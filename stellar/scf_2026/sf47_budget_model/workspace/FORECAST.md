@@ -152,3 +152,41 @@ The browser and CLI use the same exclusive workspace owner. Close the browser se
 Input JSON can be downloaded from the browser and loaded back into its normal form. Unknown fields, repeated protected assignments, changed source versions, out-of-range dates and mismatched milestone amounts are rejected before saving. Money remains decimal strings with cent precision; remaining hours preserve four decimal places.
 
 Limits follow the original operating workspace: 100 saved forecasts per case, 50 customer scenarios per forecast, 30 receipt milestones per scenario, and the existing complete-case archive bound. Keep the complete original case export for portable receiving.
+
+## Quotes whose dates depend on an original event
+
+Choose **After an original deposit or other event** when work starts only after a deposit, agreed access, source inputs or another original prerequisite. The complete quote can then be saved before either work date is known. Keep both work dates empty together, enter the quoted delivery window in business days, and retain one original relative collection term for each payment milestone.
+
+This is an optional extension to the original commercial row:
+
+```json
+{
+  "startDate": null,
+  "endDate": null,
+  "timing": {
+    "mode": "EVENT_DEPENDENT",
+    "startCondition": "Original deposit received and all agreed source, access and reviewer prerequisites ready.",
+    "deliveryBusinessDays": 12,
+    "receiptConditions": [
+      {"receiptId": "kickoff", "condition": "Due before customer implementation starts."},
+      {"receiptId": "acceptance", "condition": "Due seven calendar days after accepted complete handover."}
+    ]
+  }
+}
+```
+
+The two milestone IDs must be the IDs already in that row's `receipts`. Every milestone needs exactly one condition; normalization keeps them in original milestone order. `deliveryBusinessDays` is an integer from 1 through 1,096. The original note, offer identity, source attachments, prices and observed-payment rules continue to apply.
+
+Full selected costs and hours stay in the existing scope totals. When the work window is empty, those uninvoiced costs and hours remain outside the dated cash and capacity curves, with a specific date decision. Original invoices retain their independent due dates. Quoted milestones without collection dates remain separately undated. The report's `eventTiming` section lists the complete terms, undated delivery cost, undated hours and undated collections beside the dated results.
+
+To activate the dated work:
+
+1. Record the actual deposit, acceptance or other event through the original operations records and preserve its source.
+2. Refresh the current case and forecast, retaining the original customer and quote identities. Enter the known remaining-work window, or take the complete forecast to Portfolio and choose its reviewed release date.
+3. Portfolio derives the promised deadline using the same selected working calendar as its allocator. Day one is the first working date on or after the release. An earlier observed release remains the deadline's anchor, including when it precedes the future forecast window. Enter any holidays or special working dates needed for the original commercial calendar.
+4. Review the complete allocation, deadline exceptions and cash timing before selecting the work dates back into Forecast. The quoted delivery window is a deadline; the separate minimum effort duration remains its original Portfolio input.
+5. Enter collection dates when those dates are known, and retain the original deposit or accepted-handover terms in the milestone conditions. Save with the current case version and exact preview identity.
+
+An allocation keeps the whole undated task, including its effort, assignments and source terms. It reports `EVENT_RELEASE_DATE_REQUIRED` while the original release remains unresolved. A deadline outside the selected horizon needs a longer calendar; a manually entered due date later than the original relative deadline is returned for correction. Existing saved allocations stay available alongside that unfinished date decision.
+
+The complete forecast ZIP adds `event-dependent-timing.json`, `event-dependent-work.csv` and `event-dependent-receipts.csv` only when this timing mode is used. Complete case export and import retain these inputs through the original saved forecasts and snapshots. Ordinary dated rows omit `timing`; their normalized values, calculations and saved identities are unchanged.
