@@ -13,7 +13,7 @@ const display = value => typeof value === 'string' ? value : JSON.stringify(valu
 export function canonicalSource(item, fallback) {
   if(item.provider==='ris-document'){
     const key=item.metadata?.ris?.identityKey;
-    need(typeof key==='string'&&(/^[a-z]+:/.test(key)),'RIS_SOURCE_IDENTITY_REQUIRED');return key;
+    need(typeof key==='string'&&(/^(?:doi:10\.\d{4,9}\/[^\s<>\"\u0000-\u001f]+|ris-record:[a-f0-9]{64})$/.test(key)),'RIS_SOURCE_IDENTITY_REQUIRED');return key;
   }
   let doi = string(item.doi).trim().replace(/^https?:\/\/(?:dx\.)?doi\.org\//i, '').replace(/^doi:\s*/i, '').toLowerCase();
   if (doi) return 'doi:' + doi;
