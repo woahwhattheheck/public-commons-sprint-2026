@@ -25,6 +25,8 @@ First call inspectGrantAgentBinding with directory and optional scenarioFile, py
 | portfolioPreview(caseId, expectedVersion, inputs) | Original complete resource/day alternatives and cash preview. |
 | portfolioSave(caseId, body) | Native portfolio.save with the reviewed input, preview SHA, case version, actor and request ID. |
 | portfolioSelection(caseId, expectedVersion, portfolioId, alternativeId) | Native selected dates returned as an original forecast input. |
+| supportPreview(caseId, expectedVersion, bytes, filename) | Original SF74 support reader and complete source/deployment preview, without saving. |
+| supportReceive(caseId, bytes, body) | Native support.receive, retaining the original file and rendered review with an existing or new deployment in the original case transaction. |
 | download(kind, selection) | Complete original plan, case, forecast or portfolio ZIP, source, scenario or CSV. |
 | importBundle(kind, bytes, body) | Original complete plan or case ZIP receiver. |
 | importScenario(bytes, body) | Original source JSON with native byte identity. |
@@ -70,3 +72,29 @@ const saved = await client.forecastSave(caseId, {
 A concurrent case change is rejected by the original version check. Source-stale forecasts and allocations keep the original service's specific validation result. Quoted collection amounts and dates retain their native forecast semantics when resource dates change.
 
 Merchant MCP can use a retained native response directly: input plus expectedInputSha256 verifies the full file, and inputPointer selects its original /inputs object. The native snapshot keeps the complete file and selection lineage. That avoids reconstructing large arrays from a compact tool reply while preserving the full original JSON values.
+
+## Receive the original merchant support handoff
+
+Use the unchanged JSON file exported by Merchant Support. The client accepts its complete nonempty bytes up to the native 8 MiB attachment bound. Its original filename is part of the preview identity; retain that exact filename and byte sequence through receiving and retries.
+
+~~~js
+const preview = await client.supportPreview(caseId, version, handoffBytes, filename);
+// Review preview.value.report, .reader, .source and .deployments.
+const received = await client.supportReceive(caseId, handoffBytes, {
+  expectedVersion: version,
+  filename,
+  expectedPreviewSha256: preview.value.previewSha256,
+  deploymentId,
+  actor,
+  requestId,
+  note: 'Receive the original support file with its existing deployment.'
+});
+~~~
+
+For a new deployment, use deploymentId: null (or omit it) and deployment containing the original editable fields. Existing deployment selection permits no nonempty competing deployment object. The client excludes generated IDs, sourceIds, versions and recordedBy from new-deployment input; the original service validates the chosen operator, role, environment, work packages and receiving date.
+
+The native support.receive command re-previews the file and compares expectedPreviewSha256 inside its existing request transaction. It retains the exact handoff, native rendered report, deployment/source association, event and request receipt together. Same-file/report association can return unchanged with the original version. Read the actual receipt and current case instead of assuming a version increment.
+
+Preview is read-only: native reader availability, size and busy errors retain their definite original outcome. Receiving uses the same after-dispatch uncertainty and original-ID recovery as the other case writes. Source/case/reader changes require a fresh preview; an interrupted accepted write requires the identical original payload and request ID.
+
+Source downloads and complete case export/import preserve the original file, retained report and deployment associations. The original operator, CLI, environment fields and native reader lifecycle are documented in [Merchant support in delivery operations](SUPPORT_DELIVERY.md).
