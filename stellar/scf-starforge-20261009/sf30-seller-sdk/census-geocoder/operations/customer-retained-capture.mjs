@@ -38,7 +38,8 @@ const PINS = {
   "stellar-forge/mcp-merchant-operator/census-geocoder-download.d.mts": "d98c62faca5531a6e575cb9e97fee9a20d8e2b54",
   "stellar-forge/mcp-merchant-operator/providers/census-geocoder-workspaces.mjs": "bacc169fca63847f4f2429ee27430ad173fbfb6b",
   "stellar/scf-starforge-20261009/sf30-seller-sdk/census-geocoder/recording.mjs": "951ccf84c81c4464e2de7f676287ae53f4c626e2",
-  "stellar-forge/mcp-merchant-operator/config.mjs": "cd0d25e0c811a6b43725d01259906c2ee9c16c88",
+  "stellar-forge/mcp-merchant-operator/config.mjs": "10b23ca6fb32bbc44721ebcbbead390072953128",
+  "stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs": "ba207f66842f26d9ce65aa76c4c98cbcb43121fe",
   "stellar-forge/mcp-merchant-operator/serve.mjs": "3b01f62dc188f802e0aaecf9bd30dd1b5a89171d",
   "stellar-forge/mcp-merchant-operator/retained-download.mjs": "f204b2d032498e28dbab0f78620f17a888d8eea5",
   "stellar-forge/mcp-merchant-operator/census-geocoder-download.mjs": "3180903ecc3a83527f3388f493a90fdc019dea5f"
@@ -133,7 +134,7 @@ async function main(options) {
   assert.equal(await realpath(directory), directory, 'Use a canonical private operation directory.');
   const releaseOperation = await files.acquireWorkspace(directory);
   const checkpoint = join(directory, 'customer-run.json');
-  const binding = { operation: OPERATION, sourceHead: SOURCE_HEAD, originalDirectory,
+  const binding = { operation: OPERATION, sourceHead: SOURCE_HEAD, sourcePins: PINS, originalDirectory,
     originalEditionId: ORIGINAL.editionId, originalResponseSha256: ORIGINAL.responseSha256,
     recordingSha256: recording.recordingSha256, customerInputSha256: hash(customerBytes) };
   let result;
@@ -245,13 +246,10 @@ async function main(options) {
         merchants: { original: profile }, buyerWorkspaces: {}, runtime: { port: 0 } }
     } };
     await writeExact(connectionPath, files.bytes(connection));
-    let configurationExists = true;
-    try { await lstat(join(merchantDirectory, 'merchant-mcp.json')); } catch (error) { if (error.code !== 'ENOENT') throw error; configurationExists = false; }
-    if (!configurationExists) {
-      // Preserve any interrupted original initializer rather than replacing its state.
-      await initializeCensusGeocoderWorkspaceMerchant({ directory: merchantDirectory, connection: connectionPath,
-        name: 'Census retained customer reconciliation' });
-    }
+    // The same original initializer completes its bound config/store if startup
+    // previously ended between mkdir and publication; no replacement directory.
+    await initializeCensusGeocoderWorkspaceMerchant({ directory: merchantDirectory, connection: connectionPath,
+      name: 'Census retained customer reconciliation', resume: true });
     await readMerchantConfig(join(merchantDirectory, 'merchant-mcp.json'));
     const configuredMerchant = JSON.parse(await readFile(join(merchantDirectory, 'merchant-mcp.json'), 'utf8'));
     assert.equal(configuredMerchant.censusGeocoderWorkspaceConnection, connectionPath);

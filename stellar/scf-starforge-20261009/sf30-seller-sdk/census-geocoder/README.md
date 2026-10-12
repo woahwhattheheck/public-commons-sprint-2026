@@ -154,11 +154,11 @@ The original merchant publisher, SF82 release review and SF88 buyer workflow bel
 
 The complete [retained-capture customer operation](operations/customer-retained-capture.mjs) runs this workflow against the original three-address Census recording retained by the engineering operator. It checks that recording's actual response, request, metadata, benchmark/vintage and edition identities before creating a separate customer workspace. Its demonstration business columns are labeled locally; geocoding results come from the original response.
 
-Use Node 24, the existing SDK/browser dependencies and the original source intake at product merge a590f72c3444b67d74ee98a27e85288085535bb0. The operation checks the selected runtime leaves before acquisition. Resolve the actual edition directory from the retained workspace/output; its expected original UUID is 3afdc231-4506-4128-9ec3-b72f8a8acb56. Keep the new operation directory outside that original workspace.
+Use Node 24, the existing SDK/browser dependencies and the original a590f72c3444b67d74ee98a27e85288085535bb0 product leaves together with this delivery's original Census/SF82 initializer recovery. The operation checks all 21 selected module pins before acquisition and retains them in its checkpoint. Resolve the actual edition directory from the retained workspace/output; its expected original UUID is 3afdc231-4506-4128-9ec3-b72f8a8acb56. Keep the new operation directory outside that original workspace.
 
 ~~~sh
 node stellar/scf-starforge-20261009/sf30-seller-sdk/census-geocoder/operations/customer-retained-capture.mjs \
-  --source /absolute/selected-source-at-a590f72c \
+  --source /absolute/selected-source-with-initializer-recovery \
   --edition /absolute/original-workspace/editions/3afdc231-4506-4128-9ec3-b72f8a8acb56 \
   --directory /absolute/private/customer-receiving \
   --playwright /absolute/existing-playwright/index.mjs \
@@ -166,6 +166,8 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/census-geocoder/operations/c
 ~~~
 
 The program runs original authenticated MCP calls for source retention, invalid mapping review, explicit correction/exclusion, the exact captured-record binding and native merchant-edition compilation. It receives every edition member through the maintained file receiver, opens the same borrowed browser to reopen the saved mapping and download the original/joined files, then closes and reopens the native workspace and received edition through the existing CLI and SDK. It does not issue a Census request, start the merchant, or execute a buyer payment. Run it through the existing native resource admission used by the receiving host.
+
+Initial merchant setup uses the original initializer's explicit resume option under its existing kernel workspace and release-state locks. It binds the same immutable config before continuing stores/exports, preserves a completed release state and completes only an empty uninitialized store. An interrupted setup resumes that same merchant directory; mismatched retained config/state is preserved.
 
 The private customer-run.json keeps actual phase results, native IDs, file hashes and cleanup outcomes. A completed result returns unchanged; partial receiving uses the original native operation IDs and download checkpoint. SIGINT/SIGTERM drains acquired owners. Failed disposal retains those exact handles and the ordinary signal retry path, and is recorded as CLOSE_INCOMPLETE. The program is an operating source, not a claimed completed run: use its actual returned outcome. The [original receiving thread](https://tokenjunkielabs.slack.com/archives/C0BTB4SUCP9/p1791795336743849?thread_ts=1791760126.436279) owns the one operation and its input locator.
 

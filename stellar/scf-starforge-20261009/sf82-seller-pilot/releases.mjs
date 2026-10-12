@@ -1,5 +1,5 @@
 // MIT. Version original SF61 exports and SF30 native merchant sources through SF82.
-import { open, readFile, lstat, mkdir, readdir, rename, rm, rmdir, unlink, copyFile } from 'node:fs/promises';
+import { open, readFile, lstat, mkdir, readdir, rename, rm, rmdir, unlink, copyFile, realpath } from 'node:fs/promises';
 import { constants as fsConstants } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import { join, resolve, dirname, relative, isAbsolute, sep } from 'node:path';
@@ -209,8 +209,46 @@ async function mutate(root, action) {
   const release = await lock(root, 'state.lock');
   try { return await action(); } finally { await release(); }
 }
-export async function initReleaseStore(root) {
+export async function initReleaseStore(root, { resume = false } = {}) {
+  if (typeof resume !== 'boolean') throw new TypeError('Release initialization resume must be boolean.');
   root = resolve(root);
+  if (resume) {
+    // The original state lease serializes this recovery with ordinary mutations.
+    // A complete state is returned unchanged; no active selection is recreated.
+    if (process.platform !== 'linux') throw new TypeError('Resuming release initialization requires the original Linux state lease.');
+    try { await mkdir(root, { mode: 0o700 }); }
+    catch (error) { if (error.code !== 'EEXIST') throw error; }
+    const requirePrivate = async path => {
+      const info = await lstat(path);
+      if (!info.isDirectory() || info.isSymbolicLink() || info.mode & 0o077 || await realpath(path) !== path)
+        throw new TypeError('Resume only the original canonical private release directory.');
+    };
+    await requirePrivate(root);
+    const lifetime = await acquireReleaseLease(root, 'state.lock');
+    try {
+      // lstat distinguishes an absent initial state from invalid retained bytes.
+      let exists = true;
+      try { await lstat(join(root, 'state.json')); }
+      catch (error) { if (error.code !== 'ENOENT') throw error; exists = false; }
+      if (exists) return { root, ...await readReleaseState(root) };
+      const allowed = new Set(['releases', '.sf82-state.lock.lifetime']);
+      const pendingState = /^state\.json\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.tmp$/;
+      if ((await readdir(root)).some(name => !allowed.has(name) && !pendingState.test(name)))
+        throw new TypeError('Preserve the uninitialized release store: it contains other retained entries.');
+      const releases = join(root, 'releases');
+      try { await mkdir(releases, { mode: 0o700 }); }
+      catch (error) { if (error.code !== 'EEXIST') throw error; }
+      await requirePrivate(releases);
+      if ((await readdir(releases)).length)
+        throw new TypeError('Preserve releases whose original state is missing.');
+      const state = { schema: STORE, createdAt: new Date().toISOString(), generation: 0,
+        active: null, previous: null, history: [] };
+      await lifetime.assert();
+      // The original complete temporary+rename writer never exposes short state.
+      await atomic(join(root, 'state.json'), state);
+      return { root, ...state };
+    } finally { await lifetime.close(); }
+  }
   await mkdir(root, { mode: 0o700 });
   await mkdir(join(root, 'releases'), { mode: 0o700 });
   const state = { schema: STORE, createdAt: new Date().toISOString(), generation: 0,
@@ -1146,7 +1184,7 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
     const operations = report.operations ?? null;
     if (Boolean(record.jsonrpc || record.postgres || record.clickhouse || record.opensearch || record.grpc) !== Boolean(operations) || operations && (!/^http:\/\/127\.0\.0\.1:\d+$/.test(operations.url) ||
         operations.availability !== operations.url + '/availability' ||
-        operations.availabilityControl !== null && !new RegExp('^' + operations.url.replaceAll('.', '\\.') + '/availability#[0-9a-f]{64}$').test(operations.availabilityControl)))
+        operations.availabilityControl !== null && !new RegExp('^' + operations.url.replaceAll('.', '\.') + '/availability#[0-9a-f]{64}$').test(operations.availabilityControl)))
       throw new Error('Original merchant reported invalid private operations links.');
     await originalReadback(report.listener, record, mode);
     if (exitSettled || shutdownRequested) throw new Error('Original seller stopped during startup.');
