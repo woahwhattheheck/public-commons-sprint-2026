@@ -1,6 +1,7 @@
 // MIT. Terminable native Node workers; queued records, execution and payment remain separate.
 import { Worker } from 'node:worker_threads';
 import { jobError } from './config.mjs';
+import { createNativeProcessHost } from './processes-host.mjs';
 
 export function executeJob(source, row, attempt, { env = process.env, signal, inputDirectory } = {}) {
   const definition = source.compiled.functions[row.functionId];
@@ -13,6 +14,8 @@ export function executeJob(source, row, attempt, { env = process.env, signal, in
   }
   if (signal?.aborted) return Promise.reject(jobError(signal.reason?.code ?? 'JOB_EXECUTION_CANCELLED', 409));
   return new Promise((resolve, reject) => {
+    const native = createNativeProcessHost({ env: environment,
+      ...(environment.SF30_JOB_TEMP ? { temporaryDirectory: environment.SF30_JOB_TEMP } : {}) });
     let worker, terminal = false, retiring = false, timer, cancellationTimer;
     const finish = async (failure, body) => {
       if (terminal) return;
@@ -20,6 +23,7 @@ export function executeJob(source, row, attempt, { env = process.env, signal, in
       signal?.removeEventListener('abort', abort);
       retiring = true;
       try { if (worker) await worker.terminate(); } catch { failure ??= jobError('JOB_WORKER_RETIRE_FAILED', 503); }
+      try { await native.close(); } catch { failure ??= jobError('JOB_NATIVE_RETIRE_FAILED', 503); }
       if (failure) reject(failure); else resolve(body);
     };
     const abort = () => {
@@ -43,6 +47,9 @@ export function executeJob(source, row, attempt, { env = process.env, signal, in
       worker.on('message', message => {
         if (terminal) return;
         if (signal?.aborted) return finish(jobError(signal.reason?.code ?? 'JOB_EXECUTION_CANCELLED', 409));
+        if (native.handle(message, reply => {
+          if (!terminal) try { worker.postMessage(reply); } catch { /* Worker retirement owns cleanup. */ }
+        })) return;
         if (message?.type === 'failure' && typeof message.code === 'string')
           return finish(jobError(/^JOB_[A-Z_]+$/.test(message.code) ? message.code : 'JOB_APPLICATION_FAILED', 503));
         if (message?.type !== 'result' || !(message.body instanceof Uint8Array) || message.body.byteLength > definition.maxOutputBytes)
