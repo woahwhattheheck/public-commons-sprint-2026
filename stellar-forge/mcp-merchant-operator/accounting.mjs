@@ -15,6 +15,7 @@ import { adjustmentDefinitions, MerchantAdjustments } from './accounting-adjustm
 import { statementDefinitions, statementFileNames, statementFileSelectors, MerchantCustomerStatements } from './accounting-statements.mjs';
 import { platformDefinitions, platformFileNames, normalizePlatformConfig, platformSourceView, platformPathReferences, MerchantPlatforms } from './accounting-platforms.mjs';
 import { bitwaveDefinitions, normalizeBitwaveConfig, bitwaveSourceView, bitwavePathReferences, MerchantBitwave } from './bitwave.mjs';
+import { accountingWorkspaceBinding } from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/binding.mjs';
 import { openAccountingWorkspace } from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/store.mjs';
 import { openAccountingMaintenance } from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/recovery-controller.mjs';
 import { openCollectionWorkspace } from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/collection-workspace.mjs';
@@ -636,6 +637,44 @@ export class MerchantAccounting {
       }
       default: throw fail('ACCOUNTING_UNKNOWN_TOOL', 'Unknown merchant accounting operation.');
     }
+  }
+  /** Borrow the original adjustment controller under this accounting owner's live admission. */
+  async withServiceAdjustments(key, operation) {
+    this.#definition(key);
+    if (typeof operation !== 'function') throw fail('ACCOUNTING_INVALID_ARGUMENTS', 'Use the original service adjustment operation.');
+    if (this.#closing) throw fail('ACCOUNTING_CLOSING', 'Merchant accounting is closing.');
+    const record = this.#sessions.get(key);
+    if (!record?.maintenance || record.closing)
+      throw fail('ACCOUNTING_NOT_OPEN', 'Open the selected accounting workspace before operating on its service adjustments.');
+    const admission = record.maintenance.enter();
+    const pending = Promise.resolve().then(() => {
+      if (!record.adjustments?.controller || admission.workspace !== record.workspace)
+        throw fail('ACCOUNTING_ADJUSTMENTS_UNAVAILABLE', 'Select the original open merchant accounting workspace.');
+      return operation(record.adjustments.controller);
+    });
+    record.calls.add(pending);
+    try { return await pending; }
+    finally { record.calls.delete(pending); admission.release(); }
+  }
+  /** Borrow the same admitted accountant in merchant and buyer-only workspaces. */
+  async withServiceAccountant(key, operation) {
+    this.#definition(key);
+    if (typeof operation !== 'function') throw fail('ACCOUNTING_INVALID_ARGUMENTS', 'Use the original Service accountant operation.');
+    if (this.#closing) throw fail('ACCOUNTING_CLOSING', 'Merchant accounting is closing.');
+    const record = this.#sessions.get(key);
+    if (!record?.maintenance || record.closing)
+      throw fail('ACCOUNTING_NOT_OPEN', 'Open the selected accounting workspace before preparing its handoff.');
+    const admission = record.maintenance.enter();
+    const pending = Promise.resolve().then(() => {
+      if (!record.accountant || admission.workspace !== record.workspace)
+        throw fail('ACCOUNTING_ACCOUNTANT_UNAVAILABLE', 'Select the original open accountant workspace.');
+      const binding = accountingWorkspaceBinding(record.workspace.directory, record.workspace.state);
+      return operation(Object.freeze({ accountant: record.accountant,
+        workspaceId: binding.workspaceId, sourcesSha256: binding.sourcesSha256 }));
+    });
+    record.calls.add(pending);
+    try { return await pending; }
+    finally { record.calls.delete(pending); admission.release(); }
   }
   async call(operation, args = {}) {
     const definition = byName.get(operation);
