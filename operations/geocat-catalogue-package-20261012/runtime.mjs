@@ -44,11 +44,11 @@ async function startHost(entry,args,cwd,selection,managed){
    child.stdout.on('data',onData);child.once('exit',onExit);child.once('error',onError);
   });
   child.stdout.resume();
-  need(startup.status==='STAC_READY'&&startup.pid===child.pid,'INSTALLED_STAC_READY_IDENTITY');
+  need(startup.status==='STAC_READY'&&Number.isSafeInteger(startup.pid)&&startup.pid>0,'INSTALLED_STAC_READY_IDENTITY');
   need(startup.selectionSha256===managed.stacSelectionDigest(selection),'INSTALLED_STAC_SELECTION_CHANGED');
   const checked=await managed.verifyStacManagedHost({url:startup.url,selection});
   need(checked.workspaceId===startup.workspaceId&&checked.catalogueWorkspaceId===startup.catalogueWorkspaceId,'INSTALLED_STAC_HOST_CHANGED');
-  return {startup,async close(){
+  return {startup,dispatcherPid:child.pid,async close(){
    if(stopped)return;stopped=true;
    if(child.exitCode===null&&child.signalCode===null)child.kill('SIGTERM');
    let timer;
@@ -102,9 +102,12 @@ async function main(){
  const args=['stac','serve','--workspace',workspace,'--port','0','--startup-json','--catalogue-workspace',catalogue,
   '--managed-selection',JSON.stringify(selection)];
  let host,browser,context;
- const observations=[];
+ const observations=[],launches=[];
+ const recordLaunch=value=>launches.push({dispatcherPid:value.dispatcherPid,nativeHostPid:value.startup.pid,
+  instanceId:value.startup.instanceId,selectionSha256:value.startup.selectionSha256,sourceSha256:value.startup.sourceSha256});
  try{
   host=await startHost(entry,args,input.directory,selection,managed);
+  recordLaunch(host);
   const {chromium}=await import(pathToFileURL(input.playwrightModule).href);
   browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage'],
    ...(input.chromiumExecutable?{executablePath:input.chromiumExecutable}:{})});
@@ -113,7 +116,7 @@ async function main(){
    const page=await context.newPage();
    await page.setViewportSize({width,height:900});
    await page.goto(host.startup.url,{waitUntil:'domcontentloaded',timeout:30000});
-   await page.getByRole('button',{name:'Catalogue receiving',exact:true}).click();
+   await page.getByRole('tab',{name:'Catalogue receiving',exact:true}).click();
    await page.getByRole('navigation',{name:'Catalogue workflow'}).waitFor({state:'visible'});
    const heading=await page.locator('.catalogue-header').innerText();
    need(heading.includes(initialCatalogue.id),'INSTALLED_CATALOGUE_BROWSER_IDENTITY');
@@ -132,10 +135,11 @@ async function main(){
   need(reopenedSelection.workspace.id===initial.id&&reopenedSelection.catalogue.workspaceId===initialCatalogue.id,'INSTALLED_STAC_REOPEN_SELECTION');
   host=await startHost(entry,['stac','serve','--workspace',workspace,'--port','0','--startup-json','--catalogue-workspace',catalogue,
    '--managed-selection',JSON.stringify(reopenedSelection)],input.directory,reopenedSelection,managed);
+  recordLaunch(host);
   need(host.startup.instanceId!==firstInstance,'INSTALLED_STAC_NEW_PROCESS_REQUIRED');
   const page=await context.newPage();
   await page.goto(host.startup.url,{waitUntil:'domcontentloaded',timeout:30000});
-  await page.getByRole('button',{name:'Catalogue receiving',exact:true}).click();
+  await page.getByRole('tab',{name:'Catalogue receiving',exact:true}).click();
   await page.getByRole('navigation',{name:'Catalogue workflow'}).waitFor({state:'visible'});
   need((await page.locator('.catalogue-header').innerText()).includes(initialCatalogue.id),'INSTALLED_CATALOGUE_BROWSER_REOPEN_IDENTITY');
   await page.close();
@@ -146,7 +150,7 @@ async function main(){
   need(afterCatalogue.id===initialCatalogue.id&&afterCatalogue.revision===initialCatalogue.revision,'INSTALLED_CATALOGUE_RECEIVING_CHANGED_STATE');
   return {schema:'starforge.geocat-installed-application-receiving.v1',status:'COMPLETED',
    sourceCommit:input.commit,workspaceId:after.id,catalogueWorkspaceId:afterCatalogue.id,
-   originalManagedLaunch:true,openedTabs:observations,reopenedInFreshProcess:true,
+   originalManagedLaunch:true,launches,openedTabs:observations,reopenedInFreshProcess:true,
    stacRevision:after.revision,catalogueRevision:afterCatalogue.revision,
    sourceAcquisitions:0,geoNetworkRequests:0,
    nativeCatalogueCustomer:{operationId:'SCF-GEOCAT-NATIVE-CUSTOMER-20261012-33E6',status:'SEPARATE_ORIGINAL_REQUEST'}};
