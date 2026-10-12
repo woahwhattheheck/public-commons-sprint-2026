@@ -599,6 +599,8 @@ export async function receiveDssHandover({ directory, editionsDirectory, archive
       need(previous.exportSha256 === exported.exportSha256,
         'This receiving workspace already has different work under the original export name. Use an empty workspace.', 'WATER_DSS_RECEIVE_CONFLICT', 409);
     }
+    // Finish all validation before publishing either original directory.
+    signal?.throwIfAborted();
     if (!existingEdition) await rename(join(unpacked, 'edition'), editionTarget);
     if (!existingExport) await rename(join(unpacked, 'export'), exportTarget);
     return { status: 'READY', exportId, workspaceEditionId: editionId, exportSha256: exported.exportSha256,
@@ -612,6 +614,7 @@ export async function receiveDssUpload({ directory, editionsDirectory, stream, e
   const abort = () => stream.destroy(new Error('The workspace closed during the handover upload.'));
   signal?.addEventListener('abort', abort, { once: true });
   try {
+    signal?.throwIfAborted();
     let bytes = 0;
     for await (const chunk of stream) {
       bytes += chunk.length; need(bytes <= 8 * 1024 * 1024 * 1024, 'The uploaded handover exceeds the receiving format limit.');

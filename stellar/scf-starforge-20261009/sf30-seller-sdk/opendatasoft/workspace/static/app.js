@@ -31,6 +31,8 @@ const heading = text => element('h2', {}, text);
 const card = (...children) => element('section', { class: 'card' }, ...children);
 const row = (...children) => element('div', { class: 'row' }, ...children);
 const muted = text => element('p', { class: 'muted' }, text);
+const metadataRow = (...values) => element('div', { class: 'meta' },
+  values.filter(value => value !== '' && value !== null && value !== undefined).map(value => element('span', {}, value)));
 const pill = text => element('span', { class: 'pill' }, text ?? 'Unspecified');
 const pre = value => element('pre', {}, typeof value === 'string' ? value : JSON.stringify(value, null, 2));
 const detail = (title, value) => element('details', {}, element('summary', {}, title), pre(value));
@@ -335,7 +337,7 @@ function renderDataset(result, generation) {
   const fields = summary.fields ?? dataset.fields ?? [];
   const metadata = dataset.metas?.default ?? {};
   view.append(card(row(element('h3', { class: 'grow' }, datasetTitle(summary)), pill(count(summary.rowCount) + ' records')),
-    element('div', { class: 'meta' }, 'Dataset ' + id, 'UID ' + (summary.datasetUid ?? dataset.dataset_uid ?? 'Unspecified'),
+    metadataRow('Dataset ' + id, 'UID ' + (summary.datasetUid ?? dataset.dataset_uid ?? 'Unspecified'),
       'Modified ' + formatDate(summary.modified)),
     muted(summary.description ?? metadata.description ?? ''),
     row(element('span', {}, 'License: ', summary.license?.url ? link(summary.license.title ?? summary.license.url, summary.license.url) : summary.license?.title ?? 'Unspecified'),
@@ -485,7 +487,7 @@ async function renderEditions(generation) {
   const edition = currentEdition, note = edition.notes ?? { revision: 0, text: '', rowNotes: [] };
   const fields = edition.fields ?? [];
   view.append(card(row(element('h3', { class: 'grow' }, editionTitle(edition)), pill('Complete')),
-    element('div', { class: 'meta' }, count(edition.rowCount) + ' retained rows', count(edition.pageCount) + ' original export response(s)',
+    metadataRow(count(edition.rowCount) + ' retained rows', count(edition.pageCount) + ' original export response(s)',
       String(edition.consistency ?? ''), 'Captured ' + formatDate(edition.completedAt)),
     muted('Dataset ' + edition.datasetId + ' · UID ' + edition.datasetUid),
     row(element('span', {}, 'License: ', edition.license?.url ? link(edition.license.title ?? edition.license.url, edition.license.url) : edition.license?.title ?? 'Unspecified'),
@@ -744,7 +746,7 @@ async function renderProducts(generation) {
   const showPreview = result => {
     if (!result) { previewSlot.replaceChildren(muted('The candidate preview becomes available after extraction.')); return; }
     previewSlot.replaceChildren(
-      element('div', { class: 'meta' }, 'Matched rows: ' + count(result.page?.total ?? result.total ?? result.rowCount ?? result.count),
+      metadataRow('Matched rows: ' + count(result.page?.total ?? result.total ?? result.rowCount ?? result.count),
         'Snapshot: ' + (result.snapshot ?? candidate?.dataset?.snapshot ?? 'Unspecified')),
       table(result.rows ?? result.data ?? []), detail('Complete page response', result));
   };
@@ -820,7 +822,7 @@ function renderMerchant(generation) {
   selection.addEventListener('change', () => protect(async () => { selectedExport = selection.value; await renderView(); }, selection));
   const exported = state.exports.find(item => item.id === selectedExport);
   view.append(card(label('Merchant package', selection),
-    element('div', { class: 'meta' }, 'Resource: ' + exported.resource, 'Created: ' + formatDate(exported.createdAt)),
+    metadataRow('Resource: ' + exported.resource, 'Created: ' + formatDate(exported.createdAt)),
     muted(exported.directory), detail('Complete package manifest and release information', exported),
     row(button('Download complete merchant package', () => download('exports/' + uri(exported.id) + '/download', 'opendatasoft-merchant.tar.gz')),
       button('Download receiving guide', () => download('exports/' + uri(exported.id) + '/guide', 'opendatasoft-receiving.md')),
@@ -871,7 +873,7 @@ function renderMerchant(generation) {
   const drawOffer = saved => {
     const { request, offer } = saved;
     offerSlot.replaceChildren(
-      element('div', { class: 'meta' }, 'Seller mode: ' + offer.mode, 'Snapshot: ' + offer.snapshot),
+      metadataRow('Seller mode: ' + offer.mode, 'Snapshot: ' + offer.snapshot),
       element('p', { class: 'mono break' }, offer.url),
       element('h4', {}, 'Current payment alternatives'),
       table(offer.accepts.map((value, index) => ({ index, scheme: value.scheme, network: value.network,
@@ -914,7 +916,7 @@ function renderMerchant(generation) {
   if (requests.length) view.append(card(element('h3', {}, 'Retained buyer requests'),
     muted('Continue the existing intent in the original buyer operator. Each configuration retains its offer and snapshot selection.'),
     requests.map(request => element('article', { class: 'entry' },
-      row(element('strong', { class: 'grow' }, request.config?.intentId ?? request.id), pill(request.mode ?? 'Prepared')),
+      row(element('strong', { class: 'grow' }, request.config?.operation?.intentId ?? request.config?.intentId ?? request.id), pill(request.mode ?? 'Prepared')),
       muted(formatDate(request.createdAt)), element('p', { class: 'mono break' }, request.out),
       detail('Original buyer preparation', request),
       button('Download buyer configuration', () => download('buyer-requests/' + uri(request.id) + '/download', 'opendatasoft-buyer.json'))))));
@@ -950,7 +952,7 @@ function renderReceiving(generation) {
   view.append(card(element('h3', {}, 'Continue a prepared buyer intent'),
     muted('Download the existing buyer configuration and follow the original SF88 operator workflow. Inspect, review, collect and recover that retained intent in the same operator workspace. Keep its original operation directory and receiving artifacts together.'),
     state.buyerRequests.length ? state.buyerRequests.map(request => element('article', { class: 'entry' },
-      element('strong', {}, request.config?.intentId ?? request.id),
+      element('strong', {}, request.config?.operation?.intentId ?? request.config?.intentId ?? request.id),
       element('p', { class: 'mono break' }, request.url), muted(formatDate(request.createdAt)),
       detail('Retained buyer request', request),
       button('Download original buyer configuration', () => download('buyer-requests/' + uri(request.id) + '/download', 'opendatasoft-buyer.json')))) :

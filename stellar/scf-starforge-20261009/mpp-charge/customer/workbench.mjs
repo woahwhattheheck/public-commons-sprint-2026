@@ -95,6 +95,48 @@ export async function customerResourcePreview(options) {
     transaction:result.transaction,accounting:result.accounting,bytes:result.bytes,sha256:result.sha256,
     contractSha256:result.contractSha256,offerId:result.offerId,preview};
 }
+
+/** Read one original purchase without joining the payment queue. */
+export async function inspectCustomerPurchase({workspace,purchaseId}) {
+  purchaseId=id(purchaseId);
+  const metadata=await workspace.metadata();
+  const active=metadata.customer?await workspace.read('profiles',metadata.customer):null;
+  const binding=await workspace.read('reports',bindingKey(purchaseId));
+  const preparation=await workspace.read('reports',preparationKey(purchaseId));
+  requireValue(binding || preparation,'MPP_CUSTOMER_PURCHASE_NOT_FOUND',404);
+  const contract=preparation?.profile?.contract;
+  const fallback={contractSha256:binding?.contractSha256??contract?.sha256,
+    offerId:binding?.offerId??preparation?.offerId,merchant:contract?.title,origin:contract?.origin,
+    activeContractChanged:Boolean(active && (binding?.contractSha256??contract?.sha256)!==active.contract.sha256)};
+  const row=await workspace.read('purchases',purchaseId);
+  if(!row)return {id:purchaseId,phase:'PREPARATION_INCOMPLETE',resourceReady:false,
+    retryPreparation:Boolean(preparation),customer:fallback};
+  try{return customerPurchaseView(await readOriginalCustomerPurchase(workspace,purchaseId),active?.contract);}
+  catch(error){return {...purchaseView(row),phase:'CONTRACT_REVIEW_REQUIRED',resourceReady:false,
+    customer:{...fallback,error:error.code??'MPP_CUSTOMER_PURCHASE_IDENTITY_CHANGED'}};}
+}
+export const MAX_CUSTOMER_CHUNK_BYTES=49152;
+export async function customerResourceChunk({workspace,purchaseId,expectedSha256,offset=0,limit=MAX_CUSTOMER_CHUNK_BYTES}) {
+  requireValue(typeof expectedSha256==='string' && /^[a-f0-9]{64}$/.test(expectedSha256),
+    'MPP_CUSTOMER_RESPONSE_DIGEST_REQUIRED');
+  requireValue(Number.isSafeInteger(offset) && offset>=0 && Number.isSafeInteger(limit) &&
+    limit>=1 && limit<=MAX_CUSTOMER_CHUNK_BYTES,'MPP_CUSTOMER_RESPONSE_RANGE_INVALID');
+  const resource=await customerResource({workspace,purchaseId});
+  requireValue(resource.sha256===expectedSha256,'MPP_CUSTOMER_RESPONSE_CHANGED',409);
+  const bytes=Buffer.from(await resource.response.arrayBuffer());
+  requireValue(hash(bytes)===expectedSha256 && bytes.length===resource.bytes,'MPP_CUSTOMER_RESPONSE_CHANGED',409);
+  requireValue(offset<=bytes.length,'MPP_CUSTOMER_RESPONSE_RANGE_INVALID');
+  const part=bytes.subarray(offset,Math.min(offset+limit,bytes.length));
+  const nextOffset=offset+part.length;
+  return {schema:'stellar-forge.mpp-customer-response-chunk.v1',purchaseId,
+    contractSha256:resource.contractSha256,offerId:resource.offerId,
+    transaction:resource.transaction,receipt:resource.receipt,accounting:resource.accounting,
+    status:resource.response.status,headers:Object.fromEntries(resource.response.headers),
+    sha256:expectedSha256,bytes:bytes.length,offset,length:part.length,
+    nextOffset:nextOffset<bytes.length?nextOffset:null,complete:nextOffset===bytes.length,
+    encoding:'base64',chunkSha256:hash(part),data:part.toString('base64')};
+}
+
 export function createCustomerWorkbench({workspace,environment=process.env}={}) {
   requireValue(workspace?.root && typeof workspace.profile==='function','MPP_WORKSPACE_REQUIRED');
   async function prepareOriginal(preparation) {
@@ -122,6 +164,15 @@ export function createCustomerWorkbench({workspace,environment=process.env}={}) 
       if(transport)result.draft.configuration.transport=clone(transport);
       return result;
     },
+    review:async({profile,revision})=>{
+      const metadata=await workspace.metadata();
+      requireValue(metadata.revision===revision,'MPP_PROFILE_REVISION_CHANGED',409);
+      const normalized=customerWorkbenchProfile(profile,workspace.root);
+      return {profile:normalized,profileId:hash(stable(normalized)),revision,
+        contractSha256:normalized.contract.sha256};
+    },
+    inspect:purchaseId=>inspectCustomerPurchase({workspace,purchaseId}),
+    resourceChunk:options=>customerResourceChunk({workspace,...options}),
     configure:async({profile,revision})=>{
       const normalized=customerWorkbenchProfile(profile,workspace.root);
       return workspace.configure('customer',normalized,revision);

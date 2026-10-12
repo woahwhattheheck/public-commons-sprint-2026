@@ -22,6 +22,12 @@ REQUIRED = {APP_PREFIX + "expense-workspace/" + n for n in REQUIRED_APP}
 REQUIRED.update(APP_PREFIX + n for n in ("statement.py", "governor.py", "STATEMENTS.md"))
 REQUIRED.update({"project/workspace.sqlite", "README.md", "prepare_private.py"})
 ALLOWED = REQUIRED | {APP_PREFIX + "expense-workspace/receive.py"}
+MCP_REQUIRED = {APP_PREFIX + "expense-workspace/native_mcp.py",
+    "app/stellar-forge/mcp-paid-agent/expense-statement.mjs",
+    "app/stellar-forge/mcp-paid-agent/quote-store.mjs",
+    "app/stellar-forge/mcp-paid-agent/remote-mcp.mjs",
+    "app/stellar/scf-starforge-20261009/sf86-rpc-transfer-reconcile/terms.mjs",
+    "app/stellar/scf-starforge-20261009/sf86-rpc-transfer-reconcile/networks.json"}
 
 
 def digest_file(path):
@@ -88,7 +94,16 @@ def inspect_database(path, manifest):
             raise ValueError("The retained request-recovery history is incomplete.")
         if "workspace" in manifest and manifest["workspace"] != meta["id"] or "revision" in manifest and manifest["revision"] != revision:
             raise ValueError("The project manifest does not match its original native workspace revision.")
+        source_kinds = sorted({json.loads(row[0]).get("kind", "sf36_ledger") for row in
+                               database.execute("SELECT body FROM sources")})
+        if any(kind not in ("sf36_ledger", "mcp_quote") for kind in source_kinds):
+            raise ValueError("The retained source kind is not supported by this original receiver.")
+        if "mcp_quote" in source_kinds and manifest.get("mcp_quote_capture") != "native-readonly-v1":
+            raise ValueError("The complete MCP expense source requires its original included reader.")
+        if manifest.get("mcp_quote_capture") is not None and manifest.get("source_kinds") != source_kinds:
+            raise ValueError("The original source kinds do not match the complete project manifest.")
         return {"workspace": meta["id"], "revision": revision, "successful_requests": count,
+                "source_kinds": source_kinds,
                 "legacy_request_history": legacy, "tables": len(tables)}
     finally:
         database.close()
@@ -136,7 +151,12 @@ def receive(archive, directory, expected_sha256):
                 raise ValueError("Choose the original buyer-expense complete project format.")
             descriptions = manifest["files"]
             entries = {row["path"]: row for row in descriptions}
-            if len(entries) != len(descriptions) or not REQUIRED <= set(entries) <= ALLOWED or set(names) != set(entries) | {"manifest.json"}:
+            feature = manifest.get("mcp_quote_capture")
+            if feature not in (None, "native-readonly-v1"):
+                raise ValueError("The archive advertises an unsupported original MCP reader version.")
+            required = REQUIRED | (MCP_REQUIRED if feature else set())
+            allowed = ALLOWED | (MCP_REQUIRED if feature else set())
+            if len(entries) != len(descriptions) or not required <= set(entries) <= allowed or set(names) != set(entries) | {"manifest.json"}:
                 raise ValueError("The complete project must retain the exact original application and workspace members.")
             if sum(i.file_size for i in infos) > MAX_BYTES:
                 raise ValueError("The expanded project exceeds the native receiving limit.")
@@ -180,6 +200,7 @@ def receive(archive, directory, expected_sha256):
         result = inspect_database(root / "project/workspace.sqlite", manifest)
         result.update(state="RECEIVED", directory=str(root), archive_sha256=expected_sha256,
                       files=len(entries), source_captures_replayed=0, original_ledger_copied=False,
+                      original_quote_store_copied=False, purchased_result_bodies_copied=False,
                       application=str(root / (APP_PREFIX + "expense-workspace/server.py")))
         atomic_bytes(root / "RECEIVED.json", (json.dumps(result, indent=2) + "\n").encode())
         return result
