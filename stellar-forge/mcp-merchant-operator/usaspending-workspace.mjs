@@ -553,7 +553,8 @@ export class MerchantUSASpendingWorkspaces {
       case 'merchant_usaspending_rows': {
         const { editionId, ...filters } = input; return result(original.browse(editionId, filters));
       }
-      case 'merchant_usaspending_award': return result(original.row(input.editionId, input.awardKey));
+      case 'merchant_usaspending_award': return result({ ...original.row(input.editionId, input.awardKey),
+        review: original.state().reviews.find(item => item.award_key === input.awardKey) ?? null });
       case 'merchant_usaspending_compare': {
         const { changes, ...summary } = original.compare(input.before, input.after);
         return result({ ...summary, changes: paged(changes, input) });
