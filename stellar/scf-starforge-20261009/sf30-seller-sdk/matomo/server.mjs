@@ -1,6 +1,6 @@
 // MIT. Private loopback operator UI; all effects use the same retained workspace.
 import {createServer} from 'node:http';
-import {randomBytes,timingSafeEqual} from 'node:crypto';
+import {randomBytes,randomUUID,timingSafeEqual} from 'node:crypto';
 import {readFile,open} from 'node:fs/promises';
 import {constants} from 'node:fs';
 import {fileURLToPath} from 'node:url';
@@ -12,7 +12,7 @@ import {openMatomoWorkspace} from './model.mjs';
 const STATIC=new Map([['/',['index.html','text/html; charset=utf-8']],['/index.html',['index.html','text/html; charset=utf-8']],['/app.mjs',['app.mjs','text/javascript; charset=utf-8']],['/style.css',['style.css','text/css; charset=utf-8']]]);
 export async function startMatomoWorkspace({port=0,...options}={}) {
   if(!Number.isInteger(port)||port<0||port>65535)throw fault('MATOMO_PORT_INVALID');
-  const model=await openMatomoWorkspace(options),token=randomBytes(32).toString('hex'),pending=new Map();let origin,hosts,closing,stopping=false;
+  const model=await openMatomoWorkspace(options),token=randomBytes(32).toString('hex'),instanceId=randomUUID(),pending=new Map();let origin,hosts,closing,stopping=false;
   const secretsEqual=value=>typeof value==='string'&&/^[0-9a-f]{64}$/.test(value)&&timingSafeEqual(Buffer.from(value),Buffer.from(token));
   const operationStatus=id=>{
     const saved=model.store.action(id);if(saved)return saved;
@@ -46,6 +46,7 @@ export async function startMatomoWorkspace({port=0,...options}={}) {
       if(req.headers.origin&&req.headers.origin!==origin)throw fault('MATOMO_ORIGIN_INVALID',undefined,403);
       if(req.method==='GET'){
         const id=url.searchParams.get('id'),offset=Number(url.searchParams.get('offset')??0),limit=Number(url.searchParams.get('limit')??25);
+        if(url.pathname==='/api/identity'){send(200,{schema:'stellar-forge.matomo-listener.v1',instanceId,workspaceId:model.store.settings.id,sourceSha256:model.store.settings.sourceSha256,revision:model.store.revision(),pid:process.pid});return;}
         if(url.pathname==='/api/state'){send(200,model.state());return;}
         if(url.pathname==='/api/action'){const value=operationStatus(identifier(id));if(!value)throw fault('MATOMO_ACTION_NOT_FOUND',undefined,404);send(200,{action:value,revision:model.store.revision()});return;}
         if(url.pathname==='/api/catalog'){send(200,{catalog:model.captures.catalog(id)});return;}
@@ -103,5 +104,5 @@ export async function startMatomoWorkspace({port=0,...options}={}) {
     closing=(async()=>{try{await model.close();await Promise.allSettled([...pending.values()].map(x=>x.promise));}
       finally{await new Promise((done,fail)=>{server.close(e=>e?fail(e):done());server.closeIdleConnections?.();});}})();return closing;
   }
-  return {server,model,origin,token,url:origin+'/#'+token,close};
+  return {server,model,origin,token,instanceId,url:origin+'/#'+token,close};
 }
