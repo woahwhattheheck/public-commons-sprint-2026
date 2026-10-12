@@ -2,6 +2,12 @@
 import { readDistributionSpecification } from '../specification.mjs';
 import { grpcApplication, prepareGrpcApplication } from './application-grpc.mjs';
 import { coingeckoApplication, prepareCoingeckoApplication } from './application-coingecko.mjs';
+import { oaiApplication, prepareOaiApplication } from './application-oai.mjs';
+import { fiscalDataApplication, prepareFiscalDataApplication } from './application-fiscaldata.mjs';
+import { databentoApplication, prepareDatabentoApplication } from './application-databento.mjs';
+import { opencageApplication, prepareOpenCageApplication } from './application-opencage.mjs';
+import { webdavApplication, prepareWebDavApplication } from './application-webdav.mjs';
+import { merchantSupportApplication, prepareMerchantSupportApplication } from './application-merchant-support.mjs';
 import { readdir, lstat, realpath, access } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
@@ -21,6 +27,7 @@ import { n8nApplication, prepareN8nApplication } from './application-n8n.mjs';
 import { redisApplication, prepareRedisApplication } from './application-redis.mjs';
 import { openApiApplication, prepareOpenApiApplication } from './application-openapi.mjs';
 import { arcgisAgentApplication, prepareArcgisAgentApplication } from './application-arcgis.mjs';
+import { duckdbAgentApplication, prepareDuckDBAgentApplication } from './application-duckdb-agent.mjs';
 import { s3MerchantApplication, prepareS3MerchantApplication } from './application-s3-merchant.mjs';
 import { jobCheckoutApplication, validateJobCheckoutSelection, prepareJobCheckoutApplication } from './application-job-checkout.mjs';
 import { datasetBuyerApplication, prepareDatasetBuyerApplication } from './application-dataset-buyer.mjs';
@@ -28,6 +35,7 @@ import { pricingApplication, validatePricingSelection, preparePricingApplication
 import { collectionsApplication, prepareCollectionsApplication } from './application-collections.mjs';
 import { baserowApplication, prepareBaserowApplication } from './application-baserow.mjs';
 import { grantApplication, prepareGrantApplication } from './application-grant.mjs';
+import { grantsgovApplication, prepareGrantsgovApplication } from './application-grantsgov.mjs';
 import { fredApplication, prepareFredApplication } from './application-fred.mjs';
 import { apiPassWorkspaceApplication, prepareApiPassWorkspaceApplication } from '../../sf101-merchant-receiver/api-access/workspace/application.mjs';
 import { eventFeedApplications, prepareEventFeedApplication } from './application-event-feed.mjs';
@@ -62,6 +70,12 @@ const common = [
 ];
 export const APPLICATION_CATALOG = Object.freeze([
   coingeckoApplication(common),
+  oaiApplication(common),
+  fiscalDataApplication(common),
+  databentoApplication(common),
+  opencageApplication(common),
+  webdavApplication(common),
+  merchantSupportApplication(common),
   grpcApplication(common),
   atlasApplication(common),
   n8nApplication(common),
@@ -80,6 +94,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   stellarExpertApplication(common),
   redisApplication(common),
   arcgisAgentApplication(common),
+  duckdbAgentApplication(common),
   s3MerchantApplication(common),
   jobCheckoutApplication(common),
   datasetBuyerApplication(common),
@@ -87,6 +102,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   collectionsApplication(common),
   baserowApplication(common),
   grantApplication(common),
+  grantsgovApplication(common),
   fredApplication(common),
   tenderlyApplication(common),
   browserWalletApplication(common),
@@ -251,7 +267,19 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     const value = await inputPath(settings[name], kind, missing, privateOnly); inputs.push(value); return value;
   };
   const option = (name, value) => { if (value !== undefined && value !== '') args.push(name, String(value)); };
-  if (type.id === 'coingecko') {
+  if (type.id === 'webdav') {
+    const original = await prepareWebDavApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'merchant-support') {
+    const original = await prepareMerchantSupportApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'opencage-workspace') {
+    const original = await prepareOpenCageApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'coingecko') {
     const original = await prepareCoingeckoApplication(settings, { inputPath, runtimeDirectory });
     args.push(...original.args); inputs.push(...original.inputs);
     createDirectories.push(...original.createDirectories);
@@ -259,6 +287,14 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     const original = await prepareGrpcApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
     createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'databento-migration') {
+    const original = await prepareDatabentoApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories); selectedResourceKey = original.resourceKey;
+  } else if (type.id === 'fiscaldata') {
+    const original = await prepareFiscalDataApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories); selectedResourceKey = original.resourceKey;
   } else if (type.id === 'fred') {
     const original = await prepareFredApplication(settings, { inputPath, runtimeDirectory });
     args.push(...original.args); inputs.push(...original.inputs);
@@ -311,6 +347,9 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   } else if (type.id === 'arcgis-agent') {
     const original = await prepareArcgisAgentApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'duckdb-agent') {
+    const original = await prepareDuckDBAgentApplication(settings, inputPath, runtimeDirectory);
+    args.push(...original.args); inputs.push(...original.inputs);
   } else if (type.id === 'job-checkout') {
     const original = await prepareJobCheckoutApplication(settings, runtimeDirectory, inputPath);
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
@@ -320,6 +359,10 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     createDirectories.push(...prepared.createDirectories);
   } else if (type.id === 'buyer-collections') {
     const prepared = await prepareCollectionsApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...prepared.args); inputs.push(...prepared.inputs);
+    createDirectories.push(...prepared.createDirectories);
+  } else if (type.id === 'grantsgov') {
+    const prepared = await prepareGrantsgovApplication(settings, { inputPath, runtimeDirectory });
     args.push(...prepared.args); inputs.push(...prepared.inputs);
     createDirectories.push(...prepared.createDirectories);
   } else if (type.id === 'grant-workspace') {
@@ -343,6 +386,11 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
   } else if (type.id === 'n8n-merchant') {
     const original = await prepareN8nApplication(settings, inputPath, runtimeDirectory);
+    args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'oai-repository') {
+    const original = await prepareOaiApplication(settings, {
+      inputPath, selectedExecutable, runtimeDirectory, applicationEnvironment,
+    });
     args.push(...original.args); inputs.push(...original.inputs);
   } else if (type.id === 'rss-atom') {
     const original = await prepareRssAtomApplication(settings, {
@@ -504,10 +552,11 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
 function resourceKey(type, settings) {
   if (type.python) return pythonApplicationResource(type, settings);
   if (type.id === 'arcgis-agent') return hash({ family: 'merchant-mcp', directory: settings.configurationFile });
+  if (type.id === 'duckdb-agent') return hash({ family: 'native-mcp', directory: settings.nativeDirectory });
   const value = settings.outputParent ?? settings.workspaceDirectory ?? settings.directory ??
     settings.outputDirectory ?? settings.stateDirectory ?? settings.datasetFile;
-  // Feeds and XML retain the same original SQLite workspace and writer.
-  const family = type.id === 'rss-atom' ? 'xml' : type.id.endsWith('-publisher') ? 'publisher' : type.id;
+  // Feeds, repository metadata and XML retain the same original SQLite workspace and writer.
+  const family = ['rss-atom', 'oai-repository'].includes(type.id) ? 'xml' : type.id.endsWith('-publisher') ? 'publisher' : type.id;
   return hash({ family, directory: value });
 }
 async function application(root, id) {

@@ -6,7 +6,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { runRemote } from '../remote.mjs';
 import { openS3Store } from '../remote-s3.mjs';
 import { inspectLocalCapture, readCapturedBundle, runLocalCapture, runLocalVerification,
-  RETIRED_CAPTURE_PREFIX } from './local.mjs';
+  inspectLocalPublisherRestore, runLocalPublisherPreparation, RETIRED_CAPTURE_PREFIX } from './local.mjs';
 import { acquireDeliveryLease } from '../../sf98-merchant-delivery/delivery-lock.mjs';
 
 export const HOST_SCHEMA = 'stellar-forge.recovery-workspace.v1';
@@ -22,7 +22,7 @@ const stamp = () => new Date().toISOString();
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const clone = value => JSON.parse(JSON.stringify(value));
-const localCommand = command => command === 'snapshot' || command === 'local-verify';
+const localCommand = command => ['snapshot', 'local-verify', 'publisher-prepare'].includes(command);
 const inside = (parent, child) => parent === child || child.startsWith(parent + sep);
 
 function need(ok, code, message = code, status = 400) {
@@ -271,6 +271,33 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
     return profile.bundleRoots.some(root => path !== root.directory && inside(root.directory, path)) ||
       path !== profile.downloadRoot && inside(profile.downloadRoot, path);
   }
+  async function publisherRestoreSource(profile, restoreId) {
+    identifier(restoreId, 'completed restore operation ID');
+    const original = await operation(profile.id, restoreId);
+    need(original.command === 'restore' && original.status === 'COMPLETE' &&
+      HEX.test(original.snapshotId ?? ''), 'WORKSPACE_PUBLISHER_COMPLETE_RESTORE_REQUIRED',
+      'Select a completed original cold restore of the typed dataset publisher');
+    absolute(original.bundle, 'Original encrypted bundle');
+    absolute(original.destination, 'Completed cold restore');
+    need(allowedBundle(profile, original.bundle) && original.destination !== profile.restoreRoot &&
+      inside(profile.restoreRoot, original.destination), 'WORKSPACE_PUBLISHER_RESTORE_OUTSIDE_HOST_ROOTS');
+    need(!inside(original.bundle, original.destination) && !inside(original.destination, original.bundle),
+      'WORKSPACE_PUBLISHER_RESTORE_OVERLAP');
+    for (const path of [original.bundle, original.destination]) {
+      for (const control of [directory, ...host.profiles.map(item => item.operations)])
+        need(!inside(control, path) && !inside(path, control), 'WORKSPACE_OPERATION_PATH_OVERLAP');
+      await privateDirectory(path);
+    }
+    need(hash(await privateBytes(join(original.bundle, 'manifest.json'), MAX_MANIFEST)) === original.snapshotId,
+      'WORKSPACE_ORIGINAL_SNAPSHOT_CHANGED');
+    return original;
+  }
+  async function publisherRestoreBinding(profile, review) {
+    const original = await publisherRestoreSource(profile, review.options.sourceRestoreId);
+    need(original.snapshotId === review.options.snapshotId && original.bundle === review.options.bundle &&
+      original.destination === review.options.out, 'WORKSPACE_PUBLISHER_RESTORE_SELECTION_CHANGED');
+    return original;
+  }
   function captureIdentity(profileId, id) {
     return hash(STATE_SCHEMA + '\n' + workspaceState.id + '\n' + directory + '\n' + profileId + '\n' + id);
   }
@@ -285,6 +312,17 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
         options.plan === plan.planFile && dirname(options.out) === root.directory &&
         options.captureId === captureIdentity(profile.id, review.operationId) &&
         HEX.test(options.expectedPlanSha256 ?? ''), 'WORKSPACE_CAPTURE_SELECTION_CHANGED');
+    } else if (review.command === 'publisher-prepare') {
+      identifier(options.sourceRestoreId, 'completed restore operation ID');
+      need(allowedBundle(profile, options.bundle) && options.out !== profile.restoreRoot &&
+        inside(profile.restoreRoot, options.out) &&
+        HEX.test(options.snapshotId ?? '') && options.snapshotId === review.snapshotId &&
+        HEX.test(options.expectedReviewSha256 ?? '') && HEX.test(options.publisherOperationId ?? '') &&
+        options.expectedReviewSha256 === review.restoredPublisher?.reviewSha256 &&
+        options.publisherOperationId === review.restoredPublisher?.operationId &&
+        options.bundle === review.restoredPublisher?.bundleDirectory &&
+        options.out === review.restoredPublisher?.restoreDirectory,
+        'WORKSPACE_PUBLISHER_RESTORE_SELECTION_CHANGED');
     } else {
       need(review.command === 'local-verify' && allowedBundle(profile, options.bundle) &&
         HEX.test(options.snapshotId ?? '') && options.snapshotId === review.snapshotId,
@@ -305,7 +343,8 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
       'WORKSPACE_OPERATION_ID_USED', 'Select a new local operation ID; this ID already belongs to an original transfer');
     let review;
     if (input.action === 'snapshot') {
-      need(input.bundleId === undefined && input.snapshotId === undefined && input.quiesced === true,
+      need(input.bundleId === undefined && input.snapshotId === undefined && input.restoreId === undefined &&
+        input.quiesced === true,
         'WORKSPACE_CAPTURE_QUIESCENCE_REQUIRED',
         'Confirm that every declared source producer is quiesced before reviewing its capture');
       const capturePlan = profile.capturePlans.find(item => item.id === input.capturePlanId);
@@ -330,8 +369,23 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
         options: { command: 'snapshot', id: input.id, plan: capturePlan.planFile, out,
           passEnv: profile.passEnv, captureId, expectedPlanSha256: plan.planSha256,
           captureKind: plan.captureKind } };
-    } else {
+    } else if (input.action === 'publisher-prepare') {
       need(input.capturePlanId === undefined && input.quiesced === undefined &&
+        input.snapshotId === undefined && input.destinationName === undefined && input.bundleId === undefined,
+        'WORKSPACE_PUBLISHER_RESTORE_SELECTION_INVALID');
+      const original = await publisherRestoreSource(profile, input.restoreId);
+      const selected = { command: 'publisher-prepare', id: input.id, sourceRestoreId: input.restoreId,
+        bundle: original.bundle, out: original.destination, passEnv: profile.passEnv,
+        snapshotId: original.snapshotId };
+      const restoredPublisher = await inspectLocalPublisherRestore(selected);
+      review = { profileId: profile.id, command: 'publisher-prepare', operationId: input.id,
+        store: null, snapshotId: original.snapshotId, source: original.bundle, destination: original.destination,
+        originalStatus: restoredPublisher.status === 'RESTORED_PUBLISHER_PREPARED' ? 'COMPLETE' : restoredPublisher.status,
+        files: original.files ?? null, plainBytes: original.plainBytes ?? null, restoredPublisher,
+        options: { ...selected, expectedReviewSha256: restoredPublisher.reviewSha256,
+          publisherOperationId: restoredPublisher.operationId } };
+    } else {
+      need(input.capturePlanId === undefined && input.quiesced === undefined && input.restoreId === undefined &&
         input.snapshotId === undefined && input.destinationName === undefined,
         'WORKSPACE_LOCAL_VERIFICATION_SELECTION_INVALID');
       const bundle = await bundleAt(profile, input.bundleId);
@@ -346,13 +400,15 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
   }
   async function selection(input) {
     exact(input, ['profileId', 'action', 'id', 'bundleId', 'snapshotId', 'destinationName',
-      'capturePlanId', 'quiesced'], 'recovery selection');
+      'capturePlanId', 'quiesced', 'restoreId'], 'recovery selection');
     const profile = selectedProfile(input.profileId);
     identifier(input.id, 'original operation ID');
-    need(['snapshot', 'verify', 'push', 'pull', 'restore', 'resume'].includes(input.action), 'WORKSPACE_ACTION_INVALID');
+    need(['snapshot', 'verify', 'publisher-prepare', 'push', 'pull', 'restore', 'resume'].includes(input.action),
+      'WORKSPACE_ACTION_INVALID');
     await currentHost();
-    if (input.action === 'snapshot' || input.action === 'verify') return localSelection(profile, input);
-    need(input.capturePlanId === undefined && input.quiesced === undefined, 'WORKSPACE_TRANSFER_SELECTION_INVALID');
+    if (['snapshot', 'verify', 'publisher-prepare'].includes(input.action)) return localSelection(profile, input);
+    need(input.capturePlanId === undefined && input.quiesced === undefined && input.restoreId === undefined,
+      'WORKSPACE_TRANSFER_SELECTION_INVALID');
     let options = { command: input.action, config: profile.storeConfig, operations: profile.operations,
       id: input.id, passEnv: profile.passEnv };
     let local = null, original = null;
@@ -432,9 +488,9 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
     }
     const running = active?.key === requestPath(request.review.profileId, request.review.operationId);
     const local = request.local ? clone(request.local) : null;
-    if (local?.paidJobsPlan) {
-      const { schema, planSha256, bytes } = local.paidJobsPlan;
-      local.paidJobsPlan = { schema, planSha256, bytes };
+    for (const key of ['paidJobsPlan', 'datasetPublisherPlan']) if (local?.[key]) {
+      const { schema, planSha256, bytes } = local[key];
+      local[key] = { schema, planSha256, bytes };
     }
     return { profileId: request.review.profileId, operationId: request.review.operationId,
       review: clone(request.review), createdAt: request.createdAt, updatedAt: request.updatedAt,
@@ -472,12 +528,14 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
       let result;
       if (local) {
         localPathBindings(profile, request.review);
+        if (request.review.command === 'publisher-prepare') await publisherRestoreBinding(profile, request.review);
         request.local ??= {};
         const localOptions = { options: request.review.options, state: request.local,
           save: async () => { request.updatedAt = stamp(); await atomicJSON(job.key, request); },
           cancelled: () => job.cancelRequested };
         result = request.review.command === 'snapshot' ?
           await runLocalCapture({ ...localOptions, allowCapture: job.allowCapture === true }) :
+          request.review.command === 'publisher-prepare' ? await runLocalPublisherPreparation(localOptions) :
           await runLocalVerification(localOptions);
       } else {
         if (request.review.command === 'push') need(
@@ -544,6 +602,7 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
     if (localCommand(request.review.command)) {
       localPathBindings(profile, request.review);
       if (request.result?.status === 'COMPLETE') return requestView(request);
+      if (request.review.command === 'publisher-prepare') await publisherRestoreBinding(profile, request.review);
       if (request.review.command === 'snapshot') need(!request.local?.pendingRetirement &&
         await readCapturedBundle(request.review.options), 'WORKSPACE_CAPTURE_REVIEW_REQUIRED',
         'Review the same capture and confirm that its original source producers are quiesced', 409);
