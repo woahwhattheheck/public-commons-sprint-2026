@@ -154,8 +154,10 @@ the `ckan-agent` command alongside the existing `ckan`,
 
 ### Applications provider contract
 
-The original adapter is
-`distribution/runtime-workspace/application-ckan.mjs`.
+The `ckan` contribution declares `applicationProviders.ckan` as
+`sf30-seller-sdk/ckan/application-provider.mjs`. That source-owned adapter uses
+`distribution/runtime-workspace/application-ckan.mjs` for its original native
+preparation and startup contracts.
 
 | Export | Contract |
 | --- | --- |

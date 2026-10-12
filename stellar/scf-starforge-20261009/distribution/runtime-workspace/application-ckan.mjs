@@ -2,7 +2,9 @@
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { inspectMerchantRuntime } from '../../sf46-release/runtime-package.mjs';
-import { absolute, need, plain, hash } from './storage.mjs';
+import { absolute, need, plain, digest, json, canonical } from './storage.mjs';
+
+const hash = value => digest(json(canonical(value)));
 
 const ROOT = 'stellar-forge/mcp-merchant-operator/';
 const STARTUP = 'stellar-forge.ckan-agent-startup.v1';

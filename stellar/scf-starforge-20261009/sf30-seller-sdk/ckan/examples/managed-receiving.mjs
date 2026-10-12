@@ -4,6 +4,7 @@ import { mkdir, writeFile, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import { MCP_VERSION } from '../../../../../stellar-forge/mcp-paid-agent/http-tools.mjs';
 import { startCkanAgentWorkspace, prepareCkanManagedSelection } from '../../../../../stellar-forge/mcp-merchant-operator/ckan-workspace-launcher.mjs';
 
 const hash = value => createHash('sha256').update(value).digest('hex');
@@ -47,11 +48,12 @@ export async function receiveCkanManagedWorkspace({
   let rpcId = 0;
   async function rpc(method, params) {
     const response = await fetch(application.startup.mcpUrl, {
-      method: 'POST', headers: { authorization: 'Bearer ' + environment[tokenEnv], 'content-type': 'application/json' },
+      method: 'POST', headers: { authorization: 'Bearer ' + environment[tokenEnv], 'content-type': 'application/json',
+        accept: 'application/json, text/event-stream', 'mcp-protocol-version': MCP_VERSION },
       body: JSON.stringify({ jsonrpc: '2.0', id: ++rpcId, method, params }),
       redirect: 'error', signal: AbortSignal.timeout(30000),
     });
-    need(response.status === 200, 'Original merchant MCP transport did not answer.');
+    need(response.status === 200, 'Original merchant MCP transport returned HTTP ' + response.status + '.');
     const value = await response.json();
     need(!value.error, 'Original merchant MCP returned an error: ' + JSON.stringify(value.error));
     return value.result;
@@ -73,6 +75,9 @@ export async function receiveCkanManagedWorkspace({
       instanceId: first.instanceId, pid: first.pid, project: selection.binding.project, identifiers,
       listener: await browser('/api/launch'),
     });
+    const initialized = await rpc('initialize', { protocolVersion: MCP_VERSION, capabilities: {},
+      clientInfo: { name: 'ckan-managed-receiving', version: '1.0.0' } });
+    need(initialized.protocolVersion === MCP_VERSION, 'The original merchant MCP protocol changed.');
     const tools = await rpc('tools/list', {});
     const ckan = tools.tools.filter(tool => tool.name.startsWith('merchant_ckan_'));
     need(ckan.some(tool => tool.name === 'merchant_ckan_source_semantics'), 'The native CKAN semantic tool is missing.');
