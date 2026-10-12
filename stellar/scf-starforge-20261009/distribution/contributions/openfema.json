@@ -49,6 +49,8 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/MCP.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/MANAGED.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/mcp-client.d.mts",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/RECORDED_SOURCE.md"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/RECORDED_SOURCE.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/SOURCE_CONTRACT.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/source-contract.json"
   ]
 }
