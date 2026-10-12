@@ -16,6 +16,7 @@ Read the existing workspace:
   status
   list [--offset N --limit N --snapshot SHA256]
   metadata --id DOSSIER [--revision N]
+  source --id DOSSIER --edition EDITION --key ORIGINAL_KEY [--revision N]
   section --id DOSSIER --section questions|editions|selections|findings|sources|revisions
           [--revision N --offset N --limit N --question ID --query TEXT --selected true|false]
   compare --id DOSSIER --before N --after N [--section overview|added|removed|changed|questions|editions|availability|findings-added|findings-removed|findings-changed --offset N --limit N]
@@ -61,7 +62,9 @@ Operate the saved original Crossref acquisition:
 Retain and reopen complete original files:
   export --id DOSSIER --format json|json.gz|md|html --out NEW_FILE
   export-crossref --id DOSSIER --operation ID --out NEW_FILE
-  export-edition --id DOSSIER --edition ID --out NEW_FILE
+  export-edition --id DOSSIER --edition ID --out NEW_FILE [--revision N --sha256 SHA256]
+  export-source --id DOSSIER --edition ID --key ORIGINAL_KEY --part content|record --out NEW_FILE [--revision N --sha256 SHA256]
+  export-source-file --id DOSSIER --edition ID --key ORIGINAL_KEY --name ORIGINAL_NAME --sha256 SHA256 --out NEW_FILE [--revision N]
   export-compare --id DOSSIER --before N --after N --out NEW_FILE
   reopen --source-file PORTABLE_JSON_OR_GZIP --sha256 SHA256
 
@@ -69,6 +72,11 @@ Mutation JSON uses the original fields, including expectedRevision. Crossref
 preparation keeps requestId, questionId and the reviewed expectedRevision;
 receive keeps expectedRevision, expectedPlanSha256 and expectedEditionSha256.
 Page zero returns the revision or snapshot required by subsequent pages.
+Source and comparison pages contain compact previews and complete descriptive metadata.
+Use a citation's editionId/key to inspect one original occurrence; a file also
+keeps its original member name and SHA256. Downloads preserve the selected
+revision and never overwrite an existing destination. Content/record exports
+are declared text/JSON representations; export-edition keeps the original response bytes.
 A lost write reply is reconciled through that same dossier/operation.
 The private startup file is reread on every call. Closing this client leaves
 the original Applications listener and saved acquisitions with their owner.
@@ -76,6 +84,7 @@ the original Applications listener and saved acquisitions with their owner.
 
 const commandOptions=Object.freeze({
   status:[],list:['offset','limit','snapshot'],metadata:['id','revision'],
+  source:['id','edition','key','revision'],
   section:['id','section','revision','offset','limit','question','query','selected'],
   create:['input'],update:['id','input'],'question-add':['id','input'],
   'question-update':['id','question','input'],evidence:['id','input'],selection:['id','input'],
@@ -92,8 +101,10 @@ const commandOptions=Object.freeze({
   'crossref-review':['id','operation','section','offset','limit'],
   'crossref-start':['id','operation','plan-sha256'],'crossref-stop':['id','operation'],
   'crossref-receive':['id','operation','input'],
-  export:['id','format','out'],'export-crossref':['id','operation','out'],
-  'export-edition':['id','edition','out'],'export-compare':['id','before','after','out'],
+  export:['id','format','out','sha256'],'export-crossref':['id','operation','out','sha256'],
+  'export-edition':['id','edition','out','revision','sha256'],'export-compare':['id','before','after','out','sha256'],
+  'export-source':['id','edition','key','part','out','revision','sha256'],
+  'export-source-file':['id','edition','key','name','out','revision','sha256'],
   reopen:['source-file','sha256'],
 });
 const compact=value=>value?.dossier?{...value,dossier:researchSummary(value.dossier)}:value;
@@ -119,10 +130,14 @@ export async function main(argv=process.argv.slice(2),{output=process.stdout}={}
   try{
     const status=await client.status();let result;
     const page=selected({offset:number('offset'),limit:number('limit')});
+    const exportOptions=()=>({file:resolve(required('out')),
+      ...selected({expectedSha256:values.sha256===undefined?undefined:digest('sha256')})});
     switch(command){
       case 'status':result=status;break;
       case 'list':result=await client.list({...page,...selected({snapshot:values.snapshot})});break;
       case 'metadata':result=await client.metadata(required('id'),selected({revision:number('revision')}));break;
+      case 'source':result=await client.source(required('id'),{editionId:required('edition'),key:required('key'),
+        ...selected({revision:number('revision')})});break;
       case 'section':{
         need(values.selected===undefined||['true','false'].includes(values.selected),'SELECTION_REQUIRED');
         result=await client.section(required('id'),{...page,...selected({section:required('section'),revision:number('revision'),
@@ -175,10 +190,15 @@ export async function main(argv=process.argv.slice(2),{output=process.stdout}={}
       case 'crossref-start':result=await client.startCrossref(required('id'),required('operation'),{expectedPlanSha256:digest('plan-sha256')});break;
       case 'crossref-stop':result=await client.stopCrossref(required('id'),required('operation'));break;
       case 'crossref-receive':result=await client.receiveCrossref(required('id'),required('operation'),await input());break;
-      case 'export':result=await client.exportDossier(required('id'),{format:values.format??'json.gz',file:resolve(required('out'))});break;
-      case 'export-crossref':result=await client.exportCrossrefEdition(required('id'),required('operation'),{file:resolve(required('out'))});break;
-      case 'export-edition':result=await client.exportRetainedEdition(required('id'),required('edition'),{file:resolve(required('out'))});break;
-      case 'export-compare':result=await client.exportComparison(required('id'),{before:number('before'),after:number('after'),file:resolve(required('out'))});break;
+      case 'export':result=await client.exportDossier(required('id'),{format:values.format??'json.gz',...exportOptions()});break;
+      case 'export-crossref':result=await client.exportCrossrefEdition(required('id'),required('operation'),exportOptions());break;
+      case 'export-edition':result=await client.exportRetainedEdition(required('id'),required('edition'),{
+        ...exportOptions(),...selected({revision:number('revision')})});break;
+      case 'export-compare':result=await client.exportComparison(required('id'),{before:number('before'),after:number('after'),...exportOptions()});break;
+      case 'export-source':result=await client.exportSource(required('id'),{editionId:required('edition'),key:required('key'),
+        part:values.part??'content',...selected({revision:number('revision')}),...exportOptions()});break;
+      case 'export-source-file':result=await client.exportSourceFile(required('id'),{editionId:required('edition'),key:required('key'),
+        name:required('name'),...selected({revision:number('revision')}),...exportOptions(),expectedSha256:digest('sha256')});break;
       case 'reopen':result=await client.reopenFile(resolve(required('source-file')),{expectedSha256:digest('sha256')});break;
     }
     const value=compact(result);output.write(JSON.stringify(value,null,2)+'\n');return value;

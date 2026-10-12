@@ -4,6 +4,7 @@ import {createUnstructuredPanel} from './unstructured.js';
 import {createUnstructuredPipelinesPanel} from './unstructured-pipelines.js';
 import {createClinicalTrialsPanel} from './clinical-trials.js';
 import {createSourceBundlePanel,renderSourceBundleFiles} from './source-bundles.js';
+import {renderInspectedSource,renderOriginalRecordControl} from './source-inspection.js';
 'use strict';
 (() => {
   const $ = id => document.getElementById(id);
@@ -97,7 +98,9 @@ import {createSourceBundlePanel,renderSourceBundleFiles} from './source-bundles.
     sourceBundlePanel.updateBusy();
   }
   async function api(path, {method = 'GET', body, file, download = false} = {}) {
-    const response = await fetch(path, {method, headers: {Authorization: 'Bearer ' + state.token,
+    const requestUrl=new URL(path,location.origin);
+    if(!download&&requestUrl.pathname.startsWith('/api/'))requestUrl.searchParams.set('sourceProjection','inspection');
+    const response = await fetch(requestUrl, {method, headers: {Authorization: 'Bearer ' + state.token,
       ...(file ? {'Content-Type': 'application/octet-stream'} : body === undefined ? {} : {'Content-Type': 'application/json'})},
       ...(file ? {body: file} : body === undefined ? {} : {body: JSON.stringify(body)}), credentials: 'omit', cache: 'no-store'});
     if (!response.ok) {
@@ -302,7 +305,8 @@ import {createSourceBundlePanel,renderSourceBundleFiles} from './source-bundles.
     $('detail-classification').value = source.classification || 'unreviewed';
     const variants = asArray(source.variants);
     $('detail-variant').hidden = variants.length < 2;
-    const newest = variants.find(variant => text(variant.content) === text(source.content)) || variants.at(-1);
+    const newest = variants.find(variant => source.inspection?
+      variant.contentDigest===source.inspection.contentDigest:text(variant.content)===text(source.content)) || variants.at(-1);
     const chosen = variants.find(variant => variant.contentDigest === state.variantDigest) || newest;
     state.variantDigest = chosen?.contentDigest || null;
     $('detail-variant').replaceChildren(...variants.map(variant => {
@@ -320,6 +324,7 @@ import {createSourceBundlePanel,renderSourceBundleFiles} from './source-bundles.
       if (edition?.capturedAt || citation.capturedAt) item.append(node('div', date(edition?.capturedAt || citation.capturedAt, true)));
       if (citation.citation) item.append(node('div', text(citation.citation)));
       if (citation.references) item.append(node('div', 'Reference: ' + text(citation.references)));
+      renderOriginalRecordControl({root:item,citation,dossierId:state.dossier.id,revision:state.dossier.revision,api,task,notify});
       if (citation.original !== undefined && citation.original !== null) {
         const original = node('details', null, 'original-record');
         original.append(node('summary', 'Original result record'));
@@ -335,6 +340,8 @@ import {createSourceBundlePanel,renderSourceBundleFiles} from './source-bundles.
     renderNoteState();
   }
   function renderExcerpt(source, variant) {
+    if(renderInspectedSource({filesRoot:$('detail-bundle-files'),excerpt:$('detail-excerpt'),source,variant,
+      dossierId:state.dossier.id,revision:state.dossier.revision,api,task,notify}))return;
     const content = variant?.content ?? source.content ?? source.abstract ?? source.description ?? source.snippet;
     const bundle=renderSourceBundleFiles($('detail-bundle-files'),content);
     $('detail-excerpt').hidden=bundle;if(bundle)return;
