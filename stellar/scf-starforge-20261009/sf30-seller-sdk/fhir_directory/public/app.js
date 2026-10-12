@@ -22,7 +22,7 @@ const status=text=>{$("#activity").textContent=text;S.activity.unshift({at:new D
 function setDirty(value){S.dirty=!!value;$("#draft-state").textContent=S.busy?"Working":S.dirty?"Unsaved draft":"Ready";$("#draft-state").className="badge"+(S.dirty?" warn":"");}
 function setBusy(value,text){S.busy=value;setDirty(S.dirty);document.querySelectorAll("button[data-write]").forEach(b=>b.disabled=value);if(text)status(text);}
 function okToLeave(){return !S.busy&&(!S.dirty||confirm("Keep the current draft in this workspace and leave this section?"));}
-window.addEventListener("beforeunload",e=>{if(S.busy||S.dirty){e.preventDefault();e.returnValue="";}});
+window.addEventListener("beforeunload",e=>{captureDraft();if(S.busy||S.dirty){e.preventDefault();e.returnValue="";}});
 async function api(path,{method="GET",body,headers={},signal}={}){
  const init={method,headers:{Authorization:"Bearer "+token,...headers},signal};
  if(body!==undefined){if(body instanceof Blob||body instanceof ArrayBuffer||ArrayBuffer.isView(body))init.body=body;else{init.body=JSON.stringify(body);init.headers["Content-Type"]="application/json";}}
@@ -63,7 +63,8 @@ $("#actor").value=sessionStorage.getItem("directory.actor")||"";$("#actor").onch
 function updateNav(){const counts={intake:"sources",acquisition:"acquisitions",editions:"editions",comparisons:"comparisons",mappings:"mappings",services:"selections",referrals:"referralJoins",handoff:"handoffs",receiving:"receives"};$("#navigation").replaceChildren(...sections.map(([id,label])=>el("button",{type:"button","aria-current":S.section===id?"page":undefined,"data-nav":id,onclick:()=>navigate(id)},[el("span",{text:label}),el("span",{class:"nav-count",text:counts[id]?(dir().collections?.[counts[id]]?.total||0):""})])));}
 async function navigate(section){if(!okToLeave())return;captureDraft();S.dirty=false;history.replaceState(null,"",location.pathname+location.search+"#/"+section);await render(section);}
 function readDraft(editor){S.readingDraft=true;try{return editor.read();}finally{S.readingDraft=false;}}
-function captureDraft(){if(S.editor){try{S.drafts[S.editor.key]=readDraft(S.editor);sessionStorage.setItem("directory.draft."+dir().workspaceId+"."+S.editor.key,j(S.drafts[S.editor.key]));}catch{}}}
+function persistDraft(key,input){S.drafts[key]=clone(input);sessionStorage.setItem("directory.draft."+dir().workspaceId+"."+key,j(input));return input;}
+function captureDraft(){if(S.editor){try{persistDraft(S.editor.key,readDraft(S.editor));}catch{}}}
 function loadDraft(key,fallback){if(S.drafts[key])return clone(S.drafts[key]);try{const v=sessionStorage.getItem("directory.draft."+dir().workspaceId+"."+key);if(v)return JSON.parse(v);}catch{}return clone(fallback||{});}
 function collectionFor(name,path=""){const native=["referralEditionId","configurationId"].includes(name);const kinds={editionId:"editions",beforeEditionId:"editions",afterEditionId:"editions",sourceId:"sources",sourceIds:"sources",mappingId:"mappings",previewId:"mappingPreviews",conversionId:"sourceConversions",selectionId:"selections",referralJoinId:"referralJoins",handoffId:"handoffs",connectionId:"connections",discoveryId:"discoveries",requestId:"requests",importProfileId:"importProfiles",referralEditionId:"editions",configurationId:"configurations"};return kinds[name]?{kind:kinds[name],native}:null;}
 function recordOptions(binding){return binding.native?(S.state?.referral?.[binding.kind]||[]):(dir()[binding.kind]||[]);}
@@ -71,11 +72,11 @@ async function browseRecords(binding,onPick,title){const box=el("div"),query=el(
 function pager(p,go){const previous=Math.max(0,(p.offset||0)-(p.limit||50));return el("div",{class:"pager"},[el("span",{text:p.total===undefined?"Complete returned records":((p.offset||0)+1)+"–"+((p.offset||0)+rowsOf(p).length)+" of "+p.total}),el("div",{class:"actions"},[el("button",{type:"button",text:"Previous",disabled:!(p.offset>0),onclick:()=>go(previous).catch(showError)}),el("button",{type:"button",text:"Next",disabled:p.nextOffset===null||p.nextOffset===undefined,onclick:()=>go(p.nextOffset).catch(showError)})])]);}
 function defaultValue(spec){if(spec.default!==undefined)return clone(spec.default);if(spec.anyOf)spec=spec.anyOf.find(x=>x.type!=="null")||spec.anyOf[0];if(spec.type==="object")return{};if(spec.type==="array")return[];if(spec.type==="boolean")return false;return"";}
 function schemaField(raw,value,name,path,{required=false}={}){
- let spec=raw;if(spec.anyOf)spec=spec.anyOf.find(x=>x.type!=="null")||spec.anyOf[0];
+ let spec=raw;const nullable=raw.type==="null"||!!raw.anyOf?.some(x=>x.type==="null");if(spec.anyOf)spec=spec.anyOf.find(x=>x.type!=="null")||spec.anyOf[0];
  const wrapper=el("div",{class:"form-field"+(["object","array"].includes(spec.type)?" full":"")+(!required?" optional":"")});
- const control=el("div",{class:"control"}),label=el("label",{text:human(name)}),enabled=required||value!==undefined&&value!==null;
+ const control=el("div",{class:"control"}),label=el("label",{text:human(name)}),enabled=required||value!==undefined;
  let toggle;if(!required){toggle=el("input",{type:"checkbox",checked:enabled,"aria-label":"Include "+human(name),"data-include":path,onchange:()=>{wrapper.classList.toggle("disabled",!toggle.checked);setDirty(true);}});label.append(el("span",{class:"optional-toggle"},[toggle,"Include"]));wrapper.classList.toggle("disabled",!enabled);}else label.append(el("span",{class:"required",text:"*"}));
- wrapper.append(label,control);let read;
+ wrapper.append(label);let nullToggle;if(nullable){nullToggle=el("input",{type:"checkbox",checked:value===null,"aria-label":"Use JSON null for "+human(name),"data-null":path,onchange:()=>{control.hidden=nullToggle.checked;setDirty(true);}});wrapper.append(el("label",{class:"optional-toggle"},[nullToggle,"Use JSON null"]));control.hidden=nullToggle.checked;}wrapper.append(control);let read;
  if(spec.type==="object"&&spec.properties){
   const object=el("fieldset",{class:"field-object form-grid"}),children={};value=value&&typeof value==="object"?value:{};
   for(const[k,s]of Object.entries(spec.properties)){const c=schemaField(s,value[k],k,path+"."+k,{required:(spec.required||[]).includes(k)});children[k]=c;object.append(c.root);}
@@ -103,7 +104,7 @@ function schemaField(raw,value,name,path,{required=false}={}){
  }
  if(spec.description)wrapper.append(el("small",{class:"help",text:spec.description}));
  wrapper.addEventListener("input",()=>setDirty(true));wrapper.addEventListener("change",()=>setDirty(true));
- return {root:wrapper,read:()=>!required&&!toggle.checked?undefined:read()};
+ return {root:wrapper,read:()=>!required&&!toggle.checked?undefined:nullToggle?.checked?null:read()};
 }
 function filtered(value,spec){return Object.fromEntries(Object.keys(spec.properties||{}).filter(k=>value[k]!==undefined).map(k=>[k,clone(value[k])]));}
 function formEditor({key,title,spec,value,path,method="POST",submitText="Save reviewed record",onSubmit,after,extra=[]}){
@@ -113,7 +114,7 @@ function formEditor({key,title,spec,value,path,method="POST",submitText="Save re
  const read=()=>Object.fromEntries(Object.entries(children).map(([k,c])=>[k,c.read()]).filter(([,v])=>v!==undefined));
  mount(initial);
  const draftFile=el("input",{type:"file",accept:".json,application/json","data-testid":key+"-draft-file",class:"visually-hidden",onchange:async()=>{try{if(draftFile.files[0]){const v=JSON.parse(await draftFile.files[0].text());mount(v.input||v);setDirty(true);msg("Complete draft loaded for review");}}catch(e){showError(e,error);}}});
- const controls=el("div",{class:"draft-tools"},[button("Save draft",()=>{const input=read();S.drafts[key]=input;saveJSON({schema:"stellar-forge.directory-operator-draft.v1",form:key,workspaceId:dir().workspaceId,input},key+"-draft.json");},{kind:"small"}),button("Load draft",()=>draftFile.click(),{kind:"small"}),button("Review complete input",()=>showDialog(title+" — complete input",jsonView(read(),true)),{kind:"small"})]);
+ const controls=el("div",{class:"draft-tools"},[button("Save draft",()=>{const input=persistDraft(key,readDraft({read}));saveJSON({schema:"stellar-forge.directory-operator-draft.v1",form:key,workspaceId:dir().workspaceId,input},key+"-draft.json");},{kind:"small"}),button("Load draft",()=>draftFile.click(),{kind:"small"}),button("Review complete input",()=>showDialog(title+" — complete input",jsonView(read(),true)),{kind:"small"})]);
  const submit=el("button",{type:"submit",class:"primary",text:submitText,"data-testid":key+"-submit","data-write":"true"});
  form.append(fields,error,el("div",{class:"editor-actions"},[controls,submit]),draftFile);
  form.onsubmit=async e=>{e.preventDefault();if(S.busy)return;error.replaceChildren();try{const value=read();if(spec.properties?.actor&&!value.actor?.trim())throw new Error("Record the operating actor before this action");S.drafts[key]=clone(value);sessionStorage.setItem("directory.draft."+dir().workspaceId+"."+key,j(value));setBusy(true,"Saving "+title.toLowerCase());const result=onSubmit?await onSubmit(value):await api(path,{method,body:value});setDirty(false);await refreshState();status(title+" saved · "+short(result.id||result.source?.id||result.operationId||result.workspaceId));showResult(result,box);if(after)await after(result,value);msg("Saved the complete original record");}catch(e){showError(e,error);}finally{setBusy(false);}};
@@ -176,7 +177,7 @@ views.intake=async()=>{
  let savedProfileId=null;
  const editor=formEditor({key:"source-import",title:"Original source profile",spec:src,value:{label:"",format:"hsds-json",origin:"operator_source",scope:"snapshot"},submitText:"Save profile & receive original file",onSubmit:async value=>{
   const input=file.files[0];if(!input)throw new Error("Choose the complete original source file");if(input.size>268435456)throw new Error("Original source intake supports up to 256 MiB");
-  value.filename=input.name;const profile=await api("/api/directory/imports",{method:"POST",body:value});savedProfileId=profile.id;status("Saved import profile "+short(profile.id)+"; receiving complete original bytes");
+  if(value.filename===undefined)value.filename=input.name;const profile=await api("/api/directory/imports",{method:"POST",body:value});savedProfileId=profile.id;status("Saved import profile "+short(profile.id)+"; receiving complete original bytes");
   const result=await api("/api/directory/imports/"+profile.id+"/content",{method:"PUT",body:input,headers:{"Content-Type":"application/octet-stream"}});
   if(result.originalFile?.bytes!==undefined&&result.originalFile.bytes!==input.size)throw new Error("The native source receipt differs from the selected file length");return result;
  },after:r=>{S.selected.source=r.id;}});
