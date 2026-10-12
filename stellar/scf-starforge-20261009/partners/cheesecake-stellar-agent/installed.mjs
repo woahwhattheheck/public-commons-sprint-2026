@@ -69,6 +69,8 @@ export async function installedApplicationPaths() {
 async function selection(config, {requireState = true,managedSourceDirectory} = {}) {
   const paths = await installedApplicationPaths();
   const sourceRoot = resolve(absolute(config.runtimeDirectory),'../../..');
+  need(config.runtimeDirectory === join(sourceRoot,'stellar/scf-starforge-20261009/sf88-operator-buyer-cli'),
+    'APPLICATION_SELECTED_RUNTIME_CHANGED');
   const applicationDirectory = join(sourceRoot,APPLICATION);
   need((managedSourceDirectory === undefined ? paths.applicationDirectory : absolute(managedSourceDirectory)) ===
     applicationDirectory, 'APPLICATION_SELECTED_RUNTIME_CHANGED');
