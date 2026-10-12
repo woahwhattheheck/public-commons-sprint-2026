@@ -153,8 +153,15 @@ async function main(){
   const {values}=parseArgs({options:{
     'existing-run':{type:'string'},directory:{type:'string'},checkout:{type:'string'},
     python:{type:'string',default:'python3'},'operation-id':{type:'string'},
-    'with-workbook':{type:'boolean',default:false}
+    'with-workbook':{type:'boolean',default:false},help:{type:'boolean',short:'h',default:false}
   }});
+  if(values.help){
+    process.stdout.write('Receive an already completed original citation review through Python.\n'+
+      'Usage: research-citation-python-receive --existing-run DIR --directory NEW_DIR --checkout SOURCE\n'+
+      '  --operation-id ORIGINAL_CONTINUATION_ID [--python EXISTING_PYTHON] [--with-workbook]\n'+
+      'Uses the saved review, original listener/readers and Python call history; no provider request is created.\n');
+    return;
+  }
   for(const name of ['existing-run','directory','checkout','operation-id'])
     need(values[name],'PYTHON_CITATION_ARGUMENT_REQUIRED');
   const controller=new AbortController(),stop=()=>controller.abort();
