@@ -600,6 +600,7 @@ class Intake:
             self.issue("RANGE_REQUIRED", "Choose the exact original worksheet and inclusive row/column range")
         if self.role in ("template", "reference"):
             self.issue("REFERENCE_NOT_CUSTODY", "Retained templates/reference documents do not establish inventory admission")
+        self.custody = self.custody_summary()
         custody_input = object_value(self.descriptor.get("custody", {}), "workbook.custody")
         require_acknowledgments = custody_input.get("requireBothAcknowledgments", False)
         if not isinstance(require_acknowledgments, bool):
@@ -709,7 +710,6 @@ class Intake:
             self.issue("NO_ACTUAL_CUSTODY_ROWS", "No actual custody rows have been selected; the received original remains available")
         if includes > 2500:
             self.issue("CUSTODY_CAPACITY", "The original engine accepts at most 2,500 cartons in one reconciliation")
-        self.custody = self.custody_summary()
 
     def summary(self):
         counts = dict(Counter(row["disposition"] for row in self.items))

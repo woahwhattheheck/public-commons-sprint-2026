@@ -83,7 +83,7 @@ Original PDFs, instructions, rate/retention records, custody requests and actual
 }
 ~~~
 
-Kinds are instructions, retention, rate, custody-transfer, custody-receipt, inventory and other. Reference files are not imported as invoice or custody rows merely because they are attached.
+Kinds are instructions, retention-schedule, rate-authority, custody-transfer, custody-receipt, inventory and other. Reference files are not imported as invoice or custody rows merely because they are attached.
 
 ## Review every selected row
 
