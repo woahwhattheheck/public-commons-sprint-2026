@@ -20,6 +20,7 @@ import { geocodioWorkspaceTools } from './catalog/geocodio-workspace.mjs';
 import { webDavWorkspaceTools } from './catalog/webdav-tools.mjs';
 import { edgarWorkspaceTools } from './catalog/sec-edgar-tools.mjs';
 import { sheetsWorkspaceTools } from './catalog/sheets-workspace.mjs';
+import { nocodbWorkspaceTools } from './catalog/nocodb-workspace.mjs';
 import { ckanWorkspaceTools } from './catalog/ckan-workspace.mjs';
 import { tenderlyWorkspaceTools } from './catalog/tenderly-workspace.mjs';
 import { opencageWorkspaceTools } from './catalog/opencage-workspace.mjs';
@@ -27,6 +28,7 @@ import { stellarExpertWorkspaceTools } from './catalog/stellar-expert-workspace.
 import { coingeckoWorkspaceTools } from './catalog/coingecko-workspace.mjs';
 import { redisWorkspaceTools } from './catalog/redis-workspace.mjs';
 import { usaSpendingWorkspaceTools } from './catalog/usaspending-workspace.mjs';
+import { researchWorkspaceTools } from './catalog/research-workspace.mjs';
 import { grantsWorkspaceTools } from './catalog/grantsgov-workspace.mjs';
 import { sourceWorkspaceTools } from './catalog/source-workspace.mjs';
 import { baserowWorkspaceTools } from './catalog/baserow-workspace.mjs';
@@ -80,6 +82,7 @@ const familyTools = {
   webdavWorkspaces: webDavWorkspaceTools(tool),
   edgarWorkspaces: edgarWorkspaceTools(tool),
   sheetsWorkspaces: sheetsWorkspaceTools(tool),
+  nocodbWorkspaces: nocodbWorkspaceTools(tool),
   ckanWorkspaces: ckanWorkspaceTools(tool),
   tenderlyWorkspaces: tenderlyWorkspaceTools(tool),
   opencageWorkspaces: opencageWorkspaceTools(tool),
@@ -87,6 +90,7 @@ const familyTools = {
   coingeckoWorkspaces: coingeckoWorkspaceTools(tool),
   redisWorkspaces: redisWorkspaceTools(tool),
   usaSpendingWorkspaces: usaSpendingWorkspaceTools(tool),
+  researchWorkspaces: researchWorkspaceTools(tool),
   grantsWorkspaces: grantsWorkspaceTools(tool),
   sourceWorkspaces: sourceWorkspaceTools(tool),
   baserowWorkspaces: baserowWorkspaceTools(tool),
@@ -169,6 +173,7 @@ const MERCHANT_TOOLS = [
   ...familyTools.webdavWorkspaces,
   ...familyTools.edgarWorkspaces,
   ...familyTools.sheetsWorkspaces,
+  ...familyTools.nocodbWorkspaces,
   ...familyTools.ckanWorkspaces,
   ...familyTools.tenderlyWorkspaces,
   ...familyTools.opencageWorkspaces,
@@ -176,6 +181,7 @@ const MERCHANT_TOOLS = [
   ...familyTools.coingeckoWorkspaces,
   ...familyTools.redisWorkspaces,
   ...familyTools.usaSpendingWorkspaces,
+  ...familyTools.researchWorkspaces,
   ...familyTools.grantsWorkspaces,
   ...familyTools.sourceWorkspaces,
   ...familyTools.baserowWorkspaces,

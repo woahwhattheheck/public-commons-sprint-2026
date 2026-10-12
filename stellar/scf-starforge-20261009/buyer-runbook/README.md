@@ -12,7 +12,7 @@ interruption. The runbook supplies a local job plan, exact request snapshots,
 serial execution, durable attempt records, original accounting and receipt totals,
 and an offline operator report. It
 imports SF88's original configuration validator and launches its original CLI.
-SF81 terminal approval, SF36 reservations, the original signer, SF82 evidence and
+SF81 native operator approval, SF36 reservations, the original signer, SF82 evidence and
 SF31 response saving continue to own their existing jobs.
 
 The module uses Node.js 22+ built-ins. Actual execution requires the same POSIX
@@ -34,13 +34,24 @@ operator ledgers, including automatic selection for requests received here.
 
 ```sh
 node stellar/scf-starforge-20261009/buyer-runbook/cli.mjs workspace \
-  --state /private/research/workspace --configs /private/research/buyer-configs
+  --state /private/research/workspace --configs /private/research/buyer-configs \
+  --approval-mode browser
 ```
 
-Open the printed loopback URL and keep this process in the operator terminal for
-the original SF81 approval. Existing runs can be registered with `--run` and
-reopened alongside newly initialized acquisitions. See [WORKSPACE.md](WORKSPACE.md)
-for the complete draft, execution, recovery, resource and accounting workflow.
+Open the printed loopback URL. **Purchase approval** shows the selected native
+request, complete accepted terms, exact atomic amount, expiry and original budget
+review. **Approve purchase** continues that exact operation through its original
+reservation and signer; **Reject purchase** records the rejection. Follow the
+original resource, delivery and accounting results in the same acquisition.
+
+The direct workspace command defaults to terminal mode for existing callers.
+Use `--approval-mode terminal` with the original controlling terminal, or select
+`browser` on each browser launch and reopen. The page reports the selected mode
+and its availability separately from terminal availability. Existing runs can be
+registered with `--run` and reopened alongside newly initialized acquisitions.
+See [WORKSPACE.md](WORKSPACE.md) for the complete draft, execution, recovery,
+resource and accounting workflow, and [BROWSER_WORKSPACE.md](BROWSER_WORKSPACE.md)
+for the managed Applications launch and Stop/Reopen contract.
 
 Customers receiving an SF101 paid-file order can use **Receive paid file order**
 in this same workspace. Review the original handoff, prepare the native buyer,
@@ -144,8 +155,10 @@ private operator context.
 
 ## Execute through the original buyer
 
-Run from the operator's controlling terminal with the same existing environment
-used for original SF88:
+For the direct execution command, use the operator's controlling terminal and
+the same existing environment used for original SF88. To review each live
+purchase in the browser, use the workspace's explicit browser mode above:
+
 
 ```sh
 node stellar/scf-starforge-20261009/buyer-runbook/cli.mjs execute \

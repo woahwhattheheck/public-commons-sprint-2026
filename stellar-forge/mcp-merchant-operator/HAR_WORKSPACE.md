@@ -290,6 +290,42 @@ alias. The source library and complete exports survive closure of this MCP
 process. Closing the adapter drains its active calls and temporary reads while
 the externally owned SF61 consoles retain their existing lifetimes.
 
+## Continue the captured merchant into route pricing
+
+A reviewed captured source can use the original OpenAPI route worksheet in the
+same merchant MCP host. Declare a normal SF61 connection with the same
+`consoleUrlFile` or `consoleUrlEnv` selected for each HAR workspace. Pass that
+connection to `initializeHarWorkspaceMerchant` as `openapiWorkspaces`:
+
+~~~js
+await initializeHarWorkspaceMerchant({
+  directory: '/private/merchant-agent',
+  connection: '/private/har-connection.json',
+  openapiWorkspaces: '/private/openapi-connection.json'
+});
+~~~
+
+The original host now registers both HAR and OpenAPI tools. The OpenAPI
+connection uses schema `stellar-forge.sf61-workspace-connection.v1`; its workspace
+entries declare the original private console URL reference, optional source/plan
+files and complete package receiving directories. The HAR connection continues
+to declare its capture, review and native-source handles. Both point at the same
+merchant console and its saved packages.
+
+Call `merchant_openapi_routes` with the existing workspace and the saved package
+as `baseName`. Retain its exact source and plan hashes and `capturedSource`.
+Review the source-bound worksheet, then save its returned
+`expectedReviewSha256` under a new package name. The original HAR compiler
+requires the reviewed route set; change source decisions in the HAR review desk
+when that set needs to change. Price edits preserve complete route settings,
+including authentication, transports, request/response contracts, operation IDs,
+availability and cache policy.
+
+The [complete worksheet workflow](OPENAPI_ROUTE_WORKSHEETS.md) provides the five
+merchant tools, full Node client and CLI. Exported worksheet JSON also opens in
+the original browser's **Import a source-bound worksheet** control. Continue the
+saved package through the existing package receiving and SF82 release workflow.
+
 ## Original receiving operation
 
 The native receiving entry is receiving/har-console-adoption.mjs. It consumes the
@@ -298,8 +334,13 @@ merchant plan. It operates the actual original merchant MCP HTTP factory and bot
 native SF61 consoles, continuing source intake/refresh, immutable decision save,
 merchant package/replay, later immutable review continuation into the same copied
 source, receiving-owned review preservation, receiver adoption, original file
-download/restart and complete package reopening. Source identity and the retained native request
-results are recorded in its output directory.
+download/restart and complete package reopening. It then uses the same received
+HAR merchant in the OpenAPI worksheet: original full inventory and capture
+binding, one deliberately reviewed atomic price change, native save and exact
+save retry, complete source-bound worksheet download, original file reopen and
+full merchant package reopen. The original source, decisions and all other
+merchant settings remain attached to that purchase configuration. Source identity
+and native operation results are recorded in its output directory.
 
 ~~~sh
 node stellar-forge/mcp-merchant-operator/receiving/har-console-adoption.mjs \
@@ -309,3 +350,23 @@ node stellar-forge/mcp-merchant-operator/receiving/har-console-adoption.mjs \
 
 The existing AF825 Muse receiving request owns this continuation and its source
 repairs. Reuse its completed originals and retained result before dispatching.
+
+
+If the original HAR agent phase already completed on an earlier source, continue
+directly from its saved result:
+
+~~~sh
+node stellar-forge/mcp-merchant-operator/receiving/har-console-adoption.mjs \
+  --agent-result /private/completed-har-agent/result.json \
+  --out /private/har-route-worksheet
+~~~
+
+This opens the original received merchant and capture library, performs the
+worksheet continuation and closes its own console and MCP host. It retains the
+original agent result and source files. A result already containing the completed
+worksheet phase reopens that exact merchant and worksheet instead of repeating
+the work. The new `route-worksheet-result.json` identifies the selected HAR
+review, original and changed atomic amount, reviewed plan, saved priced merchant
+and both complete portable worksheets. The priced package is
+`received-merchant-priced`; the earlier `received-merchant` remains available
+for the original receiving continuation.
