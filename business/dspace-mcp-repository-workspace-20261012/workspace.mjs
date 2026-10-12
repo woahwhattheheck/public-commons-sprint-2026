@@ -214,7 +214,7 @@ export class RepositoryWorkspace{
     step.after=applyPatch(step.before,step.args.operations,{root});step.changes=fieldChanges(step.before,step.after,step.args.operations,root);
     for(const change of step.changes){
      if(change.path.split('/').some(part=>part.startsWith('relation.')))fail('GENERATED_METADATA_READ_ONLY','DSpace generates relation.* fields. Edit the original linked entity or relationship workflow.',409);
-     const virtual=entry=>(Array.isArray(entry.value)?entry.value:[]).filter(v=>typeof v?.authority==='string'&&v.authority.startsWith('virtual::')).map(({place,...value})=>value);
+     const virtual=entry=>(Array.isArray(entry.value)?entry.value:[]).filter(v=>typeof v?.authority==='string'&&v.authority.startsWith('virtual::')).map(value=>clone(value));
      if(json(virtual(change.before))!==json(virtual(change.after)))fail('GENERATED_METADATA_READ_ONLY','Generated virtual metadata belongs to its linked entity. Preserve these values and edit the original linked record.',409);
     }
     step.preconditions={root,fields:step.changes.map(c=>({path:c.path,...c.before}))};

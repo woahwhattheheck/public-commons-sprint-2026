@@ -1,11 +1,6 @@
 # DSpace repository workspace — joined API
 
 Maintained source: `business/dspace-mcp-repository-workspace-20261012/`.
-Native root: `/workspace/scratch/f47a89a78f42/4science-repository-workspace`.
-
-Root owns `server.mjs`, `public/index.html`, `public/app.mjs`, `public/style.css`, and `WORKFLOW.md`.
-Revenue_workshare owns `workspace.mjs`, `bridge.mjs`, `store.mjs`, `patch.mjs`, `vendor/`, examples, source and commercial delivery.
-
 ## Original implementation
 
 4Science/dspace-mcp commit `ee503ba97910f592867c897c1fa938f9e029d03c`; actual tree `6386328dd49282b98840b4dd41340b9c8a110b78`. Preserve upstream code and notices in vendor/dspace-mcp. Original source registers 15 tools, including dspace_move_item. It uses AGPL-3.0 notices; original LICENSE is retained.
@@ -20,7 +15,10 @@ const workspace = await openWorkspace({directory, upstreamRoot}); // upstreamRoo
 workspace.state(); // synchronous summary
 workspace.read(kind, id, {offset:0,limit:50}); // synchronous, kind below
 await workspace.dispatch(action, input); // write/capture; see below
-workspace.file(kind, id); // {bytes: Buffer, filename, contentType}
+workspace.file(kind, id); // original record/body/file bytes; legacy gzip handover remains available
+await workspace.exportFile(kind, id); // handoff/backup -> {path,filename,contentType,bytes,temporary:true}
+await workspace.previewFile(receivedPath); // original schema, counts, profiles, file summary, exact SHA/length
+await workspace.restoreFile({actor,operationId,revision,filename,source_sha256},receivedPath);
 await workspace.close();
 ```
 
@@ -34,9 +32,12 @@ Server should bind 127.0.0.1 by default. Generate a session token, insert it int
 - GET /api/records/:kind/:id -> workspace.read(kind,id,pagination)
 - POST /api/actions/:action -> await workspace.dispatch(action,body)
 - GET /api/files/:kind/:id -> workspace.file(kind,id)
-- GET /api/files/handoff/current -> complete portable gzip JSON handover
-- GET /api/files/backup/current -> same complete native workspace export (filename differs)
-- POST /api/actions/restore -> original complete export into an empty workspace only
+- GET /api/files/handoff/current -> streamed complete native SQLite handover
+- GET /api/files/backup/current -> the same complete native workspace backup
+- POST /api/receiving/archive -> stream original archive bytes to an owned receiving file; return its receipt and preview
+- GET /api/receiving/archive/:id -> recover that same receiving preview
+- POST /api/actions/restore-file -> {actor,operationId,revision,filename,receiving_id,source_sha256}; the server resolves the exact receipt path and calls restoreFile
+- POST /api/actions/restore -> legacy gzip JSON/base64 receiving into an empty workspace
 
 Errors thrown by core carry `code`, `status`, optional `current_revision`; expose them as `{error:code,message,current_revision?}`.
 
@@ -62,7 +63,7 @@ State:
 Profiles: `{id,name,base_url,auth_env:{token,user,password},created_at,previous_profile_id,connection}`. Env values absent. Connection includes authenticated, principal:{uuid,email,name}, checked_at, error if any. Profiles are immutable; editing creates a successor; select switches the active pointer.
 
 Capture summaries: `{id,label,profile_id,tool,args,created_at,principal,object_count,request_count,is_error}`.
-Full capture: summary plus `result` (original MCP response), `requests` (method, URL, status, response body, sha256, content type, timestamp; auth redacted), `objects` (native full item/collection/community/workspaceitem records), `assets`.
+Full capture: summary plus `result` (original MCP response), `requests` (method, URL, status, response body, sha256, content type, timestamp; auth redacted), `objects` (native full item/collection/community/workspaceitem records), `assets`. Imported captures also retain complete `source_context` and an exact `source_bundle` hash/length. Unknown source status, headers and per-request timestamps remain null. Explicit provider-extracted native JSON is eligible for object extraction with that source mode retained. File `source-bundles/:capture_id` returns the exact original submitted bundle.
 Read `captures` returns full capture plus paged `rows,total,offset,limit` from objects. Preserve metadata arrays with value/language/authority/confidence/place and all other native fields.
 
 Selections: `{id,name,profile_id,members:[{capture_id,uuid,type,name}],created_at,previous_selection_id}`. Read `selections` adds exact native object to each paged row. UUID is scoped to profile; workspace item numeric IDs remain their own type.
@@ -70,7 +71,7 @@ Selections: `{id,name,profile_id,members:[{capture_id,uuid,type,name}],created_a
 Plans: `{id,name,profile_id,created_at,previous_plan_id,step_count,status,review,latest_execution_id}`.
 Read `plans` adds complete `steps`: `{id,tool,args,source_capture_id,subject_id,before,after,changes,preconditions,asset_id}`. Changes are `{path,before,after}`, retaining original metadata arrays and missing-vs-null meaning. Review is `{actor,decision,note,at}`. Status PREPARED / CHANGES_REQUESTED / APPROVED / RUNNING / APPLIED / PARTIAL / UNCERTAIN / CONFLICT.
 
-Executions: `{id,plan_id,profile_id,principal,status,created_at,updated_at,steps}`. Step status PENDING / RUNNING / APPLIED / RECOVERED / FAILED / UNCERTAIN / CONFLICT. Steps retain original tool/args, native before/after observations, MCP result, requests, error and subject IDs. Read `executions` is full. The original target and principal remain fixed when active profile changes.
+Executions: `{id,plan_id,profile_id,principal,status,created_at,updated_at,steps}`. Step status PENDING / RUNNING / APPLIED / RECOVERED / FAILED / UNCERTAIN / CONFLICT. Steps retain original tool/args, native before/after observations, MCP result, requests, error and subject IDs. Each accepted step also retains result_capture_id for a subsequent native-source review. Read `executions` is full. The original target and principal remain fixed when active profile changes.
 
 Assets: `{id,name,media_type,bytes,sha256,created_at,profile_id?,bitstream_uuid?}`; use file assets/:id for exact bytes. Capture raw download: file captures/:id (JSON). Plan/execution/selection JSON similarly supported.
 
@@ -101,6 +102,8 @@ For metadata plans the frontend may construct exact RFC6902 operations from the 
 `{op:"replace",path:"/metadata/dc.title",value:[{value:"Corrected title",language:"en",authority:null,confidence:-1,place:0}]}`.
 Use add for a previously absent field, remove for explicit deletion. Preserve existing value object properties when editing one property. The engine computes and retains the before/after preview and checks the touched fields at execution.
 
+The backend protects generated relation.* fields and original virtual:: value membership and content, including direct JSON/batch requests. Ordinary dc.relation.* fields are separate. Native comparison accounts for DSpace's default null authority/language, confidence -1, and generated place without losing the saved original values.
+
 Workspace update JSON Pointer paths are actual supplied /sections/<section>/<field> paths; show the native sections before constructing them. The upstream initial metadata helper uses traditionalpageone; the preview retains this exact path.
 
 ### Files and receiving
@@ -112,3 +115,17 @@ Workspace update JSON Pointer paths are actual supplied /sections/<section>/<fie
 ## Native journey
 
 Use the actual pinned upstream server/client and real SDK discovery/calls. Retain source pages from scout's public anonymous sandbox capture. Customer-visible write behavior is exercised only on clearly authorized own demo records; preserve their UUIDs and original record ancestry. One substantive journey covers metadata review/change, native preflight conflict, corrected plan, draft creation/update, file receiving, interrupted-write reconciliation, retained original-target recovery, reversal and complete export/reopen. Source snapshots and illustrative authored demo records remain separately identified.
+
+## Original handler lifetime and complete receiving
+
+The actual upstream callback runs inside one fixed source observer and remains attached to its original operation until it finishes. An MCP client timeout does not release or reassign that observer. The adapter drains the original callback before reuse and records any recovered callback completion. HTTP response bytes are counted as they arrive and cancellation enforces the receiving limit even without Content-Length.
+
+Native file, bundle, and draft inventories follow all original HAL pages, retaining each response and validating totals, page numbers and identities. Upload recovery uses the complete immediate pre-dispatch inventory, original successful POST identity where present, original target bundle and exact file bytes. A write followed by server error or lost response remains reconcilable against that same original operation.
+
+The default browser and command-line archive is a native SQLite backup. Export and upload stream through files, avoiding base64 and whole-archive JS buffers. Preview validates the original three-table schema, database integrity, record identities and every source/file digest. Adoption copies original compressed rows and summaries transactionally into an empty workspace. Its original source_sha256 binds the operation identity. A completed receive replays without the temporary upload; adoption and its retained recovery result are in one transaction. An archive produced by this path has no separate 32 MiB HTTP or 128 MiB expanded-JSON limit.
+
+The command-line assemble-source operation converts a native capture manifest into browser-import JSON using the same original manifest hydration as import-source:
+
+```sh
+node scripts/cli.mjs assemble-source --source /absolute/path/to/manifest.json --output /absolute/path/to/native-source.json
+```
