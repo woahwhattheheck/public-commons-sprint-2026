@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { composeGrantEntry } from './grant-entry.mjs';
 import { attachGrantSubmission } from './grant-submission.mjs';
 import { attachGrantReviewRounds } from './grant-review-round.mjs';
+import { attachGrantCompanion } from './grant-companion.mjs';
 import { receiveFinancialApplication, attachFinancialSources } from './grant-financial-operations.mjs';
 import { projectGrantMarkdown, receiveGrantCustomerSections, projectGrantSourceIndex, receiveGrantCustomerSources } from './grant-customers.mjs';
 import { receiveDatasetteApplication, datasetteSourceSelection, addDatasetteGrantSources, receiveDatasetteExistingWork } from './grant-datasette.mjs';
@@ -252,8 +253,9 @@ export function composeGrantApplication({
   const reviewerEntry = composeGrantEntry(html);
   const submission = attachGrantSubmission({ templateHtml: reviewerEntry.html, sourceIndex: index });
   const reviewRound = attachGrantReviewRounds(submission);
-  html = reviewRound.templateHtml;
-  index = reviewRound.sourceIndex;
+  const companionReader = attachGrantCompanion(reviewRound);
+  html = companionReader.templateHtml;
+  index = companionReader.sourceIndex;
   const indexText = JSON.stringify(index, null, 2) + '\n';
   const files = {
     'grant.html': html,
@@ -262,7 +264,7 @@ export function composeGrantApplication({
     'grant-data/source-index.json': indexText,
   };
   return { files, sourcePins: Object.fromEntries(Object.entries(files).map(([path, body]) => ['/' + path, gitBlob(body)])),
-    application: index.application, productAndFinance: index.product_and_finance, economicSource: source, coastalSource, financialSources, financialOperation, datasetteSources, reviewerEntry: reviewerEntry.entry, submissionWorkspace: index.submission_workspace, submissionReviewRound: index.submission_review_round };
+    application: index.application, productAndFinance: index.product_and_finance, economicSource: source, coastalSource, financialSources, financialOperation, datasetteSources, reviewerEntry: reviewerEntry.entry, submissionWorkspace: index.submission_workspace, submissionReviewRound: index.submission_review_round, companionReader: index.companion_reader };
 }
 
 function argumentsFor(argv) {
@@ -313,7 +315,7 @@ export async function runGrantComposition(argv = process.argv.slice(2)) {
   });
   for (const [path, body] of Object.entries(result.files)) await writeFile(join(directory, path), body);
   if (options['--source-pins-output']) await writeFile(resolve(options['--source-pins-output']), JSON.stringify(result.sourcePins, null, 2) + '\n');
-  return { sourcePins: result.sourcePins, application: result.application, productAndFinance: result.productAndFinance, economicSource: result.economicSource, coastalSource: result.coastalSource, financialSources: result.financialSources, financialOperation: result.financialOperation, datasetteSources: result.datasetteSources, reviewerEntry: result.reviewerEntry, submissionWorkspace: result.submissionWorkspace, submissionReviewRound: result.submissionReviewRound };
+  return { sourcePins: result.sourcePins, application: result.application, productAndFinance: result.productAndFinance, economicSource: result.economicSource, coastalSource: result.coastalSource, financialSources: result.financialSources, financialOperation: result.financialOperation, datasetteSources: result.datasetteSources, reviewerEntry: result.reviewerEntry, submissionWorkspace: result.submissionWorkspace, submissionReviewRound: result.submissionReviewRound, companionReader: result.companionReader };
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   runGrantComposition().then(result => process.stdout.write(JSON.stringify(result, null, 2) + '\n')).catch(error => {
