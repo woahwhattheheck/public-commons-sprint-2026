@@ -195,6 +195,8 @@ class Workflow:
         need(self.checkout is not None, "DOCUMENT_WORKBOOK_ORIGINAL_RUNTIME_REQUIRED")
         need(all(isinstance(value, str) and HASH.fullmatch(value)
                  for value in (file_sha256, edition_sha256)), "DOCUMENT_WORKBOOK_REVIEWED_DIGESTS_REQUIRED")
+        need(isinstance(title, str) and 1 <= len(title) <= 160 and title.strip() and
+             all(ord(char) >= 32 for char in title), "DOCUMENT_WORKBOOK_TITLE_INVALID")
         selected = {"edition_file": str(Path(edition).expanduser().absolute()),
                     "file_sha256": file_sha256, "edition_sha256": edition_sha256, "title": title}
         operation_file = self.root / "operation.json"
