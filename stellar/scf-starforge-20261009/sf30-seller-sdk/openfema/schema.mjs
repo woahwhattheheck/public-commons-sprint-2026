@@ -1,5 +1,6 @@
 // MIT. Complete Public Assistance portfolio operating contract.
 import {TABLE_COLUMNS,REVIEW_STATES,FIELD_MAP} from './domain.mjs';
+import {DELIVERY_FIELDS,stagingMapping} from './delivery.mjs';
 export const WORKSPACE_SCHEMA='stellar-forge.openfema-workspace.v1';
 export const ACTIONS={
   'source.capture':['scope','label'],'source.resume':['captureId'],'source.pause':['captureId'],'source.import':['bundle'],
@@ -11,6 +12,9 @@ export const ACTIONS={
   'release.activate':['releaseId','expectedGeneration'],'release.start':['releaseId','expectedGeneration'],
   'release.stop':['releaseId'],'release.rollback':['releaseId','expectedGeneration'],
   'buyer.inspect':['intentIds'],'buyer.receive':['intentIds'],
+  'delivery.mapping.save':['mapping','previousMappingId'],'delivery.mapping.review':['mappingId','expectedMappingSha256','reviewer','note'],
+  'delivery.export':['mappingId','versionId','customerReconciliationId'],'delivery.reconcile':['deliveryId','customerFile'],
+  'delivery.review.apply':['reconciliationId','versionId','rowNumbers','reviewer','note'],'delivery.compare':['beforeDeliveryId','afterDeliveryId'],
   'export.create':['versionId','table','format'],'source.export':['editionId'],'workspace.export':[]
 };
 export const SOURCE_NOTES={
@@ -27,6 +31,7 @@ export function workspaceSchema({workspaceId,inboxConfigured,releaseRuntime,user
     tableColumns:TABLE_COLUMNS,fieldMap:FIELD_MAP,reviewStates:REVIEW_STATES,reviewPriorities:['low','normal','high'],
     sourceScope:{disasterNumbers:'Positive integer array',states:'Uppercase two-letter state codes',declarationDateFrom:'YYYY-MM-DD',declarationDateTo:'YYYY-MM-DD',pageSize:'1–10000, default 1000'},
     portfolioFields:['name','states','disasters','applicants','categories','counties','declarationFrom','declarationTo','minimumFederal','maximumFederal','includeUnjoined','note'],
+    delivery:{fields:DELIVERY_FIELDS,stagingMapping:stagingMapping(),customerFileLimit:16*1024*1024,identity:'Exact disasterNumber and gmProjectId; customer-only and pre-obligation rows remain in the original customer file.',state:'Mappings, explicit reviews, deliveries, customer inputs and comparisons are retained in this same workspace.'},
     amountUnit:'USD',inboxConfigured:Boolean(inboxConfigured),releaseRuntime,
     operationPolicy:'A repeated operation ID reopens its original result. New actions require the displayed workspace revision.',
     sourceCompletion:'Every selected disaster is acquired across declarations, applicants and projects; the original source pages and continuation are saved throughout capture.'};

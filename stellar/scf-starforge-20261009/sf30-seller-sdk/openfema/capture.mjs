@@ -238,12 +238,14 @@ const CONNECTOR_SCHEMA='stellar-forge.openfema-connector-file.v1';
 function connectorEvidence(receipt,url,{sourceSlot}={}) {
   const c=receipt.connector;
   const validTime=value=>typeof value==='string'&&Number.isFinite(Date.parse(value));
+  const optionalTime=value=>value===null||validTime(value);
+  const orderedTimes=values=>values.filter(value=>value!==null).every((value,index,known)=>index===0||Date.parse(known[index-1])<=Date.parse(value));
   if(!plain(c)||c.schema!==CONNECTOR_SCHEMA||c.provider!=='notion-public-file'||c.sourceUrl!==url||
      !Number.isSafeInteger(c.responseIndex)||c.responseIndex<0||
      typeof c.sourceSlot!=='string'||!c.sourceSlot||
      sourceSlot!==undefined&&c.sourceSlot!==sourceSlot||
-     !validTime(c.requestedAt)||!validTime(c.uploadReceivedAt)||!validTime(c.downloadReceivedAt)||
-     Date.parse(c.requestedAt)>Date.parse(c.uploadReceivedAt)||Date.parse(c.uploadReceivedAt)>Date.parse(c.downloadReceivedAt)||
+     !optionalTime(c.requestedAt)||!optionalTime(c.uploadReceivedAt)||!validTime(c.downloadReceivedAt)||
+     !orderedTimes([c.requestedAt,c.uploadReceivedAt,c.downloadReceivedAt])||
      receipt.status!==null||receipt.method!==null||receipt.headers!==null||
      receipt.observedAt!==c.downloadReceivedAt||receipt.observationTiming!=='connector-download-received')
     throw fault('OPENFEMA_CONNECTOR_RECEIPT','Retain the exact connector response position, source URL and receiving clocks; unexposed provider HTTP facts must remain null.',409);
