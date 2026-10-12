@@ -21,6 +21,7 @@ import tempfile
 import threading
 
 from .datasets import DatasetDelivery
+from .duckdb_agent import initialize_identity, read_identity, copy_sparse
 from .errors import StateError
 from .storage import digest, dump, lock, parse, private_directory, read, sync_directory, unique_object, write
 
@@ -306,6 +307,7 @@ class DuckDBWorkspace:
                 if existing and existing[0] != SCHEMA:
                     raise StateError("DUCKDB_WORKSPACE_SCHEMA_MISMATCH")
                 db.execute("INSERT INTO sf_workspace VALUES('schema',?) ON CONFLICT DO NOTHING", [SCHEMA])
+                initialize_identity(db)
                 db.execute("CREATE TABLE IF NOT EXISTS sf_reviews(id VARCHAR PRIMARY KEY,created_at VARCHAR NOT NULL,record VARCHAR NOT NULL)")
                 db.execute("CREATE TABLE IF NOT EXISTS sf_editions(id VARCHAR PRIMARY KEY,sequence BIGINT UNIQUE NOT NULL,record VARCHAR NOT NULL)")
                 db.execute("CREATE TABLE IF NOT EXISTS sf_files(edition_id VARCHAR,name VARCHAR,bytes BIGINT,sha256 VARCHAR,PRIMARY KEY(edition_id,name))")
@@ -329,6 +331,11 @@ class DuckDBWorkspace:
 
     def close(self):
         """Every method has already closed its own native connection."""
+
+    def identity(self):
+        """Stable original warehouse identity, retained by portable backups."""
+        with self._guard(), self._connection() as db:
+            return {"schema": SCHEMA, "workspace_id": read_identity(db)}
 
     @contextmanager
     def _guard(self):
@@ -967,7 +974,7 @@ class DuckDBWorkspace:
                 source_fd = os.open(self.path, os.O_RDONLY | os.O_NOFOLLOW)
                 target_fd = os.open(partial, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
                 with os.fdopen(source_fd, "rb") as source, os.fdopen(target_fd, "wb") as dest:
-                    shutil.copyfileobj(source, dest, _CHUNK)
+                    copy_sparse(source, dest, _CHUNK)
                     dest.flush()
                     os.fsync(dest.fileno())
                 descriptor = _descriptor(partial, "warehouse.duckdb")
@@ -984,3 +991,4 @@ class DuckDBWorkspace:
             dump(manifest, record, exclusive=True)
             record["files"].append(_descriptor(manifest))
             return record
+

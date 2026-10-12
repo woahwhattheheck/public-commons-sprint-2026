@@ -33,7 +33,8 @@ export async function runRouteWorksheetJourney({parent}={}) {
   const report={schema:'stellar-forge.api-route-worksheet-native-journey.v1',operation:OPERATION,
     startedAt:new Date().toISOString(),node:process.version,steps:[],source:{}};
   for(const path of ['openapi-route-worksheet.mjs','openapi-workspace.mjs','openapi-route-worksheet-client.mjs',
-    'openapi-route-worksheet-cli.mjs','sf61-connection.mjs','config.mjs','serve.mjs','retained-download.mjs',
+    'openapi-route-worksheet-cli.mjs','catalog/openapi-route-worksheet.mjs','catalog/openapi-workspace.mjs',
+    'sf61-connection.mjs','config.mjs','serve.mjs','retained-download.mjs',
     'openapi-workspace-client.mjs','openapi-route-worksheet-journey.mjs',
     '../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.mjs',
     '../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/model.mjs',

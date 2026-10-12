@@ -13,7 +13,8 @@ import { readSellerConfig } from '../sf30-seller-sdk/serve.mjs';
 import { compileSellerRoutes } from '../sf30-seller-sdk/resource-server.mjs';
 import { startSellerOperations } from '../sf30-seller-sdk/operations/server.mjs';
 
-export const POSTGRES_SOURCE_SCHEMA = 'stellar-forge.postgres-seller-release-manifest.v1';
+import { POSTGRES_SOURCE_SCHEMA } from './release-source-contracts.mjs';
+export { POSTGRES_SOURCE_SCHEMA } from './release-source-contracts.mjs';
 const INPUT_SCHEMA = 'stellar-forge.postgres-release-input.v1';
 const PACKAGE = 'postgres/package', ORIGINAL = 'postgres/original';
 const INPUT_MANIFEST = 'postgres/input-manifest.json';
