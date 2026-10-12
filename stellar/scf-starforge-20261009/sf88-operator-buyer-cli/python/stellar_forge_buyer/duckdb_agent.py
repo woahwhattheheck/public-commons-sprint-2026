@@ -101,11 +101,12 @@ def copy_sparse(source, target, chunk_size=1024 * 1024):
                 end = min(size, os.lseek(source.fileno(), start, os.SEEK_HOLE))
                 if not position <= start < end <= size:
                     raise StateError("DUCKDB_SPARSE_SOURCE_EXTENT_INVALID")
-                source.seek(start)
                 target.seek(start)
                 remaining = end - start
                 while remaining:
-                    chunk = source.read(min(chunk_size, remaining))
+                    # Extent discovery moved the underlying fd. Read by exact
+                    # offset so a buffered source cannot reuse stale positions.
+                    chunk = os.pread(source.fileno(), min(chunk_size, remaining), end - remaining)
                     if not chunk:
                         raise StateError("DUCKDB_SPARSE_SOURCE_CHANGED")
                     # Data extents can also contain zeroed pages.
@@ -135,4 +136,3 @@ def copy_sparse(source, target, chunk_size=1024 * 1024):
             target.write(chunk)
         remaining -= len(chunk)
     target.truncate(size)
-

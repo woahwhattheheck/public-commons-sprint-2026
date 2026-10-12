@@ -205,8 +205,10 @@ export function createNativeDuckDB({manifest,isClosed=()=>false}={}){
   return {schema:SCHEMA,name:record.name,workspaceId:record.workspaceId,database:record.database,
    browserUrl:connection.browserUrl,sources:record.sources.map(({reportPath,...source})=>source),status};
  }
- async function register(description){
+ async function register(description,{expectedWorkspaceId}={}){
   const {record,connection}=await inspectRegistration(description);
+  if(expectedWorkspaceId!==undefined)need(ID.test(expectedWorkspaceId)&&record.workspaceId===expectedWorkspaceId,
+   'MCP_DUCKDB_WORKSPACE_ID_CHANGED');
   await roots(true);await retainRecord(join(aliases,record.name+'.json'),record,{resume:true});
   // Only trusted host registration/inspection returns an operator capability URL.
   return hostBinding(record,connection,'ORIGINAL_DUCKDB_REGISTERED');
@@ -334,7 +336,7 @@ export function createNativeDuckDB({manifest,isClosed=()=>false}={}){
   running.finally(()=>pending.delete(running)).catch(()=>{});return running;
  }
  return Object.freeze({
-  register:options=>tracked(()=>register(options)),
+  register:(description,options)=>tracked(()=>register(description,options)),
   inspectRegistration:options=>tracked(async()=>{const {record,connection}=await inspectRegistration(options);
    return hostBinding(record,connection,'ORIGINAL_DUCKDB_INSPECTED');}),
   call:(args,context)=>tracked(()=>dispatch(args,context)),
@@ -353,4 +355,3 @@ export async function inspectDuckDBRegistration(description){
  try{return await client.inspectRegistration(description);}
  finally{await client.close();}
 }
-

@@ -1,5 +1,6 @@
 // MIT. Durable application jobs compile into the original SF30 seller and SF89 admission.
 import { createHash } from 'node:crypto';
+import { normalizeFilePolicy, augmentFileInput, inputManifest, storageLimits } from './inputs/protocol.mjs';
 import { compileJobIntake } from './intake/config.mjs';
 import { readFile, lstat, realpath } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
@@ -79,10 +80,15 @@ export function compileJobMerchant(input, { baseDir = process.cwd() } = {}) {
         raw.path.startsWith('/_seller/') || raw.path === '/jobs' || raw.path.startsWith('/jobs/') ||
         new URL(raw.path, origin).pathname !== raw.path || paths.has(raw.path)) fail('JOB_FUNCTION_PATH_INVALID');
     paths.add(raw.path);
-    const schema = structuredClone(raw.inputSchema);
+    let schema = structuredClone(raw.inputSchema);
     if (!plain(schema) || schema.type !== 'object' || !plain(schema.properties) || schema.additionalProperties !== false ||
         Object.keys(schema.properties).length > 64 || !plain(raw.example) || Buffer.byteLength(canonical(schema)) > 24000)
       fail('JOB_INPUT_SCHEMA_REQUIRED');
+    const inputFiles = normalizeFilePolicy(raw.inputFiles);
+    const augmented = augmentFileInput(schema, raw.example, inputFiles);
+    schema = augmented.schema;
+    if (Buffer.byteLength(canonical(schema)) > 24000) fail('JOB_INPUT_SCHEMA_TOO_LARGE');
+    const example = augmented.example;
     const output = raw.output ?? { format: 'json' };
     if (!plain(output) || !['json', 'bytes'].includes(output.format)) fail('JOB_OUTPUT_FORMAT_INVALID');
     const contentType = output.contentType ?? (output.format === 'json' ? 'application/json; charset=utf-8' : 'application/octet-stream');
@@ -109,9 +115,9 @@ export function compileJobMerchant(input, { baseDir = process.cwd() } = {}) {
       type: 'object', properties: { jobId: { type: 'string', pattern: JOB_ID.source, maxLength: 80 } },
       required: ['jobId'], additionalProperties: false,
     }, { jobId: 'example-job' });
-    const inputOffer = setBodySchema(compileHttpSellerOffer({ ...definition, body: raw.example }), schema, raw.example);
+    const inputOffer = setBodySchema(compileHttpSellerOffer({ ...definition, body: example }), schema, example);
     functions[id] = { id, path: raw.path, description: raw.description, inputSchema: schema,
-      example: structuredClone(raw.example), offer, inputOffer, payment: structuredClone(offer.accepts[0]),
+      example: structuredClone(example), ...(inputFiles ? { inputFiles } : {}), offer, inputOffer, payment: structuredClone(offer.accepts[0]),
       timeoutMs: integer(raw.timeoutMs, 300000, 100, 3600000, 'TIMEOUT'),
       maxInputBytes: integer(raw.maxInputBytes, 262144, 1, 1048576, 'INPUT_LIMIT'),
       maxOutputBytes: integer(raw.maxOutputBytes, 8388608, 1, 67108864, 'OUTPUT_LIMIT'),
@@ -126,7 +132,8 @@ export function compileJobMerchant(input, { baseDir = process.cwd() } = {}) {
     maxPending: integer(input.maxPending, 128, 1, 10000, 'QUEUE_LIMIT'),
     maxJobs: integer(input.maxJobs, 10000, 1, 100000, 'JOB_LIMIT'),
     memoryLimitMb: integer(input.memoryLimitMb, 256, 32, 4096, 'WORKER_MEMORY'),
-    intake: compileJobIntake(input.intake, functions), functions, service });
+    intake: compileJobIntake(input.intake, functions),
+    inputFileStorage: storageLimits(input.inputFileStorage), functions, service });
 }
 
 export async function readJobMerchant(configPath, { applicationPath } = {}) {
@@ -153,6 +160,7 @@ export async function readJobMerchant(configPath, { applicationPath } = {}) {
 
 export function validateJobInput(definition, input) {
   if (!plain(input)) fail('JOB_INPUT_REQUIRED');
+  if (definition.inputFiles) inputManifest(definition.inputFiles, input);
   const bytes = Buffer.from(canonical(input));
   if (bytes.length > definition.maxInputBytes) fail('JOB_INPUT_TOO_LARGE', 413);
   const decision = createLiveRequestAdmission(definition.inputOffer)({ method: 'POST', query: {}, pathParams: {}, body: input });

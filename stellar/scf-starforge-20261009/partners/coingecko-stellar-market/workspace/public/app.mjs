@@ -11,7 +11,9 @@ const valueText=v=>v===null?"Not supplied":v===undefined?"Absent":typeof v==="ob
 const displayDate=v=>v?new Date(v).toLocaleString(undefined,{dateStyle:"medium",timeStyle:"medium"}):"—";
 const localInput=v=>{if(!v)return"";const d=new Date(v);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,23)};
 const bytes=v=>Number(v||0).toLocaleString()+" B";
-const S={state:null,project:null,tab:"overview",panes:{sources:"captures",research:"snapshots"},tables:{},picked:{requests:new Set(),captures:new Set()},requestCache:null,modal:null,modalStack:[],renderId:0,jobTimer:null,busy:false,actor:localStorage.getItem("cg-market-operator")||"",projectId:localStorage.getItem("cg-market-project")||"",notice:""};
+const requestedProject=new URL(location.href).searchParams.get("project");
+if(requestedProject!==null&&!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(requestedProject))throw new Error("The saved project link has an invalid identifier.");
+const S={state:null,project:null,tab:"overview",panes:{sources:"captures",research:"snapshots"},tables:{},picked:{requests:new Set(),captures:new Set()},requestCache:null,modal:null,modalStack:[],renderId:0,jobTimer:null,busy:false,actor:localStorage.getItem("cg-market-operator")||"",projectId:requestedProject||localStorage.getItem("cg-market-project")||"",notice:""};
 const tabs=[["overview","Overview"],["requests","Requests"],["collections","Collections"],["sources","Sources"],["research","Research"],["provider","Provider"],["handover","Handover"],["history","History"]];
 const endpoint=id=>S.state.contracts.find(c=>c.id===id)||{id,name:id,pathFields:[],queryFields:[]};
 const endpointName=id=>endpoint(id).name;
@@ -44,8 +46,8 @@ async function mutation(path,payload,{operation,project=true}={}){
 }
 async function refreshState(){S.state=await get("/api/state");S.state.contracts||=[];S.state.buyerProfiles||=[];renderHeader()}
 async function loadProject(id=S.projectId){
-  if(!id){S.project=null;S.projectId="";return null}
-  const d=await get("/api/projects/"+encodeURIComponent(id));S.project=d.project;S.projectDetail=d;S.projectId=id;localStorage.setItem("cg-market-project",id);return d;
+  if(!id){S.project=null;S.projectId="";localStorage.removeItem("cg-market-project");const link=new URL(location.href);link.searchParams.delete("project");history.replaceState(null,"",link);return null}
+  const d=await get("/api/projects/"+encodeURIComponent(id));S.project=d.project;S.projectDetail=d;S.projectId=id;localStorage.setItem("cg-market-project",id);const link=new URL(location.href);link.searchParams.set("project",id);history.replaceState(null,"",link);return d;
 }
 async function refreshCurrent(){await refreshState();if(S.projectId)await loadProject();S.requestCache=null;await renderView()}
 async function selectProject(id){if(S.busy)return;if(S.modal?.isForm&&S.modal.dirty&&!confirm("Switch projects and discard the unsaved editor fields?")){renderHeader();return}closeModal(true);S.picked={requests:new Set(),captures:new Set()};S.tables={};S.requestCache=null;await loadProject(id);renderHeader();await renderView()}
@@ -793,6 +795,7 @@ $("#operator-name").addEventListener("change",event=>{S.actor=event.target.value
 $("#dialog").addEventListener("cancel",event=>{event.preventDefault();closeModal()});
 window.addEventListener("beforeunload",event=>{if(S.busy||S.modal?.isForm&&S.modal.dirty){event.preventDefault();event.returnValue=""}});
 await refreshState();
+if(requestedProject&&!S.state.projects.some(p=>p.id===requestedProject))throw new Error("The selected project is not in this workspace. Reopen the original saved application.");
 if(S.projectId&&!S.state.projects.some(p=>p.id===S.projectId))S.projectId="";
 if(!S.projectId&&S.state.projects.length===1)S.projectId=S.state.projects[0].id;
 if(S.projectId)await loadProject();

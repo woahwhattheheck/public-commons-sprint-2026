@@ -187,7 +187,107 @@
         '<td>' + esc(item.quantity) + '</td><td>' + esc(item.subtotal) + '</td><td>' + esc(item.total) + '</td><td>' + esc(item.tax) + '</td></tr>'),
       ['Item', 'Quantity', 'Subtotal', 'Line total', 'Tax']) + '<p class="sf104-help">Store amounts above remain exact Woo decimal text in ' + esc(order.currency) + '. Atomic Stellar units are shown separately.</p></section>';
   }
+  function sourceRows(value, limit = 128) {
+    return Array.isArray(value) ? value.filter(row => row && typeof row === 'object' && !Array.isArray(row)).slice(0, limit) : [];
+  }
+  function sameSource(left, right) {
+    if (left === undefined || right === undefined) return false;
+    const normalized = value => Array.isArray(value) ? value.map(normalized) :
+      value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(key => [key, normalized(value[key])])) : value;
+    return JSON.stringify(normalized(left)) === JSON.stringify(normalized(right));
+  }
+  function basketLineTable(order) {
+    const handoff = order.snapshot?.record?.handoff || {};
+    return table(sourceRows(handoff.items, 20).map(line =>
+      '<tr><td>' + esc(line.name) + '<small>Line ' + esc(line.lineId) + ' / product ' + esc(line.productId) + '</small></td>' +
+      '<td>' + esc(text(line.quantity)) + '</td><td>' + mono(line.unitStoreTotal) + '</td><td>' + mono(line.lineStoreTotal) + '</td>' +
+      '<td>' + mono(line.unitAmountAtomic) + '</td><td>' + mono(line.lineAmountAtomic) + '</td></tr>'),
+    ['Frozen product', 'Quantity', 'Store unit (' + text(handoff.storefront?.currency) + ')', 'Store line', 'Atomic unit', 'Atomic line']);
+  }
+  function basketTermsView(order) {
+    const record = order.snapshot.record, handoff = record.handoff, terms = handoff.operation?.expect || {};
+    const frozenLines = sourceRows(record.shape?.items, 20);
+    const currentLines = sourceRows(order.currentShape?.items, 20);
+    const current = new Map(currentLines.map(line => [String(line.lineId), line]));
+    const products = new Map(sourceRows(order.currentProducts, 20).map(product => [String(product.id), product]));
+    const approvedProducts = new Map(sourceRows(record.catalog?.products, 64).map(product => [String(product.productId), product]));
+    const comparisons = frozenLines.map(frozen => {
+      const now = current.get(String(frozen.lineId));
+      const unchanged = !!now && ['lineId', 'productId', 'quantity', 'name', 'total', 'tax'].every(key => frozen[key] === now[key]);
+      const delivery = now?.delivery ?? products.get(String(frozen.productId))?.delivery;
+      return '<tr><td>' + esc(frozen.name) + '<small>Line ' + esc(frozen.lineId) + ' / product ' + esc(frozen.productId) + '</small></td>' +
+        '<td>' + esc(text(frozen.quantity)) + ' / ' + esc(text(now?.quantity)) + '</td>' +
+        '<td>' + mono(frozen.total) + ' / ' + mono(now?.total) + '</td><td>' + mono(frozen.tax) + ' / ' + mono(now?.tax) + '</td>' +
+        '<td>' + (unchanged ? 'Matches' : now ? 'Review difference' : 'Current shape unavailable') + '</td>' +
+        '<td>' + (sameSource(frozen.delivery, delivery) ? 'Matches' : 'Review delivery') + '</td></tr>';
+    });
+    const frozenIds = new Set(frozenLines.map(line => String(line.lineId)));
+    for (const line of currentLines.filter(line => !frozenIds.has(String(line.lineId)))) comparisons.push(
+      '<tr><td>' + esc(line.name) + '<small>Line ' + esc(line.lineId) + '</small></td><td>' + esc(line.quantity) +
+      '</td><td>' + mono(line.total) + '</td><td>' + mono(line.tax) + '</td><td colspan="2">Not in the frozen basket</td></tr>');
+    const deliveryCards = frozenLines.map(line => {
+      const product = products.get(String(line.productId)), frozen = line.delivery || {};
+      const now = current.get(String(line.lineId))?.delivery ?? product?.delivery;
+      const currentFiles = new Map(sourceRows(now?.files, 64).map(file => [String(file.id), file]));
+      const frozenFiles = new Map(sourceRows(frozen.files, 64).map(file => [String(file.id), file]));
+      const ids = [...new Set([...frozenFiles.keys(), ...currentFiles.keys()])].sort();
+      const files = ids.map(id => {
+        const saved = frozenFiles.get(id), observed = currentFiles.get(id);
+        return '<tr><td>' + mono(id) + '</td><td>' + esc(text(saved?.name)) + '<br>' + mono(saved?.file) + '</td>' +
+          '<td>' + esc(text(observed?.name)) + '<br>' + mono(observed?.file) + '</td><td>' +
+          (sameSource(saved, observed) ? 'Matches' : saved ? 'Review changed or missing file' : 'Added file') + '</td></tr>';
+      });
+      const flags = [['Virtual', 'virtual'], ['Downloadable', 'downloadable'], ['Download limit', 'limit'], ['Expiry (days)', 'expiry']]
+        .map(([label, key]) => '<tr><th>' + esc(label) + '</th><td>' + esc(text(frozen[key])) + '</td><td>' + esc(text(now?.[key])) + '</td></tr>');
+      return '<details><summary>Product ' + esc(line.productId) + ' · ' + esc(line.name) + ' — ' +
+        (sameSource(frozen, now) ? 'delivery matches' : 'review delivery change') + '</summary><div class="sf104-details-body">' +
+        (product?.deliveryError || product?.missing ? notice('Current product delivery', product.deliveryError || product.error) : '') +
+        table(flags, ['Definition', 'Frozen order', 'Current product']) +
+        (files.length ? table(files, ['File ID', 'Frozen label / location', 'Current label / location', 'Comparison']) : '<p>No downloadable files are defined for this line.</p>') +
+        '<p class="sf104-help">These are the merchant’s configured file identities. Customer instructions contain labels only; file-content storage remains with the merchant.</p></div></details>';
+    }).join('');
+    const productCards = sourceRows(handoff.items, 20).map(line => {
+      const product = products.get(String(line.productId)), approved = approvedProducts.get(String(line.productId)) || {};
+      const map = product?.mapping || {}, selected = approved.expect || {};
+      const rows = [
+        ['Store unit currency', approved.storefront?.currency, map.storefront?.currency],
+        ['Store unit amount', approved.storefront?.total, map.storefront?.total],
+        ['Native atomic unit', selected.maxAtomic, map.amountAtomic],
+        ['Network', selected.network, map.network], ['Asset contract', selected.asset, map.asset],
+        ['Recipient', selected.payTo, map.payTo], ['Timeout (seconds)', selected.maxTimeoutSeconds, map.maxTimeoutSeconds],
+      ];
+      return '<details><summary>Product ' + esc(line.productId) + ' · ' + esc(line.name) + '</summary><div class="sf104-details-body">' +
+        table(rows.map(([label, frozen, now]) => '<tr><th>' + esc(label) + '</th><td>' + mono(frozen) + '</td><td>' + mono(now) + '</td></tr>'),
+          ['Unit term', 'Frozen catalog', 'Current product mapping']) +
+        (product?.error ? notice('Current product mapping', product.error) : '') +
+        (product?.editUrl ? '<div class="sf104-actions">' + link(product.editUrl, 'Open product ' + product.id) +
+          (product.exportUrl ? link(product.exportUrl, 'Export current individual route') : '') + '</div>' : '') + '</div></details>';
+    }).join('');
+    return '<section class="sf104-panel"><h3>Frozen digital basket</h3>' +
+      notice(order.snapshot.valid ? 'Saved basket still matches' : 'Current order differs from its saved basket',
+        order.snapshot.valid ? 'The original validator confirms every order line, quantity, total, configured delivery definition and payment binding.' : order.snapshot.error) +
+      '<dl class="sf104-facts sf104-facts-single">' + field('Catalog SHA-256', handoff.catalogDigest, true) +
+      field('Basket SHA-256', handoff.basketDigest, true) + field('Frozen snapshot SHA-256', record.digest, true) +
+      field('Current observed state SHA-256', order.stateDigest, true) + '</dl>' + basketLineTable(order) +
+      '<dl class="sf104-facts">' + field('Frozen store total', text(handoff.storefront?.currency) + ' ' + text(handoff.storefront?.total)) +
+      field('One native atomic amount', terms.maxAtomic, true) + field('Network', terms.network, true) +
+      field('Recipient', terms.payTo, true) + field('Asset contract', terms.asset, true) +
+      field('Exact original resource', handoff.operation?.url, true) + '</dl></section>' +
+      '<section class="sf104-panel"><h3>Frozen lines versus current saved order</h3>' +
+      (order.shapeError ? notice('Current checkout shape', order.shapeError) : '') +
+      table(comparisons, ['Original line', 'Quantity: saved / current', 'Net total: saved / current', 'Tax: saved / current', 'Order line', 'Delivery']) +
+      '<p class="sf104-help">Net totals and taxes above are separate native Woo values. The frozen basket table shows tax-inclusive store prices. The original order validator controls release.</p></section>' +
+      '<section class="sf104-panel"><h3>Per-product delivery definitions</h3><p>Reconcile changed file identities or product delivery settings before the original release. Expanding a product shows its exact saved and current definitions.</p>' +
+      deliveryCards + '</section><section class="sf104-panel"><h3>Current product unit mappings</h3>' +
+      '<p>These observations describe product settings now. Repricing a product or selecting a new catalog affects new orders; it does not rewrite this order’s frozen payment.</p>' + productCards + '</section>' +
+      '<section class="sf104-panel"><h3>Original retained source</h3><dl class="sf104-facts sf104-facts-single">' +
+      field('Original asset SHA-256', order.binding?.assetDigest, true) + field('Original recipient SHA-256', order.binding?.recipientDigest, true) +
+      field('Binding approved by user ID', order.binding?.approvedBy) + field('Binding approved at', time(order.binding?.approvedAt)) + '</dl>' +
+      '<details><summary>Saved snapshot and binding JSON</summary><pre class="sf104-code">' +
+      esc(JSON.stringify({snapshot:record,binding:order.binding},null,2)) + '</pre></details></section>';
+  }
   function termsView(order) {
+    if (order.snapshot?.record?.handoff?.schema === 'stellar-forge.sf104.checkout-handoff.v2') return basketTermsView(order);
     const record = order.snapshot?.record;
     const approved = record?.shape || {};
     const current = order.currentShape || {};
@@ -327,8 +427,8 @@
     const data = state.status;
     const steps = [
       ['Configure the original plugin', 'Keep the private SF98 secret in wp-config.php and the matching private environment of the original seller and delivery worker. Enable the existing native gateway only after the store HTTPS origin and REST routes are usable.'],
-      ['Map and export a real SKU', 'Use one simple virtual Woo product at quantity one. Declare its final store currency/total, original seller route, exact Stellar network, asset, recipient and atomic amount. Export the saved merchant route from Products.'],
-      ['Prepare the maintained native seller', 'Use that route export with the original woo-seller prepare command and the same store origin and private outbox. Run the original seller and SF98 sender with the matching secret. The plugin does not hold or sign a wallet.'],
+      ['Map and export the digital products', 'Declare each simple virtual product’s exact storefront unit total and original native Stellar unit terms. For a digital basket, enable its approved catalog in the payment gateway settings and export that exact catalog; legacy single-product orders retain their individual route exports.'],
+      ['Prepare the maintained native seller', 'Use the original woo-seller prepare with --basket for each retained catalog and --route for legacy orders. Keep the same store origin and existing delivery outbox across catalog updates. Run the original seller and SF98 sender with the matching private secret.'],
       ['Operate one original order', 'A shopper uses the original checkout and receives its private buyer instructions. In Orders, inspect the saved terms, reserved generation and authenticated notice. Independently verify the original settlement, then release through the existing Woo handler.'],
     ];
     workspace.innerHTML = '<section class="sf104-panel"><div class="sf104-panel-heading"><div><h2>Merchant operating setup</h2><p>Configure the existing installation and keep its original payment, delivery and recovery components together.</p></div>' +
@@ -411,7 +511,9 @@
             ['Notice body digest', order.notice?.body_sha256], ['Recorded notice transaction', order.notice?.tx_hash], ['Woo transaction', order.transactionId],
             ['Frozen order comparison', order.snapshot?.valid ? 'Matches current Woo order' : order.snapshot?.error || 'Manual binding'],
             ['Observed state digest', order.stateDigest]].map(([label, value]) => '<tr><th>' + esc(label) + '</th><td>' + esc(text(value)) + '</td></tr>').join('') +
-          '</tbody></table><h3>Retained lifecycle</h3><ul>' + order.timeline.map(event => '<li>' + esc(time(event.at)) + ' — ' + esc(event.label) + ': ' + esc(event.detail) + '</li>').join('') +
+          '</tbody></table>' + (order.snapshot?.record?.handoff?.schema === 'stellar-forge.sf104.checkout-handoff.v2' ?
+            '<h3>Frozen basket items</h3>' + basketLineTable(order) + '<p>Catalog ' + mono(order.snapshot.record.handoff.catalogDigest) +
+            '<br>Basket ' + mono(order.snapshot.record.handoff.basketDigest) + '</p>' : '') + '<h3>Retained lifecycle</h3><ul>' + order.timeline.map(event => '<li>' + esc(time(event.at)) + ' — ' + esc(event.label) + ': ' + esc(event.detail) + '</li>').join('') +
           '</ul><details><summary>Complete selected source record</summary><pre>' + esc(JSON.stringify(record, null, 2)) + '</pre></details></section>';
       }).join('') + '<footer><p>' + esc(handoff.schema) + ' · ' + esc(handoff.source.plugin) + ' ' + esc(handoff.source.version) + '</p></footer></body></html>';
   }

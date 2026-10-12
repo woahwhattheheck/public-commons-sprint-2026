@@ -12,7 +12,7 @@ import { absolute, privateDirectory, digest, now, intent, object, need, BuyerErr
 
 const SCHEMA = 'stellar-forge.node-dataset.v1';
 const WORKER = fileURLToPath(new URL('./dataset-worker.mjs', import.meta.url));
-const OUTPUTS = new Set(['dataset.jsonl','dataset.csv','review.html','manifest.json']);
+const OUTPUTS = new Set(['dataset.jsonl','dataset.csv','review.html','manifest.json','semantics.json']);
 const MAX_OUTPUT = 256 * 1024 * 1024;
 const clone = value => JSON.parse(jsonBytes(value));
 const freeze = value => {
@@ -257,7 +257,17 @@ export class DatasetDelivery {
       manifest.dataset?.snapshot === report.nativeStatus.snapshot &&
       manifest.dataset.rows === report.nativeStatus.rows && Array.isArray(manifest.dataset.projectedFields) &&
       object(manifest.outputs), 'DATASET_NATIVE_MANIFEST_INVALID');
-    for (const name of ['dataset.jsonl','dataset.csv','review.html'])
+    const semantics = manifest.semantics;
+    need((semantics !== undefined) === (report.semantics !== undefined),
+      'DATASET_SEMANTIC_OUTPUT_METADATA_INVALID');
+    if (semantics !== undefined) need(object(semantics) && semantics.file === 'semantics.json' &&
+      semantics.scope === 'PUBLISHED_DATASET' && semantics.typedRowsFile === 'dataset.jsonl' &&
+      ['schema','sha256','definitionSha256','captureManifestSha256'].every(key =>
+        semantics[key] === report.semantics[key] && semantics[key] === report.nativeStatus.semantics?.[key]) &&
+      JSON.stringify(semantics.selectedFields) === JSON.stringify(manifest.dataset.projectedFields),
+      'DATASET_SEMANTIC_OUTPUT_METADATA_INVALID');
+    for (const name of ['dataset.jsonl','dataset.csv','review.html',
+      ...(semantics !== undefined ? ['semantics.json'] : [])])
       need(manifest.outputs[name]?.sha256 === report.outputs[name]?.sha256 &&
         manifest.outputs[name]?.bytes === report.outputs[name]?.bytes, 'DATASET_OUTPUT_METADATA_INVALID');
     return new DatasetDelivery(report, manifest);
@@ -265,6 +275,17 @@ export class DatasetDelivery {
   file(name) {
     need(OUTPUTS.has(name), 'DATASET_OUTPUT_NAME_INVALID');
     return new DatasetFile({name, ...this.report.outputs[name]}, this.report.directory);
+  }
+  /** The retained published dictionary; selectedFields remain in the delivery manifest. */
+  async readSemantics({limit = 2097152, signal} = {}) {
+    if (this.manifest.semantics === undefined) return null;
+    const value = await this.file('semantics.json').json({limit, signal});
+    const binding = this.manifest.semantics;
+    need(value?.schema === binding.schema && value.sha256 === binding.sha256 &&
+      value.definitionSha256 === binding.definitionSha256 &&
+      value.source?.captureManifestSha256 === binding.captureManifestSha256,
+      'DATASET_SEMANTIC_DICTIONARY_CHANGED');
+    return value;
   }
   _row(text) {
     let value;

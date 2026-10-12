@@ -1,0 +1,442 @@
+/* Agency billing stays inside the original industrial BI workspace. */
+.billing-workspace {
+  min-width: 0;
+  color: #202020;
+}
+.billing-workspace [hidden] {
+  display: none !important;
+}
+.billing-workspace .billing-section-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 20px;
+  padding: 0 0 15px;
+  border-bottom: 1px solid #ccc;
+}
+.billing-workspace .billing-section-nav button {
+  flex: 0 1 auto;
+  padding: 10px 15px;
+  color: #303030;
+  background: #fff;
+  border: 1px solid #b8b8b8;
+  border-radius: 3px;
+  font-size: 12px;
+  text-align: center;
+}
+.billing-workspace .billing-section-nav button:hover {
+  color: #202020;
+  background: #e9e9e9;
+}
+.billing-workspace .billing-section-nav button[aria-current="page"] {
+  color: #fff;
+  background: #303030;
+  border-color: #303030;
+}
+.billing-workspace .panel > .muted:first-of-type {
+  max-width: 100ch;
+}
+.billing-workspace fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.billing-workspace fieldset:disabled input,
+.billing-workspace fieldset:disabled select,
+.billing-workspace fieldset:disabled textarea {
+  color: #606060;
+  background: #f2f2f2;
+}
+.billing-workspace button:disabled {
+  cursor: not-allowed;
+}
+.billing-workspace textarea {
+  line-height: 1.55;
+}
+.billing-workspace textarea.code {
+  min-height: 150px;
+}
+.billing-workspace .billing-import-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 18px;
+}
+.billing-workspace .billing-import-grid > .panel {
+  height: 100%;
+}
+.billing-workspace .billing-file-selection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 12px;
+}
+.billing-workspace .billing-file-selection p {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.billing-workspace .billing-file-selection button {
+  flex: 0 0 auto;
+}
+.billing-workspace .billing-headers {
+  padding: 10px 12px;
+  margin: 0 0 12px;
+  border: 1px solid #d6d6d6;
+  background: #f8f8f8;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.billing-workspace .billing-headers:empty {
+  display: none;
+}
+.billing-workspace .billing-id {
+  display: inline-block;
+  max-width: 34ch;
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+.billing-workspace .billing-rules {
+  margin: 18px 0;
+}
+.billing-workspace .billing-rule {
+  padding: 18px;
+  margin-bottom: 16px;
+  border: 1px solid #c5c5c5;
+  border-left: 3px solid #777;
+  border-radius: 3px;
+  background: #fbfbfb;
+}
+.billing-workspace .billing-rule > .panel-head h3 {
+  margin: 0;
+}
+.billing-workspace .billing-rule details {
+  background: #fff;
+}
+.billing-workspace .billing-rule details > fieldset {
+  padding-top: 16px;
+}
+.billing-workspace .billing-share-head,
+.billing-workspace .billing-share {
+  display: grid;
+  grid-template-columns: minmax(160px, 2fr) minmax(85px, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+.billing-workspace .billing-share-head {
+  margin: 10px 0 7px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #555;
+}
+.billing-workspace .billing-share {
+  margin-bottom: 9px;
+}
+.billing-workspace .billing-share label,
+.billing-workspace .billing-share input,
+.billing-workspace .billing-share select {
+  margin: 0;
+}
+.billing-workspace .billing-share-weight {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.billing-workspace .billing-draft-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 35px;
+  padding: 10px 0;
+  margin: 7px 0 11px;
+  border-top: 1px solid #ddd;
+  color: #555;
+  font-size: 12px;
+}
+.billing-workspace .billing-draft-note strong {
+  color: #242424;
+}
+.billing-workspace .billing-import-choices {
+  max-height: 330px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  margin: 0 0 18px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  background: #fff;
+}
+.billing-workspace .billing-import-choice {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  padding: 11px 12px;
+  margin: 0;
+  border-bottom: 1px solid #e1e1e1;
+  font-weight: 400;
+  cursor: pointer;
+}
+.billing-workspace .billing-import-choice:last-child {
+  border-bottom: 0;
+}
+.billing-workspace .billing-import-choice:hover {
+  background: #f5f5f5;
+}
+.billing-workspace .billing-import-choice:has(input:checked) {
+  background: #ededed;
+}
+.billing-workspace .billing-import-choice input {
+  margin: 3px 0 0;
+}
+.billing-workspace .billing-import-choice strong,
+.billing-workspace .billing-import-choice .muted {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.billing-workspace .billing-import-choice .muted {
+  margin-top: 3px;
+  font-size: 11px;
+}
+.billing-workspace .billing-adjustment {
+  margin: 15px 0;
+  padding: 15px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  background: #fff;
+}
+.billing-workspace .billing-adjustment-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 12px;
+}
+.billing-workspace .billing-adjustment-amount {
+  font-variant-numeric: tabular-nums;
+}
+.billing-workspace .billing-context {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 15px;
+  padding: 13px 0;
+  border-top: 1px solid #ddd;
+  border-bottom: 1px solid #ddd;
+  font-size: 13px;
+}
+.billing-workspace .billing-context > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.billing-workspace .billing-context strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #666;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .35px;
+}
+.billing-workspace .billing-review-summary {
+  padding: 13px 0;
+  margin-bottom: 6px;
+  color: #555;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.billing-workspace .billing-money {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.billing-workspace .billing-table td:first-child {
+  max-width: 380px;
+  overflow-wrap: anywhere;
+}
+.billing-workspace .billing-table td > .muted {
+  margin-top: 4px;
+}
+.billing-workspace .billing-table td .actions {
+  min-width: 80px;
+}
+.billing-workspace .billing-table td details {
+  padding: 8px 10px;
+  margin: 9px 0 0;
+  font-size: 11px;
+}
+.billing-workspace .billing-table td details p {
+  margin: 8px 0 3px;
+  overflow-wrap: anywhere;
+}
+.billing-workspace .billing-table td details summary {
+  font-size: 11px;
+}
+.billing-workspace .billing-table th[scope="row"] {
+  background: #fff;
+  color: #303030;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12px;
+  white-space: normal;
+}
+.billing-workspace .billing-line-filters {
+  margin: 0 0 18px;
+  padding: 0 0 15px;
+  border-bottom: 1px solid #ddd;
+}
+.billing-workspace .billing-allocations {
+  display: grid;
+  gap: 8px;
+  min-width: 220px;
+  max-width: 400px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.billing-workspace .billing-allocations li {
+  display: grid;
+  grid-template-columns: minmax(80px, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+.billing-workspace .billing-allocations span {
+  overflow-wrap: anywhere;
+}
+.billing-workspace .billing-allocations strong {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.billing-workspace .billing-allocation-weight {
+  display: block;
+  margin-top: 3px;
+  color: #666;
+  font-size: 10px;
+  line-height: 1.4;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.billing-workspace .billing-table td details.billing-allocation-details {
+  margin: 0;
+  padding: 8px 10px;
+}
+.billing-workspace .billing-allocation-details > summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.billing-workspace .billing-allocation-details[open] > summary {
+  margin-bottom: 12px;
+}
+.billing-workspace .billing-export-actions {
+  margin-top: 19px;
+  padding-top: 17px;
+  border-top: 1px solid #ccc;
+}
+.billing-workspace .billing-export-actions .muted {
+  margin-bottom: 0;
+}
+.billing-workspace .billing-reopen {
+  margin-top: 16px;
+  padding-top: 6px;
+  border-top: 1px solid #ccc;
+}
+.billing-workspace .billing-delivery {
+  padding: 19px 0;
+  border-top: 1px solid #d5d5d5;
+}
+.billing-workspace .billing-delivery:last-child {
+  padding-bottom: 0;
+}
+.billing-workspace .billing-delivery h3 {
+  margin-bottom: 4px;
+}
+.billing-workspace .billing-delivery > .panel-head {
+  margin-bottom: 9px;
+}
+.billing-workspace .billing-export-files {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.billing-workspace .billing-export-files li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 9px 0;
+  border-bottom: 1px solid #e5e5e5;
+}
+.billing-workspace .billing-export-files span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.billing-workspace .billing-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (max-width: 1100px) {
+  .billing-workspace .billing-import-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .billing-workspace .billing-context {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 720px) {
+  .billing-workspace .billing-section-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 12px;
+  }
+  .billing-workspace .billing-section-nav button {
+    flex: 0 0 auto;
+    padding: 8px 11px;
+    font-size: 11px;
+  }
+  .billing-workspace .billing-rule {
+    padding: 13px;
+  }
+  .billing-workspace .billing-share-head {
+    display: none;
+  }
+  .billing-workspace .billing-share {
+    grid-template-columns: minmax(100px, 1fr) minmax(65px, .5fr) auto;
+    gap: 6px;
+    padding-top: 10px;
+    border-top: 1px solid #e0e0e0;
+  }
+  .billing-workspace .billing-share select,
+  .billing-workspace .billing-share input {
+    font-size: 11px;
+    padding: 8px 7px;
+  }
+  .billing-workspace .billing-import-choice {
+    padding: 10px;
+  }
+  .billing-workspace .billing-adjustment {
+    padding: 12px;
+  }
+  .billing-workspace .billing-file-selection {
+    flex-wrap: wrap;
+  }
+  .billing-workspace .billing-allocations {
+    min-width: 185px;
+  }
+  .billing-workspace .billing-delivery .actions {
+    width: 100%;
+  }
+}
+
+.billing-workspace .billing-excluded-pages { margin-top: 15px; }
