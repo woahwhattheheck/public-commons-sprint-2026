@@ -171,7 +171,7 @@ python3 -B workspace.py serve --workspace /absolute/new-restore/workspace --port
 
 The immutable received payload stays under `new-restore/received`; the operating database is under `new-restore/workspace`. The restored UUID, source/edition/run/report IDs and operation requests/results remain the originals. A restored running attempt becomes interrupted. Historical backup rows are labelled **external_archive**, preserving their prior identities without offering a nonexistent local download. No solver starts automatically.
 
-A replayed original operation returns its historical result with current state. Use the original run, report and operation pages to verify receiving. Installation of archived Python code is a separate administrator choice; the Tethys adapter always imports the configured reviewed core, not code from an uploaded archive.
+A replayed original operation returns its historical result with current state. Replaying an exact run-execution request also continues its queued side effect if no native dispatch ever occurred; an already dispatched attempt still uses explicit **Continue original run**. Runtime fingerprints compare the actual executable and dependency content. Raw version diagnostics remain visible observations, including legacy Fortran process IDs and addresses, and are not treated as binary changes. Use the original run, report and operation pages to verify receiving. Installation of archived Python code is a separate administrator choice; the Tethys adapter always imports the configured reviewed core, not code from an uploaded archive.
 
 ## 11. Tethys and complete native receiving
 

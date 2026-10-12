@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Pure schema for the original DuckDB customer service, without runtime imports.
+import {nativeDuckDBReconciliationOperations} from './native-duckdb-reconciliation-schema.mjs';
 const alias={type:'string',pattern:'^[A-Za-z][A-Za-z0-9_-]{0,63}$'};
 const name={type:'string',pattern:'^[A-Za-z][A-Za-z0-9_]{0,119}$'};
 const id={type:'string',pattern:'^[a-f0-9]{64}$'};
@@ -23,6 +24,7 @@ const sql={type:'string',minLength:1,maxLength:262144};
 const exported={type:'string',pattern:'^(?:[a-f0-9]{64}|handoff-[a-f0-9]{32})$'};
 const spec=(required,properties,description)=>({required,properties,description});
 export const nativeDuckDBOperations=Object.freeze({
+ ...nativeDuckDBReconciliationOperations,
  workspaces:spec([],{},'List host-registered original DuckDB customer aliases. No service start or warehouse creation.'),
  state:spec([],{},'Read the selected original warehouse identity and current view selections. Original source/edition/query/export catalogs remain separately pageable.'),
  sources:spec([],{...page},'Page original host-registered, exact-hash SF100 report aliases. No local paths or source purchases.'),

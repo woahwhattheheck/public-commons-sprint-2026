@@ -16,6 +16,20 @@ async function optional(path){
   try{return decode(await readSourceFile(path,{privateFile:true,maxBytes:65536}));}
   catch(error){if(error.code==='ENOENT')return null;throw error;}
 }
+// Native CLI errors are one JSON line on stdout. Preserve that response after
+// child stdio closes; successful startup records can contain private URLs.
+function nativeStartupError(stdout){
+  for(const line of stdout.split(/\r?\n/).reverse()){
+    try{
+      const value=JSON.parse(line);
+      if(plain(value) && typeof value.error==='string' && value.error.length<=8192 &&
+          (value.kind===undefined || typeof value.kind==='string' && value.kind.length<=128))
+        return {error:value.error,...(value.kind===undefined?{}:{kind:value.kind})};
+    }catch{}
+  }
+  return null;
+}
+
 async function identity(directory){
   await privateSupportDirectory(directory);await privateSupportDirectory(join(directory,'eltss'));
   need(await realpath(directory)===directory,'ELTSS_DIRECTORY_ALIAS');
@@ -197,7 +211,8 @@ export class EltssConnection {
       const owned={child,exited:false,exit:null,stderr:'',stdout:''};this.#owned=owned;
       owned.done=new Promise(resolve=>{
         child.once('error',error=>{owned.exited=true;owned.exit={error:error.code??error.name};resolve();});
-        child.once('exit',(code,signal)=>{owned.exited=true;owned.exit={code,signal};resolve();});
+        child.once('exit',(code,signal)=>{owned.exited=true;owned.exit={code,signal};});
+        child.once('close',()=>resolve());
       });
       child.stdout.on('data',chunk=>{owned.stdout=(owned.stdout+chunk.toString('utf8')).slice(-16384);});
       child.stderr.on('data',chunk=>{owned.stderr=(owned.stderr+chunk.toString('utf8')).slice(-8192);});
@@ -206,8 +221,14 @@ export class EltssConnection {
       try{
         const until=Date.now()+30000;
         while(Date.now()<until){
-          need(!owned.exited,'ELTSS_START_FAILED','The original native serve process exited.',
-            {exit:owned.exit,diagnostic:owned.stderr});
+          if(owned.exited){
+            await owned.done;
+            const nativeError=nativeStartupError(owned.stdout);
+            throw failure('ELTSS_START_FAILED',nativeError?
+              'The original native serve process exited: '+nativeError.error:
+              'The original native serve process exited.',
+              {exit:owned.exit,diagnostic:owned.stderr,...(nativeError?{nativeError}:{})});
+          }
           const current=await this.#live();
           if(current){
             need(current.processId===child.pid,'ELTSS_START_CONFLICT',

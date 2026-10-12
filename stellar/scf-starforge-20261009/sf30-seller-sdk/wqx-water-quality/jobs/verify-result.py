@@ -10,6 +10,7 @@ import stat
 import zipfile
 
 SCHEMA = "starforge.wqx-scientific-job-result.v1"
+PAIRED_SCHEMA = "starforge.wqx-paired-scientific-job-result.v1"
 NAME = re.compile(r"^[A-Za-z0-9._/-]{1,240}$")
 LIMIT = 512 * 1024 * 1024
 
@@ -67,7 +68,7 @@ def verify(path, output, selected, extraction_directory=None):
         if "manifest.json" not in names or reader.getinfo("manifest.json").file_size > 16 * 1024 * 1024:
             raise ValueError("Scientific ZIP needs its bounded native manifest")
         manifest = json.loads(reader.read("manifest.json").decode("utf-8"))
-        if manifest.get("schema") != SCHEMA or not isinstance(manifest.get("members"), list):
+        if manifest.get("schema") not in (SCHEMA, PAIRED_SCHEMA) or not isinstance(manifest.get("members"), list):
             raise ValueError("Scientific ZIP manifest is invalid")
         expected = {item["path"]: item for item in manifest["members"]}
         if len(expected) != len(manifest["members"]) or set(expected) != set(names) - {"manifest.json"}:
@@ -89,7 +90,7 @@ def verify(path, output, selected, extraction_directory=None):
                     raise ValueError("Scientific ZIP member differs: " + item.filename)
             observed.append(row)
         for name in selected:
-            if name not in ("review/complete-review.json", "open-waters/complete-open-waters.json"):
+            if name not in ("review/complete-review.json", "open-waters/complete-open-waters.json", "scientific/complete-scientific-review.json"):
                 raise ValueError("Select a native complete receiving bundle")
             if name not in expected:
                 raise ValueError("Selected native receiving bundle is absent")
