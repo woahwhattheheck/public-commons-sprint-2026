@@ -55,6 +55,7 @@ const USAGE = `Seller releases — Node 22+, original SF61 compiler and SF82 lau
   catalog-review --store DIR --catalog CONFIG_JSON --id RELEASE --out NEW_REVIEW_JSON
                  [--withdraw ROUTE_ID --reason TEXT]
   catalog-apply --store DIR --catalog CONFIG_JSON --review REVIEW_JSON
+  delivery COMMAND OPTIONS (status, controls, foreground worker, capture, download and receive)
   run      --store DIR [--expect GENERATION]
   console  --store DIR [--port 8425] [--client-exports PRIVATE_DIRECTORY]
            [--discovery-setup DIRECTORY | --catalog CONFIG_JSON] [--receiving-config PRIVATE_JSON]
@@ -115,6 +116,7 @@ function parse(args) {
 }
 const print = result => process.stdout.write(JSON.stringify(result, null, 2) + '\n');
 export async function main(args = process.argv.slice(2)) {
+  if (args[0] === 'delivery') return (await import('./release-delivery-cli.mjs')).main(args.slice(1));
   const parsed = parse(args);
   if (!parsed) { process.stdout.write(USAGE + '\n'); return null; }
   const { command, options: o } = parsed, root = resolve(o.store);

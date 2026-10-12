@@ -119,3 +119,25 @@ For the OData operator, select an empty receiving workspace and restore the full
 ```
 
 The existing browser Restore handles transfers up to its declared 64 MiB input ceiling. For a larger complete collection transfer, the original UI supplies this native-file route and the actual selected workspace/CLI. The native receiver reads the complete file and preserves the same original transfer validation and workspace ownership.
+
+## Original workspace identity and preflight continuation
+
+The retained packet's workspace hash is its original creation identity: schema,
+original directory and creation time. The original workspace identity reader
+validates that record; a receiving-directory relocation retains its original
+directory in the identity comparison. The complete reference workspace file is
+also checked separately against its original 123,591 bytes and SHA-256
+`7b1b2b38bc9b574c53200f9f2708c64e980b73f92fb88625aae652cada653ea9`.
+The prepared customer result retains both identities.
+
+The first customer helper treated that creation identity as a whole-file hash
+and could stop before it created any customer workspace or native job. For that
+specific retained preflight, select the same input, output and product source,
+and add `--resume --resume-source-from ORIGINAL_SELECTION_SHA256` to the command.
+The prior SHA is `selection_sha256` in its existing `customer-operation.json`.
+The runner requires the exact original selection, an empty step history and no
+customer output beyond the original preflight records. It accepts only this
+helper correction and the original identity-reader dependency, retains the full
+prior selection and error in the same journal, and continues the same customer
+operation. Once customer work exists, ordinary `--resume` keeps its original
+source and complete native jobs.

@@ -57,6 +57,15 @@ function buttons() {
 function inputChanged() { state.dirty = true; buttons(); }
 function renderQuery(definition, saved) {
   state.query = definition;
+  const nativeOrder = state.source?.extraction?.order === 'query';
+  $('order').closest('label').hidden = nativeOrder;
+  if (!$('native-csv-option') && state.source?.extraction?.includeNativeCsv) {
+    const label = node('label', 'Retain separate native CSV export '), box = document.createElement('input');
+    box.type = 'checkbox'; box.id = 'native-csv-option';
+    box.addEventListener('change', inputChanged);
+    label.append(box); $('order').closest('label').after(label);
+  }
+  if ($('native-csv-option')) $('native-csv-option').checked = saved?.extraction?.includeNativeCsv ?? false;
   $('source-sql').textContent = typeof definition.sql === 'string' ? definition.sql : JSON.stringify(definition.serviceQuery && typeof definition.serviceQuery === 'object' && !Array.isArray(definition.serviceQuery) ? definition.serviceQuery : definition.path ? {
     path: definition.path, format: definition.format, recordsPointer: definition.recordsPointer,
     expectedSha256: definition.expectedSha256, mapping: definition.mapping, where: definition.where,
@@ -71,7 +80,8 @@ function renderQuery(definition, saved) {
       const choices = spec.type === 'boolean' ? ['true', 'false'] : spec.enum;
       for (const value of choices) input.append(node('option', String(value), { value: String(value) }));
     } else { input.type = 'text'; input.autocomplete = 'off'; }
-    const value = saved?.input && Object.hasOwn(saved.input, name) ? saved.input[name] : spec.default;
+    const value = saved?.input && Object.hasOwn(saved.input, name) ? saved.input[name] :
+      definition.probe && Object.hasOwn(definition.probe, name) ? definition.probe[name] : spec.default;
     input.value = value === null || value === undefined ? '' : String(value);
     label.append(input); wrapper.append(label);
     if (spec.required === false) {
@@ -102,7 +112,7 @@ function renderQuery(definition, saved) {
     for (const [value, label] of [['string', 'Text'], ['integer', 'Integer'], ['number', 'Float'], ['boolean', 'Boolean']])
       type.append(node('option', label, { value }));
     const declared = definition.columnTypes?.find(column => column.name === name);
-    const spec = saved?.dataset.columns[name] ?? (!saved ? declared : undefined);
+    const spec = saved?.dataset.columns[name] ?? (!saved ? declared ?? (nativeOrder ? { type: 'string', nullable: true } : undefined) : undefined);
     type.value = typeof spec === 'string' ? spec : spec?.type ?? 'string';
     const typeCell = node('td'); typeCell.append(type); row.append(typeCell);
     for (const role of ['nullable', 'filters', 'ranges', 'sorts']) {
@@ -113,7 +123,7 @@ function renderQuery(definition, saved) {
     }
     $('columns').append(row);
   }
-  $('order').value = saved ? saved.extraction.order.map(item => (item.direction === 'desc' ? '-' : '') + item.column).join(', ') : definition.columns[0];
+  $('order').value = saved ? (saved.extraction.order ?? []).map(item => (item.direction === 'desc' ? '-' : '') + item.column).join(', ') : nativeOrder ? '' : definition.columns[0];
 }
 async function freshPlan() {
   if (state.dirty && !window.confirm('Discard the unsaved extraction plan edits and start a new plan?')) return;
@@ -124,7 +134,12 @@ async function freshPlan() {
   const definition = state.source.queries[$('query-name').value];
   $('plan-form').hidden = !definition;
   if (!definition) { state.query = null; clear($('columns')); clear($('parameters')); buttons(); return; }
-  renderQuery(definition); buttons();
+  renderQuery(definition);
+  if (state.source.extraction?.order === 'query') {
+    $('max-rows').value = 1000000; $('max-mib').value = 64;
+    $('timeout').value = Math.max(120, (definition.timeoutMs ?? 30000) / 1000);
+  }
+  buttons();
 }
 function planInput() {
   const input = {};
@@ -147,8 +162,9 @@ function planInput() {
       ...($('max-cell-chars') ? { maxCellChars: Number($('max-cell-chars').value) } : {}) },
     extraction: { maxRows: Number($('max-rows').value), maxBytes: Number($('max-mib').value) * 1048576,
       maxRowBytes: 1048576, timeoutMs: Number($('timeout').value) * 1000,
-      order: $('order').value.split(',').map(value => value.trim()).filter(Boolean).map(value => ({
-        column: value.startsWith('-') ? value.slice(1) : value, direction: value.startsWith('-') ? 'desc' : 'asc' })) } };
+      ...(state.source?.extraction?.order === 'query' ? {} : { order: $('order').value.split(',').map(value => value.trim()).filter(Boolean).map(value => ({
+        column: value.startsWith('-') ? value.slice(1) : value, direction: value.startsWith('-') ? 'desc' : 'asc' })) }),
+      ...(state.source?.extraction?.includeNativeCsv ? { includeNativeCsv: $('native-csv-option')?.checked ?? false } : {}) } };
 }
 async function choosePlan(id) {
   if (state.dirty && !window.confirm('Discard the unsaved extraction plan edits and open this saved plan?')) return;

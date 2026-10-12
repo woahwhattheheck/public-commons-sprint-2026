@@ -22,8 +22,17 @@ export function renderAccountingApplicationReview(command){
     ['Reviewed start SHA-256',review.bindingSha256],['Local listener','127.0.0.1:'+review.port],
     ['Opening mode',review.recoveryStartPaused?'Paused for original recovery':'Original accounting workspace'],
   ])facts.append(row(label,value));
+  const buyer=review.workspaceBinding?.sources?.sourceMode==='buyer'?review.workspaceBinding:null;
+  facts.append(row('Accounting source',buyer?'Issued buyer period':'Merchant reconciliation'));
+  if(buyer){
+    for(const [label,value] of [['Original workspace ID',buyer.workspaceId],['Source configuration SHA-256',buyer.sourcesSha256],
+      ['Retained issued source',buyer.sources.buyerSourceFile],['Issued source SHA-256',buyer.sources.buyerSourceSha256],
+      ['Original source bytes',buyer.sources.buyerSourceBytes]])facts.append(row(label,value));
+  }
   section.append(facts);
-  for(const [provider,label] of [['quickbooks','QuickBooks Online'],['xero','Xero']]){
+  if(buyer)section.append(node('p','This initialized buyer workspace opens its original issued source, accountant handoffs, Xero returns, Connections and operating recovery.','note'));
+  for(const [provider,label] of (buyer?[['xero','Xero']]:[['quickbooks','QuickBooks Online'],['xero','Xero']])){
+
     const target=review.targets?.[provider],detail=node('div');
     detail.append(node('h5',label));
     if(!target){detail.append(node('p','No saved native selection. Use Connections after opening to authorize and review a company, then review and reopen the application.','note'));}

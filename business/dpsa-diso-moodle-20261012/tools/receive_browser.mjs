@@ -14,10 +14,12 @@ function run(argv, options = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(argv[0], argv.slice(1), {stdio: ['ignore', 'pipe', 'pipe'], ...options});
     let output = '', error = '';
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
     child.stdout.on('data', value => output += value);
     child.stderr.on('data', value => error += value);
     child.on('error', reject);
-    child.on('exit', code => code === 0 ? resolve(output) : reject(new Error('Original Moodle CLI exited ' + code + ': ' + error.slice(-5000) + output.slice(-2000))));
+    child.on('close', code => code === 0 ? resolve(output) : reject(new Error('Original Moodle CLI exited ' + code + ': ' + error.slice(-5000) + output.slice(-2000))));
   });
 }
 function attribute(value) { return JSON.stringify(String(value)); }
@@ -51,8 +53,15 @@ async function finish(page) {
   await page.getByRole('button', {name: 'Submit all and finish', exact: true}).first().click();
   const dialog = page.getByRole('dialog');
   const confirm = dialog.getByRole('button', {name: 'Submit all and finish', exact: true});
-  if (await visible(confirm)) await confirm.click();
-  await page.waitForURL(/\/mod\/quiz\/review\.php/);
+  // Moodle renders its confirmation modal asynchronously before submitting.
+  // Continue the same attempt after either that modal or direct navigation.
+  const destination = /\/mod\/quiz\/review\.php/;
+  const transition = await Promise.race([
+    confirm.waitFor({state: 'visible'}).then(() => 'confirm'),
+    page.waitForURL(destination).then(() => 'review'),
+  ]);
+  if (transition === 'confirm') await confirm.click();
+  await page.waitForURL(destination);
 }
 async function startOrResume(page, config, cmid, key, receipt, receiptFile) {
   const prior = receipt.attempts[key];
@@ -66,8 +75,13 @@ async function startOrResume(page, config, cmid, key, receipt, receiptFile) {
   const start = page.getByRole('button', {name: /^(Attempt quiz|Re-attempt quiz|Continue your attempt)/i});
   await start.first().click();
   const confirmation = page.getByRole('dialog').getByRole('button', {name: /Start attempt/i});
-  if (await visible(confirmation)) await confirmation.click();
-  await page.waitForURL(/\/mod\/quiz\/attempt\.php/);
+  const destination = /\/mod\/quiz\/attempt\.php/;
+  const transition = await Promise.race([
+    confirmation.waitFor({state: 'visible'}).then(() => 'confirm'),
+    page.waitForURL(destination).then(() => 'attempt'),
+  ]);
+  if (transition === 'confirm') await confirmation.click();
+  await page.waitForURL(destination);
   const id = Number(new URL(page.url()).searchParams.get('attempt'));
   need(Number.isSafeInteger(id) && id > 0, 'Retain original browser-created attempt ID');
   receipt.attempts[key] = {attemptId: id, quizCmid: cmid, state: 'STARTED'};

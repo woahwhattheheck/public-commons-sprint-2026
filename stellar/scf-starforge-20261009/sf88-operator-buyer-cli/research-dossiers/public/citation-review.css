@@ -1,0 +1,98 @@
+/* MIT. Original Research dossier citation review, neutral operator layout. */
+.citation-review { min-width:0; }
+.citation-review *, .citation-review *::before, .citation-review *::after { box-sizing:border-box; }
+.citation-review [hidden] { display:none !important; }
+.citation-review h2, .citation-review h3, .citation-review h4, .citation-review p { overflow-wrap:anywhere; }
+.citation-review h2 { font-size:1.18rem; line-height:1.45; }
+.citation-review h3 { font-size:1rem; line-height:1.45; margin:0 0 12px; }
+.citation-review h4 { font-size:.95rem; line-height:1.45; margin:0 0 8px; }
+.citation-review p { line-height:1.55; }
+.citation-review code, .citation-review .cr-wrap, .citation-review .cr-doi { overflow-wrap:anywhere; word-break:break-word; }
+.citation-review button { white-space:normal; overflow-wrap:anywhere; }
+.citation-review :is(input,select,textarea) { min-width:0; max-width:100%; }
+.citation-review textarea { resize:vertical; line-height:1.55; }
+.citation-review :is(input,select,textarea,button):focus-visible { outline:2px solid #484b4e; outline-offset:3px; }
+.cr-message { border:1px solid var(--line,#d9dcdf); background:#f4f5f5; padding:12px 14px; margin:16px 0; }
+.cr-message[data-kind="error"] { border-left:4px solid #42474c; }
+.cr-counts { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); border:1px solid var(--line,#d9dcdf); margin:20px 0; }
+.cr-counts > div { padding:14px 16px; display:flex; flex-direction:column; gap:4px; min-width:0; }
+.cr-counts > div + div { border-left:1px solid var(--line,#d9dcdf); }
+.cr-counts strong { font-size:1.3rem; font-variant-numeric:tabular-nums; }
+.cr-counts span { color:var(--muted,#626a70); font-size:.82rem; overflow-wrap:anywhere; }
+.cr-layout { display:grid; grid-template-columns:minmax(210px,260px) minmax(0,1fr); gap:24px; align-items:start; }
+.cr-notice-area, .cr-detail { min-width:0; }
+.cr-notice-area > .cr-field { margin-top:0; }
+.cr-notice-list { display:flex; flex-direction:column; gap:8px; margin:14px 0; }
+.cr-notice { display:flex; flex-direction:column; gap:7px; width:100%; align-items:flex-start; padding:14px; text-align:left; background:#fff; border:1px solid var(--line,#d9dcdf); border-radius:3px; }
+.cr-notice.active { border-color:#42474c; box-shadow:inset 3px 0 #42474c; background:#f5f6f6; }
+.cr-notice strong { font-size:.91rem; line-height:1.45; overflow-wrap:anywhere; }
+.cr-notice .cr-doi { font-size:.77rem; line-height:1.45; }
+.cr-status { display:inline-block; font-size:.72rem; line-height:1.45; font-weight:650; letter-spacing:.02em; text-transform:uppercase; padding:3px 7px; border:1px solid #cbd0d3; background:#f0f2f3; color:#3d4246; }
+.cr-pagination { display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between; }
+.cr-pagination .small { flex:1; min-width:70px; text-align:center; }
+.cr-detail-heading { border-bottom:1px solid var(--line,#d9dcdf); padding-bottom:18px; margin-bottom:18px; }
+.cr-detail-heading h2 { margin:12px 0; }
+.cr-meta { margin:12px 0 0; }
+.cr-meta-row { display:grid; grid-template-columns:minmax(105px,160px) minmax(0,1fr); gap:12px; padding:6px 0; font-size:.82rem; line-height:1.5; }
+.cr-meta dt { color:var(--muted,#626a70); }
+.cr-meta dd { margin:0; overflow-wrap:anywhere; word-break:break-word; }
+.cr-source-section, .cr-coverage > details, .cr-draft-versions { border:1px solid var(--line,#d9dcdf); padding:14px; margin:16px 0; }
+.citation-review summary { cursor:pointer; font-size:.87rem; font-weight:600; line-height:1.5; overflow-wrap:anywhere; }
+.cr-source-row, .cr-coverage-row { padding-top:16px; margin-top:16px; border-top:1px solid var(--line,#d9dcdf); }
+.cr-source-json { font:12px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace; white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word; max-height:440px; overflow:auto; background:#f4f5f5; padding:14px; border:1px solid #e2e5e7; }
+.cr-capture-line { display:flex; flex-direction:column; gap:4px; font-size:.78rem; line-height:1.5; margin:12px 0; }
+.cr-capture-line a { overflow-wrap:anywhere; }
+.cr-original-record { margin-top:12px; }
+.cr-actions, .cr-report-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:14px; }
+.cr-report-row > span { flex:1 1 180px; font-size:.82rem; line-height:1.45; }
+.cr-editor { border-top:1px solid var(--line,#d9dcdf); padding-top:18px; }
+.cr-draft-status { font-size:.8rem; color:var(--muted,#626a70); margin:0 0 16px; }
+.cr-review-identity { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; }
+.cr-field { display:flex; flex-direction:column; gap:7px; margin:0 0 16px; font-size:.85rem; font-weight:500; min-width:0; }
+.cr-field > span { overflow-wrap:anywhere; line-height:1.45; }
+.cr-field > :is(input,select,textarea) { width:100%; font-weight:400; }
+.cr-evidence, .cr-findings, .cr-history { margin-top:28px; }
+.cr-evidence-row, .cr-finding, .cr-history-row { padding:18px; margin:14px 0; border:1px solid var(--line,#d9dcdf); background:#fff; min-width:0; }
+.cr-record-id { display:block; font:11px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace; color:var(--muted,#626a70); margin:8px 0 16px; }
+.cr-check { display:flex; flex-wrap:wrap; gap:8px 10px; align-items:flex-start; font-size:.84rem; font-weight:400; line-height:1.5; padding:9px 0; }
+.cr-check > input { flex:0 0 auto; width:16px; height:16px; min-height:0; margin:3px 0 0; }
+.cr-check > span { flex:1 1 150px; min-width:0; overflow-wrap:anywhere; }
+.cr-check > small { flex:1 0 100%; padding-left:26px; color:var(--muted,#626a70); }
+.cr-citations { min-width:0; margin:6px 0 20px; padding:10px 12px; border:1px solid var(--line,#d9dcdf); }
+.cr-citations legend { font-size:.82rem; padding:0 6px; font-weight:600; }
+.cr-full-text { white-space:pre-wrap; overflow-wrap:anywhere; }
+.cr-history-row > details { margin-top:18px; }
+.cr-pending, .cr-conflict { border:1px solid #9ca3a8; background:#f7f8f8; padding:18px; margin:18px 0; }
+.cr-pending-row { display:flex; flex-wrap:wrap; gap:9px 16px; align-items:center; border-top:1px solid var(--line,#d9dcdf); padding:12px 0; font-size:.81rem; }
+.cr-pending-row code { flex:1 1 220px; }
+.cr-merge-field { border:1px solid var(--line,#d9dcdf); padding:14px; background:#fff; margin:16px 0; }
+.cr-merge-values { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:12px 0; }
+.cr-merge-values > div { min-width:0; }
+.cr-merge-values strong { font-size:.78rem; }
+.cr-merge-values pre { font:12px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace; max-height:260px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word; background:#f4f5f5; padding:10px; }
+.cr-draft-versions button { display:block; margin-top:12px; text-align:left; }
+@media(max-width:1200px) {
+  .cr-layout { grid-template-columns:minmax(0,1fr); gap:22px; }
+  .cr-notice-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); max-height:400px; overflow:auto; padding:2px; }
+  .cr-notice-area > .cr-field { max-width:320px; }
+}
+@media(max-width:650px) {
+  .cr-counts { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .cr-counts > div { padding:12px; }
+  .cr-counts > div:nth-child(3) { border-left:0; }
+  .cr-counts > div:nth-child(n+3) { border-top:1px solid var(--line,#d9dcdf); }
+  .cr-notice-list { grid-template-columns:minmax(0,1fr); max-height:350px; }
+  .cr-review-identity, .cr-merge-values, .cr-meta-row { grid-template-columns:minmax(0,1fr); gap:5px; }
+  .cr-review-identity { gap:0; }
+  .cr-source-section, .cr-coverage > details, .cr-draft-versions, .cr-pending, .cr-conflict { padding:12px; }
+  .cr-evidence-row, .cr-finding, .cr-history-row { padding:12px; }
+  .cr-actions > button { flex:1 1 160px; }
+  .cr-report-row > span { flex-basis:100%; }
+  .cr-report-row > button { flex:1 1 80px; }
+  .cr-merge-field { padding:10px; }
+  .cr-meta dd { font-size:.8rem; }
+}
+
+.cr-document-binding { border-top:1px solid var(--line,#d9dcdf); padding-top:14px; margin:16px 0; }
+.cr-document-binding > a { display:block; overflow-wrap:anywhere; font-size:.8rem; margin:10px 0; }
+.cr-document-binding > details { margin-top:12px; }

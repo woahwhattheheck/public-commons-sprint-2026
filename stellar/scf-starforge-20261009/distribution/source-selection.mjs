@@ -126,7 +126,14 @@ export function selectDistributionSources({ base, contributions, selection }) {
   });
   // Native peers and original exclusions remain; the recipe may omit explicit files.
   // Runtime-profile still chooses which native dependencies to install.
-  if (recipe.product !== undefined) selected.product = copy(recipe.product);
+  if (recipe.product !== undefined) {
+    selected.product = copy(recipe.product);
+    // A product can specialize README/bin without changing its source repository.
+    // Inherit only this identity; unrelated base executables stay unselected.
+    if (selected.product.repository === undefined && base.product?.repository !== undefined) {
+      selected.product.repository = copy(base.product.repository);
+    }
+  }
   const wanted = selectedContributionPaths(contributions.map(entry => entry.path), recipe);
   const byPath = new Map(contributions.map(entry => [entry.path, entry]));
   need(byPath.size === contributions.length, 'Duplicate original contribution source');

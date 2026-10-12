@@ -40,7 +40,7 @@ Supplier delivery:
   catalog-supplier-rows    --review ID [--status all|errors|warnings|ready]
                           [--search IDENTIFIER] [--offset N] [--limit N]
   catalog-supplier-recipient-rows --review ID [--kind all|product|tradeItem]
-                          [--change all|added|changed|unchanged|expired|deleted]
+                          [--change all|added|changed|unchanged|expired|deleted|skipped]
                           [--search IDENTIFIER] [--offset N] [--limit N]
   catalog-supplier-row     --review ID --material-key KEY
   catalog-supplier-save       --request REQUEST.json
@@ -50,7 +50,8 @@ Supplier delivery:
                           --format FORMAT --output FILE_OR_-
 
 Supplier formats: review.json, issues.csv, products.jsonl, bmecat.xml,
-                  xchange.json, recipient.jsonl, impact.csv.
+                  xchange.json, recipient.jsonl, impact.csv, parameters.xml, 2ba.zip.
+                  2ba.zip pairs the reviewed native JSON with parameters.xml.
 Use format.kind=xchange-json for an original ETIM xChange document.
 A complete catalog bundle also carries supplier plan/correction histories
 and every immutable supplier review; original v1 bundles remain readable.
