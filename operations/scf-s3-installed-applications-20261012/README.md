@@ -99,7 +99,7 @@ If an executed product phase fails, preserve that attempt and its journal, corre
 
 ## Results and retained state
 
-`installed-receiving.json` records source selection, original preparation, offline graph, READY identity and customer phase. `merchant-reception/managed-s3-reception.json` contains the complete customer result. Earlier worker attempts are retained as `attempt-<uuid>.json` before a continuation replaces the current journal.
+`installed-receiving.json` records source selection, original preparation, offline graph, READY identity and customer phase. `merchant-reception/managed-s3-reception.json` contains the complete customer result. A completed worker reopens its canonical original customer result and verifies its retained SHA, completed state and operation ID before returning the saved handoff. Earlier worker attempts are retained as `attempt-<uuid>.json` before a continuation replaces the current journal.
 
 The saved source archive, original package locks, installed profile, runtime plan, provider journal, workspace revisions and release records remain available for independent receiving. The source manifest beside this guide records every operating file and its provenance.
 

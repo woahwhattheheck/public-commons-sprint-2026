@@ -37,6 +37,14 @@ export async function installAndReceive(config){
   const journalPath=join(root,'installed-receiving.json');
   const prior=await exists(journalPath)?await read(journalPath):null;
   if(prior?.state==='COMPLETE'){
+    assert.equal(prior.operationId,config.operationId);
+    assert.equal(prior.inputSha256,sha(encode(config)));
+    const resultPath=join(root,'merchant-reception','managed-s3-reception.json');
+    assert.equal(prior.receiving?.state,'COMPLETE');assert.equal(prior.receiving?.result,resultPath);
+    const retained=await readFile(resultPath);
+    assert.equal(sha(retained),prior.receiving.resultSha256,'The original customer result changed');
+    const customer=JSON.parse(retained);
+    assert.equal(customer.state,'COMPLETE');assert.equal(customer.operationId,config.operationId);
     const actual=await inspectRuntimeInstall({directory:prior.runtimeDirectory,load:true,source:true,python:config.python??'python3'});
     assert.equal(actual.ready,true);assert.equal(actual.sourceCommit,config.expectedSourceCommit);
     return prior;

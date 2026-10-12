@@ -7,8 +7,8 @@
   "files": [
     {
       "path": "installed-receiving/install-and-receive.mjs",
-      "bytes": 9613,
-      "sha256": "a7610172b401deaf766668a616d85ed7aed5cd7a2d58f89a7391b5c13e764cc7",
+      "bytes": 10198,
+      "sha256": "3e87d16c6b46fbac00f1486708a804f7b09d560b8ec6e72317da7df970c03a45",
       "origin": "Original receiving with atomic complete checkpoint publication",
       "originalSha256": "223ac5b1e03def7b9a38d17007b73ca85a6eaf3001d2133f45e46391ed24faad"
     },
@@ -104,8 +104,8 @@
     {
       "path": "README.md",
       "origin": "Complete original installation, managed merchant, customer and recovery guide",
-      "bytes": 9915,
-      "sha256": "6ca12868c842f7832cbd66cadecf7bd58b57be0a273afa379c6b56b8dc4bc233"
+      "bytes": 10081,
+      "sha256": "702b7babb6269cb0007f59aa409d6a2f6739e916646dc02262b859c867e658b4"
     },
     {
       "path": "LICENSE.commons",
