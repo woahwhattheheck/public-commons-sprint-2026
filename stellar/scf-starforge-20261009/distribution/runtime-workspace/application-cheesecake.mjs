@@ -37,7 +37,8 @@ export async function prepareCheesecakeApplication(settings,inputPath,runtimeDir
     inputs.push({...item,sha256:reference.sha256});seen.add(reference.path);
   }
   const args=['serve','--config',selected.configFile,
-    '--expected-selection-sha256',selected.selectionSha256];
+    '--expected-selection-sha256',selected.selectionSha256,
+    '--managed-source',selected.applicationDirectory];
   // State identity, rather than the configuration filename, owns exclusivity.
   const resourceKey=digest(json(canonical({family:'stellar-application',directory:selected.stateDirectory})));
   return {args,inputs,resourceKey};
@@ -56,6 +57,15 @@ export function cheesecakeStartup(request,text) {
   if(!plain(value)||value.schema!==STARTUP||value.status!=='STELLAR_APPLICATION_READY')return null;
   const configFile=absolute(selectedArgument(request,'--config'));
   const expected=selectedArgument(request,'--expected-selection-sha256');
+  const sourceDirectory=absolute(selectedArgument(request,'--managed-source'));
+  const launchSourceDirectory=join(absolute(request.releaseDirectory),'source',
+    'stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent');
+  const runtimeDirectory=join(sourceDirectory,'..','..','sf88-operator-buyer-cli');
+  need(value.sourceDirectory===sourceDirectory&&value.launchSourceDirectory===launchSourceDirectory&&
+    value.runtimeDirectory===runtimeDirectory&&Number.isSafeInteger(value.pid)&&value.pid>0&&
+    plain(value.sourceFiles)&&Object.hasOwn(value.sourceFiles,'installed.mjs')&&
+    Object.values(value.sourceFiles).every(sha=>/^[a-f0-9]{64}$/.test(sha)),
+    'APPLICATION_STELLAR_STARTUP_CHANGED');
   need(/^[a-f0-9]{64}$/.test(expected)&&value.configFile===configFile&&value.selectionSha256===expected&&
     /^[a-f0-9]{64}$/.test(value.configurationSha256??'')&&
     /^[a-f0-9]{64}$/.test(value.handoffId??'')&&
@@ -68,13 +78,15 @@ export function cheesecakeStartup(request,text) {
   try{url=new URL(value.origin);}catch{need(false,'APPLICATION_STELLAR_STARTUP_CHANGED');}
   const hostIndex=request.args.indexOf('--host'),expectedHost=hostIndex<0?'127.0.0.1':request.args[hostIndex+1];
   const portIndex=request.args.indexOf('--port'),expectedPort=portIndex<0?0:Number(request.args[portIndex+1]);
+  const actualPort=Number(url.port||80);
   need(url.protocol==='http:'&&['127.0.0.1','[::1]'].includes(url.hostname)&&
-    url.hostname===(expectedHost==='::1'?'[::1]':expectedHost)&&Boolean(url.port)&&
-    Number.isInteger(expectedPort)&&(expectedPort===0||Number(url.port)===expectedPort)&&
+    url.hostname===(expectedHost==='::1'?'[::1]':expectedHost)&&actualPort>=1&&actualPort<=65535&&
+    Number.isInteger(expectedPort)&&expectedPort>=0&&expectedPort<=65535&&(expectedPort===0||actualPort===expectedPort)&&
     url.pathname==='/'&&!url.username&&!url.password&&!url.search&&!url.hash,
     'APPLICATION_STELLAR_STARTUP_CHANGED');
   return {url:url.href,original:{schema:STARTUP,configFile,
     configurationSha256:value.configurationSha256,selectionSha256:expected,
     applicationId:value.applicationId,stateDirectory:value.stateDirectory,handoffId:value.handoffId,
+    sourceDirectory,launchSourceDirectory,runtimeDirectory,sourceFiles:value.sourceFiles,pid:value.pid,
     remoteMcpSourceSha256:value.remoteMcpSourceSha256,serverId:value.serverId}};
 }
