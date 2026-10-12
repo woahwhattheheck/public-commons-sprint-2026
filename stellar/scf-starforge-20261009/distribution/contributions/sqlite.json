@@ -1,0 +1,24 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "sqlite",
+  "description": "SQLite data products",
+  "commands": {
+    "sqlite-init": "stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/create-example.mjs",
+    "sqlite-inspect": "stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/inspect.mjs",
+    "sqlite-workbench": "stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/workbench/server.mjs",
+    "sqlite-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/publisher/cli.mjs"
+  },
+  "commandDescriptions": {
+    "sqlite-init": "Prepare or inspect a SQLite source",
+    "sqlite-inspect": "Prepare or inspect a SQLite source",
+    "sqlite-workbench": "Author and export the original SQLite merchant",
+    "sqlite-publisher": "Review and publish retained SQLite data products"
+  },
+  "exports": {
+    "./seller/sqlite": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/source.mjs",
+    "./seller/sqlite/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/config.mjs",
+    "./seller/sqlite/workbench": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/workbench/model.mjs",
+    "./seller/sqlite/workbench/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/workbench/server.mjs",
+    "./seller/sqlite/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/publisher/model.mjs"
+  }
+}
