@@ -3,12 +3,41 @@ import { createOAuthConnections } from '/oauth-browser.mjs';
 
 const $ = id => document.getElementById(id);
 const PREFIX = 'stellar.accounting.connections.v1';
+const SCOPE_HEADER = 'X-Accounting-Connection-Scope';
+let ownerScope = null, ownerChanged = false;
 const KINDS = { quickbooks: 'QuickBooks Online', xero: 'Xero' };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const displayDate = value => value ? new Date(value).toLocaleString() : 'Not supplied';
 const clone = value => JSON.parse(JSON.stringify(value));
-function stored(key, fallback) { try { return JSON.parse(sessionStorage.getItem(PREFIX + '.' + key)) ?? fallback; } catch { return fallback; } }
-function remember(key, value) { try { sessionStorage.setItem(PREFIX + '.' + key, JSON.stringify(value)); } catch {} }
+function stored(key, fallback) {
+  if (!ownerScope) return fallback;
+  try { return JSON.parse(sessionStorage.getItem(PREFIX + '.' + ownerScope + '.' + key)) ?? fallback; }
+  catch { return fallback; }
+}
+function remember(key, value) {
+  if (!ownerScope) return;
+  try { sessionStorage.setItem(PREFIX + '.' + ownerScope + '.' + key, JSON.stringify(value)); } catch {}
+}
+function legacyRequests() {
+  const values = [];
+  for (const key of [PREFIX + '.request', 'stellar.accounting.oauth.public.v1.pending']) {
+    try {
+      const value = JSON.parse(sessionStorage.getItem(key));
+      if (value) values.push(value.id ?? value.body?.id ?? value.args?.requestId ?? 'Original authorization request');
+    } catch {}
+  }
+  return values;
+}
+// Only the original workspace's explicit missing-file error confirms absence.
+// An unreadable/proxy 404 keeps the exact request and saved review identity.
+function reviewMissing(error) {
+  return !error.outcomeUnknown && error.code === 'ENOENT' &&
+    (error.status === 400 || error.status === 404);
+}
+function scopeError() {
+  return Object.assign(new Error('This page belongs to a different accounting connection workspace. Reopen the original Application to continue its retained request, or reload to open the current workspace.'),
+    { code: 'ACCOUNTING_CONNECTION_SCOPE_CHANGED', status: 409, outcomeUnknown: true });
+}
 function make(tag, text, className) {
   const value = document.createElement(tag);
   if (text !== undefined) value.textContent = String(text);
@@ -43,9 +72,14 @@ function table(headers, label) {
   return { wrap, body };
 }
 async function api(path, body) {
+  if (ownerChanged || body !== undefined && !ownerScope) throw scopeError();
+  const headers = body === undefined ? {} : { 'Content-Type': 'application/json', 'X-Workspace-Request': '1' };
+  // The first state read establishes this page's owner. Later API requests
+  // retain it through the original HTTP boundary, including exact retries.
+  if (ownerScope && (path !== 'accounting-connections' || body !== undefined)) headers[SCOPE_HEADER] = ownerScope;
   const response = await fetch('/api/' + path, {
     method: body === undefined ? 'GET' : 'POST', credentials: 'same-origin', cache: 'no-store',
-    headers: body === undefined ? {} : { 'Content-Type': 'application/json', 'X-Workspace-Request': '1' },
+    headers,
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   let value;
@@ -54,19 +88,20 @@ async function api(path, body) {
   }
   if (!response.ok) {
     const source = value.error && typeof value.error === 'object' ? value.error : value;
+    if ((source.code ?? value.error) === 'ACCOUNTING_CONNECTION_SCOPE_CHANGED') {
+      ownerChanged = true; snapshot = null; available(); throw scopeError();
+    }
     throw Object.assign(new Error(source.message ?? (typeof value.error === 'string' ? value.error : 'The workspace request failed.')),
       { status: response.status, code: source.code ?? (typeof value.error === 'string' ? value.error : undefined), outcomeUnknown: source.outcomeUnknown ?? value.outcomeUnknown, details: source.details });
   }
   return value;
 }
 
-const savedDraft = stored('draft', {});
-const draft = { kind: KINDS[savedDraft.kind] ? savedDraft.kind : 'quickbooks' };
-for (const key of ['alias', 'actor', 'reference', 'minorVersion', 'tenantId', 'connectionId'])
-  draft[key] = typeof savedDraft[key] === 'string' ? savedDraft[key] : '';
+const draft = { kind: 'quickbooks', alias: '', actor: '', reference: '',
+  minorVersion: '', tenantId: '', connectionId: '' };
 let snapshot = null, review = null, accountPage = null, accountQuery = '', accountOffset = 0;
 let nativeTenants = null, tenantQuery = '', tenantOffset = 0;
-let retained = stored('request', null), busy = false, authorizationChanged = false;
+let retained = null, busy = false, authorizationChanged = false;
 let historyPage = null, historyOffset = 0, oauth;
 const rememberDraft = () => remember('draft', draft);
 const grantKey = value => value ? [value.alias, value.profileSha256, value.grantId].join(':') : '';
@@ -126,6 +161,21 @@ function renderTargets() {
 }
 async function loadState() {
   const result = await api('accounting-connections');
+  if (typeof result.scope !== 'string' || !/^[a-f0-9]{64}$/.test(result.scope))
+    throw new Error('The current accounting source does not expose a bound connection workspace. Open a compatible reviewed Application.');
+  if (ownerScope && ownerScope !== result.scope) {
+    ownerChanged = true; snapshot = null; available(); throw scopeError();
+  }
+  if (!ownerScope) {
+    ownerScope = result.scope;
+    const savedDraft = stored('draft', {});
+    draft.kind = KINDS[savedDraft.kind] ? savedDraft.kind : 'quickbooks';
+    for (const key of ['alias', 'actor', 'reference', 'minorVersion', 'tenantId', 'connectionId'])
+      draft[key] = typeof savedDraft[key] === 'string' ? savedDraft[key] : '';
+    retained = stored('request', null);
+    openAuthorization();
+    renderRetained();
+  }
   const previous = grantKey(choice());
   snapshot = result;
   if (previous && previous !== grantKey(choice())) {
@@ -212,9 +262,18 @@ function renderForm() {
   const capture = button('Capture company and accounts for review', captureReview, !selected?.ready || Boolean(retained), true);
   capture.id = 'accounting-capture-company'; container.append(capture);
 }
-function setRetained(value) { retained = value; remember('request', value); renderRetained(); }
+function setRetained(value) { retained = value ? { ...value, scope: ownerScope } : null; remember('request', retained); renderRetained(); }
 function renderRetained() {
-  const container = $('request-recovery'); container.replaceChildren(); if (!retained) return;
+  const container = $('request-recovery'); container.replaceChildren();
+  const legacy = legacyRequests();
+  if (legacy.length) {
+    const previous = make('details');
+    previous.append(make('summary', 'Earlier browser requests without a workspace binding'),
+      make('p', 'These original request IDs remain preserved. Open their original Application and its retained review history; this page will not replay them into the current workspace.', 'hint'));
+    for (const id of legacy) previous.append(make('p', id, 'wrap'));
+    container.append(previous);
+  }
+  if (!retained) return;
   container.append(make('h3', 'Retained source or selection request'),
     make('p', (retained.kind === 'select' ? 'Save reviewed selection' : 'Capture native company source') + ' · ' + (retained.id ?? retained.body?.id), 'wrap'),
     make('p', 'This browser kept the original request identity. Inspect its saved state or continue that same request.', 'hint'));
@@ -226,10 +285,10 @@ function renderRetained() {
       if (value.state === 'SAVED' || retained.kind === 'capture' && value.previewSha256) setRetained(null);
       notice('The original retained review has been read.');
     } catch (error) {
-      if (error.status === 404 || error.code === 'ENOENT') { setRetained(null); notice('The request has no retained review. The draft is available for a new capture.'); return; }
+      if (reviewMissing(error)) { setRetained(null); notice('The request has no retained review. The draft is available for a new capture.'); return; }
       throw error;
     }
-  }, busy), button('Retry exact retained request', dispatchRetained, busy));
+  }, busy || !snapshot), button('Retry exact retained request', dispatchRetained, busy || !snapshot));
   container.append(controls);
 }
 async function captureReview() {
@@ -253,6 +312,7 @@ async function captureReview() {
 }
 async function dispatchRetained() {
   if (!retained) return;
+  if (retained.scope !== ownerScope || ownerChanged) throw scopeError();
   const current = clone(retained);
   try {
     const result = await api(current.kind === 'capture' ? 'accounting-connections/reviews' :
@@ -296,7 +356,7 @@ function renderReview() {
   const downloads = make('div', undefined, 'downloads');
   for (const name of review.files) {
     const link = make('a', name === 'selection.json' ? 'Download complete native company source' : 'Download original source request');
-    link.href = '/api/accounting-connections/reviews/' + encodeURIComponent(review.id) + '/download/' + name;
+    link.href = '/api/accounting-connections/reviews/' + encodeURIComponent(review.id) + '/download/' + name + '?scope=' + encodeURIComponent(ownerScope);
     link.download = ''; downloads.append(link);
   }
   container.append(downloads);
@@ -383,13 +443,15 @@ function renderHistory() {
     button('Older reviews', () => loadHistory(historyPage.nextOffset), historyPage.nextOffset === null));
   container.append(pager);
 }
-oauth = createOAuthConnections({
+function openAuthorization() {
+  oauth = createOAuthConnections({
   container: $('authorization'), make, field, selectField, api, act, notice,
-  storagePrefix: 'stellar.accounting.oauth.public.v1',
+  storagePrefix: 'stellar.accounting.oauth.public.v1.' + ownerScope,
   description: 'Authorize the registered accounting provider and review its returned grant on this host. Then capture and review the actual company or tenant in the section below.',
   grantAcceptedMessage: 'Accounting grant reviewed and kept privately. Choose it below to read the native company and chart of accounts.',
   onChanged() { authorizationChanged = true; },
-});
+  });
+}
 $('refresh-all').addEventListener('click', () => act(async () => {
   await loadState(); await oauth.refresh(); await loadHistory();
   if (review) await showReview(await api('accounting-connections/reviews/' + encodeURIComponent(review.id)));
@@ -402,7 +464,7 @@ await act(async () => {
   const retainedReview = stored('reviewId', null);
   if (typeof retainedReview === 'string' && UUID.test(retainedReview)) {
     try { await showReview(await api('accounting-connections/reviews/' + encodeURIComponent(retainedReview))); }
-    catch (error) { if (error.status !== 404 && error.code !== 'ENOENT') throw error; remember('reviewId', null); }
+    catch (error) { if (!reviewMissing(error)) throw error; remember('reviewId', null); }
   }
   notice('Original accounting connections and saved company choices are ready.');
 });
