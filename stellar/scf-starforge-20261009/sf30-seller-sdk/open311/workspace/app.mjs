@@ -13,6 +13,8 @@ let offset = 0;
 let page = {items:[],total:0,offset:0,limit:50};
 let selected = null;
 let catalog = {items:[],capture:null};
+let catalogQueryContext = '';
+let catalogLoading = false;
 let comparison = null;
 let comparisonIds = null;
 let comparisonOffset = 0;
@@ -208,8 +210,10 @@ function setBusy(value) {
   document.body.classList.toggle('busy',value);
   for (const id of ['capture-submit','catalog-refresh','receive-submit']) {
     const node = $(id);
-    if (node) node.disabled = value || (id === 'receive-submit' && (!receiveBundle || !isEmptyWorkspace())) || (id === 'catalog-refresh' && !connectionId);
+    if (node) node.disabled = value || (id === 'receive-submit' && (!receiveBundle || !isEmptyWorkspace())) || (id === 'catalog-refresh' && (!connectionId || catalogLoading));
   }
+  for (const node of $('catalog-query-fields').querySelectorAll('input')) node.disabled = value;
+  $('catalog-query-reset').disabled = value;
   renderPending();
 }
 function assertWriteReady() {
@@ -402,7 +406,7 @@ function renderConnectionContext() {
   const current = connection();
   text('connection-context',current ? (current.jurisdictionId ? current.jurisdictionId + ' · ' : '') + current.baseUrl : 'Add a connection to begin.');
   text('capture-connection',current?.name || 'No connection selected');
-  $('catalog-refresh').disabled = !current || busy;
+  $('catalog-refresh').disabled = !current || busy || catalogLoading;
   $('toggle-capture').disabled = !current;
   $('capture-extended-field').hidden = !current?.extendedAttributes;
   $('capture-extended').checked = !!current?.extendedAttributes;
@@ -709,22 +713,59 @@ function exportQueue() {
   const items=queueItems();
   downloadCsv(['connection_id','connection','service_request_id','review_status','assignee','due_date','overdue','note','updated_at'],items.map((item)=>[item.connectionId,connectionName(item.connectionId),item.serviceRequestId,item.status,item.assignee,item.dueDate,overdue(item),item.note,item.updatedAt]),'open311-review-queue-'+new Date().toISOString().slice(0,10)+'.csv');
 }
+function renderCatalogQuery() {
+  const fields=connection()?.queryExtensions || [];
+  const context=JSON.stringify([connectionId,catalog.capture?.id || '',fields]);
+  if(context===catalogQueryContext)return;
+  catalogQueryContext=context;
+  $('catalog-query-options').hidden=!fields.length;
+  const saved=catalog.capture?.connectionId===connectionId ? catalog.capture.query || {} : {};
+  const fragment=document.createDocumentFragment();
+  for(const key of fields){
+    const label=element('label',null,'field');
+    label.append(element('span',key));
+    const input=element('input');
+    input.dataset.catalogExtension=key;
+    input.autocomplete='off';
+    input.placeholder='Provider default';
+    input.value=saved[key]===undefined || saved[key]===null ? '' : String(saved[key]);
+    input.disabled=busy;
+    label.append(input);fragment.append(label);
+  }
+  $('catalog-query-fields').replaceChildren(fragment);
+  $('catalog-query-reset').disabled=busy;
+}
+function catalogQuery() {
+  const allowed=new Set(connection()?.queryExtensions || []);
+  const query=Object.create(null);
+  for(const input of $('catalog-query-fields').querySelectorAll('[data-catalog-extension]')){
+    const key=input.dataset.catalogExtension,value=input.value.trim();
+    if(allowed.has(key) && value)query[key]=value;
+  }
+  return query;
+}
 async function loadCatalog() {
   const sequence=++catalogSequence;
-  if(!connectionId){catalog={items:[],capture:null};renderCatalog();return;}
+  if(!connectionId){catalogLoading=false;catalog={items:[],capture:null};renderCatalog();$('catalog-refresh').disabled=true;return;}
   const requestedConnection=connectionId;
+  catalogLoading=true;
+  $('catalog-refresh').disabled=true;
   try{
     const result=await api(queryPath('/api/services',{connection:requestedConnection}));
     if(sequence!==catalogSequence || requestedConnection!==connectionId)return;
     catalog={items:result.items || [],capture:result.capture || null};
   }catch(error){
-    if(sequence!==catalogSequence)return;
+    if(sequence!==catalogSequence || requestedConnection!==connectionId)return;
     if(error.status===404)catalog={items:[],capture:null};
     else throw error;
+  }finally{
+    if(sequence===catalogSequence){catalogLoading=false;$('catalog-refresh').disabled=busy || !connectionId;}
   }
   renderCatalog();
 }
 function renderCatalog() {
+  renderCatalogQuery();
+  const renderedConnection=connectionId;
   const term=$('catalog-search').value.trim().toLocaleLowerCase();
   const items=catalog.items.filter((item)=>!term || [serviceCode(item),serviceName(item),item.description,item.group,item.type].some((value)=>String(value || '').toLocaleLowerCase().includes(term)));
   text('catalog-context',catalog.capture ? 'Saved '+date(catalog.capture.capturedAt)+' · '+catalog.items.length+' services · '+coverage(catalog.capture) : 'Capture this connection’s service catalog to inspect its original service codes.');
@@ -743,7 +784,9 @@ function renderCatalog() {
     actions.append(button('Inspect',()=>showInspector('Service '+serviceCode(item),item,'Original saved catalog object.')));
     actions.append(button('Requests',()=>{switchView('requests');$('capture-panel').hidden=false;$('capture-kind').value='requests';renderCaptureKind();$('capture-service').value=String(serviceCode(item));$('capture-service').focus();}));
     if(item.metadata===true || item.metadata==='true')actions.append(button('Capture definition',async()=>{
-      const result=await mutate('/api/capture',{connectionId,kind:'service',resourceId:String(serviceCode(item)),query:{}});
+      if(connectionId!==renderedConnection)throw new Error('Open this service in its original jurisdiction connection.');
+      const query=catalogQuery();
+      const result=await mutate('/api/capture',{connectionId:renderedConnection,kind:'service',resourceId:String(serviceCode(item)),query});
       const id=resultCaptureId(result,'service');
       if(id)await inspectCapture(id);
     }));
@@ -1087,10 +1130,12 @@ function bind() {
   $('queue-search').addEventListener('input',renderQueue);
   $('queue-export').addEventListener('click',exportQueue);
   $('catalog-search').addEventListener('input',renderCatalog);
+  $('catalog-query-reset').addEventListener('click',()=>{catalogQueryContext='';renderCatalogQuery();});
   $('catalog-refresh').addEventListener('click',()=>safely(async()=>{
     if(!connectionId)throw new Error('Select a saved jurisdiction connection.');
     const targetConnection=connectionId;
-    await mutate('/api/capture',{connectionId:targetConnection,kind:'services',query:{}});
+    const query=catalogQuery();
+    await mutate('/api/capture',{connectionId:targetConnection,kind:'services',query});
     if(connectionId===targetConnection)await loadCatalog();
     notify('Saved service catalog for '+connectionName(targetConnection)+'.');
   }));
