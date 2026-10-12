@@ -7,6 +7,8 @@ import { CAPTURE_MARKER, inspectSnapshotPlan, run as recover } from '../recover.
 
 const CAPTURE_SCHEMA = 'stellar-forge.merchant-recovery-capture.v1';
 const BUNDLE_SCHEMA = 'stellar-forge.merchant-recovery.v1';
+const PAID_JOBS_SCHEMA = 'stellar-forge.paid-job-recovery-profile.v1';
+const MAX_PLAN = 256 * 1024;
 export const RETIRED_CAPTURE_PREFIX = '.sf101-interrupted-capture-';
 const HEX = /^[a-f0-9]{64}$/;
 const MAX_MANIFEST = 12 * 1024 * 1024;
@@ -57,6 +59,35 @@ function sameBinding(value, expected) {
     Object.keys(value).every(key => ['schema', 'id', 'planSha256'].includes(key));
 }
 
+async function capturePlanSelection(plan, expectedPlanSha256) {
+  const raw = await privateBytes(plan, MAX_PLAN);
+  need(HEX.test(expectedPlanSha256 ?? '') && hash(raw) === expectedPlanSha256,
+    'WORKSPACE_CAPTURE_PLAN_CHANGED', 'Review the current original snapshot plan');
+  let selected;
+  try { selected = JSON.parse(raw.toString('utf8')); }
+  catch { throw fail('WORKSPACE_CAPTURE_PLAN_INVALID', 'Select the original valid snapshot plan'); }
+  need(object(selected), 'WORKSPACE_CAPTURE_PLAN_INVALID');
+  let kind = 'generic';
+  if (Object.hasOwn(selected, 'paidJobs')) {
+    need(object(selected.paidJobs) && selected.paidJobs.schema === PAID_JOBS_SCHEMA,
+      'WORKSPACE_CAPTURE_PROFILE_UNSUPPORTED', 'Select the original supported paid-job recovery plan');
+    kind = 'paid-jobs';
+  }
+  return { raw, kind };
+}
+function retainedPaidJobPlan(state, options) {
+  const selected = state.paidJobsPlan;
+  need(object(selected) && selected.schema === PAID_JOBS_SCHEMA &&
+    selected.planSha256 === options.expectedPlanSha256 && typeof selected.base64 === 'string' &&
+    selected.base64.length <= Math.ceil(MAX_PLAN / 3) * 4,
+    'WORKSPACE_PAID_CAPTURE_PLAN_MISSING', 'Keep this capture with its original retained paid-job plan');
+  const raw = Buffer.from(selected.base64, 'base64');
+  need(raw.length === selected.bytes && raw.length <= MAX_PLAN &&
+    raw.toString('base64') === selected.base64 && hash(raw) === options.expectedPlanSha256,
+    'WORKSPACE_PAID_CAPTURE_PLAN_CHANGED', 'The retained original paid-job plan bytes changed');
+  return raw;
+}
+
 export async function inspectLocalCapture({ plan, out, forbiddenRoots = [] } = {}) {
   absolute(plan, 'Original snapshot plan'); absolute(out, 'Bundle destination');
   const selected = await inspectSnapshotPlan({ plan, out });
@@ -67,7 +98,8 @@ export async function inspectLocalCapture({ plan, out, forbiddenRoots = [] } = {
       need(!inside(root.path, forbidden) && !inside(forbidden, root.path),
         'WORKSPACE_CAPTURE_CONTROL_OVERLAP', 'A capture source cannot include its active recovery workspace');
   }
-  return selected;
+  const selectedPlan = await capturePlanSelection(plan, selected.planSha256);
+  return { ...selected, captureKind: selectedPlan.kind };
 }
 
 // This is a structural selection read. Authentication remains in recover verify.
@@ -145,14 +177,16 @@ function captureResult(options, found, state, verification) {
     plainBytes: found.manifest.totalPlainBytes, roots: found.manifest.roots.map(item => item.name),
     capture: { ...found.manifest.capture }, verified: Boolean(verification),
     original: { snapshot: state.originalSnapshot ?? null, verification: verification ?? null },
-    retainedCaptures: [...(state.retainedCaptures ?? [])] };
+    retainedCaptures: [...(state.retainedCaptures ?? [])],
+    ...(state.paidJobsVerification ? { paidJobs: { ...state.paidJobsVerification } } : {}) };
 }
 
 export async function runLocalCapture({ options, state, save, cancelled = () => false,
   allowCapture = false } = {}) {
   need(object(options) && object(state) && typeof save === 'function', 'WORKSPACE_CAPTURE_REQUEST_INVALID');
   absolute(options.plan, 'Original snapshot plan'); absolute(options.out, 'Bundle destination');
-  const expected = binding(options);
+  const expected = binding(options), declaredKind = options.captureKind ?? 'generic';
+  need(['generic', 'paid-jobs'].includes(declaredKind), 'WORKSPACE_CAPTURE_PROFILE_UNSUPPORTED');
   await privateDirectory(dirname(options.out));
   if (state.pendingRetirement) {
     need(allowCapture, 'WORKSPACE_CAPTURE_REVIEW_REQUIRED',
@@ -167,9 +201,42 @@ export async function runLocalCapture({ options, state, save, cancelled = () => 
       'Review the same capture and confirm that its original source producers are quiesced');
     await retainInterrupted(options, state, save);
   }
-  if (!found) {
-    need(allowCapture, 'WORKSPACE_CAPTURE_REVIEW_REQUIRED',
-      'Review the same capture and confirm that its original source producers are quiesced');
+  async function verifyCaptured() {
+    // Adopt a complete native bundle independently of later source changes.
+    if (cancelled()) return captureResult(options, found, state, null);
+    state.progress = 'VERIFYING'; await save();
+    const verified = await recover(['verify', '--bundle', options.out, '--pass-env', options.passEnv]);
+    const current = await readCapturedBundle(options);
+    need(current && current.snapshotId === found.snapshotId &&
+      verified.status === 'SNAPSHOT_VERIFIED' && verified.files === found.manifest.fileCount &&
+      verified.bytes === found.manifest.totalPlainBytes, 'WORKSPACE_CAPTURE_VERIFICATION_CHANGED');
+    if (declaredKind === 'paid-jobs') {
+      const planBytes = retainedPaidJobPlan(state, options);
+      const { inspectCapturedPaidJobManifest } = await import('../paid-jobs.mjs');
+      const matched = await inspectCapturedPaidJobManifest({ planBytes, manifest: current.manifest });
+      need(matched?.status === 'PAID_JOB_RECOVERY_CAPTURE_MATCHED' &&
+        matched.planSha256 === options.expectedPlanSha256 && matched.captureId === expected.id &&
+        HEX.test(matched.profileSha256 ?? ''), 'WORKSPACE_PAID_CAPTURE_VERIFICATION_CHANGED');
+      state.paidJobsVerification = { schema: PAID_JOBS_SCHEMA,
+        planSha256: options.expectedPlanSha256, manifestSha256: current.snapshotId,
+        ...(HEX.test(matched?.profileSha256 ?? '') ? { profileSha256: matched.profileSha256 } : {}) };
+    }
+    state.progress = 'VERIFIED'; state.snapshotId = found.snapshotId; state.verifiedAt = stamp();
+    await save();
+    return captureResult(options, found, state, verified);
+  }
+  if (found) return verifyCaptured();
+  need(allowCapture, 'WORKSPACE_CAPTURE_REVIEW_REQUIRED',
+    'Review the same capture and confirm that its original source producers are quiesced');
+  const selected = await capturePlanSelection(options.plan, expected.planSha256);
+  need(selected.kind === declaredKind, 'WORKSPACE_CAPTURE_PROFILE_CHANGED',
+    'Keep the original reviewed capture profile');
+  if (selected.kind === 'paid-jobs') {
+    state.paidJobsPlan = { schema: PAID_JOBS_SCHEMA, planSha256: expected.planSha256,
+      bytes: selected.raw.length, base64: selected.raw.toString('base64') };
+  }
+  state.captureKind = selected.kind;
+  async function captureAndVerify() {
     if (cancelled()) return { status: 'INTERRUPTED', command: 'snapshot',
       snapshotId: null, bundle: options.out, verified: false, retainedCaptures: [...(state.retainedCaptures ?? [])] };
     state.creationIntent = true; state.captureAttempts = (state.captureAttempts ?? 0) + 1;
@@ -180,19 +247,14 @@ export async function runLocalCapture({ options, state, save, cancelled = () => 
     state.progress = 'CAPTURED'; await save();
     found = await readCapturedBundle(options);
     need(found, 'WORKSPACE_CAPTURE_MANIFEST_MISSING');
+    return verifyCaptured();
   }
-  // A complete native bundle is authenticated before a lost completion is adopted.
-  // The source may have legitimately changed after that original capture finished.
-  if (cancelled()) return captureResult(options, found, state, null);
-  state.progress = 'VERIFYING'; await save();
-  const verified = await recover(['verify', '--bundle', options.out, '--pass-env', options.passEnv]);
-  const current = await readCapturedBundle(options);
-  need(current && current.snapshotId === found.snapshotId &&
-    verified.status === 'SNAPSHOT_VERIFIED' && verified.files === found.manifest.fileCount &&
-    verified.bytes === found.manifest.totalPlainBytes, 'WORKSPACE_CAPTURE_VERIFICATION_CHANGED');
-  state.progress = 'VERIFIED'; state.snapshotId = found.snapshotId; state.verifiedAt = stamp();
-  await save();
-  return captureResult(options, found, state, verified);
+  if (selected.kind === 'paid-jobs') {
+    const { withPaidJobRecoveryCapture } = await import('../paid-jobs.mjs');
+    return withPaidJobRecoveryCapture({ planFile: options.plan,
+      expectedPlanSha256: expected.planSha256 }, captureAndVerify);
+  }
+  return captureAndVerify();
 }
 
 export async function runLocalVerification({ options, state, save, cancelled = () => false } = {}) {

@@ -170,7 +170,7 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
       await privateDirectory(root);
     }
     await privateBytes(profile.storeConfig);
-    for (const plan of profile.capturePlans) await privateBytes(plan.planFile, 256 * 1024);
+    // Original plan files are read for fresh capture review. Retained operations can reopen after source removal.
     if (await exists(profile.operations)) await privateDirectory(profile.operations);
   }
   let lease;
@@ -328,7 +328,8 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
         originalStatus: saved?.result?.status ?? null, files: plan.files, plainBytes: plan.bytes,
         capturePlan: clone(capturePlan), plan,
         options: { command: 'snapshot', id: input.id, plan: capturePlan.planFile, out,
-          passEnv: profile.passEnv, captureId, expectedPlanSha256: plan.planSha256 } };
+          passEnv: profile.passEnv, captureId, expectedPlanSha256: plan.planSha256,
+          captureKind: plan.captureKind } };
     } else {
       need(input.capturePlanId === undefined && input.quiesced === undefined &&
         input.snapshotId === undefined && input.destinationName === undefined,
@@ -430,12 +431,17 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
       catch (caught) { if (caught.code !== 'ENOENT') error = publicError(caught); }
     }
     const running = active?.key === requestPath(request.review.profileId, request.review.operationId);
+    const local = request.local ? clone(request.local) : null;
+    if (local?.paidJobsPlan) {
+      const { schema, planSha256, bytes } = local.paidJobsPlan;
+      local.paidJobsPlan = { schema, planSha256, bytes };
+    }
     return { profileId: request.review.profileId, operationId: request.review.operationId,
       review: clone(request.review), createdAt: request.createdAt, updatedAt: request.updatedAt,
       phase: original?.status === 'COMPLETE' ? 'COMPLETE' : running ? 'RUNNING' :
         request.phase === 'RUNNING' ? 'INTERRUPTED' : request.phase,
       running, cancelRequested: running && active.cancelRequested, attempts: request.attempts,
-      operation: original, ...(request.local ? { local: clone(request.local) } : {}),
+      operation: original, ...(local ? { local } : {}),
       error: error ?? request.error ?? null };
   }
   async function requests({ cursor, limit = 50 } = {}) {

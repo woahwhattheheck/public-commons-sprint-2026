@@ -178,6 +178,7 @@ function showReview(value) {
     ['Bucket / prefix', value.store.bucket + '/' + (value.store.prefix ?? '')]);
   if (capture) details.push(
     ['Capture plan', value.capturePlan?.label ?? value.capturePlan?.id ?? value.intent.capturePlanId],
+    ['Capture kind', value.plan?.captureKind === 'paid-jobs' ? 'Paid-job merchant with original writer leases' : 'Original snapshot plan'],
     ['Plan SHA-256', value.plan?.planSha256 ?? '—'],
     ['Original plan', value.source],
     ['New encrypted bundle', value.destination],

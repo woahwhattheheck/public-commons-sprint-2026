@@ -150,6 +150,24 @@ original maintenance backup to quiesce the service group and delivery outbox
 together, or stop the complete source group through that maintained procedure
 before using a declared source capture.
 
+### Paid-job recovery plans
+
+A plan whose `paidJobs.schema` is
+`stellar-forge.paid-job-recovery-profile.v1` uses the original paid-job
+integration. It holds the merchant, delivery outbox, and result-delivery
+leases across fresh capture and verification of the new encrypted bundle.
+The original workspace request retains the exact reviewed plan bytes privately.
+A complete retained bundle is authenticated and compared with that original
+typed plan during adoption; later changes to the live source do not change
+the selected capture. The original host declaration remains in place. A fresh capture review
+requires the live plan again.
+
+Review the displayed plan and source roots, pause other writers to those
+roots, and explicitly check the quiescence acknowledgment before starting a
+fresh capture. The application leases coordinate components that use those
+same leases. The reviewed selection and operator acknowledgment remain part
+of the capture.
+
 ## Start the installed operator
 
 Start the workspace on the recovery host:
