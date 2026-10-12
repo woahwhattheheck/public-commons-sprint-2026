@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
 from urllib.parse import urlsplit
 import copy
 import hashlib
@@ -52,9 +53,9 @@ def validate_definition(workspace, definition):
     if value.get("schema") != WORKFLOW_SCHEMA:
         raise OperationError("WORKFLOW_SCHEMA", f"Use schema {WORKFLOW_SCHEMA}.")
     identifier(value.get("id"), "workflow ID")
-    _text(value.get("title"), "workflow title", maximum=200)
+    _text(value.get("title"), "workflow title", maximum=240)
     account = value.get("account")
-    if not isinstance(account, dict):
+    if not isinstance(account, dict) or set(account) - {"organization_id", "region", "runtime", "api_base_url", "version"}:
         raise OperationError("ACCOUNT_REQUIRED", "Select the existing Wherobots organization, region and runtime.")
     for key in ("organization_id", "region", "runtime"):
         _text(account.get(key), key, maximum=200)
@@ -180,6 +181,16 @@ def review(workspace, workflow_id, operation_id, expected_revision, actor, mode=
     if workflow["revision_sha256"] != expected_revision:
         raise OperationError("WORKFLOW_CHANGED", "Reopen the current workflow before reviewing its native run.", status=409)
     definition = validate_definition(workspace, workflow["definition"])
+    if mode == "submit":
+        selected_paths = {(x["store"], x["path"]) for x in definition["outputs"]}
+        for previous in workspace.records("operation"):
+            if previous["id"] == operation_id or previous["workflow_id"] != workflow_id:
+                continue
+            if previous.get("native_run_id") or previous["state"] in {"SUBMITTING", "SUBMIT_UNCERTAIN", "RECOVERY_REVIEW"}:
+                previous_paths = {(x["store"], x["path"]) for x in previous["reviewed_definition"]["outputs"]}
+                if selected_paths & previous_paths:
+                    raise OperationError("OUTPUT_PREFIX_REUSED", "Give the new output edition its own native prefix before review.",
+                                         status=409, details={"original_operation_id": previous["id"]})
     if mode == "attach" and not definition["job"]["script"].get("uri"):
         raise OperationError("ATTACH_SCRIPT_URI", "An existing-run review needs the original native script URI.")
     binding = {"workflow_id": workflow_id, "workflow_revision": expected_revision,
@@ -318,3 +329,124 @@ def capture_outputs(workspace, operation_id, provider):
         ids = list(dict.fromkeys(operation.get("output_editions", []) + [edition["id"]]))
         _save(workspace, operation, output_editions=ids)
         return edition
+
+
+def adopt_customer_input(workspace, original, files, account, expected_revision=None, actor="operator"):
+    """Adopt the original B710 intake without rewriting any customer source byte."""
+    raw = original.read_bytes() if isinstance(original, Path) else original
+    if not isinstance(raw, bytes) or len(raw) > 1024 * 1024:
+        raise OperationError("INTAKE_FILE", "Select the original workflow JSON within 1 MiB.")
+    try:
+        source = json.loads(raw)
+    except (ValueError, UnicodeError):
+        raise OperationError("INTAKE_JSON", "The original workflow document is not valid JSON.") from None
+    if not isinstance(source, dict) or source.get("schema") != "wherobots.customer-workflow.v1":
+        raise OperationError("INTAKE_SCHEMA", "Select a wherobots.customer-workflow.v1 customer document.")
+    required = {"workflowId", "title", "projectOwner", "sourceCollections", "sourceFiles",
+                "job", "outputs", "receiving", "operationAuthority"}
+    if required - source.keys():
+        raise OperationError("INTAKE_FIELDS", "The customer document is missing required original fields.",
+                             details={"missing": sorted(required - source.keys())})
+    job = source["job"]
+    if not isinstance(job, dict) or job.get("sdkVersion") not in {"0.4.0", "0.5.0"}:
+        raise OperationError("INTAKE_SDK", "The original customer job must declare SDK 0.4.0 or 0.5.0.")
+    if job.get("outputMode") != "new-edition-prefix":
+        raise OperationError("INTAKE_OUTPUT_MODE", "The original workflow must give each output edition its own prefix.")
+    for key in ("organization_id",):
+        _text(account.get(key), "existing " + key)
+    for field, original_field in (("region", "region"), ("runtime", "runtime")):
+        if account.get(field) and account[field] != job.get(original_field):
+            raise OperationError("INTAKE_ACCOUNT", "The selected account differs from the original workflow.",
+                                 details={"field": field})
+    source_files = {}
+    originals = []
+    for entry in source["sourceFiles"]:
+        source_id = identifier(entry.get("id"), "source file ID")
+        if source_id in source_files:
+            raise OperationError("SOURCE_DUPLICATE", "The original intake repeats a source file ID.")
+        if source_id not in files:
+            raise OperationError("SOURCE_FILE_REQUIRED", "Select every original source file before adoption.",
+                                 details={"source_id": source_id, "filename": entry.get("filename")})
+        provided = files[source_id]
+        obj = provided if isinstance(provided, dict) else workspace.put_object(provided)
+        path = workspace.object_path(obj.get("sha256"))
+        from .storage import hash_file
+        if hash_file(path) != (entry.get("sha256"), entry.get("bytes")):
+            raise OperationError("SOURCE_FILE_CHANGED", "The selected source differs from its original intake.",
+                                 status=409, details={"source_id": source_id})
+        source_files[source_id] = {**entry, "object": obj}
+        originals.append(source_files[source_id])
+    script_source = source_files.get(job.get("scriptSourceId"))
+    if not script_source or script_source.get("role") != "SCRIPT":
+        raise OperationError("ORIGINAL_SCRIPT", "Select the SCRIPT source named by the original job.")
+    script = {"filename": script_source["filename"], "object": script_source["object"]}
+    if script_source.get("sourceUrl", "").startswith("s3://"):
+        script["uri"] = script_source["sourceUrl"]
+    dependencies = []
+    for original_dependency in job.get("dependencies", []):
+        dep = dict(original_dependency)
+        source_id = dep.pop("sourceId", None)
+        uri = dep.pop("s3Uri", None)
+        if dep.get("sourceType") == "FILE":
+            if source_id:
+                selected = source_files.get(source_id)
+                if not selected or selected.get("role") != "DEPENDENCY":
+                    raise OperationError("DEPENDENCY_SOURCE", "Select the original dependency source named by the job.")
+                uri = uri or selected.get("sourceUrl")
+            dep["filePath"] = _uri(uri, "original dependency")
+        dependencies.append(dep)
+    outputs = []
+    for original_output in source["outputs"]:
+        storage = original_output["storage"]
+        if storage["kind"] == "s3-integration":
+            native = {"store": "s3", "path": storage["s3Prefix"], "s3_region": storage["region"],
+                      "integration_ref": storage["integrationRef"],
+                      "requester_pays": storage.get("requesterPays", False)}
+        elif storage["kind"] == "files" and storage.get("drive") == "MY_FILES":
+            if storage.get("region") != job["region"]:
+                raise OperationError("FILES_REGION", "The original My Files output must use the reviewed job region.")
+            native = {"store": "my_files", "path": storage["path"]}
+        else:
+            raise OperationError("INTAKE_OUTPUT_STORE", "Select the original S3 integration or My Files output.")
+        crs = original_output.get("crs")
+        output = {**native, "id": original_output["id"],
+                  "format": {"geojson-sequence": "geojson-seq"}.get(original_output["format"], original_output["format"]),
+                  "primary_key": [], "geometry_column": original_output.get("primaryGeometry"),
+                  "max_objects": original_output["maxObjects"], "max_bytes": original_output["maxBytes"]}
+        if crs is not None:
+            output["declared_crs"] = crs
+            if crs.get("status") == "KNOWN":
+                output["crs"] = crs.get("value")
+            elif crs.get("status") == "UNKNOWN":
+                output["crs"] = None
+            if crs.get("axisOrder"):
+                output["axis_order"] = crs["axisOrder"]
+        schema_id = original_output.get("schemaSourceId")
+        if schema_id:
+            if schema_id not in source_files:
+                raise OperationError("OUTPUT_SCHEMA_SOURCE", "Select the original output schema named by the customer.")
+            output["schema_source"] = source_files[schema_id]
+        outputs.append(output)
+    collections = []
+    for original_collection in source["sourceCollections"]:
+        query_id = original_collection.get("querySourceId")
+        if query_id not in source_files:
+            raise OperationError("QUERY_SOURCE", "Select the original query named by each source collection.")
+        collections.append({**original_collection, "uri": original_collection["sourceUrl"],
+                            "query_source": source_files[query_id]})
+    original_object = workspace.put_object(raw)
+    definition = {"schema": WORKFLOW_SCHEMA, "id": source["workflowId"], "title": source["title"],
+        "account": {**account, "region": job["region"], "runtime": job["runtime"], "version": job.get("version", "latest")},
+        "job": {"name": job["name"], "script": script, "args": job["args"],
+                "timeout_seconds": job["timeoutSeconds"], "spark_configs": job.get("sparkConfigs", {}),
+                "dependencies": dependencies},
+        "sources": collections, "source_files": originals, "outputs": outputs,
+        "limits": {"max_objects": min(100, sum(x["max_objects"] for x in outputs)),
+                   "max_bytes": min(2 * 1024 ** 3, sum(x["max_bytes"] for x in outputs))},
+        "adoption": {"original_input": original_object, "original_schema": source["schema"],
+            "original_sdk_version": job["sdkVersion"], "execution_sdk_version": "0.5.0",
+            "project_owner": source["projectOwner"], "receiving": source["receiving"],
+            "operation_authority": source["operationAuthority"], "output_mode": job["outputMode"],
+            "credential_profile_ref": job.get("credentialProfileRef"),
+            "existing_orchestrator": job.get("existingOrchestrator"), "adopted_at": now()}}
+    return save_workflow(workspace, definition, expected_revision, actor)

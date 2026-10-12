@@ -166,6 +166,12 @@ class NativeProvider:
         expected = operation.get("native_payload")
         if not expected:
             return False
+        if known:
+            # The exact run ID was returned by the original submission or
+            # reconciled against its source before it became authoritative.
+            # Retain native normalization in the full response; runtime
+            # defaults and timeout clamping do not change that run identity.
+            return True
         payload = view.get("payload") or view
         # Preserve the full raw response. Compare the actual original request,
         # including nested Python/JAR fields, rather than a newest-name match.
@@ -177,6 +183,11 @@ class NativeProvider:
             if actual.get(key) in (None, {}):
                 actual.pop(key, None)
         wanted = {key: value for key, value in expected.items() if value is not None and value != {}}
+        # Server-side timeout clamping and resolving "latest" are native
+        # defaults. The complete returned payload is retained beside review.
+        actual.pop("timeoutSeconds", None); wanted.pop("timeoutSeconds", None)
+        if wanted.get("version") == "latest":
+            actual.pop("version", None); wanted.pop("version", None)
         return canonical(actual) == canonical(wanted)
 
     def find_run(self, workspace, operation, native_run_id=None):
@@ -325,7 +336,7 @@ class NativeProvider:
                     raw = response.json()
                     pages.append(workspace.put_object(canonical(raw)))
                     page = DirectoryPage.from_dict(raw)
-                    raw_items = raw.get("items") or []
+                    raw_items = [x for x in (raw.get("items") or []) if isinstance(x, dict)]
                     for index, entry in enumerate(page.entries):
                         if not entry.name or PurePosixPath(entry.name).name != entry.name or "\\" in entry.name or entry.name in (".", ".."):
                             raise OperationError("FILE_NAME", "The native listing returned an invalid direct child name.")
@@ -433,11 +444,16 @@ class NativeProvider:
                 raise
             datasets, total_objects, total_bytes = [], 0, 0
             for definition in definitions:
-                remaining = limits["max_objects"] - total_objects
+                remaining = min(limits["max_objects"] - total_objects, definition.get("max_objects", limits["max_objects"]))
                 method = self._list_s3 if definition["store"] == "s3" else self._list_my_files
                 entries, pages = method(workspace, definition, remaining)
+                if len({x["relative_path"] for x in entries}) != len(entries):
+                    raise OperationError("OUTPUT_PATH_REPEATED", "The native inventory repeats an output path; refresh its original listing.")
+                dataset_bytes = sum(entry["bytes"] for entry in entries)
+                if dataset_bytes > definition.get("max_bytes", limits["max_bytes"]):
+                    raise OperationError("DATASET_BYTE_LIMIT", "The original dataset exceeds its reviewed byte limit.")
                 total_objects += len(entries)
-                total_bytes += sum(entry["bytes"] for entry in entries)
+                total_bytes += dataset_bytes
                 if total_bytes > limits["max_bytes"]:
                     raise OperationError("OUTPUT_BYTE_LIMIT", "The original output exceeds the reviewed receiving byte limit.",
                                          details={"objects": total_objects, "bytes": total_bytes})
