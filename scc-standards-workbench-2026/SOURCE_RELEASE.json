@@ -1,12 +1,12 @@
 {
   "schema": "scc-workbench/source-release/v2",
   "package": "scc-standards-workbench",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "identity_algorithm": "git-blob-sha1",
   "source_files": [
     {
       "path": "__init__.py",
-      "git_blob_sha": "6690d20fa1364d1946f7e5d0b5490b3c9d0636cc",
+      "git_blob_sha": "d206fbb5c9813b31ce84eda73a7cf01241ade7cb",
       "bytes": 81
     },
     {
@@ -21,7 +21,7 @@
     },
     {
       "path": "CONSULTATION.md",
-      "git_blob_sha": "685e86fa54f3b47f3ecc8c80e3f44b4405d3b441",
+      "git_blob_sha": "77be6910692d940fe837621b0cc30cbf44961512",
       "bytes": 16548
     },
     {
@@ -41,8 +41,8 @@
     },
     {
       "path": "delivery/consultation-receiving.mjs",
-      "git_blob_sha": "3312897b012c018e9b2f173c65f10b6a50e22acb",
-      "bytes": 32298
+      "git_blob_sha": "994bb6e49a5e9afe75bd97db6d82a49283902106",
+      "bytes": 32552
     },
     {
       "path": "demo.py",
@@ -161,12 +161,12 @@
     },
     {
       "path": "pyproject.toml",
-      "git_blob_sha": "850455ca4e96bc4df9b3c9c8e85b632f2d2ee844",
+      "git_blob_sha": "d6014d6778738eed54d51b59a188d2e0037fdcc3",
       "bytes": 839
     },
     {
       "path": "README.md",
-      "git_blob_sha": "23d9aec834fccf3fdc7dfc07760eed487276244c",
+      "git_blob_sha": "d665aa5d1ea56ae4a0486152154c32874e3c1b8b",
       "bytes": 20728
     },
     {
