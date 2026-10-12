@@ -642,6 +642,7 @@ async function renderCredit(){
     facts([["Operation context",credit.data_context],["Original purchase",unit(credit.purchase.amount,credit.purchase)],
       ["Verified native return",unit(n.amount,n)],["Source status / store amount",originalStoreAmount(n)+" · "+n.original_operation_status],
       ["Latest accepted receipt",credit.present_in_latest_receipt===false?"Absent; original verified return retained":"Present"],
+      ["Latest native decision",credit.latest_source_status||n.original_operation_status],["Latest source eligibility",credit.latest_source_eligibility||"Original verified return retained"],
       ["Transfer time",n.transfer_at],["Original payment transaction",n.original_transaction],["Return transaction",n.transaction],
       ["Original packet digest",credit.manifest_sha256],["Purchase allocation state",item.status]]),
     el("div",{class:"actions"},button("Open original purchase",()=>navigate(()=>{view.tab="expenses";view.item=item.id;}),"small"),

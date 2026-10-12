@@ -23,7 +23,7 @@ CREDIT_FIELDS = ("credit_id", "item_id", "source_name", "source_capture", "packe
     "transfer_identity", "observation_sha256", "native_return", "recognition_date", "native_transfer_at",
     "center_code", "center_name", "project", "account_code", "amount", "memo", "coding_id", "line", "data_context")
 CREDIT_OUTCOMES = ("credit_id", "item_id", "source_name", "source_capture", "packet_id", "manifest_sha256",
-    "site_url", "order_reference", "source_kind", "source_reference", "present_in_latest_receipt", "adjustment_id", "refund_id", "merchant_status", "store_amount", "currency",
+    "site_url", "order_reference", "source_kind", "source_reference", "present_in_latest_receipt", "latest_source_status", "latest_source_eligibility", "adjustment_id", "refund_id", "merchant_status", "store_amount", "currency",
     "store_credit_applied", "native_return", "network", "asset", "transfer_at", "observed_at",
     "transaction", "original_transaction", "transfer_identity", "observation_sha256", "coding_id", "data_context")
 ADJUSTMENT_OUTCOMES = ("source_name", "source_id", "source_capture", "packet_id", "source_sha256",
