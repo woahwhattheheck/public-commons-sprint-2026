@@ -81,6 +81,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   buyer-expenses                            Allocate native buyer expenses and issue accountant periods
   buyer-n8n-workflows Generate six original customer workflows for the selected n8n credential
   buyer-agent Operate the original buyer through LangGraph checkpoints and LangChain tools
+  stac                                      Discover imagery, compare scenes and deliver selected assets to customers
   coingecko                                 Operate CoinGecko sources, market research and original purchases
   tenderly / tenderly-workspace              Prepare and operate the Tenderly simulation merchant
   tenderly-customer                          Receive, recover and export the original simulation purchase
@@ -100,6 +101,10 @@ Native commands (arguments pass unchanged to the maintained implementation):
   api-pass-workspace                        Open the API customer workspace, saved requests, recovery and statements
   api-purchase                              Buy an API allowance, call approved routes and recover saved responses
   api-application                           Run source-pinned application functions over purchased API allowances
+  baserow-source                            Discover, retain and publish original Baserow records and files
+  baserow-workspace                         Author Baserow sources, publish and reopen customer delivery
+  baserow-publisher                         Operate the original Baserow dataset publisher
+  baserow-deployment                        Review and stage the original Baserow merchant release
   cube-workspace / cube-onboard              Author, review and export paid Cube reports
   openapi-workspace                          Import an API contract or Postman collection and operate its merchant
   oauth-connection                           Authorize, renew and select QuickBooks companies, Xero tenants or API grants
@@ -140,6 +145,9 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-accounting-adjustments            Review, retain and reconcile original merchant cancellations and refunds
   merchant-accounting-statements             Retain, recover and deliver original customer statements through MCP
   merchant-accounting-platforms              Review, retain and reconcile original QuickBooks and Xero operations
+  databento-workspace                        Review historical source editions, map customer records and reopen handoffs
+  databento-acquire                          Retain original Databento metadata, batch jobs and complete captures
+  databento-warehouse                        Receive complete customer data, select editions and recover the warehouse
   merchant-readiness                         Review every configured Stellar receiving account
   availability                              Review, pause and resume a running seller's selected routes
   cube-onboarding                            Capture and prepare reviewed Cube reports as a merchant
@@ -148,6 +156,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   graphql-deployment                         Prepare original GraphQL release and Linux host handoffs
   woo-seller / woo-buyer                     Connect existing WooCommerce orders to native checkout
   grant-workspace                           Revise, export and receive the original SF47 grant delivery plans
+  grant-demo                                Receive, inspect, open and export the original completed grant purchase
   woo-operator                              Review original Stellar transfers and complete selected Woo orders
   woo-refund                                Record verified order credits and receive original refund handoffs
 
