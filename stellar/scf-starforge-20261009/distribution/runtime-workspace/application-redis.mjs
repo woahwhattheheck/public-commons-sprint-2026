@@ -71,8 +71,9 @@ export function redisStartup(request, text) {
     'APPLICATION_REDIS_STARTUP_CHANGED', 'The original startup must name the reviewed workspace and source profile.');
   let url;
   try { url = new URL(value.operatorUrl); } catch { need(false, 'APPLICATION_REDIS_STARTUP_CHANGED'); }
-  need(url.protocol === 'http:' && url.hostname === '127.0.0.1' && Boolean(url.port) &&
-    (port === '0' || Number(url.port) === Number(port)) &&
+  const actualPort = Number(url.port || 80);
+  need(url.protocol === 'http:' && url.hostname === '127.0.0.1' &&
+    actualPort >= 1 && actualPort <= 65535 && (port === '0' || actualPort === Number(port)) &&
     !url.username && !url.password && !url.search && url.pathname === '/' &&
     /^[a-f0-9]{64}$/.test(url.hash.slice(1)), 'APPLICATION_REDIS_STARTUP_CHANGED');
   return { url: url.href, original: { schema: STARTUP, directory, workspaceId, profileSha256, head: value.head } };
