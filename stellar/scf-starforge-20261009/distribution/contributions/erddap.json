@@ -1,0 +1,23 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "erddap",
+  "description": "Complete original ERDDAP grid/table scientific source review, retained native editions, merchant/customer receiving and borrowed operator applications.",
+  "commands": {
+    "erddap": "stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/cli.mjs"
+  },
+  "commandDescriptions": {
+    "erddap": "Acquire/review original ERDDAP ocean grids and station tables, publish native merchant editions and receive complete datasets."
+  },
+  "exports": {
+    "./seller/erddap": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/merchant.mjs",
+    "./buyer/erddap": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/customer.mjs",
+    "./merchant/erddap": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/mcp.mjs",
+    "./client/erddap": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/mcp-client.mjs"
+  },
+  "applicationProviders": {
+    "erddap": "stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/application-provider.mjs"
+  },
+  "merchantProviders": {
+    "erddap-workspaces": "stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/merchant-provider.mjs"
+  }
+}
