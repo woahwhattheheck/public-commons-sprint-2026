@@ -8,6 +8,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | --- | --- | --- |
 | Catalog Atlas | atlas | Retained catalog intake, offer comparison, exact native buyer preparation and complete workspace receiving |
 | n8n automation merchant | n8n-merchant serve | Configuration review, original preparation, paid jobs, retained workflow executions, customer results and stop/reopen |
+| API-pass customer | api-pass-workspace serve | Original API access, saved requests, exact response recovery, private buyer history and customer statements |
 | API merchant authoring | openapi-workspace | Source intake, paid routes, saved packages, seller preview and operations |
 | gRPC merchant authoring | grpc-workspace | Captured protobuf source, exact typed requests and terms, saved merchant editions, retained release controls and customer files |
 | Merchant pricing and scenario planning | revenue-workspace | Original usage, saved commercial reviews, exact demand/price/cost scenarios, exports and seller price changes |
@@ -487,6 +488,20 @@ The [complete n8n Applications guide](N8N_APPLICATIONS.md) covers first-run prep
 ## JSON Lines datasets
 
 The complete [NDJSON managed application guide](../../sf30-seller-sdk/ndjson/MANAGED_APPLICATIONS.md) covers the original retained source workspace, explicit Python selection, review/save/start/open/stop/reopen, merchant MCP connection and complete customer handoff.
+
+## API-pass customer workspace
+
+Select **API-pass customer** and the private configuration produced by the maintained `api-pass-workspace configure` command. The configured customer workspace and the selected **Private customer workspace** must name the same directory. That directory retains connections, passes, exact request bodies, saved responses and operation history. The original Buyer state, Inbox and optional customer accounting workspace retain their existing paths.
+
+**Purchase approval channel** accepts `auto`, `browser` or `terminal`. Auto checks the selected original runtime's browser approval capability and uses its existing terminal channel when that capability is absent. Browser requires the original broker and its selected native helper. An optional **Selected original approval broker** names that original module. The managed PTY remains available through the original **Terminal Python executable**, which defaults to `/usr/bin/python3`. Private host proxy settings belong in the existing environment configuration.
+
+Review, save, finish the original runtime connection if required, then review and start the application. The review retains the configuration, prior workspace state and eight product files. Before starting, the adapter compares the selected installation and the adopted execution copy. The actual startup record must match the launched descendant process, loopback listener, original configuration and authenticated customer session before **Open application** becomes available.
+
+In the customer workspace, select a connection and adopt an existing pass or prepare an original purchase. Saved request identities reopen the same response. Recovery continues the selected original operation and joins its authenticated proof, buyer history and statement files. Closing the browser retains these selections and records.
+
+Use the ordinary Applications **Stop**, **Review start** and **Start reviewed application** controls to reopen the same customer directory. Each start reviews the current state, and the existing application resource lease serializes managed use of that directory.
+
+The complete [API-pass customer guide](../../sf101-merchant-receiver/api-access/workspace/README.md) covers configuration, connection setup, purchase approval, exact request recovery, customer reports, browser operations and installed package imports.
 
 ## NocoDB source authoring
 
