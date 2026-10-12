@@ -33,7 +33,8 @@ async function privateDirectory(path,{create=false}={}){
 async function readJSON(path,{optional=false,max=4_000_000}={}){
   let file;try{file=await open(path,constants.O_RDONLY|(constants.O_NOFOLLOW??0)|(constants.O_NONBLOCK??0));}
   catch(error){if(optional&&error.code==='ENOENT')return null;throw error;}
-  try{const info=await file.stat();need(info.isFile()&&info.nlink===1&&info.size<=max&&!(info.mode&0o077),
+  // Atomic replacement may unlink an opened prior generation; its descriptor still owns that complete record.
+  try{const info=await file.stat();need(info.isFile()&&info.nlink<=1&&info.size<=max&&!(info.mode&0o077),
       'ACCOUNTING_MAINTENANCE_FILE','A retained maintenance record must be a bounded private regular file.');
     const bytes=await file.readFile();need(bytes.length<=max,'ACCOUNTING_MAINTENANCE_FILE','The retained maintenance record exceeds its size limit.');
     try{return JSON.parse(bytes.toString('utf8'));}catch{need(false,'ACCOUNTING_MAINTENANCE_JSON','A retained maintenance record is invalid JSON.');}
