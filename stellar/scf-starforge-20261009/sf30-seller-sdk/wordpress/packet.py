@@ -339,7 +339,7 @@ def file_projection(path, output_directory):
         else:
             os.link(temporary, output / "dataset.csv"); sync(output)
         return {"captureId": manifest_sha, "workspaceId": manifest["workspaceId"], "rows": count,
-                "columns": columns, "csv": hash_file(output / "dataset.csv"), "manifest": manifest}
+                "columns": columns, "csv": hash_file(output / "dataset.csv"), "manifest": manifest, "manifestBytes": len(raw)}
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)

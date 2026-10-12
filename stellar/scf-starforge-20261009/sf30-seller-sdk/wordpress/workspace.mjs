@@ -235,9 +235,11 @@ export async function openWordPressWorkspace({directory,environment=process.env,
         const native=await loadDatasetConfig(join(location,'dataset.json')),seller=await buildDatasetSellerConfig(native,{
           origin:merchant.origin,path:merchant.path,payment:merchant.payment}),
           source={schema:'stellar-forge.wordpress-complete-source.v1',captureId:result.captureId,workspaceId:result.workspaceId,
-            manifest:result.manifest,packetId:selected.id,packetSha256:selected.sha256,
+            manifest:{path:'wordpress-source.json',schema:result.manifest.schema,sha256:result.captureId,bytes:result.manifestBytes,
+              revision:result.manifest.revision,files:result.manifest.files.length,sourceBytes:result.manifest.files.reduce((total,file)=>total+file.bytes,0)},
+            packetId:selected.id,packetSha256:selected.sha256,
             review:{reviewer:input.reviewer,note:input.note??'',reviewedManifestSha256:result.captureId},receiver:'wordpress.source_files.restore_wordpress_source'};
-        await immutableJson(join(location,'source.json'),source,STATE_BYTES);await immutableJson(join(location,'seller.json'),seller);
+        await immutableJson(join(location,'source.json'),source,1048576);await immutableJson(join(location,'seller.json'),seller);
         const files=[];for(const name of ['dataset.csv','dataset.json','source.json','seller.json']){const row=await hashPrivate(join(location,name),268435456);files.push({path:name,bytes:row.bytes,sha256:row.hash});}
         const product=await productForExport(input,operation,current),record={id:operation.id,delivery:'source-files',createdAt:operation.createdAt,
           packetId:selected.id,captureSha256:result.captureId,merchantId:merchant.id,productId:product.id,
