@@ -20,7 +20,8 @@ the service and the editable source workspace to another operator.
 | Receive approved periods in PostgreSQL | Reporting warehouse in the same application; starforge odk-central-workspace warehouse | Issued dataset approval, SQL review, immutable warehouse editions and full period comparison ZIP |
 | Operate the Central service | starforge odk-central-host | Released service, original database/volumes/images, backup, restored service and host handover |
 | Receive a selected field source | starforge odk-central-receive source | Original rows, repeat relationships, versions/media, source review, exports, archive and comparison after reopen |
-| Receive the released forms on that service | starforge odk-central-receive released | Actual native project/form/submission IDs and the same complete field receiving result |
+| Receive the released forms on that service | starforge odk-central-receive released | Actual native project/form/submission IDs, complete field receiving and both commissioned periods |
+| Continue those original periods | starforge odk-central-receive periods | Accepted full-source capture, exact native period boundaries, saved commissioning IDs and independent archive reopening |
 | Attach an agent | starforge merchant-providers init odk-workspaces | Original merchant configuration, declared source/runtime profiles and complete retained-file access |
 | Continue on another host | Restore the complete workspace, then receive its publisher | The same workspace UUID, source history, original-to-local release mapping and continued authoring |
 
@@ -926,15 +927,69 @@ responses, rows and native calculation are retained by the running operation.
 | provider/fixture-operation.json | Original source/request selection, native project, dispatches and accepted responses |
 | provider/inputs and provider/responses | Complete native request and observed response bodies |
 | provider/receiving-request.json | Real project/form IDs and the original full field receiving input |
-| provider/result.json | Source pins, actual provider IDs and joined receiving result |
+| provider/result.json | Source pins, actual provider IDs and joined full-source receiving result |
+| provider/period-receiving-request.json | Same accepted full capture, workspace/source-review IDs and original period operation |
+| provider/programme-result.json | Joined original fixture and commissioned-period result identities |
+| receiving/commissioning | Original period journal, agreed source boundaries, reports, datasets, archive and complete reopened comparison |
+| receiving/commissioning/warehouse-selections.json | Exact original delivery, accepted review/export receipts and native SQL approval/review/import/report request IDs |
 | workspace | Complete original field workspace |
 | receiving/receiving.json and receiving/result.json | Original operation journal, outputs, archive and full reopened comparison |
 | restored-workspace | The complete received workspace with the same source identity |
+| restored-workspace-commissioned | Independent complete commissioning archive reopen with the same original source, reviews and outputs |
 
 Keep these same paths and input identities when continuing an interruption.
 The fixture controller reconciles native form/version/submission uniqueness.
 An ambiguous project creation is reconciled through its exact recorded unique
 name. A completed provider operation and field receiving result are reused.
+
+### Continue the original two-period commissioning
+
+The released programme continues its completed five-root source capture through
+the original commissioning engine. The simple form's actual retained
+`__system.submissionDate` values select two original rows in the first period and
+one in the second. The shared boundary is the third row's observed provider
+timestamp; the final exclusive boundary is its next supported millisecond. The
+periods describe these native acquisition timestamps. Customer reporting uses
+the customer's agreed source/time interpretation from the commissioning workflow.
+
+The released source expectations are:
+
+| Original source period | Rows | Mean age | Sum of age |
+| --- | ---: | ---: | ---: |
+| Initial native submissions | 2 | 32 | 64 |
+| Following native submission | 1 | 38 | 38 |
+
+The running programme retains actual provider pages, exact original values,
+source and review identities, complete reports and datasets. It then archives
+and independently reopens the same Central workspace, compares all original
+source/period records and output bytes, and reopens the existing commissioned
+delivery through its native portable-receiving path.
+
+To continue that phase explicitly from the programme's retained request, use
+the same host environment and complete original paths:
+
+~~~sh
+starforge odk-central-receive periods \
+  --request /srv/central-receiving/field-product/provider/period-receiving-request.json \
+  --directory /srv/central-receiving/field-product/workspace \
+  --output /srv/central-receiving/field-product/receiving/commissioning \
+  --restore /srv/central-receiving/field-product/restored-workspace-commissioned
+~~~
+
+The request already binds operationId, sourceCaptureId, sourceReviewId,
+expectedWorkspaceId, projectId and the original connection. The installed entry
+passes it directly into the original receiver. Reuse that request and those
+paths to recover its journaled stage or completed result.
+
+The generated `warehouse-selections.json` carries both original accepted
+captures, complete exported dataset/receipt selections and deterministic
+32-character approval, review, import and period-report IDs. The same-host
+warehouse receiving operator consumes that exact selection through the earlier
+approved-period workflow. Its selected private PostgreSQL profile supplies the
+actual database, schema, warehouse identity and installed Python interpreter.
+
+The full native source and continuation contract are in
+[RELEASED_PERIODS.md](../../stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/RELEASED_PERIODS.md).
 
 ## Receiving handover
 

@@ -157,7 +157,7 @@ export function parseMarketSelection(value) {
     typeof value.allowLocalMerchant === 'boolean',
   'MANAGED_SELECTION_INVALID', 'Review the original CoinGecko application before Start.');
   absolute(value.workspace.directory);
-  const validIdentity = item => plain(item) && /^\\d+$/.test(item.device ?? '') && /^\\d+$/.test(item.inode ?? '');
+  const validIdentity = item => plain(item) && /^\d+$/.test(item.device ?? '') && /^\d+$/.test(item.inode ?? '');
   const workspace = value.workspace, configuration = value.configuration;
   need((workspace.identity === null || validIdentity(workspace.identity)) &&
     (workspace.database === null || validIdentity(workspace.database) &&

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GridFabric Plaid operations</title><link rel="stylesheet" href="/style.css"><script type="module" src="/app.mjs"></script></head>
+<body>
+<a class="skip" href="#main">Skip to workspace</a>
+<header class="topbar"><div><p class="eyebrow">STARFORGE / GRIDFABRIC PLAID</p><h1>Device events and reporting</h1></div><div class="top-actions"><span id="connection-state" role="status">Connecting</span><button id="refresh" type="button">Refresh workspace</button></div></header>
+<div class="workspace-bar"><span id="workspace-name">Original workspace</span><span id="workspace-id" class="mono"></span><span id="workspace-revision">Revision —</span></div>
+<div id="notice" class="notice" role="status" hidden></div>
+<section id="connection-panel" class="connection panel" hidden><h2>Open the private connection</h2><p>Open the URL printed by the original application, or enter its private connection token.</p><form id="connection-form"><label>Connection token<input id="connection-token" type="password" autocomplete="off" required></label><button type="submit">Connect</button></form></section>
+<div class="layout">
+<nav aria-label="Workspace sections">
+<button data-section="overview" aria-current="page">Overview</button>
+<button data-section="instances">Instances</button>
+<button data-section="sources">Source intake</button>
+<button data-section="mappings">Report mappings</button>
+<button data-section="events">Events and controls</button>
+<button data-section="reports">Reports</button>
+<button data-section="management">Management</button>
+<button data-section="delivery">Export and receiving</button>
+<button data-section="records">All records</button>
+<button data-section="recovery">Saved actions</button>
+</nav>
+<main id="main" tabindex="-1">
+<section id="section-overview" class="section">
+<div class="section-title"><div><p class="eyebrow">WORKSPACE</p><h2>Operating overview</h2></div><button type="button" data-open-collection="operations">Original action history</button></div>
+<p class="lead">Receive original source, review instance and report bindings, follow native event callbacks, and retain complete report and management outcomes.</p>
+<div id="counts" class="counts"></div>
+<div class="split"><article class="panel"><h3>Source and operating sequence</h3><ol class="sequence"><li><button data-section="sources">Retain the original input and inspect every source issue.</button></li><li><button data-section="instances">Bind the deployed instance, original schema and target identities.</button></li><li><button data-section="mappings">Review and activate an explicit reporting edition.</button></li><li><button data-section="events">Inspect callbacks, event revisions and current opt decisions.</button></li><li><button data-section="reports">Build and download the complete requested response.</button></li><li><button data-section="delivery">Export the original workspace and perform cold receiving.</button></li></ol></article><article class="panel"><h3>Native source and connection</h3><dl id="native-summary"></dl><p>Management and device requests are sent only by their explicit controls. Plaid retains callback scheduling.</p><details><summary>Complete source identity</summary><pre id="source-identity"></pre></details></article></div>
+<div class="panel"><h3>Recent original actions</h3><div id="recent-actions"></div></div>
+</section>
+<section id="section-instances" class="section" hidden>
+<div class="section-title"><div><p class="eyebrow">CONFIGURATION</p><h2>Instances and callback bindings</h2></div><button data-open-collection="instance_editions">Configuration history</button></div>
+<p>Keep the exact deployed instance ID, native management endpoint, schema evidence, target bindings and credential environment references.</p>
+<div class="split"><form id="instance-form" class="panel"><h3>Review an instance edition</h3><label>Complete instance JSON<textarea id="instance-input" rows="24" spellcheck="false" required></textarea></label><div class="form-actions"><button type="submit">Save instance edition</button><button type="button" id="instance-template">New instance template</button></div><p class="help">Credential fields contain environment variable names. Original callback headers and message bodies remain unchanged.</p></form><article class="panel"><h3>Configured instances</h3><div id="instance-list"></div><h3>Documented callback routes</h3><p>Select an instance to see its exact route URLs and current configuration.</p><div id="callback-routes"></div><details><summary>Binding guidance</summary><p>Attach the retained schema or original sample as source evidence. Event pointers are relative to the selected event; interval ID, signal and effective-start pointers are relative to the full callback. Target pointers are relative to the retained targets object. Choose the reviewed <code>any</code> or <code>all</code> combination explicitly.</p></details></article></div>
+</section>
+<section id="section-sources" class="section" hidden>
+<div class="section-title"><div><p class="eyebrow">ORIGINAL INPUT</p><h2>Source intake and corrections</h2></div><button data-open-collection="sources">All source editions</button></div>
+<p>Retain the complete original file. Parsed sources keep exact rows, their meanings and issue records. A correction is a separate source linked to its predecessor.</p>
+<form id="source-form" class="panel">
+<div class="form-grid"><label>Original file<input id="source-file" type="file" required></label><label>Source name<input id="source-name" required></label><label>Format<select id="source-format"><option value="json">JSON rows</option><option value="csv">CSV rows</option><option value="original">Original evidence</option></select></label><label>Corrects original source ID<input id="source-corrects" class="mono" placeholder="Optional original source ID"></label></div>
+<div class="split"><label>Profile JSON<textarea id="source-profile" rows="18" spellcheck="false"></textarea></label><label>Provenance JSON<textarea id="source-provenance" rows="18" spellcheck="false" required></textarea></label></div>
+<div class="form-actions"><button type="submit">Retain file and import source</button><button type="button" id="source-profile-template">Reset profile template</button></div>
+<p class="help">Declare units, timestamp format, interval duration, data quality and value semantics. Mixed rows may provide their own kind. Status measurements retain their original JSON object.</p>
+</form>
+<div id="source-result" class="panel" hidden></div>
+<div class="panel"><h3>Recent sources</h3><div id="source-list"></div></div>
+</section>
+<section id="section-mappings" class="section" hidden>
+<div class="section-title"><div><p class="eyebrow">REVIEWED EDITIONS</p><h2>Reporting mappings</h2></div><button data-open-collection="mappings">All mapping editions</button></div>
+<p>Map each requested <code>rId</code> to its original device, channel, time basis, unit and ordered source precedence. Keep the full registration response with this edition.</p>
+<div class="split"><form id="mapping-form" class="panel"><h3>Prepare a mapping edition</h3><label>Complete mapping JSON<textarea id="mapping-input" rows="30" spellcheck="false" required></textarea></label><button type="submit">Save reviewed mapping</button></form><article class="panel"><h3>Saved mappings</h3><div id="mapping-list"></div><form id="activation-form"><h3>Activate an edition</h3><label>Original mapping ID<input id="activation-id" class="mono" required></label><label>Reviewer<input id="activation-reviewer" required></label><button type="submit">Activate this mapping</button></form><p class="help">Only ready sources can be activated. Sparse corrections take precedence only where explicitly selected. Earlier mappings and responses remain available.</p></article></div>
+</section>
+<section id="section-events" class="section" hidden>
+<div class="section-title"><div><p class="eyebrow">NATIVE CALLBACKS</p><h2>Events, decisions and queued controls</h2></div><div class="form-actions"><button data-open-collection="callbacks">Callbacks</button><button data-open-collection="callback_deliveries">Every delivery</button><button data-open-collection="event_revisions">Event revisions</button></div></div>
+<p>Inspect the retained callback and complete distribution before deciding what changed. Plaid owns event timing; the application records decisions and queues explicit device actions.</p>
+<div class="panel"><h3>Recent events</h3><div id="event-list"></div></div>
+<div class="split"><form id="event-action-form" class="panel"><h3>Reviewed event action</h3><label>Action<select id="event-action-name"></select></label><label>Original action JSON<textarea id="event-action-input" rows="20" spellcheck="false" required></textarea></label><button type="submit">Record reviewed action</button><p class="help">History projection retains the original replies. Resuming an interval requires its exact current event revision and retained evidence.</p></form><article class="panel"><h3>Queued and completed device actions</h3><div id="device-list"></div><p>Review the original action and current opt decision before using <strong>Send device request</strong> in Management. Repeated or uncertain begin operations are never sent automatically.</p><button data-open-collection="opt_decisions">All opt decisions</button><button data-open-collection="distributions">Complete distributions</button></article></div>
+</section>
+<section id="section-reports" class="section" hidden>
+<div class="section-title"><div><p class="eyebrow">REQUESTED DATA</p><h2>Reports and original responses</h2></div><button data-open-collection="reports">All reports</button></div>
+<div class="split"><form id="report-form" class="panel"><h3>Build a requested report</h3><label>Instance ID<input id="report-instance" required></label><label>Exact query JSON<textarea id="report-query" rows="15" spellcheck="false" required></textarea></label><button type="submit">Build complete report</button><p class="help"><code>startTimet</code> and <code>endTimet</code> are inclusive epoch seconds. <code>granularityInSeconds</code> is explicit. A missing value remains a source exception.</p></form><article id="report-result" class="panel"><h3>Selected report</h3><p>Choose a retained report or build a complete query to inspect its rows, exceptions and original response.</p></article></div>
+<div class="panel"><h3>Recent report requests</h3><div id="report-list"></div></div>
+</section>
+<section id="section-management" class="section" hidden>
+<div class="section-title"><div><p class="eyebrow">EXPLICIT EXTERNAL OPERATIONS</p><h2>Management and device requests</h2></div><button data-open-collection="management_receipts">Original response history</button></div>
+<p>Prepare the exact native request, inspect its endpoint and captured bytes, then send it explicitly. HTTP, local status, exception and VTN response are separate outcome layers.</p>
+<div class="split"><form id="management-form" class="panel"><h3>Prepare management request</h3><label>Published namespace example<select id="management-example"></select></label><label>Complete preparation JSON<textarea id="management-input" rows="20" spellcheck="false" required></textarea></label><button type="submit">Prepare original request</button></form><article class="panel"><h3>Review and dispatch</h3><label>Operation kind<select id="dispatch-kind"><option value="management">Native management operation</option><option value="device">Configured device action</option></select></label><label>Original operation ID<input id="dispatch-id" class="mono"></label><div class="form-actions"><button id="dispatch-inspect" type="button">Inspect original request</button><button id="dispatch-send" type="button" disabled>Send management request</button></div><div id="dispatch-review"><p>Select an original prepared or queued operation.</p></div></article></div>
+<div class="split"><article class="panel"><h3>Management operations</h3><div id="management-list"></div></article><form id="reconcile-form" class="panel"><h3>Reconcile an uncertain operation</h3><label>Original action<select id="reconcile-name"><option value="reconcile_management">Management disposition</option><option value="reconcile_device_action">Device disposition</option><option value="recover_dispatches">Record interrupted dispatches</option></select></label><label>Evidence and reviewed disposition<textarea id="reconcile-input" rows="15" spellcheck="false" required></textarea></label><button type="submit">Record reconciliation</button><p class="help">Use the original attempt and retained evidence. Reconciliation records what is known; it does not resend the request.</p></form></div>
+</section>
+<section id="section-delivery" class="section" hidden>
+<div class="section-title"><div><p class="eyebrow">COMPLETE RECEIVING</p><h2>Export and cold restore</h2></div><button id="exports-refresh" type="button">Refresh retained exports</button></div>
+<div class="split"><article class="panel"><h3>Export original workspace</h3><p>The portable file includes every logical record, all original UTF-8 files, source/mapping editions, callback and decision history, reports and dispatch receipts.</p><button id="export-create" type="button">Create complete portable export</button><div id="export-result"></div><p class="help">The application streams a complete <code>.jsonl.gz</code> artifact with per-file hashes and a full content digest. Credentials remain environment references.</p></article><form id="restore-form" class="panel"><h3>Receive a portable workspace</h3><label>Complete original portable file<input id="restore-file" type="file" accept=".gz,.gzip" required></label><label>New sibling workspace name<input id="restore-name" pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,100}" required></label><button type="submit">Restore to new workspace</button><p class="help">Receiving preserves the original logical identity and revision. Open the new directory with the original CLI to create a fresh private listener.</p><div id="restore-result"></div></form></div>
+<div class="panel"><h3>Retained exports</h3><div id="export-list"></div></div>
+</section>
+<section id="section-records" class="section" hidden>
+<div class="section-title"><div><p class="eyebrow">COMPLETE ORIGINAL RECORDS</p><h2>Record browser</h2></div></div>
+<form id="record-filter" class="panel"><div class="form-grid"><label>Collection<select id="record-collection"></select></label><label>Original scope ID<input id="record-scope" placeholder="All scopes"></label><label>Status or tag<input id="record-tag" placeholder="All tags"></label><label>Order<select id="record-order"><option value="asc">Oldest / ascending</option><option value="desc">Newest / descending</option></select></label><label>Offset<input id="record-offset" type="number" min="0" step="1" value="0"></label><label>Rows per page<select id="record-limit"><option>50</option><option selected>100</option><option>500</option><option>1000</option></select></label></div><button type="submit">Read original page</button></form>
+<div class="panel"><div class="pagination"><span id="record-count">No page selected</span><button id="record-previous" type="button" disabled>Previous page</button><button id="record-next" type="button" disabled>Next page</button></div><div id="record-table"></div></div>
+</section>
+<section id="section-recovery" class="section" hidden>
+<div class="section-title"><div><p class="eyebrow">ORIGINAL REQUEST IDENTITIES</p><h2>Saved action recovery</h2></div></div>
+<div class="panel"><h3>Pending original request</h3><div id="pending-summary"></div><div class="form-actions"><button id="pending-read" type="button">Read original outcome</button><button id="pending-continue" type="button" disabled>Continue same local request</button><button id="pending-dismiss" type="button" disabled>Archive unaccepted request</button><button id="pending-reconcile" type="button" disabled>Review original reconciliation</button></div><details><summary>Complete saved request</summary><pre id="pending-json"></pre></details></div>
+<div class="panel"><h3>Observed browser actions</h3><p>These local receiving notes link to the authoritative original operation UUIDs. Native records remain in the original workspace.</p><div id="local-history"></div></div>
+</section>
+<aside id="inspector" class="panel inspector" hidden><div class="section-title"><h2 id="inspector-title">Original record</h2><button id="inspector-close" type="button">Close record</button></div><div id="inspector-summary"></div><div id="inspector-actions" class="form-actions"></div><div id="inspector-files" class="file-list"></div><details open><summary>Complete retained record</summary><pre id="inspector-json"></pre></details></aside>
+</main></div>
+<footer><span>Original source, decisions and response history remain in this workspace.</span><span id="footer-status">Waiting for original owner</span></footer>
+</body></html>

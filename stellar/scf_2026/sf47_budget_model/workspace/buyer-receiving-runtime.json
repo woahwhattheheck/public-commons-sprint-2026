@@ -1,21 +1,23 @@
 {
   "schema": "sf47.native-buyer-source-manifest.v1",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
-  "head": "9b99fb339612ebd9f60e8b9312a2b6445ce99b1f",
+  "head": "b21c26fafff9c1c1c2ef8c8b57a22de730fb696d",
   "source_selection": {
     "mode": "explicit_git_blobs",
     "original_buyer_runtime_head": "3afca9599b602b67a8b722043061100e2efef294",
     "original_receiving_source_commit": "32d73b8fe38c6b3aeed2c39816202d2bad456126",
     "original_receiving_merge_commit": "78884931550d54401939b9befd59244c168e8144",
     "cohort_application_head": "5771cd96dc13e80d3a630fecd2bf03b954482c60",
-    "identity_rule": "The exact path and git_blob_sha entries are authoritative. The head identifies the implementation application source cut. Original buyer/runtime sources remain selected explicitly; current Grant Operations, Installation, SF74 producer and MCP retained-file reader closures are included by their exact blobs.",
+    "identity_rule": "The exact path and git_blob_sha entries are authoritative. The head identifies the receiving recovery source cut. The original buyer/runtime and complete Grant Operations, Installation, SF74 producer and MCP reader source selections remain explicit. Requests and phase bindings recover the same original native operation; this source descriptor does not select private inputs or create an execution.",
     "initial_cohort_application_head": "704df543668351f125f7beb0222789724a657127",
     "maintained_grant_owner_source_commit": "98555147a15f0ab6fb947e243b199abe588fcc73",
     "implementation_application_head": "9b99fb339612ebd9f60e8b9312a2b6445ce99b1f",
     "implementation_base_commit": "4be8edbc781351a4ed4fc220fbd6aea8f2a1edd7",
-    "prior_receiver_manifest_git_blob": "c03d218a18a40a95cb79cedf9819d4f0810f56dc",
+    "prior_receiver_manifest_git_blob": "5f93a001a8cf5ea296251b29b100f89d32d00038",
     "maintained_implementation_producer_commit": "d3edec679cc41ae373143ea3241d1a463d51fbd0",
-    "scope": "The same original operating-case continuation; no private case, source observations, purchase result or execution request is included."
+    "scope": "The same original operating-case continuation; no private case, source observations, purchase result or execution request is included.",
+    "receiving_request_recovery_head": "b21c26fafff9c1c1c2ef8c8b57a22de730fb696d",
+    "implementation_application_merge": "8e8b52d60b3b04abb8c4fe5085e72f5598df4f74"
   },
   "files": [
     {
@@ -76,7 +78,7 @@
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/BUYER_RECEIVING_JOURNEY.md",
-      "git_blob_sha": "814b5a9e914009b86cb6ef0aa412251d9e7929d5"
+      "git_blob_sha": "368e4c269e6526a7c4e30734b9947779223608f5"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/buyer-agent-receiving.mjs",
@@ -84,7 +86,7 @@
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/buyer-operations-receiving.mjs",
-      "git_blob_sha": "6d2a5701774e570a933e11581d8d94fd8eaeac09"
+      "git_blob_sha": "36e01acf398b90d6a1f1af8a7f2d6878fe040a13"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/CLI.md",
