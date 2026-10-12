@@ -1,12 +1,13 @@
 // MIT. Source-specific authoring; the original Socrata publisher owns all merchant state.
 import { constants } from 'node:fs';
 import { mkdir, open, copyFile, lstat, readdir } from 'node:fs/promises';
-import { resolve, join, isAbsolute } from 'node:path';
+import { resolve, join, dirname, isAbsolute } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { privateDirectory, acquireWorkspace, readJson, readPrivate, hashPrivate, createFile, atomicJson, syncDirectory } from '../postgres/publisher/files.mjs';
 import { loadDatasetConfig } from '../dataset-handler.mjs';
 import { buildDatasetSellerConfig } from '../dataset-cli.mjs';
 import { openSocrataPublisher } from '../socrata/publisher.mjs';
+import { readDatasetSourceFiles } from '../../sf82-seller-pilot/release-dataset.mjs';
 import { openWebDavSource, buildDatasetEdition } from './source.mjs';
 import { listCaptures, readCapture } from './capture.mjs';
 import { exportSourcePacket, inspectSourcePacket } from './packet.mjs';
@@ -190,16 +191,52 @@ export async function openWebDavWorkspace({ directory, environment = process.env
         const seller = await buildDatasetSellerConfig(edition.native, { origin: merchant.origin, path: merchant.path, payment: merchant.payment });
         const location = join(root('exports'), operation.id); await privateDirectory(location, true);
         const files = [];
-        for (const name of ['dataset.csv', 'dataset.json', 'source.json']) {
+        for (const name of ['dataset.csv', 'dataset.json']) {
           const original = join(edition.directory, name), expected = await hashPrivate(original, 268435456);
           const actual = await copied(original, join(location, name), expected);
           files.push({ path: name, bytes: actual.bytes, sha256: actual.hash });
         }
+        // The original shared publisher now accepts an explicit sourceFiles closure.
+        // Preserve original provider/edition bytes beside the derived public inputs.
+        const mapping = await mappingRecord(edition.mappingId), captured = await captureRecord(mapping.captureId);
+        if (captured.receipt.sha256 !== mapping.captureSha256)
+          fail('WEBDAV_SOURCE_CHANGED', 'The reviewed mapping no longer matches its completed original capture.', 409);
+        const selectedSource = await sourceRecord(captured.sourceId), sourceFiles = [];
+        const retain = async (original, name) => {
+          const destination = join(location, name);
+          await privateDirectory(dirname(destination), true);
+          const actual = await copied(original, destination, await hashPrivate(original, 268435456));
+          sourceFiles.push({ path: name, bytes: actual.bytes, sha256: actual.hash });
+        };
+        await retain(join(root('sources'), selectedSource.id + '.json'), 'webdav/source.json');
+        await retain(join(root('mappings'), mapping.id + '.json'), 'webdav/mapping.json');
+        await retain(join(root('merchants'), merchant.id + '.json'), 'webdav/merchant.json');
+        const captureDirectory = join(root('cache'), captured.sourceHash, 'captures', mapping.captureId);
+        for (const name of (await readdir(captureDirectory)).sort()) {
+          if (['intent.json', 'progress.json', 'transfer.json', 'receipt.json', 'body.bin'].includes(name) ||
+              /^uncheckpointed-[a-f0-9-]{36}\.bin$/.test(name))
+            await retain(join(captureDirectory, name), 'webdav/capture/' + name);
+        }
+        for (const name of ['intent.json', 'schema.csv', 'dataset.csv', 'dataset.json', 'source.json', 'edition.json'])
+          await retain(join(edition.directory, name), 'webdav/edition/' + name);
+        const listingDirectory = join(root('cache'), captured.sourceHash, 'listings');
+        if (await exists(listingDirectory)) for (const name of (await readdir(listingDirectory)).sort()) {
+          if (/^[a-f0-9-]{36}\.(?:xml|json)$/.test(name))
+            await retain(join(listingDirectory, name), 'webdav/listings/' + name);
+        }
+        sourceFiles.sort((a, b) => a.path.localeCompare(b.path));
+        await readDatasetSourceFiles(location, { sourceFiles });
+        const originalSource = await readJson(join(edition.directory, 'source.json'), 1048576);
+        const sourceBytes = jsonBytes({ ...originalSource, sourceFiles });
+        await immutable(join(location, 'source.json'), { ...originalSource, sourceFiles });
+        files.push({ path: 'source.json', bytes: sourceBytes.length, sha256: sha256(sourceBytes) });
         await immutable(join(location, 'seller.json'), seller);
         const sellerBytes = jsonBytes(seller); files.push({ path: 'seller.json', bytes: sellerBytes.length, sha256: sha256(sellerBytes) });
+        files.push(...sourceFiles);
         const record = { schema: 'stellar-forge.webdav-merchant-export.v1', id: operation.id, createdAt: operation.createdAt,
           editionId: edition.id, merchantId: merchant.id, reviewer: input.reviewer, note: input.note ?? '',
-          snapshot: edition.dataset.snapshot, rowCount: edition.rowCount, files };
+          snapshot: edition.dataset.snapshot, rowCount: edition.rowCount, files,
+          sourceClosure: { files: sourceFiles.length, bytes: sourceFiles.reduce((sum, file) => sum + file.bytes, 0) } };
         await immutable(join(location, 'manifest.json'), record); await syncDirectory(location);
         return { result: { ...record, directory: location }, apply: value => { if (!value.exports.some(x => x.id === record.id)) value.exports.push(record); } };
       }
@@ -343,13 +380,24 @@ export async function openWebDavWorkspace({ directory, environment = process.env
       name = 'webdav-listing.' + name;
     } else if (kind === 'edition' || kind === 'export') {
       safeId(id);
-      const allowed = kind === 'edition' ? ['dataset.csv', 'dataset.json', 'source.json', 'edition.json'] : ['dataset.csv', 'dataset.json', 'source.json', 'seller.json', 'manifest.json'];
-      if (!allowed.includes(name)) fail('WEBDAV_FILE', 'Choose a retained dataset file.');
+      if (kind === 'edition') {
+        if (!['dataset.csv', 'dataset.json', 'source.json', 'edition.json'].includes(name))
+          fail('WEBDAV_FILE', 'Choose a retained dataset file.');
+      } else {
+        const record = (await stored()).exports.find(item => item.id === id);
+        if (!record) fail('WEBDAV_EXPORT_REQUIRED', 'Choose a completed original export.', 404);
+        if (name === 'manifest.json') expected = sha256(jsonBytes(record));
+        else {
+          const declared = record.files.find(file => file.path === name);
+          if (!declared || typeof name !== 'string' || name.split('/').some(part => !/^[A-Za-z0-9_.-]+$/.test(part) || part === '.' || part === '..'))
+            fail('WEBDAV_FILE', 'Choose a declared original export member.');
+          expected = declared.sha256;
+        }
+      }
       path = join(root(kind === 'edition' ? 'editions' : 'exports'), id, name);
       if (name.endsWith('.csv')) type = 'text/csv; charset=utf-8';
-      if (kind === 'export' && name !== 'manifest.json') {
-        const manifest = await readJson(join(root('exports'), id, 'manifest.json')); expected = manifest.files.find(x => x.path === name)?.sha256;
-      }
+      else if (name.endsWith('.xml')) type = 'application/xml';
+      else if (name.endsWith('.bin')) type = 'application/octet-stream';
     } else if (kind === 'packet') {
       safeId(id);
       const current = await stored(), selected = current.operations.find(row => row.id === id && row.action === 'source.packet' && row.status === 'COMPLETE');

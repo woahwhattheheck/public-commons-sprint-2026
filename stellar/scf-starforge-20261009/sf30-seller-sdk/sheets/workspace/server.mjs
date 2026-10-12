@@ -115,7 +115,7 @@ export async function serveSheetsAuthoring({ workspace, port = 8453 } = {}) {
   });
   server.requestTimeout = 180000; server.headersTimeout = 15000; server.keepAliveTimeout = 1000;
   await new Promise((done, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', done); });
-  origin = `http://127.0.0.1:${server.address().port}`;
+  origin = new URL(`http://127.0.0.1:${server.address().port}`).origin;
   return { server, workspace, origin, token, url: origin + '/#token=' + token,
     close() {
       closing ??= (async () => {
@@ -125,3 +125,4 @@ export async function serveSheetsAuthoring({ workspace, port = 8453 } = {}) {
       })(); return closing;
     } };
 }
+

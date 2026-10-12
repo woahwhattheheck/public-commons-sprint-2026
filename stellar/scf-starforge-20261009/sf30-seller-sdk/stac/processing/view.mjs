@@ -9,7 +9,13 @@ const el = (tag, text, attrs = {}) => {
   }
   return node;
 };
-const field = (label, input) => { const wrap = el('label'); wrap.append(el('span', label), input); return wrap; };
+let fieldSequence = 0;
+const field = (label, input) => {
+  const wrap = el('label'), text = el('span', label, { id: 'stac-processing-field-' + (++fieldSequence) });
+  input.setAttribute('aria-labelledby', text.id);
+  wrap.append(text, input);
+  return wrap;
+};
 const input = (type = 'text', value = '', attrs = {}) => { const node = el('input', null, { type, ...attrs }); node.value = value; return node; };
 const button = text => el('button', text, { type: 'button' });
 const optionList = (select, values, label, empty = 'Choose a saved record') => {

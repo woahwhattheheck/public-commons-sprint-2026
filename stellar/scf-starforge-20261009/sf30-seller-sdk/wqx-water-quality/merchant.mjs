@@ -238,3 +238,36 @@ export async function exportQualityPurchase(args){
   const bytes=await value.result.bytes({limit:value.metadata.bytes??PAGE_BYTES});
   return {bytes,mime:value.metadata.contentType??'application/json',filename:value.metadata.path?basename(value.metadata.path):args.intentId+'.json'};
 }
+
+/** Continue the original prepared SF88 operation; retained attempts use native recovery. */
+export async function resumeQualityPurchase({buyer,prepared,editionDirectory=prepared?.editionDirectory,signal,beforeExecute}={}){
+  need(buyer&&typeof buyer.operation==='function','Supply the original SF88 Buyer.');signal?.throwIfAborted();
+  const current=await validatePrepared(prepared,editionDirectory),operation=buyer.operation(current.intentId);
+  const meta=await optional(join(operation.directory,'operation.json'));
+  if(!meta){await beforeExecute?.();return {...await purchaseQualityEdition({buyer,prepared:current,editionDirectory,signal}),executed:true};}
+  const nativeConfig=JSON.parse(await readBytes(operation.configPath,65536));
+  for(const[key,value]of Object.entries(current.config)){
+    if(key==='responseFile'){
+      for(const[name,item]of Object.entries(value))need(canonical(nativeConfig.responseFile?.[name])===canonical(item),'The original response contract changed.');
+    }else need(canonical(nativeConfig[key])===canonical(value),'The original request terms changed: '+key);
+  }
+  const bindingFile=join(operation.directory,'wqx-edition.json');
+  if(!await optional(bindingFile)){
+    const review=await operation.review({signal});
+    const binding={...purchaseIdentity(current),purchaseSha256:current.purchaseSha256,nativeConfigSha256:review.configSha256};
+    await atomicJson(operation.directory,'wqx-edition.json',binding,{exclusive:true});
+  }
+  const retained=await reopenQualityPurchase({buyer,intentId:current.intentId,editionDirectory});
+  if(retained.result)return {...retained,executed:false};
+  const attempt=await optional(join(operation.directory,'attempt.json'));
+  if(attempt){
+    const inspection=await operation.inspect();
+    throw Object.assign(new Error('The original native attempt needs its retained output recovery.'),{
+      code:'WQX_NATIVE_ATTEMPT_RECOVERY_REQUIRED',intentId:current.intentId,inspection
+    });
+  }
+  const review=await operation.review({signal}),binding=await readPrivateJson(bindingFile);
+  need(binding.nativeConfigSha256===review.configSha256,'The original prepared operation changed.');
+  await beforeExecute?.();
+  return {...await inspectDelivery(await operation.execute({review,signal}),binding),executed:true};
+}
