@@ -676,8 +676,9 @@ export async function openRisingWaveWorkbench({ directory: selectedDirectory, so
       link ??= {schema: 'stellar-forge.risingwave-browser-publication.v1', id: selected, createdAt: timestamp(),
         revision: saved.revision, sourceRevisionId: saved.id, sourceHash: saved.sourceHash, merchantHash: saved.merchantHash,
         publicationSourceHash: digest(boundSource), query: input.query, path, merchant: structuredClone(saved.merchant)};
-      await retainBytes(location, 'source.json', boundSource);
+      // Persist the complete original request before staging its derived source bytes.
       await retainBytes(location, 'publication.json', bytes(link));
+      await retainBytes(location, 'source.json', boundSource);
       const current = await state();
       if (!current.publications.includes(selected)) current.publications.push(selected);
       current.updatedAt = timestamp(); await atomicJson(root, 'workspace.json', current);
