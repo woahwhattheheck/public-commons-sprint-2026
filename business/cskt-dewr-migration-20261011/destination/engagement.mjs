@@ -84,7 +84,7 @@ async function save(path, bytes) {
   return { path: destination, bytes: bytes.length, sha256: sha(bytes) };
 }
 function integer(value, name, minimum = 0) {
-  if (!/^d+$/.test(String(value))) fail(name + ' needs a complete nonnegative integer.');
+  if (!/^\d+$/.test(String(value))) fail(name + ' needs a complete nonnegative integer.');
   const n = Number(value);
   if (!Number.isSafeInteger(n) || n < minimum) fail(name + ' is outside its supported range.');
   return n;
@@ -163,22 +163,18 @@ export async function run(argv = process.argv.slice(2)) {
         const bytes = Buffer.from(result.content, 'utf8');
         if (bytes.length !== result.bytes || sha(bytes) !== result.sha256) fail('The CSV bytes differ from their original native identity.');
         const saved = await save(values.out, bytes);
-        process.stdout.write(JSON.stringify({ ...saved, rows: result.rows, filename: result.filename }) + '
-');
+        process.stdout.write(JSON.stringify({ ...saved, rows: result.rows, filename: result.filename }) + '\n');
         return;
       }
     }
   }
-  const bytes = Buffer.from(JSON.stringify(result, null, 2) + '
-', 'utf8');
-  if (values.out) process.stdout.write(JSON.stringify(await save(values.out, bytes)) + '
-');
+  const bytes = Buffer.from(JSON.stringify(result, null, 2) + '\n', 'utf8');
+  if (values.out) process.stdout.write(JSON.stringify(await save(values.out, bytes)) + '\n');
   else process.stdout.write(bytes);
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   run().catch(error => {
-    process.stderr.write(JSON.stringify({ error: error.code || error.name || 'engagement_error', message: error.message, status: error.status || null }) + '
-');
+    process.stderr.write(JSON.stringify({ error: error.code || error.name || 'engagement_error', message: error.message, status: error.status || null }) + '\n');
     process.exitCode = 1;
   });
 }

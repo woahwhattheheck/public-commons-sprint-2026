@@ -2,6 +2,22 @@
 /** Native staff screens, REST routes and public form rendering. */
 if (!defined('ABSPATH')) { exit; }
 
+function csktm_eng_portal_url() { return add_query_arg('cskt_engagement','receipt',home_url('/')); }
+function csktm_eng_is_portal() {
+    return isset($_GET['cskt_engagement']) && is_string($_GET['cskt_engagement']) && $_GET['cskt_engagement']==='receipt';
+}
+add_action('template_redirect',function() {
+    if (!csktm_eng_is_portal()) { return; }
+    status_header(200); nocache_headers();
+    header('Referrer-Policy: no-referrer');
+    header('X-Robots-Tag: noindex, nofollow');
+    echo '<!doctype html><html '; language_attributes(); echo '><head><meta charset="'.esc_attr(get_bloginfo('charset')).'">';
+    echo '<meta name="viewport" content="width=device-width,initial-scale=1"><title>'.esc_html__('Manage your submission','cskt-migration').'</title>';
+    wp_head();
+    echo '</head><body class="cskt-eng-portal"><main class="cskt-eng"><h1>Manage your submission</h1>';
+    echo '<p>Your private receipt or confirmation link opens the original submission here.</p><noscript><p>Enable JavaScript to open the private link from your receipt or confirmation email.</p></noscript></main>';
+    wp_footer(); echo '</body></html>'; exit;
+},-100);
 function csktm_eng_parent_list($request) {
     $search=csktm_eng_text((string)($request['search']??''),'Resource search',200);
     $page=max(1,(int)($request['page']??1));
@@ -103,15 +119,15 @@ add_action('admin_enqueue_scripts',function($hook) {
     wp_enqueue_script('cskt-engagement-admin',plugins_url('engagement-admin.js',__FILE__),array(),CSKTM_ENG_VERSION,true);
     wp_add_inline_script('cskt-engagement-admin','window.CSKTEngagement='.wp_json_encode(array(
         'baseUrl'=>home_url('/'),'namespace'=>CSKTM_ENG_NS,'nonce'=>wp_create_nonce('wp_rest'),
-        'siteTimezone'=>wp_timezone_string(),'adminUrl'=>admin_url('admin.php?page=cskt-engagement'),
+        'siteTimezone'=>wp_timezone_string(),'actorId'=>get_current_user_id(),'adminUrl'=>admin_url('admin.php?page=cskt-engagement'),
     ),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT).';','before');
 });
 add_action('wp_enqueue_scripts',function() {
-    if (!is_singular(array('page','post','cskt_project','cskt_notice'))) { return; }
+    if (!csktm_eng_is_portal() && !is_singular(array('page','post','cskt_project','cskt_notice'))) { return; }
     wp_enqueue_style('cskt-engagement',plugins_url('engagement.css',__FILE__),array(),CSKTM_ENG_VERSION);
     wp_enqueue_script('cskt-engagement-public',plugins_url('engagement-public.js',__FILE__),array(),CSKTM_ENG_VERSION,true);
     wp_add_inline_script('cskt-engagement-public','window.CSKTEngagementPublic='.wp_json_encode(array(
-        'baseUrl'=>home_url('/'),'namespace'=>CSKTM_ENG_NS,
+        'baseUrl'=>home_url('/'),'namespace'=>CSKTM_ENG_NS,'receiptUrl'=>csktm_eng_portal_url(),
     ),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT).';','before');
 });
 function csktm_eng_public_input($id,$name,$label,$type='text',$required=false,$value='') {

@@ -10,14 +10,17 @@ function csktm_eng_new_mail($entry,$kind,$to,$subject,$message,$automatic=true) 
         'message'=>csktm_eng_text($message,'Email message',40000,true),
         'state'=>$automatic?'pending':'draft','automatic'=>$automatic,'dispatchDisabled'=>false,
         'history'=>array(),'operations'=>array(),'attempts'=>array());
+    if ($kind==='registration_update') {
+        $mail['registrationSnapshot']=array('state'=>$entry['rsvp']['state'],
+            'partySize'=>$entry['rsvp']['partySize'],'confirmedAt'=>$entry['rsvp']['confirmedAt']);
+    }
     csktm_eng_event($mail,'message_prepared',array('kind'=>$kind,'automatic'=>$automatic));
     csktm_eng_put('mail',$mail);
     return $mail;
 }
 function csktm_eng_management_url($entry,$confirm=false) {
-    $parent=csktm_eng_row('form',$entry['formId'])['data']['parent'];
     $token=$confirm?$entry['verification']['token']:$entry['receiptKey'];
-    return get_permalink($parent['postId']).'#cskt-'.($confirm?'confirm':'receipt').'='.$entry['id'].':'.$token;
+    return csktm_eng_portal_url().'#cskt-'.($confirm?'confirm':'receipt').'='.$entry['id'].':'.$token;
 }
 function csktm_eng_verification_mail($entry,$form) {
     $purpose=$entry['mode']==='newsletter'?'newsletter signup':'event registration';
@@ -68,6 +71,17 @@ function csktm_eng_deliver($mail_id,$input,$cron=false) {
             csktm_eng_event($mail,'confirmation_no_longer_needed');
             csktm_eng_remember($mail,$operation,'send_mail',$input);
             return array('record'=>csktm_eng_put('mail',$mail),'send'=>false,'replayed'=>false);
+        }
+        if ($mail['kind']==='registration_update') {
+            $bound=$mail['registrationSnapshot']??null;
+            if (!is_array($bound) || ($entry['rsvp']['state']??null)!=='confirmed' ||
+                ($entry['rsvp']['confirmedAt']??null)!==($bound['confirmedAt']??null) ||
+                ($entry['rsvp']['partySize']??null)!==($bound['partySize']??null)) {
+                $mail['state']='cancelled';
+                csktm_eng_event($mail,'registration_update_superseded');
+                csktm_eng_remember($mail,$operation,'send_mail',$input);
+                return array('record'=>csktm_eng_put('mail',$mail),'send'=>false,'replayed'=>false);
+            }
         }
         $attempt=wp_generate_uuid4();
         $mail['state']='sending';
@@ -146,13 +160,21 @@ function csktm_eng_occupied($form_id,$except=null) {
     }
     return $seats;
 }
+function csktm_eng_reservation_order($left,$right) {
+    $time=strtotime($left['createdAt'])<=>strtotime($right['createdAt']);
+    return $time!==0?$time:strcmp($left['id'],$right['id']);
+}
+function csktm_eng_reservations($form_id) {
+    $entries=array_map(function($row){return $row['data'];},csktm_eng_all('entry',array('formId'=>$form_id,'mode'=>'rsvp')));
+    usort($entries,'csktm_eng_reservation_order');
+    return $entries;
+}
 function csktm_eng_allocate(&$entry,$form) {
     $size=$entry['rsvp']['partySize'];
     $occupied=csktm_eng_occupied($form['id'],$entry['id']);
     $available=$form['capacity']===0 || $occupied+$size<=$form['capacity'];
-    foreach (csktm_eng_all('entry',array('formId'=>$form['id'],'mode'=>'rsvp')) as $row) {
-        $waiting=$row['data'];
-        if ($waiting['id']!==$entry['id'] && ($waiting['rsvp']['state']??'')==='waitlisted' && $waiting['createdAt']<=$entry['createdAt']) { $available=false; break; }
+    foreach (csktm_eng_reservations($form['id']) as $waiting) {
+        if ($waiting['id']!==$entry['id'] && ($waiting['rsvp']['state']??'')==='waitlisted' && csktm_eng_reservation_order($waiting,$entry)<0) { $available=false; break; }
     }
     $entry['rsvp']['state']=$available?'confirmed':'waitlisted';
     if ($available) { $entry['rsvp']['confirmedAt']=csktm_now(); }
@@ -161,8 +183,7 @@ function csktm_eng_allocate(&$entry,$form) {
 function csktm_eng_promote($form) {
     if ($form['mode']!=='rsvp' || !csktm_eng_available($form)) { return array(); }
     $occupied=csktm_eng_occupied($form['id']); $mail_ids=array();
-    foreach (csktm_eng_all('entry',array('formId'=>$form['id'],'mode'=>'rsvp')) as $row) {
-        $entry=$row['data'];
+    foreach (csktm_eng_reservations($form['id']) as $entry) {
         if (($entry['rsvp']['state']??'')!=='waitlisted' || in_array($entry['state'],array('spam','archived'),true)) { continue; }
         $size=$entry['rsvp']['partySize'];
         // Waiting parties keep chronological priority; a later small party does not overtake.

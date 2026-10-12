@@ -96,7 +96,7 @@
     }
     if (receipt.mode === "comment") pair("Public comment", label(receipt.publicCommentState));
     host.append(details);
-    const link = new URL(location.href);
+    const link = new URL(config.receiptUrl || config.baseUrl);
     link.hash = "cskt-receipt=" + receipt.id + ":" + receipt.receiptKey;
     const linkLabel = text("label", "Keep this private link");
     linkLabel.htmlFor = "cskt-eng-receipt-link";

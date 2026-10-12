@@ -19,12 +19,98 @@
     mail: [], selectedMail: null, mailAfter: 0, mailPrevious: [], mailNext: null,
     mailFilters: { formId: "", state: "", search: "" },
     exportIds: new Set(), transfer: null, mappings: {}, preview: null, receiving: null,
-    replaceChanged: false, pending: []
+    replaceChanged: false, pending: [], drafts: {}, rendered: null, parentCatalog: {}
   };
-  try { state.pending = JSON.parse(sessionStorage.getItem("cskt-eng-pending-staff") || "[]"); } catch {}
+  const pendingKey = "cskt-eng-pending-staff:" + cfg.actorId;
+  const draftsKey = "cskt-eng-working-drafts:" + cfg.actorId;
+  try { state.pending = JSON.parse(sessionStorage.getItem(pendingKey) || "[]"); } catch {}
+  try { state.drafts = JSON.parse(sessionStorage.getItem(draftsKey) || "{}"); } catch {}
   const retainPending = () => {
-    try { sessionStorage.setItem("cskt-eng-pending-staff", JSON.stringify(state.pending)); } catch {}
+    try { sessionStorage.setItem(pendingKey, JSON.stringify(state.pending)); } catch {}
   };
+  const draftFields = {
+    form: ["title","mode","state","parentId","opensAt","closesAt","instructions","privacyText","consentText","publicationLabel","notifyEmail","successMessage","capacity","maxParty","autoAttach"],
+    entry: ["review-state","assignedTo","staffNotes","public-text","public-name","confirmation-note","reply-subject","reply-message"],
+    mail: ["mail-subject","mail-message","mail-outcome","mail-note"]
+  };
+  function control(name) {
+    return document.getElementById("cskt-eng-" + name) || document.querySelector('#cskt-eng-form-editor [name="' + name + '"]');
+  }
+  function controlValue(node) { return node.type === "checkbox" ? node.checked : node.value; }
+  function retainDrafts() {
+    try { sessionStorage.setItem(draftsKey, JSON.stringify(state.drafts)); } catch {}
+  }
+  function activeDraftRecord() {
+    if (state.tab === "forms" && state.form && state.operator?.capabilities.publish) return ["form", state.form.data];
+    if (state.tab === "entries" && state.entry) return ["entry", state.entry.data];
+    if (state.tab === "mail" && state.selectedMail) return ["mail", state.selectedMail.data];
+    return null;
+  }
+  function captureWorkingDrafts() {
+    const rendered = state.rendered;
+    if (!rendered) return;
+    const draft = state.drafts[rendered.key] || { baseRevision: rendered.revision, values: {}, originals: {}, title: rendered.title, seed: rendered.seed };
+    for (const [name, original] of Object.entries(rendered.baseline)) {
+      const node = control(name);
+      if (!node || node.readOnly || node.disabled) continue;
+      const current = controlValue(node);
+      if (current === original) {
+        delete draft.values[name]; delete draft.originals[name];
+      } else {
+        if (!Object.hasOwn(draft.originals, name)) draft.originals[name] = original;
+        draft.values[name] = current;
+      }
+    }
+    if (Object.keys(draft.values).length) { draft.updatedAt = new Date().toISOString(); state.drafts[rendered.key] = draft; }
+    else delete state.drafts[rendered.key];
+    retainDrafts();
+  }
+  function restoreWorkingDrafts() {
+    const selected = activeDraftRecord();
+    if (!selected) { state.rendered = null; return; }
+    const [kind, record] = selected, key = kind + ":" + record.id, baseline = {};
+    for (const name of draftFields[kind]) {
+      const node = control(name);
+      if (node && !node.readOnly && !node.disabled) baseline[name] = controlValue(node);
+    }
+    state.rendered = { key, revision: record.revision, baseline, title: record.title || record.subject || formTitle(record.formId), seed: kind === "form" && record.revision === 0 ? structuredClone(record) : null };
+    const draft = state.drafts[key];
+    if (!draft) return;
+    let changed = false;
+    for (const [name, value] of Object.entries(draft.values)) {
+      const node = control(name);
+      if (!node || node.readOnly || node.disabled) continue;
+      if (Object.hasOwn(draft.originals, name) && baseline[name] !== draft.originals[name] && baseline[name] !== value) changed = true;
+      if (node.type === "checkbox") node.checked = value === true;
+      else node.value = value;
+    }
+    if (changed) {
+      const note = document.createElement("p");
+      note.className = "cskt-eng-notice";
+      note.textContent = "This record has newer saved values. Your working edits are retained below; review them against the current record before saving.";
+      app.prepend(note);
+    }
+  }
+  function acknowledgeDraft(key, submitted) {
+    captureWorkingDrafts();
+    const draft = state.drafts[key];
+    for (const [name, value] of Object.entries(submitted)) {
+      const current = state.rendered?.key === key ? control(name) : null;
+      const present = current ? controlValue(current) : draft?.values[name];
+      if (String(present) !== String(value)) continue;
+      if (draft) { delete draft.values[name]; delete draft.originals[name]; }
+      if (state.rendered?.key === key && Object.hasOwn(state.rendered.baseline, name)) state.rendered.baseline[name] = present;
+    }
+    if (draft && !Object.keys(draft.values).length) delete state.drafts[key];
+    retainDrafts();
+  }
+  function workingDraftsView() {
+    const records = Object.entries(state.drafts);
+    if (!records.length) return "";
+    return panel("Working edits", "<p>Your unsaved edits stay with each original record in this browser session.</p>" +
+      table(["Record", "Edited", "Continue"], records.map(([key, draft]) => "<tr><td>" + esc(draft.title) + "</td><td>" +
+        esc(date(draft.updatedAt)) + "</td><td>" + action("open-draft", "Open working edits", key) + " " + action("discard-draft", "Discard working edits", key) + "</td></tr>")));
+  }
   const notice = message => { status.textContent = message; };
   async function api(path, body) {
     const [route, query = ""] = path.split("?", 2);
@@ -117,10 +203,10 @@
         '</p><h3>Required consent</h3><p class="cskt-eng-prose">' + esc(form.consentText) + "</p>" +
         '<div class="cskt-eng-actions">' + action("form-submissions", "Open submissions", form.id) + action("close-form", "Close form") + "</div>" + history(form));
     }
-    const existingParent = form.parent?.postId;
+    const existingParent = state.drafts['form:' + form.id]?.values.parentId || form.parent?.postId;
     const parents = [...state.parents];
-    if (existingParent && !parents.some(parent => parent.id === existingParent)) {
-      parents.unshift({ id: existingParent, title: form.parent.title, state: "selected" });
+    if (existingParent && !parents.some(parent => String(parent.id) === String(existingParent))) {
+      parents.unshift(state.parentCatalog[existingParent] || { id: existingParent, title: form.parent.title || "Resource " + existingParent, state: "selected" });
     }
     const parentOptions = option("", "Choose associated content", existingParent) + parents.map(parent => option(parent.id, parent.title + " (" + parent.state + ")", existingParent)).join("");
     return panel(form.revision ? "Edit form: " + form.title : "Create form",
@@ -277,18 +363,23 @@
       '<div class="cskt-eng-actions">' + action("export", "Download complete selected forms", "", "cskt-primary") + "</div>") + panel("Receive a workspace", receive);
   }
   function render() {
+    captureWorkingDrafts();
     const body = state.tab === "forms" ? formsView() : state.tab === "entries" ? entryView() : state.tab === "mail" ? mailView() : receivingView();
-    app.innerHTML = tabs() + pendingView() + body;
+    app.innerHTML = tabs() + pendingView() + workingDraftsView() + body;
+    restoreWorkingDrafts();
   }
   async function refresh() {
     state.operator = await api("/inspect");
     state.forms = state.operator.forms;
     if (!state.staff.length) state.staff = (await api("/staff")).items;
     if (state.form?.data.revision) state.form = await api("/forms/" + state.form.data.id);
+    if (state.entry) state.entry = await api("/entries/" + state.entry.data.id);
+    if (state.selectedMail) state.selectedMail = await api("/mail/" + state.selectedMail.data.id);
     render();
   }
   async function parents(search = "") {
     state.parents = (await api("/parents?search=" + encodeURIComponent(search))).items;
+    for (const parent of state.parents) state.parentCatalog[parent.id] = parent;
   }
   async function loadEntries(reset = false) {
     if (reset) { state.entryAfter = 0; state.entryPrevious = []; }
@@ -308,6 +399,11 @@
     const result = await mutate("/entries/" + entry.id + "/decide", {
       action: name, expectedRevision: entry.revision, ...extra
     }, human(name) + ": " + formTitle(entry.formId));
+    const acknowledged = name === "review" ? { "review-state": extra.state, assignedTo: extra.assignedTo, staffNotes: extra.staffNotes } :
+      name === "publish_comment" ? { "public-text": extra.text, "public-name": extra.displayName } :
+      name === "prepare_reply" ? { "reply-subject": extra.subject, "reply-message": extra.message } :
+      name === "confirm_registration" ? { "confirmation-note": extra.note } : {};
+    acknowledgeDraft("entry:" + entry.id, acknowledged);
     state.entry = result.record;
     await loadEntries(); await refresh();
     notice("Saved " + human(name) + " at revision " + result.record.data.revision + ".");
@@ -316,6 +412,8 @@
   async function mailAction(name, extra = {}) {
     const mail = state.selectedMail.data;
     const result = await mutate("/mail/" + mail.id + "/decide", { action: name, expectedRevision: mail.revision, ...extra }, human(name) + ": " + mail.subject);
+    acknowledgeDraft("mail:" + mail.id, name === "save_draft" ? { "mail-subject": extra.subject, "mail-message": extra.message } :
+      name === "reconcile" ? { "mail-outcome": extra.outcome, "mail-note": extra.note } : {});
     state.selectedMail = result.record;
     await loadMail(); render();
     notice("Correspondence saved.");
@@ -334,6 +432,18 @@
       maxParty: Number(data.get("maxParty")), autoAttach: data.get("autoAttach") === "on" };
   }
   const handlers = {
+    async "open-draft"(key) {
+      const [kind, id] = key.split(":");
+      if (kind === "form") { const draft = state.drafts[key]; state.form = draft?.seed ? { data: structuredClone(draft.seed) } : await api("/forms/" + id); state.tab = "forms"; await parents(); }
+      if (kind === "entry") { state.entry = await api("/entries/" + id); state.tab = "entries"; await loadEntries(true); }
+      if (kind === "mail") { state.selectedMail = await api("/mail/" + id); state.tab = "mail"; await loadMail(true); }
+      render();
+    },
+    "discard-draft"(key) {
+      captureWorkingDrafts(); delete state.drafts[key];
+      if (state.rendered?.key === key) state.rendered = null;
+      retainDrafts(); render(); notice("Working edits discarded; current saved values are shown.");
+    },
     async tab(id) {
       state.tab = id; notice("");
       if (id === "entries") await loadEntries(true);
@@ -355,7 +465,7 @@
     },
     async "open-form"(id) { state.form = await api("/forms/" + id); if (state.operator.capabilities.publish) await parents(); render(); },
     "close-form"() { state.form = null; render(); },
-    async "search-parents"() { state.form.data = captureForm(); await parents(value("parent-search")); render(); },
+    async "search-parents"() { captureWorkingDrafts(); await parents(value("parent-search")); render(); },
     async "form-submissions"(id) { state.tab = "entries"; state.entryFilters.formId = id; state.entry = null; await loadEntries(true); render(); },
     async "open-entry"(id) { state.entry = await api("/entries/" + id); render(); document.querySelector("#cskt-eng-review")?.scrollIntoView({ block: "start" }); },
     async "entries-next"() { state.entryPrevious.push(state.entryAfter); state.entryAfter = state.entryNext; await loadEntries(); render(); },
@@ -433,6 +543,7 @@
     const target = event.target.closest("[data-action]");
     if (!target) return;
     const name = target.dataset.action, id = target.dataset.id || "";
+    captureWorkingDrafts();
     target.disabled = true;
     try {
       if (name.startsWith("csv-")) {
@@ -450,10 +561,14 @@
       if (element.id === "cskt-eng-form-editor") {
         if (!element.reportValidity()) return;
         const values = captureForm();
+        const acknowledged = Object.fromEntries(draftFields.form.map(name => [name, control(name)]).filter(([, node]) => node).map(([name, node]) => [name, controlValue(node)]));
         const result = await mutate("/forms", {
           id: values.id, expectedRevision: state.form.data.revision,
           form: { ...values, parentId: values.parent.postId }
         }, "Save form: " + values.title);
+        acknowledgeDraft("form:" + values.id, acknowledged);
+        if (state.drafts["form:" + values.id]) delete state.drafts["form:" + values.id].seed;
+        retainDrafts();
         state.form = result.record; await refresh(); notice("Form saved at revision " + result.record.data.revision + ".");
       } else if (element.id === "cskt-eng-review") {
         await entryAction("review", { state: value("review-state"), assignedTo: Number(value("assignedTo")), staffNotes: value("staffNotes") });
@@ -466,7 +581,10 @@
       }
     } catch (error) { notice(error.message); }
   });
+  app.addEventListener("input", captureWorkingDrafts);
+  window.addEventListener("beforeunload", captureWorkingDrafts);
   app.addEventListener("change", async event => {
+    captureWorkingDrafts();
     const target = event.target;
     if (target.dataset.exportForm) {
       if (target.checked) state.exportIds.add(target.dataset.exportForm);

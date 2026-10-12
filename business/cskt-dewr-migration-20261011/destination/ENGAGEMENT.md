@@ -53,6 +53,8 @@ Contact forms retain the original name, email, subject, message and consent. The
 
 **Submissions** filters by form, staff state and search text. The selected record shows the original content, submission time, original form revision, exact consent and information-use text, native project or notice, assigned WordPress staff, internal notes and record history.
 
+Working edits are retained per form, submission and message in the current browser session. Navigation, paging and Refresh reopen the current saved record while preserving newer notes, comment text and draft replies. If another staff member changed the same fields, the workspace identifies that newer saved revision before the next save. Saved actions clear only the working fields they actually committed; newer typing and unrelated edits remain available in **Working edits**.
+
 Review states are **New**, **In review**, **Resolved**, **Archived** and **Spam**. Archiving or marking a record as spam withdraws its active public participation and cancels its newsletter or event participation. Its original submission and history remain retained.
 
 **Prepare response** saves a draft addressed to the original participant and opens it in Correspondence. Review the saved recipient, subject and message, then choose **Send saved message**. The actual WordPress mail attempt and outcome remain with the original entry.
@@ -83,9 +85,11 @@ An RSVP form has a maximum party size and event capacity. Capacity 0 means unlim
 
 On confirmation, the native transaction reserves the full party or puts it on the waiting list. Confirmed and attended parties count toward capacity. Pending confirmation does not hold places.
 
-Waiting parties keep their original order. A later smaller party cannot overtake an earlier waiting party. Cancellation releases capacity and promotes the waiting list within the currently open event. Increasing capacity or reopening the event also runs promotion. Reducing capacity retains already confirmed registrations and displays the current total against the new limit.
+Waiting parties use the original submitted time and a preserved UUID tie-break for equal timestamps. Allocation and promotion use that same source order, including after partial receiving. A later smaller party cannot overtake an earlier waiting party. Cancellation releases capacity and promotes the waiting list within the currently open event. Increasing capacity or reopening the event also runs promotion. Reducing capacity retains already confirmed registrations and displays the current total against the new limit.
 
-Participants cancel using the original private receipt. Staff can also cancel, check in a confirmed registration, or record an actual confirmation using **Confirm registration** with a staff note. Automatic registration-update messages stay in native correspondence.
+Private receipt and confirmation links use the plugin's stable public management page. They remain usable when the original project or notice is later archived, removed or made private. Public collection and comment display still follow that original resource's publication state.
+
+Participants cancel using the original private receipt. Staff can also cancel, check in a confirmed registration, or record an actual confirmation using **Confirm registration** with a staff note. Automatic registration-update messages stay in native correspondence. A queued promotion message is cancelled if its original confirmation state or party size is superseded before dispatch.
 
 **Attendance CSV** includes original entry ID, name, address, party size, reservation state, confirmation time and check-in time.
 
