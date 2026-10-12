@@ -149,7 +149,21 @@ async function sourceSeries(input, role, digest) {
     text(entry.body, 'Original metadata response', 256 * 1024 * 1024);
     if (!HEX.test(entry.sha256 || '') || await sha256Text(entry.body, digest) !== entry.sha256) fail('COOPS_ANALYSIS_METADATA_CHANGED', 'The original station metadata does not match its retained SHA-256.');
     const payload = parsePage(entry.body, 'Metadata response');
-    if (entry.role === 'datums' && typeof payload.epoch === 'string' && payload.epoch.trim()) epochs.add(payload.epoch.trim());
+    const stationIds = new Set();
+    for (const candidate of [payload.stationId,payload.id,payload.station?.id,...(Array.isArray(payload.stations)?payload.stations.map(v=>v?.id):[])]) {
+      if (/^\d{7}$/.test(String(candidate || ''))) stationIds.add(String(candidate));
+    }
+    if (entry.receipt?.url) {
+      let metadataUrl;
+      try { metadataUrl = new URL(entry.receipt.url); } catch { fail('COOPS_ANALYSIS_METADATA_URL', 'Retain the original metadata request URL.'); }
+      const match = /\/stations\/(\d{7})(?:\/|\.|$)/.exec(metadataUrl.pathname);
+      if (match) stationIds.add(match[1]);
+    }
+    if ([...stationIds].some(id=>id!==selected.station)) fail('COOPS_ANALYSIS_METADATA_STATION', 'The retained metadata identifies a different station from the selected source.');
+    if (entry.role === 'datums' && typeof payload.epoch === 'string' && payload.epoch.trim()) {
+      if (!stationIds.has(selected.station)) fail('COOPS_ANALYSIS_METADATA_STATION', 'Retain the original station-specific MDAPI URL or reported station identity with datum metadata.');
+      epochs.add(payload.epoch.trim());
+    }
     metadata.push({role: entry.role || 'metadata', name: entry.name || null, sha256: entry.sha256, receipt: json(entry.receipt || {}), payload});
   }
   if (epochs.size > 1) fail('COOPS_ANALYSIS_DATUM_EPOCH', 'One selected edition contains conflicting reported datum epochs.');
@@ -166,17 +180,21 @@ export async function prepareInput(document, {digest} = {}) {
     if (observations.selection[key] !== predictions.selection[key]) fail('COOPS_ANALYSIS_INCOMPATIBLE', 'The selected observations and predictions have different ' + key + '.', {field: key, observations: observations.selection[key], predictions: predictions.selection[key]});
   }
   if (observations.datumEpoch && predictions.datumEpoch && observations.datumEpoch !== predictions.datumEpoch) fail('COOPS_ANALYSIS_DATUM_EPOCH', 'The selected observations and predictions report different datum epochs.');
-  const begin = Math.max(requiredTime(observations.selection.begin_date), requiredTime(predictions.selection.begin_date));
-  const end = Math.min(requiredTime(observations.selection.end_date), requiredTime(predictions.selection.end_date));
-  if (begin > end) fail('COOPS_ANALYSIS_WINDOW', 'The retained source request windows do not overlap.');
-  if ((begin - requiredTime(observations.selection.begin_date)) % SIX_MINUTES !== 0) fail('COOPS_ANALYSIS_GRID', 'The overlapping source request window is not aligned to the original six-minute observation grid.');
+  const requestBegin = Math.max(requiredTime(observations.selection.begin_date), requiredTime(predictions.selection.begin_date));
+  const requestEnd = Math.min(requiredTime(observations.selection.end_date), requiredTime(predictions.selection.end_date));
+  if (requestBegin > requestEnd) fail('COOPS_ANALYSIS_WINDOW', 'The retained source request windows do not overlap.');
+  // NOAA water_level slots follow the UTC clock (:00, :06, ...). A request may
+  // start or end between slots; its request boundary does not shift that clock.
+  const begin = Math.ceil(requestBegin / SIX_MINUTES) * SIX_MINUTES;
+  const end = Math.floor(requestEnd / SIX_MINUTES) * SIX_MINUTES;
+  if (begin > end) fail('COOPS_ANALYSIS_GRID', 'The overlapping request window contains no six-minute UTC observation slot.');
   const binding = {
     version: ANALYSIS_VERSION,
     observations: {editionId: observations.editionId, selection: observations.selection, pages: observations.pages.map(p => ({name:p.name, sha256:p.sha256})), metadata: observations.metadata.map(p => ({role:p.role, sha256:p.sha256}))},
     predictions: {editionId: predictions.editionId, selection: predictions.selection, pages: predictions.pages.map(p => ({name:p.name, sha256:p.sha256})), metadata: predictions.metadata.map(p => ({role:p.role, sha256:p.sha256}))},
   };
   return {schema: INPUT_SCHEMA, version: ANALYSIS_VERSION, sourceId: await sha256Text(canonicalJson(binding), digest), binding,
-    observations, predictions, common: {station: observations.selection.station, datum: observations.selection.datum, units: observations.selection.units, unitLabel: observations.selection.units === 'metric' ? 'm' : 'ft', timeZone: 'GMT', cadenceMinutes: 6, begin: iso(begin), end: iso(end), datumEpoch: observations.datumEpoch || predictions.datumEpoch,
+    observations, predictions, common: {station: observations.selection.station, datum: observations.selection.datum, units: observations.selection.units, unitLabel: observations.selection.units === 'metric' ? 'm' : 'ft', timeZone: 'GMT', cadenceMinutes: 6, gridAnchor: '1970-01-01T00:00:00Z', requestOverlap: {begin:iso(requestBegin),end:iso(requestEnd)}, begin: iso(begin), end: iso(end), datumEpoch: observations.datumEpoch || predictions.datumEpoch,
       datumEpochStatus: observations.datumEpoch && predictions.datumEpoch ? 'matching original metadata' : observations.datumEpoch || predictions.datumEpoch ? 'reported by one retained metadata selection' : 'not reported in retained metadata'},
   };
 }
@@ -187,7 +205,7 @@ export function normaliseOptions(prepared, input = {}) {
   const begin = input.begin === undefined ? requiredTime(prepared.common.begin) : requiredTime(input.begin, 'Analysis begin date');
   const end = input.end === undefined ? requiredTime(prepared.common.end) : requiredTime(input.end, 'Analysis end date');
   if (begin < requiredTime(prepared.common.begin) || end > requiredTime(prepared.common.end) || begin > end) fail('COOPS_ANALYSIS_WINDOW', 'Choose an inclusive analysis window within the overlapping retained source requests.');
-  if ((begin - requiredTime(prepared.observations.selection.begin_date)) % SIX_MINUTES || (end - begin) % SIX_MINUTES) fail('COOPS_ANALYSIS_GRID', 'Choose analysis endpoints on the original six-minute observation grid.');
+  if (begin % SIX_MINUTES || end % SIX_MINUTES) fail('COOPS_ANALYSIS_GRID', 'Choose analysis endpoints on the six-minute UTC clock grid (:00, :06, and subsequent six-minute marks).');
   if ((end - begin) / SIX_MINUTES + 1 > MAX_ROWS) fail('COOPS_ANALYSIS_SIZE', 'Choose up to one million expected six-minute slots.');
   const quality = input.quality === undefined ? 'all' : input.quality;
   if (!['all', 'verified', 'preliminary'].includes(quality)) fail('COOPS_ANALYSIS_QUALITY', 'Choose all, verified or preliminary observations.');
@@ -299,7 +317,7 @@ export function analyse(prepared, inputOptions = {}) {
   }
   const included=rows.filter(row=>row.status==='included'), grid=rows.filter(row=>row.onGrid);
   return {schema:'stellar-forge.coops-residual-analysis.v1',version:ANALYSIS_VERSION,sourceId:prepared.sourceId,sourceBinding:prepared.binding,
-    context:prepared.common,options,method:{residual:'observed water level minus tidal prediction at the identical GMT timestamp',join:'exact timestamp; ambiguous duplicate timestamps excluded',numeric:'finite source decimal values; no interpolation, datum or unit conversion',statistics:'unweighted included six-minute pairs; sample standard deviation uses n-1; quantiles interpolate order statistics at (n-1)p',episodes:'inclusive operator thresholds; consecutive included six-minute samples only; span is first-to-last sample, not an inferred continuous duration',quality:'row q determines f[0]: preliminary outside-band sample count; verified inferred-value flag'},
+    context:prepared.common,options,method:{residual:'observed water level minus tidal prediction at the identical GMT timestamp',join:'exact timestamp on the six-minute UTC clock grid; ambiguous duplicate timestamps excluded',numeric:'finite source decimal values; no interpolation, datum or unit conversion',statistics:'unweighted included six-minute pairs; sample standard deviation uses n-1; quantiles interpolate order statistics at (n-1)p',episodes:'inclusive operator thresholds; consecutive included six-minute samples only; span is first-to-last sample, not an inferred continuous duration',quality:'row q determines f[0]: preliminary outside-band sample count; verified inferred-value flag'},
     coverage:{expectedSlots:expected,gridSlots:grid.length,pairedFinite,included:included.length,includedPercent:100*included.length/expected,pairedFinitePercent:100*pairedFinite/expected,
       missingObservationSlots:grid.filter(row=>row.missingObservation).length,missingPredictionSlots:grid.filter(row=>row.missingPrediction).length,
       ambiguousObservationSlots:grid.filter(row=>row.observations.length>1).length,ambiguousPredictionSlots:grid.filter(row=>row.predictions.length>1).length,
