@@ -65,6 +65,21 @@ function interruptible(promise, signal) {
       error => { signal.removeEventListener('abort', abort); reject(error); });
   });
 }
+export function nativeWebhookPayload(event) {
+  if (event.recipientDigest != null &&
+      (typeof event.recipientDigest !== 'string' || !/^[a-f0-9]{64}$/.test(event.recipientDigest)))
+    throw new Error('INVALID_SELECTED_RECIPIENT_DIGEST');
+  // Minimal message: no payment header, transaction hash, signer, wallet, buyer request or response body.
+  return JSON.stringify({
+    schema: 'stellar-forge.sf98.webhook.v1',
+    eventId: event.id, occurredAt: event.at,
+    routeId: event.routeId, method: event.method,
+    network: event.network, amountAtomic: event.amountAtomic,
+    assetDigest: event.assetDigest, orderReference: event.orderReference,
+    ...(event.recipientDigest == null ? {} : { recipientDigest: event.recipientDigest }),
+    settlement: 'ORIGINAL_NATIVE_SUCCESS',
+  });
+}
 export async function sendSignedWebhook({ event, url, allowedHost, secret, signal,
   timeoutMs = 7000, resolver = lookup, transport = request, clock = NOW }) {
   const endpoint = validateDestination(url, allowedHost);
@@ -86,19 +101,7 @@ export async function sendSignedWebhook({ event, url, allowedHost, secret, signa
     }
     throw error;
   }
-  if (event.recipientDigest != null &&
-      (typeof event.recipientDigest !== 'string' || !/^[a-f0-9]{64}$/.test(event.recipientDigest)))
-    throw new Error('INVALID_SELECTED_RECIPIENT_DIGEST');
-  // Minimal message: no payment header, transaction hash, signer, wallet, buyer request or response body.
-  const payload = JSON.stringify({
-    schema: 'stellar-forge.sf98.webhook.v1',
-    eventId: event.id, occurredAt: event.at,
-    routeId: event.routeId, method: event.method,
-    network: event.network, amountAtomic: event.amountAtomic,
-    assetDigest: event.assetDigest, orderReference: event.orderReference,
-    ...(event.recipientDigest == null ? {} : { recipientDigest: event.recipientDigest }),
-    settlement: 'ORIGINAL_NATIVE_SUCCESS',
-  });
+  const payload = nativeWebhookPayload(event);
   const timestamp = String(Math.floor(clock() / 1000));
   const digest = createHmac('sha256', secret).update(timestamp + '.' + payload).digest('hex');
   return await new Promise((resolve, reject) => {
