@@ -192,3 +192,8 @@ The original tariff workspace exposes bundle({selectionRequestId}) for this one 
 A disconnect during capture, attachment or restore retains the same inputs. The browser preserves them within the current case/workspace scope; a real workspace change clears that private state. The listener drains active operations before closing the original source/package owners. Durable recovery remains in the original pricing, backup and case engines.
 
 The customer document carries the original schedule, selected quantity, saved unit rate and rounding terms. The machine quote carries the full exact source binding. The complete case retains both together.
+
+
+## Continue the original native customer operation
+
+The [complete customer receiving programme](TARIFF_RECEIVING.md) continues the original saved Tariff run through both quote editions, whole-case export/recipient import, preserved recipient edits, native pricing/portfolio restore, and the original HTTP/MCP file paths. It reuses that run’s completed pricing selection and existing backup request. Run it against the same complete source tree and retain its customer output alongside the original native operation.

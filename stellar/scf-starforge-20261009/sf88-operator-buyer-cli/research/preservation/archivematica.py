@@ -535,7 +535,8 @@ def application_files():
     own = Path(__file__).absolute().parent
     result = {}
     required = ("preservation.py", "archivematica.py", "archivematica_client.py",
-                "ARCHIVEMATICA.md", "ARCHIVEMATICA_PROVIDER_CONTRACT.md")
+                "ARCHIVEMATICA.md", "ARCHIVEMATICA_PROVIDER_CONTRACT.md",
+                "archivematica-requirements.txt")
     optional = ()
     for name in required + optional:
         path = own / name
@@ -630,7 +631,8 @@ def verify_snapshot(archive):
         wanted[name] = row
     required = {"application/research/preservation/" + name for name in
                 ("preservation.py", "archivematica.py", "archivematica_client.py",
-                 "ARCHIVEMATICA.md", "ARCHIVEMATICA_PROVIDER_CONTRACT.md")}
+                 "ARCHIVEMATICA.md", "ARCHIVEMATICA_PROVIDER_CONTRACT.md",
+                "archivematica-requirements.txt")}
     required.add("application/research/oai/oai_feed.py")
     if not required <= set(wanted):
         raise ArchivematicaError("Snapshot omits a mandatory portable application dependency")

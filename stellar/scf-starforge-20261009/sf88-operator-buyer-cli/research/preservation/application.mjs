@@ -33,6 +33,7 @@ const LIBNOVA_SOURCE=Object.freeze([
 const ARCHIVEMATICA_SOURCE=Object.freeze([
   'research/preservation/archivematica.py','research/preservation/archivematica_client.py',
   'research/preservation/ARCHIVEMATICA.md','research/preservation/ARCHIVEMATICA_PROVIDER_CONTRACT.md',
+  'research/preservation/archivematica-requirements.txt',
 ]);
 const field=(name,label,type,required,description)=>({name,label,type,required,description});
 const equal=(a,b)=>JSON.stringify(canonical(a))===JSON.stringify(canonical(b));

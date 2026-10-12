@@ -56,11 +56,14 @@ require those dependencies to open the workbench or use the existing RODA
 and Preservica operators. The complete export and managed source binding
 retain all five LIBNOVA files together.
 
-Archivematica adds `archivematica.py`, `archivematica_client.py`, `ARCHIVEMATICA.md`
-and `ARCHIVEMATICA_PROVIDER_CONTRACT.md`. All four travel together in complete
-exports and the managed source binding. This destination uses the standard
-library and the original configured Dashboard/Storage accounts and mounted
-transfer-source directory.
+Archivematica adds `archivematica.py`, `archivematica_client.py`, `ARCHIVEMATICA.md`,
+`ARCHIVEMATICA_PROVIDER_CONTRACT.md` and `archivematica-requirements.txt`. All five
+travel together in complete exports and the managed source binding. The
+receiving client loads the declared `py7zr==1.1.3` dependency only when opening
+an AIP stored as 7z; ZIP and TAR receiving use the standard library. Install
+that retained requirements file in the selected Python environment before
+receiving the deployment's 7z AIPs. The destination uses the original configured
+Dashboard/Storage accounts and mounted transfer-source directory.
 
 ### Credentials
 
@@ -456,6 +459,11 @@ Every delivery row includes its package kind, original review/operation,
 size and SHA-256. Downloads stream the retained original file after checking
 its saved identity.
 
+An opened Archivematica destination also offers **Export this Archivematica
+operation**. This adds a complete provider archive to Delivery with its original
+source, settings, operation history, receiving results and all five provider
+source members. The local export remains attached to the selected operation.
+
 **Export complete workspace** includes:
 
 - The original core workspace and native source records.
@@ -498,6 +506,8 @@ Receiving the same original ZIP into its previously received directory
 checks the original receipt, source binding and application bytes, then
 reuses that directory. Later saved review decisions and migration progress
 in that received workspace remain in place.
+
+If an export published its complete ZIP before the application could save the final job status, reopen **Activity** and choose **Recover completed export** on that original job. The application verifies every archived member, the original package or export job, and the retained archive identity, then restores the same job and download. Recovery does not create another export.
 
 A complete snapshot records the local activity at the moment of export.
 An in-progress queue entry retained in the snapshot is marked interrupted
@@ -559,7 +569,9 @@ Host/origin checks restrict the application to its printed local origin.
 | `POST /api/refresh` | Observe original repository progress |
 | `POST /api/reconcile` | Reconcile original provider request evidence |
 | `POST /api/decide` | Apply an observed Archivematica ingest choice or arrange the original backlog transfer |
+| `POST /api/export-destination` | Export the selected original Archivematica operation and its complete provider application |
 | `POST /api/export` | Export the complete current saved workspace |
+| `POST /api/recover-export` | Recover the original published complete export using its saved job ID and verified archive inventory |
 | `GET /download?id=ARTIFACT_ID` | Download a retained original artifact |
 | `GET /review` | Open the saved preservation review report |
 

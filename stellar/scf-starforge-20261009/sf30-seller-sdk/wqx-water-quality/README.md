@@ -94,3 +94,9 @@ The scientific source intake has no added npm dependency. The original native me
 ## Open Waters receiving
 
 The **Open Waters** tab turns any saved review into a retained receiving plan for Open Environment’s published importer. It provides native identity mapping, location/activity/result fields, bulk translations, detection-limit choices, reference catalogs, six exact downloads, and complete-bundle receiving into an empty project. See [Open Waters receiving](OPEN_WATERS.md) for the full operator flow, CLI commands, pinned import contract and complete original-source journey.
+
+## Original and reporting-unit scientific editions
+
+The Scientific editions panel and `water-quality scientific` CLI retain both original and reviewed reporting units, complete source qualification and limit context, reporting-window summaries and cross-edition comparisons. Save the exact scientific preview, then export/receive both selected source editions and reopen all seven complete files. The original source and every explicit choice remain available beside the reviewed representation.
+
+[SCIENTIFIC.md](SCIENTIFIC.md) gives the full operator flow, scientific interpretation, original Potomac results, CLI/API contract and complete receiving. The [39-tool merchant guide](../../../../stellar-forge/mcp-merchant-operator/WQX_SCIENTIFIC.md) exposes that same operation through the original typed client, CLI and resumable files.

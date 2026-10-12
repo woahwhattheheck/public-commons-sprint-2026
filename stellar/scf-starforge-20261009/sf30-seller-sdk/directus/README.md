@@ -4,6 +4,8 @@ The Directus adapter brings an authenticated Directus 12.5.0 collection into the
 
 The browser operator uses a plain monochrome layout. It provides collection capture, field selection, immutable editions, review, comparison, native draft editing, merchant preparation, customer offer preparation, complete delivery receiving, and project transfer. The same operations are available from JavaScript and the CLI.
 
+The [complete selected-product installation and operating guide](../../../../products/directus-content-data/OPERATING.md) covers the `directus-content-data` package, runtime installation, managed Applications, original native workflows and complete customer/project receiving. Its [selection recipe](../../distribution/selections/directus-content-data.json) retains the required shared merchant, buyer and receiving components.
+
 ## Start the operator
 
 Use Node 24 or later, with the merchant distribution's existing dependencies installed. From the repository root:

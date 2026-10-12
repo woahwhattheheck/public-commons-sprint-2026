@@ -111,3 +111,11 @@ OPERATED_GRAVITY_REFERRAL.json uses schema stellar-forge.gravity-referral-operat
 The original and corrected source/edition/assessment identities are explicit. Native, browser, connected and Applications receiving consume these retained IDs. They inspect the actual selected workspace and retain any explicit relocation instead of rewriting the original operating record.
 
 Continue with [the complete browser journey](BROWSER_RECEIVING.md), the connected companion's receiving guide or the installed Applications operation on that same received UUID.
+
+## Recorded predecessor history in a new handoff
+
+A new complete handoff includes Edition_Lineage.json and Lineage_Exchange_History.json. The first preserves the selected edition and every recorded predecessor in chronological lineage order; the second retains complete original exchange requests and operations with their actual edition and source IDs. The readable handoff separates the selected edition's own operations from the recorded predecessor history. The saved assessment, review, consent-purpose decisions and topology retain their original edition bindings.
+
+Native_Exchange_History.json remains the exact selected-edition array. A corrected edition can therefore have an empty selected-edition array while its original predecessor carries the read, conditional write and source-version review. Open the lineage file or complete editable workspace to receive those original operations.
+
+Existing frozen handoffs retain their original bytes. Preparing a new handoff with a new label and the intended current edition creates the readable successor; repeating an existing saved request resumes its original handoff.

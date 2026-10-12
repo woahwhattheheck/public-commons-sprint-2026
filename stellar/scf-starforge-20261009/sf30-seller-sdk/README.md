@@ -2,6 +2,10 @@
 
 **Status:** Node.js 22+ seller metadata compiler and runnable resource service. MIT. The compiler and challenge-only service need no npm dependencies. The optional payment runtime delegates verification and settlement to the official x402 SDK and an explicitly configured facilitator.
 
+## Groundwater model scenarios and receiving
+
+The [groundwater workspace](./groundwater/README.md) retains complete model originals, explicit reviewed scenarios and actual MF6/MODFLOW-2005 double-precision runs. Its original Python core serves the local and Tethys operator, preserves unit/time/mask/budget distinctions, and freezes complete reports, receiving decisions and restorable workspaces. Use the maintained `groundwater` command or `node groundwater/cli.mjs`; the [complete native workflow](./groundwater/examples/NATIVE_WORKFLOW.md) keeps the unchanged publisher dual-solver baseline and each attributed scenario as separate original runs.
+
 ## FHIR Bulk Data source and customer workbench
 
 The [FHIR Bulk Data workbench](./fhir_bulk/README.md) retains actual provider discovery and Groups, complete resumable full/modification exports, exact original resources/outcomes/deletions, reviewed native mappings and keyed comparisons. Its private operator composes retained resource state, publishes through the original SF30 seller, prepares the original SF88 buyer, and receives complete source-backed datasets and editable workspaces. Start with `node dataset-cli.mjs fhir-bulk serve --workspace /absolute/private/fhir-workspace`; the guide includes the complete unchanged public SMART source and browser receiving commands.

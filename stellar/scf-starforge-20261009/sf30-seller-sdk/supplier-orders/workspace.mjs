@@ -9,6 +9,8 @@ import { PROFILE_ID, DRAFT_SCHEMA, normalizedDocument, referencedOrders, busines
   reviewDocument, projectOrder, createDocumentDraft, text, data, fail, orderId, canonical, digest } from './core.mjs';
 import { parseOpenTransDocument, renderOpenTransDocument } from './opentrans.mjs';
 import { writeSupplierOrderPackage, readSupplierOrderPackage } from './portable.mjs';
+import { loadSupplierOrderTransportConfig } from './transport-config.mjs';
+import { SupplierOrderTransport } from './transport.mjs';
 
 export const TABLES=Object.freeze({
   supplier_order_sources:['id','sha256','record_json'],
@@ -59,8 +61,9 @@ async function privateDirectory(path){
   if(!s.isDirectory()||s.isSymbolicLink())fail('ORDER_DIRECTORY_INVALID','Select an original private workspace directory.',409);
   await chmod(path,0o700);
 }
-export async function openSupplierOrderWorkspace({directory}={}){
+export async function openSupplierOrderWorkspace({directory,transportConfigPath}={}){
   text(directory,'Workspace directory',4096);
+  const transportConfiguration=transportConfigPath?await loadSupplierOrderTransportConfig(transportConfigPath):undefined;
   const store=await openWorkspaceStore(directory,digest({product:'supplier-orders',profileId:PROFILE_ID,schema:'v1'}));
   try{
     store.db.exec(
@@ -84,11 +87,11 @@ export async function openSupplierOrderWorkspace({directory}={}){
       'CREATE TABLE IF NOT EXISTS supplier_order_document_orders(document_id TEXT NOT NULL,order_id TEXT NOT NULL,PRIMARY KEY(document_id,order_id));'+
       'CREATE INDEX IF NOT EXISTS supplier_order_document_order ON supplier_order_document_orders(order_id,document_id);'
     );
-    const workspace=new SupplierOrderWorkspace(store);await workspace.directories();workspace.repairIndexes();return workspace;
+    const workspace=new SupplierOrderWorkspace(store,transportConfiguration);await workspace.directories();workspace.repairIndexes();return workspace;
   }catch(error){store.close();throw error;}
 }
 export class SupplierOrderWorkspace {
-  constructor(store){this.store=store;this.db=store.db;this.directory=store.directory;this.root=join(this.directory,'supplier-orders');this.active=new Map();this.inFlight=new Set();this.scope=new AsyncLocalStorage();this.closed=false;this.closing=false;this.closePromise=null;}
+  constructor(store,transportConfiguration){this.store=store;this.db=store.db;this.directory=store.directory;this.root=join(this.directory,'supplier-orders');this.active=new Map();this.inFlight=new Set();this.scope=new AsyncLocalStorage();this.closed=false;this.closing=false;this.closePromise=null;this.transport=new SupplierOrderTransport(this,transportConfiguration);}
   async directories(){for(const dir of [this.root,join(this.root,'files'),join(this.root,'incoming'),join(this.root,'exports')])await privateDirectory(dir);}
   assertOpen(){if(this.closed||this.closing&&this.scope.getStore()!==this)fail('ORDER_WORKSPACE_CLOSED','This workspace is closing.',503);}
   owned(action){

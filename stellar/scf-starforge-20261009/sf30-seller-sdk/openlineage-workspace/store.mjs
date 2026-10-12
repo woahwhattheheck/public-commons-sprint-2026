@@ -5,9 +5,11 @@ import { randomUUID } from "node:crypto";
 import { FORMAT, sha256, canonical, digest, clone, parseSource, project, entity, compareEditions, lineage, report, csv } from "./model.mjs";
 
 import { projectReport, reportCsv, reportHtml } from "./reports.mjs";
+import { parseRetainedSource, decodeSource, SourceEncodingError } from "./source-encoding.mjs";
 
 const APP_ROOT = dirname(fileURLToPath(import.meta.url));
-export const APPLICATION_FILES = ["LICENSE","MERCHANT.md","OPENLINEAGE_LICENSE","README.md","RECEIVING.mjs","SOURCE_CONTRACT.md","app.js","browser-assets-loader.mjs","browser-assets.json","catalog.mjs","cli.mjs","client.d.ts","client.mjs","contribution.json","fixture-event-full.json","fixture-event-simple.json","fixture-lineage-dataset.json","fixture-lineage-implicit-job.json","fixture-lineage-mixed-sources.json","fixtures.json","index.html","mcp-client.mjs","mcp-setup.mjs","mcp-tools.mjs","mcp.mjs","merchant-provider.mjs","model.mjs","package.json","protocol.mjs","reports.mjs","schema-core-1-0-1.json","schema-core-1-0-5.json","server.mjs","store.mjs","style.css"];
+const LEGACY_APPLICATION_FILES = ["LICENSE","MERCHANT.md","OPENLINEAGE_LICENSE","README.md","RECEIVING.mjs","SOURCE_CONTRACT.md","app.js","browser-assets-loader.mjs","browser-assets.json","catalog.mjs","cli.mjs","client.d.ts","client.mjs","contribution.json","fixture-event-full.json","fixture-event-simple.json","fixture-lineage-dataset.json","fixture-lineage-implicit-job.json","fixture-lineage-mixed-sources.json","fixtures.json","index.html","mcp-client.mjs","mcp-setup.mjs","mcp-tools.mjs","mcp.mjs","merchant-provider.mjs","model.mjs","package.json","protocol.mjs","reports.mjs","schema-core-1-0-1.json","schema-core-1-0-5.json","server.mjs","store.mjs","style.css"];
+export const APPLICATION_FILES = ["LICENSE","MERCHANT.md","OPENLINEAGE_LICENSE","PRODUCERS.md","PRODUCER_RECEIVING.mjs","README.md","RECEIVING.mjs","SOURCE_CONTRACT.md","app.js","browser-assets-loader.mjs","browser-assets.json","catalog.mjs","cli.mjs","client.d.ts","client.mjs","contribution.json","fixture-event-full.json","fixture-event-simple.json","fixture-lineage-dataset.json","fixture-lineage-implicit-job.json","fixture-lineage-mixed-sources.json","fixtures.json","index.html","mcp-client.mjs","mcp-setup.mjs","mcp-tools.mjs","mcp.mjs","merchant-provider.mjs","model.mjs","package.json","producer.d.mts","producer.mjs","protocol.mjs","reports.mjs","schema-core-1-0-1.json","schema-core-1-0-5.json","server.mjs","source-encoding.mjs","store.mjs","style.css"];
 const HASH = /^[0-9a-f]{64}$/;
 export class WorkspaceError extends Error {
   constructor(message, status = 400, details = undefined) { super(message); this.status = status; this.details = details; }
@@ -127,8 +129,10 @@ export class LineageWorkspace {
       await fs.unlink(temporary).catch(() => {});
     }
   }
-  async change(operationId, input, revision, action) {
-    required(operationId, "operationId"); expectedRevision(revision);
+  async change(operationId, input, revision, action, { append = false } = {}) {
+    required(operationId, "operationId");
+    if (append && input.action !== "source.import") throw new WorkspaceError("Append admission applies only to original source imports");
+    if (!append) expectedRevision(revision);
     const requestHash = digest(input);
     return this.lock(async () => {
       const state = await this.read();
@@ -137,7 +141,7 @@ export class LineageWorkspace {
         if (previous.requestHash !== requestHash) throw new WorkspaceError("Operation ID was already used for a different request", 409);
         return { ...clone(previous.result), replayed: true };
       }
-      if (state.revision !== revision) throw new WorkspaceError("Workspace changed; review the current revision before saving", 409, { currentRevision: state.revision });
+      if (!append && state.revision !== revision) throw new WorkspaceError("Workspace changed; review the current revision before saving", 409, { currentRevision: state.revision });
       const result = await action(state);
       state.revision++;
       state.updatedAt = new Date().toISOString();
@@ -147,9 +151,14 @@ export class LineageWorkspace {
       return saved;
     });
   }
-  async importSource({ bytes, name = "events.json", sourceUrl = "", operationId, expectedRevision: revision }) {
-    const buffer = Buffer.from(bytes), parsed = parseSource(buffer, name);
-    const input = { action: "source.import", objectId: parsed.id, name, sourceUrl };
+  async importSource({ bytes, name = "events.json", sourceUrl = "", operationId, expectedRevision: revision, contentEncoding = "identity" },
+    { append = false, maxDecodedBytes } = {}) {
+    const buffer = Buffer.from(bytes);
+    let parsed;
+    try { parsed = parseRetainedSource(buffer, name, { contentEncoding, ...(maxDecodedBytes === undefined ? {} : { maxDecodedBytes }) }); }
+    catch (error) { if (error instanceof SourceEncodingError) throw new WorkspaceError(error.message, error.status); throw error; }
+    const input = { action: "source.import", objectId: parsed.id, name, sourceUrl,
+      ...(parsed.contentEncoding ? { contentEncoding: parsed.contentEncoding } : {}) };
     return this.change(operationId, input, revision, async state => {
       const existing = state.sources.find(item => item.id === parsed.id);
       if (existing) return { source: existing, added: 0, retained: parsed.events.length };
@@ -164,10 +173,12 @@ export class LineageWorkspace {
           state.events.push(row); known.set(row.id, row); added++;
         }
       }
-      const source = { id: objectId, name: safeFileName(name), sourceUrl, bytes: buffer.length, format: parsed.format, eventIds: parsed.events.map(item => item.id), importedAt: new Date().toISOString(), diagnosticCount: parsed.events.filter(item => item.diagnostics.length).length };
+      const source = { id: objectId, name: safeFileName(name), sourceUrl, bytes: buffer.length, format: parsed.format,
+        ...(parsed.contentEncoding ? { contentEncoding: parsed.contentEncoding, decodedBytes: parsed.decodedBytes, decodedSha256: parsed.decodedSha256 } : {}),
+        eventIds: parsed.events.map(item => item.id), importedAt: new Date().toISOString(), diagnosticCount: parsed.events.filter(item => item.diagnostics.length).length };
       state.sources.push(source);
       return { source, added, retained: parsed.events.length };
-    });
+    }, { append });
   }
   async saveEdition({ title, description = "", operationId, expectedRevision: revision }) {
     required(title, "title");
@@ -218,7 +229,7 @@ export class LineageWorkspace {
         application.push({ path: name, sha256: sha256(bytes), bytes: bytes.length, base64: bytes.toString("base64") });
       }
     }
-    const payload = { schema: "commons.openlineage.package.v1", state, objects, application };
+    const payload = { schema: "commons.openlineage.package.v1", applicationVersion: 2, state, objects, application };
     const body = Buffer.from(JSON.stringify({ ...payload, payloadSha256: digest(payload) }));
     const id = sha256(body);
     const path = join(this.directory, "exports", id + ".json");
@@ -258,7 +269,7 @@ export class LineageWorkspace {
     const bytes = await this.readObject(id);
     if (offset > bytes.length) throw new WorkspaceError("Byte offset exceeds the original object", 416);
     const chunk = bytes.subarray(offset, Math.min(offset + length, bytes.length));
-    return { id, name: result?.name ?? source.name, mediaType: result?.mediaType ?? "application/json",
+    return { id, name: result?.name ?? source.name, mediaType: result?.mediaType ?? (source?.contentEncoding === "gzip" ? "application/gzip" : "application/json"),
       totalBytes: bytes.length, offset, bytes: chunk.length, nextOffset: offset + chunk.length,
       complete: offset + chunk.length === bytes.length, base64: chunk.toString("base64") };
   }
@@ -275,7 +286,18 @@ export class LineageWorkspace {
     if (action === "object.read") return this.readObjectRange(args.id, args);
     if (action === "workspace.read") return this.view(args);
     if (action === "source.import") return this.importSource({ ...args, bytes: args.base64 !== undefined ? Buffer.from(args.base64, "base64") : Buffer.from(args.text ?? "") });
-    if (action === "source.read") return { id: args.id, base64: (await this.readObject(args.id)).toString("base64") };
+    if (action === "source.read") {
+      const state = await this.read(), source = state.sources.find(row => row.id === args.id);
+      const bytes = await this.readObject(args.id);
+      const value = { id: args.id, base64: bytes.toString("base64"), contentEncoding: source?.contentEncoding ?? "identity" };
+      if (args.decode === true && source?.contentEncoding === "gzip") {
+        const decoded = decodeSource(bytes, { contentEncoding: "gzip" }).decoded;
+        if (sha256(decoded) !== source.decodedSha256 || decoded.length !== source.decodedBytes)
+          throw new WorkspaceError("Decoded source identity differs", 409);
+        value.decodedBase64 = decoded.toString("base64"); value.decodedSha256 = source.decodedSha256;
+      }
+      return value;
+    }
     if (action === "entity.read") return entity(await this.read(), args.key, args);
     if (action === "lineage.read") return lineage(await this.read(), args.key, args);
     if (action === "edition.save") return this.saveEdition(args);
@@ -302,8 +324,13 @@ function reconstructSources(state, objects) {
     if (!Array.isArray(source.eventIds)) throw new WorkspaceError("Source requires its event references");
     const bytes = objects.get(source.id);
     if (!bytes) throw new WorkspaceError("Source bytes missing");
-    const parsed = parseSource(bytes, source.name);
+    // Retained uncompressed originals predate ingress limits. Reconstruct them
+    // through their original parser so a valid earlier package stays receivable.
+    const encoding = source.contentEncoding ?? "identity";
+    const parsed = encoding === "identity" ? parseSource(bytes, source.name) :
+      parseRetainedSource(bytes, source.name, { contentEncoding: encoding });
     if (source.bytes !== bytes.length || source.format !== parsed.format ||
+        (source.contentEncoding === "gzip" && (source.decodedBytes !== parsed.decodedBytes || source.decodedSha256 !== parsed.decodedSha256)) ||
         canonical(parsed.events.map(row => row.id)) !== canonical(source.eventIds)) {
       throw new WorkspaceError("Source metadata or event references differ from its original bytes");
     }
@@ -368,13 +395,17 @@ export function verifyBundle(bytes) {
     for (const key of review.entityKeys) entity(state, key, { edition: review.editionId });
   }
   const application = new Map();
+  if (payload.applicationVersion !== undefined && payload.applicationVersion !== 2) throw new WorkspaceError("Unsupported application source edition");
+  if (payload.applicationVersion === undefined && state.sources.some(source => source.contentEncoding === "gzip"))
+    throw new WorkspaceError("Compressed sources require their complete version 2 application edition");
+  const expectedApplication = payload.applicationVersion === 2 ? APPLICATION_FILES : LEGACY_APPLICATION_FILES;
   for (const item of payload.application ?? []) {
-    if (!APPLICATION_FILES.includes(item.path) || application.has(item.path)) throw new WorkspaceError("Unexpected application path");
+    if (!expectedApplication.includes(item.path) || application.has(item.path)) throw new WorkspaceError("Unexpected application path");
     const data = Buffer.from(item.base64, "base64");
     if (sha256(data) !== item.sha256 || data.length !== item.bytes) throw new WorkspaceError("Application source hash mismatch");
     application.set(item.path, data);
   }
-  if (application.size && application.size !== APPLICATION_FILES.length) throw new WorkspaceError("Incomplete editable application source");
+  if (application.size && application.size !== expectedApplication.length) throw new WorkspaceError("Incomplete editable application source");
   return { state, objects, application, payloadSha256, packageSha256: sha256(bytes) };
 }
 export async function receiveBundle(bytes, destination) {

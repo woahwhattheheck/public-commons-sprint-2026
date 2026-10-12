@@ -5,9 +5,9 @@
   "applicant": "Bryce Muhlnickel / TokenJunkieLabs",
   "application": {
     "path": "application.md",
-    "bytes": 25467,
-    "sha256": "42ffd63f20b0ee82f7328418cc4f3e221d408d35d498b6a819a3afdce072a83a",
-    "git_blob": "16fed13a5cc725cafe9c5969aaa43c717b6edc97"
+    "bytes": 27607,
+    "sha256": "8ae4324b2c25cd650f3131bd0787446e6a6599d38ae6641af093efaa9680169f",
+    "git_blob": "a851a50da120e96493e56e11ba57ce063508aaf0"
   },
   "request": {
     "basis": "prospective",
@@ -214,7 +214,8 @@
         "capacity",
         "cash",
         "applicant",
-        "federal-awards"
+        "federal-awards",
+        "environmental-provider-intake"
       ]
     },
     {
@@ -370,14 +371,87 @@
       "complete_source_pages": 1,
       "transaction_occurrences": 2,
       "net_obligation_usd": "2104799.96"
+    },
+    {
+      "id": "axiom-sensor-intake",
+      "kind": "primary-customer-guidance",
+      "label": "Axiom environmental sensor intake requirements",
+      "url": "https://www.axiomdatascience.com/best-practices/SubmitDataSensors.html",
+      "qualification": "Published intake guidance establishes the source need; the sent implementation proposal is still unaccepted."
+    },
+    {
+      "id": "erddap-provider-operating",
+      "kind": "published-source",
+      "label": "Complete ERDDAP provider operation and selected installation",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "commit": "5f7143f88bb28fbd0c1b63a913545633c475afd6",
+      "path": "products/erddap-provider/OPERATING.md",
+      "git_blob": "114fda9234ffd978b77c419fd5647efedaea25fe",
+      "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/5f7143f88bb28fbd0c1b63a913545633c475afd6/products/erddap-provider/OPERATING.md"
+    },
+    {
+      "id": "erddap-provider-source-index",
+      "kind": "published-source",
+      "label": "ERDDAP provider source and complete capture selection",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "commit": "5f7143f88bb28fbd0c1b63a913545633c475afd6",
+      "path": "products/erddap-provider/SOURCE.json",
+      "git_blob": "bbabd2575a3e768d96cd36751921eb560c90ff91",
+      "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/5f7143f88bb28fbd0c1b63a913545633c475afd6/products/erddap-provider/SOURCE.json"
+    },
+    {
+      "id": "erddap-provider-selection",
+      "kind": "published-source",
+      "label": "Original erddap-provider distribution selection",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "commit": "5f7143f88bb28fbd0c1b63a913545633c475afd6",
+      "path": "stellar/scf-starforge-20261009/distribution/selections/erddap-provider.json",
+      "git_blob": "093a226cdaf4657f60ac569c3566e501f134c370",
+      "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/5f7143f88bb28fbd0c1b63a913545633c475afd6/stellar/scf-starforge-20261009/distribution/selections/erddap-provider.json"
+    },
+    {
+      "id": "erddap-provider-completed-native",
+      "kind": "retained-completed-operation-identities",
+      "label": "Original dataset and versioned provider-review receiving",
+      "basis": "Source-native implementation operation on the complete original public NDBC selection; these identities do not publish private operation files.",
+      "source_rows": 144,
+      "station": "46042",
+      "observation_period": "2023-06-01",
+      "saved_provider_revisions": 3,
+      "ready_export": false,
+      "unresolved_review_field": "contacts.scientific",
+      "native_results": [
+        {
+          "purpose": "Original complete dataset/source receiving",
+          "bytes": 14560,
+          "sha256": "31c402a6663b84b6003e608a7947d9c51a1c923a916b5abd1be299aaba4b1b7a"
+        },
+        {
+          "purpose": "Historical evaluator and exact exported-bundle compatibility",
+          "bytes": 6460,
+          "sha256": "844446d299546b0f7769f77cc95bcdab7559108de77e9ac553497260fcbe32ab"
+        },
+        {
+          "purpose": "Third explicitly selected canonical-JSON provider review",
+          "bytes": 48204,
+          "sha256": "b67f4082dd4c898032167fbdfce3c68242cfffc087797cd0d77489e40e8f920f"
+        }
+      ],
+      "pending": [
+        "selected package build and installed receiving",
+        "complete browser receiving",
+        "customer commissioning",
+        "funded independent Stellar deployment"
+      ],
+      "native_stellar_purchases": 0
     }
   ],
   "product_and_finance": {
     "path": "product-and-finance.md",
-    "git_blob": "530d8e70a6431ac248303252c43251f4191b14de",
-    "bytes": 43129,
-    "sha256": "6b35650bad1b03d4cf413561904900c069cc03a26aeb58c37a31e994ab645ec5",
-    "basis": "Independently reviewed full product, cost, cash, customer and operating companion, extended with the canonical federal-awards customer, installation and existing-package mapping.",
+    "git_blob": "29e0ab9723e0eb787041409803158dc3ae94c1e3",
+    "bytes": 56242,
+    "sha256": "3868d29714a697ca447447d0d561d9f74515cbb0dc9f1ea4d17967ad9bcca8a7",
+    "basis": "Independently reviewed full product, cost, cash, customer and operating companion, extended with the canonical federal-awards customer, installation and existing-package mapping. The ERDDAP/Axiom contribution adds the complete source-to-customer operation, proposed commissioning scope, completed native receiving and common six-package mapping.",
     "prior_git_blob": "f945864b5326bf312abc6327d37c0a197f7632a6"
   },
   "narrative_source": {
@@ -406,6 +480,47 @@
         "front_sha256": "4f36ff002cd2ccd8f59fb35ed32bb38d30ebce0ad79d5820bcf0839ed92143d9",
         "complete_companion_section_sha256": "41d6539d4950dfcb69ef44d7d23c984c5e8333089ef073775ce11eaa2dbd71a7",
         "public_source_projection": "Retained official input points to its already published original source packet."
+      },
+      {
+        "id": "erddap-axiom",
+        "basis": "Complete customer workflow accepted into the existing SCF manuscript, carried forward into the public reviewer answer and companion.",
+        "source_repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+        "source_commit": "5f7143f88bb28fbd0c1b63a913545633c475afd6",
+        "source_path": "products/erddap-provider",
+        "front_sha256": "882026a4b10610c3a9a09e4b09ef5d224d9ff34f64b764f4b3da9cfefe2b21d4",
+        "complete_companion_section_sha256": "9342202c241cf5b0835d8dd463697e205d38d7842463d5f60b34ce7d63b56ad8",
+        "proposed_workshare": {
+          "currency": "USD",
+          "amount": "12600",
+          "hours": 96,
+          "active_business_days": 18,
+          "feeds": 3,
+          "client_managed_installations": 1,
+          "file_command_receiving_integrations": 1,
+          "kickoff_amount": "6300",
+          "acceptance_amount": "6300",
+          "included_support_hours": 8,
+          "support_days_after_acceptance": 30,
+          "state": "FIRST_CONTACT_SENT_COMMISSIONING_OPEN",
+          "first_contact_date": "2026-10-12",
+          "accepted": false,
+          "invoiced": false,
+          "paid": false
+        },
+        "public_source_projection": "Public source URLs and completed-result identities only; no customer operation, contact identity, message body or private workspace is included.",
+        "common_budget_unchanged": true,
+        "source_capture_populations": {
+          "mur_selections": [
+            27,
+            27,
+            27
+          ],
+          "ndbc_selections": [
+            144,
+            432
+          ],
+          "ndbc_periods_overlap": true
+        }
       }
     ]
   }
