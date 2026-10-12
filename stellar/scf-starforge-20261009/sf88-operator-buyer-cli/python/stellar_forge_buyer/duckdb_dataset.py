@@ -832,7 +832,7 @@ class DuckDBWorkspace:
                 output = target / name
                 private_directory(output.parent)
                 if output.exists():
-                    descriptor = _descriptor(output)
+                    descriptor = _descriptor(output, name)
                 else:
                     fd, tmp = tempfile.mkstemp(prefix=".source-", dir=target)
                     try:
@@ -846,7 +846,9 @@ class DuckDBWorkspace:
                         if descriptor["bytes"] != expected_bytes or descriptor["sha256"] != expected_sha:
                             raise StateError("DUCKDB_RETAINED_SOURCE_CHANGED")
                         os.link(tmp, output)
-                        sync_directory(target)
+                        sync_directory(output.parent)
+                        if output.parent != target:
+                            sync_directory(target)
                     finally:
                         os.unlink(tmp)
                     descriptor["path"] = str(output)
