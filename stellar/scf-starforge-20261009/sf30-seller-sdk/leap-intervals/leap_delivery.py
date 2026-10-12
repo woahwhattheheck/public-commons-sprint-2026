@@ -26,8 +26,10 @@ def write_private(path, data):
         os.fsync(out.fileno())
 
 
-def export_path(workspace, ident):
-    meta = workspace.get("exports", sha_value(ident, "Original export"))
+def export_path(workspace, ident, metadata=None):
+    sha_value(ident, "Original export")
+    meta = workspace.get("exports", ident) if metadata is None else metadata
+    require(meta.get("id") == ident, "LOCAL_EXPORT", "Use the original export identity.")
     require(meta.get("status", "READY") == "READY", "LOCAL_EXPORT_PUBLISHING",
             "Continue the original export request to finish publishing its retained bytes.", request_id=meta.get("request_id"))
     path = workspace.root / "exports" / (ident + ".zip")
