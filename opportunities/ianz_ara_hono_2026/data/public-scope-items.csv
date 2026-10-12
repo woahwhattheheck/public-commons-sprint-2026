@@ -1,0 +1,25 @@
+scope_row_key,accreditation_number,activity,classification,item,method_reference,qualifier,source_id,source_page,coverage
+826-01,826,analysis,1.12,"Giardia, Cryptosporidium","USEPA 1623 (2005, superseded) (Filtamax)",Potable waters; Filtration/IMS/IFA (modified),S15,2,selected transcription; whole scope remains in original PDF
+791-01,791,analysis,1.12,Escherichia coli – Colilert Quantitray (51 well),9223 B,Potable waters; APHA online edition,S16,2,selected transcription; whole scope remains in original PDF
+791-02,791,analysis,1.12,Escherichia coli – Colilert Quantitray (97 well),9223 B,Potable waters; APHA online edition,S16,2,selected transcription; whole scope remains in original PDF
+791-03,791,analysis,1.12,Escherichia coli – Colilert-18 Quantitray (51 well),9223 B,Potable waters; APHA online edition,S16,2,selected transcription; whole scope remains in original PDF
+791-04,791,analysis,1.12,Escherichia coli – Colilert-18 Quantitray (97 well),9223 B,Potable waters; APHA online edition,S16,2,selected transcription; whole scope remains in original PDF
+791-05,791,analysis,1.12,Total Coliforms – Colilert Quantitray (51 well),9223 B,Potable waters; APHA online edition,S16,2,selected transcription; whole scope remains in original PDF
+791-06,791,analysis,1.12,Total Coliforms – Colilert Quantitray (97 well),9223 B,Potable waters; APHA online edition,S16,2,selected transcription; whole scope remains in original PDF
+791-07,791,analysis,1.12,Total Coliforms – Colilert-18 Quantitray (51 well),9223 B,Potable waters; APHA online edition,S16,2,selected transcription; whole scope remains in original PDF
+791-08,791,analysis,1.12,Total Coliforms – Colilert-18 Quantitray (97 well),9223 B,Potable waters; APHA online edition,S16,2,selected transcription; whole scope remains in original PDF
+791-09,791,analysis,2.41,Chlorine (residual),4500-Cl F,Potable waters; APHA online edition,S16,2,selected transcription; whole scope remains in original PDF
+791-10,791,analysis,2.41,Chlorine (residual),4500-Cl G,Potable waters; APHA online edition,S16,2,selected transcription; whole scope remains in original PDF
+791-11,791,analysis,2.41,Fluoride,4500-F C,Potable waters; APHA online edition,S16,2,selected transcription; whole scope remains in original PDF
+791-12,791,analysis,2.41,pH,4500-H B,Potable waters; aesthetic determinands,S16,3,selected transcription; whole scope remains in original PDF
+791-13,791,analysis,2.41,Temperature,2550 B,Potable waters; aesthetic determinands,S16,3,selected transcription; whole scope remains in original PDF
+791-14,791,analysis,2.41,Turbidity,USEPA 180.1,Potable waters; aesthetic determinands,S16,3,selected transcription; whole scope remains in original PDF
+791-15,791,sampling,1.12;2.41,Potable water,ISO 5667-1:2020,Sampling procedure reference,S16,3,selected transcription; whole scope remains in original PDF
+791-16,791,sampling,1.12;2.41,Potable water,ISO 5667-3:2018,Sampling procedure reference,S16,3,selected transcription; whole scope remains in original PDF
+791-17,791,sampling,1.12;2.41,Potable water,ISO 5667-5:2006,Sampling procedure reference,S16,3,selected transcription; whole scope remains in original PDF
+791-18,791,sampling,1.12;2.41,Potable water,ISO 19458:2006,Sampling procedure reference,S16,3,selected transcription; whole scope remains in original PDF
+157-01,157,inspection,4.75,Welder Qualification Tests,ISO 9606; ASME IX; AS 2205,Bend; Nick Breaks; Macro examination,S17,3,selected transcription; whole scope remains in original PDF
+157-02,157,inspection,4.76,Metals and Metal Products,ISO 9606; ASME IX; AS 2205,Tests to support inspection activities: Bend; Nick Breaks; Macro examination,S17,3,selected transcription; whole scope remains in original PDF
+157-03,157,inspection,4.83,Visual Inspection,AS 3978; ASME V Article 9,"Flat/rolled product; welded joints; castings; forgings; metallic coatings. Materials Al, Cu, Fe, Ni, Mg, Zn, SS",S17,3,selected transcription; whole scope remains in original PDF
+157-04,157,inspection,4.84,Dye Penetrant Methods,,"Visible and fluorescent dye: water washable, solvent removable, post emulsifiable",S17,3,selected transcription; whole scope remains in original PDF
+157-05,157,inspection,4.85,Magnetic Particle Methods,AS 1171; ASME V Article 7,"Magnetic flow method: welded joints, forgings, castings and machined parts; Fe",S17,4,selected transcription; whole scope remains in original PDF

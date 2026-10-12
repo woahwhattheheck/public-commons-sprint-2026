@@ -1,0 +1,24 @@
+profile,tariff_key,label,amount_nzd_ex_gst,charge_unit,mode,assessment_unit_factor,publication_month,tax_basis,source_id,source_page
+AS19-2026-07,AS19-2026-07:information,Information package,0.00,package,fixed,,2026-07,exclusive of GST,S11,1
+AS19-2026-07,AS19-2026-07:advice-work,Advisory assessment work,282.00,hour,rate,,2026-07,exclusive of GST,S11,1
+AS19-2026-07,AS19-2026-07:travel,Travel,141.00,hour,rate,,2026-07,exclusive of GST,S11,1
+AS19-2026-07,AS19-2026-07:initial-application,Initial application,1197.00,organisation,fixed,,2026-07,exclusive of GST,S11,1
+AS19-2026-07,AS19-2026-07:assessment-work,Assessment work,282.00,hour,rate,,2026-07,exclusive of GST,S11,1
+AS19-2026-07,AS19-2026-07:annual-administration,Annual administration,1380.00,assessment_unit,rate,,2026-07,exclusive of GST,S11,1
+AS19-2026-07,AS19-2026-07:international-recognition,International recognition levy,276.00,accreditation,rate,,2026-07,exclusive of GST,S11,1
+AS19-2026-07,AS19-2026-07:recognition-cap,Recognition levy cap,1380.00,laboratory,cap,,2026-07,exclusive of GST,S11,1
+AS19-2026-07,AS19-2026-07:expenses,"Travel, meals and accommodation",,original_actual_cost,pass_through,,2026-07,exclusive of GST,S11,1
+AS19-2026-07,AS19-2026-07:technical-expert,Technical expert fees and expenses,,original_actual_cost,pass_through,,2026-07,exclusive of GST,S11,1
+AS14-2026-07,AS14-2026-07:information,Information package,0.00,package,fixed,,2026-07,exclusive of GST,S12,1
+AS14-2026-07,AS14-2026-07:advice-work,Advisory assessment work,282.00,hour,rate,,2026-07,exclusive of GST,S12,1
+AS14-2026-07,AS14-2026-07:travel,Travel,141.00,hour,rate,,2026-07,exclusive of GST,S12,1
+AS14-2026-07,AS14-2026-07:initial-application,Initial application,1197.00,organisation,fixed,,2026-07,exclusive of GST,S12,1
+AS14-2026-07,AS14-2026-07:assessment-work,Assessment work,282.00,hour,rate,,2026-07,exclusive of GST,S12,1
+AS14-2026-07,AS14-2026-07:annual-administration,Annual administration,1380.00,assessment_unit,rate,,2026-07,exclusive of GST,S12,1
+AS14-2026-07,AS14-2026-07:international-recognition,International recognition levy,276.00,accreditation,rate,,2026-07,exclusive of GST,S12,1
+AS14-2026-07,AS14-2026-07:recognition-cap,Recognition levy cap,1380.00,inspection_body,cap,,2026-07,exclusive of GST,S12,1
+AS14-2026-07,AS14-2026-07:expenses,"Travel, meals and accommodation",,original_actual_cost,pass_through,,2026-07,exclusive of GST,S12,1
+AS14-2026-07,AS14-2026-07:technical-expert,Technical expert fees and expenses,,original_actual_cost,pass_through,,2026-07,exclusive of GST,S12,1
+AS14-2026-07,AS14-2026-07:annual-main,Main site,2760.00,site,site_administration,2,2026-07,exclusive of GST,S12,1
+AS14-2026-07,AS14-2026-07:annual-branch,Branch site,690.00,site,site_administration,0.5,2026-07,exclusive of GST,S12,1
+AS14-2026-07,AS14-2026-07:annual-satellite,Satellite site,69.00,site,site_administration,0.05,2026-07,exclusive of GST,S12,1

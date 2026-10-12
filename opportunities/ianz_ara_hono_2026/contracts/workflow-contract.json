@@ -1,0 +1,154 @@
+{
+  "schema": "tjlabs.ianz-workflow.v1",
+  "operation": "IANZ-33593043-ARAHONO-WORKSHARE-94FE-20261012",
+  "design": "Industrial software: neutral surfaces, clear typography, standard tables, readable full dates and named primary actions.",
+  "screens": [
+    {
+      "name": "Sources",
+      "purpose": "Retain original files, typed exports and all editions",
+      "actions": [
+        "Import original files",
+        "Map fields or document controls",
+        "Review source changes",
+        "Select current edition"
+      ],
+      "saved_state": [
+        "Full source bytes",
+        "Source register",
+        "Mapping",
+        "Coverage",
+        "Review"
+      ]
+    },
+    {
+      "name": "Accounts and sites",
+      "purpose": "Inspect original client/site relationships and label history",
+      "actions": [
+        "Review identity mapping",
+        "Link a received native key",
+        "Select site billing class"
+      ],
+      "saved_state": [
+        "Original keys",
+        "Labels by edition",
+        "Account/site links",
+        "Explicit merge decisions"
+      ]
+    },
+    {
+      "name": "Accreditations and scope",
+      "purpose": "Inspect selected published records and complete scope qualifiers",
+      "actions": [
+        "Compare editions",
+        "Review standard transition",
+        "Select affected scope"
+      ],
+      "saved_state": [
+        "Certificate/scope edition",
+        "Standard/classification",
+        "Original scope rows",
+        "Decisions"
+      ]
+    },
+    {
+      "name": "Assessments and documents",
+      "purpose": "Preserve native cases and source-owned document relationships",
+      "actions": [
+        "Receive original case export",
+        "Link complete document edition",
+        "Review assignments and findings"
+      ],
+      "saved_state": [
+        "Native cases",
+        "Original dates",
+        "Participants",
+        "Document/control maps",
+        "History"
+      ]
+    },
+    {
+      "name": "Billing",
+      "purpose": "Reconcile rate, unit, account, period and credit lineage",
+      "actions": [
+        "Choose tariff edition",
+        "Review fee applicability",
+        "Map finance account",
+        "Compare returned lines"
+      ],
+      "saved_state": [
+        "Source lines",
+        "Exact quantities/values",
+        "Rate profile",
+        "Tax/rounding choices",
+        "Cap allocation",
+        "Differences"
+      ]
+    },
+    {
+      "name": "Target mapping",
+      "purpose": "Save exact native platform bindings",
+      "actions": [
+        "Receive target schema/template",
+        "Map fields and enums",
+        "Review external keys",
+        "Export full import package"
+      ],
+      "saved_state": [
+        "Target edition",
+        "All field/member maps",
+        "Blank/date/unit choices",
+        "Request identity"
+      ]
+    },
+    {
+      "name": "Receiving",
+      "purpose": "Compare actual returned target data with the selected sources",
+      "actions": [
+        "Import returned extracts",
+        "Review differences",
+        "Save corrected mapping/source",
+        "Reopen original request"
+      ],
+      "saved_state": [
+        "Actual return bytes",
+        "Results",
+        "Decisions",
+        "Original request/result"
+      ]
+    },
+    {
+      "name": "Handover",
+      "purpose": "Deliver a complete editable programme to Voco’s team",
+      "actions": [
+        "Save project",
+        "Export all source and mappings",
+        "Download full operator package",
+        "Reopen portable handover"
+      ],
+      "saved_state": [
+        "Complete project",
+        "All assets",
+        "Reports",
+        "Guide",
+        "Source/return manifest"
+      ]
+    }
+  ],
+  "source_rules": {
+    "assessment_schedule": "Receive programme-specific schedule and original case dates; the published AS1 typical cycle remains a selectable source profile.",
+    "finding_dates": "Receive actual agreed deadlines from original case records.",
+    "transition_dates": "Preserve source date precision and issued standard; proposed transition planning remains distinct from an issued decision.",
+    "fees": "Use selected original fee edition and received finance rules.",
+    "document_access": "Map source roles to the commissioned target access model."
+  },
+  "operating_sequence": [
+    "Receive complete original source and target metadata",
+    "Save reviewed mappings and source decisions",
+    "Produce native import package",
+    "Retain actual accepted native request/result",
+    "Receive complete target extracts",
+    "Compare all selected records/assets/amounts",
+    "Save corrections and reviewed differences",
+    "Export and independently reopen complete handover"
+  ]
+}

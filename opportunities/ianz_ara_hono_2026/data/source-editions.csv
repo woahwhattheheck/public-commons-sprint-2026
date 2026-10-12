@@ -1,0 +1,6 @@
+edition_key,issuer_programme_id,issue,edition_date,source_id,coverage,published_organisation,method_observation,current_selection
+826-issue22-indexed,b06f40dc-4251-4157-9579-6616beb58425,22,2025-03-10,S18,indexed excerpt,MicroAquaTech,USEPA 1623 (Filtamax) Filtration/IMS/IFA (modified),false
+826-issue23-original,b06f40dc-4251-4157-9579-6616beb58425,23,2026-01-16,S15,current original PDF text,MicroAquaTech,"USEPA 1623 (2005, superseded) (Filtamax) Filtration/IMS/IFA (modified)",true
+791-issue51-indexed,b0cd4736-6581-4ec3-9088-07cf259032fe,51,2025-07-02,S19,indexed excerpt,Hamilton City Council,E. coli,false
+791-issue53-original,b0cd4736-6581-4ec3-9088-07cf259032fe,53,2026-08-26,S16,current original PDF text,IAWAI Flowing Waters Laboratory,Escherichia coli,true
+157-issue8-original,ca818460-aa11-432d-871b-c79da794cb64,8,2026-06-11,S17,current original PDF text,Mechanical & Engineering Compliance NZ Ltd,ISO/IEC 17020:2012; Type A,true

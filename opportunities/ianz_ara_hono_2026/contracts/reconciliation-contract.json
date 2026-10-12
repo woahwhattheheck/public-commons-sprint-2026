@@ -1,0 +1,114 @@
+{
+  "schema": "tjlabs.ianz-reconciliation.v1",
+  "operation": "IANZ-33593043-ARAHONO-WORKSHARE-94FE-20261012",
+  "run_identity": "original operation + immutable project revision + exact mapping version + source/return manifests",
+  "checks": [
+    {
+      "id": "source-members",
+      "scope": "Every selected complete source or declared excerpt",
+      "method": "Compare original source register, byte manifests and exact selected edition IDs",
+      "result_fields": [
+        "missing",
+        "extra",
+        "changed",
+        "coverage"
+      ]
+    },
+    {
+      "id": "identity-continuity",
+      "scope": "Issuer programme, client, accreditation, site and target keys",
+      "method": "Compare keyed records and received target ID map; retain one-to-many changes as explicit decisions",
+      "result_fields": [
+        "missing_keys",
+        "duplicate_keys",
+        "unmapped_target_ids",
+        "reviewed_relationships"
+      ]
+    },
+    {
+      "id": "scope-edition",
+      "scope": "Selected scope rows",
+      "method": "Compare original activity, code, method, qualifiers, site scope and standard edition",
+      "result_fields": [
+        "field_differences",
+        "edition_differences",
+        "qualifier_differences"
+      ]
+    },
+    {
+      "id": "documents",
+      "scope": "All complete original document assets",
+      "method": "Match content hashes, byte counts, logical edition relationships and native associations",
+      "result_fields": [
+        "missing_assets",
+        "changed_assets",
+        "unlinked_assets",
+        "visibility_differences"
+      ]
+    },
+    {
+      "id": "workflow-records",
+      "scope": "Original cases, assignments, findings, decisions and their history",
+      "method": "Compare original IDs, status, effective times, source references and native revision",
+      "result_fields": [
+        "record_differences",
+        "dangling_relations",
+        "unmapped_enums"
+      ]
+    },
+    {
+      "id": "billing-lines",
+      "scope": "Every original charge or credit line",
+      "method": "Compare exact net/tax/gross values by original invoice and line ID before grouped totals",
+      "result_fields": [
+        "missing_lines",
+        "amount_differences",
+        "unit_differences",
+        "tax_basis_differences",
+        "cap_allocations"
+      ]
+    },
+    {
+      "id": "billing-groups",
+      "scope": "Explicit source currency/tax/profile/account/period groups",
+      "method": "Sum exact values using received rounding policy; compare each group with original control totals",
+      "result_fields": [
+        "source_total",
+        "target_total",
+        "difference",
+        "rounding_basis"
+      ]
+    },
+    {
+      "id": "editable-reopen",
+      "scope": "Whole handover",
+      "method": "Open the saved project in a clean application instance; reproduce selected source, mappings, review and report from the complete retained package",
+      "result_fields": [
+        "opened_revision",
+        "selected_editions",
+        "mapping_version",
+        "report_identity"
+      ]
+    }
+  ],
+  "difference_review": {
+    "choices": [
+      "correct mapping",
+      "receive corrected original source edition",
+      "accept specified target representation with a saved reversible mapping",
+      "record explicit scope change",
+      "keep difference visible"
+    ],
+    "record": [
+      "difference_id",
+      "source_value",
+      "target_value",
+      "reason",
+      "reviewer",
+      "time",
+      "mapping_or_source_revision"
+    ]
+  },
+  "result_rule": "Completion is based on the complete selected source cohort and actual returned target records; retained unresolved differences remain visible in the report and subsequent work queue.",
+  "repeat_rule": "Read the original accepted request and saved result before replaying an interrupted native import. Reconciliation-only operations read existing inputs and results."
+}

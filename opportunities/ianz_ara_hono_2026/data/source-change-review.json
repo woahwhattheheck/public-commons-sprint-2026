@@ -1,0 +1,72 @@
+{
+  "schema": "tjlabs.source-change-review.v1",
+  "operation": "IANZ-33593043-ARAHONO-WORKSHARE-94FE-20261012",
+  "reviews": [
+    {
+      "id": "791-edition-51-to-53",
+      "anchor": {
+        "issuer_programme_id": "b0cd4736-6581-4ec3-9088-07cf259032fe",
+        "issuer_client_number": "149",
+        "accreditation_number": "791"
+      },
+      "before": "791-issue51-indexed",
+      "after": "791-issue53-original",
+      "observations": [
+        {
+          "field": "published_organisation",
+          "before": "Hamilton City Council",
+          "after": "IAWAI Flowing Waters Laboratory"
+        },
+        {
+          "field": "scope_label",
+          "before": "E. coli",
+          "after": "Escherichia coli"
+        }
+      ],
+      "retained_decision": "Maintain the stable issuer programme/account identifiers and both source editions; select issue 53 for current published fields.",
+      "legal_identity_rule": "A matching IANZ account does not supply an NZBN or establish legal-party equivalence; retain any received legal identity separately.",
+      "coverage": "The older source is an indexed excerpt; compare only its actually observed fields."
+    },
+    {
+      "id": "826-edition-22-to-23",
+      "anchor": {
+        "issuer_programme_id": "b06f40dc-4251-4157-9579-6616beb58425",
+        "accreditation_number": "826"
+      },
+      "before": "826-issue22-indexed",
+      "after": "826-issue23-original",
+      "observations": [
+        {
+          "field": "method_reference",
+          "before": "USEPA 1623 (Filtamax) Filtration/IMS/IFA (modified)",
+          "after": "USEPA 1623 (2005, superseded) (Filtamax) Filtration/IMS/IFA (modified)"
+        }
+      ],
+      "retained_decision": "Preserve exact current method qualifier and both editions. The printed word superseded is part of the current published schedule, not a local reason to drop the method."
+    },
+    {
+      "id": "157-2012-to-published-transition-profile",
+      "anchor": {
+        "issuer_programme_id": "ca818460-aa11-432d-871b-c79da794cb64",
+        "accreditation_number": "157"
+      },
+      "current": "157-issue8-original",
+      "transition_source": "S13",
+      "observations": [
+        {
+          "field": "current_standard",
+          "value": "ISO/IEC 17020:2012"
+        },
+        {
+          "field": "current_classification",
+          "value": "Type A"
+        },
+        {
+          "field": "successor_standard_available",
+          "value": "ISO/IEC 17020:2026"
+        }
+      ],
+      "retained_decision": "Keep issue 8 as its own observed current publication and receive any later issued transition as a new source edition."
+    }
+  ]
+}

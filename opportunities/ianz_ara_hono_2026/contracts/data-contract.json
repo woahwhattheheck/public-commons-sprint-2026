@@ -1,0 +1,1300 @@
+{
+  "schema": "tjlabs.ianz-data-contract.v1",
+  "operation": "IANZ-33593043-ARAHONO-WORKSHARE-94FE-20261012",
+  "authorship": "Proposed implementation contract built from the supplied original source cohort; native buyer field names are received into mapping profiles.",
+  "identity_rules": [
+    "Keep original textual identifiers and issuer namespaces; never use a display label as the only primary key.",
+    "Treat source edition and observation time as separate facts.",
+    "Every materialised field retains its source edition and locator.",
+    "Keep public account identity separate from legal-party and target-account bindings.",
+    "Preserve original nullable dates, exact decimals, historical standard editions and complete qualifiers.",
+    "Only complete original source material can satisfy a whole-file manifest; indexed excerpts retain their stated coverage."
+  ],
+  "entities": [
+    {
+      "name": "source_edition",
+      "key": [
+        "source_edition_id"
+      ],
+      "description": "One observed edition of an original file or a separately identified indexed excerpt.",
+      "fields": [
+        {
+          "name": "source_edition_id",
+          "type": "string",
+          "required": true,
+          "meaning": "Stable operation-local edition ID"
+        },
+        {
+          "name": "source_id",
+          "type": "string",
+          "required": true,
+          "meaning": "Source-register key"
+        },
+        {
+          "name": "source_kind",
+          "type": "enum",
+          "required": true,
+          "meaning": "original_binary | original_pdf_text | indexed_excerpt | structured_export"
+        },
+        {
+          "name": "source_url",
+          "type": "uri",
+          "required": true,
+          "meaning": "Original retained source location"
+        },
+        {
+          "name": "retrieved_at",
+          "type": "datetime",
+          "required": true,
+          "meaning": "Actual retrieval clock"
+        },
+        {
+          "name": "declared_issue",
+          "type": "string",
+          "required": false,
+          "meaning": "Issuer edition exactly as printed"
+        },
+        {
+          "name": "declared_date",
+          "type": "date-or-month",
+          "required": false,
+          "meaning": "Date with original precision"
+        },
+        {
+          "name": "original_filename",
+          "type": "string",
+          "required": false,
+          "meaning": "Original file name"
+        },
+        {
+          "name": "media_type",
+          "type": "string",
+          "required": false,
+          "meaning": "Observed type"
+        },
+        {
+          "name": "original_byte_length",
+          "type": "integer",
+          "required": false,
+          "meaning": "Actual byte count after original file receiving"
+        },
+        {
+          "name": "original_sha256",
+          "type": "sha256",
+          "required": false,
+          "meaning": "Digest of original bytes only"
+        },
+        {
+          "name": "transcription_sha256",
+          "type": "sha256",
+          "required": false,
+          "meaning": "Separate digest of authored structured transcription"
+        },
+        {
+          "name": "coverage",
+          "type": "string",
+          "required": true,
+          "meaning": "Whole original or exact available excerpt"
+        },
+        {
+          "name": "retained_asset_path",
+          "type": "relative-path",
+          "required": false,
+          "meaning": "Portable original asset in the complete handover"
+        },
+        {
+          "name": "supersedes_edition_id",
+          "type": "foreign-key",
+          "required": false,
+          "meaning": "Prior observed edition; preserves its body"
+        },
+        {
+          "name": "selected_for_current",
+          "type": "boolean",
+          "required": true,
+          "meaning": "Saved operator selection"
+        },
+        {
+          "name": "provenance_notes",
+          "type": "string",
+          "required": false,
+          "meaning": "Observed acquisition/edition qualifications"
+        }
+      ]
+    },
+    {
+      "name": "programme",
+      "key": [
+        "programme_key"
+      ],
+      "description": "IANZ programme with criteria and source-owned edition references.",
+      "fields": [
+        {
+          "name": "programme_key",
+          "type": "string",
+          "required": true,
+          "meaning": "Staging identifier independent of display label"
+        },
+        {
+          "name": "published_label",
+          "type": "string",
+          "required": true,
+          "meaning": "Current observed programme label"
+        },
+        {
+          "name": "navigation_group",
+          "type": "string",
+          "required": false,
+          "meaning": "Published directory grouping"
+        },
+        {
+          "name": "source_edition_id",
+          "type": "foreign-key",
+          "required": true,
+          "meaning": "Original programme source"
+        },
+        {
+          "name": "general_criteria_profile_id",
+          "type": "foreign-key",
+          "required": false,
+          "meaning": "Received applicable criteria set"
+        },
+        {
+          "name": "assessment_schedule_profile_id",
+          "type": "foreign-key",
+          "required": false,
+          "meaning": "Programme-specific schedule choices"
+        },
+        {
+          "name": "fee_profile_id",
+          "type": "foreign-key",
+          "required": false,
+          "meaning": "Explicit selected fee edition"
+        }
+      ]
+    },
+    {
+      "name": "issuer_account",
+      "key": [
+        "issuer_namespace",
+        "issuer_client_number"
+      ],
+      "description": "Original IANZ client identity and its source-dated labels; legal party identity is separate.",
+      "fields": [
+        {
+          "name": "issuer_namespace",
+          "type": "string",
+          "required": true,
+          "meaning": "IANZ for the supplied public cohort"
+        },
+        {
+          "name": "issuer_client_number",
+          "type": "string",
+          "required": true,
+          "meaning": "Preserve original textual client number"
+        },
+        {
+          "name": "display_name",
+          "type": "string",
+          "required": true,
+          "meaning": "Selected original source label"
+        },
+        {
+          "name": "legal_party_id",
+          "type": "string",
+          "required": false,
+          "meaning": "Received legal identity, such as an original NZBN; never guessed from name"
+        },
+        {
+          "name": "parent_account_key",
+          "type": "foreign-key",
+          "required": false,
+          "meaning": "Received organisation structure"
+        },
+        {
+          "name": "billing_account_key",
+          "type": "string",
+          "required": false,
+          "meaning": "Original finance account key"
+        },
+        {
+          "name": "source_edition_id",
+          "type": "foreign-key",
+          "required": true,
+          "meaning": "Current label provenance"
+        },
+        {
+          "name": "label_history",
+          "type": "array",
+          "required": true,
+          "meaning": "All observed names with original editions"
+        },
+        {
+          "name": "merge_decisions",
+          "type": "array",
+          "required": true,
+          "meaning": "Explicit identity decisions and evidence"
+        },
+        {
+          "name": "tax_registration",
+          "type": "string",
+          "required": false,
+          "meaning": "Received finance data"
+        },
+        {
+          "name": "visibility",
+          "type": "enum",
+          "required": true,
+          "meaning": "public | client_private | internal"
+        }
+      ]
+    },
+    {
+      "name": "facility",
+      "key": [
+        "facility_key"
+      ],
+      "description": "A source-identified location or assessment unit belonging to an issuer account.",
+      "fields": [
+        {
+          "name": "facility_key",
+          "type": "string",
+          "required": true,
+          "meaning": "Original site key or saved mapping from complete source identity"
+        },
+        {
+          "name": "issuer_account_key",
+          "type": "foreign-key",
+          "required": true,
+          "meaning": "Original client account"
+        },
+        {
+          "name": "published_label",
+          "type": "string",
+          "required": true,
+          "meaning": "Site label retained as given"
+        },
+        {
+          "name": "address_text",
+          "type": "string",
+          "required": false,
+          "meaning": "Original location text"
+        },
+        {
+          "name": "source_site_key",
+          "type": "string",
+          "required": false,
+          "meaning": "Received native site identifier"
+        },
+        {
+          "name": "site_kind",
+          "type": "enum",
+          "required": false,
+          "meaning": "main | branch | satellite | other | unresolved"
+        },
+        {
+          "name": "assessment_units",
+          "type": "decimal-string",
+          "required": false,
+          "meaning": "Explicit original factor; rational calculation"
+        },
+        {
+          "name": "fee_profile_id",
+          "type": "foreign-key",
+          "required": false,
+          "meaning": "Dated applicable rate schedule"
+        },
+        {
+          "name": "valid_from",
+          "type": "date",
+          "required": false,
+          "meaning": "Received effective date"
+        },
+        {
+          "name": "valid_to",
+          "type": "date",
+          "required": false,
+          "meaning": "Received effective end date"
+        },
+        {
+          "name": "source_edition_id",
+          "type": "foreign-key",
+          "required": true,
+          "meaning": "Source of site relationship"
+        }
+      ]
+    },
+    {
+      "name": "accreditation",
+      "key": [
+        "issuer_programme_id"
+      ],
+      "description": "Stable accreditation record with dated scope and certificate observations.",
+      "fields": [
+        {
+          "name": "issuer_programme_id",
+          "type": "string",
+          "required": true,
+          "meaning": "Original published Program UUID when present"
+        },
+        {
+          "name": "issuer_account_key",
+          "type": "foreign-key",
+          "required": true,
+          "meaning": "IANZ client identity"
+        },
+        {
+          "name": "accreditation_number",
+          "type": "string",
+          "required": true,
+          "meaning": "Original textual accreditation number"
+        },
+        {
+          "name": "programme_key",
+          "type": "foreign-key",
+          "required": true,
+          "meaning": "Programme"
+        },
+        {
+          "name": "facility_keys",
+          "type": "array",
+          "required": true,
+          "meaning": "Explicit site associations"
+        },
+        {
+          "name": "initial_accreditation_date",
+          "type": "date",
+          "required": false,
+          "meaning": "Original date"
+        },
+        {
+          "name": "selected_scope_edition_id",
+          "type": "foreign-key",
+          "required": true,
+          "meaning": "Current chosen source edition"
+        },
+        {
+          "name": "standard_edition",
+          "type": "string",
+          "required": true,
+          "meaning": "Exact issued standard and edition"
+        },
+        {
+          "name": "inspection_classification",
+          "type": "string",
+          "required": false,
+          "meaning": "Original edition-specific value"
+        },
+        {
+          "name": "publication_observation",
+          "type": "string",
+          "required": true,
+          "meaning": "What the current source actually exposed"
+        },
+        {
+          "name": "issuer_status",
+          "type": "string",
+          "required": false,
+          "meaning": "Received authoritative status and effective time"
+        },
+        {
+          "name": "expiry_date",
+          "type": "date",
+          "required": false,
+          "meaning": "Nullable; do not fabricate a renewal expiry"
+        },
+        {
+          "name": "status_decision_id",
+          "type": "foreign-key",
+          "required": false,
+          "meaning": "Original decision supporting status"
+        },
+        {
+          "name": "source_edition_id",
+          "type": "foreign-key",
+          "required": true,
+          "meaning": "Original source"
+        }
+      ]
+    },
+    {
+      "name": "scope_item",
+      "key": [
+        "scope_item_key",
+        "source_edition_id"
+      ],
+      "description": "An activity and all its original qualifications in a particular published scope edition.",
+      "fields": [
+        {
+          "name": "scope_item_key",
+          "type": "string",
+          "required": true,
+          "meaning": "Stable item or explicitly reviewed mapping"
+        },
+        {
+          "name": "accreditation_key",
+          "type": "foreign-key",
+          "required": true,
+          "meaning": "Parent accreditation"
+        },
+        {
+          "name": "source_edition_id",
+          "type": "foreign-key",
+          "required": true,
+          "meaning": "Original edition"
+        },
+        {
+          "name": "activity",
+          "type": "string",
+          "required": true,
+          "meaning": "Analysis, sampling, inspection or original activity"
+        },
+        {
+          "name": "classification",
+          "type": "string",
+          "required": false,
+          "meaning": "Original code retained as text"
+        },
+        {
+          "name": "item_label",
+          "type": "string",
+          "required": true,
+          "meaning": "Original observed item"
+        },
+        {
+          "name": "method_reference",
+          "type": "string",
+          "required": false,
+          "meaning": "Exact method edition and qualifier"
+        },
+        {
+          "name": "conditions",
+          "type": "array",
+          "required": true,
+          "meaning": "All applicable original limitations and qualifiers"
+        },
+        {
+          "name": "facility_keys",
+          "type": "array",
+          "required": true,
+          "meaning": "Explicit site applicability"
+        },
+        {
+          "name": "source_page",
+          "type": "integer",
+          "required": false,
+          "meaning": "One-based original PDF page"
+        },
+        {
+          "name": "source_locator",
+          "type": "string",
+          "required": false,
+          "meaning": "Table/range/paragraph locator"
+        },
+        {
+          "name": "coverage",
+          "type": "string",
+          "required": true,
+          "meaning": "Complete native item or selected public transcription"
+        },
+        {
+          "name": "decision_id",
+          "type": "foreign-key",
+          "required": false,
+          "meaning": "Original extension/suspension decision"
+        },
+        {
+          "name": "effective_from",
+          "type": "date",
+          "required": false,
+          "meaning": "Received effective date"
+        },
+        {
+          "name": "effective_to",
+          "type": "date",
+          "required": false,
+          "meaning": "Received end date"
+        }
+      ]
+    },
+    {
+      "name": "document",
+      "key": [
+        "document_key",
+        "document_edition_id"
+      ],
+      "description": "Versioned source form, submitted material or generated document with its native ownership.",
+      "fields": [
+        {
+          "name": "document_key",
+          "type": "string",
+          "required": true,
+          "meaning": "Logical document identity"
+        },
+        {
+          "name": "document_edition_id",
+          "type": "foreign-key",
+          "required": true,
+          "meaning": "Immutable content edition"
+        },
+        {
+          "name": "document_role",
+          "type": "string",
+          "required": true,
+          "meaning": "Application, scope, procedure, finding response, template, invoice or received role"
+        },
+        {
+          "name": "programme_key",
+          "type": "foreign-key",
+          "required": false,
+          "meaning": "Applicable programme"
+        },
+        {
+          "name": "accreditation_key",
+          "type": "foreign-key",
+          "required": false,
+          "meaning": "Subject accreditation"
+        },
+        {
+          "name": "assessment_key",
+          "type": "foreign-key",
+          "required": false,
+          "meaning": "Original assessment"
+        },
+        {
+          "name": "participant_key",
+          "type": "foreign-key",
+          "required": false,
+          "meaning": "Subject person where applicable"
+        },
+        {
+          "name": "original_filename",
+          "type": "string",
+          "required": true,
+          "meaning": "Preserve original file name"
+        },
+        {
+          "name": "display_name",
+          "type": "string",
+          "required": true,
+          "meaning": "Readable operator label"
+        },
+        {
+          "name": "template_id",
+          "type": "string",
+          "required": false,
+          "meaning": "Original content-control/template identity"
+        },
+        {
+          "name": "template_edition",
+          "type": "string",
+          "required": false,
+          "meaning": "Printed or native form edition"
+        },
+        {
+          "name": "content_control_map",
+          "type": "object",
+          "required": false,
+          "meaning": "Received original control IDs, table paths and repeated groups"
+        },
+        {
+          "name": "content_sha256",
+          "type": "sha256",
+          "required": true,
+          "meaning": "Digest of actual document bytes"
+        },
+        {
+          "name": "asset_path",
+          "type": "relative-path",
+          "required": true,
+          "meaning": "Portable original file"
+        },
+        {
+          "name": "visibility",
+          "type": "enum",
+          "required": true,
+          "meaning": "public | client_private | assessor_private | internal"
+        },
+        {
+          "name": "submitted_at",
+          "type": "datetime",
+          "required": false,
+          "meaning": "Original submission time"
+        },
+        {
+          "name": "supersedes",
+          "type": "foreign-key",
+          "required": false,
+          "meaning": "Prior complete edition"
+        }
+      ]
+    },
+    {
+      "name": "assessment",
+      "key": [
+        "assessment_key"
+      ],
+      "description": "Original case scheduling and documentation joins, retained independently of certificate validity.",
+      "fields": [
+        {
+          "name": "assessment_key",
+          "type": "string",
+          "required": true,
+          "meaning": "Native case identifier"
+        },
+        {
+          "name": "accreditation_key",
+          "type": "foreign-key",
+          "required": true,
+          "meaning": "Subject accreditation"
+        },
+        {
+          "name": "assessment_kind",
+          "type": "string",
+          "required": true,
+          "meaning": "Original kind"
+        },
+        {
+          "name": "planned_date",
+          "type": "date",
+          "required": false,
+          "meaning": "Saved planned date"
+        },
+        {
+          "name": "confirmed_date",
+          "type": "date",
+          "required": false,
+          "meaning": "Original confirmed date"
+        },
+        {
+          "name": "actual_start",
+          "type": "datetime",
+          "required": false,
+          "meaning": "Actual source time"
+        },
+        {
+          "name": "actual_finish",
+          "type": "datetime",
+          "required": false,
+          "meaning": "Actual source time"
+        },
+        {
+          "name": "lead_assessor_key",
+          "type": "foreign-key",
+          "required": false,
+          "meaning": "Original assignment"
+        },
+        {
+          "name": "participant_keys",
+          "type": "array",
+          "required": true,
+          "meaning": "Native appointments"
+        },
+        {
+          "name": "scope_item_keys",
+          "type": "array",
+          "required": true,
+          "meaning": "Reviewed assessment scope"
+        },
+        {
+          "name": "criteria_edition_ids",
+          "type": "array",
+          "required": true,
+          "meaning": "Applicable retained criteria"
+        },
+        {
+          "name": "document_requirements",
+          "type": "array",
+          "required": true,
+          "meaning": "Original request and due-date basis"
+        },
+        {
+          "name": "source_edition_id",
+          "type": "foreign-key",
+          "required": true,
+          "meaning": "Original assessment export"
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "required": true,
+          "meaning": "Original case status"
+        },
+        {
+          "name": "native_version",
+          "type": "string",
+          "required": false,
+          "meaning": "Concurrency value from source"
+        }
+      ]
+    },
+    {
+      "name": "participant",
+      "key": [
+        "participant_key"
+      ],
+      "description": "Original professional role and assignment, with programme-specific permissions.",
+      "fields": [
+        {
+          "name": "participant_key",
+          "type": "string",
+          "required": true,
+          "meaning": "Received person/identity key"
+        },
+        {
+          "name": "display_name",
+          "type": "string",
+          "required": true,
+          "meaning": "Source name"
+        },
+        {
+          "name": "organisation_key",
+          "type": "foreign-key",
+          "required": false,
+          "meaning": "Received account association"
+        },
+        {
+          "name": "role",
+          "type": "string",
+          "required": true,
+          "meaning": "Original staff/client/assessor/expert role"
+        },
+        {
+          "name": "native_identity_key",
+          "type": "string",
+          "required": false,
+          "meaning": "Actual account binding"
+        },
+        {
+          "name": "assignment_keys",
+          "type": "array",
+          "required": true,
+          "meaning": "Original case appointments"
+        },
+        {
+          "name": "competence_scope_keys",
+          "type": "array",
+          "required": true,
+          "meaning": "Received competence/authorisation scope"
+        },
+        {
+          "name": "source_edition_id",
+          "type": "foreign-key",
+          "required": true,
+          "meaning": "Original role source"
+        },
+        {
+          "name": "visibility",
+          "type": "string",
+          "required": true,
+          "meaning": "Native access class"
+        }
+      ]
+    },
+    {
+      "name": "finding",
+      "key": [
+        "finding_key"
+      ],
+      "description": "Original assessment finding and its complete response history.",
+      "fields": [
+        {
+          "name": "finding_key",
+          "type": "string",
+          "required": true,
+          "meaning": "Original identifier"
+        },
+        {
+          "name": "assessment_key",
+          "type": "foreign-key",
+          "required": true,
+          "meaning": "Original case"
+        },
+        {
+          "name": "classification",
+          "type": "string",
+          "required": true,
+          "meaning": "Source classification"
+        },
+        {
+          "name": "criteria_reference",
+          "type": "string",
+          "required": false,
+          "meaning": "Original applicable edition and clause"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": true,
+          "meaning": "Source content"
+        },
+        {
+          "name": "agreed_due_date",
+          "type": "date",
+          "required": false,
+          "meaning": "Original agreed date, not recalculated from publication"
+        },
+        {
+          "name": "response_document_keys",
+          "type": "array",
+          "required": true,
+          "meaning": "Complete response editions"
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "required": true,
+          "meaning": "Original status"
+        },
+        {
+          "name": "clearance_decision_id",
+          "type": "foreign-key",
+          "required": false,
+          "meaning": "Source decision"
+        },
+        {
+          "name": "source_edition_id",
+          "type": "foreign-key",
+          "required": true,
+          "meaning": "Original finding source"
+        }
+      ]
+    },
+    {
+      "name": "issuer_decision",
+      "key": [
+        "decision_key"
+      ],
+      "description": "Original accreditation or scope decision with affected records and publication state.",
+      "fields": [
+        {
+          "name": "decision_key",
+          "type": "string",
+          "required": true,
+          "meaning": "Native decision identifier"
+        },
+        {
+          "name": "accreditation_key",
+          "type": "foreign-key",
+          "required": true,
+          "meaning": "Subject"
+        },
+        {
+          "name": "decision_kind",
+          "type": "string",
+          "required": true,
+          "meaning": "Original decision type"
+        },
+        {
+          "name": "affected_scope_keys",
+          "type": "array",
+          "required": true,
+          "meaning": "Explicit partial or whole scope"
+        },
+        {
+          "name": "issued_at",
+          "type": "datetime",
+          "required": true,
+          "meaning": "Original issue time"
+        },
+        {
+          "name": "effective_at",
+          "type": "datetime",
+          "required": false,
+          "meaning": "Original effective time"
+        },
+        {
+          "name": "source_document_key",
+          "type": "foreign-key",
+          "required": true,
+          "meaning": "Complete decision source"
+        },
+        {
+          "name": "public_projection",
+          "type": "object",
+          "required": true,
+          "meaning": "Source-authorised published fields"
+        },
+        {
+          "name": "private_reason_document_keys",
+          "type": "array",
+          "required": true,
+          "meaning": "Original access-controlled reasons"
+        },
+        {
+          "name": "native_version",
+          "type": "string",
+          "required": false,
+          "meaning": "Original revision"
+        }
+      ]
+    },
+    {
+      "name": "fee_profile",
+      "key": [
+        "fee_profile_id"
+      ],
+      "description": "A dated published tariff and its explicit receiving choices.",
+      "fields": [
+        {
+          "name": "fee_profile_id",
+          "type": "string",
+          "required": true,
+          "meaning": "Original schedule plus edition"
+        },
+        {
+          "name": "source_edition_id",
+          "type": "foreign-key",
+          "required": true,
+          "meaning": "Full rate source"
+        },
+        {
+          "name": "programme_key",
+          "type": "foreign-key",
+          "required": true,
+          "meaning": "Applicable programme"
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true,
+          "meaning": "NZD for public cohort"
+        },
+        {
+          "name": "tax_basis",
+          "type": "string",
+          "required": true,
+          "meaning": "Original exclusive/inclusive classification"
+        },
+        {
+          "name": "published_period",
+          "type": "string",
+          "required": true,
+          "meaning": "Original 2026/27 label"
+        },
+        {
+          "name": "publication_month",
+          "type": "month",
+          "required": true,
+          "meaning": "Observed July 2026"
+        },
+        {
+          "name": "charge_rules",
+          "type": "array",
+          "required": true,
+          "meaning": "Exact rate, unit, cap and exceptions"
+        },
+        {
+          "name": "tax_rule",
+          "type": "object",
+          "required": false,
+          "meaning": "Received billing tax configuration"
+        },
+        {
+          "name": "rounding_rule",
+          "type": "object",
+          "required": false,
+          "meaning": "Received invoice policy"
+        },
+        {
+          "name": "effective_dates",
+          "type": "object",
+          "required": false,
+          "meaning": "Original contractual effective dates"
+        }
+      ]
+    },
+    {
+      "name": "charge_line",
+      "key": [
+        "charge_line_key"
+      ],
+      "description": "One original financial line, retained before any aggregation.",
+      "fields": [
+        {
+          "name": "charge_line_key",
+          "type": "string",
+          "required": true,
+          "meaning": "Native invoice/line identity"
+        },
+        {
+          "name": "billing_account_key",
+          "type": "string",
+          "required": true,
+          "meaning": "Original finance account"
+        },
+        {
+          "name": "accreditation_key",
+          "type": "foreign-key",
+          "required": false,
+          "meaning": "Original accreditation join"
+        },
+        {
+          "name": "assessment_key",
+          "type": "foreign-key",
+          "required": false,
+          "meaning": "Original assessment join"
+        },
+        {
+          "name": "facility_key",
+          "type": "foreign-key",
+          "required": false,
+          "meaning": "Original site join"
+        },
+        {
+          "name": "fee_profile_id",
+          "type": "foreign-key",
+          "required": true,
+          "meaning": "Selected original rate edition"
+        },
+        {
+          "name": "tariff_key",
+          "type": "string",
+          "required": true,
+          "meaning": "Explicit applicable charge"
+        },
+        {
+          "name": "quantity",
+          "type": "decimal-string",
+          "required": true,
+          "meaning": "Source quantity"
+        },
+        {
+          "name": "quantity_unit",
+          "type": "string",
+          "required": true,
+          "meaning": "Hour, accreditation, unit, site or original unit"
+        },
+        {
+          "name": "rate",
+          "type": "decimal-string",
+          "required": false,
+          "meaning": "Source rate"
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true,
+          "meaning": "Original currency"
+        },
+        {
+          "name": "net_amount",
+          "type": "decimal-string",
+          "required": true,
+          "meaning": "Exact original or calculated net amount"
+        },
+        {
+          "name": "tax_amount",
+          "type": "decimal-string",
+          "required": false,
+          "meaning": "Original or explicitly configured tax"
+        },
+        {
+          "name": "gross_amount",
+          "type": "decimal-string",
+          "required": false,
+          "meaning": "Received total"
+        },
+        {
+          "name": "billing_period",
+          "type": "string",
+          "required": true,
+          "meaning": "Original period"
+        },
+        {
+          "name": "credit_of_line_key",
+          "type": "foreign-key",
+          "required": false,
+          "meaning": "Original correction lineage"
+        },
+        {
+          "name": "source_document_key",
+          "type": "foreign-key",
+          "required": true,
+          "meaning": "Original financial source"
+        },
+        {
+          "name": "cap_group_key",
+          "type": "string",
+          "required": false,
+          "meaning": "Explicit cap allocation group"
+        }
+      ]
+    },
+    {
+      "name": "mapping_profile",
+      "key": [
+        "mapping_id",
+        "version"
+      ],
+      "description": "Saved field/member/enum/unit mapping into the receiving platform.",
+      "fields": [
+        {
+          "name": "mapping_id",
+          "type": "string",
+          "required": true,
+          "meaning": "Stable mapping"
+        },
+        {
+          "name": "version",
+          "type": "integer",
+          "required": true,
+          "meaning": "Immutable edition number"
+        },
+        {
+          "name": "source_edition_ids",
+          "type": "array",
+          "required": true,
+          "meaning": "Exact source selections"
+        },
+        {
+          "name": "target_product",
+          "type": "string",
+          "required": false,
+          "meaning": "Actual receiving platform"
+        },
+        {
+          "name": "target_environment_id",
+          "type": "string",
+          "required": false,
+          "meaning": "Actual commissioned environment"
+        },
+        {
+          "name": "target_schema_version",
+          "type": "string",
+          "required": false,
+          "meaning": "Observed schema edition"
+        },
+        {
+          "name": "field_maps",
+          "type": "array",
+          "required": true,
+          "meaning": "Canonical field to exact native field"
+        },
+        {
+          "name": "identity_maps",
+          "type": "array",
+          "required": true,
+          "meaning": "Native external keys and explicit merges"
+        },
+        {
+          "name": "enum_maps",
+          "type": "array",
+          "required": true,
+          "meaning": "Exact edition-specific values"
+        },
+        {
+          "name": "unit_maps",
+          "type": "array",
+          "required": true,
+          "meaning": "Explicit rational conversions"
+        },
+        {
+          "name": "blank_policies",
+          "type": "array",
+          "required": true,
+          "meaning": "Preserve, clear or reject per field"
+        },
+        {
+          "name": "date_policies",
+          "type": "array",
+          "required": true,
+          "meaning": "Precision, timezone and native representation"
+        },
+        {
+          "name": "native_import_profile",
+          "type": "object",
+          "required": false,
+          "meaning": "Original import template/API contract"
+        },
+        {
+          "name": "review",
+          "type": "object",
+          "required": true,
+          "meaning": "Saved reviewer and change decisions"
+        }
+      ]
+    },
+    {
+      "name": "receiving_run",
+      "key": [
+        "receiving_run_id"
+      ],
+      "description": "Full retained import/export/reconciliation operation and editable handover.",
+      "fields": [
+        {
+          "name": "receiving_run_id",
+          "type": "string",
+          "required": true,
+          "meaning": "Original stable operation ID"
+        },
+        {
+          "name": "project_revision",
+          "type": "string",
+          "required": true,
+          "meaning": "Saved immutable revision"
+        },
+        {
+          "name": "mapping_id",
+          "type": "foreign-key",
+          "required": true,
+          "meaning": "Exact receiving mapping edition"
+        },
+        {
+          "name": "source_edition_ids",
+          "type": "array",
+          "required": true,
+          "meaning": "All selected source editions"
+        },
+        {
+          "name": "outgoing_manifest",
+          "type": "object",
+          "required": true,
+          "meaning": "Complete exported members and original hashes"
+        },
+        {
+          "name": "returned_manifest",
+          "type": "object",
+          "required": false,
+          "meaning": "Complete actual target extracts"
+        },
+        {
+          "name": "native_result",
+          "type": "object",
+          "required": false,
+          "meaning": "Actual accepted import result"
+        },
+        {
+          "name": "reconciliation",
+          "type": "object",
+          "required": true,
+          "meaning": "Row/identity/field/amount results"
+        },
+        {
+          "name": "review_decisions",
+          "type": "array",
+          "required": true,
+          "meaning": "Full accepted exception history"
+        },
+        {
+          "name": "saved_request_id",
+          "type": "string",
+          "required": true,
+          "meaning": "Original request for replay"
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "required": true,
+          "meaning": "Source, prepared, imported, compared or completed"
+        },
+        {
+          "name": "handover_manifest",
+          "type": "object",
+          "required": false,
+          "meaning": "Complete saved portable package"
+        }
+      ]
+    }
+  ]
+}

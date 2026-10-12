@@ -1,0 +1,63 @@
+{
+  "schema": "tjlabs.accreditation-transition.v1",
+  "operation": "IANZ-33593043-ARAHONO-WORKSHARE-94FE-20261012",
+  "source_id": "S13",
+  "source_edition": "May 2026",
+  "programme_key": "inspection-bodies",
+  "from_standard": "ISO/IEC 17020:2012",
+  "to_standard": "ISO/IEC 17020:2026",
+  "publication_date": "2026-03-27",
+  "milestones": [
+    {
+      "kind": "new_application_standard",
+      "date": "2026-04",
+      "precision": "month",
+      "selection": "2026 edition"
+    },
+    {
+      "kind": "gap_analysis_tools",
+      "date": "2026-07",
+      "precision": "month",
+      "selection": "issuer template"
+    },
+    {
+      "kind": "mandatory_transition_assessment",
+      "date": "2028-01",
+      "precision": "month",
+      "selection": "untransitioned bodies"
+    },
+    {
+      "kind": "assessment_completion_target",
+      "date": "2028-12",
+      "precision": "month",
+      "selection": "complete assessments"
+    },
+    {
+      "kind": "transition_deadline",
+      "date": "2029-03",
+      "precision": "month",
+      "selection": "all inspection bodies"
+    }
+  ],
+  "relative_dates": [
+    {
+      "kind": "gap_analysis_submission",
+      "offset_days": -42,
+      "anchor": "confirmed assessment date",
+      "source_page": 1
+    }
+  ],
+  "classifications": {
+    "historical": [
+      "Type A",
+      "Type B",
+      "Type C"
+    ],
+    "successor": [
+      "Type A",
+      "Type non-A"
+    ],
+    "mapping_rule": "Keep original edition and value. Receive an explicit approved successor classification for each affected accreditation."
+  },
+  "grant_rule": "Retain the issued schedule/certificate edition and original issuer decision. A planned transition date does not rewrite the existing certificate."
+}

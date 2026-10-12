@@ -1,0 +1,476 @@
+{
+  "schema": "tjlabs.target-mapping.v1",
+  "operation": "IANZ-33593043-ARAHONO-WORKSHARE-94FE-20261012",
+  "mapping_id": "ianz-arahono-staging-v1",
+  "version": 1,
+  "contract": "contracts/data-contract.json",
+  "target_product": null,
+  "target_environment_id": null,
+  "format": "UTF-8 CSV per entity, JSON mapping profile and complete asset manifest",
+  "defaults": {
+    "staging_column": "Same name as the canonical field in data-contract.json",
+    "native_binding": "Receive exact target table and field metadata; persist only actual selected bindings",
+    "source_selection": "Saved original column, document control or native field",
+    "required_blank": "Reject",
+    "optional_blank": "Preserve unless explicit clearing is reviewed",
+    "number_comparison": "Exact decimal/rational value",
+    "date_comparison": "Original date precision and timezone",
+    "text_comparison": "Exact selected value",
+    "array_comparison": "Explicit order/set policy",
+    "keys": "Original entity keys bind to target external keys; target-generated IDs are retained separately"
+  },
+  "entities": [
+    {
+      "canonical_entity": "source_edition",
+      "staging_file": "source_edition.csv",
+      "canonical_keys": [
+        "source_edition_id"
+      ],
+      "fields": [
+        "source_edition_id",
+        "source_id",
+        "source_kind",
+        "source_url",
+        "retrieved_at",
+        "declared_issue",
+        "declared_date",
+        "original_filename",
+        "media_type",
+        "original_byte_length",
+        "original_sha256",
+        "transcription_sha256",
+        "coverage",
+        "retained_asset_path",
+        "supersedes_edition_id",
+        "selected_for_current",
+        "provenance_notes"
+      ],
+      "native_table": null,
+      "native_external_key": null,
+      "field_overrides": [],
+      "enum_maps": [],
+      "unit_maps": [],
+      "identity_maps": []
+    },
+    {
+      "canonical_entity": "programme",
+      "staging_file": "programme.csv",
+      "canonical_keys": [
+        "programme_key"
+      ],
+      "fields": [
+        "programme_key",
+        "published_label",
+        "navigation_group",
+        "source_edition_id",
+        "general_criteria_profile_id",
+        "assessment_schedule_profile_id",
+        "fee_profile_id"
+      ],
+      "native_table": null,
+      "native_external_key": null,
+      "field_overrides": [],
+      "enum_maps": [],
+      "unit_maps": [],
+      "identity_maps": []
+    },
+    {
+      "canonical_entity": "issuer_account",
+      "staging_file": "issuer_account.csv",
+      "canonical_keys": [
+        "issuer_namespace",
+        "issuer_client_number"
+      ],
+      "fields": [
+        "issuer_namespace",
+        "issuer_client_number",
+        "display_name",
+        "legal_party_id",
+        "parent_account_key",
+        "billing_account_key",
+        "source_edition_id",
+        "label_history",
+        "merge_decisions",
+        "tax_registration",
+        "visibility"
+      ],
+      "native_table": null,
+      "native_external_key": null,
+      "field_overrides": [],
+      "enum_maps": [],
+      "unit_maps": [],
+      "identity_maps": []
+    },
+    {
+      "canonical_entity": "facility",
+      "staging_file": "facility.csv",
+      "canonical_keys": [
+        "facility_key"
+      ],
+      "fields": [
+        "facility_key",
+        "issuer_account_key",
+        "published_label",
+        "address_text",
+        "source_site_key",
+        "site_kind",
+        "assessment_units",
+        "fee_profile_id",
+        "valid_from",
+        "valid_to",
+        "source_edition_id"
+      ],
+      "native_table": null,
+      "native_external_key": null,
+      "field_overrides": [],
+      "enum_maps": [],
+      "unit_maps": [],
+      "identity_maps": []
+    },
+    {
+      "canonical_entity": "accreditation",
+      "staging_file": "accreditation.csv",
+      "canonical_keys": [
+        "issuer_programme_id"
+      ],
+      "fields": [
+        "issuer_programme_id",
+        "issuer_account_key",
+        "accreditation_number",
+        "programme_key",
+        "facility_keys",
+        "initial_accreditation_date",
+        "selected_scope_edition_id",
+        "standard_edition",
+        "inspection_classification",
+        "publication_observation",
+        "issuer_status",
+        "expiry_date",
+        "status_decision_id",
+        "source_edition_id"
+      ],
+      "native_table": null,
+      "native_external_key": null,
+      "field_overrides": [],
+      "enum_maps": [],
+      "unit_maps": [],
+      "identity_maps": []
+    },
+    {
+      "canonical_entity": "scope_item",
+      "staging_file": "scope_item.csv",
+      "canonical_keys": [
+        "scope_item_key",
+        "source_edition_id"
+      ],
+      "fields": [
+        "scope_item_key",
+        "accreditation_key",
+        "source_edition_id",
+        "activity",
+        "classification",
+        "item_label",
+        "method_reference",
+        "conditions",
+        "facility_keys",
+        "source_page",
+        "source_locator",
+        "coverage",
+        "decision_id",
+        "effective_from",
+        "effective_to"
+      ],
+      "native_table": null,
+      "native_external_key": null,
+      "field_overrides": [],
+      "enum_maps": [],
+      "unit_maps": [],
+      "identity_maps": []
+    },
+    {
+      "canonical_entity": "document",
+      "staging_file": "document.csv",
+      "canonical_keys": [
+        "document_key",
+        "document_edition_id"
+      ],
+      "fields": [
+        "document_key",
+        "document_edition_id",
+        "document_role",
+        "programme_key",
+        "accreditation_key",
+        "assessment_key",
+        "participant_key",
+        "original_filename",
+        "display_name",
+        "template_id",
+        "template_edition",
+        "content_control_map",
+        "content_sha256",
+        "asset_path",
+        "visibility",
+        "submitted_at",
+        "supersedes"
+      ],
+      "native_table": null,
+      "native_external_key": null,
+      "field_overrides": [],
+      "enum_maps": [],
+      "unit_maps": [],
+      "identity_maps": []
+    },
+    {
+      "canonical_entity": "assessment",
+      "staging_file": "assessment.csv",
+      "canonical_keys": [
+        "assessment_key"
+      ],
+      "fields": [
+        "assessment_key",
+        "accreditation_key",
+        "assessment_kind",
+        "planned_date",
+        "confirmed_date",
+        "actual_start",
+        "actual_finish",
+        "lead_assessor_key",
+        "participant_keys",
+        "scope_item_keys",
+        "criteria_edition_ids",
+        "document_requirements",
+        "source_edition_id",
+        "status",
+        "native_version"
+      ],
+      "native_table": null,
+      "native_external_key": null,
+      "field_overrides": [],
+      "enum_maps": [],
+      "unit_maps": [],
+      "identity_maps": []
+    },
+    {
+      "canonical_entity": "participant",
+      "staging_file": "participant.csv",
+      "canonical_keys": [
+        "participant_key"
+      ],
+      "fields": [
+        "participant_key",
+        "display_name",
+        "organisation_key",
+        "role",
+        "native_identity_key",
+        "assignment_keys",
+        "competence_scope_keys",
+        "source_edition_id",
+        "visibility"
+      ],
+      "native_table": null,
+      "native_external_key": null,
+      "field_overrides": [],
+      "enum_maps": [],
+      "unit_maps": [],
+      "identity_maps": []
+    },
+    {
+      "canonical_entity": "finding",
+      "staging_file": "finding.csv",
+      "canonical_keys": [
+        "finding_key"
+      ],
+      "fields": [
+        "finding_key",
+        "assessment_key",
+        "classification",
+        "criteria_reference",
+        "description",
+        "agreed_due_date",
+        "response_document_keys",
+        "status",
+        "clearance_decision_id",
+        "source_edition_id"
+      ],
+      "native_table": null,
+      "native_external_key": null,
+      "field_overrides": [],
+      "enum_maps": [],
+      "unit_maps": [],
+      "identity_maps": []
+    },
+    {
+      "canonical_entity": "issuer_decision",
+      "staging_file": "issuer_decision.csv",
+      "canonical_keys": [
+        "decision_key"
+      ],
+      "fields": [
+        "decision_key",
+        "accreditation_key",
+        "decision_kind",
+        "affected_scope_keys",
+        "issued_at",
+        "effective_at",
+        "source_document_key",
+        "public_projection",
+        "private_reason_document_keys",
+        "native_version"
+      ],
+      "native_table": null,
+      "native_external_key": null,
+      "field_overrides": [],
+      "enum_maps": [],
+      "unit_maps": [],
+      "identity_maps": []
+    },
+    {
+      "canonical_entity": "fee_profile",
+      "staging_file": "fee_profile.csv",
+      "canonical_keys": [
+        "fee_profile_id"
+      ],
+      "fields": [
+        "fee_profile_id",
+        "source_edition_id",
+        "programme_key",
+        "currency",
+        "tax_basis",
+        "published_period",
+        "publication_month",
+        "charge_rules",
+        "tax_rule",
+        "rounding_rule",
+        "effective_dates"
+      ],
+      "native_table": null,
+      "native_external_key": null,
+      "field_overrides": [],
+      "enum_maps": [],
+      "unit_maps": [],
+      "identity_maps": []
+    },
+    {
+      "canonical_entity": "charge_line",
+      "staging_file": "charge_line.csv",
+      "canonical_keys": [
+        "charge_line_key"
+      ],
+      "fields": [
+        "charge_line_key",
+        "billing_account_key",
+        "accreditation_key",
+        "assessment_key",
+        "facility_key",
+        "fee_profile_id",
+        "tariff_key",
+        "quantity",
+        "quantity_unit",
+        "rate",
+        "currency",
+        "net_amount",
+        "tax_amount",
+        "gross_amount",
+        "billing_period",
+        "credit_of_line_key",
+        "source_document_key",
+        "cap_group_key"
+      ],
+      "native_table": null,
+      "native_external_key": null,
+      "field_overrides": [],
+      "enum_maps": [],
+      "unit_maps": [],
+      "identity_maps": []
+    },
+    {
+      "canonical_entity": "mapping_profile",
+      "staging_file": "mapping_profile.csv",
+      "canonical_keys": [
+        "mapping_id",
+        "version"
+      ],
+      "fields": [
+        "mapping_id",
+        "version",
+        "source_edition_ids",
+        "target_product",
+        "target_environment_id",
+        "target_schema_version",
+        "field_maps",
+        "identity_maps",
+        "enum_maps",
+        "unit_maps",
+        "blank_policies",
+        "date_policies",
+        "native_import_profile",
+        "review"
+      ],
+      "native_table": null,
+      "native_external_key": null,
+      "field_overrides": [],
+      "enum_maps": [],
+      "unit_maps": [],
+      "identity_maps": []
+    },
+    {
+      "canonical_entity": "receiving_run",
+      "staging_file": "receiving_run.csv",
+      "canonical_keys": [
+        "receiving_run_id"
+      ],
+      "fields": [
+        "receiving_run_id",
+        "project_revision",
+        "mapping_id",
+        "source_edition_ids",
+        "outgoing_manifest",
+        "returned_manifest",
+        "native_result",
+        "reconciliation",
+        "review_decisions",
+        "saved_request_id",
+        "status",
+        "handover_manifest"
+      ],
+      "native_table": null,
+      "native_external_key": null,
+      "field_overrides": [],
+      "enum_maps": [],
+      "unit_maps": [],
+      "identity_maps": []
+    }
+  ],
+  "import_order": [
+    "source_edition",
+    "programme",
+    "issuer_account",
+    "facility",
+    "accreditation",
+    "scope_item",
+    "participant",
+    "assessment",
+    "document",
+    "finding",
+    "issuer_decision",
+    "fee_profile",
+    "charge_line",
+    "mapping_profile",
+    "receiving_run"
+  ],
+  "dependency_receiving": "Resolve forward links in a second original-key association pass after base entities have returned native IDs. Reference-only source, programme, tariff and mapping editions are materialised before dependent records. Cyclic assessment/document/finding/decision associations retain original keys and are joined in this explicit second pass.",
+  "native_commissioning_inputs": [
+    "Actual target schema/template edition",
+    "Native import/update/result contract",
+    "Original concurrency and request keys",
+    "Document associations and access model",
+    "Finance account/tax/rounding rules",
+    "Edition-specific status and decision enums"
+  ],
+  "review": {
+    "selected_by": null,
+    "reviewed_at": null,
+    "source_editions": [],
+    "decisions": []
+  }
+}

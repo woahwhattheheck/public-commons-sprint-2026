@@ -1,0 +1,375 @@
+{
+  "schema": "tjlabs.source-register.v1",
+  "operation": "IANZ-33593043-ARAHONO-WORKSHARE-94FE-20261012",
+  "captured_at": "2026-10-12T21:33:09.482Z",
+  "sources": [
+    {
+      "id": "S01",
+      "title": "Ara Hono RFP and award",
+      "url": "https://www.gets.govt.nz/IANZ/ExternalTenderDetails.htm?id=33593043",
+      "kind": "official_indexed_html",
+      "edition": "Updated 1 October 2026",
+      "locator": "RFx Outcome",
+      "web_refs": [
+        "turn144search0"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S02",
+      "title": "IANZ September update",
+      "url": "https://www.ianz.govt.nz/media/szpix5jm/ianz-update_-september-2026-edition.pdf",
+      "kind": "official_pdf_text",
+      "edition": "September 2026",
+      "locator": "PDF page 1: Ara Hono; holiday dates later in issue",
+      "web_refs": [
+        "turn136view0"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S03",
+      "title": "Voco data migration practice",
+      "url": "https://www.voco.digital/nz/capabilities/digital-transformation/data-migration/",
+      "kind": "official_html",
+      "edition": "Current page",
+      "locator": "Service and delivery scope",
+      "web_refs": [
+        "turn135view3"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S04",
+      "title": "Voco delivery services contact",
+      "url": "https://www.voco.digital/nz/capabilities/consulting-advisory/",
+      "kind": "official_html",
+      "edition": "Current page",
+      "locator": "Jeanne Viljoen, GM Delivery Services",
+      "web_refs": [
+        "turn144view0"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S05",
+      "title": "Health NZ Lotus Notes replacement",
+      "url": "https://www.voco.digital/nz/about-us/our-work/health-nz-lotus-notes-replacement/",
+      "kind": "official_html",
+      "edition": "Case describes 2023 programme",
+      "locator": "Architecture and migration",
+      "web_refs": [
+        "turn142view3"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S06",
+      "title": "Principal Functional Consultant vacancy",
+      "url": "https://www.voco.digital/nz/about-us/careers/current-vacancies/principal-functional-consultant/",
+      "kind": "official_html",
+      "edition": "Current listed vacancy",
+      "locator": "Power Platform and D365 CE delivery",
+      "web_refs": [
+        "turn134view1"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S07",
+      "title": "IANZ public directory",
+      "url": "https://www.ianz.govt.nz/directory/",
+      "kind": "official_html",
+      "edition": "Current page",
+      "locator": "Schedule publication and continued compliance",
+      "web_refs": [
+        "turn135view0",
+        "turn140search10"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S08",
+      "title": "Drinking Water programme",
+      "url": "https://www.ianz.govt.nz/programmes/drinking-water-testing-laboratory/",
+      "kind": "official_html",
+      "edition": "Current page",
+      "locator": "Criteria, forms and programme scope",
+      "web_refs": [
+        "turn142view1"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S09",
+      "title": "Inspection Bodies programme",
+      "url": "https://www.ianz.govt.nz/programmes/inspection-bodies/",
+      "kind": "official_html",
+      "edition": "Current page",
+      "locator": "Criteria, forms and scope sectors",
+      "web_refs": [
+        "turn142view2"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S10",
+      "title": "AS1 Procedures and Conditions for Accreditation",
+      "url": "https://www.ianz.govt.nz/media/ddub3rh4/as1-procedures-and-conditions-for-accreditation.pdf",
+      "kind": "official_pdf_text",
+      "edition": "Fourteenth edition, September 2024",
+      "locator": "Sections 4.4–4.14 and 5",
+      "web_refs": [
+        "turn137view3",
+        "turn139view0",
+        "turn139view1",
+        "turn140view1"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S11",
+      "title": "AS19 Drinking Water laboratory fees",
+      "url": "https://www.ianz.govt.nz/media/bkjfhlun/as19-fee-schedule-drinking-water-laboratory.pdf",
+      "kind": "official_pdf_text",
+      "edition": "July 2026; listed as 2026/27",
+      "locator": "Single-page fee table and notes",
+      "web_refs": [
+        "turn137view0"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S12",
+      "title": "AS14 Inspection Bodies fees",
+      "url": "https://www.ianz.govt.nz/media/gcompp0b/as14-fee-schedule-inspection-bodies.pdf",
+      "kind": "official_pdf_text",
+      "edition": "July 2026; listed as 2026/27",
+      "locator": "Single-page fee table and multi-site notes",
+      "web_refs": [
+        "turn138view0"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S13",
+      "title": "ISO/IEC 17020 transition notice",
+      "url": "https://www.ianz.govt.nz/media/xy2cz2is/iso-iec-17020-2026-transition-notice.pdf",
+      "kind": "official_pdf_text",
+      "edition": "May 2026",
+      "locator": "Both pages",
+      "web_refs": [
+        "turn143view0"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S14",
+      "title": "Inspection documentation submission guide",
+      "url": "https://www.ianz.govt.nz/media/eoqopndb/inspection-bodies-guidelines-on-documentation-submission.pdf",
+      "kind": "official_pdf_text",
+      "edition": "May 2020; currently linked",
+      "locator": "Pages 1–3",
+      "web_refs": [
+        "turn143view5"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S15",
+      "title": "MicroAquaTech published accreditation schedule",
+      "url": "https://cabis.ianz.govt.nz/ianzwebportal/ViewScope.aspx?Program=b06f40dc-4251-4157-9579-6616beb58425",
+      "kind": "official_pdf_text",
+      "edition": "Issue 23; 16 January 2026",
+      "locator": "Both pages",
+      "web_refs": [
+        "turn141view0"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S16",
+      "title": "IAWAI Flowing Waters Laboratory published schedule",
+      "url": "https://cabis.ianz.govt.nz/ianzwebportal/ViewScope.aspx?Program=b0cd4736-6581-4ec3-9088-07cf259032fe",
+      "kind": "official_pdf_text",
+      "edition": "Issue 53; 26 August 2026",
+      "locator": "Pages 1–3",
+      "web_refs": [
+        "turn141view1"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S17",
+      "title": "Mechanical & Engineering Compliance NZ published schedule",
+      "url": "https://cabis.ianz.govt.nz/ianzwebportal/ViewScope.aspx?Program=ca818460-aa11-432d-871b-c79da794cb64",
+      "kind": "official_pdf_text",
+      "edition": "Issue 8; 11 June 2026",
+      "locator": "Pages 1–4",
+      "web_refs": [
+        "turn141view2"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S18",
+      "title": "MicroAquaTech older indexed schedule excerpt",
+      "url": "https://cabis.ianz.govt.nz/ianzwebportal/ViewScope.aspx?Program=b06f40dc-4251-4157-9579-6616beb58425",
+      "kind": "indexed_official_pdf_excerpt",
+      "edition": "Issue 22; 10 March 2025",
+      "locator": "Indexed page 2; complete older binary not received",
+      "web_refs": [
+        "turn140search15"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S19",
+      "title": "Hamilton City Council older indexed schedule excerpt",
+      "url": "https://cabis.ianz.govt.nz/ianzwebportal/ViewScope.aspx?Program=b0cd4736-6581-4ec3-9088-07cf259032fe",
+      "kind": "indexed_official_pdf_excerpt",
+      "edition": "Issue 51; 2 July 2025",
+      "locator": "Indexed header and selected page 2; complete older binary not received",
+      "web_refs": [
+        "turn140search16"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S20",
+      "title": "IANZ programme navigation",
+      "url": "https://www.ianz.govt.nz/",
+      "kind": "official_html",
+      "edition": "Current page",
+      "locator": "19 programme labels",
+      "web_refs": [
+        "turn142view0"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S21",
+      "title": "Application for accreditation LAB",
+      "url": "https://www.ianz.govt.nz/media/002n2sux/application-for-accreditation-lab.docx",
+      "kind": "official_docx_link",
+      "edition": "Edition available in original file",
+      "locator": "S08 form link 20; original source intake IANZ-A1",
+      "web_refs": [
+        "turn137view1"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S22",
+      "title": "Application for accreditation IB",
+      "url": "https://www.ianz.govt.nz/media/bhsnk5k5/application-for-accreditation-ib.docx",
+      "kind": "official_docx_link",
+      "edition": "Edition available in original file",
+      "locator": "S09 form link 22; original source intake IANZ-A1",
+      "web_refs": [
+        "turn143view3"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S23",
+      "title": "Change notification",
+      "url": "https://www.ianz.govt.nz/media/ql1lk53p/change-notification-form.docx",
+      "kind": "official_docx_link",
+      "edition": "Edition available in original file",
+      "locator": "S08 link 22 and S09 link 29",
+      "web_refs": [
+        "turn137view2"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S24",
+      "title": "Application for credit terms",
+      "url": "https://www.ianz.govt.nz/media/xiron5y4/application-for-credit-terms.docx",
+      "kind": "official_docx_link",
+      "edition": "Edition available in original file",
+      "locator": "New-client form; S08 link 19",
+      "web_refs": [
+        "turn143view1"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S25",
+      "title": "Application for reassessment LAB",
+      "url": "https://www.ianz.govt.nz/media/wreneoug/application-for-reassessment-lab.docx",
+      "kind": "official_docx_link",
+      "edition": "Edition available in original file",
+      "locator": "S08 link 24",
+      "web_refs": [
+        "turn143view2"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S26",
+      "title": "ISO 17020 gap analysis workbook",
+      "url": "https://www.ianz.govt.nz/media/me1pcvar/ianz-gap-analysis-17020-2026.docx",
+      "kind": "official_docx_link",
+      "edition": "2026 edition in original file",
+      "locator": "S09 link 26",
+      "web_refs": [
+        "turn143view4"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S27",
+      "title": "Ara Tupu finance and HRIS replacement",
+      "url": "https://www.gets.govt.nz/IANZ/ExternalTenderDetails.htm?id=33593301",
+      "kind": "official_html",
+      "edition": "Current retrieved notice",
+      "locator": "Separate finance/HRIS procurement",
+      "web_refs": [
+        "turn146view0"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    },
+    {
+      "id": "S28",
+      "title": "GETS IANZ completed procurement list",
+      "url": "https://www.gets.govt.nz/HUD/ExternalAwardedTenderList.htm?orderBy=client&page=11",
+      "kind": "official_indexed_html",
+      "edition": "Current indexed award list",
+      "locator": "Ara Hono and Ara Tupu separate RFx IDs",
+      "web_refs": [
+        "turn144search3"
+      ],
+      "retrieved_at": "2026-10-12T21:33:09.482Z",
+      "original_binary_sha256": null
+    }
+  ]
+}

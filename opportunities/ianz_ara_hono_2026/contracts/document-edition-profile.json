@@ -1,0 +1,68 @@
+{
+  "schema": "tjlabs.ianz-document-editions.v1",
+  "operation": "IANZ-33593043-ARAHONO-WORKSHARE-94FE-20261012",
+  "document_model": {
+    "logical_identity": "Original native document or explicit saved link",
+    "edition_identity": "Original content bytes plus received edition label",
+    "required_metadata": [
+      "original file name",
+      "media type",
+      "bytes",
+      "SHA256",
+      "programme/case/person associations",
+      "document role",
+      "visibility",
+      "source locator",
+      "template identity where present"
+    ],
+    "replacement": "A corrected source creates a new edition and a visible comparison; the earlier complete file stays in the handover."
+  },
+  "form_receiving": {
+    "source_ids": [
+      "S21",
+      "S22",
+      "S23",
+      "S24",
+      "S25",
+      "S26"
+    ],
+    "extract": [
+      "Content-control IDs and tags",
+      "Table and cell coordinates",
+      "Repeated sections and their native keys",
+      "Field prompts",
+      "Choice values and original selected flags",
+      "Header/footer edition identifiers",
+      "Embedded attachment references"
+    ],
+    "projection": "Save the actual control/field map alongside the immutable form; canonical data maps to those actual controls.",
+    "publication": "Generate any customer output from the selected original template and complete field/record mapping."
+  },
+  "public_case": {
+    "current_scope_editions": [
+      "826-issue23-original",
+      "791-issue53-original",
+      "157-issue8-original"
+    ],
+    "historical_observations": [
+      "826-issue22-indexed",
+      "791-issue51-indexed"
+    ],
+    "coverage_rule": "Older indexed observations are field-level history. The current original source supplies the selected current published values."
+  },
+  "visibility_projection": {
+    "public": [
+      "Programme labels",
+      "Public account labels",
+      "Published accreditation/scope observations",
+      "Published tariff and criteria editions"
+    ],
+    "restricted": [
+      "Client-submitted applications and supporting documents",
+      "Assessment findings and correspondence",
+      "Private decision reasons",
+      "Finance extracts and account details",
+      "Native credentials and personal account bindings"
+    ]
+  }
+}

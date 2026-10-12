@@ -1,0 +1,75 @@
+{
+  "schema": "tjlabs.tariff-controls.v1",
+  "operation": "IANZ-33593043-ARAHONO-WORKSHARE-94FE-20261012",
+  "purpose": "Arithmetic controls over published tariff values. Quantities below are explicit authored operating choices, not customer invoices.",
+  "number_model": "integer cents with rational quantity; exact decimal input; round only by received billing policy",
+  "controls": [
+    {
+      "id": "main-site-unit-factor",
+      "source": "S12",
+      "basis_cents": "138000",
+      "quantity_numerator": "2",
+      "quantity_denominator": "1",
+      "expected_cents": "276000"
+    },
+    {
+      "id": "branch-site-unit-factor",
+      "source": "S12",
+      "basis_cents": "138000",
+      "quantity_numerator": "1",
+      "quantity_denominator": "2",
+      "expected_cents": "69000"
+    },
+    {
+      "id": "satellite-site-unit-factor",
+      "source": "S12",
+      "basis_cents": "138000",
+      "quantity_numerator": "1",
+      "quantity_denominator": "20",
+      "expected_cents": "6900"
+    },
+    {
+      "id": "travel-versus-work",
+      "sources": [
+        "S11",
+        "S12"
+      ],
+      "travel_hour_cents": "14100",
+      "work_hour_cents": "28200",
+      "travel_to_work_ratio": "1/2"
+    },
+    {
+      "id": "recognition-cap",
+      "sources": [
+        "S11",
+        "S12"
+      ],
+      "count": "6",
+      "rate_cents": "27600",
+      "uncapped_cents": "165600",
+      "cap_cents": "138000",
+      "expected_charge_cents": "138000",
+      "cap_reduction_cents": "27600"
+    },
+    {
+      "id": "credit-term-exception",
+      "sources": [
+        "S11",
+        "S12"
+      ],
+      "input": "organisation already has another IANZ programme",
+      "decision": "retain published application-fee exception and require original account/programme link",
+      "outcome": "application applicability is separately reviewed"
+    }
+  ],
+  "reconciliation_groups": [
+    "tariff profile",
+    "currency",
+    "tax basis",
+    "issuer account",
+    "assessment unit or site",
+    "billing period",
+    "original invoice key"
+  ],
+  "pass_through_cost_rule": "Keep original source amount, currency, description and document link; receive explicit tax/FX/rounding choices before aggregation."
+}

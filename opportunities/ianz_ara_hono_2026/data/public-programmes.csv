@@ -1,0 +1,20 @@
+programme_key,published_label,navigation_group,source_id,source_location,programme_url,key_origin
+applied-physics,Applied Physics Testing Laboratory,laboratory,S20,PROGRAMMES navigation item 1,,authored staging key
+biological,Biological Testing Laboratory,laboratory,S20,PROGRAMMES navigation item 2,,authored staging key
+chemical,Chemical Testing Laboratory,laboratory,S20,PROGRAMMES navigation item 3,,authored staging key
+drinking-water,Drinking Water Testing Laboratory,laboratory,S20,PROGRAMMES navigation item 4,https://www.ianz.govt.nz/programmes/drinking-water-testing-laboratory/,authored staging key
+electrical,Electrical Testing Laboratory,laboratory,S20,PROGRAMMES navigation item 5,,authored staging key
+gas-cylinder,Gas Cylinder Testing Laboratory,laboratory,S20,PROGRAMMES navigation item 6,,authored staging key
+mechanical,Mechanical Testing Laboratory,laboratory,S20,PROGRAMMES navigation item 7,,authored staging key
+medical-laboratory,Medical Laboratory,laboratory,S20,PROGRAMMES navigation item 8,,authored staging key
+metrology-calibration,Metrology and Calibration Laboratory,laboratory,S20,PROGRAMMES navigation item 9,,authored staging key
+mpi-recognised,MPI Recognised Laboratory Programme,laboratory,S20,PROGRAMMES navigation item 10,,authored staging key
+wool,Wool Testing Laboratory,laboratory,S20,PROGRAMMES navigation item 11,,authored staging key
+inspection-bodies,Inspection Bodies,other,S20,PROGRAMMES navigation item 12,https://www.ianz.govt.nz/programmes/inspection-bodies/,authored staging key
+medical-imaging,Medical Imaging Services,other,S20,PROGRAMMES navigation item 13,,authored staging key
+building-consent,Building Consent Authorities,other,S20,PROGRAMMES navigation item 14,,authored staging key
+designated-cab,Designated Conformity Assessment Bodies,other,S20,PROGRAMMES navigation item 15,,authored staging key
+proficiency-testing,Proficiency Testing Providers,other,S20,PROGRAMMES navigation item 16,,authored staging key
+reference-materials,Reference Material Producers,other,S20,PROGRAMMES navigation item 17,,authored staging key
+glp,Good Laboratory Practice Compliance Monitoring,other,S20,PROGRAMMES navigation item 18,,authored staging key
+gmp-cosmetics,Good Manufacturing Practice (Cosmetics) Compliance Monitoring,other,S20,PROGRAMMES navigation item 19,,authored staging key
