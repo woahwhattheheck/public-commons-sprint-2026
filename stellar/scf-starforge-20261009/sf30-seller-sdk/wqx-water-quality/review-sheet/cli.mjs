@@ -22,7 +22,8 @@ const HELP = [
   'save     Save the reviewed plan (--document FILE --new-plan NEW_PLAN --review REVIEW --preview preview.json).',
   'units    Read exact source-unit groups (--plan PLAN).',
   'standardize  Prepare complete result/limit choices (--document FILE --target-unit UNIT --reason TEXT',
-  '         --results IDS_JSON or --from-unit EXACT_UNIT --out decisions.json --report report.json).',
+  '         --results IDS_JSON, --from-unit EXACT_UNIT or --reported-limits-only',
+  '         --out decisions.json --report report.json).',
   'unit-report  Reopen the full saved conversion (--review REVIEW [--format json|csv] --out FILE).',
   'list     List retained complete and prepared decision reviews.',
   'read     Reopen one original decision review (--review REVIEW).',
@@ -83,7 +84,7 @@ async function output(value, path) {
   process.stdout.write(JSON.stringify({ output: path, bytes: bytes.length }) + '\n');
 }
 export async function main(argv = process.argv.slice(2)) {
-  const { values, positionals } = parseArgs({ args: argv, allowPositionals: true, options: { ...definitions, help: { type: 'boolean' } } });
+  const { values, positionals } = parseArgs({ args: argv, allowPositionals: true, options: { ...definitions, 'reported-limits-only': { type: 'boolean' }, help: { type: 'boolean' } } });
   const command = positionals[0] ?? 'help';
   if (values.help || command === 'help') return output(HELP);
   if (positionals.length !== 1) throw new Error('Choose one decision-review command.');
@@ -91,12 +92,13 @@ export async function main(argv = process.argv.slice(2)) {
   try {
     if (command === 'units') return output(concentrationSourceGroups(await project.readOpenWaters(required(values, 'plan'))), values.out);
     if (command === 'standardize') {
-      if (Boolean(values.results) === (values['from-unit'] !== undefined)) throw new Error('Select --results IDS_JSON or --from-unit EXACT_UNIT.');
+      if (Number(Boolean(values.results)) + Number(values['from-unit'] !== undefined) + Number(Boolean(values['reported-limits-only'])) !== 1)
+        throw new Error('Select --results IDS_JSON, --from-unit EXACT_UNIT or --reported-limits-only.');
       const out = resolve(required(values, 'out')), reportOut = resolve(required(values, 'report'));
       if (out === reportOut) throw new Error('Choose distinct decision and complete-report output files.');
       const document = await documentFile(required(values, 'document'), values['input-format']);
       const groups = values.results ? null : concentrationSourceGroups(await project.readOpenWaters(document.sourcePlanId));
-      const resultIds = values.results ? await jsonFile(values.results) :
+      const resultIds = values.results ? await jsonFile(values.results) : values['reported-limits-only'] ? groups.limitOnly.resultIds :
         groups.groups.find(row => row.unit === values['from-unit'])?.resultIds;
       const report = await prepareConcentrationChoices({project, document, resultIds,
         targetUnit:required(values, 'target-unit'), reason:required(values, 'reason')});

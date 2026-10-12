@@ -44,7 +44,7 @@ function convertedRow(plan, row, before, targetUnit) {
     unit: before.RESULT_MSR_UNIT, limits: reportedLimits(row)}, {targetUnit});
   const native = pairs(before, targetUnit), values = {...before}, issues = [...converted.issues, ...native.issues];
   if (converted.result) {
-    values.RESULT_MSR = text(converted.result.value); values.RESULT_MSR_UNIT = converted.result.unit;
+    values.RESULT_MSR = text(converted.result.value); values.RESULT_MSR_UNIT = text(converted.result.unit);
   }
   for (const item of native.result) values[item.field] = text(item.value);
   if (native.result.length || concentrationUnit(before.DETECTION_LIMIT_UNIT)) values.DETECTION_LIMIT_UNIT = targetUnit;
@@ -90,13 +90,21 @@ function parseChoice(decision) {
   return {value, reason: reason.slice(0, index), choiceSha256: openWatersHash(value)};
 }
 export function concentrationSourceGroups(input) {
-  const plan = verifyOpenWatersPlan(input), groups = new Map();
+  const plan = verifyOpenWatersPlan(input), groups = new Map(), limitOnlyIds = [], limitUnits = new Map();
   for (const row of plan.results) {
     const unit = text(row.fields.RESULT_MSR_UNIT), group = groups.get(unit) ?? {unit, supported: Boolean(concentrationUnit(unit)), resultIds: []};
     group.resultIds.push(row.sourceRecordId); groups.set(unit, group);
+    const resultMissing = !text(row.fields.RESULT_MSR).trim() && !unit;
+    const quantities = reportedLimits(row).filter(limit => text(limit.value).trim());
+    if (resultMissing && (quantities.length || OPEN_WATERS_LIMIT_FIELDS.some(field => text(row.fields[field]).trim()))) {
+      limitOnlyIds.push(row.sourceRecordId);
+      for (const limit of quantities) limitUnits.set(text(limit.unit), (limitUnits.get(text(limit.unit)) ?? 0) + 1);
+    }
   }
   return {profile: CONCENTRATION_UNIT_PROFILE, sourcePlanId: plan.planId, sourcePlanSha256: plan.planSha256,
-    sourceResults: plan.results.length, groups: [...groups.values()].map(row => ({...row, count: row.resultIds.length})).sort((a, b) => a.unit.localeCompare(b.unit))};
+    sourceResults: plan.results.length, groups: [...groups.values()].map(row => ({...row, count: row.resultIds.length})).sort((a, b) => a.unit.localeCompare(b.unit)),
+    limitOnly: {resultIds:limitOnlyIds, count:limitOnlyIds.length,
+      sourceUnits:[...limitUnits].map(([unit,count]) => ({unit,count,supported:Boolean(concentrationUnit(unit))})).sort((a,b) => a.unit.localeCompare(b.unit))}};
 }
 /**
  * Build paired receiving choices from the complete current draft. Original records,

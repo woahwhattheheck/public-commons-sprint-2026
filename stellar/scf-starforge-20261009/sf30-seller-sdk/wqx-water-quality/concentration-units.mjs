@@ -74,8 +74,18 @@ export function convertConcentrationRecord(input, {targetUnit} = {}) {
   if (!concentrationUnit(targetUnit)) invalid('Choose a supported target concentration unit.', 'WQX_CONCENTRATION_UNIT');
   const issues = [];
   let result = null;
-  try { result = convertConcentrationMeasure({value: input.value, unit: input.unit}, targetUnit); }
-  catch (error) { issues.push({scope: 'result', index: null, code: error.code, message: error.message}); }
+  const emptyResult = input.value === undefined || input.value === null || typeof input.value === 'string' && input.value.trim() === '';
+  const unspecifiedResultUnit = input.unit === undefined || input.unit === null || input.unit === '';
+  if (emptyResult && unspecifiedResultUnit) {
+    // A non-detect may report limits while its result and result unit are absent.
+    // Keep both original missing states; each limit below has its own explicit unit.
+    result = {original: {value: input.value ?? null, valuePresent: input.value !== undefined, unit: input.unit},
+      value: input.value, unit: input.unit, kind: input.value === undefined ? 'absent' : input.value === null ? 'null' : 'empty',
+      factor: null, exact: true, representation: 'UNSPECIFIED_RESULT_UNIT'};
+  } else {
+    try { result = convertConcentrationMeasure({value: input.value, unit: input.unit}, targetUnit); }
+    catch (error) { issues.push({scope: 'result', index: null, code: error.code, message: error.message}); }
+  }
   const limits = input.limits.map((limit, index) => {
     if (!limit || typeof limit !== 'object' || Array.isArray(limit))
       invalid('Every reported limit must retain its original record.');

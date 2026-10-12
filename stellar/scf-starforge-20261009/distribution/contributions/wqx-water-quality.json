@@ -52,7 +52,11 @@
     "stellar-forge/mcp-merchant-operator/wqx-workspace-connection.example.json",
     "stellar-forge/mcp-merchant-operator/wqx-workspace-receiving.mjs",
     "stellar-forge/mcp-merchant-operator/wqx-workspace-receiving.example.json",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/CONCENTRATIONS.md"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/CONCENTRATIONS.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/review-sheet/concentrations-receiving.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/review-sheet/concentration-source.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/review-sheet/examples/potomac-concentrations.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/review-sheet/examples/potomac-concentration-source.json"
   ],
   "merchantProviders": {
     "wqx-water-quality": "stellar-forge/mcp-merchant-operator/providers/wqx-water-quality.mjs"
