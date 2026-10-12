@@ -15,7 +15,7 @@ import {canonical} from "./util.mjs";
 
 const REQUEST_FORMAT="commons.haystack.operator.request.v1";
 const SOURCE_LIMIT=32*1024*1024;
-const REQUEST_LIMIT=48*1024*1024;
+const REQUEST_LIMIT=288*1024*1024;
 const RECEIPT_LIMIT=192*1024*1024;
 const own=(object,key)=>Object.prototype.hasOwnProperty.call(object,key);
 const sha256=bytes=>createHash("sha256").update(bytes).digest("hex");

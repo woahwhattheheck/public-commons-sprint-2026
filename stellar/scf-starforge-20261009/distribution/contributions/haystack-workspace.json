@@ -1,13 +1,13 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "haystack-workspace",
-  "description": "Native building grids, source-local equipment and points, typed tag review, immutable turnover editions and complete receiving",
+  "description": "Native building grids, assigned corrective work, complete evidence, explicit review, source editions and recipient returns",
   "commands": {
     "haystack": "stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/cli.mjs",
     "haystack-mcp": "stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/mcp.mjs"
   },
   "commandDescriptions": {
-    "haystack": "Operate native Haystack grids, complete tag proposals, edition comparisons and editable building turnover",
+    "haystack": "Operate native building grids, typed proposals, assigned corrective work, reviewer decisions and complete recipient returns",
     "haystack-mcp": "Serve the complete native Haystack action catalog over local MCP stdio"
   },
   "exports": {
@@ -29,7 +29,8 @@
     "./seller/haystack/catalog": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/catalog.mjs",
     "./seller/haystack/mcp": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/protocol.mjs",
     "./seller/haystack/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/merchant.mjs",
-    "./seller/haystack/json": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/json-codec.mjs"
+    "./seller/haystack/json": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/json-codec.mjs",
+    "./seller/haystack/corrective-work": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/corrective-work.mjs"
   },
   "applicationProviders": {
     "haystack-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/application-provider.mjs"
