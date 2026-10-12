@@ -13,6 +13,7 @@ import {createNativeSourceActions} from './native-analysis-sources.mjs';
 import {createNativeArchiveActions} from './native-analysis-archives.mjs';
 import {createNativeSemanticActions} from './native-analysis-semantics.mjs';
 import {createNativeResearchActions,publicNativeResearchJob} from './native-analysis-research.mjs';
+import {createNativeLineageActions} from './native-analysis-lineage.mjs';
 
 const SCHEMA='stellar-forge.mcp-native-analysis.v1';
 const CUSTOMER='stellar-forge.customer-analysis.v1';
@@ -124,6 +125,7 @@ export function createNativeAnalysis({manifest,completedDataset,completedObject,
   const archives=createNativeArchiveActions({reads,parse});
   const meanings=createNativeSemanticActions();
   const research=createNativeResearchActions({publicJob});
+  const lineage=createNativeLineageActions({reads,parse});
   let closed=false;
   const available=()=>need(!closed&&!isClosed(),'MCP_NATIVE_WORKSPACE_CLOSING');
   async function roots(create=false){
@@ -135,22 +137,30 @@ export function createNativeAnalysis({manifest,completedDataset,completedObject,
   }
   async function request(connection,route,body,signal,{raw:asBytes=false,maximum=MAX_JSON}={}){
     available();
-    const options={method:body===undefined?'GET':'POST',redirect:'error',cache:'no-store',
-      headers:{'X-Analysis-Capability':connection.capability,'Origin':connection.url.origin},
-      signal:AbortSignal.any([shutdown.signal,AbortSignal.timeout(30000),...(signal?[signal]:[])])};
-    if(body!==undefined){const raw=enc(body);need(raw.length<=MAX_REQUEST,'MCP_ANALYSIS_REQUEST_TOO_LARGE');options.body=raw;options.headers['Content-Type']='application/json';}
+    const headers={'X-Analysis-Capability':connection.capability,'Origin':connection.url.origin};
+    let input;
+    if(body!==undefined){input=enc(body);need(input.length<=MAX_REQUEST,'MCP_ANALYSIS_REQUEST_TOO_LARGE');headers['Content-Type']='application/json';}
+    const controller=new AbortController();
+    const options={method:body===undefined?'GET':'POST',redirect:'error',cache:'no-store',headers,
+      ...(input===undefined?{}:{body:input}),
+      signal:AbortSignal.any([controller.signal,shutdown.signal,AbortSignal.timeout(30000),...(signal?[signal]:[])])};
     let response;
-    try{response=await fetch(new URL(route,connection.url),options);}
-    catch(error){
-      if(shutdown.signal.aborted||signal?.aborted)fail('MCP_ANALYSIS_CALL_INTERRUPTED_REOPEN_ORIGINAL_JOB');
-      fail(body===undefined?'MCP_ANALYSIS_SERVICE_UNAVAILABLE':'MCP_ANALYSIS_REPLY_UNCERTAIN_REOPEN_ORIGINAL_JOB');
+    try{
+      try{response=await fetch(new URL(route,connection.url),options);}
+      catch(error){
+        if(shutdown.signal.aborted||signal?.aborted)fail('MCP_ANALYSIS_CALL_INTERRUPTED_REOPEN_ORIGINAL_JOB');
+        fail(body===undefined?'MCP_ANALYSIS_SERVICE_UNAVAILABLE':'MCP_ANALYSIS_REPLY_UNCERTAIN_REOPEN_ORIGINAL_JOB');
+      }
+      const raw=await readResponse(response,maximum),value=asBytes&&response.ok?raw:parse(raw);
+      if(!response.ok){
+        const code=/^[A-Z0-9_]{1,180}$/.test(value?.error??'')?value.error:'MCP_ANALYSIS_HTTP_'+response.status;
+        fail(code);
+      }
+      return value;
+    }finally{
+      controller.abort();
+      if(response?.body&&!response.body.locked)await response.body.cancel().catch(()=>{});
     }
-    const raw=await readResponse(response,maximum),value=asBytes&&response.ok?raw:parse(raw);
-    if(!response.ok){
-      const code=/^[A-Z0-9_]{1,180}$/.test(value?.error??'')?value.error:'MCP_ANALYSIS_HTTP_'+response.status;
-      fail(code);
-    }
-    return value;
   }
   async function connect(record,signal){
     await directory(record.database);
@@ -253,8 +263,8 @@ export function createNativeAnalysis({manifest,completedDataset,completedObject,
       nativeAnalysisOperations[op].required.every(k=>Object.hasOwn(body,k)),'MCP_ANALYSIS_OPERATION_ARGUMENTS_INVALID');
     if(op==='workspaces')return finish(null,op,await workspaces());
     const alias=name(args.analysisWorkspace),record=await registered(alias),connection=await connect(record,context.signal);
-    const get=route=>request(connection,route,undefined,context.signal);
-    const post=(route,value)=>request(connection,route,value,context.signal);
+    const get=(route,{maximum=MAX_JSON}={})=>request(connection,route,undefined,context.signal,{maximum});
+    const post=(route,value,{maximum=MAX_JSON}={})=>request(connection,route,value,context.signal,{maximum});
     let value;
     if(op==='state')value={...connection.state,database:undefined,sources:connection.state.sources.map(publicSource)};
     else if(op==='sources'){
@@ -311,6 +321,8 @@ export function createNativeAnalysis({manifest,completedDataset,completedObject,
     else if(meanings.handles(op))value=await meanings.call({operation:op,body,get,
       cacheScope:record.workspaceId+':'+connection.url.href+':'+connection.capability,
       getBytes:(route,maximum)=>request(connection,route,undefined,context.signal,{raw:true,maximum})});
+    else if(lineage.handles(op))value=await lineage.call({operation:op,body,record,get,post,signal:context.signal,
+      getBytes:(route,maximum)=>request(connection,route,undefined,context.signal,{raw:true,maximum})});
     else if(research.handles(op))value=await research.call({operation:op,body,get,post});
     else if(sources.handles(op))value=await sources.call({operation:op,body,post});
     else if(workbooks.handles(op))value=await workbooks.call({operation:op,body,record,state:connection.state,get,post});
@@ -325,6 +337,7 @@ export function createNativeAnalysis({manifest,completedDataset,completedObject,
     workbooks.close();
     archives.close();
     meanings.close();
+    await lineage.close?.();
     // The original analysis service belongs to its host/browser. It keeps its own jobs and lease.
   }};
 }
