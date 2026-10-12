@@ -39,6 +39,7 @@ Imagery receiving: [STAC, eoAPI and Prescient setup, agent connection, Stop and 
 | Stellar agent application | stellar-application serve | Original HTTP and governed MCP requests, current subject authorization, retained results and aggregate spending |
 | OData source and live merchant | dataset odata | Saved source metadata, typed queries, retained editions, live paid pages, buyer handoffs and received records |
 | SEC EDGAR source operator | sec-edgar workspace | Original company facts and filings, retained source editions, merchant drafts and complete customer exports |
+| USGS water and native DSS | usgs-water managed | Original source selection, scientific review, saved editions, native HEC-DSS mapping and complete project receiving |
 | Google Sheets source authoring | sheets-source workspace serve | Retained workbook observations, typed source projections, original dataset publisher and merchant receiving |
 | NocoDB source authoring | nocodb-source workspace serve | Original database observations, complete captures, public projections, dataset publisher and retained workspace recovery |
 | Stellar asset investigation | dataset-workspace --stellar-expert | Original asset observations, exact editions, reviewed findings, native dataset and merchant releases, purchased page receiving |
@@ -681,3 +682,7 @@ Use the browser or agent to capture complete indicator pages, compare editions, 
 The agent host attaches to that same original listener through its private launch file. Explicit operator, process, project and workspace scope prevents a stale agent request from following a browser project switch. Stop releases the original writer; Start reopens the saved project with a fresh process instance.
 
 See [the complete DSpace Applications guide](APPLICATION_DSPACE.md) for setup, source selection, agent attachment, full-project receiving and saved-workspace reopening.
+
+## USGS Water and native DSS
+
+Choose **USGS water and native DSS** to review and save the original project, optional buyer and official HEC-DSS interpreter. Start opens the original Water workspace; Open uses its verified local listener, and Stop drains its original source/edition/native work before releasing the project. A received project can reopen its existing source edition and DSS export without a saved project selection or another native write. Changes to a saved selection or other reviewed inputs require reviewing the current application before the next Start. The existing managed-home adoption, operation history and restart behavior apply. See [the complete Water Applications guide](../../sf30-seller-sdk/usgs-water/MANAGED.md) for setup, received-project operation, command-line use and recovery.
