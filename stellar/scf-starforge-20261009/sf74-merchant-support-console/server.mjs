@@ -23,10 +23,14 @@ import {inspectRuntimeFiles, reviewRuntime, exportRuntimeHandoff, importRuntimeH
   MAX_RUNTIME_BYTES, MAX_HANDOFF_BYTES} from './runtime-support.mjs';
 
 import {openCaseCommercial,commercialWorkspaceId} from './case-commercial.mjs';
+import {openCommercialReceivingController} from './commercial/operator.mjs';
 
 const ASSETS = Object.freeze({
   '/': ['index.html', 'text/html; charset=utf-8'],
   '/commercial': ['commercial.html', 'text/html; charset=utf-8'],
+  '/commercial/receiving-desk.mjs': ['commercial/receiving-desk.mjs', 'text/javascript; charset=utf-8'],
+  '/commercial/receiving-desk.css': ['commercial/receiving-desk.css', 'text/css; charset=utf-8'],
+  '/commercial/RECEIVING.md': ['commercial/RECEIVING.md', 'text/markdown; charset=utf-8'],
   '/commercial-app.mjs': ['commercial-app.mjs', 'text/javascript; charset=utf-8'],
   '/commercial-desk.mjs': ['commercial-desk.mjs', 'text/javascript; charset=utf-8'],
   '/commercial-desk.css': ['commercial-desk.css', 'text/css; charset=utf-8'],
@@ -125,7 +129,7 @@ function compareUploadedSources(input) {
 export {workorderFromSources} from './workorder-source.mjs';
 
 // Injection is only for the focused loopback HTTP-contract check, not for deployed usage.
-export function createConsoleServer({runCapture = capture, allowLoopback = false, caseStore = null, handoffDesk = null, incidentDesk = null, commercialDesk = null, sourceDelivery = null, casePackages = null, launchRecord = () => null} = {}) {
+export function createConsoleServer({runCapture = capture, allowLoopback = false, caseStore = null, handoffDesk = null, incidentDesk = null, commercialDesk = null, commercialReceivingDesk = null, sourceDelivery = null, casePackages = null, launchRecord = () => null} = {}) {
   let active = false;
   const sourceRoutes=sourceDelivery?createSourceEditionDeliveryRoutes({service:sourceDelivery.service}):null;
   const packageRoutes=createCasePackageHttp(casePackages);
@@ -141,7 +145,7 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
     }
     const route = (req.url || '').split('?')[0];
     if (req.method === 'GET' && route === '/health') {
-      json(res, 200, {status: 'LOCAL_READY', originalIntake: 'SF70', providerCallsOnPageLoad: 0, paidCalls: 0, casesEnabled:Boolean(caseStore),commercialEnabled:Boolean(commercialDesk),handoffsEnabled:Boolean(handoffDesk),incidentsEnabled:Boolean(incidentDesk),sourceBundlesEnabled:Boolean(sourceDelivery),casePackagesEnabled:Boolean(casePackages)}); return;
+      json(res, 200, {status: 'LOCAL_READY', originalIntake: 'SF70', providerCallsOnPageLoad: 0, paidCalls: 0, casesEnabled:Boolean(caseStore),commercialEnabled:Boolean(commercialDesk),commercialReceivingEnabled:Boolean(commercialReceivingDesk),handoffsEnabled:Boolean(handoffDesk),incidentsEnabled:Boolean(incidentDesk),sourceBundlesEnabled:Boolean(sourceDelivery),casePackagesEnabled:Boolean(casePackages)}); return;
     }
     if (route === '/api/support-launch') {
       if (req.method !== 'GET') {json(res,405,{error:'METHOD_NOT_ALLOWED'});return;}
@@ -330,7 +334,7 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
         if (route === '/api/cases' && req.method === 'POST') {
           json(res,200,await caseStore.save(await boundedBody(req, (MAX_WORKSPACE_BYTES + MAX_RUNTIME_BYTES) * 2 + 100000))); return;
         }
-        const commercial=/^\/api\/cases\/([a-f0-9-]+)\/commercial(?:\/(preview|save-draft|publish|receive|receive-pricing|compare|download))?$/.exec(route);
+        const commercial=/^\/api\/cases\/([a-f0-9-]+)\/commercial(?:\/(preview|save-draft|publish|receive|receive-pricing|compare|download|receiving-status|receiving-capture|receiving-inspect|receiving-attach|receiving-case|receiving-restore))?$/.exec(route);
         if(commercial) {
           if(!commercialDesk){json(res,503,{error:'COMMERCIAL_DISABLED',detail:'Open the original merchant workspace with its private case directory.'});return;}
           if(req.method==='GET'&&!commercial[2]) {
@@ -340,9 +344,14 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
           }
           if(req.method!=='POST'||!commercial[2]){json(res,405,{error:'METHOD_NOT_ALLOWED'});return;}
           if(url.search)throw new TypeError('Unexpected quotation query');
-          const input=await boundedBody(req,MAX_WORKSPACE_BYTES*2+100000);
+          const input=await boundedBody(req,commercial[2].startsWith('receiving-')?64*1024:MAX_WORKSPACE_BYTES*2+100000);
           if(!input||typeof input!=='object'||Array.isArray(input)||Object.hasOwn(input,'id'))
             throw new TypeError('Supply the quotation request for the selected case.');
+          if(commercial[2].startsWith('receiving-')) {
+            if(!commercialReceivingDesk){json(res,503,{error:'COMMERCIAL_RECEIVING_DISABLED',detail:'Open the original saved-case receiving workspace.'});return;}
+            const selected=commercial[2].slice('receiving-'.length),action=selected==='case'?'inspect-case':selected;
+            json(res,200,await commercialReceivingDesk.call(action,{id:commercial[1],...input}));return;
+          }
           const method={'save-draft':'saveDraft','receive-pricing':'receivePricing'}[commercial[2]]??commercial[2];
           const result=await commercialDesk[method]({id:commercial[1],...input});
           if(method==='download') {
@@ -491,7 +500,8 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
   sourceRoutes?.configure(server);
   server.closeSourceDelivery=()=>sourceRoutes?.close()??Promise.resolve();
   server.closeCasePackages=()=>casePackages?.close()??Promise.resolve();
-  server.once('close',()=>{void server.closeCasePackages().finally(()=>server.closeSourceDelivery()).catch(()=>{});});
+  server.closeCommercialReceiving=()=>commercialReceivingDesk?.close()??Promise.resolve();
+  server.once('close',()=>{void Promise.allSettled([server.closeCasePackages(),server.closeCommercialReceiving()]).then(()=>server.closeSourceDelivery()).catch(()=>{});});
   return server;
 }
 
@@ -507,6 +517,7 @@ export async function start({port = 0, allowLoopback = false, runCapture = captu
   if((sourceDir!==null||packageDir!==null)&&casesDir===null)throw new TypeError('Source and package delivery require the original saved-case directory.');
   const caseStore = casesDir === null ? null : await openCaseStore(casesDir);
   const commercialDesk=caseStore?openCaseCommercial({store:caseStore,workspaceId:commercialWorkspaceId(resolve(casesDir))}):null;
+  const commercialReceivingDesk=caseStore?openCommercialReceivingController({store:caseStore,casesDirectory:resolve(casesDir),environment}):null;
   const handoffDesk = handoffSources === null ? null : await (await import('./handoff-store.mjs')).openHandoffDesk({configPath:handoffSources,casesDir,environment});
   let incidentDesk,sourceDelivery,casePackages,selection=null,launch=null;
   try {
@@ -523,24 +534,24 @@ export async function start({port = 0, allowLoopback = false, runCapture = captu
         throw Object.assign(new Error('The selected support configuration changed; review the current application before starting.'),
           {code:'SUPPORT_APPLICATION_SELECTION_CHANGED'});
     }
-  } catch(error) {await casePackages?.close().catch(()=>{});await Promise.allSettled([handoffDesk?.close(),incidentDesk?.close(),sourceDelivery?.close()]);throw error;}
+  } catch(error) {await Promise.allSettled([casePackages?.close(),commercialReceivingDesk?.close()]);await Promise.allSettled([handoffDesk?.close(),incidentDesk?.close(),sourceDelivery?.close()]);throw error;}
   let server;
-  try{server=createConsoleServer({allowLoopback,runCapture,caseStore,handoffDesk,incidentDesk,commercialDesk,sourceDelivery,casePackages,launchRecord:()=>launch});}
-  catch(error){await casePackages?.close().catch(()=>{});await Promise.allSettled([handoffDesk?.close(),incidentDesk?.close(),sourceDelivery?.close()]);throw error;}
+  try{server=createConsoleServer({allowLoopback,runCapture,caseStore,handoffDesk,incidentDesk,commercialDesk,commercialReceivingDesk,sourceDelivery,casePackages,launchRecord:()=>launch});}
+  catch(error){await Promise.allSettled([casePackages?.close(),commercialReceivingDesk?.close()]);await Promise.allSettled([handoffDesk?.close(),incidentDesk?.close(),sourceDelivery?.close()]);throw error;}
   try {await new Promise((resolveListen, reject) => {
     server.once('error', reject);server.listen(port, '127.0.0.1', resolveListen);
-  });}catch(error){await casePackages?.close().catch(()=>{});await Promise.allSettled([handoffDesk?.close(),incidentDesk?.close(),server.closeSourceDelivery()]);throw error;}
+  });}catch(error){await Promise.allSettled([server.closeCasePackages(),server.closeCommercialReceiving()]);await Promise.allSettled([handoffDesk?.close(),incidentDesk?.close(),server.closeSourceDelivery()]);throw error;}
   const url='http://127.0.0.1:'+server.address().port+'/';
   if(selection)launch=createSupportLaunch(selection,url);
   let closing;
   const close=()=>closing??=(async()=>{
     if(launch)launch.state='STOPPING';
-    const packageResults=await Promise.allSettled([server.closeCasePackages()]);
+    const packageResults=await Promise.allSettled([server.closeCasePackages(),server.closeCommercialReceiving()]);
     const results=packageResults.concat(await Promise.allSettled([handoffDesk?.close(),incidentDesk?.close(),server.closeSourceDelivery()]));
     await new Promise((done,reject)=>{server.close(error=>error?reject(error):done());server.closeAllConnections();});
     const failed=results.find(result=>result.status==='rejected');if(failed)throw failed.reason;
   })();
-  server.once('close',()=>{if(launch)launch.state='STOPPED';void server.closeCasePackages().finally(()=>Promise.allSettled([handoffDesk?.close(),incidentDesk?.close(),server.closeSourceDelivery()])).catch(()=>{});});
+  server.once('close',()=>{if(launch)launch.state='STOPPED';void Promise.allSettled([server.closeCasePackages(),server.closeCommercialReceiving()]).then(()=>Promise.allSettled([handoffDesk?.close(),incidentDesk?.close(),server.closeSourceDelivery()])).catch(()=>{});});
   return {server,url,close,launch};
 }
 
