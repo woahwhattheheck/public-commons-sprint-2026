@@ -115,6 +115,19 @@ class Handler(BaseHandler):
             q,offset,limit=self._page_args(target,("group",));return self._json(ws.directory_preview_page(t[1],q.get("group","findings"),offset,limit))
         if len(t)==3 and t[0]=="selections"and t[2]=="candidates":
             q,offset,limit=self._page_args(target,("query",));return self._json(ws.directory_selection_page(t[1],offset,limit,q.get("query","")))
+        if len(t)>=4 and t[:2]==["conformance","assessments"]:
+            if len(t)==4 and t[3]in {"findings","rows"}:
+                if t[3]=="findings":
+                    q,offset,limit=self._page_args(target,("severity","table","code","sourceId","recordId"))
+                    return self._json(ws.directory_conformance_findings(t[2],offset,limit,q.get("severity"),q.get("table"),q.get("code"),q.get("sourceId"),q.get("recordId")))
+                q,offset,limit=self._page_args(target,("table",))
+                return self._json(ws.directory_conformance_rows(t[2],offset,limit,q.get("table")))
+            if len(t)==5 and t[3]=="findings":
+                self._query(target,());return self._json(ws.directory_conformance_finding(t[2],t[4]))
+        if len(t)==5 and t[0]=="conformance"and t[3]=="files":
+            collections={"assessments":"conformanceAssessments","reviews":"conformanceReviews","comparisons":"conformanceComparisons"}
+            if t[1]in collections:
+                self._query(target,());return self._native_download(ws.directory_conformance_file(collections[t[1]],t[2],t[4]))
         if len(t)in {1,2}:
             kind="acquisitions"if t[0]=="operations"else t[0]
             if kind in schema.KINDS:
