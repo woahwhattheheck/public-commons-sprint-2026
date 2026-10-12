@@ -63,7 +63,8 @@ export async function main(args = process.argv.slice(2), {env=process.env}={}) {
     [config,bindings] = await Promise.all([readSellerConfig(options.configPath),readUpstreamBindings(options.upstreamPath)]);
     // Capture environment values once for a stable launch-time credential snapshot.
     const environment = {...env};
-    application = createUpstreamApplication(config,bindings,{allowLoopback:options.allowLoopback,env:environment});
+    application = createUpstreamApplication(config,bindings,{allowLoopback:options.allowLoopback,env:environment,
+      deferCredentials:!options.facilitator && !options.check});
     if (options.check) {
       const {compileSellerRoutes} = await import('./resource-server.mjs');
       const origin = config.publicOrigin ? new URL(config.publicOrigin).origin : 'http://127.0.0.1:8423';

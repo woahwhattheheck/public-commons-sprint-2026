@@ -5,7 +5,7 @@ The same project owns catalogue discovery, acquisition, field review, notes,
 edition comparison, the original dataset publisher and a portable merchant.
 SF82 manages the seller release and SF88 carries the customer purchase.
 
-The browser guide is [WORKSPACE.md](WORKSPACE.md); installed commands and the
+The browser guide is [WORKSPACE.md](workspace/WORKSPACE.md); installed commands and the
 customer continuation are in [README.md](README.md).
 
 ## Actual source
@@ -82,7 +82,7 @@ Capture selection accepts `where`, `order_by`, repeated `refine` / `exclude`,
 `lang` and `timezone`. It keeps all original fields for subsequent projection
 review. Transport options are `authTokenEnv`, `timeoutMs` and `maxResponseBytes`;
 operation limits are `maxRows` and `maxBytes`. An existing API key is read from
-the named environment variable and sent in the provider's `Apikey` header.
+the named environment variable and sent as `Authorization: Apikey <value>`.
 
 ### Import the existing original response files
 
@@ -259,13 +259,22 @@ hashes, resource, dataset snapshot and retained source metadata.
 
 The full package includes raw provider responses, source declaration,
 plan/candidate/review, typed CSV, dataset configuration, OpenAPI, selections,
-route bindings and original runtime. Relative handler imports support receiving
-on another host.
+route bindings, original runtime and the manifest-bound [receiving guide](publisher/RECEIVING.md).
+Relative handler imports support receiving on another host. The browser also
+provides a companion guide with the exact package identities for older exports.
 
 `stageMerchant(exportId,{expectedManifestSha256,releaseId,label,runtime})`
 verifies and copies the whole package into the existing SF82 store before its
-original stage operation. The seller console owns activation and start/stop.
+original stage operation. Runtime accepts the selected public facilitator URL,
+loopback seller port and the original explicit local-facilitator option. The
+browser exposes those same choices; an empty facilitator selects the original
+offer-only service. The seller console owns activation and start/stop.
 Saved releases remain usable after the original acquisition directory moves.
+
+[RECEIVING.md](publisher/RECEIVING.md) gives the complete customer installation,
+package inspection and staging, original release commands, offer and buyer
+preparation, full dataset session and retained-source import. Its companion
+download binds those instructions to the selected package and snapshot.
 
 Direct exports in `publisher/release.mjs` are:
 

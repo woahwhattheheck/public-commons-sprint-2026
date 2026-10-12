@@ -242,6 +242,14 @@ const components = [
     "kind": "seller",
     "description": "Author native searches, retain result editions, review judged query variants and export the original merchant, customer client and relevance report.",
     "path": "sf30-seller-sdk/opensearch/workspace/README.md"
+  },
+  {
+    "id": "15",
+    "title": "CoinGecko market workspace",
+    "code": "MARKETS / RESEARCH + DELIVERY",
+    "kind": "operations",
+    "description": "Retain five families of market requests and original responses, compare observations, recover native purchases and transfer complete research projects.",
+    "path": "partners/coingecko-stellar-market/README.md"
   }
 ];
 let filter='all';
