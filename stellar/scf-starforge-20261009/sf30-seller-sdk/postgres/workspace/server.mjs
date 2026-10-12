@@ -8,11 +8,9 @@ import { CatalogError, createMerchantCatalog } from './catalog.mjs';
 import { compileMerchantPlan, parameterType, WorkspaceInputError } from './plan.mjs';
 import { buildMerchantPackage, saveMerchantPackage, workspaceProfile } from './package.mjs';
 import { createWorkspaceReleaseHandoff } from './release-handoff.mjs';
+import { readBrowserAssets } from '../../../distribution/browser-assets.mjs';
 
-const ROOT = new URL('./public/', import.meta.url);
-const FILES = new Map([['/', ['index.html', 'text/html; charset=utf-8']],
-  ['/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']],
-  ['/postgres.mjs', ['../../../../sf82-seller-pilot/release-ui/postgres.mjs', 'text/javascript; charset=utf-8']], ['/style.css', ['style.css', 'text/css; charset=utf-8']]]);
+const FILES = await readBrowserAssets(new URL('./browser-assets.json', import.meta.url));
 const safeError = error => error instanceof CatalogError || error instanceof WorkspaceInputError || /^(POSTGRES_|EXPORT_|EXPORTED_|RELEASE_|WORKSPACE_BUSY)/.test(error.code ?? '') ? error.code : 'WORKSPACE_UNAVAILABLE';
 const json = (res, status, body) => {
   const text = JSON.stringify(body);
@@ -34,8 +32,8 @@ export async function startMerchantWorkspace({ catalog, profile, outputRoot,
   profile = structuredClone(profile);
   const credentialEnv = profile.source.connectionEnv ?? profile.source.connection?.passwordEnv ?? null;
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new RangeError('port must be 0–65535');
-  const files = new Map(await Promise.all([...FILES].map(async ([path, [filename, type]]) =>
-    [path, { body: await readFile(new URL(filename, ROOT)), type }])));
+  const files = new Map(await Promise.all([...FILES].map(async ([path, { url, type }]) =>
+    [path, { body: await readFile(url), type }])));
   const handoff = await createWorkspaceReleaseHandoff({ outputRoot, releaseStore });
   const token = randomBytes(24).toString('hex');
   let origin, closing, releaseBusy = false, releaseAction = Promise.resolve();

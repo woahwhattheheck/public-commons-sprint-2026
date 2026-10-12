@@ -11,6 +11,12 @@ The package preserves the original source paths and bytes. Its command interface
 starts those modules directly. It contains no alternative payment implementation,
 install hooks, test suites or GitHub Actions configuration.
 
+Browser modules served under shared URLs use the same
+[asset contracts](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/c26eee9e80fe4bccfd9faa5d79b4464742d8d95f/stellar/scf-starforge-20261009/distribution/BROWSER_ASSETS.md)
+in their original HTTP servers and the source collector. The same guide is included
+at `source/stellar/scf-starforge-20261009/distribution/BROWSER_ASSETS.md` inside the
+installed package.
+
 ## Install the source archive
 
 Use Node 22.16 or later. From a new application directory, install the supplied
@@ -723,6 +729,7 @@ or automatically retry a request.
 | `starforge assets` | Inspect, package and catalog original immutable file products |
 | `starforge postgres-workspace` | Existing database metadata to selected-query merchant package |
 | `starforge postgres-publisher` | Review and publish complete query snapshots; keep the original data product current on a saved cadence |
+| `starforge arcgis` / `arcgis-publisher` | Retain ArcGIS layers, publish reviewed datasets and receive original Esri FeatureSets from finalized buyer deliveries |
 | `starforge sheets-source` | Retain an actual Google cell response, inspect headers and prepare an explicit public projection |
 | `starforge sheets-publisher` | Review and publish selected Sheet observations through the original retained dataset and buyer workflow |
 | `starforge mysql` | Inspect actual MySQL/MariaDB metadata, preview approved queries and prepare or run a merchant |
@@ -787,6 +794,7 @@ or automatically retry a request.
 | `starforge buyer-object-workspace` | Select and review original file acquisitions, operate retained parts and download the assembled file |
 | `starforge merchant-fleet` / `merchant-fleet-control` | Serve multiple merchants and prepare, activate or roll back their routing |
 | `starforge merchant-fleet-workspace` | Review serving and proposed fleet configurations in a private browser |
+| `starforge merchant-fleet-host` | Generate, run, check and recover the original managed fleet as one Linux service |
 | `starforge fleet-release` | Stage and operate original seller releases with managed fleet rollout, draining and rollback |
 | `starforge revenue-workspace` / `revenue-report` | Review pricing, original merchant traffic and the existing native journal |
 | `starforge merchant-accounting` / `merchant-accounting-workspace` | Reconcile original settlement records, retain ledgers and review imports, comparisons and exceptions |
@@ -2178,6 +2186,43 @@ The terminal and browser both own the original lifecycle, so run one of them
 for that deployment. The `./merchant/fleet/releases` subpath exposes the same
 `openFleetReleaseOperator` API.
 
+### Install the managed fleet as a Linux service
+
+Use `starforge merchant-fleet-host` to keep the same release operator, owned
+seller sessions, gateway and private workspace running under one dedicated
+Linux account. First prepare the original fleet plan and separate release
+stores as described above. Create its host declaration using the included
+[complete deployment guide](../merchant-fleet-gateway/DEPLOYMENT.md): it names
+that plan, the private state root, the non-root service identity, the existing
+Node executable and the private workspace port.
+
+```sh
+npx --no-install starforge merchant-fleet-host inspect \
+  --declaration /private/fleet/host.json
+npx --no-install starforge merchant-fleet-host generate \
+  --declaration /private/fleet/host.json --out /private/fleet-host-001
+npx --no-install starforge merchant-fleet-host check --bundle /private/fleet-host-001
+```
+
+The generated `RUNBOOK.md` gives the exact service installation, Caddy ingress,
+SSH workspace access, graceful shutdown and recovery commands for those paths.
+Its systemd unit runs the original runtime directly. Optional Compose uses the
+explicit immutable image in the declaration and mounts the same source, state
+and private inputs. After starting the selected service, run:
+
+```sh
+npx --no-install starforge merchant-fleet-host health --bundle /private/fleet-host-001
+```
+
+Health reads the original private workspace and checks its selected plan,
+merchant authorities and owned running release slots. Use that same workspace
+for staging, source/terms review, activation, drain and rollback. Reopening
+retains the original plan and stores; encrypted recovery follows the generated
+named-root plan and the original absolute paths. The package exports
+`./merchant/fleet/host` and `./merchant/fleet/host-runtime` for native embedding.
+
+
+
 ### Pause selected merchant routes
 
 The installed `availability` command uses the running seller's original private
@@ -3481,6 +3526,29 @@ exports the same original reports with optional captured sources. Its ordinary
 The public `./merchant/recovery` entry exposes the original importer, collection
 reader and saved-response export for applications embedding this workflow.
 
+## ArcGIS source publication and GIS receiving
+
+Use `starforge arcgis` (or `arcgis-publisher`) for the maintained
+[ArcGIS workflow](../sf30-seller-sdk/arcgis/README.md): capture a FeatureServer or
+MapServer layer, or import retained original feature sets; select explicit
+native fields; review and publish through the existing dataset publisher.
+Stable object IDs, scalar attributes, geometry and coordinate reference stay
+in their original Esri representation. The same merchant supplies the original
+SF88 buyer configuration and snapshot-bound page query.
+
+Prepare the public receiving declaration with `starforge arcgis receiving-plan`
+for the retained candidate. After the original SF100 delivery has been
+finalized, `starforge arcgis receive` streams its exact typed JSONL into a usable
+Esri FeatureSet. It verifies the complete retained page chain and source binding
+before publishing the output. Payment history remains with the original buyer.
+The maintained merchant MCP also accepts a host-declared ArcGIS publisher;
+its source credentials remain private environment references.
+
+The package exports `@tokenjunkielabs/starforge-merchant/seller/arcgis`,
+`/seller/arcgis/publisher` and `/buyer/arcgis` for applications. The component
+reuses the included original publisher, dataset and buyer-delivery modules and
+adds no optional native dependency.
+
 ## Run an existing Python merchant
 
 The maintained Python merchant entrypoint is included alongside the buyer
@@ -3942,6 +4010,90 @@ record analysis, comparison and CSV functions. These entries use the original
 Node buyer SDK and Node 22.16+, with no additional runtime package. The complete
 receiving and portable-file guide is included at
 `source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/README.md`.
+
+## GoldRush wallet data and research
+
+The installed product joins the provider's prepared release to the original
+Node Buyer, Inbox and Resource library. It supports the two selected EVM wallet
+operations: token balances and one explicit page of token transfers. Stellar
+is the separately configured merchant's payment network; this does not extend
+GoldRush's existing Base Sepolia client interface or add Stellar source-chain
+data.
+
+Check the original schema runtime, then inspect or prepare the provider's
+retained release:
+
+```sh
+npx --no-install starforge doctor --feature schema
+npx --no-install starforge goldrush-merchant --help
+npx --no-install starforge goldrush-merchant prepare \
+  --plan /private/provider/goldrush-plan.json \
+  --catalog /private/provider/goldrush-catalog.json \
+  --out /private/provider/goldrush-release
+npx --no-install starforge goldrush-merchant inspect \
+  --release /private/provider/goldrush-release
+```
+
+The provider supplies the existing account, named credential environment,
+source-data rights and complete merchant payment terms. Preparation reads
+retained inputs and creates a new release; it performs no provider request.
+The original check/serve argument arrays printed by `inspect` resolve against
+this installation and the selected release directory.
+
+Open the wallet workspace with its original release and private buyer paths:
+
+```sh
+npx --no-install starforge goldrush workbench \
+  --state /private/customer/goldrush-wallet \
+  --release /private/provider/goldrush-release \
+  --buyer-state /private/customer/goldrush-buyer \
+  --inbox /private/customer/goldrush-inbox \
+  --workspace /private/customer/operator-workspace
+```
+
+Use an existing `--profile` instead of `--workspace` when that is the original
+operator configuration; the two options are mutually exclusive. Use the
+configuration required by the original wallet operating guide. Open the private
+URL announced by the process. It exposes the wallet and the original Resource library on
+the same listener and session.
+
+After stopping the process, reopen with only the same `--state`. The retained
+configuration keeps its release, buyer, inbox and operator paths. Use an
+explicit `--port` when browser drafts must reopen at the same local origin.
+Preparation, saved-response reading, comparison, notes and export do not
+execute a purchase. Each selected execution still uses the original operator
+review and terminal; interrupted work returns to the same saved Inbox intent.
+
+`starforge goldrush --help` also exposes the maintained request, prepare,
+review, execute, recover and next-page commands. One transfer response is
+one page; a next page requires a new explicit request and ceiling. The
+pilot's 20-second upstream deadline, 1-MiB response cap and four-request
+concurrency cap remain in force, and provider or delivery failures retain their original outcome.
+
+Applications may use the same argument-vector opening API:
+
+```js
+import { startGoldRushWorkspace } from '@tokenjunkielabs/starforge-merchant';
+
+const running = await startGoldRushWorkspace([
+  '--state', '/private/customer/goldrush-wallet',
+]);
+console.log(running.url);
+// Keep the application running for the operator; close it during host shutdown:
+// await running.close();
+```
+
+This reopens an initialized workspace. Its original low-level
+`openWorkbench` and `main` exports are also available at
+`@tokenjunkielabs/starforge-merchant/buyer/goldrush/workspace`.
+The `/buyer/goldrush` entry exposes original request preparation and
+`/buyer/goldrush/records` exposes the pure saved-response parser, comparison
+and CSV functions. The `/seller/goldrush` entry exposes the original merchant
+preparation command. No additional source component or dependency family is
+introduced: the existing schema feature and native buyer requirements apply.
+Follow the included [wallet operating guide](../sf30-seller-sdk/examples/goldrush-stellar-pilot/WALLET-WORKSPACE.md)
+for exact source lineage, decimal values, saved notes, reference observations
+and explicit recovery.
 
 ## Embed in an application
 
@@ -4557,3 +4709,69 @@ entry exports `startDossierWorkspace` for applications that need only the
 operator server. Use `openDossierStore(directory, {providers})` for the same
 research engine in an existing application. Source and installed usage share
 the original dossier, revision and edition identities.
+
+## Allocate buyer expenses and issue accountant periods
+
+Use the original SF36 expense workspace with Python 3.11 or later:
+
+```sh
+starforge buyer-expenses --state /absolute/private/buyer-expenses --port 0
+```
+
+Register the existing buyer ledger, review its retained statement capture, assign
+recognition dates and exact cost-center/project allocations, and close a period
+under its named reviewer. Outstanding reservations keep their native maximum;
+amounts stay separate by network and asset. Reopening preserves issued editions.
+The workspace downloads semantic accountant packets and a complete private project
+with included source for receiving. Its fixed command starts the original Python
+server. See the [buyer expense operating guide](../sf36-spend-governor/expense-workspace/README.md)
+for source continuity, coding, review and recovery.
+
+## Open-Meteo weather merchant and operations
+
+The complete `weather-operations` command uses the original SF30 seller and generated client, original SF88 operator/buyer, and original encrypted workspace recovery. It covers explicit forecast/reanalysis/ensemble requests, retained source bytes, UTC/local/member analysis, attributed operating decision revisions, frozen JSON/CSV/HTML/ZIP reports, and same-root restore.
+
+```sh
+npx --no-install starforge weather-operations --help
+npx --no-install starforge weather-operations serve \
+  --settings /private/weather/settings.json
+```
+
+The [complete original product guide](../partners/open-meteo-operations/README.md) includes merchant compilation, receiving-operator initialization, controlling-terminal execution, provider mode/attribution, exact weather semantics and full recovery commands. Installed imports are `./partners/open-meteo` plus `/application`, `/workspace`, `/server`, `/analysis`, and `/reports`. The new component adds no dependency group; it retains the maintained native SDK/Python implementations and built-in Node SQLite. Evaluation data and commercial provider configuration remain explicit choices.
+
+
+## Research federal awards and prepare implementation workshares
+
+The USAspending application retains the original search query and all returned
+pages, enriches selected awards with original detail responses, saves immutable
+editions and keeps operator research and workshare decisions alongside them.
+Its merchant uses the original saved-dataset service; the receiving application
+adopts the original customer delivery and can reopen the same research project.
+
+~~~sh
+starforge usaspending-research help
+starforge usaspending-dossier help
+~~~
+
+The award operator keeps obligations, exercised options, potential options and
+outlays as separate exact decimal fields. Recipient, parent company and parent
+award identities remain distinct. Coverage identifies the complete original
+capture, selected edition and received query view.
+
+The dossier bridge receives an existing AwardWorkspace edition or its complete
+export. It retains all original source and native delivery bytes, supports cited
+findings and complete HTML/Markdown/portable reports, and recovers the exact first
+source packet from a reopened project. A retry resumes the same source identity
+and completed components.
+
+Public modules are available at
+@tokenjunkielabs/starforge-merchant/research/usaspending (AwardWorkspace),
+/research/usaspending/merchant,
+/research/usaspending/source-import,
+/research/usaspending/server and
+/buyer/usaspending/dossier. The award and dossier stores are the original
+applications' stores.
+
+See the [award research operating guide](../sf30-seller-sdk/usaspending/README.md)
+and [complete dossier receiving guide](../sf30-seller-sdk/usaspending/DOSSIER.md)
+for configuration, original acquisition, operator use and portable handover.
