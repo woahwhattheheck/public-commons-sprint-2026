@@ -60,9 +60,9 @@ async function refreshState(){state=await api("/api/state");workspace=state.host
 const groups=[
  ["WORKSPACE",[["overview","Overview"],["risk","Risk & audit plan"],["engagement","Engagements"],["audit_area","Audit areas"],["sub_activity","Control activities"],["workpaper","Workpapers"],["observation","Observations"],["management_action","Management actions"],["evidence","Evidence"]]],
  ["REPORTING",[["follow-up","Follow-up"],["advisory_memo","Advisory memos"],["reports","Reports & handoffs"],["questionnaire","Issuer questionnaire"]]],
- ["OPERATIONS",[["sources","Source intake & mappings"],["receiving","Receiving & reconciliation"],["history","Activity & outputs"],["access","Access"],["recovery","Backup & recovery"]]]
+ ["OPERATIONS",[["sources","Source intake & mappings"],["receiving","Receiving & reconciliation"],["history","Activity & outputs"],["access","Access"],["identity","Institutional access"],["recovery","Backup & recovery"]]]
 ];
-function allowed(r){if(state.can_edit)return r!=="access"||state.actor.admin;return ["overview","engagement","audit_area","sub_activity","observation","management_action","evidence","follow-up","advisory_memo","reports","history"].includes(r);}
+function allowed(r){if(r==="identity")return true;if(state.can_edit)return r!=="access"||state.actor.admin;return ["overview","engagement","audit_area","sub_activity","observation","management_action","evidence","follow-up","advisory_memo","reports","history"].includes(r);}
 function renderNav(){$("#navigation").innerHTML=groups.map(([group,items])=>{const rows=items.filter(([r])=>allowed(r));return rows.length?'<div class="nav-group">'+esc(group)+'</div>'+rows.map(([r,n])=>'<button data-route="'+esc(r)+'"'+(r===route?' aria-current="page"':"")+'>'+esc(n)+'</button>').join(""):"";}).join("");$$("[data-route]",$("#navigation")).forEach(b=>b.onclick=()=>openRoute(b.dataset.route));}
 async function openRoute(next=route,options={}){
  route=next;routeOptions=options;const current=++generation;renderNav();$("#navigation").classList.remove("open");$("#menu-toggle").setAttribute("aria-expanded","false");page.innerHTML='<p class="muted" role="status">Opening '+esc(title(next))+'…</p>';
@@ -75,6 +75,10 @@ async function openRoute(next=route,options={}){
   else if(next==="questionnaire")await questionnairePage();
   else if(next==="history")await historyPage();
   else if(next==="access")await accessPage();
+  else if(next==="identity")await window.CommonsInstitutionalAccess.render({
+    root:page,api,action,notice,endpoint,actor:state.actor,workspace,dialog,dialogOpen,
+    refresh:refreshState,openRoute,isCurrent:()=>route==="identity"&&current===generation
+  });
   else if(next==="recovery")await recoveryPage();
   else await recordsPage(next,options);
   if(current===generation)$("#main").focus({preventScroll:true});
@@ -468,15 +472,28 @@ async function recoveryPage(){
 }
 async function start(){
  const fragment=new URLSearchParams(location.hash.slice(1)),token=fragment.get("access");
+ const identityResult=fragment.get("identity"),identityMessages={
+  opened:"Institutional sign-in opened your named workspace account.",
+  access_review:"The verified account requires a workspace access review. Its named account is retained for the access administrator.",
+  provider_declined:"The provider did not complete this sign-in. You can start another institutional sign-in.",
+  sign_in_failed:"Sign-in did not complete. Start a new institutional sign-in."
+ };
+ const identityMessage=identityMessages[identityResult];
+ if(identityResult){history.replaceState(null,"",location.pathname+location.search);$("#login-error").textContent=identityMessage||"";}
  if(token){history.replaceState(null,"",location.pathname+location.search);try{await api("/api/login",{}, {token});}catch(e){$("#login-error").textContent=e.message;}}
  try{
   await refreshState();$("#login").hidden=true;$("#shell").hidden=false;await openRoute();
+  if(identityMessage)notice(identityMessage,identityResult!=="opened");
   const unresolved=pending();if(unresolved.length){
    let recovered=0;for(const p of unresolved){try{await api("/api/operation",{id:p.id});retainPending(pending().filter(x=>x.id!==p.id));recovered++;}catch{}}
    if(recovered)notice(recovered+" original completed operation"+(recovered===1?" was":"s were")+" recovered after reopening.");
    else notice("A previous operation response is unresolved. Its original ID remains retained for a same-input retry.",true);
   }
- }catch(e){$("#shell").hidden=true;$("#login").hidden=false;if(e.status!==401)$("#login-error").textContent=e.message;}
+ }catch(e){$("#shell").hidden=true;$("#login").hidden=false;
+  if(e.status!==401)$("#login-error").textContent=e.message;
+  else if(identityResult==="opened")$("#login-error").textContent="Open a current workspace sign-in.";
+  await window.CommonsInstitutionalAccess.login({api});
+ }
 }
 $("#close-dialog").onclick=()=>dialog.close();
 $("#menu-toggle").onclick=()=>{const open=$("#navigation").classList.toggle("open");$("#menu-toggle").setAttribute("aria-expanded",String(open));};
