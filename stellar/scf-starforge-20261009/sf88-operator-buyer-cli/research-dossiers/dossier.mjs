@@ -12,6 +12,8 @@ import { portableEntries, encodePortable } from './portable.mjs';
 import {inspectSourceBundle} from './source-bundles.mjs';
 import {CITATION_REVIEW_SCHEMA,citationDigest,citationUpdateModel,citationUpdatePage,citationReviewInput,
   recordCitationReview,validateCitationReviewState,validateCitationReviewTransition} from './citation-updates.mjs';
+import {eligibilityDigest,eligibilityInput,eligibilityModel,eligibilityPage,eligibilityReport,eligibilityExport,
+  recordEligibilityOperation,validateEligibilityState,validateEligibilityTransition} from './eligibility-review.mjs';
 
 const DOCUMENT = 'sf88-research-dossier-v1';
 const PORTABLE = 'sf88-research-dossier-portable-v1';
@@ -33,6 +35,7 @@ const summary = state => ({
   questionCount: state.questions.length, editionCount: state.editions.length,
   selectedCount: state.selections.filter(selection => selection.selected).length,
   findingCount: state.findings.length, citationReviewCount:(state.citationReviews??[]).length,
+  eligibilityReviewCount:(state.eligibilityEvents??[]).filter(value=>value.action==='create-review').length,
 });
 const referenceKeys = new Set(['id', 'editionId', 'queryId', 'workspaceId', 'operationId']);
 function referenceValue(reference) {
@@ -225,7 +228,7 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
     const id = newId('d'), now = timestamp();
     const state = { schema: DOCUMENT, id, title, description, revision: 1,
       previous: null, createdAt: now, updatedAt: now, change: 'Created dossier',
-      questions: [], editions: [], selections: [], findings: [], citationReviews: [] };
+      questions: [], editions: [], selections: [], findings: [], citationReviews: [], eligibilityEvents: [] };
     await writeJson(join(await revisionsDirectory(id, true), filename(1)),
       { sha256: digest(jsonBytes(state)), state }, { exclusive: true });
     return projection === 'metadata' ? getMetadata(id) : get(id);
@@ -456,6 +459,42 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
     }
   }
 
+
+  async function eligibility(id,{revision,reviewId,workSetId,section='overview',offset=0,limit=30}={}){
+    need(offset===0||revision!==undefined,'RESEARCH_PAGE_REVISION_REQUIRED');
+    const {state}=await head(id,revision);
+    return eligibilityPage(state,eligibilityModel(state,await projections(state,{references:false})),
+      {reviewId,workSetId,section,offset,limit});
+  }
+  async function reviewEligibility(id,{projection='metadata',...value}={}){
+    need(['metadata','full'].includes(projection),'RESEARCH_PROJECTION_INVALID');
+    const request=eligibilityInput(value),requestSha256=eligibilityDigest(request);
+    async function recovered(state){
+      const existing=(state.eligibilityEvents??[]).find(item=>item.requestId===request.requestId);
+      if(!existing)return null;
+      need(existing.requestSha256===requestSha256,'ELIGIBILITY_REQUEST_CHANGED');
+      return {dossier:projection==='metadata'?metadata(state):await get(id),operation:clone(existing),duplicate:true};
+    }
+    const prior=await recovered((await head(id)).state);if(prior)return prior;
+    let operation;
+    try{
+      const dossier=await commit(id,request.expectedRevision,'Eligibility: '+request.action,async(state,previous)=>{
+        operation=recordEligibilityOperation(state,await projections(previous,{references:false}),request,timestamp());
+      },{projection});
+      return {dossier,operation:clone(operation),duplicate:false};
+    }catch(error){
+      if(error.code==='REVISION_CONFLICT'){
+        const saved=await recovered((await head(id)).state);if(saved)return saved;
+      }
+      throw error;
+    }
+  }
+  async function exportEligibility(id,{revision,reviewId,workSetId,format='json',section='queue'}={}){
+    const {state}=await head(id,revision);
+    return eligibilityExport(state,eligibilityModel(state,await projections(state,{references:false})),
+      {reviewId,workSetId,format,section});
+  }
+
   async function exportDossier(id, { format = 'json', revision } = {}) {
     need(['json', 'md', 'html'].includes(format), 'EXPORT_FORMAT_INVALID');
     const selected=(await head(id,revision)).state.revision;
@@ -479,7 +518,9 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
     const report = await view(current, { references: false });
     report.revisions=report.revisions.filter(value=>value.revision<=current.revision);
     report.citationReviews=clone(current.citationReviews??[]);
-    const citationModel=citationUpdateModel(current,await projections(current,{references:false}));
+    const reportProjected=await projections(current,{references:false});
+    const citationModel=citationUpdateModel(current,reportProjected);
+    report.eligibility=eligibilityReport(current,eligibilityModel(current,reportProjected));
     report.citationUpdates=citationModel.notices.map(({noticeId,noticeDoi,targetDoi,title,type,date,status,lastReview})=>
       ({noticeId,noticeDoi,targetDoi,title,type,date,status,lastReview}));
     report.citationCoverage=citationModel.coverage;
@@ -547,6 +588,7 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
         knownOccurrences.set(selection.occurrenceId, selection.questionId);
       }
       validateCitationReviewState(state,editions);
+      validateEligibilityState(state,editions,knownOccurrences);
       const findings = new Set();
       for (const finding of state.findings) {
         need(object(finding) && typeof finding.id === 'string' && /^f_[a-f0-9-]{36}$/.test(finding.id) &&
@@ -565,10 +607,12 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
       }
   }
 
-  async function validateCitationTransition(previous,state,readContent){
-    const hasNew=(state.citationReviews?.length??0)>(previous?.citationReviews?.length??0);
-    const projected=hasNew&&previous?await projections(previous,{references:false,readContent}):undefined;
+  async function validateReviewTransitions(previous,state,readContent){
+    const hasCitation=(state.citationReviews?.length??0)>(previous?.citationReviews?.length??0);
+    const hasEligibility=(state.eligibilityEvents?.length??0)>(previous?.eligibilityEvents?.length??0);
+    const projected=(hasCitation||hasEligibility)&&previous?await projections(previous,{references:false,readContent}):undefined;
     validateCitationReviewTransition(previous,state,projected);
+    validateEligibilityTransition(previous,state,projected);
   }
 
   async function reopen(portable) {
@@ -600,7 +644,7 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
     for (let index=0;index<incoming.length;index++){
       const state=incoming[index].state,prior=index?incoming[index-1].state:null;
       await validatePortableState(state,readContent,occurrenceCache);
-      await validateCitationTransition(prior,state,readContent);
+      await validateReviewTransitions(prior,state,readContent);
     }
     let existing = [];
     try { existing = await history(id); }
@@ -716,7 +760,7 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
         need(envelope.state.previous === previous, 'PORTABLE_HISTORY_CHANGED');
         previous = envelope.sha256;
         await validatePortableState(envelope.state, readContent, occurrenceCache);
-        await validateCitationTransition(previousState,envelope.state,readContent);previousState=envelope.state;
+        await validateReviewTransitions(previousState,envelope.state,readContent);previousState=envelope.state;
         if (revision <= existing.length)
           need((await readRevision(id, revision)).sha256 === envelope.sha256, 'PORTABLE_HISTORY_CONFLICT');
       }
@@ -739,5 +783,6 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
 
   return Object.freeze({ directory, list, create, get, getMetadata, readRetainedEdition, listRevisions, update, addQuestion, updateQuestion,
     receive, previewSourceBundle, receiveSourceBundle, receiveBuyerResult, receiveReference, selectEvidence, updateSelection, addFinding, updateFinding,
-    citationUpdates,reviewCitationUpdate,compare, exportDossier, exportStream, reopen, reopenStream });
+    citationUpdates,reviewCitationUpdate,eligibility,reviewEligibility,exportEligibility,
+    compare, exportDossier, exportStream, reopen, reopenStream });
 }
