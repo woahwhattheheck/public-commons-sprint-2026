@@ -1,0 +1,13 @@
+{
+  "schema": "stellar-forge.fred-selection.v1",
+  "series": [
+    "CPIAUCSL",
+    "GDP",
+    "UNRATE"
+  ],
+  "asOf": "2026-10-12",
+  "start": "1947-01-01",
+  "end": "2026-10-12",
+  "pageSize": 1000,
+  "maxRows": 1000000
+}

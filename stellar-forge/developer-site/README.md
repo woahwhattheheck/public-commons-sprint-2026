@@ -248,3 +248,16 @@ the retained releases. SQLite kept its staged data while MySQL read live updates
 After all prepared package directories moved, setup resume and MCP reopened the
 same fleet at revision four. Both browser views stayed within 390px with zero
 page errors, and all owned processes closed.
+
+
+## Read and reuse the economic briefing
+
+Choose **Read and reuse an economic briefing** in the existing workflow selector. **Open economic report** opens the exact original FRED offline HTML from PR1913. The completed Summary, Measures and Sources & method views contain 75 selected observations, all 150 comparisons and the original source notes. It is the retained October 2026 public-table edition; individual series keep their actual source update/retrieval dates and missing-value states.
+
+**Download report + source** uses the unchanged `zipWorkspace` writer. Its 15-file ZIP includes the complete original HTML/CSV/JSON/manifest, all 2,219 source observations and three publisher table texts, saved review/note, both native input selections, original operator guides, `START_HERE.md` and a complete package manifest. All 13 original files are byte-identical to source `8f1d879cb1ba2947a05af770091568720ce31f65`. The directory layout preserves their repository-relative paths. The new opening guide leads through the original native import, saved review, file generation, configured merchant/customer and full-project receive commands.
+
+`dist/example-download.mjs` pins the complete manifest's length and SHA-256 and checks every selected file before ZIP publication. Reads are same-origin, sequential and capped by the exact member lengths and a 1 MiB package ceiling. A one-minute download deadline, explicit Cancel, workflow change and page exit cancel its original request. An interrupted or changed example produces no partial ZIP. The served report retains its original offline CSP and downloads. No merchant input is sent by this static reader, and opening/downloading the example creates no purchase or payment.
+
+The static copy lives under `dist/examples/fred-briefing-20261012/`. Preserve its complete files when publishing the existing Site or packaging its browser assets; no toolkit runtime is embedded in the example. Use the maintained installed FRED runtime to run the included commands. The original native FRED receiving operation and funded buyer intents retain their own owner/results. This example is a completed report and customer starting point, not a claim that those later operations ran.
+
+The same ready 15-file [economic briefing ZIP](dist/examples/fred-briefing-20261012/stellar-forge-economic-briefing-20261012.zip) is retained for direct receiving: 328,163 bytes, SHA-256 `105e6fa6e6b83d05df7f8c21b1f5c0c46c2bec53ce3f3f0fc9b0823fb2298301`. It was produced by the unchanged original `zipWorkspace`; every member was compared with its selected source bytes. The browser produces that same complete member selection from the verified static files.
