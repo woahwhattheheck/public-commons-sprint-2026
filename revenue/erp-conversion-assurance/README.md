@@ -7,6 +7,21 @@ inputs, submit and recover jobs, export reports and replay packages, and record
 reviewer decisions. The [native AGX adapter](agx/README.md) makes the same retained
 jobs available to an explicitly authorized agent peer.
 
+
+## Complete customer workspace
+
+Use the [customer installation and recovery guide](customer/README.md) to create
+a new finance workspace or adopt an existing customer's service and AGX profile.
+The maintained browser carries the original mapping, comparisons, linked
+corrections and reviewer decisions into a Customer panel for approved agent
+requests, complete backups and receiving in a new installation.
+
+The full customer backup includes every retained run, review, source bundle,
+comparison engine, HMAC key, AGX binding and saved agent profile. Its receiving
+workflow checks the original archive and reopens that complete history. The
+customer operating guide includes installation, original-service adoption,
+native AGX setup, browser receiving and the supplied-export operating example.
+
 ## Comparison engine
 
 `reconcile.mjs` streams complete CSV files, including quoted multiline fields,

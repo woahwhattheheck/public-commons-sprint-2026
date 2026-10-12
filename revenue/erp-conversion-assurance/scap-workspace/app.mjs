@@ -39,13 +39,13 @@ const describeError = error => `${error.message || 'The operation could not comp
 
 function notice(message, isError = false) { $('notice').textContent = message; $('notice').classList.toggle('error', isError); }
 
-async function api(path, body, { raw = false } = {}) {
+async function api(path, body, { raw = false, binary = false, timeoutMs = 70000 } = {}) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 70000);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(path, { method: body === undefined ? 'GET' : 'POST', cache: 'no-store', redirect: 'error',
-      headers: { 'x-erp-workspace-token': token, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: controller.signal });
+      headers: { 'x-erp-workspace-token': token, ...(body === undefined ? {} : { 'Content-Type': binary ? 'application/zip' : 'application/json' }) },
+      ...(body === undefined ? {} : { body: binary ? body : JSON.stringify(body) }), signal: controller.signal });
     if (!response.ok) {
       const value = await response.json().catch(() => ({}));
       const error = new Error(value.message ?? `The workspace returned HTTP ${response.status}.`); error.code = value.error; throw error;
