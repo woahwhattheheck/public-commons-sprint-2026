@@ -18,7 +18,8 @@ from .storage import identifier, sync_directory
 
 HANDOVER_SCHEMA = "stellar-forge.wherobots-handover.v1"
 RECEIVING_SCHEMA = "stellar-forge.wherobots-receiving.v1"
-SOURCE_SUFFIXES = {".py", ".md", ".html", ".js", ".mjs", ".css", ".txt", ".json"}
+SOURCE_SUFFIXES = {".py", ".md", ".html", ".js", ".mjs", ".css", ".txt", ".json",
+                   ".csv", ".ndjson", ".jsonl", ".geojson", ".parquet", ".geoparquet"}
 KINDS = ("workflow", "operation", "capture", "edition")
 MANIFEST_BYTES = 32 * 1024 * 1024
 
@@ -50,31 +51,57 @@ def _record_id(value):
     return identifier(value, "original record ID")
 
 
+REFERENCE_FIELDS = {
+    "object", "source_object", "source_objects", "listing_object", "row_index_object",
+    "changes_object", "report_object", "run_object", "run_objects", "listing_objects",
+    "retained_listing_pages", "retained_pages", "original_input", "pages",
+}
+DATA_FIELDS = {
+    "provider", "native_payload", "preview", "row", "rows", "key", "metadata",
+    "file_metadata_base64", "geometry", "columns", "response", "listing", "data", "body",
+}
+INTERNAL_MANIFEST_SCHEMAS = {
+    "starforge.wherobots.output-listing.v1",
+    "starforge.wherobots.object-references.v1",
+}
+
+
 def _objects(value, result=None):
+    """Follow named internal references, never arbitrary data-shaped digest pairs."""
     result = {} if result is None else result
-    if isinstance(value, dict):
-        if set(("sha256", "bytes")).issubset(value):
-            sha, size = value["sha256"], value["bytes"]
-            if isinstance(sha, str) and len(sha) == 64 and all(char in "0123456789abcdef" for char in sha) and type(size) is int and size >= 0:
+    def visit(node, reference=False):
+        if isinstance(node, dict):
+            if reference and set(("sha256", "bytes")).issubset(node):
+                sha, size = node["sha256"], node["bytes"]
+                if (not isinstance(sha, str) or len(sha) != 64 or
+                    any(char not in "0123456789abcdef" for char in sha) or
+                    type(size) is not int or size < 0):
+                    fail("OUTPUT_OBJECT_DESCRIPTOR", "An internal object reference is malformed.")
                 descriptor = {"sha256": sha, "bytes": size}
                 if sha in result and result[sha] != descriptor:
                     fail("OUTPUT_OBJECT_DESCRIPTOR", "One retained object has inconsistent sizes.")
                 result[sha] = descriptor
-        for item in value.values():
-            _objects(item, result)
-    elif isinstance(value, list):
-        for item in value:
-            _objects(item, result)
+                return
+            for key, item in node.items():
+                if key not in DATA_FIELDS:
+                    visit(item, key in REFERENCE_FIELDS)
+        elif isinstance(node, list):
+            for item in node:
+                visit(item, reference)
+    visit(value)
     return result
 
 
 def _nested_objects(data):
-    if len(data) > MANIFEST_BYTES or not data.lstrip().startswith((b"{", b"[")):
+    if len(data) > MANIFEST_BYTES or not data.lstrip().startswith(b"{"):
         return {}
     try:
-        return _objects(json.loads(data))
+        manifest = json.loads(data)
     except (UnicodeError, json.JSONDecodeError):
         return {}
+    if not isinstance(manifest, dict) or manifest.get("schema") not in INTERNAL_MANIFEST_SCHEMAS:
+        return {}
+    return _objects(manifest)
 
 
 def _workflow_records(workspace, workflow_id):
@@ -95,7 +122,8 @@ def _source_files():
     root = Path(__file__).resolve().parent.parent
     result = {}
     for path in sorted(root.rglob("*")):
-        if path.is_file() and not path.is_symlink() and path.suffix in SOURCE_SUFFIXES and "__pycache__" not in path.parts:
+        if (path.is_file() and not path.is_symlink() and "__pycache__" not in path.parts and
+            (path.suffix in SOURCE_SUFFIXES or path.name.upper() in {"LICENSE", "NOTICE", "COPYING"})):
             relative = path.relative_to(root).as_posix()
             if any(part.startswith(".") for part in Path(relative).parts):
                 continue

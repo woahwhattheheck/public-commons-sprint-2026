@@ -12,7 +12,7 @@ The resulting edition has an immutable source binding derived from the original 
 
 | Format | Reader behavior | Retained interpretation |
 | --- | --- | --- |
-| CSV | Complete multiline CSV records in each part; UTF-8, one reviewed delimiter and quote character. | Every scalar remains source text. Set `csv.header` explicitly. Headerless parts require `csv.columns`. |
+| CSV | Complete multiline CSV records in each part; UTF-8, one reviewed delimiter and quote character. | Every scalar remains source text. Set `csv.header` explicitly. Headerless parts require `csv.columns`. A declared WKT/EWKT geometry column is inspected without changing source text. |
 | NDJSON / JSON | Complete JSON object records, with duplicate property and invalid-number detection. | Every numeric token remains exact text, including integer size, exponent and decimal scale; null and absence stay distinct. |
 | GeoJSON sequence | Native complete Feature records using observed newline or RFC 8142 record-separator framing. | Original Feature, properties, geometry and exact coordinate tokens remain intact. |
 | Parquet | Real PyArrow footer and batch reader; every row group and row is read. | Original Arrow types/nullability, field metadata, file metadata, decimal scale, binary data and temporal ticks. |
@@ -25,6 +25,8 @@ Example CSV output definition:
 ```json
 {"id":"results","store":"my_files","path":"results/edition-1","format":"csv","csv":{"header":false,"columns":["id","total"],"delimiter":",","encoding":"utf-8"},"primary_key":["id"]}
 ```
+
+WKT/EWKT inspection supports Point, LineString, Polygon, multipart geometries and GeometryCollection, with exact decimal coordinates, Z/M dimensions, EMPTY values and retained EWKT SRID. Raw text and source CRS remain distinct.
 
 Optional `partitioning: "hive"` adds decoded path partition values only where the actual row has no field of that name. Configure a `geometry_column`, `geometry_encoding`, `crs` and `axis_order` when a non-GeoParquet format carries a separate geometry field. The retained source bytes remain available when a geometry encoding is undeclared.
 
@@ -51,7 +53,7 @@ Inspection uses bounded batches and a disk index. CSV/JSON records have a 32 MiB
 `export_handover(workspace, workflow_id, destination: Path)` creates one ZIP64 handover containing:
 
 - The original workflow, operation, capture and edition records, with their original revision identities.
-- Every referenced source/script/run/log/listing/output/index/comparison object, following nested retained JSON manifest references.
+- Every referenced source/script/run/log/listing/output/index/comparison object, following named internal object references and typed output-listing/reference manifests. Ordinary JSON data fields do not become object dependencies.
 - Complete editable application source and requirements from the original source directory.
 - An independent industrial-style HTML overview, exact per-file manifest, source links and receiving guide.
 
@@ -68,6 +70,8 @@ Receiving saves its operation journal and original archive identity. An interrup
 The original SF30 limits apply: 64 physical columns (up to 32 value/state pairs), 1,000,000 rows, 256 MiB CSV, 1 MiB maximum cell text and its existing response byte budget. The full workflow handover remains available for larger outputs. The package's `dataset.json` is consumed by the maintained SF30 dataset loader, publisher and merchant composition; this module does not introduce another payment or dataset query implementation.
 
 ## Source standards
+
+- [OGC Simple Feature Access](https://www.ogc.org/standards/sfa/): original simple-feature WKT and WKB geometry families.
 
 - [GeoParquet 1.1.0](https://geoparquet.org/releases/v1.1.0/): root geometry columns, required metadata, WKB/GeoArrow representations and CRS defaults.
 - [Apache Arrow ParquetFile](https://arrow.apache.org/docs/python/generated/pyarrow.parquet.ParquetFile.html): native metadata and complete row-group batch iteration.

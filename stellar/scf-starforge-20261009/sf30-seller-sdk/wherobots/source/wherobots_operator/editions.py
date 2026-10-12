@@ -7,6 +7,7 @@ import hashlib
 import io
 import json
 import math
+import re
 import sqlite3
 import struct
 import tempfile
@@ -341,7 +342,7 @@ def _arrow_value(scalar, pa):
     if pa.types.is_list(dtype) or pa.types.is_large_list(dtype) or pa.types.is_fixed_size_list(dtype):
         return [_arrow_value(item, pa) for item in scalar.values]
     if pa.types.is_map(dtype):
-        return {"$map": [[_arrow_value(pair["key"], pa), _arrow_value(pair["value"], pa)] for pair in scalar.values]}
+        return {"$map": [[_arrow_value(pair[dtype.key_field.name], pa), _arrow_value(pair[dtype.item_field.name], pa)] for pair in scalar.values]}
     return scalar.as_py()
 
 
@@ -349,6 +350,9 @@ def _parquet_part(path, definition, start=0):
     pa, pq = _arrow()
     native = pq.ParquetFile(path, memory_map=False, pre_buffer=False)
     schema = native.schema_arrow
+    if len(schema.names) != len(set(schema.names)):
+        native.close()
+        fail("OUTPUT_PARQUET_COLUMNS", "The original Parquet schema repeats a root column name.")
     metadata = native.metadata.metadata or {}
     geo_bytes = metadata.get(b"geo")
     geo = _parse(geo_bytes.decode("utf-8")) if geo_bytes else None
@@ -484,7 +488,8 @@ def _geojson(stats, value, depth=0):
     kind = value.get("type")
     if kind not in GEOMETRIES.values():
         fail("OUTPUT_GEOMETRY", "Unsupported GeoJSON geometry type.")
-    stats["types"].add(kind)
+    if depth == 0:
+        stats["types"].add(kind)
     if kind == "GeometryCollection":
         members = value.get("geometries")
         if not isinstance(members, list):
@@ -527,7 +532,8 @@ def _wkb(stats, value):
             code %= 1000
         if code not in GEOMETRIES:
             fail("OUTPUT_WKB", "Unsupported WKB geometry type " + str(code))
-        stats["types"].add(GEOMETRIES[code] + (" Z" if has_z else "") + (" M" if has_m else ""))
+        if depth == 0:
+            stats["types"].add(GEOMETRIES[code] + (" Z" if has_z else "") + (" M" if has_m else ""))
         dimensions = 2 + int(has_z) + int(has_m)
         def integer(at):
             if at + 4 > len(data):
@@ -560,6 +566,111 @@ def _wkb(stats, value):
         return index
     if read(0) != len(data):
         fail("OUTPUT_WKB", "WKB has trailing bytes outside its complete geometry.")
+
+
+def _wkt(stats, value):
+    """Stream the standard simple-feature WKT geometry families and EWKT SRIDs."""
+    if not isinstance(value, str):
+        fail("OUTPUT_WKT", "A WKT geometry must retain its original source text.")
+    value = value.rstrip()
+    pattern = re.compile(r"\s*([A-Za-z_]+|[+-]?(?:\d+\.\d*|\.\d+|\d+)(?:[eE][+-]?\d+)?|[(),;=])")
+    offset, token = 0, None
+    def advance():
+        nonlocal offset, token
+        if offset >= len(value):
+            token = None
+            offset = len(value)
+            return
+        match = pattern.match(value, offset)
+        if match is None:
+            fail("OUTPUT_WKT", "Invalid token in the original WKT geometry.")
+        token, offset = match.group(1), match.end()
+    def take(expected=None):
+        result = token
+        if result is None or expected is not None and result.upper() != expected:
+            fail("OUTPUT_WKT", "Unexpected structure in the original WKT geometry.")
+        advance()
+        return result
+    advance()
+    if token and token.upper() == "SRID":
+        take("SRID"); take("=")
+        raw = take()
+        if not re.fullmatch(r"[0-9]+", raw):
+            fail("OUTPUT_WKT", "An EWKT SRID must be a nonnegative integer.")
+        stats["embedded_srids"].add(int(raw))
+        take(";")
+    def position(dimensions):
+        coordinates = []
+        while token is not None and token not in {",", ")", "("}:
+            raw = take()
+            if not re.fullmatch(r"[+-]?(?:\d+\.\d*|\.\d+|\d+)(?:[eE][+-]?\d+)?", raw):
+                fail("OUTPUT_WKT", "A WKT position requires finite original numbers.")
+            coordinates.append(ExactNumber(raw))
+            if len(coordinates) > 4:
+                fail("OUTPUT_WKT", "A simple-feature position has more than four dimensions.")
+        if dimensions is not None and len(coordinates) != dimensions:
+            fail("OUTPUT_WKT", "A WKT position differs from its declared Z/M dimensions.")
+        _point(stats, coordinates)
+    def sequence(callback):
+        take("(")
+        callback()
+        while token == ",":
+            take(","); callback()
+        take(")")
+    def empty():
+        if token and token.upper() == "EMPTY":
+            take("EMPTY")
+            return True
+        return False
+    def geometry(depth=0, inherited=None):
+        if depth > 128:
+            fail("OUTPUT_WKT", "The original geometry nesting exceeds its reader budget.")
+        name = take().upper()
+        names = {item.upper(): item for item in GEOMETRIES.values()}
+        declared = inherited
+        if token and token.upper() in {"Z", "M", "ZM"}:
+            declared = take().upper()
+        if name not in names:
+            fail("OUTPUT_WKT", "Unsupported original WKT geometry family.")
+        kind = names[name]
+        dimensions = {"Z": 3, "M": 3, "ZM": 4}.get(declared)
+        if depth == 0:
+            stats["types"].add(kind + (" Z" if declared in {"Z", "ZM"} else "") +
+                               (" M" if declared in {"M", "ZM"} else ""))
+        if empty():
+            if kind == "Point":
+                stats["empty_points"] += 1
+            return
+        def point():
+            if empty():
+                stats["empty_points"] += 1
+            elif token == "(":
+                take("("); position(dimensions); take(")")
+            else:
+                position(dimensions)
+        def line():
+            if not empty():
+                sequence(lambda: position(dimensions))
+        def polygon():
+            if not empty():
+                sequence(line)
+        if kind == "Point":
+            take("("); position(dimensions); take(")")
+        elif kind == "LineString":
+            sequence(lambda: position(dimensions))
+        elif kind == "Polygon":
+            sequence(line)
+        elif kind == "MultiPoint":
+            sequence(point)
+        elif kind == "MultiLineString":
+            sequence(line)
+        elif kind == "MultiPolygon":
+            sequence(polygon)
+        else:
+            sequence(lambda: geometry(depth + 1, declared))
+    geometry()
+    if token is not None:
+        fail("OUTPUT_WKT", "WKT has trailing text outside its complete geometry.")
 
 
 def _geoarrow(value, encoding):
@@ -599,6 +710,8 @@ def _geometry_observe(stats, value, metadata):
         _geojson(stats, _parse(value) if isinstance(value, str) else value)
     elif encoding in {"point", "linestring", "polygon", "multipoint", "multilinestring", "multipolygon"}:
         _geojson(stats, _geoarrow(value, encoding))
+    elif encoding in {"WKT", "wkt", "EWKT", "ewkt"}:
+        _wkt(stats, value)
     elif encoding == "wkb-hex":
         _wkb(stats, bytes.fromhex(value))
     else:
@@ -681,6 +794,11 @@ def _inspect_dataset(ws, supplied, temporary):
     _format(definition)
     listing = supplied.get("listing_object")
     _object(ws, listing)
+    source_objects = supplied.get("source_objects", [])
+    if not isinstance(source_objects, list):
+        fail("OUTPUT_SOURCE_OBJECTS", "Original listing pages require an ordered reference collection.")
+    for reference in source_objects:
+        _object(ws, reference)
     files = supplied.get("files")
     if not isinstance(files, list):
         fail("OUTPUT_FILES", "Retain the original complete output file collection.")
@@ -768,7 +886,7 @@ def _inspect_dataset(ws, supplied, temporary):
                 "source_nullable": sorted(stat.get("source_nullable", []))}
                for stat in schema.values()]
     return {"id": dataset_id, "dataset_id": dataset_id, "definition": definition,
-            "listing_object": listing, "complete": True, "files": parts,
+            "listing_object": listing, "source_objects": source_objects, "complete": True, "files": parts,
             "row_count": total, "columns": columns, "geometry": geometry,
             "primary_key": keys, "content_sha256": content.hexdigest(),
             "row_index_object": index_object, "row_index_schema": "wherobots-row-index.v1",
