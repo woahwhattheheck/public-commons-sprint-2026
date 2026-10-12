@@ -4,11 +4,11 @@ This stage opens the published SF101 operator over the **completed original mana
 
 The selected product is commit `8a31d674ccc626f9c47e0982e0e66c4e801bae73` (PR 2081). The receiving module verifies the exact published operator files and all ten source files recorded by the original journey. The module’s own bytes and selected runtime executables are also frozen in its receiving record.
 
-**Implementation and an actual receiving result are separate states.** This directory supplies the executable stage. A completed operating result exists only when the original owner has invoked it and retained its successful `result.json`.
-
 ## Use the original case
 
 The existing journey is `SCF-MANAGED-FLEET-RECOVERY-RECEIVING-7A2F-20261012`, exposed by its original `runFleetRecoveryJourney` entry. Use that original entry and the actual case supplied by its owner; this receiver reads the authoritative `journey.json` under the selected case.
+
+Its complete original entry is retained in this repository as [Git blob 76e306e88e1654c66afb2ec225853badeb64c3cf](https://api.github.com/repos/woahwhattheheck/public-commons-sprint-2026/git/blobs/76e306e88e1654c66afb2ec225853badeb64c3cf), 26,530 UTF-8 bytes, decoded by its owner as `recovery-journey.mjs`. The original entry records its checked engine source selection at `79c1da0def815f37e5c9a9d651117a6564d3de01`. This operator stage uses the complete published operator source at `8a31d674ccc626f9c47e0982e0e66c4e801bae73`, checks the same ten engine files, and reads the existing case after that original journey completes.
 
 Before this stage, the original journey must have:
 
