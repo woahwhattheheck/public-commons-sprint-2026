@@ -150,9 +150,10 @@ The native adapter enforces explicit network, asset, recipient, per-payment atom
 cap, timeout, sponsored authorization and one signing attempt for that approval.
 It binds the approved endpoint and arguments separately from the original
 `mcp://` resource. Its terminal shows the complete invocation before accepting
-`APPROVE <quoteId>`. Application operators can attach their existing aggregate
-budget and reservation logic to `approveQuote`; the per-payment cap and quote
-database are not an aggregate spending ledger.
+`APPROVE <quoteId>`. Use the [governed native operator](SPENDING.md) to attach the existing SF36
+aggregate ledger, show capacity during approval, reserve atomically before
+signing, and finalize through the original SF86 observer. Business applications
+can keep their existing approval UI with that operator.
 
 An embedding application can pass its existing trusted `fetchImpl`. The workspace
 launcher also accepts a `fetchImpl` export from its operator module. That fetch

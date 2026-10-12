@@ -8,9 +8,11 @@ import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 import {openResearchWorkspace,requestUrl,MAX_PAGE_BYTES,ResearchError,safeId} from './workspace.mjs';
 import {parseJson} from '../node/store.mjs';
+import {openFeedWorkspace} from './feed/workspace.mjs';
+import {handleFeedRequest} from './feed/routes.mjs';
 
 const PUBLIC=fileURLToPath(new URL('./public/',import.meta.url));
-const ASSETS={'index.html':'text/html; charset=utf-8','app.mjs':'text/javascript; charset=utf-8','style.css':'text/css; charset=utf-8'};
+const ASSETS={'index.html':'text/html; charset=utf-8','app.mjs':'text/javascript; charset=utf-8','feed.mjs':'text/javascript; charset=utf-8','style.css':'text/css; charset=utf-8'};
 const utf8=value=>Buffer.from(JSON.stringify(value)+'\n');
 const check=(condition,code,message=code,status=400)=>{if(!condition)throw new ResearchError(code,message,status);};
 function number(value,fallback,min=0,max=10000000){
@@ -91,6 +93,7 @@ async function* prependEntry(first,entries){
 export async function startResearchWorkspace({workspace,port=0,retrieval=null}={}){
   check(typeof workspace==='string'&&Number.isInteger(port)&&port>=0&&port<=65535,'WORKSPACE_OPTIONS_INVALID');
   const store=await openResearchWorkspace(workspace),token=randomBytes(32).toString('hex'),cache=new Map(),jobs=new Map(),gatherStarts=new Map();
+  const feed=await openFeedWorkspace(store);
   let origin,closing=false,closePromise;
   function jobState(job){return {editionId:job.editionId,state:job.state,startedAt:job.startedAt,updatedAt:job.updatedAt,pagesReceived:job.pagesReceived,
     stopRequested:job.stopRequested,coverage:job.coverage,error:job.error};}
@@ -139,6 +142,7 @@ export async function startResearchWorkspace({workspace,port=0,retrieval=null}={
       const auth=Buffer.from(req.headers.authorization??''),expected=Buffer.from('Bearer '+token);
       check(auth.length===expected.length&&timingSafeEqual(auth,expected),'AUTH_REQUIRED','Open the workspace URL printed by the server.',401);
       if(req.method!=='GET')check(!closing,'WORKSPACE_CLOSING',undefined,503);
+      if(await handleFeedRequest({req,res,url,send,jsonBody,tablePage,zipArchive,headers,feed}))return;
       if(req.method==='GET'&&path==='/api/state'){
         send(200,{queries:await store.listQueries(),editions:await store.listEditions(),jobs:[...jobs.values()].map(jobState),
           retrieval:retrieval?{mode:retrieval.mode,description:retrieval.description,status:await retrieval.snapshot()}:null});return;

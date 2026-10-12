@@ -1,4 +1,5 @@
 // MIT. Industrial research workspace. Provider content is rendered only as text or validated links.
+import {renderFeed} from './feed.mjs';
 const $=id=>document.getElementById(id),el=(tag,text,cls)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=String(text);if(cls)node.className=cls;return node;};
 const pretty=value=>JSON.stringify(value,null,2),count=value=>value===null||value===undefined?'—':new Intl.NumberFormat().format(value);
 const human=value=>String(value).replace(/([a-z])([A-Z])/g,'$1 $2').replace(/[_-]/g,' ').replace(/^./,c=>c.toUpperCase());
@@ -252,13 +253,14 @@ async function renderExports(current){
 async function renderTab(){
   if(!state.edition)return;
   for(const button of $('tabs').querySelectorAll('button')){if(button.dataset.tab===state.tab)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');}
-  for(const name of ['records','summary','sources','compare','exports'])$('panel-'+name).hidden=name!==state.tab;
+  for(const name of ['records','summary','sources','compare','exports','feed'])$('panel-'+name).hidden=name!==state.tab;
   const stamp=++state.draw,current=()=>state.draw===stamp;
   if(state.tab==='records')await renderRecords(current);
   else if(state.tab==='summary')await renderSummary(current);
   else if(state.tab==='sources')renderSources();
   else if(state.tab==='compare')await renderComparison(current);
   else if(state.tab==='exports')await renderExports(current);
+  else if(state.tab==='feed')await renderFeed({api,download,container:$('panel-feed'),editionId:state.editionId,catalog:state.catalog,current,notice});
 }
 function showQuery(query=null){
   const form=$('query-form');form.reset();state.editingQuery=query;
