@@ -36,6 +36,7 @@
         <button data-page="host" aria-current="page">Host</button>
         <button data-page="tools">Tools</button>
         <button data-page="requests">Requests <span id="request-count" class="count">0</span></button>
+        <button data-page="workflows">Workflows <span id="workflow-count" class="count">0</span></button>
         <button data-page="customers">Customers <span id="customer-count" class="count">0</span></button>
       </nav>
 
@@ -92,6 +93,63 @@
             </div>
           </section>
         </div>
+      </section>
+
+
+      <section id="page-workflows" class="page" hidden>
+        <div class="section-heading"><div><p class="eyebrow">Saved sequences of native requests</p><h2>Workflows</h2></div><div class="actions"><button id="new-workflow">New workflow</button><button id="refresh-workflows">Refresh workflows</button></div></div>
+        <section id="workflow-pending" class="panel compact" hidden><h3>Recover an original action</h3><p>A start or handover is retained for this operator profile. Recover its original request before issuing another action of the same kind.</p><p id="workflow-pending-start" class="mono hint break"></p><p id="workflow-pending-handover" class="mono hint break"></p><div class="actions"><button id="workflow-retry-start">Recover original start</button><button id="workflow-retry-handover">Recover original handover</button></div></section>
+        <div class="request-layout">
+          <section class="panel"><h3>Saved workflows</h3><div id="workflow-list" class="select-list"></div><h3>Original runs</h3><div id="workflow-runs" class="select-list"></div></section>
+          <section class="panel">
+            <p>Compose the requests saved in this profile. Each run keeps its selected revision, inputs, original results and current progress.</p>
+            <div id="workflow-editor" hidden>
+              <form id="workflow-form">
+                <label for="workflow-name">Workflow name</label><input id="workflow-name" maxlength="160" required>
+                <label for="workflow-add-draft">Add a saved request</label><div class="inline-input"><select id="workflow-add-draft"><option value="">Choose a saved request</option></select><button id="workflow-add-step" type="button">Add step</button></div>
+                <details><summary>Connect inputs and results</summary>
+                  <p>Each mapping names the target argument and the value to use. Select workflow inputs, an earlier step’s complete returned JSON, or this run’s identifiers. An empty pointer selects the complete object. Escape a slash as ~1 and a tilde as ~0.</p>
+                  <pre>[
+  {"target": "/requestId", "from": "run", "pointer": "/requestId"},
+  {"target": "/caseId", "from": "inputs", "pointer": "/caseId"},
+  {"target": "/expectedVersion", "from": "step", "stepId": "step1", "pointer": "/case/version"}
+]</pre>
+                  <p>Required result values pause a run until its native result matches. Use an exact value or a list of accepted values. Leave the list empty when a successful native return completes the step.</p>
+                  <pre>[{"pointer": "/state", "oneOf": ["READY", "COMPLETE"]}]</pre>
+                  <p class="hint">Use the paths and identifiers shown in your actual saved native result. Review each request’s own version, generation and confirmation fields before composing it.</p>
+                </details>
+                <div id="workflow-steps"></div>
+                <div class="editor-meta"><span id="workflow-edition" class="hint"></span><code id="workflow-definition-sha" class="hint break"></code></div>
+                <div class="actions"><button id="workflow-save" class="primary" type="submit">Save revision</button><button id="workflow-copy" type="button">Save as new workflow</button></div>
+              </form>
+              <section class="subsection"><h3>Run this saved revision</h3><label for="workflow-inputs">Workflow inputs (JSON)</label><textarea id="workflow-inputs" class="code-input workflow-json" spellcheck="false" rows="6">{}</textarea><button id="workflow-start" class="primary" type="button">Run saved workflow</button></section>
+            </div>
+          </section>
+        </div>
+        <section id="workflow-run-detail" class="panel workflow-run-detail" hidden>
+          <div class="section-heading"><div><p class="eyebrow">Original workflow run</p><h3 id="workflow-run-title"></h3></div><span id="workflow-run-state" class="tag"></span></div>
+          <div class="columns"><div><dl id="workflow-run-properties" class="properties"></dl></div><div><p id="workflow-run-message"></p>
+            <div class="actions"><button id="workflow-continue" class="primary">Continue same run</button><button id="workflow-pause">Pause after current request</button><button id="workflow-open-edition">Open original workflow revision</button><button id="workflow-export">Export full profile</button></div>
+          </div></div>
+          <div class="table-wrap"><table><thead><tr><th>Order</th><th>Step</th><th>State</th><th>Original request</th><th>Open</th></tr></thead><tbody id="workflow-run-steps"></tbody></table></div>
+          <section id="workflow-recovery" class="subsection" hidden><h4>Resolve the current step</h4><p id="workflow-recovery-hint" class="hint"></p><button id="workflow-open-original">Open original request and recovery</button>
+            <form id="workflow-recovery-form"><label for="workflow-recovery-call">Completed native recovery</label><select id="workflow-recovery-call" required><option value="">Choose a completed linked recovery</option></select>
+              <label for="workflow-recovery-note">How this result resolves the step</label><textarea id="workflow-recovery-note" maxlength="8000" rows="3" required></textarea>
+              <button id="workflow-resolve" type="submit">Use recovered result</button></form>
+          </section>
+          <details><summary>Hand over this paused run</summary>
+            <p>Open the destination operator’s Host page and copy its console workspace and host binding below. Pause this run first. Handover assigns continued execution to that workspace and exports the complete profile for import there.</p>
+            <form id="workflow-handover-form">
+              <label for="workflow-recipient-workspace">Destination console workspace</label><input id="workflow-recipient-workspace" autocomplete="off" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,127}" required>
+              <label for="workflow-recipient-host">Destination host binding</label><input id="workflow-recipient-host" class="mono" autocomplete="off" pattern="[a-f0-9]{64}" required>
+              <label for="workflow-handover-note">Receiving instructions</label><textarea id="workflow-handover-note" maxlength="8000" rows="3" required></textarea>
+              <div class="actions"><button id="workflow-handover-submit" type="submit">Hand over and export profile</button></div>
+            </form>
+          </details>
+          <details><summary>Complete run inputs</summary><pre id="workflow-run-inputs"></pre></details>
+          <details><summary>Complete progress history</summary><pre id="workflow-run-events"></pre></details>
+          <details><summary>Complete saved run</summary><pre id="workflow-run-json"></pre></details>
+        </section>
       </section>
 
       <section id="page-customers" class="page" hidden>
