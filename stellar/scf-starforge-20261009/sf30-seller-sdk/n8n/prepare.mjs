@@ -1,22 +1,42 @@
 // MIT. Create one immutable native job merchant from selected n8n automations.
-import { mkdir, readFile, lstat, realpath } from 'node:fs/promises';
+import { mkdir, readFile, lstat, realpath, readdir } from 'node:fs/promises';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { canonical, digest } from '../jobs/config.mjs';
 import { readN8nConfiguration, compileN8nMerchant, environmentStatus, fail } from './config.mjs';
+import { acquireStateLease } from '../../merchant-fleet-gateway/state-lease.mjs';
 import { privateDirectory, readPrivate, writePrivate } from './store.mjs';
 
 export const PREPARED_SCHEMA = 'stellar-forge.n8n-prepared-merchant.v1';
 const runtimeFiles = ['config.mjs', 'store.mjs', 'client.mjs', 'runtime.mjs'];
-export async function prepareN8nMerchant({ configPath, directory } = {}) {
+export async function prepareN8nMerchant({ configPath, directory, resume = false } = {}) {
+  if (typeof resume !== 'boolean') fail('PREPARATION', 'Resume must be an explicit boolean.');
   directory = resolve(directory);
   const parent = dirname(directory);
   if (await realpath(parent) !== parent) fail('DIRECTORY', 'Prepare the merchant below a canonical existing parent.');
   const source = await readN8nConfiguration(configPath);
-  await mkdir(directory, { mode: 0o700 });
+  try { await mkdir(directory, { mode: 0o700 }); }
+  catch (error) { if (error.code !== 'EEXIST' || !resume) throw error; }
   await privateDirectory(directory, { create: false });
-  const dispatchDirectory = join(directory, 'dispatches');
-  await privateDirectory(dispatchDirectory);
+  const lease = await acquireStateLease(directory);
+  try {
+    let retained;
+    try { retained = JSON.parse(await readPrivate(join(directory, 'n8n-prepared.json'))); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+    if (retained) {
+      const inspected = await inspectN8nMerchant(directory);
+      if (retained.inputSha256 !== digest(source.bytes) || inspected.configurationSha256 !== source.configurationSha256)
+        fail('PREPARATION_CHANGED', 'Reopen this merchant with its original selected configuration.', 409);
+      return { ...inspected.record, configPath: join(directory, 'merchant.json'), functions: Object.keys(inspected.jobs.functions) };
+    }
+    const permitted = new Set(['lease.lock', 'n8n-merchant.json', 'merchant.json', 'application.mjs', 'dispatches']);
+    for (const name of await readdir(directory))
+      if (!permitted.has(name) && !/^\.pending-[0-9a-f-]{36}$/.test(name))
+        fail('PREPARATION_DIRECTORY', 'Select the new or original interrupted preparation directory.', 409);
+    const dispatchDirectory = join(directory, 'dispatches');
+    await privateDirectory(dispatchDirectory);
+    if ((await readdir(dispatchDirectory)).length)
+      fail('PREPARATION_DIRECTORY', 'Retain the original prepared manifest for this existing execution state.', 409);
   const closure = await Promise.all(runtimeFiles.map(async name => ({
     url: new URL('./' + name, import.meta.url).href,
     sha256: digest(await readFile(new URL('./' + name, import.meta.url))),
@@ -36,14 +56,25 @@ export async function prepareN8nMerchant({ configPath, directory } = {}) {
     '',
   ].join('\n');
   const merchantBytes = Buffer.from(JSON.stringify(source.jobs, null, 2) + '\n');
-  await writePrivate(join(directory, 'n8n-merchant.json'), source.bytes);
-  await writePrivate(join(directory, 'merchant.json'), merchantBytes);
-  await writePrivate(join(directory, 'application.mjs'), Buffer.from(application));
-  const record = { schema: PREPARED_SCHEMA, directory, configurationSha256: source.configurationSha256,
-    inputSha256: digest(source.bytes), merchantSha256: digest(merchantBytes), applicationSha256: digest(application),
-    runtime: closure, dispatchDirectory, jobDirectory: join(directory, 'jobs'), createdAt: new Date().toISOString() };
-  await writePrivate(join(directory, 'n8n-prepared.json'), Buffer.from(canonical(record) + '\n'));
-  return { ...record, configPath: join(directory, 'merchant.json'), functions: Object.keys(source.jobs.functions) };
+    const files = [
+      ['n8n-merchant.json', source.bytes], ['merchant.json', merchantBytes], ['application.mjs', Buffer.from(application)],
+    ];
+    for (const [name, bytes] of files) {
+      lease.assertHeld();
+      const file = join(directory, name);
+      let existing;
+      try { existing = await readPrivate(file); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+      if (existing) {
+        if (!existing.equals(bytes)) fail('PREPARATION_CHANGED', 'The retained ' + name + ' differs from this original preparation.', 409);
+      } else await writePrivate(file, bytes);
+    }
+    const record = { schema: PREPARED_SCHEMA, directory, configurationSha256: source.configurationSha256,
+      inputSha256: digest(source.bytes), merchantSha256: digest(merchantBytes), applicationSha256: digest(application),
+      runtime: closure, dispatchDirectory, jobDirectory: join(directory, 'jobs'), createdAt: new Date().toISOString() };
+    lease.assertHeld();
+    await writePrivate(join(directory, 'n8n-prepared.json'), Buffer.from(canonical(record) + '\n'));
+    return { ...record, configPath: join(directory, 'merchant.json'), functions: Object.keys(source.jobs.functions) };
+  } finally { await lease.close(); }
 }
 
 export async function inspectN8nMerchant(directory, { env = process.env } = {}) {
