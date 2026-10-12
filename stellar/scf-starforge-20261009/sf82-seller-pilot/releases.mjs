@@ -964,7 +964,8 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
     const originalOptions = { ...record.runtime, port: String(record.runtime.port),
       ...((record.jsonrpc || record.postgres || record.clickhouse || record.opensearch) && operationsNavigationOrigin ? { operationsNavigationOrigin } : {}) };
     await atomic(join(path, 'pilot-runtime.json'), { schema: 'stellar-forge.seller-pilot-runtime.v1',
-      source: { offersSha256: record.source.offersSha256, serviceConfigSha256: record.source.serviceConfigSha256 },
+      source: { offersSha256: record.source.offersSha256, serviceConfigSha256: record.source.serviceConfigSha256,
+        ...(record.opensearch ? { executionSha256: record.opensearch.executionSha256 } : {}) },
       options: originalOptions });
     const instanceId = randomUUID(), mode = record.runtime.facilitator ? 'NATIVE_X402' : 'CHALLENGE_ONLY';
     const cacheRoutes = record.routes.filter(route => route.upstream?.cache).map(route => ({
