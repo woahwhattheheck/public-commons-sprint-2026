@@ -2,7 +2,60 @@
 
 Use the [recurring merchant continuation](#recurring-merchant-continuation) for the complete original programme: the seven-call baseline, eight-call recipe, two eight-call customer periods, complete customer receiving and restoration of the delivered archive. Its `run-series-native.py` and `series-source-map.json` carry the full 698-file source selection and the two original public dependency archives. The original 501-file source and first-phase commands are retained below for continuation of earlier prepared work.
 
-This source selection runs the complete original two-workspace merchant workflow and reusable recipe receiving operation merged in PR 1998.
+## Completed original programme
+
+The complete original programme finished on 12 October 2026 at 21:33:38 UTC using
+the 698-file source selection `6f9623f61d42aabe238d997061366b5dac24a24a`.
+The maintained merchant product includes the recurring workflow, typed client,
+CLI, browser controls and independent customer receiving described below. The
+original baseline, recipe and recurring records remain one continued operation.
+
+| Programme | Completed native outcome |
+| --- | --- |
+| Original merchant | Seven original calls, linked activation recovery, complete six-file customer delivery, returned profile and workspace reopen |
+| Reusable commissioning recipe | Eight original native calls, recovered lost installation response, six-file customer delivery, original revision 1 retained beside revision 2, complete profile receiving and reopen |
+| Recurring customer periods | October and November periods from two different source editions; eight calls and six complete client files per period; both original runs and releases retained |
+| Delivered archive receiving | Actual cold reopen of both original Console workspaces, all four six-file customer deliveries and the complete recurring handover; every native child returned exit 0 |
+
+Both reopened workspaces retain 31 original operation calls plus the linked
+activation recovery. Their original workspace, profile, workflow, cycle, call,
+release and customer identities remain available in the saved records. The
+recurring handover contains the twelve client files and complete profile, with
+its original selection and handover manifests.
+
+The complete delivered workspace archive is `merchant-original-native-artifacts.tar.gz`,
+676,501 bytes, SHA-256
+`21c4cf75450fca2a6bbc9825fd599094df5c51cc3ed48f551d207e3dadc0acd9`.
+Its manifest retains 142 complete files. The companion
+`merchant-native-customer-delivery.md` describes the saved programmes and full
+actual cold-reopen result. Both original delivery files are saved as version 5.
+Use the restoration command below with the original directories recorded in
+that archive. A completed workspace reopens its retained programmes without
+reissuing their completed native operations.
+
+The operated runtime used Node 24.19.0, Playwright 1.62.1, Chromium 153.0.8010.0,
+the original x402 2.28.0 packages and Stellar SDK 16.3.1. A worker whose selected
+application dependency directory is absent can install the exact four original
+top-level packages into its own writable runtime directory:
+
+```sh
+npm install --prefix /absolute/private/merchant-runtime \
+  --ignore-scripts --no-audit --no-fund --save-exact \
+  @x402/core@2.28.0 @x402/stellar@2.28.0 \
+  @x402/extensions@2.28.0 @stellar/stellar-sdk@16.3.1
+```
+
+Pass its `node_modules` directory and the selected working Chromium binary to
+the original receiving command. The runner keeps installed packages at their
+original locations through its small dependency view; the complete original
+yaml and re2js archives remain in the source packet.
+
+The original coordination and completed operating result are maintained in the
+[merchant workflow thread](https://tokenjunkielabs.slack.com/archives/C0C1F274SGH/p1791835894948889?thread_ts=1791796045.068549).
+
+## Earlier source selection
+
+The earlier 501-file source selection runs the original two-workspace merchant workflow and reusable recipe receiving operation merged in PR 1998.
 
 - Original operation: `ASTRA-24EA-MERCHANT-WORKFLOW-20261012`.
 - Product source: `ce592daecb3865d0d2395764991ab8e276f2df5f`.
