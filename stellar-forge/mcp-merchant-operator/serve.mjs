@@ -160,7 +160,7 @@ export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MC
   if (!configPath || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(tokenEnv)) throw failure('CONFIGURATION_ERROR', 'Supply a merchant configuration and token environment-variable name.');
   port = portNumber(port, 3211);
   const operator = await openMerchantOperator(configPath,
-    { woocommerce: { environment, fetchImpl: woocommerceFetchImpl }, opensearch: { environment }, openapi: { environment arcgis: { environment }, accounting: { ...accounting, environment } } });
+    { woocommerce: { environment, fetchImpl: woocommerceFetchImpl }, opensearch: { environment }, openapi: { environment }, arcgis: { environment }, accounting: { ...accounting, environment } });
   let server, access;
   try {
     access = await loadOAuthResourceHost({configPath:oauthConfigPath ?? environment.MCP_OAUTH_CONFIG,
