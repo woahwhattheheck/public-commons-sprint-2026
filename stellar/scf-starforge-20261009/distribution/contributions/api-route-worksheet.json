@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "api-route-worksheet",
+  "description": "Source-bound API merchant route selection and exact price authoring",
+  "exports": {
+    "./seller/openapi/route-worksheet": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/route-sheet-model.mjs"
+  }
+}

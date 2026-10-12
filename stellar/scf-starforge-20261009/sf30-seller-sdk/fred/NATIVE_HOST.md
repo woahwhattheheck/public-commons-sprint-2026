@@ -4,11 +4,11 @@ The native host command supplies the complete setup around the existing FRED rec
 
 ## Select the existing host
 
-Use the equipped host that owns the original operator workspace, private custody and testnet resources. The current working setup is documented in the [FD06/39DA handoff](https://tokenjunkielabs.slack.com/archives/C0C1F274SGH/p1791773418541189), within the [original FRED receiving operation](https://tokenjunkielabs.slack.com/archives/C0C1F274SGH/p1791768518287349).
+Use the equipped host that owns the original operator workspace, private custody and testnet resources. Retain that host's existing directory and its original payment and accounting configuration.
 
 The original host directory supplies `operator-workspace/workspace.json`, its original `operator.json`, journal keys and policy/ledger, `accounts.public.json`, `accounts.private.json`, `facilitator.json`, `signer-ownership/`, and the existing `tls/server.pem`, `tls/server-key.pem`, `tls/extra-ca.pem`. The original workspace selects the actual native facilitator source through its retained `sourceCli`. The configured public terms remain exact Stellar testnet, the original asset and merchant, 10,000 atomic units and a 600-second payment window.
 
-Save a private JSON using [the host configuration example](examples/native-host-config.json). Set `directory` to the host operation's private output folder, `originalDirectory` to the actual original native host, and `receiver.id` to the original FRED receiving ID. Set `browser` to the actual Playwright module and Chrome executable available there. The original successful container uses a controlling util-linux `script` PTY and Node with system CA support; the host command creates that PTY and selects the original CA before starting Node.
+Save a private JSON using [the host configuration example](examples/native-host-config.json). Set `directory` to the host operation's private output folder, `originalDirectory` to the actual original native host, and `receiver.id` to the original FRED receiving ID. Set `browser` to the actual Playwright module and Chrome executable available there. The host command creates a controlling util-linux `script` PTY and selects the original CA before starting Node. It also carries system CA support through `NODE_OPTIONS` so the maintained SF88 signer and RPC child processes use the same trust configuration.
 
 ```sh
 starforge fred receiver-host --project /private/original-fred-project --config /private/fred-host.json
@@ -58,4 +58,4 @@ The native receiver exports its complete project and receives it into a second p
 | Project `receivers/ID/receiver.json` | The maintained original receiving checkpoint. |
 | Project receiver `deliveries/`, `project-bundle.json`, `received-project/` and browser folders | Original native replies, complete source/CSV, portable project and actual browser output. |
 
-Return the accepting controller, original private run path and the actual receiving/accounting/browser result in the existing FRED operation. The same project then opens through [managed Applications](../../distribution/runtime-workspace/FRED_APPLICATIONS.md).
+The retained receiving, accounting and browser results identify the complete original operation. The same project then opens through [managed Applications](../../distribution/runtime-workspace/FRED_APPLICATIONS.md).

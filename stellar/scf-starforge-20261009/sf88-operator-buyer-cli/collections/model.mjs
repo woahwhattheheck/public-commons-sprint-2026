@@ -134,7 +134,7 @@ export async function previewCollection({ configFiles } = {}) {
 }
 
 // The kernel owns the coordination lock; terminating a process releases it.
-async function acquire(directory) {
+export async function acquireCollectionLease(directory, { shared = false } = {}) {
   need(process.platform === 'linux', 'COLLECTION_LINUX_FLOCK_REQUIRED');
   await initializationDirectory(directory);
   const path = join(directory, '.collection.lock');
@@ -145,7 +145,7 @@ async function acquire(directory) {
       (typeof process.getuid !== 'function' || info.uid === process.getuid()), 'COLLECTION_LOCK_INVALID');
     await new Promise((accept, reject) => {
       let settled = false;
-      const child = spawn('flock', ['--exclusive', '--nonblock', '--conflict-exit-code', '75', '3'],
+      const child = spawn('flock', [shared ? '--shared' : '--exclusive', '--nonblock', '--conflict-exit-code', '75', '3'],
         { shell: false, stdio: ['ignore', 'ignore', 'ignore', handle.fd] });
       const finish = error => {
         if (settled) return;
@@ -167,8 +167,8 @@ async function acquire(directory) {
     return () => handle.close();
   } catch (error) { await handle.close(); throw error; }
 }
-async function withLock(directory, action) {
-  const release = await acquire(directory);
+async function withLock(directory, action, options) {
+  const release = await acquireCollectionLease(directory, options);
   try { return await action(); } finally { await release(); }
 }
 function itemFiles(captured, destination, queueRoot) {
@@ -256,11 +256,13 @@ function actionResult(intentId, state, error) {
 }
 
 /** One private collection store bound to an existing original SF88 queue. */
-export async function openCollections({ directory, queueRoot } = {}) {
+export async function openCollections({ directory, queueRoot, existingOnly = false } = {}) {
+  need(typeof existingOnly === 'boolean', 'COLLECTION_OPEN_MODE_INVALID');
   directory = absolute(directory);
-  await initializationDirectory(directory, { create: true });
+  await initializationDirectory(directory, { create: !existingOnly });
   const rootFile = join(directory, 'collections.json');
   const retained = await optionalRecord(rootFile, 65536);
+  need(!existingOnly || retained !== null, 'COLLECTION_STORE_NOT_FOUND');
   if (retained) {
     need(retained.schema === ROOT && typeof retained.queueRoot === 'string', 'COLLECTION_STORE_INVALID');
     need(queueRoot === undefined || queueRoot === retained.queueRoot, 'COLLECTION_QUEUE_BINDING_CHANGED');
@@ -269,12 +271,19 @@ export async function openCollections({ directory, queueRoot } = {}) {
   queueRoot = absolute(queueRoot);
   const queue = await openQueue(queueRoot);
   const collectionsPath = join(directory, 'collections');
-  await initializationDirectory(collectionsPath, { create: true });
-  await retainInitializationRecord(rootFile, { schema: ROOT, queueRoot, createdAt: retained?.createdAt ?? date() },
+  await initializationDirectory(collectionsPath, { create: !existingOnly });
+  if (!existingOnly) await retainInitializationRecord(rootFile, { schema: ROOT, queueRoot, createdAt: retained?.createdAt ?? date() },
     { resume: true, ignore: ['createdAt'] });
   let closed = false, active = null, runBusy = false;
   const live = () => need(!closed, 'COLLECTION_STORE_CLOSED');
   const pathFor = id => join(collectionsPath, collectionId(id));
+  // Shared for ordinary independent collections; exclusive only for recovery.
+  // Existing per-collection locks and original permanent inbox attempts remain.
+  const mutationAt = (path, action, { create = false } = {}) => withLock(directory, async () => {
+    live();
+    if (create) await initializationDirectory(path, { create: true });
+    return withLock(path, action);
+  }, { shared: true });
 
   async function original(id, expected) {
     live();
@@ -384,8 +393,7 @@ export async function openCollections({ directory, queueRoot } = {}) {
     need(typeof name === 'string' && name.trim().length > 0 && name.length <= 160 &&
       !/[\u0000-\u001f\u007f]/.test(name) && HASH.test(expectedPreviewSha256), 'COLLECTION_INVALID_INPUT');
     const destination = pathFor(id);
-    await initializationDirectory(destination, { create: true });
-    return withLock(destination, async () => {
+    return mutationAt(destination, async () => {
       let existing = null;
       try { existing = await original(id); }
       catch (error) { if (error.code !== 'COLLECTION_NOT_FOUND') throw error; }
@@ -447,7 +455,7 @@ export async function openCollections({ directory, queueRoot } = {}) {
         { schema: 'stellar-forge.sf88.collection-prepared.v1', manifestSha256, completedAt: date() },
         { resume: true, ignore: ['completedAt'] });
       return inspect(id);
-    });
+    }, { create: true });
   }
   async function verifyInput(item) {
     const base = dirname(item.configFile);
@@ -463,7 +471,7 @@ export async function openCollections({ directory, queueRoot } = {}) {
   async function enqueue({ id, expectedManifestSha256 } = {}) {
     need(HASH.test(expectedManifestSha256), 'COLLECTION_MANIFEST_REQUIRED');
     const initial = await original(id, expectedManifestSha256);
-    return withLock(initial.path, async () => {
+    return mutationAt(initial.path, async () => {
       const saved = await original(id, expectedManifestSha256);
       need(await preparedAt(saved), 'COLLECTION_INPUT_MISSING');
       const results = [];
@@ -490,7 +498,7 @@ export async function openCollections({ directory, queueRoot } = {}) {
   async function act(kind, { id, intentIds, expectedManifestSha256 } = {}) {
     need(HASH.test(expectedManifestSha256), 'COLLECTION_MANIFEST_REQUIRED');
     const initial = await original(id, expectedManifestSha256);
-    return withLock(initial.path, async () => {
+    return mutationAt(initial.path, async () => {
       const saved = await original(id, expectedManifestSha256), selected = selection(saved.manifest, intentIds);
       const results = [];
       for (const item of selected) {
@@ -528,7 +536,7 @@ export async function openCollections({ directory, queueRoot } = {}) {
     const abort = () => controller.abort(signal?.reason);
     if (signal?.aborted) abort();
     else signal?.addEventListener('abort', abort, { once: true });
-    const completion = withLock(initial.path, async () => {
+    const completion = mutationAt(initial.path, async () => {
       const saved = await original(id, expectedManifestSha256);
       need(await preparedAt(saved), 'COLLECTION_INPUT_MISSING');
       const runId = randomUUID(), runPath = join(saved.path, 'runs', runId);
@@ -578,8 +586,7 @@ export async function openCollections({ directory, queueRoot } = {}) {
     out = absolute(out);
     need(out !== directory && out !== collectionsPath && !out.startsWith(collectionsPath + '/') &&
       out !== queueRoot && !out.startsWith(queueRoot + '/'), 'COLLECTION_EXPORT_DIRECTORY_CONFLICT');
-    await initializationDirectory(out, { create: true });
-    return withLock(out, async () => {
+    return mutationAt(out, async () => {
       const prior = await optionalRecord(join(out, 'manifest.json'));
       if (prior) {
         need(prior.schema === EXPORT && prior.id === id && prior.manifestSha256 === saved.sha256, 'COLLECTION_EXPORT_CONFLICT');
@@ -616,13 +623,37 @@ export async function openCollections({ directory, queueRoot } = {}) {
           ({ name: file.name, bytes: file.bytes.length, sha256: digest(file.bytes) })) };
       await retainInitializationRecord(join(out, 'manifest.json'), manifest);
       return { ...manifest, directory: out };
+    }, { create: true });
+  }
+  async function inspectRecoverySource() {
+    live();
+    const listed = await list(), saved = [];
+    need(listed.collections.every(item => !item.error), 'COLLECTION_RECOVERY_SOURCE_REVIEW_REQUIRED');
+    for (const item of listed.collections) {
+      const retained = await original(item.id);
+      need(await preparedAt(retained), 'COLLECTION_INPUT_MISSING');
+      for (const input of retained.manifest.items) await verifyInput(input);
+      saved.push({ manifest: retained.manifest, manifestSha256: retained.sha256,
+        snapshot: await inspect(item.id) });
+    }
+    const jobs = await queue.list();
+    need(jobs.every(job => job.state !== 'REVIEW_REQUIRED'), 'COLLECTION_RECOVERY_INBOX_INVALID');
+    return { directory, queueRoot, headerSha256: digest(await initializationBytes(rootFile, 65536)),
+      collections: saved, jobs };
+  }
+  async function withRecoveryLock(action) {
+    live();
+    need(typeof action === 'function', 'COLLECTION_RECOVERY_CALLBACK_REQUIRED');
+    return withLock(directory, async () => {
+      live(); need(!runBusy && !active, 'COLLECTION_BUSY');
+      return action();
     });
   }
   return Object.freeze({
     directory, queueRoot, preview: input => { live(); return previewCollection(input); },
     create, list, inspect, enqueue, run,
     cancel: input => act('CANCEL', input), recover: input => act('RECOVER', input),
-    export: exportCollection,
+    export: exportCollection, inspectRecoverySource, withRecoveryLock,
     async close() {
       if (closed) return;
       if (active) {

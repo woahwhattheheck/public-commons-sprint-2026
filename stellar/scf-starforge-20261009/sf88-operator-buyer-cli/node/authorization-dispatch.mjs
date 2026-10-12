@@ -5,6 +5,7 @@ import { open, lstat, realpath } from 'node:fs/promises';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
+import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { isDeepStrictEqual } from 'node:util';
 import { need, digest, exists, privateDirectory } from './store.mjs';
@@ -185,6 +186,52 @@ async function originalRequest(intent, owner, adapterPath, signal) {
   return mapped;
 }
 
+
+// The first unsigned 402 can be retained before disk failure prevents the
+// signing-input checkpoint. Reuse the original SF31 parser/selector/intent
+// constructor with a capability that can return only this already saved 402.
+// Its approval callback always returns false; no operator, signer, or network
+// capability is supplied. The caller separately audits the original reservation.
+async function originalUnsignedInput({runtime, op, cfg, body, wire, reader, signerSources, signal}) {
+  const path = resolve(runtime,'../sf31-buyer-client/buyer.mjs');
+  const source = await reader.read(path);
+  const gitSha = createHash('sha1').update('blob '+source.raw.length+'\0').update(source.raw).digest('hex');
+  need(gitSha === '04de96e3445a4928d213b036bbb6c2b1c5e92077', 'UNDISPATCHED_ORIGINAL_SF31_SOURCE_CHANGED');
+  signerSources.sf31 = {...source.descriptor, gitBlobSha:gitSha};
+  const {X402BuyerClient} = await import(pathToFileURL(path).href);
+  const retained = wire.events['unsigned-response'], request = wire.events['unsigned-request'];
+  need(retained?.status === 402 && request && !wire.events['signing-input'] &&
+    !wire.events['signing-result'] && !wire.events['signing-error'] && !wire.events['signed-request'],
+    'UNDISPATCHED_UNSIGNED_GATE_REQUIRED');
+  let requests = 0, captured = null;
+  const original = new X402BuyerClient({fetchImpl:async (url, options) => {
+    checkSignal(signal);
+    need(++requests === 1 && new URL(url).href === request.url &&
+      options.method === request.method &&
+      same([...new Headers(options.headers).entries()], request.headers),
+      'UNDISPATCHED_RETAINED_UNSIGNED_REQUEST_CHANGED');
+    const actualBody = options.body === undefined ? undefined : Buffer.from(options.body);
+    need((actualBody !== undefined) === (body !== undefined) &&
+      (body === undefined || actualBody.equals(Buffer.from(body))),
+      'UNDISPATCHED_RETAINED_UNSIGNED_BODY_CHANGED');
+    return new Response(null,{status:402,statusText:retained.statusText,headers:retained.headers});
+  }});
+  try {
+    await original.call({...op,body,headers:cfg.operation.headers ?? {},signal,
+      approve:async intent => {captured=copy(intent);return false;},
+      sign:async () => {need(false,'UNDISPATCHED_READER_CANNOT_SIGN');}});
+    need(false,'UNDISPATCHED_ORIGINAL_INTENT_CAPTURE_FAILED');
+  } catch(error) {
+    need(error.code === 'PAYMENT_NOT_APPROVED' && requests === 1 && object(captured),
+      'UNDISPATCHED_ORIGINAL_INTENT_CAPTURE_FAILED');
+  }
+  const encoded = new Headers(retained.headers).get('payment-required');
+  // The original SF31 call has already validated canonical base64, its bounded
+  // JSON challenge, the exact resource and unique accepted requirements.
+  const challenge = JSON.parse(Buffer.from(encoded,'base64').toString('utf8'));
+  return {intent:captured,challenge,accepted:copy(captured.acceptedTerms)};
+}
+
 /**
  * Safe, deterministic evidence for the original generated environment signer.
  * It deliberately avoids operation._bound(): the successor's own lineage check
@@ -306,12 +353,16 @@ export async function readUndispatchedAuthorizationEvidence(operation, options =
   const wire = await readAttemptWireCheckpoint({cfg:bound.config,body:wireBody,includeWire:true});
   const snapshot = wire?.snapshot;
   need(snapshot?.writerActive === false && snapshot.intentId === operation.intentId &&
-    snapshot.signingEntered === true && snapshot.signedDispatchRecorded === false &&
+    typeof snapshot.signingEntered === 'boolean' && snapshot.signedDispatchRecorded === false &&
     snapshot.signedResponseRecorded === false && object(wire.events) &&
     !wire.events['signed-dispatch'] && !wire.events['signed-response'] && !wire.events['signed-error'] &&
-    wire.events['unsigned-response']?.status === 402 && object(wire.events['signing-input']?.input),
+    wire.events['unsigned-response']?.status === 402 &&
+    (snapshot.signingEntered ? object(wire.events['signing-input']?.input) :
+      !wire.events['signing-input'] && !wire.events['signing-result'] && !wire.events['signing-error'] &&
+      !wire.events['signed-request'] && snapshot.state === 'UNSIGNED_RESPONSE_HEADERS_RETAINED'),
     'UNDISPATCHED_ORIGINAL_WIRE_REQUIRED');
-  const input = copy(wire.events['signing-input'].input);
+  const input = snapshot.signingEntered ? copy(wire.events['signing-input'].input) :
+    await originalUnsignedInput({runtime,op,cfg:bound.config,body:wireBody,wire,reader,signerSources,signal});
   const {validateNativeSignerInput} = await import(pathToFileURL(nativePath).href);
   const checked = validateNativeSignerInput(input,pins);
   need(checked.policy.paymentFlow === 'authorization' &&
@@ -348,21 +399,25 @@ export async function readUndispatchedAuthorizationEvidence(operation, options =
       ticketSha256:bound.ticketSha256, actor:owner.actor, service:owner.service,
       network:checked.intent.network, asset:checked.intent.asset, payer:pins.expectedPayer,
       payTo:checked.intent.payTo, amount:checked.intent.amount, paymentFlow:'authorization',
-      signingInputSha256:snapshot.records['signing-input'].sha256,
+      signingInputSha256:snapshot.records['signing-input']?.sha256 ?? null,
     },
     wire:copy(snapshot), signerSources,
     scope:{
       basis:'RETAINED_ORIGINAL_WIRE_AND_REVIEWED_AUTHORIZATION_SOURCE',
       signer:'ORIGINAL_GENERATED_ENVIRONMENT_ED25519',
       x402SdkVersion:'2.28.0', stellarSdkVersion:'16.3.1',
-      signedAuthorizationMayExist:true,
+      signedAuthorizationMayExist:snapshot.signingEntered,
       authorizationTransferredByOriginalSignedHttp:false,
       signedDispatchGate:'ORIGINAL_WIRE_CHECKPOINT_PUBLISHED_BEFORE_TRANSPORT',
       signerRemoteOperations:'LEDGER_AND_ACCOUNT_READS_AND_SIMULATION; NO_SUBMIT_OR_AUTOMATIC_RESTORE_OPTION',
       reservation:'PRESERVED; ORIGINAL_SF36_AUDIT_AND_APPROVAL_BELONG_TO_THE_CALLER',
-      rawAuthorization:'RETAINED_ONLY_IN_THE_ORIGINAL_PRIVATE_WIRE; OMITTED_FROM_THIS_SNAPSHOT',
+      rawAuthorization:snapshot.signingEntered ?
+        'RETAINED_ONLY_IN_THE_ORIGINAL_PRIVATE_WIRE; OMITTED_FROM_THIS_SNAPSHOT' :
+        'ORIGINAL_SIGNER_NOT_ENTERED_BEFORE_THE_RETAINED_UNSIGNED_GATE',
+      ...(snapshot.signingEntered ? {} : {approvalIntentSource:'ORIGINAL_SF31_FROM_RETAINED_UNSIGNED_402; ORIGINAL_SF54_CANONICAL_REQUEST'}),
     },
   };
   return {...result,sha256:digest(canonical(result))};
 }
+
 
