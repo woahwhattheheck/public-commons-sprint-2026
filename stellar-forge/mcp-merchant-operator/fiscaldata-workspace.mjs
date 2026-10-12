@@ -143,7 +143,7 @@ export class MerchantFiscalDataWorkspaces{
   #packageDirectory(name){this.#declared(name);return join(this.#config.exportsDirectory,'fiscaldata-packages',name);}
   async #model(entry){
     const{openFiscalWorkspace}=await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/workspace-model.mjs');
-    return openFiscalWorkspace({directory:entry.directory,limits:entry.limits,
+    return openFiscalWorkspace({directory:entry.directory,limits:entry.limits,expectedWorkspace:entry.expectedWorkspace,
       buyerWorkspaces:Object.entries(entry.buyerWorkspaces).map(([id,item])=>({id,...item}))});
   }
   async #open(name){
@@ -294,7 +294,7 @@ export class MerchantFiscalDataWorkspaces{
     await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(count(port??0,'Browser port',0,65535),'127.0.0.1',resolve);});
     const origin='http://127.0.0.1:'+server.address().port,token=randomBytes(32).toString('hex');
     try{
-      handler=await createFiscalWorkspaceHandler({origins:[origin],token,model:{
+      handler=await createFiscalWorkspaceHandler({origins:[origin],token,identity:handle.entry.managedIdentity??null,model:{
         snapshot:()=>handle.model.snapshot(),file:(...args)=>handle.model.file(...args),
         dispatch:(action,input)=>this.#enqueue(handle,()=>this.#native(handle,action,input,'browser'))
       }});
@@ -420,3 +420,4 @@ export class MerchantFiscalDataWorkspaces{
     })();return this.#close;
   }
 }
+

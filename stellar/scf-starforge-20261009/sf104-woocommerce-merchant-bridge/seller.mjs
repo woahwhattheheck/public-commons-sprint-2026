@@ -6,6 +6,7 @@ import {open, unlink} from 'node:fs/promises';
 import {isAbsolute, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {fields, publicUrl, reference, generation, sha256} from './buyer.mjs';
+import {validateBasketCatalog} from './basket.mjs';
 import {need, operation} from '../sf88-operator-buyer-cli/config.mjs';
 import {compileHttpSellerOffer} from '../sf30-seller-sdk/seller.mjs';
 import {startSellerService} from '../sf30-seller-sdk/serve.mjs';
@@ -14,14 +15,17 @@ import {createPublicHttpsFetch} from '../sf31-buyer-client/public-transport.mjs'
 import {openOutbox, instrumentNativeSettlement} from '../sf98-merchant-delivery/outbox.mjs';
 
 export const MERCHANT_SCHEMA = 'stellar-forge.sf104.merchant.v1';
+export const BASKET_MERCHANT_SCHEMA = 'stellar-forge.sf104.merchant.v2';
 const REQUEST_SCHEMA = 'stellar-forge.sf104.checkout-admission.v1';
 const RESULT_SCHEMA = 'stellar-forge.sf104.checkout-admission-result.v1';
 const ENDPOINT = '/wp-json/stellar-forge/v1/checkout-admission';
 
 export function compileMerchant(raw) {
-  fields(raw, ['schema','storeOrigin','admissionUrl','secretEnv','outbox','routes','timeoutMs'], 'WOO_MERCHANT_FIELDS_INVALID');
-  need(raw.schema === MERCHANT_SCHEMA && Array.isArray(raw.routes) && raw.routes.length >= 1 &&
-    raw.routes.length <= 64, 'WOO_MERCHANT_CONFIG_INVALID');
+  const basketConfig = raw?.schema === BASKET_MERCHANT_SCHEMA;
+  fields(raw, ['schema','storeOrigin','admissionUrl','secretEnv','outbox','routes','timeoutMs',
+    ...(basketConfig ? ['baskets'] : [])], 'WOO_MERCHANT_FIELDS_INVALID');
+  need((raw.schema === MERCHANT_SCHEMA || basketConfig) && Array.isArray(raw.routes) &&
+    (basketConfig || raw.routes.length >= 1) && raw.routes.length <= 64, 'WOO_MERCHANT_CONFIG_INVALID');
   const store = publicUrl(raw.storeOrigin, 'WOO_STORE_ORIGIN_INVALID');
   need(store.pathname === '/' && !store.search, 'WOO_STORE_ORIGIN_INVALID');
   const endpoint = publicUrl(raw.admissionUrl ?? store.origin + ENDPOINT, 'WOO_ADMISSION_URL_INVALID');
@@ -57,8 +61,21 @@ export function compileMerchant(raw) {
     return {productId:input.productId, routeId:input.routeId, url:url.href, method:input.method,
       expect:structuredClone(input.expect), offer, handler:'wooOrder' + index, admit:'wooAdmission' + index};
   });
+  const baskets = [];
+  if (basketConfig) {
+    need(Array.isArray(raw.baskets) && raw.baskets.length >= 1 && raw.baskets.length <= 32, 'WOO_BASKET_CATALOGS_REQUIRED');
+    const retained = new Set();
+    for (const input of raw.baskets) {
+      const catalog = validateBasketCatalog(input), first = baskets[0];
+      need(catalog.storeOrigin === store.origin && !retained.has(catalog.catalogDigest), 'WOO_BASKET_CATALOG_IDENTITY_INVALID');
+      need(!ids.has(catalog.routeId) && !routes.some(r => new URL(r.url).pathname.toLowerCase() === new URL(catalog.url).pathname.toLowerCase()),
+        'WOO_BASKET_ROUTE_MUST_BE_DISTINCT');
+      need(!first || ['routeId','url','method'].every(key => first[key] === catalog[key]), 'WOO_BASKET_CATALOG_ENDPOINT_CHANGED');
+      retained.add(catalog.catalogDigest); origins.add(new URL(catalog.url).origin); baskets.push(catalog);
+    }
+  }
   need(origins.size === 1, 'WOO_ROUTES_REQUIRE_ONE_SELLER_ORIGIN');
-  return {storeOrigin:store.origin, admissionUrl:endpoint.href, secretEnv, outbox:raw.outbox, timeoutMs, routes,
+  return {storeOrigin:store.origin, admissionUrl:endpoint.href, secretEnv, outbox:raw.outbox, timeoutMs, routes, baskets,
     service:{schema:'stellar-forge.seller-service.v1', publicOrigin:[...origins][0],
       admissionTimeoutMs:Math.min(timeoutMs + 500, 60000), handlerTimeoutMs:Math.min(timeoutMs + 1000, 60000),
       routes:routes.map(route => ({id:route.routeId, path:new URL(route.url).pathname, offer:route.offer,
@@ -165,6 +182,10 @@ export function createWooApplication(compiled, {env = process.env, fetchImpl} = 
 
 export async function startWooMerchant(compiled, {nativeFactory = null, env = process.env,
   fetchImpl, port = 8423, operationsPort = 8424, maxInFlight = 64, drainGraceMs = 60000} = {}) {
+  if (compiled.baskets?.length) {
+    const {startWooBasketMerchant} = await import('./basket-seller.mjs');
+    return startWooBasketMerchant(compiled, {nativeFactory, env, fetchImpl, port, operationsPort, maxInFlight, drainGraceMs});
+  }
   const outbox = await openOutbox(compiled.outbox);
   const handlers = createWooApplication(compiled, {env, fetchImpl});
   let seller, operations, closing;
@@ -189,7 +210,9 @@ async function writeNewJson(path, value) {
   await file.close();
 }
 
-const USAGE = `node seller.mjs prepare --route /absolute/woo-product.json [--route /absolute/another-product.json] --store-origin https://shop.example --outbox /private/sf98-outbox --out /private/woo-merchant.json [--admission-url https://shop.example/subdir/wp-json/stellar-forge/v1/checkout-admission]
+const USAGE = `node seller.mjs prepare [--route /absolute/woo-product.json] [--basket /absolute/basket-catalog.json] --store-origin https://shop.example --outbox /private/sf98-outbox --out /private/woo-merchant.json [--admission-url https://shop.example/subdir/wp-json/stellar-forge/v1/checkout-admission]
+Repeat --route for existing fixed-product routes and --basket for retained catalog versions.
+Basket catalogs are exported by the original Woo gateway; keep earlier catalogs for pending orders.
 node seller.mjs inspect --config /private/woo-merchant.json
 node seller.mjs serve --config /private/woo-merchant.json --facilitator https://facilitator.example [--port 8423] [--operations-port 8424]
 
@@ -202,32 +225,35 @@ An uncertain reserved order stays reserved until original merchant reconciliatio
 
 export async function main(args = process.argv.slice(2)) {
   if (args.length === 1 && args[0] === '--help') { console.log(USAGE); return; }
-  const action = args[0], options = new Map(), routeFiles = [];
-  const allowed = {prepare:['--route','--store-origin','--outbox','--out','--admission-url'],
+  const action = args[0], options = new Map(), routeFiles = [], basketFiles = [];
+  const allowed = {prepare:['--route','--basket','--store-origin','--outbox','--out','--admission-url'],
     inspect:['--config'], serve:['--config','--facilitator','--allow-local-facilitator','--port','--operations-port']}[action];
   need(allowed, 'WOO_SELLER_ACTION_REQUIRED');
   for (let i = 1; i < args.length; i++) {
-    const key = args[i]; need(allowed.includes(key) && (key === '--route' || !options.has(key)), 'WOO_SELLER_ARGUMENT_INVALID');
+    const key = args[i]; need(allowed.includes(key) && (['--route','--basket'].includes(key) || !options.has(key)), 'WOO_SELLER_ARGUMENT_INVALID');
     if (key === '--allow-local-facilitator') { options.set(key, true); continue; }
     need(typeof args[i+1] === 'string' && !args[i+1].startsWith('--'), 'WOO_SELLER_VALUE_REQUIRED');
     const value = args[++i];
-    if (key === '--route') routeFiles.push(value); else options.set(key, value);
+    if (key === '--route') routeFiles.push(value); else if (key === '--basket') basketFiles.push(value); else options.set(key, value);
   }
   if (action === 'prepare') {
-    need(routeFiles.length && ['--store-origin','--outbox','--out'].every(key => options.has(key)), 'WOO_SETUP_ARGUMENT_REQUIRED');
-    const raw = {schema:MERCHANT_SCHEMA, storeOrigin:options.get('--store-origin'),
+    need((routeFiles.length || basketFiles.length) && ['--store-origin','--outbox','--out'].every(key => options.has(key)), 'WOO_SETUP_ARGUMENT_REQUIRED');
+    const raw = {schema:basketFiles.length ? BASKET_MERCHANT_SCHEMA : MERCHANT_SCHEMA, storeOrigin:options.get('--store-origin'),
       outbox:resolve(options.get('--outbox')), routes:await Promise.all(routeFiles.map(path => readJson(resolve(path)))),
+      ...(basketFiles.length ? {baskets:await Promise.all(basketFiles.map(path => readJson(resolve(path))))} : {}),
       ...(options.has('--admission-url') ? {admissionUrl:options.get('--admission-url')} : {})};
     const compiled = compileMerchant(raw), output = resolve(options.get('--out'));
     await writeNewJson(output, raw);
-    const result = {status:'WOO_NATIVE_MERCHANT_PREPARED', output, routes:compiled.routes.length, networkRequests:0};
+    const result = {status:'WOO_NATIVE_MERCHANT_PREPARED', output, routes:compiled.routes.length, basketCatalogs:compiled.baskets.length, networkRequests:0};
     console.log(JSON.stringify(result)); return result;
   }
   need(options.has('--config'), 'WOO_CONFIG_REQUIRED');
-  const compiled = compileMerchant(await readJson(resolve(options.get('--config'))));
+  const compiled = compileMerchant(await readJson(resolve(options.get('--config')), 2097152));
   if (action === 'inspect') {
     const result = {status:'WOO_MERCHANT_CONFIG_VALID', storeOrigin:compiled.storeOrigin,
-      admissionUrl:compiled.admissionUrl, routes:compiled.routes.map(route => ({productId:route.productId,
+      admissionUrl:compiled.admissionUrl, baskets:compiled.baskets.map(catalog => ({catalogDigest:catalog.catalogDigest,
+        routeId:catalog.routeId, url:catalog.url, method:catalog.method, products:catalog.products})),
+      routes:compiled.routes.map(route => ({productId:route.productId,
         routeId:route.routeId, url:route.url, method:route.method, expect:route.expect})), networkRequests:0};
     console.log(JSON.stringify(result, null, 2)); return result;
   }
@@ -246,7 +272,7 @@ export async function main(args = process.argv.slice(2)) {
     nativeFactory:routes => createNativeSellerServer(routes, {facilitatorClient:client})});
   for (const name of ['SIGINT','SIGTERM']) process.once(name, () => session.close().catch(() => {process.exitCode = 1;}));
   console.log(JSON.stringify({status:'WOO_NATIVE_MERCHANT_RUNNING', mode:session.seller.mode,
-    seller:session.seller.url, operations:session.operations.url, routes:compiled.routes.length}));
+    seller:session.seller.url, operations:session.operations.url, routes:compiled.routes.length, basketCatalogs:compiled.baskets.length}));
   return session;
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url))
@@ -254,3 +280,4 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     console.error(JSON.stringify({error:/^[A-Z0-9_]+$/.test(error.code ?? '') ? error.code : 'WOO_SELLER_COMMAND_FAILED',
       automaticPaymentRetry:false})); process.exitCode = 1;
   });
+

@@ -10,6 +10,7 @@ import { createSellerServiceConfig } from '../../../sf61-openapi-seller-import/s
 import { readReleaseState, stageRelease } from '../../../sf82-seller-pilot/releases.mjs';
 import { readCkanSourceFile } from '../declaration.mjs';
 import { readCkanCapture } from '../capture.mjs';
+import { projectCkanSemantics } from '../semantics.mjs';
 import { captureMember } from './driver.mjs';
 import { inspectCkanMerchantFiles } from './handler-runtime.mjs';
 import { object, absolute, bytes, digest, createFile, privateDirectory, readPrivate,
@@ -36,7 +37,58 @@ function handlerEntry(manifestSha256, runtimeSha256) {
     "export const queryDataset = handlers.queryDataset;\n" +
     "export const admitDataset = handlers.admitDataset;\n";
 }
-function inputs(description, payment, origin, path, capture) {
+function semanticBinding(semantics) {
+  return { sha256: semantics.sha256, definitionSha256: semantics.definitionSha256,
+    file: 'semantics.json', csvwFile: 'table-schema.json' };
+}
+function semanticResponseSchema(description, semantics) {
+  const meanings = new Map(semantics.columns.map(column => [column.name, column]));
+  const properties = Object.fromEntries(description.columns.map(column => {
+    const meaning = meanings.get(column.name);
+    return [column.name, { type: column.type, ...(column.nullable ? { nullable: true } : {}),
+      ...(meaning ? { 'x-ckan-source-field': meaning.sourceField, 'x-ckan-encoding': meaning.encoding,
+        'x-csvw-column': meaning.projectedDefinition } : {}) }];
+  }));
+  return { type: 'object', required: ['schema', 'dataset', 'fields', 'rows', 'page', 'semantics'],
+    properties: {
+      schema: { type: 'string', enum: ['stellar-forge.dataset-page.v1'] },
+      dataset: { type: 'object' },
+      fields: { type: 'array', items: { type: 'string', enum: description.columns.map(column => column.name) } },
+      // The ordinary fields query can select a subset of these columns.
+      rows: { type: 'array', items: { type: 'object', properties, additionalProperties: false } },
+      page: { type: 'object' },
+      semantics: { type: 'object', description: 'The full retained semantic document for the published dataset; fields selects the columns returned on this page.',
+        required: ['schema', 'sha256', 'definitionSha256', 'source', 'columns', 'csvw'],
+        properties: {
+          schema: { type: 'string', enum: ['stellar-forge.ckan-semantics.v1'] },
+          sha256: { type: 'string', enum: [semantics.sha256] },
+          definitionSha256: { type: 'string', enum: [semantics.definitionSha256] },
+          source: { type: 'object' }, columns: { type: 'array', items: { type: 'object' } },
+          csvw: { type: 'object' },
+        } },
+    }, 'x-stellar-forge-ckan-semantics': semanticBinding(semantics) };
+}
+function reviewedMerchantSemantics(selected, capture, queryName, description) {
+  const query = selected.queries[queryName], review = query?.semanticReview;
+  if (review === undefined) return null;
+  if (!object(review) || !HASH.test(review.sha256 ?? '') || !HASH.test(review.definitionSha256 ?? ''))
+    throw fault('CKAN_SEMANTIC_REVIEW_REQUIRED');
+  const reviewed = projectCkanSemantics(capture, query.projection);
+  if (!reviewed || reviewed.sha256 !== review.sha256 || reviewed.definitionSha256 !== review.definitionSha256)
+    throw fault('CKAN_SEMANTIC_REVIEW_CHANGED', 'Review this retained capture and source projection before exporting.', 409);
+  // The accepted candidate may expose a subset of its source query, or narrow
+  // nullable columns. Publish the meaning of the actual accepted CSV columns.
+  const projection = Object.fromEntries(description.columns.map(column => {
+    const source = query.projection[column.name];
+    if (!source || source.type !== column.type) throw fault('CKAN_MERCHANT_COLUMN_CHANGED');
+    return [column.name, { ...source, type: column.type, nullable: column.nullable }];
+  }));
+  const semantics = projectCkanSemantics(capture, projection);
+  if (!semantics || !HASH.test(semantics.sha256 ?? '') || !HASH.test(semantics.definitionSha256 ?? ''))
+    throw fault('CKAN_MERCHANT_SEMANTICS_INVALID');
+  return { semantics, sourceSemanticReview: { sha256: review.sha256, definitionSha256: review.definitionSha256 } };
+}
+function inputs(description, payment, origin, path, capture, semantics) {
   const resource = origin + path;
   const parameters = datasetQueryParameters(description).map(parameter => ({
     name: parameter.name, in: 'query', required: false, description: parameter.description,
@@ -45,6 +97,11 @@ function inputs(description, payment, origin, path, capture) {
   parameters.push({ name: 'snapshot', in: 'query', required: false,
     description: 'Select this retained edition by its immutable dataset snapshot.',
     schema: { type: 'string' }, example: description.snapshot });
+  if (semantics) parameters.push({ name: 'semantics', in: 'query', required: false,
+    description: 'Select the reviewed meaning for this capture and published projection. Omission selects the current meaning.',
+    schema: { type: 'string' }, example: semantics.sha256 });
+  if (parameters.length > 32)
+    throw fault('CKAN_MERCHANT_QUERY_BUDGET_EXCEEDED', 'Select fewer filter/range capabilities; dataset queries, snapshot and reviewed semantics share the original 32-parameter offer budget.');
   const document = { openapi: '3.0.3', info: { title: description.name, version: description.snapshot },
     servers: [{ url: new URL('/', origin).href }], paths: { [path]: { get: {
       operationId: 'queryCkanDataset', summary: description.name,
@@ -53,7 +110,7 @@ function inputs(description, payment, origin, path, capture) {
         '. One paid request per page. Original publisher metadata and license are retained with the edition.',
       tags: ['dataset', 'ckan'], parameters,
       responses: { '200': { description: 'A page from the selected immutable dataset edition.',
-        content: { 'application/json': { schema: { type: 'object' } } } } },
+        content: { 'application/json': { schema: semantics ? semanticResponseSchema(description, semantics) : { type: 'object' } } } } },
     } } } };
   const selections = [{ method: 'GET', path, serviceName: 'CKAN DataStore API', accepts: [payment] }];
   const bindings = [{ method: 'GET', path, id: 'ckan_dataset',
@@ -101,12 +158,18 @@ export async function exportCkanMerchantPackage(options) {
       capture.manifest.packageId !== selected.config.packageId || capture.manifest.resourceId !== selected.config.resourceId)
     throw fault('CKAN_MERCHANT_CAPTURE_CHANGED');
   const metadata = sourceMetadata(capture);
-  const generated = inputs(candidate.dataset, payment, seller.publicOrigin, path, metadata);
+  const meaning = reviewedMerchantSemantics(selected, capture, plan.data.query, candidate.dataset);
+  const generated = inputs(candidate.dataset, payment, seller.publicOrigin, path, metadata, meaning?.semantics);
   const csv = await readPrivate(join(dirname(current.configPath), 'data.csv'), plan.data.extraction.maxBytes);
   if (digest(csv) !== candidate.csvHash || csv.length !== candidate.csvBytes)
     throw fault('CKAN_MERCHANT_CANDIDATE_CHANGED');
   const datasetConfig = await readPrivate(current.configPath, 65536);
   if (digest(datasetConfig) !== candidate.configHash) throw fault('CKAN_MERCHANT_CANDIDATE_CHANGED');
+  if (meaning) {
+    const pageBudget = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(datasetConfig)).maxPageBytes ?? 921600;
+    if (Buffer.byteLength(JSON.stringify({ semantics: meaning.semantics })) >= pageBudget)
+      throw fault('CKAN_SEMANTICS_PAGE_TOO_LARGE', 'The selected semantic document exceeds the original page budget. Review a smaller publication projection.', 413);
+  }
   const source = structuredClone(selected.config); source.connection.file = 'capture/capture.json';
   const fileMap = new Map([
     ['data.csv', csv], ['dataset.json', datasetConfig], ['source.json', bytes(source)],
@@ -118,10 +181,15 @@ export async function exportCkanMerchantPackage(options) {
     ['runtime/dataset-handler.mjs', await readFile(new URL('../../dataset-handler.mjs', import.meta.url))],
     ['runtime/handler-runtime.mjs', await readFile(new URL('./handler-runtime.mjs', import.meta.url))],
   ]);
+  if (meaning) {
+    fileMap.set('semantics.json', bytes(meaning.semantics));
+    fileMap.set('table-schema.json', bytes(meaning.semantics.csvw));
+  }
   for (const [name, content] of capture.rawFiles) fileMap.set('capture/' + captureMember(name), content);
   const manifest = { schema: 'stellar-forge.ckan-merchant-package.v1', createdAt: new Date().toISOString(),
     resource: generated.resource, publicOrigin: seller.publicOrigin, path,
     dataset: candidate.dataset, capture: metadata,
+    ...(meaning ? { semantics: semanticBinding(meaning.semantics), sourceSemanticReview: meaning.sourceSemanticReview } : {}),
     candidate: { runId, candidateDigest: candidate.candidateDigest, planDigest: candidate.planDigest,
       csvHash: candidate.csvHash, configHash: candidate.configHash },
     review: { id: run.data.review.id, reviewer: run.data.review.reviewer, recordedAt: run.data.review.recordedAt },
@@ -141,6 +209,7 @@ export async function exportCkanMerchantPackage(options) {
   await syncDirectory(out);
   return { directory: out, manifestSha256, handlerSha256: digest(entry),
     resource: generated.resource, dataset: candidate.dataset, capture: metadata,
+    ...(meaning ? { semantics: manifest.semantics, sourceSemanticReview: manifest.sourceSemanticReview } : {}),
     files: manifest.files.length + 2 };
 }
 export async function inspectCkanMerchantPackage(directory, expectedManifestSha256) {
@@ -202,21 +271,48 @@ export async function stageCkanMerchantRelease(root, options) {
     runtime: { ...(options.runtime ?? {}), handlers: join(retained.directory, 'handlers.mjs') },
   });
   return { release, packageDirectory: retained.directory, manifestSha256: retained.manifestSha256,
-    resource: retained.manifest.resource, dataset: retained.manifest.dataset, capture: retained.manifest.capture };
+    resource: retained.manifest.resource, dataset: retained.manifest.dataset, capture: retained.manifest.capture,
+    ...(retained.manifest.semantics ? { semantics: retained.manifest.semantics,
+      sourceSemanticReview: retained.manifest.sourceSemanticReview } : {}) };
 }
 export async function readCkanMerchantBuyerOffer(options) {
   only(options, ['packageDirectory', 'expectedManifestSha256', 'seller', 'query'], 'CKAN_BUYER_OPTIONS_INVALID');
   const retained = await inspectCkanMerchantPackage(options.packageDirectory, options.expectedManifestSha256);
-  return readDatasetBuyerOffer({ seller: options.seller, resource: retained.manifest.resource,
-    snapshot: retained.manifest.dataset.snapshot, query: options.query ?? '' });
+  const semantics = retained.manifest.semantics;
+  let query = options.query ?? '';
+  if (semantics) {
+    if (typeof query !== 'string' || query.length > 8192)
+      throw fault('BUYER_SELECTION_REQUIRED', 'Select a published edition and its first-page query.');
+    const selected = new URL(retained.manifest.resource); selected.search = query;
+    const parameters = selected.searchParams, requested = parameters.getAll('semantics');
+    if (requested.length > 1 || requested.length === 1 && requested[0] !== semantics.sha256)
+      throw fault('CKAN_SEMANTICS_CHANGED', 'Select the reviewed meaning of this merchant package.', 409);
+    parameters.delete('semantics');
+    query = parameters.toString();
+  }
+  // Reuse the original snapshot, route, payment and dataset-query checks.
+  const review = await readDatasetBuyerOffer({ seller: options.seller, resource: retained.manifest.resource,
+    snapshot: retained.manifest.dataset.snapshot, query });
+  if (!semantics) return review;
+  const bazaar = review.offer.extensions?.bazaar;
+  const advertised = bazaar?.schema?.properties?.input?.properties?.queryParams;
+  if (advertised?.properties?.semantics?.type !== 'string' ||
+      advertised.required?.includes('semantics') ||
+      Object.hasOwn(advertised.properties.semantics, 'default') ||
+      bazaar?.info?.input?.queryParams?.semantics !== semantics.sha256)
+    throw fault('CKAN_SEMANTICS_NOT_ADVERTISED', 'Activate the release advertising this exact reviewed semantic digest, then reload its offer.', 409);
+  const url = new URL(review.url); url.searchParams.set('semantics', semantics.sha256);
+  return { ...review, url: url.href, query: url.searchParams.toString(),
+    semantics: { ...semantics }, sourceSemanticReview: { ...retained.manifest.sourceSemanticReview } };
 }
 export async function prepareCkanMerchantBuyer(options) {
   only(options, ['packageDirectory', 'expectedManifestSha256', 'seller', 'query',
     'intentId', 'acceptIndex', 'offerSha256', 'out'], 'CKAN_BUYER_OPTIONS_INVALID');
   const offer = await readCkanMerchantBuyerOffer({ packageDirectory: options.packageDirectory,
     expectedManifestSha256: options.expectedManifestSha256, seller: options.seller, query: options.query ?? '' });
-  const prepared = prepareDatasetBuyer(offer, {
-    intentId: options.intentId, acceptIndex: options.acceptIndex, offerSha256: options.offerSha256 });
+  const prepared = { ...prepareDatasetBuyer(offer, {
+    intentId: options.intentId, acceptIndex: options.acceptIndex, offerSha256: options.offerSha256 }),
+    ...(offer.semantics ? { semantics: offer.semantics, sourceSemanticReview: offer.sourceSemanticReview } : {}) };
   if (options.out) {
     const out = absolute(options.out, 'buyer configuration file');
     await createFile(out, Buffer.from(prepared.configText));

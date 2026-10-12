@@ -223,7 +223,9 @@ export class Operation {
   /** Inspect a selected expired-attempt continuation and its retained evidence; read-only. */
   inspectExpiredContinuation(): Promise<ExpiredContinuationStatus>;
   prepareExpiredContinuation(options: ExpiredContinuationOptions): Promise<Operation>;
-  /** Follow already-selected unpaid or expired lineages without preparing or executing. */
+  inspectUndispatchedContinuation(): Promise<UndispatchedContinuationStatus>;
+  prepareUndispatchedContinuation(options: UndispatchedContinuationOptions): Promise<Operation>;
+  /** Follow already-selected unpaid, expired or undispatched authorization lineages without preparing or executing. */
   followContinuation(): Promise<Operation>;
   /** Inspect the original definitive unpaid result and any explicit successor; read-only. */
   inspectUnpaidContinuation(): Promise<UnpaidContinuationStatus>;
@@ -1387,6 +1389,28 @@ export interface ExpiredContinuationStatus {
     choiceSha256: string; source: NodeLostOutputAttempt & { requestIdentity: string };
     expiry: AuthorizationExpiryEvidence;
     reservation: Record<string, unknown> & { request_id: string; request_digest: string; state: 'reserved'; actual: '0'; amount: string; sourceSha256: string; recordAuthority: string };
+    accounting: 'ORIGINAL_RESERVATION_RETAINED; SUCCESSOR_REQUIRES_ORIGINAL_APPROVAL';
+  };
+}
+
+/** Exact original authorization has no durable signed-dispatch record. */
+export interface UndispatchedContinuationOptions extends Omit<ExpiredContinuationOptions,'expiryEvidence'> {}
+export interface UndispatchedAuthorizationEvidence {
+  schema: 'stellar-forge.sf88.undispatched-authorization-evidence.v1';
+  kind: 'ORIGINAL_AUTHORIZATION_NOT_DISPATCHED';
+  binding: Record<string, unknown> & {intentId: string; requestSha256: string; attemptId: string; configSha256: string};
+  wire: Record<string, unknown> & {writerActive: false; signedDispatchRecorded: false};
+  signerSources: Record<string, {path: string; bytes: number; sha256: string}>;
+  scope: Record<string, unknown>;
+  sha256: string;
+}
+export interface UndispatchedContinuationStatus {
+  intentId: string;
+  continuation: null | {
+    intentId: string; reason: string; state: 'PREPARING' | 'PREPARED'; createdAt: string;
+    choiceSha256: string; source: NodeLostOutputAttempt & {requestIdentity: string};
+    authorization: UndispatchedAuthorizationEvidence;
+    reservation: Record<string, unknown> & {request_id: string; request_digest: string; state: 'reserved'; actual: '0'; amount: string; sourceSha256: string; recordAuthority: string};
     accounting: 'ORIGINAL_RESERVATION_RETAINED; SUCCESSOR_REQUIRES_ORIGINAL_APPROVAL';
   };
 }
