@@ -122,8 +122,8 @@
     },
     {
       "path": "web/archive.js",
-      "bytes": 24422,
-      "sha256": "e8d0ec9d5b81ad31f00297ff6b96f45b427023ab10afd6ba09e28f0cfb4a0c5c"
+      "bytes": 25020,
+      "sha256": "7cda03522efe9b2da67fb2f3e900a733682cb0451856df2e09e7a7994f295d18"
     },
     {
       "path": "web/companions.js",
@@ -132,8 +132,8 @@
     },
     {
       "path": "web/timephased.js",
-      "bytes": 16140,
-      "sha256": "e981f1b56cf4b0eb9577d06c551c38cbdd19d89ff7e61809fa6846855418e6e3"
+      "bytes": 16528,
+      "sha256": "3053c0f1fb2834985e30b144dbaec551006a6c43dd02bd891ab053c69b191ba5"
     },
     {
       "path": "workspace.py",
