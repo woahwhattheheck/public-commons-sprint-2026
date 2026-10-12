@@ -55,17 +55,17 @@ export async function openWorkspace(directory, {create = false} = {}) {
     }
     const metaPath = join(root,'workspace.json');
     if (!(await read(metaPath,true))) await saveJSON(metaPath, {
-      schema:'stellar-forge.mpp-workspace.v1', createdAt:now(), revision:0, merchant:null, buyer:null
+      schema:'stellar-forge.mpp-workspace.v1', createdAt:now(), revision:0, merchant:null, buyer:null, customer:null
     });
     const api = {
       root,
       metadata: () => read(metaPath),
       profile: async kind => {
-        requireValue(['merchant','buyer'].includes(kind),'MPP_PROFILE_KIND_INVALID');
+        requireValue(['merchant','buyer','customer'].includes(kind),'MPP_PROFILE_KIND_INVALID');
         const meta = await read(metaPath); return meta[kind] ? get('profiles',meta[kind]) : null;
       },
       configure: (kind,profile,expectedRevision) => serial(async () => {
-        requireValue(['merchant','buyer'].includes(kind),'MPP_PROFILE_KIND_INVALID');
+        requireValue(['merchant','buyer','customer'].includes(kind),'MPP_PROFILE_KIND_INVALID');
         const meta = await read(metaPath);
         requireValue(meta.revision === expectedRevision,'MPP_PROFILE_REVISION_CHANGED',409);
         const digest = hash(stable(profile));
