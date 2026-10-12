@@ -67,10 +67,11 @@ The service's access token remains in the original private workspace. merchant_g
 | --- | --- |
 | merchant_grant_plans, merchant_grant_plan | Saved plan summaries; current or selected immutable revision with original scenario and reports. |
 | merchant_grant_plan_history | Original plan revision history. |
-| merchant_grant_cases, merchant_grant_case | Existing case summaries and the full pinned plan, record collections, sources, reviews and forecasts. |
+| merchant_grant_cases, merchant_grant_case | Existing case summaries and the full pinned plan, record collections, sources, reviews, forecasts and portfolios. |
 | merchant_grant_case_report | Original invoice allocations, native assets, delivery measures and grant-stage reporting. |
 | merchant_grant_case_history | One native event-history page, with the original cursor and page result. |
 | merchant_grant_forecasts, merchant_grant_forecast | Immutable forecast summaries or the entire saved forecast and current source-change comparison. |
+| merchant_grant_portfolios, merchant_grant_portfolio | Saved resource/date allocations, their original forecast, alternatives and current source comparison. |
 | merchant_grant_review | Complete original saved business review and its source snapshot. |
 
 Read the original planId and current revision, or the original caseId and program.version, before a mutation. An operating case remains pinned to its selected original planning revision.
@@ -139,6 +140,54 @@ The input contract remains [the original forecast guide](../../stellar/scf_2026/
 
 If another operator changes the case between preview and save, the original service returns OPERATIONS_CONFLICT or FORECAST_PREVIEW_CONFLICT. Read the current case, reconcile the input and preview again. An older saved forecast remains immutable and shows its original source comparison.
 
+## Allocate resources and carry selected dates into cash
+
+The six portfolio operations use the completed original [Portfolio allocation workflow](../../stellar/scf_2026/sf47_budget_model/workspace/PORTFOLIO.md). The original saved forecast supplies the full remaining task set, hours, prices and cash rules. The original allocation engine supplies resource availability, dependencies and working dates.
+
+| Tool | Original operation |
+| --- | --- |
+| merchant_grant_portfolios | All saved allocation summaries for the selected case. |
+| merchant_grant_portfolio | The complete immutable allocation, source forecast, alternatives, dated results and current source comparison. |
+| merchant_grant_portfolio_seed | An editable input from the selected current saved forecast, retaining every remaining source task. |
+| merchant_grant_portfolio_preview | The original entered allocation and alternative calculation against the current case version. |
+| merchant_grant_portfolio_save | Native portfolio.save with the reviewed preview identity, exact case version and stable request ID. |
+| merchant_grant_portfolio_selection | The selected ready alternative's original forecast input and retained date/source selection; it creates an editable cash forecast input. |
+
+1. Inspect the current case version and the selected saved forecast's ID and SHA. Call portfolio_seed with that case version and forecast ID.
+2. Read the seed's complete /inputs object. Enter explicit weekdays, daily availability, dated exceptions, resource effort, dependencies and alternatives. Every source task stays in that native input. An unentered capacity and an entered zero retain their different original meanings.
+3. Call portfolio_preview with the complete input. Inspect every alternative's status, available and allocated hours, chosen dates, late or unfinished tasks, collection-timing findings and original cash result. Use snapshot/rows for large arrays and file_read for the complete response.
+4. Call portfolio_save with the same input, current expectedVersion, expectedPreviewSha256, actor and original requestId. Reopen the returned portfolio ID with portfolio; the save's source and complete result stay immutable.
+5. Read the case's current version. Call portfolio_selection with that version, portfolioId and the exact alternativeId (base selects the base allocation).
+6. Feed the returned original /inputs object into forecast_preview, review the cash assumptions, then forecast_save with its original preview SHA, current version and a new deliberate request ID.
+7. Export kind portfolio with caseId and portfolioId for the full source/calculation/CSV handoff. Export kind case for native import and reopening of the entire case, including every retained portfolio and original forecast.
+
+Seed, preview and selection are read-only native operations. Save uses the original command journal. A stale case or changed forecast keeps the original validation response; an uncertain save retains the original request ID for exact replay. Saving an incomplete allocation preserves the native findings and entered work for later receiving. Only an original READY alternative is eligible for the date selection step.
+
+### Pass the exact original object between operations
+
+Forecast and portfolio preview/save accept one complete inline inputs object or one verified input reference. For a native response that wraps the input, set inputPointer explicitly. The SHA always identifies the entire retained file; projection happens after full-file verification.
+
+For example, portfolio_selection returns a retained snapshot whose native response contains inputs. Use its real snapshot ID and whole-response SHA:
+
+~~~json
+{
+  "workspace": "grant",
+  "caseId": "operation-<original 32 hex characters>",
+  "expectedVersion": 32,
+  "input": {
+    "snapshotId": "snapshot-<original UUID>"
+  },
+  "expectedInputSha256": "<complete selection-response SHA256>",
+  "inputPointer": "/inputs"
+}
+~~~
+
+Pass this selection to merchant_grant_forecast_preview. For forecast_save, retain those exact input-selection fields and add actor, requestId and the original forecast preview's expectedPreviewSha256. The same reference pattern can select /inputs from portfolio_seed or /inputs from portfolio_preview for portfolio_save. A declared host JSON file or completed transfer can use the same optional pointer.
+
+Pointers use the shared original JSON-pointer rules: / for object paths, ~0 for a tilde, ~1 for a slash. The selected value must be the native input object. Inline inputs exclude input, expectedInputSha256 and inputPointer. Complete native response files retain their own receiving bounds; the projected input fits the existing 8 MiB input bound and the service's complete request remains within 32 MiB.
+
+The selection changes the original work-date fields. Quoted collections and conditional grant receipts keep the original forecast engine's entered timing and completion-payment rule. Review its collection-timing findings before accepting the dated cash forecast.
+
 ## Planning, delivery and reviews
 
 Planning changes use merchant_grant_plan_estimate, plan_save, plan_restore and plan_clone. The original expectedRevision, request ID, note, scenario patch and planning inputs pass to the corresponding native operation. Native request IDs contain up to 100 letters, numbers, dots, underscores or hyphens, beginning with a letter or number. Keep their exact original spelling on replay.
@@ -160,7 +209,7 @@ Use merchant_grant_source_attach for exact source bytes. It calls the original s
 
 ## Export, transfer and receive the complete work
 
-merchant_grant_export supports original plan ZIP, operating-case ZIP, forecast ZIP, source file, scenario JSON and original daily/cost CSVs. It preserves the complete native response. A case ZIP includes all original source attachments, reviews and forecasts.
+merchant_grant_export supports original plan ZIP, operating-case ZIP, forecast ZIP, portfolio ZIP, source file, scenario JSON and original daily/cost CSVs. It preserves the complete native response. A case ZIP includes all original source attachments, reviews, forecasts and portfolios.
 
 For exact bytes, call merchant_grant_file_read with the snapshot ID and expectedSha256. Repeat the returned readId, same SHA and nextOffset; keep each base64 chunk's decoded bytes in order. Each chunk is at most 65,536 bytes. The shared original reader keeps a verified snapshot, returns an exact total size and hash, and releases its temporary descriptor at EOF. merchant_grant_file_release closes a reader early; the retained original file stays available.
 
