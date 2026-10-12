@@ -102,7 +102,7 @@ Use **Read original acquisition status** and then **Receive completed customer o
 
 ## 5. Transfer or reopen the workspace
 
-**Download complete workspace** produces one private SQLite database containing original response bodies, source definitions, immutable editions, named reviews, comparisons, merchant and publication records, buyer configurations, completed delivery members and every operation's retained progress.
+**Download complete workspace** produces one private SQLite database containing original response bodies, source definitions, immutable editions, named reviews, comparisons, merchant and publication records, each initialized original version store and its complete retained generations, buyer configurations, completed delivery members and every operation's retained progress.
 
 The export is identified by the exact complete database bytes. Failed or interrupted capture attempts are included even when they did not advance the selected edition revision.
 
@@ -116,7 +116,7 @@ starforge-merchant superset-workspace --directory /private/received-report
 
 Receiving checks the original schema and every compressed blob/record digest, binds reviews and buyer/delivery identities, regenerates the source projection, verifies every native dataset snapshot and reopens completed customer outputs. The original workspace ID, records and history are preserved. A repeated import of the same exact file into the same receiving directory reopens that existing workspace.
 
-Retained source replay, edition queries, comparison, reviews and customer output inspection work offline. Set the named environment variables to make another live native capture. A restored merchant package is rebound to its receiving host's local version-store directory; starting it uses the same original package/release engine. Exported publication records retain their original outcomes.
+Retained source replay, edition queries, comparison, reviews and customer output inspection work offline. Set the named environment variables to make another live native capture. A restored merchant package is rebound to its receiving host's local version-store directory. The project carries the original native state, current selection, revision, retention settings, source binding and every referenced CSV/configuration/manifest generation. Export selects a consistent state while the original writer runs; receiving validates a private staged copy through the original version engine with collection disabled, then publishes it at the receiving location. Starting the merchant resumes that retained store through the same original package/release engine. Original retention deadlines and publication outcomes remain attached to their native generations.
 
 ## Command and integration API
 
@@ -149,6 +149,7 @@ The running operator immediately records QUEUED before returning HTTP 202. Statu
 | client.mjs | SupersetClient, sourceOptions |
 | source.mjs | readCapture, buildEdition, compareEditions |
 | workspace.mjs | openSupersetWorkspace, receiveSupersetWorkspace; dispatch, query, exportDataset, exportFile, close |
+| native-custody.mjs | captureSupersetVersionStores, validateSupersetVersionStores, restoreSupersetVersionStores |
 | merchant.mjs | prepareSupersetMerchant, readSupersetMerchant, initializeSupersetVersions, startSupersetMerchant, publishSupersetMerchant, supersetMerchantStatus; original supervised release adapters |
 | customer.mjs | reviewSupersetBuyer, prepareSupersetBuyer, receiveSupersetBuyer, inspectSupersetDelivery, runSupersetBuyer |
 | server.mjs | startSupersetWorkspaceServer / startSupersetOperator |
