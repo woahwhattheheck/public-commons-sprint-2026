@@ -1,5 +1,9 @@
 // MIT. Optional private terminal and original CLI URL capture inside the managed runner.
 import { blockscoutStartup } from './application-blockscout.mjs';
+import { jobCheckoutStartup } from './application-job-checkout.mjs';
+import { datasetBuyerStartup } from './application-dataset-buyer.mjs';
+import { tenderlyStartup } from './application-tenderly.mjs';
+import { eventFeedOutputReader, eventFeedStartup, verifyEventFeedLaunch } from './application-event-feed.mjs';
 import { constants } from 'node:fs';
 import { StringDecoder } from 'node:string_decoder';
 import { open, readdir, lstat, access } from 'node:fs/promises';
@@ -39,6 +43,7 @@ export async function applicationEnvironment(path, expectedSha256) {
   return { environment: { ...process.env, ...value }, sha256 };
 }
 export async function prepareApplicationCommand(request, directory, originalArgs) {
+  await verifyEventFeedLaunch(request, directory);
   const { environment } = await applicationEnvironment(request.environmentFile, request.environmentSha256);
   if (request.pythonCommand) return preparePythonManagedChild(dirname(dirname(directory)), request, environment);
   if (request.terminal) {
@@ -59,7 +64,8 @@ function privateUrl(text) {
   try {
     const url = new URL(text);
     if (url.protocol !== 'http:' || !['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) ||
-        !url.port || url.username || url.password || text.length > 4096) return null;
+        Number(url.port || 80) < 1 || Number(url.port || 80) > 65535 ||
+        url.username || url.password || text.length > 4096) return null;
     return url.href;
   } catch { return null; }
 }
@@ -67,16 +73,17 @@ export function observeApplicationOutput(request, directory, context = {}) {
   if (request.pythonCommand) return observePythonApplicationOutput(request, directory, context);
   let buffer = '', seen = false, datasetMarker = false, saveError = null, closed = false, saving = Promise.resolve();
   const decoder = new StringDecoder('utf8');
+  const eventOutput = eventFeedOutputReader(request);
   function line(text) {
     if (seen || !request.applicationId) return;
     // Read only the maintained CLI's startup announcement. Later user-entered
     // terminal text and provider payloads cannot select a different application.
     text = text.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '').trim();
-    if (request.command === 'blockscout') {
-      if (!text.startsWith('{"schema":"stellar-forge.blockscout-startup.v1",')) return;
+    if (request.command === 'job-workspace') {
+      if (!text.startsWith('{"schema":"stellar-forge.sf88.job-workspace-launch.v1",')) return;
       saving = saving.then(async () => {
         if (seen) return;
-        const startup = await blockscoutStartup(request, text);
+        const startup = await jobCheckoutStartup(request, text);
         const url = startup && privateUrl(startup.url);
         if (!url) return;
         seen = true;
@@ -88,7 +95,44 @@ export function observeApplicationOutput(request, directory, context = {}) {
       }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       return;
     }
+    if (request.command === 'blockscout' || request.command === 'tenderly-workspace') {
+      const tenderly = request.command === 'tenderly-workspace';
+      if (!text.startsWith(tenderly ? '{"schema":"stellar-forge.tenderly-workspace-startup.v1",' :
+        '{"schema":"stellar-forge.blockscout-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await (tenderly ? tenderlyStartup : blockscoutStartup)(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (eventOutput) {
+      for (const value of eventOutput(text)) {
+        saving = saving.then(async () => {
+          if (seen) return;
+          const startup = await eventFeedStartup(request, directory, value);
+          const url = startup && privateUrl(startup.url);
+          if (!url) return;
+          seen = true;
+          await saveJSON(join(directory, 'application-url.json'), {
+            schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+            operationId: directory.split('/').at(-1), command: request.command,
+            source: 'original-command-stdout', observedAt: now(), url,
+            links: startup.links, original: startup.original,
+          });
+        }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      }
+      return;
+    }
     let candidate = null;
+    if (request.command === 'buyer-dataset-workspace') candidate = datasetBuyerStartup(request, text);
     if (request.command === 'openapi-workspace' && text.startsWith('API merchant workspace: '))
       candidate = text.slice('API merchant workspace: '.length);
     if (request.command === 'buyer-object-workspace' && text.startsWith('Object buyer workspace: '))
@@ -134,7 +178,7 @@ export function observeApplicationOutput(request, directory, context = {}) {
           const selectedPort = portIndex < 0 ? 0 : Number(request.args[portIndex + 1]);
           if (address.protocol === 'http:' && address.hostname === '127.0.0.1' &&
               address.pathname === '/' && !address.search && /^[#][A-Za-z0-9_-]{43}$/.test(address.hash) &&
-              Number.isInteger(selectedPort) && (selectedPort === 0 || Number(address.port) === selectedPort))
+              Number.isInteger(selectedPort) && (selectedPort === 0 || Number(address.port || 80) === selectedPort))
             candidate = ready.url;
         }
       } catch {}
