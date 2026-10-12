@@ -25,17 +25,25 @@ import sys
 from capture import BlsError, load_source, member, open_regular, require
 
 MAX_SAFE_INTEGER = 9007199254740991
+# Display labels pinned to official BLS tables read on 2026-10-11:
+# https://www.bls.gov/cew/classifications/ownerships/ownership-titles.htm
+# (last modified 2020-09-23), and
+# https://www.bls.gov/cew/classifications/aggregation/agg-level-titles.htm
+# (last modified 2020-09-15). Original codes/tokens remain in every raw_record.
 OWNERSHIP = {
-    "0": "Total covered", "1": "Federal government", "2": "State government",
-    "3": "Local government", "5": "Private", "8": "Total government",
-    "9": "UI covered (excludes federal government)",
+    "0": "Total Covered", "1": "Federal Government", "2": "State Government",
+    "3": "Local Government", "4": "International Government", "5": "Private",
+    "8": "Total Government", "9": "Total U.I. Covered (Excludes Federal Government)",
 }
 AGGREGATION = {
-    "70": "County, total covered", "71": "County, by ownership",
-    "72": "County, by domain", "73": "County, by supersector",
-    "74": "County, by NAICS sector", "75": "County, by 3-digit NAICS",
-    "76": "County, by 4-digit NAICS", "77": "County, by 5-digit NAICS",
-    "78": "County, by 6-digit NAICS",
+    "70": "County, Total Covered", "71": "County, Total -- by ownership sector",
+    "72": "County, by Domain -- by ownership sector",
+    "73": "County, by Supersector -- by ownership sector",
+    "74": "County, NAICS Sector -- by ownership sector",
+    "75": "County, NAICS 3-digit -- by ownership sector",
+    "76": "County, NAICS 4-digit -- by ownership sector",
+    "77": "County, NAICS 5-digit -- by ownership sector",
+    "78": "County, NAICS 6-digit -- by ownership sector",
 }
 
 
