@@ -23,7 +23,7 @@ export const PORTFOLIO_HELP='Client portfolio — original accounting workspaces
 '  execute --prepared /private/original-request.json\n'+
 '  reconcile --prepared /private/original-request.json\n'+
 '  execute-command --id COMMAND --sha EXACT_COMMAND_SHA256\n'+
-'  packet | calendar | print --id SAVED_ID --out FILE\n'+
+'  packet | received-packet | calendar | print --id SAVED_ID --out FILE\n'+
 '  client-packet --id RECEIVED_ID --client CLIENT_ID --cycle PERIOD_ID --out FILE\n\n'+
 'The input describes the actual operator and native action. Prepare reads the current\n'+
 'coordinator identity/revision, creates one UUID, and retains the exact original request\n'+
@@ -56,7 +56,7 @@ const actions={
 };
 const flags={inspect:[],status:[],live:[],source:['--alias'],client:['--id'],plan:['--id'],command:['--id'],result:['--id'],operation:['--id'],received:['--id'],
   preview:['--input','--out'],prepare:['--action','--input','--out','--file'],execute:['--prepared'],reconcile:['--prepared'],'execute-command':['--id','--sha'],
-  packet:['--id','--out'],calendar:['--id','--out'],print:['--id','--out'],'client-packet':['--id','--client','--cycle','--out']};
+  packet:['--id','--out'],'received-packet':['--id','--out'],calendar:['--id','--out'],print:['--id','--out'],'client-packet':['--id','--client','--cycle','--out']};
 const required=(options,name)=>{need(typeof options[name]==='string'&&options[name].trim(),'PORTFOLIO_ARGUMENT','Provide '+name+'.');return options[name];};
 const identifier=(options,name)=>{const value=required(options,name);need(UUID.test(value),'PORTFOLIO_ID','Choose the saved UUID for '+name+'.');return value;};
 function parse(argv){
@@ -139,7 +139,7 @@ export async function portfolioMain(argv,{signal}={}){
       result=await request(root+'/commands/'+id+'/execute',{expectedCommandSha256:sha});
     }else{
       const id=identifier(options,'--id');
-      const path=command==='packet'?root+'/captures/'+id+'/packet':command==='calendar'?root+'/plans/'+id+'/calendar.csv':command==='print'?root+'/plans/'+id+'/print':
+      const path=command==='packet'?root+'/captures/'+id+'/packet':command==='received-packet'?root+'/received/'+id+'/packet':command==='calendar'?root+'/plans/'+id+'/calendar.csv':command==='print'?root+'/plans/'+id+'/print':
         root+'/received/'+id+'/clients/'+identifier(options,'--client')+'/cycles/'+identifier(options,'--cycle')+'/packet';
       const file=await request(path,undefined,{file:true});result={file:await retainRunbookOutput(required(options,'--out'),file.bytes),type:file.type};
     }
