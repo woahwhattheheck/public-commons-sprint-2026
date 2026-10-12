@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-stac-workspaces",
+  "description": "Original STAC imagery MCP provider",
+  "merchantProviders": {
+    "stac-workspaces": "stellar-forge/mcp-merchant-operator/providers/stac-workspaces.mjs"
+  }
+}

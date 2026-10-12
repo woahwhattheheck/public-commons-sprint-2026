@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-python-workspaces",
+  "description": "Original python workspaces MCP provider",
+  "merchantProviders": {
+    "python-workspaces": "stellar-forge/mcp-merchant-operator/providers/python-workspaces.mjs"
+  }
+}
