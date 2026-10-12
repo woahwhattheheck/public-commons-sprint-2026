@@ -5,7 +5,7 @@ import { compileGeocodePlan,productFor,bindGeocodeQuery,API_ORIGIN,API_PATH,PARA
 import { readBytes,jsonBytes,digest,readBundle,publishBundle } from '../twelvedata/files.mjs';
 export const DELIVERY='stellar-forge.opencage-delivery.v1';
 const decoder=new TextDecoder('utf-8',{fatal:true});
-function csvCell(value,{text=false}={}) {
+export function csvCell(value,{text=false}={}) {
   let encoded=value === null || value === undefined ? '' : typeof value === 'object' ? JSON.stringify(value) : String(value);
   if(text && /^[\s]*[=+@-]/.test(encoded)) encoded="'"+encoded;
   return '"'+encoded.replaceAll('"','""')+'"';
