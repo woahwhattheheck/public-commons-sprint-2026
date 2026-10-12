@@ -7,7 +7,7 @@ let renderSequence = 0, sourceSequence = 0, contextRestored = false;
 let publisherScope = null, pricingCorrection = null;
 const extensionViews = new Map();
 const pageSize = 30;
-const titles = {sources:'Sources',publisher:'Publisher intake',receiving:'Receiving and annual review',classification:'Classification and placement',matches:'Jobs and matches',analysis:'Market analysis',cycles:'Survey cycles',reports:'Decisions and exports',workspace:'Workspace'};
+const titles = {sources:'Sources',publisher:'Publisher intake',receiving:'Receiving and annual review',classification:'Classification and placement',market_structure:'Proposed pay structures',matches:'Jobs and matches',analysis:'Market analysis',cycles:'Survey cycles',reports:'Decisions and exports',workspace:'Workspace'};
 const $ = (s, root=document) => root.querySelector(s);
 const $$ = (s, root=document) => Array.from(root.querySelectorAll(s));
 const h = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -131,7 +131,7 @@ async function render(){
   if(generation!==renderSequence)return;
   $('#view-title').textContent=titles[currentView];
   $$('#nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.view===currentView?'page':'false'));
-  if(currentView==='publisher'||currentView==='receiving'||currentView==='classification')await renderExtension(currentView,generation);
+  if(currentView==='publisher'||currentView==='receiving'||currentView==='classification'||currentView==='market_structure')await renderExtension(currentView,generation);
   else if(currentView==='sources')renderSources();
   else if(currentView==='matches')await renderMatches(generation);
   else if(currentView==='analysis')renderAnalysis();
@@ -155,15 +155,20 @@ async function renderExtension(name,generation){
     element.innerHTML=empty('Loading '+titles[name].toLowerCase()+'…');
     view={element,workspaceId,controller:null,disposed:false,ready:null};
     extensionViews.set(name,view);
-    const path=name==='publisher'?'/extensions/publisher/bridge.mjs':name==='classification'?'/extensions/classification/browser.mjs':'/receiving-bridge.mjs';
+    const path=name==='publisher'?'/extensions/publisher/bridge.mjs':(name==='classification'||name==='market_structure')?'/extensions/'+name+'/browser.mjs':'/receiving-bridge.mjs';
     view.ready=import(path).then(async module=>{
       if(view.disposed||state.workspace.id!==workspaceId)return;
-      const common={request,mutate,refresh,note};
+      const common={request,mutate,refresh,note,drafts:{
+        read:key=>pendingStore('readonly',store=>store.get(key),'drafts'),
+        write:(key,value)=>pendingStore('readwrite',store=>store.put({key,workspace_id:value.workspace_id,value}),'drafts')
+      }};
       view.controller=name==='publisher'
         ?module.mountPublisherBridge(element,{...common,onSource:openPublisherSource})
         :name==='classification'
           ?module.mountClassificationBridge(element,{...common,getState:()=>state})
-          :module.mountReceivingBridge(element,{...common,getState:()=>state,onOpenAnalysis:openReceivingAnalysis});
+          :name==='market_structure'
+            ?module.mountMarketStructureBridge(element,{...common,getState:()=>state,onOpenClassification:openMarketClassification})
+            :module.mountReceivingBridge(element,{...common,getState:()=>state,onOpenAnalysis:openReceivingAnalysis});
       await view.controller.ready;
     }).catch(error=>{if(!view.disposed){note(error.message||String(error),true);if(!view.controller)element.innerHTML=empty('The view could not load. Refresh this view to retry.');throw error;}});
   }
@@ -176,6 +181,17 @@ async function renderExtension(name,generation){
     if(!view.controller&&extensionViews.get(name)===view){view.disposed=true;extensionViews.delete(name);}
     throw error;
   }
+}
+async function openMarketStructure(analysisId){
+  const workspaceId=state.workspace.id;currentView='market_structure';await render();
+  if(state.workspace.id!==workspaceId||currentView!=='market_structure')return;
+  if(analysisId)await extensionViews.get('market_structure').controller.selectAnalysis(analysisId);
+}
+async function openMarketClassification(ref){
+  if(!ref||!['method','roles'].includes(ref.kind)||typeof ref.id!=='string'||typeof ref.sha256!=='string')throw new Error('Select an original derived classification edition.');
+  const workspaceId=state.workspace.id;currentView='classification';await render();
+  if(state.workspace.id!==workspaceId||currentView!=='classification')return;
+  await extensionViews.get('classification').controller.open(ref.kind,ref.id,ref.sha256);
 }
 async function openPublisherSource(payload){
   const source=payload?.document,kind=source?.kind==='cohort'?'cohort':'edition';
@@ -287,7 +303,7 @@ function analysisHtml(a,includeReview=true){
 }
 function renderAnalysisResult(a){$('#analysis-result').innerHTML=analysisHtml(a);}
 function renderReports(){
-  const rows=state.analyses.map(a=>'<tr><td>'+button(a.title,'analysis-detail',a.id)+'<span class="muted">'+h(a.created_at)+'</span></td>'+cell(a.currency+' '+number(a.consensus.p50),'number')+'<td>'+badge(a.latest_review?a.latest_review.outcome:a.status)+'<span class="muted">'+h(a.latest_review?a.latest_review.reviewer:'')+'</span></td><td>'+button('Open and review','review-analysis',a.id)+(a.latest_review&&a.latest_review.outcome==='accepted'?' <a href="/api/report/'+encodeURIComponent(a.id)+'?format=csv">CSV</a> · <a href="/api/report/'+encodeURIComponent(a.id)+'?format=json">Complete JSON</a>':'')+'</td></tr>');
+  const rows=state.analyses.map(a=>'<tr><td>'+button(a.title,'analysis-detail',a.id)+'<span class="muted">'+h(a.created_at)+'</span></td>'+cell(a.currency+' '+number(a.consensus.p50),'number')+'<td>'+badge(a.latest_review?a.latest_review.outcome:a.status)+'<span class="muted">'+h(a.latest_review?a.latest_review.reviewer:'')+'</span></td><td>'+button('Open and review','review-analysis',a.id)+(a.latest_review&&a.latest_review.outcome==='accepted'?' <a href="/api/report/'+encodeURIComponent(a.id)+'?format=csv">CSV</a> · <a href="/api/report/'+encodeURIComponent(a.id)+'?format=json">Complete JSON</a> · '+button('Propose pay structure','propose-pay-structure',a.id):'')+'</td></tr>');
   $('#view').innerHTML='<div class="panel"><h3>Retained analyses and receiving decisions</h3><p class="muted">Each result keeps its original inputs, source editions, professional decisions and exact calculation. Accepted receiving outputs remain tied to that historical state.</p>'+(rows.length?table(['Analysis','Median-figure consensus','Receiving decision','Open / export'],rows):empty('The first saved analysis will appear here.'))+'</div>';
 }
 async function renderCycles(generation=renderSequence){
@@ -357,6 +373,7 @@ document.addEventListener('click',async event=>{
     }else if(action==='source-next'||action==='source-previous'){sourceDetailOffset=Math.max(0,sourceDetailOffset+(action.endsWith('next')?pageSize:-pageSize));await showSourceRows();
     }else if(action==='resume-source'){await resumeSource(id);
     }else if(action==='record-detail'){modal('Original record and source',jsonDetail(await request('/api/document/record/'+encodeURIComponent(id))));}
+    else if(action==='propose-pay-structure'){await openMarketStructure(id);}
     else if(action==='commit-source'){
       const r=await mutate('/api/import/commit',{preview_id:id});preview=null;sourceDraft=null;await refresh();note('Imported '+r.result.rows+' original rows. '+(r.result.change?JSON.stringify(r.result.change):'The existing edition was reopened.'));
     }else if(action==='choose-job'){selectedJob=await request('/api/document/record/'+encodeURIComponent(id));if(pricingCorrection&&(selectedJob.source_key!==pricingCorrection.job_source_key||selectedJob.record_key!==pricingCorrection.job_record_key))pricingCorrection=null;latestAnalysis=null;await render();}

@@ -28,6 +28,9 @@ IDENTITY_SCHEMA = "stellar-forge.node-process-identity.v1"
 NATIVE_START_SCHEMA = "stellar-forge.node-native-start-receipt.v1"
 SHA = re.compile(r"^[a-f0-9]{64}$")
 MAX_FILE = 16 * 1024 * 1024
+ATTEMPT_LIMIT = 65536
+RESERVED_REQUEST_LIMIT = 2097152
+REVIEWED_BOOTSTRAP_SHA256 = "aabc20e221b269957ff9e32115500980d27e32e3292ad9e338c7a1fff9eddac4"
 
 
 class ProofError(ValueError):
@@ -51,15 +54,15 @@ def contained(path, root):
     return path == root or root in path.parents
 
 
-def stable_bytes(path, expected=None):
+def stable_bytes(path, expected=None, limit=MAX_FILE):
     if expected is not None:
         need(isinstance(expected, str) and SHA.fullmatch(expected), "EXACT_SOURCE_SHA256_REQUIRED")
     descriptor = os.open(path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
     with os.fdopen(descriptor, "rb") as stream:
         before = os.fstat(stream.fileno())
-        need(stat.S_ISREG(before.st_mode) and before.st_size <= MAX_FILE,
+        need(stat.S_ISREG(before.st_mode) and before.st_size <= limit,
              "BOUNDED_REGULAR_SOURCE_REQUIRED")
-        raw = stream.read(MAX_FILE + 1)
+        raw = stream.read(limit + 1)
         after = os.fstat(stream.fileno())
     identity = lambda value: (value.st_dev, value.st_ino, value.st_size,
                               value.st_mtime_ns, value.st_ctime_ns)
@@ -220,6 +223,111 @@ def recorded_identity_proof(selected, attempt, bindings, directory, workspace, i
     return result
 
 
+def compact_json(value):
+    # Source bindings contain JSON objects with ASCII field names and integral
+    # byte counts. This matches the runtime's recursively sorted JSON encoding.
+    return json.dumps(value, ensure_ascii=False, sort_keys=True,
+                      separators=(",", ":"), allow_nan=False).encode("utf-8")
+
+
+def reserved_start_command(command, operation, bindings, expected_args):
+    runtime_name = operation.get("runtimeDirectory")
+    need(isinstance(runtime_name, str) and Path(runtime_name).is_absolute() and
+         "\0" not in runtime_name, "ORIGINAL_RESERVED_RUNTIME_REQUIRED")
+    runtime = Path(runtime_name).resolve(strict=True)
+    need(runtime.is_dir(), "ORIGINAL_RESERVED_RUNTIME_REQUIRED")
+    bootstrap = absolute(command[1])
+    need(bootstrap == (runtime / "node" / "reserved-entry.mjs").resolve(strict=True),
+         "ORIGINAL_RESERVED_BOOTSTRAP_PATH_DIFFERS")
+    _, bindings["reservedBootstrap"] = stable_bytes(
+        bootstrap, REVIEWED_BOOTSTRAP_SHA256)
+    request_path = absolute(command[2])
+    need(request_path == Path(bindings["attempt"]["path"]).parent / "native-reserved-request.json" and
+         isinstance(command[3], str) and SHA.fullmatch(command[3]),
+         "ORIGINAL_RESERVED_REQUEST_BINDING_REQUIRED")
+    raw, bindings["reservedRequest"] = stable_bytes(
+        request_path, command[3], limit=RESERVED_REQUEST_LIMIT)
+    request_stat = request_path.stat(follow_symlinks=False)
+    request_binding = bindings["reservedRequest"]
+    need(stat.S_ISREG(request_stat.st_mode) and request_stat.st_nlink == 1 and
+         request_stat.st_uid == os.getuid() and request_stat.st_mode & 0o077 == 0 and
+         request_stat.st_dev == request_binding["device"] and
+         request_stat.st_ino == request_binding["inode"],
+         "ORIGINAL_PRIVATE_RESERVED_REQUEST_REQUIRED")
+    request = parse(raw)
+    need(set(request).issubset({"schema", "entryFile", "entrySha256", "args",
+                               "nativeFileReservation", "nativeRuntimeSource"}) and
+         request.get("schema") == "stellar-forge.sf88.reserved-entry.v1" and
+         request.get("args") == expected_args and
+         isinstance(request.get("entrySha256"), str) and SHA.fullmatch(request["entrySha256"]),
+         "ORIGINAL_RESERVED_ENTRY_BINDINGS_DIFFER")
+    entry = absolute(request.get("entryFile"))
+    need(entry == (runtime / "python" / "bridge.mjs").resolve(strict=True),
+         "ORIGINAL_RESERVED_ENTRY_PATH_DIFFERS")
+    _, bindings["reservedEntry"] = stable_bytes(entry, request["entrySha256"])
+
+    provider = request.get("nativeFileReservation")
+    need(isinstance(provider, dict) and
+         set(provider) == {"schema", "executable", "executableSha256", "timeoutMs"} and
+         provider.get("schema") == "stellar-forge.sf88.file-reservation.v1" and
+         isinstance(provider.get("executableSha256"), str) and SHA.fullmatch(provider["executableSha256"]) and
+         type(provider.get("timeoutMs")) is int and 0 < provider["timeoutMs"] <= 60000,
+         "ORIGINAL_RESERVED_PROVIDER_REQUIRED")
+    executable = absolute(provider["executable"])
+    _, bindings["reservedAllocator"] = stable_bytes(executable, provider["executableSha256"])
+    executable_stat = executable.stat(follow_symlinks=False)
+    executable_binding = bindings["reservedAllocator"]
+    need(stat.S_ISREG(executable_stat.st_mode) and executable_stat.st_mode & 0o111 and
+         executable_stat.st_mode & 0o022 == 0 and
+         executable_stat.st_dev == executable_binding["device"] and
+         executable_stat.st_ino == executable_binding["inode"],
+         "ORIGINAL_RESERVED_ALLOCATOR_CHANGED")
+
+    if "nativeRuntimeSource" not in request:
+        return
+    source = request["nativeRuntimeSource"]
+    fields = {"schema", "directory", "sourceDirectory", "sourceManifestFile",
+              "sourceManifestSha256", "sourceManifestBytes", "filesSha256",
+              "fileCount", "sourceBytes", "sha256"}
+    need(isinstance(source, dict) and set(source) == fields and
+         source.get("schema") == "stellar-forge.node-successor-runtime-binding.v1" and
+         all(isinstance(source.get(name), str) and SHA.fullmatch(source[name])
+             for name in ("sha256", "sourceManifestSha256", "filesSha256")) and
+         all(type(source.get(name)) is int and source[name] > 0
+             for name in ("sourceManifestBytes", "fileCount", "sourceBytes")) and
+         source.get("directory") == str(runtime) and
+         hashlib.sha256(compact_json({key: value for key, value in source.items()
+                                     if key != "sha256"})).hexdigest() == source["sha256"],
+         "ORIGINAL_RESERVED_RUNTIME_BINDING_CHANGED")
+    source_directory = absolute(source["sourceDirectory"])
+    need(source_directory.is_dir() and contained(runtime, source_directory),
+         "ORIGINAL_RESERVED_RUNTIME_ROOT_CHANGED")
+    manifest_path = absolute(source["sourceManifestFile"])
+    manifest_raw, bindings["reservedRuntimeManifest"] = stable_bytes(
+        manifest_path, source["sourceManifestSha256"], limit=4 * 1024 * 1024)
+    manifest = parse(manifest_raw)
+    files = manifest.get("files")
+    need(set(manifest) == {"schema", "sourceDirectory", "runtimeDirectory", "files"} and
+         manifest.get("schema") == "stellar-forge.node-successor-runtime-source.v1" and
+         manifest.get("sourceDirectory") == str(source_directory) and
+         manifest.get("runtimeDirectory") == str(runtime) and
+         len(manifest_raw) == source["sourceManifestBytes"] and
+         isinstance(files, list) and 0 < len(files) <= 10000 and len(files) == source["fileCount"] and
+         all(isinstance(item, dict) and set(item) == {"path", "bytes", "sha256"} and
+             isinstance(item["path"], str) and item["path"] and
+             not Path(item["path"]).is_absolute() and "\0" not in item["path"] and "\\" not in item["path"] and
+             all(part not in ("", ".", "..") for part in item["path"].split("/")) and
+             type(item["bytes"]) is int and 0 <= item["bytes"] <= 64 * 1024 * 1024 and
+             isinstance(item["sha256"], str) and SHA.fullmatch(item["sha256"]) for item in files) and
+         len({item["path"] for item in files}) == len(files) and
+         sum(item["bytes"] for item in files) == source["sourceBytes"] and
+         hashlib.sha256(compact_json(files)).hexdigest() == source["filesSha256"],
+         "ORIGINAL_RESERVED_RUNTIME_MANIFEST_CHANGED")
+    # Retain the original manifest bytes in this process observation. The
+    # existing runtime's workspace check verifies every selected source file
+    # again before the authenticated ledger audit and original approval path.
+
+
 def not_dispatched_proof(attempt, operation, bindings, directory, workspace, intent_id, config_sha):
     receipt = attempt.get("nativeStart")
     need(attempt.get("state") == "NOT_DISPATCHED" and attempt.get("pid") is None and
@@ -235,22 +343,25 @@ def not_dispatched_proof(attempt, operation, bindings, directory, workspace, int
     need(instant(receipt["observedAt"]) >= instant(attempt["startedAt"]),
          "ORIGINAL_NATIVE_START_RECEIPT_ORDER_DIFFERS")
     command = receipt.get("command")
-    need(isinstance(command, list) and len(command) == 9 and
+    need(isinstance(command, list) and len(command) in (4, 9) and
          all(isinstance(arg, str) and "\0" not in arg and len(arg) <= 16384 for arg in command) and
          Path(command[0]).is_absolute() and Path(command[1]).is_absolute(),
          "ORIGINAL_NATIVE_START_COMMAND_REQUIRED")
     ticket = operation.get("ticketSha256")
     need(ticket is None or isinstance(ticket, str) and SHA.fullmatch(ticket),
          "ORIGINAL_NATIVE_START_TICKET_INVALID")
-    need(command[2:] == ["execute-workspace", "--dir", str(workspace), "--config",
-                            bindings["config"]["path"], "--ticket-sha", ticket or "none"],
-         "ORIGINAL_NATIVE_START_COMMAND_BINDINGS_DIFFER")
+    expected_args = ["execute-workspace", "--dir", str(workspace), "--config",
+                     bindings["config"]["path"], "--ticket-sha", ticket or "none"]
+    if len(command) == 9:
+        need(command[2:] == expected_args, "ORIGINAL_NATIVE_START_COMMAND_BINDINGS_DIFFER")
     # store.mjs jsonBytes uses JSON.stringify(value, null, 2) plus one newline.
     # The argv consists only of strings, so this reproduces those exact bytes.
     encoded = (json.dumps(command, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
     need(isinstance(receipt.get("commandSha256"), str) and SHA.fullmatch(receipt["commandSha256"]) and
          hashlib.sha256(encoded).hexdigest() == receipt["commandSha256"],
          "ORIGINAL_NATIVE_START_COMMAND_SHA256_DIFFERS")
+    if len(command) == 4:
+        reserved_start_command(command, operation, bindings, expected_args)
     # A settled runtime return before any spawn event is retained atomically in
     # this same pinned attempt. A missing receipt never implies no child.
     confirm_bindings(bindings)
@@ -283,7 +394,8 @@ def inspect_request(request_path):
             need(attempt_directory is None or path.parent == attempt_directory,
                  "ORIGINAL_ATTEMPT_REVIEW_DIRECTORY_DIFFERS")
             attempt_directory = path.parent
-        raw, bindings[name] = stable_bytes(path, selected["expected"][name + "Sha256"])
+        raw, bindings[name] = stable_bytes(path, selected["expected"][name + "Sha256"],
+                                            limit=ATTEMPT_LIMIT if name == "attempt" else MAX_FILE)
         documents[name] = parse(raw)
     operation, config, review, attempt = (documents[name] for name in ("operation", "config", "review", "attempt"))
     config_sha = bindings["config"]["sha256"]

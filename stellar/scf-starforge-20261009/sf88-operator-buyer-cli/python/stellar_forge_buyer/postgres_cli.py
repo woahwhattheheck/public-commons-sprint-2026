@@ -96,6 +96,14 @@ def _parser():
     compare.add_argument("current")
     compare.add_argument("--offset", type=int, default=0)
     compare.add_argument("--limit", type=int, default=100)
+    meanings = commands.add_parser("semantics", help="read original column meanings and reviewed SQL aliases")
+    meanings.add_argument("version_id")
+    dictionary = commands.add_parser("semantics-file", help="save the exact retained original semantics.json")
+    dictionary.add_argument("version_id")
+    dictionary.add_argument("--destination", required=True)
+    meaning_comparison = commands.add_parser("compare-semantics", help="compare source meanings independently of row keys")
+    meaning_comparison.add_argument("previous")
+    meaning_comparison.add_argument("current")
     manifest = commands.add_parser("manifest", help="save a retained edition's exact original SF100 manifest")
     manifest.add_argument("version_id")
     manifest.add_argument("--destination", required=True)
@@ -164,6 +172,16 @@ def main(argv=None):
                 output = warehouse.rows(args.version_id, after=args.after, limit=args.limit, include_original=args.include_original)
             elif args.command == "compare":
                 output = warehouse.compare(args.previous, args.current, offset=args.offset, limit=args.limit)
+            elif args.command == "semantics":
+                output = warehouse.semantics(args.version_id)
+            elif args.command == "compare-semantics":
+                output = warehouse.compare_semantics(args.previous, args.current)
+            elif args.command == "semantics-file":
+                raw = warehouse.semantics_bytes(args.version_id)
+                if raw is None:
+                    raise WarehouseError("DATASET_PG_LEGACY_EDITION_HAS_NO_DICTIONARY")
+                output = {"status": "DICTIONARY_SAVED", "version_id": args.version_id,
+                          **_save(args.destination, raw)}
             else:
                 saved = _save(args.destination, warehouse.manifest_bytes(args.version_id))
                 output = {"status": "MANIFEST_SAVED", "version_id": args.version_id, **saved}

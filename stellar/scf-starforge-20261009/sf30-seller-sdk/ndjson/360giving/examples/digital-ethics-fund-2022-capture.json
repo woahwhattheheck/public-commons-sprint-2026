@@ -1,0 +1,28 @@
+{
+  "sourceUrl": "https://scvo.scot/funding/data/a113z00000VExxLAAT/digital-ethics-fund-2022.json",
+  "finalUrl": "https://storage.googleapis.com/scvo-platform-assets/scvo/data/funding/archive/digital-ethics-fund-2022.json",
+  "captureMethod": "Original publisher HTTP response with gzip transport and decoded JSON retained",
+  "retrievedDate": "2026-10-12",
+  "publisher": "Scottish Council for Voluntary Organisations",
+  "license": "https://creativecommons.org/licenses/by/4.0/",
+  "contentType": "application/json",
+  "completedAt": "2026-10-12T04:53:07Z",
+  "httpStatus": 200,
+  "decoded": {
+    "file": "digital-ethics-fund-2022.json",
+    "bytes": 11280,
+    "sha256": "50c77b94091f5c642b7da04973335dde39d2334780b2716ee57e378cdd6eaf34",
+    "gitBlob": "90d1f626977f45a552a8920077d92fb819191b3d"
+  },
+  "transport": {
+    "contentEncoding": "gzip",
+    "bytes": 1134,
+    "sha256": "6fcb26b6c3e3bf9721ee2c68fb2213ce2abb104299f56d352795b5400f0aadf4"
+  },
+  "nativeMapping": {
+    "file": "digital-ethics-fund-2022-mapping.json",
+    "bytes": 2515,
+    "sha256": "904e3a51670824df931efc4b0cbbd0cf3bbf620bec70e00faa760fbead583769"
+  },
+  "sourceArrayPointer": "/grants"
+}

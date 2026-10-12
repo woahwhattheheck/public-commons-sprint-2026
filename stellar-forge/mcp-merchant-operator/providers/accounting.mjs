@@ -6,11 +6,16 @@ export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "accounting", family: "accounting",
   title: "accounting merchant", order: 120, catalogOrder: 60,
   configKey: "accounting", summary: true, dependencies: [],
-  maxRequestBytes: 131072,
+  maxRequestBytes: 32 * 1024 * 1024,
   configuration: { input: "accounting", privateExports: false,
     read: async (value, { base, config, hostPath }) => value == null ? null : (await import("../accounting.mjs")).normalizeAccountingConfig(value, base) },
   tools: accountingTools,
   instructions: [
+    {
+      prefix: 'merchant_accounting_runbooks_',
+      text: 'For client runbooks, open the original accounting workspace, choose its actual client files or a retained accountant handoff and exact return revision, and save the complete prepared request before execute. Recover that same request after a lost response. Freeze procedures for the selected period; retain preparation, returned corrections and reviewer decisions. Read full original packet, print and task files through the accounting reader, receive the complete packet into its chosen second workspace, then start the next local period from those received procedures and its actual local close source.',
+      order: 45
+    },
     {
       "prefix": "merchant_accounting_cryptoworth_",
       "text": "For Cryptoworth receiving, open the declared original accounting workspace and inspect the actual template alias, original handoff and explicit accountant revision. Preserve the complete normalized preview, source alias hashes, native request ID, workspace ID/revision and preview hash for profile, plan, capture and accountant-return saves. Reconcile the saved native ID before rereading changed input aliases after an uncertain response. PREPARED retains the same staged accountant request; COMMITTED and SUPERSEDED retain terminal history. Record a whole native import-unit rollback only with its actual completed vendor reference. Packet receiving binds both input and sealed packet SHA256s; complete retained files use the original accounting file reader. Close the original MCP workspace before launching its same directory in Applications.",

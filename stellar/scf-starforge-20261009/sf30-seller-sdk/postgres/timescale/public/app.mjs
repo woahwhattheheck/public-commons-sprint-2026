@@ -260,3 +260,27 @@ await action(async()=>{
   }
 });
 setInterval(()=>refresh().catch(error=>{notice.textContent=error.message;}),4000);
+
+
+// The continuing-work desk borrows these original controls; it never starts a
+// second native workspace, listener or request journal.
+const timescaleHost=Object.freeze({
+  hasPending:()=>Boolean(state.busy||state.pending||state.status?.active),
+  snapshot:()=>state.status?structuredClone(state.status):null,
+  async refresh(){
+    if(state.busy)return state.status?structuredClone(state.status):null;
+    await action(()=>refresh());
+    if(!state.status)throw new Error('Open the original Timescale workspace first.');
+    return structuredClone(state.status);
+  },
+  async openPlan(id){
+    if(state.busy)throw new Error('The original operator controls are busy.');
+    await action(async()=>{await loadPlan(id);planned.scrollIntoView({block:'start'});});
+    if(state.plan?.id!==id)throw new Error('The original saved plan could not be opened.');
+  },
+  async openOperation(id){
+    if(state.busy)throw new Error('The original operator controls are busy.');
+    await action(async()=>{await showOperation(id);state.lastOperation=id;persist();historyArea.scrollIntoView({block:'start'});});
+  }
+});
+export { timescaleHost };

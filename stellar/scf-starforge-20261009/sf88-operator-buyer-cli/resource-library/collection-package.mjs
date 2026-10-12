@@ -252,3 +252,6 @@ export async function openReceivedLibrary({directory:received,state,signal,index
     return library;
   } catch(e) {await library.close();throw e;}
 }
+
+// Native consumers retain the same complete manifest and streamed object reader.
+export { parseManifest as parseCollectionManifest, readArchive as readCollectionArchive };
