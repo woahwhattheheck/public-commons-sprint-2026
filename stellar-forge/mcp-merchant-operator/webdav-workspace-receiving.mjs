@@ -5,6 +5,7 @@ import { resolve, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { acquireStateLease } from '../../stellar/scf-starforge-20261009/merchant-fleet-gateway/state-lease.mjs';
 import { privateSupportDirectory, writePrivate } from './host-files.mjs';
+import { webDavBindingSelection, verifyWebDavNativeOperation } from './webdav-workspace-intent.mjs';
 import {
   WEBDAV_OPERATION_SCHEMA, WEBDAV_MUTATION_TOOLS, validateWebDavRequest,
   webDavHash, webDavCanonical, webDavJson, webDavJsonBytes, webDavUuid, webDavCount, webDavError
@@ -34,9 +35,8 @@ function validateRecord(value) {
     throw webDavError('WEBDAV_CLIENT_OPERATION_INVALID', 'Open the original complete WebDAV client operation.');
   webDavUuid(value.workspaceId); webDavUuid(value.id);
   const args = validateWebDavRequest(value.tool, value.args);
-  const kind = value.tool === 'merchant_webdav_source' ? 'source' : value.tool === 'merchant_webdav_merchant' ? 'merchant' : null;
-  const binding = value.profileBinding;
-  if (kind ? !binding || binding.kind !== kind || binding.profile !== args.profile
+  const selected = webDavBindingSelection(value.tool, args), binding = value.profileBinding;
+  if (selected ? !binding || binding.kind !== selected.kind || binding.profile !== selected.profile
       || webDavHash(Buffer.from(webDavCanonical(binding.value))) !== binding.sha256 : binding !== null)
     throw webDavError('WEBDAV_CLIENT_PROFILE_CHANGED', 'Retain the exact reviewed host profile with this original operation.');
   if (args.operationId !== value.id || args.workspace !== value.workspace
@@ -92,15 +92,23 @@ function observe(record, phase, detail = {}) {
   record.observations.push({ at: new Date().toISOString(), phase, ...detail });
 }
 async function profileBinding(client, tool, args, options) {
-  if (!['merchant_webdav_source','merchant_webdav_merchant'].includes(tool)) return null;
+  const selected = webDavBindingSelection(tool, args);
+  if (!selected) return null;
   const status = await client.status({}, options);
   const workspace = status.workspaces?.find(row => row.workspace === args.workspace);
-  const source = tool === 'merchant_webdav_source';
-  const selected = workspace?.[source ? 'sourceProfiles' : 'merchantProfiles']?.find(row => row.profile === args.profile);
-  if (!selected) throw webDavError('WEBDAV_CLIENT_PROFILE_MISSING', 'Select the original host-declared source or merchant profile.');
-  const value = source ? selected.source : { origin: selected.origin, path: selected.path, payment: selected.payment };
-  return { kind: source ? 'source' : 'merchant', profile: args.profile,
-    sha256: webDavHash(Buffer.from(webDavCanonical(value))), value: webDavJson(value) };
+  let value;
+  if (selected.kind === 'source')
+    value = workspace?.sourceProfiles?.find(row => row.profile === selected.profile)?.source;
+  else if (selected.kind === 'merchant') {
+    const profile = workspace?.merchantProfiles?.find(row => row.profile === selected.profile);
+    if (profile) value = { origin: profile.origin, path: profile.path, payment: profile.payment };
+  } else if (selected.kind === 'runtime') value = workspace?.runtime;
+  else {
+    const buyer = workspace?.buyerWorkspaces?.find(row => row.buyerWorkspace === selected.profile);
+    if (buyer?.directorySha256) value = { directorySha256: buyer.directorySha256 };
+  }
+  if (!value) throw webDavError('WEBDAV_CLIENT_PROFILE_MISSING', 'Select the original profile from the matching WebDAV host, including its publisher runtime or buyer binding.');
+  return { ...selected, sha256: webDavHash(Buffer.from(webDavCanonical(value))), value: webDavJson(value) };
 }
 export async function prepareWebDavOperation({
   client, directory, tool, args: input
@@ -114,6 +122,8 @@ export async function prepareWebDavOperation({
   if (args.expectedRevision !== status.native.revision)
     throw webDavError('WEBDAV_STALE_REVISION', 'Prepare the operation against the actual displayed native revision.');
   const binding = await profileBinding(client, tool, args, options);
+  if (args.expectedProfileSha256 !== undefined && args.expectedProfileSha256 !== binding?.sha256)
+    throw webDavError('WEBDAV_CLIENT_PROFILE_CHANGED', 'The explicit profile digest differs from the displayed original host selection.');
   const record = { schema: WEBDAV_OPERATION_SCHEMA, id: args.operationId, endpoint: client.endpoint,
     workspace: args.workspace, workspaceId: webDavUuid(status.native.id), tool, args,
     profileBinding: binding,
@@ -135,8 +145,9 @@ async function inspectNative(client, record, options) {
     throw webDavError('WEBDAV_CLIENT_ENDPOINT_CHANGED', 'Continue this original operation at its selected merchant endpoint.');
   const status = await client.assertWorkspace({ workspace: record.workspace, workspaceId: record.workspaceId }, options);
   let native = null;
-  try { native = await client.operation({ workspace: record.workspace, kind: 'operation', id: record.id }, options); }
+  try { native = await client.operation({ workspace: record.workspace, kind: 'operation', id: record.id }, { ...options, resolveResult: true }); }
   catch (error) { if (error.code !== 'WEBDAV_OPERATION_NOT_FOUND') throw error; }
+  verifyWebDavNativeOperation(record, native);
   return { status, native };
 }
 function nativePhase(native) {
@@ -173,6 +184,7 @@ export async function runWebDavOperation({
     if (webDavCanonical(currentProfile) !== webDavCanonical(record.profileBinding))
       throw webDavError('WEBDAV_CLIENT_PROFILE_CHANGED', 'The selected original source or merchant profile changed. Retain this intent and explicitly review the new profile.');
     const args = webDavJson(record.args, 1024 * 1024);
+    if (record.profileBinding) args.expectedProfileSha256 = record.profileBinding.sha256;
     if (reviewedRevision !== undefined) {
       webDavCount(reviewedRevision, 'Reviewed native revision');
       if (reviewedRevision !== status.native.revision)
@@ -184,11 +196,19 @@ export async function runWebDavOperation({
       resumedOriginal: phase === 'RESUME_AVAILABLE' });
     await saveRecord(root, lease, record);
     let result;
-    try { result = await client.request(record.tool, args, options); }
+    try {
+      result = await client.request(record.tool, args, { ...options, resolveResult: true });
+      const original = await client.operation({ workspace: record.workspace, kind: 'operation', id: record.id },
+        { ...options, resolveResult: true });
+      verifyWebDavNativeOperation(record, original);
+      result = { ...result, ...original };
+    }
     catch (error) {
-      record.state = error.nativeEnvelope?.operation?.status === 'COMPLETE' ? 'COMPLETE_RESULT_UNREAD'
+      const envelope = error.nativeEnvelope ?? error.nativeResult ?? result;
+      record.state = error.code === 'WEBDAV_CLIENT_NATIVE_INTENT_CHANGED' ? 'NATIVE_INTENT_CHANGED'
+        : envelope?.operation?.status === 'COMPLETE' ? 'COMPLETE_RESULT_UNREAD'
         : error.applied === false ? 'NOT_APPLIED' : 'RESPONSE_UNCERTAIN';
-      if (error.nativeEnvelope) record.lastNative = error.nativeEnvelope;
+      if (envelope) { record.lastNative = envelope; error.nativeResult ??= envelope; }
       observe(record, record.state, { code: error.code ?? 'TRANSPORT_ERROR' });
       try { await saveRecord(root, lease, record); }
       catch (saveError) { error.localSaveError = { code: saveError.code, message: saveError.message }; }

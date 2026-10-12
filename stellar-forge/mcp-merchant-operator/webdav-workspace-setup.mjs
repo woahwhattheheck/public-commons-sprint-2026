@@ -10,11 +10,11 @@ export async function prepareWebDavMerchantHost({
 } = {}) {
   if (typeof directory !== 'string' || !directory || typeof connection !== 'string' || !connection)
     throw Object.assign(new Error('Choose a new private merchant directory and the original connection file.'), { code: 'CONFIGURATION_ERROR' });
+  const host = createMerchantMcpClientConfiguration({ configPath: resolve(directory, 'merchant-mcp.json'),
+    name: hostName, nodePath, entryPath, existingConfiguration });
   const initialized = await initializeWebDavWorkspaceMerchant({
     directory: resolve(directory), connection: resolve(connection), name
   });
   await readMerchantConfig(initialized.configuration);
-  const host = createMerchantMcpClientConfiguration({ configPath: initialized.configuration,
-    name: hostName, nodePath, entryPath, existingConfiguration });
   return { ...initialized, hostConfiguration: host };
 }

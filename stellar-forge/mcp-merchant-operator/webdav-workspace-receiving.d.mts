@@ -5,7 +5,7 @@ export interface WebDavOperationRecord {
   directory: string; schema: 'stellar-forge.webdav-client-operation.v1'; id: Uuid;
   endpoint: string; workspace: string; workspaceId: Uuid; tool: MutationToolName;
   args: ToolArguments[MutationToolName]; requestSha256: Sha256; createdAt: string; state: string;
-  profileBinding: null | { kind: 'source'|'merchant'; profile: string; sha256: Sha256; value: JsonObject };
+  profileBinding: null | { kind: 'source'|'merchant'|'runtime'|'buyer'; profile: string|null; sha256: Sha256; value: JsonObject };
   observations: Array<JsonObject & { at: string; phase: string }>; lastNative: NativeResponse | null;
 }
 type OptionalReview<A> = A extends unknown
