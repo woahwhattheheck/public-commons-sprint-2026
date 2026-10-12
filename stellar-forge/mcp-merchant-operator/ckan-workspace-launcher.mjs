@@ -15,9 +15,13 @@ const UUID = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 const CKAN = 'stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/';
 const MCP = 'stellar-forge/mcp-merchant-operator/';
 const SOURCE_FILES = [
-  ...['ckan-workspace-launcher.mjs', 'ckan-workspace.mjs', 'config.mjs', 'operator.mjs', 'serve.mjs'].map(name => MCP + name),
+  ...['ckan-workspace-launcher.mjs', 'ckan-workspace.mjs', 'ckan-workspace-transfers.mjs',
+    'catalog/ckan-workspace.mjs', 'config.mjs', 'operator.mjs', 'serve.mjs'].map(name => MCP + name),
   ...['model.mjs', 'server.mjs', 'source.mjs', 'capture.mjs', 'semantics.mjs', 'declaration.mjs',
+    'archive.mjs', 'source-locations.mjs',
     'public/index.html', 'public/app.mjs', 'public/style.css'].map(name => CKAN + name),
+  ...['releases.mjs', 'release-installation.mjs'].map(name =>
+    'stellar/scf-starforge-20261009/sf82-seller-pilot/' + name),
 ].sort();
 const originalSourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');

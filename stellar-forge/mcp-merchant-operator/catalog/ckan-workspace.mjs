@@ -44,13 +44,31 @@ const projection = { type: 'object', minProperties: 1, maxProperties: 64,
     required: ['field', 'type', 'nullable', 'encoding'] } };
 
 const definitions = [
-  ['merchant_ckan_workspaces', 'List host-declared original CKAN project aliases, browser ownership, configured inputs and merchant/buyer availability. Does not open a project or read a catalogue.', {}, [], read],
+  ['merchant_ckan_workspaces', 'List host-declared original and receiving CKAN project aliases, browser ownership, current receiving operation, configured inputs and merchant/buyer availability. Does not open a project or read a catalogue.', {}, [], read],
   ['merchant_ckan_open', 'Open one existing CKAN project under its original lease and serve the same browser on loopback. Browser and agent actions share the original model. Reuse the returned current instanceId; close a separately running workbench first.', selected, ['workspace'], { idempotent: true }],
   ['merchant_ckan_close', 'Close this exact owned CKAN browser/model instance, drain pending calls and native operation, close retained file reads, and release its original project lease. Saved editions, publisher state and merchant packages remain available on reopen.', { ...selected, instanceId: uuid }, ['workspace', 'instanceId'], { destructive: true, idempotent: false }],
   ['merchant_ckan_status', 'Read the original current operation, active operation ID, retained project item pages and current loopback browser. Before a changing tool, use native.operation?.id ?? null as expectedOperationId. A resolved operation may be FAILED or CANCELLED: inspect its state and error. Each collection has its own offset and nextOffset.', {
     ...selected, editionsOffset: offset, sourcesOffset: offset, publicationsOffset: offset,
     exportsOffset: offset, buyerRequestsOffset: offset, limit: { type: 'integer', minimum: 1, maximum: 100 },
   }, ['workspace'], read],
+  ['merchant_ckan_workspace_archives', 'List complete original workspace archives with exact hashes, project counts and the authenticated streaming download route. Page with nextOffset; browserUrl identifies the existing owner.', {
+    ...selected, offset, limit: { type: 'integer', minimum: 1, maximum: 100 },
+  }, ['workspace'], read],
+  ['merchant_ckan_workspace_archive', 'Export the complete retained CKAN project through its original native archive operation. Preserves captured source meanings, publisher history, datasets, merchant packages and seller/buyer records. Follow merchant_ckan_status until this operation completes, then list or inspect its retained archive.', {
+    ...changing, maxBytes: { type: 'integer', minimum: 1, maximum: 8589934592 },
+    maxFiles: { type: 'integer', minimum: 1, maximum: 100000 },
+  }, changed, mutation],
+  ['merchant_ckan_workspace_inspect', 'Verify every byte of a selected original workspace archive and page its complete file inventory. Select exactly one retained archiveId or host input alias of kind workspace-archive, with expectedSha256. Later pages reuse one checked metadata table and recheck the retained file identity.', {
+    ...selected, archiveId: uuid, input: alias, expectedSha256: digest, offset,
+    limit: { type: 'integer', minimum: 1, maximum: 100 },
+  }, ['workspace', 'expectedSha256'], read],
+  ['merchant_ckan_workspace_read', 'Receive the complete selected workspace archive in SHA256-pinned base64 chunks through the existing native retained-file reader. Select one archiveId or host archive input alias; reuse readId, expectedSha256 and nextOffset. The same read-only descriptor serves all chunks without copying the payload. The final chunk releases it; merchant_ckan_file_release closes an abandoned read.', {
+    ...selected, archiveId: uuid, input: alias, expectedSha256: digest, readId: uuid, offset,
+    limit: { type: 'integer', minimum: 1, maximum: MAX_RETAINED_CHUNK_BYTES },
+  }, ['workspace', 'expectedSha256'], read],
+  ['merchant_ckan_workspace_receive', 'Receive a complete original workspace archive into one configured receiveTarget alias beside this project. Select exactly one archiveId or host input alias with expectedSha256. The original operation owns extraction, relocation and resume; follow its result, then merchant_ckan_open the targetWorkspace to query the received project.', {
+    ...changing, archiveId: uuid, input: alias, expectedSha256: digest, targetWorkspace: alias,
+  }, [...changed, 'expectedSha256', 'targetWorkspace'], mutation],
   ['merchant_ckan_search', 'Search the original project catalogue through CKAN package_search and return the original provider receipt and dataset/resource metadata page. Continue with page.next; catalogue reads use only the original configured credential reference.', {
     ...selected, q: { type: 'string', maxLength: 2048 }, start: { type: 'integer', minimum: 0, maximum: 10000000 },
     rows: { type: 'integer', minimum: 1, maximum: 100 },
@@ -58,7 +76,7 @@ const definitions = [
   ['merchant_ckan_package', 'Read one original CKAN package and its resources through the project catalogue, retaining the provider receipt. Public metadata field names and exact numeric tokens remain visible.', {
     ...selected, packageId: field,
   }, ['workspace', 'packageId'], { readOnly: true, openWorld: true }],
-  ['merchant_ckan_inputs', 'List host-declared original capture input aliases, or inspect one complete private capture manifest file and return its exact current bytes and SHA256. The original importer validates its retained sibling metadata and page bytes.', {
+  ['merchant_ckan_inputs', 'List host-declared capture and workspace-archive input aliases, or hash one complete selected private file. Capture inputs retain their original page contract; use workspace_inspect/receive for a whole-workspace input.', {
     ...selected, input: alias,
   }, ['workspace'], read],
   ['merchant_ckan_import', 'Import the selected host-declared retained CKAN edition through the original importer. The importer checks expectedSha256 before any edition is copied; the original complete manifest and all provider page hashes remain authoritative. On an uncertain reply inspect native.operation and retained editions before another action.', {
