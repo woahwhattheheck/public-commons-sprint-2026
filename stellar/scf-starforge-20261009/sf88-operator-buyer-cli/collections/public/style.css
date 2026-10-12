@@ -83,3 +83,22 @@ footer{padding:1rem 2rem;color:var(--muted);font-size:11px;border-top:1px solid 
 .sr-only{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media(max-width:1000px){main{grid-template-columns:230px minmax(0,1fr)}.content{padding:1rem}.panel{padding:1rem}.form-grid{grid-template-columns:1fr}.toolbar-spacer{display:none}}
 @media(max-width:720px){.masthead{padding:1rem;align-items:flex-start}.lede{padding:.8rem 1rem}.header-actions{flex-direction:column;align-items:flex-end;gap:.4rem}main{display:block}.sidebar{border-right:0;border-bottom:1px solid var(--line);padding:1rem}.collection-list{max-height:230px;overflow:auto}.workspace-paths{display:none}.content{padding:1rem}.empty{padding:1.5rem}.notice{margin:1rem}.progress-row{gap:1.2rem}.selection-toolbar{align-items:stretch}h1{font-size:20px}.narrow{margin:1rem}.section-heading{gap:.5rem}}
+
+/* Operating backup and receiving share the existing neutral workspace. */
+.recovery-form { display: grid; gap: 14px; }
+.recovery-form > div { min-width: 0; }
+.recovery-form input[type="checkbox"] { width: auto; min-height: auto; }
+.recovery-facts { display: grid; grid-template-columns: minmax(110px, 170px) minmax(0, 1fr); gap: 8px 16px; margin: 16px 0; }
+.recovery-facts dt { color: #555; font-size: .875rem; }
+.recovery-facts dd { margin: 0; overflow-wrap: anywhere; }
+.recovery-detail { margin: 12px 0; border-top: 1px solid #ddd; padding-top: 12px; }
+.recovery-detail > summary { cursor: pointer; font-weight: 600; }
+.recovery-detail .table-wrap { margin-top: 12px; max-height: 440px; overflow: auto; }
+#recovery-panel .panel { margin-bottom: 16px; }
+#recovery-panel .notice { overflow-wrap: anywhere; }
+#recovery-panel pre { max-height: 320px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+#recovery-panel td { overflow-wrap: anywhere; max-width: 400px; }
+#recovery-panel .form-actions { flex-wrap: wrap; }
+#open-recovery { margin-top: 10px; }
+@media(max-width: 680px) { .recovery-facts { grid-template-columns: 1fr; gap: 4px; }
+  .recovery-facts dd { margin-bottom: 10px; } }

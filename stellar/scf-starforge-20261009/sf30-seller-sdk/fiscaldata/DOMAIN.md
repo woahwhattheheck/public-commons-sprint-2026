@@ -132,3 +132,10 @@ Unfinished comparisons and exports retain status BUILDING or FAILED, an optional
 Unsealed export copies use an intent-bound temporary, source-hash verification and create-only publication. A retry reconciles the exact interrupted staging link before private-file readback. Incomplete derived copies are retained with their original digest under staging/export-copy-recovery before the original request continues. Existing sealed deliveries are verified and remain immutable; recovery files are outside the delivered archive selection.
 
 New merchant exports also declare source.json.sourceFiles using the shared SF82 adapter’s exact {path,bytes,sha256} contract. It explicitly includes every captured response/receipt, capture manifest, reviewed field metadata and original row positions. The unchanged edition source.json is retained at original-edition/source.json; the publisher declaration adds the file list without rewriting the sealed edition. sourceClosureVersion=1 is pinned only on new merchant export records, so a retry of a retained older export preserves its original file layout. The original publisher preparation, SF82 staging and inspection retain and verify that same declared closure.
+
+## Managed launch identity
+
+The existing `openFiscalWorkspace` accepts optional `expectedWorkspace:{id,createdAt,directoryIdentity:{dev,ino}}`. Device and inode are decimal strings. When supplied, the original initialized directory and immutable header fields must match while the original kernel lease is held, before source reconstruction or writes. A replaced or missing source returns `WORKSPACE_IDENTITY_CHANGED`; ordinary direct callers retain the existing behavior.
+
+The original named-MCP adapter forwards this host-only binding and a host-created managed identity to its borrowed browser. The optional authenticated `GET /api/identity` returns that identity for the existing Applications startup observer. It is absent on ordinary browser instances. See [managed Applications](../../distribution/runtime-workspace/FISCALDATA_APPLICATIONS.md) for the complete source/configuration/launch contract.
+
