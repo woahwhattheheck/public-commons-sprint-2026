@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto';
 import { WorkspaceError, canonical, digest, identifier, now } from '../workspace/store.mjs';
 import { normalizeCatalogMapping, verifyCatalogMaterial, catalogText } from './mapping.mjs';
 import { catalogInputFormat } from './input.mjs';
+import { trackCatalogStorageWork, retireCompletedCatalogImport } from './import-storage.mjs';
 import { CATALOG_TABLES, CATALOG_SCHEMA, SOURCE_SCHEMA, EDITION_SCHEMA, DECISION_SCHEMA,
   sourceIdentity, editionReview, materialRoot, hashCatalogFile } from './workspace.mjs';
 
@@ -266,7 +267,8 @@ function mergeRows(workspace, staged, table) {
 export function importCatalogBundle(workspace, meta, iterable) {
   const request = { requestId: identifier(meta.requestId, 'request ID'), name: catalogText(meta.name, 'Bundle name', 240),
     bytes: meta.bytes, sha256: meta.sha256 };
-  return workspace.perform('catalog-import', request, async operation => {
+  workspace.open();
+  const imported = workspace.perform('catalog-import', request, async operation => {
     await workspace.directories();
     const bundle = join(workspace.root, 'transfers', request.requestId + '.jsonl');
     await workspace.retainBytes(request, iterable, bundle);
@@ -277,6 +279,7 @@ export function importCatalogBundle(workspace, meta, iterable) {
     const databasePath = join(directory, 'catalog.sqlite3');
     const created = await open(databasePath, 'wx', 0o600); await created.close();
     const db = new DatabaseSync(databasePath); let liveSource;
+    workspace.importStageReaders.set(operation.id, db);
     try {
     db.exec('PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;'); stageTables(db);
     const hash = createHash('sha256'); let frames = 0, header, footer, sourceBytes = 0;
@@ -374,6 +377,14 @@ export function importCatalogBundle(workspace, meta, iterable) {
     } finally {
       if (liveSource) await liveSource.file.close().catch(() => {});
       db.close();
+      workspace.importStageReaders.delete(operation.id); workspace.importClosedStages.add(operation.id);
     }
+  });
+  return trackCatalogStorageWork(workspace, async () => {
+    const result = await imported;
+    // The successful close marker, or ended original owner, gates stage retirement.
+    // Cleanup has its own receipt; storage errors never rewrite COMPLETE business work.
+    await retireCompletedCatalogImport(workspace, result);
+    return result;
   });
 }

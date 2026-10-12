@@ -2,6 +2,12 @@
 
 A complete source and reporting workspace for existing ODK Central field operations. Choose authorized projects and forms, receive the full reporting cohort, inspect original versions and media, review the edition, and deliver readable reports or approved datasets. The same workspace opens in the browser, one command line, SDK, Applications and MCP.
 
+The complete installed [operating guide](../../../../products/odk-central/OPERATING.md)
+covers service hosting and backup, field capture, two-period commissioning,
+approved PostgreSQL receiving, publishing and full customer reopening.
+**Reporting warehouse** carries issued period datasets into the existing
+PostgreSQL operator through this same application's source store and listener.
+
 ## Operator workflow
 
 1. **Connect the existing Central user.** Select the Central server and the name of the host environment variable that contains its complete Authorization header. The workspace verifies the original user and accessible projects.
@@ -14,7 +20,7 @@ The browser uses a neutral, compact operator layout. Every original source downl
 
 ## Start
 
-Use Linux, Node 24 or newer, Python 3 with its standard library, and util-linux `flock`. The installed distribution has one command:
+Use Linux, Node 24 or newer, Python 3 with its standard library, and util-linux `flock`. The installed distribution opens the complete field, commissioning and warehouse application:
 
 ```sh
 starforge odk-central-workspace serve \
@@ -187,3 +193,23 @@ A trusted source extension may pass `extend: async ({workspace, store}) => { ...
 Report and dataset operations bind the original request and receiving interpretation before output publication. Repeating an explicit operation ID resumes those exact outputs, including an interruption after some files were written. Browser recovery and CLI operation identities use the same original methods.
 
 The portable workspace editor resumes an unfinished publisher receiving under its original operation ID. Its row budget can be increased for a larger dataset on a suitably provisioned host. Received unfinished preparations remain visible with their original export and release request; the same native preparation continues from that request. The current host’s preparation records are available in `state.publisherPreparations`, while `publisherTransfers` retains the complete original source and receiving records.
+
+## Approved periods in the reporting warehouse
+
+Open **Reporting warehouse** from the managed application. Select the private
+PostgreSQL profile under Applications' **Reporting warehouse profiles**, or
+provide `--warehouse-profiles /private/postgres-profiles.json` to the existing
+managed command.
+
+The original workflow retains an issued commissioning dataset, inspects its
+complete approved CSV and dictionary, saves the full SQL mapping review,
+imports the immutable edition and produces the complete two-period report ZIP.
+Each period keeps the accepted Central review, original field/key/state
+projection and native warehouse request. The subsequent Central archive carries
+the approvals, complete command results and retained report files.
+
+Use `starforge odk-central-workspace warehouse --help` for the same command
+workflow through the existing `odk.connection.json`. The dedicated
+`./seller/odk/warehouse` export contains the original factories and complete
+types. The [warehouse guide](warehouse/README.md) documents installation,
+profiles, full receiving, native SQL bindings and portable reopening.

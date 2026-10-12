@@ -5,12 +5,13 @@ import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { fault, digest } from '../../odata/state.mjs';
 import { normalizeConnection } from '../commissioning/agreement.mjs';
+import { ODK_CONNECTION_SCHEMA, connectCentralWorkspace } from '../connection.mjs';
 import { normalizeWarehouseProfiles } from './bridge.mjs';
 import { openCentralWarehouse, serveCentralWarehouse } from './open.mjs';
 
 const methods=new Map([['state','state'],['prepare','prepare'],['connect','connect'],['inspect','inspect'],
   ['review','review'],['import','import'],['report','periodReport'],['operation','operation'],['approval','approval'],['resume','resume']]);
-export const WAREHOUSE_HELP="Central approved period warehouse\n\n  node odk/warehouse/cli.mjs serve --workspace /private/central \\\n    --profiles /private/postgres-profiles.json --port 0 \\\n    --ready-file /private/central-warehouse-listener.json\n  node odk/warehouse/cli.mjs COMMAND --operator-file /private/central-warehouse-listener.json \\\n    --input /private/original-action.json\n  node odk/warehouse/cli.mjs COMMAND --workspace /private/central \\\n    --profiles /private/postgres-profiles.json --input /private/original-action.json\n\nUse the existing listener when the Central workspace is open.\nEvery action retains its 32-character hexadecimal requestId before execution.\n\n  state       current profiles, original deliveries, approvals and operations\n  connect     {requestId, profileId}; binds the actual existing warehouse identity\n  prepare     {requestId, deliveryId, datasetId, period:0|1}\n  inspect     {requestId, approvalId, profileId}\n  review      {requestId, inspectionId, mapping, reviewer, note}\n  import      {requestId, reviewId}\n  report      {requestId, previousImportId, currentImportId, title}\n  operation   {requestId}; complete original command/result/recovery record\n  approval    {requestId}; full approved original source and every file receipt\n  resume      {requestId}; original saved action and stable native IDs\n\nOptional --connection FILE supplies the original commissioning connection for its\nsame listener. PostgreSQL credentials stay in each profile's connectionEnv. The\noriginal Python package and warehouse are installed/initialized by the host.\n";
+export const WAREHOUSE_HELP="Central approved period warehouse\n\n  node odk/warehouse/cli.mjs serve --workspace /private/central \\\n    --profiles /private/postgres-profiles.json --port 0 \\\n    --ready-file /private/central-warehouse-listener.json\n  node odk/warehouse/cli.mjs COMMAND --operator-file /private/central-warehouse-listener.json \\\n    --input /private/original-action.json\n  node odk/warehouse/cli.mjs COMMAND --workspace /private/central \\\n    --profiles /private/postgres-profiles.json --input /private/original-action.json\n\nUse the existing listener when the Central workspace is open.\nThe managed odk.connection.json is accepted by --operator-file.\nEvery action retains its 32-character hexadecimal requestId before execution.\n\n  state       current profiles, original deliveries, approvals and operations\n  connect     {requestId, profileId}; binds the actual existing warehouse identity\n  prepare     {requestId, deliveryId, datasetId, period:0|1}\n  inspect     {requestId, approvalId, profileId}\n  review      {requestId, inspectionId, mapping, reviewer, note}\n  import      {requestId, reviewId}\n  report      {requestId, previousImportId, currentImportId, title}\n  operation   {requestId}; complete original command/result/recovery record\n  approval    {requestId}; full approved original source and every file receipt\n  resume      {requestId}; original saved action and stable native IDs\n\nOptional --connection FILE supplies the original commissioning connection for its\nsame listener. PostgreSQL credentials stay in each profile's connectionEnv. The\noriginal Python package and warehouse are installed/initialized by the host.\n";
 function parse(argv) {
   const options={command:argv[0]};
   if(!argv.length||argv.includes('--help')||argv.includes('-h'))return {help:true};
@@ -66,6 +67,16 @@ async function retireReady(receipt) {
 }
 async function remoteClient(path) {
   const descriptor=await jsonFile(path,{privateFile:true,limit:65536});
+  if(descriptor.schema===ODK_CONNECTION_SCHEMA){
+    const client=await connectCentralWorkspace({connectionFile:resolve(path)});
+    try{
+      await client.warehouseState();
+      const send=(route,input)=>route==='/api/warehouse/state'?client.warehouseState():
+        client.warehouseAction(route.slice('/api/warehouse/'.length),input);
+      send.close=()=>client.close();
+      return send;
+    }catch(error){client.close();throw error;}
+  }
   let address;try{address=new URL(descriptor.origin);}catch{throw fault('CENTRAL_WAREHOUSE_LISTENER','Use the original private listener descriptor.');}
   if(address.protocol!=='http:'||!['127.0.0.1','localhost','[::1]'].includes(address.hostname)||
       address.username||address.password||address.pathname!=='/'||address.search||address.hash||
@@ -112,12 +123,12 @@ export async function runCentralWarehouseCli(argv=process.argv.slice(2)) {
   const method=methods.get(options.command),input=options.input?await jsonFile(options.input):{};
   if(method!=='state'&&!input.requestId)throw fault('CENTRAL_WAREHOUSE_REQUEST_ID','Save the complete action and requestId in the original input file.');
   if(input.requestId)process.stderr.write(JSON.stringify({method,requestId:input.requestId,inputSha256:digest(JSON.stringify(input))})+'\n');
-  let owner=null;
+  let owner=null,remote=null;
   try {
     let result;
     if(options['operator-file']) {
-      const send=await remoteClient(options['operator-file']);
-      result=await send(method==='state'?'/api/warehouse/state':'/api/warehouse/'+method,method==='state'?undefined:input);
+      remote=await remoteClient(options['operator-file']);
+      result=await remote(method==='state'?'/api/warehouse/state':'/api/warehouse/'+method,method==='state'?undefined:input);
     } else {
       if(!options.workspace)throw fault('CENTRAL_WAREHOUSE_WORKSPACE','Choose the original workspace or private listener.');
       owner=await openCentralWarehouse({directory:options.workspace,profiles:await profilesFile(options.profiles),
@@ -125,7 +136,7 @@ export async function runCentralWarehouseCli(argv=process.argv.slice(2)) {
       result=await owner.warehouse[method](input);
     }
     output(result);return result;
-  }finally{await owner?.close();}
+  }finally{remote?.close?.();await owner?.close();}
 }
 if(process.argv[1]&&pathToFileURL(resolve(process.argv[1])).href===import.meta.url)
   runCentralWarehouseCli().catch(error=>{process.stderr.write(JSON.stringify({code:error.code??'CENTRAL_WAREHOUSE_CLI',

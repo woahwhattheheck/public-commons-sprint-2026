@@ -1,3 +1,4 @@
+import {RUNBOOK_PROFILE_LIMIT,normalizeRunbookProfiles,runbookProfileSelection,runbookCycleSteps} from '/runbook-profiles.mjs';
 const CLIENT_MOUNT = /^\/portfolio\/clients\/[A-Za-z0-9][A-Za-z0-9._-]{0,79}(?=\/)/.exec(location.pathname)?.[0] ?? '';
 const ROOT = CLIENT_MOUNT + '/api/runbooks';
 if(CLIENT_MOUNT){const navigation=document.createElement('nav'),back=document.createElement('a');back.href='/portfolio.html';back.textContent='Back to firm portfolio';navigation.className='portfolio-return';navigation.append(back);document.body.prepend(navigation);}
@@ -268,7 +269,8 @@ function renderBook() {
     el('div',{className:'view-heading'},el('div',{},el('p',{className:'eyebrow'},edition.client),el('h1',{},edition.name)),tag('Edition '+edition.number)),
     el('section',{className:'panel'},field('Retained procedure edition',chooser),prose(edition.description),facts([['Recorded by',edition.actor],['Saved',when(edition.createdAt)],['Steps',edition.steps.length],['Resources',edition.resources.length]]),
       el('div',{className:'actions'},button('Create next edition',()=>beginAuthor(edition,{runbookId:book.id,expectedEditionId:book.latestEditionId}),{mutation:true}),button('Start period with this edition',()=>startSchedule({runbookId:book.id,editionId:edition.id}),{primary:true,mutation:true}))),
-    el('section',{className:'panel'},el('h2',{},'Procedure'),procedureNode(edition)),
+    (edition.profiles||[]).length?el('section',{className:'panel'},el('h2',{},'Named procedure sets'),procedureSetsNode(edition,profileId=>startSchedule({runbookId:book.id,editionId:edition.id,profileId}))):null,
+    el('section',{className:'panel'},el('h2',{},'Complete procedure catalog'),procedureNode(edition)),
     (edition.resources||[]).length?el('section',{className:'panel'},el('h2',{},'All resources'),el('div',{className:'resource-list'},resourceNodes(edition.resources))):null);
   paintLocks();
 }
@@ -276,10 +278,12 @@ function renderBook() {
 
 async function loadAuthor() {
   const meta=await readKey(key('author/meta'));if(!meta)return null;
-  const names=[...meta.stepIds.map(id=>key('author/step/'+id)),...meta.resourceIds.map(id=>key('author/resource/'+id)),key('author/reference')], values=await readMany(names);
-  const steps=meta.stepIds.map(id=>values.get(key('author/step/'+id))),resources=meta.resourceIds.map(id=>values.get(key('author/resource/'+id)));
-  if(steps.some(item=>!item)||resources.some(item=>!item))throw new Error('A saved procedure draft is incomplete in browser storage. Keep this tab open and restore the original draft before saving an edition.');
-  return {meta,steps,resources,reference:values.get(key('author/reference'))||null};
+  const profileIds=meta.profileIds||[];
+  const names=[...meta.stepIds.map(id=>key('author/step/'+id)),...meta.resourceIds.map(id=>key('author/resource/'+id)),...profileIds.map(id=>key('author/profile/'+id)),key('author/reference')], values=await readMany(names);
+  const steps=meta.stepIds.map(id=>values.get(key('author/step/'+id))),resources=meta.resourceIds.map(id=>values.get(key('author/resource/'+id))),profiles=profileIds.map(id=>values.get(key('author/profile/'+id)));
+  meta.profileIds=profileIds;
+  if(steps.some(item=>!item)||resources.some(item=>!item)||profiles.some(item=>!item))throw new Error('A saved procedure draft is incomplete in browser storage. Keep this tab open and restore the original draft before saving an edition.');
+  return {meta,steps,resources,profiles,reference:values.get(key('author/reference'))||null};
 }
 function authorMetaChanged() { if(!S.author)return;S.author.meta.updatedAt=new Date().toISOString();persist(key('author/meta'),S.author.meta).catch(()=>{}); }
 function saveAuthorPart(kind,item) { S.author.meta.updatedAt=new Date().toISOString();persist(key('author/'+kind+'/'+item.id),item).catch(()=>{}); }
@@ -287,10 +291,10 @@ async function beginAuthor(edition=null,context={}) {
   await flush();
   const retained=await loadAuthor();
   if(retained){S.author=retained;showView('author');renderAuthor();notice('Your saved procedure draft is open. Save or discard it before starting a different edition.');return;}
-  const now=new Date().toISOString(), steps=clone(edition?.steps||[{id:slug('step'),title:'',instructions:'',required:true,resourceIds:[]}]),resources=clone(edition?.resources||[]);
-  const meta={draftId:uid(),runbookId:context.runbookId||null,expectedEditionId:context.expectedEditionId||null,baseRevision:S.data.revision,name:edition?.name||'',client:edition?.client||'',description:edition?.description||'',stepIds:steps.map(x=>x.id),resourceIds:resources.map(x=>x.id),createdAt:now,updatedAt:now};
-  S.author={meta,steps,resources,reference:edition?clone(edition):null};
-  await writeBatch([[key('author/meta'),meta],[key('author/reference'),S.author.reference],...steps.map(item=>[key('author/step/'+item.id),item]),...resources.map(item=>[key('author/resource/'+item.id),item])]);
+  const now=new Date().toISOString(), steps=clone(edition?.steps||[{id:slug('step'),title:'',instructions:'',required:true,resourceIds:[]}]),resources=clone(edition?.resources||[]),profiles=clone(edition?.profiles||[]);
+  const meta={draftId:uid(),runbookId:context.runbookId||null,expectedEditionId:context.expectedEditionId||null,baseRevision:S.data.revision,name:edition?.name||'',client:edition?.client||'',description:edition?.description||'',stepIds:steps.map(x=>x.id),resourceIds:resources.map(x=>x.id),profileIds:profiles.map(x=>x.id),createdAt:now,updatedAt:now};
+  S.author={meta,steps,resources,profiles,reference:edition?clone(edition):null};
+  await writeBatch([[key('author/meta'),meta],[key('author/reference'),S.author.reference],...steps.map(item=>[key('author/step/'+item.id),item]),...resources.map(item=>[key('author/resource/'+item.id),item]),...profiles.map(item=>[key('author/profile/'+item.id),item])]);
   showView('author');renderAuthor();notice('');
 }
 async function resumeAuthor() { await flush();S.author=await loadAuthor();if(!S.author)return beginAuthor();showView('author');renderAuthor(); }
@@ -303,7 +307,7 @@ function renderAuthor() {
   const draft=S.author;if(!draft)return;
   $('author-heading').textContent=draft.meta.runbookId?'Create next edition':'New runbook';
   $('author-name').value=draft.meta.name;$('author-client').value=draft.meta.client;$('author-description').value=draft.meta.description;
-  renderAuthorBasis();renderAuthorResources();renderAuthorSteps();
+  renderAuthorBasis();renderAuthorResources();renderAuthorSteps();renderAuthorProfiles();
   const box=$('author-reference');box.hidden=!draft.reference;
   if(draft.reference)put(box,el('details',{},el('summary',{},'Original selected edition · '+(draft.reference.number||short(draft.reference.id))),el('div',{},prose(draft.reference.description),procedureNode(draft.reference))));
   else put(box);
@@ -341,10 +345,59 @@ function renderAuthorResources() {
   }):empty('Add a document, a working note or a link used by this procedure.'));
   $('add-resource').dataset.permanentDisabled=draft.resources.length>=100?'true':'false';
 }
+
+function procedureSetsNode(edition,startPeriod=null){
+  const names=new Map(edition.steps.map(step=>[step.id,step.title]));
+  return el('div',{className:'procedure-sets'},(edition.profiles||[]).map(profile=>el('article',{className:'procedure-set'},
+    el('h3',{},profile.name),prose(profile.description),el('p',{className:'small muted'},profile.stepIds.length+' selected procedures'),
+    el('ul',{},profile.stepIds.map(id=>el('li',{},names.get(id)||id))),
+    startPeriod?button('Start '+profile.name+' period',()=>startPeriod(profile.id),{mutation:true}):null)));
+}
+function renderAuthorProfiles(){
+  const draft=S.author;if(!draft)return;
+  put('author-profiles',draft.profiles.length?draft.profiles.map(profile=>{
+    const count=el('p',{className:'small muted'},profile.stepIds.length+' selected procedures');
+    const checks=el('fieldset',{className:'profile-procedures'},el('legend',{},'Procedures in this set'),el('div',{className:'check-list'},draft.steps.map((step,index)=>{
+      const check=input('',{type:'checkbox',checked:profile.stepIds.includes(step.id),onchange:event=>{
+        const chosen=new Set(profile.stepIds);if(event.target.checked)chosen.add(step.id);else chosen.delete(step.id);
+        profile.stepIds=draft.steps.filter(item=>chosen.has(item.id)).map(item=>item.id);saveAuthorPart('profile',profile);
+        count.textContent=profile.stepIds.length+' selected procedures'+(profile.stepIds.length?'':' · select at least one before saving');
+      }});
+      return el('label',{className:'check-row'},check,el('span',{},(index+1)+'. '+(step.title||'Untitled procedure')));
+    })));
+    return el('article',{className:'editor-card'},el('div',{className:'section-heading'},el('h3',{},profile.name||'New procedure set'),button('Remove set',()=>removeProfile(profile.id))),
+      field('Procedure set name',input(profile.name,{maxlength:240,required:true,placeholder:'For example, Weekly cash review',oninput:event=>{profile.name=event.target.value;saveAuthorPart('profile',profile);}})),
+      field('When to use this set',area(profile.description,{rows:3,maxlength:16000,oninput:event=>{profile.description=event.target.value;saveAuthorPart('profile',profile);}})),count,checks);
+  }):empty('Every period can use all procedures. Add named sets when weekly work and monthly close need different tasks.'));
+  $('add-profile').dataset.permanentDisabled=draft.profiles.length>=RUNBOOK_PROFILE_LIMIT?'true':'false';
+}
+async function addProfile(){
+  if(S.author.profiles.length>=RUNBOOK_PROFILE_LIMIT)throw new Error('Use up to '+RUNBOOK_PROFILE_LIMIT+' named procedure sets in one edition.');
+  await flush();const item={id:slug('set'),name:'',description:'',stepIds:S.author.steps.map(step=>step.id)};
+  S.author.profiles.push(item);S.author.meta.profileIds.push(item.id);S.author.meta.updatedAt=new Date().toISOString();
+  await writeBatch([[key('author/profile/'+item.id),item],[key('author/meta'),S.author.meta]]);renderAuthorProfiles();paintLocks();
+}
+async function removeProfile(id){
+  await flush();S.author.profiles=S.author.profiles.filter(item=>item.id!==id);S.author.meta.profileIds=S.author.profiles.map(item=>item.id);S.author.meta.updatedAt=new Date().toISOString();
+  await writeBatch([[key('author/meta'),S.author.meta]],[key('author/profile/'+id)]);renderAuthorProfiles();paintLocks();
+}
+function renderScheduleSelection(){
+  const draft=S.schedule;if(!draft)return;const node=$('schedule-profile'),edition=S.scheduleBook?.editions.find(item=>item.id===draft.editionId);
+  fillOptions(node,[{value:'',label:edition?'All procedures · '+edition.steps.length+' tasks':'Choose a procedure edition first'},...(edition?.profiles||[]).map(profile=>({value:profile.id,label:profile.name+' · '+profile.stepIds.length+' tasks'}))],draft.profileId);
+  node.setCustomValidity('');node.dataset.permanentDisabled=edition?'false':'true';
+  if(!edition){put('schedule-selection',empty('Choose a saved edition to select its procedures.'));return;}
+  try{
+    const {profile,steps}=runbookProfileSelection(edition,draft.profileId||undefined);
+    put('schedule-selection',el('h3',{},profile?.name||'All procedures'),profile?.description?prose(profile.description):null,
+      el('p',{className:'small muted'},steps.length+' procedures will be fixed in this period. Review rounds and handovers keep this selection.'),
+      el('details',{},el('summary',{},'Preview selected procedures'),procedureNode({...edition,steps})));
+  }catch(error){node.setCustomValidity(error.message);put('schedule-selection',el('p',{className:'inline-note'},error.message));}
+}
+
 function renderAuthorSteps() {
   const draft=S.author;if(!draft)return;
   put('author-steps',draft.steps.map((step,index)=>{
-    const title=input(step.title,{maxlength:240,required:true,oninput:event=>{step.title=event.target.value;saveAuthorPart('step',step);}});
+    const title=input(step.title,{maxlength:240,required:true,onchange:()=>renderAuthorProfiles(),oninput:event=>{step.title=event.target.value;saveAuthorPart('step',step);}});
     const instructions=area(step.instructions,{rows:6,maxlength:32000,required:true,oninput:event=>{step.instructions=event.target.value;saveAuthorPart('step',step);}});
     const required=input('',{type:'checkbox',checked:step.required,onchange:event=>{step.required=event.target.checked;saveAuthorPart('step',step);}});
     return el('article',{className:'editor-card'},el('div',{className:'section-heading'},el('h3',{},'Step '+(index+1)),el('div',{className:'actions'},
@@ -358,7 +411,7 @@ async function moveAuthor(kind,index,direction) {
   await flush();const list=kind==='step'?S.author.steps:S.author.resources,other=index+direction;
   if(other<0||other>=list.length)return;[list[index],list[other]]=[list[other],list[index]];
   S.author.meta[kind==='step'?'stepIds':'resourceIds']=list.map(item=>item.id);await persist(key('author/meta'),S.author.meta);
-  if(kind==='step')renderAuthorSteps();else{renderAuthorResources();renderAuthorSteps();}paintLocks();
+  if(kind==='step')renderAuthorSteps();else{renderAuthorResources();renderAuthorSteps();}renderAuthorProfiles();paintLocks();
 }
 async function addResource() {
   if(S.author.resources.length>=100)throw new Error('A procedure edition can retain up to 100 resources.');
@@ -368,7 +421,7 @@ async function addResource() {
 async function addStep() {
   if(S.author.steps.length>=100)throw new Error('A procedure edition can retain up to 100 steps.');
   const item={id:slug('step'),title:'',instructions:'',required:true,resourceIds:[]};S.author.steps.push(item);S.author.meta.stepIds.push(item.id);
-  await flush();await writeBatch([[key('author/step/'+item.id),item],[key('author/meta'),S.author.meta]]);renderAuthorSteps();paintLocks();
+  await flush();await writeBatch([[key('author/step/'+item.id),item],[key('author/meta'),S.author.meta]]);renderAuthorSteps();renderAuthorProfiles();paintLocks();
 }
 async function removeResource(id) {
   await flush();S.author.resources=S.author.resources.filter(item=>item.id!==id);S.author.meta.resourceIds=S.author.resources.map(item=>item.id);
@@ -378,7 +431,8 @@ async function removeResource(id) {
 }
 async function removeStep(id) {
   if(S.author.steps.length===1)return;await flush();S.author.steps=S.author.steps.filter(item=>item.id!==id);S.author.meta.stepIds=S.author.steps.map(item=>item.id);
-  await writeBatch([[key('author/meta'),S.author.meta]],[key('author/step/'+id)]);renderAuthorSteps();paintLocks();
+  for(const profile of S.author.profiles)profile.stepIds=profile.stepIds.filter(stepId=>stepId!==id);
+  await writeBatch([[key('author/meta'),S.author.meta],...S.author.profiles.map(profile=>[key('author/profile/'+profile.id),profile])] ,[key('author/step/'+id)]);renderAuthorSteps();renderAuthorProfiles();paintLocks();
 }
 async function discardAuthor() {
   await flush();if(!S.author)return;
@@ -397,7 +451,7 @@ function normalizedResources() {
 }
 async function saveEdition() {
   if(!$('author-form').reportValidity())return;
-  await flush();const draft=S.author,body={name:draft.meta.name,client:draft.meta.client,description:draft.meta.description,steps:clone(draft.steps),resources:normalizedResources()};
+  await flush();const draft=S.author,body={name:draft.meta.name,client:draft.meta.client,description:draft.meta.description,steps:clone(draft.steps),resources:normalizedResources(),profiles:normalizeRunbookProfiles(draft.profiles,draft.steps)};
   if(draft.meta.runbookId){body.runbookId=draft.meta.runbookId;body.expectedEditionId=draft.meta.expectedEditionId;}
   await mutate('book',ROOT+'/books/save',null,body,{draftId:draft.meta.draftId},draft.meta.baseRevision);
 }
@@ -413,7 +467,7 @@ async function startSchedule(options={}) {
   await flush();const old=await readKey(key('schedule'));
   if(old){S.schedule={sourceKind:'accountant',sourceLabel:'',sourceNote:'',sourceFileIds:[],...old};showView('schedule');await renderSchedule({reload:true});notice('Your saved period draft is open. Create or discard it before starting another period.');return;}
   const previous=options.previousCycle||null;
-  const draft={draftId:uid(),baseRevision:S.data.revision,sourceKind:previous?.source?.kind==='files'?'files':'accountant',sourceLabel:'',sourceNote:'',sourceFileIds:[],runbookId:options.runbookId||previous?.runbookId||'',editionId:options.editionId||previous?.editionId||'',label:'',preparer:previous?.preparer||'',reviewer:previous?.reviewer||'',dueDate:'',handoffId:'',accountantRevisionId:'',periodCloseId:'',previousCycleId:previous?.id||'',previousLabel:previous?.label||'',createdAt:new Date().toISOString()};
+  const draft={draftId:uid(),baseRevision:S.data.revision,sourceKind:previous?.source?.kind==='files'?'files':'accountant',sourceLabel:'',sourceNote:'',sourceFileIds:[],runbookId:options.runbookId||previous?.runbookId||'',editionId:options.editionId||previous?.editionId||'',profileId:options.profileId??previous?.profileId??'',label:'',preparer:previous?.preparer||'',reviewer:previous?.reviewer||'',dueDate:'',handoffId:'',accountantRevisionId:'',periodCloseId:'',previousCycleId:previous?.id||'',previousLabel:previous?.label||'',createdAt:new Date().toISOString()};
   S.schedule=draft;await writeBatch([[key('schedule'),draft]]);showView('schedule');await renderSchedule({reload:true});notice('');
 }
 async function resumeSchedule() {
@@ -447,7 +501,7 @@ async function renderSchedule({reload=false}={}) {
   const context=$('schedule-context');context.hidden=!draft.previousCycleId;
   if(draft.previousCycleId)put(context,el('h2',{},'Following period'),el('p',{},'Continue the procedure after “'+draft.previousLabel+'”. Choose the original source for the new local period below. Earlier worked tasks and reviews stay in the prior period.'),button('Open prior worked period',()=>openCycle(draft.previousCycleId)));
   else put(context);
-  renderScheduleSources();paintLocks();
+  renderScheduleSelection();renderScheduleSources();paintLocks();
 }
 function renderScheduleSources() {
   const draft=S.schedule;if(!draft||!S.sources)return;
@@ -475,6 +529,9 @@ async function saveCycle() {
   if(!$('schedule-form').reportValidity())return;
   await flush();const draft=S.schedule;
   const fields={runbookId:draft.runbookId,editionId:draft.editionId,label:draft.label,preparer:draft.preparer,reviewer:draft.reviewer,dueDate:draft.dueDate,sourceKind:draft.sourceKind||'accountant'};
+  const edition=S.scheduleBook?.editions.find(item=>item.id===draft.editionId);
+  runbookProfileSelection(edition,draft.profileId||undefined);
+  if(draft.profileId)fields.profileId=draft.profileId;
   if(fields.sourceKind==='files'){
     const selected=draft.sourceFileIds||[];
     if(selected.length<1||selected.length>100||!selected.every(id=>(S.data.files||[]).some(file=>file.id===id)))throw new Error('Select 1–100 existing original files for this client close.');
@@ -504,7 +561,8 @@ async function openCycle(id,stepId) {
   const value=sameWorkspace(results[0].value);S.cycle=value.cycle;S.data.revision=value.revision;S.bookId=value.cycle.runbookId;
   S.workDrafts=new Map(results[1].value.map(([,draft])=>[draft.stepId,draft]));
   S.cycleNotes={submit:results[2].value.get(key('submit/'+id))||{note:'',baseRevision:value.revision},review:results[2].value.get(key('review/'+id))||{decision:'',note:'',acceptedExceptions:[],baseRevision:value.revision}};
-  S.stepId=(S.cycle.edition?.steps||[]).some(item=>item.id===stepId)?stepId:S.cycle.edition?.steps?.[0]?.id;
+  const selectedSteps=runbookCycleSteps(S.cycle);
+  S.stepId=selectedSteps.some(item=>item.id===stepId)?stepId:selectedSteps[0]?.id;
   renderCycle();rememberView();
 }
 function workStatus(cycle,stepId) { return cycle.work?.[stepId]?.status||'PENDING'; }
@@ -523,7 +581,7 @@ function saveWorkDraft(draft) {
 }
 function renderStepNav() {
   const node=$('cycle-step-nav');if(!node||!S.cycle)return;
-  put(node,(S.cycle.edition.steps||[]).map((step,index)=>{
+  put(node,(runbookCycleSteps(S.cycle)||[]).map((step,index)=>{
     const draft=S.workDrafts.get(step.id);
     return el('button',{type:'button','aria-current':S.stepId===step.id?'true':null,onclick:act(async()=>{await flush();S.stepId=step.id;renderStepNav();renderWorkStep();rememberView();})},
       el('strong',{},(index+1)+'. '+step.title),tag(STATUS[workStatus(S.cycle,step.id)]||workStatus(S.cycle,step.id)),el('span',{},draft?.dirty?'Private draft to save':step.required?'Required':'Optional'));
@@ -531,11 +589,12 @@ function renderStepNav() {
 }
 function renderCycle() {
   const cycle=S.cycle;if(!cycle)return;
-  const edition=cycle.edition,steps=edition.steps||[],saved=steps.filter(step=>workStatus(cycle,step.id)==='COMPLETE').length;
+  const edition=cycle.edition,{profile,steps}=runbookProfileSelection(edition,cycle.profileId),saved=steps.filter(step=>workStatus(cycle,step.id)==='COMPLETE').length;
   const latestReturn=[...(cycle.reviews||[])].reverse().find(item=>item.decision==='RETURN');
   const source=cycle.source||{};
   const header=el('div',{className:'view-heading'},el('div',{},el('p',{className:'eyebrow'},edition.client+' · '+edition.name),el('h1',{},cycle.label)),tag(PHASE[cycle.phase]||cycle.phase,true));
-  const overview=el('section',{className:'panel'},facts([['Due date',cycle.dueDate],['Preparer',cycle.preparer],['Reviewer',cycle.reviewer],['Procedure edition','Edition '+edition.number],['Completed steps',saved+' of '+steps.length],['Work mode',cycle.readOnly?'Received handover':'Local period']]),
+  const overview=el('section',{className:'panel'},facts([['Due date',cycle.dueDate],['Preparer',cycle.preparer],['Reviewer',cycle.reviewer],['Procedure edition','Edition '+edition.number],['Procedure set',profile?.name||'All procedures'],['Completed steps',saved+' of '+steps.length],['Work mode',cycle.readOnly?'Received handover':'Local period']]),
+    profile?.description?prose(profile.description):null,
     cycle.readOnly?el('p',{className:'inline-note'},'This received period retains its original preparation, review and accountant source. Start a following local period to perform the procedure with a new original source.'):null,
     cycle.phase==='CHANGES_REQUESTED'&&latestReturn?el('div',{className:'inline-note'},el('strong',{},'Review returned this preparation'),prose(latestReturn.note)):null,
     el('div',{className:'actions'},link('Download handover packet',cyclePath(cycle.id)+'/packet',{download:true}),link('Printable handover',cyclePath(cycle.id)+'/print',{download:true}),link('Task handover CSV',cyclePath(cycle.id)+'/tasks.csv',{download:true}),
@@ -557,7 +616,7 @@ function attachmentPicker(draft,{onChange}={}) {
 }
 function renderWorkStep() {
   const cycle=S.cycle,node=$('cycle-step');if(!cycle||!node)return;
-  const step=cycle.edition.steps.find(item=>item.id===S.stepId);
+  const step=runbookCycleSteps(cycle).find(item=>item.id===S.stepId);
   if(!step){put(node,empty('This period has no procedure steps.'));return;}
   const resources=new Map((cycle.edition.resources||[]).map(item=>[item.id,item])),saved=cycle.work?.[step.id]||{status:'PENDING',note:'',fileIds:[]};
   const instruction=el('div',{className:'step-instructions'},el('div',{className:'section-heading'},el('h2',{},step.title),tag(step.required?'Required':'Optional')),prose(step.instructions),(step.resourceIds||[]).length?el('div',{className:'resource-list'},resourceNodes(step.resourceIds.map(id=>resources.get(id)).filter(Boolean))):null);
@@ -591,7 +650,7 @@ async function saveStep(stepId) {
 function renderCyclePreparation() {
   const cycle=S.cycle,node=$('cycle-preparation');if(!cycle||!node)return;
   if(!cycleEditable()){put(node);return;}
-  const steps=cycle.edition.steps||[],pending=steps.filter(step=>step.required&&workStatus(cycle,step.id)==='PENDING'),blocked=steps.filter(step=>step.required&&workStatus(cycle,step.id)==='BLOCKED'),dirty=[...S.workDrafts.values()].filter(item=>item.dirty);
+  const steps=runbookCycleSteps(cycle)||[],pending=steps.filter(step=>step.required&&workStatus(cycle,step.id)==='PENDING'),blocked=steps.filter(step=>step.required&&workStatus(cycle,step.id)==='BLOCKED'),dirty=[...S.workDrafts.values()].filter(item=>item.dirty);
   const draft=S.cycleNotes.submit;
   const note=area(draft.note,{rows:4,maxlength:16000,oninput:event=>{draft.note=event.target.value;persist(key('submit/'+cycle.id),draft).catch(()=>{});}});
   const submit=el('button',{type:'submit',className:'primary'},'Submit preparation for review');
@@ -613,7 +672,7 @@ async function submitCycle() {
 function renderCycleReview() {
   const cycle=S.cycle,node=$('cycle-review');if(!cycle||!node)return;
   if(cycle.readOnly||cycle.phase!=='IN_REVIEW'){put(node);return;}
-  const draft=S.cycleNotes.review,exceptions=cycle.edition.steps.filter(step=>step.required&&workStatus(cycle,step.id)==='BLOCKED');
+  const draft=S.cycleNotes.review,exceptions=runbookCycleSteps(cycle).filter(step=>step.required&&workStatus(cycle,step.id)==='BLOCKED');
   draft.acceptedExceptions=draft.acceptedExceptions.filter(id=>exceptions.some(item=>item.id===id));
   const decision=select([{value:'',label:'Choose the review decision'},{value:'APPROVE',label:'Approve preparation'},{value:'RETURN',label:'Return for changes'}],draft.decision,{required:true,onchange:event=>{draft.decision=event.target.value;persist(key('review/'+cycle.id),draft).catch(()=>{});renderCycleReview();paintLocks();}});
   const note=area(draft.note,{rows:5,maxlength:16000,required:draft.decision==='RETURN'||(draft.decision==='APPROVE'&&exceptions.length>0),oninput:event=>{draft.note=event.target.value;persist(key('review/'+cycle.id),draft).catch(()=>{});}});
@@ -628,7 +687,7 @@ function renderCycleReview() {
 async function reviewCycle() {
   await flush();const cycle=S.cycle,draft=S.cycleNotes.review;
   if(!['APPROVE','RETURN'].includes(draft.decision))throw new Error('Choose whether to approve or return this preparation.');
-  const blocked=cycle.edition.steps.filter(step=>step.required&&workStatus(cycle,step.id)==='BLOCKED');
+  const blocked=runbookCycleSteps(cycle).filter(step=>step.required&&workStatus(cycle,step.id)==='BLOCKED');
   if(draft.decision==='APPROVE'&&blocked.some(step=>!draft.acceptedExceptions.includes(step.id)))throw new Error('Explicitly select each required blocked task you accept, or return the preparation for changes.');
   if((draft.decision==='RETURN'||(draft.decision==='APPROVE'&&blocked.length))&&!draft.note.trim())throw new Error('Add the reason for this review decision.');
   await mutate('review',cyclePath(cycle.id)+'/review',cycle.id,{decision:draft.decision,note:draft.note,acceptedExceptions:draft.decision==='APPROVE'?clone(draft.acceptedExceptions):[]},{cycleId:cycle.id},draft.baseRevision);
@@ -639,7 +698,7 @@ function historyDetails(label,build) {
 }
 function renderCycleHistory() {
   const cycle=S.cycle,node=$('cycle-history');if(!cycle||!node)return;
-  const steps=new Map(cycle.edition.steps.map(item=>[item.id,item])),entries=[];
+  const steps=new Map(runbookCycleSteps(cycle).map(item=>[item.id,item])),entries=[];
   for(const round of cycle.submissions||[]){
     const detail=historyDetails('Preparation submitted · '+when(round.at)+' · '+round.actor,()=>{
       const rows=Object.entries(round.work||{}).map(([stepId,work])=>el('div',{},
@@ -763,10 +822,12 @@ async function finishCommitted(pending) {
   if(action==='book'&&values.get(key('author/meta'))?.draftId===context.draftId){
     const meta=values.get(key('author/meta')),steps=meta.stepIds.map(id=>values.get(key('author/step/'+id))),resources=meta.resourceIds.map(id=>values.get(key('author/resource/'+id)));
     const projected=resources.every(Boolean)?resources.map(item=>({id:item.id,title:item.title,kind:item.kind,...(item.kind==='file'?{fileId:item.fileId}:item.kind==='link'?{url:item.url}:{text:item.text||''})})):null;
-    if(canonical({name:meta.name,client:meta.client,description:meta.description,steps,resources:projected})===canonical({name:pending.input.name,client:pending.input.client,description:pending.input.description,steps:pending.input.steps,resources:pending.input.resources}))for(const [name]of draftEntries)if(name.startsWith(key('author/')))remove.add(name);
+    const profiles=(meta.profileIds||[]).map(id=>values.get(key('author/profile/'+id)));let profilesMatch=false;
+    try{profilesMatch=profiles.every(Boolean)&&((pending.input.profiles===undefined&&profiles.length===0)||canonical(normalizeRunbookProfiles(profiles,steps))===canonical(pending.input.profiles));}catch{}
+    if(profilesMatch&&canonical({name:meta.name,client:meta.client,description:meta.description,steps,resources:projected})===canonical({name:pending.input.name,client:pending.input.client,description:pending.input.description,steps:pending.input.steps,resources:pending.input.resources}))for(const [name]of draftEntries)if(name.startsWith(key('author/')))remove.add(name);
   }
   if(action==='cycle'&&schedule?.draftId===context.draftId){
-    const common=['runbookId','editionId','label','preparer','reviewer','dueDate','previousCycleId'];
+    const common=['runbookId','editionId','profileId','label','preparer','reviewer','dueDate','previousCycleId'];
     const names=(pending.input.sourceKind||'accountant')==='files'?[...common,'sourceKind','sourceLabel','sourceNote']:[...common,'handoffId','accountantRevisionId','periodCloseId'];
     if(names.every(name=>(schedule[name]||'')===(pending.input[name]||''))&&((pending.input.sourceKind||'accountant')!=='files'||canonical(schedule.sourceFileIds)===canonical(pending.input.sourceFileIds)))remove.add(key('schedule'));
   }
@@ -835,7 +896,7 @@ async function prepareCorrection() {
     }else if(source){
       nodes.push(facts([['Period',source.label],['Current phase',PHASE[source.phase]||source.phase],['Preparer',source.preparer],['Reviewer',source.reviewer]]));
       if(pending.action==='work'){
-        const step=source.edition.steps.find(item=>item.id===pending.input.stepId),work=source.work?.[pending.input.stepId]||{status:'PENDING',note:''};
+        const step=runbookCycleSteps(source).find(item=>item.id===pending.input.stepId),work=source.work?.[pending.input.stepId]||{status:'PENDING',note:''};
         nodes.push(el('h4',{},step?.title||'Selected task'),tag(STATUS[work.status]||work.status),prose(work.note),fileList(work.fileIds));
       }else nodes.push(el('p',{},'The current saved preparation and its latest review round will reopen. Choose the decision again against that current work.'));
     }
@@ -879,13 +940,14 @@ function bindEvents() {
   for(const id of ['book-search','cycle-search'])$(id).addEventListener('input',renderNav);
   $('cycle-phase').addEventListener('change',renderNav);
   for(const [id,name]of [['author-name','name'],['author-client','client'],['author-description','description']])$(id).addEventListener('input',event=>{if(S.author){S.author.meta[name]=event.target.value;authorMetaChanged();}});
-  $('add-resource').addEventListener('click',act(addResource));$('add-step').addEventListener('click',act(addStep));
+  $('add-resource').addEventListener('click',act(addResource));$('add-step').addEventListener('click',act(addStep));$('add-profile').addEventListener('click',act(addProfile));
   $('author-discard').addEventListener('click',act(discardAuthor));$('author-form').addEventListener('submit',act(saveEdition));
   $('schedule-book').addEventListener('change',act(async event=>{if(!S.schedule)return;S.schedule.runbookId=event.target.value;S.schedule.editionId='';saveScheduleDraft();await renderSchedule();}));
   $('schedule-source-kind').addEventListener('change',event=>{if(S.schedule){S.schedule.sourceKind=event.target.value;saveScheduleDraft();renderScheduleSources();paintLocks();}});
   for(const [id,name]of [['schedule-source-label','sourceLabel'],['schedule-source-note','sourceNote']])$(id).addEventListener('input',event=>{if(S.schedule){S.schedule[name]=event.target.value;saveScheduleDraft();renderFilesSourceSummary();}});
   $('schedule-source-upload-button').addEventListener('click',act(()=>uploadFile($('schedule-source-upload').files[0],{scheduleDraftId:S.schedule.draftId})));
-  $('schedule-edition').addEventListener('change',event=>{if(S.schedule){S.schedule.editionId=event.target.value;saveScheduleDraft();}});
+  $('schedule-edition').addEventListener('change',event=>{if(S.schedule){S.schedule.editionId=event.target.value;saveScheduleDraft();renderScheduleSelection();paintLocks();}});
+  $('schedule-profile').addEventListener('change',event=>{if(S.schedule){S.schedule.profileId=event.target.value;saveScheduleDraft();renderScheduleSelection();paintLocks();}});
   for(const [id,name]of [['schedule-label','label'],['schedule-due','dueDate'],['schedule-preparer','preparer'],['schedule-reviewer','reviewer']])$(id).addEventListener('input',event=>{if(S.schedule){S.schedule[name]=event.target.value;saveScheduleDraft();}});
   $('schedule-handoff').addEventListener('change',event=>{if(S.schedule){S.epoch++;S.schedule.handoffId=event.target.value;S.schedule.accountantRevisionId='';S.schedule.periodCloseId='';saveScheduleDraft();renderScheduleSources();}});
   $('schedule-accountant-revision').addEventListener('change',event=>{if(S.schedule){S.schedule.accountantRevisionId=event.target.value;saveScheduleDraft();renderScheduleSources();}});

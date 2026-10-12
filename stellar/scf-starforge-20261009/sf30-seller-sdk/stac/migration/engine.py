@@ -32,19 +32,33 @@ def _file(workspace, path):
     files.verify_file(workspace.root, records[path])
     return records[path]
 
-def execute(workspace_path, command, payload, *, progress=None, exports_root=None):
+def execute(workspace_path, command, payload, *, progress=None, exports_root=None,
+            expected_workspace_id=None):
     need(isinstance(payload, dict), "MIGRATION_REQUEST_OBJECT_REQUIRED")
     need(command in READ_COMMANDS | WRITE_COMMANDS | {"create", "verify", "native-reopen"},
          "MIGRATION_COMMAND_UNKNOWN", command)
+    if expected_workspace_id is not None:
+        need(isinstance(expected_workspace_id, str) and bool(expected_workspace_id),
+             "MIGRATION_WORKSPACE_ID_REQUIRED")
     if command == "create":
+        if expected_workspace_id is not None:
+            need(Workspace(workspace_path).read()["id"] == expected_workspace_id,
+                 "MIGRATION_WORKSPACE_CHANGED", expected_workspace_id)
         return Workspace(workspace_path, create=True, title=payload.get("title", "GIS migration")).summary()
     if command == "receive":
         from migration import receiving
+        declared_id = payload.get("expectedWorkspaceId", expected_workspace_id)
+        need(expected_workspace_id is None or declared_id == expected_workspace_id,
+             "MIGRATION_WORKSPACE_CHANGED", expected_workspace_id)
         result = receiving.receive(payload["archive"], payload["destination"],
             expected_sha256=payload["expectedSha256"], progress=progress,
-            native_reopen=payload.get("nativeReopen", "auto"))
+            native_reopen=payload.get("nativeReopen", "auto"),
+            expected_workspace_id=declared_id)
         return {key: value for key, value in result.items() if key != "workspace"}
     workspace = Workspace(workspace_path)
+    if expected_workspace_id is not None:
+        need(workspace.read()["id"] == expected_workspace_id,
+             "MIGRATION_WORKSPACE_CHANGED", expected_workspace_id)
     if command == "state":
         return workspace.summary()
     if command == "records":
@@ -132,6 +146,7 @@ def execute(workspace_path, command, payload, *, progress=None, exports_root=Non
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", required=True)
+    parser.add_argument("--expected-workspace-id", help="Original opened workspace ID, or incoming ID for receive.")
     parser.add_argument("--input", help="Complete original request JSON; stdin if omitted.")
     parser.add_argument("--output", help="Atomic complete result JSON.")
     parser.add_argument("--exports-root", help="Original server-owned archive directory.")
@@ -151,7 +166,8 @@ def main(argv=None):
         progress = (lambda value: print(files.canonical(value), file=sys.stderr, flush=True)) if args.progress else None
         with contextlib.redirect_stdout(sys.stderr):
             result = execute(args.workspace, request["command"], request.get("payload", {}),
-                             progress=progress, exports_root=args.exports_root)
+                             progress=progress, exports_root=args.exports_root,
+                             expected_workspace_id=args.expected_workspace_id)
         envelope = {"ok": True, "result": result}
         code = 0
     except (OSError, ValueError, KeyError, TypeError, ImportError) as exc:

@@ -24,7 +24,9 @@
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/superset/browser-assets.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/superset/README.md",
-    "stellar/scf-starforge-20261009/distribution/runtime-workspace/APPLICATION_SUPERSET.md"
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/APPLICATION_SUPERSET.md",
+    "products/superset-report/OPERATING.md",
+    "products/superset-report/SOURCE.json"
   ],
   "commandDescriptions": {
     "superset": "Capture saved Superset queries, review editions and receive complete original customer output",

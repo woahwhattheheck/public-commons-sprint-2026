@@ -4,6 +4,8 @@ import {RetainedFileReads,MAX_RETAINED_CHUNK_BYTES} from '../../../../stellar-fo
 import {readOwned} from '../stellar-expert/store.mjs';
 import {plain,fields,identity,stable,json,sha,fault,WORKSPACE_SCHEMA} from './contract.mjs';
 import {validateSourceEdition,openPrivateFile,inspectRetainedFile,TRANSFER_LIMITS} from './portable.mjs';
+import {retainedPath} from './analysis/artifacts.mjs';
+import {pythonSourceFile} from './analysis/python-document.mjs';
 
 const HASH=/^[a-f0-9]{64}$/,UUID=/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/,
   DATASET=/^dataset-[a-f0-9]{24}$/,COMPARISON=/^comparison-[a-f0-9]{24}$/,
@@ -23,6 +25,7 @@ const PUBLISHER_FILES=Object.freeze([
 export const FILE_SELECTION_CONTRACT=Object.freeze({
   schema:'stellar-forge.sensorthings-file-selection.v1',
   kinds:{
+    analysis:{id:'analysis publication, evidence, viewer, receiving, export or prepared Python source identity',file:'exact named manifest member'},
     source:{id:'edition ID',sha256:'original member SHA; required for read'},
     edition:{id:'edition ID',file:'edition.json'},
     dataset:{id:'native dataset ID',file:'dataset.csv, dataset.json, source.json, dataset-receipt.json or exact source-manifest member'},
@@ -46,7 +49,7 @@ const find=(rows,id,label)=>{
 function selection(input,{read=false}={}){
   fields(input,['kind','id','file','sha256','datasetId'],['kind','id']);
   const allowed={
-    source:['kind','id','sha256'],edition:['kind','id','file'],dataset:['kind','id','file'],
+    analysis:['kind','id','file'],source:['kind','id','sha256'],edition:['kind','id','file'],dataset:['kind','id','file'],
     comparison:['kind','id','file'],transfer:['kind','id','file'],buyer:['kind','id','file'],
     publisher:['kind','datasetId','id','file']
   };
@@ -325,6 +328,35 @@ async function publisherFiles(workspace,selected){
   }
   return output;
 }
+
+async function analysisFiles(workspace,selected){
+  if(!workspace.analysis)throw fault('FILE_ANALYSIS','Install the coupled original analysis file owner.',409);
+  const retained=await workspace.analysis.fileRecord(selected.id),output=[],names=new Set();
+  if(retained.pythonSource){
+    for(const member of retained.pythonSource.files){
+      if(selected.file&&selected.file!==member.file)continue;
+      if(names.has(member.file))throw fault('FILE_MANIFEST','The prepared Python source repeats a file selector.',409);names.add(member.file);
+      const source=await pythonSourceFile(workspace.store,retained.pythonSource,member.file);
+      if(source.file!==member.file||source.bytes!==member.bytes||source.sha256!==member.sha256)
+        throw fault('FILE_MANIFEST','The original Python document file differs from its retained identity.',409);
+      output.push(await descriptor(source.path,{kind:'analysis',id:selected.id,file:source.file},
+        {name:source.filename,type:source.contentType,bytes:source.bytes,sha256:source.sha256,retention:'ORIGINAL_PYTHON_SOURCE_FILE'}));
+    }
+    return output;
+  }
+  for(const file of retained.files??[]){
+    if(names.has(file.name))throw fault('FILE_MANIFEST','The frozen analysis selection repeats a file name.',409);names.add(file.name);
+    output.push(await descriptor(retainedPath(workspace.store,file),{kind:'analysis',id:selected.id,file:file.name},
+      {name:file.name,type:file.type,bytes:file.bytes,sha256:file.sha256,retention:'FROZEN_ANALYSIS_FILE'}));
+  }
+  for(const file of retained.objects??[]){
+    if(names.has(file.name)||!HASH.test(file.sha256??''))throw fault('FILE_MANIFEST','The frozen analysis object selection is invalid.',409);names.add(file.name);
+    output.push(await descriptor(join(workspace.store.root,'objects',file.sha256),{kind:'analysis',id:selected.id,file:file.name},
+      {name:file.name,type:file.type,bytes:file.bytes,sha256:file.sha256,retention:'ORIGINAL_ANALYSIS_OBJECT'}));
+  }
+  return output;
+}
+
 export function createFileAccess(workspace){
   if(!workspace?.store||typeof workspace.edition!=='function'||typeof workspace.publisherFile!=='function')
     throw fault('FILE_WORKSPACE','Use the existing SensorThings workspace file owner.');
@@ -335,7 +367,7 @@ export function createFileAccess(workspace){
   let closing=false;
   async function resolveFiles(selected){
     if(closing)throw fault('FILE_CLOSING','The original file owner is closing.',503);
-    const resolver={source:sourceFiles,edition:editionFiles,dataset:datasetFiles,comparison:comparisonFiles,
+    const resolver={analysis:analysisFiles,source:sourceFiles,edition:editionFiles,dataset:datasetFiles,comparison:comparisonFiles,
       transfer:transferFiles,buyer:buyerFiles,publisher:publisherFiles}[selected.kind];
     const files=await resolver(workspace,selected);
     const filtered=selected.file?files.filter(f=>f.selection.file===selected.file):files;

@@ -817,6 +817,20 @@ module StarforgeRubyRuntime
       save(File.join(path,"registered.json"),receipt)
       receipt
     end
+    def application_edition
+      path,record = application_record
+      saved = parse(File.join(path,"registered.json"))
+      need(saved["applicationSha256"] == record["sha256"],"RUBY_APPLICATION_CHANGED")
+      input = @request.fetch("parameters").merge("operationId"=>@operation_id)
+      output = File.join(@attempt_root,"edition-result.json")
+      application_command("edition",File.join(path,"application.json"),output: output,extra: {"edition"=>input})
+      answer = parse(output)
+      need(answer["schema"] == "stellar-forge.ruby-application-edition-operation.v1" &&
+        answer["applicationId"] == record["id"] &&
+        answer["editionId"] == input["editionId"] && answer["reviewId"] == input["reviewId"],
+        "RUBY_EDITION_RESULT_CHANGED")
+      answer
+    end
     def serve_application
       path,record = application_record
       saved = parse(File.join(path,"registered.json"))
@@ -936,9 +950,22 @@ module StarforgeRubyRuntime
       when "customer-command" then customer_command
       when "application-register" then register_application
       when "application-serve" then serve_application
+      when "application-edition" then application_edition
       else raise Error.new("RUBY_ACTION_INVALID")
       end
       outputs = []
+      if action == "application-edition"
+        outputs << output("edition-result.json",File.join(@attempt_root,"edition-result.json"))
+        app_path,app_record = application_record
+        result.fetch("files").each do |file|
+          name = "edition/" + member(file.fetch("name"))
+          destination = File.join(@attempt_root,name)
+          directories(@attempt_root,File.dirname(destination))
+          copy_file(File.join(app_record.fetch("directory"),member(file.fetch("path"))),destination,file)
+          outputs << {"name"=>name,"path"=>name,
+            "type"=>name.end_with?(".csv") ? "text/csv; charset=utf-8" : "application/json"}.merge(file.slice("bytes","sha256"))
+        end
+      end
       if action == "export"
         outputs << {"name"=>"ruby-runtime.tar","path"=>"ruby-runtime.tar","type"=>"application/x-tar"}.merge(
           file_descriptor(File.join(@attempt_root,"ruby-runtime.tar")))

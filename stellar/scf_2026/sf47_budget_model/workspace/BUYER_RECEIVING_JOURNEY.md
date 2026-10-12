@@ -1,20 +1,21 @@
 # Receive an original buyer result through SDK, browser and agent
 
-This continuation joins a saved SF88 Inbox observation to the original SF47 Operations case, then exports and reopens that complete case. It uses the maintained Node Inbox, Python Inbox, queue CLI, Operations browser, typed grant client and 58-tool merchant grant provider. The reusable source does not include a buyer workspace, account, original case archive or purchase result.
+This continuation joins a saved SF88 Inbox observation to the original SF47 Operations case, then exports and reopens that complete case. It uses the maintained Node Inbox, Python Inbox, queue CLI, Operations browser, typed grant client and maintained merchant grant provider. The reusable source does not include a buyer workspace, account, original case archive or purchase result.
 
 The source is published independently of its execution. A completed result requires the retained run's `result.json` with `allOwnedServicesClosed: true`, the referenced native agent result, and the exact final workspace archive. Source publication and a historical purchase receipt do not establish that this receiving continuation has run.
 
 ## Original runtime and source
 
-`buyer-receiving-runtime.json` records the 195 selected source paths and exact Git blob identities for this whole continuation. Materialize those retained blobs at their recorded relative paths and verify every identity before starting. The manifest is an explicit source selection: it preserves the original buyer runtime from `3afca9599b602b67a8b722043061100e2efef294`, the maintained receiving continuation, and the cohort/client application changes at `5771cd96dc13e80d3a630fecd2bf03b954482c60`. Its `head` is that application source anchor; its exact `files` list is authoritative for the selected runtime. Later unrelated package changes are not silently substituted into that selection.
+`buyer-receiving-runtime.json` records the 212 selected source paths and exact Git blob identities for this whole continuation. Materialize those retained blobs at their recorded relative paths and verify every identity before starting. The manifest is an explicit source selection: it preserves the original buyer runtime from `3afca9599b602b67a8b722043061100e2efef294`, the maintained receiving continuation, and the retained cohort/client application and complete implementation-evidence successor. Its `source_selection` records each original source anchor and the implementation release. Its `head` is the application source anchor; its exact `files` list is authoritative for the selected runtime. Later unrelated package changes are not silently substituted into that selection.
 
 The selected source includes these receiving files beside the original `cli.py`:
 
 - `buyer-operations-receiving.mjs`: the single SDK, browser, agent and receiving controller.
-- `buyer-agent-receiving.mjs`: the original agent phase with the additive cohort/client join, Git blob `0f1fdf851383f328538beddf353393c983228e03`.
-- `cohort-operations-receiving.mjs`: the optional original-case cohort phase, Git blob `6e6b008dc603ea8affe376eb28000d35ef5ab923`.
+- `buyer-agent-receiving.mjs`: the original agent phase with the complete cohort and implementation client joins selected by the runtime descriptor.
+- `cohort-operations-receiving.mjs`: the optional original-case cohort phase, selected by the same runtime descriptor.
+- `implementation-operations-receiving.mjs`: the optional original-source implementation review, exact member attachment and complete receiving phase.
 
-The controller checks that exact agent helper before invoking it. The helper checks the original typed client, grant provider and 58-tool catalogue blobs. The runtime manifest identifies source files; it is not an execution result or a private input package.
+The controller checks that exact agent helper before invoking it. The helper checks the selected original typed client, grant provider and 67-tool catalogue blobs. The runtime manifest identifies source files; it is not an execution result or a private input package.
 
 Use existing compatible Node, Python, Playwright and Chromium installations. Set executable and module paths explicitly for the selected host. No new service, account, purchase or workspace binding is created around the original buyer Inbox. The receiving Operations workspace is a separate import of the complete original case, preserving its record identities and history.
 
@@ -105,7 +106,7 @@ The joined agent phase currently accepts one explicitly selected purchase. Its o
 
 Amounts such as stroops remain decimal strings. Expected network, payment, settlement and response values must reflect the original observed purchase. Case population counts and dates are taken from the selected source, without changing commercial proposal or acceptance stages.
 
-Set `cohortReceiving:true` for the retained SCF v37 application continuation described here. It requires the supplied original team-operated population and selected Routescan proof; it does not replace them with a new example case. Omit the flag when running only the earlier buyer-receiving workflow. The complete source still includes the cohort module and original 58-tool provider.
+Set `cohortReceiving:true` for the retained SCF v37 application continuation described here. It requires the supplied original team-operated population and selected Routescan proof; it does not replace them with a new example case. Omit the flag when running only the earlier buyer-receiving workflow. The complete source still includes the cohort module and maintained 67-tool provider.
 
 ## Run one continuation
 
@@ -173,7 +174,7 @@ The final protected-file check compares the original Inbox, response files and i
 
 ## Resume and receiving artifacts
 
-Keep the whole private continuation directory after any failure. It holds the configuration hash, original case baseline, browser requests, captures, source handoffs A/B/C, agent input and request, and completed command results. A lost response is recovered from the same saved request and workspace. Do not delete the directory, regenerate the request ID, recapture an existing saved handoff, or replace the original input bytes.
+Keep the whole private continuation directory after any failure. It holds the configuration hash, original case baseline, browser requests, captures, source handoffs A/B/C, agent input and request, and completed command results. A lost response is recovered from the same saved request and workspace. A new phase records its case, command and preceding request keys before the browser action. The original request file also retains that phase. Its queue entry and phase association are published together in one serialized state save before HTTP dispatch. On restart, the controller first verifies all original request files and phase bindings, then recovers their same native results. A request file retained before the state update is reattached to its original phase. An older unbound cohort or implementation freeze is recovered only when its one original request is provable; multiple candidates or mismatching source identities stop with `RECEIVING_PHASE_AMBIGUOUS` or `RECEIVING_PHASE_UNRESOLVED`. The controller does not settle an unbound freeze and then create a replacement review. Any recovered associations are recorded in `continuation.json.requestBindingRecoveries`, with unchanged request IDs, bodies and saved results. Do not delete the directory, regenerate the request ID, recapture an existing saved handoff, or replace the original input bytes.
 
 The joined agent phase retains `agent-receiving/phase-input.json`, `original-receiving-request.json` and `NATIVE_BUYER_AGENT_RESULT.json`. Reinvoking the exact complete phase revalidates its retained artifacts. An interrupted phase reuses the original request before proceeding. The controller checks that the managed service has closed before restarting the browser server.
 

@@ -403,6 +403,38 @@ node connected/RECEIVING.mjs \
 
 The command is relative to the original `fhir_eltss` directory. Node 22 or later, the native Python workbench, the complete installed source dependencies, and an existing Playwright/Chromium runtime are required. The optional `--credentials-file` is a private local native file path. The operating example uses the already-retained original source and performs no provider acquisition.
 
+### Continue on a received copy
+
+The native result remains the unchanged original file when a different host receives the workspace. Use the original native CLI to initialize a new private destination and receive the whole editable archive:
+
+~~~sh
+python3 cli.py init --workspace /private/received-eltss
+python3 cli.py workspace-receive \
+  --workspace /private/received-eltss \
+  --input /private/incoming/eLTSS_Editable_Workspace_20261012.zip
+python3 cli.py status \
+  --workspace /private/received-eltss \
+  --expected-workspace-id 84e234a1-8858-4e83-8e64-ec111eb8362d
+~~~
+
+The UUID in this example belongs to the published native operating result used by this receiving journey. For that same result, the saved complete editable archive is 281,278 bytes with SHA-256 `cb4fcd42b640b8ce18477f51a629d947bb0e74ae5428095411b99d4b8a546852`; the original native result is 118,891 bytes with SHA-256 `c497520e43c1bf7cc5ec99ff0401fa9fb7d5282bb762eccdc0ef54e776b7b91f`. Verify the selected incoming originals before receiving them. The native receiver verifies archive members and retains the receiving record while restoring the original UUID.
+
+Then select the actual local paths explicitly:
+
+~~~sh
+node connected/RECEIVING.mjs \
+  --receiving /private/incoming/eLTSS_Operated_CarePlans_20261012.json \
+  --workspace /private/received-eltss \
+  --original-bundle /absolute/fhir_eltss/examples/Bundle-2039212f3fa5406bb4ffd4a.json \
+  --out /private/eltss-connected-receiving \
+  --playwright /absolute/existing/playwright/index.mjs \
+  --chromium /absolute/existing/chrome-headless-shell
+~~~
+
+The optional `--workspace` changes only the selected receiving directory. The original result bytes, their hash, the original directory recorded in that result and its UUID remain in the connected journal. The optional `--original-bundle` chooses the actual local copy of the unchanged published source; its complete byte count and SHA-256 must still equal the original native result. All saved source, graph, review, assessment, correction, build and receiving IDs are read from the selected native workspace and checked by the same operating journey. The original result JSON needs no path edits.
+
+Continue with the same flags and output directory after an interruption. A changed directory, input file, credentials selection or native result produces a different binding and is rejected for that existing journal. The defaults still select the original local paths from `OPERATED_ELTSS.json`.
+
 The genuine source is the [published STU2 Bundle](https://hl7.org/fhir/us/eltss/STU2/Bundle-2039212f3fa5406bb4ffd4a.json), preserved as 128,055 bytes with SHA-256 `b1bfe61134b7f18c8d8831b9d253f64df7d37e8bb4e457a00ab472e0aa1b4de2`. It contains 39 original resources, two CarePlans and 98 literal references. The native saved receiving result provides the actual selected source, review, correction, build, artifact and customer identifiers.
 
 The connected journey:

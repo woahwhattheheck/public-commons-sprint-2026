@@ -1,0 +1,574 @@
+{
+  "schema": "stellar-forge.gridfabric-functional-input-manifest.v1",
+  "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+  "recipe_id": "tjl-gridfabric-31-day-functional-v1",
+  "source_contract": {
+    "repository": "woahwhattheheck/public-commons-sprint-2026",
+    "core_commit": "c8ca7652ba31a885b21b0b26948bec358312ea04",
+    "core_blob": "d32457edf700375d0dd6b2ebbf03188dd677fe37",
+    "model_blob": "4db377e81e06f11723bc849e3a13cff3fca3ee4a",
+    "public_contract_commit": "82c2f1a4dc77395b517a45615fdb0d1515b164c0"
+  },
+  "generator": {
+    "path": "operations/scf-gridfabric-plaid-receiving-20261012/generate-functional-input.mjs",
+    "bytes": 33395,
+    "sha256": "4a6097af12cc0f534b60f475b45cb8acb4ab4df42fc5288f8a65550fd47684af"
+  },
+  "dataset": {
+    "device_count": 8,
+    "days": 31,
+    "points_per_device": 2976,
+    "kinds": [
+      "power",
+      "energy",
+      "status"
+    ],
+    "original_rows": 71424,
+    "correction_rows": 96,
+    "corrected_device_count": 4,
+    "correction_windows": [
+      {
+        "device_index": 0,
+        "day_index": 6,
+        "first_quarter": 40,
+        "quarters": 8,
+        "delta_watts": 120,
+        "key": "correction-window-1",
+        "device_id": "tjl-functional-device-01",
+        "startTimet": 1786096800,
+        "endTimet": 1786103100
+      },
+      {
+        "device_index": 2,
+        "day_index": 13,
+        "first_quarter": 56,
+        "quarters": 8,
+        "delta_watts": -80,
+        "key": "correction-window-2",
+        "device_id": "tjl-functional-device-03",
+        "startTimet": 1786716000,
+        "endTimet": 1786722300
+      },
+      {
+        "device_index": 4,
+        "day_index": 20,
+        "first_quarter": 20,
+        "quarters": 8,
+        "delta_watts": 240,
+        "key": "correction-window-3",
+        "device_id": "tjl-functional-device-05",
+        "startTimet": 1787288400,
+        "endTimet": 1787294700
+      },
+      {
+        "device_index": 6,
+        "day_index": 27,
+        "first_quarter": 72,
+        "quarters": 8,
+        "delta_watts": -160,
+        "key": "correction-window-4",
+        "device_id": "tjl-functional-device-07",
+        "startTimet": 1787940000,
+        "endTimet": 1787946300
+      }
+    ],
+    "source_unit_families": [
+      "W",
+      "kW",
+      "Wh",
+      "kWh",
+      "status"
+    ],
+    "output_units": {
+      "power": "W",
+      "energy": "Wh",
+      "status": "status"
+    }
+  },
+  "report_range": {
+    "startTimet": 1785542400,
+    "endTimet": 1788219900,
+    "granularityInSeconds": 900,
+    "inclusive": true,
+    "rows_per_kind": 23808,
+    "complete_corrected_rows": 71424
+  },
+  "portfolio_totals": {
+    "devices": [
+      {
+        "device_id": "tjl-functional-device-01",
+        "original_energy_wh": 1363620,
+        "corrected_energy_wh": 1363860,
+        "correction_energy_delta_wh": 240,
+        "original_minimum_power_w": 1493,
+        "original_maximum_power_w": 2250,
+        "original_measurements": 8928
+      },
+      {
+        "device_id": "tjl-functional-device-02",
+        "original_energy_wh": 1495068,
+        "corrected_energy_wh": 1495068,
+        "correction_energy_delta_wh": 0,
+        "original_minimum_power_w": 1666,
+        "original_maximum_power_w": 2423,
+        "original_measurements": 8928
+      },
+      {
+        "device_id": "tjl-functional-device-03",
+        "original_energy_wh": 1626516,
+        "corrected_energy_wh": 1626356,
+        "correction_energy_delta_wh": -160,
+        "original_minimum_power_w": 1839,
+        "original_maximum_power_w": 2596,
+        "original_measurements": 8928
+      },
+      {
+        "device_id": "tjl-functional-device-04",
+        "original_energy_wh": 1751580,
+        "corrected_energy_wh": 1751580,
+        "correction_energy_delta_wh": 0,
+        "original_minimum_power_w": 2012,
+        "original_maximum_power_w": 2769,
+        "original_measurements": 8928
+      },
+      {
+        "device_id": "tjl-functional-device-05",
+        "original_energy_wh": 1879836,
+        "corrected_energy_wh": 1880316,
+        "correction_energy_delta_wh": 480,
+        "original_minimum_power_w": 2185,
+        "original_maximum_power_w": 2942,
+        "original_measurements": 8928
+      },
+      {
+        "device_id": "tjl-functional-device-06",
+        "original_energy_wh": 2011284,
+        "corrected_energy_wh": 2011284,
+        "correction_energy_delta_wh": 0,
+        "original_minimum_power_w": 2358,
+        "original_maximum_power_w": 3115,
+        "original_measurements": 8928
+      },
+      {
+        "device_id": "tjl-functional-device-07",
+        "original_energy_wh": 2139540,
+        "corrected_energy_wh": 2139220,
+        "correction_energy_delta_wh": -320,
+        "original_minimum_power_w": 2531,
+        "original_maximum_power_w": 3288,
+        "original_measurements": 8928
+      },
+      {
+        "device_id": "tjl-functional-device-08",
+        "original_energy_wh": 2264604,
+        "corrected_energy_wh": 2264604,
+        "correction_energy_delta_wh": 0,
+        "original_minimum_power_w": 2704,
+        "original_maximum_power_w": 3461,
+        "original_measurements": 8928
+      }
+    ],
+    "original_energy_wh": 14532048,
+    "corrected_energy_wh": 14532288
+  },
+  "operating_scope": {
+    "original_audit_reports": 4,
+    "original_audit_rows": 96,
+    "complete_corrected_reports": 3,
+    "complete_corrected_rows": 71424,
+    "actual_provider_requests": 0,
+    "management_dispatches": 0,
+    "device_dispatches": 0,
+    "public_452_is_execution_receipt": false,
+    "installed_runtime_claim": false
+  },
+  "source_validation": {
+    "method": "Original model.sourceRecords and normalizeRow applied to every emitted original/correction row; no native workspace, provider or installed-runtime run",
+    "validated_model_blob": "4db377e81e06f11723bc849e3a13cff3fca3ee4a",
+    "original_rows": 71424,
+    "correction_rows": 96
+  },
+  "files": [
+    {
+      "key": "original",
+      "path": "sources/functional-original.json",
+      "name": "functional-original.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 17662029,
+      "sha256": "7e283be44f153dbb6e6dde8088d8c38442debc42590fd6ae8ab0ae7940ac2b0c"
+    },
+    {
+      "key": "correction",
+      "path": "sources/functional-correction.json",
+      "name": "functional-correction.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 35028,
+      "sha256": "e29c6155bb498a8f71f6446f042a4e9292a8829ffeb10890fcfb6aa8b9cf614a"
+    },
+    {
+      "key": "lineage",
+      "path": "sources/functional-lineage.json",
+      "name": "functional-lineage.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 89976,
+      "sha256": "f3322ce1de5568a50dcd0af2bd22d9e8d33d6b13fa404d853c34471dc924bd9c"
+    },
+    {
+      "key": "callback_schema",
+      "path": "sources/authored-callback-bindings.json",
+      "name": "authored-callback-bindings.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 1927,
+      "sha256": "7648c77ab06e835f237525c42c86f6355c6b302bf63765a10d9cffa71a2fa963"
+    },
+    {
+      "key": "public_examples",
+      "path": "public/published-management-and-query-examples.json",
+      "name": "published-management-and-query-examples.json",
+      "mime_type": "application/json",
+      "classification": "RETAINED_PUBLIC_HISTORICAL_AND_EXPLICITLY_LABELED_EXAMPLES",
+      "bytes": 6144,
+      "sha256": "cf7a986c60c3ba3e17873f0ed124459b05404a0552a7b6cd37a1740f9fbae022"
+    },
+    {
+      "key": "public_452",
+      "path": "public/published-http200-status-ok-vtn452.json",
+      "name": "published-http200-status-ok-vtn452.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 892,
+      "sha256": "23d94e09c1ae24b3fedc622c07160408e44cab84b0cc4e2050ba9bfbb87af62d"
+    },
+    {
+      "key": "public_query",
+      "path": "public/documented-query-path-example.json",
+      "name": "documented-query-path-example.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 1124,
+      "sha256": "30140d05ef83345534e1453b004af18f8e4ccf7b8e83a042c394c6c96a23abb2"
+    },
+    {
+      "key": "registration",
+      "path": "expected/functional-registration-response.json",
+      "name": "functional-registration-response.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 9153,
+      "sha256": "86c70934d37ecd90a9ff87328ee07a8141bfcaad2330b8cd322cfb3c1bcb9213"
+    },
+    {
+      "key": "callback_unmapped_event",
+      "path": "callbacks/unmapped_event.json",
+      "name": "unmapped_event.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 203,
+      "sha256": "f5de8382ea3de1679b9f4fe0b9732e3875ebd14d172c7e13498c5aa8b2f6cb41"
+    },
+    {
+      "key": "expected_original_correction_window_1",
+      "path": "expected/original_correction_window_1.json",
+      "name": "original_correction_window_1.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 3826,
+      "sha256": "0ed7e765817f3d6a1ab885ce5842bc74851bb440b0bccc62595e6af361f9022a"
+    },
+    {
+      "key": "expected_original_correction_window_2",
+      "path": "expected/original_correction_window_2.json",
+      "name": "original_correction_window_2.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 3826,
+      "sha256": "f833c079f95125b2298ba0af25fa851372b8ea4d35688e83805e029796d72940"
+    },
+    {
+      "key": "expected_original_correction_window_3",
+      "path": "expected/original_correction_window_3.json",
+      "name": "original_correction_window_3.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 3822,
+      "sha256": "402d72d39f1ca4b131cb21453eb586dc639bedaded3c9be8565995b483e78d82"
+    },
+    {
+      "key": "expected_original_correction_window_4",
+      "path": "expected/original_correction_window_4.json",
+      "name": "original_correction_window_4.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 3826,
+      "sha256": "f8896ac2f2949e941377ca85cd954ff68848b2453be2a0a44c9a3f02382e1e46"
+    },
+    {
+      "key": "callback_register_reports",
+      "path": "callbacks/register_reports.json",
+      "name": "register_reports.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 105,
+      "sha256": "4abcd2e26b7ae8ef653c755b5bbedbd74414a0188c07d3760552f0db5d035b19"
+    },
+    {
+      "key": "expected_full_power",
+      "path": "expected/full_power.json",
+      "name": "full_power.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 2523720,
+      "sha256": "15add2bd92a9f87b78471f5f95d4a114d96bc9b2c09c158a3df336e8ed8f5881"
+    },
+    {
+      "key": "expected_full_energy",
+      "path": "expected/full_energy.json",
+      "name": "full_energy.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 2571336,
+      "sha256": "d2a617a8cded3c36fcd639f2a3d3bdbdb90f2ae9761f03b1a73be45746a4bf76"
+    },
+    {
+      "key": "expected_full_status",
+      "path": "expected/full_status.json",
+      "name": "full_status.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 5329484,
+      "sha256": "3564d3573760e352f36fa844c51d753ca09a5e23002644beeeeae6bedde06e56"
+    },
+    {
+      "key": "callback_query_intervals",
+      "path": "callbacks/query_intervals.json",
+      "name": "query_intervals.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 262,
+      "sha256": "f27b6cbae19d2d61b9d9a322a5733a99b973fa89245b4cd2d08e53abae67a055"
+    },
+    {
+      "key": "callback_distribution_start",
+      "path": "callbacks/distribution_start.json",
+      "name": "distribution_start.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 651,
+      "sha256": "814de25d0d024517d7f60f5b30a867c08db740d68e0fa23df2c6eaa810952fb3"
+    },
+    {
+      "key": "callback_distribution_complete",
+      "path": "callbacks/distribution_complete.json",
+      "name": "distribution_complete.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 162,
+      "sha256": "1189e1e6d378e1467ea7388288ed5ce6ad0681df0366ea91c876b37b74ba3f54"
+    },
+    {
+      "key": "callback_event_definition",
+      "path": "callbacks/event_definition.json",
+      "name": "event_definition.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 335,
+      "sha256": "a80ed7ceb3a2b4c222255d512c8f997966ef9f2699d0027b1c4d69d12b4f9eeb"
+    },
+    {
+      "key": "callback_ramp_up",
+      "path": "callbacks/ramp_up.json",
+      "name": "ramp_up.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 341,
+      "sha256": "a7bab7bacc2c09144fc15fb43ed9a3b6751d6c084d2cca4c49439366cef767b2"
+    },
+    {
+      "key": "callback_event_start",
+      "path": "callbacks/event_start.json",
+      "name": "event_start.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 340,
+      "sha256": "8bff301ab36b854117eeb40c9f525938b11f4772d5c7301f92e8ed437738e6e7"
+    },
+    {
+      "key": "callback_interval_revision_zero",
+      "path": "callbacks/interval_revision_zero.json",
+      "name": "interval_revision_zero.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 542,
+      "sha256": "b7b9484b776d6f0d232f74fbad8d707b01cb295df94a328e9841682bddc8f1be"
+    },
+    {
+      "key": "callback_event_revision_one",
+      "path": "callbacks/event_revision_one.json",
+      "name": "event_revision_one.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 365,
+      "sha256": "9aafb61bb66bae99ac7aaaba6d4b71f532ed94aa30ea32296c76ed44bf5d75ca"
+    },
+    {
+      "key": "callback_interval_revision_one",
+      "path": "callbacks/interval_revision_one.json",
+      "name": "interval_revision_one.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 572,
+      "sha256": "1216fe0430c3a9a0e347adc6282032d9099feb4c04d1ced87ba75c802c8bc5d6"
+    },
+    {
+      "key": "callback_stale_revision",
+      "path": "callbacks/stale_revision.json",
+      "name": "stale_revision.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 357,
+      "sha256": "fb24c1ef5f2d13ff900f7bc61ca41d3aded26b5512e085af7512dea6f82c8a6d"
+    },
+    {
+      "key": "callback_unknown_revision",
+      "path": "callbacks/unknown_revision.json",
+      "name": "unknown_revision.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 337,
+      "sha256": "c3adaa0ca4f355946f1671f9c3814a819bc822d53a83a15e69d8960fac156aa1"
+    },
+    {
+      "key": "callback_conflicting_revision",
+      "path": "callbacks/conflicting_revision.json",
+      "name": "conflicting_revision.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 370,
+      "sha256": "06dbba17ee45b27941d233cb408fbdf74081b081a6ef427a8d94392609f3364d"
+    },
+    {
+      "key": "callback_event_cancel",
+      "path": "callbacks/event_cancel.json",
+      "name": "event_cancel.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 371,
+      "sha256": "1396676dab12b3f5ba42174585128832c6c2f5263e7d13d22fe4690d057c7770"
+    },
+    {
+      "key": "callback_event_archive",
+      "path": "callbacks/event_archive.json",
+      "name": "event_archive.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 372,
+      "sha256": "4e337e1bf0cc4aae43fbde188f709ae1d3ce8a91a71da9316324a2b7bbbf5b05"
+    },
+    {
+      "key": "callback_event_end",
+      "path": "callbacks/event_end.json",
+      "name": "event_end.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 373,
+      "sha256": "2c7a9336e71a7f3b973d8a3da4c3c0f336f1e2a77fbd6af2dc817fd95703aa3f"
+    },
+    {
+      "key": "callback_all_devices_interval",
+      "path": "callbacks/all_devices_interval.json",
+      "name": "all_devices_interval.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 415,
+      "sha256": "ac5e9a1683beb7570fe93c464974b92c3a65893d277dee00b3d51c25849c6b06"
+    },
+    {
+      "key": "callback_all_devices_end",
+      "path": "callbacks/all_devices_end.json",
+      "name": "all_devices_end.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 214,
+      "sha256": "6008d67c31882784fc1530e7cc87da293bc7d4dc555e62806d620d04125d2e8e"
+    },
+    {
+      "key": "callback_opted_out_interval",
+      "path": "callbacks/opted_out_interval.json",
+      "name": "opted_out_interval.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 452,
+      "sha256": "c3fc32e0cde9c82605374f1fad3758230e6cb2f146202399d1a0e7333f0bda38"
+    },
+    {
+      "key": "callback_periodic_start",
+      "path": "callbacks/periodic_start.json",
+      "name": "periodic_start.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 195,
+      "sha256": "1525c65be188796b74bc885a7b1377947634f6faf00afafef156ea487e9cf94d"
+    },
+    {
+      "key": "callback_periodic_complete",
+      "path": "callbacks/periodic_complete.json",
+      "name": "periodic_complete.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 192,
+      "sha256": "ade6a8f73574a912c81ba12963cb5fe826ffe03d7e86372afa93b0359e6ba0f4"
+    },
+    {
+      "key": "callback_registration_notice",
+      "path": "callbacks/registration_notice.json",
+      "name": "registration_notice.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 170,
+      "sha256": "9f73fbc310d2b18ac52615fbeb195018255421845b772bc76c9f0cd8a23439d9"
+    },
+    {
+      "key": "callback_error_notice",
+      "path": "callbacks/error_notice.json",
+      "name": "error_notice.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 212,
+      "sha256": "19dc4d0287b5304db2b488cea01b79f6f5225c48dcb5ae254e4eb344c3fb815f"
+    },
+    {
+      "key": "callback_heartbeat",
+      "path": "callbacks/heartbeat.json",
+      "name": "heartbeat.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "key": "expectations",
+      "path": "expected/functional-expectations.json",
+      "name": "functional-expectations.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 5646,
+      "sha256": "9505cd74d6abf7f0912e4c069cf919c99d20d6bbb2d5b59d69d5c001eb9f2ff1"
+    },
+    {
+      "key": "receiving_input",
+      "path": "gridfabric-functional-input.json",
+      "name": "gridfabric-functional-input.json",
+      "mime_type": "application/json",
+      "classification": "TOKENJUNKIELABS_AUTHORED_FUNCTIONAL_DATA_NOT_VENDOR_CAPTURE",
+      "bytes": 89750,
+      "sha256": "697b0be311d2b8a0f0d191fc46b4a81b364dc0f53dba1526bc37c5cf723a04e6"
+    }
+  ],
+  "steps": 51,
+  "checks": 53,
+  "file_comparisons": 7
+}

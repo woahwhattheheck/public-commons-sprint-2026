@@ -24,9 +24,9 @@ const HERE=dirname(fileURLToPath(import.meta.url)),ELTSS=resolve(HERE,'..'),REPO
 const CLI=join(ELTSS,'cli.py'),options={};
 for(let i=2;i<process.argv.length;i+=2){
   const flag=process.argv[i],value=process.argv[i+1];
-  need(['--receiving','--out','--chromium','--playwright','--credentials-file'].includes(flag) &&
+  need(['--receiving','--out','--workspace','--original-bundle','--chromium','--playwright','--credentials-file'].includes(flag) &&
     value && !value.startsWith('--') && !Object.hasOwn(options,flag),
-  'ELTSS_CONNECTED_RECEIVING_ARGUMENTS','Use --receiving ABS/OPERATED_ELTSS.json --out ABS/PRIVATE_OUTPUT [--chromium ABS] [--playwright ABS].');
+  'ELTSS_CONNECTED_RECEIVING_ARGUMENTS','Use --receiving ABS/OPERATED_ELTSS.json --out ABS/PRIVATE_OUTPUT [--workspace ABS/RESTORED_WORKSPACE] [--original-bundle ABS/PUBLISHED_BUNDLE.json] [--chromium ABS] [--playwright ABS].');
   options[flag]=absolute(value);
 }
 for(const key of ['--receiving','--out'])need(options[key],'ELTSS_CONNECTED_RECEIVING_ARGUMENT_REQUIRED',key);
@@ -50,9 +50,12 @@ need(native.schema==='stellar-forge.eltss-operated.v1' &&
   native.originalBundle?.bytes===128055 &&
   native.originalBundle?.sha256==='b1bfe61134b7f18c8d8831b9d253f64df7d37e8bb4e457a00ab472e0aa1b4de2',
 'ELTSS_CONNECTED_COMPLETE_NATIVE_REQUIRED','Select the completed genuine STU2 source, all-field review, correction, native dataset and whole receiving result.');
+const originalBundleFile=absolute(options['--original-bundle']??native.originalBundle.file);
 const binding={receiving:options['--receiving'],receivingSha256:digest(nativeBytes),
-  workspace:absolute(native.workspace),workspaceId:native.workspaceId,sourceRoot:ELTSS,
-  credentialsFile:options['--credentials-file']??null};
+  workspace:absolute(options['--workspace']??native.workspace),workspaceId:native.workspaceId,sourceRoot:ELTSS,
+  credentialsFile:options['--credentials-file']??null,
+  ...(options['--workspace']?{nativeWorkspace:absolute(native.workspace)}:{}),
+  ...(options['--original-bundle']?{originalBundleFile}: {})};
 const paths={original:binding.workspace,restored:join(output,'restored-workspace'),customer:join(output,'customer-workspace')};
 function same(left,right){return JSON.stringify(canonical(left))===JSON.stringify(canonical(right));}
 async function checkpoint(){
@@ -143,7 +146,7 @@ async function readOriginal(path){
   return response.json();
 }
 async function prepareInputs(){
-  const actual=await fileIdentity(absolute(native.originalBundle.file),{maxBytes:256*1024*1024});
+  const actual=await fileIdentity(originalBundleFile,{maxBytes:256*1024*1024});
   need(actual.bytes===native.originalBundle.bytes&&actual.sha256===native.originalBundle.sha256,
     'ELTSS_CONNECTED_PUBLISHED_SOURCE_CHANGED');
   const assessment=await readOriginal('/api/assessments/'+native.baseAssessmentId),
@@ -160,7 +163,7 @@ async function prepareInputs(){
   // to the exact host input alias throughout a resumed operation.
   journal.reviewInput={file,...identity,predecessorId:review.id};await checkpoint();
   return {original:{full_review:{file,sha256:identity.sha256,label:'Complete original56-field review'}},
-    customer:{published_bundle:{file:absolute(native.originalBundle.file),sha256:actual.sha256,label:'Unchanged published STU2 Bundle JSON'}}};
+    customer:{published_bundle:{file:originalBundleFile,sha256:actual.sha256,label:'Unchanged published STU2 Bundle JSON'}}};
 }
 async function startMerchant(){
   const token=randomBytes(32).toString('base64url'),tokenEnv='ELTSS_CONNECTED_RECEIVING_MCP_CODE',

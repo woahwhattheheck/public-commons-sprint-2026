@@ -42,7 +42,11 @@ async function atomic(path,value){
 let state=await optionalJSON(statePath);
 if(state)need(state.configSha256===sha(configRaw),'Continue with the exact original configuration.');
 else state={schema:'sf47.native-buyer-receiving-run.v1',configSha256:sha(configRaw),sourceHead,startedAt:new Date().toISOString(),stages:[],requests:[],captures:[]};
-const save=()=>atomic(statePath,state);
+let stateSave=Promise.resolve();
+const save=()=>{
+  const snapshot=JSON.stringify(state,null,2)+'\n',pending=stateSave.then(()=>atomic(statePath,snapshot));
+  stateSave=pending.catch(()=>{});return pending;
+};
 let baselineMemo=null;
 function originalSelection(intentId){return (config.originalCase?.selections??[]).find(row=>row.intentId===intentId);}
 function selectedPurchase(current,intentId){
@@ -244,21 +248,137 @@ async function api(path,body){
   const value=await response.json();if(!response.ok)throw Object.assign(new Error(value.error?.message||'Original API rejected the request.'),{status:response.status,code:value.error?.code});
   return value;
 }
+function requestCore(request){return{id:request.id,path:request.path,body:request.body};}
+function requestConflict(code,message,detail={}){
+  throw Object.assign(new Error(message),{code,detail});
+}
+function validRequest(key,request){
+  need(/^[a-f0-9]{64}$/.test(key)&&request&&typeof request.id==='string'&&request.id&&request.id===request.body?.requestId&&sha(request.id)===key&&
+    typeof request.path==='string'&&request.path.startsWith('/api/operations'),
+    'The retained original request identity is missing or changed.');
+}
+function phaseSpec(name){
+  const action=name==='implementation-freeze'?'implementation.prepare':name==='cohort-freeze'?'cohort.prepare':
+    name==='implementation-source'||/^implementation-original-[a-f0-9]{64}$/.test(name)?'source.add':
+    ['bounded-observation','historical-source-replay','current-verified-observation'].includes(name)?'buyer.receive':null;
+  need(action&&state.caseId,'The original receiving phase has no recorded case/command definition.');
+  return{path:'/api/operations/'+state.caseId+'/command',action};
+}
+async function matchesPhase(name,request){
+  const spec=state.phaseIntents?.[name]??phaseSpec(name);
+  if(request.path!==spec.path||request.body.action!==spec.action||request.body.actor!==config.actor)return false;
+  if(spec.action==='source.add'){
+    const expected=name==='implementation-source'?config.implementationReceiving?.source:
+      (config.implementationReceiving?.files??[]).find(row=>row.sha256===name.slice('implementation-original-'.length));
+    if(!expected||typeof request.body.data?.contentBase64!=='string')return false;
+    const raw=Buffer.from(request.body.data.contentBase64,'base64');
+    return raw.length===expected.bytes&&sha(raw)===expected.sha256&&request.body.data.filename===expected.filename;
+  }
+  if(spec.action==='buyer.receive'){
+    const note={
+      'bounded-observation':'Observe the original Inbox with an explicit zero-byte verification limit. Its existing response remains untouched.',
+      'historical-source-replay':'Reopen the older exact source association while retaining the later original output observation.',
+      'current-verified-observation':'Record a fresh verification of the unchanged original saved response after the bounded review.'
+    }[name];
+    if(request.body.note!==note)return false;
+    const label=name==='bounded-observation'?'bounded-output-observation':
+      name==='current-verified-observation'?'current-verified-output-observation':null;
+    const observation=label?await optionalJSON(join(work,label+'-review.json')):state.nativeReport;
+    const digest=observation?.sourceSha256??observation?.source?.sha256;
+    const data=request.body.data;
+    if(!digest||!data)return false;
+    if(typeof data.contentBase64==='string')return sha(Buffer.from(data.contentBase64,'base64'))===digest;
+    return data.sourceSha256===digest;
+  }
+  return true;
+}
+async function reconcileRequestBindings(){
+  const files=(await readdir(join(work,'requests'))).filter(name=>/^[a-f0-9]{64}\.json$/.test(name));
+  const retained=new Map();
+  for(const file of files){const key=file.slice(0,-5),request=await optionalJSON(join(work,'requests',file));
+    validRequest(key,request);retained.set(key,request);}
+  const requests=[...(state.requests??[])],bindings={...(state.phaseRequests??{})},before=canonical({requests,bindings});
+  need(new Set(requests).size===requests.length,'The original request journal repeats a key.');
+  for(const key of requests)need(retained.has(key),'The original request journal lost its exact request file.');
+  const orphans=[...retained.keys()].filter(key=>!requests.includes(key));
+  if(orphans.length>1)requestConflict('RECEIVING_REQUEST_ORDER_UNRESOLVED',
+    'Several retained requests are absent from the original ordered journal; resolve those originals before continuation.',{requestKeys:orphans});
+  requests.push(...orphans);
+  const assigned=new Map();
+  const bind=async(name,key)=>{
+    const request=retained.get(key);need(request,'The retained phase lost its original request.');
+    if(bindings[name]&&bindings[name]!==key||assigned.has(key)&&assigned.get(key)!==name)
+      requestConflict('RECEIVING_PHASE_AMBIGUOUS','More than one original request is associated with a receiving phase.',{phase:name,requestKey:key,recordedKey:bindings[name]??null});
+    if(request.phase!==undefined&&request.phase!==null&&request.phase!==name||!await matchesPhase(name,request))
+      requestConflict('RECEIVING_PHASE_REQUEST_MISMATCH','The retained phase does not match its original case, action and source.',{phase:name,requestKey:key});
+    bindings[name]=key;assigned.set(key,name);
+  };
+  for(const[name,key]of Object.entries(bindings))await bind(name,key);
+  for(const[key,request]of retained)if(request.phase!==undefined&&request.phase!==null){
+    need(typeof request.phase==='string'&&request.phase,'The original request has an invalid phase.');
+    await bind(request.phase,key);
+  }
+  // These commands have one defined freeze phase in this same configuration.
+  // Recover older journals before settling a request, including a result already committed.
+  for(const[name,action,selected]of [
+    ['cohort-freeze','cohort.prepare',config.cohortReceiving],
+    ['implementation-freeze','implementation.prepare',config.implementationReceiving]
+  ]){
+    const candidates=[...retained].filter(([key,request])=>!assigned.has(key)&&
+      request.path==='/api/operations/'+state.caseId+'/command'&&request.body.action===action);
+    if(!candidates.length)continue;
+    if(!selected||candidates.length!==1||bindings[name])
+      requestConflict('RECEIVING_PHASE_AMBIGUOUS','Resolve the original freeze request before any further review can be prepared.',{phase:name,requestKeys:candidates.map(([key])=>key)});
+    await bind(name,candidates[0][0]);
+  }
+  if(state.activePhase&&!bindings[state.activePhase]){
+    const name=state.activePhase,intent=state.phaseIntents?.[name],candidates=[];
+    for(const[key,request]of retained){
+      if(assigned.has(key)||intent?.requestKeysBefore?.includes(key))continue;
+      if(await matchesPhase(name,request))candidates.push(key);
+    }
+    if(candidates.length>1)requestConflict('RECEIVING_PHASE_AMBIGUOUS',
+      'The interrupted phase has several possible original requests; none has been executed by this recovery.',{phase:name,requestKeys:candidates});
+    if(candidates.length===1)await bind(name,candidates[0]);
+    else{
+      const spec=intent??phaseSpec(name);
+      const unresolved=[...retained].filter(([key,request])=>!assigned.has(key)&&
+        !intent?.requestKeysBefore?.includes(key)&&request.path===spec.path&&request.body.action===spec.action);
+      if(unresolved.length)requestConflict('RECEIVING_PHASE_UNRESOLVED',
+        'The interrupted phase cannot be bound to its exact original source; resolve the retained request without replacing it.',
+        {phase:name,requestKeys:unresolved.map(([key])=>key)});
+    }
+  }
+  if(before!==canonical({requests,bindings})){
+    const recovered=Object.entries(bindings).filter(([name,key])=>state.phaseRequests?.[name]!==key)
+      .map(([phase,requestKey])=>({phase,requestKey}));
+    state.requests=requests;state.phaseRequests=bindings;
+    state.requestBindingRecoveries??=[];
+    state.requestBindingRecoveries.push({at:new Date().toISOString(),orphanRequestKeys:orphans,bindings:recovered});
+    await save();
+  }
+}
 async function persistRequest(path,body){
   if(!body?.requestId)return;
   const key=sha(body.requestId),file=join(work,'requests',key+'.json'),existing=await optionalJSON(file);
-  const request={id:body.requestId,path,body};
-  need(!existing||canonical(existing)===canonical(request),'One original request ID was reused with different fields.');
+  const phase=state.activePhase??null,request={id:body.requestId,path,body,phase};
+  if(phase){
+    need(await matchesPhase(phase,request),'The outgoing request differs from its selected original phase.');
+    need(!state.phaseRequests?.[phase]||state.phaseRequests[phase]===key,'The original phase already has a different retained request.');
+  }
+  need(!existing||canonical(requestCore(existing))===canonical(requestCore(request)),
+    'One original request ID was reused with different fields.');
+  if(existing&&existing.phase!==undefined)need(existing.phase===phase,'The original request belongs to another phase.');
   if(!existing)await atomic(file,request);
-  if(!state.requests.includes(key)){state.requests.push(key);await save();}
-  if(state.activePhase){state.phaseRequests??={};const prior=state.phaseRequests[state.activePhase];
-    need(!prior||prior===key,'The original phase already has a different retained request.');
-    state.phaseRequests[state.activePhase]=key;await save();}
+  // One saved state publishes both the queue entry and phase binding before dispatch.
+  if(!state.requests.includes(key))state.requests.push(key);
+  if(phase){state.phaseRequests??={};state.phaseRequests[phase]=key;}
+  await save();
   if(context)await context.storageState({path:join(work,'browser-state.json')});
 }
 async function settleRequest(key){
   const file=join(work,'requests',key+'.json'),responseFile=join(work,'requests',key+'.result.json');
-  let saved=await optionalJSON(responseFile);const request=await optionalJSON(file);
+  let saved=await optionalJSON(responseFile);const request=await optionalJSON(file);validRequest(key,request);
   if(!saved){const result=await api(request.path,request.body);saved={result};await atomic(responseFile,saved);}
   if(request.path==='/api/operations'){state.caseId=saved.result.id;await save();}
   if(request.body.action==='buyer.receive'){state.lastReceiving=saved.result;await save();}
@@ -267,10 +387,10 @@ async function settleRequest(key){
 async function requestForPhase(name) {
   const key=state.phaseRequests?.[name];if(!key)return null;
   const request=await optionalJSON(join(work,'requests',key+'.json')),saved=await optionalJSON(join(work,'requests',key+'.result.json'));
-  need(request,'The retained phase lost its original request.');
-  return {...request,result:saved?.result??null};
+  validRequest(key,request);return {...request,result:saved?.result??null};
 }
 async function recoverOriginalRequests(){
+  await reconcileRequestBindings();
   for(const key of state.requests)await settleRequest(key);
   if(state.activePhase&&state.phaseRequests?.[state.activePhase]){state.activePhase=null;await save();}
 }
@@ -288,9 +408,10 @@ async function openOperations(href,caseId){
   if(caseId){await page.locator('[name="caseSelect"]').selectOption(caseId);}
 }
 async function openBuyer(){await page.locator('[data-ops-tab="buyer"]').click();await page.locator('.buyer-receiving').waitFor({state:'visible'});}
-async function waitPost(path,action){
+async function waitPost(path,action,phase){
   const response=await page.waitForResponse(r=>new URL(r.url()).pathname===path&&r.request().method()==='POST'&&
-    (!action||r.request().postDataJSON()?.action===action),{timeout:60000});
+    (!action||r.request().postDataJSON()?.action===action)&&
+    (!phase||sha(r.request().postDataJSON()?.requestId||'')===state.phaseRequests?.[phase]),{timeout:60000});
   const body=response.request().postDataJSON(),result=await response.json();
   need(response.ok(),'Original operator action failed: '+JSON.stringify(result));
   await atomic(join(work,'requests',sha(body.requestId)+'.result.json'),{result});
@@ -298,15 +419,24 @@ async function waitPost(path,action){
   if(action==='buyer.receive')state.lastReceiving=result;
   await save();return result;
 }
-async function saveBrowserRequest(click,path,action){const waiting=waitPost(path,action);waiting.catch(()=>{});await click();return waiting;}
+async function saveBrowserRequest(click,path,action,phase){const waiting=waitPost(path,action,phase);waiting.catch(()=>{});await click();return waiting;}
 async function phaseRequest(name,click,path,action){
   if(state.phaseRequests?.[name]){
+    const request=await optionalJSON(join(work,'requests',state.phaseRequests[name]+'.json'));
+    need(request?.path===path&&request.body.action===action,'Continue the exact original phase action.');
     const result=await settleRequest(state.phaseRequests[name]);
     if(state.activePhase===name){state.activePhase=null;await save();}
     return result;
   }
+  need(!state.activePhase||state.activePhase===name,'Resolve the active original phase before beginning another.');
+  state.phaseIntents??={};
+  const intent=state.phaseIntents[name];
+  need(!intent||intent.path===path&&intent.action===action,'The original phase command changed.');
+  if(!intent)state.phaseIntents[name]={path,action,requestKeysBefore:[...state.requests]};
   state.activePhase=name;await save();
-  const result=await saveBrowserRequest(click,path,action);state.activePhase=null;await save();return result;
+  const result=await saveBrowserRequest(click,path,action,name);
+  need(state.phaseRequests?.[name],'The original phase response has no retained request binding.');
+  state.activePhase=null;await save();return result;
 }
 async function receiveSource(current){
   await openBuyer();
@@ -614,7 +744,7 @@ try{
     purchaseCalls:0,upstreamProviderCalls:0,buyerRecoveryCalls:0,finalizationCalls:0};
   await atomic(join(work,'result.json'),state.result);await stage('complete-native-buyer-receiving',{caseId:state.caseId,importedCaseId:imported.id,sourceSha256:state.nativeReport.source.sha256});
 }catch(error){
-  state.lastFailure={at:new Date().toISOString(),code:error.code??null,message:error.message,command:error.result??null};
+  state.lastFailure={at:new Date().toISOString(),code:error.code??null,message:error.message,detail:error.detail??null,command:error.result??null};
   try{await save();}catch{}
   process.stderr.write(JSON.stringify({state:'RETAINED_FOR_SAME_WORKSPACE_CONTINUATION',...state.lastFailure})+'\n');process.exitCode=1;
 }finally{

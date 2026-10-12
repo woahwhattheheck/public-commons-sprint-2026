@@ -31,7 +31,8 @@ function clientHeader(row){
 }
 function commandHeader(row){
   const {nativeRequest,...head}=row;
-  return {...copy(head),nativeRequestId:nativeRequest.requestId,clientRevision:nativeRequest.revision};
+  return {...copy(head),nativeRequestId:nativeRequest.requestId,clientRevision:nativeRequest.revision,
+    ...(row.action==='create'&&nativeRequest.profileId!=null?{profileId:nativeRequest.profileId}:{})};
 }
 function planHeader(row){
   const {rows,calendar,firm,capacityExceptions,...head}=row;
