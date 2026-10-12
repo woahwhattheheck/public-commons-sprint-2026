@@ -26,7 +26,10 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/dspace/browser-assets.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/dspace/client.d.mts",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/dspace/AGENT.md",
-    "stellar/scf-starforge-20261009/distribution/runtime-workspace/APPLICATION_DSPACE.md"
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/APPLICATION_DSPACE.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/dspace/native/agent-consumer.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/dspace/native/managed-receiving.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/dspace/native/MANAGED_RECEIVING.md"
   ],
   "commandDescriptions": {
     "dspace": "Select repository data, publish reviewed editions and receive complete customer output",
