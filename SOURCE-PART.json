@@ -1,0 +1,28 @@
+{
+  "schema": "stellar-forge.git-source-part.v1",
+  "source": {
+    "repository": "woahwhattheheck/public-commons-sprint-2026",
+    "commit": "ae69240a441001bdb18e367d395af7bd39dd4fb1",
+    "tree": "9ce0b4761570467af6d339658790f43cb3527788",
+    "fileCount": 288,
+    "sourceBytes": 3814929
+  },
+  "part": 1,
+  "parts": 2,
+  "kind": "git-authority",
+  "members": [],
+  "authorities": [
+    {
+      "path": "SOURCE-COMMIT.json",
+      "kind": "github-git-commit-response",
+      "bytes": 1308,
+      "sha256": "1d48764f23d1fe730d3a22e0071371ef107910e7be41f032da9b7f69ae94556c"
+    },
+    {
+      "path": "SOURCE-TREE.json",
+      "kind": "github-recursive-git-tree-response",
+      "bytes": 108053,
+      "sha256": "0359ab6b7e42f835438896dd83aae5db4555405bcef85f387842b8786db34b86"
+    }
+  ]
+}
