@@ -130,3 +130,34 @@ The customer-source-workspace directory is the actual receiving workspace. It pr
 The public API supplies opportunity research data. The operator preserves the original application links, descriptions and rules so an analyst can make a source-backed eligibility and workshare decision. An actual application continues through that issuer's application process.
 
 This product uses the Grants.gov API but is not endorsed or certified by the U.S. Department of Health and Human Services.
+
+## Existing testnet host entry point
+
+The `examples/publisher-host.mjs` command composes the maintained publisher driver with the original native facilitator and an existing HTTPS merchant host. Its companion `testnet-host.mjs` connects the running SF82 loopback listener through the host's existing certificate and explicit CONNECT proxy. The original facilitator performs RPC readiness, physical signer ownership, fee limits, exact payment checks, settlement and drain. The existing payer workspace continues to own the keys, actor, Governor policy and ledger.
+
+Supply public settings as described above and a host JSON file:
+
+~~~json
+{
+  "origin": "https://your-existing-merchant.example",
+  "facilitatorConfig": "/absolute/existing-custody/facilitator.json",
+  "tlsKeyFile": "/absolute/existing-custody/tls/server-key.pem",
+  "tlsCertificateFile": "/absolute/existing-custody/tls/server.pem",
+  "proxyEnvironment": "YOUR_EXISTING_BUYER_PROXY"
+}
+~~~
+
+The caller supplies the existing facilitator and buyer secrets through their original configured environment names. The command reads no key store and changes no account, spending allocation, certificate or policy. It retains the configured upstream HTTPS/HTTP proxy for the original RPC host and admits only the selected existing merchant hostname and that configured RPC hostname. Normal certificate validation remains enabled.
+
+~~~sh
+node examples/publisher-host.mjs receive \
+  --directory /absolute/original-operation \
+  --capture /absolute/capture-export.json \
+  --settings /absolute/public-settings.json \
+  --host /absolute/existing-host.json \
+  --operation original-operation-id
+~~~
+
+A `prepare` phase imports the same retained source, builds both dataset editions and previews the original draft before acquiring signer ownership. It allocates and records the original local facilitator URL; subsequent `publish` or `receive` uses that same URL and the same native configuration digest. These phases reuse the same directory, operation ID, settings and host file. If the selected local port or the original signer gate is occupied, the existing native readiness error identifies the original resource to reconcile.
+
+`host-operation.json` retains the public host inputs, original request digest, named proxy, facilitator status, route counts and shutdown result. It excludes secret values and payment headers. `native-operation.json` and the complete receiving directory remain the publisher/customer records. Reopening a completed original operation loads its existing buyer session and retains its original exports. A failed or uncertain original payment follows the SF88 recovery result; the host never starts a replacement payment.
