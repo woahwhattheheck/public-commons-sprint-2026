@@ -140,7 +140,7 @@ function passphrase(options, environment, originalOwner) {
 }
 /** A pipe-only child. Holders retain their original lock until release() resolves. */
 async function runChild(executable, args, {input, expected, hold = false, signal,
-  environment = {LANG:'C.UTF-8',LC_ALL:'C.UTF-8'}, timeout = 180000} = {}) {
+  environment = {LANG:'C.UTF-8',LC_ALL:'C.UTF-8'}, timeout = 180000, maxOutput = 65536} = {}) {
   interrupted(signal);
   const child = spawn(executable,args,{shell:false,env:environment,stdio:['pipe','pipe','ignore']});
   let output = '', first = false, closed = false, problem;
@@ -159,7 +159,7 @@ async function runChild(executable, args, {input, expected, hold = false, signal
   child.stdin.once('error',() => stop('NATIVE_RECOVERY_CHILD_PIPE_FAILED'));
   child.stdout.on('data',chunk => {
     output += chunk;
-    if (output.length > 65536) return stop('NATIVE_RECOVERY_CHILD_RESULT_INVALID');
+    if (output.length > maxOutput) return stop('NATIVE_RECOVERY_CHILD_RESULT_INVALID');
     const end = output.indexOf('\n');
     if (first || end < 0) return;
     first = true;
@@ -205,7 +205,7 @@ async function verifyNative(plan, staged, keys, ctx, python, expectedCheckpoint)
     ['-I','-B',LOCK,'verify',join(staged,'state')],
     {input:{owner:plan,keys,database:join(staged,'ledger.sqlite'),policy:join(staged,'policy.json'),
       ...(expectedCheckpoint === undefined ? {} : {expected_checkpoint:expectedCheckpoint})},
-      expected:'NATIVE_STATE_VERIFIED',signal:ctx.signal});
+      expected:'NATIVE_STATE_VERIFIED',signal:ctx.signal,maxOutput:12*1024**2});
   need(result.value.checkpoint?.outcome === 'JOURNAL_CONSISTENT','NATIVE_RECOVERY_LEDGER_AUDIT_FAILED');
   return result.value;
 }
@@ -248,7 +248,7 @@ function summary(record, recordSha256, manifestSha256) {
   return {schema:SCHEMA,operationId:record.operationId,createdAt:record.createdAt,
     owner:record.owner,configSha256:record.configSha256,policySha256:record.policySha256,
     recordSha256,manifestSha256,checkpoint:record.checkpoint,ledgerIdentity:record.ledgerIdentity,
-    nativeState:record.nativeState,files:record.files.length,
+    nativeState:record.nativeState,boundRequestReferences:record.boundRequestReferences,files:record.files.length,
     bytes:record.files.reduce((sum,file) => sum+file.size,0),
     controlKeyEnvironment:[...KEYS],controlKeyCustody:'ORIGINAL_ENCRYPTED_RECOVERY'};
 }
@@ -305,7 +305,7 @@ export async function snapshotNativeMcpSpendingRecovery(options, supplied) {
       owner:plan,configSha256:inspected.configSha256,policySha256:inspected.policySha256,
       ledgerIdentity,checkpoint:verified.checkpoint,
       nativeState:{boundRequests:verified.boundRequests,reservedRequests:verified.reservedRequests,
-        finalityRecords:verified.finalityRecords},files};
+        finalityRecords:verified.finalityRecords},boundRequestReferences:verified.boundRequestReferences,files};
     const recordPath = join(temporary,'record.json'); await save(recordPath,record);
     const planPath = join(temporary,'plan.json');
     await save(planPath,{schema:'stellar-forge.merchant-recovery-plan.v1',
@@ -366,6 +366,9 @@ async function openBackup(options, ctx) {
     need(same(native.checkpoint,record.checkpoint) && same(record.nativeState,
       {boundRequests:native.boundRequests,reservedRequests:native.reservedRequests,finalityRecords:native.finalityRecords}),
       'NATIVE_RECOVERY_CHECKPOINT_CHANGED');
+    if (record.boundRequestReferences !== undefined) need(same(record.boundRequestReferences,native.boundRequestReferences),
+      'NATIVE_RECOVERY_BOUND_REQUEST_REFERENCES_CHANGED');
+    else record.boundRequestReferences = native.boundRequestReferences;
     return {temporary,staged,record,keys,recordSha256,manifestSha256:observed.sha256};
   } catch (error) { await rm(temporary,{recursive:true,force:true}); throw error; }
 }
@@ -501,7 +504,7 @@ export async function verifyCurrentNativeMcpSpendingOwner(options, supplied) {
     await locked.release(); locked = undefined;
     return {status:'NATIVE_SPENDING_CURRENT_OWNER_VERIFIED',
       ...summary(record,opened.recordSha256,opened.manifestSha256),
-      currentCheckpoint:verified.checkpoint,currentLedgerIdentity,
+      currentCheckpoint:verified.checkpoint,currentLedgerIdentity,currentBoundRequestReferences:verified.boundRequestReferences,
       currentNativeState:{boundRequests:verified.boundRequests,reservedRequests:verified.reservedRequests,
         finalityRecords:verified.finalityRecords},archivePrefix:verified.archivePrefix};
   } finally {
