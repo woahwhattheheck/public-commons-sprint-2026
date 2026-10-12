@@ -5,6 +5,7 @@ This packet runs the original installed merchant workspace, native workbook pars
 ## Selected product
 
 - Cumulative source: e28755f20dd4f9cb932d82fb59feb48424e327e7.
+- Maintained writer upgrade: d723d8709de2495b865fa2073f5e7ff844cac262 (PR1477), applied to an owned installation as the two explicit postimages below.
 - Original package manifest SHA-256: 267cd1292c8e542e8a70134c814bba7d624d2b375191a8892fb269f226bf4ff7.
 - Original source TGZ: 7,245,436 bytes; SHA-256 0da9dea0db031b5ecc442e10f5b73134034d872224e6b98f2fd5fa78cb778568.
 - Rust SDK: merged 712ae7f7d9fac5d2e3d3c239ac9dedf28d2d0f62, included as eleven exact source files in that installation.
@@ -24,7 +25,16 @@ The mapping selects the native `Jam Values!A20:G36` table by worksheet coordinat
 
 ## Run on the existing installed product
 
-Extract this packet into a private owned directory. Point the variables at the actual existing installation, runtime and released Rust executable:
+Use an owned installation for this customer run. Preserve its original e287 package manifest and apply these two maintained public postimages before executing:
+
+| Original installed path, below `source/stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/` | Exact Git blob | Published source |
+| --- | --- | --- |
+| versions.mjs | 079e4f8eca9819b7cd916579e34f703664ef4346 | https://raw.githubusercontent.com/woahwhattheheck/public-commons-sprint-2026/d723d8709de2495b865fa2073f5e7ff844cac262/stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/versions.mjs |
+| writer-lease.mjs | b0d0207910ffc77e6b8bd0a8c5558c52c5c8dbea | https://raw.githubusercontent.com/woahwhattheheck/public-commons-sprint-2026/d723d8709de2495b865fa2073f5e7ff844cac262/stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/writer-lease.mjs |
+
+The maintained Linux lease is held by the native open file description and released on normal close or process death. The original store migrates v1 to v2 while retaining the original candidate, revision, snapshot and source bindings. A preexisting legacy JSON lease requires the original owner to identify and recover its completed writer before migration. This packet starts its own customer workspace.
+
+Extract this source into a private owned directory. Point the variables at that actual owned installation, runtime and released Rust executable:
 
 ```sh
 export SCF_MERCHANT_PACKAGE=/absolute/installed/node_modules/@tokenjunkielabs/starforge-merchant
@@ -35,7 +45,7 @@ export SCF_RUST_BINARY=/absolute/starforge-rust-linux-x86_64/bin/starforge-buyer
 node ./run-installed-customer.mjs
 ```
 
-The wrapper verifies the original installed manifest, released binary and both workbook hashes before opening the native application. By default it keeps its own state under `browser-run/` beside these scripts. `SCF_CENSUS_WORKSPACE` may select another absolute owned directory containing these original controller/caller files; its `inputs/` files are retained or retrieved from the pinned public Census URLs.
+The wrapper verifies the original base manifest, both exact writer postimages, the released binary and both workbook hashes before opening the native application. Its result records the base source plus the explicit two-file upgrade, including their byte sizes, Git blob IDs and SHA-256 values. By default it keeps its own state under `browser-run/` beside these scripts. `SCF_CENSUS_WORKSPACE` may select another absolute owned directory containing these original controller/caller files; its `inputs/` files are retained or retrieved from the pinned public Census URLs.
 
 ## Customer workflow
 
