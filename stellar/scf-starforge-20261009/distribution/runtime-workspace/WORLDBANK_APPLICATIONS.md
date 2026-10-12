@@ -2,6 +2,39 @@
 
 World Bank economic data opens the retained source workspace through the standard Applications controls. The original industrial browser and the merchant agent share one model, including saved selections, acquired source pages, revision comparisons, reviews, exports, the original publisher and customer preparation.
 
+## Complete the runtime installation
+
+Select the native runtime and the **mcp** feature when preparing the installation. World Bank Applications uses the merchant MCP host as well as the native World Bank source workspace. The installed profile therefore includes the MCP SDK, the original x402 MCP adapter and jose together with the native x402/Stellar dependencies.
+
+Prepare and complete the runtime through the maintained installer from the selected original package:
+
+```js
+import { prepareRuntimeInstall, installRuntime } from './runtime-install.mjs';
+
+await prepareRuntimeInstall({
+  directory: '/private/worldbank-runtime',
+  archive: '/private/releases/starforge-original.tgz',
+  sha256: originalArchiveSha256,
+  native: true,
+  features: ['mcp'],
+  operator: true,
+  pins: { '@stellar/stellar-sdk': '16.3.1' },
+  python: '/usr/bin/python3',
+});
+const runtime = await installRuntime({ directory: '/private/worldbank-runtime' });
+
+```
+
+Create a real private temporary directory on the selected host and set `TMPDIR` before starting the installer or receiving command. Runtime adoption uses the host's temporary directory while unpacking a release, so this selection must have room for the original source and belong to the same operator:
+
+```sh
+mkdir -p /private/worldbank-temporary
+chmod 700 /private/worldbank-temporary
+export TMPDIR=/private/worldbank-temporary
+```
+
+Use the selected release archive and its recorded SHA-256. The installer retains the dependency selection, package lock, installation identity and original source. Continue an interrupted installation in that same directory through `installRuntime`. When restoring a saved operating directory, preserve its private permissions and original absolute paths so the existing Applications records continue to identify the same runtime.
+
 ## Open the retained workspace
 
 Select **Applications → New application → World Bank economic data** in an installed runtime containing the `worldbank-agent` command. Choose the same private merchant configuration and World Bank alias already used by the [merchant workspace](../../../../stellar-forge/mcp-merchant-operator/WORLDBANK-WORKSPACES.md). The launcher reads those declarations; it opens their existing source directory.
@@ -69,4 +102,10 @@ Run the [managed receiving example](../../../../stellar-forge/mcp-merchant-opera
 node /installed/source/stellar-forge/mcp-merchant-operator/examples/worldbank-managed-receiving.mjs --runtime /private/ready-runtime --workdir /private/worldbank-applications-receiving --python /usr/bin/python3
 ```
 
-The directory retains the original input, source workspace, merchant declaration, Applications record, operation logs, complete download and customer receiving. Its private environment file contains the generated local agent token. Share the exported economic-data handover with customers; keep the complete operating checkpoint with the owner.
+Run the same command with the same `--runtime` and `--workdir` after an interruption. The driver recovers the saved application, original source import and reviewed export; it reconciles a pending or surviving application run before choosing its next start. Once the prior run has ended, it records a new start request against the same saved application. Completed merchant work and customer downloads keep their original identities, even when a restarted MCP host has a different loopback port. A retained buyer offer is reopened before preparation, so recovery stays attached to the original reviewed request.
+
+The directory retains the original input, source workspace, merchant declaration, Applications record, operation logs, complete download and customer receiving. Its private environment file contains the generated local agent token. The customer receives `customer-download/handover.zip`; the operator retains the complete private working directory and its selected installed runtime.
+
+For a complete private checkpoint, preserve filesystem symlinks and hardlinks, private directory permissions, and the original absolute paths used by the runtime and saved Applications records. Archive link objects rather than following them into repeated runtime/source copies. Python's `tarfile` data filter deliberately omits directory modes during extraction; restore the private runtime root to mode `0700` before using the original installer or Applications recovery. The maintained installer checks the same source, selected dependency profile and lock before returning READY.
+
+The original installed reference completed the complete Applications, source, merchant, download, Stop, saved-start recovery and second-customer journey on 12 October 2026. It retained all 42 original observations and six customer files. The [original managed receiving outcome](https://tokenjunkielabs.slack.com/archives/C0BTB4SUCP9/p1791785852097869?thread_ts=1791764726.590409) and the source-bound `managed-journey.json` connect those completed steps to the selected installation.

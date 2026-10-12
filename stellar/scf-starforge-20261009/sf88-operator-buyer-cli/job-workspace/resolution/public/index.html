@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Job support and resolution</title><link rel="stylesheet" href="/jobs/resolutions/style.css"></head>
+<body><header><h1>Job support and resolution</h1><nav><a id="jobs-link" href="/jobs/">Jobs</a><a id="library-link" href="/">Library</a><button id="reload">Refresh local list</button></nav></header>
+<main><p id="notice" class="status" role="status" aria-live="polite"></p>
+<section><h2>Retained paid jobs</h2><form id="search-form" class="toolbar"><label>Search<input id="query" type="search"></label><button>Search</button></form>
+<div class="scroll"><table><thead><tr><th>Job</th><th>Execution</th><th>Last resolution read</th><th>Pending requests</th><th></th></tr></thead><tbody id="jobs"></tbody></table></div>
+<div class="toolbar"><button id="previous">Previous</button><span id="page"></span><button id="next">Next</button></div></section>
+<div id="detail" hidden><section><div class="toolbar"><h2 id="title"></h2><button id="refresh">Read merchant resolution</button><button id="stop">Stop current read or send</button><button id="export">Download receipt and receiving file</button></div>
+<p id="state"></p><code id="payment"></code><div id="totals" class="numbers"></div><div id="conversation"></div></section>
+<section><h2>Raise an issue</h2><p>Describe the problem with this retained paid job. The merchant receives your issue under the same original job and payment.</p>
+<form id="issue-form"><label>Requested resolution<select id="remedy"><option value="CONTACT">Discuss the job</option><option value="RETRY">Retry the job</option><option value="REFUND">Request a refund</option></select></label>
+<label>Message<textarea id="issue-message" maxlength="4000" required></textarea></label><button class="primary">Send issue</button></form></section>
+<section><h2>Continue the conversation</h2><form id="message-form"><label>Message<textarea id="message" maxlength="4000" required></textarea></label><button>Send message</button></form></section>
+<section><h2>Retained requests</h2><p class="help">Recover reads your saved request from the merchant. Resume sends the same retained request ID again when you choose to continue an interrupted send.</p><div id="operations"></div></section>
+<section><h2>Receive a saved resolution file</h2><p>Open a receiving file alongside this same original buyer record. Its accepted response and purchase identity are checked before the saved resolution is imported.</p>
+<form id="receive-form"><label>Resolution receiving file<input id="receive-file" type="file" accept="application/json,.json" required></label><button>Receive saved file</button></form></section>
+<details class="panel"><summary>Original receipt and accounting facts</summary><pre id="receipt"></pre></details></div>
+</main><script type="module" src="/jobs/resolutions/app.mjs"></script></body></html>

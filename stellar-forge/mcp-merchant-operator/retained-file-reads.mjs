@@ -260,6 +260,10 @@ export class RetainedFileReads {
     const pending = this.#readTail.then(async () => {
       if (this.#closing || this.#closingScopes.has(scope))
         throw this.#fail('CLOSING', 'Retained file reads are closing.');
+      // Failed unpublished cleanup still owns descriptors and snapshot storage.
+      // Drain that same owner before any later loader acquires more resources.
+      if (this.#pendingFileCloses.size)
+        throw this.#fail('READ_CAPACITY', 'Finish closing the original retained file handles before opening another read.');
       if (this.#reads.size >= SNAPSHOT_COUNT_LIMIT)
         throw this.#fail('READ_CAPACITY', 'Finish or release an existing file read before opening another.');
       if (typeof load === 'function' && loadFile !== undefined || typeof loadFile === 'function' && load !== undefined ||

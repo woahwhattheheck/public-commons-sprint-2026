@@ -13,7 +13,7 @@ Keep these four maintained manual inputs together:
 - `managed-pipelines-browser.mjs`: original workspace/browser continuation.
 - this guide.
 
-The caller selects one current Starforge source tree, one native resource operation, the already installed Playwright module, and the existing Chromium executable. The command takes no credentials and performs no dependency installation. It creates its temporary TLS key/certificate and Chromium profile under a private `/dev/b9d2-managed-pipelines-*` directory, keeps the server and browser in the same foreground process namespace, and removes that temporary directory at exit. The persistent operation and output directories retain the job state, request history, output bytes, source identity, and receiving state.
+The caller selects one current Starforge source tree, one native resource operation, the already installed Playwright module, and the existing Chromium executable. The command takes no credentials and performs no dependency installation. It creates its temporary TLS key/certificate and Chromium profile under a private `b9d2-managed-pipelines-*` directory beneath the selected temporary root, keeps the server and browser in the same foreground process namespace, and removes that temporary directory at exit. Linux defaults to `/dev`; other platforms default to their system temporary directory. The optional `--temporary-root` selects an existing absolute directory on the actual admitted volume. The outer caller resolves that directory once and passes it to the child, so the child's private `TMPDIR` cannot change the selected parent. The persistent operation and output directories retain the job state, request history, output bytes, source identity, and receiving state.
 
 The entry must follow the existing resource admission and operator custody for the selected run. Check the native record before continuing a disconnected carrier. An interrupted run uses the same command, directories, source selection, provider port, and original native operation. Keep process polling attached to that original foreground caller.
 
@@ -64,8 +64,11 @@ node /absolute/manual/managed-pipelines-native.mjs \
   --directory /absolute/operation/state \
   --output /absolute/operation/output \
   --playwright /absolute/existing/playwright/index.mjs \
-  --chromium /absolute/existing/chrome-headless-shell
+  --chromium /absolute/existing/chrome-headless-shell \
+  --temporary-root /absolute/admitted/temporary-root
 ```
+
+Include the selected temporary volume and the complete browser/TLS peak in the original native resource request. An equipped macOS or other supported host can run the same source and retained journey with its installed Chromium, Playwright, Node, and OpenSSL; use the original operation's destination and custody when selecting that host.
 
 The outer command creates the one local TLS context and launches its child with `NODE_EXTRA_CA_CERTS`. The child uses original `openPipelineOperations` and `startDossierWorkspace`, native `fetch`, and the maintained browser assets. The API key exists only in the child process and is supplied through the configured environment variable. The selected provider API URL and profile digest remain stable across a resumed operation.
 

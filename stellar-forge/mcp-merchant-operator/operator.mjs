@@ -94,12 +94,15 @@ export class MerchantReleaseOperator {
 
   get maxRequestBytes() {
     const configuredMaximum = (() => {
-      if (this.#config.graphqlWorkspaces) return 8 * 1024 * 1024;
+      if (this.#config.grantWorkspaces) return 32 * 1024 * 1024;
+      if (this.#config.graphqlWorkspaces || this.#config.dspaceOperators) return 8 * 1024 * 1024;
       return this.#config.mpp ? 3 * 1024 * 1024 : (this.#config.opensearchWorkspaces || this.#config.grpcWorkspaces || this.#config.usgsWorkspaces) ? 2 * 1024 * 1024 : this.#config.grantsWorkspaces ? 512 * 1024 : 128 * 1024;
     })();
     return Math.max(configuredMaximum, this.#config.feedsWorkspaces ? 16 * 1024 * 1024 + 65536 : 0,
       this.#config.researchWorkspaces ? 2 * 1024 * 1024 : 0,
-      this.#config.nocodbWorkspaces ? 1024 * 1024 : 0);
+      this.#config.nocodbWorkspaces ? 1024 * 1024 : 0,
+      this.#config.n8nWorkspaces ? 2 * 1024 * 1024 : 0,
+      this.#config.paidJobWorkspaces ? 2 * 1024 * 1024 : 0);
   }
   async #status() {
     const result = await (await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs')).releaseStatus(this.#config.releaseStore);
