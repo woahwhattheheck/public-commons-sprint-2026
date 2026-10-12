@@ -695,7 +695,7 @@ export function observeApplicationOutput(request, directory, context = {}) {
       const tenderly = request.command === 'tenderly-workspace', redis = request.command === 'redis',
         arcgis = request.command === 'arcgis-agent', cryptoworth = request.command === 'merchant-accounting-workspace';
       const startupSchema = cryptoworth ? 'stellar-forge.accounting-workspace-startup.v1' : arcgis ? 'stellar-forge.arcgis-agent-workspace-startup.v1' :
-        redis ? 'stellar-forge.redis-workspace-startup.v1' :
+        redis ? (request.args?.[1] === 'setup' ? 'stellar-forge.redis-setup-startup.v1' : 'stellar-forge.redis-workspace-startup.v1') :
         tenderly ? 'stellar-forge.tenderly-workspace-startup.v1' : 'stellar-forge.blockscout-startup.v1';
       if (!text.startsWith('{"schema":"' + startupSchema + '",')) return;
       saving = saving.then(async () => {

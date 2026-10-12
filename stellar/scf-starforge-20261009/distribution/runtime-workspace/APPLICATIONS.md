@@ -21,7 +21,7 @@ Buyer receiving: [complete setup, acquisition, Stop and reopen guide](BUYER_RECE
 | API merchant authoring | openapi-workspace | Source intake, paid routes, saved packages, seller preview and operations |
 | gRPC merchant authoring | grpc-workspace | Captured protobuf source, exact typed requests and terms, saved merchant editions, retained release controls and customer files |
 | Merchant pricing and scenario planning | revenue-workspace | Original usage, saved commercial reviews, exact demand/price/cost scenarios, exports and seller price changes |
-| Redis and Valkey merchant authoring | redis workspace open | Saved products, source profiles, live previews, customer packages and managed release controls |
+| Redis and Valkey merchant authoring | redis workspace setup / open | Source onboarding, saved topology and products, live previews, customer packages and original release controls |
 | MPP merchant and customer | mpp serve | Saved merchant/customer profiles, original offers, purchases, packages, governor terminal and retained response receiving |
 | Stellar agent application | stellar-application serve | Original HTTP and governed MCP requests, current subject authorization, retained results and aggregate spending |
 | OData source and live merchant | dataset odata | Saved source metadata, typed queries, retained editions, live paid pages, buyer handoffs and received records |
@@ -452,27 +452,13 @@ Choose **Event-feed buyer** to reopen an initialized original SF88 subscription.
 
 ## Redis and Valkey merchant authoring
 
-Choose **Redis and Valkey merchant authoring** and select an initialized private Redis workspace. A selected installation must contain the original Redis authoring CLI, model and binding inspector. Native TCP previews use that runtime's optional Redis feature; Upstash HTTPS uses the original HTTPS source. Source editing and reopening use the retained local workspace.
+Choose **Redis and Valkey merchant authoring** and select its original private workspace, or enable **Set up a new workspace** for a new directory in an existing private parent. New setup uses the original browser for standalone Redis/Valkey, Cluster, Sentinel or Upstash connections, products, merchant terms and public CA bundles. After creation, the same application reopens that saved workspace.
 
-Create the workspace once through its original command:
+Review retains the immutable source identity, topology, required environment names and data/monitor CA fingerprints. Saved product revisions remain editable, and offline opening and source review work with live credentials unavailable. The original preview and release controls resolve those host credentials when needed.
 
-    starforge-merchant redis workspace create \
-      --directory /private/inventory-workspace \
-      --source /private/inventory-source.json \
-      --plan /private/inventory-merchant-plan.json \
-      --label "Inventory data"
+The managed operation owns the original setup and authoring servers. Its Open URL comes from their matching structured startup; Stop releases the same workspace. Continue after interrupted creation reuses the retained setup operation and input identity, while a fresh reviewed start opens the original workspace with its immutable binding.
 
-Select that directory in Applications and optionally select the original private environment JSON. The imported source retains its password or Upstash-token environment reference names and selected database CA. Application configuration, start reviews and managed operation records retain those references and file identities; values pass only through the original child's environment.
-
-**Review configuration** reads the workspace's original SQLite metadata in read-only mode. It does not acquire its writer, recover a pending operation or open Redis. The binding retains the immutable workspace ID and a SHA-256 of the original source profile, including transport, connection references, pool settings and database CA identity. Product edits and merchant terms stay on their normal saved revisions.
-
-**Save configuration**, **Review start** and **Start reviewed application** use the existing Applications lifecycle. The original command receives the reviewed workspace ID and profile SHA-256. It checks both after taking its original writer lease and before recovering operations or opening its HTTP server. Changing the connection profile or replacing the directory requires a new review.
-
-The original startup record contains schema stellar-forge.redis-workspace-startup.v1, status REDIS_WORKSPACE_READY, the matching workspace ID, source-profile digest, saved head and canonical directory. Applications accepts its operatorUrl only for those same reviewed arguments and the requested loopback port. The private capability URL stays with its original managed run.
-
-**Open application** exposes the original product editor, full merchant terms, source review, saved revisions, real database preview and native next-page inputs. Prepare customer OpenAPI/client files from a saved revision, stage the prepared package, then open the original release controls for seller start, stop, upgrade, rollback and customer handoff.
-
-**Stop application** closes that original authoring server and its owned release console. After it has stopped, a new reviewed start reopens the same workspace ID, saved revisions, requests, customer packages and release store with a fresh private URL. The Redis workspace's own Continue action resumes an original interrupted request; launching Applications preserves its normal recovery semantics.
+The [complete Redis Applications guide](REDIS_APPLICATIONS.md) covers settings, full source creation, private environment configuration, customer packages, release operation and Stop/Continue/reopen. The [connection setup guide](../../sf30-seller-sdk/redis/workspace/SETUP.md) provides the original source and merchant draft format.
 
 ## API merchant connections and managed reopening
 
