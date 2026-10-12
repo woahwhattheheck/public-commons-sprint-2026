@@ -17,10 +17,11 @@ import re
 import subprocess
 
 from governor import ID_PATTERN, as_time, canonical, parse_amount, validate_request
-from finalize import HASH, NETWORKS, decode, private_path
+from finalize import HASH, NETWORKS, SCHEMA as FINALIZATION_SCHEMA, decode, private_path
 from lost_output_finality import evidence_state, finalize_lost_output, raw_file, require
 
 SOURCE_SCHEMA = 'stellar-forge.sf88.lost-output-source.v1'
+INSPECTION_SCHEMA = 'stellar-forge.sf88.node-reservation-source.v1'
 CONTEXT_SCHEMA = 'stellar-forge.sf36.node-attempt-context.v1'
 NATIVE_CONTEXT = Path(__file__).with_name('node_context.mjs')
 EMPTY_SHA = hashlib.sha256(b'').hexdigest()
@@ -77,26 +78,31 @@ def optional_identity(path, limit, *, classify_json=False):
 
 
 def node_source_context(source_path, source, governor, payer, ledger, policy, *,
-                        node, use_system_ca=False):
-    require(source.get('schema') == SOURCE_SCHEMA and source.get('sourceKind') == 'node-operation',
+                        node, use_system_ca=False, inspection=False):
+    require(type(inspection) is bool, 'NODE_RESERVATION_INSPECTION_INVALID')
+    require(source.get('schema') == (INSPECTION_SCHEMA if inspection else SOURCE_SCHEMA) and source.get('sourceKind') == 'node-operation',
             'NODE_LOST_OUTPUT_SOURCE_SCHEMA_INVALID')
     intent, transaction, request_sha = source.get('intentId'), source.get('transaction'), source.get('requestSha256')
     require(isinstance(intent, str) and ID_PATTERN.fullmatch(intent) and
-            isinstance(transaction, str) and HASH.fullmatch(transaction) and
+            ((inspection and transaction is None) or
+             (not inspection and isinstance(transaction, str) and HASH.fullmatch(transaction))) and
             isinstance(request_sha, str) and HASH.fullmatch(request_sha),
             'LOST_OUTPUT_TRANSACTION_AND_DIGEST_REQUIRED')
     state, workspace = Path(source['stateDirectory']), Path(source['workspace'])
     private_path(state, directory=True)
     private_path(workspace, directory=True)
     operation = state / hashlib.sha256(intent.encode('utf8')).hexdigest()
-    directory = operation / 'lost-output'
+    directory = operation if inspection else operation / 'lost-output'
     private_path(operation, directory=True)
     private_path(directory, directory=True)
-    require(str(operation) == source.get('operationDirectory') and
-            source_path == directory / (transaction + '.source.json'),
+    expected_sources = ({operation / 'expired-reservation-source.json',
+                         operation / 'undispatched-reservation-source.json'} if inspection
+                        else {directory / (transaction + '.source.json')})
+    require(str(operation) == source.get('operationDirectory') and source_path in expected_sources,
             'NODE_LOST_OUTPUT_SOURCE_LOCATION_INVALID')
     source_raw = raw_file(source_path)
-    require(decode(source_raw) == source and decode(raw_file(directory / 'selection.json')) == source,
+    require(decode(source_raw) == source and (inspection or
+            decode(raw_file(directory / 'selection.json')) == source),
             'NODE_LOST_OUTPUT_SELECTION_CHANGED')
     paths = {'configuration': operation / 'config.json', 'operation': operation / 'operation.json',
              'attempt': operation / 'attempt.json', 'workspaceConfig': workspace / 'operator.json',
@@ -209,10 +215,12 @@ def node_source_context(source_path, source, governor, payer, ledger, policy, *,
         require(type(expected['maxTimeoutSeconds']) is int and
                 1 <= preimage['max_timeout_seconds'] <= expected['maxTimeoutSeconds'],
                 'LOST_OUTPUT_APPROVED_TIMEOUT_MISMATCH')
-    binding = {key: source[key] for key in (
-        'sourceKind', 'stateDirectory', 'operationDirectory', 'runtimeDirectory', 'workspace',
-        'intentId', 'attemptId', 'configSha256', 'requestSha256', 'transaction',
-        'sourceHashes', 'evidenceState', 'localOutcome', 'transportCheckpointSha256')}
+    binding_keys = ('sourceKind', 'stateDirectory', 'operationDirectory', 'runtimeDirectory', 'workspace',
+        'intentId', 'attemptId', 'configSha256', 'requestSha256',
+        'sourceHashes', 'evidenceState', 'localOutcome', 'transportCheckpointSha256')
+    binding = {key: source[key] for key in binding_keys}
+    if not inspection:
+        binding['transaction'] = source['transaction']
     binding.update(sourcePath=str(source_path), sourceSha256=hashlib.sha256(source_raw).hexdigest(),
         attemptStartedAt=started, evidencePath=str(evidence_path),
         evidenceStatus=loss['condition'] + '_ORIGINAL_OUTPUT',
@@ -230,3 +238,13 @@ def finalize_node_lost_output(governor, source_path, source, payer, *,
             use_system_ca=options.get('use_system_ca', False))
     return finalize_lost_output(governor, source_path, source, payer, node=node,
         ledger=ledger, policy=policy, context_reader=context, **options)
+
+
+def inspect_node_reservation(governor, source_path, source, payer, *, node, ledger, policy,
+                             expected_request_sha, use_system_ca=False):
+    require(expected_request_sha == source.get('requestSha256'), 'NODE_RESERVATION_SELECTED_DIGEST_MISMATCH')
+    binding, terms, row, _ = node_source_context(source_path, source, governor, payer, ledger, policy,
+        node=node, use_system_ca=use_system_ca, inspection=True)
+    return {'schema': FINALIZATION_SCHEMA, 'outcome': 'RESERVATION_VERIFIED',
+            'binding': binding, 'terms': terms, 'reservation': row,
+            'recordAuthority': 'ORIGINAL_SF36_HMAC_JOURNAL_READ_TRANSACTION'}

@@ -10,10 +10,13 @@ const hash=value=>digest(json(canonical(value)));
 const MODULES=Object.freeze({
   analysis:'stellar_forge_buyer.analysis_workspace',
   duckdb:'stellar_forge_buyer.duckdb_cli',
+  postgres:'stellar_forge_buyer.postgres_cli',
   workbooks:'stellar_forge_buyer.analysis_workbooks',
   workbookDelivery:'stellar_forge_buyer.workbook_client',
 });
 export const PYTHON_APPLICATION_COMMANDS=Object.freeze([
+  {id:'postgres',kind:'module',title:'PostgreSQL receiving workspace',module:MODULES.postgres,
+    description:'Review complete source mappings, import retained editions, compare changes and select the application SQL view.'},
   {id:'duckdb',kind:'module',title:'DuckDB dataset workspace',module:MODULES.duckdb,
     description:'Review original dataset deliveries, retain editions, run SQL and export portable analytical results.'},
   {id:'analysis',kind:'module',title:'Analysis workspace',module:MODULES.analysis,
@@ -23,6 +26,7 @@ export const PYTHON_APPLICATION_COMMANDS=Object.freeze([
   {id:'workbookDelivery',kind:'module',title:'Workbook delivery',module:MODULES.workbookDelivery,
     description:'Run the original recipe against its selected analysis database and delivery operation.'},
   {id:'stellar-forge-duckdb',kind:'script',title:'DuckDB dataset command'},
+  {id:'stellar-forge-postgres',kind:'script',title:'PostgreSQL receiving command'},
   {id:'stellar-forge-buyer',kind:'script',title:'Original buyer command'},
   {id:'stellar-forge-agent',kind:'script',title:'Original agent workflow'},
   {id:'stellar-forge-workbook',kind:'script',title:'Original workbook command'},
@@ -36,10 +40,20 @@ function argumentsList(args) {
 }
 function requiredExtras(command,args) {
   if(['duckdb','stellar-forge-duckdb'].includes(command))return ['duckdb'];
+  if(['postgres','stellar-forge-postgres'].includes(command))return ['postgres'];
   if(command==='stellar-forge-agent')return ['agents'];
   if(['workbookDelivery','stellar-forge-workbook-deliver'].includes(command))return ['workbooks'];
   if(['workbooks','stellar-forge-workbook'].includes(command) && !['receive','inspect','copy','--help'].includes(args[0]))return ['workbooks'];
   return [];
+}
+function argumentValue(args,name,fallback) {
+  const values=[];
+  for(let index=0;index<args.length;index++){
+    if(args[index]===name){need(index+1<args.length,'PYTHON_APPLICATION_ARGUMENTS_INVALID');values.push(args[index+1]);}
+    else if(args[index].startsWith(name+'='))values.push(args[index].slice(name.length+1));
+  }
+  need(values.length<=1,'PYTHON_APPLICATION_ARGUMENTS_INVALID','Select '+name+' once.');
+  return values[0]??fallback;
 }
 function exactOption(args,name,value) {
   const positions=args.map((item,index)=>item===name?index:-1).filter(index=>index>=0);
@@ -75,6 +89,12 @@ export async function bindPythonApplicationCommand(root,{
         'PYTHON_APPLICATION_WORKSPACE_REQUIRED','Select one private DuckDB workspace directory with --workspace.');
       absolute(originalArgs[originalArgs.indexOf('--workspace')+1]);
     }
+    if(command==='postgres' && originalArgs.includes('serve')){
+      const directory=argumentValue(originalArgs,'--workspace');
+      need(typeof directory==='string','PYTHON_APPLICATION_WORKSPACE_REQUIRED',
+        'Select the private PostgreSQL receiving directory with --workspace.');
+      absolute(directory);
+    }
     argv=['-I','-m',module,...originalArgs];
   }else{
     entrypoint=installation.entrypoints?.[command];
@@ -94,7 +114,12 @@ export async function bindPythonApplicationCommand(root,{
       file:join(absolute(originalArgs[originalArgs.indexOf('--database')+1]),'analysis-launch.json')}:
       command==='duckdb'?{kind:'duckdb-private-launch',schema:'stellar-forge.duckdb-operator-launch.v1',
         directory:absolute(originalArgs[originalArgs.indexOf('--workspace')+1]),
-        file:join(absolute(originalArgs[originalArgs.indexOf('--workspace')+1]),'duckdb-launch.json')}:null,
+        file:join(absolute(originalArgs[originalArgs.indexOf('--workspace')+1]),'duckdb-launch.json')}:
+      command==='postgres' && originalArgs.includes('serve')?{
+        kind:'postgres-private-launch',schema:'stellar-forge.postgres-operator-launch.v1',
+        directory:absolute(argumentValue(originalArgs,'--workspace')),
+        databaseSchema:argumentValue(originalArgs,'--schema','sf_received'),
+        file:join(absolute(argumentValue(originalArgs,'--workspace')),'postgres-launch.json')}:null,
     capabilities:installation.capabilities};
   return {...value,fingerprint:hash(value)};
 }

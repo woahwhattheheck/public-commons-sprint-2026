@@ -97,8 +97,8 @@
       "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/diffbot/browser-assets.json"
     },
     {
-      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/workspace/server.mjs",
-      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/workspace/browser-assets.json"
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/geocodio/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/geocodio/browser-assets.json"
     },
     {
       "server": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.mjs",
@@ -107,6 +107,18 @@
     {
       "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/workspace/server.mjs",
       "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/workspace/browser-assets.json"
+    },
+    {
+      "server": "stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/browser-assets.json"
+    },
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/databento/workbench.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/databento/browser-assets.json"
+    },
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/browser-assets.json"
     }
   ],
   "supportFiles": [
@@ -190,7 +202,9 @@
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/browser-assets.json",
     "stellar/scf-starforge-20261009/sf44-developer-onramp/onboard.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/sdmx/examples/ecb-reference-rates.sdmx.zip",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/sdmx/macrobond/examples/ecb-reference-rates.macrobond.zip"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/sdmx/macrobond/examples/ecb-reference-rates.macrobond.zip",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/checkout-basket.php",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/BASKET.md"
   ],
   "commands": {
     "openalex": "stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/cli.mjs",
@@ -204,6 +218,7 @@
     "seller": "stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs",
     "arcgis": "stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/cli.mjs",
     "arcgis-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/cli.mjs",
+    "arcgis-agent": "stellar-forge/mcp-merchant-operator/arcgis-workspace-launcher.mjs",
     "upstream": "stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-serve.mjs",
     "supplier-quotas": "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-quota/cli.mjs",
     "jsonrpc": "stellar/scf-starforge-20261009/sf30-seller-sdk/jsonrpc/cli.mjs",
@@ -416,8 +431,6 @@
     "frictionless": "stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/cli.mjs",
     "mcp-analysis-archive": "stellar-forge/mcp-paid-agent/native-analysis-archive-download.mjs",
     "geocodio": "stellar/scf-starforge-20261009/sf30-seller-sdk/geocodio/cli.mjs",
-    "mssql": "stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/cli.mjs",
-    "mssql-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/workspace/server.mjs",
     "sec-edgar": "stellar/scf-starforge-20261009/sf30-seller-sdk/sec-edgar/cli.mjs",
     "bls-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/bls-labor/publisher/cli.mjs",
     "odata": "stellar/scf-starforge-20261009/sf30-seller-sdk/odata/cli.mjs",
@@ -430,7 +443,18 @@
     "sec-edgar-download": "stellar-forge/mcp-merchant-operator/sec-edgar-download.mjs",
     "nocodb-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/cli.mjs",
     "unstructured-merchant": "stellar/scf-starforge-20261009/partners/unstructured/merchant.mjs",
-    "unstructured-commerce": "stellar/scf-starforge-20261009/partners/unstructured/commerce.mjs"
+    "unstructured-commerce": "stellar/scf-starforge-20261009/partners/unstructured/commerce.mjs",
+    "dataset-ndjson-customer": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/consumer/cli.mjs",
+    "api-pass-workspace": "stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/cli.mjs",
+    "mcp-collections-download": "stellar-forge/mcp-paid-agent/native-collections-download.mjs",
+    "databento-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/databento/workbench.mjs",
+    "databento-acquire": "stellar/scf-starforge-20261009/sf30-seller-sdk/databento/acquire.mjs",
+    "databento-warehouse": "stellar/scf-starforge-20261009/sf30-seller-sdk/databento/warehouse.mjs",
+    "baserow-source": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/cli.mjs",
+    "baserow-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/publisher/cli.mjs",
+    "baserow-deployment": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/deployment-cli.mjs",
+    "baserow-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/cli.mjs",
+    "stac": "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -533,6 +557,10 @@
       "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/quickbooks.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/quickbooks.mjs"
     },
+    "./seller/oauth-connections/xero": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/xero.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/xero.mjs"
+    },
     "./seller/client": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-generator.mjs",
     "./seller/client-export": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-export.mjs",
     "./seller/releases": "./source/stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs",
@@ -625,6 +653,8 @@
     "./merchant/mcp/graphql-workspaces": "./source/stellar-forge/mcp-merchant-operator/graphql-workspace.mjs",
     "./merchant/mcp/graphql-download": "./source/stellar-forge/mcp-merchant-operator/graphql-workspace-download.mjs",
     "./seller/graphql/workspace-files": "./source/stellar/scf-starforge-20261009/sf105-subquery-graphql-merchant/workspace/files.mjs",
+    "./merchant/mcp/arcgis": "./source/stellar-forge/mcp-merchant-operator/arcgis-workspace.mjs",
+    "./merchant/mcp/arcgis/server": "./source/stellar-forge/mcp-merchant-operator/arcgis-workspace-launcher.mjs",
     "./merchant/mcp/redis": "./source/stellar-forge/mcp-merchant-operator/redis-workspace.mjs",
     "./merchant/mcp/server": "./source/stellar-forge/mcp-merchant-operator/serve.mjs",
     "./seller/merchant-desk": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/desk/server.mjs",
@@ -967,13 +997,6 @@
     "./seller/geocodio/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/geocodio/server.mjs",
     "./merchant/mcp/opensearch": "./source/stellar-forge/mcp-merchant-operator/opensearch-workspace.mjs",
     "./merchant/mcp/opensearch/deployment": "./source/stellar-forge/mcp-merchant-operator/opensearch-deployment.mjs",
-    "./seller/mssql": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/merchant.mjs",
-    "./seller/mssql/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/source.mjs",
-    "./seller/mssql/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/config.mjs",
-    "./seller/mssql/prepare": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/prepare.mjs",
-    "./seller/mssql/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/workspace/server.mjs",
-    "./seller/mssql/workspace/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/workspace/model.mjs",
-    "./seller/releases/mssql": "./source/stellar/scf-starforge-20261009/sf82-seller-pilot/release-mssql.mjs",
     "./seller/sec-edgar/cli": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sec-edgar/cli.mjs",
     "./seller/sec-edgar/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sec-edgar/config.mjs",
     "./seller/sec-edgar/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sec-edgar/source.mjs",
@@ -1053,7 +1076,56 @@
     "./buyer/unstructured": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/unstructured/index.mjs",
     "./buyer/research-dossiers/unstructured-workspace": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/unstructured-workspace.mjs",
     "./partners/unstructured": "./source/stellar/scf-starforge-20261009/partners/unstructured/merchant.mjs",
-    "./partners/unstructured/commerce": "./source/stellar/scf-starforge-20261009/partners/unstructured/commerce.mjs"
+    "./partners/unstructured/commerce": "./source/stellar/scf-starforge-20261009/partners/unstructured/commerce.mjs",
+    "./merchant/mcp/coingecko": "./source/stellar-forge/mcp-merchant-operator/coingecko-workspace.mjs",
+    "./merchant/mcp/fiscaldata": "./source/stellar-forge/mcp-merchant-operator/fiscaldata-workspace.mjs",
+    "./seller/fiscaldata/portable": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/portable.mjs",
+    "./merchant/mcp/mpp": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/mpp-console.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/mpp-console.mjs"
+    },
+    "./merchant/mcp/mpp-download": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/mpp-download.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/mpp-download.mjs"
+    },
+    "./seller/ndjson/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/release.mjs",
+    "./merchant/mcp/dataset-lifecycle": "./source/stellar-forge/mcp-merchant-operator/dataset-lifecycle.mjs",
+    "./merchant/mcp/worldbank-workspaces": "./source/stellar-forge/mcp-merchant-operator/worldbank-workspace.mjs",
+    "./merchant/mcp/worldbank-download": "./source/stellar-forge/mcp-merchant-operator/worldbank-workspace-download.mjs",
+    "./merchant/api-pass-workspace": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/model.mjs",
+    "./merchant/api-pass-workspace/config": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/configuration.mjs",
+    "./merchant/api-pass-workspace/server": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/server.mjs",
+    "./merchant/api-pass-workspace/cli": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/cli.mjs",
+    "./merchant/mcp/grpc": "./source/stellar-forge/mcp-merchant-operator/grpc-workspace.mjs",
+    "./merchant/mcp/grpc/receiving": "./source/stellar-forge/mcp-merchant-operator/grpc-workspace-download.mjs",
+    "./merchant/mcp/grpc/export": "./source/stellar-forge/mcp-merchant-operator/grpc-workspace-export.mjs",
+    "./buyer/mcp/collections": "./source/stellar-forge/mcp-paid-agent/native-collections.mjs",
+    "./buyer/mcp/collections-schema": "./source/stellar-forge/mcp-paid-agent/native-collections-schema.mjs",
+    "./buyer/mcp/collections-download": "./source/stellar-forge/mcp-paid-agent/native-collections-download.mjs",
+    "./seller/databento/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/databento/workbench.mjs",
+    "./seller/databento/acquire": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/databento/acquire.mjs",
+    "./seller/databento/warehouse": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/databento/warehouse.mjs",
+    "./seller/baserow": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/index.mjs",
+    "./seller/baserow/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/source.mjs",
+    "./seller/baserow/declaration": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/declaration.mjs",
+    "./seller/baserow/capture": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/capture.mjs",
+    "./seller/baserow/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/publisher/model.mjs",
+    "./seller/baserow/deployment": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/deployment.mjs",
+    "./seller/baserow/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/model.mjs",
+    "./seller/baserow/workspace/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/server.mjs",
+    "./seller/baserow/workspace/launch": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/launch.mjs",
+    "./seller/baserow/workspace/packet": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/packet.mjs",
+    "./seller/stac": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/merchant.mjs",
+    "./seller/stac/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/workspace.mjs",
+    "./seller/stac/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/provider.mjs",
+    "./seller/stac/customer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/customer.mjs",
+    "./seller/stac/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/server.mjs",
+    "./buyer/stac": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/customer.mjs",
+    "./buyer/stac/receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/receiving/delivery.mjs",
+    "./seller/stac/processing": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/processing/workspace.mjs",
+    "./seller/stac/processing/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/processing/provider.mjs",
+    "./buyer/stac/processing": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/processing/portable.mjs",
+    "./seller/stac/processing/cirrus": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/processing/cirrus.mjs"
   },
   "nativePeers": {
     "@x402/core": {
@@ -1141,7 +1213,6 @@
     "mcp": "stellar-forge/mcp-paid-agent/package.json",
     "node-agents": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/examples/agents/runtime-package.json",
     "sftp": "stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/package.json",
-    "mssql": "stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/package.json",
     "grpc": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/package.json"
   }
 }

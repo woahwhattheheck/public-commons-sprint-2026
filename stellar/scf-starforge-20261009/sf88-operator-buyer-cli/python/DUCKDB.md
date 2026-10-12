@@ -203,8 +203,15 @@ Each completed result includes:
   and member byte counts and SHA-256 hashes.
 
 Use the returned `files` list for the complete delivery. In the browser, open
-the export to download its files or reopen its query. **Continue a saved
-operation** resumes an interrupted export or handoff from its retained request.
+the export to download its files or reopen its query. **Parquet column types**
+shows each column's original SQL type, stored file type and representation.
+**Exact decimal** and **Exact text** identify values stored through a lossless
+conversion. Open **Read the original SQL types** to copy the query for the
+downloaded `result.parquet`; it restores the saved result's original column
+types using the retained schema.
+
+**Continue a saved operation** resumes an interrupted export or handoff from
+its retained request.
 
 To deliver an existing export to another computer, copy that export's complete
 directory. The portable analytical workspace described below retains its export
