@@ -131,9 +131,20 @@
   "maxTimeoutSeconds": 60
 }</textarea></label>
         <p class="hint">Enter the actual network, asset, exact atomic-unit amount and recipient. The original merchant compiler validates these terms. The package includes native seller configuration, OpenAPI, generated customer SDK, original source, mapping and an operating guide.</p>
-        <button class="primary" type="submit">Download complete merchant package</button>
+        <button class="primary" type="submit">Prepare and retain merchant</button>
       </form>
       <div class="panel">
+        <h3>Saved merchant packages</h3>
+        <p class="hint">Reopen the same prepared merchant after a restart. Downloads reuse its complete saved ZIP and generated customer SDK.</p>
+        <label>Retained merchant<select id="merchant-saved"></select></label>
+        <div id="merchant-detail" class="detail"></div>
+        <div class="actions"><button id="merchant-show" type="button">Verify and reopen</button><button id="merchant-download" type="button">Download saved package</button></div>
+        <form id="merchant-receive-form">
+          <h3>Receive a complete merchant</h3>
+          <label>Original merchant ZIP<input id="merchant-receive-file" type="file" accept=".zip,application/zip" required></label>
+          <p class="hint">Validates every source and customer file, rebuilds the original dataset and retains the exact uploaded ZIP. A source-project ZIP uses the separate source import.</p>
+          <button type="submit">Receive and reopen merchant</button>
+        </form>
         <h3>Retain, move and recover</h3>
         <label>Edition to export<select id="export-build"></select></label>
         <div class="stack"><button id="export-project" type="button">Download complete source project</button><button id="export-dataset" type="button">Download native dataset and lineage</button></div>
