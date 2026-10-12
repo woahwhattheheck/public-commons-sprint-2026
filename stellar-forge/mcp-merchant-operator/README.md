@@ -52,7 +52,7 @@ Agents can then stage, compare, prepare and activate releases; observe draining
 requests; retire exact owned child instances; review and restore a retained
 revision; and stop or reopen the saved fleet. The original gateway, release
 stores and sessions own these operations. See [FLEET.md](FLEET.md) for the full
-host configuration, all 13 fleet tools, and recovery workflow. Existing merchant
+host configuration, base fleet tools, and recovery workflow. Existing merchant
 initialization can include the same fleet with `--fleet-plan`.
 
 
@@ -72,6 +72,23 @@ The managed fleet workspace exposes the same original customer controls, and
 `fleet-release` supplies a resumable `client-download` command. See
 [the fleet customer handover guide](../../stellar/scf-starforge-20261009/merchant-fleet-gateway/CLIENT_HANDOVER.md)
 for the complete browser, foreground CLI, and authenticated MCP workflow.
+
+### Publish tenant discovery and serve the original buyer explorer
+
+The same fleet owner now operates each tenant's original seller enrollment,
+signed catalogue and native buyer explorer across release slots. Review the
+current serving source and exact payment choices, apply the original signed
+publication, inspect retained resource history, and withdraw a route from an
+older retained release. Interrupted enrollment can be inspected, preserved and
+completed through the original setup workflow.
+
+Use the `merchant_fleet_discovery_*` tools for enrollment, start/stop,
+retained-source inspection, publication review/apply, original history and
+native discovery pages. The managed browser and foreground CLI expose the
+complete workflow over the same lifecycle owner. See
+[the tenant discovery guide](../../stellar/scf-starforge-20261009/merchant-fleet-gateway/DISCOVERY.md)
+for exact inputs, recovery, slot changes and the original buyer preparation
+workflow.
 
 ## Prepare a merchant
 

@@ -221,8 +221,8 @@ export async function bootstrapFleet({ declarationFile, directory, planFile, sig
   planFile = resolve(planFile ?? join(directory, 'fleet-plan.json'));
   const journalFile = join(directory, 'bootstrap.json'), pendingPlan = join(directory, 'bootstrap-plan.pending.json');
   const reserved = ['bootstrap.json', 'bootstrap-plan.pending.json', 'lease.lock', 'links.json',
-    'prepared-fleet.json', 'stores', 'recovery', 'gateway', 'clients', 'discovery'].map(name => join(directory, name));
-  if ([...reserved, declarationFile].includes(planFile) || ['stores', 'recovery', 'gateway', 'clients', 'discovery']
+    'prepared-fleet.json', 'stores', 'recovery', 'gateway', 'clients', 'discovery', 'discovery-recovery'].map(name => join(directory, name));
+  if ([...reserved, declarationFile].includes(planFile) || ['stores', 'recovery', 'gateway', 'clients', 'discovery', 'discovery-recovery']
       .some(name => planFile.startsWith(join(directory, name) + sep)))
     throw failure('FLEET_BOOTSTRAP_PLAN_PATH_INVALID');
   const intent = declaredIntent(input, dirname(declarationFile), directory, planFile);

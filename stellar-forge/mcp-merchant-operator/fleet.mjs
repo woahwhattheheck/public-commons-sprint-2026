@@ -37,9 +37,55 @@ function fleetClientTools(tool) {
   ];
 }
 
+function fleetDiscoveryTools(tool) {
+  const scope = { tenant, slot: alias, instanceId: identity };
+  const page = {
+    view: { type: 'string', enum: ['list', 'search'] },
+    limit: { type: 'integer', minimum: 1, maximum: 100 },
+    offset: { type: 'integer', minimum: 0, maximum: 9999999 },
+    query: { type: 'string', minLength: 1, maxLength: 1024 },
+    cursor: { type: 'string', minLength: 1, maxLength: 512 },
+    network: { type: 'string', enum: ['stellar:testnet', 'stellar:pubnet'] },
+    type: { type: 'string', enum: ['http', 'mcp'] },
+    scheme: { type: 'string', maxLength: 256 }, payTo: { type: 'string', maxLength: 256 },
+    extensions: { type: 'string', maxLength: 256 },
+  };
+  return [
+    tool('merchant_fleet_discovery_status', 'Read one tenant’s original seller enrollment, serving release and instance, exact payment terms, catalogue head and original buyer explorer. The signing identity belongs to the tenant across release slots. Interrupted setup includes its inspected recovery identity.',
+      { tenant }, ['tenant'], { readOnly: true, idempotent: true }),
+    tool('merchant_fleet_discovery_enrollment', 'Read the original public seller enrollment and pinned public key for this tenant, with its original source and accepted origin, recipients, networks and schemes.',
+      { tenant }, ['tenant'], { readOnly: true, idempotent: true }),
+    tool('merchant_fleet_discovery_enrollment_review', 'Review the exact serving tenant release, actual offers and source-derived permissions before original seller enrollment. For an incomplete setup, pass expectedIncompleteId from current status to review preservation of its partial files followed by enrollment.',
+      { ...scope, sellerId: { type: 'string', pattern: '^[A-Za-z0-9_.:-]{1,128}$' },
+        sourceURL: { type: 'string', minLength: 1, maxLength: 4096 }, expectedIncompleteId: digest },
+      ['tenant', 'slot', 'instanceId', 'sellerId'], { readOnly: true }),
+    tool('merchant_fleet_discovery_enroll', 'Create this tenant’s original seller identity from the exact enrollment review. The current routing guard spans original setup. A reviewed incomplete setup is preserved intact before creating its replacement; completed enrollment reopens its existing identity.',
+      { tenant, reviewId: identity }, ['tenant', 'reviewId']),
+    tool('merchant_fleet_discovery_start', 'Start or reopen this tenant’s original signed catalogue and its original SF61 buyer explorer. Reuses the retained seller identity and journal across blue/green deployments.',
+      { tenant }, ['tenant'], { idempotent: true }),
+    tool('merchant_fleet_discovery_stop', 'Close this process-owned tenant buyer explorer and catalogue using its exact discovery instanceId. Retains the original enrollment, signed revisions and withdrawals for reopen.',
+      { tenant, instanceId: identity }, ['tenant', 'instanceId'], { destructive: true }),
+    tool('merchant_fleet_discovery_source', 'Inspect the actual offers, payment choices and catalogue differences of one retained tenant release, including a stopped slot. Select an older route that a replacement release removed.',
+      { tenant, slot: alias, releaseId: release }, ['tenant', 'slot', 'releaseId'], { readOnly: true, idempotent: true }),
+    tool('merchant_fleet_discovery_review', 'Review exact signed publication or withdrawal against the tenant’s original catalogue head and current serving instance. Publishing uses the serving release. A withdrawal may select sourceSlot/sourceReleaseId for an older retained route, with a concrete reason.',
+      { ...scope, action: { type: 'string', enum: ['publish', 'withdraw'] },
+        routeId: { type: 'string', minLength: 1, maxLength: 256 },
+        reason: { type: 'string', minLength: 1, maxLength: 256 }, sourceSlot: alias, sourceReleaseId: release },
+      ['tenant', 'slot', 'instanceId', 'action'], { readOnly: true }),
+    tool('merchant_fleet_discovery_apply', 'Apply the exact reviewed tenant publication or withdrawal using the original signer and transaction journal. The current routing lock spans signatures and commit. After a lost response, read current status/history to reconcile its durable result.',
+      { tenant, reviewId: identity }, ['tenant', 'reviewId']),
+    tool('merchant_fleet_discovery_history', 'Read this tenant resource’s original signed lifecycle and journal head, including price revisions and withdrawals. Remains available after the release slot retires and the retained catalogue reopens.',
+      { tenant, catalogKey: { type: 'string', minLength: 1, maxLength: 4096 } },
+      ['tenant', 'catalogKey'], { readOnly: true, idempotent: true }),
+    tool('merchant_fleet_discovery_consume', 'Read an actual page from this tenant’s original SF60 discovery through its original SF61 consumer. Preserves pagination, opaque search cursors, source URL and observation time. The buyer explorer exports that exact page for original SF88 preparation.',
+      { tenant, ...page }, ['tenant'], { readOnly: true, idempotent: true }),
+  ];
+}
+
 export function fleetControlTools(tool) {
   return [
     ...fleetClientTools(tool),
+    ...fleetDiscoveryTools(tool),
     tool('merchant_fleet_plan', 'Inspect the host-configured original fleet: plan digest, tenant/slot/package aliases, listener ports and limits. Reads original release stores without starting a process or exposing private paths.', {}, [], { readOnly: true, idempotent: true }),
     tool('merchant_fleet_status', 'Read this MCP process ownership and the original live fleet revision, candidates, exact release mapping, retained rollback history, active requests and drain state. A stopped fleet remains stopped.', {}, [], { readOnly: true, idempotent: true }),
     tool('merchant_fleet_start', 'Start or reopen the original retained multi-store fleet using the exact inspected host-plan digest. Starts its original selected merchant sessions and gateway; does not request a paid resource.', { expectedPlanDigest: digest }, ['expectedPlanDigest'], { openWorld: true }),
@@ -150,12 +196,20 @@ export class MerchantFleet {
             merchant_fleet_operations: 'operations', merchant_fleet_client_list: 'clientList',
             merchant_fleet_client_status: 'clientInspect', merchant_fleet_client_generate: 'clientGenerate',
             merchant_fleet_client_adopt: 'clientAdopt', merchant_fleet_client_manifest: 'clientManifest',
-            merchant_fleet_client_file: 'clientFile', merchant_fleet_client_file_release: 'clientFileRelease' };
+            merchant_fleet_client_file: 'clientFile', merchant_fleet_client_file_release: 'clientFileRelease',
+            merchant_fleet_discovery_status: 'discoveryStatus', merchant_fleet_discovery_enrollment: 'discoveryEnrollment',
+            merchant_fleet_discovery_enrollment_review: 'discoveryReviewEnrollment',
+            merchant_fleet_discovery_enroll: 'discoveryCreateEnrollment', merchant_fleet_discovery_start: 'discoveryStart',
+            merchant_fleet_discovery_stop: 'discoveryStop', merchant_fleet_discovery_source: 'discoverySource',
+            merchant_fleet_discovery_review: 'discoveryReview', merchant_fleet_discovery_apply: 'discoveryApply',
+            merchant_fleet_discovery_history: 'discoveryHistory', merchant_fleet_discovery_consume: 'discoveryConsume' };
           const method = methods[name];
           if (!method) throw error('TOOL_NOT_FOUND', 'Unknown fleet operation.');
           const held = this.#owned();
           const result = await held.operator[method](args);
-          if (!['catalog', 'operations', 'clientList', 'clientInspect', 'clientManifest', 'clientFile', 'clientFileRelease'].includes(method))
+          if (!['catalog', 'operations', 'clientList', 'clientInspect', 'clientManifest', 'clientFile', 'clientFileRelease',
+            'discoveryStatus', 'discoveryEnrollment', 'discoverySource', 'discoveryHistory', 'discoveryConsume',
+            'discoveryReviewEnrollment', 'discoveryReview'].includes(method))
             this.#lastOperation = { action: method, outcome: 'RETURNED', managerId: held.id, at: new Date().toISOString() };
           return { managerId: held.id, ...result };
         }
