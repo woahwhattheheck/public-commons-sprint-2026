@@ -1,6 +1,7 @@
 // MIT. Private industrial workspace for original water-data operations.
+import { constants } from 'node:fs';
 import { createServer } from 'node:http';
-import { readFile, realpath, stat } from 'node:fs/promises';
+import { readFile, realpath, stat, open } from 'node:fs/promises';
 import { dirname, join, resolve, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes, randomUUID, timingSafeEqual, createHash } from 'node:crypto';
@@ -10,6 +11,7 @@ import { prepareWaterPurchase, purchaseWaterEdition, reopenWaterPurchase } from 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const STATIC = new Map([['/', ['ui/index.html', 'text/html; charset=utf-8']],
   ['/app.mjs', ['ui/app.mjs', 'text/javascript; charset=utf-8']],
+  ['/dss.mjs', ['ui/dss.mjs', 'text/javascript; charset=utf-8']],
   ['/style.css', ['ui/style.css', 'text/css; charset=utf-8']]]);
 const json = value => JSON.stringify(value, null, 2) + '\n';
 function fail(message, code = 'WATER_WORKSPACE_INVALID', status = 400) { throw Object.assign(new Error(message), { code, status }); }
@@ -32,6 +34,7 @@ function publicError(error) {
   return { code: error.code ?? 'WATER_OPERATION_FAILED',
     message: typeof error.status === 'number' || error.code?.startsWith('WATER_') || error.code?.startsWith('USGS_')
       ? error.message : error.code === 'ENOENT' ? 'The original saved record is unavailable.' : 'The operation could not complete. Its saved input and completed source pages remain available.',
+    ...(error.code === 'WATER_DSS_TIME_CONFLICT' ? { detail: error.detail } : {}),
     retryAt: error.retryAt ?? null, retryAfter: error.retryAfter ?? null };
 }
 function publicPurchase(value) {
@@ -60,9 +63,21 @@ export async function startWaterWorkspace({ directory, port = 0, merchantPort = 
       ...(filename ? { 'content-disposition': 'attachment; filename="' + filename.replace(/[^A-Za-z0-9_.-]/g, '_') + '"' } : {}) });
     response.end(bytes);
   };
+  async function sendFile(response, file) {
+    const handle = await open(file.path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+    const info = await handle.stat();
+    if (!info.isFile() || info.nlink !== 1 || (info.mode & 0o077) || info.size !== file.bytes) {
+      await handle.close(); fail('The retained download changed.', 'WATER_DSS_CHANGED', 409);
+    }
+    response.writeHead(200, { 'content-type': file.mime, 'content-length': file.bytes, 'cache-control': 'no-store',
+      'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer',
+      'content-disposition': 'attachment; filename="' + file.filename.replace(/[^A-Za-z0-9_.-]/g, '_') + '"' });
+    const stream = handle.createReadStream({ autoClose: true });
+    response.once('close', () => stream.destroy()); stream.once('error', () => response.destroy()); stream.pipe(response);
+  }
   async function view() {
     return { project: await project.read(), captures: await project.listCaptures(), reviews: await project.listReviews(),
-      editions: await project.listEditions(), runtime: plainRuntime(activeMerchant, activeEditionId),
+      editions: await project.listEditions(), dssExports: await project.listDssExports(), runtime: plainRuntime(activeMerchant, activeEditionId),
       buyerConfigured: Boolean(buyer), jobs: [...jobs.values()].map(({ promise, ...row }) => row), token };
   }
   function startJob(id, work) {
@@ -87,7 +102,7 @@ export async function startWaterWorkspace({ directory, port = 0, merchantPort = 
       }
       if (request.method === 'GET' && path === '/api/workspace') return send(response, 200, await view());
       if (request.method === 'GET' && path === '/api/status')
-        return send(response, 200, { captures: await project.listCaptures(), runtime: plainRuntime(activeMerchant, activeEditionId),
+        return send(response, 200, { captures: await project.listCaptures(), dssExports: await project.listDssExports(), runtime: plainRuntime(activeMerchant, activeEditionId),
           jobs: [...jobs.values()].map(({ promise, ...row }) => row) });
       if (request.method === 'GET' && (match = /^\/api\/reviews\/([A-Za-z0-9_-]+)(?:\/(html|json|csv|geojson))?$/.exec(path))) {
         if (!match[2]) return send(response, 200, await project.readReview(match[1]));
@@ -110,14 +125,38 @@ export async function startWaterWorkspace({ directory, port = 0, merchantPort = 
       }
       if (request.method === 'GET' && (match = /^\/api\/editions\/([A-Za-z0-9_-]+)$/.exec(path)))
         return send(response, 200, await project.readEdition(match[1]));
+      if (request.method === 'GET' && (match = /^\/api\/dss\/source\/([A-Za-z0-9_-]+)$/.exec(path)))
+        return send(response, 200, await project.inspectDssEdition(match[1]));
+      if (request.method === 'GET' && (match = /^\/api\/dss\/([A-Za-z0-9_-]+)\/files\/(dss|report|mapping|rows|native|comparison|handover)$/.exec(path)))
+        return sendFile(response, await project.dssDownload(match[1], match[2]));
+      if (request.method === 'GET' && (match = /^\/api\/dss\/([A-Za-z0-9_-]+)$/.exec(path)))
+        return send(response, 200, await project.readDssOperation(match[1]));
       if (request.method !== 'POST') fail('Workspace route not found.', 'WATER_ROUTE_NOT_FOUND', 404);
       if (!sameToken(request.headers['x-workspace-token'], token)) fail('Refresh the workspace before making a change.', 'WATER_TOKEN_MISMATCH', 403);
+      if (path === '/api/dss/receive') {
+        if (!String(request.headers['content-type'] ?? '').startsWith('application/zip')) fail('Choose a complete DSS handover ZIP.');
+        return send(response, 200, await project.receiveDssUpload(request));
+      }
       const input = await body(request);
       if (path === '/api/captures') {
         const id = operationId(input.operationId ?? randomUUID());
         return send(response, 202, startJob(id, progress => project.acquire({ operationId: id, expectedRevision: input.expectedRevision, onProgress: progress })));
       }
       if ((match = /^\/api\/captures\/([A-Za-z0-9_-]+)\/cancel$/.exec(path))) return send(response, 200, project.cancelCapture(match[1]));
+      if (path === '/api/dss/runtime') return send(response, 200, await project.probeDssRuntime());
+      if (path === '/api/dss/preview') return send(response, 200, await project.previewDssExport(input));
+      if (path === '/api/dss/exports') {
+        const id = operationId(input.exportId);
+        return send(response, 202, startJob('dss-' + id, progress => project.createDssExport({ ...input, exportId: id, onProgress: progress })));
+      }
+      if ((match = /^\/api\/dss\/([A-Za-z0-9_-]+)\/verify$/.exec(path))) {
+        const id = operationId(match[1]);
+        return send(response, 202, startJob('dss-verify-' + id, () => project.verifyDssExport(id)));
+      }
+      if ((match = /^\/api\/dss\/([A-Za-z0-9_-]+)\/handover$/.exec(path))) {
+        const id = operationId(match[1]);
+        return send(response, 202, startJob('dss-handover-' + id, () => project.exportDssHandover(id)));
+      }
       if (path === '/api/analysis') return send(response, 200, await project.analyze(input));
       const result = await serial(async () => {
         if (path === '/api/project') return project.save(input);
