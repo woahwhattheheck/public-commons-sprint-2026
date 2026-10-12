@@ -6,10 +6,10 @@ The application runs on your computer. Its SQLite workspace contains the current
 
 ## Install and open
 
-Python 3.10 or newer is required. The package uses `python-docx 1.2.0` and `reportlab 4.4.9` to generate editable Word documents and PDFs. Download the [complete source package](https://github.com/woahwhattheheck/public-commons-sprint-2026/raw/main/scc-standards-workbench-2026/releases/scc_standards_workbench-0.2.2-source.zip) and install it into your usual Python environment. The archive contains the application, browser assets, original public sources and declared build metadata:
+Python 3.10 or newer is required. The package uses `python-docx 1.2.0` and `reportlab 4.4.9` to generate editable Word documents and PDFs. Download the [complete source package](https://github.com/woahwhattheheck/public-commons-sprint-2026/raw/main/scc-standards-workbench-2026/releases/scc_standards_workbench-0.2.3-source.zip) and install it into your usual Python environment. The archive contains the application, browser assets, original public sources and declared build metadata:
 
 ```sh
-python -m pip install ./scc_standards_workbench-0.2.2-source.zip
+python -m pip install ./scc_standards_workbench-0.2.3-source.zip
 standards-workbench --workspace ./standards-workspace --demo
 ```
 

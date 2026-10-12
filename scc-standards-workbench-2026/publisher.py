@@ -115,6 +115,24 @@ def _text(value):
     return value
 
 
+def _display_timestamp(value, language="en"):
+    original = _text(value)
+    try:
+        instant = datetime.fromisoformat(original.replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return original
+    if instant.tzinfo is None:
+        return original
+    instant = instant.astimezone(timezone.utc)
+    months = (("janvier", "février", "mars", "avril", "mai", "juin",
+               "juillet", "août", "septembre", "octobre", "novembre", "décembre")
+              if language == "fr" else
+              ("January", "February", "March", "April", "May", "June",
+               "July", "August", "September", "October", "November", "December"))
+    day = f"{instant.day} {months[instant.month - 1]} {instant.year}" if language == "fr" else f"{months[instant.month - 1]} {instant.day}, {instant.year}"
+    return day + (" à " if language == "fr" else " at ") + instant.strftime("%H:%M:%S UTC")
+
+
 def _json(value):
     return (engine.canonical(value) + "\n").encode("utf-8")
 
@@ -261,7 +279,7 @@ def _standard_model(edition, publication, language):
     state = words.get(publication.get("status"), publication.get("status", "")) if publication else words["no_publication"]
     model = _model(title, words["edition"] + " " + edition["label"] + " · " + words["language"] +
                    (" · " + state if state else ""), language, edition["frozen_at"])
-    _para(model, words["frozen"] + ": " + edition["frozen_at"], True)
+    _para(model, words["frozen"] + ": " + _display_timestamp(edition["frozen_at"], language), True)
     preface = scope.get("preface_" + language)
     if preface:
         _heading(model, words["preface"])
