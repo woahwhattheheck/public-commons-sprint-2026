@@ -122,6 +122,13 @@
       ]
     ],
     [
+      "/product-plan-runtime.mjs",
+      [
+        "../product-plan-runtime.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
       "/product-requirements.mjs",
       [
         "../../discovery/product-requirements.mjs",
