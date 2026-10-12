@@ -222,7 +222,8 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     relatedApplications.replaceChildren(...(current?.privateLinks ?? []).flatMap(link => {
       let url;
       try { url = new URL(link.url); } catch { return []; }
-      if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || !url.port ||
+      if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' ||
+          Number(url.port || 80) < 1 || Number(url.port || 80) > 65535 ||
           url.username || url.password || typeof link.label !== 'string') return [];
       const anchor = element('a', link.label); anchor.href = url.href; anchor.target = '_blank';
       anchor.rel = 'noopener noreferrer'; anchor.referrerPolicy = 'no-referrer'; return [anchor];
