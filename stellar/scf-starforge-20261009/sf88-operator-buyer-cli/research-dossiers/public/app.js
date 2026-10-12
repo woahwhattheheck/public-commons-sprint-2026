@@ -916,6 +916,8 @@ import {installZoteroResearchControl} from './zotero-browser.mjs';
     if(state.busy||!state.dossier||!state.token)return;
     const destination=new URL('/template-exchange.html',location.origin);
     destination.searchParams.set('dossierId',state.dossier.id);
+    if(state.workspaceId)destination.searchParams.set('workspaceId',state.workspaceId);
+    if(state.instanceId)destination.searchParams.set('instanceId',state.instanceId);
     destination.hash=new URLSearchParams({token:state.token}).toString();
     location.assign(destination.href);
   });

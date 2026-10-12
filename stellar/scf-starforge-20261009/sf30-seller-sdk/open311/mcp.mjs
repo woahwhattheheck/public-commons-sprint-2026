@@ -97,6 +97,8 @@ export class MerchantOpen311Workspaces {
           responseLimit: item.responseLimit ?? 1000, responseLimitParameter: item.responseLimitParameter ?? null,
           pagination: item.pagination === true,
           extendedAttributes: item.extendedAttributes === true, queryExtensions: item.queryExtensions ?? [],
+          queryDateRanges: item.queryDateRanges ?? [], apiKeyTransport: item.apiKeyTransport ?? 'query',
+          minimumRequestIntervalMs: item.minimumRequestIntervalMs ?? 0,
           attribution: item.attribution ?? null })) };
   }
   #atRevision(store, expectedRevision, work) {

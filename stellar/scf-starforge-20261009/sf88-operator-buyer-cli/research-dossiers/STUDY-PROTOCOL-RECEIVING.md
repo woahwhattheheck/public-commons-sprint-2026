@@ -18,7 +18,8 @@ Use the existing study-extraction owner and selected Research workspace for capt
 | `receiving/records/` | Original selected baseline, received metadata and exact question/edition/source binding |
 | `receiving/receiving-selection.json` | Immutable original operation and receiving selection |
 | `receiving/ENGINE_SOURCE.json` | Complete repository-relative engine inventory and source-cohort provenance |
-| `receiving/engine-source/` | 286 original engine, dependency, public-asset and licence files, plus the six protocol programme files |
+| `receiving/engine-source/` | The complete selected Research engine, dependencies, public assets and licence, with all six protocol programme files. The original default contains 292 files; a current installation retains its complete selected inventory. |
+| `receiving/records/engine-selection.json` | Exact full current-engine manifest when the original operator selected one; retained for receiving, packaging and resume |
 | `receiving/programme-source/` | Convenient copies of the same six programme files, verified against their engine-source counterparts |
 
 The complete reusable capture retains every member named by `CAPTURE_COMPLETE.json`. In particular, `original-source/source-manifest.json` and `original-source/source-bundle.json` are present beside the unchanged capture receipt. The original capture inspector therefore has the same selected input after transfer.
@@ -49,9 +50,34 @@ The engine source has the original repository layout:
 engine-source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/
 ```
 
-Before the original protocol operation, materialize the selected repaired 286-file Research source cohort with all six programme files beside `source-bundles.mjs`, `workspace-client.mjs` and `workspace-files.mjs`. The original receiving module verifies all 286 frozen source hashes before using that engine. It then includes those exact files, the six actual programme postimages and the original licence in its receipt. The complete `ENGINE_SOURCE.json` records the selected repository/ref, original cohort and repair provenance, all 292 file identities, and six overlays.
+Materialize the selected complete Research source cohort with all six programme files beside `source-bundles.mjs`, `workspace-client.mjs` and `workspace-files.mjs`. The receiver verifies every selected source hash before using the existing client. It includes the complete selected files, all six actual programme postimages and the original licence in its receipt. `ENGINE_SOURCE.json` records the selected repository/ref, full cohort provenance, actual source identities and six programme overlays.
+
+The original repaired 286-file engine remains the default for that retained source selection. For a current customer workspace with extraction, independent appraisal, workbook exchange and Python customer updates, pass the complete current installation manifest through `--engine-source`. Its dossier, client, host, assets and helpers then travel together in the delivered editable application.
 
 Git source modes `100644` and `100755` remain source metadata. The original materializer and this helper use private physical permissions: `0600` for files and `0700` for executable source and directories. This matters because the original Research host-file reader expects private files. Invoke JavaScript with the selected Node executable and Python with `python3`; do not make the receiving tree publicly writable or readable to work around a reader error.
+
+## Select the complete current Research engine
+
+The existing Research installation owner supplies the full source manifest for the selected customer edition. Save that exact UTF-8 JSON as a private file beside the operation inputs. The descriptor uses the same original cohort structure:
+
+| Field | Required value |
+|---|---|
+| `id` | The original installation's stable source-selection ID |
+| `repository` | The selected repository as `owner/name` |
+| `ref` | Its full 40-character source commit |
+| `baseFiles` | The exact length of `files` |
+| `baseBytes` | The sum of every selected file's byte length |
+| `files` | Every selected complete source descriptor, with repository-relative `path`, byte length `bytes`, lowercase SHA-256 `sha256`, and original Git mode `100644` or `100755` |
+
+Retain the original source/repair provenance fields with that descriptor. All original engine paths must remain represented, including the licence and Developer assets; changed current files use their actual current hashes. Include the complete current Python, Zotero, extraction, appraisal, workbook and customer source selected by the original installation owner. The receiver reads these files from its existing repository-layout source root and verifies every body against the chosen descriptor.
+
+The six protocol programme files can be supplied alongside the selected engine. The receiver copies each actual complete programme source and records it as an overlay. If the current manifest already includes a programme path, that descriptor must match the running source exactly; the path is included once in the engine and its identical convenience copy remains in `programme-source/`.
+
+Pass `--engine-source /ABS/original-inputs/Research_Engine_Selection.json` to the existing `receive` or `run` command. The JavaScript API accepts the same absolute file through `receiveStudyProtocol({engineSourceFile, ...existingSelection})`. Capture, the selected existing question, connection, source bundle and original operation stay the same.
+
+The exact selection bytes are retained at `records/engine-selection.json`. Later invocations can omit the option and resume from that saved selection. Supplying a different file after selection is rejected before receiving. A completed operation returns its original completed source selection; an explicit request for a different engine does not relabel that delivery. Preserve the original delivered edition when selecting a later customer edition.
+
+The archive validator binds this complete selection, every selected engine file, all six programme overlays and their exact union. The resulting file count comes from the selected source. Fresh archive materialization and native dossier reopen use that same complete delivered engine.
 
 ## 1. Reuse or capture the original protocol
 
@@ -94,10 +120,11 @@ node "$PROTOCOL_SOURCE/study-protocol-cli.mjs" receive \
   --dossier ORIGINAL_DOSSIER_ID \
   --question ORIGINAL_QUESTION_ID \
   --base-revision ORIGINAL_BASE_REVISION \
+  --engine-source /ABS/original-inputs/Research_Engine_Selection.json \
   --operation DBC61-SCF-STUDY-EXTRACTION-20261012-PROTOCOL
 ```
 
-The values beginning `ORIGINAL_` are the actual selected IDs and integer revision, not literal values. The workspace ID has the original `research_` plus 64 hexadecimal characters. The connection file stays private and is never a package input.
+The values beginning `ORIGINAL_` are the actual selected IDs and integer revision, not literal values. The workspace ID has the original `research_` plus 64 hexadecimal characters. The connection file stays private and is never a package input. The examples select the full current engine manifest; omit `--engine-source` when resuming its saved selection or intentionally using the original frozen engine.
 
 The `run` command joins the same capture and receiving phases under one original operation directory:
 
@@ -110,6 +137,7 @@ node "$PROTOCOL_SOURCE/study-protocol-cli.mjs" run \
   --dossier ORIGINAL_DOSSIER_ID \
   --question ORIGINAL_QUESTION_ID \
   --base-revision ORIGINAL_BASE_REVISION \
+  --engine-source /ABS/original-inputs/Research_Engine_Selection.json \
   --operation DBC61-SCF-STUDY-EXTRACTION-20261012-PROTOCOL
 ```
 

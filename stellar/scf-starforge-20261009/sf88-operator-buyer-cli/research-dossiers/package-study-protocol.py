@@ -391,7 +391,7 @@ def validate_receiving(raw, read):
     need(bool(engine.get("sourceCohort")) and isinstance(engine.get("repository"), str) and
          bool(engine["repository"]), "PROTOCOL_ENGINE_PROVENANCE_REQUIRED")
     engine_files = table(engine.get("files"), "path")
-    need(len(engine_files) == 292 and engine.get("sourceFiles") == len(engine_files) and
+    need(engine.get("sourceFiles") == len(engine_files) and
          engine.get("sourceBytes") == sum(row["bytes"] for row in engine_files.values()),
          "PROTOCOL_ENGINE_INVENTORY_CHANGED")
     overlays = table(engine.get("overlays"), "path")
@@ -403,6 +403,39 @@ def validate_receiving(raw, read):
     engine_rows = {row["path"]: row for row in engine["files"]}
     for row in engine["overlays"]:
         need(row == engine_rows.get(row["path"]), "PROTOCOL_ENGINE_OVERLAY_CHANGED", row["path"])
+    selected_engine = engine.get("engineSelection")
+    if selected_engine is None:
+        need(len(engine_files) == 292 and result.get("engineSelection") is None,
+             "PROTOCOL_ENGINE_INVENTORY_CHANGED")
+    else:
+        selection_ref = descriptor(selected_engine)
+        need(selection_ref["name"] == "records/engine-selection.json" and
+             selected_engine == result.get("engineSelection"),
+             "PROTOCOL_ENGINE_SELECTION_CHANGED")
+        selection_name = selection_ref["name"]
+        selected = doc(selection_name)
+        same_bytes(files[selection_name], selection_ref,
+                   "PROTOCOL_ENGINE_SELECTION_CHANGED", selection_name)
+        selected_files = table(selected.get("files"), "path")
+        need(isinstance(selected.get("id"), str) and ID.fullmatch(selected["id"]) and
+             isinstance(selected.get("repository"), str) and
+             re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", selected["repository"]) and
+             isinstance(selected.get("ref"), str) and
+             re.fullmatch(r"[0-9a-f]{40}", selected["ref"]) and
+             type(selected.get("baseFiles")) is int and
+             selected["baseFiles"] == len(selected_files) and
+             type(selected.get("baseBytes")) is int and
+             selected["baseBytes"] == sum(row["bytes"] for row in selected_files.values()),
+             "PROTOCOL_ENGINE_COHORT_INVENTORY_CHANGED")
+        cohort_metadata = {key: value for key, value in selected.items() if key != "files"}
+        need(engine["sourceCohort"] == cohort_metadata and
+             engine["repository"] == selected["repository"] and engine.get("ref") == selected["ref"],
+             "PROTOCOL_ENGINE_PROVENANCE_CHANGED")
+        need(set(engine_files) == set(selected_files) | set(overlays),
+             "PROTOCOL_ENGINE_INVENTORY_CHANGED")
+        for row in selected["files"]:
+            need(row == engine_rows.get(row["path"]),
+                 "PROTOCOL_ENGINE_SELECTED_SOURCE_CHANGED", row["path"])
     need(all(name in engine_files for name in REQUIRED_ENGINE), "PROTOCOL_ENGINE_SOURCE_INCOMPLETE",
          [name for name in REQUIRED_ENGINE if name not in engine_files])
     modes = {}
