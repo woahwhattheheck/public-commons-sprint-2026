@@ -5,6 +5,8 @@ import { fail,verifySealed,ROW_SCHEMA } from '../model.mjs';
 import { effectiveXChange,normalizeXChangeProfile } from './profile.mjs';
 import { exactJSON,XCHANGE_SCHEMA,XCHANGE_SUPPLIER_SCHEMA,XCHANGE_PRODUCT_SCHEMA } from './schema.mjs';
 import { RECIPIENT_SCHEMA,xChangeRecipientRoot } from './recipient.mjs';
+import { twoBaParametersDescriptor } from './processing.mjs';
+import { twoBaArchiveDescriptor } from './package.mjs';
 const parse=row=>JSON.parse(row.record_json);
 const csv=value=>'"'+String(value??'').replaceAll('"','""')+'"';
 function assertRecipient(db,review){if(!review.recipient||xChangeRecipientRoot(db,review.id)!==review.recipient.rowsRootSha256)fail('XCHANGE_RECIPIENT_CHANGED','The immutable recipient review changed.',409);}
@@ -18,6 +20,13 @@ function* objectWithArray(header,tokens,schema,arrayKey,body){
 export function exportXChangeReview(db,review,format){
   assertRecipient(db,review);const profile=normalizeXChangeProfile(review.plan.profile);
   const name='ETIM_XCHANGE_'+review.id+'_';
+  const uploadPackage=format==='2ba.zip';
+  let parameters=null;
+  if(uploadPackage||format==='parameters.xml'){
+    parameters=twoBaParametersDescriptor(profile);
+    if(format==='parameters.xml')return parameters;
+    format='xchange.json';
+  }
   if(format==='recipient.jsonl'){
     const body=(function*(){yield JSON.stringify({kind:'recipient-review',reviewId:review.id,reviewSha256:review.sha256,recipient:review.recipient,profile})+'\n';for(const row of recipientRows(db,review))yield JSON.stringify(row)+'\n';})();
     return{type:'application/x-ndjson; charset=utf-8',filename:name+'recipient.jsonl',body};
@@ -26,7 +35,7 @@ export function exportXChangeReview(db,review,format){
     const body=(function*(){yield ['kind','supplierKey','identifier','productKey','materialKey','action','beforeSha256','afterSha256','recipientCode'].map(csv).join(',')+'\r\n';for(const row of recipientRows(db,review))yield [row.kind,row.supplierKey,row.identifier,row.productKey,row.materialKey,row.action,row.beforeSha256,row.afterSha256,row.after?.status?.recipientCode??''].map(csv).join(',')+'\r\n';})();
     return{type:'text/csv; charset=utf-8',filename:name+'impact.csv',body};
   }
-  if(format!=='xchange.json')fail('XCHANGE_EXPORT_FORMAT','Select xchange.json, recipient.jsonl or impact.csv.');
+  if(format!=='xchange.json')fail('XCHANGE_EXPORT_FORMAT','Select xchange.json, recipient.jsonl, impact.csv, parameters.xml or 2ba.zip.');
   if(review.counts.errors||!review.counts.total)fail('XCHANGE_CORRECTIONS_REQUIRED','Resolve the immutable review findings before exporting the complete native message.');
   const body=(function*(){
     const iterator=nativeRows(db,review)[Symbol.iterator]();let current=iterator.next(),productCount=0,supplierCount=0;
@@ -45,5 +54,6 @@ export function exportXChangeReview(db,review,format){
       if(!supplierCount)fail('XCHANGE_EXPORT_EMPTY','The original message contains no supplier.');
     }finally{iterator.return?.();}
   })();
-  return{type:'application/json; charset=utf-8',filename:name+String(review.recipient.catalogueType??'catalogue')+'.json',body};
+  const dataset={type:'application/json; charset=utf-8',filename:name+String(review.recipient.processing?.nativeCatalogueType??review.recipient.catalogueType??'catalogue')+'.json',body};
+  return uploadPackage?twoBaArchiveDescriptor({review,dataset,parameters}):dataset;
 }

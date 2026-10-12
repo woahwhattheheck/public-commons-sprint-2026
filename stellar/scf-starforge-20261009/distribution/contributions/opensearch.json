@@ -13,7 +13,7 @@
     "opensearch": "Preflight and run a native OpenSearch merchant",
     "opensearch-prepare": "Prepare named search routes and the original customer client",
     "opensearch-workspace": "Save drafts, capture and compare search editions, and prepare merchants",
-    "opensearch-catalog": "Retain material catalogs, correct BMEcat and native ETIM xChange deliveries, inspect recipient changes and reopen complete handovers",
+    "opensearch-catalog": "Retain material catalogs, correct BMEcat and native ETIM xChange deliveries, review 2BA processing and upload packages, and reopen complete handovers",
     "opensearch-materials-client": "Operate original material and supplier MCP workflows and receive complete resumable deliveries"
   },
   "exports": {
@@ -48,6 +48,9 @@
     "./seller/opensearch/catalog/supplier/xchange/recipient": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/supplier/xchange/recipient.mjs",
     "./seller/opensearch/catalog/supplier/xchange/exports": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/supplier/xchange/exports.mjs",
     "./seller/opensearch/receiving/xchange": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/receiving/xchange-delivery-journey.mjs",
-    "./clients/opensearch-material/receiving/xchange": "./source/stellar-forge/mcp-merchant-operator/receiving/xchange-materials-native.mjs"
+    "./clients/opensearch-material/receiving/xchange": "./source/stellar-forge/mcp-merchant-operator/receiving/xchange-materials-native.mjs",
+    "./seller/opensearch/catalog/supplier/xchange/processing": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/supplier/xchange/processing.mjs",
+    "./seller/opensearch/catalog/supplier/xchange/package": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/supplier/xchange/package.mjs",
+    "./clients/opensearch-material/receiving/twoba": "./source/stellar-forge/mcp-merchant-operator/receiving/twoba-materials-native.mjs"
   }
 }
