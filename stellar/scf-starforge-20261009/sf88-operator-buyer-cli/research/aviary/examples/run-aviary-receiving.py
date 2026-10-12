@@ -45,6 +45,10 @@ PART_SIZE = 5 * 1024 * 1024
 PCM_BYTES = PART_SIZE + 256 * 1024
 CHUNK = 256 * 1024
 COLLECTION = "8701"
+ORGANIZATION = "8801"
+API_DOCUMENT = {"url": "https://www.aviaryplatform.com/aviary-api.json",
+                "sha256": "1bf29e93ede6bc7aa755be25603e1fed4ddb899dac1964f4f63eaaca930c1291",
+                "bytes": 200348, "retrievedDate": "2026-10-12"}
 RESOURCE = "9101"
 MEDIA_LOCAL = "9201"
 MEDIA_LINKED = "9202"
@@ -185,6 +189,7 @@ def make_fixture(a, directory):
     png = base64.b64decode(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=")
     write_bytes(directory / "assets" / "supplemental.png", png, immutable=True)
+    write_bytes(directory / "assets" / "thumbnail.png", png, immutable=True)
     rows = {
         "resources": [{
             "Resource User Key": "source-resource", "Title": "Aviary receiving cohort",
@@ -196,6 +201,7 @@ def make_fixture(a, directory):
             {"Resource User Key": "source-resource", "Media User Key": "source-local",
              "Display Name": "Receiving multipart audio", "Path": "assets/held-multipart.wav",
              "Sequence #": "1", "Public": "no", "360 Video": "no",
+             "Media Thumbnail Path": "assets/thumbnail.png",
              "Description": "Original local WAV for the multipart receiving path",
              "Rights": "Generated receiving fixture"},
             {"Resource User Key": "source-resource", "Media User Key": "source-linked",
@@ -282,7 +288,9 @@ class ProviderState:
                 "resources": {}, "media_files": {}, "transcripts": {},
                 "indexes": {}, "supplemental_files": {}},
             "counts": {}, "parts": {}, "loseFirstLocalCreate": True,
-            "failSecondPart": True, "violations": [], "stages": {},
+            "failSecondPart": True, "loseFirstComplete": True,
+            "loseFirstMetadata": True, "completionReadbackReady": False,
+            "metadataReadbackReady": False, "violations": [], "stages": {},
         }
         self.api = None
         self.storage = None
@@ -329,9 +337,9 @@ class ProviderState:
                                  "bytes": len(body), "sha256": hashlib.sha256(body).hexdigest()}
             write_json(self.root / (relative + ".response.json"), value, immutable=True)
 
-    def media_model(self, identifier):
+    def media_model(self, identifier, *, include_upload=False):
         record = copy.deepcopy(self.value["records"]["media_files"][str(identifier)])
-        if str(identifier) == MEDIA_LOCAL:
+        if str(identifier) == MEDIA_LOCAL and include_upload:
             count = (self.fixture["audio"]["bytes"] + PART_SIZE - 1) // PART_SIZE
             record["multipart_upload"] = {
                 "upload_id": UPLOAD, "part_size": PART_SIZE, "parts_count": count,
@@ -339,16 +347,36 @@ class ProviderState:
                            "url": self.storage + f"/parts/{UPLOAD}/{number}?X-Amz-Signature=local-original-{number}"}
                           for number in range(1, count + 1)],
             }
+        if (str(identifier) == MEDIA_LOCAL and self.value["completionReadbackReady"]
+                and str(identifier) in self.value.get("completedMedia", {})):
+            record["media_download_url"] = (self.storage + "/media/held-multipart.wav"
+                                            "?X-Amz-Signature=local-completed-original")
+            record["media_info_metadata"] = [{"type": "General",
+                                              "FileSize": str(self.fixture["audio"]["bytes"])}]
+        metadata = record.get("metadata")
+        if str(identifier) == MEDIA_LOCAL and not self.value["metadataReadbackReady"]:
+            metadata = {}  # Declared index-lag barrier after the original update is retained.
+        if isinstance(metadata, dict):
+            record["metadata"] = [{"label": label, "data": copy.deepcopy(values)}
+                                  for label, values in metadata.items()]
+            record["metadata"].append({"label": "provider_note", "data": [{
+                "value": "Existing repository annotation", "vocabulary": ""}]})
         return record
 
     def resource_model(self):
         record = copy.deepcopy(self.value["records"]["resources"][RESOURCE])
         record["transcripts_id"] = sorted(self.value["records"]["transcripts"])
+        record["media_file_id"] = sorted(self.value["records"]["media_files"])
+        record["resource_id"] = record.pop("id")
+        # The documented single-resource model need not include collection
+        # membership; the original collection-scoped list supplies that fact.
+        for key in ("collection_id", "url", "direct_url"):
+            record.pop(key, None)
         return record
 
     def mutation_counts(self):
         return {key: value for key, value in self.value["counts"].items()
-                if key.startswith(("CREATE:", "PUT_PART:", "COMPLETE:", "METADATA:"))}
+                if key.startswith(("CREATE:", "PUT_PART:", "COMPLETE:", "METADATA:", "THUMBNAIL:"))}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -397,6 +425,11 @@ class Handler(BaseHTTPRequestHandler):
         if self.headers.get("Authorization") != "Bearer " + TOKEN:
             self.state.violation("API_AUTHORIZATION_SCOPE", {"request": number})
             self.send_record(number, 401, {"error": "Expected selected loopback receiving credential"})
+            return False
+        if self.headers.get("organization-id") != ORGANIZATION:
+            self.state.violation("API_ORGANIZATION_SCOPE", {"request": number})
+            self.send_record(number, 403, {"success": False, "data": {
+                "errors": ["The selected organization-id header is required."]}})
             return False
         return True
 
@@ -459,11 +492,19 @@ class Handler(BaseHTTPRequestHandler):
                     lost = is_local and self.state.value["loseFirstLocalCreate"]
                     if lost:
                         self.state.value["loseFirstLocalCreate"] = False
+                    response = {"data": self.state.media_model(identifier, include_upload=True)}
+                    if is_local:
+                        self.state.value.setdefault("originalUploads", {})[identifier] = {
+                            "schema": "commons.aviary-original-provider-upload.v1",
+                            "providerMediaId": identifier, "requestNumber": number,
+                            "originalUploadId": UPLOAD, "response": response,
+                            "scope": "Original local provider creation record; explicitly supplied by its operator after the response was lost."
+                        }
                     self.state.persist()
                     if lost:
                         self.drop_response(number)
                     else:
-                        self.send_record(number, 201, {"data": self.state.media_model(identifier)})
+                        self.send_record(number, 201, response)
                     return
                 if method == "PUT" and re.fullmatch(r"/api/v1/media_files/[1-9][0-9]*", path):
                     identifier = path.rsplit("/", 1)[-1]
@@ -471,8 +512,30 @@ class Handler(BaseHTTPRequestHandler):
                     require(isinstance(fields.get("metadata"), dict), "MEDIA_METADATA_BODY", fields)
                     self.state.count("METADATA:" + identifier)
                     self.state.value["records"]["media_files"][identifier]["metadata"] = fields["metadata"]
+                    lost = identifier == MEDIA_LOCAL and self.state.value["loseFirstMetadata"]
+                    if lost:
+                        self.state.value["loseFirstMetadata"] = False
+                        self.state.count("LOST_METADATA_RESPONSE:" + identifier)
                     self.state.persist()
-                    self.send_record(number, 200, {"data": self.state.media_model(identifier)})
+                    if lost:
+                        self.drop_response(number)
+                    else:
+                        self.send_record(number, 200, {"success": True, "data": self.state.media_model(identifier)})
+                    return
+                if method == "PUT" and path == "/api/v1/media_files/" + MEDIA_LOCAL + "/thumbnail":
+                    require(MEDIA_LOCAL in self.state.value["records"]["media_files"], "THUMBNAIL_MEDIA_ID")
+                    require(set(files) == {"thumbnail_image"}, "THUMBNAIL_MULTIPART_FIELD")
+                    upload = files["thumbnail_image"]
+                    expected = fingerprint(self.state.root / "source" / "assets" / "thumbnail.png")
+                    require(upload["bytes"] == expected["bytes"] and upload["sha256"] == expected["sha256"],
+                            "THUMBNAIL_ORIGINAL_SOURCE_BYTES")
+                    self.state.count("THUMBNAIL:" + MEDIA_LOCAL)
+                    require(self.state.value["counts"]["THUMBNAIL:" + MEDIA_LOCAL] == 1,
+                            "ORIGINAL_THUMBNAIL_REPLAY")
+                    self.state.value["records"]["media_files"][MEDIA_LOCAL]["thumbnail_url"] = (
+                        self.state.storage + "/thumbnails/thumbnail.png")
+                    self.state.persist()
+                    self.send_record(number, 200, {"success": True, "data": ["The media file thumbnail updated successfully."]})
                     return
                 attachments = {
                     "/api/v1/transcripts": ("transcripts", TRANSCRIPT, "resource_file_id", MEDIA_LOCAL, "receiving.vtt"),
@@ -482,6 +545,8 @@ class Handler(BaseHTTPRequestHandler):
                 if method == "POST" and path in attachments:
                     kind, identifier, parent_field, parent, filename = attachments[path]
                     require(str(fields.get(parent_field)) == parent, "ATTACHMENT_PARENT", fields)
+                    require(not {"sequence", "sequence_number", "sequence_no", "sort_order"} & set(fields),
+                            "UNDOCUMENTED_ATTACHMENT_SEQUENCE_FIELD", fields)
                     require(identifier not in self.state.value["records"][kind],
                             "DUPLICATE_ATTACHMENT_CREATION", kind)
                     upload = files.get("associated_file")
@@ -507,8 +572,21 @@ class Handler(BaseHTTPRequestHandler):
         try:
             parsed = urlsplit(self.path)
             if self.server.role == "storage":
-                require(self.headers.get("Authorization") is None and self.headers.get("Cookie") is None,
-                        "STORAGE_CREDENTIAL_LEAK")
+                require(self.headers.get("Authorization") is None and self.headers.get("Cookie") is None
+                        and self.headers.get("organization-id") is None, "STORAGE_CREDENTIAL_LEAK")
+                if parsed.path == "/media/held-multipart.wav":
+                    require(MEDIA_LOCAL in self.state.value.get("completedMedia", {}),
+                            "MEDIA_DOWNLOAD_BEFORE_COMPLETION")
+                    require(parse_qs(parsed.query).get("X-Amz-Signature") == ["local-completed-original"],
+                            "ORIGINAL_MEDIA_DOWNLOAD_CAPABILITY")
+                    with self.state.lock:
+                        self.state.count("MEDIA_FILE_STORAGE_GET")
+                        self.state.persist()
+                    source = self.state.root / "source" / "assets" / "held-multipart.wav"
+                    require(fingerprint(source) == self.state.fixture["audio"],
+                            "MEDIA_DOWNLOAD_SOURCE_CHANGED")
+                    self.send_record(number, 200, headers={"Content-Type": "audio/wav"}, raw=source.read_bytes())
+                    return
                 require(parsed.path == "/transcripts/receiving.vtt", "STORAGE_GET_PATH", parsed.path)
                 with self.state.lock:
                     self.state.count("TRANSCRIPT_STORAGE_GET")
@@ -520,6 +598,21 @@ class Handler(BaseHTTPRequestHandler):
             path = parsed.path
             with self.state.lock:
                 self.state.count("GET:" + path)
+                if path == "/api/v1/collections/" + COLLECTION + "/resources":
+                    query = parse_qs(parsed.query)
+                    require(query.get("page_size") == ["100"], "COLLECTION_PAGE_SIZE", query)
+                    page = int(query.get("page_number", ["0"])[0])
+                    require(page in (1, 2), "COLLECTION_PAGE_NUMBER", query)
+                    remote = [{"resource_id": str(9700 + i), "title": "Existing remote catalogue entry " + str(i)}
+                              for i in range(100)]
+                    if RESOURCE in self.state.value["records"]["resources"]:
+                        remote.append({"resource_id": RESOURCE,
+                                       "title": self.state.value["records"]["resources"][RESOURCE]["title"]})
+                    self.state.count("COLLECTION_MEMBERSHIP_PAGE:" + str(page))
+                    self.state.persist()
+                    self.send_record(number, 200, {"data": remote[(page - 1) * 100:page * 100],
+                                                  "total_entries": len(remote)})
+                    return
                 if path == "/api/v1/resources/" + RESOURCE:
                     self.state.persist()
                     self.send_record(number, 200, {"data": self.state.resource_model()})
@@ -545,8 +638,15 @@ class Handler(BaseHTTPRequestHandler):
                     self.state.count("COMPLETE:" + MEDIA_LOCAL)
                     self.state.value.setdefault("completedMedia", {})[MEDIA_LOCAL] = {
                         "at": now(), "bytes": size, "sha256": digest_value.hexdigest()}
+                    lost = self.state.value["loseFirstComplete"]
+                    if lost:
+                        self.state.value["loseFirstComplete"] = False
+                        self.state.count("LOST_COMPLETE_RESPONSE:" + MEDIA_LOCAL)
                     self.state.persist()
-                    self.send_record(number, 200, {"data": self.state.media_model(MEDIA_LOCAL)})
+                    if lost:
+                        self.drop_response(number)
+                    else:
+                        self.send_record(number, 200, {"success": True, "data": {"id": int(MEDIA_LOCAL), "processing": True}})
                     return
                 if path == "/api/v1/transcripts/" + TRANSCRIPT:
                     record = copy.deepcopy(self.state.value["records"]["transcripts"][TRANSCRIPT])
@@ -577,8 +677,8 @@ class Handler(BaseHTTPRequestHandler):
             matched = re.fullmatch(r"/parts/" + re.escape(UPLOAD) + r"/([12])", parsed.path)
             require(matched is not None, "ORIGINAL_STORAGE_PART_ID", parsed.path)
             part_number = int(matched.group(1))
-            require(self.headers.get("Authorization") is None and self.headers.get("Cookie") is None,
-                    "STORAGE_CREDENTIAL_LEAK")
+            require(self.headers.get("Authorization") is None and self.headers.get("Cookie") is None
+                    and self.headers.get("organization-id") is None, "STORAGE_CREDENTIAL_LEAK")
             require(parse_qs(parsed.query).get("X-Amz-Signature") == [f"local-original-{part_number}"],
                     "ORIGINAL_STORAGE_CAPABILITY")
             offset = (part_number - 1) * PART_SIZE
@@ -977,7 +1077,7 @@ def receiving(args):
     result = None
     with Servers(state):
         config = {"schema": "stellar-forge.aviary-client.v1", "baseUrl": state.api,
-                  "collectionId": COLLECTION, "tokenEnv": TOKEN_ENV,
+                  "collectionId": COLLECTION, "organizationId": ORGANIZATION, "tokenEnv": TOKEN_ENV,
                   "authorizationScheme": "Bearer", "allowLoopback": True,
                   "partSize": PART_SIZE, "multipartThreshold": PART_SIZE, "timeoutSeconds": 5}
         write_json(root / "client-config.json", config, immutable=True)
@@ -1012,7 +1112,15 @@ def receiving(args):
                 require(current["state"] in ("ADOPTED", "CONFIRMED") and current["provider_id"] == MEDIA_LOCAL,
                         "ADOPTED_ID_CHANGED")
                 adoption = {"state": current["state"], "providerId": current["provider_id"], "reused": True}
-            write_json(adopted, adoption, immutable=True)
+            original_upload = state.value["originalUploads"][MEDIA_LOCAL]
+            write_json(root / "original-provider-upload.json", original_upload, immutable=True)
+            require(original_upload["providerMediaId"] == MEDIA_LOCAL and
+                    original_upload["originalUploadId"] == UPLOAD, "ORIGINAL_OPERATOR_UPLOAD_EVIDENCE")
+            refreshed = c.refresh_upload(workspace, OPERATION, prepared["localMediaKey"],
+                                         original_upload["response"])
+            write_json(adopted, {"providerRecord": adoption, "originalUpload": refreshed,
+                                 "operatorEvidence": fingerprint(root / "original-provider-upload.json"),
+                                 "scope": original_upload["scope"]}, immutable=True)
         partial = stage_path(root, "04-second-part-retained")
         if not partial.exists():
             require(state.value["failSecondPart"], "PART_FAILURE_BARRIER_LOST")
@@ -1032,6 +1140,59 @@ def receiving(args):
         with state.lock:
             state.value["failSecondPart"] = False
             state.persist()
+        completion_loss = stage_path(root, "04b-completion-response-lost")
+        if not completion_loss.exists():
+            current = saved_actions(a, workspace, OPERATION).get(prefix + ":complete")
+            if current is None:
+                completion_result = c.run(workspace, OPERATION)
+            else:
+                # The native action and original provider journal are the
+                # recovery boundary if the stage receipt itself was interrupted.
+                completion_result = {"state": "RETAINED", "actionState": current["state"]}
+            actions = saved_actions(a, workspace, OPERATION)
+            current = actions.get(prefix + ":complete")
+            require(current and current["state"] in ("DISPATCHING", "UNCERTAIN", "CONFIRMED", "ADOPTED"),
+                    "ORIGINAL_COMPLETION_LOSS_NOT_RETAINED", current)
+            require(state.value["counts"].get("COMPLETE:" + MEDIA_LOCAL) == 1 and
+                    state.value["counts"].get("LOST_COMPLETE_RESPONSE:" + MEDIA_LOCAL) == 1 and
+                    actions[prefix + ":part:2"]["state"] == "CONFIRMED" and
+                    state.value["counts"].get("PUT_PART:1") == 1,
+                    "ORIGINAL_COMPLETION_LOSS_BOUNDARY", state.value["counts"])
+            outcome = state.value["completedMedia"][MEDIA_LOCAL]
+            require({key: outcome[key] for key in ("bytes", "sha256")} == fixture["audio"],
+                    "ORIGINAL_COMPLETED_SOURCE_IDENTITY")
+            write_json(completion_loss, {"run": completion_result, "originalAction": current,
+                                         "originalProviderOutcome": outcome,
+                                         "counts": copy.deepcopy(state.value["counts"])}, immutable=True)
+        with state.lock:
+            state.value["completionReadbackReady"] = True
+            state.persist()
+        metadata_loss = stage_path(root, "04c-metadata-response-lost")
+        if not metadata_loss.exists():
+            current = saved_actions(a, workspace, OPERATION).get(prefix + ":metadata")
+            if current is None:
+                metadata_result = c.run(workspace, OPERATION)
+            else:
+                metadata_result = {"state": "RETAINED", "actionState": current["state"]}
+            actions = saved_actions(a, workspace, OPERATION)
+            complete_action = actions.get(prefix + ":complete")
+            current = actions.get(prefix + ":metadata")
+            require(complete_action and complete_action["state"] == "ADOPTED" and
+                    complete_action["provider_id"] == MEDIA_LOCAL and
+                    state.value["counts"].get("MEDIA_FILE_STORAGE_GET", 0) >= 1,
+                    "COMPLETE_SOURCE_READBACK_NOT_ADOPTED", complete_action)
+            require(current and current["state"] in ("DISPATCHING", "UNCERTAIN", "ADOPTED") and
+                    state.value["counts"].get("METADATA:" + MEDIA_LOCAL) == 1 and
+                    state.value["counts"].get("LOST_METADATA_RESPONSE:" + MEDIA_LOCAL) == 1,
+                    "ORIGINAL_METADATA_LOSS_NOT_RETAINED", current)
+            require(state.value["counts"].get("COMPLETE:" + MEDIA_LOCAL) == 1,
+                    "UNCERTAIN_COMPLETION_REPLAYED")
+            write_json(metadata_loss, {"run": metadata_result, "originalCompletion": complete_action,
+                                       "originalMetadata": current,
+                                       "counts": copy.deepcopy(state.value["counts"])}, immutable=True)
+        with state.lock:
+            state.value["metadataReadbackReady"] = True
+            state.persist()
         completed = stage_path(root, "05-completed-original-operation")
         if not completed.exists():
             complete_result = c.run(workspace, OPERATION)
@@ -1044,6 +1205,17 @@ def receiving(args):
             require(state.value["counts"].get("PUT_PART:1") == 1 and
                     state.value["counts"].get("COMPLETE:" + MEDIA_LOCAL) == 1,
                     "ORIGINAL_PART_OR_COMPLETION_REPLAY")
+            completed_actions = saved_actions(a, workspace, OPERATION)
+            require(completed_actions[prefix + ":complete"]["state"] == "ADOPTED" and
+                    completed_actions[prefix + ":metadata"]["state"] == "ADOPTED" and
+                    state.value["counts"].get("METADATA:" + MEDIA_LOCAL) == 1,
+                    "ORIGINAL_UNCERTAIN_WRITE_REPLAYED")
+            require(completed_actions[prefix + ":thumbnail"]["state"] == "CONFIRMED" and
+                    state.value["counts"].get("THUMBNAIL:" + MEDIA_LOCAL) == 1,
+                    "NATIVE_THUMBNAIL_NOT_CONFIRMED")
+            require(state.value["counts"].get("COLLECTION_MEMBERSHIP_PAGE:1", 0) >= 1 and
+                    state.value["counts"].get("COLLECTION_MEMBERSHIP_PAGE:2", 0) >= 1,
+                    "COLLECTION_MEMBERSHIP_PAGES_NOT_READ")
             exports = c.export_transcripts(workspace, OPERATION)
             require(len(exports["files"]) == 1, "TRANSCRIPT_EXPORT_COUNT", exports)
             exported = exports["files"][0]
@@ -1058,7 +1230,10 @@ def receiving(args):
             with a.connect(received["workspace"]) as db:
                 response = json.loads(db.execute(
                     "SELECT response FROM actions WHERE run_id=? AND action_key=?", (OPERATION, action)).fetchone()[0])
-            raw_projection = encoded(response)
+                upload_events = [json.loads(row[0]) for row in db.execute(
+                    "SELECT document FROM events WHERE run_id=? AND action_key=? ORDER BY sequence",
+                    (OPERATION, action))]
+            raw_projection = encoded({"response": response, "events": upload_events})
             require(b"[local upload URL removed]" in raw_projection and b"local-original-" not in raw_projection,
                     "PORTABLE_CAPABILITY_REDACTION")
             write_json(completed, {"run": complete_result, "transcripts": exports,
@@ -1071,6 +1246,7 @@ def receiving(args):
         if not cold.exists():
             before = copy.deepcopy(state.mutation_counts())
             storage_gets = state.value["counts"].get("TRANSCRIPT_STORAGE_GET", 0)
+            media_gets = state.value["counts"].get("MEDIA_FILE_STORAGE_GET", 0)
             argv = [sys.executable, "-B", str(Path(__file__).resolve()), "--cold-reopen",
                     "--application", str(root / "received" / "application"),
                     "--workspace", str(root / "received" / "workspace"), "--out", str(root)]
@@ -1079,7 +1255,8 @@ def receiving(args):
             require(child.returncode == 0, "COLD_NATIVE_PROCESS_FAILED",
                     {"returncode": child.returncode, "stderr": "cold-reopen.stderr.log"})
             require(cold.exists() and state.mutation_counts() == before and
-                    state.value["counts"].get("TRANSCRIPT_STORAGE_GET", 0) == storage_gets,
+                    state.value["counts"].get("TRANSCRIPT_STORAGE_GET", 0) == storage_gets and
+                    state.value["counts"].get("MEDIA_FILE_STORAGE_GET", 0) == media_gets,
                     "COLD_REOPEN_REPLAYED_REMOTE_MUTATION")
         cold_value = read_json(cold)
         require(cold_value["workspaceId"] == prepared["workspaceId"] and cold_value["state"] == "COMPLETE",
@@ -1089,7 +1266,7 @@ def receiving(args):
                 not state.value["violations"], "HTTP_CREDENTIAL_OR_CONTRACT_VIOLATION", state.value["violations"])
         result = {"schema": SCHEMA, "state": "PASS", "operationId": OPERATION,
                   "startedOrResumedAt": now(), "workspaceId": prepared["workspaceId"],
-                  "providerContract": a.CONTRACT, "application": app_manifest,
+                  "providerContract": a.CONTRACT, "apiDocument": API_DOCUMENT, "application": app_manifest,
                   "scope": {"service": "Pinned-contract loopback API/storage receiving",
                             "deployedAviaryAcceptance": False, "nativeAviaryIngestJob": False,
                             "realServiceCredentialUsed": False,
@@ -1105,6 +1282,13 @@ def receiving(args):
                       "unknownCreationBlockedUntilOriginalIdAdoption": True,
                       "firstCompletedPartNotReplayed": True,
                       "sameMultipartIdentityAndCompleteSourceBytes": True,
+                      "operatorSuppliedOriginalUploadIdentityRetained": True,
+                      "lostCompletionResolvedByOriginalMediaDownloadBytes": True,
+                      "uncertainMetadataAdoptedWithoutRepeatingPut": True,
+                      "nativeThumbnailMultipartUsesExactOriginalBytes": True,
+                      "organizationHeaderBoundToApiOrigin": True,
+                      "resourceCollectionBoundThroughAllNativeListPages": True,
+                      "attachmentOrderWithoutUndocumentedSequenceFields": True,
                       "descendantsAndSupplementalCreatedExactlyOnce": True,
                       "excludedMalformedOriginalRetainedAndSkipped": True,
                       "effectiveParentKeysAllocatedBeforePlanning": True,
@@ -1116,6 +1300,7 @@ def receiving(args):
         for path in sorted(root.rglob("*")) if path.is_file()
         and (path.relative_to(root).parts[0] in ("stages", "http", "storage") or path.name in (
             "application-source.json", "generated-source-inventory.json", "provider-state.json",
+            "original-provider-upload.json",
             "client-config.json", "cold-expected.json", "original-example-inventory.json",
             "original-native-package.zip", "original-native-package.zip.manifest.json",
             "portable-workspace.zip", "completed-workspace.zip", "cold-reopen-result.json",

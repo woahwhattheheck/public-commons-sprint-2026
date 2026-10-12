@@ -92,8 +92,8 @@ def config_document(config):
         if not isinstance(value, int) or isinstance(value, bool) or not minimum <= value <= maximum:
             raise a.Problem("CONFIG", f"{key} must be an integer between {minimum} and {maximum}.")
     organization = str(config.get("organizationId", ""))
-    if any(char in organization for char in "\r\n"):
-        raise a.Problem("CONFIG", "organizationId cannot contain a newline.")
+    if not a.ID.fullmatch(organization):
+        raise a.Problem("CONFIG", "organizationId must be the positive ID required by the Aviary API.")
     ca_file = config.get("caFile")
     if ca_file is not None and (not isinstance(ca_file, str) or not Path(ca_file).is_file()):
         raise a.Problem("CONFIG", "caFile must name an existing CA certificate file.")
@@ -246,6 +246,8 @@ class Transport:
         self.opener = urllib.request.build_opener(NoRedirect(), urllib.request.HTTPSHandler(context=self.context))
 
     def headers(self):
+        if not a.ID.fullmatch(str(self.config.get("organizationId", ""))):
+            raise a.Problem("CONFIG", "This saved target needs its original Aviary organization ID before provider access.")
         value = self.token if self.config["authorizationScheme"] == "raw" else "Bearer " + self.token
         headers = {"Authorization": value, "Accept": "application/json",
                    "User-Agent": "Commons-Aviary-Migration/" + a.VERSION}
@@ -333,11 +335,16 @@ class Transport:
         code = ("AUTHENTICATION" if status == 401 else "PERMISSION" if status == 403
                 else "RATE_LIMIT" if status == 429 else "CONFLICT" if status == 409
                 else "PROVIDER" if status >= 400 else "REDIRECT" if 300 <= status < 400 else None)
-        error_body = isinstance(content, dict) and (content.get("error") or content.get("errors"))
+        data = content.get("data") if isinstance(content, dict) else None
+        rejected = (isinstance(content, dict) and content.get("success") is False) or (
+            isinstance(data, dict) and data.get("success") is False)
+        error_body = isinstance(content, dict) and (
+            content.get("error") or content.get("errors") or rejected or
+            (isinstance(data, dict) and (data.get("error") or data.get("errors") or data.get("status") == "error")))
         if code or error_body:
-            raise ProviderProblem(code or "PROVIDER",
+            raise ProviderProblem(code or ("PROVIDER_VALIDATION" if rejected else "PROVIDER"),
                 f"Aviary returned HTTP {status}" + (" with an error response." if error_body else "."),
-                receipt, uncertain=mutates and (status >= 500 or 200 <= status < 300),
+                receipt, uncertain=mutates and (status >= 500 or (200 <= status < 300 and not rejected)),
                 retry_at=retry_time(selected_headers))
         if not isinstance(content, dict) or "responseText" in content:
             raise ProviderProblem("RESPONSE_SHAPE", "Aviary response is not a JSON object.", receipt,
@@ -393,6 +400,70 @@ class Transport:
             if attempt < 3:
                 time.sleep(2 ** attempt)
         raise ProviderProblem("UPLOAD_TRANSPORT", "The original storage part remains unfinished.", failures)
+
+    def inspect_file(self, url, expected):
+        """Read the documented original-file URL without retaining another media copy."""
+        original = urljoin(self.origin + "/", url)
+        current = original
+        wanted = {key: expected[key] for key in ("bytes", "sha256")}
+        for _ in range(6):
+            self.storage_url(current)
+            parsed = urlsplit(current)
+            origin = urlunsplit((parsed.scheme, parsed.netloc.lower(), "", "", ""))
+            headers = self.headers() if origin == self.origin else {
+                "User-Agent": "Commons-Aviary-Migration/" + a.VERSION}
+            headers["Accept-Encoding"] = "identity"
+            request = urllib.request.Request(current, headers=headers, method="GET")
+            try:
+                response = self.opener.open(request, timeout=self.config["timeoutSeconds"])
+            except urllib.error.HTTPError as error:
+                response = error
+            except (urllib.error.URLError, TimeoutError, OSError, http.client.HTTPException) as error:
+                raise ProviderProblem("FILE_READBACK_TRANSPORT", "Original media readback was interrupted.",
+                                      {"type": type(error).__name__})
+            with response:
+                if response.status in (301, 302, 303, 307, 308):
+                    location = response.headers.get("Location")
+                    if not location:
+                        raise ProviderProblem("FILE_READBACK_REDIRECT", "Original media redirect has no Location.")
+                    current = urljoin(current, location)
+                    continue
+                if not 200 <= response.status < 300:
+                    code = ("RATE_LIMIT" if response.status == 429 else
+                            "AUTHENTICATION" if response.status == 401 and origin == self.origin else
+                            "PERMISSION" if response.status == 403 and origin == self.origin else "FILE_READBACK_HTTP")
+                    raise ProviderProblem(code, "Original media readback returned HTTP " + str(response.status),
+                                          {"status": response.status}, retry_at=retry_time(dict(response.headers)))
+                declared = response.headers.get("Content-Length")
+                if declared is not None and (not declared.isdigit() or int(declared) != wanted["bytes"]):
+                    raise ProviderProblem("FILE_READBACK_LENGTH",
+                        "Published media length does not match the original upload.",
+                        {"expectedBytes": wanted["bytes"], "declaredBytes": declared})
+                encoding = response.headers.get("Content-Encoding", "").strip().lower()
+                if encoding not in ("", "identity"):
+                    raise ProviderProblem("FILE_READBACK_ENCODING",
+                        "Original media readback must provide the identity representation.", {"encoding": encoding})
+                h, count = hashlib.sha256(), 0
+                try:
+                    while count <= wanted["bytes"]:
+                        block = response.read(min(a.CHUNK, wanted["bytes"] + 1 - count))
+                        if not block:
+                            break
+                        h.update(block)
+                        count += len(block)
+                except (TimeoutError, OSError, http.client.HTTPException) as error:
+                    raise ProviderProblem("FILE_READBACK_TRANSPORT", "Original media readback ended before completion.",
+                        {"type": type(error).__name__, "receivedBytes": count,
+                         "receivedPrefixSha256": h.hexdigest()})
+                observed = {"bytes": count, "sha256": h.hexdigest()}
+                if observed != wanted:
+                    raise ProviderProblem("FILE_READBACK_CHANGED",
+                        "Published media bytes do not match the original retained upload.",
+                        {"expected": wanted, "observed": observed})
+                return {**observed, "at": a.now(), "status": response.status, "origin": origin,
+                        "originalUrlSha256": hashlib.sha256(original.encode()).hexdigest(),
+                        "contentType": response.headers.get("Content-Type")}
+        raise ProviderProblem("FILE_READBACK_REDIRECT", "Original media readback exceeded six redirects.")
 
     def download(self, url, destination):
         """Follow file redirects with authentication confined to the Aviary origin."""
@@ -471,12 +542,102 @@ def data_model(receipt):
 
 
 def provider_id(receipt):
-    value = str(data_model(receipt).get("id", ""))
+    record = data_model(receipt)
+    value = record.get("id")
+    # The documented resource GET has both id and resource_id response examples.
+    if receipt.get("method") == "GET" and re.fullmatch(r"resources/[1-9][0-9]*", receipt.get("path", "")):
+        alias = record.get("resource_id")
+        if value not in (None, "") and alias not in (None, "") and str(value) != str(alias):
+            raise ProviderProblem("PROVIDER_ID", "Resource readback has conflicting original IDs.", receipt)
+        if value in (None, ""):
+            value = alias
+    value = str(value if value is not None else "")
     if not a.ID.fullmatch(value):
         raise ProviderProblem("PROVIDER_ID", "Provider response lacks a positive record ID.",
                               receipt, uncertain=receipt.get("method") != "GET")
     return value
 
+
+def require_record_id(receipt, expected_id):
+    if provider_id(receipt) != str(expected_id):
+        raise ProviderProblem("PROVIDER_ID", "Response returned a different original record ID.",
+                              receipt, uncertain=receipt.get("method") != "GET")
+
+
+def completion_model(receipt, expected_id):
+    """Accept the endpoint's id/processing model, without repairing its malformed documentation example."""
+    data = receipt["body"].get("data")
+    if isinstance(data, list) and len(data) == 1 and isinstance(data[0], dict):
+        data = data[0]
+    if not isinstance(data, dict) or str(data.get("id", "")) != str(expected_id):
+        raise ProviderProblem("COMPLETION_RESPONSE", "Completion did not return the original media ID.",
+                              receipt, uncertain=True)
+    if not isinstance(data.get("processing"), bool):
+        raise ProviderProblem("COMPLETION_RESPONSE", "Completion did not return a Boolean processing state.",
+                              receipt, uncertain=True)
+    return data
+
+
+def thumbnail_response(receipt):
+    data = receipt["body"].get("data")
+    if not isinstance(data, list) or not data or any(not isinstance(value, str) or not value.strip() for value in data):
+        raise ProviderProblem("THUMBNAIL_RESPONSE", "Thumbnail update did not return its acknowledgement.",
+                              receipt, uncertain=True)
+
+
+def validate_thumbnail_selection(preview):
+    issues = []
+    for row in preview["tables"]["media"]:
+        if not row["included"]:
+            continue
+        values = row["values"]
+        local, remote = values.get("Media Thumbnail Path", ""), values.get("Media Thumbnail URL", "")
+        if local and remote:
+            issues.append({"key": row["key"], "code": "THUMBNAIL",
+                           "message": "Select one thumbnail path or thumbnail URL."})
+        if local and not row["assets"].get("Media Thumbnail Path"):
+            issues.append({"key": row["key"], "code": "THUMBNAIL_SOURCE",
+                           "message": "The selected local thumbnail has no retained source bytes."})
+    if issues:
+        raise a.Problem("THUMBNAIL", "Resolve the original thumbnail selection before provider dispatch.", issues)
+
+
+def requested_metadata_present(record, expected):
+    """Compare only requested fields; repeated values retain their multiplicity."""
+    source = record.get("metadata")
+    fields = {}
+    if isinstance(source, list):
+        for item in source:
+            if not isinstance(item, dict) or not isinstance(item.get("label"), str):
+                return False
+            values = item.get("data")
+            if not isinstance(values, list):
+                return False
+            fields.setdefault(item["label"], []).extend(values)
+    elif isinstance(source, dict):
+        for name, values in source.items():
+            if isinstance(values, dict):
+                values = values.get("data")
+            if not isinstance(values, list):
+                return False
+            fields[name] = values
+    elif expected:
+        return False
+    for name, wanted in expected.items():
+        values = fields.get(name)
+        if not isinstance(values, list):
+            return False
+        available = []
+        for item in values:
+            if not isinstance(item, dict) or "value" not in item:
+                return False
+            available.append(a.encoded({"value": item["value"], "vocabulary": item.get("vocabulary", "")}))
+        for item in wanted:
+            value = a.encoded({"value": item["value"], "vocabulary": item.get("vocabulary", "")})
+            if value not in available:
+                return False
+            available.remove(value)
+    return True
 
 def metadata(values, kind):
     standard = set(a.FIELDS[kind])
@@ -521,6 +682,7 @@ def plan(workspace, config, operation_id, revision=None):
         model = a.preview(root, revision)
         if not model["ready"]:
             raise a.Problem("VALIDATION", "Resolve the listed source mapping issues.", model["issues"])
+        validate_thumbnail_selection(model)
         a.verify_source(root)
         document = {"schema": "stellar-forge.aviary-operation.v1", "id": operation_id,
                     "workspaceId": model["workspace"]["id"], "revision": model["revision"],
@@ -559,6 +721,11 @@ class Migration:
         self.root, self.db, self.document = root, db, document
         self.id, self.config = document["id"], document["config"]
         self.transport = Transport(self.config)
+        self.parent_records = {}
+        self.collection_members = {}
+        self.collection_page = 0
+        self.collection_total = None
+        self.collection_finished = False
 
     def action(self, key):
         row = self.db.execute("SELECT * FROM actions WHERE run_id=? AND action_key=?", (self.id, key)).fetchone()
@@ -592,8 +759,258 @@ class Migration:
                 raise ProviderProblem("DEFERRED", "Original provider retry time has not arrived.",
                                       {"retryAt": retry_at}, retry_at=retry_at)
 
+    def observed(self, key, kind, receipt):
+        with self.db:
+            a.event(self.db, self.id, key, kind, receipt)
+
+    def collection_member(self, resource_id):
+        """Find a positive member using the provider's original collection-scoped pages."""
+        collection = self.config["collectionId"]
+        while resource_id not in self.collection_members and not self.collection_finished:
+            page = self.collection_page + 1
+            receipt = self.transport.request("GET", "collections/" + collection + "/resources",
+                                             query={"page_number": page, "page_size": 100})
+            body = receipt["body"]
+            records, total = body.get("data"), body.get("total_entries")
+            if (not isinstance(records, list) or len(records) > 100 or
+                    not isinstance(total, int) or isinstance(total, bool) or total < 0):
+                raise ProviderProblem("COLLECTION_PAGE", "Collection resources require data and total_entries.", receipt)
+            if self.collection_total is not None and total != self.collection_total:
+                raise ProviderProblem("COLLECTION_CHANGED",
+                    "Collection membership changed while its source pages were read.", receipt)
+            additions = []
+            for record in records:
+                if not isinstance(record, dict):
+                    raise ProviderProblem("COLLECTION_PAGE", "Collection resource entry is not an object.", receipt)
+                identifier = record.get("id")
+                if identifier in (None, ""):
+                    identifier = record.get("resource_id")
+                identifier = str(identifier if identifier is not None else "")
+                if (not a.ID.fullmatch(identifier) or
+                        (record.get("id") is not None and record.get("resource_id") is not None and
+                         str(record["id"]) != str(record["resource_id"]))):
+                    raise ProviderProblem("COLLECTION_PAGE", "Collection resource entry has no single valid ID.", receipt)
+                if identifier in self.collection_members or identifier in additions:
+                    raise ProviderProblem("COLLECTION_CHANGED", "Collection pages repeat an original resource ID.", receipt)
+                additions.append(identifier)
+            if len(self.collection_members) + len(additions) > total or (not additions and len(self.collection_members) < total):
+                raise ProviderProblem("COLLECTION_PAGE", "Collection page count differs from its reported total.", receipt)
+            self.observed("collection:" + collection, "COLLECTION_MEMBERSHIP_PAGE", receipt)
+            descriptor = {"collectionId": collection, "pageNumber": page,
+                          "responseSha256": receipt["responseSha256"], "at": receipt["at"]}
+            for identifier in additions:
+                self.collection_members[identifier] = descriptor
+            self.collection_page, self.collection_total = page, total
+            self.collection_finished = len(self.collection_members) == total
+        if resource_id not in self.collection_members:
+            raise ProviderProblem("TARGET_COLLECTION",
+                "Existing resource is not a member of the selected Aviary collection.",
+                {"resourceId": resource_id, "collectionId": collection,
+                 "pages": self.collection_page, "totalEntries": self.collection_total})
+        return self.collection_members[resource_id]
+
+    def resource_record(self, resource_id, refresh=False):
+        resource_id = str(resource_id)
+        if not a.ID.fullmatch(resource_id):
+            raise a.Problem("PARENT_ID", "Original resource ID must be a positive integer.")
+        cache_key = ("resources", resource_id)
+        if cache_key in self.parent_records and not refresh:
+            return self.parent_records[cache_key]
+        receipt = self.transport.request("GET", "resources/" + resource_id)
+        record = data_model(receipt)
+        if provider_id(receipt) != resource_id:
+            raise ProviderProblem("PARENT_ID", "Resource readback returned a different original ID.", receipt)
+        collection = self.config["collectionId"]
+        checked = {}
+        value = record.get("collection_id")
+        if value is not None:
+            if str(value) != collection:
+                raise ProviderProblem("TARGET_COLLECTION", "Existing resource belongs to a different collection.", receipt)
+            checked["collection_id"] = collection
+        direct = record.get("direct_url")
+        if isinstance(direct, str):
+            parsed = urlsplit(direct)
+            match = re.fullmatch(r"/collections/([1-9][0-9]*)/collection_resources/([1-9][0-9]*)/?", parsed.path)
+            if parsed.scheme in ("http", "https") and parsed.hostname and not parsed.username and not parsed.password and match:
+                if match.group(1) != collection or match.group(2) != resource_id:
+                    raise ProviderProblem("TARGET_COLLECTION",
+                        "Resource's documented direct URL identifies a different collection or resource.", receipt)
+                checked["directUrl"] = {"collectionId": collection, "resourceId": resource_id}
+        if not checked:
+            checked["collectionMembership"] = self.collection_member(resource_id)
+        self.observed("resources:" + resource_id, "PARENT_RESOURCE_READ",
+                      {"response": receipt, "checked": checked})
+        self.parent_records[cache_key] = (record, receipt)
+        return record, receipt
+
+    def media_record(self, media_id, expected_resource=None, refresh=False):
+        media_id = str(media_id)
+        if not a.ID.fullmatch(media_id):
+            raise a.Problem("PARENT_ID", "Original media ID must be a positive integer.")
+        cache_key = ("media", media_id)
+        if cache_key in self.parent_records and not refresh:
+            record, receipt = self.parent_records[cache_key]
+        else:
+            receipt = self.transport.request("GET", "media_files/" + media_id)
+            record = data_model(receipt)
+            if provider_id(receipt) != media_id:
+                raise ProviderProblem("PARENT_ID", "Media readback returned a different original ID.", receipt)
+            resource_id = str(record.get("collection_resource_id", ""))
+            if not a.ID.fullmatch(resource_id):
+                raise ProviderProblem("PARENT_RESOURCE", "Media readback omits its original resource ID.", receipt)
+            resource, resource_receipt = self.resource_record(resource_id, refresh=True)
+            if "media_file_id" in resource:
+                media_ids = complete_list(resource_receipt, resource["media_file_id"], "resource media IDs")
+                if media_id not in {str(value) for value in media_ids}:
+                    raise ProviderProblem("PARENT_RESOURCE", "Resource does not list the selected original media.", receipt)
+            self.observed("media:" + media_id, "PARENT_MEDIA_READ", receipt)
+            self.parent_records[cache_key] = (record, receipt)
+        if expected_resource is not None and str(record.get("collection_resource_id", "")) != str(expected_resource):
+            raise ProviderProblem("PARENT_RESOURCE", "Media readback differs from the original requested resource.", receipt)
+        return record, receipt
+
+    def metadata_readback(self, row, media_id, parent, current):
+        record, receipt = self.media_record(media_id, parent, refresh=True)
+        requested = current["request"].get("payload")
+        expected = {"metadata": metadata(row["values"], "media"), "media_file": {}}
+        if requested != expected:
+            raise a.Problem("REQUEST_CHANGED", "Saved media metadata differs from the original source row.")
+        if not requested_metadata_present(record, expected["metadata"]):
+            raise ProviderProblem("METADATA_UNCERTAIN",
+                "The original update is still unresolved; its requested values are absent from this media readback.",
+                {"mediaId": media_id, "response": receipt, "requestedFields": sorted(expected["metadata"])},
+                uncertain=True)
+        return receipt | {"readback": {"kind": "REQUESTED_MEDIA_METADATA_PRESENT",
+            "mediaId": media_id, "fields": sorted(expected["metadata"]),
+            "originalRequestSha256": current["request_sha"]}}
+
+    def confirmed_upload(self, row, media_id):
+        """Reconstruct completion parameters from immutable confirmed original part requests."""
+        prefix = "media:" + row["values"]["Media User Key"] + ":part:"
+        entries = [self.action(item["action_key"]) for item in self.db.execute(
+            "SELECT action_key FROM actions WHERE run_id=? AND substr(action_key,1,?)=?",
+            (self.id, len(prefix), prefix))]
+        if not entries:
+            raise ProviderProblem("UPLOAD_PENDING", "Original completion has no retained confirmed upload parts.")
+        parts, identity = [], None
+        item = row["assets"]["Path"]
+        for entry in entries:
+            request = entry["request"]
+            if entry["request_sha"] != a.digest(request):
+                raise a.Problem("UPLOAD_CHANGED", "Original part request digest does not match its retained content.")
+            if (entry["state"] not in TERMINAL or str(request.get("mediaId")) != media_id or
+                    request.get("source") != item or not isinstance(request.get("upload"), dict)):
+                raise ProviderProblem("UPLOAD_PENDING", "Completion requires every exact original upload part.")
+            if identity is None:
+                identity = request["upload"]
+            elif identity != request["upload"]:
+                raise a.Problem("UPLOAD_CHANGED", "Original part upload identities disagree.")
+            if not all(isinstance(request.get(k), int) and not isinstance(request.get(k), bool)
+                       for k in ("number", "offset", "length")):
+                raise a.Problem("UPLOAD_CHANGED", "Original part range is invalid.")
+            response = entry.get("response") or {}
+            if (response.get("offset") != request["offset"] or response.get("length") != request["length"]
+                    or response.get("bytes") != request["length"] or
+                    not re.fullmatch(r"[0-9a-f]{64}", str(response.get("sha256", "")))):
+                raise a.Problem("UPLOAD_CHANGED", "Confirmed original part has no matching byte receipt.")
+            parts.append(request)
+        parts.sort(key=lambda part: part["number"])
+        offset = 0
+        for number, part in enumerate(parts, 1):
+            if part["number"] != number or part["offset"] != offset or part["length"] <= 0:
+                raise a.Problem("UPLOAD_CHANGED", "Original upload parts do not cover one contiguous file.")
+            offset += part["length"]
+        if offset != item["bytes"] or str(identity.get("mediaId")) != media_id:
+            raise a.Problem("UPLOAD_CHANGED", "Original parts do not match the planned media file.")
+        if identity.get("mode") == "single" and len(parts) == 1:
+            parameters = {}
+        elif (identity.get("mode") == "multipart" and identity.get("partsCount") == len(parts)
+              and isinstance(identity.get("uploadId"), str) and identity["uploadId"]):
+            parameters = {"upload_id": identity["uploadId"], "parts_count": identity["partsCount"]}
+        else:
+            raise a.Problem("UPLOAD_CHANGED", "Original upload mode or completion identity is invalid.")
+        complete = self.action("media:" + row["values"]["Media User Key"] + ":complete")
+        if complete is not None:
+            original_parameters = complete["request"].get("query")
+            if not isinstance(original_parameters, dict) or set(original_parameters) != set(parameters):
+                raise a.Problem("UPLOAD_CHANGED", "Original completion has a different parameter set.")
+            if parameters:
+                count = original_parameters.get("parts_count")
+                if (str(original_parameters.get("upload_id")) != identity["uploadId"] or
+                        isinstance(count, bool) or len(str(count)) > 20 or
+                        not str(count).isdigit() or int(count) != len(parts)):
+                    raise a.Problem("UPLOAD_CHANGED", "Original completion changed its multipart identity.")
+            parameters = original_parameters
+        return parameters, {"upload": identity, "parts": len(parts), "bytes": offset,
+                            "sourceSha256": item["sha256"]}
+
+    def completion_readback(self, row, media_id, parent, current):
+        parameters, upload = self.confirmed_upload(row, media_id)
+        expected = {"method": "GET", "path": "media_files/" + media_id + "/complete",
+                    "payload": None, "fields": None, "files": None, "query": parameters}
+        if current["request"] != expected or current["request_sha"] != a.digest(expected):
+            raise a.Problem("REQUEST_CHANGED", "Saved completion differs from the original upload.")
+        record, receipt = self.media_record(media_id, parent, refresh=True)
+        analysis = record.get("media_info_metadata")
+        general = [item for item in analysis if isinstance(item, dict) and item.get("type") == "General"] if isinstance(analysis, list) else []
+        if (len(general) != 1 or
+                str(general[0].get("FileSize", "")) != str(row["assets"]["Path"]["bytes"])):
+            raise ProviderProblem("MEDIA_READBACK_PENDING",
+                "The original media record does not yet expose matching file-analysis size evidence.",
+                {"mediaId": media_id, "response": receipt, "upload": upload}, uncertain=True)
+        original_url = record.get("media_download_url")
+        if not isinstance(original_url, str) or not original_url.strip():
+            raise ProviderProblem("MEDIA_READBACK_PENDING",
+                "The original media record has not exposed its downloadable file yet.",
+                {"mediaId": media_id, "response": receipt, "upload": upload}, uncertain=True)
+        content = self.transport.inspect_file(original_url, row["assets"]["Path"])
+        return receipt | {"readback": {"kind": "ORIGINAL_UPLOADED_BYTES_AVAILABLE",
+            "mediaId": media_id, "originalRequestSha256": current["request_sha"],
+            "upload": upload, "file": content,
+            "mediaAnalysis": {"type": "General", "FileSize": general[0]["FileSize"]},
+            "processingState": "NOT_EXPOSED_BY_MEDIA_GET"}}
+
+    def thumbnail_readback(self, row, media_id, parent, current):
+        item = row["assets"].get("Media Thumbnail Path")
+        if not item:
+            raise a.Problem("THUMBNAIL_SOURCE", "This original row has no selected local thumbnail.")
+        path = a.within(self.root / "source", item["path"])
+        expected = {"method": "PUT", "path": "media_files/" + media_id + "/thumbnail",
+                    "payload": None, "fields": None,
+                    "files": {"thumbnail_image": {"filename": path.name,
+                        "source": str(path.relative_to(self.root / "source")),
+                        "bytes": item["bytes"], "sha256": item["sha256"]}}, "query": None}
+        if current["request"] != expected or current["request_sha"] != a.digest(expected):
+            raise a.Problem("REQUEST_CHANGED", "Saved thumbnail differs from the original selected file.")
+        record, receipt = self.media_record(media_id, parent, refresh=True)
+        url = record.get("thumbnail_url")
+        if not isinstance(url, str) or not url.strip():
+            raise ProviderProblem("THUMBNAIL_READBACK_PENDING",
+                "The original media has not exposed its thumbnail file yet.",
+                {"mediaId": media_id, "response": receipt}, uncertain=True)
+        content = self.transport.inspect_file(url, item)
+        return receipt | {"readback": {"kind": "ORIGINAL_THUMBNAIL_BYTES_AVAILABLE",
+            "mediaId": media_id, "originalRequestSha256": current["request_sha"], "file": content}}
+
+    def adopted_readback(self, key, request, current, readback):
+        self.cooldown()
+        try:
+            receipt = readback(current)
+        except ProviderProblem as error:
+            details = error.as_dict() | {"retryAt": error.retry_at}
+            self.observed(key, "ORIGINAL_REQUEST_READBACK_PENDING",
+                          {"requestSha256": current["request_sha"], "error": details})
+            if error.retry_at:
+                self.observed(key, "DEFERRED", {"error": details})
+            raise
+        record_id = provider_id(receipt)
+        self.save(key, "ADOPTED", request, receipt, record_id)
+        self.observed(key, "ORIGINAL_REQUEST_READBACK",
+                      {"requestSha256": a.digest(request), "response": receipt})
+        return receipt
+
     def perform(self, key, method, path, *, payload=None, fields=None, files=None, query=None,
-                requires_id=False, repeatable=False):
+                requires_id=False, repeatable=False, validator=None, readback=None):
         logical_files = {}
         for name, value in (files or {}).items():
             logical_files[name] = {k: v for k, v in value.items() if k not in ("path", "held", "expected")}
@@ -612,7 +1029,11 @@ class Migration:
                 raise a.Problem("REQUEST_CHANGED", "Original action payload changed.", key)
             if current["state"] in TERMINAL:
                 return current["response"]
-            if current["state"] in ("DISPATCHING", "UNCERTAIN") and not repeatable:
+            if current["state"] in ("DISPATCHING", "UNCERTAIN") and not (
+                    repeatable or (method == "GET" and not path.endswith("/complete"))):
+                self.cooldown()
+                if readback is not None:
+                    return self.adopted_readback(key, request, current, readback)
                 raise ProviderProblem("UNCERTAIN",
                     "Reconcile the original provider result before continuing this action.", {"action": key})
         self.cooldown()
@@ -630,6 +1051,8 @@ class Migration:
                 for entry in (transfer_files or {}).values():
                     if "held" in entry:
                         entry["held"].assert_unchanged()
+                if validator is not None:
+                    validator(receipt)
                 record_id = provider_id(receipt) if requires_id else (current["provider_id"] if current else None)
                 self.save(key, "CONFIRMED", request, receipt, record_id)
                 return receipt
@@ -638,6 +1061,10 @@ class Migration:
                 details = error.as_dict() | {"retryAt": error.retry_at}
                 self.save(key, state, request, record_id=current["provider_id"] if current else None,
                           error=details)
+                if error.uncertain and error.retry_at:
+                    self.observed(key, "DEFERRED", {"error": details})
+                if error.uncertain and readback is not None:
+                    return self.adopted_readback(key, request, self.action(key), readback)
                 raise
             except BaseException:
                 # DISPATCHING retains the original request after any local interruption.
@@ -646,6 +1073,12 @@ class Migration:
     def parent_id(self, row):
         parent = row["parent"]
         if parent["providerId"]:
+            if parent["kind"] == "resources":
+                self.resource_record(parent["providerId"])
+            elif parent["kind"] == "media":
+                self.media_record(parent["providerId"])
+            else:
+                raise a.Problem("PARENT", "Unknown original parent kind.")
             return parent["providerId"]
         saved = self.action(parent["kind"] + ":" + parent["key"] + ":create")
         if not saved or saved["state"] not in TERMINAL or not saved["provider_id"]:
@@ -654,8 +1087,12 @@ class Migration:
 
     def resource(self, row):
         key = "resources:" + row["values"]["Resource User Key"] + ":create"
-        return self.perform(key, "POST", "resources", payload=resource_payload(row["values"], self.config),
-                            requires_id=True)
+        receipt = self.perform(key, "POST", "resources", payload=resource_payload(row["values"], self.config),
+                               requires_id=True)
+        self.parent_records.pop(("resources", provider_id(receipt)), None)
+        self.collection_members, self.collection_page = {}, 0
+        self.collection_total, self.collection_finished = None, False
+        return receipt
 
     def media(self, row):
         values, parent = row["values"], self.parent_id(row)
@@ -667,11 +1104,8 @@ class Migration:
                 "sort_order": values["Sequence #"]}
         thumbnail = values.get("Media Thumbnail URL", "")
         if thumbnail:
+            # The maintained full importer supplies thumbnail_path at creation.
             base["thumbnail_path"] = thumbnail
-        if row["assets"].get("Media Thumbnail Path"):
-            # Local thumbnail bytes remain in the native package; a separate API
-            # file upload is attached below after the media record exists.
-            pass
         if values["Path"]:
             item = row["assets"]["Path"]
             path = a.within(self.root / "source", item["path"])
@@ -688,17 +1122,23 @@ class Migration:
                 media_id = provider_id(receipt)
                 complete = self.action(prefix + ":complete")
                 if complete is None or complete["state"] not in TERMINAL:
-                    record = self.upload(row, record, held)
-                    held.assert_unchanged()
-                    parameters = {}
-                    if record.get("multipart_upload"):
-                        parameters = {"upload_id": record["multipart_upload"]["upload_id"],
-                                      "parts_count": record["multipart_upload"]["parts_count"]}
+                    if complete and complete["state"] in ("DISPATCHING", "UNCERTAIN"):
+                        # Original confirmed part receipts survive expired/redacted upload URLs.
+                        parameters, _ = self.confirmed_upload(row, media_id)
+                    else:
+                        record = self.upload(row, record, held)
+                        held.assert_unchanged()
+                        parameters = {}
+                        if record.get("multipart_upload"):
+                            parameters = {"upload_id": record["multipart_upload"]["upload_id"],
+                                          "parts_count": record["multipart_upload"]["parts_count"]}
                     self.perform(prefix + ":complete", "GET", "media_files/" + media_id + "/complete",
-                                 query=parameters)
+                        query=parameters, validator=lambda response: completion_model(response, media_id),
+                        readback=lambda current: self.completion_readback(row, media_id, parent, current))
             self.perform(prefix + ":metadata", "PUT", "media_files/" + media_id,
-                         payload={"metadata": metadata(values, "media"), "media_file": {}},
-                         repeatable=True)
+                payload={"metadata": metadata(values, "media"), "media_file": {}},
+                validator=lambda response: require_record_id(response, media_id),
+                readback=lambda current: self.metadata_readback(row, media_id, parent, current))
         elif values["URL"]:
             from urllib.parse import unquote
             filename = Path(unquote(urlsplit(values["URL"]).path)).name or user_key
@@ -717,9 +1157,20 @@ class Migration:
                               "filename": values["Display Name"] or user_key}
             receipt = self.perform(prefix + ":create", "POST", "media_files", query=payload,
                                    fields={}, requires_id=True)
-            self.perform(prefix + ":metadata", "PUT", "media_files/" + provider_id(receipt),
-                         payload={"metadata": metadata(values, "media"), "media_file": {}},
-                         repeatable=True)
+            media_id = provider_id(receipt)
+            self.perform(prefix + ":metadata", "PUT", "media_files/" + media_id,
+                payload={"metadata": metadata(values, "media"), "media_file": {}},
+                validator=lambda response: require_record_id(response, media_id),
+                readback=lambda current: self.metadata_readback(row, media_id, parent, current))
+        media_id = provider_id(receipt)
+        local_thumbnail = row["assets"].get("Media Thumbnail Path")
+        if local_thumbnail:
+            path = a.within(self.root / "source", local_thumbnail["path"])
+            self.perform(prefix + ":thumbnail", "PUT", "media_files/" + media_id + "/thumbnail",
+                files={"thumbnail_image": {"path": str(path), "filename": path.name,
+                                          "expected": local_thumbnail}},
+                validator=thumbnail_response,
+                readback=lambda current: self.thumbnail_readback(row, media_id, parent, current))
         return receipt
 
     def upload(self, row, record, source):
@@ -825,10 +1276,11 @@ def run(workspace, operation_id):
         document = operation(db, operation_id)
         if document["workspaceId"] != a.meta(db, "identity")["id"]:
             raise a.Problem("WORKSPACE_BINDING", "Operation belongs to a different workspace.")
+        validate_thumbnail_selection(document["preview"])
         a.verify_source(root)
         migration = Migration(root, db, document)
         migration.cooldown()
-        errors, completed = [], []
+        errors, completed, media_delivery = [], [], []
         with db:
             a.event(db, operation_id, None, "RUN_STARTED", {"at": a.now()})
         stop = False
@@ -850,6 +1302,28 @@ def run(workspace, operation_id):
                     else:
                         result = migration.attachment(kind, row)
                     completed.append({"kind": kind, "key": row["key"], "providerId": provider_id(result)})
+                    if kind == "media":
+                        prefix = "media:" + row["values"]["Media User Key"]
+                        original_complete = migration.action(prefix + ":complete")
+                        complete_response = (original_complete or {}).get("response") or {}
+                        complete_data = (complete_response.get("body") or {}).get("data")
+                        if isinstance(complete_data, list) and len(complete_data) == 1:
+                            complete_data = complete_data[0]
+                        processing = complete_data.get("processing") if isinstance(complete_data, dict) else None
+                        thumbnail_action = migration.action(prefix + ":thumbnail")
+                        local_thumbnail = row["assets"].get("Media Thumbnail Path")
+                        selected_url = row["values"].get("Media Thumbnail URL", "")
+                        media_delivery.append({"key": row["key"], "providerId": provider_id(result),
+                            "completionActionState": (original_complete or {}).get("state"),
+                            "completionEvidence": (complete_response.get("readback") or {}).get("kind",
+                                "PROVIDER_ACKNOWLEDGEMENT" if original_complete else "PROVIDER_MANAGED_IMPORT"),
+                            "providerReportedProcessing": processing if isinstance(processing, bool) else None,
+                            "thumbnail": {"mode": "local" if local_thumbnail else "url" if selected_url else "none",
+                                "actionState": (thumbnail_action or {}).get("state"),
+                                "sourceSha256": local_thumbnail["sha256"] if local_thumbnail else None,
+                                "selectedUrlSha256": hashlib.sha256(selected_url.encode()).hexdigest() if selected_url else None,
+                                "outcome": "LOCAL_UPDATE_CONFIRMED" if thumbnail_action else
+                                           "CREATE_PARAMETER_ACCEPTED" if selected_url else "PROVIDER_DEFAULT"}})
                 except a.Problem as error:
                     errors.append({"kind": kind, "key": row["key"], **error.as_dict()})
                     if error.code in ("AUTHENTICATION", "PERMISSION", "RATE_LIMIT", "DEFERRED", "CREDENTIAL"):
@@ -857,7 +1331,8 @@ def run(workspace, operation_id):
                         break
         outcome = {"schema": "stellar-forge.aviary-run-result.v1", "operationId": operation_id,
                    "state": "COMPLETE" if not errors else "PARTIAL", "at": a.now(),
-                   "completed": completed, "errors": errors}
+                   "completed": completed, "errors": errors, "mediaDelivery": media_delivery,
+                   "scope": "RECORDS_AND_REQUESTED_TRANSFERS"}
         with db:
             a.event(db, operation_id, None, "RUN_FINISHED", outcome)
         return outcome | {"status": a.show(root, operation_id)}
@@ -870,27 +1345,67 @@ def reconcile(workspace, operation_id, action, remote_id, note):
     with a.locked(workspace) as root, a.connect(root) as db:
         migration = Migration(root, db, operation(db, operation_id))
         current = migration.action(action)
+        if current and current["state"] in TERMINAL and current["provider_id"] == remote_id:
+            return {"operationId": operation_id, "action": action, "providerId": remote_id,
+                    "state": current["state"], "reused": True,
+                    "checked": {"originalRequestSha256": current["request_sha"]}}
         if not current or current["state"] not in ("DISPATCHING", "UNCERTAIN"):
-            raise a.Problem("RECONCILIATION", "Action must be an original uncertain creation.", action)
+            raise a.Problem("RECONCILIATION", "Select an original uncertain action.", action)
         request = current["request"]
-        if request["method"] != "POST" or "/" in request["path"]:
-            raise a.Problem("RECONCILIATION", "Only record creation supports provider-ID adoption.", action)
-        receipt = migration.transport.request("GET", request["path"] + "/" + remote_id)
-        record = data_model(receipt)
-        if provider_id(receipt) != remote_id:
-            raise a.Problem("RECONCILIATION", "Readback ID differs from the selected original ID.")
-        expected = (request["payload"] or {}) | (request["fields"] or {}) | (request["query"] or {})
-        bindings = ("collection_id", "collection_resource_id", "resource_file_id", "title", "filename")
-        checked = {}
-        for field in bindings:
-            if expected.get(field) not in (None, ""):
-                if field not in record or str(record[field]) != str(expected[field]):
+        if a.digest(request) != current["request_sha"]:
+            raise a.Problem("REQUEST_CHANGED", "Original request no longer matches its retained digest.")
+        media_match = re.fullmatch(r"media_files/([1-9][0-9]*)(?:/(complete|thumbnail))?", request["path"])
+        if media_match and (request["method"] == "PUT" or
+                            (request["method"] == "GET" and media_match.group(2) == "complete")):
+            if media_match.group(1) != remote_id:
+                raise a.Problem("RECONCILIATION", "Readback must use the original requested media ID.")
+            suffix = media_match.group(2) or "metadata"
+            row = next((item for item in migration.document["preview"]["tables"]["media"]
+                        if item["included"] and action == "media:" + item["values"]["Media User Key"] + ":" + suffix), None)
+            if row is None:
+                raise a.Problem("RECONCILIATION", "Original action does not match a selected media row.")
+            parent = migration.parent_id(row)
+            callback = {"complete": migration.completion_readback,
+                        "metadata": migration.metadata_readback, "thumbnail": migration.thumbnail_readback}[suffix]
+            receipt = migration.adopted_readback(action, request, current,
+                       lambda original: callback(row, remote_id, parent, original))
+            checked = receipt["readback"]
+        else:
+            endpoints = {"resources", "media_files", "transcripts", "indexes", "supplemental_files"}
+            if request["method"] != "POST" or request["path"] not in endpoints:
+                raise a.Problem("RECONCILIATION", "This action has no supported original-record readback.", action)
+            expected = (request["payload"] or {}) | (request["fields"] or {}) | (request["query"] or {})
+            if request["path"] == "resources":
+                record, receipt = migration.resource_record(remote_id)
+            elif request["path"] == "media_files":
+                record, receipt = migration.media_record(remote_id, expected.get("collection_resource_id"))
+            else:
+                receipt = migration.transport.request("GET", request["path"] + "/" + remote_id)
+                record = data_model(receipt)
+                if provider_id(receipt) != remote_id:
+                    raise a.Problem("RECONCILIATION", "Readback ID differs from the selected original ID.")
+                if request["path"] == "supplemental_files":
+                    parent_id = str(record.get("collection_resource_id", ""))
+                    migration.resource_record(parent_id)
+                else:
+                    parent_id = str(record.get("resource_file_id", ""))
+                    migration.media_record(parent_id)
+            checked = {}
+            for field in ("collection_id", "collection_resource_id", "resource_file_id",
+                          "title", "filename", "display_name", "custom_unique_identifier"):
+                if expected.get(field) in (None, ""):
+                    continue
+                if field == "collection_id" and request["path"] == "resources":
+                    observed = migration.config["collectionId"]  # resource_record proved this membership.
+                else:
+                    observed = record.get(field)
+                if str(observed) != str(expected[field]):
                     raise a.Problem("RECONCILIATION", "Provider record does not match the original " + field + ".",
-                                    {"expected": expected[field], "observed": record.get(field)})
+                                    {"expected": expected[field], "observed": observed})
                 checked[field] = expected[field]
-        if not checked:
-            raise a.Problem("RECONCILIATION", "Provider response exposes no binding fields for this original action.")
-        migration.save(action, "ADOPTED", request, receipt, remote_id)
+            if not checked:
+                raise a.Problem("RECONCILIATION", "Provider response exposes no binding fields for this original action.")
+            migration.save(action, "ADOPTED", request, receipt, remote_id)
         with db:
             a.event(db, operation_id, action, "PROVIDER_RECORD_RECONCILED",
                     {"providerId": remote_id, "note": note.strip(), "checked": checked, "response": receipt})
@@ -981,10 +1496,7 @@ def export_transcripts(workspace, operation_id, resource_ids=None):
             raise a.Problem("RESOURCE_ID", "Transcript export requires positive resource IDs.")
         retained = []
         for resource_id in resource_ids:
-            resource_receipt = migration.transport.request("GET", "resources/" + resource_id)
-            resource = data_model(resource_receipt)
-            if provider_id(resource_receipt) != resource_id:
-                raise a.Problem("RESOURCE_ID", "Resource readback returned a different ID.")
+            resource, resource_receipt = migration.resource_record(resource_id)
             ids = complete_list(resource_receipt, resource.get("transcripts_id"), "transcript IDs")
             with db:
                 a.event(db, operation_id, "resources:" + resource_id, "TRANSCRIPT_LIST_READ", resource_receipt)
@@ -995,11 +1507,17 @@ def export_transcripts(workspace, operation_id, resource_ids=None):
                 record = data_model(receipt)
                 if provider_id(receipt) != transcript_id or not isinstance(record.get("export"), dict):
                     raise a.Problem("TRANSCRIPT_EXPORT", "Transcript export response has an invalid ID or format map.")
+                media_id = str(record.get("resource_file_id", ""))
+                if not a.ID.fullmatch(media_id):
+                    raise a.Problem("TRANSCRIPT_PARENT", "Transcript export has no original media parent.")
+                migration.media_record(media_id, resource_id)
                 with db:
                     a.event(db, operation_id, "transcripts:" + transcript_id, "EXPORT_FORMATS_READ", receipt)
                 for format_name, item in sorted(record["export"].items()):
                     if not re.fullmatch(r"[A-Za-z0-9_.-]+", format_name) or format_name in (".", ".."):
                         raise a.Problem("TRANSCRIPT_FORMAT", "Provider export format cannot name a local path.")
+                    if not isinstance(item, dict):
+                        raise a.Problem("TRANSCRIPT_EXPORT", "Provider export entry must be an object.")
                     filename, url = item.get("file_name"), item.get("file")
                     if not isinstance(filename, str) or a.relative(filename) != Path(filename).name:
                         raise a.Problem("TRANSCRIPT_FILENAME", "Provider export filename must be a basename.")

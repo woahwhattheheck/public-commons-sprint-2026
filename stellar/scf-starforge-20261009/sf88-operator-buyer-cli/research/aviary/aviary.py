@@ -35,6 +35,13 @@ CONTRACT = {
     "transcriptExporterBlob": "0b57ecff919740a17fbdf71ac304f981221ebc7b",
     "guide": "https://coda.aviaryplatform.com/bulk-importing-248",
     "apiGuide": "https://coda.aviaryplatform.com/aviary-api-14",
+    "apiSpecification": {
+        "url": "https://www.aviaryplatform.com/aviary-api.json",
+        "openapi": "3.0.0", "version": "1.0.0",
+        "retrievedAt": "2026-10-12T09:20:11.412169+00:00",
+        "bytes": 200348,
+        "sha256": "1bf29e93ede6bc7aa755be25603e1fed4ddb899dac1964f4f63eaaca930c1291",
+    },
 }
 KINDS = ("resources", "media", "transcripts", "indexes", "supplemental")
 RESOURCE_METADATA = ("Description", "Date", "Agent", "Coverage", "Language",

@@ -24,6 +24,7 @@ The implementation follows the current Aviary guides and maintained AVP importer
 
 - [Bulk importing](https://coda.aviaryplatform.com/bulk-importing-248).
 - [Aviary API](https://coda.aviaryplatform.com/aviary-api-14).
+- [Official OpenAPI specification](https://www.aviaryplatform.com/aviary-api.json), as linked by the API documentation page. The reviewed source was retrieved on October 12, 2026 at 09:20 UTC: OpenAPI 3.0.0, document version 1.0.0, 200,348 bytes, SHA256 `1bf29e93ede6bc7aa755be25603e1fed4ddb899dac1964f4f63eaaca930c1291`.
 - [Transcripts](https://coda.aviaryplatform.com/transcripts-137).
 - [Indexes](https://coda.aviaryplatform.com/indexes-221).
 - [AVP import/export scripts at the retained commit](https://github.com/WeAreAVP/aviary-api-scripts/tree/9f189144f6434e6561696983edce17494aa66dd0).
@@ -61,11 +62,16 @@ From the application directory in the repository, run:
 ~~~bash
 python3 -B examples/receive_usgs_example.py \
   --packet examples/usgs-example-input.json \
-  --directory /absolute/aviary-usgs-example \
-  --api-documentation
+  --directory /absolute/aviary-usgs-example
 ~~~
 
-Choose a persistent directory. A repeat with the identical input reopens and verifies completed captures. A changed source body does not overwrite an existing captured member.
+Choose a persistent directory. A repeat with the identical input reopens and verifies completed captures. A changed source body does not overwrite an existing captured member. The script links captured bodies into the source tree when both directories use the same filesystem, so original assets occupy one set of storage blocks.
+
+A failed publisher page does not prevent capture of the remaining sources. The script retains the actual HTTP status, selected response headers, response body, transport error and any Retry-After deadline under capture-attempts/. A resumed run respects an active deadline for that original host.
+
+For publisher pages that need normal browser navigation, use an existing Playwright/Chromium installation and add --publisher-browser. The script first records the direct response, then opens the original public page in a fresh browser context. It retains the browser’s actual main-document response bytes and labels browser decompression explicitly. Add --browser-executable /absolute/path/to/chromium only when selecting an already installed browser. Successful original captures are reused in either mode.
+
+The optional --api-documentation switch captures the Aviary documentation HTML and specification locator. The exact reviewed OpenAPI document is identified in the provider contract; capturing a documentation page does not update that reviewed contract automatically.
 
 The result includes:
 
@@ -73,9 +79,10 @@ The result includes:
 - mapping.json: the complete five-table source mapping.
 - receiving-result.json: actual counts, member hashes, original URLs and capture outcome.
 - captures/: exact downloaded bodies and response metadata.
+- capture-attempts/: failed responses and progress from any incomplete source intake.
 - contract/: complete captured API documentation HTML and specification-locator contexts when requested.
 
-Expected rows are **2 resources, 3 media, 1 transcript, 2 indexes and 2 supplemental files**. Asset sizes and hashes come from the actual capture receipt. If an original source is unavailable, the script retains completed earlier captures and reports the source that failed.
+Expected rows are **2 resources, 3 media, 1 transcript, 2 indexes and 2 supplemental files**. Asset sizes and hashes come from the actual capture receipt. If original sources are unavailable, the script completes the other captures, retains each failed response, and reports the remaining source IDs in one progress result. Repeating the same command continues that intake.
 
 ## Create and review a workspace
 
@@ -218,13 +225,14 @@ The native package supports Aviary’s bulk-import workflow. A complete workspac
 
 ## Configure one API operation
 
-Create a local JSON configuration using the actual organization origin and destination collection ID. These values are examples:
+Create a local JSON configuration using the actual organization origin, organization ID and destination collection ID. These values are examples:
 
 ~~~json
 {
   "schema": "stellar-forge.aviary-client.v1",
   "baseUrl": "https://your-organization.aviaryplatform.com",
   "collectionId": "1234",
+  "organizationId": "5678",
   "tokenEnv": "AVIARY_TOKEN",
   "authorizationScheme": "Bearer",
   "timeoutSeconds": 120,
@@ -233,7 +241,7 @@ Create a local JSON configuration using the actual organization origin and desti
 }
 ~~~
 
-The token comes from the named environment variable. Configuration stores the variable name, not the credential. Use the receiver’s existing secret-injection method. Optional caFile names an existing certificate file; organizationId can be supplied where the reviewed service configuration needs it.
+The token comes from the named environment variable. Configuration stores the variable name, not the credential. Use the receiver’s existing secret-injection method. The API requires the positive organizationId; the client sends it in the organization-id header. Optional caFile names an existing certificate file.
 
 baseUrl is the organization HTTPS origin without an API path, query or embedded credentials. The client joins the documented routes. allowLoopback: true enables HTTP only for an explicit local receiving exercise.
 
@@ -260,6 +268,16 @@ Resources precede dependent media and attachments. The client records an action 
 
 Local media uses Aviary’s original upload description. Small files use a presigned upload URL; large files can use multipart upload with retained part identities and ETags. The client checks the file size, part count and part numbers. It opens each local media or attachment with a held file descriptor, verifies its full SHA256 and length against the saved plan before dispatch, and uses that same descriptor through every part and retry. A concurrent source change cannot silently substitute other bytes. Storage PUTs use the supplied storage route without forwarding the Aviary bearer token. Completion and metadata stay bound to the original media ID.
 
+## Thumbnails and media delivery
+
+Choose either Media Thumbnail Path for a retained local image or Media Thumbnail URL for an existing URL. The mapping review reports a row with both populated so the operator can choose its intended source before planning.
+
+A local image is verified against the saved source and uploaded through Aviary’s thumbnail endpoint after its media record exists. It has a separate media:<user key>:thumbnail action, so a thumbnail failure preserves the completed media upload. A URL is sent with media creation using the maintained importer’s thumbnail_path parameter.
+
+Each run returns mediaDelivery entries for local-file completion, the provider’s reported processing value when present, and the selected thumbnail outcome. COMPLETE means the planned records, source transfers, metadata and attachments have confirmed or positively reconciled results. Inspect the provider’s processing information when deciding whether a recording is ready for playback.
+
+The native CSV package preserves each positive numeric Sequence #. The documented transcript and index creation endpoints have no sequence field; API dispatch follows the reviewed row order while the native package carries its explicit values.
+
 ## Continue a partial or interrupted run
 
 Inspect show, then continue with the same run command. Preserve the original operation when a creation result is uncertain.
@@ -270,6 +288,8 @@ Inspect show, then continue with the same run command. Preserve the original ope
 | DEFERRED | Respect the actual retry time, then run the same operation |
 | RETRYABLE | Correct the stated cause and continue the same operation |
 | DISPATCHING or UNCERTAIN for creation | Find and reconcile the actual original provider record |
+| UNCERTAIN completion, metadata or thumbnail | Run the original operation again to read and compare the original provider state |
+| UPLOADING or UPLOAD_PENDING | Continue the original unfinished parts; refresh that upload’s URLs when required |
 | Parent pending | Complete or reconcile the original parent |
 | Changed request or source | Restore the bound input or review a deliberate new source |
 
@@ -300,6 +320,12 @@ python3 -B aviary.py refresh-upload \
 
 The command rejects a changed media ID, upload mode, multipart ID, part size or part count. It saves the refreshed observation; run then continues the same upload.
 
+If a completion response was lost, the next run reads the original media and downloads its original file for a streaming size/hash comparison. It also requires matching provider file-size analysis, the original collection/resource relationship and the already confirmed upload parts. A positive result adopts the original completion; accepted parts and the mutating completion request remain unchanged.
+
+A lost metadata response is resolved by comparing all requested metadata values with the current original media record, including repeated values. A lost local-thumbnail response is resolved by reading its original thumbnail_url and matching the image bytes with the reviewed local source. These reads recur when the original operation resumes, respecting any provider retry deadline. If the provider changes the image or source-file bytes, review that specific action with the receiving operator.
+
+For an explicitly selected completion, metadata or thumbnail action, reconcile accepts only the original media ID already bound to that action. The saved request and its history stay attached to the same operation.
+
 A filesystem or process failure can leave a saved action without returned command output. Reopen its status/events first. Keep the workspace database and original source together.
 
 ## Retain transcript exports
@@ -312,7 +338,7 @@ python3 -B aviary.py transcripts \
   --operation-id usgs-aviary-pilot-20261012
 ~~~
 
-Select particular existing resources by repeating --resource-id ID. The client reads each resource’s transcript IDs, then its original format map and files. It retains IDs, formats, filenames, response evidence, lengths and hashes under exports/transcripts/.
+Select particular existing resources by repeating --resource-id ID. The client checks that each selected resource belongs to the configured collection, following the collection’s resource pages when needed. It validates each transcript through its original media and resource, then reads its declared export formats and files. It retains IDs, formats, filenames, response evidence, lengths and hashes under exports/transcripts/.
 
 Repeated retrieval reuses unchanged retained downloads. Changed retained bytes are reported. If a provider response declares further pages beyond its supported response, the client reports the incomplete list rather than marking that partial set complete.
 
@@ -382,7 +408,7 @@ python3 -B examples/run-aviary-receiving.py \
   --out /absolute/aviary-native-receiving
 ~~~
 
-The program starts two local HTTP origins, runs the maintained client through original resource/media/attachment operations, loses one creation response, resumes an interrupted multipart upload, exports exact transcript bytes and reopens the exported application in a cold Python process. It verifies that completed records, parts and completion requests are reused. The generated receiving records explicitly exercise those conditions; the separately supplied USGS directory retains its own actual publisher-source inventory.
+The program starts two local HTTP origins and runs the complete client workflow with the required organization header, a resource found on the second collection page, original resource/media/attachment operations and a local thumbnail. It exercises a lost creation response, an interrupted multipart upload, lost completion/metadata responses with delayed provider readback, exact transcript downloads and a cold process reopening the exported application. It checks that completed records, accepted parts, completion requests and metadata updates keep their original identities through recovery. The separately supplied USGS directory retains its actual publisher-source inventory alongside this application receiving journey.
 
 The result is receiving-result.json. The output directory retains the original input, HTTP and storage records, byte hashes, portable-workspace.zip, completed-workspace.zip and cold-reopen-result.json. A repeat with the same source and output directory reconciles its saved artifacts and continues the same operation.
 
