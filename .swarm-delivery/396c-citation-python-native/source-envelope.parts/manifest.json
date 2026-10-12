@@ -1,0 +1,1 @@
+{"schema":"commons.file-transfer.v1","transfer_id":"sha256-4699d7bef9afae7e7b83246600e7add0904403fe829943c32553a3eb63c113ff","bytes":6690329,"sha256":"4699d7bef9afae7e7b83246600e7add0904403fe829943c32553a3eb63c113ff","parts":7,"raw_chunk_bytes":1000000,"max_request_bytes":1400000,"transport":"file_envelopes_only","uploaded":false}
