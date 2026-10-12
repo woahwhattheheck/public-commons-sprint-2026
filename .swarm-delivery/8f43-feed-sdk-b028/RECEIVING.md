@@ -21,15 +21,15 @@ Completion is published under the original output lease after SDK clients, MCP o
 | Original 329-file inventory | `0466d93ba98844dcc2cb1b4bc8efdfc5d10fb363` |
 | Complete adopted source selection | `cbe7f008696f6e2d63dca8481c06ce71c1e265ce` |
 | Published SDK product | `055c5231fa50c654e2d720062f72e0df42ea9865` |
-| Guarded source preparation | `92667ebfdda549d8ebd69afeade7b6f8ec5c681b` |
-| Complete compressed source packet | `96acd68fbf461ee6b5809a592f0f4de04f1065d4` |
-| Original-packet receiving launcher | `03355a9e2330ce07f13e31d8a73ece5bf13b174d` |
+| Guarded source preparation | `65f305460bb1392f021e0eb06e4dbe964272e6b5` |
+| Complete compressed source packet | `e7083d372bff57c85333b5b4f45a04f9fa575003` |
+| Original-packet receiving launcher | `40d62554ccd2745e443bc0bf291b02525aa6e8b3` |
 
 The selected source contains 341 files and 3,906,741 bytes. Five native donor leaves receive the exact reviewed replacements and twelve files are added. The remaining 324 original donor files retain their original bytes. The four prerequisites supplement the thirteen-file SDK cohort: the feed tool catalogue, retained file limits, retained file reader and original MCP HTTP handler.
 
 The original publisher and draft-store implementations remain in this donor. Their complete buyer review, prepare, action result, saved metadata recovery, saved configuration and export interfaces were compared directly with the maintained implementations used during review.
 
-The source packet is 179,947 UTF-8 bytes. It uses the existing Commons source packet encoder and the original installed `cloud_source_command.decode_packet`; it expands to 409,533 bytes containing every selected new source body, the complete receiving driver, source selection and guarded preparer. Git blob identifiers above identify complete file bytes, independently of native artifact SHA-256 identifiers.
+The source packet is 164,336 UTF-8 bytes. It uses the existing `gzip+base64` Commons source-packet format and the original installed `cloud_source_command.decode_packet`; it expands to 411,487 bytes containing every selected new source body, the complete receiving driver, source selection and guarded preparer. Git blob identifiers above identify complete file bytes, independently of native artifact SHA-256 identifiers.
 
 ## Prepare the existing source
 
@@ -52,6 +52,8 @@ A carrier that already has the launcher can instead read the packet from an immu
 The launcher accepts `--request-sha256` when the original owner has already captured that exact request digest. On the first adoption it also freezes the entire unchanged original request in the private adoption directory under the native record lock. Every continuation checks the frozen original bytes, operation, project and command. The request is preserved with all its existing capacity, source, runtime and artifact fields.
 
 The preparer checks the selected complete host identity, original donor inventory, original OPML and installed dependency link. It checks every old or already-adopted file before publishing anything. It then retains the five replaced source files and the original driver, writes new imports before their updated consumers, reads back all 341 selected files, and publishes the receiving driver last. Each file is complete and fsynced before publication. A repeated preparation recognizes the exact existing postimages and preserved original bytes.
+
+The original driver retains its actual permission mode through preparation and reopen. The mode is taken from the exact original driver or its preserved original preimage, then checked against the selected replacement; the preparer does not chmod an already adopted caller. This supports the original retained 0644 driver as well as an original 0600 caller. New SDK leaves retain their selected 0600 modes. New completion receipts include `driverMode`; an otherwise identical completed v1 receipt without that field is reopened unchanged.
 
 The driver independently checks the full selected source before starting its original consoles. Both the original inventory and the additional adopted-source manifest remain available.
 

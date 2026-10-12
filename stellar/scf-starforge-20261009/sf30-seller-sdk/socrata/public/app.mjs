@@ -1,6 +1,8 @@
 // MIT. Browser operator for the original Socrata workspace.
 import {createPublisherPanel} from "./publisher.mjs";
-let publisherPanel;
+import {createPropertyPanel} from "./property.mjs";
+let publisherPanel, propertyPanel;
+let publisherResource = null;
 const $ = id => document.getElementById(id);
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const json = value => JSON.stringify(value, null, 2);
@@ -150,7 +152,44 @@ async function downloadPublisher(kind, id) {
   setTimeout(() => URL.revokeObjectURL(url),30000);
   notice('Downloaded retained publisher file: ' + filename);
 }
-publisherPanel = createPublisherPanel({getState:() => state,perform,download:downloadPublisher,handle,notice,selectSection});
+function publisherState(value=state) {
+  if(!publisherResource)return value;
+  const selected=value?.property?.resources?.find(r=>r.id===publisherResource);
+  if(!selected)return {...value,publisher:null,exports:[],lastQuery:null,propertyPublisherResourceId:publisherResource};
+  return {...value,publisher:value.propertyPublishers?.[publisherResource]??null,exports:[{...selected,createdAt:selected.created_at}],
+    lastQuery:{initialQuery:{limit:'25'}},propertyPublisherResourceId:publisherResource};
+}
+async function scopedPublisher(action,payload={}) {
+  const selected=publisherResource;
+  const result=selected?await perform('property.'+action,{resource_id:selected,payload}):await perform(action,payload);
+  if(selected!==publisherResource)throw new Error('The publisher resource changed while the original operation completed. Reopen that resource.');
+  return result;
+}
+async function propertyDownload(path) {
+  const response=await fetch(path,{headers:{Authorization:'Bearer '+token},cache:'no-store'});
+  if(!response.ok){const error=await response.json().catch(()=>({}));throw new Error(error.message||error.error||'The retained property download is unavailable.');}
+  const raw=/filename\*=UTF-8''([^;]+)/i.exec(response.headers.get('content-disposition')||'')?.[1],filename=raw?decodeURIComponent(raw):'property-source';
+  const url=URL.createObjectURL(await response.blob()),a=node('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
+}
+async function scopedPublisherDownload(kind,id){
+  const selected=publisherResource;
+  if(!selected)return downloadPublisher(kind,id);
+  return propertyDownload('/api/property/publisher/exports/'+encodeURIComponent(selected)+'/'+encodeURIComponent(kind)+'/'+encodeURIComponent(id));
+}
+function setPublisherResource(id) {
+  if(busy||needsRefresh||sessionExpired||propertyPanel?.pending())throw new Error('Finish or recover the current original operation before changing publisher resource.');
+  if(id&&!state?.property?.resources?.some(r=>r.id===id))throw new Error('Select a retained merchant resource.');
+  publisherResource=id||null;renderPublisherScope();publisherPanel.render(publisherState());renderControls();selectSection('publisher');
+}
+function renderPublisherScope(){
+  const select=$('publisher-resource-scope');select.replaceChildren(option('','Original Socrata / HPD resource'));
+  for(const r of state?.property?.resources||[])select.append(option(r.id,(r.name||r.id)+' · '+short(r.snapshot)));
+  select.value=publisherResource||'';
+  $('publisher-resource-note').textContent=publisherResource?'This selected property resource uses the original publisher and buyer engines. The HPD publisher and its retained acquisitions remain separate.':'Original Socrata publisher, releases and buyer acquisitions.';
+}
+$('publisher-resource-scope').addEventListener('change',event=>handle(()=>setPublisherResource(event.target.value)));
+publisherPanel = createPublisherPanel({getState:() => publisherState(),perform:scopedPublisher,download:scopedPublisherDownload,handle,notice,selectSection});
+propertyPanel = createPropertyPanel({getState:()=>state,perform,request,downloadFile:file=>propertyDownload('/api/property/file?file='+encodeURIComponent(file)),handle,notice,selectSection,selectPublisher:setPublisherResource});
 
 function factList(entries) {
   const list = node('dl');
@@ -512,7 +551,9 @@ function renderControls() {
   $('add-all-mapping-columns').disabled = !state?.metadata?.columns?.length;
   $('refresh-state').disabled = busy;
   $('mapping-dirty').textContent = mappingDirty ? 'Unsaved mapping changes' : state?.mapping ? 'Saved mapping' : 'Choose and save a mapping';
-  publisherPanel?.controls(locked);
+  publisherPanel?.controls(locked || Boolean(propertyPanel?.pending()));
+  propertyPanel?.controls(locked);
+  $('publisher-resource-scope').disabled=locked || Boolean(propertyPanel?.pending());
 }
 function render() {
   if (!state) { renderControls(); return; }
@@ -529,7 +570,7 @@ function render() {
   if (currentActive !== activeSignature) {
     activeSignature = currentActive; lastQuery = null; nextCursor = null; queryResult = null; queryDirty = false;
   }
-  renderQueryCapabilities(); renderQueryResult(); renderMerchant(); renderExports(); publisherPanel?.render(state); renderControls();
+  renderQueryCapabilities(); renderQueryResult(); renderMerchant(); renderExports(); renderPublisherScope(); publisherPanel?.render(publisherState()); propertyPanel?.render(state); renderControls();
   if (!busy) $('connection-status').textContent = 'Local workspace';
 }
 async function runCapture({resume = false} = {}) {

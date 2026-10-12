@@ -83,6 +83,7 @@ export async function createDuckdbWorkspace({ directory, sourceFile, planFile,
   catch (error) { if (error.code !== 'ENOENT') throw error; }
   const store = await openWorkspaceStore({ directory, sourceFile: originalSource?.path ?? resolve(sourceFile) });
   let active = null, closing = false, tail = Promise.resolve(), closePromise;
+  const lifetime=new AbortController();
   try {
     if (!originalSource && !store.latest()) throw new WorkspaceError('APPROVED_SOURCE_NOT_FOUND', 404);
     if (originalSource) store.sourceDescription(publicDescription(originalSource));
@@ -101,7 +102,8 @@ export async function createDuckdbWorkspace({ directory, sourceFile, planFile,
   const packagePath = id => resolve(store.directory, 'packages', operationId(id));
   const mutate = fn => {
     if (closing) return Promise.reject(new WorkspaceError('WORKSPACE_CLOSING', 503));
-    const task = tail.then(fn); tail = task.catch(() => {}); return task;
+    const task = tail.then(()=>{if(closing)throw new WorkspaceError('WORKSPACE_CLOSING',503);return fn();});
+    tail = task.catch(() => {}); return task;
   };
   function draftFor(revision) {
     const value = store.getDraft(revisionNumber(revision));
@@ -162,15 +164,17 @@ export async function createDuckdbWorkspace({ directory, sourceFile, planFile,
     if (!active) return runtime();
     const owned = active;
     store.setRuntime({ ...saved, state: 'STOPPING' });
-    try {
-      await owned.session.close();
-    } finally {
-      try { await owned.operations.close(); }
-      finally {
-        active = null;
-        store.setRuntime({ ...saved, state: 'STOPPED', endedAt: new Date().toISOString() });
-      }
+    const result=await Promise.allSettled([
+      owned.sessionClosed?Promise.resolve():owned.session.close().then(()=>{owned.sessionClosed=true;}),
+      owned.operationsClosed?Promise.resolve():owned.operations.close().then(()=>{owned.operationsClosed=true;})
+    ]);
+    const failed=result.filter(value=>value.status==='rejected');
+    if(failed.length){
+      store.setRuntime({...saved,state:'STOPPING',error:publicIssue(failed[0].reason).error});
+      throw failed[0].reason;
     }
+    active = null;
+    store.setRuntime({ ...saved, state: 'STOPPED', endedAt: new Date().toISOString() });
     return runtime();
   }
   let cloud;
@@ -178,11 +182,13 @@ export async function createDuckdbWorkspace({ directory, sourceFile, planFile,
     cloud = await createCloudDelivery({ workspaceStore: store, python, environment, currentSource,
       canSelect: () => { if (active) throw new WorkspaceError('MERCHANT_ALREADY_RUNNING', 409,
         'Stop the current merchant before selecting a different retained data edition.'); },
-      inspectPackage: async id => (await inspectedPackage(id)).item, packageDirectory: packagePath });
+      inspectPackage: async id => (await inspectedPackage(id)).item, packageDirectory: packagePath,
+      packageDraft: async id => draftFor(packageFor(id).revision),signal:lifetime.signal });
   } catch (error) { store.close(); throw error; }
   return {
-    directory: store.directory,
-    cloud: Object.fromEntries(Object.entries(cloud).map(([name, method]) => [name, (...args) => mutate(() => method(...args))])),
+    directory: store.directory, workspaceId:store.workspaceId,
+    cloud: Object.fromEntries(Object.entries(cloud).map(([name, method]) => [name, (...args) =>
+      name==='operation'?method(...args):mutate(() => method(...args))])),
     state() { return mutate(async () => {
       let source, sourceError = null, authoringError = null;
       const draft = store.latest();
@@ -205,6 +211,13 @@ export async function createDuckdbWorkspace({ directory, sourceFile, planFile,
         sourceChanged: Boolean(draft && draft.sourceSha256 !== source.sourceSha256), runtime: runtime(), cloud: cloud.state() };
     }); },
     draft(revision) { return draftFor(revision); },
+    operation({operationId:id,kind}) {
+      operationId(id);
+      if(!['draft','package'].includes(kind))throw new WorkspaceError('WORKSPACE_OPERATION_KIND_INVALID');
+      const value=kind==='draft'?store.draftByOperation(id):store.getPackage(id);
+      if(!value)throw new WorkspaceError('WORKSPACE_OPERATION_NOT_FOUND',404);
+      return {kind,operationId:id,state:kind==='draft'?'READY':value.state,record:value};
+    },
     runtime,
     catalog: input => mutate(() => author().catalog(input)),
     authorReview: input => mutate(() => author().review(input)),
@@ -212,7 +225,21 @@ export async function createDuckdbWorkspace({ directory, sourceFile, planFile,
     save(input) { return mutate(async () => {
       const declaration = await currentSource(); sameSource(declaration, input.sourceSha256);
       encodePlan(input.plan);
-      return store.saveDraft({ ...input, sourceSha256: declaration.sourceSha256 });
+      return store.saveDraft({ ...input, origin:null, sourceSha256: declaration.sourceSha256 });
+    }); },
+    adoptReceivedDraft(input) { return mutate(async()=>{
+      const original=cloud.receivedDraft({receivingId:input.receivingId});
+      if(input.originalDraftSha256!==original.originalDraftSha256)
+        throw new WorkspaceError('CLOUD_RECEIVED_DRAFT_CHANGED',409);
+      const selection=cloud.state().selection;
+      if(!selection||!original.editionIds.includes(selection.editionId))
+        throw new WorkspaceError('CLOUD_SELECT_RECEIVED_SOURCE_FIRST',409);
+      const declaration=await currentSource();sameSource(declaration,input.sourceSha256);
+      encodePlan(input.plan);
+      return store.saveDraft({...input,sourceSha256:declaration.sourceSha256,
+        origin:{schema:'stellar-forge.cloud-draft-adoption.v1',receivingId:original.receivingId,
+          originalDraftSha256:original.originalDraftSha256,delivery:original.delivery,
+          editionId:selection.editionId}});
     }); },
     review: input => mutate(() => review(input.revision)),
     preview(input, { signal } = {}) { return mutate(async () => {
@@ -223,7 +250,7 @@ export async function createDuckdbWorkspace({ directory, sourceFile, planFile,
         try {
           if (opened.source.describe().sourceSha256 !== exact.sourceSha256) throw new WorkspaceError('SOURCE_CHANGED', 409);
           return { operatorPreview: true, sourceSha256: input.sourceSha256,
-            result: await opened.source.query(input.query, input.input ?? {}, { signal }) };
+            result: await opened.source.query(input.query, input.input ?? {}, { signal: signal ? AbortSignal.any([signal,lifetime.signal]) : lifetime.signal }) };
         } finally { await opened.source.close(); }
       });
     }); },
@@ -294,11 +321,12 @@ export async function createDuckdbWorkspace({ directory, sourceFile, planFile,
     stop(input) { return mutate(() => stopActive(input.instanceId)); },
     close() {
       if (closePromise) return closePromise;
-      closing = true;
-      closePromise = tail.then(async () => {
-        try { if (active) await stopActive(store.runtime().instanceId); }
-        finally { store.close(); }
+      closing = true;lifetime.abort();
+      const pending=tail.then(async () => {
+        if(active)await stopActive(store.runtime().instanceId);
+        store.close();
       });
+      closePromise=pending;void pending.catch(()=>{if(closePromise===pending)closePromise=null;});
       return closePromise;
     },
   };

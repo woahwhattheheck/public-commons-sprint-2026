@@ -7,6 +7,8 @@ import {isAbsolute, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {fields, publicUrl, reference, generation, sha256} from './buyer.mjs';
 import {validateBasketCatalog} from './basket.mjs';
+import {compileVersionedMerchant,VERSIONED_MERCHANT_SCHEMA,WOO_MERCHANT_MAX_BYTES} from './versioned-seller.mjs';
+export {VERSIONED_MERCHANT_SCHEMA,WOO_MERCHANT_MAX_BYTES};
 import {need, operation} from '../sf88-operator-buyer-cli/config.mjs';
 import {compileHttpSellerOffer} from '../sf30-seller-sdk/seller.mjs';
 import {startSellerService} from '../sf30-seller-sdk/serve.mjs';
@@ -21,6 +23,7 @@ const RESULT_SCHEMA = 'stellar-forge.sf104.checkout-admission-result.v1';
 const ENDPOINT = '/wp-json/stellar-forge/v1/checkout-admission';
 
 export function compileMerchant(raw) {
+  if(raw?.schema===VERSIONED_MERCHANT_SCHEMA)return compileVersionedMerchant(raw,compileMerchant);
   const basketConfig = raw?.schema === BASKET_MERCHANT_SCHEMA;
   fields(raw, ['schema','storeOrigin','admissionUrl','secretEnv','outbox','routes','timeoutMs',
     ...(basketConfig ? ['baskets'] : [])], 'WOO_MERCHANT_FIELDS_INVALID');
@@ -183,6 +186,11 @@ export function createWooApplication(compiled, {env = process.env, fetchImpl} = 
 export async function startWooMerchant(compiled, {nativeFactory = null, env = process.env,
   fetchImpl, port = 8423, operationsPort = 8424, operationsNavigationOrigin = null,
   maxInFlight = 64, drainGraceMs = 60000} = {}) {
+  if (compiled.versioned) {
+    const {startWooVersionedMerchant}=await import('./versioned-seller.mjs');
+    return startWooVersionedMerchant(compiled,{nativeFactory,env,fetchImpl,port,operationsPort,
+      operationsNavigationOrigin,maxInFlight,drainGraceMs});
+  }
   if (compiled.baskets?.length) {
     const {startWooBasketMerchant} = await import('./basket-seller.mjs');
     return startWooBasketMerchant(compiled, {nativeFactory, env, fetchImpl, port, operationsPort,
@@ -214,7 +222,10 @@ async function writeNewJson(path, value) {
 }
 
 const USAGE = `node seller.mjs prepare [--route /absolute/woo-product.json] [--basket /absolute/basket-catalog.json] --store-origin https://shop.example --outbox /private/sf98-outbox --out /private/woo-merchant.json [--admission-url https://shop.example/subdir/wp-json/stellar-forge/v1/checkout-admission]
-Repeat --route for existing fixed-product routes and --basket for retained catalog versions.
+Repeat --route for current fixed-product routes and --basket for retained catalog versions.
+Use --versioned and repeated --route-version FILE to retain earlier fixed-product terms.
+Versioned configuration preserves earlier basket endpoints on the same seller origin.
+Catalog commissioning exports the complete v3 config, including frozen unpaid order versions.
 Basket catalogs are exported by the original Woo gateway; keep earlier catalogs for pending orders.
 node seller.mjs inspect --config /private/woo-merchant.json
 node seller.mjs serve --config /private/woo-merchant.json --facilitator https://facilitator.example [--port 8423] [--operations-port 8424]
@@ -228,32 +239,46 @@ An uncertain reserved order stays reserved until original merchant reconciliatio
 
 export async function main(args = process.argv.slice(2)) {
   if (args.length === 1 && args[0] === '--help') { console.log(USAGE); return; }
-  const action = args[0], options = new Map(), routeFiles = [], basketFiles = [];
-  const allowed = {prepare:['--route','--basket','--store-origin','--outbox','--out','--admission-url'],
+  const action = args[0], options = new Map(), routeFiles = [], basketFiles = [], routeVersionFiles = [];
+  const allowed = {prepare:['--route','--route-version','--basket','--versioned','--store-origin','--outbox','--out','--admission-url'],
     inspect:['--config'], serve:['--config','--facilitator','--allow-local-facilitator','--port','--operations-port']}[action];
   need(allowed, 'WOO_SELLER_ACTION_REQUIRED');
   for (let i = 1; i < args.length; i++) {
-    const key = args[i]; need(allowed.includes(key) && (['--route','--basket'].includes(key) || !options.has(key)), 'WOO_SELLER_ARGUMENT_INVALID');
-    if (key === '--allow-local-facilitator') { options.set(key, true); continue; }
+    const key = args[i]; need(allowed.includes(key) && (['--route','--route-version','--basket'].includes(key) || !options.has(key)), 'WOO_SELLER_ARGUMENT_INVALID');
+    if (['--allow-local-facilitator','--versioned'].includes(key)) { options.set(key, true); continue; }
     need(typeof args[i+1] === 'string' && !args[i+1].startsWith('--'), 'WOO_SELLER_VALUE_REQUIRED');
     const value = args[++i];
-    if (key === '--route') routeFiles.push(value); else if (key === '--basket') basketFiles.push(value); else options.set(key, value);
+    if (key === '--route') routeFiles.push(value);
+    else if (key === '--route-version') routeVersionFiles.push(value);
+    else if (key === '--basket') basketFiles.push(value); else options.set(key, value);
   }
   if (action === 'prepare') {
-    need((routeFiles.length || basketFiles.length) && ['--store-origin','--outbox','--out'].every(key => options.has(key)), 'WOO_SETUP_ARGUMENT_REQUIRED');
-    const raw = {schema:basketFiles.length ? BASKET_MERCHANT_SCHEMA : MERCHANT_SCHEMA, storeOrigin:options.get('--store-origin'),
-      outbox:resolve(options.get('--outbox')), routes:await Promise.all(routeFiles.map(path => readJson(resolve(path)))),
-      ...(basketFiles.length ? {baskets:await Promise.all(basketFiles.map(path => readJson(resolve(path))))} : {}),
+    need((routeFiles.length || basketFiles.length || routeVersionFiles.length) &&
+      ['--store-origin','--outbox','--out'].every(key => options.has(key)), 'WOO_SETUP_ARGUMENT_REQUIRED');
+    need(routeFiles.length<=64 && routeVersionFiles.length<=256 && basketFiles.length<=256,
+      'WOO_SETUP_VERSION_COUNT_INVALID');
+    const versioned=options.has('--versioned') || routeVersionFiles.length>0;
+    const routes=await Promise.all(routeFiles.map(path=>readJson(resolve(path))));
+    const baskets=await Promise.all(basketFiles.map(path=>readJson(resolve(path))));
+    const raw = {schema:versioned ? VERSIONED_MERCHANT_SCHEMA : basketFiles.length ? BASKET_MERCHANT_SCHEMA : MERCHANT_SCHEMA,
+      storeOrigin:options.get('--store-origin'),outbox:resolve(options.get('--outbox')),routes,
+      ...(versioned ? {routeVersions:await Promise.all(routeVersionFiles.map(path=>readJson(resolve(path)))),baskets} :
+        basketFiles.length ? {baskets} : {}),
       ...(options.has('--admission-url') ? {admissionUrl:options.get('--admission-url')} : {})};
     const compiled = compileMerchant(raw), output = resolve(options.get('--out'));
     await writeNewJson(output, raw);
-    const result = {status:'WOO_NATIVE_MERCHANT_PREPARED', output, routes:compiled.routes.length, basketCatalogs:compiled.baskets.length, networkRequests:0};
+    const result = {status:'WOO_NATIVE_MERCHANT_PREPARED', output, routes:compiled.routes.length,
+      routeVersions:compiled.routeVersions?.length ?? compiled.routes.length,
+      basketCatalogs:compiled.baskets.length,versioned:Boolean(compiled.versioned),networkRequests:0};
     console.log(JSON.stringify(result)); return result;
   }
   need(options.has('--config'), 'WOO_CONFIG_REQUIRED');
-  const compiled = compileMerchant(await readJson(resolve(options.get('--config')), 2097152));
+  const compiled = compileMerchant(await readJson(resolve(options.get('--config')), WOO_MERCHANT_MAX_BYTES));
   if (action === 'inspect') {
     const result = {status:'WOO_MERCHANT_CONFIG_VALID', storeOrigin:compiled.storeOrigin,
+      ...(compiled.versioned ? {versioned:true,catalogOrderUrl:compiled.catalogOrderUrl,
+        routeVersions:compiled.routeVersions.map(({version,productId,routeId,url,method,expect})=>
+          ({version,productId,routeId,url,method,expect}))} : {}),
       admissionUrl:compiled.admissionUrl, baskets:compiled.baskets.map(catalog => ({catalogDigest:catalog.catalogDigest,
         routeId:catalog.routeId, url:catalog.url, method:catalog.method, products:catalog.products})),
       routes:compiled.routes.map(route => ({productId:route.productId,

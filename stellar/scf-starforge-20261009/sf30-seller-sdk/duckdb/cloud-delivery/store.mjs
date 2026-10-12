@@ -32,6 +32,10 @@ export function createCloudStore({ db, transaction }) {
   };
   return {
     revision, get,
+    operation(id) {
+      const row=db.prepare('SELECT * FROM cloud_records WHERE operation_id=?').get(id);
+      return row ? {kind:row.kind,...decode(row)} : null;
+    },
     list(kind) { return db.prepare('SELECT * FROM cloud_records WHERE kind=? ORDER BY rowid DESC').all(kind).map(decode); },
     history() {
       return db.prepare('SELECT * FROM cloud_events ORDER BY sequence DESC LIMIT 500').all()

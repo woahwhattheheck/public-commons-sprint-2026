@@ -17,6 +17,7 @@ import threading
 from urllib.parse import parse_qs, unquote, urlsplit
 
 from . import _duckdb_ui, _spatial_ui, spatial_http
+from .reconciliation import http as reconciliation_http
 from .duckdb_agent import identity as agent_identity, catalog as agent_catalog, request_record, check_report
 from ._analysis_export_http import send_export
 from .errors import BuyerError, StateError
@@ -151,6 +152,7 @@ class DuckDBOperator:
                 "handoffs": self._handoff_rows(),
                 "operations": self.operation_records(),
                 "spatial": spatial_http.spatial(self).status(),
+                "reconciliation": reconciliation_http.model(self).status(),
             }
 
     def export_record(self, export_id):
@@ -211,6 +213,8 @@ class DuckDBOperator:
             _integer(body["expected_revision"], "revision", 1)
         elif route == "/api/spatial/exports":
             spatial_http.validate_export(body)
+        elif route == "/api/reconciliation/exports":
+            reconciliation_http.validate_export(body)
         elif route == "/api/source-handoffs":
             _fields(body, ("edition_id", "request_id"))
             _identifier(body["edition_id"])
@@ -225,7 +229,7 @@ class DuckDBOperator:
                 raise StateError("DUCKDB_OPERATOR_ORIGINAL_REQUEST_CHANGED")
         else:
             original = {"request_id": request_id, "route": route, "body": body,
-                        "directory": self._destination(self.export_root if route in {"/api/exports", "/api/spatial/exports"} else self.handoff_root, request_id),
+                        "directory": self._destination(self.export_root if route in {"/api/exports", "/api/spatial/exports", "/api/reconciliation/exports"} else self.handoff_root, request_id),
                         "created_at": datetime.now(timezone.utc).isoformat()}
             dump(path, original, exclusive=True)
         dump(status_path, {"state": "RUNNING", "updated_at": datetime.now(timezone.utc).isoformat()})
@@ -235,6 +239,8 @@ class DuckDBOperator:
                     expected_revision=body["expected_revision"], expected_views=body.get("expected_views"))
             elif route == "/api/spatial/exports":
                 result = spatial_http.export(self, body, original["directory"])
+            elif route == "/api/reconciliation/exports":
+                result = reconciliation_http.export(self, body, original["directory"])
             else:
                 native = (self.workspace.export_source(body["edition_id"], original["directory"])
                           if route == "/api/source-handoffs" else self.workspace.backup(original["directory"]))
@@ -262,6 +268,8 @@ class DuckDBOperator:
 
     def perform(self, route, body):
         with self.mutex:
+            if route.startswith("/api/reconciliation/"):
+                return reconciliation_http.perform(self, route, body)
             if route.startswith("/api/spatial/"):
                 return spatial_http.perform(self, route, body)
             if route == "/api/inspect-delivery":
@@ -394,10 +402,17 @@ def serve(workspace, *, port=0, export_root=None, handoff_root=None, spatial_ext
             if self.command in {"GET", "HEAD"} and url.path in assets and not url.query:
                 value, mime = assets[url.path]
                 return self._reply(200, value.encode(), mime)
+            if self.command in {"GET", "HEAD"} and not url.query:
+                selected = reconciliation_http.asset(url.path)
+                if selected is not None:
+                    payload, mime = selected
+                    return self._reply(200, payload, mime)
             capabilities = self.headers.get_all("X-DuckDB-Capability", [])
             if len(capabilities) != 1 or not secrets.compare_digest(capabilities[0], token):
                 return self._reply(403, {"error": "DUCKDB_OPERATOR_CAPABILITY_REQUIRED"})
             workspace_ids = self.headers.get_all("X-DuckDB-Workspace-ID", [])
+            if url.path.startswith("/api/reconciliation/") and len(workspace_ids) != 1:
+                return self._reply(409, {"error": "DUCKDB_OPERATOR_WORKSPACE_ID_REQUIRED"})
             if workspace_ids and (len(workspace_ids) != 1 or not secrets.compare_digest(
                     workspace_ids[0], workspace.identity()["workspace_id"])):
                 return self._reply(409, {"error": "DUCKDB_OPERATOR_WORKSPACE_ID_CHANGED"})
@@ -406,6 +421,9 @@ def serve(workspace, *, port=0, export_root=None, handoff_root=None, spatial_ext
                 raise StateError("DUCKDB_OPERATOR_PARAMETERS_INVALID")
             parts = [unquote(part) for part in url.path.strip("/").split("/")]
             if self.command in {"GET", "HEAD"}:
+                if url.path.startswith("/api/reconciliation/"):
+                    with operator.mutex:
+                        return self._reply(200, reconciliation_http.get(operator, url.path, parameters))
                 if len(parts) == 4 and parts[:2] == ["api", "exports"] and parts[3] == "file":
                     if set(parameters) != {"name"}:
                         raise StateError("DUCKDB_OPERATOR_DOWNLOAD_NAME_REQUIRED")
@@ -492,6 +510,8 @@ def serve(workspace, *, port=0, export_root=None, handoff_root=None, spatial_ext
             except BuyerError as exc:
                 code = exc.code
                 status = 409 if any(word in code for word in ("REVISION", "CHANGED", "BUSY", "EXISTS", "OPEN")) else 400
+                if code.startswith("DUCKDB_RECONCILIATION_") and code.endswith("_NOT_FOUND"):
+                    status = 404
                 self._reply(status, {"error": code})
             except (ValueError, TypeError, KeyError, OverflowError):
                 self._reply(400, {"error": "DUCKDB_OPERATOR_REQUEST_INVALID"})

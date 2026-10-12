@@ -1,9 +1,12 @@
 # Supplier order desk
 
-The supplier order desk keeps original Unite openTRANS 1.0 orders, confirmations,
+The supplier order desk keeps original openTRANS 1.0 orders, confirmations,
 dispatch notifications and invoices in one private operator workspace. It retains
 every original XML file, saved draft, prepared document and explicit current
-selection. Browser, command line and merchant MCP use the same native workspace.
+selection. Browser, command line and merchant MCP use the same native workspace. The original
+Unite profile remains the default. A separate customer interface retains its complete
+reviewed declaration before original business intake; see the installed
+`sf30-seller-sdk/supplier-orders/PROFILES.md` for the full schema, editor and receiving flow.
 
 ## Install and open
 
@@ -32,6 +35,21 @@ operator; it grants access to this workspace. The interface binds to the local
 computer and presents a neutral order list, document history, editable draft,
 review and file delivery surface.
 
+## Retain the customer interface
+
+Open **Customer profile** before first business intake. Keep the actual source
+agreement/revision, complete declaration and reason; save with the displayed profile
+SHA and selection revision. The selection locks after original intake. The included
+`examples/customer-profile.json` is an explicitly authored local receiving example,
+not a partner agreement. A foreign ORDERS05/cXML format still requires its selected
+source adapter.
+
+Customer ZIPs carry the complete declaration. Inspect a different incoming profile
+before explicitly adopting it into an empty workspace. A matching existing workspace
+preserves later customer revisions and the original package replay. CLI commands are
+`profile-template`, `profile`, `profile-history`, and `select-profile`; typed/MCP
+methods are documented in the full profile guide.
+
 ## Receive and review an order
 
 Import the complete supplier ORDER XML. The workspace retains its original bytes
@@ -51,11 +69,13 @@ order status even when quantities balance.
 
 ## Prepare confirmations, dispatches and invoices
 
-Create a confirmation from the selected original order. Keep the source line
+For the unchanged Unite default, create a confirmation from the selected original order. Keep the source line
 identifiers and enter the current confirmation or cancellation quantity. A negative
 confirmation quantity records the cancelled quantity. When a later partial
 confirmation replaces a line, the current view uses that line's latest selected
-confirmation and retains the earlier document in history.
+confirmation and retains the earlier document in history. A customer profile can instead reject negative quantities
+and require every original order line. The editor, native review and output use the
+same retained declaration.
 
 Create a dispatch notification from remaining quantities. Split an order across
 separate dispatch documents and record available parcel, tracking, delivery-period
@@ -155,7 +175,7 @@ starforge merchant-mcp serve --config /private/merchant/merchant.json
 ```
 
 The provider guide documents the exact host-options schema, connection file,
-runtime, credentials, complete 27-tool catalog, client, CLI and receiving flow:
+runtime, credentials, complete 40-tool catalog, client, CLI and receiving flow:
 
 - `stellar-forge/mcp-merchant-operator/SUPPLIER_ORDERS.md`
 - `stellar-forge/mcp-merchant-operator/supplier-order-client.mjs`

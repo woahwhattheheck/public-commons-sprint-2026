@@ -207,7 +207,7 @@ class Handler(original_server.Handler):
             self._query(target, ())
             path = ws.source_path(parts[2])
             archive = zipfile.is_zipfile(path)
-            self._file(path, "eltss-original-source.zip" if archive else "eltss-original-source.json",
+            self._download(path, "eltss-original-source.zip" if archive else "eltss-original-source.json",
                        "application/zip" if archive else "application/fhir+json")
         elif len(parts) == 4 and parts[:2] == ["api", "sources"] and parts[3] == "rows":
             values = self._query(target, ("resourceType", "offset", "limit", "query"))
@@ -229,11 +229,11 @@ class Handler(original_server.Handler):
             self._json(ws.graph_node(parts[2], parts[4]))
         elif len(parts) == 4 and parts[:2] == ["api", "assessments"] and parts[3] == "file":
             self._query(target, ())
-            self._file(ws.assessment_file(parts[2]), "eltss-complete-assessment.jsonl",
+            self._download(ws.assessment_file(parts[2]), "eltss-complete-assessment.jsonl",
                        "application/x-ndjson")
         elif len(parts) == 4 and parts[:2] == ["api", "edition-comparisons"] and parts[3] == "file":
             self._query(target, ())
-            self._file(ws.edition_changes_file(parts[2]), "eltss-complete-edition-changes.jsonl",
+            self._download(ws.edition_changes_file(parts[2]), "eltss-complete-edition-changes.jsonl",
                        "application/x-ndjson")
         elif len(parts) == 4 and parts[:2] == ["api", "assessments"] and parts[3] == "cells":
             values = self._query(target, ("carePlanId", "fieldKey", "status", "offset", "limit"))
@@ -250,10 +250,10 @@ class Handler(original_server.Handler):
             with ws.scratch() as temporary:
                 path = temporary / "eltss-care-plan-handoff.zip"
                 ws.export_handoff(parts[2], path)
-                self._file(path, path.name, "application/zip")
+                self._download(path, path.name, "application/zip")
         elif len(parts) == 4 and parts[:2] == ["api", "artifacts"] and parts[3] == "file":
             self._query(target, ())
-            self._file(ws.artifact_path(parts[2]), "eltss-original-receiving-result.bin", "application/octet-stream")
+            self._download(ws.artifact_path(parts[2]), "eltss-original-receiving-result.bin", "application/octet-stream")
         elif len(parts) == 4 and parts[:2] == ["api", "builds"] and parts[3] == "query":
             self._json(ws.query(parts[2], self._query(target)))
         elif len(parts) == 4 and parts[:2] == ["api", "builds"] and parts[3] in {"dataset", "packet"}:
@@ -269,7 +269,7 @@ class Handler(original_server.Handler):
                         for member in sorted(directory.rglob("*")):
                             if member.is_file() and not member.is_symlink():
                                 archive.write(member, member.relative_to(directory).as_posix())
-                self._file(path, path.name, "application/zip")
+                self._download(path, path.name, "application/zip")
         elif len(parts) == 4 and parts[:2] == ["api", "comparisons"] and parts[3] in {"changes", "file"}:
             if parts[3] == "changes":
                 values = self._query(target, ("offset", "limit"))
@@ -277,13 +277,13 @@ class Handler(original_server.Handler):
                            self._integer(values.get("limit", "50"), "limit", 1, 250)))
             else:
                 self._query(target, ())
-                self._file(ws.comparison_file(parts[2]), "eltss-dataset-changes.jsonl", "application/x-ndjson")
+                self._download(ws.comparison_file(parts[2]), "eltss-dataset-changes.jsonl", "application/x-ndjson")
         elif parts == ["api", "workspace", "packet"]:
             self._query(target, ())
             with ws.scratch() as temporary:
                 path = temporary / "eltss-editable-workspace.zip"
                 ws.export_workspace(path)
-                self._file(path, path.name, "application/zip")
+                self._download(path, path.name, "application/zip")
         else:
             self._json({"error": "Unknown care-plan route"}, 404)
 

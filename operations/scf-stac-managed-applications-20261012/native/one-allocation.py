@@ -41,6 +41,21 @@ logs=ROOT/'native-logs';logs.mkdir(mode=0o700,exist_ok=True)
 lock=(ROOT/'original-operation.lock').open('a+')
 fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
 started=stamp()
+
+# Reuse the maintained transfer engine with the original opaque reservation.
+upload_tools=Path('/workspace/scratch/b71092915960/wherobots/library-upload-20261012')
+upload_tool_hashes={
+ 'library_upload.py':'b11e4929596e321366c2f7291890fbb6d6bf8b413ae6d24593e9548f9bf50f23',
+ 'library_file_transfer.py':'5c81478cd94a59d721a1677d0bd36f7cec23c18a21b48740b1c9ff94d27fb26f',
+ 'library_hosted_apps.py':'b7961301f7ca6f76b2f2f30e4e5673a303532680a790e545c3207a2bf5e63de4'
+}
+for name,expected in upload_tool_hashes.items():
+ source=upload_tools/name
+ if not source.is_file() or source.is_symlink() or digest(source)!=expected:
+  raise ValueError('The selected maintained Library transfer source changed: '+name)
+ exact(DELIVERY/'original-operation'/'library-upload'/name,source.read_bytes())
+sys.path.insert(0,str(upload_tools))
+from library_upload import UploadRequest,PreparedUpload,SignedUrlUploader
 source_owner=Path('/workspace/scratch/b71092915960/stac-managed-applications-native/operation-code')
 for path in sorted(source_owner.iterdir()):
  if path.is_file():
@@ -95,11 +110,19 @@ transfer={'operationId':OPERATION,'upload_session_id':upload['upload_session_id'
 transfer_file=ROOT/('transfer-'+label+'.json')
 save(transfer_file,transfer)
 try:
- body=archive.read_bytes()
- request=urllib.request.Request(upload['upload_url'],data=body,headers=upload['required_headers'],method=upload['method'])
- with urllib.request.urlopen(request,timeout=45) as response:
-  response.read()
-  transfer.update(state='UPLOADED',httpStatus=response.status,completedAt=stamp())
+ request_body={'local_path':str(archive),'purpose':upload['purpose']}
+ if upload.get('library_artifact_type') is not None:
+  request_body['library_artifact_type']=upload['library_artifact_type']
+ request=UploadRequest.parse(request_body,0)
+ if request.size_bytes!=archive.stat().st_size:
+  raise ValueError('The complete native archive changed before transfer')
+ prepared=PreparedUpload.parse(request,upload)
+ upload_state=ROOT/('upload-'+label)
+ upload_state.mkdir(mode=0o700)
+ completed=SignedUrlUploader().upload((prepared,),upload_state)
+ if completed!={0}:
+  raise RuntimeError('The original Library upload did not complete')
+ transfer.update(state='UPLOADED',transferEngine='maintained SignedUrlUploader',completedAt=stamp())
 except BaseException as failure:
  transfer.update(state='TRANSFER_UNCERTAIN',errorType=type(failure).__name__,httpStatus=getattr(failure,'code',None),observedAt=stamp())
 finally:save(transfer_file,transfer)
