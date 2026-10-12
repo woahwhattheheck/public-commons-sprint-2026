@@ -9,22 +9,26 @@ const statusLabel = {
   carried: 'Decisions carried forward',
   changed: 'Review changed observations',
   'not-observed': 'Not observed in this capture',
+  returned: 'Retained route observed; choose inclusion',
 };
 
 function operationCard(operation) {
   const changes = operation.changes.map(change => '<details><summary>' + escape(change.label) +
     '</summary><h3>Previous capture</h3><pre>' + pretty(change.previous) +
     '</pre><h3>New capture</h3><pre>' + pretty(change.candidate) + '</pre></details>').join('');
-  const groups = '<p>Previous groups: <code>' + escape(operation.previousGroups.join(', ')) +
+  const groups = '<p>Comparison source: <code>' + escape(operation.comparisonSourceSha256) +
+    '</code><br>Last observed groups: <code>' + escape(operation.previousGroups.join(', ')) +
     '</code><br>New groups: <code>' + escape(operation.candidateGroups.join(', ') || 'none') + '</code></p>';
   const missing = operation.status === 'not-observed' ?
     '<p>This route is unselected in the draft. Its authored decisions remain available below for explicit source-group remapping. Absence from one capture does not establish a removed API.</p>' : '';
+  const returned = operation.status === 'returned' ?
+    '<p>This retained route has matching observations again. Its operation ID and authored decisions are preserved; explicitly include and acknowledge it to expose it in this edition.</p>' : '';
   const template = operation.templateMatches.length ?
     '<p>New samples matched this reviewed path template: <code>' + escape(operation.templateMatches.join(', ')) + '</code>. Review their observations and routing before keeping them selected.</p>' : '';
   return '<details><summary><strong>' + escape(operation.operationId) + '</strong> · ' +
     escape(operation.method + ' ' + operation.path) + ' · ' + escape(statusLabel[operation.status]) +
     '</summary><p>' + operation.previousEntries + ' previous requests · ' + operation.candidateEntries +
-    ' new requests</p>' + groups + missing + template + changes +
+    ' new requests</p>' + groups + missing + returned + template + changes +
     '<details><summary>Previous authored decisions</summary><pre>' + pretty(operation.previousDecisions) + '</pre></details></details>';
 }
 
@@ -41,11 +45,11 @@ export async function renderRefreshReview(packet, review = packet.draft) {
     '<p>Showing the first 200 unselected groups. The complete inventory is available in the operation list and change-report.json.</p>' : '';
   const section = '<section><h2>Capture edition changes</h2>' +
     '<p>' + s.carried + ' carried · ' + s.changed + ' changed · ' + s.notObserved +
-    ' not observed · ' + s.unselectedGroups + ' additional unselected groups</p>' +
+    ' not observed · ' + s.returned + ' retained routes observed again · ' + s.unselectedGroups + ' additional unselected groups</p>' +
     '<p>Previous source: <code>' + escape(manifest.lineage.previousSourceSha256) +
     '</code><br>Previous review: <code>' + escape(manifest.lineage.previousReviewSha256) +
     '</code><br>New source: <code>' + escape(manifest.lineage.candidateSourceSha256) + '</code></p>' +
-    '<p>Unchanged routes keep their authored decisions and acknowledgment. Changed routes keep their authored values and reopen review; new fields start unresolved. New or ambiguous groups remain unselected. Sample counts alone do not reset an unchanged contract.</p>' +
+    '<p>Unchanged routes keep their authored decisions and acknowledgment. Changed routes keep their authored values and reopen review; new fields start unresolved. Dormant routes retain their authored identity across editions; returning routes require explicit inclusion and acknowledgment. New or ambiguous groups remain unselected. Sample counts alone do not reset an unchanged contract.</p>' +
     '<p class="muted">' + escape(report.interpretation) + '</p>' +
     changedFirst.map(operationCard).join('') +
     '<details><summary>Additional and ambiguous observations (' + report.unassigned.length + ')</summary><ul>' +
