@@ -1,0 +1,80 @@
+{
+  "schema": "stellar-forge.clinicaltrials-managed-receiving-input.v1",
+  "source": {
+    "managedPullRequest": 1773,
+    "managedCommit": "107611e8879af70c1b11fbecfaf199d502462a10",
+    "registryPullRequest": 1738,
+    "selection": "A complete committed distribution containing the original source-owned registry and this provider"
+  },
+  "packet": {
+    "name": "ClinicalTrials_Customer_Checkpoint.zip",
+    "bytes": 7936017,
+    "sha256": "ed8eb65e0d4fce506390eb50a0e7cd5f91df1e5ce07f4eb83927d9b4538b9416"
+  },
+  "original": {
+    "captureId": "capture-fb551338-f35d-46b3-b257-1138ba449c28",
+    "rows": 165,
+    "pages": 4,
+    "sourceId": "30df480b1dc4f295eec7c536a9158cd1ad45ddde1eb684cbcd33862754199130",
+    "planId": "95c873ac240646d41df5ebe26e8081bfd6fbda5ff553851bc41994913f5bf0af",
+    "buildId": "94f5417fe4cd79239d12af4b309d8ae1940adfca869ce840e0ac36708528371c",
+    "snapshot": "ade2c08954dc92830e14d152290d2543a8c6bd7335dbb949bf57a4e605a4b0a4",
+    "reviews": [
+      {
+        "nctId": "NCT03529110",
+        "id": "7f82857ab38977b3fea662d329fbb66175c891726507a1309661ca4f3cf7ce3c"
+      },
+      {
+        "nctId": "NCT00141453",
+        "id": "01577be1c3e1105ff0beb101b707539a1832cf9670dc7268b9f8a694901c3522"
+      }
+    ]
+  },
+  "managedFiles": [
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/managed.py",
+      "bytes": 6010,
+      "sha256": "e302688afab990269d6e16a1c6ae7dcc5c1758d848730c69b077af95c17fa5fc"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/managed-application.mjs",
+      "bytes": 13738,
+      "sha256": "1f31a1247252aec4b8cd56c6f1170b77cbe653888ab2ae8f927f0488bdd2ed45"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/application-provider.mjs",
+      "bytes": 1319,
+      "sha256": "54361b08ecf72f8070609f3972e3a0caeba01edc032fe972ae51d2377cc35712"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/cli.py",
+      "bytes": 11531,
+      "sha256": "37ac892f2add7b031acaf98031e2fc989288a7667bf5de30d442d26c79b5bea1"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/cli.mjs",
+      "bytes": 1553,
+      "sha256": "6eca33ecd49173b91528f5e080bf8c21a1953ee4ab99c3e6c9d0fb9b3460c006"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/clinical_server.py",
+      "bytes": 9134,
+      "sha256": "67fd190b91a0f3290191fd784f7ef814fe3c6e80a053ec5073cf697df4b9d20c"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/distribution/contributions/clinicaltrials.json",
+      "bytes": 3411,
+      "sha256": "c4a86d29f9c122e04d7f4ef8bb24f6471d57f7d1513bc323e36576bcfe66cdfa"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/README.md",
+      "bytes": 17362,
+      "sha256": "38a4de8105c015479af47f7b08902289edeb5614560c4934aad3789878743674"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/MANAGED_APPLICATION.md",
+      "bytes": 14976,
+      "sha256": "70b3890ae9cf80524b458e91477761aa8a41448b83efeefb12c3834429a82dbb"
+    }
+  ]
+}
