@@ -393,26 +393,32 @@ export async function runInstalledFlowableJourney({
       return {record:ref(record),response:{status:response.status,bytes:response.bodyBytes,sha256:response.bodySha256},
         resultVariables:response.json.resultVariables};
     }
-    const decisionPrepared=await memo('sdk-decision-prepared',{source:decisionSeed.record},()=>sender.prepareDecisionEvaluation({
+    // Preparation is a resumable native read. Ask for the current saved record instead of
+    // memoizing an interrupted result; a dispatched decision continues through readback.
+    const decisionPrepared=await sender.prepareDecisionEvaluation({
       requestId:request('sdk-decision-prepare'),connectionId:decisionConnectionId,
-      label:'Installed SDK native decision continuation',selection:decisionSeed.selection}));
-    const decisionSdk=await sender.dispatchDecisionEvaluation({requestId:request('sdk-decision-dispatch'),
+      label:'Installed SDK native decision continuation',selection:decisionSeed.selection});
+    const decisionSdk=decisionPrepared.value.dispatchedAt?decisionPrepared:await sender.dispatchDecisionEvaluation({
+      requestId:request('sdk-decision-dispatch:review:'+decisionPrepared.revision),
       id:decisionPrepared.id,expectedRevision:decisionPrepared.revision,planSha256:decisionPrepared.value.planSha256});
     const decisionSdkResult=await decisionOutcome(decisionSdk,'Installed SDK',record=>sender.reconcileOperation({
       requestId:request('sdk-decision-reconcile'),kind:'decisionEvaluation',id:record.id}));
     const decisionSelectionPath=join(directory,'original-native-decision-selection.json');
     await common.publish(decisionSelectionPath,decisionSeed.selection,{replace:true,lease});
-    const decisionCliPrepared=await memo('cli-decision-prepared',{source:decisionSeed.record},()=>runCLI(sourceRoot,[
+    const decisionCliPrepared=await runCLI(sourceRoot,[
       'prepare','--dir',senderDirectory,'--kind','decisionEvaluation','--request',request('cli-decision-prepare'),
       '--connection',decisionConnectionId,'--selection',decisionSelectionPath,
-      '--label','Installed CLI native decision continuation'],signal));
+      '--label','Installed CLI native decision continuation'],signal);
     report.cli.push(decisionCliPrepared.receipt);
     const cliPrepared=decisionCliPrepared.value;
-    const decisionCli=await runCLI(sourceRoot,['dispatch','--dir',senderDirectory,'--kind','decisionEvaluation',
-      '--request',request('cli-decision-dispatch'),'--id',cliPrepared.id,'--revision',String(cliPrepared.revision),
-      '--plan-sha256',cliPrepared.value.planSha256],signal);
-    report.cli.push(decisionCli.receipt);
-    const decisionCliResult=await decisionOutcome(decisionCli.value,'Installed CLI',async record=>{
+    let decisionCliValue=cliPrepared;
+    if(!cliPrepared.value.dispatchedAt){
+      const decisionCli=await runCLI(sourceRoot,['dispatch','--dir',senderDirectory,'--kind','decisionEvaluation',
+        '--request',request('cli-decision-dispatch:review:'+cliPrepared.revision),'--id',cliPrepared.id,'--revision',String(cliPrepared.revision),
+        '--plan-sha256',cliPrepared.value.planSha256],signal);
+      report.cli.push(decisionCli.receipt);decisionCliValue=decisionCli.value;
+    }
+    const decisionCliResult=await decisionOutcome(decisionCliValue,'Installed CLI',async record=>{
       const continued=await runCLI(sourceRoot,['reconcile','--dir',senderDirectory,'--kind','decisionEvaluation',
         '--request',request('cli-decision-reconcile'),'--id',record.id],signal);
       report.cli.push(continued.receipt);return continued.value;
@@ -594,12 +600,13 @@ export async function runInstalledFlowableJourney({
       portfolioId:decisionPortfolio.id,revision:decisionPortfolio.revision,executionId:selectedExecution.id});
     need(canonical(remoteDecision)===canonical(installedDefinition) && canonical(remoteAudit)===canonical(installedAudit),
       'MCP, SDK and CLI open the same complete native definition and audit resources.');
-    const mcpDecisionPrepared=await memo('mcp-decision-prepared',{source:decisionSeed.record},()=>mcp.tool(
+    const mcpDecisionPrepared=await mcp.tool(
       'merchant_flowable_prepare_decision_evaluation',{workspace:'sender',requestId:request('mcp-decision-prepare'),
-        connectionId:decisionConnectionId,label:'Installed MCP native decision continuation',selection:decisionSeed.selection}));
-    const mcpDecision=await mcp.tool('merchant_flowable_dispatch_decision_evaluation',{workspace:'sender',
-      requestId:request('mcp-decision-dispatch'),id:mcpDecisionPrepared.id,expectedRevision:mcpDecisionPrepared.revision,
-      planSha256:mcpDecisionPrepared.value.planSha256});
+        connectionId:decisionConnectionId,label:'Installed MCP native decision continuation',selection:decisionSeed.selection});
+    const mcpDecision=mcpDecisionPrepared.value.dispatchedAt?mcpDecisionPrepared:
+      await mcp.tool('merchant_flowable_dispatch_decision_evaluation',{workspace:'sender',
+        requestId:request('mcp-decision-dispatch:review:'+mcpDecisionPrepared.revision),id:mcpDecisionPrepared.id,
+        expectedRevision:mcpDecisionPrepared.revision,planSha256:mcpDecisionPrepared.value.planSha256});
     const mcpDecisionResult=await decisionOutcome(mcpDecision,'Installed MCP',record=>mcp.tool('merchant_flowable_reconcile',{
       workspace:'sender',requestId:request('mcp-decision-reconcile'),kind:'decisionEvaluation',id:record.id}));
     const mcpDecisionPortfolio=await mcp.tool('merchant_flowable_capture_decisions',{workspace:'sender',

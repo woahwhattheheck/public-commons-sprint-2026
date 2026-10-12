@@ -366,6 +366,14 @@ async function openRecord(kind,id){
         await reload();await openRecord(kind,id);notice('Saved '+kind+' outcome: '+result.value.state+'.');
       },{primary:true}));
     }
+    if(!review.dispatchedAt&&['INTERRUPTED','PREPARE_FAILED'].includes(review.phase)&&record.value.preparationInput){
+      toolbar.append(button('Resume original preparation',async()=>{
+        const original=await api('readSource',{reference:record.value.preparationInput});
+        const method='prepare'+kind[0].toUpperCase()+kind.slice(1);
+        const result=await write(method,original.value);
+        await reload();await openRecord(kind,id);notice('Original preparation: '+result.value.state+'.');
+      },{primary:true}));
+    }
     if(review.dispatchedAt)toolbar.append(button('Refresh native outcome',async()=>{
       await write('reconcileOperation',{kind,id,expectedRevision:record.revision});await reload();await openRecord(kind,id);
     }));
@@ -393,6 +401,14 @@ async function openRecord(kind,id){
     jsonSection(container,'Native state before the request',review.before);
     jsonSection(container,'Native state after the request',review.after);
     jsonSection(container,'Original response',review.response);
+  }else if(['portfolio','decisionPortfolio'].includes(kind)){
+    if(record.value.phase==='INTERRUPTED'&&record.value.captureInput)container.append(button('Resume original capture',async()=>{
+      const original=await api('readSource',{reference:record.value.captureInput});
+      const result=await write(kind==='decisionPortfolio'?'captureDecisionPortfolio':'capturePortfolio',original.value);
+      await reload();await openRecord(kind,id);notice('Original capture: '+result.value.state+'.');
+    },{primary:true}));
+    if(record.value.failure)container.append(node('p',record.value.failure.message));
+    jsonSection(container,'Saved native portfolio',record.value,{open:true});
   }else if(kind==='delivery'){
     if(record.value.state==='EXPORTED')container.append(node('a','Download complete handover',
       {class:'button',href:'/api/delivery?id='+encodeURIComponent(id),download:''}));
