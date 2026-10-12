@@ -24,6 +24,7 @@ import sys
 import tempfile
 import time
 import urllib.parse
+import zipfile
 
 SCHEMA = "stellar-forge.roda-client.v1"
 HANDOFF_SCHEMA = "stellar-forge.roda-research-transfer.v1"
@@ -256,8 +257,12 @@ def _base_url(value):
 
 def read_handoff(workspace):
     root = Path(workspace).resolve(strict=True)
-    from roda import verify_workspace
-    verified_handoff = verify_workspace(root)
+    from roda import Error as PreparationError, verify_workspace
+    try:
+        verified_handoff = verify_workspace(root)
+    except (PreparationError, zipfile.BadZipFile, UnicodeError, ValueError, KeyError, TypeError) as exc:
+        _fail("PREPARED_WORKSPACE_INVALID", "The original producer rejected the prepared workspace.",
+              cause=type(exc).__name__, reason=str(exc)[:2048])
     raw = _read(root / "handoff.json")
     handoff = _parse(raw)
     if handoff != verified_handoff:
@@ -883,6 +888,8 @@ class _Client:
             if not isinstance(batch, list):
                 _fail("INVALID_REPORTS_RESPONSE", "Expected the original RODA Reports object.")
             for indexed in batch:
+                if not isinstance(indexed, dict):
+                    _fail("INVALID_REPORTS_RESPONSE", "Each indexed report must be an original object.")
                 report_id = _id(indexed.get("id"), "report.id")
                 if report_id in seen:
                     _fail("REPORT_PAGE_OVERLAP", "Report pagination returned a repeated original report.")

@@ -218,6 +218,8 @@ HTTP 401, 403, 409, 429, missing resources, redirects and transport failures rem
 
 HTTP requests use bounded response sizes and deadlines. The upload's multipart envelope has an exact Content-Length; the ZIP is streamed from the original verified file. The client does not follow redirects carrying the selected credential. A cancelled command closes its HTTP connection and keeps the already-published stage identity.
 
+`PREPARED_WORKSPACE_INVALID` preserves the original producer's validation reason in a structured client error. A changed original bag, outer SIP, agreement or derived receiving view is rejected before any repository call.
+
 Exit codes are 0 for a received status (including running/approval/review states), 2 for an explicit client/provider error, and 130 for an interrupted command. Automation should inspect the returned `status`, particularly `INGESTED_ACTIVE`, rather than treating exit 0 as completed ingest.
 
 ## Source contract and compatibility

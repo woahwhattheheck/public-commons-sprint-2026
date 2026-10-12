@@ -219,8 +219,9 @@ python3 -B research/preservation/roda.py remote plan \
   --job-template /absolute/operator/roda-ingest-job.json
 ~~~
 
-The plan binds the entered repository, actual authenticated account, original
-handoff, transfer and selected job template. If the agreement names a parent AIP,
+The plan binds the entered repository, configured account, original handoff,
+transfer and selected job template. Repository operations verify the actual
+authenticated account before proceeding. If the agreement names a parent AIP,
 the job must name the same parent and use its force-parent parameter.
 
 Run the whole selected repository workflow:
@@ -302,7 +303,7 @@ python3 -B research/preservation/roda.py receive \
 Receiving verifies the complete manifest and source/data inventory, rejects
 unsafe paths and nonregular members, reconstructs the original handoff and
 publishes a new receiving directory. It verifies the package with the already
-installed producer before executing bundled source.
+installed producer. Subsequent operator commands can use the included application.
 
 The returned directory contains **application/** and **workspace/**. The original
 handoff, transfer, remote request journal and actual repository IDs remain the
