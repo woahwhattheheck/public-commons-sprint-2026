@@ -211,7 +211,77 @@ def _output(path):
     return path
 
 
-def pack_scan(scan, destination):
+
+def _evidence_name(name):
+    if isinstance(name, str) and re.fullmatch(r"operator-pages/[0-9]{5}\.(request|response|receipt)\.json", name):
+        return name
+    fail("OPERATOR_EVIDENCE_NAME_INVALID")
+
+
+def operator_evidence(delivery, directory):
+    """Bind the exact reviewed request, original body and receipt to each native page."""
+    directory = Path(directory)
+    if private_directory(directory, create=False) != directory:
+        fail("OPERATOR_EVIDENCE_DIRECTORY_INVALID")
+    records, members = [], []
+    for index, page in enumerate(delivery.native["originalNativeScan"]["pages"]):
+        prefix = str(index).zfill(5)
+        values, pins = {}, {}
+        for kind in ("request", "response", "receipt"):
+            filename = prefix + "." + kind + ".json"
+            path = directory / filename
+            pin = _sha_file(path)
+            raw = read(path, 2 * 1024 * 1024)
+            if len(raw) != pin["bytes"] or hashlib.sha256(raw).hexdigest() != pin["sha256"]:
+                fail("OPERATOR_EVIDENCE_CHANGED")
+            values[kind], pins[kind] = loads(raw), pin
+            members.append({"path": "operator-pages/" + filename, **pin})
+        request, response, receipt = values["request"], values["response"], values["receipt"]
+        authorization = request.get("authorization", {})
+        if (request.get("schema") != "stellar-forge.matomo-operator-page.v1"
+                or request.get("id") != page["intent"]
+                or request.get("query", {}).get("cursor") != page.get("requestCursor")
+                or request.get("providerRequest") is not False or request.get("paymentRequest") is not False
+                or authorization.get("kind") != "REVIEWED_LOCAL_DATASET_OPERATOR"
+                or not isinstance(authorization.get("reviewer"), str) or not authorization["reviewer"].strip()
+                or not isinstance(authorization.get("note"), str) or not authorization["note"].strip()
+                or pins["request"]["sha256"] != page.get("evidenceSha256")
+                or pins["response"]["sha256"] != page["sourceSha256"]
+                or response.get("schema") != "stellar-forge.dataset-page.v1"
+                or receipt.get("schema") != "stellar-forge.matomo-operator-response.v1"
+                or receipt.get("requestId") != page["intent"] or receipt.get("status") != 200
+                or receipt.get("bodySha256") != pins["response"]["sha256"]
+                or receipt.get("bodyBytes") != pins["response"]["bytes"]
+                or receipt.get("providerRequest") is not False or receipt.get("paymentRequest") is not False):
+            fail("OPERATOR_PAGE_BINDING_CHANGED")
+        for field in ("configSha256", "csvSha256"):
+            if not _SHA.fullmatch(request.get(field, "")):
+                fail("OPERATOR_SOURCE_BINDING_INVALID")
+        records.append({"index": index, "intent": page["intent"],
+            "request": "operator-pages/" + prefix + ".request.json",
+            "response": "operator-pages/" + prefix + ".response.json",
+            "receipt": "operator-pages/" + prefix + ".receipt.json"})
+    return records, members
+
+
+def _copy_evidence(path, output, expected):
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    checksum, size = hashlib.sha256(), 0
+    with os.fdopen(fd, "rb") as source:
+        info = os.fstat(source.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_mode & 0o077:
+            fail("PRIVATE_FILE_REQUIRED")
+        while chunk := source.read(1024 * 1024):
+            size += len(chunk)
+            if size > expected["bytes"]:
+                fail("OPERATOR_EVIDENCE_CHANGED")
+            checksum.update(chunk)
+            output.write(chunk)
+    if size != expected["bytes"] or checksum.hexdigest() != expected["sha256"]:
+        fail("OPERATOR_EVIDENCE_CHANGED")
+
+
+def pack_scan(scan, destination, *, evidence_directory):
     """Package only the original verified native data room, retaining its source scan."""
     delivery = DatasetDelivery.from_finalized_scan(scan)
     members = []
@@ -219,8 +289,12 @@ def pack_scan(scan, destination):
         _native_name(name)
         expected = delivery.native["outputs"].get(name) or delivery.native["archives"][name]
         members.append({"path": "data-room/" + name, "bytes": expected["bytes"], "sha256": expected["sha256"]})
+    evidence, evidence_members = operator_evidence(delivery, evidence_directory)
+    members.extend(evidence_members)
+    if sum(item["bytes"] for item in members) > _MAX:
+        fail("ARCHIVE_TOO_LARGE")
     manifest = {"schema": _ARCHIVE, "sourceFormat": "SF100_SCAN",
-                "originalScan": scan, "files": members,
+                "originalScan": scan, "operatorEvidence": evidence, "files": members,
                 "paymentStatus": delivery.payment_status}
     raw = _json(manifest)
     destination = _output(destination)
@@ -236,6 +310,9 @@ def pack_scan(scan, destination):
                 with archive.open(info, "w", force_zip64=True) as target:
                     if source is not None:
                         target.write(source)
+                    elif name.startswith("operator-pages/"):
+                        expected = next(item for item in evidence_members if item["path"] == name)
+                        _copy_evidence(Path(evidence_directory) / name.removeprefix("operator-pages/"), target, expected)
                     else:
                         with delivery.file(name.removeprefix("data-room/")).open() as stream:
                             shutil.copyfileobj(stream, target, length=1024 * 1024)
@@ -285,6 +362,9 @@ def open_received(directory, *, node="node"):
             != {k: v for k, v in original.get("originalScan", {}).items() if k != "out"}):
         fail("ORIGINAL_SCAN_CHANGED")
     delivery = DatasetDelivery.from_finalized_scan(scan)
+    evidence, evidence_members = operator_evidence(delivery, directory / "operator-pages")
+    if (evidence != original.get("operatorEvidence") or evidence_members != [item for item in original["files"] if item["path"].startswith("operator-pages/")]):
+        fail("OPERATOR_EVIDENCE_CHANGED")
     source = MatomoSourceFiles.from_dataset(delivery, directory / "source",
         expected_capture_id=record["captureId"], edition_id=record["editionId"],
         report_capture_id=record["reportCaptureId"])
@@ -320,9 +400,12 @@ def receive_archive(archive_path, destination, *, node="node"):
             expected = {}
             for item in manifest["files"]:
                 name = item.get("path")
-                if not isinstance(name, str) or not name.startswith("data-room/"):
+                if not isinstance(name, str):
                     fail("HANDOVER_MEMBER_INVALID")
-                _native_name(name.removeprefix("data-room/"))
+                if name.startswith("data-room/"):
+                    _native_name(name.removeprefix("data-room/"))
+                else:
+                    _evidence_name(name)
                 if name in expected or type(item.get("bytes")) is not int or not 0 <= item["bytes"] <= _MAX or not _SHA.fullmatch(item.get("sha256", "")):
                     fail("HANDOVER_MEMBER_INVALID")
                 expected[name] = item
@@ -350,6 +433,9 @@ def receive_archive(archive_path, destination, *, node="node"):
                 != {k: v for k, v in manifest["originalScan"].items() if k != "out"}):
             fail("ORIGINAL_SCAN_CHANGED")
         delivery = DatasetDelivery.from_finalized_scan(scan)
+        evidence, evidence_members = operator_evidence(delivery, stage / "operator-pages")
+        if (evidence != manifest.get("operatorEvidence") or evidence_members != [item for item in manifest["files"] if item["path"].startswith("operator-pages/")]):
+            fail("OPERATOR_EVIDENCE_CHANGED")
         source = MatomoSourceFiles.from_dataset(delivery, stage / "source")
         record = {"schema": _RECEIVED, "archiveSha256": pin["sha256"], "archiveBytes": pin["bytes"],
                   "captureId": source.capture_id, "editionId": source.edition_id,
@@ -378,13 +464,17 @@ def main():
     parser.add_argument("command", choices=["pack", "receive", "reopen", "from-scan", "rows"])
     parser.add_argument("--scan")
     parser.add_argument("--archive")
+    parser.add_argument("--operator-evidence")
     parser.add_argument("--out", required=True)
     parser.add_argument("--node", default="node")
     args = parser.parse_args()
     if args.command == "pack":
         if not args.scan:
             parser.error("--scan is required")
-        result = pack_scan(loads(read(_output(args.scan), 16 * 1024 * 1024)), args.out)
+        if not args.operator_evidence:
+            parser.error("--operator-evidence is required for the original per-page operator records")
+        result = pack_scan(loads(read(_output(args.scan), 16 * 1024 * 1024)), args.out,
+                           evidence_directory=_output(args.operator_evidence))
     elif args.command == "receive":
         if not args.archive:
             parser.error("--archive is required")
