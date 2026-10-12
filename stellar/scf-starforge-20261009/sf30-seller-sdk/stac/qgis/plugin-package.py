@@ -8,13 +8,14 @@ import json
 import os
 from pathlib import Path
 import stat
+import sys
 import tempfile
 import zipfile
 
 
 def build(out, source=None):
     root = Path(source or __file__).resolve().parent
-    plugin = root / "starforge_stac"
+    plugin = root / "starforge_stac" if (root / "starforge_stac").is_dir() else root
     names = ["__init__.py", "model.py", "vector_source.py", "qgis_project.py", "plugin.py", "cli.py",
              "field.py", "field_native.py", "field_bridge.py", "field_ui.py", "metadata.txt"]
     files = {}
@@ -47,6 +48,16 @@ def build(out, source=None):
         if name.endswith(".py"):
             ast.parse(body, filename=str(path))
         files["starforge_stac/postgis/" + name] = body
+    # Reuse the original analyst source closure for full repository and received packages.
+    sys.path.insert(0, str(plugin.parent))
+    from starforge_stac.analyst_state import analyst_software_files
+    for name, body in analyst_software_files(plugin).items():
+        if name.endswith(".py"):
+            ast.parse(body, filename=name)
+        target = "starforge_stac/" + (name[len("starforge_stac/"):] if name.startswith("starforge_stac/") else name)
+        if target in files and files[target] != body:
+            raise ValueError("A retained software member has conflicting bytes: " + name)
+        files[target] = body
     manifest = {"schema": "starforge.stac-qgis-plugin-package.v1",
                 "files": [{"path": name, "bytes": len(body), "sha256": hashlib.sha256(body).hexdigest()}
                           for name, body in sorted(files.items())]}
