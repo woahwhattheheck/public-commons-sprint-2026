@@ -152,10 +152,12 @@ class Operations:
                      "state": row[4], "name": row[5], "mode": row[6], "updatedAt": row[7]}
                 for row in self.db.execute("SELECT id,plan_id,plan_revision,version,state,name,mode,updated_at FROM ops_programs" + where + " ORDER BY updated_at DESC,id", params)]
 
-    def _event(self, program_id, version, body, action, before=None, after=None, kind=None, record_id=None):
+    def _event(self, program_id, version, body, action, before=None, after=None, kind=None, record_id=None, source_change=None):
         event = {"version": version, "at": now(), "actor": body["actor"], "note": body.get("note", ""),
                  "requestId": body["requestId"], "action": action, "kind": kind, "recordId": record_id,
                  "before": before, "after": after}
+        if source_change is not None:
+            event["sourceChange"] = source_change
         event["sha256"] = digest(event)
         self.db.execute("INSERT INTO ops_events VALUES(?,?,?)", (program_id, version, canonical(event)))
 
@@ -232,12 +234,13 @@ class Operations:
                 domain.fail("Reopen this closed review before recording new work.", "OPERATIONS_CLOSED", 409)
             next_version = expected + 1
             before, after, kind, record_id = None, None, None, None
-            extra_receipt = {}
+            extra_receipt, source_change = {}, None
             if command == "source.add":
                 after = self._source_add(program_id, data)
                 kind, record_id = "source", after["id"]
             elif command == "support.receive":
                 result = support.receive(self, context, data, actor, next_version)
+                source_change = result["sourceChange"]
                 before, after, kind = result["before"], result["after"], "deployments"
                 record_id = after["id"]
                 extra_receipt = {"sourceIds": result["sourceIds"], "sourceSha256": result["sourceSha256"],
@@ -341,7 +344,8 @@ class Operations:
                              "reviewedBy": actor, "reviewNote": note}
                 self._save(program_id, kind, after)
             self.db.execute("UPDATE ops_programs SET version=?,updated_at=? WHERE id=?", (next_version, now(), program_id))
-            self._event(program_id, next_version, {**body, "actor": actor, "note": note}, command, before, after, kind, record_id)
+            self._event(program_id, next_version, {**body, "actor": actor, "note": note}, command, before, after, kind, record_id,
+                        source_change=source_change)
             return {"id": program_id, "version": next_version, "action": command, "kind": kind, "recordId": record_id,
                     **extra_receipt, **({"businessSha256": after["businessSha256"]} if command == "review" else {})}
         return self.workspace._transaction(body.get("requestId"), payload, action)

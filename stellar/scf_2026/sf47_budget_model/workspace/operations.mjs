@@ -2,6 +2,8 @@ import {mountForecast} from './forecast.mjs';
 import {mountPortfolio} from './portfolio.mjs';
 import {mountSupportDelivery} from './operations_support.mjs';
 
+const retainedSupportSessions=new Map();
+
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const title = value => String(value ?? '').toLowerCase().replaceAll('_',' ').replace(/^./, c => c.toUpperCase());
 const money = value => value === null || value === undefined ? 'Unvalued' : new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(value));
@@ -164,7 +166,10 @@ export function mountOperations({container,api:transport,plan,inform:notify,muta
       portfolioView.ready.catch(alertError);
     }
     if(c&&view.tab==='support'){
-      supportView=mountSupportDelivery({container:$('[data-ops-support]'),current:c,api,mutationId,recordingActor,
+      const supportKey=c.program.id;
+      if(!retainedSupportSessions.has(supportKey))retainedSupportSessions.set(supportKey,{});
+      supportView=mountSupportDelivery({container:$('[data-ops-support]'),current:c,api,saveApi:transport,
+        session:retainedSupportSessions.get(supportKey),mutationId,recordingActor,
         onReload:refresh,onSaved:async result=>{
           if(view.current?.program.id!==c.program.id)return;
           await refresh();inform(result.unchanged?'Reopened the support source already attached to this deployment.':
