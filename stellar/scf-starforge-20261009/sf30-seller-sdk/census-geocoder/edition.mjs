@@ -1,20 +1,80 @@
 // MIT. Reviewed Census results become the original native dataset and merchant.
-import { join, resolve } from 'node:path';
+import { join, resolve, dirname, basename } from 'node:path';
+import { constants } from 'node:fs';
+import { open, lstat, link, unlink } from 'node:fs/promises';
 import { loadDatasetConfig } from '../dataset-handler.mjs';
 import { buildDatasetSellerConfig } from '../dataset-cli.mjs';
 import { csvLine } from '../postgres/publisher/plan.mjs';
 import { bytes, digest, identity, readPrivate, readJson, createFile, hashPrivate,
-  privateDirectory, acquireWorkspace, syncDirectory, fault, stamp } from '../postgres/publisher/files.mjs';
+  privateDirectory, acquireWorkspace, syncDirectory, fault } from '../postgres/publisher/files.mjs';
 import { COLUMNS, COORDINATE_MEANING, API_GUIDE, MAX_INPUT_BYTES, MAX_RESPONSE_BYTES, only,
   inputAddresses, parseBatchResponse } from './source.mjs';
 import { customerSource, customerResults } from './customer-intake.mjs';
 
 export const EDITION_SCHEMA = 'stellar-forge.census-geocoder-edition.v1';
-export async function writeExact(path, value) {
-  try { await createFile(path, value); }
-  catch (error) {
-    if (error.code !== 'EEXIST' || !(await readPrivate(path, Math.max(value.length, 1))).equals(value)) throw error;
+const publicationStage = path => join(dirname(path), '.census-publish-' + identity({ name: basename(path) }));
+// Native writers already hold the original workspace lease. Recovery finishes
+// only the exact two-name publication; unpublished staging bytes stay private.
+async function finishPublication(path) {
+  const stage = publicationStage(path), directory = dirname(path);
+  let pending;
+  try { pending = await lstat(stage); }
+  catch (error) { if (error.code === 'ENOENT') return; throw error; }
+  if (!pending.isFile() || pending.isSymbolicLink() || pending.mode & 0o077 ||
+      ![1, 2].includes(pending.nlink)) throw fault('GEOCODER_PUBLICATION_STAGE');
+  if (pending.nlink === 1) return;
+  const published = await lstat(path);
+  if (!published.isFile() || published.isSymbolicLink() || published.mode & 0o077 ||
+      published.dev !== pending.dev || published.ino !== pending.ino)
+    throw fault('GEOCODER_PUBLICATION_STAGE');
+  if (published.nlink === 1) {
+    // An overlapping read may have already finished this exact alias.
+    try { await lstat(stage); } catch (error) {
+      if (error.code === 'ENOENT') { await syncDirectory(directory); return; }
+      throw error;
+    }
+    throw fault('GEOCODER_PUBLICATION_STAGE');
   }
+  if (published.nlink !== 2) throw fault('GEOCODER_PUBLICATION_STAGE');
+  // Persist the published name before removing the retained staging alias.
+  await syncDirectory(directory);
+  try { await unlink(stage); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  await syncDirectory(directory);
+}
+export async function writeExact(path, value) {
+  path = resolve(path);
+  const directory = dirname(path), stage = publicationStage(path), maximum = Math.max(value.length, 1);
+  await privateDirectory(directory);
+  await finishPublication(path);
+  try {
+    const saved = await readPrivate(path, maximum);
+    if (!saved.equals(value)) throw fault('GEOCODER_IMMUTABLE_CHANGED', 'The retained member differs from this operation.');
+    return;
+  } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  let staged = null;
+  try { staged = await readPrivate(stage, maximum); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
+  if (staged && !value.subarray(0, staged.length).equals(staged))
+    throw fault('GEOCODER_PUBLICATION_STAGE_CHANGED', 'Preserve the existing private staging member.');
+  if (staged && staged.length !== value.length) {
+    // A prior interrupted write never occupied the final name. Recreate only
+    // this member's proven prefix under the same original writer lease.
+    await unlink(stage); await syncDirectory(directory); staged = null;
+  }
+  if (!staged) await createFile(stage, value);
+  const handle = await open(stage, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  try { await handle.sync(); } finally { await handle.close(); }
+  try { await link(stage, path); }
+  catch (error) { if (error.code !== 'EEXIST') throw error; }
+  await finishPublication(path);
+  if (!(await readPrivate(path, maximum)).equals(value))
+    throw fault('GEOCODER_IMMUTABLE_CHANGED', 'The retained member differs from this operation.');
+  // EEXIST with a matching independent final leaves our unpublished stage.
+  try {
+    if (!(await readPrivate(stage, maximum)).equals(value)) throw fault('GEOCODER_PUBLICATION_STAGE_CHANGED');
+    await unlink(stage);
+  } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  await syncDirectory(directory);
 }
 export function reviewSelection(input, captured) {
   only(input, ['name', 'columns', 'statuses', 'matchTypes', 'excludedIds', 'filters', 'ranges',
@@ -51,6 +111,7 @@ const safePath = value => typeof value === 'string' && !value.startsWith('/') &&
   value.split('/').every(part => /^[A-Za-z0-9_.-]+$/.test(part) && !['.', '..'].includes(part));
 export async function reopenEdition(directory) {
   directory = resolve(directory); await privateDirectory(directory);
+  await finishPublication(join(directory, 'edition.json'));
   const manifest = await readJson(join(directory, 'edition.json'), 4 * 1024 * 1024);
   if (manifest.schema !== EDITION_SCHEMA || !Array.isArray(manifest.files) ||
       !manifest.files.length || manifest.files.length > 512 ||
@@ -59,6 +120,7 @@ export async function reopenEdition(directory) {
   for (const file of manifest.files) {
     if (!safePath(file.path) || !/^[a-f0-9]{64}$/.test(file.sha256) || !Number.isSafeInteger(file.bytes) || file.bytes < 0)
       throw fault('GEOCODER_EDITION_FILE');
+    await finishPublication(join(directory, file.path));
     const actual = await hashPrivate(join(directory, file.path), 64 * 1024 * 1024);
     if (actual.hash !== file.sha256 || actual.bytes !== file.bytes) throw fault('GEOCODER_EDITION_CHANGED', file.path);
   }
@@ -115,7 +177,9 @@ export async function createEdition({ directory, batch, attempt, review, capture
       if (saved.operationId !== operationId) throw fault('GEOCODER_EDITION_ALREADY_USED');
       return saved;
     } catch (error) { if (error.code !== 'ENOENT') throw error; }
-    await writeExact(join(directory, 'preparing.json'), bytes({ schema: EDITION_SCHEMA, operationId }));
+    const preparation = join(directory, 'preparing.json');
+    await writeExact(preparation, bytes({ schema: EDITION_SCHEMA, operationId }));
+    const createdAt = (await lstat(preparation)).mtime.toISOString();
     const rows = selectRows(captured.rows, plan);
     const joinedCustomer = customer ? customerResults(customer, batch, originals['submitted.csv'], captured, review,
       rows.map(row => row.record_id)) : null;
@@ -155,7 +219,7 @@ export async function createEdition({ directory, batch, attempt, review, capture
       const seller = await buildDatasetSellerConfig(native, { payment, origin, path });
       await writeExact(join(directory, 'seller.json'), bytes(seller)); files.push('seller.json');
     }
-    const manifest = { schema: EDITION_SCHEMA, operationId, createdAt: stamp(), batchId: batch.id,
+    const manifest = { schema: EDITION_SCHEMA, operationId, createdAt, batchId: batch.id,
       attemptId: attempt.id, reviewId: review.id, dataset: native.describe(), source,
       ...(joinedCustomer ? { customer: joinedCustomer.description } : {}), files: [] };
     for (const name of files) {
@@ -163,7 +227,7 @@ export async function createEdition({ directory, batch, attempt, review, capture
       manifest.files.push({ path: name, bytes: file.bytes, sha256: file.hash });
     }
     await syncDirectory(join(directory, 'source'));
-    await createFile(join(directory, 'edition.json'), bytes(manifest)); await syncDirectory(directory);
+    await writeExact(join(directory, 'edition.json'), bytes(manifest)); await syncDirectory(directory);
     return { ...manifest, directory, datasetPath: join(directory, 'dataset.json'),
       sellerPath: payment === undefined ? null : join(directory, 'seller.json') };
   } finally { await release(); }
