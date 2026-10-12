@@ -163,6 +163,15 @@ channel result. For a webhook, it reports whether the original environment
 configuration resolves. The operation sends no incident message. A changed
 configuration revision requires a new current inspection.
 
+An embedded host's existing `startMerchantMcp({environment})` selection passes
+through the original provider options into both source-file and single-directory
+Support operations. Direct `new MerchantSupport(config, {environment})` uses the
+same contract; omission uses `process.env`. Destination inspection, watcher
+delivery and configuration/acknowledgment/reminder/retry operations all resolve
+their original environment references from that selected host environment.
+Values stay in the executing host and are not added to support configuration,
+case metadata, source inventory or notification readbacks.
+
 The original [Slack notification transport](../../stellar/scf-starforge-20261009/sf93-seller-support-bundle/INCIDENT_OPERATIONS.md)
 retains its exact attempted message, binding, same-thread parent, retry timing and
 accepted delivery reference in the original event. The Support MCP reads the
