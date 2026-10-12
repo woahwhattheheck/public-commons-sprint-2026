@@ -15,7 +15,7 @@ function saveBlob(blob, filename) {
 }
 
 export function bindClientControls({ request, getSnapshot, isBusy, setBusy }) {
-  let listing, reviewed, after, nextAfter, downloading, sequence = 0;
+  let listing, reviewed, after, nextAfter, downloading, downloadDone, sequence = 0;
   const message = (text = '', error = false) => {
     $('#client-notice').textContent = text; $('#client-notice').classList.toggle('error', error);
   };
@@ -143,6 +143,8 @@ export function bindClientControls({ request, getSnapshot, isBusy, setBusy }) {
   async function download(file) {
     if (isBusy() || downloading || reviewed?.state !== 'COMPLETE') return;
     const original = reviewed, controller = new AbortController(); downloading = controller; buttons();
+    let finishDownload;
+    const completion = new Promise(done => { finishDownload = done; }); downloadDone = completion;
     const filename = file?.name ?? original.exportId + '-client.tar.gz';
     const query = new URLSearchParams({ exportId: original.exportId, expectedManifestSha256: original.manifestFile.sha256,
       ...(file ? { file: file.name, expectedSha256: file.sha256 } : {}) });
@@ -168,7 +170,10 @@ export function bindClientControls({ request, getSnapshot, isBusy, setBusy }) {
     } catch (error) {
       $('#client-download-progress').textContent = controller.signal.aborted
         ? 'Download stopped. The retained customer export remains available for another download.' : error.message;
-    } finally { downloading = null; buttons(); }
+    } finally {
+      downloading = null; if (downloadDone === completion) downloadDone = null;
+      buttons(); finishDownload();
+    }
   }
   $('#client-export-id').addEventListener('input', () => { sequence++; renderReview(null); message(); });
   $('#client-inspect').addEventListener('click', () => inspect()); $('#client-generate').addEventListener('click', generate);
@@ -180,5 +185,13 @@ export function bindClientControls({ request, getSnapshot, isBusy, setBusy }) {
   };
   $('#client-refresh').addEventListener('click', () => page(after));
   $('#client-first').addEventListener('click', () => page(undefined)); $('#client-next').addEventListener('click', () => page(nextAfter));
-  return { refresh, buttons };
+  async function reset({ exportId: nextId = '' } = {}) {
+    sequence++; const pending = downloadDone; downloading?.abort(); await pending;
+    listing = undefined; after = undefined; nextAfter = undefined;
+    $('#client-export-id').value = nextId; $('#client-list').replaceChildren();
+    $('#client-owner').textContent = ''; $('#client-download-progress').textContent = '';
+    renderReview(null); message();
+  }
+  return { refresh, buttons, reset,
+    close() { sequence++; downloading?.abort(); return downloadDone ?? Promise.resolve(); } };
 }
