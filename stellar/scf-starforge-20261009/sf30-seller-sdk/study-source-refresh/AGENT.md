@@ -128,7 +128,7 @@ file_read uses the maintained shared RetainedFileReads implementation over an al
 
 Incoming documents and ZIPs use one retained payload per transfer. Call receive_begin with a stable transferKey, original filename, total bytes and SHA256. Write fixed 65,536-byte base64 parts with receive_chunk; the last part uses its exact remaining length. Each part is fsynced before its small hash receipt is saved. An identical retry verifies the existing original bytes. receive_status pages missing offsets after interruption. receive_commit verifies all parts, the full original length and SHA256, then makes that input available to the subsequent explicit native import. The native 512 MiB complete-package limit remains in force. The agent upload sends that complete SHA256 to the original HTTP receiver, which checks its actual received bytes before extracting or importing the package.
 
-Use a completed transferId as an input for package_import or property_document_import. Files that must retain their adjacent native companions, such as a source pointer and capture manifest, should use a host-declared complete input directory and the original source import route, or arrive inside the complete original receiving package.
+Use a completed transferId as an input for package_import or property_document_import. Files that must retain their adjacent native companions, such as a source pointer and capture manifest, should use a host-declared source pointer with its unchanged companion directory and the original source import route, or arrive inside the complete original receiving package.
 
 Agent result storage is response/transport custody. The original Study SQLite, source manifests, acquisition directories, review version and package inventory remain the business records. If native HTTP completed but local snapshot retention fails, the response reports its known native status, result and retention failure. Recover storage, inspect the original saved IDs and repeat the required read/download to retain it.
 
@@ -163,3 +163,27 @@ try {
 ```
 
 The package also exports the exact tool metadata and native operation contracts at /seller/study-source-refresh/contracts, and the original provider at /seller/study-source-refresh/merchant. The component contribution declares the Python/UI support files and source-owned Merchant descriptor so installed dispatch selects the same maintained implementation.
+
+## Complete installed-package receiving
+
+The included `examples/agent_receive.mjs` operates an existing completed property export through the actual installed Merchant stdio transport. Select the original Study workspace and package ID from its saved export, then run:
+
+```sh
+node INSTALLED_PACKAGE/source/stellar/scf-starforge-20261009/sf30-seller-sdk/study-source-refresh/examples/agent_receive.mjs \
+  --package INSTALLED_PACKAGE \
+  --commit FULL_INSTALLED_SOURCE_COMMIT \
+  --workspace /private/completed-study \
+  --export-id ORIGINAL_PACKAGE_ID \
+  --python /usr/bin/python3 \
+  --out /private/study-receiving
+```
+
+The installed package's original manifest binds the selected source. The operation opens the original Study service through its typed owner, prepares the original Merchant configuration, reads its complete tool catalog, and has Merchant borrow that same source operator. It verifies the selected native package, reads the original report and downloads the complete original archive.
+
+The receiving alias uses the existing single-payload transfer. The example repeats one identical part, restarts its actual stdio connection after another part, reopens the retained transfer and receives the remaining original offsets. It then verifies the complete SHA256 and imports that ZIP through the original Study HTTP receiver.
+
+The final receiving reads compare the native frozen selection, report and every original source-document record. The package is reopened through the same native import and remains visible in the operator's package inventory. Merchant shutdown releases its owned receiving service while the separately owned source operator remains available; the original installed CLI then opens the received report.
+
+The private output includes the actual original package, transfer and source identities in `result.json`, together with the existing Merchant configuration and receiving workspace. Reuse the same arguments and output directory to continue its original file transfer; the stable package-derived transfer key and native package identity select the retained operation. The original workspace and its source files remain the receiving authority.
+
+To first create a property package from retained survey inputs, use the installed `examples/property_source_journey.py` described in [PROPERTY_RESEARCH.md](PROPERTY_RESEARCH.md). Both examples use the same original property service and complete package format.
