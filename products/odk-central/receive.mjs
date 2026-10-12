@@ -20,6 +20,11 @@ Continue the two original commissioned periods from an accepted full capture:
     --directory ORIGINAL_WORKSPACE --output ORIGINAL_PERIOD_RECEIVING \
     --restore ORIGINAL_COMMISSIONED_REOPEN
 
+Receive all original approved periods and reopen the same PostgreSQL warehouse:
+  starforge odk-central-receive warehouse --request ORIGINAL_WAREHOUSE_SELECTION.json \
+    --profiles PRIVATE_HOST_PROFILES.json --profile PROFILE --reviewer NAME --note TEXT \
+    --output ORIGINAL_WAREHOUSE_RECEIVING --restore-directory REOPENED_CENTRAL
+
 source invokes the original native/receive.mjs with the exact saved specification.
 released invokes the original host-bound launcher. It reads that host's private
 connection and authorization file, selects its CA before Node starts, creates or
@@ -30,7 +35,9 @@ original commands. Use the same paths and saved inputs after an interruption.
 
 periods invokes the original receive-released-periods.mjs using its saved request,
 complete source capture and original commissioning/warehouse IDs.
-Use source --help or released --help for their complete original arguments.
+warehouse invokes the original approved-period receiver, retains every SQL action ID,
+receives full period reports, and restores/reopens the same source and warehouse.
+Use source --help, released --help, periods --help or warehouse --help for the original arguments.
 See products/odk-central/OPERATING.md for installation and customer handover.
 `;
 
@@ -55,7 +62,13 @@ export async function main(args=process.argv.slice(2)){
     await receive(rest);
     return process.exitCode??0;
   }
-  throw Object.assign(new TypeError('Choose source, released or periods. Use --help for the original receiving workflow.'),{
+  if(mode==='warehouse'){
+    const {main:receive}=await import(
+      '../../stellar/scf-starforge-20261009/sf30-seller-sdk/odk/warehouse/receiving.mjs');
+    await receive(rest);
+    return process.exitCode??0;
+  }
+  throw Object.assign(new TypeError('Choose source, released, periods or warehouse. Use --help for the original receiving workflow.'),{
     code:'CENTRAL_PRODUCT_RECEIVING_COMMAND',
   });
 }
