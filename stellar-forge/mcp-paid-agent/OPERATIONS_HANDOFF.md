@@ -78,7 +78,7 @@ Choose a stable handoff ID and the actual ordered original intent IDs. Save the 
 
 Replace the example intent with an ID returned by the original Inbox. The exporter accepts 1–100 distinct original intents. Their ordering is part of the retained request. The default output-verification limit is 256 MiB per saved response; an explicit value from zero through 1 GiB is supported. The original capture also limits total selected verification to 1 GiB. A large or unavailable response retains its actual review status instead of being reported as verified.
 
-Before capture, the native workspace saves the exact selection and the original native-workspace, Inbox-header and optional registration hashes. It then calls the original SF88 exporter and publishes its unchanged JSON to a private create-only file. The packet remains limited to 8 MiB by the original contract.
+Before capture, the native workspace saves the exact selection and the original native-workspace, Inbox-header and optional registration hashes. It then durably claims a create-only capture-attempt boundary before calling the original SF88 exporter and publishing its unchanged JSON to a private create-only file. Only that boundary's publishing caller may start capture. The packet remains limited to 8 MiB by the original contract.
 
 Successful **value** fields include:
 
@@ -120,7 +120,8 @@ Inspection opens the saved handoff and applies the original full source contract
 
 | State | Receiving action |
 | --- | --- |
-| PENDING_CAPTURE | No handoff has been published. Reuse the original export request; the retained original source binding must still match. |
+| PENDING_CAPTURE | The capture-attempt boundary has not been claimed. Reuse the original export request; the retained original source binding must still match. |
+| CAPTURE_IN_PROGRESS_OR_UNAVAILABLE | A capture-attempt boundary exists but its original source file is not currently available. The first capture may still be running, or its result may have been interrupted or lost. Inspect that same ID after the original caller finishes, or restore its exact saved source. A second capture never starts under this ID. |
 | SAVED_NEEDS_INSPECTION | A handoff exists but the compact receipt is absent. Inspect the same source and read its exact bytes. Replaying export can finish the receipt without recapturing. |
 | SAVED | A handoff and compact receipt are present. Inspect or read the selected SHA to verify current file content. |
 | SAVED_FILE_UNAVAILABLE | A retained receipt exists but the corresponding source file is absent. Restore that exact saved source through its original custody; do not recapture under this ID. |
@@ -128,7 +129,9 @@ Inspection opens the saved handoff and applies the original full source contract
 
 List rows set **verifiedSavedFile: false** because listing metadata alone does not read every handoff. Use **nextOffset** rather than assuming that a requested limit is the returned count; tool pages are also bounded by bytes.
 
-If capture had not published and its native-workspace/Inbox/registration binding changes, the original request reports a conflict. Preserve it and choose a separately reviewed new capture if that is the intended action. If a complete handoff was already published before the change, inspect continues to expose that actual older source.
+A stop after the capture-attempt boundary does not prove that publication never happened. If the original source cannot be recovered, an operator can deliberately choose a separately reviewed new handoff ID for a new observation while preserving the unresolved original request. The module does not make that choice automatically.
+
+If the capture-attempt boundary has not yet been claimed and its native-workspace/Inbox/registration binding changes, the original request reports a conflict. Preserve it and choose a separately reviewed new capture if that is the intended action. If a complete handoff was already published before the change, inspect continues to expose that actual older source.
 
 ## Review every original row
 
@@ -191,7 +194,7 @@ The returned **value.file** is the original native saved-file reader's byte enve
 
 A receiving client should durably retain the expected source SHA/size, same handoff ID and its next byte offset before asking for the next range. Write into its private receiving directory, verify the final byte count and whole SHA, then publish that exact JSON. A partial local file continues from its saved offset; it does not call export again or substitute another capture. The original Node/Python **inspectOperations / inspect_operations** or buyer CLI **operations inspect** can independently inspect that exact completed private file without opening the Inbox.
 
-On the operator host, the unchanged file is retained under the existing native workspace's **operations-handoffs/SHA256(handoff-ID UTF-8)/handoff.json**. Its **request.json** and **receipt.json** remain alongside it. The directory layout is private implementation custody; a model supplies only the stable ID.
+On the operator host, the unchanged file is retained under the existing native workspace's **operations-handoffs/SHA256(handoff-ID UTF-8)/handoff.json**. Its **request.json**, **capture-attempt.json** and **receipt.json** remain alongside it. The directory layout is private implementation custody; a model supplies only the stable ID.
 
 ## Receive into the existing Operations case
 

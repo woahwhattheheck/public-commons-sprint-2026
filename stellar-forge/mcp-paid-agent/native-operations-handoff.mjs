@@ -19,7 +19,7 @@ import {nativeOperationsHandoffOperations,nativeOperationsHandoffActions}
 export {nativeOperationsHandoffActions,nativeOperationsHandoffSchema} from './native-operations-handoff-schema.mjs';
 
 const SCHEMA='stellar-forge.mcp-native-operations-handoff.v1';
-const REQUEST=SCHEMA+'.request',RECEIPT=SCHEMA+'.receipt';
+const REQUEST=SCHEMA+'.request',RECEIPT=SCHEMA+'.receipt',ATTEMPT=SCHEMA+'.capture-attempt';
 const ID=/^[A-Za-z0-9._:-]{1,128}$/,HASH=/^[a-f0-9]{64}$/,ALIAS=/^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
 const MAX_TOOL=262144,ROW_BUDGET=196608;
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
@@ -166,6 +166,25 @@ export function createNativeOperationsHandoff({manifest,currentWorkspace,runOwne
     record.source.inputs.forEach(input=>absolute(input.path));
     return {path,record};
   }
+  async function retainedAttempt(saved){
+    const raw=await optionalBytes(join(saved.path,'capture-attempt.json'),4096);
+    if(raw===null)return null;
+    const record=parse(raw);
+    need(object(record)&&record.schema===ATTEMPT&&record.id===saved.record.id&&
+      record.requestSha256===saved.record.requestSha256&&stamp(record.startedAt)&&
+      record.publication==='FIRST_CAPTURE_ONLY','MCP_HANDOFF_CAPTURE_ATTEMPT_CHANGED');
+    return record;
+  }
+  async function beginCapture(saved,signal){
+    available(signal);
+    const attempt={schema:ATTEMPT,id:saved.record.id,requestSha256:saved.record.requestSha256,
+      startedAt:new Date().toISOString(),publication:'FIRST_CAPTURE_ONLY'};
+    try{await retainRecord(join(saved.path,'capture-attempt.json'),attempt);return true;}
+    catch(error){
+      if(error.code!=='EEXIST')throw error;
+      await retainedAttempt(saved);return false;
+    }
+  }
   async function retainedReceipt(saved){
     const raw=await optionalBytes(join(saved.path,'receipt.json'),65536);
     return raw===null?null:validateReceipt(parse(raw),saved.record);
@@ -176,6 +195,11 @@ export function createNativeOperationsHandoff({manifest,currentWorkspace,runOwne
   async function inspected(id,{signal,expected,publishReceipt=false}={}){
     available(signal);
     const saved=await retainedRequest(id),file=join(saved.path,'handoff.json');
+    if(!await exists(file)){
+      if(await retainedReceipt(saved)!==null)fail('MCP_HANDOFF_SAVED_FILE_UNAVAILABLE');
+      if(await retainedAttempt(saved)!==null)fail('MCP_HANDOFF_CAPTURE_IN_PROGRESS_OR_UNAVAILABLE');
+      fail('MCP_HANDOFF_NOT_YET_CAPTURED');
+    }
     const read=await inspectSavedHandoff({file,signal});
     const candidate=receiptFor(saved.record,read.report);
     if(expected!==undefined)need(candidate.source.sha256===expectedHash(expected),'MCP_HANDOFF_SAVED_SOURCE_CHANGED');
@@ -221,7 +245,8 @@ export function createNativeOperationsHandoff({manifest,currentWorkspace,runOwne
         const original=await inspected(selected.id,{signal,publishReceipt:true});
         return {...summary(original.saved.record,original.receipt,original.receiptRecorded),replayed:true};
       }
-      if(saved&&await retainedReceipt(saved)!==null)fail('MCP_HANDOFF_SAVED_FILE_UNAVAILABLE');
+      if(saved&&(await retainedReceipt(saved))!==null)fail('MCP_HANDOFF_SAVED_FILE_UNAVAILABLE');
+      if(saved&&(await retainedAttempt(saved))!==null)fail('MCP_HANDOFF_CAPTURE_IN_PROGRESS_OR_UNAVAILABLE');
       saved??=await newRequest(selected,signal);
       await currentWorkspace();available(signal);
       const source=await selectedNativeSourceInbox(manifest,selected.inbox_alias);
@@ -232,6 +257,13 @@ export function createNativeOperationsHandoff({manifest,currentWorkspace,runOwne
       ]);
       need(sameSelection(current,saved.record.source.inputs),'MCP_HANDOFF_REGISTERED_SOURCE_CHANGED');
       await checkNativeSourceFiles(saved.record.source.inputs);available(signal);
+      // This durable create-only boundary distinguishes a not-started request from an ambiguous capture.
+      // Only its publishing caller may invoke capture; missing bytes after it never authorize recapture.
+      if(!await beginCapture(saved,signal)){
+        const original=await inspected(selected.id,{signal,publishReceipt:true});
+        return {...summary(original.saved.record,original.receipt,original.receiptRecorded),replayed:true};
+      }
+      available(signal);
       let recovered=false;
       try{
         await exportSelectedInbox({directory:source.queue.root,intentIds:selected.intent_ids,
@@ -260,9 +292,11 @@ export function createNativeOperationsHandoff({manifest,currentWorkspace,runOwne
       if(raw===null){const item={requestKey:entry.name,state:'REQUEST_NOT_PUBLISHED',verifiedSavedFile:false};
         items.push(item);size+=encoded(item).length;continue;}
       const id=parse(raw).id;need(sha(identifier(id))===entry.name,'MCP_HANDOFF_REQUEST_CHANGED');
-      const saved=await retainedRequest(id),receipt=await retainedReceipt(saved),present=await exists(join(path,'handoff.json'));
+      const saved=await retainedRequest(id),receipt=await retainedReceipt(saved),attempt=await retainedAttempt(saved),
+        present=await exists(join(path,'handoff.json'));
       const item={...publicRequest(saved.record),state:present?(receipt?'SAVED':'SAVED_NEEDS_INSPECTION'):
-        (receipt?'SAVED_FILE_UNAVAILABLE':'PENDING_CAPTURE'),source:receipt?.source??null,counts:receipt?.counts??null,
+        (receipt?'SAVED_FILE_UNAVAILABLE':attempt?'CAPTURE_IN_PROGRESS_OR_UNAVAILABLE':'PENDING_CAPTURE'),
+        captureAttempt:attempt?{startedAt:attempt.startedAt}:null,source:receipt?.source??null,counts:receipt?.counts??null,
         receiptRecorded:receipt!==null,verifiedSavedFile:false,noExecution:true};
       const length=encoded(item).length;if(items.length&&size+length>ROW_BUDGET)break;
       items.push(item);size+=length;
@@ -276,6 +310,7 @@ export function createNativeOperationsHandoff({manifest,currentWorkspace,runOwne
     if(receipt===null)receipt=(await inspected(body.id,{signal,expected:body.sha256})).receipt;
     need(receipt.source.sha256===expectedHash(body.sha256),'MCP_HANDOFF_SAVED_SOURCE_CHANGED');
     await privateDirectory(saved.path);available(signal);
+    need(await exists(join(saved.path,'handoff.json')),'MCP_HANDOFF_SAVED_FILE_UNAVAILABLE');
     const value=await reads({destination:join(saved.path,'handoff.json'),sha256:receipt.source.sha256,
       bytes:receipt.source.bytes,contentType:'application/json'},body);
     available(signal);
