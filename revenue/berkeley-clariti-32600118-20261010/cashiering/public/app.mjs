@@ -176,7 +176,8 @@ function showDialogError(error){
   else notification(errorText(error),{persistent:true,error:true});
 }
 function actorField(value=S.actor){return field('actor','Recorded by',textInput('actor',value,'required maxlength="180" autocomplete="name"'),'Use the named operator responsible for this change.');}
-function rememberActor(value){S.actor=nonblank(value);sessionStorage.setItem('berkeley-cashier-actor',S.actor);}
+function rememberActor(value){S.actor=nonblank(value);try{sessionStorage.setItem('berkeley-cashier-actor',S.actor);}catch{}}
+function actorValue(form){const value=nonblank(formValue(form,'actor'));if(!value)throw new Error('Name the operator responsible for this change.');rememberActor(value);return value;}
 function readonlyRecord(title,value){openDialog(title,details('Complete retained record',value,true),{readOnly:true});}
 function pageHeading(title,description,actions=''){
  return '<div class="page-heading"><div><p class="eyebrow">Berkeley / Clariti</p><h1>'+h(title)+'</h1><p class="muted">'+h(description)+'</p></div><div class="actions">'+actions+'</div></div>';
@@ -318,23 +319,28 @@ function originalRowPanel(row){
  ])+details('Complete original fields',metadata.values??metadata.data??metadata,true)+details('Native interpreted record',row));
 }
 function reviewerDisplay(detail){
- return dataTable(['Reviewer','Role','Statement','Note','Recorded','Reviewed edition'],list(detail?.signoffs).map(row=>[
+ return dataTable(['Reviewer','Role','Statement','Note','Recorded','Reviewed edition / currency'],list(detail?.signoffs).map(row=>[
   '<strong>'+h(row.name)+'</strong><br>'+h(row.reviewer_id),h(row.role),h(row.statement),h(row.note),h(date(row.created_at??row.signed_at)),
-  'Edit '+h(row.edit_revision)+'<br><span class="mono">'+h(row.snapshot_hash)+'</span>'
+  'Edit '+h(row.edit_revision)+'<br>'+badge(row.current?'current':'retained prior review')+'<br><span class="mono">'+h(row.snapshot_hash)+'</span>'
  ]),{emptyText:'No reviewer signoff is recorded for this run.'});
 }
 function closingHistoryDisplay(detail){
  return dataTable(['Retained close','State','Reviewer / owner','Recorded','Reviewed source'],list(detail?.closings).map(row=>[
-  h(row.id),badge(row.status),h(row.owner),h(date(row.closed_at??row.created_at??row.prepared_at)),h(row.edit_revision)+details('Complete close record',row)
+  h(row.id),badge(row.status)+' '+badge(row.current?'current close':'retained prior close'),h(row.owner),h(date(row.closed_at??row.created_at??row.prepared_at)),h(row.edit_revision)+details('Complete close record',row)
  ]),{emptyText:'No daily close has been recorded.'});
 }
 function interfaceHistoryDisplay(detail){
- return list(detail?.interface_exports).length?list(detail.interface_exports).map(row=>'<article class="record-card"><div class="panel-head"><div><h3>'+h(row.label??row.title??row.filename??row.id)+'</h3><p>'+badge(row.status)+' <span class="mono">'+h(row.id)+'</span></p></div><div class="actions">'+button('Inspect / download','interface-export','data-id="'+h(row.id)+'"','small')+'</div></div>'+
+ return list(detail?.interface_exports).length?list(detail.interface_exports).map(row=>'<article class="record-card"><div class="panel-head"><div><h3>'+h(row.label??row.filename??row.id)+'</h3><p>'+badge(row.status)+' '+badge(row.current_financial_edition?'current financial source':'retained earlier financial source')+' <span class="mono">'+h(row.id)+'</span></p></div><div class="actions">'+button('Inspect / download','interface-export','data-id="'+h(row.id)+'"','small')+'</div></div>'+
  definitionList([
-  ['Prepared',h(date(row.prepared_at??row.created_at))],['Layout',h(row.profile_id??'Not supplied')+' · '+h(row.profile_version??'Not supplied')],
-  ['Transmitted',h(date(row.transmitted_at))],['Received',h(date(row.received_at))],
-  ['Posting reference',h(row.posting_reference??'Not supplied')],['Original bytes',h(row.sha256??'Not supplied')]
- ])+'</article>').join(''):empty('No interface export prepared','Create a reviewed output using the actual receiving layout. A downloaded file remains a prepared output until its external observations are recorded.');
+  ['Prepared',h(date(row.created_at))],['Layout',h(row.profile_id)+' · '+h(row.profile_version)],
+  ['Financial edit revision',h(row.edit_revision)],['Native output rows',h(txt(row.row_count))],
+  ['Original bytes',h(row.sha256??'Not supplied')]
+ ])+
+ dataTable(['Actual observation','Observed at','Native reference','Original supporting record','Recorded by / note'],list(row.receipts).map(receipt=>[
+  badge(receipt.status),h(date(receipt.observed_at)),h(receipt.reference),
+  button('Inspect original','capture','data-id="'+h(receipt.document_id)+'"','small')+'<br><span class="mono">'+h(receipt.document_sha256)+'</span>',
+  h(receipt.owner)+'<br>'+h(receipt.note)
+ ]),{emptyText:'No actual external observation is recorded for this prepared output.'})+'</article>').join(''):empty('No interface export prepared','Create a reviewed output using the actual receiving layout. A downloaded file remains a prepared output until its external observations are recorded.');
 }
 
 
@@ -460,10 +466,10 @@ function uploadEditor(kind='permits'){
   field('source-kind','Source role',selectInput('source-kind',document?['document']:['permits','receivables','processor','cashier'],kind,'required'))+
   field('source-file','Original file','<input id="source-file" name="source-file" type="file"'+(document?'':' accept=".csv,.json"')+' required>','The actual bytes are retained unchanged.')+
   field('captured-at','Original capture time',textInput('captured-at','','required placeholder="2026-10-12T17:00:00-07:00"'),'Use the source observation time with its explicit UTC offset.',true)+
-  '</div>'+coverageForm(),
+  '</div>'+coverageForm()+actorField(),
   {submitLabel:'Retain original',context,reopen:()=>uploadEditor(kind),submit:async form=>{
     const file=form.elements.namedItem('source-file').files[0];
-    const payload={revision:context.revision,kind:formValue(form,'source-kind'),filename:file?.name??'',captured_at:formValue(form,'captured-at'),coverage:readCoverage(form)};
+    const payload={revision:context.revision,kind:formValue(form,'source-kind'),filename:file?.name??'',captured_at:formValue(form,'captured-at'),coverage:readCoverage(form),owner:actorValue(form)};
     payload.content_base64=await fileBase64(file,25*1024*1024);
     await mutate('/api/cashiering/upload',payload,{label:'Retain original export',after:result=>{S.tab='intake';},message:'Original source retained with its declared coverage.'});
   }}
@@ -501,6 +507,7 @@ function settingsEditor({run=false}={}){
   field('cashier-payment-types','Cashier comparison tender scope',textArea('cashier-payment-types',json(settings.balance_payment_types?.cashier??null),'rows="3"'),'Blank or null includes all source tender types. An explicit JSON list limits this comparison; [] makes it inapplicable to every tender.')+
   field('processor-payment-types','Processor comparison tender scope',textArea('processor-payment-types',json(settings.balance_payment_types?.processor??null),'rows="3"'),'For example, select only the exact declared card tender values when the processor report excludes cash. No scope is inferred from the report name.')+
   field('scope-note','Included population and operating scope',textArea('scope-note',settings.scope_note,'rows="5"'),'Describe the original systems, daily accounting window, tender comparison scope and known exclusions.',true)+
+  actorField()+
   (run?field('settings-note','Reason for this financial edition',textArea('settings-note','','rows="4" required'),'',true):'')+
   '</div>',
   {submitLabel:run?'Save this run’s scope':'Save operating setup',context,reopen:()=>settingsEditor({run}),submit:async form=>{
@@ -514,7 +521,7 @@ function settingsEditor({run=false}={}){
     for(const [currency,scale] of Object.entries(next.scales)){if(!Number.isInteger(scale)||scale<0||scale>12)throw new Error(currency+' requires an integer currency scale from 0 to 12.');}
     for(const [currency,tolerance] of Object.entries(next.balance_tolerance_minor)){if(typeof tolerance!=='string'||!/^\d+$/.test(tolerance))throw new Error(currency+' tolerance must be a nonnegative integer STRING in minor units.');}
     if(next.required_lanes.some(lane=>!['permits','receivables','processor','cashier'].includes(lane)))throw new Error('Required source roles must use the exact declared data-lane names.');
-    const payload={revision:context.revision,settings:next,...(run?{run_id:context.run_id,note:formValue(form,'settings-note')}:{})};
+    const payload={revision:context.revision,settings:next,owner:actorValue(form),...(run?{run_id:context.run_id,note:formValue(form,'settings-note')}:{})};
     await mutate(base+(run?'/run-settings':'/settings'),payload,{label:run?'Revise run operating scope':'Save operating setup',message:run?'Revised scope retained in this financial run. Current reviews must match its new edition.':'Operating choices saved. Existing runs retain their original settings.'});
   }}
  );
@@ -690,9 +697,9 @@ async function mappingEditor(id){
   field('status-map','Original status classifications',textArea('status-map',json(mapping.status_map??{}),'rows="6"'),'JSON object mapping exact original status text to '+list(S.state.catalog.statuses).join(', ')+'.')+
   field('mapping-note','Report meaning and interpretation',textArea('mapping-note',mapping.note??'','rows="5"'),'Explain the event stream or snapshot, amount basis and original source statuses.',true)+
   '</div></fieldset>'+checkInput('mapping-confirmed','Confirm this mapping for every nonblank original row.',capture.confirmed===true)+
-  '<p class="help">Leave confirmation unchecked to retain a working mapping and inspect its row issues. Confirmed captures can be selected for a new run.</p>',
+  '<p class="help">Leave confirmation unchecked to retain a working mapping and inspect its row issues. Confirmed captures can be selected for a new run.</p>'+actorField(),
   {submitLabel:'Save mapping',context,reopen:()=>mappingEditor(id),submit:async form=>{
-   const payload={revision:context.revision,capture_id:id,mapping:readMapping(form,mapping),confirmed:formBoolean(form,'mapping-confirmed')};
+   const payload={revision:context.revision,capture_id:id,mapping:readMapping(form,mapping),confirmed:formBoolean(form,'mapping-confirmed'),owner:actorValue(form)};
    await mutate(base+'/mapping',payload,{label:'Save source mapping',message:payload.confirmed?'Source mapping confirmed. Select the capture for the intended run.':'Working mapping retained. Inspect the interpreted rows and issues.'});
   }}
  );
@@ -734,9 +741,9 @@ function runEditor({refreshRun=false}={}){
    field('run-start','First business date',textInput('run-start','','type="date" required'))+
    field('run-end','Last business date',textInput('run-end','','type="date" required')):'')+
   field('run-note',refreshRun?'Source refresh reason':'Observation and scope note',textArea('run-note','','rows="4"'),'',true)+
-  '</div><fieldset><legend>Explicit retained source editions</legend>'+runCaptureCheckboxes(selected)+'</fieldset>',
+  '</div><fieldset><legend>Explicit retained source editions</legend>'+runCaptureCheckboxes(selected)+'</fieldset>'+actorField(),
   {submitLabel:refreshRun?'Refresh source edition':'Prepare run',context,reopen:()=>runEditor({refreshRun}),submit:async form=>{
-   const common={revision:context.revision,capture_ids:selectedChecked(form,'run-captures'),note:formValue(form,'run-note')};
+   const common={revision:context.revision,capture_ids:selectedChecked(form,'run-captures'),note:formValue(form,'run-note'),owner:actorValue(form)};
    const payload=refreshRun?{...common,run_id:context.run_id}:{...common,label:formValue(form,'run-label'),start_date:formValue(form,'run-start'),end_date:formValue(form,'run-end')};
    await mutate(base+(refreshRun?'/refresh':'/run'),payload,{label:refreshRun?'Refresh run source edition':'Prepare daily run',message:refreshRun?'New source edition retained in this run.':'Daily run prepared from the selected original editions.',after:()=>{S.tab='overview';}});
   }}
@@ -885,7 +892,7 @@ function signoffEditor(){
   field('reviewer-name','Staff name',textInput('reviewer-name','','required autocomplete="name"'))+
   field('reviewer-role','Role',textInput('reviewer-role','','required'))+
   field('reviewer-statement','Review statement',textArea('reviewer-statement','','rows="5" required'),'Record what was checked and the staff member’s actual conclusion.',true)+
-  field('reviewer-note','Supporting review note',textArea('reviewer-note','','rows="3"'),'',true)+
+  field('reviewer-note','Supporting review note',textArea('reviewer-note','','rows="3" required'),'',true)+
   '</div>',
   {submitLabel:'Retain staff review',context,reopen:signoffEditor,submit:async form=>{
    await mutate(base+'/signoff',{revision:context.revision,run_id:context.run_id,reviewer_id:formValue(form,'reviewer-id'),name:formValue(form,'reviewer-name'),role:formValue(form,'reviewer-role'),statement:formValue(form,'reviewer-statement'),note:formValue(form,'reviewer-note')},{label:'Record staff review',message:'Staff review retained against this exact financial edition.'});
@@ -928,7 +935,7 @@ async function editionInspector(id){
  const detail=await request(base+'/editions/'+encodeURIComponent(id)),settings=settingsFor(detail);
  openDialog('Original financial edition · '+txt(detail.run?.edit_revision),
   notice('This is a retained prior edition. Inspecting it does not change current sources, decisions or the selected daily close.')+
-  definitionList([['Run',h(detail.run?.label??detail.run?.id)],['Created',h(date(detail.run?.created_at))],['Financial edition',h(detail.run?.edit_revision)],['Snapshot',h(detail.snapshot_hash)]])+
+  definitionList([['Run',h(detail.run?.label??detail.run?.id)],['Created',h(date(detail.edition?.created_at??detail.run?.created_at))],['Financial edition',h(detail.run?.edit_revision)],['Snapshot',h(detail.snapshot_hash)]])+
   '<div class="actions">'+button('Download original edition JSON','edition-download','data-id="'+h(id)+'"')+'</div>'+
   section('Original financial position',nativeTotals(detail))+
   section('Original daily balances',nativeBalances(detail))+
@@ -955,7 +962,7 @@ function findProfile(id,version){
  return version!==undefined?rows.find(row=>row.version===Number(version))??null:rows.sort((a,b)=>b.version-a.version)[0]??null;
 }
 const balanceFieldNames=['business_date','session_id','payment_type','currency','expected_minor','cashier_minor','cashier_difference_minor','processor_minor','processor_difference_minor'];
-function profileFieldChoices(){return [...new Set([...balanceFieldNames,...canonicalFields().map(field=>field.key),'record_key','raw_status','raw_event','in_scope','excluded','reported_net_minor'])];}
+function profileFieldChoices(scope='balances'){return scope==='balances'?balanceFieldNames:[...new Set([...canonicalFields().map(field=>field.key),'record_key','raw_status','raw_event','reported_net_minor'])];}
 function profileColumnRow(index,column={}){
  const mode=own(column,'literal')?'literal':'field',value=mode==='literal'?column.literal:column.field??'';
  return '<tr class="profile-column" data-index="'+index+'"><td>'+textInput('column-header:'+index,column.header??'','required aria-label="Column header"')+'</td>'+
@@ -985,14 +992,14 @@ function profileEditor(id='',version){
   field('profile-delimiter','Field delimiter',selectInput('profile-delimiter',delimiters,profile?.delimiter??','))+
   field('profile-line-ending','Line ending',selectInput('profile-line-ending',['CRLF','LF'],profile?.line_ending??'CRLF'))+
   '<div class="field">'+checkInput('profile-header','Include the declared header row.',profile?.include_header??true)+'</div>'+
-  '</div><datalist id="profile-field-options">'+profileFieldChoices().map(name=>'<option value="'+h(name)+'"></option>').join('')+'</datalist>'+
+  '</div><datalist id="profile-field-options">'+profileFieldChoices(profile?.scope??'balances').map(name=>'<option value="'+h(name)+'"></option>').join('')+'</datalist>'+
   '<div class="table-wrap" tabindex="0" role="region" aria-label="Declared output columns"><table><thead><tr><th>Output header</th><th>Source</th><th>Exact field / literal</th><th>Format</th><th></th></tr></thead><tbody id="profile-columns">'+columns.map((column,index)=>profileColumnRow(index,column)).join('')+'</tbody></table></div>'+
   '<div class="actions">'+button('Add output column','profile-column-add')+'</div>'+
   '<p class="help">Column order is the output order. “Major” uses each row’s native currency scale. “Minor” retains signed integer unit strings. These machine-interface bytes are separate from spreadsheet-safe human report CSVs.</p>'+
   field('profile-note','Source layout and review notes',textArea('profile-note',profile?.note??'','rows="5" required'),'Name the actual supplied layout, field meanings, constants and intended receiving behavior.')+
-  (profile?details('Original retained profile edition',profile):''),
+  (profile?details('Original retained profile edition',profile):'')+actorField(),
   {submitLabel:id?'Save new layout edition':'Save receiving layout',context,reopen:()=>profileEditor(id),submit:async form=>{
-   const payload={revision:context.revision,...(id?{id}:{}),name:formValue(form,'profile-name'),columns:readProfileColumns(form),delimiter:formValue(form,'profile-delimiter'),include_header:formBoolean(form,'profile-header'),line_ending:formValue(form,'profile-line-ending'),scope:formValue(form,'profile-scope'),lane:formValue(form,'profile-lane'),note:formValue(form,'profile-note')};
+   const payload={revision:context.revision,owner:actorValue(form),...(id?{id}:{}),name:formValue(form,'profile-name'),columns:readProfileColumns(form),delimiter:formValue(form,'profile-delimiter'),include_header:formBoolean(form,'profile-header'),line_ending:formValue(form,'profile-line-ending'),scope:formValue(form,'profile-scope'),lane:formValue(form,'profile-lane'),note:formValue(form,'profile-note')};
    await mutate(base+'/profile',payload,{label:'Save receiving layout edition',message:'Exact receiving layout edition retained.'});
   }}
  );
@@ -1115,7 +1122,7 @@ async function switchView(tab,{focus=true}={}){
 }
 async function selectCapture(id,selected){
  const capture=captureById(id);if(!capture)throw new Error('Refresh the source register.');
- await mutate(base+'/select',{revision:S.state.revision,capture_id:id,selected},{label:selected?'Select retained source':'Unselect retained source',message:selected?'Source selected for the defaults of a new run. Existing runs remain retained.':'Source unselected from new-run defaults. Earlier runs retain their original selection.'});
+ await mutate(base+'/select',{revision:S.state.revision,capture_id:id,selected,owner:S.actor||'Operator'},{label:selected?'Select retained source':'Unselect retained source',message:selected?'Source selected for the defaults of a new run. Existing runs remain retained.':'Source unselected from new-run defaults. Earlier runs retain their original selection.'});
 }
 function pendingDismissEditor(){
  const pending=S.pending;
@@ -1221,6 +1228,11 @@ document.addEventListener('submit',async event=>{
 });
 document.addEventListener('change',async event=>{
  const control=event.target;
+ if(control.id==='profile-scope'){
+  if(interactionInFlight||S.busy)return;
+  const options=$('#profile-field-options');if(options)options.innerHTML=profileFieldChoices(control.value).map(name=>'<option value="'+h(name)+'"></option>').join('');
+  return;
+ }
  if(control.id==='export-profile'){
   if(interactionInFlight||S.busy)return;
   try{const profile=parseProfileKey(control.value);$('#selected-profile-review').innerHTML=profileReviewDisplay(findProfile(profile.id,profile.version));const reviewed=$('#layout-reviewed');if(reviewed)reviewed.checked=false;}catch(error){showDialogError(error);}return;
