@@ -11,18 +11,32 @@ import { verifyFile } from './store.mjs';
 const assets=new Map([['/',{file:'index.html',type:'text/html; charset=utf-8'}],
   ['/ui.mjs',{file:'ui.mjs',type:'text/javascript; charset=utf-8'}],['/ui.css',{file:'ui.css',type:'text/css; charset=utf-8'}]]);
 const actions=new Set(['connect','projects','forms','createPlan','capture','resume','pause','wait','edition','rows','row',
-  'resources','quality','review','compare','sourceFile','exportFile','exportDataset','report','backup','prepareRelease','releaseStatus','activateRelease','rollbackRelease']);
+  'resources','quality','review','compare','sourceFile','exportFile','exportDataset','report','backup','prepareRelease','releaseStatus','activateRelease','rollbackRelease','capturePublisher','receivePublisher','publisherTransfers']);
 const same=(a,b)=>typeof a==='string'&&Buffer.byteLength(a)===Buffer.byteLength(b)&&timingSafeEqual(Buffer.from(a),Buffer.from(b));
 const filename=value=>String(value||'source').replace(/[^\p{L}\p{N}_. -]/gu,'_').slice(0,180)||'source';
 const errorRecord=(error,operationId)=>({code:error.code||'CENTRAL_HTTP',message:error.message||'The operation could not finish.',
   status:Number.isInteger(error.status)?error.status:500,operationId:operationId??null,
   details:{...(error.details??{}),...(error.providerStatus?{providerStatus:error.providerStatus}:{}),
     ...(error.receipt?{receipt:error.receipt}:{}),...(error.retryAfter?{retryAfter:error.retryAfter}:{})}});
-export async function createCentralServer({workspace,host='127.0.0.1',port=0,token=randomBytes(32).toString('hex')}={}) {
+export async function createCentralServer({workspace,host='127.0.0.1',port=0,token=randomBytes(32).toString('hex'),extensions=[]}={}) {
   if(!workspace?.directory)throw fault('CENTRAL_SERVER_WORKSPACE','Open the original Central workspace before starting its operator.');
   if(!['127.0.0.1','::1','localhost'].includes(host))throw fault('CENTRAL_SERVER_HOST','Bind the private Central operator to a loopback host.');
   if(!Number.isSafeInteger(port)||port<0||port>65535)throw fault('CENTRAL_SERVER_PORT','Choose an available local port.');
   if(typeof token!=='string'||Buffer.byteLength(token)<32||/[\r\n]/.test(token))throw fault('CENTRAL_SERVER_TOKEN','Use a private operator token of at least 32 bytes.');
+  if(!Array.isArray(extensions))throw fault('CENTRAL_SERVER_EXTENSIONS','Compose an array of trusted operator extensions.');
+  const mountedAssets=new Map([...assets].map(([path,asset])=>[path,{url:new URL('./'+asset.file,import.meta.url),type:asset.type}]));
+  const mountedExtensions=extensions.map(extension=>{
+    if(!extension||typeof extension.handle!=='function'||!(extension.assets instanceof Map))
+      throw fault('CENTRAL_SERVER_EXTENSION','Use a trusted extension with fixed assets and an authenticated handler.');
+    for(const [path,asset]of extension.assets){
+      if(typeof path!=='string'||!path.startsWith('/')||path.startsWith('//')||/[?#\\\u0000-\u001f\u007f]/.test(path)||
+        mountedAssets.has(path)||!(asset?.url instanceof URL)||asset.url.protocol!=='file:'||
+        typeof asset.type!=='string'||/[\r\n]/.test(asset.type))
+        throw fault('CENTRAL_SERVER_EXTENSION_ASSET','Keep each trusted asset at its unique fixed local URL.');
+      mountedAssets.set(path,{url:new URL(asset.url.href),type:asset.type});
+    }
+    return extension;
+  });
   let origin=null,closed=false;const tickets=new Map();
   const authorize=request=>same(request.headers.authorization,'Bearer '+token);
   const json=(response,status,value)=>{response.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store',
@@ -67,8 +81,8 @@ export async function createCentralServer({workspace,host='127.0.0.1',port=0,tok
       const address=new URL(request.url,origin||'http://127.0.0.1');
       if(request.headers.origin&&request.headers.origin!==origin)throw fault('CENTRAL_ORIGIN','Use this operator origin for workspace requests.',403);
       if(origin&&request.headers.host!==new URL(origin).host)throw fault('CENTRAL_HOST','Use the original private operator address.',403);
-      if(['GET','HEAD'].includes(request.method)&&assets.has(address.pathname)){
-        const asset=assets.get(address.pathname),bytes=await readFile(new URL('./'+asset.file,import.meta.url));
+      if(['GET','HEAD'].includes(request.method)&&mountedAssets.has(address.pathname)){
+        const asset=mountedAssets.get(address.pathname),bytes=await readFile(asset.url);
         response.writeHead(200,{'Content-Type':asset.type,'Content-Length':String(bytes.length),'Cache-Control':'no-store',
           'X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer',
           'Content-Security-Policy':"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' blob:; base-uri 'none'; frame-ancestors 'self'"});
@@ -102,11 +116,18 @@ export async function createCentralServer({workspace,host='127.0.0.1',port=0,tok
       if(request.method==='POST'&&action&&actions.has(action[1])){
         const input=await body(request);
         if(!input||typeof input!=='object'||Array.isArray(input))throw fault('CENTRAL_REQUEST_OBJECT','Send a workspace action object.');
-        operationId=input.reportId??input.exportId??(['capture','backup'].includes(action[1])?input.id:null);
-        if(['capture','backup'].includes(action[1])&&!input.id)throw fault('CENTRAL_OPERATION_ID','Retain a caller-generated id before starting this operation.');
+        operationId=input.reportId??input.exportId??(['capture','backup','capturePublisher','receivePublisher'].includes(action[1])?input.id:null);
+        if(['capture','backup','capturePublisher','receivePublisher'].includes(action[1])&&!input.id)throw fault('CENTRAL_OPERATION_ID','Retain a caller-generated id before starting this operation.');
         const result=await workspace[action[1]](input);
         json(response,['capture','resume'].includes(action[1])?202:200,['capture','resume'].includes(action[1])?{ok:true,result,operationId:result.id}:{ok:true,result,operationId});return;
       }
+      for(const extension of mountedExtensions)if(await extension.handle({request,response,address,json,
+        body:async original=>{
+          const input=await body(original);
+          if(input&&typeof input==='object'&&!Array.isArray(input))
+            operationId=input.requestId??input.reportId??input.exportId??input.id??input.captureId??null;
+          return input;
+        }}))return;
       throw fault('CENTRAL_HTTP_ROUTE','This operator route does not exist.',404);
     }catch(error){
       if(response.headersSent){response.destroy(error);return;}

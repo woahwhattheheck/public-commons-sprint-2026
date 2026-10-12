@@ -45,7 +45,7 @@ async function request(path,{method='GET',body}={}){
 }
 async function action(method,input={}){const envelope=await request('/api/actions/'+method,{method:'POST',body:input});return envelope.result;}
 function persistPending(){writeStorage('pending',JSON.stringify([...pending.values()]));renderPending();}
-function pendingCollection(method){return {connect:'connections',createPlan:'plans',capture:'captures',report:'reports',exportDataset:'exports',backup:'archives'}[method];}
+function pendingCollection(method){return {connect:'connections',createPlan:'plans',capture:'captures',report:'reports',exportDataset:'exports',backup:'archives',capturePublisher:'publisherSnapshots',receivePublisher:'publisherReceiving'}[method];}
 async function retainedAction(method,input){
   const id=input.reportId??input.exportId??input.id;
   if(!id)throw new Error('Retain this operation ID before starting.');
@@ -54,7 +54,7 @@ async function retainedAction(method,input){
   try{const result=await action(method,input);pending.delete(id);persistPending();return result;}
   catch(error){operation.status=error.uncertain?'Response unresolved':'Review the operation response';operation.error={code:error.code,message:error.message};persistPending();error.operationId=id;throw error;}
 }
-function reconcilePending(){if(!workspace)return;let changed=false;for(const [id,operation]of pending){const collection=pendingCollection(operation.method);if(collection&&workspace[collection]?.some(item=>item.id===id)){pending.delete(id);changed=true;}}if(changed)persistPending();}
+function reconcilePending(){if(!workspace)return;let changed=false;for(const [id,operation]of pending){const collection=pendingCollection(operation.method);if(collection&&workspace[collection]?.some(item=>item.id===id&&(!['capturePublisher','receivePublisher'].includes(operation.method)||item.status==='COMPLETE'))){pending.delete(id);changed=true;}}if(changed)persistPending();}
 function renderPending(){const content=[];for(const operation of pending.values()){const item=node('div',null,'operation');item.append(node('strong',operation.method+' · '+operation.status),node('p','Operation '+operation.id+' · '+date(operation.startedAt)),node('p',operation.error?.message||'The same request remains available until its result is received.'));
     item.append(button('Read workspace result',()=>refresh()),button('Retry original request',async()=>{await retainedAction(operation.method,operation.input);await refresh();notice('Original operation received.');}),button('View original input',()=>detail('Retained operation',node('pre',pretty(operation)))));
     content.push(item);}replace('pending-operations',...content);
@@ -221,8 +221,57 @@ form('release-form',async data=>{const result=await action('prepareRelease',{exp
 bind('release-status',async()=>{const result=await action('releaseStatus');$('release-result').textContent=pretty(result);if(Number.isSafeInteger(result.state?.generation))$('release-generation').value=result.state.generation;notice('Original seller release state received.');});
 bind('release-activate',async()=>{const expectedGeneration=Number($('release-generation').value);if($('release-generation').value===''||!Number.isSafeInteger(expectedGeneration))throw new Error('Read the current release generation first.');const id=$('release-form').elements.releaseId.value.trim();if(!id)throw new Error('Choose the prepared release ID.');
   const result=await action('activateRelease',{id,expectedGeneration,reason:$('release-reason').value});$('release-result').textContent=pretty(result);notice('Selected seller release activated.');});
-function renderWorkspace(){replace('workspace-information',table(['Workspace','Original identity'],[['Workspace ID',workspace.id],['Revision',workspace.revision],['Created',date(workspace.createdAt)],['Received original archive',workspace.receivedArchive?.archiveSha256||'Created on this host']]));
+function renderPublisher(){
+  const snapshots=workspace.publisherSnapshots??[],receiving=workspace.publisherReceiving??[];
+  replace('publisher-snapshot-list',snapshots.length?table(['Snapshot','State','Original selection','Retained files'],descending(snapshots).map(item=>[
+    item.id,item.status,item.selection?String(item.selection.generation??'unfinished')+' · '+(item.selection.active??'No selected release'):'No publisher',
+    (item.fileCount??0)+' files · '+bytes(item.bytes)
+  ])):empty('The next archive captures the publisher automatically. A separate source snapshot is optional.'));
+  options('publisher-snapshot',snapshots.filter(item=>item.status==='COMPLETE'),{label:item=>item.id+' · '+(item.fileCount??0)+' files'});
+  $('publisher-receive-form').querySelector('button').disabled=!snapshots.some(item=>item.status==='COMPLETE');
+  replace('publisher-receiving-list',receiving.length?table(['Receiving operation','State','Original snapshot','Datasets / releases','Original to local'],descending(receiving).map(item=>[
+    item.id,item.status,item.snapshotId,(item.datasetCount??0)+' datasets · '+(item.releaseCount??0)+' releases',
+    button('Open source and local mapping',async()=>{const records=await action('publisherTransfers');detail('Original publisher receiving',node('pre',pretty(records.receiving.find(value=>value.id===item.id))));})
+  ])):empty('Receive an original snapshot to prepare its publisher on this host.'));
+  const releases=[],seen=new Set();
+  for(const item of receiving)if(item.status==='COMPLETE')for(const release of item.releases??[])if(!seen.has(release.localId)){
+    seen.add(release.localId);releases.push({...release,id:release.localId,selected:item.activation?.localActive===release.localId});
+  }
+  options('publisher-local-release',releases,{label:item=>item.originalId+' → '+item.localId+(item.selected?' · original selection':'')});
+  $('publisher-activation-form').querySelector('button[type="submit"]').disabled=!releases.length;
+}
+function renderWorkspace(){renderPublisher();replace('workspace-information',table(['Workspace','Original identity'],[['Workspace ID',workspace.id],['Revision',workspace.revision],['Created',date(workspace.createdAt)],['Received original archive',workspace.receivedArchive?.archiveSha256||'Created on this host']]));
   replace('archive-list',workspace.archives.length?table(['Archive','Created','Size','Files'],descending(workspace.archives).map(item=>[item.id,date(item.createdAt),bytes(item.bytes),item.files.length?outputFiles(item):node('span','Previous archive receipt retained')])):empty('Create a portable archive to move the complete workspace to another host.'));}
+bind('open-commissioning',()=>{
+  if(!token)throw new Error('Open the private workspace before its customer commissioning editor.');
+  location.assign('/commissioning/#token='+encodeURIComponent(token));
+});
+bind('publisher-capture',async()=>{
+  const value=$('publisher-expected-generation').value,input={id:uuid()};
+  if(value!==''){const generation=Number(value);if(!Number.isSafeInteger(generation)||generation<0)throw new Error('Use the actual nonnegative release generation.');input.expectedGeneration=generation;}
+  const result=await retainedAction('capturePublisher',input);$('publisher-result').textContent=pretty(result);
+  await refresh({quiet:true});notice('Publisher source and original release history retained.');
+});
+bind('publisher-history',async()=>detail('Complete publisher source and receiving',node('pre',pretty(await action('publisherTransfers')))));
+form('publisher-receive-form',async()=>{
+  const result=await retainedAction('receivePublisher',{id:uuid(),snapshotId:chosen('publisher-snapshot','an original publisher snapshot')});
+  $('publisher-result').textContent=pretty(result);await refresh({quiet:true});
+  if(result.activation?.localActive)$('publisher-local-release').value=result.activation.localActive;
+  if(Number.isSafeInteger(result.activation?.expectedGeneration))$('publisher-current-generation').value=result.activation.expectedGeneration;
+  notice('Original publisher received. Review its local release selection below.');
+});
+bind('publisher-generation-read',async()=>{
+  const result=await action('releaseStatus');$('publisher-result').textContent=pretty(result);
+  if(!Number.isSafeInteger(result.state?.generation))throw new Error('The native release store did not return its current generation.');
+  $('publisher-current-generation').value=result.state.generation;notice('Current native release generation received.');
+});
+form('publisher-activation-form',async data=>{
+  const text=$('publisher-current-generation').value,expectedGeneration=Number(text);
+  if(text===''||!Number.isSafeInteger(expectedGeneration)||expectedGeneration<0)throw new Error('Read the current native release generation.');
+  const result=await action('activateRelease',{id:chosen('publisher-local-release','a received native release'),expectedGeneration,reason:String(data.get('reason'))});
+  $('publisher-result').textContent=pretty(result);$('publisher-current-generation').value='';
+  await refresh({quiet:true});notice('The received native release is selected.');
+});
 bind('create-archive',async()=>{notice('Creating the complete portable workspace. Keep this original operation available.');const result=await retainedAction('backup',{id:uuid()});await refresh({quiet:true});notice('Complete portable archive created.');showOutput(result);});
 try{for(const item of JSON.parse(readStorage('pending')||'[]'))if(item?.id&&pendingCollection(item.method))pending.set(item.id,item);}catch{/* A malformed browser draft cannot alter the host workspace. */}
 const fragment=new URLSearchParams(location.hash.slice(1));token=fragment.get('token')||readStorage('token')||'';
