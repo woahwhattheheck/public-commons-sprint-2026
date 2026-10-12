@@ -5,6 +5,7 @@ import { renderAccountingApplicationReview } from './accounting-application.mjs'
 import { createOpenApiConnectionSetupView } from './openapi-connection-setup.mjs';
 import { createApplicationLibrary } from './application-library.mjs';
 import { createApplicationDrafts } from './application-drafts.mjs';
+import { createWorkbookResultsView, renderWorkbookReview, workbookFormFromDescriptor, isWorkbookApplication } from './workbook-results.mjs';
 const element = (tag, text, className) => {
   const node = document.createElement(tag);
   if (text !== undefined) node.textContent = text;
@@ -190,7 +191,8 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   terminalActions.append(send, interrupt, eof);
   inputForm.append(element('p', 'This is the original application terminal. Review its current prompt, then enter the response yourself. Opening or refreshing this page sends no input.', 'note'),
     field('Terminal response', input), terminalActions, inputStatus);
-  outputPanel.append(outputDescription, output, inputForm);
+  const workbookResults = createWorkbookResultsView({ api, message, error });
+  outputPanel.append(outputDescription, output, inputForm, workbookResults.root);
   root.replaceChildren(header, intro, libraryRoot, configuration, selectedPanel, history, outputPanel);
   const drafts = createApplicationDrafts({
     root: draftRoot, controls: { label, runtime, kind, settings }, reviewButton,
@@ -441,7 +443,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
           'Application saved. Your newer setup draft remains open.'));
       }));
       reviewResult.replaceChildren(element('h3', 'Reviewed application'), rows,
-        renderOpenApiApplicationReview(reviewed.command), renderApplicationReview(reviewed.command), renderAccountingApplicationReview(reviewed.command), save);
+        renderOpenApiApplicationReview(reviewed.command), renderApplicationReview(reviewed.command), renderAccountingApplicationReview(reviewed.command), renderWorkbookReview(reviewed), save);
       if (reviewed.command.createDirectories.length) reviewResult.append(element('p', 'Creates private folder: ' + reviewed.command.createDirectories.join(', '), 'note'));
       reviewResult.hidden = false;
     });
@@ -473,7 +475,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       ['Terminal', reviewed.command.terminal ? 'Explicit operator input through the original controlling terminal' : 'Retained original output'],
       ...mppReviewRows(reviewed.command),
       ...wooReviewRows(reviewed.command),
-    ]), renderOpenApiApplicationReview(reviewed.command), renderApplicationReview(reviewed.command), renderAccountingApplicationReview(reviewed.command), start); operationReview.hidden = false;
+    ]), renderOpenApiApplicationReview(reviewed.command), renderApplicationReview(reviewed.command), renderAccountingApplicationReview(reviewed.command), renderWorkbookReview(reviewed), start); operationReview.hidden = false;
   }
   function renderSelected() {
     const app = selected(); selectedPanel.hidden = !app; history.hidden = !app;
@@ -553,7 +555,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     } else {
       navigationRecovery.replaceChildren(); delete navigationRecovery.dataset.signature;
     }
-    const workbookCommand = ['python-workbooks', 'python-workbook-delivery'].includes(app.kind);
+    const workbookCommand = isWorkbookApplication(app, current);
     urlNote.textContent = workbookCommand ? (active ? 'The original workbook command is running. Its output is retained below.' :
       current ? 'The original workbook command has ended. Open its retained outcome and complete output below.' :
       'Review a start to run this original workbook command.') : navigationChanged ?
@@ -582,9 +584,9 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   }
   async function refreshOutput() {
     const app = selected(), id = selectedRun, own = scope;
-    if (!app || !id) { outputPanel.hidden = true; return; }
+    if (!app || !id) { outputPanel.hidden = true; workbookResults.reset(); return; }
     const run = visibleRuns().find(item => item.id === id);
-    if (!run) { outputPanel.hidden = true; return; }
+    if (!run) { outputPanel.hidden = true; workbookResults.reset(); return; }
     const response = await api(query(run.terminal ? '/api/applications/terminal' : '/api/applications/output', { applicationId: app.id, operationId: id }));
     if (scope !== own || app.id !== selectedId || id !== selectedRun) return;
     outputPanel.hidden = false;
@@ -593,6 +595,8 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     if (bottom) output.scrollTop = output.scrollHeight;
     outputDescription.textContent = id + ' · ' + response.output.totalBytes + ' retained output bytes' +
       (response.output.offset ? ' · showing the last ' + (response.output.totalBytes - response.output.offset) + ' bytes' : '');
+    await workbookResults.update(app, run, response);
+    if (scope !== own || app.id !== selectedId || id !== selectedRun) return;
     inputForm.hidden = !run.terminal;
     input.disabled = send.disabled = interrupt.disabled = eof.disabled = !response.ready || sending;
     if (run.terminal) {
@@ -668,7 +672,12 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     refresh,
     async beginPython(descriptor) {
       data = await api('/api/applications/state?historyLimit=1');
-      const type = data.catalog.find(item => item.python && item.command === descriptor.command);
+      let workbookSetup = workbookFormFromDescriptor(descriptor);
+      const namedWorkbook = workbookSetup ? data.catalog.find(item => item.id === workbookSetup.kind) : null;
+      if (!namedWorkbook) workbookSetup = null;
+      const type = namedWorkbook ??
+        data.catalog.find(item => item.id === (descriptor.command === 'workbooks' ? 'python-workbooks' : descriptor.command === 'workbookDelivery' ? 'python-workbook-delivery' : '')) ??
+        data.catalog.find(item => item.python && item.command === descriptor.command);
       if (!type) throw new Error('This Applications revision does not include the selected original Python command.');
       const value = name => descriptor.args[descriptor.args.indexOf(name) + 1];
       kind.replaceChildren(...data.catalog.map(item => new Option(item.title, item.id)));
@@ -677,7 +686,9 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
         runtime.append(new Option(savedRuntime?.label ?? descriptor.runtime.directory, descriptor.runtime.runtimeId));
       configurationReview = startReview = null;
       const values = { installationId: descriptor.installationId };
-      if (descriptor.command === 'postgres') {
+      if (workbookSetup) {
+        Object.assign(values, workbookSetup.values);
+      } else if (descriptor.command === 'postgres') {
         if (!descriptor.args.includes('serve')) throw new Error('Prepare the PostgreSQL serve command with its private operator directory.');
         const option = (name, fallback) => {
           const index = descriptor.args.indexOf(name);
@@ -708,7 +719,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       scope++; navigationVersion++; data = null; selectedId = selectedRun = editingId = null; configurationReview = startReview = null;
       resetHistory(null); initial = true; drafts.reset(); library.reset(); label.value = ''; kind.replaceChildren(); runtime.replaceChildren();
       selectedPanel.hidden = history.hidden = outputPanel.hidden = reviewResult.hidden = true; configuration.open = true;
-      openapiSetup.reset();
+      openapiSetup.reset(); workbookResults.reset();
     },
   };
 }

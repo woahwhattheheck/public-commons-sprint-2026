@@ -45,6 +45,7 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
     ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
     ['/managed.mjs', 'managed.mjs', 'text/javascript; charset=utf-8'],
     ['/applications.mjs', 'applications.mjs', 'text/javascript; charset=utf-8'],
+    ['/workbook-results.mjs', 'workbook-results.mjs', 'text/javascript; charset=utf-8'],
     ['/application-library.mjs', 'application-library.mjs', 'text/javascript; charset=utf-8'],
     ['/application-drafts.mjs', 'application-drafts.mjs', 'text/javascript; charset=utf-8'],
     ['/application-review.mjs', 'application-review.mjs', 'text/javascript; charset=utf-8'],
@@ -75,7 +76,7 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
     type: 'text/css; charset=utf-8',
   });
   let origin, host, closing = false;
-  const sockets = new Set(), imageDownloads = new Map(), transferDownloads = new Map(), pythonDownloads = new Map(), sourceBuildDownloads = new Map();
+  const sockets = new Set(), imageDownloads = new Map(), transferDownloads = new Map(), pythonDownloads = new Map(), sourceBuildDownloads = new Map(), workbookDownloads = new Map();
   const server = createServer(async (req, res) => {
     const reply = (status, type, bytes, headers = {}) => {
       if (res.headersSent || res.destroyed) return;
@@ -137,6 +138,19 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
         try {
           res.writeHead(200, { ...security, 'content-type': file.type, 'content-length': file.bytes,
             'content-disposition': 'attachment; filename="' + file.file + '"', etag: '"' + file.sha256 + '"' });
+          await pipeline(file.handle.createReadStream({ autoClose: false, start: 0 }), res);
+        } finally { await file.handle.close(); }
+        return;
+      }
+      if (req.method === 'GET' && /^\/workbook-download\/[a-f0-9]{64}$/.test(url.pathname) && !url.search) {
+        const key = url.pathname.split('/').at(-1), selected = workbookDownloads.get(key);
+        workbookDownloads.delete(key);
+        need(selected && selected.expires > Date.now(), 'WORKBOOK_DOWNLOAD_EXPIRED', 'Request this original workbook file again.', 410);
+        const file = await model.applicationsWorkbookDownload(selected.input);
+        try {
+          res.writeHead(200, { ...security, 'content-type': file.type, 'content-length': file.bytes,
+            'content-disposition': 'attachment; filename="' + file.file + '"', etag: '"' + file.sha256 + '"',
+            'x-content-sha256': file.sha256 });
           await pipeline(file.handle.createReadStream({ autoClose: false, start: 0 }), res);
         } finally { await file.handle.close(); }
         return;
@@ -203,6 +217,8 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
         }
         return send(200, await model.applicationsHistory(value));
       }
+      if (req.method === 'GET' && url.pathname === '/api/applications/workbook-result')
+        return send(200, await model.applicationsWorkbookResult(params(url, ['applicationId', 'operationId'])));
       if (req.method === 'GET' && url.pathname === '/api/applications/output')
         return send(200, await model.applicationsOutput(params(url, ['applicationId', 'operationId'])));
       if (req.method === 'GET' && url.pathname === '/api/applications/terminal')
@@ -326,8 +342,18 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
         const value = await body(req, ['runtimeId', 'context', 'input'], openApiSetupBodyLimit(action));
         return send(200, await model.applicationsOpenApiSetup({ ...value, action }));
       }
+      if (url.pathname === '/api/applications/workbook-download') {
+        const input = await body(req, ['applicationId', 'operationId', 'file', 'manifestSha256']);
+        const file = await model.applicationsWorkbookDownload(input);
+        await file.handle.close();
+        for (const [key, value] of workbookDownloads) if (value.expires <= Date.now()) workbookDownloads.delete(key);
+        need(workbookDownloads.size < 256, 'WORKBOOK_DOWNLOAD_LIMIT', 'Finish or reopen a recent workbook download.', 429);
+        const key = randomBytes(32).toString('hex');
+        workbookDownloads.set(key, { input, expires: Date.now() + 60000 });
+        return send(200, { url: origin + '/workbook-download/' + key, file: file.file, bytes: file.bytes, sha256: file.sha256 });
+      }
       if (url.pathname === '/api/applications/review')
-        return send(200, await model.applicationsReview(await body(req, ['runtimeId', 'kind', 'settings', 'label', 'applicationId', 'expectedRevision', 'homeId'])));
+        return send(200, await model.applicationsReview(await body(req, ['runtimeId', 'kind', 'settings', 'label', 'applicationId', 'expectedRevision', 'homeId', 'providerId'])));
       if (url.pathname === '/api/applications/save')
         return send(201, await model.applicationsSave(await body(req, ['requestId', 'reviewId', 'applicationId'])));
       if (url.pathname === '/api/applications/connect')
@@ -370,7 +396,7 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
   return { origin, url: origin + '/#' + token, directory: model.directory,
     async close() {
       if (closing) return;
-      closing = true; imageDownloads.clear(); transferDownloads.clear(); pythonDownloads.clear(); sourceBuildDownloads.clear();
+      closing = true; imageDownloads.clear(); transferDownloads.clear(); pythonDownloads.clear(); sourceBuildDownloads.clear(); workbookDownloads.clear();
       const stopped = new Promise(done => server.close(done));
       await model.close(); server.closeIdleConnections();
       for (const socket of sockets) socket.destroy();
