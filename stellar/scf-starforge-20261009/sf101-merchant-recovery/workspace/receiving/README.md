@@ -175,6 +175,6 @@ These source references describe the implemented workflow. The actual owner’s 
 
 ## Complete source and service runner
 
-The [complete source and service guide](service-run/RUN_ORIGINAL.md) supplies the full application checkout, standalone original journey, actual service-account setup and both producing commands. Its published package retains all 1,682 original files in 31 independently verified source parts.
+The [complete source and service guide](service-run/RUN_ORIGINAL.md) supplies the full application checkout, standalone original journey, actual service-account setup and both producing commands. Its published package retains all 1,685 original files in 32 independently verified source parts, including the developer portal's computed static assets.
 
 Use `service-run/materialize-original-source.py` to receive that exact source beside the package. The optional `service-run/launch-original-controller.py` runs the selected complete supervisor and maintained Library child from one host selection. The supervisor checks the real service UID/GID before creating its original root, prepares dependencies, runs the original journey and this operator receiver, and saves the whole case through the current Library workflow. The guide documents retained-process continuation, source resolution and complete output custody.
