@@ -78,6 +78,9 @@ def _mapped(receiving, columns):
 
 
 def delivery_fields(delivery, manifest, columns, *, document=False):
+    from .timescale_intake.source import MANIFEST as TIMESCALE_MANIFEST, delivery_fields as timescale_fields
+    if isinstance(manifest, dict) and manifest.get("schema") == TIMESCALE_MANIFEST:
+        return timescale_fields(delivery, manifest)
     receiving = read_delivery_semantics(delivery, manifest=manifest)
     if receiving is None:
         return {}
@@ -94,6 +97,19 @@ def edition_context(db, edition):
     _require(digest(original) == edition["manifest_sha256"]
              and same_json(manifest, edition["source"]["manifest"]),
              "DUCKDB_RETAINED_SEMANTIC_MANIFEST_CHANGED")
+    from .timescale_intake.source import MANIFEST as TIMESCALE_MANIFEST, no_dataset_semantics
+    if manifest.get("schema") == TIMESCALE_MANIFEST:
+        no_dataset_semantics(edition["source"]["native"], manifest)
+        _require(edition.get("semantics") is None, "DUCKDB_RETAINED_SEMANTICS_MISSING")
+        context = edition.get("timescale_source")
+        _require(isinstance(context, dict) and same_json(
+            {key: value for key, value in context.items() if key != "descriptor"},
+            manifest["dataset"].get("timescale")), "DUCKDB_TIMESCALE_SOURCE_BINDING_CHANGED")
+        _require(context.get("descriptor", {}).get("schema") == "stellar-forge.duckdb-timescale-intake.v1.source"
+                 and context["descriptor"].get("report_id") == context.get("report_id")
+                 and context["descriptor"].get("source_id") == context.get("source_id"),
+                 "DUCKDB_TIMESCALE_SOURCE_BINDING_CHANGED")
+        return None
     receiving = read_delivery_semantics(_EditionFiles(db, edition), manifest=manifest)
     if receiving is None:
         _require(edition.get("semantics") is None, "DUCKDB_RETAINED_SEMANTICS_MISSING")

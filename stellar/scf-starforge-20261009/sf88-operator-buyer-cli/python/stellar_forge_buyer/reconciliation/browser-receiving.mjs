@@ -27,10 +27,48 @@ async function exists(file){try{await fs.lstat(file);return true;}catch(error){i
 async function readJson(file){await regular(file);return JSON.parse(await fs.readFile(file,'utf8'));}
 async function syncDirectory(directory){const fd=await fs.open(directory,constants.O_RDONLY);try{await fd.sync();}finally{await fd.close();}}
 async function retain(file,bytes){
- if(await exists(file)){await regular(file);need((await fs.readFile(file)).equals(bytes),'The original receiving input changed.');return;}
- const fd=await fs.open(file,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);
- try{await fd.writeFile(bytes);await fd.sync();}finally{await fd.close();}
- await syncDirectory(path.dirname(file));
+ // The surrounding original receiving owns this directory. A deterministic
+ // stage retains only these exact input bytes and can be continued after a
+ // failed write; the immutable final pathname is published create-only.
+ const staged=file+'.'+hash(bytes)+'.pending';
+ async function info(name){try{return await fs.lstat(name);}catch(error){if(error.code==='ENOENT')return null;throw error;}}
+ function privateFile(value){
+  need(value?.isFile()&&!value.isSymbolicLink()&&(value.mode&0o077)===0&&
+   (value.nlink===1||value.nlink===2),'Receiving metadata must remain a private original file.');
+ }
+ async function finish(){
+  const published=await info(file);if(!published)return false;
+  privateFile(published);need((await fs.readFile(file)).equals(bytes),'The original receiving input changed.');
+  const pending=await info(staged);
+  if(pending){
+   privateFile(pending);
+   const same=pending.dev===published.dev&&pending.ino===published.ino;
+   need(same?(published.nlink===2&&pending.nlink===2):(published.nlink===1&&pending.nlink===1),
+    'The original receiving stage has an unexpected file binding.');
+   // If publication completed before interruption, remove only its original
+   // stage link. A failed earlier private stage can also be discarded once the
+   // exact immutable final bytes have been recovered.
+   await fs.unlink(staged);
+  }
+  const original=await regular(file),fd=await fs.open(file,constants.O_RDONLY|constants.O_NOFOLLOW);
+  try{
+   const opened=await fd.stat();
+   need(opened.dev===original.dev&&opened.ino===original.ino,'The original receiving metadata changed while reopening.');
+   await fd.sync();
+  }finally{await fd.close();}
+  await syncDirectory(path.dirname(file));return true;
+ }
+ if(await finish())return;
+ const pending=await info(staged);
+ if(pending){privateFile(pending);need(pending.nlink===1,'Reopen the published original receiving stage.');}
+ const fd=await fs.open(staged,constants.O_WRONLY|constants.O_CREAT|constants.O_NOFOLLOW,0o600);
+ try{
+  const opened=await fd.stat();privateFile(opened);need(opened.nlink===1,'The pending original metadata has another file owner.');
+  if(pending)need(opened.dev===pending.dev&&opened.ino===pending.ino,'The original receiving stage changed.');
+  await fd.truncate(0);await fd.writeFile(bytes);await fd.sync();
+ }finally{await fd.close();}
+ try{await fs.link(staged,file);}catch(error){if(error.code!=='EEXIST')throw error;}
+ need(await finish(),'The original receiving metadata was not published.');
 }
 async function publish(file,value){
  const temp=file+'.'+randomBytes(12).toString('hex')+'.partial';

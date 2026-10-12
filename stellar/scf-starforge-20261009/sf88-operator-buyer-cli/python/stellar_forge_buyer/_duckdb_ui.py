@@ -7,7 +7,7 @@ HTML = r"""<!doctype html>
 <body>
 <header class="topbar"><div><span class="brand">STELLAR FORGE</span><h1>Dataset workspace</h1></div><div class="header-actions"><span class="badge">DuckDB · Local</span><button id="refresh">Refresh</button></div></header>
 <div class="shell">
-<aside class="sidebar"><nav aria-label="Workspace"><button class="nav active" data-screen="sources">Source delivery</button><button class="nav" data-screen="editions">Dataset editions <span id="edition-count">0</span></button><button class="nav" data-screen="query">SQL workspace</button><button class="nav" data-screen="exports">Saved exports <span id="export-count">0</span></button><a id="reconciliation-link" class="reconciliation-link" href="/reconciliation/">Dataset reconciliation</a></nav><section class="workspace-info"><h2>Workspace</h2><p id="workspace-path" class="mono wrap">Opening…</p><p id="workspace-meta" class="muted"></p></section></aside>
+<aside class="sidebar"><nav aria-label="Workspace"><button class="nav active" data-screen="sources">Source delivery</button><button class="nav" data-screen="editions">Dataset editions <span id="edition-count">0</span></button><button class="nav" data-screen="query">SQL workspace</button><button class="nav" data-screen="exports">Saved exports <span id="export-count">0</span></button><a id="reconciliation-link" class="reconciliation-link" href="/reconciliation/">Dataset reconciliation</a><a id="timescale-intake-link" class="reconciliation-link" href="/timescale-intake/">Timescale intake</a></nav><section class="workspace-info"><h2>Workspace</h2><p id="workspace-path" class="mono wrap">Opening…</p><p id="workspace-meta" class="muted"></p></section></aside>
 <main>
 <div id="message" class="notice" role="status" aria-live="polite" hidden></div>
 <section id="screen-sources" class="screen">
@@ -50,6 +50,7 @@ let capability = location.hash.slice(1);
 try { if(capability) sessionStorage.setItem('stellar_duckdb_capability',capability); else capability=sessionStorage.getItem('stellar_duckdb_capability')||''; } catch(error) {}
 if(location.hash) history.replaceState(null,'',location.pathname);
 $('reconciliation-link').href='/reconciliation/#'+capability;
+$('timescale-intake-link').href='/timescale-intake/#'+capability;
 function element(tag,text,cls) { const item=document.createElement(tag); if(text!==undefined) item.textContent=String(text); if(cls) item.className=cls; return item; }
 function text(value) { if(value===null||value===undefined) return ''; if(typeof value==='object' && 'text' in value && 'type' in value) return value.type==='null'?'NULL':String(value.text); if(typeof value==='object') return JSON.stringify(value); return String(value); }
 function pretty(value) { return JSON.stringify(value,null,2); }
