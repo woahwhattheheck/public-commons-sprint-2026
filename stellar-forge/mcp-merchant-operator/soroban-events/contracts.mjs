@@ -3,12 +3,14 @@ import {createHash} from 'node:crypto';
 export const TOOL_PREFIX='merchant_soroban_events_';
 export const CONNECTION_SCHEMA='stellar-forge.soroban-events-connection.v1';
 export const MANIFEST_SCHEMA='stellar-forge.soroban-events.source-export.v1';
+export const WATCH_MANIFEST_SCHEMA='stellar-forge.soroban-events.watch-export.v1';
 export const MANIFEST_NAME='manifest.json';
 export const MAX_FILE_BYTES=8*1024*1024*1024;
 export const MAX_MANIFEST_BYTES=64*1024*1024;
 export const MAX_JSON_BYTES=128*1024*1024;
 export const MAX_REQUEST_BYTES=2*1024*1024;
 export const ALIAS='^[a-z0-9][a-z0-9_-]{0,63}$';
+export const NATIVE_ALIAS='^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$';
 export const SHA='^[a-f0-9]{64}$';
 export const UUID='^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$';
 export const plain=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
@@ -42,9 +44,11 @@ export function relativeFile(value){
 export function parseSorobanEventsManifest(bytes,exportId){
   need(Buffer.isBuffer(bytes)&&bytes.length>0&&bytes.length<=MAX_MANIFEST_BYTES,'SOROBAN_EVENTS_MANIFEST_INVALID');
   let manifest;try{manifest=decode(bytes);}catch{need(false,'SOROBAN_EVENTS_MANIFEST_INVALID');}
-  need(plain(manifest)&&manifest.schema===MANIFEST_SCHEMA&&manifest.exportId===checked(exportId,SHA,'export ID')&&
-    typeof manifest.editionId==='string'&&new RegExp(UUID).test(manifest.editionId)&&Array.isArray(manifest.files),
+  need(plain(manifest)&&[MANIFEST_SCHEMA,WATCH_MANIFEST_SCHEMA].includes(manifest.schema)&&
+    manifest.exportId===checked(exportId,SHA,'export ID')&&Array.isArray(manifest.files),
     'SOROBAN_EVENTS_MANIFEST_INVALID');
+  const identity=manifest.schema===WATCH_MANIFEST_SCHEMA?manifest.watchId:manifest.editionId;
+  need(typeof identity==='string'&&new RegExp(UUID).test(identity),'SOROBAN_EVENTS_MANIFEST_INVALID');
   const seen=new Set();let total=0;
   const files=manifest.files.map(file=>{
     need(plain(file),'SOROBAN_EVENTS_MANIFEST_INVALID');

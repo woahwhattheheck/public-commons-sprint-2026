@@ -5,6 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { openSorobanEventsWorkspace } from './engine.mjs';
 import { startSorobanEventsServer } from './server.mjs';
 import { SorobanEventsError, requireValue } from './rpc.mjs';
+import { downloadSorobanSourceFile } from './source-download.mjs';
 
 const HELP = [
   'Soroban event workspace',
@@ -15,8 +16,9 @@ const HELP = [
   '  open                 Start the private industrial operator browser',
   '  state                List original plans, captures, editions and exports',
   '  plan-save            Save a plan version from --input JSON',
-  '  capture-start        Capture the current version of --plan ID',
+  '  capture-start        Capture --plan ID, optionally --plan-version N',
   '  capture-resume       Continue --capture ID from its native cursor',
+  '                       Both accept --connection-alias NAME for a configured host source',
   '  capture-status       Inspect --capture ID',
   '  events               Page retained events using --capture ID, --after ID, --limit N',
   '  edition-create       Freeze --capture ID using --name LABEL',
@@ -30,7 +32,11 @@ const HELP = [
   'request arguments recovers the saved result. Capture uses --connection-file JSON',
   'with rpcUrl/network and optional headers; the file remains local to the host.',
   'open accepts --port N and optional --token-file PRIVATE_FILE.',
+  'Use --connections-file PRIVATE_JSON for named native RPC connections, including',
+  'an archive provider for recurring source recovery. The operator keeps active',
+  'services running; use soroban-events-watch for the full headless service CLI.',
   'receive accepts --manifest-sha256 HEX to bind the original source manifest.',
+  'capture-start accepts --start-ledger N, --end-ledger N and --max-ledgers N.',
   'A missing plan range selects the latest observed ledger; endLedger is exclusive.',
   'Save plans with explicit startLedger/endLedger for a historical event window.',
 ].join('\n');
@@ -54,19 +60,21 @@ export async function runSorobanEventsCLI(argv = process.argv.slice(2), io = { w
   const directory = resolve(options.workspace);
   const connectionFile = options['connection-file'] ?? options.connection;
   const connection = connectionFile ? await jsonFile(connectionFile) : undefined;
+  const connectionsFile = options['connections-file'];
+  const connections = connectionsFile ? await jsonFile(connectionsFile) : undefined;
   if (command === 'open') {
     const token = options['token-file'] ? (await fs.readFile(resolve(options['token-file']), 'utf8')).trim() : undefined;
     requireValue(options['startup-format'] === undefined || options['startup-format'] === 'json', 'INVALID_ARGUMENT', 'Supported startup format is json');
-    const server = await startSorobanEventsServer({ directory, connection, port: Number(options.port ?? 0), token, expectedWorkspaceId: options['expected-workspace-id'] });
+    const server = await startSorobanEventsServer({ directory, connection, connections, port: Number(options.port ?? 0), token, expectedWorkspaceId: options['expected-workspace-id'] });
     io.write(JSON.stringify({ schema: 'stellar-forge.soroban-events-workspace-startup.v1', status: 'SOROBAN_EVENTS_READY', directory,
       workspaceId: (await server.workspace.describe()).workspaceId, sourceDirectory: dirname(fileURLToPath(import.meta.url)),
-      connectionFile: connectionFile ? resolve(connectionFile) : null, url: server.url, origin: server.origin, pid: process.pid }) + '\n');
+      connectionFile: connectionFile ? resolve(connectionFile) : null, connectionsFile: connectionsFile ? resolve(connectionsFile) : null, url: server.url, origin: server.origin, pid: process.pid }) + '\n');
     const stop = () => { server.close().catch(() => { process.exitCode = 1; }); };
     process.once('SIGINT', stop); process.once('SIGTERM', stop);
     return server;
   }
   if (command === 'receive') requireValue(typeof options['source-directory'] === 'string' && options['source-directory'].trim().length > 0, 'INVALID_ARGUMENT', '--source-directory is required for receive');
-  const workspace = await openSorobanEventsWorkspace({ directory, connection });
+  const workspace = await openSorobanEventsWorkspace({ directory, connection, connections });
   try {
     const mutation = () => {
       requireValue(options.request && options.revision !== undefined, 'INVALID_ARGUMENT', '--request and --revision are required for a workspace change');
@@ -75,8 +83,16 @@ export async function runSorobanEventsCLI(argv = process.argv.slice(2), io = { w
     let result;
     if (command === 'state') result = await workspace.describe();
     else if (command === 'plan-save') result = await workspace.planSave({ ...await jsonFile(options.input), ...mutation() });
-    else if (command === 'capture-start') result = await workspace.captureStart({ ...mutation(), planId: options.plan });
-    else if (command === 'capture-resume') result = await workspace.captureResume({ ...mutation(), captureId: options.capture });
+    else if (command === 'capture-start') {
+      const selection = Object.fromEntries([['start-ledger','startLedger'],['end-ledger','endLedger'],['max-ledgers','maxLedgers']]
+        .filter(([option]) => options[option] !== undefined).map(([option,key]) => [key,Number(options[option])]));
+      result = await workspace.captureStart({ ...mutation(), planId: options.plan,
+        ...(options['plan-version'] === undefined ? {} : { planVersion: Number(options['plan-version']) }),
+        ...(options['connection-alias'] === undefined ? {} : { connectionAlias: options['connection-alias'] }),
+        ...(Object.keys(selection).length ? { selection } : {}) });
+    }
+    else if (command === 'capture-resume') result = await workspace.captureResume({ ...mutation(), captureId: options.capture,
+      ...(options['connection-alias'] === undefined ? {} : { connectionAlias: options['connection-alias'] }) });
     else if (command === 'capture-status') result = await workspace.captureStatus({ captureId: options.capture });
     else if (command === 'events') result = await workspace.eventPage({ captureId: options.capture, after: options.after ?? null, limit: Number(options.limit ?? 100), contractId: options.contract ?? null, type: options.type ?? null });
     else if (command === 'edition-create') result = await workspace.editionCreate({ ...mutation(), captureId: options.capture, name: options.name });
@@ -86,10 +102,7 @@ export async function runSorobanEventsCLI(argv = process.argv.slice(2), io = { w
     else if (command === 'publisher-source') result = await workspace.publisherSource({ editionId: options.edition });
     else if (command === 'source-file') {
       requireValue(options.output, 'INVALID_ARGUMENT', '--output must select a new file');
-      const file = await workspace.sourceFile({ exportId: options.export, path: options.path });
-      const output = resolve(options.output), handle = await fs.open(output, 'wx', 0o600);
-      try { await handle.writeFile(file.content); await handle.sync(); } finally { await handle.close(); }
-      result = { path: output, bytes: file.bytes, sha256: file.sha256 };
+      result = await downloadSorobanSourceFile({ source: workspace, exportId: options.export, path: options.path, output: options.output });
     } else throw new SorobanEventsError('INVALID_COMMAND', 'Unknown command: ' + command);
     io.write(JSON.stringify(result, null, 2) + '\n');
     return result;
