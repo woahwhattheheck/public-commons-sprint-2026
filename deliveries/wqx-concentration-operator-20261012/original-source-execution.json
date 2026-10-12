@@ -1,0 +1,68 @@
+{
+  "schema": "starforge.wqx-concentration-source-execution.v1",
+  "completedAt": "2026-10-12T10:35:57.060Z",
+  "runtime": {
+    "kind": "connected-functions-v8",
+    "module": "concentration-units.mjs",
+    "moduleSha256": "18b652699a2513d3a2540180993bf4e826ae73824ae4c9272d23b7c4984f1f30",
+    "structuredCloneBridge": "JSON.parse(JSON.stringify(value)) for the retained JSON-only original source binding"
+  },
+  "input": {
+    "blob": "fdb9b68f0daf3906ecbb21dbb3381cbb1a8ec979",
+    "bytes": 5572563,
+    "sha256": "708d265ac3944bf85bdff51ecd2f6724c31fd08b3124bea2647a76ed4b5f507a",
+    "planSha256": "893c32bd0b9729cc3504244670ecd05c34c51ddf1e44887296c7ea2cb0788e21",
+    "captureSha256": "cbb29504ab01598cddb21bde33c918ca92075aad7f53fdac4fb07581371d29d7",
+    "reviewSha256": "ba122f919127c23f701dcbf9cb88314fee46cdace3fd881b971a23b959489631"
+  },
+  "fullSource": {
+    "results": 1035,
+    "limits": 1112,
+    "unchanged": true
+  },
+  "execution": {
+    "consideredResults": 750,
+    "preparedResults": 749,
+    "explicitMassVolumeResults": 298,
+    "unspecifiedUnitResults": 451,
+    "convertedReportedLimits": 1089,
+    "exactQuantityAndReverseChecks": 1387,
+    "issuesOnPrepared": 0
+  },
+  "preserved": {
+    "sourceRecordId": "wqx-record-11d4710939ec7646c8fe39b90e5e9589924e15cef1824024e388b1d0111498af",
+    "nativeResultId": "94a2a1f1-33d4-42f5-8eac-abcb7f2be615",
+    "characteristic": "Turbidity",
+    "result": null,
+    "resultUnit": null,
+    "unit": "NTRU",
+    "limits": [
+      {
+        "id": "wqx-limit-1d7b6834d6e2edaf8ada6be3779eb37d7a35d2eff10979982c8f8bd38887aa81",
+        "type": "Censoring Level",
+        "value": "2.0",
+        "unit": "NTRU",
+        "origin": "result-A",
+        "targetField": "LAB_REPORTING_LEVEL"
+      },
+      {
+        "id": "wqx-limit-c2ac80c10506eaad88b8ca687b6e46d3de51dc626643be958d76714833c99dd4",
+        "type": "Lower Reporting Limit",
+        "value": "2",
+        "unit": "NTRU",
+        "origin": "result-B",
+        "targetField": null
+      }
+    ],
+    "reason": "Keep original optical quantities; the mass/volume profile does not apply."
+  },
+  "silica": {
+    "resultBefore": "4.65",
+    "resultAfter": "4650",
+    "resultUnitBefore": "mg/L",
+    "resultUnitAfter": "ug/L",
+    "limitBefore": "0.06",
+    "limitAfter": "60"
+  },
+  "continuation": "The maintained original source/CLI/browser/portable receiving operation uses this full cohort and the explicit optical Keep choice."
+}
