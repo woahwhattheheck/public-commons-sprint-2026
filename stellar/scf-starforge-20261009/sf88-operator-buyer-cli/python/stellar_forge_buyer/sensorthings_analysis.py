@@ -348,7 +348,8 @@ def _source(selection):
             return raw
         component = component_analysis.verify_component_document(intake, document, edition,
             component_original("original-component-analysis-version"),
-            component_original("original-component-binding-manifest"))
+            component_original("original-component-binding-manifest"),
+            component_original("original-source-edition"))
     return {"name": selection["name"], "intake_path": intake_path, "root": root,
             "intake": intake, "source": source, "document": document, "edition": edition,
             "intake_sha256": intake_sha256, "manifest_path": input_path("source.json"),

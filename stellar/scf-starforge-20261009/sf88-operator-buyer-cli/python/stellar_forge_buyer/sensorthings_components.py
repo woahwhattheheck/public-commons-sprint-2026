@@ -12,6 +12,7 @@ import hashlib
 import json
 import math
 import re
+from urllib.parse import quote, unquote, urljoin, urlsplit
 
 from .errors import StateError
 
@@ -226,7 +227,178 @@ def _browser_json_projection(value):
     return value
 
 
-def _binding(item, edition, entity_index, raw_item):
+_RELATIONSHIPS = (
+    ("Thing", "Things"), ("Sensor", "Sensors"),
+    ("ObservedProperty", "ObservedProperties"), ("ObservedProperties", "ObservedProperties"),
+    ("Locations", "Locations"), ("HistoricalLocations", "HistoricalLocations"),
+    ("FeatureOfInterest", "FeaturesOfInterest"), ("Datastream", "Datastreams"),
+    ("MultiDatastream", "MultiDatastreams"))
+_ROOT_POINTER = re.compile(r"/value/(0|[1-9][0-9]*)")
+
+
+def _source_url(value, source, base=None):
+    """Resolve retained HTTP(S) links only; this function never performs I/O.
+
+    Match the original sourceURL scope and the HTTP URL normalization used by
+    graphIndex. Invalid/out-of-scope links remain unresolvable source evidence.
+    """
+    def canonical(raw, against=None):
+        _need(isinstance(raw, str) and not isinstance(raw, _Number) and
+              0 < len(raw.encode("utf-16-le", "surrogatepass")) // 2 <= 16384 and
+              raw.strip() and not re.search(r"[\x00-\x1f\x7f]", raw), "SOURCE_LINK")
+        # For special HTTP URLs, a literal backslash is a path separator.
+        # Encoded backslashes are still rejected by the decoded scope check.
+        raw = raw.strip(" ")
+        before, separator, after = raw.partition("?")
+        raw = before.replace("\\", "/") + (separator + after if separator else "")
+        joined = urljoin(against, raw) if against is not None else raw
+        parts = urlsplit(joined)
+        _need(parts.scheme.lower() in {"http", "https"} and parts.hostname and
+              parts.username is None and parts.password is None and "#" not in joined,
+              "SOURCE_LINK")
+        scheme = parts.scheme.lower()
+        host = parts.hostname.lower()
+        host = ("[" + host + "]") if ":" in host else host.encode("idna").decode("ascii")
+        port = parts.port
+        origin = scheme + "://" + host + (
+            ":" + str(port) if port is not None and port != (443 if scheme == "https" else 80) else "")
+        path = parts.path or "/"
+        # WHATWG special URLs remove dot segments, including their percent
+        # encoded spellings. Preserve every other original escaped path byte.
+        segments = []
+        source_segments = path.split("/")
+        for ordinal, segment in enumerate(source_segments):
+            dots = re.sub(r"(?i)%2e", ".", segment)
+            if dots == ".":
+                if ordinal == len(source_segments) - 1:
+                    segments.append("")
+                continue
+            if dots == "..":
+                if len(segments) > 1:
+                    segments.pop()
+                if ordinal == len(source_segments) - 1:
+                    segments.append("")
+                continue
+            segments.append(segment)
+        path = "/".join(segments) or "/"
+        path = quote(path, safe="/!$&'()*+,-.:;=@_~%[]|")
+        query = quote(parts.query, safe="!$&()*+,-./:;=?@_~%[]|\\^`{}")
+        query_present = "?" in joined
+        return origin + path + (("?" + query) if query_present else ""), origin, path
+    try:
+        root_url, root_origin, root_path = canonical(source["serviceUrl"])
+        url, origin, path = canonical(value, base if base is not None else root_url)
+        _need(not re.search(r"%(?![0-9a-fA-F]{2})", path + root_path), "SOURCE_LINK")
+        decoded, root_decoded = unquote(path, errors="strict"), unquote(root_path, errors="strict")
+        _need(origin == root_origin and
+              (decoded == root_decoded.rstrip("/") or decoded.startswith(root_decoded)) and
+              not any(piece in {".", ".."} for piece in decoded.split("/")) and
+              not re.search(r"[\x00-\x1f\x7f\\]", decoded), "SOURCE_LINK")
+        return url
+    except (KeyError, ValueError, UnicodeError, StateError):
+        return None
+
+
+def _retained_graph(document, edition):
+    """Rebuild graphIndex from retained roots, not the supplied binding order.
+
+    Page order comes from the immutable edition. Root ordinals come from
+    /value/N pointers, and nested relation order comes from each original
+    entity JSON. Table row order and membership alone confer no relation.
+    """
+    by_occurrence, roots_by_hash = {}, defaultdict(list)
+    for row in document["entities"]:
+        occurrence = row["occurrence_id"]
+        _need(occurrence not in by_occurrence, "ENTITY_OCCURRENCE_REPEATED")
+        by_occurrence[occurrence] = row
+        if row["source_pointer"] == "" or _ROOT_POINTER.fullmatch(row["source_pointer"]):
+            roots_by_hash[row["source_page_sha256"]].append(row)
+    urls, streams = defaultdict(list), {}
+    def walk(record, kind, pointer, depth=0):
+        if not isinstance(record, dict) or depth > 8:
+            return
+        yield record, kind, pointer
+        for name, next_kind in _RELATIONSHIPS:
+            child = record.get(name)
+            child_pointer = pointer + "/" + name.replace("~", "~0").replace("/", "~1")
+            if isinstance(child, list):
+                for ordinal, value in enumerate(child):
+                    yield from walk(value, next_kind, child_pointer + "/" + str(ordinal), depth + 1)
+            elif isinstance(child, dict):
+                yield from walk(child, next_kind, child_pointer, depth + 1)
+    for page in edition["pages"]:
+        if page["kind"] == "Observations" or page["phase"] == "stream-end":
+            continue
+        receipt = page["receipt"]
+        captured = receipt.get("sourceCapturedAt")
+        if captured is None:
+            captured = receipt["completedAt"]
+        roots = []
+        for row in roots_by_hash.get(receipt["sha256"], []):
+            pointer = row["source_pointer"]
+            if (row["entity_kind"] != page["kind"] or row["capture_phase"] != page["phase"] or
+                bool(_ROOT_POINTER.fullmatch(pointer)) != bool(page.get("collection"))):
+                continue
+            expected_id = _identity({"taskId": page["taskId"], "sha256": receipt["sha256"],
+                                     "pointer": pointer})
+            if row["occurrence_id"] == expected_id:
+                roots.append(row)
+        roots.sort(key=lambda row: int(row["source_pointer"].rsplit("/", 1)[-1])
+                   if page.get("collection") else 0)
+        for root in roots:
+            for record, kind, pointer in walk(_loads(root["entity_json"]), page["kind"],
+                                              root["source_pointer"]):
+                occurrence = _identity({"taskId": page["taskId"], "sha256": receipt["sha256"],
+                                        "pointer": pointer})
+                row = by_occurrence.get(occurrence)
+                _need(row is not None and row["entity_kind"] == kind and
+                      row["source_page_sha256"] == receipt["sha256"] and
+                      row["source_pointer"] == pointer and row["capture_phase"] == page["phase"] and
+                      row["source_observed_at"] == captured and row["entity_json"] == _emit(record),
+                      "ENTITY_ROOT_RELATION_CHANGED")
+                ref = {"sha256": receipt["sha256"], "bytes": receipt["bytes"],
+                       "jsonPointer": pointer, "requestId": receipt["requestId"],
+                       "url": page["url"], "capturedAt": captured}
+                item = {"record": record, "kind": kind, "page": page, "sourceRef": ref}
+                keys = []
+                link = record.get("@iot.selfLink")
+                if isinstance(link, str) and not isinstance(link, _Number):
+                    resolved = _source_url(link, edition["source"], page["url"])
+                    if resolved is not None:
+                        keys.append(resolved)
+                if pointer == "" or _ROOT_POINTER.fullmatch(pointer):
+                    keys.extend([page["url"] if page.get("originUrl") is None else page["originUrl"],
+                                 page["url"]])
+                for key in dict.fromkeys(keys):
+                    urls[key].append(item)
+                if page["phase"] == "stream-start" and pointer == "":
+                    streams[page["streamKey"]] = item
+    def relation(item, name):
+        inline = item["record"].get(name)
+        if isinstance(inline, list):
+            return [{"record": record, "kind": dict(_RELATIONSHIPS)[name], "page": item["page"],
+                     "sourceRef": {**item["sourceRef"],
+                                   "jsonPointer": item["sourceRef"]["jsonPointer"] + "/" + name + "/" + str(i)}}
+                    for i, record in enumerate(inline)]
+        if isinstance(inline, dict):
+            return [{"record": inline, "kind": dict(_RELATIONSHIPS)[name], "page": item["page"],
+                     "sourceRef": {**item["sourceRef"],
+                                   "jsonPointer": item["sourceRef"]["jsonPointer"] + "/" + name}}]
+        link = item["record"].get(name + "@iot.navigationLink")
+        if not isinstance(link, str) or isinstance(link, _Number):
+            return []
+        base = item["page"]["url"]
+        self_link = item["record"].get("@iot.selfLink")
+        if isinstance(self_link, str) and not isinstance(self_link, _Number):
+            base = _source_url(self_link, edition["source"], base)
+            if base is None:
+                return []
+        resolved = _source_url(link, edition["source"], base)
+        return urls.get(resolved, []) if resolved is not None else []
+    return streams, relation
+
+
+def _binding(item, edition, entity_index, raw_item, original_streams, original_relation):
     choice, descriptor = item["choice"], item["descriptor"]
     binding_text = item["bindingJson"]
     _need(isinstance(binding_text, str) and
@@ -249,8 +421,15 @@ def _binding(item, edition, entity_index, raw_item):
     candidates = entity_index.get((source["sha256"], source["jsonPointer"]), [])
     _need(any(x["entity_kind"] == "MultiDatastreams" and x["capture_phase"] == "stream-start" and
               x["entity_json"] == original for x in candidates), "STREAM_SOURCE_NOT_RETAINED")
+    actual_stream = original_streams.get(plan["key"])
+    _need(actual_stream is not None and actual_stream["kind"] == "MultiDatastreams" and
+          _emit(actual_stream["record"]) == original and
+          _same(actual_stream["sourceRef"], source), "SELECTED_STREAM_SOURCE_CHANGED")
     stream = _loads(original)
     properties = binding["orderedProperties"]
+    actual_properties = [{"sourceJson": _emit(prop["record"]), "sourceRef": prop["sourceRef"]}
+                         for prop in original_relation(actual_stream, "ObservedProperties")]
+    _need(_same(properties, actual_properties), "ORIGINAL_PROPERTY_RELATION_ORDER_CHANGED")
     for prop in properties:
         ref = prop["sourceRef"]
         _need(any(x["entity_kind"] == "ObservedProperties" and x["entity_json"] == prop["sourceJson"]
@@ -334,8 +513,12 @@ def _binding(item, edition, entity_index, raw_item):
             "raw_descriptor": raw_item["descriptor"], "raw_stream": raw_item["stream"]}
 
 
-def verify_component_document(intake, document, edition, version_bytes, binding_bytes):
+def verify_component_document(intake, document, edition, version_bytes, binding_bytes, edition_bytes):
     """Validate complete component coverage and every value against retained raw rows."""
+    retained_edition = _loads(edition_bytes)
+    retained_edition_id = retained_edition.pop("id")
+    _need(_identity(retained_edition) == retained_edition_id == edition["id"] and
+          json.loads(edition_bytes) == edition, "RETAINED_EDITION_IDENTITY_CHANGED")
     version_raw, manifest_raw = _loads(version_bytes), _loads(binding_bytes)
     version = json.loads(version_bytes)
     manifest = json.loads(binding_bytes)
@@ -365,10 +548,12 @@ def verify_component_document(intake, document, edition, version_bytes, binding_
     entity_index = defaultdict(list)
     for entity in document["entities"]:
         entity_index[(entity["source_page_sha256"], entity["source_pointer"])].append(entity)
+    original_streams, original_relation = _retained_graph(document, edition)
     bound = []
     for index, item in enumerate(manifest["bindings"]):
         _need(item["choice"] == choices[index], "CHOICE_ORDER_CHANGED")
-        bound.append(_binding(item, edition, entity_index, manifest_raw["bindings"][index]))
+        bound.append(_binding(item, edition, entity_index, manifest_raw["bindings"][index],
+                              original_streams, original_relation))
     _need(component.get("bindingIds") == [b["descriptor"]["bindingId"] for b in bound],
           "ORDERED_BINDING_IDS_CHANGED")
     binding_rows = document["component_bindings"]
