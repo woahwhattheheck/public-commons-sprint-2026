@@ -54,11 +54,12 @@ export function normalizeWorkflowSteps(value,profileId,getDraft){
   need(Array.isArray(value)&&value.length>0&&value.length<=128,'CONSOLE_WORKFLOW_STEPS','Save a sequence from 1 to 128 original native requests.');
   const prior=new Set();
   return value.map(input=>{
-    fields(input,['id','name','draftId','draftRevision','bindings','expect'],'step');
+    fields(input,['id','name','draftId','draftRevision','bindings','expect','pauseAfter'],'step');
     const id=identifier(input.id);need(!prior.has(id),'CONSOLE_WORKFLOW_STEPS','Give each workflow step its own identifier.');
     const draft=getDraft(identifier(input.draftId),revision(input.draftRevision));
     need(draft.profileId===profileId,'CONSOLE_WORKFLOW_PROFILE','Select original requests from this operator profile.');
-    const value={id,name:title(input.name),draftId:draft.id,draftRevision:draft.revision,bindings:bindings(input.bindings??[],prior),expect:expectations(input.expect??[])};
+    need(input.pauseAfter===undefined||typeof input.pauseAfter==='boolean','CONSOLE_WORKFLOW_PAUSE','Choose whether this step should pause the run.');
+    const value={id,name:title(input.name),draftId:draft.id,draftRevision:draft.revision,bindings:bindings(input.bindings??[],prior),expect:expectations(input.expect??[]),pauseAfter:input.pauseAfter??false};
     prior.add(id);return value;
   });
 }
@@ -70,8 +71,12 @@ function processStart(pid){
   catch{return null;}
 }
 const currentDispatcher={pid:process.pid,processStart:processStart(process.pid)};
+const dispatcherKey=Symbol.for('stellar-forge.merchant-console.dispatchers.v1');
+const dispatchers=globalThis[dispatcherKey]??(globalThis[dispatcherKey]=new Map());
+export function registerWorkflowDispatcher(instanceId,active){dispatchers.set(instanceId,active);return()=>dispatchers.delete(instanceId);}
 export function workflowDispatchActive(step,workspaceId){
-  const owner=step?.dispatchOwner;if(!owner||owner.workspaceId!==workspaceId)return false;
+  const owner=step?.dispatchOwner;if(!owner||step.dispatchSettledAt!==null||owner.workspaceId!==workspaceId)return false;
+  if(owner.pid===currentDispatcher.pid&&owner.processStart===currentDispatcher.processStart)return dispatchers.get(owner.instanceId)?.(step.callId)??false;
   try{process.kill(owner.pid,0);}catch(error){return error.code==='EPERM';}
   return owner.processStart===null||processStart(owner.pid)===owner.processStart;
 }
@@ -83,7 +88,7 @@ export function installWorkflowTables(db){
     'CREATE TABLE IF NOT EXISTS workflow_call_refs(call_id TEXT PRIMARY KEY,run_id TEXT NOT NULL REFERENCES workflow_runs(id),step_id TEXT NOT NULL);');
 }
 // Runs inside the original native-call reservation transaction, immediately before dispatch.
-export function reserveWorkflowNative(db,workspaceId,request,guard){
+export function reserveWorkflowNative(db,workspaceId,instanceId,request,guard){
   const ref=db.prepare('SELECT run_id,step_id FROM workflow_call_refs WHERE call_id=?').get(request.id);
   if(!ref){need(guard===undefined,'CONSOLE_WORKFLOW_REQUEST','Use the original saved workflow step.',409);return;}
   need(plain(guard)&&guard.runId===ref.run_id&&guard.stepId===ref.step_id,'CONSOLE_WORKFLOW_REQUEST',
@@ -94,9 +99,22 @@ export function reserveWorkflowNative(db,workspaceId,request,guard){
     run.executionHostFingerprint===request.hostFingerprint&&step?.id===ref.step_id&&step.draftId===request.draftId&&
     step.draftRevision===request.draftRevision&&step.argumentsSha256===request.argumentsSha256,
     'CONSOLE_WORKFLOW_RUN_CHANGED','Reopen the current saved run and its execution owner before dispatch.',409);
-  step.dispatchOwner={workspaceId,...currentDispatcher};
+  step.dispatchOwner={workspaceId,instanceId,...currentDispatcher};
   run.state='RUNNING';run.error=null;run.revision++;run.updatedAt=now();
   run.events.push({sequence:run.revision,at:run.updatedAt,kind:'STEP_DISPATCH_RESERVED',stepId:step.id,callId:request.id,detail:{...step.dispatchOwner}});
+  db.prepare('UPDATE workflow_runs SET value=? WHERE id=?').run(JSON.stringify(run),run.id);
+}
+export function settleWorkflowNative(db,workspaceId,callId){
+  const ref=db.prepare('SELECT run_id,step_id FROM workflow_call_refs WHERE call_id=?').get(callId);
+  if(!ref)return;
+  const callRow=db.prepare('SELECT value FROM calls WHERE id=?').get(callId);
+  if(!callRow||JSON.parse(callRow.value).state!=='RUNNING')return;
+  const row=db.prepare('SELECT value FROM workflow_runs WHERE id=?').get(ref.run_id),run=JSON.parse(row.value);
+  const step=run.steps.find(value=>value.id===ref.step_id);
+  if(run.ownerWorkspaceId!==workspaceId||!step||step.dispatchSettledAt!==null||['COMPLETE','RECOVERED'].includes(step.state))return;
+  const at=now();step.dispatchSettledAt=at;step.state='WAITING';run.state='WAITING';run.updatedAt=at;run.revision++;
+  run.error={code:'CONSOLE_WORKFLOW_RETURN_UNRETAINED',message:'The original native task ended before its return was saved. Open its existing recovery request.'};
+  run.events.push({sequence:run.revision,at,kind:'NATIVE_RETURN_UNRETAINED',stepId:step.id,callId,detail:{dispatchOwner:step.dispatchOwner}});
   db.prepare('UPDATE workflow_runs SET value=? WHERE id=?').run(JSON.stringify(run),run.id);
 }
 export function archiveWorkflowRows(db,profileId){
@@ -154,16 +172,17 @@ export function validateWorkflowRows(value,{profile,drafts,calls}){
     let pending=false;
     for(let index=0;index<run.steps.length;index++){
       const step=run.steps[index],original=definition.steps[index];
-      fields(step,['id','callId','draftId','draftRevision','state','argumentsSha256','dispatchOwner','resolvedCallId','resolutionNote','completedAt'],'workflow step progress');
+      fields(step,['id','callId','draftId','draftRevision','state','argumentsSha256','dispatchOwner','dispatchSettledAt','resolvedCallId','resolutionNote','completedAt'],'workflow step progress');
       need(step.id===original.id&&step.callId===workflowCallId(run.id,step.id)&&step.draftId===workflowDraftId(run.id,step.id)&&
         ['PENDING','RESERVED','WAITING','COMPLETE','RECOVERED'].includes(step.state),'CONSOLE_WORKFLOW_ARCHIVE_CHANGED','Keep each step with its original native request identity.');
       if(step.dispatchOwner!==null){
-        fields(step.dispatchOwner,['workspaceId','pid','processStart'],'original native dispatch owner');
-        identifier(step.dispatchOwner.workspaceId);
+        fields(step.dispatchOwner,['workspaceId','instanceId','pid','processStart'],'original native dispatch owner');
+        identifier(step.dispatchOwner.workspaceId);identifier(step.dispatchOwner.instanceId);
         need(Number.isSafeInteger(step.dispatchOwner.pid)&&step.dispatchOwner.pid>0&&
           (step.dispatchOwner.processStart===null||typeof step.dispatchOwner.processStart==='string'&&/^[0-9]+$/.test(step.dispatchOwner.processStart)),
           'CONSOLE_WORKFLOW_ARCHIVE','Retain the original native dispatch process identity.');
       }
+      if(step.dispatchSettledAt!==null){date(step.dispatchSettledAt);need(step.dispatchOwner!==null,'CONSOLE_WORKFLOW_ARCHIVE','Keep the settled native task with its original dispatch identity.');}
       const completed=['COMPLETE','RECOVERED'].includes(step.state);
       need(!pending||!completed,'CONSOLE_WORKFLOW_ARCHIVE','Retain the original sequential step order.');
       if(!completed)pending=true;
@@ -176,6 +195,7 @@ export function validateWorkflowRows(value,{profile,drafts,calls}){
         need(draft&&draft.profileId===profile.id&&draft.tool===base.tool&&draft.toolSchemaSha256===base.toolSchemaSha256&&draft.argumentsSha256===sha(step.argumentsSha256),
           'CONSOLE_WORKFLOW_ARCHIVE_CHANGED','Retain the exact prepared native request for this workflow step.');
         const call=originalCalls.get(step.callId);
+        need(Boolean(call)===Boolean(step.dispatchOwner),'CONSOLE_WORKFLOW_ARCHIVE','Retain the native call reserved with its original dispatcher.');
         need(!call||call.draftId===step.draftId&&call.draftRevision===step.draftRevision&&call.profileId===profile.id&&step.dispatchOwner?.workspaceId===call.workspaceId,
           'CONSOLE_WORKFLOW_ARCHIVE_CHANGED','Retain the original step call and its prepared request.');
         if(step.state==='COMPLETE')need(call&&successful(call),'CONSOLE_WORKFLOW_ARCHIVE','A complete step retains its successful original native call.');
@@ -292,7 +312,7 @@ export class WorkflowRecords{
       const value={schema:WORKFLOW_RUN_SCHEMA,...request,requestSha256,workspaceId:this.store.id,ownerWorkspaceId:this.store.id,executionHostFingerprint:request.hostFingerprint,handover:null,revision:1,
         createdAt:at,updatedAt:at,completedAt:null,state:'READY',pauseRequested:false,error:null,
         steps:definition.steps.map(step=>({id:step.id,callId:workflowCallId(request.id,step.id),draftId:workflowDraftId(request.id,step.id),
-          draftRevision:null,state:'PENDING',argumentsSha256:null,dispatchOwner:null,resolvedCallId:null,resolutionNote:'',completedAt:null})),
+          draftRevision:null,state:'PENDING',argumentsSha256:null,dispatchOwner:null,dispatchSettledAt:null,resolvedCallId:null,resolutionNote:'',completedAt:null})),
         events:[{sequence:1,at,kind:'RUN_SAVED',stepId:null,callId:null,detail:{workflowRevision:definition.revision}}]};
       this.db.prepare('INSERT INTO workflow_runs VALUES(?,?,?)').run(value.id,profile.id,JSON.stringify(value));
       for(const step of value.steps)this.db.prepare('INSERT INTO workflow_call_refs VALUES(?,?,?)').run(step.callId,value.id,step.id);

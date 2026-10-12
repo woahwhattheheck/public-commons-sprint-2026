@@ -116,7 +116,7 @@ export async function createMerchantConsole({operator,configPath,directory,autho
     const task=(async()=>{
       try { const result=await operator.call(draft.tool,args,authorization?{authorization:context}:undefined); return store.finish(input.id,result); }
       catch(error){ return store.finish(input.id,null,error); }
-      finally { active.delete(input.id); }
+      finally { active.delete(input.id);try{store.noteWorkflowCallSettled(input.id);}catch{} }
     })();
     active.set(input.id,task); task.catch(()=>{});
     return {call:callView(store.call(input.id)),reused:false};

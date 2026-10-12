@@ -1,35 +1,93 @@
 // MIT. Saved native workflows in the original merchant operator interface.
 export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties,selectionList,action,busy,api,notice,uid,requireProfile,loadProfile,openCall,chooseTool,download,schedulePoll}){
-  const own={profileId:null,definitions:[],runs:[],definition:null,steps:[],editorId:null,dirty:false,run:null,pendingRun:null,pendingHandover:null};
+  const own={profileId:null,definitions:[],runs:[],definition:null,steps:[],editorId:null,dirty:false,run:null,pendingRun:null,pendingHandover:null,editorVersion:0,definitionOpenSeq:0,runOpenSeq:0,refreshSeq:0,intentReady:false,mutating:false,sessionEpoch:null};
   const unchanged=(a,b)=>JSON.stringify(order(a))===JSON.stringify(order(b));
   function order(value){if(Array.isArray(value))return value.map(order);if(value&&typeof value==='object')return Object.fromEntries(Object.keys(value).sort().map(key=>[key,order(value[key])]));return value;}
   const owned=run=>run?.ownerWorkspaceId===state.host?.console.workspaceId;
   const finished=step=>['COMPLETE','RECOVERED'].includes(step.state);
-  const invoke=async(path,body)=>api(path,{method:'POST',body});
+  const context=()=>({session:state.sessionEpoch,selection:state.profileEpoch,profileId:state.profile?.id,workspaceId:state.host?.console.workspaceId});
+  const current=ctx=>ctx.session===state.sessionEpoch&&ctx.selection===state.profileEpoch&&ctx.profileId===state.profile?.id&&ctx.workspaceId===state.host?.console.workspaceId;
+  const invoke=async(path,body,ctx=context())=>api(path,{method:'POST',body,epoch:ctx.session});
+  let intentDatabase;
+  function database(){
+    if(!intentDatabase)intentDatabase=new Promise((resolve,reject)=>{
+      const request=indexedDB.open('starforge-merchant-operator-actions',1);
+      request.onupgradeneeded=()=>request.result.createObjectStore('intents',{keyPath:'key'});
+      request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);
+    }).catch(error=>{intentDatabase=null;throw error;});
+    return intentDatabase;
+  }
+  const intentKey=(ctx,kind)=>[ctx.workspaceId,ctx.profileId,kind].join('/');
+  async function intentRecord(ctx,kind,change){
+    const db=await database(),key=intentKey(ctx,kind);
+    return new Promise((resolve,reject)=>{
+      const transaction=db.transaction('intents',change?'readwrite':'readonly'),store=transaction.objectStore('intents');
+      const request=store.get(key);let result;
+      request.onsuccess=()=>{
+        try{
+          result=request.result??null;
+          if(change){
+            const next=change(result);
+            if(next===null){store.delete(key);result=null;}
+            else if(next!==result){result={...next,key};store.put(result);}
+          }
+        }catch(error){transaction.abort();reject(error);}
+      };
+      transaction.oncomplete=()=>resolve(result);
+      transaction.onerror=()=>reject(transaction.error);
+      transaction.onabort=()=>reject(transaction.error??new Error('The pending action could not be saved.'));
+    });
+  }
+  async function retainIntent(ctx,kind,body){
+    const value=await intentRecord(ctx,kind,old=>old??{kind,body,createdAt:new Date().toISOString()});
+    return value.body;
+  }
+  async function releaseIntent(ctx,kind,body){
+    return intentRecord(ctx,kind,old=>{
+      if(!old)return null;
+      const field=kind==='handover'?'handoverId':'id';
+      return old.body[field]===body[field]?null:old;
+    });
+  }
+  async function restoreIntents(ctx){
+    const [start,handover]=await Promise.all([intentRecord(ctx,'start'),intentRecord(ctx,'handover')]);
+    if(!current(ctx))return;
+    own.pendingRun=start?.body??null;own.pendingHandover=handover?.body??null;own.intentReady=true;renderPending();sync();
+  }
+  function renderPending(){
+    const pending=Boolean(own.pendingRun||own.pendingHandover);$('workflow-pending').hidden=!pending;
+    $('workflow-retry-start').hidden=!own.pendingRun;$('workflow-retry-handover').hidden=!own.pendingHandover;
+    text($('workflow-pending-start'),own.pendingRun?'Original start '+own.pendingRun.id+' · '+own.pendingRun.workflowId+' / r'+own.pendingRun.workflowRevision:'');
+    text($('workflow-pending-handover'),own.pendingHandover?'Original handover '+own.pendingHandover.handoverId+' · run '+own.pendingHandover.id+' → '+own.pendingHandover.workspaceId:'');
+  }
+  async function mutate(fn){
+    if(own.mutating)throw new Error('Let the current workflow action return.');
+    own.mutating=true;sync();try{return await fn();}finally{own.mutating=false;sync();}
+  }
   function parsed(value,label,kind='array'){
     let result;try{result=JSON.parse(value);}catch(error){throw new Error(label+' must be complete JSON: '+error.message);}
     if(kind==='array'?!Array.isArray(result):!result||typeof result!=='object'||Array.isArray(result))throw new Error(label+' must be a JSON '+kind+'.');
     return result;
   }
-  function changed(){own.dirty=true;sync();}
+  function changed(){own.dirty=true;own.editorVersion++;sync();}
   function readSteps(){
     return [...$('workflow-steps').querySelectorAll('[data-step-id]')].map(card=>{
       const source=own.steps.find(step=>step.id===card.dataset.stepId);
       return{...source,name:card.querySelector('[data-field="name"]').value,
         bindings:parsed(card.querySelector('[data-field="bindings"]').value,'Input mappings'),
-        expect:parsed(card.querySelector('[data-field="expect"]').value,'Required result values')};
+        expect:parsed(card.querySelector('[data-field="expect"]').value,'Required result values'),pauseAfter:card.querySelector('[data-field="pauseAfter"]').checked};
     });
   }
   function reset(){
-    own.profileId=state.profile?.id??null;own.definitions=[];own.runs=[];own.definition=null;own.steps=[];own.editorId=null;
+    own.profileId=state.profile?.id??null;own.sessionEpoch=state.sessionEpoch;own.editorVersion++;own.definitionOpenSeq++;own.runOpenSeq++;own.refreshSeq++;own.intentReady=false;own.definitions=[];own.runs=[];own.definition=null;own.steps=[];own.editorId=null;
     own.dirty=false;own.run=null;own.pendingRun=null;own.pendingHandover=null;
     $('workflow-editor').hidden=true;$('workflow-run-detail').hidden=true;
     $('workflow-name').value='';$('workflow-inputs').value='{}';$('workflow-steps').replaceChildren();
     for(const id of ['workflow-run-json','workflow-run-events','workflow-run-inputs'])text($(id),'');
     for(const id of ['workflow-recipient-workspace','workflow-recipient-host','workflow-handover-note','workflow-recovery-note'])$(id).value='';
-    renderLists();sync();
+    renderLists();renderPending();sync();
   }
-  function profileChanged(){if(own.profileId!==(state.profile?.id??null))reset();refreshDraftPicker();sync();}
+  function profileChanged(){if(own.profileId!==(state.profile?.id??null)||own.sessionEpoch!==state.sessionEpoch)reset();refreshDraftPicker();sync();}
   function refreshDraftPicker(){
     const selected=$('workflow-add-draft').value;
     const drafts=(state.details?.drafts??[]).filter(draft=>!draft.id.startsWith('workflow-draft-'));
@@ -37,7 +95,7 @@ export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties
     if(drafts.some(draft=>draft.id===selected))$('workflow-add-draft').value=selected;
   }
   function editor(definition=null){
-    requireProfile();own.definition=definition;own.editorId=definition?.id??uid();own.steps=JSON.parse(JSON.stringify(definition?.steps??[]));own.dirty=!definition;
+    requireProfile();own.editorVersion++;own.definitionOpenSeq++;own.definition=definition;own.editorId=definition?.id??uid();own.steps=JSON.parse(JSON.stringify(definition?.steps??[]));own.dirty=!definition;
     $('workflow-editor').hidden=false;$('workflow-name').value=definition?.name??'';
     renderSteps();sync();
     if(!definition)$('workflow-name').focus();
@@ -65,7 +123,9 @@ export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties
       mappings.id='workflow-mappings-'+step.id;mappings.dataset.field='bindings';mappings.className='code-input workflow-json';mappings.rows=4;mappings.spellcheck=false;mappings.value=pretty(step.bindings);mappingLabel.htmlFor=mappings.id;mappings.addEventListener('input',changed);
       const expectationLabel=node('label','Required result values (JSON)'),expect=node('textarea');
       expect.id='workflow-expect-'+step.id;expect.dataset.field='expect';expect.className='code-input workflow-json';expect.rows=3;expect.spellcheck=false;expect.value=pretty(step.expect??[]);expectationLabel.htmlFor=expect.id;expect.addEventListener('input',changed);
-      card.append(mappingLabel,mappings,expectationLabel,expect);$('workflow-steps').append(card);
+      const pauseLabel=node('label',undefined,'checkbox'),pause=node('input');pause.type='checkbox';pause.dataset.field='pauseAfter';pause.checked=step.pauseAfter??false;pause.addEventListener('change',changed);
+      pauseLabel.append(pause,node('span','Pause after this step'));
+      card.append(mappingLabel,mappings,expectationLabel,expect,pauseLabel);$('workflow-steps').append(card);
     });
     if(!own.steps.length)$('workflow-steps').append(node('p','Add saved requests in the order this workflow should perform them.','empty'));
   }
@@ -74,46 +134,63 @@ export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties
     if(!draft)throw new Error('Choose a saved request to add.');
     if(own.steps.length)own.steps=readSteps();
     let number=1;while(own.steps.some(step=>step.id==='step'+number))number++;
-    own.steps.push({id:'step'+number,name:draft.name,draftId:draft.id,draftRevision:draft.revision,bindings:[],expect:[]});changed();renderSteps();
+    own.steps.push({id:'step'+number,name:draft.name,draftId:draft.id,draftRevision:draft.revision,bindings:[],expect:[],pauseAfter:false});changed();renderSteps();
   }
   async function openDefinition(id,revision){
-    const profileId=requireProfile().id;
-    const packet=await api('workflow/'+encodeURIComponent(id)+(revision?'?revision='+revision:''));
-    if(state.profile?.id!==profileId)return;
+    requireProfile();const ctx=context(),sequence=++own.definitionOpenSeq,editVersion=own.editorVersion;
+    const packet=await api('workflow/'+encodeURIComponent(id)+(revision?'?revision='+revision:''),{epoch:ctx.session});
+    if(!current(ctx)||sequence!==own.definitionOpenSeq||editVersion!==own.editorVersion)return;
     editor(packet.definition);renderLists();
   }
   async function save(copy=false){
-    const profile=requireProfile(),steps=readSteps();
+    const profile=requireProfile(),ctx=context(),steps=readSteps(),version=own.editorVersion,selection=own.definitionOpenSeq;
     if(!steps.length)throw new Error('Add at least one saved request.');
-    const id=copy?uid():own.editorId??uid();own.editorId=id;
+    const id=copy?uid():own.editorId??uid();
     const body={id,profileId:profile.id,name:$('workflow-name').value,steps,
       ...(!copy&&own.definition?{expectedRevision:own.definition.revision}:{})};
     let packet;
-    try{packet=await invoke('workflows',body);}
+    try{packet=await invoke('workflows',body,ctx);}
     catch(error){
-      try{const retained=await api('workflow/'+encodeURIComponent(id));
+      try{const retained=await api('workflow/'+encodeURIComponent(id),{epoch:ctx.session});
         if(retained.definition.name===body.name.trim()&&unchanged(retained.definition.steps,steps))packet=retained;
       }catch{}
       if(!packet)throw error;
     }
-    editor(packet.definition);await refresh();notice('Saved '+packet.definition.name+' · revision '+packet.definition.revision+'.');
+    if(!current(ctx))return;
+    if(version===own.editorVersion&&selection===own.definitionOpenSeq)editor(packet.definition);
+    await refresh();notice('Saved '+packet.definition.name+' · revision '+packet.definition.revision+'.');
   }
-  async function start(){
-    const profile=requireProfile(),definition=own.definition;
-    if(!definition||own.dirty)throw new Error('Save the displayed workflow revision first.');
-    const input=parsed($('workflow-inputs').value,'Workflow inputs','object');
-    if(!own.pendingRun)own.pendingRun={id:uid(),profileId:profile.id,workflowId:definition.id,workflowRevision:definition.revision,
-      expectedWorkflowSha256:definition.contentSha256,expectedHostFingerprint:state.host.configurationFingerprint,inputs:input};
-    const intent=own.pendingRun;
+  async function start(recover=false){
+    const profile=requireProfile(),ctx=context(),definition=own.definition,version=own.editorVersion,selection=own.runOpenSeq;
+    if(!own.intentReady)throw new Error('Let this profile’s original pending actions load first.');
+    let intent;
+    if(recover){intent=own.pendingRun;if(!intent)throw new Error('There is no pending original start.');}
+    else{
+      if(own.pendingRun)throw new Error('Recover the displayed original start before starting a new run.');
+      if(!definition||own.dirty)throw new Error('Save the displayed workflow revision first.');
+      const inputs=parsed($('workflow-inputs').value,'Workflow inputs','object');
+      intent=await retainIntent(ctx,'start',{id:uid(),profileId:profile.id,workflowId:definition.id,workflowRevision:definition.revision,
+        expectedWorkflowSha256:definition.contentSha256,expectedHostFingerprint:state.host.configurationFingerprint,inputs});
+      if(!current(ctx))return;
+      own.pendingRun=intent;renderPending();sync();
+    }
     let result;
-    try{result=await invoke('workflow-runs',intent);}
-    catch(error){try{result=await api('workflow-run/'+encodeURIComponent(intent.id));}catch{}if(!result){if(error.status>=400&&error.status<500)own.pendingRun=null;throw error;}}
-    own.pendingRun=null;await loadProfile();await openRun(result.run.id);
-    notice((result.reused?'Reopened':'Started')+' workflow '+result.run.id+'.');schedulePoll();
+    try{result=await invoke('workflow-runs',intent,ctx);}
+    catch(error){
+      try{result=await api('workflow-run/'+encodeURIComponent(intent.id),{epoch:ctx.session});}catch{}
+      if(!result){if(error.status>=400&&error.status<500){await releaseIntent(ctx,'start',intent);if(current(ctx))await restoreIntents(ctx);}throw error;}
+    }
+    await releaseIntent(ctx,'start',intent);
+    if(!current(ctx))return;
+    await restoreIntents(ctx);await loadProfile();
+    if(current(ctx)&&selection===own.runOpenSeq&&(recover||version===own.editorVersion))await openRun(result.run.id);
+    if(current(ctx))notice((result.reused?'Reopened':'Started')+' workflow '+result.run.id+'.');
+    schedulePoll();
   }
-  async function openRun(id){
-    const profileId=requireProfile().id,packet=await api('workflow-run/'+encodeURIComponent(id));
-    if(state.profile?.id!==profileId)return;
+  async function openRun(id,{background=false}={}){
+    requireProfile();const ctx=context(),sequence=background?own.runOpenSeq:++own.runOpenSeq;
+    const packet=await api('workflow-run/'+encodeURIComponent(id),{epoch:ctx.session});
+    if(!current(ctx)||sequence!==own.runOpenSeq||background&&own.run?.id!==id)return;
     own.run=packet.run;renderRun();renderLists();sync();
   }
   function renderLists(){
@@ -154,72 +231,94 @@ export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties
     sync();
   }
   async function refresh(){
-    profileChanged();const profileId=state.profile?.id;if(!profileId)return;
-    const packet=await api('workflows?'+new URLSearchParams({profile:profileId}));
-    if(state.profile?.id!==profileId)return;
+    profileChanged();const ctx=context();if(!ctx.profileId)return;const sequence=++own.refreshSeq;
+    try{await restoreIntents(ctx);}catch(error){if(current(ctx)){own.intentReady=false;notice('Pending workflow actions could not be opened: '+error.message,true);}}
+    if(!current(ctx)||sequence!==own.refreshSeq)return;
+    const packet=await api('workflows?'+new URLSearchParams({profile:ctx.profileId}),{epoch:ctx.session});
+    if(!current(ctx)||sequence!==own.refreshSeq)return;
     own.definitions=packet.workflows;own.runs=packet.runs;
     if(own.run){
-      const current=own.runs.find(value=>value.id===own.run.id);
-      if(current&&(current.revision!==own.run.revision||current.active!==own.run.active||own.run.state==='WAITING'||own.run.state==='PAUSED'))
-        await openRun(current.id);
+      const selected=own.runs.find(value=>value.id===own.run.id);
+      if(selected&&(selected.revision!==own.run.revision||selected.active!==own.run.active||own.run.state==='WAITING'||own.run.state==='PAUSED'))
+        await openRun(selected.id,{background:true});
     }
-    renderLists();sync();
+    if(current(ctx)){renderLists();sync();}
   }
   async function control(kind){
-    const run=own.run;if(!run)throw new Error('Open a saved run.');
-    const packet=await invoke('workflow-'+kind,{id:run.id,expectedRevision:run.revision});
-    own.run=packet.run;await loadProfile();await openRun(run.id);schedulePoll();
-    notice(kind==='pause'?'Pause requested after the current native request.':'Continuing the same saved workflow.');
+    const run=own.run,ctx=context(),selection=own.runOpenSeq;if(!run)throw new Error('Open a saved run.');
+    await invoke('workflow-'+kind,{id:run.id,expectedRevision:run.revision},ctx);
+    if(!current(ctx))return;
+    await loadProfile();if(current(ctx)&&selection===own.runOpenSeq&&own.run?.id===run.id)await openRun(run.id,{background:true});
+    schedulePoll();if(current(ctx))notice(kind==='pause'?'Pause requested after the current native request.':'Continuing the same saved workflow.');
   }
   async function resolveStep(){
-    const run=own.run,step=run?.steps.find(value=>!finished(value));
+    const run=own.run,ctx=context(),selection=own.runOpenSeq,step=run?.steps.find(value=>!finished(value)),note=$('workflow-recovery-note').value;
     if(!step)throw new Error('Open an unfinished workflow step.');
-    await invoke('workflow-resolve',{id:run.id,expectedRevision:run.revision,stepId:step.id,callId:$('workflow-recovery-call').value,note:$('workflow-recovery-note').value});
-    $('workflow-recovery-note').value='';await loadProfile();await openRun(run.id);notice('The native recovery is attached to this step. Continue the saved run when ready.');
-  }
-  async function handover(){
-    const run=own.run;if(!run)throw new Error('Open the paused run.');
-    if(!own.pendingHandover)own.pendingHandover={id:run.id,expectedRevision:run.revision,handoverId:uid(),
-      workspaceId:$('workflow-recipient-workspace').value.trim(),hostFingerprint:$('workflow-recipient-host').value.trim(),note:$('workflow-handover-note').value};
-    const request=own.pendingHandover;
-    try{await invoke('workflow-handover',request);}
-    catch(error){
-      let retained;try{retained=await api('workflow-run/'+encodeURIComponent(run.id));}catch{}
-      if(!retained?.run.events.some(event=>event.kind==='HANDED_OVER'&&event.detail.id===request.handoverId)){
-        if(error.status>=400&&error.status<500)own.pendingHandover=null;throw error;
-      }
+    await invoke('workflow-resolve',{id:run.id,expectedRevision:run.revision,stepId:step.id,callId:$('workflow-recovery-call').value,note},ctx);
+    if(!current(ctx))return;
+    await loadProfile();if(current(ctx)&&selection===own.runOpenSeq&&own.run?.id===run.id){
+      if($('workflow-recovery-note').value===note)$('workflow-recovery-note').value='';
+      await openRun(run.id,{background:true});notice('The native recovery is attached to this step. Continue the saved run when ready.');
     }
-    own.pendingHandover=null;
-    await openRun(run.id);await download('export/'+encodeURIComponent(run.profileId),run.profileId+'-operator-profile.json');
-    notice('Handed the saved run to '+request.workspaceId+' and exported its complete profile.');
+  }
+  async function handover(recover=false){
+    const run=own.run,ctx=context(),selection=own.runOpenSeq;
+    if(!own.intentReady)throw new Error('Let this profile’s original pending actions load first.');
+    let request;
+    if(recover){request=own.pendingHandover;if(!request)throw new Error('There is no pending original handover.');}
+    else{
+      if(!run)throw new Error('Open the paused run.');
+      if(own.pendingHandover)throw new Error('Recover the displayed original handover first.');
+      request=await retainIntent(ctx,'handover',{id:run.id,expectedRevision:run.revision,handoverId:uid(),
+        workspaceId:$('workflow-recipient-workspace').value.trim(),hostFingerprint:$('workflow-recipient-host').value.trim(),note:$('workflow-handover-note').value});
+      if(!current(ctx))return;own.pendingHandover=request;renderPending();sync();
+    }
+    let response;
+    try{response=await invoke('workflow-handover',request,ctx);}
+    catch(error){
+      try{const retained=await api('workflow-run/'+encodeURIComponent(request.id),{epoch:ctx.session});
+        if(retained.run.events.some(event=>event.kind==='HANDED_OVER'&&event.detail.id===request.handoverId))response=retained;
+      }catch{}
+      if(!response){if(error.status>=400&&error.status<500){await releaseIntent(ctx,'handover',request);if(current(ctx))await restoreIntents(ctx);}throw error;}
+    }
+    await releaseIntent(ctx,'handover',request);
+    if(!current(ctx))return;
+    await restoreIntents(ctx);await refresh();
+    if(current(ctx)&&selection===own.runOpenSeq&&(recover||own.run?.id===request.id))await openRun(request.id);
+    if(!current(ctx))return;
+    await download('export/'+encodeURIComponent(response.run.profileId),response.run.profileId+'-operator-profile.json');
+    if(current(ctx))notice('Handed run '+request.id+' to '+request.workspaceId+' and exported its complete profile.');
   }
   function sync(){
     const selected=Boolean(state.profile),saved=Boolean(own.definition)&&!own.dirty,bound=state.profile?.hostFingerprint===state.host?.configurationFingerprint;
     $('new-workflow').disabled=!selected;$('workflow-add-step').disabled=!selected||!own.editorId;
     $('workflow-save').disabled=!selected||!own.editorId;$('workflow-copy').disabled=!selected||!own.editorId;
-    $('workflow-start').disabled=!saved||!bound||Boolean(state.host?.console.closing);
-    text($('workflow-start'),own.pendingRun?'Retry same start':'Run saved workflow');
+    $('workflow-start').disabled=!saved||!bound||!own.intentReady||Boolean(own.pendingRun)||Boolean(state.host?.console.closing);
+    text($('workflow-start'),'Run saved workflow');
+    $('workflow-retry-start').disabled=!own.intentReady||!own.pendingRun;$('workflow-retry-handover').disabled=!own.intentReady||!own.pendingHandover;
     text($('workflow-edition'),own.definition?'Revision '+own.definition.revision+(own.dirty?' · unsaved changes':' · saved'):'New workflow');
     text($('workflow-definition-sha'),own.definition?.contentSha256??'');
     const run=own.run,can=Boolean(run)&&owned(run)&&run.state!=='COMPLETE';
     $('workflow-continue').disabled=!can||run.active||Boolean(state.host?.console.closing);
     $('workflow-pause').disabled=!can||run.pauseRequested;
     $('workflow-resolve').disabled=!can||run.active||!$('workflow-recovery-call').value;
-    $('workflow-handover-submit').disabled=!can||run.active||!['PAUSED','WAITING'].includes(run.state);
+    $('workflow-handover-submit').disabled=!can||run.active||!own.intentReady||Boolean(own.pendingHandover)||!['PAUSED','WAITING'].includes(run.state);
     $('workflow-open-edition').disabled=!run;$('workflow-export').disabled=!run;
     $('workflow-open-original').disabled=!run?.steps.find(step=>!finished(step)&&step.draftRevision!==null);
+    if(own.mutating)for(const id of ['workflow-save','workflow-copy','workflow-start','workflow-continue','workflow-pause','workflow-resolve','workflow-handover-submit','workflow-retry-start','workflow-retry-handover'])$(id).disabled=true;
   }
   action($('new-workflow'),()=>editor());
   action($('refresh-workflows'),async()=>{await loadProfile();if(own.run)await openRun(own.run.id);});
-  action($('workflow-add-step'),addStep);action($('workflow-copy'),()=>save(true));action($('workflow-start'),start);
-  $('workflow-form').addEventListener('submit',event=>{event.preventDefault();busy(event.submitter,()=>save());});
+  action($('workflow-add-step'),addStep);action($('workflow-copy'),()=>mutate(()=>save(true)));action($('workflow-start'),()=>mutate(()=>start()));
+  $('workflow-form').addEventListener('submit',event=>{event.preventDefault();busy(event.submitter,()=>mutate(()=>save()));});
   $('workflow-name').addEventListener('input',changed);
-  action($('workflow-continue'),()=>control('resume'));action($('workflow-pause'),()=>control('pause'));
+  action($('workflow-continue'),()=>mutate(()=>control('resume')));action($('workflow-pause'),()=>mutate(()=>control('pause')));
   action($('workflow-open-edition'),()=>openDefinition(own.run.workflowId,own.run.workflowRevision));
   action($('workflow-export'),()=>download('export/'+encodeURIComponent(own.run.profileId),own.run.profileId+'-operator-profile.json'));
   action($('workflow-open-original'),()=>openCall(own.run.steps.find(step=>!finished(step)).callId));
   $('workflow-recovery-call').addEventListener('change',sync);
-  $('workflow-recovery-form').addEventListener('submit',event=>{event.preventDefault();busy(event.submitter,resolveStep);});
-  $('workflow-handover-form').addEventListener('submit',event=>{event.preventDefault();busy(event.submitter,handover);});
+  $('workflow-recovery-form').addEventListener('submit',event=>{event.preventDefault();busy(event.submitter,()=>mutate(resolveStep));});
+  $('workflow-handover-form').addEventListener('submit',event=>{event.preventDefault();busy(event.submitter,()=>mutate(()=>handover()));});
+  action($('workflow-retry-start'),()=>mutate(()=>start(true)));action($('workflow-retry-handover'),()=>mutate(()=>handover(true)));
   return{refresh,profileChanged,reset,sync,get hasActive(){return own.runs.some(run=>run.active);}};
 }
