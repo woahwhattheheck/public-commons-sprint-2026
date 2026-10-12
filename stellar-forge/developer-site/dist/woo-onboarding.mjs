@@ -247,6 +247,8 @@ function basketGuide(input,value) {
     'basket implementation. The prepared WordPress folder contains 16 original',
     'files, including checkout-basket.php and the full BASKET.md operating guide.',
     'Keep its WordPress and Node source on that same release.',
+    'When ready for customer checkout, set WooCommerce Site visibility to Live.',
+    'Check the order page and private handoff in the customer’s own session.',
     '',
     '~~~sh',
     'TOOLKIT=/absolute/path/to/checkout-or-installed-package',
@@ -369,6 +371,10 @@ environment variable in both Node services. Merely setting a PHP-FPM environment
 variable without defining the constant does not configure the plugin. The key
 never belongs in this packet, product JSON, command arguments or a public folder.
 Enable the Stellar Forge native checkout gateway in WooCommerce Payments.
+When the shop is ready for customers, set WooCommerce → Settings → Site visibility
+to Live. Check checkout and the order page in the customer's own session, including
+its private payment-instructions download. Coming soon visibility can hide that
+page even when the administrator can see the complete order.
 
 ${merchantProductGuide(value)}
 
@@ -769,6 +775,9 @@ downloadable), set its actual storefront currency/total, then save its exact
 Stellar Forge route, GET/HEAD method, network, asset contract, recipient,
 atomic amount and timeout. The mapping declares the native price directly;
 no exchange rate is calculated. Enable the native gateway in Payments.
+When ready to accept customers, open WooCommerce → Settings → Site visibility
+and select Live. Use the customer's own session to check the order page and
+its private payment-instructions download before accepting orders.
 Use Download saved merchant route on the saved product. For a digital basket,
 enable Digital baskets in the original payment gateway settings, select the
 approved product IDs and distinct seller endpoint, save, then use Download this
