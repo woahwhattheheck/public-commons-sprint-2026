@@ -19,6 +19,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Workbook build and receiving | Selected Python environment: workbooks | Original build, receive, inspect and copy commands with retained output |
 | Workbook delivery and refresh | Selected Python environment: workbookDelivery | Original recipe or reviewed refresh and its retained delivery operation |
 | Paid application jobs | job-workspace serve | Prepared job checkout, original review and execution, verified results, customer library and collections |
+| Paid-job result receiver | jobs receiver serve | Signed completed files, original merchant/job/payment identity, private inspection, verified downloads and complete customer exports |
 | Object buyer workspace | buyer-object-workspace | Original sessions, receiving, chunk or whole acquisition, verified downloads and managed analysis |
 | GoldRush wallet research | goldrush workbench | Retained wallets, requests, source comparisons, notes and original buyer approval |
 | Freighter buyer wallet | browser-wallet serve | Original payer connection, exact native authorization, retained request recovery and private wallet history |
@@ -150,6 +151,12 @@ jobs, result library and collections. Existing checkouts retain their originally
 selected source and operator; an installed upgrade supplies the source for future
 ticket imports. Review the updated original input files before starting if the
 operator configuration has changed.
+
+## Paid-job result receiver
+
+Choose **Paid-job result receiver** to reopen an original initialized customer receiver directory. Select its receiving port, separate private operator port and private environment JSON containing the configured HMAC secret. Review, Save, Review start and Start use the same managed worker and selected READY runtime. Open connects to the original private receiver desk; Stop drains both original listeners and the receiver lease. The selected directory and complete normalized configuration are bound to the actual receiver startup before the link is saved.
+
+The [complete installed receiving guide](JOB_RESULT_RECEIVER.md) includes archive/runtime setup, paired destination and private environment, HTTPS intake, merchant dispatch, result inspection, complete exports and same-state recovery.
 
 ## Dataset buyer
 

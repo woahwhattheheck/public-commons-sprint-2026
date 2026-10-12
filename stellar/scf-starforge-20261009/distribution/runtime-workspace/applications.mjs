@@ -8,6 +8,7 @@ import { mppApplication, prepareMppApplication } from './application-mpp.mjs';
 import { atlasApplication, prepareAtlasApplication } from './application-atlas.mjs';
 import { redisApplication, prepareRedisApplication } from './application-redis.mjs';
 import { jobCheckoutApplication, validateJobCheckoutSelection, prepareJobCheckoutApplication } from './application-job-checkout.mjs';
+import { jobResultReceiverApplication, prepareJobResultReceiverApplication } from './application-job-result-receiver.mjs';
 import { datasetBuyerApplication, prepareDatasetBuyerApplication } from './application-dataset-buyer.mjs';
 import { collectionsApplication, prepareCollectionsApplication } from './application-collections.mjs';
 import { eventFeedApplications, prepareEventFeedApplication } from './application-event-feed.mjs';
@@ -46,6 +47,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   mppApplication(common),
   redisApplication(common),
   jobCheckoutApplication(common),
+  jobResultReceiverApplication(common),
   datasetBuyerApplication(common),
   collectionsApplication(common),
   tenderlyApplication(common),
@@ -197,7 +199,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     ...context, runtimeDirectory, inputPath, selectedExecutable, applicationEnvironment,
   });
   const inputs = [], createDirectories = [], args = [];
-  let terminalPython, eventFeed, mppBinding;
+  let terminalPython, eventFeed, mppBinding, jobResultReceiver;
   const path = async (name, kind = 'directory', missing = false, privateOnly = false) => {
     if (!settings[name]) return;
     const value = await inputPath(settings[name], kind, missing, privateOnly); inputs.push(value); return value;
@@ -217,6 +219,11 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   } else if (type.id === 'redis') {
     const original = await prepareRedisApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'job-result-receiver') {
+    const original = await prepareJobResultReceiverApplication(settings, {
+      inputPath, runtimeDirectory, applicationEnvironment,
+    });
+    args.push(...original.args); inputs.push(...original.inputs); jobResultReceiver = original.identity;
   } else if (type.id === 'job-checkout') {
     const original = await prepareJobCheckoutApplication(settings, runtimeDirectory, inputPath);
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
@@ -364,6 +371,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   const environment = await applicationEnvironment(settings.environmentFile);
   return { command: type.command, args, inputs, createDirectories, terminal: type.terminal,
     ...(eventFeed ? { eventFeed } : {}),
+    ...(jobResultReceiver ? { jobResultReceiver } : {}),
     ...(mppBinding ? { mppBinding } : {}),
     ...(type.terminal ? { terminalPython } : {}),
     ...(settings.environmentFile ? { environmentFile: settings.environmentFile, environmentSha256: environment.sha256 } : {}) };
@@ -581,6 +589,7 @@ export async function prepareApplicationStart(root, { applicationId, requestId, 
       expectedRevision: home.revision, applicationId: id, command: current.command, args: current.args,
       terminal: current.terminal, ...(current.terminalPython ? { terminalPython: current.terminalPython } : {}),
       ...(current.pythonCommand ? { pythonCommand: current.pythonCommand } : {}),
+      ...(current.jobResultReceiver ? { jobResultReceiver: current.jobResultReceiver } : {}),
       ...(current.environmentFile ? { environmentFile: current.environmentFile, environmentSha256: current.environmentSha256 } : {}) };
     const value = { schema: 'stellar-forge.application-run.v1', id: requestId, applicationId: id,
       createdAt: now(), revision: saved.revision, reviewId, requestHash, request };
