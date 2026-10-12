@@ -1,4 +1,5 @@
 // MIT. Contract revision controls on the existing local API workspace.
+import {createTransportSelector,appendTransportReview} from './transport-browser.mjs';
 const make=(tag,text,cls)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(cls)node.className=cls;return node;};
 const field=(label,value='')=>{const wrap=make('label',label),input=make('input');input.value=value;wrap.append(input);return {wrap,input};};
 const button=label=>{const node=make('button',label);node.type='button';return node;};
@@ -44,6 +45,7 @@ export function createRevisionDesk({container,api,act,notice,onSaved,connections
     save.disabled=blocked||!review?.ready;
     stage.disabled=blocked||!candidate;
     loadDraft.disabled=blocked||!draftList.value;
+    for(const row of controls)row.transport.input.disabled=blocked||row.action.value==='drop';
     for(const row of controls)if(row.oauth) {
       row.oauth.alias.disabled=blocked||row.action.value==='drop'||connections.pending();
       row.oauth.use.disabled=blocked||row.action.value==='drop'||!row.oauth.alias.value||connections.pending();
@@ -131,6 +133,8 @@ export function createRevisionDesk({container,api,act,notice,onSaved,connections
     if(review.pending.length)overview.append(make('p','Choose keep, remap or drop for '+review.pending.length+' routes.','hint'));
     else if(review.ready)overview.append(make('p','The complete candidate compiles with the existing merchant runtime.','small'));
     overview.append(differenceTable('Complete provider source',review.sourceChanges));
+    if(review.transportChanges)overview.append(differenceTable('Selected transport profiles',review.transportChanges));
+    if(review.preview)appendTransportReview(overview,review.preview);
     targets.replaceChildren();
     for(const operation of review.operations.filter(operation=>operation.supported)) {
       const option=make('option');option.value=key(operation);option.label=operation.summary??'';targets.append(option);
@@ -151,7 +155,16 @@ export function createRevisionDesk({container,api,act,notice,onSaved,connections
       const settings=make('textarea');settings.value=pretty(route.settings);settings.rows=9;settings.spellcheck=false;
       settings.setAttribute('aria-label','Operation settings for '+route.routeId);
       settingsDetail.append(settingsSummary,make('p','All saved settings are included: authentication references, server choice, examples, cache, stream and durable-operation settings where configured. Edit this JSON for an explicit configuration change. The original source-refresh engine retains amountAtomic and route identity '+route.routeId+'.','hint'),settings);
-      const selected=make('div',undefined,'fields');selected.append(actionLabel,target.wrap);
+      const transport=createTransportSelector({value:route.settings.transport,profiles:()=>review.transportProfiles??{},
+        ariaLabel:'Revision backend transport for '+route.routeId,onChange(value){
+          try{
+            const current=JSON.parse(settings.value);
+            if(value===undefined)delete current.transport;else current.transport=value;
+            settings.value=pretty(current);invalidate();
+          }catch{transport.set(route.settings.transport);notice('Restore valid operation settings JSON before selecting its backend transport.',true);}
+        }});
+      transport.element.className='wide';
+      const selected=make('div',undefined,'fields');selected.append(actionLabel,target.wrap,transport.element);
       const authorizationPanel=make('details',undefined,'oauth-revision');let oauth=null;
       if(connections) {
         authorizationPanel.append(make('summary','Provider authorization for the replacement'));
@@ -174,14 +187,16 @@ export function createRevisionDesk({container,api,act,notice,onSaved,connections
           notice('Reviewed replacement grant selected for '+route.routeId+'. Review the complete candidate before saving.');
         }));
       } else authorizationPanel.hidden=true;
-      const update=()=>{target.wrap.hidden=action.value!=='remap';settingsDetail.hidden=action.value==='drop';authorizationPanel.hidden=!connections||action.value==='drop';};update();
+      const update=()=>{target.wrap.hidden=action.value!=='remap';settingsDetail.hidden=action.value==='drop';authorizationPanel.hidden=!connections||action.value==='drop';transport.element.hidden=action.value==='drop';};update();
       action.addEventListener('change',()=>{update();invalidate();});
       target.input.addEventListener('input',invalidate);settings.addEventListener('input',()=>{
-        const row=controls.find(value=>value.id===route.routeId);if(row)refreshConnectionControl(row);invalidate();
+        const row=controls.find(value=>value.id===route.routeId);if(row)refreshConnectionControl(row);
+        try{transport.set(JSON.parse(settings.value).transport);}catch{}
+        invalidate();
       });
       card.append(selected,settingsDetail,authorizationPanel,differenceTable('Contracts and generated bindings',route.changes),differenceTable('Explicit settings',route.settingChanges));
       for(const error of route.errors)card.append(make('p',error,'error wrap'));
-      const control={id:route.routeId,action,target:target.input,settings,oauth};controls.push(control);refreshConnectionControl(control);routeList.append(card);
+      const control={id:route.routeId,action,target:target.input,settings,oauth,transport};controls.push(control);refreshConnectionControl(control);routeList.append(card);
     }
     available();
   }

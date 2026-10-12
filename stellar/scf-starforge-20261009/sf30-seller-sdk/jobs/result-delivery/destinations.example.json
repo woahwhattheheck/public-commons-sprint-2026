@@ -1,0 +1,16 @@
+{
+  "schema": "stellar-forge.job-result-destinations.v1",
+  "destinations": [
+    {
+      "id": "customer-results",
+      "url": "https://results.customer.example/starforge/results",
+      "allowedHost": "results.customer.example",
+      "secretEnv": "STARFORGE_JOB_DELIVERY_SECRET",
+      "enabled": true
+    }
+  ],
+  "concurrency": 2,
+  "pollIntervalMs": 30000,
+  "attemptLimit": 8,
+  "timeoutMs": 15000
+}

@@ -24,6 +24,11 @@ const HELP = [
   '  cache-operations export --state PRIVATE_DIRECTORY --out NEW_JSON_FILE',
   '  cache-operations report --state PRIVATE_DIRECTORY --out NEW_HTML_FILE [--source ALIAS]',
   '  cache-operations restore --state NEW_PRIVATE_DIRECTORY --archive JSON_FILE [--sources SOURCES_JSON]',
+  '  cache-operations policy-review --state PACKAGE_HISTORY --parent PACKAGE_PARENT --package ORIGINAL_NAME',
+  '      --inspection SNAPSHOT_ID --routes ROUTE_ID,ROUTE_ID --name NEW_PACKAGE [--note-file FILE]',
+  '  cache-operations policy-list --state PACKAGE_HISTORY --parent PACKAGE_PARENT [--package ORIGINAL_NAME] [--offset N]',
+  '  cache-operations policy-show --state PACKAGE_HISTORY --parent PACKAGE_PARENT --id REVIEW_ID',
+  '  cache-operations policy-save --state PACKAGE_HISTORY --parent PACKAGE_PARENT --id REVIEW_ID --expected-review SHA256',
   '',
   'Sources JSON is an array of {id,label,controlFile} or {id,label,socketPath}.',
   'Use the existing original merchant private control. Descriptor values stay on that host.',
@@ -42,7 +47,7 @@ export async function main(args = process.argv.slice(2)) {
   if (!args.length || args.includes('--help') || args[0] === 'help') { process.stdout.write(HELP); return; }
   const [command, ...rest] = args, options = {};
   const allowed = new Set(['state','sources','port','source','revision','label','id','inspection','route','action','policy',
-    'note-file','restore-inspection','operation-id','before','after','out','archive']);
+    'note-file','restore-inspection','operation-id','before','after','out','archive','parent','package','name','routes','expected-review','offset']);
   for (let index = 0; index < rest.length; index += 2) {
     const key = rest[index].replace(/^--/, '');
     if (!rest[index].startsWith('--') || !allowed.has(key) || Object.hasOwn(options, key) || !rest[index + 1] ||
@@ -66,7 +71,21 @@ export async function main(args = process.argv.slice(2)) {
     new TextDecoder('utf-8', { fatal: true }).decode(await regular(resolve(options['note-file']), 8192)) : '';
   let result;
   try {
-    if (command === 'show') result = workspace.snapshot({ sourceId: options.source });
+    if (command.startsWith('policy-')) {
+      if (!options.parent) throw new TypeError('--parent PACKAGE_PARENT is required');
+      const policy = await import('../../../sf61-openapi-seller-import/workspace/cache-policy-revisions.mjs');
+      const shared = { parent: resolve(options.parent), baseName: options.package, workspace };
+      if (command === 'policy-review') {
+        if (!options.package || !options.name || !options.routes || !options.inspection) throw new TypeError(HELP);
+        result = await policy.prepareCachePolicyRevision({ ...shared, name: options.name,
+          routeIds: options.routes.split(','), inspectionId: options.inspection, note: await readNote() });
+      } else if (command === 'policy-list')
+        result = await policy.listCachePolicyRevisions({ ...shared, offset: Number(options.offset ?? 0) });
+      else if (command === 'policy-show') result = await policy.readCachePolicyRevision({ ...shared, id: options.id });
+      else if (command === 'policy-save')
+        result = await policy.saveCachePolicyRevision({ ...shared, id: options.id, expectedReviewSha256: options['expected-review'] });
+      else throw new TypeError(HELP);
+    } else if (command === 'show') result = workspace.snapshot({ sourceId: options.source });
     else if (command === 'inspect') result = await workspace.inspect(options.source);
     else if (command === 'capture') result = await workspace.capture({ sourceId: options.source,
       expectedRevision: revision(), label: options.label ?? '' });

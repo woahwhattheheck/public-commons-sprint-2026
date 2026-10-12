@@ -130,7 +130,14 @@ export function createSftpTransport(config, { env = process.env, baseDirectory =
         },
         close: handle => call(sftp, 'close', handle),
         opendir: path => call(sftp, 'opendir', path),
-        readdir: handle => call(sftp, 'readdir', handle),
+        readdir: async handle => {
+          try { return await call(sftp, 'readdir', handle); }
+          catch (issue) {
+            // ssh2 returns SSH_FX_EOF through the callback for a directory handle.
+            if (issue?.code === 1 && !joined.aborted) return false;
+            throw issue;
+          }
+        },
       };
       return await operation(api);
     } catch (issue) { throw transportIssue(joined.aborted ? joined.reason : issue, rejectedPin); }

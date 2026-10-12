@@ -1,0 +1,517 @@
+{
+  "schema": "stellar-forge.bls-labor-contract.v1",
+  "source_schema": "stellar-forge.bls-labor-source.v1",
+  "capture_schema": "stellar-forge.bls-labor-capture.v1",
+  "extraction_schema": "stellar-forge.bls-labor-extraction.v1",
+  "manifest_path": "_bls/capture-manifest.json",
+  "chunk_bytes": 49152,
+  "projections": {
+    "laus": {
+      "columns": {
+        "capture_id": {
+          "type": "string",
+          "nullable": false
+        },
+        "observation_id": {
+          "type": "string",
+          "nullable": false
+        },
+        "provider": {
+          "type": "string",
+          "nullable": false
+        },
+        "measure_code": {
+          "type": "string",
+          "nullable": false
+        },
+        "measure_name": {
+          "type": "string",
+          "nullable": false
+        },
+        "unit": {
+          "type": "string",
+          "nullable": false
+        },
+        "basis": {
+          "type": "string",
+          "nullable": false
+        },
+        "series_id": {
+          "type": "string",
+          "nullable": false
+        },
+        "series_title": {
+          "type": "string",
+          "nullable": false
+        },
+        "area_code": {
+          "type": "string",
+          "nullable": false
+        },
+        "area_type_code": {
+          "type": "string",
+          "nullable": false
+        },
+        "area_name": {
+          "type": "string",
+          "nullable": false
+        },
+        "county_fips": {
+          "type": "string",
+          "nullable": false
+        },
+        "seasonal": {
+          "type": "string",
+          "nullable": false
+        },
+        "year": {
+          "type": "integer",
+          "nullable": false
+        },
+        "period": {
+          "type": "string",
+          "nullable": false
+        },
+        "period_kind": {
+          "type": "string",
+          "nullable": false
+        },
+        "period_start": {
+          "type": "string",
+          "nullable": false
+        },
+        "period_end": {
+          "type": "string",
+          "nullable": false
+        },
+        "value_raw": {
+          "type": "string",
+          "nullable": false
+        },
+        "value": {
+          "type": "number",
+          "nullable": true
+        },
+        "value_status": {
+          "type": "string",
+          "nullable": false
+        },
+        "footnote_codes": {
+          "type": "string",
+          "nullable": false
+        },
+        "footnotes": {
+          "type": "string",
+          "nullable": false
+        },
+        "coverage_months": {
+          "type": "integer",
+          "nullable": true
+        },
+        "excluded_months": {
+          "type": "string",
+          "nullable": false
+        },
+        "coverage_note": {
+          "type": "string",
+          "nullable": false
+        },
+        "source_file": {
+          "type": "string",
+          "nullable": false
+        },
+        "source_sha256": {
+          "type": "string",
+          "nullable": false
+        },
+        "source_row_sha256": {
+          "type": "string",
+          "nullable": false
+        },
+        "source_url": {
+          "type": "string",
+          "nullable": false
+        },
+        "retrieved_at": {
+          "type": "string",
+          "nullable": false
+        },
+        "release_vintage": {
+          "type": "string",
+          "nullable": false
+        },
+        "raw_record": {
+          "type": "string",
+          "nullable": false
+        },
+        "source_line": {
+          "type": "integer",
+          "nullable": false
+        },
+        "source_line_end": {
+          "type": "integer",
+          "nullable": false
+        },
+        "definition_sources": {
+          "type": "string",
+          "nullable": false
+        }
+      },
+      "filters": [
+        "county_fips",
+        "measure_code",
+        "year",
+        "period",
+        "seasonal",
+        "value_status"
+      ],
+      "ranges": [
+        "value"
+      ],
+      "sorts": [
+        "county_fips",
+        "year",
+        "period"
+      ]
+    },
+    "qcew": {
+      "columns": {
+        "capture_id": {
+          "type": "string",
+          "nullable": false
+        },
+        "observation_id": {
+          "type": "string",
+          "nullable": false
+        },
+        "provider": {
+          "type": "string",
+          "nullable": false
+        },
+        "area_fips": {
+          "type": "string",
+          "nullable": false
+        },
+        "area_name": {
+          "type": "string",
+          "nullable": false
+        },
+        "ownership_code": {
+          "type": "string",
+          "nullable": false
+        },
+        "ownership_title": {
+          "type": "string",
+          "nullable": false
+        },
+        "industry_code": {
+          "type": "string",
+          "nullable": false
+        },
+        "industry_title": {
+          "type": "string",
+          "nullable": false
+        },
+        "aggregation_code": {
+          "type": "string",
+          "nullable": false
+        },
+        "aggregation_title": {
+          "type": "string",
+          "nullable": false
+        },
+        "size_code": {
+          "type": "string",
+          "nullable": false
+        },
+        "size_title": {
+          "type": "string",
+          "nullable": false
+        },
+        "year": {
+          "type": "integer",
+          "nullable": false
+        },
+        "quarter": {
+          "type": "integer",
+          "nullable": false
+        },
+        "metric": {
+          "type": "string",
+          "nullable": false
+        },
+        "unit": {
+          "type": "string",
+          "nullable": false
+        },
+        "basis": {
+          "type": "string",
+          "nullable": false
+        },
+        "period_start": {
+          "type": "string",
+          "nullable": false
+        },
+        "period_end": {
+          "type": "string",
+          "nullable": false
+        },
+        "value_raw": {
+          "type": "string",
+          "nullable": false
+        },
+        "value": {
+          "type": "number",
+          "nullable": true
+        },
+        "value_status": {
+          "type": "string",
+          "nullable": false
+        },
+        "disclosure_code": {
+          "type": "string",
+          "nullable": false
+        },
+        "disclosure_group": {
+          "type": "string",
+          "nullable": false
+        },
+        "source_file": {
+          "type": "string",
+          "nullable": false
+        },
+        "source_sha256": {
+          "type": "string",
+          "nullable": false
+        },
+        "source_row_sha256": {
+          "type": "string",
+          "nullable": false
+        },
+        "source_url": {
+          "type": "string",
+          "nullable": false
+        },
+        "retrieved_at": {
+          "type": "string",
+          "nullable": false
+        },
+        "release_vintage": {
+          "type": "string",
+          "nullable": false
+        },
+        "raw_record": {
+          "type": "string",
+          "nullable": false
+        },
+        "source_line": {
+          "type": "integer",
+          "nullable": false
+        },
+        "source_line_end": {
+          "type": "integer",
+          "nullable": false
+        }
+      },
+      "filters": [
+        "area_fips",
+        "year",
+        "quarter",
+        "industry_code",
+        "ownership_code",
+        "metric",
+        "value_status"
+      ],
+      "ranges": [
+        "value"
+      ],
+      "sorts": [
+        "area_fips",
+        "year",
+        "quarter",
+        "metric"
+      ]
+    },
+    "source_files": {
+      "columns": {
+        "capture_id": {
+          "type": "string",
+          "nullable": false
+        },
+        "path": {
+          "type": "string",
+          "nullable": false
+        },
+        "file_sha256": {
+          "type": "string",
+          "nullable": false
+        },
+        "file_bytes": {
+          "type": "integer",
+          "nullable": false
+        },
+        "chunk_index": {
+          "type": "integer",
+          "nullable": false
+        },
+        "chunk_count": {
+          "type": "integer",
+          "nullable": false
+        },
+        "chunk_sha256": {
+          "type": "string",
+          "nullable": false
+        },
+        "content_base64": {
+          "type": "string",
+          "nullable": false
+        }
+      },
+      "filters": [
+        "capture_id",
+        "path"
+      ],
+      "ranges": [],
+      "sorts": [
+        "path"
+      ]
+    }
+  },
+  "selection": {
+    "counties": [
+      "50005",
+      "50009",
+      "50019"
+    ],
+    "laus": {
+      "years": [
+        2024,
+        2025,
+        2026
+      ],
+      "periods": [
+        "M01",
+        "M02",
+        "M03",
+        "M04",
+        "M05",
+        "M06",
+        "M07",
+        "M08",
+        "M09",
+        "M10",
+        "M11",
+        "M12",
+        "M13"
+      ],
+      "measures": [
+        "03",
+        "04",
+        "05",
+        "06"
+      ],
+      "seasonal": [
+        "U"
+      ]
+    },
+    "qcew": {
+      "periods": [
+        {
+          "year": 2026,
+          "quarter": 1
+        }
+      ],
+      "ownership_codes": [
+        "0"
+      ],
+      "industry_codes": [
+        "10"
+      ],
+      "size_codes": [
+        "0"
+      ],
+      "metrics": [
+        "qtrly_estabs",
+        "month1_emplvl",
+        "month2_emplvl",
+        "month3_emplvl",
+        "total_qtrly_wages",
+        "taxable_qtrly_wages",
+        "qtrly_contributions",
+        "avg_wkly_wage",
+        "lq_qtrly_estabs",
+        "lq_month1_emplvl",
+        "lq_month2_emplvl",
+        "lq_month3_emplvl",
+        "lq_total_qtrly_wages",
+        "lq_taxable_qtrly_wages",
+        "lq_qtrly_contributions",
+        "lq_avg_wkly_wage",
+        "oty_qtrly_estabs_chg",
+        "oty_qtrly_estabs_pct_chg",
+        "oty_month1_emplvl_chg",
+        "oty_month1_emplvl_pct_chg",
+        "oty_month2_emplvl_chg",
+        "oty_month2_emplvl_pct_chg",
+        "oty_month3_emplvl_chg",
+        "oty_month3_emplvl_pct_chg",
+        "oty_total_qtrly_wages_chg",
+        "oty_total_qtrly_wages_pct_chg",
+        "oty_taxable_qtrly_wages_chg",
+        "oty_taxable_qtrly_wages_pct_chg",
+        "oty_qtrly_contributions_chg",
+        "oty_qtrly_contributions_pct_chg",
+        "oty_avg_wkly_wage_chg",
+        "oty_avg_wkly_wage_pct_chg"
+      ]
+    }
+  },
+  "limits": {
+    "max_capture_bytes": 536870912,
+    "max_manifest_bytes": 8388608,
+    "max_source_file_bytes": 536870912,
+    "max_record_bytes": 1048576,
+    "max_files": 20000,
+    "max_projected_rows": 1000000,
+    "max_projected_bytes": 268435456
+  },
+  "semantics": {
+    "raw_record": "JSON object of all original parsed source fields, preserving each field's text; source_row_sha256 binds the original physical CSV/TSV record including its original line ending.",
+    "missing_strings": "Nonnullable string metadata uses empty string when unavailable; JSON collections are compact JSON strings.",
+    "dates": "ISO YYYY-MM-DD strings; monthly employment metrics use their specific month, quarterly metrics the quarter; M13 is an annual average with separate coverage fields.",
+    "laus_basis": "place_of_residence",
+    "qcew_basis": "place_of_employment",
+    "annual_coverage": "Resolve original observation and series footnote codes against captured la.footnote. Code G for 2025 is eleven months excluding October. Unavailable annual averages have null value and coverage; do not impute missing months.",
+    "qcew_disclosure": "Use disclosure_code, lq_disclosure_code, or oty_disclosure_code for the corresponding metric group. N means withheld even when the raw token is zero; keep raw token. Preserve the original full row.",
+    "numeric": "value is finite and within safe integer precision, otherwise null with a specific value_status; raw value is always retained.",
+    "source_retention": "Source-file projection includes every manifest files member and the manifest itself; capture_id is SHA256 of exact manifest bytes."
+  },
+  "worker": {
+    "command": [
+      "python3",
+      "project.py",
+      "--source",
+      "SOURCE_JSON",
+      "--query",
+      "laus|qcew|source_files"
+    ],
+    "row": {
+      "kind": "row",
+      "row": "object matching selected projection columns exactly"
+    },
+    "complete": {
+      "kind": "complete",
+      "result": {
+        "schema": "stellar-forge.bls-labor-extraction.v1",
+        "projection": "laus|qcew|source_files",
+        "sourceHash": "SHA256 source JSON bytes",
+        "captureHash": "SHA256 manifest bytes",
+        "completeSelection": true,
+        "sourceVerified": true,
+        "rawValuesPreserved": true,
+        "rowCount": "integer"
+      }
+    },
+    "rules": "UTF-8 JSONL only on stdout, diagnostics on stderr, nonzero exit on failure. One final complete line after all rows; no output after it. Exit nonzero when pipe closes. No network while projecting."
+  }
+}

@@ -2,8 +2,8 @@
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { privateDirectory, atomicJson, readPrivateJson, withPrivateLock } from '../routescan/quota.mjs';
-import { canonical, clone, need, operationId, normalizeSelection, projectionPolicy, compareCaptures, MAX_CAPTURE_BYTES } from './model.mjs';
-import { hash, digest, jsonBytes, optionalJson, validateCapture, captureFred, storeFredCapture, sealFredPublicTable } from './source.mjs';
+import { canonical, clone, need, operationId, normalizeSelection, projectionPolicy, compareCaptures, MAX_CAPTURE_BYTES, PUBLIC_CAPTURE, PUBLIC_SET_CAPTURE } from './model.mjs';
+import { hash, digest, jsonBytes, optionalJson, validateCapture, captureFred, storeFredCapture, sealFredPublicTable, sealFredPublicTables } from './source.mjs';
 
 const SCHEMA = 'stellar-forge.fred-project.v1';
 const BUNDLE = 'stellar-forge.fred-project-bundle.v1';
@@ -116,7 +116,7 @@ async function adoptCapture(state, directory, capture) {
   await storeFredCapture(fredCaptureDirectory(directory, captureId), capture);
   if (!state.captures.some(item => item.id === captureId))
     state.captures.push({ id: captureId, selection: model.selection, sourceMode: model.sourceMode, timeBasis: model.timeBasis, rowCount: model.rowCount, missing: model.missing,
-      series: model.series, responses: model.sourceResponses, importedAt: new Date().toISOString() });
+      series: model.series, responses: model.sourceResponses, ...(model.retrievalWindow ? { retrievalWindow: model.retrievalWindow } : {}), importedAt: new Date().toISOString() });
   state.selectedCapture = captureId;
   return { captureId, rowCount: model.rowCount, missing: model.missing };
 }
@@ -128,9 +128,27 @@ export async function configureFredProject({ directory, id, expectedRevision, se
 }
 export async function importFredCapture({ directory, id, expectedRevision, capture } = {}) {
   if (capture?.version === 'commons.retained-public-table.v1') capture = sealFredPublicTable(capture);
+  else if (capture?.version === 'commons.retained-public-table-set.v1') capture = sealFredPublicTables(capture);
   validateCapture(capture);
   return transact(directory, { id, expectedRevision, kind: 'import', payload: { captureId: capture.captureSha256 } },
     (state, root) => adoptCapture(state, root, capture));
+}
+
+export async function combineFredTables({ directory, id, expectedRevision, captureIds } = {}) {
+  need(Array.isArray(captureIds) && captureIds.length >= 1 && captureIds.length <= 50 &&
+    captureIds.every(item => /^[a-f0-9]{64}$/.test(item)) && new Set(captureIds).size === captureIds.length,
+    'Select one to fifty distinct retained public-table captures.');
+  captureIds = [...captureIds].sort();
+  return transact(directory, { id, expectedRevision, kind: 'combine', payload: { captureIds } }, async (state, root) => {
+    const tables = [];
+    for (const captureId of captureIds) {
+      const capture = await getFredCapture(root, captureId);
+      need([PUBLIC_CAPTURE, PUBLIC_SET_CAPTURE].includes(capture.schema), 'Combine complete public-table captures from this project.');
+      tables.push(...(capture.schema === PUBLIC_SET_CAPTURE ? capture.source.tables : [capture.source]));
+    }
+    const capture = sealFredPublicTables({ version: 'commons.retained-public-table-set.v1', tables });
+    return { ...(await adoptCapture(state, root, capture)), originalCaptures: captureIds };
+  });
 }
 export async function acquireFredCapture({ directory, id, expectedRevision, signal, environment, fetchImpl } = {}) {
   const original = await readFredProject(directory);
