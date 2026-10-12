@@ -1,10 +1,10 @@
-// MIT — Durable Node applications on the original SF88 CLI.
 import { inspectPreapprovalRecovery, preparePreapprovalRecovery, executePreapprovalRecovery,
   recoverPreapprovalResult, readPreapprovalRecovery, readSelectedPreapprovalReview } from './preapproval-recovery.mjs';
+// MIT — Durable Node applications on the original SF88 CLI.
 import { mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { NativeRuntime, unstartedAttempt } from './runtime.mjs';
+import { NativeRuntime, unstartedAttempt, resultRecordLimit, attemptRecordLimit } from './runtime.mjs';
 import { WorkspaceRecovery } from './workspace-recovery.mjs';
 import {AcquisitionWorkspace} from './acquisitions.mjs';
 import { readWorkspace, checkWorkspace, workspaceCommand } from './workspace.mjs';
@@ -14,12 +14,12 @@ import {inspectNodeLostOutput,recoverNodeLostOutput,readNodeLostOutputRecovery,
   exportNodeLostOutputProof} from './lost-output.mjs';
 import {prepareExpiredContinuation,inspectExpiredContinuation,
   prepareUndispatchedContinuation,inspectUndispatchedContinuation,followContinuation,
-  assertOperationContinuationBinding} from './expired-continuation.mjs';
+  assertOperationContinuationBinding,openOperationRuntime} from './expired-continuation.mjs';
 import { Dataset, createDataset, listDatasets } from './dataset.mjs';
 import { ObjectAcquisition, createObject, listObjects } from './object.mjs';
 import { Inbox, createInbox, inspectOperationHandoff } from './inbox.mjs';
 import { absolute, privateDirectory, digest, now, intent, object, need, BuyerError,
-  jsonBytes, parseJson, readBytes, readJson, exists, writeBytes, writeJson, syncDirectory } from './store.mjs';
+  jsonBytes, parseJson, readBytes, readJson, exists, writeBytes, writeJson, syncDirectory, prepareWriteReservations } from './store.mjs';
 
 const SCHEMA = 'stellar-forge.node-buyer.v1';
 const NATIVE_RESULT = 'ORIGINAL_OPERATOR_APPROVED_BUYER_ATTEMPT';
@@ -69,6 +69,7 @@ export class Buyer {
 
   async ready() { await privateDirectory(this.stateDirectory); return this; }
   operation(intentId) { return new Operation(this, intent(intentId)); }
+  openOperation(intentId, options) { return openOperationRuntime(this.operation(intentId), options); }
 
   async _requestFiles() {
     // The installed original runtime owns the shared request ceiling and exact
@@ -378,44 +379,61 @@ export class Operation {
       need(!signal?.aborted, 'OPERATION_ABORTED_BEFORE_START');
       command = workspaceCommand(this.buyer, context);
     }
-    // Atomic hard-link publication: all processes contend for one nonreplaceable
-    // attempt marker. A crash cannot expire it or authorize another purchase.
-    try { await writeJson(attemptPath, attempt, { exclusive: true }); }
-    catch (error) {
-      if (error.code === 'EEXIST') {
-        const previous = await readJson(attemptPath);
-        if (previous.kind === 'INBOX_DELEGATED') throw new BuyerError('OPERATION_DELEGATED_USE_INBOX',
-          {operation:this, inboxDirectory:previous.inboxDirectory});
-        throw new BuyerError('ATTEMPT_ALREADY_RECORDED_USE_RECOVER', { operation: this });
+    const reserveFile = await this.buyer.runtime.fileReservation();
+    const reservations = await prepareWriteReservations([
+      { path: attemptPath, bytes: attemptRecordLimit, exclusive: true },
+      { path: attemptPath, bytes: attemptRecordLimit },
+      { path: attemptPath, bytes: attemptRecordLimit },
+      { path: attemptPath, bytes: attemptRecordLimit },
+      { path: join(this.directory, 'result.json'),
+        bytes: resultRecordLimit(this.buyer.runtime), exclusive: true },
+    ], { reserveFile, signal });
+    const recordAttempt = async () => {
+      // Atomic hard-link publication: all processes contend for one nonreplaceable
+      // attempt marker. A crash cannot expire it or authorize another purchase.
+      try { await writeJson(attemptPath, attempt, { exclusive: true }); }
+      catch (error) {
+        if (error.code === 'EEXIST') {
+          const previous = await readJson(attemptPath);
+          if (previous.kind === 'INBOX_DELEGATED') throw new BuyerError('OPERATION_DELEGATED_USE_INBOX',
+            {operation:this, inboxDirectory:previous.inboxDirectory});
+          throw new BuyerError('ATTEMPT_ALREADY_RECORDED_USE_RECOVER', { operation: this });
+        }
+        throw error;
       }
-      throw error;
-    }
-    let run;
-    try {
-      run = await this.buyer.runtime.run(command.args, {
-        directory: this.directory, signal, entryFile: command.entryFile,
-        started: async (pid, processIdentity) => {
-          attempt = { ...attempt, state: 'STARTED', pid, startedAt: now(), processIdentity };
-          await writeJson(attemptPath, attempt);
-        },
-      });
-    } catch (error) {
-      await writeJson(attemptPath, unstartedAttempt(attempt, error) ??
-        { ...attempt, state: 'INTERRUPTED_OR_START_FAILED', endedAt: now() });
-      throw error;
-    }
-    if (run.output?.mode !== NATIVE_RESULT || run.output.intentId !== this.intentId) {
-      await writeJson(attemptPath, unstartedAttempt(attempt, run) ??
-        { ...attempt, state: 'NATIVE_RESULT_UNAVAILABLE', endedAt: now(),
+      let run;
+      try {
+        run = await this.buyer.runtime.run(command.args, {
+          directory: this.directory, signal, entryFile: command.entryFile,
+          beforeSpawn: async nativeCommand => {
+            attempt = { ...attempt, nativeCommand };
+            await writeJson(attemptPath, attempt);
+          },
+          started: async (pid, processIdentity) => {
+            attempt = { ...attempt, state: 'STARTED', pid, startedAt: now(), processIdentity };
+            await writeJson(attemptPath, attempt);
+          },
+        });
+      } catch (error) {
+        await writeJson(attemptPath, unstartedAttempt(attempt, error) ??
+          { ...attempt, state: 'INTERRUPTED_OR_START_FAILED', endedAt: now() });
+        throw error;
+      }
+      if (run.output?.mode !== NATIVE_RESULT || run.output.intentId !== this.intentId) {
+        await writeJson(attemptPath, unstartedAttempt(attempt, run) ??
+          { ...attempt, state: 'NATIVE_RESULT_UNAVAILABLE', endedAt: now(),
           exitCode: run.exitCode, errorCode: run.errorCode ?? 'NATIVE_RESULT_INVALID' });
-      throw new BuyerError(run.errorCode ?? 'NATIVE_RESULT_INVALID', { operation: this, exitCode: run.exitCode });
-    }
-    const record = { schema: SCHEMA, intentId: this.intentId, configSha256: meta.configSha256,
-      native: run.output, exitCode: run.exitCode, exitSignal: run.exitSignal,
-      runtimeError: run.errorCode, recovered: false, recordedAt: now() };
-    await writeJson(join(this.directory, 'result.json'), record, { exclusive: true });
-    await writeJson(attemptPath, { ...attempt, state: 'RECORDED', exitCode: run.exitCode, endedAt: now() });
-    return this._result(record);
+        throw new BuyerError(run.errorCode ?? 'NATIVE_RESULT_INVALID', { operation: this, exitCode: run.exitCode });
+      }
+      const record = { schema: SCHEMA, intentId: this.intentId, configSha256: meta.configSha256,
+        native: run.output, exitCode: run.exitCode, exitSignal: run.exitSignal,
+        runtimeError: run.errorCode, recovered: false, recordedAt: now() };
+      await writeJson(join(this.directory, 'result.json'), record, { exclusive: true });
+      await writeJson(attemptPath, { ...attempt, state: 'RECORDED', exitCode: run.exitCode, endedAt: now() });
+      return this._result(record);
+    };
+    try { return reservations ? await reservations.run(recordAttempt) : await recordAttempt(); }
+    finally { await reservations?.close(); }
   }
   async _result(record) {
     const { meta, config } = await this._bound();
@@ -428,7 +446,7 @@ export class Operation {
     if (await exists(join(this.directory, 'preapproval-continuation.json')))
       return recoverPreapprovalResult(this);
     if (await exists(join(this.directory, 'result.json')))
-      return this._result(await readJson(join(this.directory, 'result.json'), this.buyer.runtime.outputLimit));
+      return this._result(await readJson(join(this.directory, 'result.json'), resultRecordLimit(this.buyer.runtime)));
     if (!await exists(join(this.directory, 'attempt.json'))) return null;
     const attempt = await readJson(join(this.directory, 'attempt.json'));
     need(attempt.intentId === this.intentId && attempt.configSha256 === meta.configSha256, 'ATTEMPT_BINDING_MISMATCH');
@@ -443,10 +461,10 @@ export class Operation {
   async inspect() {
     const { meta, config } = await this._bound();
     const attemptPath = join(this.directory, 'attempt.json');
-    const attempt = await exists(attemptPath) ? await readJson(attemptPath) : null;
-    const result = await this.recover();
     const preapprovalRecovery = await exists(join(this.directory, 'preapproval-continuation.json'))
       ? await readPreapprovalRecovery(this) : null;
+    const attempt = await exists(attemptPath) ? await readJson(attemptPath) : null;
+    const result = await this.recover();
     let transportCheckpoint = null;
     if (await exists(join(config.evidenceDir, 'wire-' + digest(Buffer.from(this.intentId))))) {
       // The selected native runtime owns its checkpoint version. The standalone

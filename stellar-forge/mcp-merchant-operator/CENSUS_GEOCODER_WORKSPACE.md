@@ -275,3 +275,54 @@ If shutdown reports an incomplete native close, the original seller handle and w
 A completed native capture is reused on an ordinary capture call. retry:true is accepted only for an incomplete original capture, after the operator reviews its state. Retained response bytes and HTTP identity are reconciled by the original workspace when reopened. An existing paid or uncertain buyer attempt uses the original SF88 recovery path.
 
 Public exports are ./merchant/mcp/census-geocoder and ./merchant/mcp/census-geocoder/server. The maintained distribution includes these source modules and the existing Census browser assets; it uses the same cumulative package and installed runtime.
+
+## Customer CSV intake and joined result receiving
+
+The same managed application and MCP workspace now accept an original business CSV with arbitrary customer columns. Add a host import such as:
+
+~~~json
+{
+  "kind":"customer-addresses",
+  "label":"Customer locations",
+  "file":"/absolute/private/customer-locations.csv",
+  "header":true
+}
+~~~
+
+Declare it under the existing workspaces.ALIASES.imports map. header defaults to true for customer-addresses; the existing addresses kind keeps its original false default. The adapter reads the owned host file with its exact UTF-8 bytes, including a BOM if present. It accepts neither an arbitrary input path nor signing material in a tool call.
+
+Use merchant_census_geocoder_customer with this action sequence:
+
+| Action | Payload and result |
+| --- | --- |
+| source | sourceImport and optional label; retains the complete original customer file and returns sourceId as result.id |
+| preview | sourceId, explicit plan, optional offset/limit/filter; returns the current reviewSha256, row exceptions and ready summary |
+| mapping | Same sourceId/plan plus expectedReviewSha256; retains a READY or REVIEW_REQUIRED immutable mapping |
+| inspect | mappingId, or sourceId alone; mapping row results are paginated; full mapping JSON remains available through file reads |
+| batch | mappingId, expectedReviewSha256, label and the original discovery/benchmark/vintage selection; returns the original native batch and binding |
+| bind | mappingId, expectedReviewSha256 and batchId; attaches only identical already-submitted ordered addresses, without another Census request |
+
+The complete plan and CLI examples are in the native Census guide's **Customer CSV mapping and result delivery** section. Plan columns are zero-based original column positions. Decision row numbers are one-based original data records. IDs can come from an explicit source column or stable row-000001 values. All unselected customer fields and duplicated business IDs remain in the original source; row corrections and exclusions require visible reasons.
+
+The native parser reports address exceptions. No invalid or duplicated row is automatically discarded. Preview responses have bounded rows/cell text and next offsets; original source and full mapping are available through merchant_census_geocoder_file kinds customer-input, customer-mapping and customer-submitted. These use source UUID, mapping UUID and mapping UUID respectively. Existing retained readId, expectedSha256, offset and file_release semantics remain unchanged.
+
+After the original completed capture and match review, pass mappingId to merchant_census_geocoder_edition with the original reviewId and optional public merchant profile. The mapping must already be bound to that review's exact batch. The edition contains all original customer rows, exact mapping/binding files, and joined CSV/JSON results. EXCLUDED input rows retain null provider results, and the original match-review selection is a separate flag. The public native dataset and its payment terms still use the original reviewed geocoder columns.
+
+The full edition is a private operator or customer handover: it includes every original customer column, the original input, row corrections and joined results. Give it only to the intended recipient through the existing authenticated/private receiving workflow. Keep the operator MCP token with the operator; a public query buyer uses the merchant offer and original SF88 buyer session instead. Published dataset routes and SF88 query-page exports contain the reviewed geocoder columns, while the complete private edition receiver retains the raw customer members.
+
+Receive the complete joined edition through the already maintained receiver:
+
+~~~sh
+starforge census-geocoder-download inspect \
+  --url http://127.0.0.1:PORT/mcp --workspace addresses --edition EDITION_UUID
+starforge census-geocoder-download download \
+  --url http://127.0.0.1:PORT/mcp --workspace addresses --edition EDITION_UUID \
+  --manifest-sha256 EXACT_INSPECTED_SHA256 --out /absolute/private/customer-edition
+starforge census-geocoder-download reopen --dir /absolute/private/customer-edition
+starforge census-geocoder-download query --dir /absolute/private/customer-edition --query 'limit=10'
+~~~
+
+Use the original configured MCP token environment variable. The receiver already retains every declared edition member, so customer-input.csv, customer-mapping.json, customer-binding.json and customer-results.csv/json follow the same partial-prefix recovery and exact native reopen. Query uses the original dataset handler; the full customer join is in the received CSV/JSON files. No source request, publication or payment is repeated by downloading.
+
+The native browser's **Customer CSV mapping** panel acts on this same workspace. The existing managed application configuration, original PTY approval, writer lease, browser ownership and shutdown retry behavior are unchanged. Operators can retain a mapping through MCP, reopen it in the browser, finish the native batch/review/merchant workflow, and receive the same customer edition locally.
+

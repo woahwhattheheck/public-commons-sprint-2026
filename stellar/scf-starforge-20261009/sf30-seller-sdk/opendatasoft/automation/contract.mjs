@@ -16,8 +16,8 @@ export const AUTOMATION_SOURCE = freeze({
   "legacyDocumentation": "https://help.opendatasoft.com/apis/ods-automation-v1/",
   "currentReference": {
     "path": "current-reference.json",
-    "bytes": 7598,
-    "sha256": "d9f084bfdf358093776bca18df95186c2e9c8badd865ee80641387fd356821da"
+    "bytes": 8093,
+    "sha256": "6ca776100782e636dbdf9ec1bcae7ce4c3ae96b70eaf397d91cb00493f3a305f"
   },
   "contractBasis": "retained-official-sdk-with-current-official-reference",
   "operationAliasCount": 1
@@ -2702,9 +2702,16 @@ export const AUTOMATION_SCHEMAS = freeze({
           "type": "string",
           "enum": [
             "explore_restricted_dataset",
+            "explore_restricted_page",
             "edit_dataset",
             "publish_dataset",
-            "manage_dataset"
+            "manage_dataset",
+            "manage_connection",
+            "edit_page",
+            "manage_page",
+            "submit_private_form",
+            "moderate_form",
+            "edit_form"
           ]
         }
       },
@@ -4078,9 +4085,16 @@ export const AUTOMATION_SCHEMAS = freeze({
           "type": "string",
           "enum": [
             "explore_restricted_dataset",
+            "explore_restricted_page",
             "edit_dataset",
             "publish_dataset",
-            "manage_dataset"
+            "manage_dataset",
+            "manage_connection",
+            "edit_page",
+            "manage_page",
+            "submit_private_form",
+            "moderate_form",
+            "edit_form"
           ]
         }
       },

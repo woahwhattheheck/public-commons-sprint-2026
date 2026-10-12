@@ -1,5 +1,5 @@
 // MIT. Original customer workspace and immutable installed-source launch reader.
-import { open, lstat, realpath, rename, unlink } from 'node:fs/promises';
+import { open, lstat, realpath, rename, unlink, readdir } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { resolve, join, dirname, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,8 +8,13 @@ import { startFacilityServer } from './server.mjs';
 
 const HERE=fileURLToPath(new URL('.',import.meta.url));
 const FILES=['cli.mjs','managed-launch.mjs','server.mjs','store.mjs','model.mjs','provider.mjs','browser-assets.json',
+  'buyer-collections.mjs','public/collections.mjs','public/collection-hash-worker.mjs',
   'public/index.html','public/app.mjs','public/styles.css','../report-core.mjs','../facilities.example.json','../historical-response.json',
-  '../../../../../distribution/browser-assets.mjs'];
+  '../../../../../distribution/browser-assets.mjs',
+  '../../../../../sf88-operator-buyer-cli/resource-library/collection-package.mjs',
+  '../../../../../sf88-operator-buyer-cli/resource-library/collections.mjs',
+  '../../../../../sf88-operator-buyer-cli/resource-library/files.mjs',
+  '../../../../../sf88-operator-buyer-cli/job-workspace/inputs/public/sha256.mjs'];
 function absolute(value){
   need(typeof value==='string'&&isAbsolute(value)&&resolve(value)===value&&value!=='/'&&!/[\x00-\x1f\x7f]/.test(value),'Choose an absolute canonical workspace or source directory.');
   return value;
@@ -45,6 +50,21 @@ export async function inspectFacilityWorkspace(value){
     const file=join(directory,name);
     try{const stat=await lstat(file);need(stat.isFile()&&!stat.isSymbolicLink(),'Use the original regular workspace database.');transferFiles.push(file);}
     catch(error){if(error.code!=='ENOENT')throw error;}
+  }
+  const shelf=join(directory,'buyer-collections');let shelfStatus;
+  try{shelfStatus=await lstat(shelf);}catch(error){if(error.code!=='ENOENT')throw error;}
+  if(shelfStatus){
+    need(shelfStatus.isDirectory()&&!shelfStatus.isSymbolicLink()&&await realpath(shelf)===shelf&&
+      !(shelfStatus.mode&0o077)&&(uid()===undefined||shelfStatus.uid===uid()),
+      'Keep the original buyer collection directory private to its operator.');
+    for(const name of (await readdir(shelf)).sort()){
+      if(!/^[a-f0-9]{64}\.tar$/.test(name))continue;
+      const file=join(shelf,name),status=await lstat(file);
+      need(status.isFile()&&!status.isSymbolicLink()&&await realpath(file)===file&&
+        !(status.mode&0o077)&&(uid()===undefined||status.uid===uid()),
+        'Use the original private buyer collection archive.');
+      transferFiles.push(file);
+    }
   }
   return {directory,initialized:true,workspaceId:manifest.id,manifestFile,transferFiles};
 }

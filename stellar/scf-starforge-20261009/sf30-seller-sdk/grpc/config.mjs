@@ -39,7 +39,7 @@ export function validateGrpcConfig(value) {
     metadata: structuredClone(metadata), limits: normalized };
 }
 export function validateGrpcLimits(limits = {}) {
-  fields(limits, [...Object.keys(DEFAULTS), 'stream'], 'GRPC_LIMIT_FIELDS_INVALID');
+  fields(limits, [...Object.keys(DEFAULTS), 'stream', 'requestStream'], 'GRPC_LIMIT_FIELDS_INVALID');
   return {
     timeoutMs: integer(limits.timeoutMs, 'GRPC_TIMEOUT_INVALID', DEFAULTS.timeoutMs, 1, 300000),
     readyTimeoutMs: integer(limits.readyTimeoutMs, 'GRPC_READY_TIMEOUT_INVALID', DEFAULTS.readyTimeoutMs, 1, 60000),
@@ -50,6 +50,7 @@ export function validateGrpcLimits(limits = {}) {
     maxJsonResponseBytes: integer(limits.maxJsonResponseBytes, 'GRPC_JSON_LIMIT_INVALID', DEFAULTS.maxJsonResponseBytes, 1, 16777216),
     // Absent stream configuration stays absent, preserving retained unary hashes.
     ...(limits.stream === undefined ? {} : { stream: validateGrpcStreamLimits(limits.stream) }),
+    ...(limits.requestStream === undefined ? {} : { requestStream: validateGrpcRequestStreamLimits(limits.requestStream) }),
   };
 }
 export function validateGrpcStreamLimits(value) {
@@ -58,6 +59,13 @@ export function validateGrpcStreamLimits(value) {
     maxBytes: integer(value.maxBytes, 'GRPC_STREAM_BYTES_INVALID', 67108864, 1, 1073741824),
     maxRecords: integer(value.maxRecords, 'GRPC_STREAM_RECORDS_INVALID', 100000, 1, 1000000),
     idleTimeoutMs: integer(value.idleTimeoutMs, 'GRPC_STREAM_IDLE_TIMEOUT_INVALID', 10000, 1, 300000),
+  };
+}
+export function validateGrpcRequestStreamLimits(value) {
+  fields(value, ['maxMessages', 'maxBytes'], 'GRPC_REQUEST_STREAM_LIMIT_FIELDS_INVALID');
+  return {
+    maxMessages: integer(value.maxMessages, 'GRPC_REQUEST_STREAM_MESSAGES_INVALID', 10000, 1, 100000),
+    maxBytes: integer(value.maxBytes, 'GRPC_REQUEST_STREAM_BYTES_INVALID', 16777216, 1, 67108864),
   };
 }
 export async function readGrpcSourceFile(path) {

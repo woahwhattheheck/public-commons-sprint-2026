@@ -63,7 +63,8 @@ function readChunk(reader, signal) {
 /** Reserve a caller-chosen destination BEFORE calling the buyer. The parent
  * must be an existing, trusted directory on a hard-link-capable filesystem. */
 export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 1024 * 1024,
-  timeoutMs = 30_000, expectedSha256, expectedBytes, expectedContentType, stream, reservationTag } = {}) {
+  timeoutMs = 30_000, expectedSha256, expectedBytes, expectedContentType, stream, reservationTag,
+  reserveFile, signal: preparationSignal } = {}) {
   if (typeof destination !== 'string' || !isAbsolute(destination) || destination.includes('\0') ||
       /[\\/]$/.test(destination) || ['.', '..'].includes(basename(destination)))
     throw new BuyerResponseFileError('BAD_RESPONSE_FILE_DESTINATION', 'absolute file path required');
@@ -74,6 +75,14 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
   if (reservationTag !== undefined && (typeof reservationTag !== 'string' ||
       !/^[A-Za-z0-9._:-]{1,96}$/.test(reservationTag)))
     throw new BuyerResponseFileError('BAD_RESPONSE_FILE_RESERVATION_TAG');
+  if (reserveFile !== undefined && typeof reserveFile !== 'function')
+    throw new BuyerResponseFileError('BAD_RESPONSE_FILE_RESERVER');
+  if (preparationSignal !== undefined && !(preparationSignal instanceof AbortSignal))
+    throw new BuyerResponseFileError('BAD_RESPONSE_FILE_SIGNAL');
+  const checkPreparation = () => {
+    if (preparationSignal?.aborted) throw new BuyerResponseFileError('RESPONSE_FILE_ABORTED');
+  };
+  checkPreparation();
   const pins = validateResponseFileIntegrity({ expectedSha256, expectedBytes, expectedContentType }, maxBytes);
   const streamOptions = stream === undefined ? null : normalizeResponseStream(stream);
   if (streamOptions && pins.expectedContentType &&
@@ -83,11 +92,37 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
   let finalPath, reservationPath, partialPath, probePath, reservation, file;
   let state = 'PREPARING', activeSave = null, bytes = 0;
   const controller = new AbortController();
+  let allocation = null;
+  async function reserve(handle, path, kind, amount) {
+    const before = await handle.stat({bigint:true}), fd = handle.fd;
+    const blocks = before.blocks * 512n;
+    if (!before.isFile() || before.size !== 0n || fd < 0)
+      throw new BuyerResponseFileError('RESPONSE_FILE_ALLOCATION_IDENTITY');
+    checkPreparation();
+    await reserveFile({fileHandle:handle, path, kind, bytes:amount, signal:preparationSignal});
+    checkPreparation();
+    const after = await handle.stat({bigint:true}), named = await lstat(path,{bigint:true});
+    if (handle.fd !== fd || after.dev !== before.dev || after.ino !== before.ino ||
+        !named.isFile() || named.dev !== after.dev || named.ino !== after.ino ||
+        after.nlink !== before.nlink || after.size !== before.size || after.mode !== before.mode ||
+        after.blocks * 512n < BigInt(amount))
+      throw new BuyerResponseFileError('RESPONSE_FILE_ALLOCATION_IDENTITY');
+    return Object.freeze({kind, reservedBytes:amount, device:String(after.dev), inode:String(after.ino),
+      allocatedBytes:String(after.blocks * 512n), previousAllocatedBytes:String(blocks),
+      logicalSizePreserved:true});
+  }
 
   async function cleanup({ keepPartial = false } = {}) {
     const warnings = [];
     for (const [handle, path] of [[file, partialPath], [reservation, reservationPath]]) {
       if (handle) {
+        // KEEP_SIZE leaves any unused allocation beyond EOF. Release that tail
+        // on the same inode, preserving every byte actually written, including
+        // a retained incomplete response after cancellation or a read failure.
+        if (reserveFile !== undefined) {
+          try { const current = await handle.stat(); await handle.truncate(current.size); await handle.sync(); }
+          catch (error) { warnings.push({path, code:error.code ?? 'ALLOCATION_RELEASE_FAILED'}); }
+        }
         try { await handle.close(); }
         catch (error) { warnings.push({ path, code: error.code ?? 'CLOSE_FAILED' }); }
       }
@@ -118,8 +153,14 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
     const candidate = join(parent, `.x402-response-${randomUUID()}.partial`);
     file = await open(candidate, 'wx', 0o600);
     partialPath = candidate;
-    await reservation.writeFile(JSON.stringify({ destination: finalPath, partialPath, pid: process.pid,
+    const reservationBytes = Buffer.from(JSON.stringify({ destination: finalPath, partialPath, pid: process.pid,
       ...(reservationTag === undefined ? {} : { reservationTag }) }) + '\n');
+    if (reserveFile !== undefined) {
+      const response = await reserve(file, partialPath, 'buyer-response', maxBytes);
+      const lock = await reserve(reservation, reservationPath, 'buyer-response-reservation', reservationBytes.length);
+      allocation = Object.freeze({mode:'HELD_DESTINATION_DESCRIPTORS', response, reservation:lock});
+    }
+    await reservation.writeFile(reservationBytes);
     await reservation.sync();
     // Discover unsupported hard links before the caller sends a paid request.
     const probe = join(parent, `.x402-link-${randomUUID()}`);
@@ -128,6 +169,7 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
     await unlink(probePath);
     probePath = null;
     await absent(finalPath);
+    checkPreparation();
     state = 'PREPARED';
   } catch (cause) {
     const cleanupWarnings = await cleanup();
@@ -233,12 +275,18 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
           throw new BuyerResponseFileError('RESPONSE_STREAM_INCOMPLETE_RECORD');
       }
       check();
+      if (allocation !== null) {
+        const current = await file.stat();
+        if (current.size !== bytes) throw new BuyerResponseFileError('RESPONSE_FILE_ALLOCATION_SIZE_CHANGED');
+        await file.truncate(bytes);
+      }
       await file.sync();
       await file.close();
       file = null;
       check();
       digest = hash.digest('hex');
       const saved = { path: finalPath, bytes, sha256: digest, contentType,
+        ...(allocation === null ? {} : {allocation}),
         ...(parser ? { stream: parser.summary() } : {}) };
       // A completed transfer is not yet an accepted product. Leave a mismatched
       // private partial for reconciliation; never publish it under the buyer's name.
@@ -288,6 +336,7 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
   return Object.freeze({
     destination: finalPath,
     partialPath,
+    ...(allocation === null ? {} : {allocation}),
     save(result, { signal, onRecord } = {}) {
       if (state !== 'PREPARED')
         return Promise.reject(new BuyerResponseFileError('RESPONSE_FILE_NOT_PREPARED', state));

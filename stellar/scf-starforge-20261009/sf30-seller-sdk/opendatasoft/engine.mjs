@@ -254,7 +254,7 @@ export async function openOpendatasoftWorkbench({ directory, create = false, ori
       recoverTenantPlan: (value,input = {}) => launch('recover tenant ingestion',(signal,progress) => tenant.recover(value,input,signal,progress)),
       refreshTenantStatus: value => launch('read tenant processing',signal => tenant.status(value,signal)),
       receiveTenantPlan: (value,input = {}) => launch('receive published tenant dataset',(signal,progress) => tenant.receive(value,input,signal,progress)),
-      exportTenantPlan: value => launch('export tenant delivery',() => tenant.export(value)),
+      exportTenantPlan: value => launch('export tenant delivery',(signal,progress) => tenant.export(value,signal,progress)),
       status: () => structuredClone({ ...state, directory, active: active ? active.operation.id : null }),
       async search(input = {}) {
         const received = await searchOpendatasoft(state.catalogOrigin, input, { authTokenEnv: state.authTokenEnv, env: environment });

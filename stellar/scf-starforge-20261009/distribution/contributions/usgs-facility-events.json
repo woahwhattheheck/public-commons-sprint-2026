@@ -1,17 +1,18 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "usgs-facility-events",
-  "description": "Facility operating workspaces with original event sources, saved reports and customer receiving.",
+  "description": "Facility operating workspaces with complete original buyer collections, saved reports and customer receiving.",
   "commands": {
     "usgs-facility-events": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/postman/examples/usgs-facility-events/workspace/cli.mjs"
   },
   "commandDescriptions": {
-    "usgs-facility-events": "Operate facility rosters, event sources, assigned reviews and customer handovers (Node 24+)."
+    "usgs-facility-events": "Operate facility rosters, retained buyer collections, event sources, assigned reviews and customer handovers (Node 24+)."
   },
   "exports": {
     "./customer/facility-operations": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/postman/examples/usgs-facility-events/workspace/model.mjs",
     "./customer/facility-operations/store": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/postman/examples/usgs-facility-events/workspace/store.mjs",
-    "./customer/facility-operations/captures": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/postman/examples/usgs-facility-events/workspace/provider.mjs"
+    "./customer/facility-operations/captures": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/postman/examples/usgs-facility-events/workspace/provider.mjs",
+    "./customer/facility-operations/collections": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/postman/examples/usgs-facility-events/workspace/buyer-collections.mjs"
   },
   "browserAssets": [
     {

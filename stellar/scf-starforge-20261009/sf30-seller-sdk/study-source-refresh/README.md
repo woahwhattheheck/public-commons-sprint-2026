@@ -1,6 +1,6 @@
 # Study Source Refresh Workspace
 
-A complete local operator application for turning retained Census ACS, BLS LAUS/QCEW and HUD income-limit releases into a selected, mapped and reviewed study edition.
+A complete local operator application for turning retained Census ACS, BLS LAUS/QCEW, HUD income-limit releases and original property surveys into selected, reviewed study editions and complete receiving packages.
 
 The application uses the installed original provider readers. It retains their input files, HTTP receipts, native projection rows and source definitions. A frozen portfolio selects geographies and measures; a frozen mapping defines receiving columns, keys, types, nulls and explicit unit conversions. The operator compares editions, resolves the full review queue and exports a package that another workspace can reopen without retrieving the sources again.
 
@@ -18,7 +18,7 @@ python3 stellar/scf-starforge-20261009/sf30-seller-sdk/study-source-refresh/cli.
 
 The host listens on loopback. Its private connection.json contains the current address and operator token. The open option passes the token to the browser fragment; the page removes the fragment after opening. The host prints the connection-file path and address.
 
-The industrial interface has seven areas: Workspace, Sources, Portfolio, Export mapping, Editions, Comparison & review, and Delivery & reopen. CLI and HTTP use the same application operations.
+The industrial interface has eight areas: Workspace, Sources, Portfolio, Export mapping, Editions, Comparison & review, Delivery & reopen, and Property research. The [property research guide](PROPERTY_RESEARCH.md) covers full original-document intake, editable survey schedules, source revisions, purpose-specific comparable selection, and complete report/CSV/ZIP receiving. CLI and HTTP use the same application operations.
 
 ## Complete operator flow
 

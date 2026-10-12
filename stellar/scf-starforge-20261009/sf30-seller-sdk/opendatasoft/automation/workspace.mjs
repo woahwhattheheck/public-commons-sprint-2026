@@ -1,8 +1,9 @@
 // MIT. Reviewed native Huwise Automation ingestion inside the original workbench lock.
 import { join, resolve, dirname } from 'node:path';
-import { lstat, readdir, rename, unlink } from 'node:fs/promises';
+import { lstat, readdir, rename, unlink, open } from 'node:fs/promises';
+import { constants } from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { object, bytes, digest, fault, stamp, privateDirectory, readPrivate, createFile, atomicJson, syncDirectory } from '../../postgres/publisher/files.mjs';
+import { object, bytes, digest, fault, stamp, privateDirectory, readPrivate, createFile, atomicJson, syncDirectory, hashPrivate } from '../../postgres/publisher/files.mjs';
 import { catalogOrigin, captureSelection, captureOpendatasoftDataset, readOpendatasoftCapture, parseOpendatasoftJson, ExactOpendatasoftNumber } from '../capture.mjs';
 import { createOpendatasoftAutomationClient, validateOpendatasoftAutomationBody, classifyOpendatasoftAutomationStatus } from './client.mjs';
 import { AUTOMATION_SOURCE, AUTOMATION_SCHEMAS } from './contract.mjs';
@@ -57,6 +58,17 @@ function nativeCanonical(value) {
   return [typeof value,value];
 }
 const identity = value => digest(Buffer.from(JSON.stringify(nativeCanonical(value))));
+const publicationIdentity = value => identity(Object.fromEntries(['status','previous','next','since','is_published']
+  .filter(key => Object.hasOwn(value,key)).map(key => [key,value[key]])));
+function publicationTransition(plan,status,callId) {
+  const step = plan.steps.publish;
+  if (!step?.publicationBaseline || step.request?.operationId !== 'publish-dataset' ||
+      !['COMPLETE','UNCERTAIN','DISPATCH_PENDING','ACKNOWLEDGED'].includes(step.state)) return false;
+  const current = publicationIdentity(status);
+  if (current !== step.publicationBaseline.statusSha256 && !step.publicationTransition)
+    step.publicationTransition = { status:clone(status),statusSha256:current,callId,at:stamp() };
+  return Boolean(step.publicationTransition);
+}
 async function retainBytes(path,content) {
   const raw = Buffer.isBuffer(content) ? content:Buffer.from(content);
   if (await exists(path)) {
@@ -72,6 +84,81 @@ async function retainBytes(path,content) {
   } catch (error) {
     if (await exists(pending)) await unlink(pending).catch(() => {});
     throw error;
+  }
+}
+async function retainExportFile(path,source,expected,signal,onProgress = () => {}) {
+  signal?.throwIfAborted();
+  if (await exists(path)) {
+    const actual = await hashPrivate(path,expected.bytes);
+    if (actual.bytes !== expected.bytes || actual.hash !== expected.sha256)
+      throw fail('EXPORT_CHANGED','A file in the original delivery preparation differs from its frozen source.');
+    onProgress(expected.bytes); return;
+  }
+  // This pending file belongs to the original frozen delivery and survives an
+  // interrupted copy. The workbench's existing operation lock is the sole writer.
+  const pending = path + '.pending-copy';
+  let input, output;
+  try {
+    input = await open(source,constants.O_RDONLY | constants.O_NOFOLLOW);
+    const sourceStat = await input.stat();
+    if (!sourceStat.isFile() || sourceStat.nlink !== 1 || sourceStat.mode & 0o077 || sourceStat.size !== expected.bytes)
+      throw fail('EXPORT_SOURCE_CHANGED','Restore the original file selected by the delivery preparation.');
+    output = await open(pending,constants.O_RDWR | constants.O_CREAT | constants.O_NOFOLLOW,0o600);
+    const copied = await output.stat();
+    if (!copied.isFile() || copied.nlink !== 1 || copied.mode & 0o077 || copied.size > expected.bytes)
+      throw fail('EXPORT_CHANGED','The original partial delivery file is invalid.');
+    const original = Buffer.alloc(1048576), partial = Buffer.alloc(1048576);
+    async function readExactly(handle,buffer,length,position) {
+      let count = 0;
+      while (count < length) {
+        signal?.throwIfAborted();
+        const received = await handle.read(buffer,count,length - count,position + count);
+        if (!received.bytesRead) throw fail('EXPORT_SOURCE_CHANGED','A prepared delivery file changed during receiving.');
+        count += received.bytesRead;
+      }
+    }
+    // Check every retained prefix byte before continuing at the original offset.
+    for (let position = 0; position < copied.size;) {
+      const length = Math.min(original.length,copied.size - position);
+      await readExactly(input,original,length,position);
+      await readExactly(output,partial,length,position);
+      if (!original.subarray(0,length).equals(partial.subarray(0,length)))
+        throw fail('EXPORT_CHANGED','The original partial delivery differs from its frozen source.');
+      position += length; onProgress(position);
+    }
+    for (let position = copied.size; position < expected.bytes;) {
+      const length = Math.min(original.length,expected.bytes - position);
+      await readExactly(input,original,length,position);
+      let written = 0;
+      while (written < length) {
+        signal?.throwIfAborted();
+        const result = await output.write(original,written,length - written,position + written);
+        if (!result.bytesWritten) throw fail('EXPORT_WRITE_FAILED','The original delivery copy could not advance.');
+        written += result.bytesWritten;
+      }
+      position += length; onProgress(position);
+    }
+    signal?.throwIfAborted();
+    const sourceAfter = await input.stat();
+    if (sourceAfter.size !== sourceStat.size || sourceAfter.mtimeMs !== sourceStat.mtimeMs || sourceAfter.ctimeMs !== sourceStat.ctimeMs)
+      throw fail('EXPORT_SOURCE_CHANGED','The original prepared source changed while it was being copied.');
+    await output.sync(); await output.close(); output = null;
+    await input.close(); input = null;
+    const actual = await hashPrivate(pending,expected.bytes);
+    if (actual.bytes !== expected.bytes || actual.hash !== expected.sha256)
+      throw fail('EXPORT_SOURCE_CHANGED','The completed delivery copy differs from its frozen source.');
+    signal?.throwIfAborted();
+    if (await exists(path)) {
+      const prior = await hashPrivate(path,expected.bytes);
+      if (prior.bytes !== expected.bytes || prior.hash !== expected.sha256)
+        throw fail('EXPORT_CHANGED','The original delivery file changed during receiving.');
+      await unlink(pending);
+    } else await rename(pending,path);
+    await syncDirectory(dirname(path));
+  } finally {
+    // Retain the one original partial file for the next same-delivery attempt.
+    if (output) { await output.sync().catch(() => {}); await output.close().catch(() => {}); }
+    await input?.close().catch(() => {});
   }
 }
 const exists = async path => { try { await lstat(path); return true; } catch (error) { if (error.code === 'ENOENT') return false; throw error; } };
@@ -94,13 +181,15 @@ export function automationWritable(value, schemaName) {
       const selected = AUTOMATION_SCHEMAS[schema.discriminator.mapping[item[schema.discriminator.propertyName]].split('/').at(-1)];
       for (const part of selected?.allOf ?? []) properties = { ...properties, ...(part.properties ?? {}) };
     }
-    const result = {};
+    const entries = [];
     for (const [key, child] of Object.entries(item)) {
-      const rule = properties[key] ?? {};
-      if (rule.readOnly || key === 'remote_value' && Object.hasOwn(item,'value')) continue;
-      result[key] = visit(child,rule);
+      const rule = Object.hasOwn(properties,key) ? properties[key] :
+        object(schema.additionalProperties) ? schema.additionalProperties : {};
+      const expanded = rule.$ref ? { ...AUTOMATION_SCHEMAS[rule.$ref.split('/').at(-1)],...rule } : rule;
+      if (expanded.readOnly) continue;
+      entries.push([key,visit(child,rule)]);
     }
-    return result;
+    return Object.fromEntries(entries);
   }
   return visit(value,AUTOMATION_SCHEMAS[schemaName]);
 }
@@ -151,7 +240,7 @@ export async function readAutomationConnections(path) {
   exact(config,['schema','targets'],['schema','targets']);
   if (config.schema !== AUTOMATION_CONNECTION_SCHEMA || !object(config.targets) || Object.keys(config.targets).length > 32)
     throw fail('CONNECTION_INVALID','Declare up to 32 named tenant connections in the private host file.');
-  const targets = {};
+  const targets = Object.create(null);
   for (const [alias,entry] of Object.entries(config.targets)) {
     if (!ALIAS.test(alias)) throw fail('CONNECTION_INVALID','Use a short tenant alias.');
     exact(entry,['origin','authTokenEnv','label','timeoutMs','maxResponseBytes','maxUploadBytes'],['origin','authTokenEnv']);
@@ -182,7 +271,10 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
     const plan = await readJson(join(location(value),'plan.json'),67108864);
     if (plan.schema !== TENANT_PLAN_SCHEMA || plan.id !== value) throw fail('PLAN_INVALID','The retained tenant plan has changed.');
     const spec = await readJson(join(location(value),'specification.json'),8388608);
-    if (identity(spec) !== plan.planSha256) throw fail('PLAN_CHANGED','The retained plan specification has changed.');
+    if (identity(spec) !== plan.planSha256 || identity(plan.source) !== identity(spec.source) || identity(plan.target) !== identity(spec.target))
+      throw fail('PLAN_CHANGED','The retained plan source or target binding has changed.');
+    if (plan.workflow && (!plan.workflowSha256 || identity(plan.workflow) !== plan.workflowSha256))
+      throw fail('PLAN_CHANGED','The retained native workflow has changed.');
     return plan;
   }
   async function specFor(plan) {
@@ -331,7 +423,7 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
     const originalDataset = before.absent ? null:configuration(before).dataset;
     const metadata = clone(originalDataset?.metadata ?? {});
     for (const [template,fields] of Object.entries(spec.dataset.metadata))
-      metadata[template] = { ...(metadata[template] ?? {}),...fields };
+      Object.defineProperty(metadata,template,{ value:{ ...(Object.hasOwn(metadata,template) ? metadata[template]:{}),...fields },enumerable:true,writable:true,configurable:true });
     const dataset = { ...(originalDataset ?? {}),...spec.dataset };
     if (before.absent) dataset.metadata = metadata; else delete dataset.metadata;
     validateOpendatasoftAutomationBody(before.absent ? 'create-dataset':'update-dataset',dataset);
@@ -425,6 +517,13 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
       if (identity(automationWritable(current,descriptor.schema)) !== identity(descriptor.expected))
         throw fail('REMOTE_EDITED','The selected native object changed after review. Inspect its current configuration before a new plan.',409);
     }
+    if (descriptor.key === 'publish') {
+      const baseline = await retainCall(plan,'get-dataset-status',{ params },{ signal });
+      if (['RUNNING','UNKNOWN'].includes(classifyOpendatasoftAutomationStatus(baseline.value).phase))
+        throw fail('PUBLICATION_RUNNING','The tenant has an active native operation. Read its status, then continue this saved review when that operation finishes.',409);
+      step.publicationBaseline = { status:clone(baseline.value),statusSha256:publicationIdentity(baseline.value),callId:baseline.callId,at:stamp() };
+      await save(plan);
+    }
     const input = descriptor.upload ? { params,upload:{
       file:join(location(plan.id),'source','records.json'),filename:spec.source.filename,mimetype:'application/json',
       expectedSha256:spec.source.sha256,expectedBytes:spec.source.bytes,
@@ -468,12 +567,11 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
         }
       }
     } else if (descriptor.key === 'publish') {
-      const current = (await retainCall(plan,'get-dataset-status',{ params },{ signal })).value;
+      const observed = await retainCall(plan,'get-dataset-status',{ params },{ signal }), current = observed.value;
       plan.providerStatus = current;
-      // An idle old publication cannot establish whether a new publish POST ran.
-      // Complete Explore receiving below can establish the reviewed result itself.
-      step.recovery = { kind:'NATIVE_STATUS',at:stamp(),status:current };
-      plan.state = 'RECEIVING_REQUIRED'; await save(plan); return;
+      const transitioned = publicationTransition(plan,current,observed.callId);
+      step.recovery = { kind:'NATIVE_STATUS',at:stamp(),status:current,transitioned };
+      plan.state = transitioned ? 'RECEIVING_REQUIRED':'PUBLICATION_PENDING'; await save(plan); return;
     } else {
       const kind = descriptor.key === 'resource' ? null:descriptor.kind;
       const listOperation = kind ? TYPES[kind].list:'list-dataset-resources';
@@ -587,20 +685,60 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
       missingFields,missingRows,differentRows,comparedFields:Object.keys(fieldMap).length,
       captureSha256:received.manifestSha256,at:stamp() };
   }
+  async function retainedExport(entry,signal) {
+    if (entry.directory !== join(directory,'tenant-deliveries',checkedId(entry.id)))
+      throw fail('EXPORT_CHANGED','The original delivery directory changed.');
+    await privateDirectory(entry.directory);
+    const raw = await readPrivate(join(entry.directory,'manifest.json'),16777216);
+    if (digest(raw) !== entry.manifestSha256) throw fail('EXPORT_CHANGED','The retained tenant delivery manifest changed.');
+    const manifest = parseOpendatasoftJson(raw), paths = new Set();
+    if (manifest.schema !== 'stellar-forge.opendatasoft-tenant-export.v1' || manifest.id !== entry.id ||
+        manifest.planId !== entry.planId || manifest.planSha256 !== entry.planSha256 || !Array.isArray(manifest.files))
+      throw fail('EXPORT_CHANGED','The retained tenant delivery binding changed.');
+    for (const file of manifest.files) {
+      signal?.throwIfAborted();
+      if (typeof file.path !== 'string' || paths.has(file.path) ||
+          file.path.split('/').some(part => !part || part === '.' || part === '..' || part.includes('\\')) ||
+          !Number.isSafeInteger(file.bytes) || file.bytes < 0 || file.bytes > 1073741824 || !SHA.test(file.sha256 ?? ''))
+        throw fail('EXPORT_CHANGED','The retained delivery file is invalid.');
+      paths.add(file.path);
+      const content = await hashPrivate(join(entry.directory,file.path),file.bytes);
+      if (content.bytes !== file.bytes || content.hash !== file.sha256)
+        throw fail('EXPORT_CHANGED','A retained tenant delivery file changed.');
+    }
+    return { ...entry,manifest };
+  }
   const api = {
     async reconcile() {
       if (!await exists(root)) return;
       await privateDirectory(root);
-      const saved = [];
+      const saved = []; let restoredDelivery = false;
       for (const entry of await readdir(root,{ withFileTypes:true })) {
         if (!entry.isDirectory() || !UUID.test(entry.name)) continue;
         if (!await exists(join(root,entry.name,'plan.json'))) continue;
         const plan = await read(entry.name);
+        const preparation = plan.exportPreparation;
+        // The private plan commits before the workbench catalog. Recover that
+        // exact completed delivery after a crash between the two atomic writes.
+        if (preparation?.state === 'COMPLETE' && plan.lastExport?.id === preparation.id &&
+            !(state.tenantExports ?? []).some(item => item.id === preparation.id)) {
+          const destination = join(directory,'tenant-deliveries',checkedId(preparation.id));
+          const raw = await readPrivate(join(destination,'manifest.json'),16777216);
+          const manifest = parseOpendatasoftJson(raw);
+          if (digest(raw) !== plan.lastExport.manifestSha256 || manifest.basisSha256 !== preparation.basisSha256 ||
+              manifest.planRevisionSha256 !== preparation.planRevisionSha256 || !Array.isArray(manifest.files))
+            throw fail('EXPORT_CHANGED','The completed original delivery changed before catalog recovery.');
+          const delivery = { id:preparation.id,planId:plan.id,planSha256:plan.planSha256,directory:destination,
+            createdAt:manifest.createdAt,manifestSha256:plan.lastExport.manifestSha256,fileCount:manifest.files.length,
+            bytes:manifest.files.reduce((sum,file) => sum + file.bytes,raw.length) };
+          await retainedExport(delivery);
+          (state.tenantExports ??= []).push(delivery); restoredDelivery = true;
+        }
         saved.push(planSummary(plan));
       }
       saved.sort((a,b) => a.createdAt.localeCompare(b.createdAt));
       const current = [...(state.tenantPlans ?? [])].sort((a,b) => a.createdAt.localeCompare(b.createdAt));
-      if (identity(current) !== identity(saved)) { state.tenantPlans = saved; await persist(); }
+      if (restoredDelivery || identity(current) !== identity(saved)) { state.tenantPlans = saved; await persist(); }
     },
     async targets() {
       const config = await readAutomationConnections(connectionFile);
@@ -706,7 +844,8 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
       await originalSource(plan,spec);
       const before = await snapshot(plan,signal);
       plan.inspection = await writeSnapshot(plan,'before',before);
-      plan.workflow = workflow(plan,spec,before); plan.review = null; plan.state = 'INSPECTED'; plan.error = null;
+      plan.workflow = workflow(plan,spec,before); plan.workflowSha256 = identity(plan.workflow);
+      plan.review = null; plan.state = 'INSPECTED'; plan.error = null;
       await save(plan); return planSummary(plan);
     },
     async review(value,input) {
@@ -716,14 +855,14 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
       if (input.planSha256 !== plan.planSha256 || input.configurationSha256 !== plan.inspection.configurationSha256)
         throw fail('REVIEW_CHANGED','Review the inspected source and tenant configuration hashes.');
       await originalSource(plan,spec);
-      plan.review = { id:randomUUID(),planSha256:plan.planSha256,configurationSha256:plan.inspection.configurationSha256,
+      plan.review = { id:randomUUID(),planSha256:plan.planSha256,workflowSha256:plan.workflowSha256,configurationSha256:plan.inspection.configurationSha256,
         at:stamp(),note:input.note ? line(input.note,'a review note',2048):'' };
       plan.state = 'REVIEWED'; await save(plan); return planSummary(plan);
     },
     async apply(value,input,signal,progress = () => {}) {
       exact(input,['reviewId'],['reviewId']);
       const plan = await read(value), spec = await specFor(plan);
-      if (input.reviewId !== plan.review?.id || plan.review.planSha256 !== plan.planSha256) throw fail('REVIEW_REQUIRED','Use the saved review for this exact tenant plan.');
+      if (input.reviewId !== plan.review?.id || plan.review.planSha256 !== plan.planSha256 || plan.review.workflowSha256 !== plan.workflowSha256) throw fail('REVIEW_REQUIRED','Use the saved review for this exact tenant plan.');
       await retainedSource(plan,spec);
       if (plan.state === 'ACCEPTED' || plan.state === 'CONFIGURED' && !spec.publish) return planSummary(plan);
       if (!Object.values(plan.steps).some(step => step.state !== 'READY' && step.state !== 'NOT_DISPATCHED')) {
@@ -758,7 +897,10 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
         await guardConfiguration(plan,spec,signal,'configured');
       }
       plan.state = spec.publish ? 'PUBLICATION_REQUESTED':'CONFIGURED';
-      if (plan.datasetUid) plan.providerStatus = (await retainCall(plan,'get-dataset-status',{ params:{ dataset_uid:plan.datasetUid } },{ signal })).value;
+      if (plan.datasetUid) {
+        const observed = await retainCall(plan,'get-dataset-status',{ params:{ dataset_uid:plan.datasetUid } },{ signal });
+        plan.providerStatus = observed.value; publicationTransition(plan,observed.value,observed.callId);
+      }
       await save(plan); return planSummary(plan);
     },
     async recover(value,input = {},signal,progress = () => {}) {
@@ -773,30 +915,37 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
         if (descriptor.key === 'dataset') await ensureCreatedBaseline(plan,spec,signal);
       }
       const incomplete = plan.workflow.some(descriptor => plan.steps[descriptor.key]?.state !== 'COMPLETE');
-      if (plan.state !== 'RECEIVING_REQUIRED') plan.state = incomplete ? 'REVIEWED':spec.publish ? 'PUBLICATION_REQUESTED':'CONFIGURED';
+      if (!['RECEIVING_REQUIRED','PUBLICATION_PENDING'].includes(plan.state)) plan.state = incomplete ? 'REVIEWED':spec.publish ? 'PUBLICATION_REQUESTED':'CONFIGURED';
       plan.error = null; await save(plan); return planSummary(plan);
     },
     async status(value,signal) {
       const plan = await read(value);
       if (!plan.datasetUid) return planSummary(plan);
-      plan.providerStatus = (await retainCall(plan,'get-dataset-status',{ params:{ dataset_uid:plan.datasetUid } },{ signal })).value;
+      const observed = await retainCall(plan,'get-dataset-status',{ params:{ dataset_uid:plan.datasetUid } },{ signal });
+      plan.providerStatus = observed.value; publicationTransition(plan,observed.value,observed.callId);
       await save(plan); return planSummary(plan);
     },
     async receive(value,input = {},signal,progress = () => {}) {
       exact(input,['maxRows','maxBytes']);
       const plan = await read(value), spec = await specFor(plan), capture = await retainedSource(plan,spec);
       if (!plan.datasetUid || !plan.review) throw fail('DATASET_REQUIRED','Apply the reviewed native configuration before receiving its publication.');
+      if (!spec.publish) throw fail('PUBLICATION_PLAN_REQUIRED','This plan configures the tenant without publication. Use a reviewed publication plan to receive a new published result.');
+      const publication = plan.steps.publish;
+      if (!publication?.publicationBaseline || publication.request?.operationId !== 'publish-dataset' ||
+          !['COMPLETE','UNCERTAIN','DISPATCH_PENDING','ACKNOWLEDGED'].includes(publication.state))
+        throw fail('PUBLICATION_REQUIRED','Apply this saved review through its original publish step before receiving the publication.');
       const unfinished = (plan.workflow ?? []).filter(step => step.key !== 'publish' && plan.steps[step.key]?.state !== 'COMPLETE');
       if (unfinished.length) throw fail('RECOVERY_REQUIRED','Recover the original configuration steps before receiving the publication.');
-      const status = (await retainCall(plan,'get-dataset-status',{ params:{ dataset_uid:plan.datasetUid } },{ signal })).value;
+      const observed = await retainCall(plan,'get-dataset-status',{ params:{ dataset_uid:plan.datasetUid } },{ signal }), status = observed.value;
       plan.providerStatus = status;
-      if (classifyOpendatasoftAutomationStatus(status).phase !== 'IDLE' || status.is_published !== true) {
+      const transitioned = publicationTransition(plan,status,observed.callId);
+      if (!transitioned || classifyOpendatasoftAutomationStatus(status).phase !== 'IDLE' || status.is_published !== true) {
         plan.state = 'PUBLICATION_PENDING'; await save(plan);
         return planSummary(plan);
       }
       await guardConfiguration(plan,spec,signal,'receiving-before',true);
       const connection = await binding(plan), priorReceiving = plan.receiving;
-      const resume = priorReceiving?.state === 'RECEIVING' && priorReceiving.publicationSince === status.since;
+      const resume = priorReceiving?.state === 'RECEIVING' && priorReceiving.publicationStatusSha256 === publicationIdentity(status);
       const receivingId = resume ? checkedId(priorReceiving.id):randomUUID();
       const limits = {
         maxRows:integer(input.maxRows ?? priorReceiving?.limits?.maxRows ?? Math.max(250000,spec.acceptance.expectedRows + 1),'receiving row capacity',10000000),
@@ -810,12 +959,12 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
       const receivingDirectory = join(receivingRoot,receivingId);
       const selection = captureSelection({ catalogOrigin:connection.origin,datasetId:plan.target.datasetId,authTokenEnv:connection.authTokenEnv });
       plan.state = 'RECEIVING'; plan.receiving = { id:receivingId,state:'RECEIVING',
-        startedAt:resume ? priorReceiving.startedAt:stamp(),publicationSince:status.since,limits }; await save(plan);
+        startedAt:resume ? priorReceiving.startedAt:stamp(),publicationSince:status.since,publicationStatusSha256:publicationIdentity(status),limits }; await save(plan);
       const received = await captureOpendatasoftDataset(selection,receivingDirectory,{
         env:environment,signal,onProgress:progress,...limits,
       });
       const afterStatus = (await retainCall(plan,'get-dataset-status',{ params:{ dataset_uid:plan.datasetUid } },{ signal })).value;
-      if (classifyOpendatasoftAutomationStatus(afterStatus).phase !== 'IDLE' || afterStatus.is_published !== true || status.since !== afterStatus.since)
+      if (classifyOpendatasoftAutomationStatus(afterStatus).phase !== 'IDLE' || afterStatus.is_published !== true || publicationIdentity(status) !== publicationIdentity(afterStatus))
         throw fail('PUBLICATION_CHANGED','The tenant publication changed while its complete receiving export was being read.');
       const acceptance = receivingComparison(capture,received,spec);
       if (Array.isArray(afterStatus.records_errors) && afterStatus.records_errors.length) acceptance.accepted = false;
@@ -824,6 +973,10 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
         captureFile:join('receiving',receivingId,'capture.json'),acceptance,completedAt:stamp() };
       plan.providerStatus = afterStatus;
       const after = await snapshot(plan,signal); plan.after = await writeSnapshot(plan,'after',after);
+      const finalStatus = (await retainCall(plan,'get-dataset-status',{ params:{ dataset_uid:plan.datasetUid } },{ signal })).value;
+      if (publicationIdentity(finalStatus) !== publicationIdentity(status))
+        throw fail('PUBLICATION_CHANGED','The native publication changed during its final configuration readback.');
+      plan.providerStatus = finalStatus;
       const configurationResult = await compareConfiguration(plan,after,true);
       plan.configurationCheck = { ...configurationResult,snapshot:plan.after,phase:'receiving-after' };
       acceptance.configuration = configurationResult;
@@ -836,9 +989,15 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
       plan.state = acceptance.accepted ? 'ACCEPTED':'RECEIVING_REVIEW_REQUIRED';
       await save(plan); return planSummary(plan);
     },
-    async export(value) {
+    async export(value,signal,progress = () => {}) {
+      signal?.throwIfAborted();
       const plan = await read(value), spec = await specFor(plan);
       await retainedSource(plan,spec);
+      const { updatedAt:_updatedAt,lastExport:_lastExport,exportPreparation:_preparation,...product } = plan;
+      const planRevisionSha256 = identity(product);
+      const cataloged = state.tenantExports?.some(item => item.id === plan.exportPreparation?.id);
+      if (cataloged && plan.exportPreparation?.state === 'COMPLETE' && plan.exportPreparation.planRevisionSha256 === planRevisionSha256)
+        return api.exportEntry(plan.exportPreparation.id,signal);
       const guide = [
         '# Huwise tenant ingestion', '',
         'Plan: ' + plan.id, 'Tenant: ' + plan.target.origin, 'Dataset: ' + plan.target.datasetId,
@@ -859,53 +1018,93 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
         '## Current result', '',
         JSON.stringify(planSummary(plan),null,2), '',
       ].join('\n');
-      const exportId = randomUUID(), exportsRoot = join(directory,'tenant-deliveries');
-      await privateDirectory(exportsRoot,true);
-      const destination = join(exportsRoot,exportId); await privateDirectory(destination,true);
-      const files = [];
-      async function copy(path,target,prefix = '') {
-        for (const entry of await readdir(path,{ withFileTypes:true })) {
-          if (!prefix && entry.name === 'exports') continue;
-          const name = prefix ? prefix + '/' + entry.name : entry.name;
-          if (entry.isSymbolicLink()) throw fail('EXPORT_CHANGED','A retained tenant file was replaced with a symbolic link.');
-          if (entry.isDirectory()) {
-            await privateDirectory(join(target,entry.name),true);
-            await copy(join(path,entry.name),join(target,entry.name),name);
-          } else if (entry.isFile()) {
-            const raw = await readPrivate(join(path,entry.name),1073741824);
-            await createFile(join(target,entry.name),raw);
-            files.push({ path:name,bytes:raw.length,sha256:digest(raw) });
+      const pending = plan.exportPreparation && (plan.exportPreparation.state !== 'COMPLETE' || !cataloged) ? plan.exportPreparation:null;
+      const exportId = pending ? checkedId(pending.id):randomUUID(), exportsRoot = join(directory,'tenant-deliveries');
+      const preparations = join(directory,'tenant-export-preparations');
+      await privateDirectory(exportsRoot,true); await privateDirectory(preparations,true);
+      if (!pending) {
+        plan.exportPreparation = { id:exportId,state:'PREPARING',createdAt:stamp(),planRevisionSha256 };
+        await save(plan);
+      }
+      const destination = join(exportsRoot,exportId), preparationFile = join(preparations,exportId + '.json');
+      await privateDirectory(destination,true);
+      let basis;
+      if (await exists(preparationFile)) basis = await readJson(preparationFile,268435456);
+      else {
+        const frozen = [];
+        async function inventory(path,prefix = '') {
+          for (const item of await readdir(path,{ withFileTypes:true })) {
+            signal?.throwIfAborted();
+            if (!prefix && item.name === 'exports' || item.name.includes('.pending-')) continue;
+            const name = prefix ? prefix + '/' + item.name:item.name, source = join(path,item.name);
+            if (item.isSymbolicLink()) throw fail('EXPORT_CHANGED','A retained tenant file was replaced with a symbolic link.');
+            if (item.isDirectory()) await inventory(source,name);
+            else if (item.isFile()) {
+              if (item.name === 'plan.json' || item.name === 'progress.json') {
+                const raw = await readPrivate(source,67108864);
+                frozen.push({ path:name,bytes:raw.length,sha256:digest(raw),snapshotBase64:raw.toString('base64') });
+              } else {
+                const actual = await hashPrivate(source,1073741824);
+                frozen.push({ path:name,bytes:actual.bytes,sha256:actual.hash });
+              }
+            }
           }
         }
+        await inventory(location(value)); frozen.sort((a,b) => a.path.localeCompare(b.path));
+        basis = { schema:'stellar-forge.opendatasoft-tenant-export-preparation.v1',id:exportId,planId:value,
+          planSha256:plan.planSha256,planRevisionSha256:plan.exportPreparation.planRevisionSha256,
+          createdAt:plan.exportPreparation.createdAt,guide,files:frozen };
+        await retainBytes(preparationFile,bytes(basis));
       }
-      await copy(location(value),destination);
-      const companion = Buffer.from(guide);
-      await createFile(join(destination,'TENANT-INGESTION.md'),companion);
-      files.push({ path:'TENANT-INGESTION.md',bytes:companion.length,sha256:digest(companion) });
-      files.sort((a,b) => a.path.localeCompare(b.path));
-      const manifest = { schema:'stellar-forge.opendatasoft-tenant-export.v1',id:exportId,planId:value,planSha256:plan.planSha256,createdAt:stamp(),files };
+      if (basis.schema !== 'stellar-forge.opendatasoft-tenant-export-preparation.v1' || basis.id !== exportId ||
+          basis.planId !== value || basis.planSha256 !== plan.planSha256 || !Array.isArray(basis.files) ||
+          basis.planRevisionSha256 !== plan.exportPreparation.planRevisionSha256 ||
+          plan.exportPreparation.basisSha256 && plan.exportPreparation.basisSha256 !== identity(basis))
+        throw fail('EXPORT_CHANGED','The saved original delivery preparation changed.');
+      plan.exportPreparation.basisSha256 = identity(basis); plan.exportPreparation.state = 'COPYING'; await save(plan);
+      const totalBytes = basis.files.reduce((sum,file) => sum + file.bytes,0);
+      let completeFiles = 0, completeBytes = 0;
+      for (const file of basis.files) {
+        signal?.throwIfAborted();
+        const fileProgress = copiedBytes => progress({ phase:'tenant-export',exportId,completeFiles,totalFiles:basis.files.length,
+          completeBytes,totalBytes,path:file.path,copiedBytes,fileBytes:file.bytes });
+        fileProgress(0);
+        if (typeof file.path !== 'string' || file.path.split('/').some(part => !part || part === '.' || part === '..' || part.includes('\\')) ||
+            !Number.isSafeInteger(file.bytes) || file.bytes < 0 || file.bytes > 1073741824 || !SHA.test(file.sha256 ?? ''))
+          throw fail('EXPORT_CHANGED','The prepared native delivery file is invalid.');
+        const target = join(destination,file.path);
+        await privateDirectory(dirname(target),true);
+        if (file.snapshotBase64 !== undefined) {
+          if (typeof file.snapshotBase64 !== 'string') throw fail('EXPORT_CHANGED','The frozen native state is invalid.');
+          const raw = Buffer.from(file.snapshotBase64,'base64');
+          if (raw.length !== file.bytes || digest(raw) !== file.sha256) throw fail('EXPORT_CHANGED','The frozen native state changed.');
+          await retainBytes(target,raw);
+        } else await retainExportFile(target,join(location(value),file.path),file,signal,fileProgress);
+        completeFiles++; completeBytes += file.bytes; fileProgress(file.bytes);
+      }
+      signal?.throwIfAborted();
+      const companion = Buffer.from(basis.guide);
+      await retainBytes(join(destination,'TENANT-INGESTION.md'),companion);
+      const preparedFiles = basis.files.map(({ path,bytes,sha256 }) => ({ path,bytes,sha256 }));
+      preparedFiles.push({ path:'TENANT-INGESTION.md',bytes:companion.length,sha256:digest(companion) });
+      preparedFiles.sort((a,b) => a.path.localeCompare(b.path));
+      const manifest = { schema:'stellar-forge.opendatasoft-tenant-export.v1',id:exportId,planId:value,
+        planSha256:plan.planSha256,planRevisionSha256:basis.planRevisionSha256,basisSha256:identity(basis),
+        createdAt:basis.createdAt,files:preparedFiles };
       const manifestBytes = bytes(manifest);
-      await createFile(join(destination,'manifest.json'),manifestBytes);
+      await retainBytes(join(destination,'manifest.json'),manifestBytes);
       const entry = { id:exportId,planId:value,planSha256:plan.planSha256,directory:destination,createdAt:manifest.createdAt,
-        manifestSha256:digest(manifestBytes),fileCount:files.length,bytes:files.reduce((sum,file) => sum + file.bytes,manifestBytes.length) };
-      state.tenantExports ??= []; state.tenantExports.push(entry);
-      plan.lastExport = { id:exportId,manifestSha256:entry.manifestSha256 }; await save(plan);
-      return { ...entry,manifest };
+        manifestSha256:digest(manifestBytes),fileCount:preparedFiles.length,bytes:preparedFiles.reduce((sum,file) => sum + file.bytes,manifestBytes.length) };
+      state.tenantExports ??= [];
+      const originalEntry = state.tenantExports.findIndex(item => item.id === exportId);
+      if (originalEntry < 0) state.tenantExports.push(entry); else state.tenantExports[originalEntry] = entry;
+      plan.exportPreparation.state = 'COMPLETE'; plan.lastExport = { id:exportId,manifestSha256:entry.manifestSha256 };
+      await save(plan); return { ...entry,manifest };
     },
-    async exportEntry(value) {
+    async exportEntry(value,signal) {
       const entry = state.tenantExports?.find(item => item.id === checkedId(value));
       if (!entry) throw fail('EXPORT_REQUIRED','Choose an existing retained tenant delivery.',404);
-      const raw = await readPrivate(join(entry.directory,'manifest.json'),16777216);
-      if (digest(raw) !== entry.manifestSha256) throw fail('EXPORT_CHANGED','The retained tenant delivery manifest changed.');
-      const manifest = parseOpendatasoftJson(raw);
-      for (const file of manifest.files) {
-        if (typeof file.path !== 'string' || file.path.split('/').some(part => !part || part === '.' || part === '..' || part.includes('\\')))
-          throw fail('EXPORT_CHANGED','The retained delivery path is invalid.');
-        const content = await readPrivate(join(entry.directory,file.path),file.bytes);
-        if (content.length !== file.bytes || digest(content) !== file.sha256) throw fail('EXPORT_CHANGED','A retained tenant delivery file changed.');
-      }
-      return { ...entry,manifest };
-
+      return retainedExport(entry,signal);
     },
   };
   return api;

@@ -1,0 +1,16 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "grpc-request-streams",
+  "description": "Reviewed native client-streaming and bidirectional request sequences through the original merchant, operator and customer lifecycle",
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/REQUEST_STREAMS.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/examples/proto/request-streams.proto",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/examples/request-stream-server.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/examples/request-stream-source.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/examples/request-sequence.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/examples/request-stream-plan.json"
+  ],
+  "exports": {
+    "./seller/grpc/request-series": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/request-series.mjs"
+  }
+}

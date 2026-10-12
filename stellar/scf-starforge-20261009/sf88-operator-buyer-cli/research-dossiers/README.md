@@ -16,6 +16,13 @@ The [Research client guide](RESEARCH_CLIENT.md) covers the authenticated SDK,
 It includes revision-pinned section reads, complete retained source exports,
 streamed portable reopen and managed Applications startup records.
 
+## Import original source bundles
+
+[Source bundles](SOURCE_BUNDLES.md) bring a manifest, its named original files,
+source selections and linked findings into an existing question in one revision.
+Use the browser, local command, original-workspace client or merchant tools.
+The complete retained files remain readable and downloadable after portable reopen.
+
 ## Open the operator
 
 Use the complete sprint source checkout and its existing Node 22+ runtime.

@@ -6,12 +6,13 @@ import sys
 
 from .client import Buyer
 from .errors import BuyerError, DeliveryError
+from .inbox import Inbox, InboxError
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--checkout", default=os.environ.get("STELLAR_FORGE_CHECKOUT"), required=not os.environ.get("STELLAR_FORGE_CHECKOUT"))
-    parser.add_argument("--state", required=True)
+    parser.add_argument("--state", help="private application state; required for application-operation commands")
     parser.add_argument("--node", default="node")
     commands = parser.add_subparsers(dest="command", required=True)
     imported = commands.add_parser("import", help="snapshot an existing original SF88 config")
@@ -60,8 +61,37 @@ def main():
         command = commands.add_parser(name)
         command.add_argument("intent")
     commands.add_parser("list")
+    inbox_list = commands.add_parser("inbox-list", help="read original Inbox jobs; no execution")
+    inbox_list.add_argument("--inbox", required=True)
+    inbox_show = commands.add_parser("inbox-show", help="read one original Inbox intent")
+    inbox_show.add_argument("--inbox", required=True)
+    inbox_show.add_argument("--intent", required=True)
+    inbox_export = commands.add_parser("inbox-export-operations", help="save selected original jobs for Operations review")
+    inbox_export.add_argument("--inbox", required=True)
+    inbox_export.add_argument("--intent", dest="intent_ids", action="append", required=True)
+    inbox_export.add_argument("--out", required=True)
+    inbox_export.add_argument("--max-verify-bytes", type=int, default=268_435_456)
+    inbox_inspect = commands.add_parser("inbox-inspect-operations", help="inspect the same saved private handoff")
+    inbox_inspect.add_argument("--inbox", required=True,
+                               help="original Inbox identity; need not remain online for saved-file inspection")
+    inbox_inspect.add_argument("--file", required=True)
     args = parser.parse_args()
+    if not args.command.startswith("inbox-") and not args.state:
+        parser.error("--state is required for application-operation commands")
     try:
+        if args.command.startswith("inbox-"):
+            inbox = Inbox(checkout=args.checkout, directory=args.inbox, node=args.node)
+            if args.command == "inbox-list":
+                result = inbox.list()
+            elif args.command == "inbox-show":
+                result = inbox.show(args.intent)
+            elif args.command == "inbox-export-operations":
+                result = inbox.export_operations(args.out, intent_ids=args.intent_ids,
+                                                 max_verify_bytes=args.max_verify_bytes)
+            else:
+                result = inbox.inspect_operations(args.file)
+            print(json.dumps({"native": result.native, "process": result.process}, indent=2))
+            return 0
         buyer = Buyer(checkout=args.checkout, state_dir=args.state, node=args.node)
         if args.command == "import":
             output = buyer.from_config(args.config).inspect()
@@ -118,6 +148,10 @@ def main():
     except BuyerError as error:
         result = {"error": error.code, "operationDirectory":
             str(error.operation.directory) if error.operation else None}
+        if isinstance(error, InboxError):
+            result.update(inboxDirectory=error.inbox_directory, destination=error.destination)
+            if error.result:
+                result["process"] = error.result.process
         if isinstance(error, DeliveryError):
             result.update(retainedBytes=error.retained_bytes, resumable=error.resumable)
             if error.partial_path:

@@ -29,10 +29,14 @@ function button(label, fn, options = {}) {
   result.addEventListener('click', () => run(fn, result)); return result;
 }
 function table(headers, rows, className = '') {
+  const body = rows.map(row => node('tr', {}, row.map(value => {
+    const content = value instanceof Node ? value :
+      document.createTextNode(value === undefined || value === null ? '—' : String(value));
+    return node('td', {}, [content]);
+  })));
   return node('div', {className:'table-wrap'}, [node('table', {className}, [
     node('thead', {}, [node('tr', {}, headers.map(label => node('th', {text:label, scope:'col'})))]),
-    node('tbody', {}, rows.map(row => node('tr', {}, row.map(value =>
-      node('td', {}, [value instanceof Node ? value : document.createTextNode(value === undefined || value === null ? '—' : String(value))]))))),
+    node('tbody', {}, body),
   ])]);
 }
 function field(label, control) {

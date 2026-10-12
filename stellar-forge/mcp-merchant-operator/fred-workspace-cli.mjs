@@ -29,6 +29,8 @@ export const FRED_WORKSPACE_HELP = [
   '  operation --id ORIGINAL_ID | wait --id ORIGINAL_ID [--wait-ms 60000]',
   '  observations --capture SHA [--series UNRATE --offset 0]',
   '  compare --before SHA --after SHA [--offset 0]',
+  '  briefing-preview --capture SHA --briefing-file JSON [--offset 0]',
+  '  briefing --review SHA [--offset 0]',
   '',
   'Build the original product:',
   '  configure --id ID --revision N --selection-file SELECTION.json',
@@ -36,7 +38,7 @@ export const FRED_WORKSPACE_HELP = [
   '  import --id ID --revision N --input ORIGINAL_SOURCE_ALIAS [--sha256 FILE_SHA]',
   '  combine --id ID --revision N --captures SHA,SHA,SHA',
   '  select --id ID --revision N --capture SHA',
-  '  review --id ID --revision N --capture SHA [--policy-file JSON --note-file TEXT]',
+  '  review --id ID --revision N --capture SHA [--policy-file JSON --note-file TEXT --briefing-file JSON]',
   '  publish --id ID --revision N --review SHA --profile HOST_PROFILE',
   '  abandon --id ID --revision N --pending ORIGINAL_ID',
   '',
@@ -53,6 +55,7 @@ export const FRED_WORKSPACE_HELP = [
   'Complete retained downloads and local project receiving:',
   '  download --kind source --capture SHA --out NEW_FILE [--sha256 FILE_SHA]',
   '  download --kind comparison --before SHA --after SHA --out NEW_FILE',
+  '  download --kind briefing --review SHA --format html|csv|json|manifest --out NEW_FILE',
   '  download --kind customer --publication SHA --intent ORIGINAL_ID --out NEW_FILE',
   '  download --kind project --out NEW_PROJECT_BUNDLE.json',
   '  receive --source ORIGINAL_PROJECT_BUNDLE.json --project EMPTY_PRIVATE_DIRECTORY [--sha256 FILE_SHA]',
@@ -67,13 +70,13 @@ export const FRED_WORKSPACE_HELP = [
 ].join('\n');
 
 const fail = message => { throw new FredWorkspaceError('FRED_CLI_USAGE', message); };
-const remote = new Set(['workspaces','status','inputs','input-inspect','records','record','operation','observations','compare',
+const remote = new Set(['workspaces','status','inputs','input-inspect','records','record','operation','observations','compare','briefing-preview','briefing',
   'configure','capture','import','combine','select','review','publish','abandon','merchant-start','merchant-stop',
   'publication','requests','preview','prepare','buy','recover','disconnect']);
 const allowed = new Set(['connection','workspace','args-file','out','console-url-file','project-id','binding-sha','label',
   'inputs-file','profiles-file','payment-file','merchant-origin','merchant-path','kind','id','capture','series','offset','limit','revision','before','after','input','sha256',
   'captures','review','profile','pending','publication','intent','query','file','accept','view-sha','selection-file',
-  'policy-file','note-file','previous-file','wait-ms','source','project','help']);
+  'policy-file','note-file','briefing-file','format','previous-file','wait-ms','source','project','help']);
 function parse(values) {
   const argv = [...values], command = argv[0] && !argv[0].startsWith('--') ? argv.shift() : 'help', flags = {};
   while (argv.length) {
@@ -149,12 +152,12 @@ async function toolArgs(flags, workspace) {
   if (workspace !== undefined) put('workspace', workspace);
   const strings = { kind:'kind', id:'id', capture:'captureId', series:'series', before:'before', after:'after',
     input:'input', sha256:'expectedSha256', review:'reviewId', profile:'profile', pending:'pendingId',
-    publication:'publicationId', intent:'intentId', query:'query', file:'file', 'view-sha':'expectedViewSha256' };
+    publication:'publicationId', intent:'intentId', query:'query', file:'file', format:'format', 'view-sha':'expectedViewSha256' };
   for (const [flag, key] of Object.entries(strings)) if (flags[flag] !== undefined) put(key, flags[flag]);
   for (const [flag, key] of Object.entries({ offset:'offset', limit:'limit', revision:'expectedRevision', accept:'acceptIndex' }))
     if (flags[flag] !== undefined) put(key, number(flags[flag], flag));
   if (flags.captures !== undefined) put('captureIds', flags.captures.split(','));
-  for (const [flag, key] of Object.entries({ 'selection-file':'selection', 'policy-file':'policy', 'previous-file':'previous' }))
+  for (const [flag, key] of Object.entries({ 'selection-file':'selection', 'policy-file':'policy', 'previous-file':'previous', 'briefing-file':'briefing' }))
     if (flags[flag] !== undefined) put(key, await jsonFile(flags[flag]));
   if (flags['note-file'] !== undefined) put('note', (await readFredHostFile(flags['note-file'], 32768)).toString('utf8'));
   return args;

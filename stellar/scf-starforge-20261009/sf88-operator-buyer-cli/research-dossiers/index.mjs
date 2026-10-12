@@ -7,3 +7,6 @@ export { openPortableFile, writePortableFile } from './portable.mjs';
 
 export {ResearchWorkspaceClient,readResearchConnectionFile} from './workspace-client.mjs';
 export {RESEARCH_WORKSPACE_API,RESEARCH_WORKSPACE_CONNECTION,RESEARCH_SECTIONS} from './workspace-protocol.mjs';
+
+export {SOURCE_BUNDLE_SCHEMA,SOURCE_MANIFEST_SCHEMA,SOURCE_BUNDLE_LIMIT,
+  inspectSourceBundle,createSourceBundle,createSourceBundleFromDirectory,sourceBundleFileBytes} from './source-bundles.mjs';

@@ -26,19 +26,22 @@ const HELP = `merchant-mcp pricing
       [--manifest-sha256 REVIEWED_DIGEST] [--chunk-bytes BYTES]
 
   cost-state|cost-list|cost-inputs --url MCP_ENDPOINT --workspace ALIAS [--kind KIND]
-  cost-input --url MCP_ENDPOINT --workspace ALIAS --kind SOURCE|BOOK --input-alias ALIAS
+  cost-input --url MCP_ENDPOINT --workspace ALIAS --kind SOURCE|BOOK|PACKAGE --input-alias ALIAS
   cost-upload|cost-capture|cost-mapping|cost-weights --url MCP_ENDPOINT --input PRIVATE_JSON
   cost-preview|cost-save|cost-request|cost-compare --url MCP_ENDPOINT --input PRIVATE_JSON
   cost-edition --url MCP_ENDPOINT --workspace ALIAS --edition UUID [--view VIEW]
   cost-proposal|cost-apply|cost-export --url MCP_ENDPOINT --input PRIVATE_JSON
-  cost-manifest --url MCP_ENDPOINT --workspace ALIAS --kind source|edition|export --id UUID
-  cost-download --url MCP_ENDPOINT --workspace ALIAS --kind source|edition|export --id UUID
+  cost-receive|cost-received|cost-receiving-review|cost-receiving-draft --url MCP_ENDPOINT --input PRIVATE_JSON
+  cost-manifest --url MCP_ENDPOINT --workspace ALIAS --kind source|edition|export|received --id UUID
+  cost-download --url MCP_ENDPOINT --workspace ALIAS --kind source|edition|export|received --id UUID
       --out PRIVATE_DIRECTORY [--manifest-sha256 SHA256] [--chunk-bytes BYTES]
 
 Cost operations use the existing pricing alias and original cost model.
 A complete large book is selected by a host-declared bookSource with inspected
 expectedSha256/expectedBytes; the existing MCP body limit remains in force.
-Sources and archives retain exact original bytes. COSTS.md covers this workflow.
+Sources and archives retain exact original bytes. A receivedDraft selector feeds
+cost-preview/cost-save, with explicit bookAdjustments for local coverage/alignment.
+RECEIVING.md covers complete cost-package receiving and the ordinary editor handoff.
 
 All commands accept --token-env NAME (default MCP_ACCESS_TOKEN).
 Paged reads accept --view, --offset, --limit, --scenario-id and --suggestion-kind.
