@@ -117,7 +117,7 @@ function action(name,attributes={},p=page,within=''){
 async function clickAction(name,attributes={},p=page,within=''){
  await action(name,attributes,p,within).click();await settle(p);
 }
-async function tab(name,p=page){await clickAction('tab',{tab:name},p,'#app');}
+async function tab(name,p=page){await clickAction('tab',{tab:name},p,'#app nav[aria-label="Cashiering workspace"]');}
 async function formFill(name,value,p=page){
  const field=p.locator('#dialog-form [name='+JSON.stringify(name)+']');
  const tag=await field.evaluate(el=>el.tagName),type=await field.getAttribute('type');
