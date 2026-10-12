@@ -244,3 +244,15 @@ unpaid request returns its native HTTP 402 offer with the reviewed exact terms.
 The original runtime owner and release history remain the operational controls.
 
 Each merchant operation reads its declared managed console URL once and retains that original console through dependent source reads, inspection, review and publication. A reconnect between operations uses the updated URL. Declared source, plan and worksheet file handles and receiving directories stay attached to the same configured workspace.
+
+## Run the complete original merchant workflow
+
+From this source checkout, choose an existing private directory and run:
+
+```sh
+node stellar-forge/mcp-merchant-operator/openapi-route-worksheet-journey.mjs /absolute/existing/private-directory
+```
+
+This original-console operation expands the maintained weather example to 1,302 API operations. It uses actual authenticated merchant HTTP, declared source/plan/worksheet files, full inventory pages and a worksheet larger than the ordinary MCP request limit. It then downloads and reopens the complete worksheet, changes integer atomic prices beyond JavaScript's exact-number range, adds a fully authored route, reconciles two price conflicts with retained selections, and saves through the original package writer. The same operation changes the managed console URL during save to exercise connection pinning, then verifies that the next operation uses the updated connection.
+
+The continuation exports every original package member, downloads and reopens the complete package, receives it through a second original console, and operates the SF82 release through compare, activation, HTTP 402 and owned shutdown. It exercises the CLI export in that same workflow. Its private result.json records the operated source and outcomes; the driver closes its original consoles and merchant host when it finishes.
