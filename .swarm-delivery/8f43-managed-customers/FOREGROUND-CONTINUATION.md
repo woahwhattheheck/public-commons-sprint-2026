@@ -14,7 +14,7 @@ This continuation resumes the existing managed customer operation through the ma
 | Original preparation launcher | `af25db37758fe890fe3177b7f7cc63fb9b409365` |
 | Preparation-only module | `cebb7a18f91aa6b8ae0b292f5cf530f6559bb7df` |
 | Foreground caller | `4425cbde51ac615ca27994cba237931c99a6ef33` |
-| Complete compact source command | `428fad020129dd28a276bcf3e774df851680bcde` |
+| Complete compact source command | `4a4e5c6729c7146f172ed2b4062f68ed7911accd` |
 | Original checkpoint producer | `b5195498e582ccaa084520a4a95f2b9c5e36ef34` |
 | Installed maintained host | `/workspace/scratch/b0285b3810b3/native-shared-queue/current-host` |
 | Actual runtime identity SHA-256 | `2bc8cd1e19dfce1257c060d13f77177c8d4a0e0003d7839f6659c8b831f74dbb` |
@@ -25,18 +25,17 @@ The memory declaration remains 896 MiB plus 128 MiB reserve. The original projec
 
 ## Run the complete existing operation
 
-The original source cache is a partial Git cache. The original source repair also needs eight original blob entries in its six changed tree directories. Their exact bytes are carried by `restore-original-tree-inputs.py`; every body is checked before publication into the same original cache. The original tree and commit checks remain unchanged.
+The original source cache is a partial Git cache. The original source repair also needs eight original blob entries in its six changed tree directories. The compact command carries `restore-original-tree-inputs.py` as a second exact source packet and executes it before the same foreground. Every body is checked before publication into the original cache. The full repair packet is Git blob `2cba4f6b45e8989067048a38400239521af6acd3`, 58,325 bytes. The original tree and commit checks remain unchanged.
 
 From the retained source checkout:
 
 ```sh
-/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3 -B .swarm-delivery/8f43-managed-customers/restore-original-tree-inputs.py
 bash .swarm-delivery/8f43-managed-customers/foreground-source-command.sh
 ```
 
-Retain the resulting foreground until the original operation finishes. The source command carries its complete 89,339-byte transport; it requires the original shared source, dependencies, customer workspaces, and installed host already selected by this operation.
+Retain the resulting foreground until the original operation finishes. The source command carries its complete 121,587-byte transport; it requires the original shared source, dependencies, customer workspaces, and installed host already selected by this operation.
 
-The compact command verifies the original compressed bootstrap, reads its original launcher as data, and reconstructs the reviewed preparation-only module. It checks the complete preparation and foreground Git blob identities before creating their private files. It then executes the foreground caller with the actual selected runtime identity.
+The compact command verifies the original compressed bootstrap and the complete Git restoration packet. After restoring those original objects, it reads the original launcher as data and reconstructs the reviewed preparation-only module. It checks the complete preparation and foreground Git blob identities before creating their private files. It then executes the foreground caller with the actual selected runtime identity.
 
 The caller takes the original native record lock, checks the exact request, retains its own full source and selection beneath `foreground-continuations`, and prepares the original product source. It uses `native_runtime_handoff.inspect` and `prepare`, followed by the maintained `native_foreground.resume_foreground(..., action="resume-capacity")`. That helper owns the finally-bound supervisor handoff. A currently running or completed original owner is followed through its original record.
 
