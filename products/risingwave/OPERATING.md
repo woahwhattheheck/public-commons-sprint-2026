@@ -547,6 +547,61 @@ Attach the same operating state through the original Applications workflow.
 Preserve the earlier source release and runtime while checking the reopened
 operation and its complete retained history.
 
+
+## Reopen the complete browser workspace
+
+The browser saves its complete working draft beside the native operating state.
+It keeps the source declaration, merchant choices, the report being edited,
+columns, parameter definitions and probes, membership filters, raw JSON editor
+text, input values, selected editions, product and customer fields. A reload
+restores those values before any original request is continued.
+
+Draft saves also retain the original request bodies and IDs for source saves,
+subscription review and creation, capture, complete comparison, publication and
+customer preparation. Transfer → Original operations opens accepted results or
+continues a pending request with its original body. A completed capture still
+uses its own Resume or Recover action when its native read needs continuation.
+
+The private workbench stores browser drafts in browser-workspaces. A new launch
+port or an Applications restart reads those same drafts from the original
+workbench directory. Transfer lists every saved browser workspace and provides
+Save, Open, Export and Import. Opening the saved source starts a fresh browser
+draft while preserving the previous complete draft in that list. When two tabs
+edit the same draft, the second writer keeps its own complete workspace rather
+than replacing the other tab's edits.
+
+The exported JSON contains all draft fields and original operation selections.
+Import it into its original saved workbench to restore that editor. The
+workbench's creation identity and directory bind the import; connection values
+continue to come from the launcher's environment references. Keep the complete
+private operating directory and its received edition files when transferring
+the actual application state.
+
+### Reconcile another operator's source changes
+
+A restored draft retains its original source revision. If a newer revision was
+saved, Reconcile source changes combines independent edits to the source and
+merchant settings. Fields changed on both sides appear with their previous,
+draft and saved values. Choose each overlapping field, recalculate, and apply
+the complete reconciled draft. Save changes then uses the current revision.
+
+Raw JSON editors remain available exactly as typed, including incomplete text.
+Apply edited source or payment JSON before saving or reconciling those fields.
+Report drafts retain incomplete field values until their declaration can be
+compiled.
+
+### Continue customer preparation and downloads
+
+Preparing a customer request now retains a stable buyerId alongside its original
+intent, run, query, payment choice and offer digest. A repeated original request
+reopens the same prepared file. The customer history pages through every saved
+request, including older requests beyond the first page.
+
+Transfer also retains original download selections. Its download buttons request
+the same edition, comparison, source revision or customer file again. Complete
+edition and comparison receiving continues through the existing CLI and MCP
+receiving operations, which retain partial offsets and verify every full file.
+
 ## References
 
 - [Native source and receiving operator](../../stellar/scf-starforge-20261009/sf30-seller-sdk/risingwave/README.md)

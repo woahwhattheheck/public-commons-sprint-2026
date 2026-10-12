@@ -250,6 +250,7 @@ final class Starforge_SF104_Checkout {
     }
 
     static function prepare_order($order_id) {
+        $prepare = static function () use ($order_id) {
         return self::with_order_lock($order_id, static function () use ($order_id) {
             $order = wc_get_order($order_id);
             if (!$order || $order->get_payment_method() !== self::ID ||
@@ -261,6 +262,12 @@ final class Starforge_SF104_Checkout {
             if ($record) {
                 $record = self::snapshot($order, false);
             } else {
+                // Read current product metadata only after catalog application/checkout admission serialized.
+                if (class_exists('Starforge_SF104_Catalog')) {
+                    Starforge_SF104_Catalog::clear_products(array_map(static function ($item) {
+                        return (string) $item->get_product_id();
+                    }, array_values($order->get_items('line_item'))));
+                }
                 if ($order->get_meta(Starforge_SF98_Woo::META_READY, true)) {
                     throw new RuntimeException('This order already has a separate merchant payment binding.');
                 }
@@ -312,6 +319,8 @@ final class Starforge_SF104_Checkout {
             if ($order->get_status() !== 'on-hold') $order->update_status('on-hold', 'Awaiting the original Stellar payment and independent merchant settlement review.');
             return self::available_handoff($order, $record);
         });
+        };
+        return class_exists('Starforge_SF104_Catalog') ? Starforge_SF104_Catalog::with_lock($prepare) : $prepare();
     }
 
     static function can_read($order) {
@@ -459,9 +468,12 @@ function starforge_sf104_register_gateway() {
             ] + Starforge_SF104_Basket::fields();
         }
         function process_admin_options() {
-            $result = parent::process_admin_options();
-            Starforge_SF104_Basket::settings_saved();
-            return $result;
+            $save = function () {
+                $result = parent::process_admin_options();
+                Starforge_SF104_Basket::settings_saved();
+                return $result;
+            };
+            return class_exists('Starforge_SF104_Catalog') ? Starforge_SF104_Catalog::with_lock($save) : $save();
         }
         function is_available() {
             if ($this->enabled !== 'yes' || Starforge_SF98_Woo::secret() === null) return false;
