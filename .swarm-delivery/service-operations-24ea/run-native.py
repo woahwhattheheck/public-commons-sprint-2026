@@ -19,8 +19,21 @@ SOURCE_COMMIT = "fe7329e0595d7ab77eddc832bee27785f13e9a4d"
 OPERATION = "SCF-SUPPORT-SERVICE-COMMITMENTS-24EA-20261012"
 
 
+def echo(text):
+    try:
+        sys.stdout.write(text)
+        sys.stdout.flush()
+    except BrokenPipeError:
+        # A disconnected progress reader does not cancel the accepted native child.
+        descriptor = os.open(os.devnull, os.O_WRONLY)
+        try:
+            os.dup2(descriptor, sys.stdout.fileno())
+        finally:
+            os.close(descriptor)
+
+
 def emit(value):
-    print(json.dumps(value, separators=(",", ":")), flush=True)
+    echo(json.dumps(value) + "\n")
 
 
 def now():
@@ -40,12 +53,12 @@ def runtime_identity():
             "pidNamespace": os.readlink("/proc/self/ns/pid")}
 
 
-def write_json(path, value):
+def write_bytes(path, data):
     # Same durable record pattern as the original managed Support receiving carrier.
     temporary = path.with_name(path.name + ".pending-" + uuid.uuid4().hex)
     with temporary.open("xb") as stream:
         os.chmod(temporary, 0o600)
-        stream.write((json.dumps(value, indent=2) + "\n").encode())
+        stream.write(data)
         stream.flush()
         os.fsync(stream.fileno())
     os.replace(temporary, path)
@@ -54,6 +67,10 @@ def write_json(path, value):
         os.fsync(descriptor)
     finally:
         os.close(descriptor)
+
+
+def write_json(path, value):
+    write_bytes(path, (json.dumps(value, indent=2) + "\n").encode())
 
 
 def read_existing(path):
@@ -172,9 +189,7 @@ def main():
                 if target.read_bytes() != data:
                     raise RuntimeError("Different selected source already exists " + name)
             else:
-                with target.open("xb") as stream:
-                    stream.write(data)
-                target.chmod(0o600)
+                write_bytes(target, data)
 
         entry = source / packet["nativeEntry"]
         if packet["nativeEntry"] not in packet["files"] or not entry.is_file():
@@ -188,10 +203,25 @@ def main():
         browser = root / "browser"
         browser.mkdir(exist_ok=True, mode=0o700)
         browser_link = native / "browser"
+        browser_recovery = None
         if not browser_link.exists() and not browser_link.is_symlink():
             browser_link.symlink_to(browser, target_is_directory=True)
         elif browser_link.is_symlink() and not browser_link.exists():
-            raise RuntimeError("Retain or restore the existing browser-profile destination")
+            prior_custody = read_existing(native / "runtime-custody.json")
+            prior_profile = prior_custody["value"].get("browserProfile") if prior_custody else None
+            if (not prior_custody or prior_custody["value"].get("commit") != SOURCE_COMMIT
+                    or not isinstance(prior_profile, str) or not Path(prior_profile).is_absolute()
+                    or Path(prior_profile).resolve() != browser_link.resolve()):
+                raise RuntimeError("The missing browser profile does not match the original runtime custody")
+            # The ephemeral profile disappeared; the original case/checkpoint remain in native.
+            replacement = native / (".browser-pending-" + uuid.uuid4().hex)
+            replacement.symlink_to(browser, target_is_directory=True)
+            try:
+                os.replace(replacement, browser_link)
+            finally:
+                replacement.unlink(missing_ok=True)
+            browser_recovery = {"priorProfile": prior_profile, "profile": str(browser),
+                                "runtimeCustodySha256": prior_custody["sha256"], "recoveredAt": now()}
 
         selection = {
             "operationId": OPERATION, "commit": SOURCE_COMMIT, "packetSha256": PACKET_SHA256,
@@ -200,6 +230,8 @@ def main():
             "runtime": {"node": str(node), "chromium": str(chromium),
                         "playwrightModule": str(playwright), "nodeModules": str(deps)},
         }
+        if browser_recovery is not None:
+            selection["browserProfileRecovery"] = browser_recovery
         for path in (root / "source-selection.json", native / "runtime-custody.json"):
             prior = read_existing(path)
             if prior:
@@ -287,15 +319,9 @@ def main():
                 write_json(active_path, active)
                 emit({"event": "service-original-native-started", "pid": child.pid,
                       "attemptId": attempt, "argv": argv})
-                echo = True
-                for block in iter(lambda: child.stdout.read1(16384), b""):
+                for block in child.stdout:
                     output.write(block)
-                    if echo:
-                        try:
-                            sys.stdout.buffer.write(block)
-                            sys.stdout.buffer.flush()
-                        except BrokenPipeError:
-                            echo = False
+                    echo(block.decode("utf-8", errors="replace"))
                 code = child.wait()
             if code:
                 close_owned_group()
