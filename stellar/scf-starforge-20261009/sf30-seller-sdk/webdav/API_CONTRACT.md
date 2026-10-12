@@ -483,6 +483,51 @@ into state.
 `draft-csv`, `draft-review`, `buyer-config` and `session-manifest`, with the
 corresponding original candidate, buyer or session ID.
 
+
+## Managed Applications and native startup
+
+`managed.mjs` exports the read-only `inspectWebDavWorkspaceBinding(directory,
+{expectedWorkspaceId,expectedWorkspaceIdentity})` and
+`inspectWebDavLaunchSource(directory,{expectedSha256})` inspections. The first
+returns schema `stellar-forge.webdav-workspace-binding.v1`, directory,
+workspaceId, createdAt and sha256. That hash binds the original workspace schema,
+UUID and creation identity; normal revisions remain editable. The second returns
+schema `stellar-forge.webdav-launch-source.v1`, directory, files and sha256, over
+the ordered 14 owned executable source files and their exact bytes.
+
+`openWebDavWorkspace` and `server.start` accept optional
+`expectedWorkspaceId` and `expectedWorkspaceIdentity` together. A bound open
+requires the original existing private directory. It checks the expected
+identity under the original writer lease before initializing state or source
+subdirectories. A mismatch returns `WEBDAV_WORKSPACE_BINDING_CHANGED`; incomplete
+expectations return `WEBDAV_WORKSPACE_BINDING_REQUIRED`.
+
+The managed CLI additionally requires `--managed-source`,
+`--expected-source-sha256` and `--startup-format json` together with the two
+workspace expectations. It verifies both reviewed source and its actual launch
+source. The one compact startup record has this shape:
+
+~~~js
+{
+  schema: 'stellar-forge.webdav-startup.v1',
+  status: 'WEBDAV_OPERATOR_READY',
+  url, directory, workspaceId, workspaceIdentity, createdAt,
+  sourceDirectory, launchSourceDirectory, sourceSha256, sourceFiles,
+  revision, pid, instanceId
+}
+~~~
+
+`server.start` returns its original fields plus createdAt and instanceId.
+`GET /api/health` returns status, workspaceId, createdAt, revision, pid and
+instanceId. The new random instanceId identifies that actual server lifetime;
+no workspace token appears in readiness or health.
+
+The maintained `application-webdav.mjs` helper validates source, workspace,
+instance and requested loopback port through the existing serialized startup
+observer. The complete [Applications guide](APPLICATIONS.md) supplies the saved
+entry, native Stop/reopen and source receiving operation. Existing unbound
+serve/API/MCP callers remain compatible.
+
 ## Portable source handoff and fresh import
 
 The packet interface is available without a running workspace:

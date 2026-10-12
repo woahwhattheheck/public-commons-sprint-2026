@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // MIT. One explicit source/publisher intent per command; no payment retry loop.
-import { resolve } from 'node:path';
+import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { readPrivate } from '../postgres/publisher/files.mjs';
@@ -8,11 +8,15 @@ import { openWebDavWorkspace } from './workspace.mjs';
 import { start } from './server.mjs';
 import { importSourcePacket, inspectSourcePacket } from './packet.mjs';
 import { fail } from './config.mjs';
+import { inspectWebDavLaunchSource, inspectWebDavWorkspaceBinding, WEBDAV_STARTUP_SCHEMA } from './managed.mjs';
 
 const HELP = [
   'Stellar Forge WebDAV source workspace',
   '',
   '  node cli.mjs serve --directory ABS --port 0 [--python PYTHON]',
+  '  Managed serve additionally requires this complete original binding:',
+  '    --expected-workspace-id UUID --expected-workspace-identity SHA256',
+  '    --managed-source ABS --expected-source-sha256 SHA256 --startup-format json',
   '  node cli.mjs state --directory ABS',
   '  node cli.mjs operation --directory ABS --id UUID',
   '  node cli.mjs act ACTION --directory ABS --input PRIVATE_JSON_FILE',
@@ -75,11 +79,40 @@ export async function main(argv = process.argv.slice(2)) {
   const command = argv[0], action = command === 'act' ? argv[1] : null, args = options(argv.slice(command === 'act' ? 2 : 1));
   const python = args.python ?? 'python3';
   if (command === 'serve') {
-    only(args, ['directory', 'port', 'python']);
-    const service = await start({ directory: absolute(args.directory, 'workspace directory'), port: Number(args.port ?? 0), python });
-    await signals(service.close);
-    json({ status: 'WEBDAV_OPERATOR_READY', url: service.url, directory: service.directory, workspaceId: service.workspaceId,
-      revision: service.revision, pid: service.pid }); return;
+    const managedKeys = ['expected-workspace-id', 'expected-workspace-identity',
+      'managed-source', 'expected-source-sha256', 'startup-format'];
+    only(args, ['directory', 'port', 'python', ...managedKeys]);
+    const selected = managedKeys.filter(key => args[key] !== undefined);
+    if (selected.length && (selected.length !== managedKeys.length || args['startup-format'] !== 'json'))
+      fail('WEBDAV_MANAGED_ARGUMENTS', 'Use the complete reviewed workspace/source binding and JSON startup format.');
+    const managed = selected.length > 0, directory = absolute(args.directory, 'workspace directory');
+    let source, sourceDirectory, launchSourceDirectory;
+    if (managed) {
+      sourceDirectory = absolute(args['managed-source'], 'reviewed source directory');
+      launchSourceDirectory = dirname(fileURLToPath(import.meta.url));
+      source = await inspectWebDavLaunchSource(sourceDirectory, { expectedSha256: args['expected-source-sha256'] });
+      await inspectWebDavLaunchSource(launchSourceDirectory, { expectedSha256: source.sha256 });
+    }
+    const service = await start({ directory, port: Number(args.port ?? 0), python,
+      ...(managed ? { expectedWorkspaceId: args['expected-workspace-id'],
+        expectedWorkspaceIdentity: args['expected-workspace-identity'] } : {}) });
+    const remove = await signals(service.close);
+    try {
+      if (managed) {
+        const binding = await inspectWebDavWorkspaceBinding(directory, {
+          expectedWorkspaceId: args['expected-workspace-id'], expectedWorkspaceIdentity: args['expected-workspace-identity'],
+        });
+        process.stdout.write(JSON.stringify({
+          schema: WEBDAV_STARTUP_SCHEMA, status: 'WEBDAV_OPERATOR_READY', url: service.url,
+          directory, workspaceId: binding.workspaceId, workspaceIdentity: binding.sha256,
+          createdAt: binding.createdAt, sourceDirectory, launchSourceDirectory,
+          sourceSha256: source.sha256, sourceFiles: source.files,
+          revision: service.revision, pid: service.pid, instanceId: service.instanceId,
+        }) + '\n');
+      } else json({ status: 'WEBDAV_OPERATOR_READY', url: service.url, directory: service.directory,
+        workspaceId: service.workspaceId, revision: service.revision, pid: service.pid });
+    } catch (error) { remove(); await service.close(); throw error; }
+    return;
   }
   if (command === 'inspect-source' || command === 'import-source') {
     only(args, command === 'inspect-source' ? ['input', 'python'] : ['input', 'directory', 'python']);
