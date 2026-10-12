@@ -3,6 +3,7 @@ export const SELECTION = 'stellar-forge.fred-selection.v1';
 export const CAPTURE = 'stellar-forge.fred-capture.v1';
 export const FRED_NOTICE = "This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.";
 export const FRED_TERMS = 'https://fred.stlouisfed.org/docs/api/terms_of_use.html';
+export const PUBLIC_CAPTURE = 'stellar-forge.fred-public-table-capture.v1';
 export const FRED_ORIGIN = 'https://api.stlouisfed.org';
 export const MAX_CAPTURE_BYTES = 64 * 1024 * 1024;
 export const MAX_PAGE_BYTES = 8 * 1024 * 1024;
@@ -16,6 +17,11 @@ export function canonical(value) {
   if (Array.isArray(value)) return '[' + value.map(canonical).join(',') + ']';
   need(plain(value), 'Only JSON values are supported.');
   return '{' + Object.keys(value).sort().map(key => JSON.stringify(key) + ':' + canonical(value[key])).join(',') + '}';
+}
+export function utf8Length(value) {
+  let bytes = 0;
+  for (const character of value) { const cp = character.codePointAt(0); bytes += cp <= 0x7f ? 1 : cp <= 0x7ff ? 2 : cp <= 0xffff ? 3 : 4; }
+  return bytes;
 }
 export const clone = value => JSON.parse(JSON.stringify(value));
 export function date(value, label = 'Date') {
@@ -65,7 +71,7 @@ export function fredRequest(selectionInput, series, endpoint = 'series/observati
 function bodyOf(receipt, request) {
   need(plain(receipt) && receipt.status === 200 && canonical(receipt.request) === canonical(request),
     'A retained source response does not match its original request.');
-  need(typeof receipt.body === 'string' && new TextEncoder().encode(receipt.body).length <= MAX_PAGE_BYTES,
+  need(typeof receipt.body === 'string' && utf8Length(receipt.body) <= MAX_PAGE_BYTES,
     'A retained source response exceeds its byte capacity.');
   need(typeof receipt.sha256 === 'string' && /^[a-f0-9]{64}$/.test(receipt.sha256), 'A source digest is required.');
   need(typeof receipt.receivedAt === 'string' && Number.isFinite(Date.parse(receipt.receivedAt)),
@@ -132,12 +138,13 @@ export function readObservationPage(receipt, selectionInput, id, offset = 0, exp
     complete: offset + observations.length === body.count, observations };
 }
 export function inspectCapture(capture) {
+  if (capture?.schema === PUBLIC_CAPTURE) return inspectPublicTableCapture(capture);
   need(plain(capture) && capture.schema === CAPTURE, 'Select an original FRED capture bundle.');
   const selection = normalizeSelection(capture.selection);
   need(canonical(selection) === canonical(capture.selection), 'Capture selection is not normalized.');
   need(Array.isArray(capture.records) && capture.records.length >= selection.series.length * 2,
     'Capture is missing original metadata or observation responses.');
-  need(new TextEncoder().encode(JSON.stringify(capture)).length <= MAX_CAPTURE_BYTES, 'Capture exceeds 64 MiB.');
+  need(utf8Length(JSON.stringify(capture)) <= MAX_CAPTURE_BYTES, 'Capture exceeds 64 MiB.');
   let cursor = 0, totalRows = 0;
   const series = [], rows = [];
   for (const id of selection.series) {
@@ -157,15 +164,15 @@ export function inspectCapture(capture) {
     }
     series.push({ ...meta.metadata, count, missing: values.filter(row => row.missing).length });
     for (const item of values) rows.push({ series: id, date: item.date, value: item.value, missing: item.missing,
-      as_of: selection.asOf, realtime_start: item.realtimeStart, realtime_end: item.realtimeEnd,
+      as_of: selection.asOf, time_basis: 'FRED_REALTIME_DATE', realtime_start: item.realtimeStart, realtime_end: item.realtimeEnd,
       units: meta.metadata.units, frequency: meta.metadata.frequency, seasonal_adjustment: meta.metadata.seasonalAdjustment });
   }
   need(cursor === capture.records.length, 'Capture contains responses outside the original selection.');
-  return { selection, series, rows, rowCount: totalRows,
+  return { selection, sourceMode: 'API_VINTAGE', timeBasis: 'FRED_REALTIME_DATE', series, rows, rowCount: totalRows,
     missing: rows.filter(row => row.missing).length, sourceResponses: capture.records.length };
 }
 export const COLUMNS = Object.freeze({ series: 'string', date: 'string', value: 'string', missing: 'boolean',
-  as_of: 'string', realtime_start: 'string', realtime_end: 'string', units: 'string', frequency: 'string',
+  as_of: 'string', time_basis: 'string', realtime_start: 'string', realtime_end: 'string', units: 'string', frequency: 'string',
   seasonal_adjustment: 'string' });
 export function projectionPolicy(input = {}) {
   need(plain(input) && Object.keys(input).every(key => ['fields', 'filters', 'ranges', 'sorts', 'defaultLimit', 'maxLimit'].includes(key)),
@@ -173,7 +180,7 @@ export function projectionPolicy(input = {}) {
   const fields = input.fields ?? Object.keys(COLUMNS);
   need(Array.isArray(fields) && fields.length > 0 && new Set(fields).size === fields.length &&
     fields.every(key => Object.hasOwn(COLUMNS, key)), 'Select unique original observation columns.');
-  for (const key of ['series', 'date', 'value', 'missing', 'as_of', 'units', 'frequency', 'seasonal_adjustment'])
+  for (const key of ['series', 'date', 'value', 'missing', 'as_of', 'time_basis', 'units', 'frequency', 'seasonal_adjustment'])
     need(fields.includes(key), 'Customer output must retain ' + key + ' with the original value.');
   const result = { fields: [...fields], filters: input.filters ?? ['series', 'missing'],
     ranges: input.ranges ?? ['date'], sorts: input.sorts ?? ['date', 'series'],
@@ -224,11 +231,12 @@ export function exactDifference(before, after) {
 export function compareCaptures(beforeCapture, afterCapture) {
   const before = inspectCapture(beforeCapture), after = inspectCapture(afterCapture);
   need(canonical(before.selection.series) === canonical(after.selection.series) &&
-    before.selection.start === after.selection.start && before.selection.end === after.selection.end,
-    'Compare the same original series and observation interval; vintages may differ.');
+    before.sourceMode === after.sourceMode &&
+    (before.sourceMode === 'PUBLIC_TABLE' || before.selection.start === after.selection.start && before.selection.end === after.selection.end),
+    'Compare the same series and source mode; API selections also retain the same observation interval.');
   const metadata = new Map(before.series.map(row => [row.id, row]));
   const metadataChanges = after.series.flatMap(row => {
-    const previous = metadata.get(row.id), fields = ['title', 'units', 'frequency', 'seasonalAdjustment', 'observationStart', 'observationEnd', 'lastUpdated', 'notes'];
+    const previous = metadata.get(row.id), fields = ['title', 'units', 'frequency', 'seasonalAdjustment', 'observationStart', 'observationEnd', 'lastUpdated', 'notes', 'publisher', 'release'];
     const changes = fields.filter(key => previous[key] !== row[key]).map(key => ({ field: key, before: previous[key], after: row[key] }));
     return changes.length ? [{ series: row.id, changes }] : [];
   });
@@ -247,8 +255,77 @@ export function compareCaptures(beforeCapture, afterCapture) {
     before: row.value, after: null, delta: null });
   changes.sort((a, b) => a.series < b.series ? -1 : a.series > b.series ? 1 : a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
   return { schema: 'stellar-forge.fred-comparison.v1', beforeAsOf: before.selection.asOf, afterAsOf: after.selection.asOf,
+    sourceMode: before.sourceMode, timeBasis: before.timeBasis,
     selection: { series: before.selection.series, start: before.selection.start, end: before.selection.end },
+    afterSelection: { start: after.selection.start, end: after.selection.end },
     beforeRows: before.rowCount, afterRows: after.rowCount, unchanged: after.rowCount - changes.filter(row => row.kind !== 'removed').length,
     totals: Object.fromEntries(['added', 'removed', 'revised', 'missing-changed', 'meaning-changed'].map(kind => [kind, changes.filter(row => row.kind === kind).length])),
     metadataChanges, changes };
+}
+
+/** Read the actual complete public-table text, preserving its publisher metadata. */
+export function readPublicTable(source) {
+  need(plain(source) && source.version === 'commons.retained-public-table.v1',
+    'Import a retained complete official public-table source.');
+  const id = string(source.series_id, 'Original series ID', 100);
+  need(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/.test(id) &&
+    source.source_url === 'https://fred.stlouisfed.org/data/' + encodeURIComponent(id),
+    'The public table must name its exact official FRED source page.');
+  need(typeof source.retrieved_at === 'string' && Number.isFinite(Date.parse(source.retrieved_at)),
+    'Retain the actual public-table retrieval timestamp.');
+  const asOf = new Date(source.retrieved_at).toISOString().slice(0, 10);
+  need(typeof source.table_text === 'string' && utf8Length(source.table_text) === source.bytes &&
+    source.bytes <= MAX_CAPTURE_BYTES && /^[a-f0-9]{64}$/.test(source.sha256 ?? ''),
+    'Retain the complete original public-table bytes and digest.');
+  const lines = source.table_text.replace(/\r\n?/g, '\n').split('\n'), fields = new Map(), observations = [];
+  const tableAt = lines.findIndex(line => /^DATE\s*\|\s*VALUE\s*$/.test(line));
+  need(tableAt > 0 && /^# Table Data - .+/.test(lines[0]), 'Original table header is missing.');
+  let field = null;
+  for (const line of lines.slice(1, tableAt)) {
+    const pair = /^([^|]+?)\s*\|\s*(.*)$/.exec(line);
+    if (pair) {
+      field = pair[1].trim();
+      need(!fields.has(field), 'Public table repeats a metadata field.');
+      fields.set(field, pair[2]);
+    } else if (line.trim()) {
+      need(field === 'Notes', 'Unrecognized original table metadata.');
+      fields.set(field, fields.get(field) + '\n' + line);
+    }
+  }
+  for (const name of ['Title', 'Series ID', 'Source', 'Frequency', 'Units', 'Seasonal Adjustment', 'Date Range', 'Last Updated'])
+    need(fields.has(name) && fields.get(name).length > 0, 'Original table needs ' + name + '.');
+  need(fields.get('Series ID') === id, 'Retained table series differs from its source page.');
+  const range = /^(\d{4}-\d{2}-\d{2}) to (\d{4}-\d{2}-\d{2})$/.exec(fields.get('Date Range'));
+  need(range, 'Original table date coverage is missing.');
+  const start = date(range[1]), end = date(range[2]);
+  let previous = null, separator = false;
+  for (const line of lines.slice(tableAt + 1)) {
+    if (!line.trim()) continue;
+    if (/^-+\s*\|\s*-+\s*$/.test(line) && !separator && observations.length === 0) { separator = true; continue; }
+    const row = /^(\d{4}-\d{2}-\d{2})\s*\|\s*(\.|-?\d+(?:\.\d+)?(?:[eE][+-]?\d{1,4})?)\s*$/.exec(line);
+    need(row, 'Every original public-table observation must remain present and readable.');
+    const when = date(row[1]);
+    need(when >= start && when <= end && (previous === null || when > previous), 'Public-table dates must remain unique and ordered.');
+    observations.push({ date: when, value: row[2], missing: row[2] === '.' }); previous = when;
+  }
+  need(Number.isSafeInteger(source.observation_count) && observations.length === source.observation_count &&
+    observations.length > 0 && observations.length <= 1000000 && observations[0].date === start &&
+    observations.at(-1).date === end, 'The complete source count and original coverage must agree.');
+  const selection = normalizeSelection({ series: [id], asOf, start, end });
+  const metadata = { id, title: fields.get('Title'), publisher: fields.get('Source'), release: fields.get('Release') ?? '',
+    units: fields.get('Units'), frequency: fields.get('Frequency'), seasonalAdjustment: fields.get('Seasonal Adjustment'),
+    observationStart: start, observationEnd: end, lastUpdated: fields.get('Last Updated'), notes: fields.get('Notes') ?? '',
+    sourceUrl: source.source_url, asOf, retrievedAt: source.retrieved_at, timeBasis: 'PUBLIC_TABLE_RETRIEVAL_DATE',
+    count: observations.length, missing: observations.filter(row => row.missing).length };
+  return { selection, sourceMode: 'PUBLIC_TABLE', timeBasis: 'PUBLIC_TABLE_RETRIEVAL_DATE',
+    series: [metadata], rowCount: observations.length, missing: metadata.missing, sourceResponses: 1,
+    rows: observations.map(row => ({ series: id, date: row.date, value: row.value, missing: row.missing,
+      as_of: asOf, time_basis: 'PUBLIC_TABLE_RETRIEVAL_DATE', realtime_start: '', realtime_end: '',
+      units: metadata.units, frequency: metadata.frequency, seasonal_adjustment: metadata.seasonalAdjustment })) };
+}
+export function inspectPublicTableCapture(capture) {
+  need(capture?.schema === PUBLIC_CAPTURE, 'Select a retained public-table capture.');
+  const model = readPublicTable(capture.source);
+  need(canonical(capture.selection) === canonical(model.selection), 'Public table selection differs from its original coverage.');
+  return model;
 }

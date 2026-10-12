@@ -2,7 +2,7 @@
 import { upstreamCredentialReferences,compileUpstreamBindings } from '../../upstream.mjs';
 import { importOpenApi } from '../../../sf61-openapi-seller-import/importer.mjs';
 import { createSellerServiceConfig } from '../../../sf61-openapi-seller-import/service-config.mjs';
-import { canonical } from '../source.mjs';
+import { canonical,getEntitySet } from '../source.mjs';
 import { underlyingType } from '../schema.mjs';
 import { validatePlan,sourceTarget,digest,PLAN_SCHEMA } from './contract.mjs';
 export const json = value => JSON.stringify(value,null,2)+'\n';
@@ -35,10 +35,15 @@ export function prepareProduct(input,catalog,options={}) {
         properties:{field:{enum:operation.orderFields},direction:{enum:['asc','desc']}}}},
       top:{type:'integer',minimum:1,maximum:operation.maxTotalRows},count:{type:'boolean'},
       pageSize:{type:'integer',minimum:1,maximum:operation.maxPageRows}}};
+    if(operation.sourceFilters!==undefined){
+      initial.properties.filters.const=operation.sourceFilters;
+      initial.properties.filterMode.enum=[operation.sourceFilterMode??'and'];
+    }
     const request={type:'object',properties:{...initial.properties,cursor:{type:'string',minLength:1,maxLength:32768}},oneOf:[initial,{type:'object',additionalProperties:false,required:['cursor'],properties:{cursor:{type:'string',minLength:1,maxLength:32768}}}]};
     spec.paths[operation.path]={post:{operationId:operation.id,summary:operation.entitySet+' live selected rows',
       description:'Each successful provider page has the listed price. pageSize is a preference; the supplier may return up to '+operation.maxPageRows+
-        ' rows. top limits the complete query. Exact Decimal/Int64 values remain strings. Submit only the returned cursor for a subsequent paid page.',
+        ' rows. top limits the complete query. Exact Decimal/Int64 values remain strings. Submit only the returned cursor for a subsequent paid page.'+
+        (operation.sourceFilters!==undefined?' The retained source filters and their Boolean mode are fixed for this merchant product.':''),
       requestBody:{required:true,content:{'application/json':{schema:request,example:{pageSize:Math.min(100,operation.maxPageRows)}}}},
       responses:{'200':{description:'Selected scalar fields, exact count, cumulative rows, and signed merchant continuation.',content:{'application/json':{schema:{type:'object'}}}},
         '422':{description:'Request exceeds merchant query policy or its continuation has expired.'},
@@ -51,8 +56,8 @@ export function prepareProduct(input,catalog,options={}) {
   return {plan,catalog,upstreams,spec,selections,bindings,imported,service,offers:{resources:imported.offers.map(row=>row.seller)},
     sourceBinding:digest(canonical({plan,metadataSha256:catalog.receipts.metadata.sha256,serviceSha256:catalog.receipts.service.sha256}))};
 }
-export function templatePlan(catalog,{publicOrigin='https://merchant.example'}={}) {
-  const entity=catalog.entitySets.find(set=>set.keyFields.length),supported=new Set(['Edm.String','Edm.Boolean','Edm.Byte','Edm.SByte','Edm.Int16','Edm.Int32',
+export function templatePlan(catalog,{publicOrigin='https://merchant.example',entitySet}={}) {
+  const entity=entitySet?getEntitySet(catalog,entitySet):catalog.entitySets.find(set=>set.keyFields.length),supported=new Set(['Edm.String','Edm.Boolean','Edm.Byte','Edm.SByte','Edm.Int16','Edm.Int32',
     'Edm.Int64','Edm.Decimal','Edm.Single','Edm.Double','Edm.Guid','Edm.Date','Edm.DateTimeOffset','Edm.TimeOfDay','Edm.Duration','Edm.Binary']);
   if (!entity) throw new TypeError('Select an advertised entity set with declared keys');
   const selected=entity.fields.filter(field=>!field.collection&&supported.has(underlyingType(catalog,field.type))).slice(0,32).map(field=>field.path);

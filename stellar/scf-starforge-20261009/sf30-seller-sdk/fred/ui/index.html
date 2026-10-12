@@ -16,7 +16,7 @@
 <label>Source page size<input id="page-size" type="number" min="1" max="100000" required></label><label>Combined row capacity<input id="max-rows" type="number" min="1" max="1000000" required></label>
 <div class="wide buttons"><button type="submit">Save selection</button><button type="button" id="capture">Acquire selected source</button></div>
 </form>
-<div class="box"><h3>Import retained source</h3><p>Import the original capture JSON from an earlier operation or receiving team.</p><label>Capture file<input id="capture-file" type="file" accept=".json,application/json"></label><button id="import-capture">Import source</button></div>
+<div class="box"><h3>Import retained source</h3><p>Import an original API capture or a complete retained official public-table JSON. Public tables keep the actual retrieval date and published source metadata.</p><label>Capture file<input id="capture-file" type="file" accept=".json,application/json"></label><button id="import-capture">Import source</button></div>
 <h3>Selected acquisition</h3><pre id="acquisition-state">No acquisition is running.</pre>
 </section>
 <section data-panel="editions" hidden>
@@ -25,7 +25,7 @@
 <div id="series-detail"></div>
 <h3>Original observations</h3><div class="inline"><label>Series<select id="row-series"></select></label><span id="row-count"></span></div><div id="observations" class="table-wrap"></div>
 <div class="buttons"><button id="rows-previous">Previous page</button><button id="rows-next">Next page</button></div>
-<div class="box"><h3>Review the customer edition</h3><p>Keep the original value, missing marker, vintage, units and frequency together. Configure the original dataset’s selected fields and query capabilities.</p>
+<div class="box"><h3>Review the customer edition</h3><p>Keep the original value, missing marker, date basis, units and frequency together. Configure the original dataset’s selected fields and query capabilities.</p>
 <label>Projection and page policy<textarea id="policy" rows="13" spellcheck="false"></textarea></label><label>Review note<textarea id="review-note" rows="3" maxlength="8000"></textarea></label><button id="save-review">Save reviewed edition</button></div>
 <h3>Compare two retained vintages</h3><div class="form-grid"><label>Earlier capture<select id="compare-before"></select></label><label>Later capture<select id="compare-after"></select></label></div>
 <div class="buttons"><button id="compare">Compare source editions</button><button id="download-comparison">Download full comparison</button></div><pre id="comparison-summary">Select the same series and observation interval in two captures.</pre><div id="comparison" class="table-wrap"></div>
