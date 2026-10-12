@@ -39,7 +39,7 @@ const PINS = {
   "stellar-forge/mcp-merchant-operator/providers/census-geocoder-workspaces.mjs": "bacc169fca63847f4f2429ee27430ad173fbfb6b",
   "stellar/scf-starforge-20261009/sf30-seller-sdk/census-geocoder/recording.mjs": "951ccf84c81c4464e2de7f676287ae53f4c626e2",
   "stellar-forge/mcp-merchant-operator/config.mjs": "10b23ca6fb32bbc44721ebcbbead390072953128",
-  "stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs": "ba207f66842f26d9ce65aa76c4c98cbcb43121fe",
+  "stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs": "c6f138658b1eb7dfb9b811fb177876bf679d2aa0",
   "stellar-forge/mcp-merchant-operator/serve.mjs": "3b01f62dc188f802e0aaecf9bd30dd1b5a89171d",
   "stellar-forge/mcp-merchant-operator/retained-download.mjs": "f204b2d032498e28dbab0f78620f17a888d8eea5",
   "stellar-forge/mcp-merchant-operator/census-geocoder-download.mjs": "3180903ecc3a83527f3388f493a90fdc019dea5f"
