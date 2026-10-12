@@ -199,7 +199,10 @@ async function screenshot(name,width){
 async function connectBrowser(){
   if(browser)return page;
   check();
-  const {chromium}=await import(pathToFileURL(options.playwright).href);
+  const loaded=await import(pathToFileURL(options.playwright).href),
+    chromium=loaded.chromium??loaded.default?.chromium;
+  assert.equal(typeof chromium?.launchPersistentContext,'function',
+    'The selected Playwright runtime must provide Chromium persistent contexts.');
   check();
   browser=await chromium.launchPersistentContext(join(root,'browser'),{
     executablePath:options.chromium,headless:true,viewport:{width:1440,height:960},
