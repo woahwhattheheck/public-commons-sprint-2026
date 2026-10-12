@@ -1,0 +1,90 @@
+{
+  "schema": "stellar-forge.mpp-native-inputs.v1",
+  "operation": "SCF-MPP-APPLICATIONS-NATIVE-20261012-EB459",
+  "files": [
+    {
+      "name": "source-packet.zip",
+      "source": {
+        "github_blob": {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "sha": "53b35ffd562e7af3ccc809c28a97f0d46167d8a3"
+        }
+      },
+      "bytes": 430362,
+      "sha256": "e88010db7854addc90d348d66af44ab349565cb2676b4dc4b162f90347837827"
+    },
+    {
+      "name": "receive-original-mpp.py",
+      "source": {
+        "github_blob": {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "sha": "068d931540bd3fe85061b5fa460b42ac882d967c"
+        }
+      },
+      "bytes": 12682,
+      "sha256": "2762cd47e22ab7e615f8e898f5354b024eb62eb5805c93433bd9a55ac0c07652"
+    },
+    {
+      "name": "git-object-receiving.py",
+      "source": {
+        "github_blob": {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "sha": "b4cfcbad88e1d076625e8f59badf315f08f9c23f"
+        }
+      },
+      "bytes": 22952,
+      "sha256": "7faf53b390cde66c2d46b58841dfd37cc836cc2eb7a5417ab80e993e9b72ee22"
+    },
+    {
+      "name": "runtime-receiving.py",
+      "source": {
+        "github_blob": {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "sha": "0f1be6df1c47f8f8fb9517dcaee5b708c71aa4d6"
+        }
+      },
+      "bytes": 37739,
+      "sha256": "6795272032979798358fb4f94bd109880bcd2dd9b108248b2376c57dd2fca930"
+    },
+    {
+      "name": "mpp-managed-reception.mjs",
+      "source": {
+        "github_blob": {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "sha": "e9fdd60207a7c706ab547ba68d60f53f504e53ec"
+        }
+      },
+      "bytes": 33723,
+      "sha256": "5d5e3e593b8bbbca122891b147b46cec1625ca6264fcdeb6335248e77753e50b"
+    },
+    {
+      "name": "e2b-original-mpp.py",
+      "source": {
+        "github_blob": {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "sha": "6c59f161f2837b512b34c487535840e5a46e7708"
+        }
+      },
+      "bytes": 22786,
+      "sha256": "ead73fac05ed4b9030e6d68f6f50a6acb9488b3bce0e941ddec502b78d23c926"
+    }
+  ],
+  "totalBytes": 560244,
+  "wrapper": {
+    "prepare": [
+      "python3",
+      "-B",
+      "/root/commons-mpp-applications-eb459-20261012/inbox/e2b-original-mpp.py",
+      "prepare",
+      "/root/commons-mpp-applications-eb459-20261012"
+    ],
+    "launch": [
+      "python3",
+      "-B",
+      "/root/commons-mpp-applications-eb459-20261012/inbox/e2b-original-mpp.py",
+      "launch",
+      "/root/commons-mpp-applications-eb459-20261012"
+    ],
+    "setupEnvironment": "MPP_WORKER_PROFILE_JSON"
+  }
+}
