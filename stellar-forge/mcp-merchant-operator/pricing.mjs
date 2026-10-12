@@ -83,7 +83,7 @@ export async function readPricingConfiguration(path) {
   const workspaces = Object.create(null), seen = new Set();
   for (const [name, item] of Object.entries(raw.workspaces)) {
     identifier(name, 'Pricing workspace alias');
-    exact(item, ['label', 'config', 'directory', 'snapshot', 'history', 'opsUrl', 'nativeOutbox', 'sourcePackage', 'releaseStore', 'releaseRuntime', 'costInputs', 'costBooks', 'supplierUsage', 'accountingReport'], ['config', 'directory']);
+    exact(item, ['label', 'config', 'directory', 'snapshot', 'history', 'opsUrl', 'nativeOutbox', 'sourcePackage', 'releaseStore', 'releaseRuntime', 'costInputs', 'costBooks', 'costPackages', 'supplierUsage', 'accountingReport'], ['config', 'directory']);
     const settings = { label: line(item.label ?? name, 'Pricing workspace label'), config: hostPath(item.config, baseDirectory),
       directory: hostPath(item.directory, baseDirectory) };
     await privateSupportDirectory(settings.directory);
@@ -220,6 +220,7 @@ export class MerchantPricing {
           live: Boolean(value.opsUrl), sourceKinds: value.opsUrl ? ['SESSION', 'DURABLE_HISTORY'] :
             [...(value.snapshot ? ['SESSION'] : []), ...(value.history ? ['DURABLE_HISTORY'] : [])],
           costSourceInputs: Object.keys(value.costInputs ?? {}).length, costBookInputs: Object.keys(value.costBooks ?? {}).length,
+          costPackageInputs: Object.keys(value.costPackages ?? {}).length,
           costConfiguredCaptures: [...(value.supplierUsage ? ['USAGE'] : []), ...(value.accountingReport ? ['ACCOUNTING'] : [])],
           nativeAttached: Boolean(value.nativeOutbox), sourcePackageAvailable: Boolean(value.sourcePackage),
           releaseAvailable: Boolean(value.releaseStore),
@@ -249,7 +250,7 @@ export class MerchantPricing {
       this.#entries.set(name, entry);
       entry.opening = (async () => {
         const { openWorkspace } = await import('../../stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/workspace/model.mjs');
-        const { label, costInputs, costBooks, ...settings } = configured;
+        const { label, costInputs, costBooks, costPackages, ...settings } = configured;
         const model = await openWorkspace(settings), source = await model.state();
         entry.model = model; entry.source = source;
       })();
