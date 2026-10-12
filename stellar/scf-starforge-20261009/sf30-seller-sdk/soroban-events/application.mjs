@@ -17,12 +17,14 @@ export function sorobanEventsApplication(common) {
     title: 'Soroban contract events',
     terminal: false,
     requiredSource: SOURCE + '/server.mjs',
-    description: 'Save native contract and topic filters, capture a fixed ledger range, resume original RPC cursors, review complete event sources, and prepare editions for paid delivery or full customer receiving.',
+    description: 'Capture native contract events and operate recurring services with retained ledger ranges, paid publication, source recovery and complete receiving.',
     fields: [
       field('workspaceDirectory', 'Private event workspace', 'path', true,
         'Reopen the original event workspace, or create a directory in an existing private parent. Saved filters, captures and editions remain selected.'),
       field('connectionFile', 'Private Stellar RPC connection', 'path', false,
         'JSON containing rpcUrl, network and optional headers. Leave empty to review a received workspace without a network connection.'),
+      field('connectionsFile', 'Named private RPC connections', 'path', false,
+        'Optional JSON map of connection aliases to native RPC settings. Select an archive alias in Services when historical recovery is needed.'),
       ...common,
     ],
   };
@@ -35,7 +37,7 @@ export async function prepareSorobanEventsApplication(settings, { inputPath, run
   const inputs = [selected], createDirectories = selected.exists ? [] : [directory];
   const runtime = await inspectMerchantRuntime(absolute(runtimeDirectory), { load: false });
   const sourceDirectory = join(runtime.sourceRoot, SOURCE);
-  for (const name of ['server.mjs', 'cli.mjs', 'engine.mjs', 'rpc.mjs', 'browser-assets.json'])
+  for (const name of ['server.mjs', 'cli.mjs', 'engine.mjs', 'rpc.mjs', 'watch.mjs', 'publish.mjs', 'source-download.mjs', 'browser-assets.json'])
     inputs.push(await inputPath(join(sourceDirectory, name), 'file'));
   const native = await import(pathToFileURL(join(sourceDirectory, 'engine.mjs')).href);
   need(typeof native.inspectSorobanEventsWorkspace === 'function', 'APPLICATION_SOROBAN_SOURCE_REQUIRED',
@@ -47,8 +49,9 @@ export async function prepareSorobanEventsApplication(settings, { inputPath, run
     need(UUID.test(identity.workspaceId ?? ''), 'APPLICATION_SOROBAN_WORKSPACE_ID_REQUIRED');
     args.push('--expected-workspace-id', identity.workspaceId);
   }
-  if (settings.connectionFile) {
-    const file = await inputPath(absolute(settings.connectionFile), 'file', false, true);
+  for (const [setting, argument] of [['connectionFile', '--connection-file'], ['connectionsFile', '--connections-file']]) {
+    if (!settings[setting]) continue;
+    const file = await inputPath(absolute(settings[setting]), 'file', false, true);
     const bytes = await regular(file.path, 65536);
     let connection;
     try { connection = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); }
@@ -58,7 +61,7 @@ export async function prepareSorobanEventsApplication(settings, { inputPath, run
     // provider headers and local development settings. Keep these private bytes
     // in the existing reviewed input set rather than duplicating credentials.
     inputs.push(file);
-    args.push('--connection-file', file.path);
+    args.push(argument, file.path);
   }
   // Workspace metadata changes during normal capture and review. Preserve its
   // stable identity in the saved command instead of pinning mutable bytes.
@@ -86,9 +89,12 @@ export async function sorobanEventsStartup(request, text) {
   const directory = absolute(option(request, '--workspace'));
   const connectionOption = option(request, '--connection-file', true);
   const connectionFile = connectionOption ? absolute(connectionOption) : null;
+  const connectionsOption = option(request, '--connections-file', true);
+  const connectionsFile = connectionsOption ? absolute(connectionsOption) : null;
   const sourceDirectory = join(absolute(request.releaseDirectory), 'source', SOURCE);
   const expectedWorkspaceId = option(request, '--expected-workspace-id', true);
   need(value.directory === directory && value.connectionFile === connectionFile &&
+    (value.connectionsFile ?? null) === connectionsFile &&
     value.sourceDirectory === sourceDirectory && UUID.test(value.workspaceId ?? '') &&
     (expectedWorkspaceId === undefined || value.workspaceId === expectedWorkspaceId) &&
     Number.isSafeInteger(value.pid) && value.pid > 0, 'APPLICATION_SOROBAN_STARTUP_CHANGED');
@@ -112,6 +118,7 @@ export async function sorobanEventsStartup(request, text) {
       directory,
       workspaceId: identity.workspaceId,
       connectionFile,
+      connectionsFile,
       sourceDirectory,
       pid: value.pid,
     },
