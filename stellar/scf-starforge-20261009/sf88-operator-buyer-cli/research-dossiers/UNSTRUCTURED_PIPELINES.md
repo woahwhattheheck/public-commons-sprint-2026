@@ -61,6 +61,35 @@ A profile may supply an exact provider `job_nodes` array instead of `template_id
 
 The provider documents at most ten files per local-file job, 50 MB per file, and at least one second between create requests. It allows five jobs to run concurrently and schedules overflow. The implementation uses a conservative decimal 50,000,000-byte file ceiling. The browser accepts at most ten files and 32 MiB in total; a smaller configured limit also applies. The original account gate serializes creates within this shared operations directory and preserves launch spacing across profiles, configuration revisions, and process restarts. Independent hosts must coordinate through their shared account operations. Provider status remains the status returned by the service.
 
+## Open the saved source from Applications
+
+In the original runtime workspace, choose **Applications → Research dossiers**.
+Select the private research directory and set **Original document-pipeline source
+selection** to the absolute path of the source JSON above. The saved field is
+`pipelineSourceConfig`; the original command receives it as `--pipeline-source`.
+
+Use the existing **Private environment JSON** field when the original process
+needs a private API-key variable. The variable name must match `apiKeyEnv` in the
+account configuration. The account, API address and processing profiles remain
+in that original private configuration.
+
+**Review** retains the selected source file, its referenced account configuration
+and the original pipeline jobs directory. It validates the configuration through
+the selected runtime's original Pipelines contract. A new jobs directory can be
+created in an existing private parent through the normal Applications preparation.
+The account selection is reviewed without starting a provider job.
+
+Choose **Save**, connect the selected runtime, then **Review Start → Start**.
+Applications opens the original authenticated Research listener after its startup
+announcement identifies the selected research directory and pipeline workspace.
+The existing **Pipeline jobs** view operates the original saved jobs.
+
+Use **Stop** to close the managed listener. Reopen the same saved application and
+start it again to continue its retained jobs, outputs and dossier decisions. If
+the source selection or account configuration changes, review those current
+inputs through Applications before starting. The original provider controls,
+action recovery, reconciliation and receiving flow below remain available.
+
 ## Prepare and submit a job
 
 1. Open or create a research dossier, then add the research question the documents should inform.
