@@ -1,0 +1,122 @@
+{
+  "schema": "apex.original-source-bundle/v1",
+  "sources": [
+    {
+      "name": "pay-plan",
+      "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf",
+      "bytes": 100340,
+      "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+      "retrieved_at": "2026-10-12T03:25:23.632906+00:00",
+      "pages": 6,
+      "file": "pay-plan.pdf",
+      "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+      "include_in_native_import": true,
+      "text_extraction": {
+        "file": "pay-plan.txt",
+        "bytes": 70074,
+        "sha256": "d4c568d1b80a50466787b7f144319d01f25717a77346ed18378e7ecc4a223017",
+        "command": "pdftotext -layout",
+        "encoding": "utf-8",
+        "source_sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2"
+      }
+    },
+    {
+      "name": "pay-memo",
+      "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-ddc740306bfc4de7a47ef33c69c6f109.pdf",
+      "bytes": 240254,
+      "sha256": "7ded61af8535eab8cf9a2801c477206e9b8e34be7cb108312458ceb0f785ae1f",
+      "retrieved_at": "2026-10-12T03:25:23.633115+00:00",
+      "pages": 3,
+      "file": "pay-memo.pdf",
+      "label": "CN19-A2 FY2025-2026 Position Study Recommendations",
+      "include_in_native_import": true,
+      "text_extraction": {
+        "file": "pay-memo.txt",
+        "bytes": 2422,
+        "sha256": "dc791afaabf825186af0af2096c56e92397f2f1501007270180495bef9a70ffc",
+        "command": "pdftotext -layout",
+        "encoding": "utf-8",
+        "source_sha256": "7ded61af8535eab8cf9a2801c477206e9b8e34be7cb108312458ceb0f785ae1f"
+      }
+    },
+    {
+      "name": "positions",
+      "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf",
+      "bytes": 89323,
+      "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+      "retrieved_at": "2026-10-12T03:25:23.634276+00:00",
+      "pages": 6,
+      "file": "positions.pdf",
+      "label": "CN20-A1 FY27 Position Authorization by Department",
+      "include_in_native_import": true,
+      "text_extraction": {
+        "file": "positions.txt",
+        "bytes": 28837,
+        "sha256": "2be2f4b8a94dc02581722f0a63633f45ea94b287e31e9c49379ac086b7b599dc",
+        "command": "pdftotext -layout",
+        "encoding": "utf-8",
+        "source_sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb"
+      }
+    },
+    {
+      "name": "pay-coversheet",
+      "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-83551ba65648407ca3be1ec55f90769c.pdf",
+      "bytes": 132169,
+      "sha256": "e17afff05ee97922fe9287c598c0e5367c0f4d42a3f9151fed2101c0ada0a1e4",
+      "retrieved_at": "2026-10-12T03:25:23.658584+00:00",
+      "pages": 2,
+      "file": "pay-coversheet.pdf",
+      "label": "CN19 Pay and Classification Plan FY2026-2027 coversheet",
+      "include_in_native_import": true,
+      "text_extraction": {
+        "file": "pay-coversheet.txt",
+        "bytes": 4029,
+        "sha256": "e4f96ba099a2af7cf8d73fd5e743ba1d16176674e27afcb532ee7439718946ed",
+        "command": "pdftotext -layout",
+        "encoding": "utf-8",
+        "source_sha256": "e17afff05ee97922fe9287c598c0e5367c0f4d42a3f9151fed2101c0ada0a1e4"
+      }
+    },
+    {
+      "name": "rfp",
+      "url": "https://apexnc.org/DocumentCenter/View/56664",
+      "bytes": 296800,
+      "sha256": "f8f7680b7d771e4f766856a74bb4f58ff0e327b74ce48b4c75118209d38c33a5",
+      "retrieved_at": "2026-10-12T03:25:31.020559+00:00",
+      "pages": 14,
+      "file": "rfp.pdf",
+      "label": "Public Safety Classification and Compensation Plan RFP, issued October 5, 2026",
+      "include_in_native_import": true,
+      "text_extraction": {
+        "file": "rfp.txt",
+        "bytes": 30816,
+        "sha256": "3e9b4cbb69547cf1c4b746caa3a5d841fc397764f490d97a0e4c26e6a51a40c1",
+        "command": "pdftotext -layout",
+        "encoding": "utf-8",
+        "source_sha256": "f8f7680b7d771e4f766856a74bb4f58ff0e327b74ce48b4c75118209d38c33a5"
+      }
+    },
+    {
+      "name": "position-cover",
+      "label": "CN20 Position Authorization List FY2026-2027 coversheet",
+      "file": "position-cover.pdf",
+      "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-567b03c50d6e4c7290eb4f08c7d839ec.pdf",
+      "bytes": 123607,
+      "sha256": "e4f5d7bec4d2c37fde4a78a30070476bbbc05815d7cfd91baff52438eb49e35f",
+      "retrieved_at": "2026-10-12T03:18:58.190490+00:00",
+      "retrieval_time_note": "Timestamp of original F11 request; original HTTP status, response Date, Last-Modified and ETag are retained in f11-source-capture.json.",
+      "pages": 1,
+      "include_in_native_import": true,
+      "received_at": "2026-10-12T03:44:47.543183+00:00",
+      "text_extraction": {
+        "file": "position-cover.txt",
+        "bytes": 1587,
+        "sha256": "dc41e5d6d8c7f60535ca8725e40aacd8b209d54eeea4c86f74d28bd976fdf97d",
+        "command": "pdftotext -layout",
+        "encoding": "utf-8",
+        "source_sha256": "e4f5d7bec4d2c37fde4a78a30070476bbbc05815d7cfd91baff52438eb49e35f"
+      }
+    }
+  ],
+  "physical_page_numbers": true
+}
