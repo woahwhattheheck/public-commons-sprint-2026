@@ -169,7 +169,7 @@ const actionNames = [
   'cohort.configure', 'version.inspect', 'capture.start', 'capture.select', 'capture.advance',
   'capture.resume', 'capture.pause', 'review.record', 'mapping.default', 'mapping.save',
   'edition.build', 'edition.compare', 'dataset.query', 'merchant.configure', 'package.export',
-  'prs.candidate', 'prs.plan', 'prs.apply', 'prs.reconcile'
+  'prs.candidate', 'prs.plan', 'prs.apply', 'prs.reconcile', 'prs.preview'
 ];
 const originalTools = sourceWorkspaceTools((name, description, properties, required, annotations) =>
   ({ name, description, properties, required, annotations }));

@@ -170,7 +170,7 @@ The native acquisition preserves complete fields, requests the count on the firs
 | Build/compare | edition.build, edition.compare |
 | Query retained edition | dataset.query |
 | Prepare merchant/package | merchant.configure, package.export |
-| PRS operations | prs.candidate, prs.plan, prs.apply, prs.reconcile |
+| PRS operations | prs.candidate, prs.plan, prs.apply, prs.reconcile, prs.preview |
 | Publisher | Installed original publisher.* actions |
 | Dossier | Installed original dossier.* actions, validated by the controller's joined leaf |
 
@@ -181,6 +181,8 @@ Mapping uses the original inventory: exact nested key paths and array markers, o
 The complete study read includes the nested object, original lexical JSON and source page. SectionJson retains the exact original section JSON for review. Source and build hashes come from the retained native engine, independently of displayed names.
 
 ## PRS intake, modernization and reconciliation
+
+For an original full or partial upload composition, call action with prs.preview and {baseDocumentId, incomingDocumentId, reviewer, rules?}. Both selected documents must already be retained in this workspace. The original PRS engine applies its protocol/results schema and reviewed composition rules, retains both inputs, and returns the composed candidate with its complete report. Use the same revision and UUID envelope as every other native action.
 
 Use files to inspect the actual host-declared XML and its complete SHA256. Prs_upload requires the declared prs handle, expectedSha256, schema protocol/results, current expectedRevision and retained requestId.
 
