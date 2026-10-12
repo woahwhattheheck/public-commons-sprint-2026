@@ -86,6 +86,78 @@ Review **Project** and **Delivery capacity** alongside a revised budget to keep 
 
 The complete draft uses the existing 16 MiB logical allowance. Receiving checks the complete candidate draft before replacing the current editor state. Each original planning file is stored once per draft; saved editorial versions refer to its retained identity. Original file downloads reproduce the received JSON or ZIP bytes.
 
+## Review a later revision against the edited submission
+
+When the same native plan changes, receive its next complete JSON or planning ZIP through **Planning edition**. The original file is retained before the editor opens **Review incoming native plan revision**. The selected plan, edited Delivery answer and issuer fields stay in their current working state until the revision choices are applied.
+
+A previously received file can also be selected through **Review another retained revision of this native plan**. Both original file identities and both selected native revision identities are displayed. The comparison uses the exact saved native plans, including their original calculations. It supports a later numbered revision, an earlier retained revision, and explicitly selected files containing different content under the same revision number. Shared history identities remain visible so the operator can recognize those different source histories.
+
+### Compare the full scope and resulting answers
+
+The comparison contains:
+
+- Requested award, estimated hours, project completion day and package count.
+- Every changed, added or removed work package, with its original and incoming price, scope, tranche, work window, effort and completion assessment.
+- All three tranche deliverables, prices, submission days, completion measures and planning notes.
+- The four conditional payment allocations and changed conditions or modeled payment dates.
+- Native planning-input changes and both complete cash and contributor-capacity calculations.
+- The canonical Delivery answer and each existing issuer field that includes Delivery or has received a native planning preview.
+- The current Project and Delivery capacity answers, available beside the revised award and schedule.
+
+Each target retains its own applied-plan baseline. A field that deliberately keeps an earlier edition continues to reference that earlier original plan when a later update is reviewed. Removing an issuer field preserves its earlier complete state in Saved versions; a later comparison includes the fields that still exist in the working draft.
+
+New plan applications record the complete resulting target text and the exact native scope used to generate it. Earlier drafts remain readable. A legacy replacement application supplies its exact applied text as a baseline. Where a legacy appended field has no complete target baseline, the editor shows its full current text and incoming scope for explicit selection or editing.
+
+### Choose the exact full text
+
+For every target, read the complete compared text and select one of these choices:
+
+| Choice | Result |
+| --- | --- |
+| Keep current edited answer | Retain that target's current text and original plan baseline. |
+| Use incoming native scope | Replace that target with the selected incoming native scope. |
+| Use proposed combined answer | Carry independent native changes and editorial changes into one full answer. This choice is available when the changes can be combined without an overlap. |
+| Edit and use complete proposed answer | Edit the full proposed text, including any overlapping changes, then use that exact answer. |
+
+Combination happens in two stages: edits made to the originally applied planning text are compared with the revised native scope; later edits to the working target are then carried forward against its applied baseline. Changes to different lines can be combined. Overlapping changes remain visible with both source texts and the complete editable proposal. The editor performs no text rewrite merely because a file was received.
+
+The complete resulting answer is visible beneath each choice. Its word and character counts follow the existing output format. Issuer fields also display the actual recorded prompts, limits and counting convention through the maintained field review. The selected work-package scope travels with each target. A field containing a selected subset receives that subset's surviving package identities; a full-plan target includes newly added native packages. Removed selected scope is shown explicitly.
+
+Use the related Project and Delivery capacity links to reconcile the requested amount, time frame and funding assumptions in those original answers. Returning to the planning comparison preserves its draft choices. **Refresh comparison against current draft** incorporates the latest target text and form context; unchanged choices carry forward, while changed target inputs require a current selection. The preceding complete review remains in Saved versions.
+
+After reviewing the selected full answers and related application context, choose **Apply reviewed revision choices**. The editor retains the whole preceding submission version, applies the selected text decisions, and selects the reviewed incoming native plan. A target kept on its earlier text retains that original baseline. The review records all resulting full answers and choices.
+
+**Keep current plan and close review** retains the current plan and all current target text. The incoming file and the completed keep decision remain available for a later comparison.
+
+### Save and continue the same application
+
+Use the existing **Save version**, **Download full draft**, **Open draft file** and **Browser drafts** controls. The ordinary complete export now includes the selected planning revision, current target baselines, pending or completed revision choices, every original planning file and all earlier versions. The original draft schema and IndexedDB revision check remain in use.
+
+Restoring an earlier saved version restores its plan selection, target baselines and revision review together with its answers, issuer mapping and other review state. All received source files remain available. A version from before this capability opens with no target bindings or update review and can receive an original native plan normally.
+
+**Download complete comparison and decisions** produces a separate full JSON report containing both selected native plans and calculations, their source identities, package/tranche/payment changes, each complete text alternative, notes and choices, and the current target text. Use the full submission export to continue editing with the complete original files and draft history.
+
+A comparison is checked against the current planning selection, answer text, issuer-field instructions and related Project/Delivery capacity text before applying. If those inputs changed while the review was open, refresh it and review the current choices. The existing draft's logical size limit is checked on the complete candidate; a receiving or save error keeps the current working draft available.
+
+### Source and receiving integration
+
+The maintained submission asset registration includes /grant-plan-update-core.mjs and /grant-plan-update-workspace.mjs. Publish them with the existing complete source edition. The original plan calculator, native case amendment, manuscript composer and Page publication remain their existing components.
+
+The exported model functions in grant-plan-update-core.mjs operate on the same complete draft:
+
+- selectPlanningRevision selects a first or different native plan, or opens a same-plan revision review.
+- beginPlanningUpdate starts a comparison from the retained original sources.
+- choosePlanningUpdate retains a target's keep, incoming, combined or custom text decision.
+- refreshPlanningUpdate updates the comparison against current edited inputs.
+- planningUpdateReviewBasis identifies the exact current set of text choices reviewed by the operator.
+- finishPlanningUpdate applies the reviewed choices or retains the current plan.
+- exportPlanningUpdate returns the complete comparison and decision report.
+
+The caller retains a full version before a transition and validates the resulting complete draft through the existing grant-submission-core.mjs. The browser already makes those calls. Existing full-export verification checks each original plan file when the same working draft is received again.
+
+For the original equipped reviewer Page, continue with the same edited application. Receive the next actual saved revision of its selected native plan, review the original package and answer changes, resolve the affected targets, and retain the full export before reopening that file and the saved browser draft. Restore the preceding version through **Saved versions** to continue either editorial state. Use the saved original plan revisions and their native calculations as the inputs to this journey.
+
+
 ## Review the required content
 
 **Required content** connects the nine answers to the issuer's current published criteria. Record an editorial status and a precise note locating the supporting content. The status is the operator's review decision.
@@ -109,7 +181,7 @@ Before opening another draft, the workspace preserves unsaved current work. If a
 - The issuer profile, prompts, field limits, answer selections and field text.
 - The saved required-content review.
 - Every retained working version and its selected source edition.
-- Every received native planning file, its complete saved revisions, selected packages, editorial preview and application history.
+- Every received native planning file, its complete saved revisions, selected packages, editorial preview, application history, target baselines and pending or completed revision choices.
 - A SHA-256 over the full draft body.
 
 **Open draft file** reads the complete export, checks its body and every original source edition, and preserves the current working draft before opening it. Save the received draft in that browser to continue. **Saved versions** can restore an earlier working state; the state being replaced is also retained.
@@ -131,6 +203,8 @@ The existing registerGrantSubmissionAssets function declares the complete submis
 - /grant-plan-core.mjs
 - /grant-plan-source.mjs
 - /grant-plan-workspace.mjs
+- /grant-plan-update-core.mjs
+- /grant-plan-update-workspace.mjs
 
 The original /drafts.mjs and application/source-index routes remain its dependencies. Publish the complete existing dist directory through the original Site project and retain its current audience. The static browser carries its own working drafts; the established application and issuer-form workflow carry the submitted edition.
 
@@ -165,7 +239,7 @@ const result = await receiveGrantPlanning(page, {
 
 Use the original `SCF-GRANT-REVIEWER-PUBLICATION-8910-20261012` receiving context and continue the same output directory. Each call uses the Page and listener already owned by that receiver. The callback compares the complete current submission and handover asset routes, including the original draft store, with their installed files.
 
-The first invocation retains its original manuscript draft identity, receives the actual native plan, selects its saved revisions, prepares the full Delivery preview and applies that reviewed text. It publishes the accepted complete draft and native roadmap before saving or beginning the subsequent reopen phases. The same original browser store then carries its saved draft and later revisions.
+The first invocation retains its original manuscript draft identity, receives the actual native plan and selects the current saved revision from that original file. When selecting it opens the incoming-plan review, the continuation uses the complete incoming native scope for Delivery and keeps every existing issuer field. It verifies the selected source and native revision before accepting those explicit choices. When the current native revision is already selected, it prepares and applies the ordinary full Delivery preview. The complete current draft is retained before either flow. It publishes the accepted complete draft and native roadmap before saving or beginning the subsequent reopen phases. The same original browser store then carries its saved draft and later revisions.
 
 ### Resume a retained operation
 

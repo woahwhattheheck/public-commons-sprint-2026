@@ -93,6 +93,31 @@ async function download(page,output,name){
   const file=await retain(output,join(output,name),bytes);
   await result.delete();return {document,file,bytes};
 }
+async function settleInitialRevisionReview(page,planningSha256,expectedRevision=null){
+  const panel=page.locator('section[data-plan-update-id]');
+  if(!await panel.count())return false;
+  need(await panel.getAttribute('data-plan-update-source')===planningSha256,
+    'Continue the review of the original selected native planning file.');
+  const selectedRevision=Number(await panel.getAttribute('data-plan-update-revision'));
+  need(Number.isSafeInteger(selectedRevision)&&selectedRevision>0&&
+    (expectedRevision===null||selectedRevision===expectedRevision),
+    'Review the original selected native revision before accepting its Delivery.');
+  const targets=page.locator('section[data-plan-update-target]');
+  need(await targets.count()>0,'Retain the complete incoming-plan target comparison.');
+  let delivery=false;
+  for(let index=0;index<await targets.count();index++){
+    const target=targets.nth(index),key=await target.getAttribute('data-plan-update-target');
+    need(key==='answer:delivery'||key?.startsWith('field:'),'Retain the original Delivery and field targets.');
+    await target.getByRole('combobox').selectOption(key==='answer:delivery'?'incoming':'keep');
+    if(key==='answer:delivery')delivery=true;
+  }
+  need(delivery,'Retain the complete Delivery answer in this plan review.');
+  await page.getByRole('checkbox',{name:'I have reviewed the exact chosen answers, native budget changes and related application context.',exact:true}).check();
+  await page.getByRole('button',{name:'Apply reviewed revision choices',exact:true}).click();
+  await page.waitForFunction(()=>document.getElementById('status')?.textContent.includes('Applied the reviewed native revision choices.')&&
+    !document.getElementById('workspace-root')?.inert,null,{timeout:15000});
+  return true;
+}
 function nativeSelection(draft,original,planningSha256,{applied=true}={}){
   const source=draft.planSources?.find(item=>item.sha256===planningSha256);
   need(source&&Buffer.from(source.base64,'base64').equals(original),'Retain the exact original native planning file.');
@@ -231,7 +256,7 @@ export async function receiveGrantPlanning(page,{
     const ready=async part=>page.waitForFunction(part=>{
       const error=document.getElementById('error');
       if(error&&!error.hidden)throw Error(error.textContent);
-      return document.getElementById('status')?.textContent.includes(part);
+      return (Array.isArray(part)?part:[part]).some(value=>document.getElementById('status')?.textContent.includes(value));
     },part,{timeout:15000});
     const choose=async(button,path)=>{
       const event=page.waitForEvent('filechooser',{timeout:15000});
@@ -393,20 +418,31 @@ export async function receiveGrantPlanning(page,{
             item.document.draft.planSources?.some(source=>source.sha256===planningSha256))||prepared;
           await openDraft(working);await page.locator('#view').selectOption('planning');currentDocumentSha=null;
           if(!working.document.draft.planSources?.some(source=>source.sha256===planningSha256)){
-            await choose('Receive native plan or planning ZIP',inputPath);await ready('native plan revisions');
+            await choose('Receive native plan or planning ZIP',inputPath);await ready(['native plan revisions','Retained the incoming native plan.']);
           }
-          await page.getByLabel('Retained planning file',{exact:true}).selectOption(planningSha256);
-          const revisions=page.getByLabel('Native saved revision',{exact:true});
-          const options=await revisions.locator('option').evaluateAll(items=>items.map(item=>item.value));
-          need(options.length>0,'The original saved plan revisions did not open.');
-          await revisions.selectOption(options[0]);await revisions.selectOption(options.at(-1));
-          await page.getByRole('button',{name:'Prepare preview from selected native plan',exact:true}).click();
-          const preview=await page.getByLabel('Exact budget and roadmap text to apply',{exact:true}).inputValue();
-          need(preview.trim(),'The selected native plan produced an empty preview.');
-          await page.getByRole('checkbox',{name:'I have reviewed this exact preview for the selected planning edition.',exact:true}).check();
-          await page.getByRole('button',{name:'Apply reviewed plan to draft',exact:true}).click();
-          await ready('Applied the reviewed native budget and roadmap');
-          need(await page.getByLabel('Draft answer',{exact:true}).inputValue()===preview,'The applied Delivery differs from the selected native preview.');
+          const originalRevision=working.document.draft.planSources?.find(source=>source.sha256===planningSha256)?.document.currentRevision??null;
+          let revisionApplied=await settleInitialRevisionReview(page,planningSha256,originalRevision);
+          if(!revisionApplied){
+            await page.getByLabel('Retained planning file',{exact:true}).selectOption(planningSha256);
+            revisionApplied=await settleInitialRevisionReview(page,planningSha256,originalRevision);
+          }
+          if(!revisionApplied){
+            const revisions=page.getByLabel('Native saved revision',{exact:true});
+            const options=await revisions.locator('option').evaluateAll(items=>items.map(item=>item.value));
+            need(options.length>0,'The original saved plan revisions did not open.');
+            const requestedRevision=options.at(-1);
+            await revisions.selectOption(requestedRevision);
+            revisionApplied=await settleInitialRevisionReview(page,planningSha256,Number(requestedRevision));
+          }
+          if(!revisionApplied){
+            await page.getByRole('button',{name:'Prepare preview from selected native plan',exact:true}).click();
+            const preview=await page.getByLabel('Exact budget and roadmap text to apply',{exact:true}).inputValue();
+            need(preview.trim(),'The selected native plan produced an empty preview.');
+            await page.getByRole('checkbox',{name:'I have reviewed this exact preview for the selected planning edition.',exact:true}).check();
+            await page.getByRole('button',{name:'Apply reviewed plan to draft',exact:true}).click();
+            await ready('Applied the reviewed native budget and roadmap');
+            need(await page.getByLabel('Draft answer',{exact:true}).inputValue()===preview,'The applied Delivery differs from the selected native preview.');
+          }
           full=await capture('SCF_Native_Plan_Submission.json');
         }
       }
