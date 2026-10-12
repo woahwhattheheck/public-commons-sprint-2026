@@ -52,6 +52,27 @@ Choose the Python client for the selected purchase and use its existing private 
 
 Use the saved Python review with the Python client and the saved Node review with the Node client. Their existing source-native buyer implementations own request admission, payment execution, result retention and recovery.
 
+## When the original result is not yet available
+
+Both `recover` commands print structured JSON with `recovery: "RESULT_UNAVAILABLE"`
+and `resultRecoverable: false`, then exit with code 2 when the original buyer has
+no recoverable result. The response retains the original `intentId` and an
+`inspect` next action with that same intent and private state directory. It does
+not supply a payment or delivery classification, create an output file, or
+execute the purchase again.
+
+Use the `inspect` command shown above with the same language, runtime, state
+directory and intent. An unavailable result can mean that the purchase has not
+been attempted or that its original attempt has not retained a recoverable
+outcome; it does not establish either payment failure or success. Keep the
+saved review and original operation while resolving that state. If its original
+process is still working, let that process finish, then recover the same
+operation. A new intent or state directory would describe a different purchase.
+
+A recovered result continues to report the original native `status` and separate
+`delivery` outcome. Export still requires a new destination filename. Other
+source, configuration and runtime errors retain their existing error handling.
+
 ## Read the returned Stellar data
 
 getTransaction preserves SUCCESS, FAILED or NOT_FOUND as actual chain-data outcomes. getEvents preserves original event IDs, XDR topics/data and the returned cursor. Prepare the next selected page as a new deliberate request/purchase using that cursor. getLedgerEntries preserves the canonical requested keys and returned XDR. Compare the data network and actual provider observation with the selected installation's plan when investigating an unexpected result.
