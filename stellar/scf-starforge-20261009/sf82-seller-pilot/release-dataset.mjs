@@ -13,7 +13,8 @@ import { compileSellerRoutes } from '../sf30-seller-sdk/resource-server.mjs';
 import { openDatasetVersions, DATASET_SNAPSHOT_PARAMETER } from '../sf30-seller-sdk/dataset-refresh/versions.mjs';
 import { startVersionedDatasetSeller } from '../sf30-seller-sdk/dataset-refresh/service.mjs';
 
-export const DATASET_SOURCE_SCHEMA = 'stellar-forge.dataset-seller-release-manifest.v1';
+import { DATASET_SOURCE_SCHEMA } from './release-source-contracts.mjs';
+export { DATASET_SOURCE_SCHEMA } from './release-source-contracts.mjs';
 export const DATASET_BINDING_SCHEMA = 'stellar-forge.dataset-release-binding.v1';
 const SOURCE_FILES = ['dataset.csv', 'dataset.json', 'seller.json', 'source.json', 'binding.json'];
 const MiB = 1024 * 1024;

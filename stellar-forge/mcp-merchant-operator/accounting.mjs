@@ -1,3 +1,5 @@
+import { accountingTools, definitions, base, page, readOnly, maintenanceChange, sha256, name, backupId, uuid, alias, views, change, actor, periodSelection, supportedMethods, returnSelection, nullableId, timestamp, reportNames, periodNames, accountantNames, sourceIds, revision, optionLabel, shortText } from './catalog/accounting.mjs';
+export { accountingTools } from './catalog/accounting.mjs';
 // MIT. Agent operations over the retained original merchant accounting workspace.
 import { constants } from 'node:fs';
 import { open } from 'node:fs/promises';
@@ -18,92 +20,36 @@ import { supportsSellerMethod } from '../../stellar/scf-starforge-20261009/sf30-
 const fail = (code, message) => Object.assign(new Error(message), { code });
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
-const alias = { type: 'string', pattern: '^[a-z0-9][a-z0-9_-]{0,63}$' };
-const uuid = { type: 'string', pattern: '^[0-9a-f-]{36}$' };
-const sha256 = { type: 'string', pattern: '^[0-9a-f]{64}$' };
-const revision = { type: 'integer', minimum: 1 };
-const actor = { type: 'string', minLength: 1, maxLength: 240 };
-const name = { type: 'string', minLength: 1, maxLength: 160 };
-const page = { offset: { type: 'integer', minimum: 0 }, limit: { type: 'integer', minimum: 1, maximum: 200 } };
-const base = { workspace: alias };
-const change = { ...base, revision, actor };
-const maintenanceChange = { ...base, actor: { ...actor, maxLength: 160 }, requestId: uuid };
-const backupId = { type: 'string', pattern: '^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$' };
-const readOnly = { readOnly: true, idempotent: true };
-const shortText = { type: 'string', maxLength: 160 };
-const timestamp = { type: 'string', minLength: 1, maxLength: 80 };
-const nullableId = { anyOf: [uuid, { type: 'null' }] };
-const returnSelection = { anyOf: [uuid, { type: 'string', enum: ['initial'] }] };
-const periodSelection = { anyOf: [{ type: 'object', properties: { id: uuid, version: revision }, required: ['id', 'version'], additionalProperties: false }, { type: 'null' }] };
-const sourceIds = { type: 'array', items: uuid, minItems: 1, maxItems: 2000, uniqueItems: true };
-const optionLabel = { type: 'object', properties: { optionId: sha256, assetLabel: shortText, unitLabel: shortText, accountCode: shortText, accountName: shortText }, required: ['optionId'], additionalProperties: false };
-const views = ['runs', 'jobs', 'recovered', 'previews', 'proofs', 'terms', 'exports', 'history', 'collectionSources', 'collections', 'collectionJobs', 'pricing', 'periods', 'closes', 'handoffs'];
-const sourceKinds = ['recoveredSources', 'recoveryRequests', 'proofFiles', 'termsFiles', 'pricingReports', 'accountantReturns', 'platformInputs', 'statementUsageInputs'];
-const reportNames = ['report.json', 'ledger.csv', 'options.csv', 'exceptions.csv', 'review.html', 'manifest.json'];
-const periodNames = ['period-close.json', 'review-notes.json', 'adjustments.json', 'adjustments.csv', 'adjustments.html'];
-const accountantNames = ['handoff.json', 'accountant.csv', 'review.html', 'original-report.json', 'original-manifest.json', 'input-manifest.json', 'packet-manifest.json', 'accountant-handoff.tar', 'period-close.json', 'review-notes.json', 'returned.csv', 'return.json', 'adjustments.json', 'adjustments.csv', 'adjustments.html'];
-const fileSelections = ['runId', 'recoveryId', 'exportId', 'collectionId', 'sourceId', 'reviewId', 'closeId', 'handoffId', 'revisionId', 'adjustmentId', 'jobId', 'planId', 'responseId', 'nativePost', 'attemptId', 'file', ...statementFileSelectors];
-const supportedMethods = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'].filter(supportsSellerMethod);
 
-const definitions = [
-  ...platformDefinitions,
-  ...bitwaveDefinitions,
-  ...adjustmentDefinitions,
-  ...statementDefinitions,
-  ['merchant_accounting_maintenance_status', 'Inspect the owned original maintenance state, selected source review, backup identities, retained jobs and recovery marker. Summary includes the newest 25 backups and 10 jobs; choose a paged backups, jobs or sources view for the retained inventory. Paths are host aliases.', { ...base, view: { type: 'string', enum: ['summary', 'backups', 'jobs', 'sources'] }, ...page }, ['workspace'], readOnly],
-  ['merchant_accounting_maintenance_pause', 'Pause this owned accounting operation. The original controller rejects new ordinary calls, drains accepted work and file reads, and closes its original accounting, collection and Bitwave controllers. Retain requestId and follow the returned job.', maintenanceChange, ['workspace', 'actor', 'requestId'], { idempotent: true }],
-  ['merchant_accounting_maintenance_review', 'Review the complete paused original workspace and declared operating sources. Returns the original reviewId for a later explicitly acknowledged backup; does not capture a backup or run RPC.', maintenanceChange, ['workspace', 'actor', 'requestId'], { idempotent: true }],
-  ['merchant_accounting_maintenance_backup', 'Capture the reviewed paused accounting operation through its original encrypted backup engine. Pin expectedReviewId, name the operator and explicitly acknowledge that external source writers have stopped. Retain requestId to reconcile a lost reply.', { ...maintenanceChange, expectedReviewId: sha256, externalWritersStopped: { type: 'boolean', enum: [true] }, label: { ...name, maxLength: 160 } }, ['workspace', 'actor', 'requestId', 'expectedReviewId', 'externalWritersStopped'], { idempotent: true }],
-  ['merchant_accounting_maintenance_verify', 'Authenticate the selected original backup and exact manifest without changing the workspace. The host supplies its private passphrase environment variable. Follow the retained job; no payment or RPC occurs.', { ...maintenanceChange, backupId, expectedSha256: sha256 }, ['workspace', 'actor', 'requestId', 'backupId', 'expectedSha256'], { idempotent: true }],
-  ['merchant_accounting_maintenance_restore', 'Restore the exact selected backup into its original declared paths while paused. Requires external-writer acknowledgment. A retained incomplete restore accepts only that same manifest; continue explicitly with a new requestId and preserve the original files.', { ...maintenanceChange, backupId, expectedSha256: sha256, externalWritersStopped: { type: 'boolean', enum: [true] } }, ['workspace', 'actor', 'requestId', 'backupId', 'expectedSha256', 'externalWritersStopped'], { destructive: true, idempotent: true }],
-  ['merchant_accounting_maintenance_resume', 'Reopen the same original accounting, collection, accountant and Bitwave controllers after completed recovery. RUNNING is retained only after reopening succeeds. Requires a complete original workspace; never starts another payment.', maintenanceChange, ['workspace', 'actor', 'requestId'], { idempotent: true }],
-  ['merchant_accounting_maintenance_job', 'Read one exact retained original maintenance job by its stable request/job ID, including phase, result and interruption status. This reconciles a lost caller response without executing the operation again.', { ...base, jobId: uuid }, ['workspace', 'jobId'], readOnly],
-  ['merchant_accounting_maintenance_cancel', 'Request cancellation of an owned original review, backup, verification or restore job. Use a separate stable requestId for this cancellation. The native incomplete-restore marker remains available for explicit same-backup continuation; pause and resume finish their lifecycle transitions.', { ...maintenanceChange, jobId: uuid }, ['workspace', 'actor', 'requestId', 'jobId'], { idempotent: true }],
-  ['merchant_accounting_sources', 'List host-configured accounting workspaces and named recovery, verification, collection, pricing, accountant-return and Bitwave inputs. Returns aliases and ownership without local paths or source bytes.', { workspace: alias }, [], readOnly],
-  ['merchant_accounting_open', 'Open the declared accounting session and its original controllers, or its host-configured paused recovery state when the workspace is absent or incomplete. Reopens retained reconciliation and maintenance history without RPC or another purchase.', base, ['workspace'], { idempotent: true }],
-  ['merchant_accounting_close', 'Close this process-owned accounting session. Waits for accepted maintenance jobs, ordinary calls and file reads, then closes its original controllers and releases their leases. Retained backups, recovery markers, jobs and source records remain.', base, ['workspace'], { destructive: true, idempotent: true }],
-  ['merchant_accounting_status', 'Read the current workspace revision, retained job/run status and source aliases. Choose a paged view for jobs, recovery reviews, recovered entries, reconciliations, proofs, terms, exports or history.', { ...base, view: { type: 'string', enum: ['summary', ...views] }, ...page }, ['workspace'], readOnly],
-  ['merchant_accounting_input_import', 'Import a declared original SF86 verification file or merchant terms file into this workspace. Uses the original parser, eligibility and terms selection; preserves original payment classification.', { ...change, kind: { type: 'string', enum: ['proof', 'terms'] }, source: alias }, ['workspace', 'revision', 'actor', 'kind', 'source']],
-  ['merchant_accounting_input_select', 'Select original source terms or a retained terms import, or include/exclude a retained original proof. Pass selection from current state; proof selection also requires included.', { ...change, kind: { type: 'string', enum: ['proof', 'terms'] }, selection: { anyOf: [uuid, { type: 'string', enum: ['source'] }] }, included: { type: 'boolean' } }, ['workspace', 'revision', 'actor', 'kind', 'selection']],
-  ['merchant_accounting_recovered_source', 'Connect a declared recovered collection alias, or pass source:null to disconnect it. Existing completed reconciliation snapshots and their exact response files remain retained.', { ...change, source: { anyOf: [alias, { type: 'null' }] } }, ['workspace', 'revision', 'actor', 'source']],
-  ['merchant_accounting_recovered_refresh', 'Read the connected original recovered collection into the workspace using its current revision. Does not verify remotely or make a payment.', change, ['workspace', 'revision', 'actor']],
-  ['merchant_accounting_recovery_review', 'Review a declared original recovery request and retain its exact input hashes and native receipt binding. Reads original files without RPC, signing or payment; returns the previewId required for import.', { ...change, source: alias, name }, ['workspace', 'revision', 'actor', 'source', 'name']],
-  ['merchant_accounting_recovery_import', 'Queue the original recovery importer for a retained previewId. It rechecks reviewed input hashes, reuses an identical existing entry, or calls the original official RPC verifier and imports that completed transfer. Follow the original job through status; never purchases the resource again.', { ...change, previewId: uuid }, ['workspace', 'revision', 'actor', 'previewId'], { openWorld: true }],
-  ['merchant_accounting_recovery_cancel', 'Request cancellation of one original recovery job. Read its retained status afterward; an already completed import remains available. Does not cancel, send or reverse a ledger transaction.', { ...base, jobId: uuid, actor }, ['workspace', 'jobId', 'actor'], { idempotent: true }],
-  ['merchant_accounting_capture', 'Capture current original outbox, selected terms/proofs, pricing provenance, recorded-activity period and recovered sources into an immutable named reconciliation. expectedPeriodSelection can pin the reviewed saved period or null. Follow the returned runId with run/status.', { ...change, name, expectedPeriodSelection: periodSelection }, ['workspace', 'revision', 'actor', 'name']],
-  ['merchant_accounting_run', 'Inspect a retained original reconciliation status, exact report/input manifest digests, totals and review counts. Use rows for detailed tables and file for verified original report bytes.', { ...base, runId: uuid }, ['workspace', 'runId'], readOnly],
-  ['merchant_accounting_rows', 'Page original ledger, payment options, exceptions, proof metadata or recovered entries from a completed reconciliation. Filters preserve the original six HTTP methods, networks and transfer/delivery classifications.', { ...base, runId: uuid, kind: { type: 'string', enum: ['ledger', 'options', 'exceptions', 'proofs', 'recovered'] }, ...page, routeId: { type: 'string', maxLength: 240 }, method: { type: 'string', enum: supportedMethods }, network: { type: 'string', maxLength: 240 }, transfer: { type: 'string', maxLength: 240 }, delivery: { type: 'string', maxLength: 240 }, review: { type: 'string', enum: ['open', 'investigating', 'reviewed'] }, search: { type: 'string', maxLength: 300 } }, ['workspace', 'runId', 'kind'], readOnly],
-  ['merchant_accounting_review', 'Retain a named review of an actual original exception using its current note version. Notes and assignments do not change native settlement classifications.', { ...base, runId: uuid, exceptionId: sha256, version: { type: 'integer', minimum: 0 }, status: { type: 'string', enum: ['open', 'investigating', 'reviewed'] }, note: { type: 'string', minLength: 1, maxLength: 4000 }, assignee: { type: 'string', maxLength: 160 }, actor }, ['workspace', 'runId', 'exceptionId', 'version', 'status', 'note', 'actor']],
-  ['merchant_accounting_compare', 'Compare two retained original reconciliations, with event, exception and option deltas. Page changed, added, removed or option rows without reclassifying or contacting a merchant.', { ...base, runId: uuid, baselineId: uuid, view: { type: 'string', enum: ['changed', 'added', 'removed', 'options'] }, ...page }, ['workspace', 'runId', 'baselineId'], readOnly],
-  ['merchant_accounting_export', 'Create the original retained review TAR from a completed run and current named notes. Explicit includeSources:true includes the captured private original input files and retained delivered responses; false includes the report, review notes and source identities.', { ...change, runId: uuid, includeSources: { type: 'boolean' } }, ['workspace', 'revision', 'actor', 'runId', 'includeSources']],
-  ['merchant_accounting_file', 'Read exact original response, report, export, collection result, pricing source, period close, accountant packet, adjustment request/proof or original QuickBooks/Xero retained bytes in bounded base64 chunks. Keep every source selector unchanged with readId/expectedSha256. The original owner verifies once per read; later chunks reuse its private snapshot. See the accounting guide for each kind and filename.', { ...base, kind: { type: 'string', enum: ['response', 'report', 'export', 'collection', 'pricing', 'period', 'accountant', 'adjustment', 'qbo', 'xero', 'customer-statement', 'customer-statement-preview'] }, recoveryId: sha256, runId: uuid, exportId: uuid, collectionId: uuid, sourceId: uuid, reviewId: uuid, closeId: uuid, handoffId: uuid, revisionId: returnSelection, adjustmentId: uuid, jobId: uuid, planId: uuid, responseId: uuid, nativePost: { type: 'boolean', enum: [true] }, attemptId: uuid, statementId: uuid, customerId: uuid, usageId: nullableId, replacesId: nullableId, from: timestamp, until: timestamp, file: { anyOf: [
-    { type: 'string', enum: [...new Set([...reportNames, ...periodNames, ...accountantNames, ...platformFileNames, ...statementFileNames, 'report', 'terms', 'archive', 'request.json', 'proof.json', 'xero-handoff.tar'])] },
-    { type: 'string', maxLength: 100, pattern: '^[A-Za-z0-9][A-Za-z0-9._/-]*$' }
-  ] }, readId: uuid, offset: { type: 'integer', minimum: 0 }, limit: { type: 'integer', minimum: 1, maximum: 196608 }, expectedSha256: sha256 }, ['workspace', 'kind'], readOnly],
-  ['merchant_accounting_file_release', 'Release an unfinished process-owned file read by readId. Frees only its temporary verified snapshot; original recovered responses, reports, archives and workspace records remain retained.', { ...base, readId: uuid }, ['workspace', 'readId'], { idempotent: true }],
-  ['merchant_accounting_collection_source', 'Retain one host-declared original SF81 payment record or SF82 evidence input with its configured payer, network endpoint and event-page limit. The original controller checks the source; no RPC or payment runs during import.', { ...change, source: alias, name }, ['workspace', 'revision', 'actor', 'source', 'name']],
-  ['merchant_accounting_collection_prepare', 'Prepare an original RPC collection from explicit distinct retained sourceIds. Retains the original plan and source hashes; no verification runs until collection_start.', { ...change, name, sourceIds }, ['workspace', 'revision', 'actor', 'name', 'sourceIds']],
-  ['merchant_accounting_collection', 'Inspect one original collection and its actual progress. Page selected sources, result attempts, published proof identities or owned operation jobs. This reads retained state and does not start or retry verification.', { ...base, collectionId: uuid, view: { type: 'string', enum: ['summary', 'sources', 'results', 'proofs', 'jobs'] }, ...page }, ['workspace', 'collectionId'], readOnly],
-  ['merchant_accounting_collection_refresh', 'Refresh one inactive collection from its original durable result files and retain its totals with the current workspace revision. Does not call an RPC service.', { ...change, collectionId: uuid }, ['workspace', 'revision', 'actor', 'collectionId']],
-  ['merchant_accounting_collection_start', 'Queue original collect or publish. Collect verifies unattempted records, or only the explicitly supplied unsuccessful retryIds; it never sends a payment. Publish imports existing exact result bytes into the same proof workspace. Follow original collectionJobs status.', { ...change, collectionId: uuid, operation: { type: 'string', enum: ['collect', 'publish'] }, retryIds: { ...sourceIds, minItems: 0 } }, ['workspace', 'revision', 'actor', 'collectionId', 'operation'], { openWorld: true }],
-  ['merchant_accounting_collection_cancel', 'Cancel an owned original collection operation by jobId. Retains completed attempts and proof imports; later continuation is explicit.', { ...base, jobId: uuid, actor }, ['workspace', 'jobId', 'actor'], { idempotent: true }],
-  ['merchant_accounting_pricing_review', 'Import a declared original pricing-report file into the existing pricing controller. Retains its exact source, derived accounting terms and provenance; selection is a separate operation.', { ...change, source: alias, name: { ...name, maxLength: 130 }, accountingReference: { type: 'string', maxLength: 100 } }, ['workspace', 'revision', 'actor', 'source', 'name']],
-  ['merchant_accounting_pricing', 'Inspect a retained pricing review and page its original payment options. With baselineSelection, compare against original source terms or a retained terms ID. Does not select prices or calculate an exchange rate.', { ...base, reviewId: uuid, baselineSelection: { anyOf: [uuid, { type: 'string', enum: ['source'] }] }, ...page }, ['workspace', 'reviewId'], readOnly],
-  ['merchant_accounting_pricing_select', 'Select the checked original pricing review for future captures. Uses the existing terms selector and current revision; prior captured reports keep their original prices and provenance.', { ...change, reviewId: uuid }, ['workspace', 'revision', 'actor', 'reviewId']],
-  ['merchant_accounting_period_save', 'Save a named immutable recorded-activity UTC interval. To edit an existing definition, supply its id and current expectedVersion; select:true selects the saved version for future captures.', { ...change, id: uuid, expectedVersion: revision, name, from: timestamp, until: timestamp, note: { type: 'string', maxLength: 2000 }, select: { type: 'boolean' } }, ['workspace', 'revision', 'actor', 'name', 'from', 'until']],
-  ['merchant_accounting_period_select', 'Select an exact retained period {id,version}, or null for all recorded activity. Original capture and recovery import times remain the period basis.', { ...change, selection: periodSelection }, ['workspace', 'revision', 'actor', 'selection']],
-  ['merchant_accounting_period_definition', 'Inspect a saved recorded-activity definition and page its immutable versions before selecting or editing it. Status view:periods lists the retained definition IDs and latest versions.', { ...base, id: uuid, ...page }, ['workspace', 'id'], readOnly],
-  ['merchant_accounting_period_close', 'Retain an original named close from a completed run captured with a saved period. Freezes its report, source identities and current exception reviews; includeSources explicitly chooses the source-inclusive original archive.', { ...change, runId: uuid, name, note: { type: 'string', maxLength: 4000 }, includeSources: { type: 'boolean' } }, ['workspace', 'revision', 'actor', 'runId', 'name', 'includeSources']],
-  ['merchant_accounting_period', 'Inspect an exact retained close, frozen and current review counts, and its previous close. Use view:notes to page original frozen notes beside current reviews. Download the original metadata or archive with file kind:period.', { ...base, closeId: uuid, view: { type: 'string', enum: ['summary', 'notes'] }, status: { type: 'string', enum: ['open', 'investigating', 'reviewed'] }, search: { type: 'string', maxLength: 300 }, ...page }, ['workspace', 'closeId'], readOnly],
-  ['merchant_accounting_accountant_prepare', 'Inspect the original completed run or retained period close before preparing an accountant handoff. Returns exact source hashes, original totals and paged payment options for operator labels.', { ...base, runId: uuid, closeId: uuid, ...page }, ['workspace'], readOnly],
-  ['merchant_accounting_accountant_create', 'Retain the original accountant packet from a reviewed run or period close. Supply a stable id for lost-reply recovery and optional labels for actual option IDs. Native amounts and classifications remain from the original report.', { ...change, id: uuid, runId: uuid, closeId: uuid, name, labels: { type: 'array', items: optionLabel, maxItems: 22200 } }, ['workspace', 'revision', 'actor', 'id', 'name']],
-  ['merchant_accounting_accountant', 'Inspect an original handoff, selected return and source hashes. revisionId:initial selects its unchanged initial packet; omission selects its latest return. Page retained return revisions, exact file identities, issues or labels.', { ...base, handoffId: uuid, revisionId: returnSelection, view: { type: 'string', enum: ['summary', 'revisions', 'files', 'issues', 'labels'] }, ...page }, ['workspace', 'handoffId'], readOnly],
-  ['merchant_accounting_accountant_rows', 'Page original handoff rows and their current or selected returned assignments. External status and book references stay separate from source payment evidence, amounts and merchant quotes.', { ...base, handoffId: uuid, revisionId: returnSelection, status: { type: 'string', enum: ['UNREVIEWED', 'REVIEWED', 'BOOKED', 'EXCLUDED'] }, search: { type: 'string', maxLength: 500 }, ...page }, ['workspace', 'handoffId'], readOnly],
-  ['merchant_accounting_accountant_preview', 'Review a declared accountant-return CSV against an explicit current parent (null for the first return). Returns exact source hash, proposed return ID/time/integrity, summary and optional paged outcomes. Repeat id/createdAt to inspect more pages of the same proposed revision. No return is saved.', { ...base, handoffId: uuid, source: alias, expectedParentId: nullableId, actor, name, id: uuid, createdAt: timestamp, sourceSha256: sha256, view: { type: 'string', enum: ['summary', 'results', 'issues', 'assignments', 'missingRows'] }, ...page }, ['workspace', 'handoffId', 'source', 'expectedParentId', 'actor', 'name'], { readOnly: true }],
-  ['merchant_accounting_accountant_apply', 'Save the explicitly reviewed original returned CSV. Carry preview ID, timestamp, workspace revision, parent, source SHA256 and preview integrity unchanged. The original controller preserves conflicts, inherited omissions and immutable prior returns; stable IDs recover lost replies.', { ...change, handoffId: uuid, source: alias, id: uuid, createdAt: timestamp, name, expectedParentId: nullableId, sourceSha256: sha256, previewSha256: sha256 }, ['workspace', 'revision', 'actor', 'handoffId', 'source', 'id', 'createdAt', 'name', 'expectedParentId', 'sourceSha256', 'previewSha256']],
-];
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const sourceKinds = ['recoveredSources', 'recoveryRequests', 'proofFiles', 'termsFiles', 'pricingReports', 'accountantReturns', 'platformInputs', 'statementUsageInputs'];
+
+
+
+const fileSelections = ['runId', 'recoveryId', 'exportId', 'collectionId', 'sourceId', 'reviewId', 'closeId', 'handoffId', 'revisionId', 'adjustmentId', 'jobId', 'planId', 'responseId', 'nativePost', 'attemptId', 'file', ...statementFileSelectors];
+
+
+
 const byName = new Map(definitions.map(([name, description, properties, required]) => [name, { properties, required }]));
-export const accountingTools = tool => definitions.map(parts => tool(...parts));
+
 
 function check(schema, value) {
   if (schema.anyOf) return schema.anyOf.some(option => check(option, value));
