@@ -347,3 +347,18 @@ Single-file download renders the requested file directly. The export index calcu
 Programmatic callers can use `store.exportEntries(editionId, options)` as an async iterator of `[name, Buffer]`, `store.exportFile(editionId, name, options)` for one member, and `store.exportManifest(editionId, options)` for the full manifest. The existing `exportFiles` and `researchExports` APIs still return complete in-memory bundles. `researchExportPlan` provides deferred per-file serializers for applications that control their own output.
 
 Saved filesystem exports retain their existing content-addressed directory and recoverable plan. They calculate the manifest, then write files in a second pass over the same frozen edition and review snapshot; this uses no extra temporary export directory. The collector's retained cohort and the largest individual generated file still contribute to memory use.
+
+
+### Receive large saved cohorts without generating reports
+
+The existing `workspace.exportFiles(editionId, options)` API accepts `includeAnalysis: false` for source consumers. It returns the original edition/query/coverage/decisions/page index, requested raw page/request/page/native files, and the same version-1 manifest contract. Each response and native record is validated against the saved page before the export is returned. The collection's cursor state, reported counts, unique-membership warning and reviewed decisions remain attached.
+
+```js
+const saved = await workspace.exportFiles(editionId, {
+  includePages: true,
+  includeNative: true,
+  includeAnalysis: false,
+});
+```
+
+This mode reads one response at a time to validate membership and retains only the requested source file buffers. It skips cohort analysis and the generated HTML/CSV/JSON report set. Use it to receive the saved collection into another application that will make its own report. The research dossier importer selects it automatically. The default remains `includeAnalysis: true`, so existing CLI exports, reports, browser downloads and complete researcher delivery packages keep their current contents.
