@@ -51,14 +51,15 @@ async function persistSnapshot(out, bytes, snapshot) {
 }
 
 /** Validate with SF30, then retain only original JSON bytes and their digest. */
-export async function prepareUpstreamSnapshot({ out, input, saved, config, allowLoopback = false }) {
+export async function prepareUpstreamSnapshot({ out, input, saved, config, allowLoopback = false, deferCredentials = false }) {
   const bytes = input ? await readBytes(input) : (await verifyUpstreamSnapshot(out, saved)).bytes;
   let bindings;
   try { bindings = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); }
   catch { throw new TypeError('Upstream bindings must contain valid UTF-8 JSON'); }
-  // Compiled objects contain launch-time credential values. Keep them in this
-  // invocation only: saved JSON contains environment variable names, never values.
-  const compiled = compileUpstreamBindings(bindings, { allowLoopback });
+  // Paid launch validates credential values here. Unpaid-only resume validates
+  // their references and leaves value resolution to the original admitted handler.
+  // Saved JSON always retains names and original bytes, never credential values.
+  const compiled = compileUpstreamBindings(bindings, { allowLoopback, deferCredentials });
   validateUpstreamService(config, compiled);
   const sha256 = digest(bytes), snapshot = { file: `pilot-upstreams-${sha256}.json`, sha256 };
   if (input) await persistSnapshot(out, bytes, snapshot);
