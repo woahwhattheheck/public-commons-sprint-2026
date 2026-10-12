@@ -336,6 +336,31 @@ try{
   };
   await reviewer.locator("#open-file").setInputFiles(correctedFile);
   await reviewer.locator("#saved").filter({hasText:/The saved draft is open for this exact packet\.|Le brouillon enregistré est ouvert pour ce dossier exact\./}).waitFor();
+  const originalReturn=JSON.parse(fs.readFileSync(correctedFile,"utf8"));
+  await reviewer.locator('[data-view="instructions"]').click();
+  for(const key of ["name","organization","email"])assert.equal(await reviewer.locator('#reviewer-fields [name="'+key+'"]').inputValue(),originalReturn.reviewer[key]||"");
+  assert.equal(await reviewer.locator('#reviewer-fields [name="reviewer_language"]').inputValue(),originalReturn.reviewer.language||"en");
+  assert.equal(await reviewer.locator('#reviewer-fields [name="authored_example"]').isChecked(),originalReturn.authored_example===true);
+  await reviewer.locator("#preview-response").click();
+  for(const value of [originalReturn.reviewer.name,originalReturn.reviewer.organization,originalReturn.reviewer.email].filter(Boolean))assert.ok((await reviewer.locator(".reviewer-summary").innerText()).includes(value));
+  const reopenedReturn=await exportedResponse(savedResponse("Reopened_Reviewer_Response.json"));
+  const withoutExport=value=>{const copy=structuredClone(value);delete copy.exported_at;return copy;};
+  assert.deepEqual(withoutExport(reopenedReturn),withoutExport(originalReturn),"Opening and exporting changed original response content.");
+  await download(reviewer,reviewer.locator('[data-reviewer-action="summary"]'),savedResponse("Reopened_Reviewer_Readable_Copy.html"));
+  const readable=fs.readFileSync(savedResponse("Reopened_Reviewer_Readable_Copy.html"),"utf8"),escaped=value=>String(value).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;");
+  for(const value of [originalReturn.reviewer.name,originalReturn.reviewer.organization,originalReturn.reviewer.email,...originalReturn.comments.flatMap(c=>[c.body,c.proposed_text_en,c.proposed_text_fr])].filter(Boolean))assert.ok(readable.includes(escaped(value)));
+  const publication=await api("/api/projects/"+projectId+"/export?audience=edition&edition_id="+successor);
+  const publicationZip=savedResponse("Current_Reviewed_Edition.zip"),publicationRoot=path.join(config.output,"publication-current-source");
+  fs.writeFileSync(publicationZip,publication);unzip(publicationZip,publicationRoot);
+  for(const name of ["edition.json","source-register.json","case-records.json","language-review.json","consultation.json"]){
+   assert.deepEqual(fs.readFileSync(path.join(publicationRoot,"publication",name)),fs.readFileSync(path.join(config.output,"successor","publication",name)),"Presentation changed original "+name);
+  }
+  const frozen=JSON.parse(fs.readFileSync(path.join(publicationRoot,"publication","edition.json"),"utf8")).frozen_at;
+  for(const [lang,label] of [["en","Edition captured"],["fr","Édition consignée"]]){
+   const html=fs.readFileSync(path.join(publicationRoot,"publication","standard-"+lang+".html"),"utf8");
+   assert.ok(!html.includes(label+": "+frozen),"Publication opening still uses its raw timestamp.");
+   assert.ok(html.includes("UTC"),"Publication opening must retain the displayed time zone.");
+  }
   await reviewer.locator("#language").selectOption("bilingual");
   for(const [label,width,height] of [["desktop",1440,1000],["phone",390,844]]){
    await reviewer.setViewportSize({width,height});
@@ -360,7 +385,7 @@ try{
   }
   await reviewer.setViewportSize({width:1440,height:1000});await operator.setViewportSize({width:1440,height:1000});
   save(savedResponse("buyer-views.json"),{captured_at:new Date().toISOString(),views});
-  return{main_views:views.length,recipient_views:views.filter(v=>v.name.startsWith("reviewer-")).length,desktop_width:1440,phone_width:390,source_identity:sourceIdentity,review_file:"buyer-views.json"};
+  return{main_views:views.length,recipient_views:views.filter(v=>v.name.startsWith("reviewer-")).length,desktop_width:1440,phone_width:390,source_identity:sourceIdentity,review_file:"buyer-views.json",reopened_response:"Reopened_Reviewer_Response.json",reopened_readable_copy:"Reopened_Reviewer_Readable_Copy.html",current_publication:"Current_Reviewed_Edition.zip"};
  });
 
  assert.deepEqual(sourceManifest(),initialSource,"The producer source changed during the native review journey.");
