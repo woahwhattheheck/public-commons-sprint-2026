@@ -81,16 +81,20 @@ def sync_directory(path):
 def immutable(path, value):
     path = Path(path)
     private_directory(path.parent)
+    descriptor, temporary = tempfile.mkstemp(prefix=".immutable-", dir=path.parent)
     try:
-        descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
-    except FileExistsError:
-        require(regular(path) == value, "ORIGINAL_CARRIER_DESTINATION_CHANGED:" + str(path))
-        return
-    with os.fdopen(descriptor, "wb") as stream:
-        stream.write(value)
-        stream.flush()
-        os.fsync(stream.fileno())
-    sync_directory(path.parent)
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(value)
+            stream.flush()
+            os.fsync(stream.fileno())
+        try:
+            os.link(temporary, path, follow_symlinks=False)
+        except FileExistsError:
+            require(regular(path) == value, "ORIGINAL_CARRIER_DESTINATION_CHANGED:" + str(path))
+        sync_directory(path.parent)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
 
 
 def descriptor(name, value):
