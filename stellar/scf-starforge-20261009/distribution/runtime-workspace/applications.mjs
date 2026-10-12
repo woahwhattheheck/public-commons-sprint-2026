@@ -4,6 +4,7 @@ import { constants } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { blockscoutApplication, prepareBlockscoutApplication } from './application-blockscout.mjs';
+import { mppApplication, prepareMppApplication } from './application-mpp.mjs';
 import { redisApplication, prepareRedisApplication } from './application-redis.mjs';
 import { jobCheckoutApplication, validateJobCheckoutSelection, prepareJobCheckoutApplication } from './application-job-checkout.mjs';
 import { datasetBuyerApplication, prepareDatasetBuyerApplication } from './application-dataset-buyer.mjs';
@@ -38,6 +39,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   ...PYTHON_APPLICATION_CATALOG,
   ...eventFeedApplications(common),
   blockscoutApplication(common),
+  mppApplication(common),
   redisApplication(common),
   jobCheckoutApplication(common),
   datasetBuyerApplication(common),
@@ -189,13 +191,16 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     ...context, runtimeDirectory, inputPath, selectedExecutable, applicationEnvironment,
   });
   const inputs = [], createDirectories = [], args = [];
-  let terminalPython, eventFeed;
+  let terminalPython, eventFeed, mppBinding;
   const path = async (name, kind = 'directory', missing = false, privateOnly = false) => {
     if (!settings[name]) return;
     const value = await inputPath(settings[name], kind, missing, privateOnly); inputs.push(value); return value;
   };
   const option = (name, value) => { if (value !== undefined && value !== '') args.push(name, String(value)); };
-  if (['mercury-feed', 'buyer-event-feed'].includes(type.id)) {
+  if (type.id === 'mpp') {
+    const original = await prepareMppApplication(settings, inputPath, runtimeDirectory);
+    args.push(...original.args); inputs.push(...original.inputs); mppBinding = original.binding;
+  } else if (['mercury-feed', 'buyer-event-feed'].includes(type.id)) {
     const selected = await prepareEventFeedApplication(type.id, settings, {
       ...context, runtime: { directory: runtimeDirectory }, inputPath, selectedExecutable,
     });
@@ -338,11 +343,12 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     terminalPython = await realpath(settings.terminalPython ?? '/usr/bin/python3');
     inputs.push(await inputPath(terminalPython, 'file')); await access(terminalPython, constants.X_OK);
   }
-  option('--port', settings.port);
+  if (type.id !== 'mpp') option('--port', settings.port);
   if (settings.environmentFile) inputs.push(await inputPath(settings.environmentFile, 'file'));
   const environment = await applicationEnvironment(settings.environmentFile);
   return { command: type.command, args, inputs, createDirectories, terminal: type.terminal,
     ...(eventFeed ? { eventFeed } : {}),
+    ...(mppBinding ? { mppBinding } : {}),
     ...(type.terminal ? { terminalPython } : {}),
     ...(settings.environmentFile ? { environmentFile: settings.environmentFile, environmentSha256: environment.sha256 } : {}) };
 }

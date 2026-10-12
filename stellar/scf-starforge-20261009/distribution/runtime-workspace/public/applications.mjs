@@ -19,6 +19,17 @@ function facts(rows) {
   }
   return node;
 }
+function mppReviewRows(command) {
+  const workspace = command?.mppBinding;
+  if (!workspace) return [];
+  const roles = Object.entries(workspace.profiles).filter(([, profile]) => profile).map(([role]) => role);
+  return [
+    ['MPP workspace', workspace.workspace],
+    ['Workspace created', workspace.createdAt],
+    ['Saved profile revision', workspace.revision],
+    ['Configured roles', roles.join(', ') || 'Ready for merchant or customer configuration'],
+  ];
+}
 async function textHash(text) {
   const bytes = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)));
   return [...bytes].map(byte => byte.toString(16).padStart(2, '0')).join('');
@@ -184,6 +195,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
         ['Managed home', reviewed.homeDirectory], ['Connection', reviewed.releaseId ? 'Existing original release ' + reviewed.releaseId : 'Adopt this original ready runtime'],
         ['Input', reviewed.command.terminal ? 'Connected original terminal, explicit operator responses' : 'Original application output'],
         ['Environment file', reviewed.settings.environmentFile ?? 'Inherited operator environment'],
+        ...mppReviewRows(reviewed.command),
       ]);
       const save = button(editingId ? 'Save reviewed settings' : 'Save application', () => act(async () => {
         if (configurationReview !== reviewed) return;
@@ -221,6 +233,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       ['Release', reviewed.releaseId], ['Source', reviewed.runtime.sourceCommit],
       ['Inputs', reviewed.command.inputs.map(item => item.path).join('\n')],
       ['Terminal', reviewed.command.terminal ? 'Explicit operator input through the original controlling terminal' : 'Retained original output'],
+      ...mppReviewRows(reviewed.command),
     ]), start); operationReview.hidden = false;
   }
   function renderSelected() {
