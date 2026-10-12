@@ -4,8 +4,12 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 export async function main(args = process.argv.slice(2)) {
+  args = [...args];
+  const explicit = args[0] === '--python';
+  if (explicit && (!args[1] || args[1].startsWith('--')))
+    throw new Error('Supply the selected Python executable after --python');
   const source = resolve(dirname(fileURLToPath(import.meta.url)), 'cli.py');
-  const python = process.env.SF30_XML_PYTHON || 'python3';
+  const python = explicit ? args.splice(0, 2)[1] : process.env.SF30_XML_PYTHON || 'python3';
   const child = spawn(python, [source, ...args], {
     stdio: 'inherit', env: { ...process.env, SF30_XML_NODE: process.execPath },
   });

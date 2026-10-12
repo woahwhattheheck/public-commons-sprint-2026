@@ -5,6 +5,7 @@ import {dirname,resolve,join} from 'node:path';
 import {exact,identifier,line,plain,failure} from './host-files.mjs';
 import {RetainedFileReads} from './retained-file-reads.mjs';
 import {researchWorkspaceTools,RESEARCH_EXPORTS} from './catalog/research-workspace.mjs';
+import {callResearchClinicalTrials,exportResearchClinicalTrials,RESEARCH_CLINICALTRIALS_PREFIX} from './research-clinicaltrials.mjs';
 export {researchWorkspaceTools} from './catalog/research-workspace.mjs';
 import {ResearchWorkspaceClient} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-client.mjs';
 import {readResearchHostFile,openResearchSource} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-files.mjs';
@@ -37,7 +38,7 @@ export async function readResearchWorkspaceConfiguration(file){
       throw failure('CONFIGURATION_ERROR','Declare original source handles.');
     for(const[name,source]of Object.entries(value.sources??{})){
       identifier(name);exact(source,['file','kind','sha256','provider','sourceReference'],['file','kind','sha256']);
-      if(!['research','reference','portable'].includes(source.kind)||source.kind!=='portable'&&
+      if(!['research','reference','portable','clinicaltrials-packet'].includes(source.kind)||!['portable','clinicaltrials-packet'].includes(source.kind)&&
         (typeof source.provider!=='string'||!/^[a-z][a-z0-9_-]{0,79}$/.test(source.provider)))
         throw failure('CONFIGURATION_ERROR','Each source declares its original kind and provider.');
       if(source.sourceReference!==undefined&&(typeof source.sourceReference!=='string'||source.sourceReference.length>4000)||
@@ -195,7 +196,9 @@ export class MerchantResearchWorkspaces{
     const spec=kind(args.kind),temporary=join(entry.directory,'.export-'+randomUUID()+'.'+spec.extension);
     let result,selection;
     try{
-      if(spec.format){
+      if(args.kind.startsWith('clinicaltrials-')){
+        ({result,selection}=await exportResearchClinicalTrials(entry.client,args,{file:temporary}));
+      }else if(spec.format){
         exact(args,['workspace','dossierId','kind'],['workspace','dossierId','kind']);
         result=await entry.client.exportDossier(args.dossierId,{format:spec.format,file:temporary});
         selection={dossierId:args.dossierId,revision:result.revision??null};
@@ -277,6 +280,10 @@ export class MerchantResearchWorkspaces{
     if(name==='merchant_research_detach')return this.#detach(args.workspace,args.attachmentId);
     return this.#with(args.workspace,async entry=>{
       const c=entry.client,id=args.dossierId,input=nativeFields(args,['workspace','dossierId']);
+      if(name.startsWith(RESEARCH_CLINICALTRIALS_PREFIX)){
+        const result=await callResearchClinicalTrials(c,name,args,{source:(name,accepted)=>this.#source(entry,name,accepted)});
+        return name==='merchant_research_clinicaltrials_receive'?compactDossier(result):result;
+      }
       switch(name){
         case 'merchant_research_status':return this.#describe(entry,await c.status());
         case 'merchant_research_list':return c.list(input);
@@ -348,8 +355,8 @@ export class MerchantResearchWorkspaces{
       try{return await this.#execute(name,args);}
       catch(error){
         if(error.outcomeUnknown)throw Object.assign(failure(error.code??'RESEARCH_CONNECTION_INTERRUPTED',
-          'The original write response was interrupted. Read the saved dossier revision or the same Crossref operation before another write.'),
-          {outcomeUnknown:true,dossierId:args.dossierId,operationId:args.operationId});
+          'The original write response was interrupted. Read the saved dossier revision and the same source receiving operation or retained input before another write.'),
+          {outcomeUnknown:true,dossierId:args.dossierId,operationId:args.operationId,requestId:args.requestId,sourceId:args.sourceId});
         throw error;
       }
     });

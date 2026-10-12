@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-clinical-trials-workspaces",
+  "description": "Original clinical trials workspaces MCP provider",
+  "merchantProviders": {
+    "clinical-trials-workspaces": "stellar-forge/mcp-merchant-operator/providers/clinical-trials-workspaces.mjs"
+  }
+}

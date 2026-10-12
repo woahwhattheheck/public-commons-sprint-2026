@@ -1,0 +1,106 @@
+{
+  "operationId": "nws-site-weather-native-b3909-20261012",
+  "product": {
+    "repository": "woahwhattheheck/public-commons-sprint-2026",
+    "commit": "83256fe628eb347c379b798d242d516e23325fd3",
+    "tree": "eddcd9e671acfc4f8f133136eee9fe891987630e",
+    "productPullRequest": 1771,
+    "runtimeJoinPullRequest": 1845
+  },
+  "entrypoint": "python -B operations/nws-site-weather-native-20261012/native-run.py",
+  "operatingFiles": [
+    {
+      "name": "native-journey.mjs",
+      "bytes": 18964,
+      "gitBlob": "1e06c0cd1449150ab64337d676bbfe2aaacde590"
+    },
+    {
+      "name": "browser-journey.mjs",
+      "bytes": 24655,
+      "gitBlob": "e243a7ba416d5dbb85512abe72c1a105fa568d36"
+    },
+    {
+      "name": "mcp-receiving.mjs",
+      "bytes": 19615,
+      "gitBlob": "dcbedd0a27d882b9747c49ea68dbc6e876d66e21"
+    },
+    {
+      "name": "native-run.py",
+      "bytes": 2001,
+      "gitBlob": "94fce372bfbfc1c9157b938346509efd657b36e5"
+    }
+  ],
+  "originalState": {
+    "directory": "/workspace/scratch/b3909ae247f2/nws-site-weather",
+    "workspace": "workspace",
+    "inbox": "inbox",
+    "journal": "private/native-journey.json",
+    "browserJournal": "browser/journal.json",
+    "merchantReceivingJournal": "merchant-receiving/journal.json",
+    "merchantReceivingResult": "merchant-receiving/result.json",
+    "operationRegistration": "Use the existing native job registry and this one operation ID."
+  },
+  "sourcePackage": {
+    "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/nws/examples/washington-monument-source-20261012.json",
+    "bytes": 608872,
+    "sha256": "9a1a99def2fff2d32c9849ca613d867d007f40e1600610b7b436c190357f4563",
+    "responseTexts": 11,
+    "selectedEditionResponses": 10
+  },
+  "payment": {
+    "network": "stellar:testnet",
+    "asset": "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
+    "amountPerPage": "10000",
+    "totalAtomic": "20000",
+    "payTo": "GBB37T6QFXSFLVG7FHVVOQOK4YHE4T7ISG3ITPDRS3XNNY6JBWRIYOGC",
+    "intentIds": [
+      "nws-site-weather-b3909-20261012-p1",
+      "nws-site-weather-b3909-20261012-p2"
+    ],
+    "rows": 14,
+    "pageRows": 7
+  },
+  "existingEquipment": {
+    "originalOperatorRoot": "/workspace/scratch/39daa82f3fbd/routescan_native_39da",
+    "operatorWorkspace": "operator-workspace",
+    "facilitatorPolicy": "facilitator.json",
+    "privateAccounts": "accounts.private.json",
+    "ownership": "signer-ownership",
+    "tls": "tls",
+    "reusableSdk": {
+      "libraryFile": "libfile_5288aa2e5b5c8191856c3e2e0e009b76",
+      "bytes": 31303408,
+      "sha256": "96e5de4ba72837804e59b155f8ca092812a54c18c6921ff2542f7606c1826b0d",
+      "installation": "b53f2153a10fde6e0b56b824a29365c70703036425739dfd8170ee8164307e2e",
+      "profile": "7f9a7725dd06a4be1eff5c18c3a9c9b17966675446241eb48f93706c752d12e8",
+      "sdkSource": "d16e851341db5f0abd451a3d09ad52f99afdd162"
+    }
+  },
+  "environment": {
+    "NWS_JOURNEY_DIRECTORY": "Absolute original business-state directory",
+    "NWS_PRODUCT_ROOT": "Absolute complete source root at product.commit",
+    "NWS_ORIGINAL_SCF_RUNTIME": "Absolute existing source-native facilitator runtime root",
+    "NWS_ORIGINAL_OPERATOR_ROOT": "Absolute original private native operator custody root",
+    "NWS_OPERATOR_WORKSPACE": "Absolute original operator-workspace",
+    "NWS_NODE_EXECUTABLE": "Existing equipped Node executable",
+    "NWS_PLAYWRIGHT_MODULE": "Existing equipped Playwright package",
+    "NWS_CHROMIUM_EXECUTABLE": "Existing equipped Chromium executable",
+    "NWS_CA_FILE": "Original private test-host CA file",
+    "HTTPS_PROXY": "Existing egress proxy used by the original native network transport"
+  },
+  "completeFlow": [
+    "Original source import with lost reply, reload and unchanged-file reselection",
+    "Eight source-backed weather tables, edition review and staff conflict recovery",
+    "Whole source JSON, CSV and HTML handover with unchanged-source reimport",
+    "Original 14-row SF30 dataset and SF82 merchant release",
+    "Two original seven-row SF88/SF100 customer pages and finalization",
+    "Five complete customer files, merchant schema and tools",
+    "Partial customer download through listener-port replacement",
+    "Retained source completion after original workspace closure",
+    "Offline receiving and cold reopening with original workspace, edition and receipt identities"
+  ],
+  "coordination": {
+    "channel": "C0BTB4SUCP9",
+    "thread": "1791730288.879869"
+  }
+}

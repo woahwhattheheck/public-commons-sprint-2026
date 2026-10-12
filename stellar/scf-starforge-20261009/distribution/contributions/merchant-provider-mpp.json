@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-mpp",
+  "description": "Original mpp MCP provider",
+  "merchantProviders": {
+    "mpp": "stellar-forge/mcp-merchant-operator/providers/mpp.mjs"
+  }
+}

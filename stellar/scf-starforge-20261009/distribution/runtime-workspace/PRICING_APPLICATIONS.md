@@ -2,8 +2,8 @@
 
 The original Applications runtime can open and operate the merchant pricing
 workspace. It retains the selected seller, traffic source, saved reviews and
-scenarios in one application. The same managed process supplies both **Open
-application** and **Scenario planning** links, then closes through **Stop** and
+scenarios in one application. The same managed process supplies the **Open
+application**, **Scenario planning** and **Supplier costs** links, then closes through **Stop** and
 reopens the merchant's saved work on the next start.
 
 ## Select the merchant
@@ -16,6 +16,7 @@ scenario planning**, and select the original merchant inputs.
 | Setting | Selection |
 | --- | --- |
 | Private pricing workspace | The existing saved workspace, or one new directory in an existing private parent. |
+| Complete pricing and supplier-cost backup | Optional original WORKSPACE_BACKUP TAR, with a new receiving directory or this same original restoration. |
 | Original seller configuration | The current SF30 seller JSON, including its complete ordered payment options. |
 | Original operations URL | The merchant's existing loopback SF30 operations listener. Use this source by itself. |
 | Original session traffic export | A saved original session export. It can be selected with a retained usage export. |
@@ -32,8 +33,9 @@ source controls. The optional environment JSON follows the existing managed
 Applications behavior.
 
 **Review application** displays the exact original command and selected runtime.
-**Save application** creates the reviewed pricing directory when needed and
-connects the installation through its existing managed release. **Review start →
+**Save application** connects the installation through its existing managed release.
+For ordinary opening, it creates the reviewed pricing directory when needed.
+For backup receiving, the native restore creates its target during the reviewed start. **Review start →
 Start reviewed application** runs the original `revenue-workspace` command.
 
 For example, a merchant using its live operations listener runs:
@@ -108,7 +110,9 @@ files.
 
 The original CLI emits one startup object containing its schema, existing
 `MERCHANT_PRICING_WORKSPACE_READY` status, canonical `state` and `configPath`, the
-actual `configSha256`, `pid`, `url` and `planningUrl`. Applications accepts the
+actual `configSha256`, `pid`, `url`, `planningUrl` and `costsUrl`.
+A backup receiving start also reports `costRestore`, including the actual archive,
+receiving directory, restored archive digest, complete file count and replay state. Applications accepts the
 reported links for that selected seller, workspace and requested port. The
 planning link stays on the original server at `/planning`.
 
@@ -121,19 +125,95 @@ part of the maintained distribution's original runtime-workspace subtree.
 
 ## Supplier costs and complete recovery
 
-The original pricing workspace also opens its **Supplier costs** application on
-`/economics`; Applications exposes that link when the original process announces
-it. Optional **Original supplier usage export** and **Original accounting report**
-fields retain the original context file paths for explicit capture in that
-workspace. Those source files may be temporarily unavailable when reopening
-saved reviews. The original cost workspace retains bills, credits and quotes,
-reviewed allocations, corrected editions and cost-linked pricing decisions.
+The original pricing workspace opens **Supplier costs** on `/economics`.
+Optional **Original supplier usage export** and **Original accounting report**
+fields select the original context for explicit capture in that workspace.
+Saved originals, cost editions and pricing decisions remain readable when a
+configured live observation source is temporarily unavailable.
 
-Its complete pricing-and-cost backup includes the saved scenario plans and
-referenced pricing versions. Use the original `revenue-workspace
---restore-cost-workspace BACKUP.tar --state NEW_DIRECTORY` operation with the
-original seller and observation arguments to receive a backup once, then select
-that existing private workspace in Applications. Subsequent managed starts open
-the same received records. See the original
-[Supplier costs guide](../../sf97-merchant-revenue-ops/economics/README.md) for
-source capture, allocation, comparison, backup and restore.
+Start with a saved pricing review for the intended merchant routes and period.
+Upload the supplier's original bill, credit note or quotation, map its exact
+columns or retain manually reviewed lines, then allocate the signed amounts.
+The native page keeps currency, billed and quoted basis, unassigned money,
+period alignment and route coverage visible. Save a complete cost edition and
+review its eligible proposal before applying costs to a new original pricing
+review. Continue that review through **Scenario planning** or its original
+atomic price-change and release actions.
+
+### Receive a complete merchant workspace in Applications
+
+Export **WORKSPACE_BACKUP** from the existing Supplier costs page, or receive
+the original backup through the maintained merchant pricing MCP/CLI downloader.
+Keep its complete original TAR, up to the native 512 MiB limit.
+
+1. Open **Applications → New application → Merchant pricing and scenario
+   planning** in the selected READY installation.
+2. Enter a new **Private pricing workspace** beneath an existing private
+   parent. Select the complete TAR in **Complete pricing and supplier-cost
+   backup**. An existing incomplete restoration uses the same directory and
+   archive.
+3. Select the original seller configuration and its session/history export or
+   operations URL. These identify the merchant and the source for future
+   reviews. Saved reviews retain their own original seller and observations.
+4. Choose **Review application**. The **Receive pricing and supplier costs**
+   review shows the archive path, complete SHA-256 and byte count, retained file
+   count, receiving directory and original restoration state. It also shows
+   supplier originals, saved cost editions, pricing reviews, scenario plans,
+   price changes and cost links carried by that backup.
+5. Save the configuration, then **Review start → Start reviewed application**.
+   Both reviews read the complete original archive. The saved start supplies
+   its exact digest to the native restore. A changed archive is rejected before
+   any receiving target is created or populated.
+6. Open **Supplier costs** to read its original documents and saved editions.
+   Open **Scenario planning** and the pricing history to continue the restored
+   comparisons and saved reviews. All three links belong to the same original
+   pricing process and directory.
+7. Stop and reopen that application normally. A completed restoration reopens
+   its current retained work, including changes made after import. After
+   successful receiving, the configuration can clear the optional backup field
+   while keeping the same pricing directory. This permits later starts after
+   the handover TAR has been moved to its retained archive location.
+
+The native restore creates a new private target or continues its own original
+restoration. It retains complete files and original completion records; a
+pre-existing unrelated workspace is not a receiving destination. Choosing
+another backup uses a new receiving directory. The same original archive and
+destination recover an interrupted import.
+
+A single **COST_EDITION** export remains useful for its original edition
+handover. It does not contain the complete pricing workspace required by this
+receiving action.
+
+### Inspect or receive through the same CLI
+
+Inspect the full archive and destination without opening a listener or creating
+the workspace:
+
+```sh
+starforge revenue-workspace \
+  --inspect-cost-workspace /private/received/pricing-cost-backup.tar \
+  --state /private/merchant/received-pricing
+```
+
+Retain the returned `sourceArchiveSha256`, then use that exact value with
+`--expected-cost-backup-sha256` when starting:
+
+```sh
+starforge revenue-workspace \
+  --config /private/merchant/seller-service.json \
+  --snapshot /private/merchant/original-seller-traffic.json \
+  --restore-cost-workspace /private/received/pricing-cost-backup.tar \
+  --expected-cost-backup-sha256 REVIEWED_FULL_BACKUP_SHA256 \
+  --state /private/merchant/received-pricing --port 0
+```
+
+Replace the digest placeholder with the inspected 64-character value. A source
+checkout uses `node stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/workspace/cli.mjs`
+in place of `starforge revenue-workspace`. The direct restore command remains
+available without the optional digest; Applications supplies it automatically.
+
+The original [Supplier costs guide](../../sf97-merchant-revenue-ops/economics/README.md)
+defines monetary allocation, coverage, pricing proposals, comparison and the
+complete archive. The [merchant MCP cost guide](../../../../stellar-forge/mcp-merchant-operator/COSTS.md)
+covers the same source/book aliases, exact saved requests and resumable complete
+file receiving.

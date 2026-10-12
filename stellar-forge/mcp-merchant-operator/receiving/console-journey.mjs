@@ -80,7 +80,7 @@ export async function receiveConsole({directory,chromiumPath,playwrightModule,so
     await page.locator('[data-page=tools]').click();
     await page.locator('#tool-search').fill(tool);
     await observedResponse('tools',()=>page.locator('#tool-filter button[type=submit]').click(),'GET');
-    const button=page.locator('#tool-list button').filter({has:page.locator('strong',{hasText:tool})});
+    const button=page.locator('#tool-list button').filter({has:page.locator('strong').filter({hasText:new RegExp('^'+tool+'$')})});
     await button.first().click();
     await page.locator('#tool-detail').waitFor({state:'visible'});
     assert.equal(await page.locator('#tool-title').textContent(),tool);

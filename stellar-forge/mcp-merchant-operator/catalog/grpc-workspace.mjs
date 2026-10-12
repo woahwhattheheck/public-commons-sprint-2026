@@ -1,5 +1,6 @@
 // MIT. Original tool metadata; provider runtimes load only when selected.
 import { MAX_RETAINED_CHUNK_BYTES } from '../retained-file-contracts.mjs';
+import { grpcUpgradeTools } from './grpc-upgrades.mjs';
 
 const SHA = /^[0-9a-f]{64}$/;
 
@@ -35,6 +36,7 @@ const reflectionSource = { ...selection, profile: alias, revision: digest,
   protocol: { type: 'string', enum: ['auto', 'v1', 'v1alpha'] } };
 function grpcWorkspaceTools(tool) {
   return [
+    ...grpcUpgradeTools(tool),
     tool('merchant_grpc_workspaces', 'List original gRPC workspaces and host-declared protobuf capture, reflection, request and receiving handles.', {}, [], read),
     tool('merchant_grpc_status', 'Read the original current revision, generation, native runtime and complete inventory counts. Recover here after an interrupted action.', selection, ['workspace'], read),
     tool('merchant_grpc_inventory', 'Page every original revision, preparation, intent or retained call, or complete delivery exports. Continue with the returned snapshot and nextOffset.', { ...selection, kind: { type: 'string', enum: ['revisions', 'prepared', 'intents', 'attempts', 'reflections', 'exports'] }, ...page }, ['workspace', 'kind'], read),
