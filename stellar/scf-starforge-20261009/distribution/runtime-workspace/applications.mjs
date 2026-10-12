@@ -38,6 +38,7 @@ import { pricingApplication, validatePricingSelection, preparePricingApplication
 import { collectionsApplication, prepareCollectionsApplication } from './application-collections.mjs';
 import { baserowApplication, prepareBaserowApplication } from './application-baserow.mjs';
 import { grantApplication, prepareGrantApplication } from './application-grant.mjs';
+import { dspaceApplication, prepareDspaceApplication } from './application-dspace.mjs';
 import { buyerRunbookApplication, prepareBuyerRunbookApplication } from './application-buyer-runbook.mjs';
 import { grantsgovApplication, prepareGrantsgovApplication } from './application-grantsgov.mjs';
 import { fredApplication, prepareFredApplication } from './application-fred.mjs';
@@ -110,6 +111,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   collectionsApplication(common),
   baserowApplication(common),
   grantApplication(common),
+  dspaceApplication(common),
   buyerRunbookApplication(common),
   grantsgovApplication(common),
   fredApplication(common),
@@ -390,6 +392,10 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     const prepared = await prepareBuyerRunbookApplication(settings, { inputPath, runtimeDirectory });
     args.push(...prepared.args); inputs.push(...prepared.inputs);
     createDirectories.push(...prepared.createDirectories); buyerRunbook = prepared.identity;
+  } else if (type.id === 'dspace-workspace') {
+    const prepared = await prepareDspaceApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...prepared.args); inputs.push(...prepared.inputs);
+    createDirectories.push(...prepared.createDirectories); selectedResourceKey = prepared.resourceKey;
   } else if (type.id === 'grant-workspace') {
     const prepared = await prepareGrantApplication(settings, { inputPath, selectedExecutable, runtimeDirectory });
     args.push(...prepared.args); inputs.push(...prepared.inputs);

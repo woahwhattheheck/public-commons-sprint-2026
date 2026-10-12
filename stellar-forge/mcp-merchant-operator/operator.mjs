@@ -94,7 +94,8 @@ export class MerchantReleaseOperator {
   get tools() { return structuredClone(this.#tools); }
   get maxRequestBytes() {
     const configuredMaximum = (() => {
-      if (this.#config.graphqlWorkspaces) return 8 * 1024 * 1024;
+      if (this.#config.grantWorkspaces) return 32 * 1024 * 1024;
+      if (this.#config.graphqlWorkspaces || this.#config.dspaceOperators) return 8 * 1024 * 1024;
       return this.#config.mpp ? 3 * 1024 * 1024 : (this.#config.opensearchWorkspaces || this.#config.grpcWorkspaces || this.#config.usgsWorkspaces) ? 2 * 1024 * 1024 : this.#config.grantsWorkspaces ? 512 * 1024 : 128 * 1024;
     })();
     return Math.max(configuredMaximum, this.#config.feedsWorkspaces ? 16 * 1024 * 1024 + 65536 : 0,
