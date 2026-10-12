@@ -17,5 +17,8 @@
     "./merchant/n8n/prepare": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/n8n/prepare.mjs",
     "./merchant/n8n/runtime": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/n8n/runtime.mjs",
     "./merchant/n8n/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/n8n/workspace/server.mjs"
+  },
+  "applicationProviders": {
+    "n8n": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/n8n.mjs"
   }
 }

@@ -2,6 +2,14 @@
 
 Applications opens the original merchant and buyer tools from a selected READY runtime. It retains the runtime binding, installed release, data paths, exact argv, original process operation and private session URL. The existing managed worker owns the process. Closing the runtime browser or its web server leaves that process available for reopening.
 
+## Source-owned application inventory
+
+The catalog and original startup adapters are discovered from the same maintained
+source contributions as merchant commands. Each product owns its registration;
+Review, Save, Start, Open, Stop and recovery remain the original shared lifecycle.
+The [Applications provider guide](APPLICATION_PROVIDERS.md) explains source
+selection, the provider inventory, exact original adapters and installed receiving.
+
 ## Available original tools
 
 | Application | Maintained command | Original workflow |
