@@ -132,7 +132,7 @@ async function sendPending(){
  }catch(err){
   if(pending){
    try{if(await recoverPending(true)){notice("The response was interrupted, but the matching original commit was recovered. Check the saved run, delivery or backup before continuing.",false);return;}}catch(recovery){notice(recovery.message,true);}
-   if(pending){pending.issue={code:err.code||"response_uncertain",message:err.message};pending.rejected=Boolean(err.status>=400&&err.status<500&&["stale_version","invalid_text","invalid_integer","invalid_decimal","required","decision","unresolved_findings","blocking_finding","source_incomplete","scenario_review","runtime_required","layer_mapping","changes","operation_mismatch","receiver_directory","project_binding","comparison_project"].includes(err.code));saveStored("pending",pending);renderRecovery();}
+   if(pending){pending.issue={code:err.code||"response_uncertain",message:err.message};pending.rejected=Boolean(err.status>=400&&err.status<500&&["stale_version","invalid_text","invalid_integer","invalid_decimal","required","decision","unresolved_findings","blocking_finding","source_incomplete","reference_inspection_required","reference_basis_changed","reference_reader_changed","source_identity","scenario_review","runtime_required","layer_mapping","changes","operation_mismatch","receiver_directory","project_binding","comparison_project"].includes(err.code));saveStored("pending",pending);renderRecovery();}
   }
   throw err;
  }
@@ -172,15 +172,30 @@ function findingsRead(findings){return findings.length?findings.map(f=>'<div cla
 function findingsForm(findings){
  return findings.map(f=>'<div class="finding" data-finding="'+esc(f.id)+'">'+tag(f.severity)+"<h4>"+esc(f.id)+"</h4><p>"+esc(f.message)+"</p>"+jsonView("Original evidence",f.evidence||f)+'<div class="grid">'+select("finding:"+f.id,"Disposition",[["acknowledged","Acknowledge this exact finding"],["requires_change","Changes required"]]) + area("finding_reason:"+f.id,"Attributed finding reason","","maxlength=4000")+"</div></div>").join("");
 }
-function reviewForm(kind,id,findings){
- return form(kind+"-review-"+id,kind+"-review",'<input type="hidden" name="id" value="'+esc(id)+'">'+findingsForm(findings)+'<div class="grid">'+select("decision","Review decision",[["approved","Approve exact edition/result"],["changes_requested","Request changes"]],"","required")+area("reason","Overall review reason","","required maxlength=8000")+"</div>","Save named review");
+function reviewForm(kind,id,findings,referenceBasis=null){
+ return form(kind+"-review-"+id,kind+"-review",'<input type="hidden" name="id" value="'+esc(id)+'">'+(referenceBasis?'<input type="hidden" name="reference_basis_sha256" value="'+esc(referenceBasis.sha256)+'">':"")+findingsForm(findings)+'<div class="grid">'+select("decision","Review decision",[["approved","Approve exact edition/result"],["changes_requested","Request changes"]],"","required")+area("reason","Overall review reason","","required maxlength=8000")+"</div>","Save named review");
+}
+function referenceInspection(source,status){
+ if(!status)return "";
+ const basis=status.basis;
+ const summary=facts([["Original source",code(source.id)],["Source SHA-256",code(source.sha256)],["Inspection basis",code(basis.sha256)],["Installed reader",code(status.reader.source_sha256)],["Retained inspection",basis.inspection_id?code(basis.inspection_id):"Original import"]]);
+ const current=status.current?note("These findings use the installed reference reader over the same original files and selected namefiles.") : note("The retained findings were produced by an earlier reader. Inspect these same original files before a new edition review or native run.","warn");
+ const inspectionForm=form("source-inspect-"+source.id,"source-inspect",'<input type="hidden" name="id" value="'+esc(source.id)+'"><input type="hidden" name="source_sha256" value="'+esc(source.sha256)+'"><input type="hidden" name="reader_sha256" value="'+esc(status.reader.source_sha256)+'">'+area("reason","Reference inspection reason","","required maxlength=8000")+note("This records a new attributed inspection of the retained ZIP and its exact members. The source, baseline edition and previous import remain unchanged."),"Inspect retained native references");
+ return card("Current reference inspection",summary+current+findingsRead(basis.findings)+jsonView("Resolved native input and output paths",basis.profile,true)+inspectionForm+jsonView("Reference inspection history",status.inspections));
+}
+function editionReference(id){
+ const edition=state.editions.find(row=>row.id===id);
+ if(edition?.profile?.adapter!=="native_package")return {};
+ if(!edition.reference_inspection_current||!edition.reference_basis_sha256)throw new Error("Open the original source and inspect its native references with the installed reader before queueing.");
+ return {reference_basis_sha256:edition.reference_basis_sha256};
 }
 async function renderSources(id){
  let body=sectionIntro("Complete original sources","The unchanged publisher files and uploaded native packages retain their original byte hashes. Generated inputs and solver outputs belong to a later native attempt.")+projectRequired();
  body+=card("Source inventory",table(["Source","Kind","Original members","Actions"],state.sources.map(x=>[link("sources/"+x.id,x.name),tag(x.kind),esc(x.files.length),link("sources/"+x.id,"Inspect originals")])));
  if(id){
   const d=await read("/sources/"+encodeURIComponent(id));currentDetail=d;const source=d.source;
-  body+=card(source.name,facts([["Original source",code(source.id)],["Source SHA-256",code(source.sha256)],["Retained ZIP",source.archive?esc(source.archive.filename)+" · "+code(source.archive.sha256):"Publisher files individually retained"]])+jsonView("Original model profile and native references",source.profile,true)+findingsRead(source.findings));
+  body+=card(source.name,facts([["Original source",code(source.id)],["Source SHA-256",code(source.sha256)],["Retained ZIP",source.archive?esc(source.archive.filename)+" · "+code(source.archive.sha256):"Publisher files individually retained"]])+jsonView("Original import profile and native references",source.profile,true)+jsonView("Findings retained by the original import",source.findings));
+  body+=referenceInspection(source,d.reference_inspection);
   body+=card("Original files",table(["Original path","Bytes","SHA-256","View"],source.files.map(x=>[esc(x.path),esc(x.bytes),code(x.sha256),download("/sources/"+id+"/original","Download",{path:x.path})+' · <button type="button" class="small" data-view-source="'+esc(id)+'" data-path="'+esc(x.path)+'">View source</button>'])));
   body+='<section class="card" id="source-viewer" hidden><h2>Original source text</h2><p id="source-viewer-path" class="mono"></p><pre class="source-preview" id="source-viewer-text"></pre></section>';
   body+=card("Editions from this source",table(["Edition","Kind","Review"],d.editions.map(x=>[link("editions/"+x.id,x.name),tag(x.kind),esc(x.id)])));
@@ -199,7 +214,7 @@ async function renderEditions(id){
  let d=null;if(id){d=await read("/editions/"+encodeURIComponent(id));currentDetail=d;}
  const parent=d?.edition||state.editions[0];
  if(d){
-  body+=card(d.edition.name,facts([["Edition",code(d.edition.id)],["Parent",d.edition.parent_id?link("editions/"+d.edition.parent_id,d.edition.parent_id):"Original source baseline"],["Original source",link("sources/"+d.source.id,d.source.name)],["Edition SHA-256",code(d.edition.sha256)]])+jsonView("Exact parameters and profile",d.edition,true)+jsonView("Previous named reviews",d.reviews)+reviewForm("edition",d.edition.id,d.source.findings));
+  body+=card(d.edition.name,facts([["Edition",code(d.edition.id)],["Parent",d.edition.parent_id?link("editions/"+d.edition.parent_id,d.edition.parent_id):"Original source baseline"],["Original source",link("sources/"+d.source.id,d.source.name)],["Edition SHA-256",code(d.edition.sha256)]])+jsonView("Exact parameters and profile",d.edition,true)+jsonView("Previous named reviews",d.reviews)+(d.reference_inspection&&!d.reference_inspection.current?note("Open this source and inspect its retained native references before preparing a new review.","warn"):reviewForm("edition",d.edition.id,d.reference_inspection?d.reference_inspection.basis.findings:d.source.findings,d.reference_inspection?.basis)));
   body+=card("Queue this edition",form("run-create-"+d.edition.id,"run-create",'<input type="hidden" name="edition_id" value="'+esc(d.edition.id)+'">'+area("reason","Native run purpose","","required")+note("Queueing freezes the actual runtime identity. Execution is a separate explicit action; the unchanged baseline preserves the publisher's declared metadata."),"Create queued run"));
  }
  if(parent&&parent.profile.adapter==="publisher_twri"){
@@ -339,6 +354,7 @@ const handlers={
  "project-update":(formNode)=>mutate(formNode,"project.update",{id:value(formNode,"id"),expected_project_version:Number(value(formNode,"expected_project_version")),name:value(formNode,"name"),description:value(formNode,"description"),site_label:value(formNode,"site_label")}),
  "publisher-source":async formNode=>{const result=await mutate(formNode,"source.publisher",{project_id:selectedProject(),name:value(formNode,"name")});if(result?.source_id)location.hash="sources/"+result.source_id;},
  "source-import":async formNode=>{const file=field(formNode,"file").files[0];const p={project_id:selectedProject(),name:value(formNode,"name"),filename:file?.name||"",layer_mapping:parseJSON(value(formNode,"layer_mapping"),"Layer mapping"),intended_units:parseJSON(value(formNode,"intended_units")||"{}","Intended units")};for(const name of ["mf6_namefile","legacy_namefile"])if(value(formNode,name))p[name]=value(formNode,name);const result=await mutate(formNode,"source.import",p,file);if(result?.source_id)location.hash="sources/"+result.source_id;},
+ "source-inspect":async formNode=>{const result=await mutate(formNode,"source.inspect",{id:value(formNode,"id"),source_sha256:value(formNode,"source_sha256"),reader_sha256:value(formNode,"reader_sha256"),reason:value(formNode,"reason")});if(result?.source_id)location.hash="sources/"+result.source_id;},
  "scenario-create":async formNode=>{
   const parent=state.editions.find(x=>x.id===value(formNode,"parent_id"));if(!parent)throw new Error("The original parent edition is not selected.");
   const changes=[];
@@ -348,9 +364,9 @@ const handlers={
   if(!changes.length)throw new Error("Select at least one explicit scenario change.");
   const result=await mutate(formNode,"edition.create",{project_id:selectedProject(),parent_id:parent.id,name:value(formNode,"name"),description:value(formNode,"description"),changes});if(result?.id)location.hash="editions/"+result.id;
  },
- "edition-review":formNode=>mutate(formNode,"edition.review",{id:value(formNode,"id"),decision:value(formNode,"decision"),reason:value(formNode,"reason"),findings:reviewChoices(formNode)}),
+ "edition-review":formNode=>mutate(formNode,"edition.review",{id:value(formNode,"id"),decision:value(formNode,"decision"),reason:value(formNode,"reason"),findings:reviewChoices(formNode),...(value(formNode,"reference_basis_sha256")?{reference_basis_sha256:value(formNode,"reference_basis_sha256")}:{})}),
  "run-review":formNode=>mutate(formNode,"run.review",{id:value(formNode,"id"),decision:value(formNode,"decision"),reason:value(formNode,"reason"),findings:reviewChoices(formNode)}),
- "run-create":async formNode=>{const result=await mutate(formNode,"run.create",{edition_id:value(formNode,"edition_id"),reason:value(formNode,"reason")});if(result?.id)location.hash="runs/"+result.id;},
+ "run-create":async formNode=>{const edition_id=value(formNode,"edition_id");const result=await mutate(formNode,"run.create",{edition_id,reason:value(formNode,"reason"),...editionReference(edition_id)});if(result?.id)location.hash="runs/"+result.id;},
  "run-execute":formNode=>mutate(formNode,"run.execute",{id:value(formNode,"id"),reason:value(formNode,"reason"),retry_incomplete:checked(formNode,"retry_incomplete"),rebind_runtime:checked(formNode,"rebind_runtime")}),
  "run-resume":formNode=>mutate(formNode,"run.resume",{id:value(formNode,"id"),reason:value(formNode,"reason"),retry_incomplete:checked(formNode,"retry_incomplete"),rebind_runtime:checked(formNode,"rebind_runtime")}),
  "comparison":async formNode=>{saveDraft(formNode);const result=await read("/runs/"+encodeURIComponent(value(formNode,"run_id"))+"/compare",{baseline_run_id:value(formNode,"baseline_run_id")});el("comparison-result").hidden=false;el("comparison-result").innerHTML="<h2>Exact retained comparison</h2>"+comparisonView(result);},

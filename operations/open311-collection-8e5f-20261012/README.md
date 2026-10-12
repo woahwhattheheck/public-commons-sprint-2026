@@ -53,6 +53,8 @@ Supply actual absolute paths from the selected existing installation. The module
 
 Choose a new private output directory under a durable writable parent. The receiver creates this directory with mode 0700. An existing destination causes an error before it starts the bootstrap.
 
+A tmpfs directory consumes the host's memory budget as well as its reported filesystem capacity. Select a private disk-backed destination for a substantial operating run when shared memory is constrained. Keep source materialization, both product stages, archive receipt, and external delivery inside the same foreground lifetime when the execution environment gives each invocation a private mount. The complete saved ZIP must reach its selected durable destination before that lifetime closes.
+
 ## Run the complete operation
 
 The following path names are examples to replace with the actual existing machine paths and retained reporting packet:
@@ -184,7 +186,18 @@ Keep the current bootstrap alive until its complete archive has been preserved. 
 
 An operator can preserve the entire generated archive directly through an already authorized Slack file upload while the bootstrap remains alive. The normal file receiver above downloads the archive to its private output directory. The direct upload command is available to an existing driver of the same stdin protocol when it has prepared a Slack upload for the selected delivery conversation.
 
-After `OPEN311_REPORTING_RESULT`, prepare the upload using the returned archive filename and exact byte count. Retain the returned file ID and complete signed upload URL privately. Send both with the current archive selection:
+For the direct bootstrap, prepare the upload after `OPEN311_REPORTING_RESULT`. For `receive_native.py --wait-for-upload` or `launch_native.py --wait-for-upload`, use `OPEN311_LOCAL_UPLOAD_READY`, which confirms the whole ZIP has already been saved and verified locally. Both descriptors supply the actual archive filename, byte count, and SHA256.
+
+The Slack upload preparation may return structured `file_id` and `upload_url` properties, or a `result` string containing exact `File ID:` and `Upload URL:` lines. Decode the connector's outer JSON before extracting those values. Preserve the complete signed URL byte-for-byte and keep it out of console output:
+
+```js
+const description = typeof prepared.result === 'string' ? prepared.result : '';
+const fileId = prepared.file_id ?? description.match(/^File ID:\s*(\S+)/m)?.[1];
+const uploadUrl = prepared.upload_url ?? description.match(/^Upload URL:\s*(\S+)/m)?.[1];
+if (!fileId || !uploadUrl) throw new Error('Upload preparation is incomplete');
+```
+
+Retain the same file ID, complete signed upload URL, and current archive selection privately, then send:
 
 ```json
 {
@@ -199,6 +212,8 @@ After `OPEN311_REPORTING_RESULT`, prepare the upload using the returned archive 
 
 Replace the example byte count with the archive descriptor's actual integer. The bootstrap verifies both the length and SHA256, posts the whole ZIP as raw `application/zip` bytes with its exact content length, and returns `OPEN311_NATIVE_UPLOADED`. It uses the prepared HTTPS target directly and does not follow redirects. The upload intent and result are saved privately below `archive-uploads/`, outside the delivery ZIP.
 
-An `UPLOADED` result records the provider's successful HTTP response. Finalize that same file ID into the selected delivery conversation using the existing Slack upload flow, then preserve the final file link and upload receipt. Send `finish` after the delivery is complete. `REJECTED` records an explicit HTTP rejection; `UNCERTAIN` records a transport result that requires reconciliation with that existing upload. Repeating an identical command in the live process returns its retained result. The same upload ID cannot be reused for a changed URL or archive, and an uncertain upload is not automatically posted again.
+`OPEN311_NATIVE_UPLOADED` carries a flat JSON record. The ordinary receiver forwards that identical record as `OPEN311_LOCAL_UPLOAD_RESULT`; it adds no `result` or `record` wrapper. Its fields include `replayed`, `uploadId`, `payloadHash`, `state`, `archive: {filename, bytes, sha256}`, `startedAt`, `status`, `uncertain`, `providerResponse`, and `completedAt`.
+
+An `UPLOADED` state records the provider's successful HTTP response. Require that state, the same prepared `uploadId`, and the selected archive's exact bytes and SHA256 before finalization. Finalize that same file ID into the selected delivery conversation using the existing Slack upload flow, then preserve the final file link and upload receipt. Keep the native foreground alive through this exchange and send `finish` after the delivery is complete. `REJECTED` records an explicit HTTP rejection; `UNCERTAIN` records a transport result that requires reconciliation with that existing upload. Repeating an identical command in the live process returns its retained result. The same upload ID cannot be reused for a changed URL or archive, and an uncertain upload is not automatically posted again.
 
 A source packet may also select `archiveFilename` for a different complete operation. It must be a plain `.zip` basename, beginning with a letter or digit and containing only letters, digits, dots, underscores, or hyphens, with at most 181 characters before `.zip`. Omitting the field preserves `helsinki-collection-reporting-workspace-8e5f-20261012.zip`. The ordinary local receiver uses that selected filename for its verified local download. With no explicit packet filename it keeps `helsinki-collection-reporting.zip` in the selected private output directory.

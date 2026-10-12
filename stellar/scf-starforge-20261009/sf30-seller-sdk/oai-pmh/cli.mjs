@@ -4,7 +4,9 @@ import { spawn } from 'node:child_process';
 import { isAbsolute, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-export async function main(args = process.argv.slice(2)) {
+export async function main(args = process.argv.slice(2), { entrypoint = 'cli.py' } = {}) {
+  if (!['cli.py', 'islandora_cli.py'].includes(entrypoint))
+    throw new TypeError('Choose an original repository workspace command.');
   let input = [...args];
   let python = process.env.SF30_OAI_PYTHON || process.env.SF30_XML_PYTHON || 'python3';
   if (input[0] === '--python') {
@@ -15,7 +17,7 @@ export async function main(args = process.argv.slice(2)) {
   }
   if (!input.length) input = ['--help'];
   const child = spawn(python,
-    [fileURLToPath(new URL('./cli.py', import.meta.url)), ...input], {
+    [fileURLToPath(new URL('./' + entrypoint, import.meta.url)), ...input], {
       stdio: 'inherit',
       shell: false,
       windowsHide: true,

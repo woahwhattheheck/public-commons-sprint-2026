@@ -450,6 +450,39 @@ class Workspace(_original.Workspace):
             return {"body":body,"mediaType":entry["headers"].get("content-type","application/json"),"name":name}
     def default_mapping(self,source_id,name=None):return source.default_plan(self.source(source_id)["inventory"],name)
 
+
+    def records(self,collection,offset=0,limit=100,expected_view_sha256=None):
+        """Page the entire retained inventory with an explicit view identity."""
+        source.integer(offset,0,100000000,"offset");source.integer(limit,1,250,"limit")
+        if expected_view_sha256 is not None:checked_id(expected_view_sha256)
+        with self.mutex:
+            if collection=="documents":
+                values=[{"id":r["id"],**{k:v for k,v in load_json(r["receipt"]).items()
+                    if k in {"requestUrl","status","bytes","sha256","completedAt"}}}
+                    for r in self.db.execute("SELECT * FROM cs_documents ORDER BY created DESC,id")]
+            elif collection=="operations":
+                values=[]
+                for r in self.db.execute("SELECT id FROM cs_operations ORDER BY created DESC,id"):
+                    op=self.operation(r["id"]);values.append({k:v for k,v in op.items() if k!="result"})
+            elif collection=="connections":
+                values=[self.connection(r["id"]) for r in self.db.execute("SELECT id FROM cs_connections ORDER BY created DESC,id")]
+            elif collection=="queries":
+                values=[{"id":r["id"],**{k:v for k,v in load_json(r["body"]).items()
+                    if k in {"name","connectionId","datastreamUrl","limits"}},"created":r["created"]}
+                    for r in self.db.execute("SELECT * FROM cs_queries ORDER BY created DESC,id")]
+            elif collection in {"sources","plans","builds","comparisons"}:
+                values=super().state()[collection]
+            else:raise InputError("Unknown retained record collection")
+            identity=digest(json_bytes(values))
+            if offset>len(values) or (offset>0 and expected_view_sha256 is None) or (expected_view_sha256 is not None and expected_view_sha256!=identity):
+                error=InputError("The retained collection view changed; reopen offset zero and use its viewSha256")
+                error.code="CSAPI_COLLECTION_CHANGED";error.status=409;error.view_sha256=identity
+                raise error
+            items=values[offset:offset+limit]
+            return {"schema":"stellar-forge.connected-systems-records.v1","collection":collection,
+                "viewSha256":identity,"total":len(values),"offset":offset,"returned":len(items),
+                "nextOffset":offset+len(items) if offset+len(items)<len(values) else None,"items":items}
+
     def state(self):
         result=super().state()
         with self.mutex:
@@ -465,6 +498,70 @@ class Workspace(_original.Workspace):
             result["operationCount"]=self.db.execute("SELECT COUNT(*) FROM cs_operations").fetchone()[0]
             result["listCoverage"]={"documents":"latest 200; exact documents remain available by ID","operations":"latest 200; original operations remain available by ID"}
         return result
+
+
+    def export_dataset(self,build_id,destination):
+        """Retain an exact native projection and its source-specific seller lineage."""
+        with self.mutex:
+            view=self.build_view(build_id);original=self.source(view["source"])
+            source_path=self.root/"sources"/(view["source"]+"."+self.kind)
+            if _original.file_digest(source_path)!=view["source"]:raise InputError("Original capture changed before dataset export")
+            shape=original["inventory"];plan=self.plan(view["plan"])
+            basis={"schema":"stellar-forge.connected-systems-series-identity.v1",
+                "endpoint":shape["endpoint"],"datastreamId":shape["datastream"]["id"],
+                "schemaSha256":shape["schemaSha256"],"mapping":view["plan"]}
+            project={**basis,"id":digest(json_bytes(basis)),"title":plan["name"]}
+            paths={name:self._build_path(build_id,name) for name in ("data.csv","dataset.json")}
+            files={name:{"bytes":paths[name].stat().st_size,"sha256":_original.file_digest(paths[name])} for name in paths}
+            if any(files[name]!=view["files"][name] for name in paths):raise InputError("Saved dataset differs from its original native build")
+            lineage={"schema":"stellar-forge.connected-systems-lineage.v1","build":view["id"],
+                "project":project,"snapshot":view["native"]["snapshot"],"files":files,
+                "sources":[{"id":original["id"],"bytes":original["bytes"],"name":original["name"],
+                    "responses":shape["files"],"resources":shape["resources"],
+                    "metadata":{"datastreamId":shape["datastream"]["id"],
+                        "name":shape["datastream"].get("name"),"systemId":shape["datastream"].get("system@id"),
+                        "schemaSha256":shape["schemaSha256"],"schemaIdentityPolicy":shape["schemaIdentityPolicy"]},
+                    "rights":shape["rights"]}],
+                "selection":shape["selection"],"coverage":shape["coverage"],"duplicates":shape["duplicates"],
+                "mapping":plan,"rowCount":view["rowCount"],"engineBlob":view["engineBlob"],
+                "valuePolicy":shape["valuePolicy"],"created_at":original["created"]}
+            body=json_bytes(lineage)
+            if len(body)>8*1024*1024:raise InputError("Dataset lineage exceeds its complete merchant capacity; reduce the selected source window")
+            destination=Path(destination).expanduser().absolute()
+            if not destination.parent.is_dir():raise InputError("Select an existing dataset export parent")
+            private_dir(destination)
+            # This create-only lineage binds an interrupted export before any
+            # file is installed. A matching retry fills only missing exact files.
+            retained(destination/self.lineage_name,body)
+            for name,path in paths.items():
+                target=destination/name;expected=files[name]
+                if target.exists():
+                    _original.regular(target,MAX_SOURCE)
+                    if target.stat().st_size!=expected["bytes"] or _original.file_digest(target)!=expected["sha256"]:
+                        raise InputError("Dataset export contains a different original file")
+                    continue
+                fd,temp=tempfile.mkstemp(prefix=".connected-systems-dataset-",dir=destination.parent)
+                try:
+                    os.chmod(temp,0o600)
+                    with path.open("rb") as inp,os.fdopen(fd,"wb") as out:
+                        h=hashlib.sha256();size=0
+                        while block:=inp.read(65536):
+                            size+=len(block)
+                            if size>expected["bytes"]:raise InputError("Original native dataset changed during export")
+                            h.update(block);out.write(block)
+                        out.flush();os.fsync(out.fileno())
+                    if size!=expected["bytes"] or h.hexdigest()!=expected["sha256"]:
+                        raise InputError("Original native dataset changed during export")
+                    try:os.link(temp,target)
+                    except FileExistsError:
+                        _original.regular(target,MAX_SOURCE)
+                        if target.stat().st_size!=expected["bytes"] or _original.file_digest(target)!=expected["sha256"]:
+                            raise InputError("Concurrent dataset export contains a different original file")
+                finally:
+                    try:os.unlink(temp)
+                    except FileNotFoundError:pass
+            _original.sync_dir(destination);_original.sync_dir(destination.parent)
+            return {"directory":str(destination),"dataset":str(destination/"dataset.json"),"build":view,"lineage":lineage}
 
     def _packet_entries(self,build_id):
         view=self.build_view(build_id)

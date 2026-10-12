@@ -137,3 +137,6 @@ main{margin:1rem auto;padding:0 .8rem}
 footer{padding:1rem;flex-direction:column;gap:.4rem}
 }
 
+
+/* Original NLD commissioning view */
+.nld-section{border-top:1px solid var(--line,#d8e0df);padding:1.35rem 0}.nld-section:first-of-type{border-top:0}.nld-mapping input:not([type=checkbox]){min-width:9rem}.nld-mapping td:nth-child(2){min-width:11rem;font-weight:600}.nld-mapping td{vertical-align:top}.nld-mapping input[type=checkbox]{width:1.1rem;height:1.1rem;margin-top:.6rem}.nld-section .wide{grid-column:1/-1}.nld-section .definition dd{overflow-wrap:anywhere}.nld-section textarea{width:100%}#nld-report-files td:last-child{white-space:nowrap}#nld-report-files td:nth-child(3){max-width:24rem;overflow-wrap:anywhere}

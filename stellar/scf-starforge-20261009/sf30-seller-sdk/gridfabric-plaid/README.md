@@ -1,5 +1,7 @@
 # GridFabric Plaid operations
 
+The typed SDK, merchant MCP provider and managed Applications integration attach to this same native workspace. See [SDK_MCP.md](SDK_MCP.md) for every native operation, complete file transfer and SDK/MCP receiving, and [MANAGED_APPLICATION.md](MANAGED_APPLICATION.md) for the installed application lifecycle.
+
 This application retains original meter and device measurements, reviewed reporting mappings, Plaid callbacks, event history, opt decisions, management requests and device dispatch receipts in one private workspace. Its Node CLI, authenticated HTTP console and browser operate the same SQLite database and the same native workspace lease.
 
 Plaid continues to own event and interval scheduling. Receiving a callback can record or queue an explicitly bound device intent. It does not invoke the management API or device adapter. A separate reviewed dispatch command sends one captured request after its original begin transaction commits.

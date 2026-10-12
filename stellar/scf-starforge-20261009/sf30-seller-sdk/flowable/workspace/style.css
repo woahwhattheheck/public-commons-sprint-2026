@@ -10,6 +10,7 @@ main{min-width:0;padding:24px 32px 12px;max-width:1640px;width:100%}.toolbar{dis
 h1{font-size:26px;font-weight:600;letter-spacing:-.5px;margin:28px 0 5px}h2{font-size:16px;margin:0 0 16px;font-weight:600}
 h3{font-size:14px;margin:22px 0 10px}.lede{color:#565656;max-width:1000px;margin:0 0 24px}.panel{background:#fff;border:1px solid #c6c6c2;padding:20px;margin:0 0 20px;border-radius:2px}
 label{display:block;color:#454545;font-size:12px;font-weight:600;margin:0 0 15px}input,select,textarea{display:block;background:#fff;color:#222;border:1px solid #aaa;border-radius:2px;font:400 14px Arial,Helvetica,sans-serif;width:100%;padding:9px 10px;margin-top:5px}
+.checkbox-row{display:flex;align-items:center;gap:9px;font-weight:400}.checkbox-row input[type=checkbox]{display:inline-block;flex:0 0 auto;width:16px;height:16px;margin:0;padding:0}
 input[type=file]{font-size:13px;padding:8px}textarea{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;line-height:1.5;resize:vertical;tab-size:2}input[readonly]{background:#f1f1ef}
 button,.button{appearance:none;background:#f7f7f5;color:#222;border:1px solid #aaa;border-radius:2px;padding:8px 12px;font:500 13px Arial,Helvetica,sans-serif;cursor:pointer;line-height:1.4;text-decoration:none;display:inline-block}
 button:hover,.button:hover{background:#e8e8e5;border-color:#777}button:disabled{opacity:.45;cursor:wait}button[type=submit],button.primary{background:#303030;color:#fff;border-color:#303030}

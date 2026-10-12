@@ -351,11 +351,14 @@ def open_receiving_source(root, expected_manifest_sha256=None, progress=None, ve
     """Select the complete original manifest without changing either source kind."""
     root = directory(root)
     vector_name = "vector-export.json"
-    selected = [name for name in (MANIFEST_NAME, vector_name, "postgis-receiving.json")
+    selected = [name for name in (MANIFEST_NAME, vector_name, "postgis-receiving.json", "parcel-map-source.json")
                 if (root / name).exists() or (root / name).is_symlink()]
     require(len(selected) == 1, "RECEIVING_MANIFEST_SELECTION",
-            "Select one complete original STAC, vector or PostGIS receiving directory.",
+            "Select one complete original STAC, vector, PostGIS or reviewed parcel-map receiving directory.",
             manifests=selected)
+    if selected[0] == "parcel-map-source.json":
+        from .parcels.projection import ParcelMapSource
+        return ParcelMapSource(root, expected_manifest_sha256, progress=progress, verify=verify)
     if selected[0] == "postgis-receiving.json":
         from .postgis.source import PostgisReceivingSource
         return PostgisReceivingSource(root, expected_manifest_sha256, progress=progress, verify=verify)
@@ -562,6 +565,8 @@ class QgisWorkspace:
 
     @staticmethod
     def _validate_state(state):
+        from .parcels.state import validate_parcels
+        validate_parcels(state)
         require(state.get("schema") == WORKSPACE_SCHEMA and isinstance(state.get("sources"), list) and
                 isinstance(state.get("layers"), list) and isinstance(state.get("projects"), list) and
                 isinstance(state.get("reviews"), list), "WORKSPACE_SCHEMA", "The complete project state is invalid.")
@@ -592,7 +597,9 @@ class QgisWorkspace:
         source_id = source_id or state["activeSourceId"]
         row = next((x for x in state["sources"] if x["id"] == source_id), None)
         require(row is not None, "SOURCE_NOT_SELECTED", "Select an imported source edition.")
-        return open_receiving_source(self.root / row["path"], row["manifestSha256"], progress=progress, verify=verify)
+        source = open_receiving_source(self.root / row["path"], row["manifestSha256"], progress=progress, verify=verify)
+        if source.sourceKind == "parcel": source.validate_workspace(state)
+        return source
 
     def import_source(self, source_root, *, revision, request_id, actor, expected_manifest_sha256=None, progress=None):
         if expected_manifest_sha256 is not None:
@@ -600,6 +607,7 @@ class QgisWorkspace:
             if previous:
                 return previous
         source = open_receiving_source(source_root, expected_manifest_sha256, progress=progress)
+        if source.sourceKind == "parcel": source.validate_workspace(self.read())
         payload = {"sourceId": source.id}
         previous = self.operation(request_id, "source.imported", payload)
         if previous:
@@ -646,7 +654,7 @@ class QgisWorkspace:
             source = cached[row["sourceId"]]
             require(row.get("kind") in ("footprints", "raster", "vector"), "LAYER_KIND",
                     "Select footprints, a retained raster, or a retained vector layer.")
-            require(source.sourceKind != "vector" or row["kind"] == "vector", "VECTOR_LAYER_KIND",
+            require(source.sourceKind not in ("vector", "parcel") or row["kind"] == "vector", "VECTOR_LAYER_KIND",
                     "Choose the original native vector output for this vector source.")
             row["label"] = str(row.get("label") or ("Scene footprints" if row["kind"] == "footprints" else row.get("assetKey", "Layer"))).strip()
             require(0 < len(row["label"]) <= 512, "LAYER_LABEL", "Use a layer label of up to 512 characters.")
@@ -835,6 +843,7 @@ class QgisWorkspace:
             records[record["path"]] = record
         for row in state["sources"]:
             source = open_receiving_source(self.root / row["path"], row["manifestSha256"], verify=False)
+            if source.sourceKind == "parcel": source.validate_workspace(state)
             for name, value in source.files.items():
                 add({"path": row["path"] + "/" + name, "bytes": value["bytes"], "sha256": value["sha256"]})
             add({"path": row["path"] + "/" + source.manifest_name, "bytes": len(source.manifest_body), "sha256": source.id})
@@ -856,6 +865,9 @@ class QgisWorkspace:
             add(record)
         from .analyst_state import analyst_file_refs
         for record in analyst_file_refs(snapshot):
+            add(record)
+        from .parcels.state import parcel_file_refs
+        for record in parcel_file_refs(snapshot):
             add(record)
         return [records[name] for name in sorted(records)]
 
@@ -1117,7 +1129,8 @@ def _receive_opened_package(archive, destination, measured, assert_archive, *, p
             "REQUEST_HISTORY", "The original operation history contains a duplicate identity.")
     # Bind all nested source and project/style references before publishing the database.
     for source in snapshot["state"]["sources"]:
-        open_receiving_source(target / source["path"], source["manifestSha256"], verify=False)
+        opened = open_receiving_source(target / source["path"], source["manifestSha256"], verify=False)
+        if opened.sourceKind == "parcel": opened.validate_workspace(snapshot["state"])
     referenced = []
     for project in snapshot["state"]["projects"]:
         referenced.append(project["file"])
@@ -1132,6 +1145,9 @@ def _receive_opened_package(archive, destination, measured, assert_archive, *, p
     from .analyst_state import validate_analyst_snapshot, analyst_file_refs, restore_analyst_snapshot
     validate_analyst_snapshot(snapshot, records=records)
     referenced.extend(analyst_file_refs(snapshot))
+    from .parcels.state import validate_parcels, parcel_file_refs
+    validate_parcels(snapshot["state"], records=records)
+    referenced.extend(parcel_file_refs(snapshot))
     for raw in referenced:
         record = descriptor(raw)
         require(record["path"] in records and all(records[record["path"]][k] == record[k] for k in ("bytes", "sha256")),

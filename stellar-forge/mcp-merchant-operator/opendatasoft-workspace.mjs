@@ -65,7 +65,7 @@ export async function readOpendatasoftWorkspaceConfiguration(path) {
   const { catalogOrigin } = await import(NATIVE + 'capture.mjs');
   const workspaces = Object.create(null), used = new Set(), base = dirname(path);
   for (const [name, item] of named(input.workspaces, 'workspaces')) {
-    exact(item, ['label','directory','origin','create','authTokenEnv','automationConnection','imports','merchants','sellers','runtime'], ['directory','origin']);
+    exact(item, ['label','directory','origin','create','authTokenEnv','automationConnection','facilitatorConnection','imports','merchants','sellers','runtime'], ['directory','origin']);
     const directory = await realpath(hostPath(item.directory, base));
     await privateSupportDirectory(directory);
     if (used.has(directory)) throw failure('CONFIGURATION_ERROR', 'Give each original Huwise project one alias.');
@@ -95,6 +95,7 @@ export async function readOpendatasoftWorkspaceConfiguration(path) {
     workspaces[name] = { label: line(item.label ?? name), directory, origin: catalogOrigin(item.origin), create: item.create === true,
       authTokenEnv: item.authTokenEnv,
       ...(item.automationConnection ? { automationConnection:await realpath(hostPath(item.automationConnection,base)) }: {}),
+      ...(item.facilitatorConnection ? { facilitatorConnection:await realpath(hostPath(item.facilitatorConnection,base)) }: {}),
       imports, merchants, sellers, runtime: runtime(item.runtime) };
   }
   return { workspaces };
@@ -149,7 +150,7 @@ export class MerchantOpendatasoftWorkspaces {
           throw fail('TOKEN_UNAVAILABLE', 'The original host-declared portal token is unavailable.');
         const { openOpendatasoftWorkbench } = await import(NATIVE + 'engine.mjs');
         const workbench = await openOpendatasoftWorkbench({ directory: definition.directory, create: !exists,
-          origin: definition.origin, authTokenEnv: definition.authTokenEnv, automationConnection:definition.automationConnection, environment: this.#environment });
+          origin: definition.origin, authTokenEnv: definition.authTokenEnv, automationConnection:definition.automationConnection, facilitatorConnection:definition.facilitatorConnection, environment: this.#environment });
         return { definition, workbench, instanceId: randomUUID(), browser: null, browserPending: null, stopping: null, tail: Promise.resolve(), closing: false };
       })();
       this.#handles.set(name, pending);
@@ -217,7 +218,7 @@ export class MerchantOpendatasoftWorkspaces {
   async #retain(name, handle, args) {
     digest(args.expectedCaptureSha256); count(args.expectedNotesRevision);
     const editionId = originalId(args.editionId);
-    const selection = Object.fromEntries(['geometryField','sourceId','merchantExportId','buyerRequestId','tenantExportId'].filter(key => args[key] !== undefined).map(key => [key, args[key]]));
+    const selection = Object.fromEntries(['geometryField','sourceId','merchantExportId','buyerRequestId','tenantExportId','facilitatorReviewId'].filter(key => args[key] !== undefined).map(key => [key, args[key]]));
     if (args.geometryField !== undefined && (typeof args.geometryField !== 'string' || !args.geometryField)) throw failure('INVALID_PARAMS', 'Choose an original geographic field.');
     let completed;
     try { completed = await this.#files.manifest(args.exportId); }
@@ -258,6 +259,19 @@ export class MerchantOpendatasoftWorkspaces {
         throw fail('EXPORT_SELECTION_CHANGED','The tenant delivery belongs to another original source edition or notes revision.');
       source.tenantManifestSha256 = tenant.manifestSha256;
     }
+    let facilitatorFiles;
+    if (args.facilitatorReviewId !== undefined) {
+      if (!args.merchantExportId) throw fail('EXPORT_SELECTION_CHANGED','Include the original merchant package for this provider review.');
+      facilitatorFiles = await handle.workbench.facilitatorFiles(digest(args.facilitatorReviewId));
+      const binding = facilitatorFiles.source;
+      if (binding.merchantExportId !== args.merchantExportId ||
+          binding.merchantManifestSha256 !== source.merchantManifestSha256 ||
+          binding.capture.manifestSha256 !== source.captureSha256)
+        throw fail('EXPORT_SELECTION_CHANGED','The native provider review belongs to another original merchant package or capture.');
+      source.facilitatorReviewId = binding.reviewId;
+      source.facilitatorReviewSha256 = facilitatorFiles.files.find(file => file.name === 'facilitator-review.json').sha256;
+      source.facilitatorSourceSha256 = facilitatorFiles.files.find(file => file.name === 'facilitator-source.json').sha256;
+    }
     if (args.buyerRequestId) {
       const buyer = item(state, 'buyerRequests', args.buyerRequestId);
       if (!args.merchantExportId || buyer.exportId !== args.merchantExportId)
@@ -274,6 +288,7 @@ export class MerchantOpendatasoftWorkspaces {
         '.\n\nThe JSON file contains complete source metadata, original values and analyst notes. CSV cells contain JSON-encoded source values; parse each source cell as JSON to preserve null, empty text, arrays and exact number tokens. GeoJSON retains the selected geographic field and reports unavailable geometries. The HTML review includes every row and the original rights and attribution.\n\n' +
         'Use the maintained merchant opendatasoft download and reopen commands to receive and verify every manifest file. Keep the export manifest with these files. The saved capture SHA256 is ' + source.captureSha256 + ' and the notes revision is ' + source.notesRevision + '.\n\n' +
         (args.merchantExportId ? 'Extract merchant.tar.gz into a new private directory and follow MERCHANT-RECEIVING.md and the package RECEIVING.md. The package contains its original full capture, typed projection, reviewed candidate, dataset, handlers, OpenAPI and route declarations. Keep its selected manifest SHA256: ' + source.merchantManifestSha256 + '.\n\n' : '') +
+        (args.facilitatorReviewId ? 'facilitator-review.json is the complete original native provider review; facilitator-source.json binds it to this merchant package and capture. FACILITATORS.md explains reviewed staging, original release selection and recovery. The review records a provider compatibility observation; it is not proof of activation, settlement or customer usage.\n\n' : '') +
         (args.sourceId ? 'source-declaration.json is the original host-bound field selection. Its capture path remains the original workspace binding; the portable merchant archive includes its own relative capture binding.\n\n' : '') +
         (args.buyerRequestId ? 'buyer-request.json is the original prepared buyer input for the selected merchant package and actual offer. Use the original buyer CLI and retained intent to continue it.\n' : '') }
     ];
@@ -285,6 +300,7 @@ export class MerchantOpendatasoftWorkspaces {
     if (args.tenantExportId) files.push(
       { name:'tenant.tar.gz',route:'/api/tenant-deliveries/' + args.tenantExportId + '/download',contentType:'application/gzip' },
       { name:'TENANT-INGESTION.md',route:'/api/tenant-deliveries/' + args.tenantExportId + '/guide',contentType:'text/markdown' });
+    if (facilitatorFiles) files.push(...facilitatorFiles.files.map(({name,contentType,content}) => ({name,contentType,content})));
     const browser = await this.#browser(handle);
     return this.#files.retain({ exportId: args.exportId, workspace: name, source, selection, files, validate: current,
       receive: async file => {
@@ -349,6 +365,18 @@ export class MerchantOpendatasoftWorkspaces {
         if (name === 'buyer_offer') return native.buyerOffer(originalId(args.merchantExportId), input);
         return launched(native.prepareBuyer(originalId(args.merchantExportId), { ...input, intentId: args.intentId,
           acceptIndex: count(args.acceptIndex), offerSha256: digest(args.offerSha256) }));
+      }
+      case 'facilitators': return nativeView(await native.facilitators());
+      case 'facilitator_history': return native.facilitatorHistory({
+        limit:args.limit ?? 25,...(args.after === undefined ? {}:{after:digest(args.after)})});
+      case 'facilitator_inspect': return nativeView(await native.facilitatorReview(digest(args.reviewId)));
+      case 'facilitator_review': case 'facilitator_stage': {
+        if (await realpath(this.#config.releaseStore) !== join(definition.directory,'seller-releases'))
+          throw fail('SELLER_STORE_CHANGED','Bind this merchant host to the same original Huwise seller store before changing its provider.');
+        if (name === 'facilitator_stage') return launched(native.stageFacilitator(digest(args.reviewId)));
+        return launched(native.reviewFacilitator({merchantExportId:originalId(args.merchantExportId),
+          provider:identifier(args.provider,'Provider alias'),releaseId:identifier(args.releaseId,'Source release'),
+          id:identifier(args.id,'New release'),...(args.label === undefined ? {}:{label:args.label})}));
       }
       case 'tenant_targets': return native.tenantTargets();
       case 'tenant_datasets': return native.tenantDatasets(identifier(args.target,'Tenant alias'),args.query ?? {});

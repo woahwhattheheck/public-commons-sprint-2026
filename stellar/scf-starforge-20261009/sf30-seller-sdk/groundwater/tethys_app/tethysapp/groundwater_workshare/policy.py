@@ -33,6 +33,7 @@ ACTION_PERMISSIONS = {
     "project.update": "edit_workspace",
     "source.publisher": "edit_workspace",
     "source.import": "edit_workspace",
+    "source.inspect": "edit_workspace",
     "edition.create": "edit_workspace",
     "edition.review": "review_workspace",
     "runtime.configure": "configure_runtime",

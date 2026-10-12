@@ -21,6 +21,7 @@ const HELP = [
 const assets = new Map([
   ['/', ['index.html', 'text/html; charset=utf-8']],
   ['/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']],
+  ['/recovery.mjs', ['recovery.mjs', 'text/javascript; charset=utf-8']],
   ['/style.css', ['style.css', 'text/css; charset=utf-8']],
 ]);
 const failure = (message, status = 400) => Object.assign(new TypeError(message), { status });
@@ -33,13 +34,13 @@ function queryFields(url, allowed) {
   for (const name of url.searchParams.keys())
     if (!allowed.includes(name) || url.searchParams.getAll(name).length !== 1) throw failure('Unsupported query fields');
 }
-async function input(req) {
+async function input(req, maximum = 1048576) {
   if (!/^application\/json(?:;\s*charset=utf-8)?$/i.test(req.headers['content-type'] ?? ''))
     throw failure('Send application/json', 415);
   const chunks = []; let length = 0;
   for await (const chunk of req) {
     length += chunk.length;
-    if (length > 1048576) throw failure('Source and merchant settings exceed 1 MiB', 413);
+    if (length > maximum) throw failure('This workspace request exceeds its complete request size limit', 413);
     chunks.push(chunk);
   }
   let value;
@@ -86,6 +87,10 @@ export async function startRisingWaveWorkbench({ port = 0, ...options } = {}) {
       let result;
       if (req.method === 'GET') {
         if (url.pathname === '/api/state') { queryFields(url, []); result = await model.inspect(); }
+        else if (url.pathname === '/api/browser-workspaces') { queryFields(url, []); result = await model.browserWorkspaces(); }
+        else if (/^\/api\/browser-workspaces\/browser-[a-z0-9-]{1,90}$/.test(url.pathname)) {
+          queryFields(url, []); result = await model.browserWorkspace(url.pathname.split('/').at(-1));
+        }
         else if (url.pathname === '/api/subscriptions') { queryFields(url, []); result = await model.subscriptions(); }
         else if (/^\/api\/subscriptions\/[a-z][a-z0-9-]+$/.test(url.pathname)) {
           queryFields(url, []); result = await model.subscriptionRecord(url.pathname.split('/').at(-1));
@@ -112,7 +117,9 @@ export async function startRisingWaveWorkbench({ port = 0, ...options } = {}) {
           queryFields(url, []); result = await model.revision(Number(url.pathname.split('/').at(-1)));
         } else if (publication) {
           const [, selected, action] = publication;
-          if (!action) { queryFields(url, []); result = await model.inspectPublication(selected); }
+          if (!action) { queryFields(url, ['buyerLimit', 'buyerOffset']); result = await model.inspectPublication(selected, {
+            ...(url.searchParams.has('buyerLimit') ? {buyerLimit: Number(url.searchParams.get('buyerLimit'))} : {}),
+            ...(url.searchParams.has('buyerOffset') ? {buyerOffset: Number(url.searchParams.get('buyerOffset'))} : {})}); }
           else if (action === 'run') {
             queryFields(url, ['runId']); result = await model.inspectRun(selected, url.searchParams.get('runId'));
           } else if (action === 'buyer') {
@@ -127,8 +134,9 @@ export async function startRisingWaveWorkbench({ port = 0, ...options } = {}) {
           return download(res, await model.file(kind, selected, name));
         } else return json(res, 404, { error: 'Not found' });
       } else if (req.method === 'POST') {
-        queryFields(url, []); const value = await input(req);
-        if (url.pathname === '/api/save') result = await mutate(() => model.save(value));
+        queryFields(url, []); const value = await input(req, url.pathname === '/api/browser-workspace' ? 8388608 + 16384 : 1048576);
+        if (url.pathname === '/api/browser-workspace') result = await model.saveBrowserWorkspace(value);
+        else if (url.pathname === '/api/save') result = await mutate(() => model.save(value));
         else if (url.pathname === '/api/catalogue') result = await mutate(() => model.catalogue(value));
         else if (url.pathname === '/api/subscription/inspect') result = await model.subscriptionInspect(value);
         else if (url.pathname === '/api/subscription/prepare') result = await model.subscriptionPrepare(value);

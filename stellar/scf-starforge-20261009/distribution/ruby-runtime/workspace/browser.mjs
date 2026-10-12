@@ -9,7 +9,7 @@ const ACTIVE = new Set(['QUEUED','RUNNING']);
 const state = { token: '', connected: false, snapshot: null, environmentId: null, applicationId: null,
   operationId: null, operation: null, application: null, tab: 'environments', pending: null, pendingRecords: [],
   transfer: null, transferRecords: [], transferFile: null, transferBusy: false, busy: false, refreshing: null,
-  log: null, logStarts: [], timer: null, closed: false };
+  log: null, logStarts: [], timer: null, closed: false, captureDrafts: new Map() };
 const full = value => JSON.stringify(value, null, 2);
 const rubyPath = value => typeof value === 'string' ? value : value?.executable || value?.ruby_executable || '—';
 const bytes = value => Number.isFinite(Number(value))
@@ -149,6 +149,51 @@ function renderEnvironments() {
   const latest=environmentLast(e.id);$('env-show-operation').hidden=!latest;
   $('env-show-operation').dataset.operationId=latest?.id||'';
 }
+function captureDraftKey(application) {
+  return JSON.stringify([state.snapshot?.directory ?? null, application.id]);
+}
+function applicationCaptureDraft(application) {
+  const key = captureDraftKey(application);
+  if (!state.captureDrafts.has(key)) state.captureDrafts.set(key, { selected: false, text: '' });
+  return state.captureDrafts.get(key);
+}
+function renderWorkingCapture(application, running) {
+  const draft = applicationCaptureDraft(application);
+  const selected = $('application-capture-selected'), input = $('application-capture-selection');
+  selected.checked = draft.selected;
+  if (input.value !== draft.text) input.value = draft.text;
+  selected.disabled = state.busy || running || !state.connected;
+  input.disabled = !draft.selected || state.busy || running || !state.connected;
+  $('application-capture-fields').hidden = !draft.selected;
+  const retained = application.workingCapture;
+  $('application-capture-current').textContent = retained
+    ? 'This application retains a saved working dataset. Its existing selection is used unless you select another saved dataset below.'
+    : 'Use the existing application verification, or select a complete saved dataset to carry working edits with the application.';
+  $('application-capture-retained').hidden = !retained;
+  $('application-capture-retained-value').textContent = retained ? full(retained) : '';
+}
+function workingCaptureSelection(application) {
+  const draft = applicationCaptureDraft(application);
+  if (!draft.selected) return undefined;
+  let value;
+  try { value = JSON.parse(draft.text); }
+  catch { throw new Error('Paste the complete saved dataset selection from the Working records screen.'); }
+  const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
+  if (!value || typeof value !== 'object' || Array.isArray(value) ||
+      Object.keys(value).sort().join(',') !== 'captureId,expectedCaptureSha256,reviewId' ||
+      typeof value.reviewId !== 'string' || !uuid.test(value.reviewId) ||
+      typeof value.captureId !== 'string' || !uuid.test(value.captureId) ||
+      typeof value.expectedCaptureSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(value.expectedCaptureSha256)) {
+    throw new Error('Use the exact review reference, saved dataset reference and complete checksum returned by Working records.');
+  }
+  return value;
+}
+function applicationOperationInput(application, action) {
+  const body = { id: application.environmentId, operationId: newOperation(), action, applicationId: application.id };
+  const capture = workingCaptureSelection(application);
+  if (capture !== undefined) body.workingCapture = capture;
+  return body;
+}
 function renderApplications() {
   const filter=$('app-filter').value.toLowerCase(), apps=state.snapshot?.applications||[];
   listRows($('application-rows'),apps.filter(a=>[a.id,a.title].join(' ').toLowerCase().includes(filter)).map(a=>{
@@ -167,6 +212,7 @@ function renderApplications() {
   $('application-stop').disabled=state.busy||!running||!state.connected;
   $('application-export').disabled=state.busy||running||!state.connected;
   $('application-verify').disabled=state.busy||running||!state.connected;
+  renderWorkingCapture(a,running);
   $('application-open').hidden=!href||a.phase!=='RUNNING';
   if(href)$('application-open').href=href;
   $('application-state-note').textContent=running
@@ -474,13 +520,24 @@ on('application-launch','click',async()=>{
   await command('/api/applications/launch',{id:state.applicationId,operationId:newOperation(),port},'Launch original Rails application');
 });
 on('application-stop','click',()=>command('/api/applications/stop',{id:state.applicationId},'Stop original Rails application'));
+on('application-capture-selected','change',()=>{
+  const application=getApplication();if(!application)return;
+  const draft=applicationCaptureDraft(application);
+  draft.selected=$('application-capture-selected').checked;
+  if(draft.selected&&!draft.text&&application.workingCapture)draft.text=full(application.workingCapture);
+  renderApplications();
+});
+on('application-capture-selection','input',()=>{
+  const application=getApplication();if(!application)return;
+  applicationCaptureDraft(application).text=$('application-capture-selection').value;
+});
 on('application-verify','click',()=>{
   const app=getApplication();if(!app)throw new Error('Select an original application.');
-  return command('/api/operations/start',{id:app.environmentId,operationId:newOperation(),action:'verify',applicationId:app.id},'Verify stopped Rails application and complete current rows');
+  return command('/api/operations/start',applicationOperationInput(app,'verify'),'Verify stopped Rails application and complete current rows');
 });
 on('application-export','click',()=>{
   const app=getApplication();if(!app)throw new Error('Select an original application.');
-  return command('/api/operations/start',{id:app.environmentId,operationId:newOperation(),action:'export',applicationId:app.id},'Export environment and stopped application');
+  return command('/api/operations/start',applicationOperationInput(app,'export'),'Export environment and stopped application');
 });
 
 on('operation-filter','input',renderOperations);

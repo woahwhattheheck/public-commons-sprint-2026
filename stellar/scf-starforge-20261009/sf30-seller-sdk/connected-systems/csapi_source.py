@@ -205,8 +205,8 @@ def observation(value,datastream_id):
     if ("result" in value)==("result@link" in value):raise InputError("Observation must carry either its inline result or its external result link")
     if "result@link" in value:
         link=value["result@link"]
-        if not isinstance(link,dict) or not isinstance(link.get("href"),str):raise InputError("Invalid external observation result link")
-    if "phenomenonTime" in value and not isinstance(value["phenomenonTime"],str):
+        if not isinstance(link,dict) or not isinstance(link.get("href"),str) or isinstance(link.get("href"),Number) or not link["href"]:raise InputError("Invalid external observation result link")
+    if "phenomenonTime" in value and (not isinstance(value["phenomenonTime"],str) or isinstance(value["phenomenonTime"],Number) or not value["phenomenonTime"]):
         raise InputError("Observation phenomenonTime must retain its original string")
     if "parameters" in value and not isinstance(value["parameters"],dict):raise InputError("Observation parameters must be an object")
     lexical_json(value)
@@ -359,7 +359,7 @@ def schema_fields(schema):
             "label":node.get("label",node.get("title")),"type":kind,"units":unit,
             "definition":node.get("definition",node.get("@swe.definition")),"referenceFrame":own_frame,"schema":node}
         output.append(record)
-        if kind in {"DataRecord","Vector"}:
+        if isinstance(kind,str) and kind in {"DataRecord","Vector"}:
             fields=node.get("fields") if kind=="DataRecord" else node.get("coordinates")
             if isinstance(fields,list):
                 for field in fields:
@@ -434,11 +434,11 @@ def validate_plan(raw):
     for col in cols:
         exact(col,{"name","source","pointer","type","nullable","encoding"},"column",{"name","source","type","nullable","encoding"})
         kind=col["source"]
-        if kind not in {"observation","ordinal","page","index"}:raise InputError("Unknown original record selector")
+        if not isinstance(kind,str) or kind not in {"observation","ordinal","page","index"}:raise InputError("Unknown original record selector")
         path=pointer(col.get("pointer",""))
         if kind!="observation" and path!="":raise InputError("Only observation columns have JSON pointers")
         encoding=col["encoding"]
-        if encoding not in {"plain","json","presence-json"}:raise InputError("Choose an explicit original value encoding")
+        if not isinstance(encoding,str) or encoding not in {"plain","json","presence-json"}:raise InputError("Choose an explicit original value encoding")
         if encoding!="plain" and (col["type"]!="string" or col["nullable"]is not False):
             raise InputError("JSON cell encodings require nonnullable native string columns")
         converted.append({"name":col["name"],"path":[],"type":col["type"],"nullable":col["nullable"]})
@@ -448,7 +448,7 @@ def validate_plan(raw):
     checked=xml_plan(original)
     result={k:v for k,v in checked.items() if k not in {"schema","recordPath","columns"}}
     coverage=raw.get("coveragePolicy","require-exhausted")
-    if coverage not in {"require-exhausted","allow-partial"}:raise InputError("Choose an explicit acquisition coverage policy")
+    if not isinstance(coverage,str) or coverage not in {"require-exhausted","allow-partial"}:raise InputError("Choose an explicit acquisition coverage policy")
     result.update(schema=PLAN_SCHEMA,endpoint=base_url(raw["endpoint"]),datastreamId=text(raw["datastreamId"],"Datastream ID",2048),
         schemaSha256=raw["schemaSha256"],coveragePolicy=coverage,
         columns=[{"name":c["name"],"type":c["type"],"nullable":c["nullable"],**extra} for c,extra in zip(checked["columns"],extras)])

@@ -53,6 +53,8 @@ the original `0.1.0-source.g0123456789ab` version form.
 
 | Selection | Product | Original Applications | Complete installed workflow |
 | --- | --- | --- | --- |
+| `haystack-turnover` | Native building grids, source-local equipment and points, typed tag review, saved editions and complete editable turnover receiving | Haystack building turnover; Runtime management | [Complete installed operator guide](../../../products/haystack/OPERATING.md) |
+| `human-services-directory` | Original HSDS and FHIR directory sources, complete editions and comparisons, reviewed mapping and service selection, Gravity clinical joins and editable customer handoffs | Human Services Directory; Gravity Referrals; FHIR Bulk Data; eLTSS Care Plans; Runtime management | [Complete directory programme and receiving](../../../products/human-services-directory/OPERATING.md) |
 | `source-tables` | Complete CSV and TSV source authoring, typed field meaning, retained editions and comparisons, native merchant resources and editable customer handover | Source Tables; Runtime management | [Complete installation and operation](../../../products/source-tables/OPERATING.md) |
 | `openlineage-operations` | Native Python and Java producer intake, original compressed/source bytes, job/run/dataset lineage, saved reviews and complete editable customer receiving | OpenLineage operations; Runtime management | [Complete installed operation and producer guide](../../../products/openlineage/OPERATING.md) |
 | `dbnomics` | Exact economic series and source revisions, saved analyst reports, native publication, complete editable workspace and customer receiving | DBnomics economic workspace; Runtime management | [Operating guide](../../../products/dbnomics/OPERATING.md) |
@@ -115,6 +117,7 @@ its dependency profile from the complete installed workflow linked above:
 
 | Selected product | Profile flags for the complete installed edition |
 | --- | --- |
+| `haystack-turnover` | `--operator`; install the selected product with `--offline` |
 | `openapi-merchant`, `safe-review`, `water-operations`, `woo-merchant`, `eurostat`, `coastal-operations`, `dbnomics` | `--native --feature schema --feature openapi --feature mcp --operator` |
 | `redis-applications` | `--native --feature redis --feature schema --feature openapi --feature mcp --operator` |
 | `study-research` | `--native --feature schema --feature openapi --feature mcp --feature postgres --operator` |
@@ -183,6 +186,18 @@ override, the maintained package default remains in effect. This keeps a
 standalone product's source identity without bringing other products' bins
 into its selected archive.
 
+Explicit support-file declarations retain the complete original file regardless
+of extension, including publisher TeX, native input/reference formats and opaque
+support assets. They do not broaden automatic component-directory discovery:
+undeclared formats still follow the maintained runtime-file heuristic. The
+existing hidden-directory, excluded-directory and exact `excludeFiles` rules
+remain in force. Only the existing explicit CSV/JSON/TXT/Parquet fixture-data
+exception permits a `fixtures` path; declaring an executable fixture does not
+permit it. The original Git reader still requires regular source files, exact
+object identity and the per-file and aggregate byte bounds. A declaration that
+violates those rules remains a missing required entry rather than being silently
+dropped from a supposedly complete package.
+
 Required command and export targets, selected provider modules, runtime package
 manifests, and browser server/manifests are retained as explicit runtime seeds.
 The original static ESM and browser-map closure then includes their dependencies.
@@ -230,3 +245,29 @@ build/install/Open workflow, actual engine receiving and customer handover.
 The recipe includes the source-owned `flowable-workspaces`,
 `merchant-provider-flowable-workspaces` and `flowable-product`
 contributions, the original browser assets and complete installed guides.
+
+## Haystack building turnover
+
+Build `--selection haystack-turnover` to retain the native grid codec, source-local
+equipment and point index, reviewed tag proposals, saved source editions, full
+reports and complete editable receiving application. The selected
+`haystack-workspace` contribution supplies the `haystack` and `haystack-mcp`
+commands, typed native exports, original browser route map, managed Applications
+entry and `haystack-workspaces` Merchant provider.
+
+The complete source component includes the original Charlie grid, its source
+metadata, the upstream license, operator guides and `RECEIVING.mjs`. The
+application, managed Applications lifecycle and registered Haystack Merchant
+provider use Node builtins and the maintained local helpers. Select `--operator`
+through the original runtime installer for this dependency-free product. The
+complete operator guide describes separately selected wider host integrations.
+
+Continue the [complete native operator and receiving workflow](../../../products/haystack/OPERATING.md)
+against the same saved building project. A customer package retains every
+source byte, proposal and review, saved edition, original request outcome and
+portable application file; the received application reopens that original
+workspace for continued work.
+
+## Complete Groundwater installation receiving
+
+The existing `groundwater-reports` product is exercised through its original managed source review, package build, selected runtime install, lock-bound offline transfer, independent install and saved-build reopen. The [complete receiving guide](receiving/GROUNDWATER.md) and its caller retain one source-build request and verify all 64 scientific files in both installations. The separate `groundwater-report` selection remains the Report Desk product. Scientific execution continues through its existing workspace and owner.

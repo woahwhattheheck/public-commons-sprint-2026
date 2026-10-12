@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="color-scheme" content="light"><title>Flowable process operations</title><link rel="stylesheet" href="/style.css">
+<meta name="color-scheme" content="light"><title>Flowable process and decision operations</title><link rel="stylesheet" href="/style.css">
 <script type="module" src="/browser.mjs"></script></head>
 <body>
-<header><div><strong>Flowable</strong><span class="product">Process operations</span></div><div class="workspace-label" id="workspace-label">Opening workspace</div></header>
+<header><div><strong>Flowable</strong><span class="product">Process and decision operations</span></div><div class="workspace-label" id="workspace-label">Opening workspace</div></header>
 <div class="shell">
 <aside><nav aria-label="Workspace sections">
 <button type="button" data-page="overview" aria-current="page">Overview</button>
@@ -12,6 +12,7 @@
 <button type="button" data-page="processes">Processes</button>
 <button type="button" data-page="tasks">Human tasks</button>
 <button type="button" data-page="migrations">Migrations</button>
+<button type="button" data-page="decisions">Decisions</button>
 <button type="button" data-page="handover">Handover</button>
 <button type="button" data-page="engines">Engines</button>
 </nav><p class="aside-note">Original engine state, deployment resources and saved operation history.</p></aside>
@@ -66,6 +67,32 @@
 <p class="muted">Use the original Flowable ProcessInstanceMigrationDocument JSON, including its target definition and activity mappings. The native validation result appears in the saved review.</p>
 <label>Operator note<textarea name="note" rows="2" maxlength="20000"></textarea></label>
 <button type="submit">Run native validation</button></form><div class="panel"><h2>Migration history</h2><div id="migration-records"></div></div></section>
+<section data-panel="decisions" hidden><h1>Decision operations</h1>
+<p class="lede">Release original DMN rules, evaluate their current native definitions and inspect complete execution audit data.</p>
+<div class="toolbar"><label class="grow">Saved decision portfolio<select id="decision-portfolio-select" aria-label="Selected decision portfolio"></select></label>
+<button id="capture-decisions" type="button">Refresh decisions</button></div>
+<p id="decision-portfolio-status" class="muted"></p>
+<p class="muted">Select the saved engine connection for the original DMN REST service, such as /flowable-rest/dmn-api. Process operations use their original process REST connection.</p>
+<div class="panel"><h2>Decision definitions</h2><div id="decisions-table"></div></div>
+<form id="decisionRelease-form" class="panel"><h2>Prepare decision release</h2><div class="form-grid">
+<label>Release name<input name="label" maxlength="300" placeholder="Customer qualification rules"></label>
+<label>Tenant ID<input name="tenantId" maxlength="1000"></label>
+<label class="full">Original DMN resource<input name="resource" type="file" accept=".dmn,.dmn.xml,.dmn11,.dmn11.xml" required></label></div>
+<p class="muted">Flowable receives one complete DMN resource. Its original filename determines the native deployment name.</p>
+<label>Operator note<textarea name="note" rows="2" maxlength="20000"></textarea></label>
+<button type="submit">Prepare decision deployment</button></form>
+<div class="panel"><h2>Decision release history</h2><div id="decisionRelease-records"></div></div>
+<form id="decisionEvaluation-form" class="panel"><h2>Evaluate decisions</h2><div class="form-grid">
+<label>Operation name<input name="label" maxlength="300" placeholder="Customer qualification"></label>
+<label>Native evaluation mode<select name="mode"><option value="auto">Automatic</option><option value="decision">Decision</option><option value="decisionService">Decision service</option></select></label></div>
+<label class="checkbox-row"><input name="singleResult" type="checkbox"> Use the native single-result operation</label>
+<label>Original native evaluation JSON<textarea name="bodyText" rows="12" spellcheck="false" required></textarea></label>
+<p class="muted">Use decisionKey, optional tenantId and parentDeploymentId, typed inputVariables and disableHistory. The engine selects its current definition. Its selected definition and original source appear in the saved review before evaluation.</p>
+<p class="muted">For exact decimal or large integer input, use the native bigDecimal or bigInteger type and a quoted decimal value, such as {"name":"amount","type":"bigDecimal","value":"12500.25"}. Keep this complete original JSON text.</p>
+<label>Operator note<textarea name="note" rows="2" maxlength="20000"></textarea></label>
+<button type="submit">Prepare decision evaluation</button></form>
+<div class="panel"><h2>Saved evaluations</h2><div id="decisionEvaluation-records"></div></div>
+<div class="panel"><h2>Native execution history</h2><div id="historic-decisions-table"></div></div></section>
 <section data-panel="handover" hidden><h1>Customer handover</h1><p class="lede">Receive complete source resources, saved revisions, native responses and operation journals in another workspace.</p>
 <div class="two-columns"><form id="export-form" class="panel"><h2>Export workspace</h2>
 <label>Handover name<input name="label" maxlength="300" placeholder="Customer process operations handover"></label>
@@ -75,7 +102,7 @@
 <p>Upload the complete exported archive, inspect its manifest, then adopt its original history.</p><button type="submit">Inspect archive</button></form></div>
 <div class="panel"><h2>Exported handovers</h2><div id="delivery-records"></div></div>
 <div class="panel"><h2>Received handovers</h2><div id="receiving-records"></div></div></section>
-<section data-panel="engines" hidden><h1>Engine connections</h1><p class="lede">Connect to the original Flowable REST service. Credential values come from the local process environment.</p>
+<section data-panel="engines" hidden><h1>Engine connections</h1><p class="lede">Save the original process REST service and DMN REST service as named connections. Credential values come from the local process environment.</p>
 <div class="panel" id="connections-table"></div>
 <form id="connection-form" class="panel"><h2 id="connection-form-title">Add engine</h2>
 <input type="hidden" name="recordId"><input type="hidden" name="revision">

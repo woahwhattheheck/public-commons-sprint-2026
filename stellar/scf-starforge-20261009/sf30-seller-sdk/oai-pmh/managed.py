@@ -18,6 +18,9 @@ SOURCE_FILES = (
     "oai-pmh/workspace.py", "oai-pmh/cli.py", "oai-pmh/cli.mjs",
     "oai-pmh/server.py", "oai-pmh/managed.py", "oai-pmh/index.html",
     "oai-pmh/browser.mjs", "oai-pmh/style.css",
+    "oai-pmh/islandora.py", "oai-pmh/islandora_io.py", "oai-pmh/islandora_cli.py",
+    "oai-pmh/islandora_cli.mjs", "oai-pmh/islandora.mjs", "oai-pmh/islandora.css",
+    "oai-pmh/ISLANDORA_OPERATOR_GUIDE.md",
     "xml/xml_source.py", "xml/workspace.py", "xml/native.mjs", "dataset-handler.mjs",
 )
 

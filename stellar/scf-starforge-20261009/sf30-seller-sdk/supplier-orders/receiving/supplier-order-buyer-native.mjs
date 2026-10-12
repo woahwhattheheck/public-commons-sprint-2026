@@ -432,12 +432,9 @@ export async function runSupplierOrderBuyerReceiving({
       return{kind,draftId:saved.result.draftId,draftRevision:saved.result.revision,draftSha256:saved.result.draft.sha256,
         documentId:record.id,documentSha256:record.sha256,source:copy(record.source)};
     }
-    for(const [position,kind]of KINDS.slice(1).entries())prepared[kind]=await stage(String(position+4).padStart(2,'0')+'-review-and-prepare-'+kind.toLowerCase(),()=>prepareKind(kind));
     peer=await receivingPeer({directory:join(root,'peer'),cert,key,port:ports.outgoing,token:outgoingToken,profile});
-    const delivered=await stage('07-complete-declared-https-delivery',async()=>{
-      const receipts=[];
-      for(const kind of KINDS.slice(1)){
-        const output=prepared[kind],name=kind.toLowerCase();
+    async function deliverKind(kind,output){
+      const name=kind.toLowerCase();
         const intent=await operation('producer',name+'-delivery-intent',request=>client.prepareTransmission(request),async()=>({
           documentId:output.documentId,expectedDocumentSha256:output.documentSha256,channelId:'declared-local',
           expectedChannelSha256:(await client.transportChannels()).channels.find(x=>x.id==='declared-local').sha256,
@@ -461,7 +458,25 @@ export async function runSupplierOrderBuyerReceiving({
         assert.equal(current.state,'ACKNOWLEDGED');assert.equal(current.profileSha256,profileSha256);
         assert.equal(current.attemptCount,1);assert.equal((await readdir(join(root,'peer'))).filter(x=>x.startsWith(kind+'-')&&x.endsWith('.json')).length,1);
         const filtered=[];for await(const page of client.pages('transmissions',{orderId,limit:1}))filtered.push(...page.items);
-        assert.ok(filtered.some(row=>row.id===transmissionId));receipts.push({kind,transmissionId,transmissionSha256:current.sha256,receipt});
+        assert.ok(filtered.some(row=>row.id===transmissionId));return{kind,transmissionId,transmissionSha256:current.sha256,receipt};
+
+    }
+    // Complete each actual delivery before a later selected document advances
+    // the order branch retained by this draft. The transport's current-source
+    // guard remains authoritative, including on resumed original operations.
+    const receipts=[];
+    for(const [position,kind]of KINDS.slice(1).entries()){
+      const number=String(position+4).padStart(2,'0');
+      prepared[kind]=await stage(number+'-review-and-prepare-'+kind.toLowerCase(),()=>prepareKind(kind));
+      receipts.push(await stage(number+'b-complete-declared-https-'+kind.toLowerCase(),()=>deliverKind(kind,prepared[kind])));
+    }
+    const delivered=await stage('07-complete-declared-https-delivery',async()=>{
+      for(const row of receipts){
+        const current=await client.transmission({transmissionId:row.transmissionId});
+        assert.equal(current.state,'ACKNOWLEDGED');assert.equal(current.sha256,row.transmissionSha256);
+        assert.equal(current.attemptCount,1);assert.equal(current.documentId,prepared[row.kind].documentId);
+        assert.equal(current.source.sha256,prepared[row.kind].source.sha256);
+        await verifyFile(row.receipt.file);
       }
       return{receipts,incomingTransmissionId:incoming.transmissionId};
     });

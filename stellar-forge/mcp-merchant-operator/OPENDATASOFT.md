@@ -50,7 +50,7 @@ Private portals can declare authTokenEnv as the name of their existing portal cr
 
 ## Operate the original application
 
-The host advertises 44 merchant_opendatasoft tools only when this connection is configured.
+The host advertises 48 merchant_opendatasoft tools only when this connection is configured.
 
 | Workflow | Operations | Original state |
 | --- | --- | --- |
@@ -59,6 +59,7 @@ The host advertises 44 merchant_opendatasoft tools only when this connection is 
 | Data review | edition, rows, facets, notes, compare | Original fields, exact values, notes revision and edition history |
 | Typed publication | source_save, publication_create, publication, publication_review, publication_recover, publication_publish | Native projection, candidate, reviewer and published dataset |
 | Merchant and buyer | merchant_export, merchant_stage, buyer_offer, buyer_prepare | Original merchant package, release store and reviewed offer |
+| Facilitator review | facilitators, facilitator_history, facilitator_inspect, facilitator_review, facilitator_stage | Host aliases, complete native alternatives, original merchant/capture binding and reviewed SF82 stage |
 | Operation control | operation, cancel | Original asynchronous operation ID |
 | Complete receiving | export, exports, manifest, file, file_release | Immutable original files, SHA256 manifest and resumable native reads |
 
@@ -187,6 +188,39 @@ node stellar-forge/mcp-merchant-operator/examples/opendatasoft-receiving.mjs \
 To receive an existing original project, add --project /srv/starforge/huwise-workbench. This selects its completed native edition and any associated original source declaration, merchant archive, receiving guide and buyer request. The existing project's analyst notes are preserved. A new example project records its completed row and file review in its own analyst notes and confirms that the earlier immutable export still replays after that later edit.
 
 The default source is https://public.opendatasoft.com and dataset open-data-sources. Use --origin and --dataset for another authorized public portal and dataset. The supplied directory retains the original project, merchant connection, export request, full customer files and native-receiving.json. Repeat the same command and directory after interruption. A completed operation reopens and verifies its original delivery locally.
+
+## Review a facilitator for the original merchant
+
+Add facilitatorConnection to the same host workspace declaration, pointing to
+its private stellar-forge.seller-facilitators.v1 profile file. Paths resolve
+beside the original connection file. The workbench reads that file on open;
+close and reopen its actual owner to adopt changed profiles. Browser and MCP
+inputs select host aliases. Review and stage require the merchant host's
+releaseStore to be this project's original seller-releases directory.
+
+facilitator_review receives workspace, merchantExportId, provider, releaseId,
+id and optional label. It returns the original operationId. Inspect its actual
+completion, then facilitator_inspect returns the entire native review, Huwise
+source binding and proposed release observation. facilitator_stage takes only
+workspace and that reviewId and uses the original SF82 idempotent stage. The
+shared seller controls continue to own activation, running state and rollback.
+
+The typed client exposes facilitatorReview, facilitatorHistory,
+facilitatorInspect and facilitatorStage. Page every history result through its
+nextCursor. Review includes each original ordered native alternative, complete
+supported response and atomic amount string; it is separate from any actual
+payment outcome.
+
+Add facilitatorReviewId and the same merchantExportId to the normal complete
+export. Its original manifest binds facilitator-review.json,
+facilitator-source.json and FACILITATORS.md alongside every selected native
+file. The existing download, resumed file reads and closed-workbench local
+reopen receive them unchanged. Use a new exportId for a new selection; old
+complete deliveries remain intact.
+
+The [complete facilitator operating guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/FACILITATORS.md)
+contains the installed commands, full profiles/input shapes, typed client
+workflow, source checks, actual release lifecycle and same-operation recovery.
 
 ## Native tenant ingestion
 

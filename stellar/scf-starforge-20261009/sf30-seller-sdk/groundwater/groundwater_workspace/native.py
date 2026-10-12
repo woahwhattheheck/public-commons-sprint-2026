@@ -155,6 +155,12 @@ def completed_result(workspace,run):
     actual = tuple(result.get(k) for k in ("run_id","edition_id","edition_sha256","source_id","source_sha256","runtime_sha256","application_sha256","project_id"))
     if actual != expected:
         raise Problem("native_result_identity","The native result does not belong to this frozen original run.")
+    reference_basis = run.get("reference_basis")
+    if reference_basis is not None:
+        from .sources import verify_reference_basis
+        verify_reference_basis(reference_basis,workspace.record(run["source_id"],"source"))
+        if result.get("reference_basis_sha256") != reference_basis["sha256"]:
+            raise Problem("native_reference_identity","The native result differs from its original frozen reference inspection.")
     verify_inventory(attempt,result["files"])
     for engine in ("mf6","mf2005"):
         receipts = [x for x in result["native_executions"] if x["engine"]==engine and not x.get("version_probe")]
@@ -185,7 +191,7 @@ def run_detail(workspace,run_id):
         with log.open("rb") as stream:
             stream.seek(0,os.SEEK_END);size=stream.tell();stream.seek(max(0,size-65536));tail=stream.read(65536)
         log_excerpt={"attempt":run["attempt"],"path":"worker.log","bytes":size,"tail":tail.decode("utf-8",errors="replace"),"observed_at":now(),"scope":"Observed log excerpt; immutable completion files are listed separately."}
-    return {"log_excerpt":log_excerpt,"run":{**run_summary(workspace,run),"runtime":run["runtime"],"runtime_rebindings":run.get("runtime_rebindings",[])},"edition":workspace.record(run["edition_id"],"edition"),"source":workspace.record(run["source_id"],"source"),"result":result,"attempts":attempts,"files":result["files"] if result else [],"review":review}
+    return {"log_excerpt":log_excerpt,"run":{**run_summary(workspace,run),"runtime":run["runtime"],"runtime_rebindings":run.get("runtime_rebindings",[]),"reference_basis":run.get("reference_basis")},"edition":workspace.record(run["edition_id"],"edition"),"source":workspace.record(run["source_id"],"source"),"result":result,"attempts":attempts,"files":result["files"] if result else [],"review":review}
 
 def run_file(workspace,run_id,name):
     run = workspace.record(run_id,"run")

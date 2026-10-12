@@ -1,4 +1,4 @@
-# Install the Flowable process operations product
+# Install the Flowable process and decision operations product
 
 This selected release delivers the original Flowable transport, durable
 process workspace, complete browser, typed client, command line, merchant
@@ -8,7 +8,7 @@ selection, distribution builder, runtime installer and Applications owner.
 The `flowable-merchant.json` recipe selects these complete source-owned
 contributions:
 
-- `flowable-workspaces`: native process operations, workspace, original
+- `flowable-workspaces`: native process and decision operations, workspace, original
   browser and full source/history receiving.
 - `merchant-provider-flowable-workspaces`: the same saved workspace
   through the maintained merchant MCP registry.
@@ -107,7 +107,7 @@ identity and all source/history records.
 ## Launch through Applications
 
 Register the READY runtime in the existing Runtime workspace. Choose
-**Applications → Flowable process operations**, select the initialized
+**Applications → Flowable process and decision operations**, select the initialized
 private product directory and existing private environment file, then use
 the maintained Review → Save → Start → Open flow.
 
@@ -172,3 +172,9 @@ For an upgrade, install the new reviewed edition into a new runtime
 directory while retaining the customer's original private product and
 native workspace. Review that runtime through the same Applications
 lifecycle before reopening the saved process history.
+
+## Native decision operations
+
+The same installed workspace includes original DMN deployment, native decision and decision-service evaluation, captured execution audits and full source/history receiving. Save the original DMN REST endpoint as a separate named connection. Use the **Decisions** page, `capture-decisions`, `decision-portfolio`, `decision-definition` and `decision-execution` commands, the typed client, or the eight native decision MCP actions.
+
+See [Decision deployment, evaluation and operating history](../../../../products/flowable-merchant/DECISIONS.md) for the complete operator workflow, typed numeric input and native result semantics.

@@ -1,3 +1,4 @@
+import {validateHandover,handoverSelectionOf,restoreHandoverSelection} from './grant-handover-core.mjs';
 import {validatePlanSources, validatePlanningState, newPlanReview} from './grant-plan-core.mjs';
 // MIT. Portable model for the existing SCF application and its local submission draft.
 export const SCHEMA = 'stellar-forge.grant-submission-draft.v1';
@@ -14,6 +15,16 @@ export const ANSWERS = [
   ['capacity','Delivery capacity, payment timing and sustainability'],
   ['applicant','Applicant, experience and submission'],
 ];
+// Later canonical headings retain the same nine saved-answer identities.
+const ANSWER_HEADINGS = new Map([
+  ...ANSWERS.map(([id, title]) => [title, id]),
+  ["Customer problem, first payer and adoption", "need"],
+  ["Why Stellar and how the product differs", "stellar"],
+  ["Defined architecture and customer operation", "architecture"],
+  ["Working foundation and demonstrated customer results", "product"],
+  ["Threat response and measurable acceptance", "outcomes"],
+  ["Capacity, payment timing and sustainability", "capacity"],
+]);
 export const REQUIREMENTS = [
   {id:'complete',title:'A complete answer within the form',answers:ANSWERS.map(x=>x[0]),detail:'Include the facts needed for review in the answers themselves.'},
   {id:'need',title:'Demonstrated customer need',answers:['need','product'],detail:'Explain actual use or validated need and relevant experience.'},
@@ -53,7 +64,7 @@ export function measureText(value){
 export function parseAnswers(markdown){
   string(markdown,'Original application');
   const matches=[...markdown.matchAll(/^## ([^\r\n]+)\r?$/gm)];
-  need(JSON.stringify(matches.map(x=>x[1]))===JSON.stringify(ANSWERS.map(x=>x[1])),'Use the complete original application with its nine canonical answers in order.');
+  need(JSON.stringify(matches.map(x=>ANSWER_HEADINGS.get(x[1])))===JSON.stringify(ANSWERS.map(x=>x[0])),'Use the complete application with its nine original answer identities and accepted headings in order.');
   return matches.map((match,index)=>({id:ANSWERS[index][0],title:match[1],
     text:markdown.slice(match.index+match[0].length,index+1<matches.length?matches[index+1].index:markdown.length).replace(/^\r?\n/,'').trim()}));
 }
@@ -120,11 +131,12 @@ export function validateDraft(input){
     string(version.id,'Version identity');string(version.label,'Version label');iso(version.savedAt,'Version date');string(version.title,'Version title');
     validateState(version,input.sources,input.planSources||[]);
   }
+  validateHandover(input);
   need(measureText(JSON.stringify(input)).utf8Bytes<=MAX_BYTES,'This draft exceeds 16 MiB. The current editor remains open. Copy any oversized unsaved answer text, then reduce the unsaved addition before saving.');
   return input;
 }
 function stateOf(draft){
-  return clone({title:draft.title,currentSource:draft.currentSource,answers:draft.answers,form:draft.form,fields:draft.fields,reviews:draft.reviews,planningReview:draft.planningReview??null});
+  return clone({title:draft.title,currentSource:draft.currentSource,answers:draft.answers,form:draft.form,fields:draft.fields,reviews:draft.reviews,planningReview:draft.planningReview??null,handoverSelection:handoverSelectionOf(draft)});
 }
 export function retainVersion(draft,label='Saved version',now=new Date().toISOString()){
   const result=clone(validateDraft(draft));result.updatedAt=now;
@@ -137,6 +149,7 @@ export function restoreVersion(draft,id,now=new Date().toISOString()){
   const version=draft.versions.find(x=>x.id===id);need(version,'Select an existing saved version.');
   const result=retainVersion(draft,'Before restoring '+version.label,now);
   Object.assign(result,clone({title:version.title,currentSource:version.currentSource,answers:version.answers,form:version.form,fields:version.fields,reviews:version.reviews,planningReview:version.planningReview??null}));
+  restoreHandoverSelection(result,version);
   result.folder='SCF submission — '+result.title;return validateDraft(result);
 }
 export function compareSource(draft,source){
