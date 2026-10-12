@@ -166,6 +166,26 @@ export class ResearchWorkspaceClient{
   startCrossref(id,operationId,{expectedPlanSha256}={}){return this.#json(operationPath(id,operationId)+'/start',{expectedPlanSha256});}
   stopCrossref(id,operationId){return this.#json(operationPath(id,operationId)+'/stop',{});}
   receiveCrossref(id,operationId,input){return this.#json(operationPath(id,operationId)+'/receive?projection=metadata',input);}
+
+  objectInputs(id,{after,snapshot,limit,...options}={}){
+    return this.#json(dossierPath(id)+'/pipelines/objects'+parameters({after,snapshot,limit}),undefined,options);
+  }
+  objectReviews(id,{after,limit,...options}={}){
+    return this.#json(dossierPath(id)+'/pipelines/object-reviews'+parameters({after,limit}),undefined,options);
+  }
+  reviewObjectInput(id,input,options={}){
+    return this.#json(dossierPath(id)+'/pipelines/objects/review',input,options);
+  }
+  prepareObjectPipeline(id,input,options={}){
+    return this.#json(dossierPath(id)+'/pipelines/objects/prepare',input,options);
+  }
+  pipelineOperations(id,{after,limit,...options}={}){
+    return this.#json(dossierPath(id)+'/pipelines'+parameters({after,limit}),undefined,options);
+  }
+  pipelineOperation(id,operationId,options={}){
+    return this.#json(dossierPath(id)+'/pipelines/operations/'+pathId(operationId),undefined,options);
+  }
+
   async #download(route,file,{signal,expectedSha256}={}){
     return this.#run(()=>this.#request(route,{signal},async response=>{
       const disposition=response.headers.get('content-disposition')??'';
