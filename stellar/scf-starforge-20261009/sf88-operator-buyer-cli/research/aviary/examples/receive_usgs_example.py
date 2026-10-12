@@ -205,6 +205,53 @@ class PublisherBrowser:
     try:page.close()
     except Exception as error:self.cleanup_errors.append({"stage":"page","error":type(error).__name__+": "+str(error)})
 
+
+class NodePublisherBrowser:
+ """Use the installed Node Playwright runtime with the same original capture contract."""
+ def __init__(self,executable=None,node_executable=None,playwright_module=None):
+  self.executable=executable;self.node=node_executable or os.environ.get("CODEX_PRIMARY_RUNTIME_NODE") or shutil.which("node")
+  self.module=playwright_module;self.cleanup_errors=[]
+ def close(self):return self.cleanup_errors
+ def capture(self,root,item):
+  import signal,subprocess
+  started=stamp();directory=Path(tempfile.mkdtemp(prefix="publisher-node-",dir=root))
+  record=None;body=b""
+  try:
+   helper=Path(__file__).resolve().with_name("capture-publisher-page.mjs")
+   if not self.node or not helper.is_file():raise RuntimeError("Node publisher browser or its companion source is unavailable")
+   request={"item":item,"directory":str(directory),"executable":self.executable,"playwright_module":self.module}
+   process=subprocess.Popen([self.node,str(helper)],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,start_new_session=True)
+   try:stdout,stderr=process.communicate(raw_json(request),timeout=120)
+   except subprocess.TimeoutExpired:
+    os.killpg(process.pid,signal.SIGTERM)
+    try:stdout,stderr=process.communicate(timeout=5)
+    except subprocess.TimeoutExpired:os.killpg(process.pid,signal.SIGKILL);stdout,stderr=process.communicate()
+    raise RuntimeError("Publisher browser exceeded its capture timeout; child group drained")
+   result_path=directory/"result.json"
+   if not result_path.is_file():raise RuntimeError("Publisher browser returned no capture result: "+stderr.decode("utf-8","replace")[-3000:])
+   result=json.loads(result_path.read_text("utf-8"))
+   if result.get("schema")!="commons.browser.publisher-capture.v1" or result.get("request_url")!=item["url"]:
+    raise ValueError("Publisher browser result belongs to another request")
+   self.cleanup_errors.extend(result.get("cleanup",[]))
+   for entry in result["records"]:
+    record=json.loads(safe(directory,entry["record"]).read_text("utf-8"));body=safe(directory,entry["body"]).read_bytes()
+    if record.get("request_url")!=item["url"] or len(body)!=record["bytes"] or sha(body)!=record["sha256"]:
+     raise ValueError("Publisher browser original response changed")
+    allowed_url(record["final_url"])
+    problem=validate_capture(item,record,body)
+    if not problem and entry["finalDocument"]:return record,body
+    record["error"]=problem or "Earlier browser navigation response; final document differs"
+    store_attempt(root,item,record,body)
+   raise CaptureFailure(result.get("navigation_error") or "Browser did not return the original publisher document",record)
+  except CaptureFailure:raise
+  except Exception as error:
+   record=capture_record(item,"node-playwright-chromium",started)
+   record["error"]=type(error).__name__+": "+str(error);finish_record(record,b"")
+   store_attempt(root,item,record,b"");raise CaptureFailure(record["error"],record) from error
+  finally:
+   try:shutil.rmtree(directory)
+   except Exception as error:self.cleanup_errors.append({"stage":"node-capture-directory","error":type(error).__name__+": "+str(error)})
+
 def publish_captured(path,original,record):
  """Link immutable captured bytes into the source tree; copy only across filesystems."""
  path.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
@@ -262,7 +309,7 @@ def source_transcript(raw):
  if not 100<len(text)<50000:raise ValueError("Unexpected original transcript length")
  return (text+"\n").encode("utf-8")
 def main():
- ap=argparse.ArgumentParser();ap.add_argument("--packet",required=True);ap.add_argument("--directory",required=True);ap.add_argument("--api-documentation",action="store_true");ap.add_argument("--publisher-browser",action="store_true",help="Use installed Playwright/Chromium for publisher pages after a failed direct response");ap.add_argument("--browser-executable",help="Optional existing Chromium executable");args=ap.parse_args()
+ ap=argparse.ArgumentParser();ap.add_argument("--packet",required=True);ap.add_argument("--directory",required=True);ap.add_argument("--api-documentation",action="store_true");ap.add_argument("--publisher-browser",action="store_true",help="Use installed Playwright/Chromium for publisher pages after a failed direct response");ap.add_argument("--browser-executable",help="Optional existing Chromium executable");ap.add_argument("--publisher-browser-runtime",choices=("python","node"),default="python",help="Use the installed Python or Node Playwright runtime");ap.add_argument("--node-executable",help="Existing Node executable for publisher browser capture");ap.add_argument("--playwright-module",help="Existing Node Playwright module entrypoint");args=ap.parse_args()
  packet_raw=Path(args.packet).read_bytes();packet=json.loads(packet_raw)
  if packet["schema"]!="commons.aviary.public-source-example-input.v1":raise ValueError("Unsupported packet")
  root=Path(args.directory).resolve();root.mkdir(parents=True,exist_ok=True,mode=0o700)
@@ -275,7 +322,7 @@ def main():
    if len(raw)!=item["bytes"] or sha(raw)!=item["sha256"]:raise ValueError("Packet member hash differs: "+item["path"])
    publish(safe(source,item["path"]),raw)
   captures={};capture_bodies={};failures=[]
-  browser=PublisherBrowser(args.browser_executable) if args.publisher_browser else None
+  browser=(NodePublisherBrowser(args.browser_executable,args.node_executable,args.playwright_module) if args.publisher_browser_runtime=="node" else PublisherBrowser(args.browser_executable)) if args.publisher_browser else None
   try:
    for item in packet["downloads"]:
     try:record,body=read_capture(root,item,browser)

@@ -946,39 +946,284 @@ def meta_from_workspace(root, key):
         return meta(db, key)
 
 
+def _receiving_metadata_temporaries(directory, prefix, expected_prefix):
+    """Retire only this receive's interrupted atomic metadata writes."""
+    retired = False
+    for path in directory.glob(prefix + "*"):
+        if path.is_symlink() or not path.is_file():
+            raise Problem("RECEIVE_METADATA", "Receiving metadata temporary is not a regular file.", str(path))
+        value = path.read_bytes()
+        if not (expected_prefix.startswith(value) or value.startswith(expected_prefix)):
+            raise Problem("RECEIVE_METADATA", "Receiving metadata temporary differs from this handoff.", str(path))
+        path.unlink()
+        retired = True
+    if retired:
+        sync_dir(directory)
+
+
+def _receiving_prefix(archive, item, destination):
+    """Validate a complete member or the exact bytes retained before interruption."""
+    if destination.is_symlink():
+        raise Problem("RECEIVE_SYMLINK", "A receiving member is a symbolic link.", item["path"])
+    if not destination.exists():
+        return None, None
+    before = destination.stat()
+    if not stat.S_ISREG(before.st_mode):
+        raise Problem("RECEIVE_MEMBER", "A receiving member is not a regular file.", item["path"])
+    original = fingerprint(destination)
+    wanted = {key: item[key] for key in ("bytes", "sha256")}
+    if original == wanted:
+        return before, original
+    if original["bytes"] >= item["bytes"]:
+        raise Problem("RECEIVE_CHANGED", "Retained member bytes differ from this handoff.", item["path"])
+    prefix, remaining = hashlib.sha256(), original["bytes"]
+    with archive.open(item["path"]) as incoming:
+        while remaining:
+            block = incoming.read(min(CHUNK, remaining))
+            if not block:
+                raise Problem("RECEIVE_PREFIX", "The archive is shorter than the retained prefix.", item["path"])
+            prefix.update(block)
+            remaining -= len(block)
+    if prefix.hexdigest() != original["sha256"]:
+        raise Problem("RECEIVE_CHANGED", "Retained prefix differs from this handoff.", item["path"])
+    return before, original
+
+
+def _receiving_inventory(root, expected, *, completion=False):
+    directories = {str(parent) for name in expected for parent in PurePosixPath(name).parents
+                   if str(parent) != "."}
+    for path in root.rglob("*"):
+        name = path.relative_to(root).as_posix()
+        if path.is_symlink():
+            raise Problem("RECEIVE_SYMLINK", "A receiving path is a symbolic link.", name)
+        if path.is_dir():
+            if name not in directories:
+                raise Problem("RECEIVE_EXTRA", "Receiving contains an undeclared directory.", name)
+        elif not path.is_file():
+            raise Problem("RECEIVE_MEMBER", "Receiving contains a special file.", name)
+        elif name not in expected and not (completion and name in (
+                "RECEIVING.json", "workspace/workspace.lock",
+                "workspace/aviary.sqlite3-journal", "workspace/aviary.sqlite3-wal",
+                "workspace/aviary.sqlite3-shm")):
+            raise Problem("RECEIVE_EXTRA", "Receiving contains an undeclared file.", name)
+
+
+def _received_status(output, manifest, declared):
+    # Mapping, API actions and downloaded transcripts can advance after receiving.
+    # The original archive, application, source and delivery stay byte-bound.
+    for item in declared:
+        if item["path"] == "workspace/aviary.sqlite3":
+            continue
+        path = within(output, item["path"])
+        if not path.is_file() or fingerprint(path) != {key: item[key] for key in ("bytes", "sha256")}:
+            raise Problem("RECEIVE_CHANGED", "A received original member has changed.", item["path"])
+    with locked(output / "workspace"):
+        verify_source(output / "workspace")
+        status = show(output / "workspace")
+        if status["workspace"]["id"] != manifest["workspaceId"]:
+            raise Problem("WORKSPACE_BINDING", "Received workspace identity differs from the manifest.")
+    return status
+
+
 def receive(source, output):
-    source, output = Path(source).resolve(), Path(output).resolve()
-    if output.exists():
-        raise Problem("OUTPUT_EXISTS", "Choose a new receiving directory.", str(output))
+    """Continue an archive-bound receive and publish its complete directory once."""
+    source, requested = Path(source).resolve(), Path(output).absolute()
+    if not requested.name or requested.is_symlink():
+        raise Problem("OUTPUT", "Choose a receiving directory without a symbolic link.", str(requested))
+    output = requested.parent.resolve() / requested.name
+    source_identity = fingerprint(source)
     with zipfile.ZipFile(source) as archive:
         names = archive.namelist()
         if names.count("MANIFEST.json") != 1:
             raise Problem("MANIFEST", "Handoff must contain exactly one manifest.")
-        manifest = json.loads(archive.read("MANIFEST.json"))
+        manifest_bytes = archive.read("MANIFEST.json")
+        manifest = json.loads(manifest_bytes)
         if manifest.get("schema") != "stellar-forge.aviary-handoff.v1":
             raise Problem("SCHEMA", "This is not an Aviary workspace handoff.")
-        entries = manifest["files"]
-        declared = entries + [{"path": "MANIFEST.json", **{
-            "bytes": len(archive.read("MANIFEST.json")),
-            "sha256": hashlib.sha256(archive.read("MANIFEST.json")).hexdigest()}}]
+        entries = manifest.get("files")
+        if not isinstance(entries, list) or not entries:
+            raise Problem("MANIFEST", "Handoff member inventory is missing.")
+        for item in entries:
+            if not isinstance(item, dict) or not isinstance(item.get("path"), str):
+                raise Problem("MANIFEST", "Handoff member declaration is invalid.")
+            relative(item["path"])
+            if (type(item.get("bytes")) is not int or item["bytes"] < 0 or
+                    not isinstance(item.get("sha256"), str) or
+                    not re.fullmatch(r"[0-9a-f]{64}", item["sha256"])):
+                raise Problem("MANIFEST", "Handoff member identity is invalid.", item["path"])
+        paths = [item["path"] for item in entries]
+        if len(paths) != len(set(paths)) or any(name in paths for name in ("MANIFEST.json", "RECEIVING.json")):
+            raise Problem("MANIFEST", "Handoff member declarations repeat a reserved or original path.")
+        required = {"workspace/aviary.sqlite3", "workspace/source-manifest.json",
+                    "delivery/preview.json", "delivery/status.json",
+                    "delivery/native-package-manifest.json", "delivery/review.html", "DELIVERY.md"}
+        required.update("application/" + name for name in (
+            "aviary.py", "aviary_client.py", "server.py", "index.html",
+            "app.js", "cli.mjs", "README.md", "PROVIDER_CONTRACT.md"))
+        if "application/managed.py" in paths or "application/APPLICATIONS.md" in paths:
+            required.update(("application/managed.py", "application/APPLICATIONS.md"))
+        if not required.issubset(paths) or not isinstance(manifest.get("workspaceId"), str):
+            raise Problem("APPLICATION", "Handoff lacks its complete application, source or workspace identity.",
+                          sorted(required.difference(paths)))
+        declared = entries + [{"path": "MANIFEST.json", "bytes": len(manifest_bytes),
+                              "sha256": hashlib.sha256(manifest_bytes).hexdigest()}]
         verify_zip(source, declared)
-        output.mkdir(parents=True, mode=0o700)
+        if fingerprint(source) != source_identity:
+            raise Problem("SOURCE_CHANGED", "The handoff archive changed while it was being verified.")
+        binding = {"schema": "stellar-forge.aviary-receiving.v1", "archive": source_identity,
+                   "manifestSha256": hashlib.sha256(manifest_bytes).hexdigest(),
+                   "workspaceId": manifest["workspaceId"]}
+        expected = {item["path"]: item for item in declared}
+        completion_prefix = encoded({"binding": binding})[:-2] + b","
+        output.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        prefix = ".aviary-receive-" + hashlib.sha256(os.fsencode(output)).hexdigest()[:24]
+        lock_path = output.parent / (prefix + ".lock")
+        fd = os.open(lock_path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
         try:
-            for name in names:
-                destination = within(output, name)
+            if not stat.S_ISREG(os.fstat(fd).st_mode):
+                raise Problem("RECEIVE_LOCK", "Receiving lock is not a regular file.", str(lock_path))
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise Problem("BUSY", "Another receive operation is using this output.", str(output))
+            staging = output.parent / (prefix + ".staging")
+            content = staging / "content"
+            state_path = staging / "binding.json"
+            if output.is_symlink():
+                raise Problem("OUTPUT", "Receiving output became a symbolic link.", str(output))
+            if output.exists():
+                if not output.is_dir():
+                    raise Problem("OUTPUT_EXISTS", "Receiving output is not a directory.", str(output))
+                receipt_path = within(output, "RECEIVING.json")
+                if receipt_path.exists():
+                    receipt = read_json(receipt_path)
+                    if receipt.get("binding") != binding:
+                        raise Problem("RECEIVE_BINDING", "This output belongs to a different handoff.", str(output))
+                    status = _received_status(output, manifest, declared)
+                    _receiving_metadata_temporaries(output, ".RECEIVING.json.", completion_prefix)
+                    return {"output": str(output), "workspace": str(output / "workspace"),
+                            "application": str(output / "application"), "status": status,
+                            "reused": True, "receiving": receipt}
+                immutable_complete = all(
+                    within(output, item["path"]).is_file() and
+                    fingerprint(within(output, item["path"])) ==
+                    {key: item[key] for key in ("bytes", "sha256")}
+                    for item in declared if item["path"] != "workspace/aviary.sqlite3")
+                database_path = within(output, "workspace/aviary.sqlite3")
+                database_partial = not database_path.is_file()
+                if immutable_complete and database_path.is_file():
+                    database_item = expected["workspace/aviary.sqlite3"]
+                    if database_path.stat().st_size < database_item["bytes"]:
+                        try:
+                            _receiving_prefix(archive, database_item, database_path)
+                        except Problem as error:
+                            if error.code != "RECEIVE_CHANGED":
+                                raise
+                        else:
+                            database_partial = True
+                    if not database_partial:
+                        # A complete earlier receive may already have later database revisions.
+                        status = _received_status(output, manifest, declared)
+                        _receiving_metadata_temporaries(output, ".RECEIVING.json.", completion_prefix)
+                        receipt = {"binding": binding, "completedAt": now(), "adoptedExisting": True}
+                        write_json(receipt_path, receipt, exclusive=True)
+                        return {"output": str(output), "workspace": str(output / "workspace"),
+                                "application": str(output / "application"), "status": status,
+                                "reused": True, "receiving": receipt}
+                # Older receivers wrote into the visible output. Move only a fully
+                # verified original partial tree into private staging before resuming.
+                _receiving_metadata_temporaries(output, ".RECEIVING.json.", completion_prefix)
+                _receiving_inventory(output, expected)
+                for item in declared:
+                    _receiving_prefix(archive, item, within(output, item["path"]))
+            if staging.is_symlink():
+                raise Problem("RECEIVE_SYMLINK", "Receiving staging is a symbolic link.", str(staging))
+            staging.mkdir(exist_ok=True, mode=0o700)
+            if not staging.is_dir():
+                raise Problem("RECEIVE_STAGE", "Receiving staging is not a directory.", str(staging))
+            if state_path.is_symlink():
+                raise Problem("RECEIVE_SYMLINK", "Receiving binding is a symbolic link.", str(state_path))
+            wanted_state = {"binding": binding, "output": str(output)}
+            if state_path.exists():
+                if read_json(state_path) != wanted_state:
+                    raise Problem("RECEIVE_BINDING", "Retained staging belongs to a different handoff.", str(staging))
+            else:
+                # An interrupted atomic metadata write precedes any original media.
+                _receiving_metadata_temporaries(staging, ".binding.json.", encoded(wanted_state))
+                if any(staging.iterdir()):
+                    raise Problem("RECEIVE_BINDING", "Existing staging has no original archive binding.", str(staging))
+                write_json(state_path, wanted_state, exclusive=True)
+            _receiving_metadata_temporaries(staging, ".binding.json.", encoded(wanted_state))
+            if any(path.name not in ("binding.json", "content") for path in staging.iterdir()):
+                raise Problem("RECEIVE_EXTRA", "Receiving staging contains an undeclared member.", str(staging))
+            if output.exists():
+                if content.exists() or content.is_symlink():
+                    raise Problem("RECEIVE_CONFLICT", "Both the original output and staging contain work.", str(output))
+                os.rename(output, content)
+                sync_dir(output.parent)
+                sync_dir(staging)
+            else:
+                if content.is_symlink():
+                    raise Problem("RECEIVE_SYMLINK", "Receiving content is a symbolic link.", str(content))
+                content.mkdir(exist_ok=True, mode=0o700)
+            _receiving_metadata_temporaries(content, ".RECEIVING.json.", completion_prefix)
+            _receiving_inventory(content, expected, completion=True)
+            saved_receipt = content / "RECEIVING.json"
+            if saved_receipt.exists() and read_json(saved_receipt).get("binding") != binding:
+                raise Problem("RECEIVE_BINDING", "Retained completion belongs to another handoff.")
+            recovered, reused = [], 0
+            for item in declared:
+                destination = within(content, item["path"])
+                before, original = _receiving_prefix(archive, item, destination)
+                wanted = {key: item[key] for key in ("bytes", "sha256")}
+                if original == wanted:
+                    reused += 1
+                    continue
                 destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-                with archive.open(name) as incoming, open(destination, "xb") as outgoing:
-                    shutil.copyfileobj(incoming, outgoing, CHUNK)
-                os.chmod(destination, 0o600)
-            verify_source(output / "workspace")
-            status = show(output / "workspace")
-            if status["workspace"]["id"] != manifest["workspaceId"]:
-                raise Problem("WORKSPACE_BINDING", "Received workspace identity differs from the manifest.")
+                flags = os.O_WRONLY | os.O_APPEND | os.O_NOFOLLOW
+                if before is None:
+                    flags |= os.O_CREAT | os.O_EXCL
+                member_fd = os.open(destination, flags, 0o600)
+                with os.fdopen(member_fd, "ab") as outgoing, archive.open(item["path"]) as incoming:
+                    opened = os.fstat(outgoing.fileno())
+                    if ((before is None and opened.st_size != 0) or
+                            (before is not None and
+                             (opened.st_dev, opened.st_ino, opened.st_size, opened.st_mtime_ns) !=
+                             (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns))):
+                        raise Problem("RECEIVE_CONCURRENT_CHANGE", "Retained member changed before continuation.", item["path"])
+                    if original is not None:
+                        incoming.seek(original["bytes"])
+                    while block := incoming.read(CHUNK):
+                        outgoing.write(block)
+                    outgoing.flush()
+                    os.fsync(outgoing.fileno())
+                if fingerprint(destination) != wanted:
+                    raise Problem("RECEIVE_MEMBER", "Received member bytes differ from the archive.", item["path"])
+                sync_dir(destination.parent)
+                recovered.append({"path": item["path"], "retainedBytes": original["bytes"] if original else 0,
+                                  "writtenBytes": item["bytes"] - (original["bytes"] if original else 0)})
+            status = _received_status(content, manifest, declared)
+            receipt = {"binding": binding, "completedAt": now(), "reusedMembers": reused,
+                       "recoveredMembers": recovered}
+            write_json(saved_receipt, receipt)
+            for directory in sorted((path for path in content.rglob("*") if path.is_dir()),
+                                    key=lambda path: len(path.parts), reverse=True):
+                sync_dir(directory)
+            sync_dir(content)
+            if output.exists() or output.is_symlink():
+                raise Problem("RECEIVE_CONCURRENT_CHANGE", "Receiving output appeared before publication.", str(output))
+            os.rename(content, output)
+            sync_dir(output.parent)
+            # The output lock inode stays in place so waiting receivers share one lock.
+            state_path.unlink()
+            staging.rmdir()
+            sync_dir(output.parent)
             return {"output": str(output), "workspace": str(output / "workspace"),
-                    "application": str(output / "application"), "status": status}
-        except BaseException:
-            shutil.rmtree(output)
-            raise
+                    "application": str(output / "application"), "status": status,
+                    "reused": bool(reused or any(x["retainedBytes"] for x in recovered)),
+                    "receiving": receipt}
+        finally:
+            os.close(fd)
 
 
 def main(argv=None):
