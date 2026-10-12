@@ -6,6 +6,18 @@ import { inspectMerchantRuntime } from '../../../sf46-release/runtime-package.mj
 import { regular, need, plain, absolute, digest } from "../storage.mjs";
 
 const PIPELINE_ROOT = 'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers';
+const DOCUMENT_FILES = [
+  'unstructured-workspace.mjs',
+  '../node/client.mjs',
+  '../node/unstructured/contract.mjs',
+  '../node/unstructured/dossier.mjs',
+  '../node/unstructured/purchase.mjs',
+];
+async function documentSourceSelection(filename, modulePath) {
+  const { openSavedDocumentBuyerSource } = await import(pathToFileURL(modulePath).href);
+  need(typeof openSavedDocumentBuyerSource === 'function', 'APPLICATION_DOCUMENT_SOURCE_READER_REQUIRED');
+  return openSavedDocumentBuyerSource(absolute(filename));
+}
 const PIPELINE_FILES = [
   'unstructured-pipelines-workspace.mjs',
   'unstructured-pipelines/contract.mjs',
@@ -43,6 +55,8 @@ export default {
         'Optional retained source directory. Enables DOI metadata using public Crossref.'),
       field('crossrefConfig', 'Original Crossref merchant configuration', 'path', false,
         'Optional existing configuration; requires the Crossref source directory.'),
+      field('documentSourceConfig', 'Original document buyer source selection', 'path', false,
+        'Optional private source JSON selecting an existing document buyer or inbox. Reopen its saved original purchases and receive them into research.'),
       field('pipelineSourceConfig', 'Original document-pipeline source selection', 'path', false,
         'Optional private source JSON selecting the retained pipeline jobs directory and original account configuration. Reopening keeps the same saved jobs and source.'), ...common] }]; },
   validateSettings(type, settings) {
@@ -52,6 +66,12 @@ export default {
       'APPLICATION_CROSSREF_STATE_REQUIRED', 'Choose the original Crossref source directory with its configuration');
   },
   async checkRuntime(type, settings, runtime) {
+    if (settings.documentSourceConfig) {
+      for (const path of DOCUMENT_FILES)
+        await regular(join(runtime.sourceRoot, PIPELINE_ROOT, path), 4 * 1024 * 1024).catch(() =>
+          need(false, 'APPLICATION_NOT_IN_RUNTIME',
+            'Choose a runtime containing the original document buyer and research receiving source.'));
+    }
     if (settings.pipelineSourceConfig) {
       for (const path of PIPELINE_FILES)
         await regular(join(runtime.sourceRoot, PIPELINE_ROOT, path), 4 * 1024 * 1024).catch(() =>
@@ -93,6 +113,19 @@ export default {
       for (const part of ['queries', 'editions'])
         inputs.push(await inputPath(join(settings.openalexWorkspaceDirectory, part), 'directory'));
     }
+    const selectedRuntime = settings.documentSourceConfig || settings.pipelineSourceConfig
+      ? await inspectMerchantRuntime(absolute(runtimeDirectory), { load: false, source: false }) : null;
+    if (settings.documentSourceConfig) {
+      const selectedInput = await path('documentSourceConfig', 'file');
+      const modulePath = join(selectedRuntime.sourceRoot, PIPELINE_ROOT, 'unstructured-workspace.mjs');
+      inputs.push(await inputPath(modulePath, 'file'));
+      const selected = await documentSourceSelection(selectedInput.path, modulePath);
+      need(selectedInput.sha256 === digest(await regular(selectedInput.path, 1024 * 1024)),
+        'APPLICATION_INPUTS_CHANGED', 'Review the current original document buyer source selection again.');
+      const directories = new Set([selected.runtimeDirectory, selected.buyer.stateDirectory,
+        ...(selected.inboxDirectory === undefined ? [] : [selected.inboxDirectory])]);
+      for (const directory of directories) inputs.push(await inputPath(directory, 'directory'));
+    }
     if (settings.pipelineSourceConfig) {
       const selectedInput = await path('pipelineSourceConfig', 'file');
       const selected = await pipelineSelection(selectedInput.path);
@@ -106,8 +139,7 @@ export default {
       need(configuration.sha256 === digest(bytes), 'APPLICATION_INPUTS_CHANGED',
         'Review the current original pipeline account configuration again.');
       inputs.push(configuration);
-      const runtime = await inspectMerchantRuntime(absolute(runtimeDirectory), { load: false, source: false });
-      const contractPath = join(runtime.sourceRoot, PIPELINE_ROOT, 'unstructured-pipelines/contract.mjs');
+      const contractPath = join(selectedRuntime.sourceRoot, PIPELINE_ROOT, 'unstructured-pipelines/contract.mjs');
       inputs.push(await inputPath(contractPath, 'file'));
       const { normalizeConfiguration } = await import(pathToFileURL(contractPath).href);
       need(typeof normalizeConfiguration === 'function', 'APPLICATION_PIPELINE_CONTRACT_REQUIRED');
@@ -119,6 +151,7 @@ export default {
     option('--openalex-module', settings.openalexModule);
     option('--crossref-state', settings.crossrefState);
     option('--crossref-config', settings.crossrefConfig);
+    option('--document-source', settings.documentSourceConfig);
     option('--pipeline-source', settings.pipelineSourceConfig);
     return { args, inputs, createDirectories };
   },
@@ -129,20 +162,29 @@ export default {
         const ready = JSON.parse(text), directoryIndex = request.args.indexOf('--dir');
         const crossrefSelected = request.args.includes('--crossref-state');
         const pipelineIndex = request.args.indexOf('--pipeline-source');
+        const documentIndex = request.args.indexOf('--document-source');
         if (ready.mode !== 'RESEARCH_DOSSIER_WORKSPACE' || directoryIndex < 0 ||
             ready.directory !== request.args[directoryIndex + 1] ||
             crossrefSelected && ready.crossrefConfigured !== true || typeof ready.url !== 'string') return null;
-        if (pipelineIndex >= 0) {
-          if (ready.pipelineSourceConfigured !== true) return null;
-          return async () => {
+        if (pipelineIndex < 0 && documentIndex < 0) return ready.url;
+        if (pipelineIndex >= 0 && ready.pipelineSourceConfigured !== true ||
+            documentIndex >= 0 && ready.documentSourceConfigured !== true) return null;
+        return async () => {
+          if (pipelineIndex >= 0) {
             const selected = await pipelineSelection(request.args[pipelineIndex + 1]);
             need(ready.pipelineWorkspaceId === selected.value.workspaceId,
               'APPLICATION_PIPELINE_STARTUP_CHANGED',
               'The original research listener opened a different document-pipeline source.');
-            return { url: ready.url, original: ready };
-          };
-        }
-        return ready.url;
+          }
+          if (documentIndex >= 0) {
+            const modulePath = join(absolute(request.releaseDirectory), 'source', PIPELINE_ROOT, 'unstructured-workspace.mjs');
+            const selected = await documentSourceSelection(request.args[documentIndex + 1], modulePath);
+            need(ready.documentWorkspaceId === selected.workspaceId,
+              'APPLICATION_DOCUMENT_STARTUP_CHANGED',
+              'The original research listener opened a different document buyer source.');
+          }
+          return { url: ready.url, original: ready };
+        };
       } catch {}
       return null;
     });
