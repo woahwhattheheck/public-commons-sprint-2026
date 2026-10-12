@@ -45,7 +45,7 @@ CREDIT_REQUIRED.update("app/" + n for n in CREDIT_READER_FILES if n not in ADJUS
 ADJUSTMENT_REQUIRED = {APP_PREFIX + "expense-workspace/native_adjustments.py"}
 ADJUSTMENT_REQUIRED.update("app/" + n for n in ADJUSTMENT_READER_FILES)
 CREDIT_VERSIONS = ("original-woo-refund-v1", "original-native-refund-v2")
-ACCOUNTANT_REQUIRED = {APP_PREFIX + "expense-workspace/" + n for n in ("native_accountant.py", "accountant_store.py", "accountant-reader-files.json")}
+ACCOUNTANT_REQUIRED = {APP_PREFIX + "expense-workspace/" + n for n in ("native_accountant.py", "accountant_store.py", "accountant-reader-files.json", "BOOKKEEPING.md")}
 ACCOUNTANT_REQUIRED.update("app/" + n for n in ACCOUNTANT_READER_FILES)
 ACCOUNTANT_FEATURE = "issued-accountant-return-v1"
 
