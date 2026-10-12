@@ -297,8 +297,9 @@ client/README.md and use its package immediately.
 
 A second invocation with the same endpoint, exportId and directory resumes or
 verifies the completed receiving. The manifest and all seven file SHA256s remain
-pinned. Transfer files also remain in their flat transport names so the original
-checkpoint can verify a later continuation.
+pinned. The original transfer/ child retains its flat transport files and checkpoint.
+The usable native files and completion manifest are linked at the receiving root,
+so repeated receiving keeps the original transport directory contract intact.
 
 For a direct MCP client, use merchant_grpc_export_manifest, then
 merchant_grpc_export_file. Pin expectedManifestSha256 and expectedSha256 on
@@ -336,3 +337,27 @@ The maintained distribution registers:
 
 The original merchant-mcp command exposes init-grpc-workspaces, inspect-grpc and
 download-grpc. The same provider retains every existing merchant integration.
+
+## Run one complete native agent receiving journey
+
+The explicit operating driver uses the original included gRPC service, the
+original workspace/model and HTTP servers, the existing merchant MCP and the
+original receiving engine. It exercises source CAS, typed native calls and
+same-ID recovery, full attempt pagination, an interrupted/resumed/repeated
+seven-file download, usable SDK import, complete source receiving, the direct
+merchant challenge and original SF82 activation/drain/rollback.
+
+Run it once from a complete selected source/runtime after the original native
+receiver has handed over that execution slot:
+
+~~~sh
+node experiments/grpc-merchant-agent-20261012-9b23.mjs \
+  --source-root /selected/complete/source \
+  --source-commit REVIEWED_40_CHARACTER_COMMIT \
+  --out /private/grpc-agent-native-journey
+~~~
+
+The output directory is new and private. The driver records the actual source
+file hashes, original operation and release IDs, completed phases and received
+file hashes, then closes every process-owned server. Its customer/ directory
+contains the usable original seven-file customer package.
