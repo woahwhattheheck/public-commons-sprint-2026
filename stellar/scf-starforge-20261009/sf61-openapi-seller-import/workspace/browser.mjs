@@ -5,10 +5,11 @@ import { createRevisionDesk } from './revision-browser.mjs';
 import { createStreamSettings, isStreamFormat, merchantResponseLabel } from './stream-browser.mjs';
 import { createStreamCustomerPanel } from './stream-customer-browser.mjs';
 import { createPostmanPanel, mergePostmanMerchantPlan } from '/postman-browser.mjs';
+import { createTransportPanel, createTransportDelivery, appendTransportReview, renderTransportRuntime } from './transport-browser.mjs';
 const $=id=>document.getElementById(id);
 const countLabel=(n,label)=>n+' '+label+(n===1?'':'s');
 const token=location.hash.slice(1);
-let specText='', inspection=null, routeFields=[], selectedPackage=null, busy=false, customerOpen=false, revisionDesk=null, connections=null, postmanPanel=null;
+let specText='', inspection=null, routeFields=[], selectedPackage=null, busy=false, customerOpen=false, revisionDesk=null, connections=null, postmanPanel=null, transportPanel=null, transportDelivery=null, lastPreview=null;
 const notice=(message,error=false)=>{$('notice').textContent=message;$('notice').classList.toggle('error',error);};
 const make=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
 async function api(path,body) {
@@ -24,9 +25,10 @@ function available() {
   $('start-preview').disabled=busy||!selectedPackage||customerOpen;
   $('start-native').disabled=busy||!selectedPackage||customerOpen||!$('facilitator').value.trim();
   revisionDesk?.available(busy);connections?.available(busy);postmanPanel?.refresh(busy);
+  transportPanel?.available(busy);transportDelivery?.available(busy);
 }
 function dirty() {
-  selectedPackage=null;
+  selectedPackage=null;lastPreview=null;transportDelivery?.clear();
   $('run-label').textContent='Save this configuration as a new package before starting it.';
   $('saved-path').hidden=true;
   $('review').replaceChildren();
@@ -59,6 +61,9 @@ function selectField(label,values,value) {
   input.value=String(value??values[0]?.[0]??'');container.append(input);return {container,input};
 }
 const customerPanel=createStreamCustomerPanel({container:$('stream-customer-content'),make,field,selectField,api,act,notice});
+transportPanel=createTransportPanel({container:$('backend-transports'),onChanged:dirty,notice,
+  onAssign(alias){const selected=routeFields.filter(route=>route.check.checked);for(const route of selected)route.transport.set(alias);dirty();return selected.length;}});
+transportDelivery=createTransportDelivery({container:$('transport-delivery'),api,act,notice});
 postmanPanel=createPostmanPanel({container:$('postman-intake'),api,act,notice,
   async onSource(text,operations) {
     const current=mergePostmanMerchantPlan({currentSource:specText,source:text,currentPlan:planFromForm(),operations});
@@ -90,6 +95,7 @@ function drawRoutes(saved=[]) {
       const server=selectField('Backend server',op.servers.map(s=>[s.index,s.url+(s.variables?' (expand variables first)':'')]),previous?.serverIndex??0);
       const amount=field('Price in atomic units',previous?.amountAtomic??'');amount.input.inputMode='numeric';amount.input.placeholder='e.g. 20000';
       settings.append(server.container,amount.container);
+      const transport=transportPanel.select(previous?.transport,op);transport.element.className='wide';settings.append(transport.element);
       const description=field('Public description',previous?.publicDescription??op.publicDescription??'');
       description.container.className='wide';settings.append(description.container);
       if (op.requestBody) settings.append(make('p',op.requestBody.mediaType+' · Whole body '+(op.requestBody.required?'required':'optional')+
@@ -146,7 +152,7 @@ function drawRoutes(saved=[]) {
       }
       const operation=createOperationSettings({make,field},previous,op.method);
       if(operation)settings.append(operation.element);
-      const controls=[server.input,amount.input,description.input,requestInput,validation.input,headerInput,security.input,mode.input,timeout.input,size.input,requestSize.input,capacity.input,forwarded.input,guard.input];
+      const controls=[server.input,transport.input,amount.input,description.input,requestInput,validation.input,headerInput,security.input,mode.input,timeout.input,size.input,requestSize.input,capacity.input,forwarded.input,guard.input];
       const guardControls=[failureThreshold.input,resetAfter.input,maxResetAfter.input];
       const toggle=()=>{
         const streaming=isStreamFormat(mode.input.value);
@@ -162,7 +168,7 @@ function drawRoutes(saved=[]) {
       check.addEventListener('change',toggle);guard.input.addEventListener('change',toggle);
       mode.input.addEventListener('change',()=>{if(mode.input.value!=='json')validation.input.value='none';toggle();});
       cache?.enabled.addEventListener('change',toggle);toggle();
-      routeFields.push({op,previous,check,server:server.input,amount:amount.input,description:description.input,request:requestInput,validation:validation.input,headers:headerInput,security:security.input,
+      routeFields.push({op,previous,check,transport,server:server.input,amount:amount.input,description:description.input,request:requestInput,validation:validation.input,headers:headerInput,security:security.input,
         mode:mode.input,timeout:timeout.input,size:size.input,requestSize:requestSize.input,capacity:capacity.input,forwarded:forwarded.input,
         guard:guard.input,failureThreshold:failureThreshold.input,resetAfter:resetAfter.input,maxResetAfter:maxResetAfter.input,cache,authentication,operation,stream});
     }
@@ -171,11 +177,13 @@ function drawRoutes(saved=[]) {
   if(!inspection.operations.length)$('routes').append(make('p','This document contains no HTTP operations.','empty'));
 }
 function planFromForm() {
+  const transports=transportPanel?.read()??{};
   return {schema:'stellar-forge.api-merchant-plan.v1',sellerServer:$('seller-server').value.trim(),serviceName:$('service-name').value.trim(),
     payment:{network:$('network').value.trim(),asset:$('asset').value.trim(),payTo:$('recipient').value.trim(),maxTimeoutSeconds:Number($('payment-timeout').value),paymentFlow:$('payment-flow').value},
     allowLoopbackUpstream:$('allow-loopback').checked,
+    ...(Object.keys(transports).length?{transports}:{}),
     operations:routeFields.filter(r=>r.check.checked).map(r=>({method:r.op.method,path:r.op.path,
-      ...(r.previous?.id?{id:r.previous.id}:{}),serverIndex:Number(r.server.value),amountAtomic:r.amount.value.trim(),headerEnv:JSON.parse(r.headers.value),
+      ...(r.previous?.id?{id:r.previous.id}:{}),...(r.transport.read()?{transport:r.transport.read()}:{}),serverIndex:Number(r.server.value),amountAtomic:r.amount.value.trim(),headerEnv:JSON.parse(r.headers.value),
       publicDescription:r.description.value.trim(),responseValidation:r.validation.value,
       ...(r.request.value.trim()?{requestExample:JSON.parse(r.request.value)}:{}),
       ...r.authentication.toPlan(),
@@ -196,6 +204,7 @@ function fillPlan(plan) {
   $('payment-timeout').value=plan?.payment?.maxTimeoutSeconds??60;
   $('payment-flow').value=plan?.payment?.paymentFlow??'authorization';
   $('allow-loopback').checked=plan?.allowLoopbackUpstream===true;
+  transportPanel.load(plan?.transports??{});
   drawRoutes(plan?.operations??[]);
 }
 async function loadSource(text,plan) {
@@ -207,6 +216,7 @@ async function loadSource(text,plan) {
   await postmanPanel.reopen(text);
 }
 function preview(value) {
+  lastPreview=value;
   const table=make('table'),thead=make('thead'),head=make('tr');
   for(const title of ['Route','Public seller','Backend target','Request','Atomic price','Response','Read policy'])head.append(make('th',title));
   thead.append(head);table.append(thead);const rows=make('tbody');
@@ -224,14 +234,17 @@ function preview(value) {
     $('review').append(make('p',ready+' / '+value.routeChecks.length+' route examples ready for an unpaid check.','small'));
     for(const route of value.routeChecks.filter(r=>r.state!=='READY'))$('review').append(make('p',route.method+' '+route.id+': '+(route.reason==='MULTIPART_REQUIRES_PRIVATE_FILE_REQUEST'?'select and retain an actual private file in the running operation form.':'add a public request example with its path, query and body values.'),'hint'));}
   appendAuthenticationReview($('review'),value.routes,{make});
+  appendTransportReview($('review'),value);
 }
 async function saved(name,value) {
-  selectedPackage=name;$('run-label').textContent='Saved package: '+name;revisionDesk.selectPackage(name,value);available();
+  selectedPackage=name;$('run-label').textContent='Saved package: '+name;revisionDesk.selectPackage(name,value);
+  transportDelivery.select(name,value?.preview??lastPreview);available();
   await customerPanel.setPackage(name);
 }
 function runtime(value) {
   customerOpen=Boolean(value.customer);customerPanel.renderRuntime(value.customer);available();
   renderCredentialRuntime($('credential-runtime'),value.credentials,{make});
+  renderTransportRuntime($('transport-runtime'),value.transports);
   operationPanel.render(value);
   $('runtime').replaceChildren();$('cache-runtime').replaceChildren();$('stop').disabled=value.state!=='RUNNING';
   $('check-routes').disabled=value.state!=='RUNNING'||value.mode!=='CHALLENGE_ONLY';

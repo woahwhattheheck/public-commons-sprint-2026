@@ -5,8 +5,9 @@ import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { inspectOpenApi, prepareMerchant, savePackage, readPackage, privateParent, packageName } from './model.mjs';
+import { inspectOpenApi, prepareMerchant, savePackage, readPackage, privateParent, packageName, readMerchantTransportConfiguration } from './model.mjs';
 import { prepareMerchantOperationDirectories } from './operation-plan.mjs';
+import { merchantTransportSummary } from './transport-plan.mjs';
 import { createMerchantTicketIssuer, saveMerchantTicket, readMerchantTicket, readMerchantOperationHandoff } from './operation-ticket.mjs';
 import { stageMerchantFileRequest, loadMerchantFileRequest, listMerchantFileRequests } from './file-requests.mjs';
 import { MAX_REQUEST_BODY_BYTES } from '../../sf31-buyer-client/request-body.mjs';
@@ -25,6 +26,7 @@ import { createOAuthWorkspaceAdapter } from './oauth-http.mjs';
 const here = fileURLToPath(new URL('.', import.meta.url));
 const STATIC = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/stream-browser.mjs','stream-browser.mjs'],['/stream-customer-browser.mjs','stream-customer-browser.mjs'],['/authentication-browser.mjs','authentication-browser.mjs'],['/oauth-browser.mjs','oauth-browser.mjs'],['/oauth.css','oauth.css'],['/operation-panel.mjs','operation-panel.mjs'],['/file-input-browser.mjs','file-input-browser.mjs'],['/style.css','style.css']]);
 STATIC.set('/revision-browser.mjs','revision-browser.mjs');
+STATIC.set('/transport-browser.mjs','transport-browser.mjs');
 STATIC.set('/postman-browser.mjs','../postman/browser.mjs');
 const MIME = {'.html':'text/html; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'};
 const HELP = 'node workspace/server.mjs --out-parent PRIVATE_DIRECTORY [--port 0] [--oauth-connections HOST_JSON] [--allow-loopback-oauth]\nCreate a private directory first (mkdir -m 700 /path/to/merchant-projects).\nOAuth host JSON carries approved aliases and directory environment references only. Explicit loopback OAuth is for local development.\nNode 22+; the console prints the local browser URL. Ctrl-C closes its managed seller.';
@@ -91,6 +93,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
     directory:customerActive.directory,seller:customerActive.session.seller.url} : null;
   const view = () => ({...(active ? {name:active.name, mode:active.session.mode, seller:active.session.seller,
     operations:active.session.operationsDashboard, state:'RUNNING',runtimeId:active.runtimeId,caches:cacheView(),credentials:credentialView(),
+    transports:merchantTransportSummary(active.upstreams),
     operationBindings:active.tickets.bindings,
     ...(active.tickets.bindings.length ? {operationConsole:active.session.operations.operationControlUrl ?? active.session.operations.merchantOperationsUrl} : {}),
     ...(active.acceptance?{acceptance:active.acceptance}:{})} : {state:'STOPPED'}),customer:customerView()});
@@ -117,9 +120,9 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
     const send=(status,value)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(value));};
     try {
       if (shuttingDown) return send(503,{error:'Workspace is stopping'});
-      const url=new URL(req.url,origin), pathname=url.pathname;
       if ((req.headers.host !== new URL(origin).host || req.headers.origin && req.headers.origin !== origin) &&
           !oauth.acceptCallbackRequest(req,url)) return send(403,{error:'Use the exact local workspace origin'});
+      const url=new URL(req.url,origin), pathname=url.pathname;
       if(req.method==='GET'&&oauth.returned(res,url))return;
       if(await oauth.callback(req,res,url))return;
       if (req.method==='GET' && STATIC.has(pathname)) {
@@ -142,6 +145,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
           plan:JSON.parse(await readFile(new URL('./examples/streaming-plan.json',import.meta.url),'utf8'))});
         if (pathname==='/api/packages') return send(200,{packages:await list(),runtime:view(),output});
         if (pathname==='/api/status') return send(200,view());
+        if (pathname==='/api/transports/export') return send(200,await readMerchantTransportConfiguration(output,url.searchParams.get('name')));
         if (pathname==='/api/revisions/drafts') return send(200,{drafts:await listMerchantRevisionDrafts(output)});
         if (pathname==='/api/revisions/load') return send(200,await readMerchantRevisionDraft(output,url.searchParams.get('name'),{validatePlan:oauth.validatePlan}));
         if (pathname==='/api/customer/options') {
