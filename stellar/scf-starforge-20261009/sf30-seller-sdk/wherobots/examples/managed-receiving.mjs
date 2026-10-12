@@ -43,10 +43,13 @@ export async function receiveManagedWherobots({
   const save=(name,value)=>atomic(path.join(outputDirectory,name),Buffer.from(JSON.stringify(value,null,2)+"\n"));
   const selection=await prepareWherobotsApplication({connection,workspace,python});
   const selectionPath=path.join(outputDirectory,"selection.json");
+  const receivingSelection={schema:"stellar-forge.wherobots-managed-receiving-selection.v1",
+    workflow_id:workflowId,selection};
   try{
     const retained=JSON.parse(await readFile(selectionPath,"utf8"));
-    need(stable(retained)===stable(selection),"This receiving directory belongs to another original source or workspace selection.");
-  }catch(error){if(error.code!=="ENOENT")throw error;await save("selection.json",selection);}
+    need(stable(retained)===stable(receivingSelection),
+      "This receiving directory belongs to another original source, workspace or workflow selection.");
+  }catch(error){if(error.code!=="ENOENT")throw error;await save("selection.json",receivingSelection);}
   const report={schema:"stellar-forge.wherobots-managed-receiving.v1",state:"RUNNING",
     startedAt:new Date().toISOString(),workspace,workspace_id:selection.binding.workspaceId,workflow_id:workflowId,
     sourceSha256:selection.source.sha256,bindingSha256:selection.binding.bindingSha256,phases:[],datasets:[],files:[]};
@@ -126,9 +129,26 @@ export async function receiveManagedWherobots({
     const rowsFile=path.join(outputDirectory,"rows.jsonl");await rename(rowPath,rowsFile);rowPath=null;
     report.files.push({path:rowsFile,bytes:rowBytes,sha256:rowDigest.digest("hex")});
     await phase("received every original edition and typed row",{editions:editions.length,datasets:report.datasets.length,rows:totalRows});
-    const requestId=sha(stable({workspace_id:state.workspace_id,workflow_id:workflowId,
+    const originalRequestId=sha(stable({workspace_id:state.workspace_id,workflow_id:workflowId,
       workflow_revision:workflow.revision_sha256,editions,purpose:"managed-browser-handover"})).slice(0,48);
-    let task=await json("/api/export",{body:{workflow_id:workflowId,request_id:requestId}});
+    let requestId=originalRequestId,task;
+    const interruptedRequests=new Set();
+    for(;;){
+      task=await json("/api/export",{body:{workflow_id:workflowId,request_id:requestId}});
+      need(task.id===requestId&&task.action==="export"&&task.arguments?.workflow_id===workflowId,
+        "The retained original export task changed its request or workflow identity.");
+      if(task.state!=="INTERRUPTED")break;
+      need(!interruptedRequests.has(requestId)&&/^[a-f0-9]{64}$/.test(task.revision_sha256??""),
+        "The original interrupted export must retain its stable task revision.");
+      interruptedRequests.add(requestId);
+      const successor=sha(stable({original_request_id:originalRequestId,
+        interrupted_request_id:requestId,interrupted_revision:task.revision_sha256,
+        purpose:"resume-original-managed-browser-handover"})).slice(0,48);
+      await phase("resumed interrupted original export",{original_request_id:originalRequestId,
+        interrupted_request_id:requestId,interrupted_revision:task.revision_sha256,
+        request_id:successor});
+      requestId=successor;
+    }
     while(["QUEUED","RUNNING"].includes(task.state)){
       await delay(250,undefined,{signal});
       task=await json("/api/tasks/"+encodeURIComponent(requestId));

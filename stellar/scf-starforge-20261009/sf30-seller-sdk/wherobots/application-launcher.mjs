@@ -249,6 +249,7 @@ export async function startWherobotsApplication({
       bindingSha256:binding.bindingSha256,sourceRoot:current.source.root,sourceSha256:current.source.sha256,
       pid:process.pid,workerPid:child.pid,instanceId:worker.instanceId,url:worker.url,runtime:worker.runtime};
     await verifyWherobotsApplicationStartup(startup,{selection:current,launchSourceRoot:current.source.root,port,pid:process.pid,signal});
+    signal?.throwIfAborted();
     return {startup,url:startup.url,selection:current,close,closed:done,
       get diagnostics(){return {pid:child.pid,closing:!!closing,exited,stderr};}};
   }catch(error){
