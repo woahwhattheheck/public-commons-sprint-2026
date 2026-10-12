@@ -7,6 +7,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path, PurePosixPath
 import threading
 from urllib.error import HTTPError
@@ -16,6 +17,7 @@ import zipfile
 
 from stellar_forge_buyer import DuckDBWorkspace
 from stellar_forge_buyer.duckdb_http import serve
+from stellar_forge_buyer.duckdb_agent import copy_sparse
 from stellar_forge_buyer.storage import dump, parse, private_directory, read, write
 
 SCHEMA = "stellar-forge.duckdb-semantic-receiving.v1"
@@ -91,6 +93,65 @@ def receive_files(request, record, destination):
     return received
 
 
+
+def exact_file(path, descriptor):
+    require(path.is_file() and path.stat().st_size == descriptor["bytes"],
+            "Retained receiving file is missing: " + str(path))
+    with path.open("rb") as source:
+        require(hashlib.file_digest(source, "sha256").hexdigest() == descriptor["sha256"],
+                "Retained receiving file changed: " + str(path))
+
+
+def copy_received(source, destination, descriptor):
+    exact_file(source, descriptor)
+    private_directory(destination.parent)
+    with source.open("rb") as incoming:
+        fd = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, "wb") as output:
+            copy_sparse(incoming, output)
+    exact_file(destination, descriptor)
+
+
+def finish_delivery(record, directory, args, record_path):
+    """Finish the original completed workflow without reopening its operations."""
+    require("original_reopen" in record["steps"] and "portable_reopen" in record["steps"],
+            "Complete the original native receiving before final delivery")
+    roots = []
+    for section, name in (("query_receiving", "downloaded-query"),
+                          ("source_receiving", "downloaded-source"),
+                          ("portable_receiving", "portable")):
+        root = directory / name
+        for descriptor in record["steps"][section]["files"]:
+            exact_file(root / descriptor["name"], descriptor)
+        roots.append(root)
+    exact_file(directory / "semantics.json", record["steps"]["dictionary"])
+    record["state"] = "COMPLETE"
+    record.pop("error", None)
+    record.setdefault("completed_at", now())
+    dump(record_path, record)
+    if args.archive:
+        archive = Path(args.archive).expanduser().absolute()
+        private_directory(archive.parent)
+        selected = [record_path, directory / "semantics.json", *roots]
+        files = [path for root in selected
+                 for path in (sorted(root.rglob("*")) if root.is_dir() else [root]) if path.is_file()]
+        if archive.exists():
+            with zipfile.ZipFile(archive) as existing:
+                require(set(existing.namelist()) == {path.relative_to(directory).as_posix() for path in files},
+                        "Original receiving archive member selection changed")
+                for path in files:
+                    require(existing.read(path.relative_to(directory).as_posix()) == path.read_bytes(),
+                            "Original receiving archive changed")
+        else:
+            with zipfile.ZipFile(archive, "x", compression=zipfile.ZIP_DEFLATED) as output:
+                for path in files:
+                    output.write(path, path.relative_to(directory).as_posix())
+            archive.chmod(0o600)
+    print(json.dumps({"state": record["state"], "receiving": str(record_path),
+                      "workspace_id": record["workspace_id"], "rows": record["steps"]["edition"]["rows"],
+                      "dictionary_sha256": record["steps"]["dictionary"]["sha256"]}, ensure_ascii=False), flush=True)
+    return record
+
 def run(args):
     directory = private_directory(Path(args.directory))
     report = Path(args.report).expanduser().resolve(strict=True)
@@ -124,6 +185,9 @@ def run(args):
         keep(name, {"request_id": request_id, "export_id": result["export_id"],
                     "directory": result["directory"]})
         return request("/api/exports/" + quote(result["export_id"], safe=""))
+
+    if "original_reopen" in record["steps"]:
+        return finish_delivery(record, directory, args, record_path)
 
     workspace = DuckDBWorkspace(directory / "warehouse", memory_limit="128MB", threads=1)
     try:
@@ -234,7 +298,11 @@ def run(args):
             keep("portable_receiving", {"directory": str(portable), "files": portable_files})
         workspace.close()
 
-        with DuckDBWorkspace(directory / "portable", memory_limit="128MB", threads=1) as received:
+        working = private_directory(directory / "portable-working")
+        database = next(item for item in portable_files if item["name"] == "warehouse.duckdb")
+        if not (working / "warehouse.duckdb").exists():
+            copy_received(directory / "portable" / "warehouse.duckdb", working / "warehouse.duckdb", database)
+        with DuckDBWorkspace(working, memory_limit="128MB", threads=1) as received:
             require(received.identity()["workspace_id"] == record["workspace_id"],
                     "Portable warehouse identity changed")
             require(received.semantics_bytes(edition_id) == original,
@@ -250,25 +318,7 @@ def run(args):
             result = reopened.query(sql, max_rows=100)
             keep("original_reopen", {"workspace_id": reopened.identity()["workspace_id"],
                     "preview_rows": len(result["rows"]), "source_meanings": result["source_meanings"]})
-        record["state"] = "COMPLETE"
-        record["completed_at"] = now()
-        dump(record_path, record)
-        if args.archive:
-            archive = Path(args.archive).expanduser().absolute()
-            private_directory(archive.parent)
-            require(not archive.exists(), "Receiving archive already exists")
-            roots = [directory / "receiving.json", directory / "semantics.json",
-                     directory / "downloaded-query", directory / "downloaded-source", directory / "portable"]
-            with zipfile.ZipFile(archive, "x", compression=zipfile.ZIP_DEFLATED) as output:
-                for root in roots:
-                    for path in sorted(root.rglob("*")) if root.is_dir() else [root]:
-                        if path.is_file():
-                            output.write(path, path.relative_to(directory).as_posix())
-            archive.chmod(0o600)
-        print(json.dumps({"state": record["state"], "receiving": str(record_path),
-                          "workspace_id": record["workspace_id"], "rows": edition["row_count"],
-                          "dictionary_sha256": sha(original)}, ensure_ascii=False), flush=True)
-        return record
+        return finish_delivery(record, directory, args, record_path)
     except BaseException as error:
         record["state"] = "INTERRUPTED"
         record["error"] = getattr(error, "code", type(error).__name__)
