@@ -180,21 +180,159 @@ export function invoiceSummary(invoice, data, asOf = today()) {
     amountDue: money(amountDue, currency), creditBalance: money(creditBalance, currency),
     paymentStatus, overdueDays, voidDate: invoice.voidDate ?? null, asOf};
 }
+/** Amounts returned or reserved from an original receipt on one commercial date. */
+function refundAccounting(row, asOf) {
+  const proposal = row.proposal;
+  need(plain(proposal) && plain(proposal.payout) && ['AWAITING_TRANSFER', 'RECORDED', 'CANCELLED', 'REVERSED'].includes(row.status),
+    'INVALID_RETAINED_REFUND', 'The original refund identity or status is invalid.', 409);
+  dateValue(proposal.effectiveDate, 'refund funds date');
+  for (const key of ['refundDate', 'accountingDate', 'cancelledDate', 'reversedDate']) if (row[key]) dateValue(row[key], key);
+  const accountingDate = row.accountingDate ?? row.refundDate ?? null;
+  const correction = proposal.payout.kind === 'OPERATOR_RECORDED' && Boolean(proposal.payout.replacesRefundId);
+  need((!row.refundDate && !accountingDate || row.refundDate &&
+      row.refundDate >= dateValue(proposal.receipt.receivedDate, 'original receipt date') &&
+      accountingDate >= proposal.effectiveDate &&
+      accountingDate === (correction ? [row.refundDate, proposal.effectiveDate].sort().at(-1) : row.refundDate)) &&
+    (!row.cancelledDate || row.cancelledDate >= proposal.effectiveDate) &&
+    (!row.reversedDate || row.refundDate && row.reversedDate >= accountingDate),
+    'INVALID_REFUND_DATE_SEQUENCE', 'The retained refund dates contradict its original funding, actual payout or accounting date.', 409);
+  need(row.status !== 'CANCELLED' || row.cancelledDate && !row.refundDate,
+    'INVALID_REFUND_CANCELLATION', 'The retained refund cancellation contradicts its original payout.', 409);
+  need(!['RECORDED', 'REVERSED'].includes(row.status) || row.refundDate,
+    'INVALID_RECORDED_REFUND', 'The recorded refund is missing its original payout date.', 409);
+  need(row.status !== 'REVERSED' || row.reversedDate && proposal.payout.kind === 'OPERATOR_RECORDED',
+    'INVALID_REFUND_CORRECTION', 'The retained refund correction is not an original operator entry.', 409);
+  const currency = currencyOf(proposal.currency), units = minor(proposal.amount, currency, 'refund amount', {positive:true}),
+    accounting = proposal.payout.network !== 'stellar:testnet';
+  const reserved = accounting && proposal.effectiveDate <= asOf && (!accountingDate || accountingDate > asOf) &&
+    (!row.cancelledDate || row.cancelledDate > asOf);
+  const refunded = accounting && accountingDate && accountingDate <= asOf && (!row.reversedDate || row.reversedDate > asOf);
+  const effectiveStatus = proposal.effectiveDate > asOf ? 'FUTURE' :
+    row.reversedDate && row.reversedDate <= asOf ? 'REVERSED' : refunded ? 'RECORDED' :
+    row.cancelledDate && row.cancelledDate <= asOf ? 'CANCELLED' :
+    accounting ? 'RESERVED' : 'TESTNET_OBSERVATION';
+  return {currency, reserved: reserved ? units : 0n, refunded: refunded ? units : 0n, effectiveStatus};
+}
+export function receiptRefundAmounts(receipt, data, asOf = today()) {
+  dateValue(asOf, 'report date');
+  need(data.refunds === undefined || Array.isArray(data.refunds), 'INVALID_REFUND_REGISTER',
+    'The saved customer refund register is invalid.', 409);
+  let refunded = 0n, reserved = 0n;
+  for (const row of data.refunds ?? []) {
+    need(plain(row.proposal) && typeof row.proposal.receiptId === 'string', 'INVALID_RETAINED_REFUND',
+      'The original refund funding identity is invalid.', 409);
+    if (row.proposal.receiptId !== receipt.id) continue;
+    const amounts = refundAccounting(row, asOf);
+    need(currencyKey(amounts.currency) === currencyKey(receipt.currency),
+      'REFUND_CURRENCY_CHANGED', 'The refund no longer has its original receipt currency.', 409);
+    refunded += amounts.refunded; reserved += amounts.reserved;
+  }
+  return {refunded, reserved};
+}
+export function refundAccountSummary(row, asOf = today()) {
+  dateValue(asOf, 'report date');
+  const proposal = row.proposal, amounts = refundAccounting(row, asOf);
+  return {id: row.id, customerId: proposal.customerId, customerName: proposal.customer.name,
+    receiptId: proposal.receiptId, receiptReference: proposal.receipt.reference, currency: amounts.currency, amount: proposal.amount,
+    status: row.status, effectiveStatus: amounts.effectiveStatus, kind: proposal.payout.kind,
+    accountingScope: proposal.accountingScope, effectiveDate: proposal.effectiveDate,
+    refundDate: row.refundDate ?? null, accountingDate: row.accountingDate ?? row.refundDate ?? null,
+    replacesRefundId: proposal.payout.replacesRefundId ?? null,
+    cancelledDate: row.cancelledDate ?? null, reversedDate: row.reversedDate ?? null,
+    createdAt: row.createdAt ?? null, returnCount: row.returns?.length ?? 0,
+    reserved: money(amounts.reserved, amounts.currency), refunded: money(amounts.refunded, amounts.currency),
+    reference: row.payoutRecord?.reference ?? null, transaction: row.payoutRecord?.transaction ?? null, asOf};
+}
+/** A confirmed outgoing return remains visible until its original cash entry is reconciled. */
+export function receiptUnreconciledRefunds(receipt, data, asOf = today()) {
+  dateValue(asOf, 'report date');
+  const all = data.refunds ?? [], result = [], seenTransfers = new Map();
+  for (const row of all) {
+    if (row.proposal.receiptId !== receipt.id || row.proposal.accountingScope !== 'COMMERCIAL') continue;
+    for (const returned of row.returns ?? []) {
+      if (all.some(record => record.refundDate && (record.id === row.id && record.payoutRecord?.returnId === returned.id ||
+        record.proposal.payout.originalRefundId === row.id && record.proposal.payout.originalReturnId === returned.id))) continue;
+      const observation = [...(returned.observations ?? [])].reverse().find(item =>
+        item.verification?.status === 'VERIFIED' && item.verification.verificationScope === 'OFFICIAL_PUBNET_RPC' &&
+        item.verification.closedAt?.slice(0, 10) <= asOf);
+      if (!observation) continue;
+      const fingerprints = new Set([sha(returned.transaction), ...(observation.verification.transactionFingerprints ?? []),
+        ...(observation.verification.proof?.transactionFingerprints ?? [])]);
+      if (all.some(record => record.refundDate && record.payoutRecord?.network === row.proposal.payout.network &&
+        [record.payoutRecord.transactionFingerprint, ...(record.payoutRecord.transactionFingerprints ?? []),
+          ...(record.payoutRecord.proof?.transactionFingerprints ?? [])].some(value => fingerprints.has(value)))) continue;
+      const network = observation.verification.network, seen = seenTransfers.get(network) ?? new Set();
+      const duplicate = [...fingerprints].some(value => seen.has(value));
+      for (const value of fingerprints) seen.add(value);
+      seenTransfers.set(network, seen);
+      if (duplicate) continue;
+      result.push({refundId:row.id,returnId:returned.id,observationId:observation.id,
+        transaction:returned.transaction,amount:row.proposal.amount,currency:cloneCurrency(row.proposal.currency),
+        closedAt:observation.verification.closedAt,status:observation.status});
+    }
+  }
+  return result;
+}
+function cloneCurrency(currency) { return structuredClone(currencyOf(currency)); }
 export function receiptSummary(receipt, data, asOf = today()) {
   dateValue(asOf, 'report date'); const currency = receipt.currency;
   let allocated = 0n;
   for (const row of data.allocations) if (row.receiptId === receipt.id && allocationActive(row, asOf)) allocated += minor(row.amount, currency);
-  const effective = receipt.receivedDate <= asOf && (!receipt.voidDate || receipt.voidDate > asOf);
-  const amount = minor(receipt.amount, currency), available = effective ? amount - allocated : 0n;
-  need(available >= 0n, 'RECEIPT_ALLOCATION_INVARIANT', 'Saved allocations exceed this receipt.', 409);
-  return {...structuredClone(receipt), allocated: money(allocated, currency), available: money(available, currency), asOf};
+  const effective = (receipt.accountingDate ?? receipt.receivedDate) <= asOf && (!receipt.voidDate || receipt.voidDate > asOf);
+  const amount = minor(receipt.amount, currency), {refunded, reserved} = receiptRefundAmounts(receipt, data, asOf);
+  const available = effective ? amount - allocated - refunded - reserved : 0n;
+  need(available >= 0n, 'RECEIPT_ALLOCATION_INVARIANT', 'Saved allocations, refunds or refund reservations exceed this receipt.', 409);
+  const unreconciledRefunds = receiptUnreconciledRefunds(receipt, data, asOf);
+  const unreconciledAmount = unreconciledRefunds.reduce((sum, row) => sum + minor(row.amount, currency), 0n);
+  return {...structuredClone(receipt), accountingDate: receipt.accountingDate ?? receipt.receivedDate, allocated: money(allocated, currency), refunded: money(refunded, currency),
+    reserved: money(reserved, currency), netAmount: money(effective ? amount - refunded : 0n, currency),
+    available: money(unreconciledRefunds.length ? 0n : available, currency),
+    availableBeforeUnreconciledRefunds: money(available, currency), unreconciledRefunds,
+    unreconciledRefundAmount: money(unreconciledAmount, currency),
+    refundDeficit: money(unreconciledAmount > available ? unreconciledAmount - available : 0n, currency), asOf};
+}
+/** Every boundary matters: a present refund must preserve already saved future allocations. */
+export function receiptBalanceDates(receipt, data, from = receipt.receivedDate) {
+  dateValue(from, 'balance date');
+  const dates = new Set([from, receipt.receivedDate, receipt.accountingDate ?? receipt.receivedDate]);
+  if (receipt.voidDate) dates.add(receipt.voidDate);
+  for (const row of data.allocations) if (row.receiptId === receipt.id) {
+    dates.add(row.allocatedDate); if (row.releasedDate) dates.add(row.releasedDate);
+  }
+  for (const row of data.refunds ?? []) if (row.proposal?.receiptId === receipt.id) {
+    dates.add(row.proposal.effectiveDate);
+    for (const key of ['refundDate', 'accountingDate', 'cancelledDate', 'reversedDate']) if (row[key]) dates.add(row[key]);
+    for (const returned of row.returns ?? []) for (const observation of returned.observations ?? [])
+      if (observation.verification?.status === 'VERIFIED' && observation.verification.closedAt)
+        dates.add(observation.verification.closedAt.slice(0, 10));
+  }
+  return [...dates].filter(date => date >= from).sort();
+}
+export function assertReceiptConservation(receipt, data) {
+  for (const asOf of receiptBalanceDates(receipt, data)) {
+    const summary = receiptSummary(receipt, data, asOf);
+    const capacity = (receipt.accountingDate ?? receipt.receivedDate) <= asOf && (!receipt.voidDate || receipt.voidDate > asOf)
+      ? minor(receipt.amount, receipt.currency) : 0n;
+    need(minor(summary.allocated, receipt.currency) + minor(summary.refunded, receipt.currency) +
+      minor(summary.reserved, receipt.currency) <= capacity, 'RECEIPT_FUNDS_ALREADY_COMMITTED',
+    'This receipt already funds an allocation or refund during part of the selected date range.', 409);
+  }
+}
+export function receiptRefundCapacity(receipt, data, asOf = today()) {
+  dateValue(asOf, 'report date');
+  let lowest = null;
+  for (const date of receiptBalanceDates(receipt, data, asOf)) {
+    const available = minor(receiptSummary(receipt, data, date).available, receipt.currency);
+    if (lowest === null || available < lowest) lowest = available;
+  }
+  return money(lowest ?? 0n, receipt.currency);
 }
 export function agingReport(data, asOf = today(), customerId = null) {
   dateValue(asOf, 'report date'); const groups = new Map();
   const group = currency => {
     const key = currencyKey(currency);
     if (!groups.has(key)) groups.set(key, {currency, current: 0n, days1to30: 0n, days31to60: 0n,
-      days61to90: 0n, days91plus: 0n, amountDue: 0n, creditBalance: 0n, unappliedPayments: 0n, invoices: 0});
+      days61to90: 0n, days91plus: 0n, amountDue: 0n, creditBalance: 0n, unappliedPayments: 0n, reservedRefunds: 0n, refundedPayments: 0n, invoices: 0});
     return groups.get(key);
   };
   const invoices = data.invoices.filter(row => !customerId || row.draft.customerId === customerId)
@@ -208,7 +346,10 @@ export function agingReport(data, asOf = today(), customerId = null) {
     result.invoices++;
   }
   for (const receipt of data.receipts) if (!customerId || receipt.customerId === customerId) {
-    const summary = receiptSummary(receipt, data, asOf); group(receipt.currency).unappliedPayments += minor(summary.available, receipt.currency);
+    const summary = receiptSummary(receipt, data, asOf), result = group(receipt.currency);
+    result.unappliedPayments += minor(summary.available, receipt.currency);
+    result.reservedRefunds += minor(summary.reserved, receipt.currency);
+    result.refundedPayments += minor(summary.refunded, receipt.currency);
   }
   return {asOf, currencies: [...groups.values()].map(value => Object.fromEntries(Object.entries(value)
     .map(([key, item]) => [key, typeof item === 'bigint' ? money(item, value.currency) : item]))),
@@ -265,27 +406,63 @@ export function customerExport(data, customer, asOf = today()) {
     currencies: aging.currencies, invoices: visibleInvoices,
     credits: data.credits.filter(row => invoiceIds.has(row.invoiceId) && row.document.creditDate <= asOf).map(row => ({id: row.id, invoiceId: row.invoiceId,
       number: row.number, creditDate: row.document.creditDate, currency: row.document.currency, total: row.document.totals.total, reason: row.document.reason})),
-    receipts: data.receipts.filter(row => row.customerId === customer.id && row.receivedDate <= asOf).map(row => {
+    receipts: data.receipts.filter(row => row.customerId === customer.id && (row.accountingDate ?? row.receivedDate) <= asOf).map(row => {
       const result = receiptSummary(row, data, asOf);
-      return Object.fromEntries(['id', 'reference', 'method', 'receivedDate', 'currency', 'amount', 'allocated', 'available', 'voidDate'].map(key => [key, result[key] ?? null]));
+      return Object.fromEntries(['id', 'reference', 'method', 'receivedDate', 'accountingDate', 'replacesReceiptId', 'replacedByReceiptId', 'replacementReceiptIds', 'replacementRole', 'currency', 'amount', 'allocated',
+        'refunded', 'reserved', 'netAmount', 'available', 'voidDate', 'unreconciledRefunds',
+        'unreconciledRefundAmount', 'refundDeficit'].map(key => [key, result[key] ?? null]));
     }),
     allocations: data.allocations.filter(row => invoiceIds.has(row.invoiceId) && row.allocatedDate <= asOf).map(row =>
-      Object.fromEntries(['id', 'receiptId', 'invoiceId', 'amount', 'currency', 'allocatedDate', 'releasedDate'].map(key => [key, row[key] ?? null])))};
+      Object.fromEntries(['id', 'receiptId', 'invoiceId', 'amount', 'currency', 'allocatedDate', 'releasedDate',
+        'replacesAllocationId', 'dispositionId'].map(key => [key, row[key] ?? null]))),
+    refunds: (data.refunds ?? []).filter(row => row.proposal.customerId === customer.id &&
+      row.proposal.effectiveDate <= asOf && row.proposal.accountingScope === 'COMMERCIAL')
+      .map(row => refundAccountSummary(row, asOf)),
+    creditDispositions: (data.creditDispositions ?? []).filter(row => row.proposal.customerId === customer.id &&
+      row.proposal.effectiveDate <= asOf).map(row => ({id:row.id,receiptId:row.proposal.receiptId,
+        receiptReference:row.proposal.receipt.reference,currency:row.proposal.currency,effectiveDate:row.proposal.effectiveDate,
+        released:row.proposal.released,allocated:row.proposal.allocated,
+        allocationIds:row.allocationIds,invoiceIds:row.invoiceIds,customerNote:row.proposal.customerNote}))};
   const invoiceCsv = csv([['invoice', 'status', 'issue_date', 'due_date', 'currency', 'total', 'paid', 'credited', 'amount_due', 'credit_balance', 'overdue_days'],
     ...value.invoices.map(row => [row.number ?? row.id, row.paymentStatus, row.issueDate, row.dueDate, row.currency.code, row.total, row.paid, row.credited,
       row.amountDue, row.creditBalance, row.overdueDays])]);
+  const receiptsCsv = csv([['receipt_id','reference','method','received_date','accounting_date','replaces_receipt_id','replaced_by_receipt_id','replacement_receipt_ids','replacement_role','currency','gross_amount','allocated','refunded','reserved','net_amount','available','void_date','unreconciled_refund_amount','refund_deficit'],
+    ...value.receipts.map(row=>[row.id,row.reference,row.method,row.receivedDate,row.accountingDate,row.replacesReceiptId,row.replacedByReceiptId,(row.replacementReceiptIds??[]).join(';'),row.replacementRole,row.currency.code,row.amount,row.allocated,row.refunded,row.reserved,row.netAmount,row.available,row.voidDate,row.unreconciledRefundAmount,row.refundDeficit])]);
+  const allocationsCsv = csv([['allocation_id','receipt_id','invoice_id','currency','amount','allocated_date','released_date','replaces_allocation_id','disposition_id'],
+    ...value.allocations.map(row=>[row.id,row.receiptId,row.invoiceId,row.currency.code,row.amount,row.allocatedDate,row.releasedDate,row.replacesAllocationId,row.dispositionId])]);
+  const refundsCsv = csv([['refund_id','receipt_id','reference','currency','amount','status','effective_date','refund_date','accounting_date','replaces_refund_id','cancelled_date','reversed_date','reserved','refunded','transaction'],
+    ...value.refunds.map(row=>[row.id,row.receiptId,row.reference,row.currency.code,row.amount,row.effectiveStatus,row.effectiveDate,row.refundDate,row.accountingDate,row.replacesRefundId,row.cancelledDate,row.reversedDate,row.reserved,row.refunded,row.transaction])]);
+  const dispositionsCsv = csv([['disposition_id','receipt_id','currency','effective_date','released','allocated','allocation_ids','invoice_ids'],
+    ...value.creditDispositions.map(row=>[row.id,row.receiptId,row.currency.code,row.effectiveDate,row.released,row.allocated,row.allocationIds.join(' '),row.invoiceIds.join(' ')])]);
   const e = escape;
   const html = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Account statement — ' +
     e(customer.name) + '</title><style>' + STYLE + '</style></head><body><main><header><div><h1>Account statement</h1><p>As of ' + e(asOf) +
     '</p></div><div><h2>' + e(customer.name) + '</h2><p>' + e(customer.reference) + '</p></div></header>' +
     value.currencies.map(row => '<section><h2>' + e(row.currency.code) + '</h2><p>Amount due ' + e(row.amountDue) +
-      ' · Credit balance ' + e(row.creditBalance) + ' · Unapplied payments ' + e(row.unappliedPayments) + '</p></section>').join('') +
+      ' · Credit balance ' + e(row.creditBalance) + ' · Unapplied payments ' + e(row.unappliedPayments) +
+      '</p><p>Refunds reserved ' + e(row.reservedRefunds) + ' · Payments refunded ' + e(row.refundedPayments) + '</p></section>').join('') +
     '<table><thead><tr><th>Invoice</th><th>Due</th><th>Currency</th><th class="amount">Amount due</th><th class="amount">Credit balance</th><th>Status</th></tr></thead><tbody>' +
     value.invoices.map(row => '<tr><td>' + e(row.number ?? 'Draft') + '</td><td>' + e(row.dueDate) + '</td><td>' + e(row.currency.code) +
       '</td><td class="amount">' + e(row.amountDue) + '</td><td class="amount">' + e(row.creditBalance) + '</td><td>' + e(row.paymentStatus) + '</td></tr>').join('') +
-    '</tbody></table></main></body></html>\n';
+    '</tbody></table><h2>Customer payments</h2><table><thead><tr><th>Reference</th><th>Received</th><th>Accounting date</th><th>Currency</th><th class="amount">Gross</th><th class="amount">Refunded</th><th class="amount">Reserved</th><th class="amount">Available</th></tr></thead><tbody>' +
+    value.receipts.map(row=>'<tr><td>'+e(row.reference)+'</td><td>'+e(row.receivedDate)+'</td><td>'+e(row.accountingDate)+'</td><td>'+e(row.currency.code)+
+      '</td><td class="amount">'+e(row.amount)+'</td><td class="amount">'+e(row.refunded)+'</td><td class="amount">'+e(row.reserved)+'</td><td class="amount">'+e(row.available)+'</td></tr>').join('')+
+    '</tbody></table>'+
+    (value.refunds.length?'<h2>Refunds and corrections</h2><table><thead><tr><th>Reference</th><th>Funds date</th><th>Actual payout date</th><th>Accounting date</th><th>Currency</th><th class="amount">Amount</th><th>Status</th></tr></thead><tbody>'+
+      value.refunds.map(row=>'<tr><td>'+e(row.reference??row.id)+'</td><td>'+e(row.effectiveDate)+'</td><td>'+e(row.refundDate??'')+
+        '</td><td>'+e(row.accountingDate??'')+'</td><td>'+e(row.currency.code)+'</td><td class="amount">'+e(row.amount)+'</td><td>'+e(row.effectiveStatus)+'</td></tr>').join('')+'</tbody></table>':'')+
+    (value.creditDispositions.length?'<h2>Credit dispositions</h2><table><thead><tr><th>Original payment</th><th>Effective date</th><th>Currency</th><th class="amount">Released</th><th class="amount">Applied</th></tr></thead><tbody>'+
+      value.creditDispositions.map(row=>'<tr><td>'+e(row.receiptReference)+'</td><td>'+e(row.effectiveDate)+'</td><td>'+e(row.currency.code)+
+        '</td><td class="amount">'+e(row.released)+'</td><td class="amount">'+e(row.allocated)+'</td></tr>').join('')+'</tbody></table>':'')+
+    (value.receipts.some(row=>row.unreconciledRefunds.length)?'<h2>Verified payouts awaiting account reconciliation</h2><table><thead><tr><th>Transaction</th><th>Ledger date</th><th>Currency</th><th class="amount">Amount</th></tr></thead><tbody>'+
+      value.receipts.flatMap(row=>row.unreconciledRefunds).map(row=>'<tr><td>'+e(row.transaction)+'</td><td>'+e(row.closedAt.slice(0,10))+'</td><td>'+e(row.currency.code)+'</td><td class="amount">'+e(row.amount)+'</td></tr>').join('')+'</tbody></table>':'')+
+    '</main></body></html>\n';
   return {value, files: [{name: 'account.json', type: 'application/json', bytes: Buffer.from(json(value))},
     {name: 'invoices.csv', type: 'text/csv; charset=utf-8', bytes: Buffer.from(invoiceCsv)},
+    {name: 'receipts.csv', type: 'text/csv; charset=utf-8', bytes: Buffer.from(receiptsCsv)},
+    {name: 'allocations.csv', type: 'text/csv; charset=utf-8', bytes: Buffer.from(allocationsCsv)},
+    {name: 'refunds.csv', type: 'text/csv; charset=utf-8', bytes: Buffer.from(refundsCsv)},
+    {name: 'credit-dispositions.csv', type: 'text/csv; charset=utf-8', bytes: Buffer.from(dispositionsCsv)},
     {name: 'account.html', type: 'text/html; charset=utf-8', bytes: Buffer.from(html)}]};
 }
 

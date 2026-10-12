@@ -45,20 +45,33 @@ export interface StatementArgumentsMap {
 export type StatementMutationKind = keyof StatementInputMap;
 export interface StatementSelection {
   customerId: string; runId: string; usageId?: string | null; replacesId?: string | null;
-  from?: string; until?: string;
+  from?: string; until?: string; usageOpeningId?: string | null;
 }
-export interface NormalizedStatementSelection extends StatementSelection { usageId: string | null; replacesId: string | null; }
+export interface NormalizedStatementSelection extends StatementSelection { usageId: string | null; replacesId: string | null; usageOpeningId?: string; }
 export interface StatementIdentity { requestId: string; actor: string; }
 export interface StatementRetentionArguments extends NormalizedStatementSelection, StatementRevision {
   requestId: string; previewSha256: string;
 }
 export interface StatementUsageImport {
   id: string; name: string; sha256: string; bytes: number; createdAt: string; sourceCreatedAt: string;
-  sourceRevision: number; sourceSchema: string; orderCount: number; actor: string;
+  sourceRevision: number | string; sourceSchema: string; orderCount: number; actor: string;
 }
+export interface StatementServicePassIdentity {
+  orderRef: string; eventId: string; routeId: string; method: string; network: string;
+  amountAtomic: string; assetDigest: string; recipientDigest: string | null; entitledAt: string;
+  planId: string; planRevision: string; planSha256: string; manifestSha256: string; unitsPurchased: string;
+}
+export type StatementServiceCapture = StatementUsageImport & {
+  schema: 'stellar-forge.merchant-service-capture.v1';
+} & (
+  | { periodEligible: true; periodIdentity: StatementServicePassIdentity; periodIdentitySha256: string;
+      pass: StatementServicePassIdentity & StatementServiceBalance & {planLabel: string; callCount: number}; unavailableCode: null; }
+  | { periodEligible: false; periodIdentity: null; periodIdentitySha256: null; pass: null;
+      unavailableCode: 'COMPLETE_NATIVE_PERIOD_SOURCE_REQUIRED' | 'SERVICE_PERIOD_ENTITLEMENT_REQUIRED'; }
+);
 export interface StatementUsageSource {
   source: string; sha256: string; bytes: number; sourceSchema: string;
-  sourceCreatedAt: string; sourceRevision: number; orderCount: number;
+  sourceCreatedAt: string; sourceRevision: number | string; orderCount: number;
 }
 export interface StatementBinding {
   id: string; orderRef: string; orderReferenceDigest: string; customerId: string; label: string;
@@ -87,32 +100,92 @@ export type StatementStatusResult<V extends StatementStatusView = StatementStatu
 export interface StatementBindingsQuery extends StatementPageArguments { customerId?: string; search?: string; }
 export type RetainedStatementStatus = 'RETAINED' | 'SUPERSEDED' | 'WITHDRAWN';
 export interface StatementListQuery extends StatementPageArguments { customerId?: string; status?: RetainedStatementStatus; }
-export type StatementArtifactName = 'statement.json' | 'statement.csv' | 'usage.csv' | 'statement.html' | 'manifest.json';
+export type StatementBaseArtifactName = 'statement.json' | 'statement.csv' | 'usage.csv' | 'statement.html' | 'manifest.json';
+export type StatementPeriodArtifactName = 'period.csv' | 'period-summary.csv' | 'usage-opening.json' | 'usage-closing.json';
+export type StatementArtifactName = StatementBaseArtifactName | StatementPeriodArtifactName;
 export interface StatementFileIdentity { sha256: string; bytes: number; }
 export interface StatementFileMetadata extends StatementFileIdentity { name: string; type?: string; }
 export interface RetainedStatement {
   id: string; number: string; requestId: string; intentSha256: string; previewSha256: string;
   customerId: string; customerReference: string; customerName: string; runId: string; usageId: string | null;
   createdAt: string; actor: string; status: RetainedStatementStatus; replacesId: string | null; supersededBy: string | null;
-  files: Record<StatementArtifactName, StatementFileIdentity>;
+  files: Record<StatementBaseArtifactName, StatementFileIdentity> & Partial<Record<StatementPeriodArtifactName, StatementFileIdentity>>;
+  usageOpeningId?: string; servicePeriod?: { from: string; until: string; orderRef: string };
   orderCount: number; excludedOrderCount: number; from: string | null; until: string | null; historyCount: number;
 }
 export type StatementHistory =
   | { at: string; actor: string; action: 'retained' }
   | { at: string; actor: string; action: 'superseded'; statementId: string }
   | { at: string; actor: string; action: 'withdrawn'; reason: string };
+export interface StatementUsageSourceIdentity {
+  id: string | null; sha256: string | null; sourceSchema: string; createdAt: string; revision: number | string;
+}
+export interface StatementServiceBalance {
+  unitsPurchased: string; unitsUsed: string; unitsReserved: string; unitsRemaining: string;
+}
+export type StatementServiceCallStatus = 'IN_FLIGHT' | 'RECOVERY_REQUIRED' | 'COMPLETED' | 'CONSUMED' | 'RELEASED';
+export interface StatementNativeServiceCall {
+  requestId: string; routeId: string; method: string; path: string; requestSha256: string;
+  units: string; consumedUnits: string; reservedUnits: string;
+  status: StatementServiceCallStatus; storedStatus: StatementServiceCallStatus; revision: number;
+  startedAt: string; deadlineAt: string; updatedAt: string; errorCode: string | null;
+  result: { status: number; contentType: string; sha256: string; bytes: number } | null;
+}
+export interface StatementServicePeriodCall extends NativeRecord {
+  requestId: string; routeId: string; method: string; path: string; units: string;
+  kind: 'NEW_CALL' | 'RESULT_RECOVERED' | 'DURABLE_CHANGE' | 'CARRIED_RESERVATION';
+  opening: StatementNativeServiceCall | null; closing: StatementNativeServiceCall;
+  admittedUnits: string; consumedUnits: string; releasedUnits: string;
+  reservedDeltaUnits: string; availableDeltaUnits: string; resultRecovered: boolean;
+}
+export interface StatementServicePeriodRoute extends NativeRecord {
+  routeId: string; method: string; path: string; routeUnits: string;
+  openingCalls: number; closingCalls: number; newCalls: number; changedCalls: number; resultRecoveries: number;
+  openingUsedUnits: string; closingUsedUnits: string; openingReservedUnits: string; closingReservedUnits: string;
+  admittedUnits: string; consumedUnits: string; releasedUnits: string;
+}
+export interface StatementServicePeriodTotals {
+  openingCalls: number; closingCalls: number; newCalls: number; changedCalls: number; unchangedCalls: number;
+  carriedReservations: number; resultRecoveries: number;
+  admittedUnits: string; consumedUnits: string; releasedUnits: string; reservedDeltaUnits: string; availableDeltaUnits: string;
+}
+export interface StatementServicePeriod {
+  schema: 'stellar-forge.merchant-service-period.v1'; orderRef: string; eventId: string;
+  planId: string; planSha256: string; manifestSha256: string; planLabel: string;
+  from: string; until: string; timeBasis: 'COMPLETE_NATIVE_SNAPSHOT_COMPARISON';
+  openingSource: StatementUsageSourceIdentity; closingSource: StatementUsageSourceIdentity;
+  opening: StatementServiceBalance; closing: StatementServiceBalance; totals: StatementServicePeriodTotals;
+  routes: StatementServicePeriodRoute[]; calls: StatementServicePeriodCall[];
+}
+export interface StatementServicePeriodSummary extends Omit<StatementServicePeriod, 'routes' | 'calls'> {
+  counts: { routes: number; calls: number };
+}
+export interface StatementUsagePeriodSelection { usageOpeningId: string; usageId: string; }
+export interface StatementUsagePeriodQuery extends StatementUsagePeriodSelection, StatementPageArguments {
+  view?: 'summary' | 'routes' | 'calls';
+}
+export interface StatementUsagePeriodReport { period: StatementServicePeriod; revision: number; }
+export interface StatementUsagePeriodFile extends StatementUsagePeriodSelection, StatementFileIdentity {
+  kind: 'customer-usage-period-preview'; file: 'usage-period.json';
+}
+export interface StatementUsagePeriodSummary {
+  period: StatementServicePeriodSummary; periodSha256: string; revision: number;
+  page?: StatementPage<StatementServicePeriodRoute | StatementServicePeriodCall, 'routes' | 'calls'>;
+  reportFile: StatementUsagePeriodFile;
+}
 export interface StatementDraft extends NativeRecord {
   schema: 'stellar-forge.merchant-customer-statement.v1';
   customer: Pick<StatementCustomer, 'id' | 'reference' | 'name' | 'email' | 'address' | 'version'>;
   source: {
     runId: string; reportSha256: string; inputManifestSha256: string | null; reportCreatedAt: string;
     originalPeriod: NativeRecord | null;
-    usage: { id: string | null; sha256: string | null; sourceSchema: string; createdAt: string; revision: number } | null;
+    usage: StatementUsageSourceIdentity | null; usageOpening?: StatementUsageSourceIdentity;
   };
   selection: {
     from: string | null; until: string | null; timeBasis: 'NATIVE_SETTLEMENT_CAPTURED_AT';
-    usageBasis: 'CUMULATIVE_AS_OF_SERVICE_SNAPSHOT' | null;
+    usageBasis: 'CUMULATIVE_AS_OF_SERVICE_SNAPSHOT' | 'COMPLETE_NATIVE_SNAPSHOT_COMPARISON' | null;
   };
+  servicePeriod?: StatementServicePeriod;
   items: NativeRecord[]; excluded: NativeRecord[];
   totals: {
     orders: number; excludedOrders: number; serviceOrders: number; requiringReconciliation: number;
@@ -124,11 +197,11 @@ export interface AccountingStatementPreview {
 }
 export interface StatementDocumentSummary extends NativeRecord {
   schema: StatementDraft['schema']; customer: StatementDraft['customer']; source: StatementDraft['source'];
-  selection: StatementDraft['selection'];
+  selection: StatementDraft['selection']; servicePeriod?: StatementServicePeriodSummary;
   totals: Omit<StatementDraft['totals'], 'byAsset'> & { assetCount: number };
   counts: { items: number; excluded: number; assets: number };
 }
-export type StatementDocumentView = 'summary' | 'items' | 'excluded' | 'assets' | 'calls' | 'adjustments';
+export type StatementDocumentView = 'summary' | 'items' | 'excluded' | 'assets' | 'calls' | 'adjustments' | 'period-routes' | 'period-calls';
 export interface StatementPreviewQuery extends StatementSelection, StatementPageArguments { view?: StatementDocumentView; orderRef?: string; }
 export interface StatementDetailQuery extends StatementPageArguments {
   statementId: string; view?: StatementDocumentView | 'history'; orderRef?: string;
@@ -168,6 +241,7 @@ export interface OriginalAccountingFileSelection {
   jobId?: string; planId?: string; responseId?: string; nativePost?: boolean; attemptId?: string; file?: string;
 }
 export type StatementFileSelection =
+  | (StatementUsagePeriodSelection & { kind: 'customer-usage-period-preview'; file: 'usage-period.json' })
   | (StatementSelection & { kind: 'customer-statement-preview'; file: 'preview.json' })
   | { kind: 'customer-statement'; statementId: string; file: StatementArtifactName | 'status.json' }
   | OriginalAccountingFileSelection;
@@ -188,12 +262,16 @@ export interface AccountingStatementClient {
   lookup(requestId: string, options?: StatementCallOptions): Promise<StatementLookupResult>;
   allCustomers(options?: StatementCallOptions): Promise<StatementInventory<StatementCustomer>>;
   allUsage(options?: StatementCallOptions): Promise<StatementInventory<StatementUsageImport>>;
+  usageCaptures(args?: StatementPageArguments, options?: StatementCallOptions): Promise<{revision: number; page: StatementPage<StatementServiceCapture, 'usage-captures'>}>;
+  allUsageCaptures(options?: StatementCallOptions): Promise<StatementInventory<StatementServiceCapture>>;
   allBindings(args?: StatementBindingsQuery, options?: StatementCallOptions): Promise<StatementInventory<StatementBinding>>;
   allStatements(args?: StatementListQuery, options?: StatementCallOptions): Promise<StatementInventory<RetainedStatement>>;
   saveCustomer(value: CustomerSaveInput, options?: StatementCallOptions): Promise<CustomerSaveResult>;
   assign(value: CustomerAssignmentInput, options?: StatementCallOptions): Promise<CustomerAssignmentResult>;
   usageSource(source: string, options?: StatementCallOptions): Promise<StatementUsageSource>;
   importUsage(value: CustomerUsageImportArguments, options?: StatementCallOptions): Promise<CustomerUsageImportResult>;
+  usagePeriodSummary(args: StatementUsagePeriodQuery, options?: StatementCallOptions): Promise<StatementUsagePeriodSummary>;
+  usagePeriod(args: StatementUsagePeriodSelection, options?: StatementCallOptions): Promise<StatementUsagePeriodReport>;
   previewSummary(args: StatementPreviewQuery, options?: StatementCallOptions): Promise<StatementPreviewSummary>;
   preview(args: StatementSelection, options?: StatementCallOptions): Promise<AccountingStatementPreview>;
   retain(preview: AccountingStatementPreview, identity: StatementIdentity, options?: StatementCallOptions): Promise<StatementRetentionResult>;
@@ -212,6 +290,7 @@ export interface AccountingStatementClient {
   closeWorkspace(options?: StatementCallOptions): Promise<NativeRecord | StatementReaderDrain>;
 }
 export interface ConnectedAccountingStatementClient extends AccountingStatementClient { readonly endpoint: string; }
+export function accountingStatementSelection(selection: StatementSelection): NormalizedStatementSelection;
 export function accountingStatementPreview<T extends AccountingStatementPreview>(preview: T): T;
 export function accountingStatementPreview(preview: unknown): AccountingStatementPreview;
 export function accountingStatementRetentionArguments(preview: AccountingStatementPreview, identity: StatementIdentity): StatementRetentionArguments;

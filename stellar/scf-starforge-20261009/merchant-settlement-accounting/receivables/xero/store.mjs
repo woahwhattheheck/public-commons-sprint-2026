@@ -326,17 +326,38 @@ export class XeroReceivablesWorkspace {
         preparedElsewhere:latest&&latest.id!==selection.parentId?latest.id:null,
         requiresReturnedCorrection:resolution&&['MISMATCH','CONFLICT'].includes(resolution.status)});
     }
-    const accounts=[],additionalFiles=[];
+    const accounts=[],additionalFiles=[],cashFiles=[],cashNames=new Set();let cashBytes=0;
     for(const kind of ['invoice','credit'])additionalFiles.push(await this._retainedFile(profile,kind+'-template.csv'));
     for(const customerId of customerIds) {
       const account=customerExport(data,this.receivables._customer(customerId),selection.asOf);
       accounts.push(account.value);
       for(const item of account.files)additionalFiles.push({...item,name:'customer-'+customerId+'-'+item.name,role:'original-customer-account'});
+      // These original private readers already share this accounting lease. Keep the
+      // full customer advice bytes and original names inside the selected handover.
+      const originals=[...await this.receivables.refundsWorkspace.customerFiles(customerId,selection.asOf),
+        ...await this.receivables.bankReceiptsWorkspace.customerFiles(customerId,selection.asOf)];
+      for(const item of originals) {
+        const sourceSha256=sha(item.bytes),suffix=/\.(json|html|csv|txt|bin)$/i.exec(item.name)?.[1].toLowerCase()??'dat',
+          name='cash-'+sha(json({customerId,name:item.name,sha256:sourceSha256}))+'.'+suffix;
+        if(cashNames.has(name))continue;
+        cashNames.add(name);cashBytes+=item.bytes.length;
+        need(cashBytes<=XERO_PACKAGE_BYTES,'XERO_PACKAGE_LIMIT','The customer cash advice exceeds 128 MiB. Select fewer documents.');
+        additionalFiles.push({...item,name,role:'original-customer-payment'});
+        cashFiles.push({customerId,originalName:item.name,name,type:item.type,bytes:item.bytes.length,sha256:sourceSha256});
+      }
     }
-    const receiptIds=new Set(data.receipts.filter(row=>customerIds.has(row.customerId)&&row.receivedDate<=selection.asOf).map(row=>row.id));
+    if(cashFiles.length)additionalFiles.push(packetFile('customer-cash-files.json',json({
+      schema:'stellar-forge.merchant-receivables-xero-cash-files.v1',asOf:selection.asOf,files:cashFiles}),
+      'original-customer-payment-index'));
+    const receiptIds=new Set(data.receipts.filter(row=>customerIds.has(row.customerId)&&
+      (row.accountingDate??row.receivedDate)<=selection.asOf).map(row=>row.id));
     const snapshot={schema:'stellar-forge.merchant-receivables-xero-account-snapshot.v1',asOf:selection.asOf,accounts,
       receipts:clone(data.receipts.filter(row=>receiptIds.has(row.id))),
-      allocations:clone(data.allocations.filter(row=>receiptIds.has(row.receiptId)&&row.allocatedDate<=selection.asOf))};
+      allocations:clone(data.allocations.filter(row=>receiptIds.has(row.receiptId)&&row.allocatedDate<=selection.asOf)),
+      refunds:clone((data.refunds??[]).filter(row=>receiptIds.has(row.proposal.receiptId)&&
+        row.proposal.accountingScope==='COMMERCIAL'&&row.proposal.effectiveDate<=selection.asOf)),
+      creditDispositions:clone((data.creditDispositions??[]).filter(row=>receiptIds.has(row.proposal.receiptId)&&
+        row.proposal.effectiveDate<=selection.asOf))};
     return compileXeroPackage(profile.profile,originals,snapshot,selection,additionalFiles);
   }
   async preview(value) {return this.workspace.serial(async()=>({...((await this._build(value)).review),revision:this.workspace.state.revision}));}

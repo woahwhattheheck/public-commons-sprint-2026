@@ -3,6 +3,7 @@ import {readFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {openAccountingWorkspace} from '../workspace/store.mjs';
+import {accountingWorkspaceBinding, assertAccountingWorkspaceBinding} from '../workspace/binding.mjs';
 import {ReceivablesWorkspace, RECEIVABLE_REQUEST_BYTES} from './store.mjs';
 import {renderCustomerTar} from './core.mjs';
 import {PaymentPlanWorkspace} from './payment-plans/store.mjs';
@@ -125,15 +126,110 @@ export async function receivablesAsset(path, {apiPath = '/api/receivables', uiPa
 }
 
 /** Original-style pure route adapter: the parent keeps its request/auth/lifecycle boundary. */
-export async function handleReceivablesRequest(receivables, {method, path, query = {}, value, apiPath = '/api/receivables'}) {
+export async function handleReceivablesRequest(receivables, {method, path, query = {}, value, apiPath = '/api/receivables', expectedWorkspaceId, expectedSourcesSha256}) {
   apiPath = basePath(apiPath, '/api/receivables');
   if (path !== apiPath && !path.startsWith(apiPath + '/')) return null;
+  const workspace = receivables.workspace;
+  if (expectedWorkspaceId !== undefined || expectedSourcesSha256 !== undefined)
+    assertAccountingWorkspaceBinding(workspace.directory, workspace.state, {expectedWorkspaceId, expectedSourcesSha256});
   const parts = path.slice(apiPath.length).split('/').filter(Boolean).map(identifier);
   const route = parts.join('/');
   const search = query instanceof URLSearchParams ? query : new URLSearchParams(Object.entries(query).filter(([, value]) => value !== undefined && value !== null));
+  const cashComparisonQuery = () => Object.fromEntries(['leftId','rightId','leftEditionId','rightEditionId'].map(key => [key,search.get(key)||undefined]));
+  const collectionsQuery = () => Object.fromEntries(['asOf','customerId','owner','status','search'].map(key => [key, search.get(key) || undefined]));
   let result;
   if (method === 'GET') {
-    if (route === '' || route === 'state') result = await receivables.state({asOf: search.get('asOf') || undefined});
+    if (route === 'identity') {
+      const {schema, workspaceId, sourcesSha256} = accountingWorkspaceBinding(workspace.directory, workspace.state);
+      result = {schema, workspaceId, sourcesSha256};
+    }
+    else if (route === '' || route === 'state') result = await receivables.state({asOf: search.get('asOf') || undefined});
+    else if (route === 'credit-control') result = await receivables.creditControl({
+      customerId:search.get('customerId')||undefined,search:search.get('search')||undefined,
+    });
+    else if (parts[0] === 'credit-control' && parts[1] === 'policies' && parts.length === 3)
+      result = await receivables.creditPolicy(parts[2]);
+    else if (parts[0] === 'credit-control' && parts[1] === 'decisions' && parts.length === 3)
+      result = await receivables.creditDecision(parts[2]);
+    else if (parts[0] === 'credit-control' && parts[1] === 'decisions' && parts[3] === 'files' && parts.length === 5) {
+      const selected=await receivables.creditDecisionFile(parts[2],parts[4]);
+      return {file:selected,type:selected.type};
+    }
+    else if (parts[0] === 'credit-control' && parts[1] === 'operations' && parts.length === 3)
+      result = await receivables.creditControlOperation(parts[2]);
+    else if (route === 'cash-plans') result = await receivables.cashPlans({status:search.get('status')||undefined,search:search.get('search')||undefined});
+    else if (route === 'cash-plans/compare') result = await receivables.compareCashPlans(cashComparisonQuery());
+    else if (route === 'cash-plans/compare/export') {
+      const selected=await receivables.cashPlanComparisonFile(search.get('name'),cashComparisonQuery());
+      return {file:selected,type:selected.type};
+    }
+    else if (parts[0] === 'cash-plans' && parts[1] === 'operations' && parts.length === 3)
+      result = await receivables.cashPlanOperation(parts[2]);
+    else if (parts[0] === 'cash-plans' && parts.length === 2)
+      result = await receivables.cashPlan(parts[1],{editionId:search.get('editionId')||undefined});
+    else if (parts[0] === 'cash-plans' && parts[2] === 'files' && parts.length === 4) {
+      const selected=await receivables.cashPlanFile(parts[1],parts[3],{editionId:search.get('editionId')||undefined});
+      return {file:selected,type:selected.type};
+    }
+    else if (route === 'collections') result = await receivables.collectionCases(collectionsQuery());
+    else if (route === 'collections/export') {
+      const selected = await receivables.collectionsFile(search.get('name'), collectionsQuery());
+      return {file: selected, type: selected.type};
+    }
+    else if (parts[0] === 'collections' && parts[1] === 'operations' && parts.length === 3)
+      result = await receivables.collectionOperation(parts[2]);
+    else if (parts[0] === 'collections' && parts.length === 2)
+      result = await receivables.collectionCase(parts[1], {asOf: search.get('asOf') || undefined});
+    else if (parts[0] === 'collections' && parts[2] === 'reminder' && parts.length === 3)
+      result = await receivables.collectionReminder(parts[1], {asOf: search.get('asOf') || undefined});
+    else if (parts[0] === 'collections' && parts[2] === 'files' && parts.length === 4) {
+      const selected = await receivables.collectionFile(parts[1], parts[3], {asOf: search.get('asOf') || undefined});
+      return {file: selected, type: selected.type};
+    }
+    else if (route === 'bank-accounts') result = await receivables.bankAccounts({
+      status: search.get('status') || undefined, search: search.get('search') || undefined,
+      offset: integer(search, 'offset', 0, Number.MAX_SAFE_INTEGER), limit: integer(search, 'limit', 100, 500),
+    });
+    else if (route === 'bank-imports') result = await receivables.bankImports({
+      accountId: search.get('accountId') || undefined, status: search.get('status') || undefined,
+      search: search.get('search') || undefined,
+      offset: integer(search, 'offset', 0, Number.MAX_SAFE_INTEGER), limit: integer(search, 'limit', 100, 500),
+    });
+    else if (parts[0] === 'bank-imports' && parts.length === 2) result = await receivables.bankImport(parts[1], {
+      view: search.get('view') || undefined, rowStatus: search.get('rowStatus') || undefined,
+      direction: search.get('direction') || undefined, search: search.get('search') || undefined,
+      offset: integer(search, 'offset', 0, Number.MAX_SAFE_INTEGER), limit: integer(search, 'limit', 100, 500),
+    });
+    else if (parts[0] === 'bank-imports' && parts[2] === 'files' && parts.length === 4) {
+      const selected = await receivables.bankImportFile(parts[1], parts[3]);
+      return {file: selected, type: selected.type};
+    }
+    else if (route === 'funds') result = await receivables.customerFunds({
+      customerId: search.get('customerId') || undefined, asOf: search.get('asOf') || undefined,
+    });
+    else if (parts[0] === 'customers' && parts[2] === 'funds' && parts.length === 3)
+      result = await receivables.customerFunds({customerId: parts[1], asOf: search.get('asOf') || undefined});
+    else if (route === 'refunds') result = await receivables.refunds({
+      customerId: search.get('customerId') || undefined, receiptId: search.get('receiptId') || undefined,
+      status: search.get('status') || undefined, asOf: search.get('asOf') || undefined,
+      offset: integer(search, 'offset', 0, Number.MAX_SAFE_INTEGER), limit: integer(search, 'limit', 100, 500),
+    });
+    else if (parts[0] === 'refunds' && parts.length === 2)
+      result = await receivables.refund(parts[1], {asOf: search.get('asOf') || undefined});
+    else if (parts[0] === 'refunds' && parts[2] === 'files' && parts.length === 4) {
+      const selected = await receivables.refundFile(parts[1], parts[3]);
+      return {file: selected, type: selected.type};
+    }
+    else if (route === 'payment-requests') result = await receivables.paymentRequests({
+      invoiceId: search.get('invoiceId') || undefined, customerId: search.get('customerId') || undefined,
+      status: search.get('status') || undefined, asOf: search.get('asOf') || undefined,
+      offset: integer(search, 'offset', 0, Number.MAX_SAFE_INTEGER), limit: integer(search, 'limit', 100, 500),
+    });
+    else if (parts[0] === 'payment-requests' && parts.length === 2) result = await receivables.paymentRequest(parts[1], {asOf: search.get('asOf') || undefined});
+    else if (parts[0] === 'payment-requests' && parts[2] === 'files' && parts.length === 4) {
+      const selected = await receivables.paymentRequestFile(parts[1], parts[3]);
+      return {file: selected, type: selected.type};
+    }
     else if (route === 'ledger') result = await receivables.ledger({
       runId: search.get('runId') || '', customerId: search.get('customerId') || '',
       offset: integer(search, 'offset', 0, Number.MAX_SAFE_INTEGER), limit: integer(search, 'limit', 100, 500),
@@ -162,11 +258,62 @@ export async function handleReceivablesRequest(receivables, {method, path, query
   } else if (method === 'POST') {
     if (!value || Array.isArray(value) || typeof value !== 'object') throw problem('INVALID_JSON', 'Send a JSON operator request.');
     if (route === 'settings') result = await receivables.settings(value);
+    else if (route === 'credit-control/policies') result = await receivables.saveCreditPolicy(value);
+    else if (parts[0] === 'credit-control' && parts[1] === 'invoices' && parts[3] === 'assessment' && parts.length === 4)
+      result = await receivables.previewCreditAssessment(parts[2],value);
+    else if (parts[0] === 'credit-control' && parts[1] === 'invoices' && parts[3] === 'decisions' && parts.length === 4)
+      result = await receivables.saveCreditDecision(parts[2],value);
+    else if (parts[0] === 'credit-control' && parts[1] === 'decisions' && parts[3] === 'withdraw' && parts.length === 4)
+      result = await receivables.withdrawCreditDecision(parts[2],value);
+    else if (route === 'cash-plans/preview') result = await receivables.previewCashPlan(value);
+    else if (route === 'cash-plans') result = await receivables.saveCashPlan(value);
+    else if (parts[0] === 'cash-plans' && parts.length === 3) {
+      if (parts[2] === 'archive') result=await receivables.archiveCashPlan(parts[1],value);
+      else if (parts[2] === 'reopen') result=await receivables.reopenCashPlan(parts[1],value);
+      else throw problem('NOT_FOUND','Choose an existing cash-plan operation.',404);
+    }
+    else if (route === 'collections') result = await receivables.saveCollectionCase(value);
+    else if (parts[0] === 'collections' && parts.length === 3) {
+      if (parts[2] === 'activities') result = await receivables.recordCollectionActivity(parts[1], value);
+      else if (parts[2] === 'close') result = await receivables.closeCollectionCase(parts[1], value);
+      else if (parts[2] === 'reopen') result = await receivables.reopenCollectionCase(parts[1], value);
+      else throw problem('NOT_FOUND', 'Choose an existing collection case operation.', 404);
+    }
+    else if (route === 'bank-accounts') result = await receivables.saveBankAccount(value);
+    else if (route === 'bank-imports/inspect') result = await receivables.inspectBankSource(value);
+    else if (route === 'bank-imports') result = await receivables.importBankSource(value);
+    else if (parts[0] === 'bank-imports' && parts.length === 3) {
+      if (parts[2] === 'preview') result = await receivables.previewBankPosting(parts[1], value);
+      else if (parts[2] === 'post') result = await receivables.postBankReceipts(parts[1], value);
+      else if (parts[2] === 'ignore') result = await receivables.ignoreBankRows(parts[1], value);
+      else if (parts[2] === 'restore') result = await receivables.restoreBankRows(parts[1], value);
+      else if (parts[2] === 'close') result = await receivables.closeBankImport(parts[1], value);
+      else throw problem('NOT_FOUND', 'This bank statement operation does not exist.', 404);
+    }
+    else if (route === 'refunds/preview') result = await receivables.previewRefund(value);
+    else if (route === 'refunds') result = await receivables.commitRefund(value);
+    else if (route === 'credit-dispositions/preview') result = await receivables.previewCreditDisposition(value);
+    else if (route === 'credit-dispositions') result = await receivables.applyCreditDisposition(value);
+    else if (parts[0] === 'refunds' && parts.length === 3) {
+      if (parts[2] === 'cancel') result = await receivables.cancelRefund(parts[1], value);
+      else if (parts[2] === 'reverse') result = await receivables.reverseRefund(parts[1], value);
+      else if (parts[2] === 'returns') result = await receivables.reportRefundReturn(parts[1], value);
+      else if (parts[2] === 'receive') result = await receivables.receiveRefund(parts[1], value);
+      else throw problem('NOT_FOUND', 'This customer refund operation does not exist.', 404);
+    }
     else if (route === 'invoices') result = await receivables.saveDraft(value);
     else if (route === 'import-quote') result = await receivables.importQuote(value);
     else if (route === 'receipts') result = await receivables.receipt(value);
     else if (route === 'receipts/settlement') result = await receivables.importSettlement(value);
     else if (route === 'allocations') result = await receivables.allocate(value);
+    else if (parts[0] === 'invoices' && parts[2] === 'payment-requests' && parts.length === 4 && parts[3] === 'preview') result = await receivables.previewPaymentRequest(parts[1], value);
+    else if (parts[0] === 'invoices' && parts[2] === 'payment-requests' && parts.length === 3) result = await receivables.createPaymentRequest(parts[1], value);
+    else if (parts[0] === 'payment-requests' && parts.length === 3) {
+      if (parts[2] === 'cancel') result = await receivables.cancelPaymentRequest(parts[1], value);
+      else if (parts[2] === 'returns') result = await receivables.reportPaymentReturn(parts[1], value);
+      else if (parts[2] === 'receive') result = await receivables.receivePaymentRequest(parts[1], value);
+      else throw problem('NOT_FOUND', 'This payment request operation does not exist.', 404);
+    }
     else if (parts[0] === 'invoices' && parts.length === 3) {
       if (parts[2] === 'issue') result = await receivables.issue(parts[1], value);
       else if (parts[2] === 'void') result = await receivables.voidInvoice(parts[1], value);
@@ -211,7 +358,9 @@ export async function createReceivablesHandler(receivables, {apiPath = '/api/rec
       }
       if (request.method !== 'GET' && request.method !== 'POST') throw problem('METHOD_NOT_ALLOWED', 'Use a supported workspace operation.', 405);
       const value = mutation ? await body(request, planRequest ? PAYMENT_PLAN_REQUEST_BYTES : customer ? STATEMENT_REQUEST_BYTES : RECEIVABLE_REQUEST_BYTES) : undefined;
-      const parameters = {method: request.method, path: url.pathname, query: Object.fromEntries(url.searchParams), value, apiPath};
+      const parameters = {method: request.method, path: url.pathname, query: Object.fromEntries(url.searchParams), value, apiPath,
+        expectedWorkspaceId: request.headers['x-accounting-workspace-id'],
+        expectedSourcesSha256: request.headers['x-accounting-sources-sha256']};
       const result = planRequest ? await handlePaymentPlansRequest(paymentPlans, {...parameters, apiPath: planApiPath}) :
         customer ? await handleCustomerStatementRequest(statements, parameters) : await handleReceivablesRequest(receivables, parameters);
       if (!result) throw problem('NOT_FOUND', 'This workspace route does not exist.', 404);
