@@ -1,6 +1,6 @@
-# FilmDrop processing operations in the STAC workspace
+# FilmDrop and Cirrus processing in the STAC workspace
 
-This extension attaches a configured FilmDrop deployment and its retained processing history to the original STAC analyst workspace. Staff can inspect the native workflow inventory, review a selection, capture each workflow's complete run-page chain, read its available events and payloads, review scene/asset associations, and receive the full operating history in another copy of the same product.
+This extension attaches a configured FilmDrop or Cirrus State API deployment and its retained processing history to the original STAC analyst workspace. Staff can inspect the native workflow inventory, review a selection, capture each workflow's complete run-page chain, read its available events and payloads, review scene/asset associations, and receive the full operating history in another copy of the same product.
 
 The original STAC provider, merchant, customer, dataset/object delivery, and offline GIS receiving engines remain the integration points. The processing controller opens no listener. Its view mounts inside the existing authenticated analyst server.
 
@@ -104,7 +104,7 @@ A transport attempt without a complete body remains in history; the next actual 
 
 HTTP401,429 and503 retain a paused outcome. The original `Retry-After` is honored on resume. An operator can restore the same configured environment reference and resume. Other failed tasks remain in the edition and can be explicitly included with **Also retry definitively failed tasks**.
 
-Cancellation records the original intent, aborts this process's owned request and leaves retained pages readable. Closing the controller aborts and awaits its owned reads. A process lease prevents overlapping dispatch; original process identity, boot and procfs-view checks govern interruption recovery.
+Cancellation records the original intent, aborts this process's owned request and leaves retained pages readable. Closing the controller aborts and awaits its owned reads. The original native file lock owns the complete capture; saved tokens fence state writes, and the operating system releases the descriptor if its process exits. Retained legacy PID leases keep their original reconciliation path.
 
 ### Read details and review associations
 
@@ -180,3 +180,99 @@ The receiving interface exposes **Open retained source configuration** and **Dow
 ## Native operation ownership
 
 Processing page capture and imported-page advancement use the original STAC product's `withPrivateLock` from `routescan/quota.mjs`. The same private per-edition file descriptor stays locked through the complete operation and is released by the operating system if its process ends. Saved owner tokens fence state writes and remain in history. This works when executor PID/network namespaces differ and reading another namespace's `/proc/1/ns/pid` is unavailable; normal new captures do not use that probe. Retained legacy PID leases keep their original reconciliation path instead of being overwritten as though a live process had ended.
+
+
+## Deployed Cirrus State API
+
+Select **Cirrus State API** in the existing connection form for a root that advertises native collection/workflow child links. The original root JSON and FilmDrop OpenAPI remain distinct source contracts.
+
+The actual Earth Search deployment was located through the [official Earth Search page](https://element84.com/earth-search/), its [served dashboard](https://dashboard.demo.filmdrop.element84.com/), and the dashboard's retained JavaScript bundle. The complete captured source package retains that discovery chain and each original connector carrier. The maintained [Cirrus API](https://github.com/cirrus-geo/cirrus-geo/blob/56c7009ff6c662ed53734958f667a95235e7764d/src/cirrus/lambda_functions/api.py) and [StateDB](https://github.com/cirrus-geo/cirrus-geo/blob/56c7009ff6c662ed53734958f667a95235e7764d/src/cirrus/lib/statedb.py) establish the native `state`, `since`, `limit` and `nextkey` fields; the saved deployment responses supply the record shapes used by this profile.
+
+```json
+{
+  "deployment": {
+    "id": "earth-search-aws-state-api",
+    "title": "Earth Search Cirrus processing",
+    "dialect": "cirrus-state",
+    "baseUrl": "https://bo2uhhfs12.execute-api.us-west-2.amazonaws.com/prod/",
+    "metricsUrl": "https://bo2uhhfs12.execute-api.us-west-2.amazonaws.com/prod/stats/",
+    "pageSize": 100
+  },
+  "source": {
+    "path": "/private/source/cirrus-root-or-source-package.json",
+    "metadata": {
+      "url": "https://bo2uhhfs12.execute-api.us-west-2.amazonaws.com/prod/",
+      "status": null,
+      "capturedAt": null
+    }
+  }
+}
+```
+
+The source can be the original native root JSON or a complete `scf-stac-cirrus-public-source-package/v1`. A standalone root uses the operator's explicit metrics URL; a package may retain that URL from its original source chain. All workflow and metrics requests stay inside the reviewed deployment's HTTPS origin and prefix.
+
+### Native inventory, records and statistics
+
+The Cirrus inventory retains the root's original child links and the explicitly selected statistics document. A review selects actual collection/workflow endpoints, a native duration such as `1h`, `1d`, `7d` or `30d`, and an optional native state. **Workflow summary** retains the selected workflow's counts. FilmDrop event, log, definition and input/output detail controls are disabled for this profile.
+
+The returned wrapper identifies the dialect and selected workflow. Its `latest` field remains the unchanged native Cirrus record. Identity uses `collections`, `workflow`, `items` and `payload_id`; state, timestamps, executions, output and payload links, catalog and catid remain native values.
+
+**Read saved workflow counts and metrics** opens the history's summaries and its original inventory statistics. Numeric counts and capped native strings occupy distinct columns; an original `"100000+"` remains that string. Select the native response, interval series and period to inspect each state's separate **count** and **unique_count**. The October12 capture includes COMPLETED count32,194 and unique_count32,193 in one daily period. Its full source retains12 workflow links,61 daily periods,37 hourly periods and2 hourly rolling periods.
+
+Every native record, series and period remains in the complete JSON and portable handover. A later capture retains its newly returned observations as another edition.
+
+### Explicit continuation and coverage
+
+The deployed response to `since=1h&state=COMPLETED&limit=2` returned two items and omitted `nextkey`. A subsequent actual GET using its last retained `payload_id` in the documented `nextkey` field returned two distinct earlier records. Both requests and connector carriers are preserved in the receiving example.
+
+The capture status and the coverage of its latest native page are separate:
+
+| Native response | Retained coverage |
+|---|---|
+| A native nextkey is present | `MORE_NATIVE_PAGES`; the original provider follows that cursor |
+| Items are present with no cursor | `NO_NATIVE_CURSOR_RETURNED`; the operator can review explicit continuation |
+| An empty items page has no cursor | `EMPTY_NATIVE_PAGE`; that request observed an empty tail |
+
+**Continue from last native payload** pins the latest retained capture SHA-256, records the last actual payload identifier as the operator's selected cursor, and executes the GET through the same provider and edition lease. It retains the workflow, state, duration and page size. The selection origin is `operator-last-native-payload-id`; an actual response cursor retains `response-nextkey`.
+
+**Prepare continuation for an external capture** performs the same selection and leaves its exact request ready for **Import response**. Repeating the operation ID reconciles that original selection. A changed source page or previously used cursor is rejected before dispatch.
+
+Cirrus evaluates relative `since` at each request. Every selected duration and original request/capture time is retained, making the windows used during a long traversal visible. The UI shows saved pages, returned/limit values, coverage, continuation history and the next request together.
+
+### Original connector documents
+
+`readCirrusSourceDocuments(sourceBytes)` extracts JSON from each exact retained carrier, including an explicitly decoded single HTML `pre` wrapper. Provenance keeps the original carrier hash, record index, requested/final URL, extraction type and package hash.
+
+An absent native HTTP status or individual response time remains `null`. The controller accepts such an explicitly identified connector document after checking it against the configured original source package and pending request. The body, provenance and available transport metadata must match. The offline receiver repeats that same binding check.
+
+This uses the original per-attempt request/body store, source fingerprint, job state, native lease, export and receiving mechanisms. The complete source package travels with its imported responses.
+
+### Scene comparisons and receiving
+
+Cirrus references enter the existing association model through their original native record and capture pointer. Exact Feature collection/item identities and exact native asset hrefs may produce candidates; S3 and HTTPS references are compared literally. The original operator review can retain an explained association.
+
+The actual October12 processing records and September Austin imagery are distinct cohorts. Their native comparison preserves the unmatched result and both identity sets, giving the recipient processing context alongside the selected imagery.
+
+The portable export includes the source package/carriers, root and metrics, workflow summaries, run pages, explicit continuation, review, scene binding, association records and selected already captured asset bytes. The receiver reopens the same native records and source identities.
+
+### API and complete actual example
+
+The existing workspace adds `statistics(editionId)` and `continuePage({editionId,taskId,expectedCaptureSha256,operationId,execute})`. The latter defaults to direct execution; `execute:false` prepares the original request for imported receiving.
+
+The host adapter adds `reads.statistics` and the `continue-page` / `prepare-continuation` actions. Both actions accept exactly `{editionId,taskId,expectedCaptureSha256}` with the original host operation ID. Task summaries expose `latestCaptureSha256`, `coverage`, `continuationAvailable` and `continuations`. Native state joins the existing review body.
+
+`examples/processing-cirrus-native.mjs` exports `runCirrusReceivingJourney`. It takes the original STAC handover and exact captured Cirrus package, imports the native inventory/history, retains explicit continuation, compares scene identities, exports the whole handover, imports it through a fresh original controller and reopens it offline.
+
+```sh
+node stellar/scf-starforge-20261009/sf30-seller-sdk/stac/examples/processing-cirrus-native.mjs \
+  --directory /private/cirrus-receiving \
+  --stac-handover /private/source/original-stac-handover.json \
+  --source-package /private/source/cirrus-public-source-package.json \
+  --operation-id customer-cirrus-receiving \
+  --actor "Receiving operator"
+```
+
+The example's five-record package preserves both actual two-item pages, so its page size of two reproduces those exact requests. A new production capture uses its reviewed deployment page size.
+
+The operation retains `plan.json`, `result.json` and `cirrus-native.processing.json.gz` together with its original source and receiving workspaces. An optional `inspect` callback receives the reopened recipient's same workspace/controller in the owning process. The existing STAC server and `examples/inspect-processing.mjs` inspect retained inventory, native run details, separate count fields, continuation controls, desktop/mobile layout and draft focus.
+
