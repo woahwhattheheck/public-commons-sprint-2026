@@ -15,7 +15,7 @@ node cli.cjs serve
 
 Open the local URL printed by the command and choose **Open NYC source**. The server listens on 127.0.0.1 and serves only the application and the listed public input files. Use `--port 0` to choose an available local port. Stop with Ctrl+C.
 
-The browser remembers the active case in IndexedDB. **Save case** downloads a portable JSON file containing the original files and the full review history. Open that file on another machine to continue. If browser storage is unavailable, the Save case download remains usable.
+The browser remembers the active case in IndexedDB. **Save case** downloads a portable JSON file containing the original files and the full review history. Open that file on another machine to continue. If browser storage is unavailable, use Save case; the application retains its unsaved-change warning until browser storage succeeds. Download preparation alone does not claim that the file has been saved.
 
 ## Produce a full delivery
 
@@ -48,11 +48,11 @@ To create only the standalone interface:
 node cli.cjs standalone --case /path/to/reviewed-case.json --out /path/to/workbench.html
 ```
 
-The standalone file opens its embedded case. It also accepts other saved cases. The bundled-source button requires the local server; a standalone case already contains its full original source.
+The standalone file opens its embedded source edition and restores a valid saved continuation of that edition's review history. A different source edition or divergent review history does not replace the embedded case. It also accepts other saved cases. The bundled-source button requires the local server; a standalone case already contains its full original source.
 
 ## Review and comparison
 
-Select **Review** on a row to see the exact published estimate, confidence interval, source note and calculation. Review actions add a note, include an observation, or exclude it with a reason. They never alter an original estimate or interval. Each decision retains its predecessor and a content-derived event identifier. Repeating the same last action is a no-op.
+Select **Review** on a row to see the exact published estimate, confidence interval, source note and calculation. Review actions add a note, include an observation, or exclude it with a reason. Adding a note preserves the last explicit include/exclude decision; only Include reverses an exclusion. Exports retain both the latest action and the effective publication disposition, with the decision's original note. Reviews never alter an original estimate or interval. Each decision retains its predecessor and a content-derived event identifier. Repeating the same last action is a no-op.
 
 **Compare periods** stays inside the same indicator, measure and geography. It checks overlapping periods, the source's 2021 trend break and explicitly stated imputation changes. When a descriptive difference is appropriate, it is reported in the source measure's units. It does not calculate statistical significance.
 

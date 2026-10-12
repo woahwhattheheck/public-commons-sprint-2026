@@ -17,13 +17,14 @@ function standalone(savedCase){
  html=html.replace('<link rel="stylesheet" href="style.css">',"<style>"+readText(path.join(ROOT,"style.css"))+"</style>");
  html=html.replace('<script src="core.cjs"></script>',"<script>"+readText(path.join(ROOT,"core.cjs")).replace(/<\/script/gi,"<\\/script")+"</script>");
  html=html.replace('<script src="app.js"></script>','<script id="embedded-case" type="application/json">'+embed(C.canonical(savedCase))+"</script><script>"+readText(path.join(ROOT,"app.js")).replace(/<\/script/gi,"<\\/script")+"</script>");
- // A standalone edition always opens its embedded case; another case can still be chosen.
+ // A standalone edition opens its embedded sources and any saved compatible review continuation.
  return html;
 }
 function sha(bytes){return crypto.createHash("sha256").update(bytes).digest("hex");}
 function ensureFile(filename,bytes){
  if(fs.existsSync(filename)){
   const current=fs.readFileSync(filename);if(current.length!==bytes.length||sha(current)!==sha(bytes))throw Error("Existing delivery differs; retain it and choose a different output directory: "+filename);
+  const parent=fs.openSync(path.dirname(filename),"r");try{fs.fsyncSync(parent);}finally{fs.closeSync(parent);}
   return "reused";
  }
  const partial=filename+"."+process.pid+"."+crypto.randomBytes(6).toString("hex")+".part";

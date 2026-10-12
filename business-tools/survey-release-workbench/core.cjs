@@ -175,7 +175,13 @@ function sha1(data){const length=data.length,n=Math.ceil((length+9)/64)*64,b=new
   }
   function reviewState(savedCase) {
     const state = new Map();
-    for (const event of savedCase.review_events) state.set(event.row_id, event);
+    for (const event of savedCase.review_events) {
+      const previous = state.get(event.row_id);
+      // An annotation changes the note, not the last explicit publication decision.
+      const disposition = event.action === "annotate" ? (previous ? previous.disposition : "include") : event.action;
+      const dispositionNote = event.action === "annotate" ? (previous ? previous.disposition_note : "") : event.note;
+      state.set(event.row_id, Object.assign({}, event, {disposition, disposition_note: dispositionNote}));
+    }
     return state;
   }
   function validateReview(savedCase, model) {
@@ -216,8 +222,8 @@ function sha1(data){const length=data.length,n=Math.ceil((length+9)/64)*64,b=new
       const values = filters[name]; if (Array.isArray(values) && values.length && !values.map(String).includes(String(row[key]))) return false;
     }
     const decision = review && review.get(row.id);
-    if (filters.review === "excluded" && (!decision || decision.action !== "exclude")) return false;
-    if (filters.review === "included" && decision && decision.action === "exclude") return false;
+    if (filters.review === "excluded" && (!decision || decision.disposition !== "exclude")) return false;
+    if (filters.review === "included" && decision && decision.disposition === "exclude") return false;
     if (filters.review === "reviewed" && !decision) return false;
     if (filters.flag && !row.flags.includes(filters.flag)) return false;
     if (filters.search) {
@@ -237,7 +243,7 @@ function sha1(data){const length=data.length,n=Math.ceil((length+9)/64)*64,b=new
       for (const flag of row.flags) byFlag[flag] = (byFlag[flag] || 0) + 1;
       byGeo[row.geo_type] = (byGeo[row.geo_type] || 0) + 1;
       byEra[row.era] = (byEra[row.era] || 0) + 1;
-      if (review.get(row.id)?.action === "exclude") excluded++;
+      if (review.get(row.id)?.disposition === "exclude") excluded++;
     }
     return {observations: model.rows.length, indicators: model.indicators.size, measures: model.measures.size,
       source_files: savedCase.manifest.files.length, source_bytes: savedCase.manifest.files.reduce((n, f) => n + f.bytes, 0),
@@ -248,10 +254,12 @@ function sha1(data){const length=data.length,n=Math.ceil((length+9)/64)*64,b=new
     let s = value == null ? "" : String(value);
     // A leading apostrophe prevents formula execution when this file is opened in a spreadsheet.
     // Exact unmodified text remains available in release.json and the original source case.
-    if (/^[=+@\t\r]/.test(s) || /^-\s*[^\d.]/.test(s)) s = "'" + s;
+    const trimmed = s.trimStart();
+    const negativeNumber = /^-(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(trimmed);
+    if (/^[=+@\t\r\n]/.test(s) || /^[=+@]/.test(trimmed) || (trimmed.startsWith("-") && !negativeNumber)) s = "'" + s;
     return '"' + s.replace(/"/g, '""') + '"';
   }
-  const columns = ["row_id","indicator_id","indicator","measure_id","measure","measurement_type","display_type","geography_type","geography_id","geography","borough","period_id","period","period_start_utc","period_end_utc","published_value","confidence_interval","source_note","methodology_era","review_action","review_note","source_path","source_row_index","flags"];
+  const columns = ["row_id","indicator_id","indicator","measure_id","measure","measurement_type","display_type","geography_type","geography_id","geography","borough","period_id","period","period_start_utc","period_end_utc","published_value","confidence_interval","source_note","methodology_era","review_action","review_disposition","review_note","review_disposition_note","source_path","source_row_index","flags"];
   function publicRow(model, row, decision) {
     const d = describe(model, row);
     return {
@@ -264,7 +272,8 @@ function sha1(data){const length=data.length,n=Math.ceil((length+9)/64)*64,b=new
       published_value: row.display_value, confidence_interval: row.published_ci, source_note: row.source_note, methodology_era: row.era,
       trend_no_compare: d.measure.TrendNoCompare == null ? "" : String(d.measure.TrendNoCompare),
       how_calculated: d.measure.how_calculated, source: d.measure.Sources,
-      review_action: decision ? decision.action : "unchanged", review_note: decision ? decision.note : "",
+      review_action: decision ? decision.action : "unchanged", review_disposition: decision ? decision.disposition : "include",
+      review_note: decision ? decision.note : "", review_disposition_note: decision ? decision.disposition_note : "",
       source_path: row.source_path, source_row_index: row.source_index, flags: row.flags.join(";")
     };
   }
@@ -273,7 +282,7 @@ function sha1(data){const length=data.length,n=Math.ceil((length+9)/64)*64,b=new
     const state = reviewState(savedCase), chosen = selectedRows(model, savedCase, filters), excluded = [], rows = [];
     for (const row of chosen) {
       const decision = state.get(row.id), out = publicRow(model, row, decision);
-      if (decision && decision.action === "exclude") excluded.push(out); else rows.push(out);
+      if (decision && decision.disposition === "exclude") excluded.push(out); else rows.push(out);
     }
     const payload = {
       schema: "survey-publication/v1", case_id: savedCase.case_id, source_id: sourceIdentity(savedCase.manifest),
@@ -331,7 +340,7 @@ function sha1(data){const length=data.length,n=Math.ceil((length+9)/64)*64,b=new
   function compareCases(leftCase, rightCase) {
     const left = buildModel(leftCase), right = buildModel(rightCase);
     const leftReview = reviewState(leftCase), rightReview = reviewState(rightCase), changes = [];
-    const signatures = m => ({measures:new Map([...m.measures].map(([k,v])=>[k,canonical(v)])),periods:new Map([...m.periods].map(([k,v])=>[k,canonical(v)])),geographies:new Map([...m.geographies].map(([k,v])=>[k,canonical(v)]))});
+    const signatures = m => ({indicators:new Map([...m.indicators].map(([k,v])=>{const metadata=Object.assign({},v);delete metadata.Measures;return [k,canonical(metadata)];})),measures:new Map([...m.measures].map(([k,v])=>[k,canonical(v)])),periods:new Map([...m.periods].map(([k,v])=>[k,canonical(v)])),geographies:new Map([...m.geographies].map(([k,v])=>[k,canonical(v)]))});
     const leftSignatures=signatures(left),rightSignatures=signatures(right);
     for (const id of new Set([...left.rowMap.keys(), ...right.rowMap.keys()])) {
       const a = left.rowMap.get(id), b = right.rowMap.get(id);
@@ -339,11 +348,13 @@ function sha1(data){const length=data.length,n=Math.ceil((length+9)/64)*64,b=new
       const fields = ["raw_value","display_value","source_ci","source_note","era"];
       const changed = fields.filter(key => a[key] !== b[key]);
       const measureKey=JSON.stringify([a.indicator_id,a.measure_id]),geoKey=JSON.stringify([a.geo_type,a.geo_id]);
+      if (leftSignatures.indicators.get(String(a.indicator_id)) !== rightSignatures.indicators.get(String(b.indicator_id))) changed.push("indicator_metadata");
       if (leftSignatures.measures.get(measureKey) !== rightSignatures.measures.get(measureKey)) changed.push("measure_metadata");
       if (leftSignatures.periods.get(String(a.period_id)) !== rightSignatures.periods.get(String(b.period_id))) changed.push("period_metadata");
       if (leftSignatures.geographies.get(geoKey) !== rightSignatures.geographies.get(geoKey)) changed.push("geography_metadata");
       const ra = leftReview.get(id), rb = rightReview.get(id);
-      if (canonical(ra ? {action:ra.action,note:ra.note} : null) !== canonical(rb ? {action:rb.action,note:rb.note} : null)) changed.push("review");
+      const reviewSignature = r => r ? {action:r.action,disposition:r.disposition,note:r.note,disposition_note:r.disposition_note} : null;
+      if (canonical(reviewSignature(ra)) !== canonical(reviewSignature(rb))) changed.push("review");
       if (changed.length) changes.push({row_id:id, kind:"changed", fields:changed});
     }
     return {left_case_id:leftCase.case_id, right_case_id:rightCase.case_id, changes,

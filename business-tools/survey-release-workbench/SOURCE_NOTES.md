@@ -43,7 +43,7 @@ The pinned current GeoLookup file omits UHF33. The source observation files stil
 The authoritative historical sources are:
 
 - [Original NYC CHS 2002 SAS formats](https://www.nyc.gov/assets/doh/downloads/sas/episrv/formats_chs2002_public.sas), the \`value uhf33f\` table.
-- [CHS 2002 public-use codebook](https://www.nyc.gov/assets/doh/downloads/pdf/episrv/chs2002-codebook.pdf), printed page 30 / PDF page 29.
+- [CHS 2002 public-use codebook](https://www.nyc.gov/assets/doh/downloads/pdf/episrv/chs2002-codebook.pdf), printed page 30 / zero-based PDF index 29.
 - [Official historical UHF map](https://www.nyc.gov/assets/doh/downloads/pdf/survey/uhf_map_100604.pdf), printed September 2006. Its date comes from the document, not the filename.
 
 The 2002 SAS format uses ordinal values 1–33, while EHDP uses concatenated three-digit component codes. The supplement preserves both. For example, original ordinal 15 describes Flatbush–Canarsie with components 207 and 208; its EHDP GeoID is **207208**. Ordinal 30 describes Western Queens–Long Island City with components 401 and 402; its EHDP GeoID is **401402**. Union Square (309) and Lower Manhattan (310) are separate in UHF33. They are combined as 309310 in the later UHF34 system.
