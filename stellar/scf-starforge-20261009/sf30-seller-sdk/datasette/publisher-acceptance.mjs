@@ -1,5 +1,6 @@
 // MIT. Original WRI edition through the Datasette publisher, seller, interfaces and receiving.
 import { createServer as reserveServer } from 'node:net';
+import { request as rawHttpRequest } from 'node:http';
 import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile, rename, open, readdir, lstat, unlink } from 'node:fs/promises';
@@ -17,6 +18,7 @@ import { openDatasetVersions, DATASET_SNAPSHOT_PARAMETER } from '../dataset-refr
 import { startVersionedDatasetSeller, datasetControl } from '../dataset-refresh/service.mjs';
 import { buildDatasetSellerConfig } from '../dataset-cli.mjs';
 import { prepareDatasetBuyer } from '../dataset-refresh/buyer-handoff.mjs';
+import { runDatasetteMcpReceiving } from '../../../../operations/scf-datasette-mcp-receiving-20261012/run-receiving.mjs';
 
 const EXPECTED_ARCHIVE = '53f2486406d61f18c9e1c9ceaac659c265bbad7afe2fe54b1a17f43307cb0ca0';
 const EXPECTED_EDITION = 'ee34942e0c4c090d4e5cab66eeb51dda49c5cf8852f86d9dfa299913b4115616';
@@ -69,7 +71,7 @@ async function retainedJourney(directory,inputs) {
     state={schema:'stellar-forge.datasette-publisher-programme-state.v1',directory,inputs,
       startedAt,runId:randomUUID(),requestId:randomUUID(),buyerIntentId:'datasette-wri-'+randomUUID(),
       selectionRequestId:randomUUID(),reviewRequestId:randomUUID(),buyerRequestId:randomUUID(),receivedSelectionRequestId:randomUUID(),
-      sellerPort:await freePort(),uploadId:randomUUID(),refreshOperationId:'wri-refresh-'+randomUUID(),refreshEditionId:'wri-geothermal-refresh',phase:'CREATED',
+      sellerPort:await freePort(),uploadId:randomUUID(),shutdownUploadId:randomUUID(),refreshOperationId:'wri-refresh-'+randomUUID(),refreshEditionId:'wri-geothermal-refresh',phase:'CREATED',
       report:{schema:'stellar-forge.datasette-publisher-programme.v1',startedAt,node:process.version,
         source:{archiveSha256:EXPECTED_ARCHIVE,editionSha256:EXPECTED_EDITION},checks:{}}};
     const handle=await open(file,'wx',0o600);
@@ -80,6 +82,7 @@ async function retainedJourney(directory,inputs) {
   }
   for(const name of ['selectionRequestId','reviewRequestId','buyerRequestId','receivedSelectionRequestId']) state[name]??=randomUUID();
   state.uploadId??=state.runId;
+  state.shutdownUploadId??=randomUUID();
   state.refreshOperationId??='wri-refresh-'+state.runId;
   state.refreshEditionId??='wri-geothermal-refresh';
   const save=async phase=>{
@@ -92,7 +95,9 @@ function programmeSummary(report,reportFile) {
   return {schema:report.schema,startedAt:report.startedAt,completedAt:report.completedAt,node:report.node,
     checks:report.checks,runId:report.extraction.run.id,planId:report.plan.id,snapshot:report.buyer.snapshot,reportFile,
     archive:{file:report.archive.archiveFile,sha256:report.archive.sha256,bytes:report.archive.bytes},
-    editedArchive:report.editedArchive,sourceRefresh:{state:report.sourceRefresh?.state??null,
+    editedArchive:report.editedArchive,mcpReceiving:{state:report.mcpReceiving?.state??null,
+      report:report.mcpReceiving?.report??null,exportId:report.mcpReceiving?.exportId??null,
+      files:report.mcpReceiving?.result?.downloadFiles??null},sourceRefresh:{state:report.sourceRefresh?.state??null,
       operationId:report.sourceRefresh?.operationId??null,error:report.sourceRefresh?.error??null}};
 }
 async function freePort() {
@@ -150,11 +155,47 @@ async function launchCLI(directory,expectedWorkspaceId) {
   check(announcement.schema==='stellar-forge.datasette-server.v1'&&announcement.workspaceId===expectedWorkspaceId,
     'The original CLI announcement changed the workspace identity.');
   return {child,announcement,completion,async close(){
-    child.kill('SIGTERM');const result=await completion;
+    const startedAt=new Date().toISOString();
+    child.kill('SIGTERM');
+    let timer;
+    const ended=await Promise.race([completion.then(result=>({result})),
+      new Promise(done=>{timer=setTimeout(()=>done({timedOut:true}),10000);})]);
+    clearTimeout(timer);
+    if(ended.timedOut) {
+      child.kill('SIGKILL');
+      const terminal=await completion;
+      throw Object.assign(new Error('The managed Datasette CLI did not drain its original upload within ten seconds.'),
+        {code:'DATASETTE_CLI_SHUTDOWN_TIMEOUT',shutdown:{startedAt,terminal}});
+    }
+    const result={...ended.result,startedAt,completedAt:new Date().toISOString()};
     check(result.code===0,'Original CLI shutdown failed: '+result.stderr);
     check(result.stdout.trim().split('\n').length===1,'The CLI emitted more than one startup announcement.');
     return result;
   }};
+}
+function incompleteUpload(url,workspaceId,declaration,raw,offset) {
+  const target=new URL('/api/upload',url);
+  const selected={...declaration,offset:String(offset),length:String(raw.length-offset)};
+  for(const [name,value] of Object.entries(selected)) target.searchParams.set(name,value);
+  let request,resolveResult,finished=false,responseStatus=null,responseBody='';
+  const result=new Promise(done=>{resolveResult=done;});
+  const finish=value=>{if(!finished){finished=true;resolveResult({responseStatus,responseBody,...value});}};
+  request=rawHttpRequest(target,{method:'POST',headers:{
+    'X-Datasette-Workspace-ID':workspaceId,'Content-Type':'application/octet-stream',
+    'Content-Length':selected.length,
+  }});
+  request.once('error',error=>finish({error:{code:error.code??error.name,message:error.message}}));
+  request.once('close',()=>finish({closed:true}));
+  request.once('response',response=>{
+    responseStatus=response.statusCode;
+    response.on('data',chunk=>{if(responseBody.length<4096)responseBody+=chunk.toString('utf8').slice(0,4096-responseBody.length);});
+    response.once('error',error=>finish({error:{code:error.code??error.name,message:error.message}}));
+    response.once('end',()=>finish({ended:true}));
+  });
+  request.flushHeaders();
+  const offered=raw.subarray(offset,Math.min(raw.length,offset+97));
+  request.write(offered);
+  return {request,result,input:selected,offeredBytes:offered.length};
 }
 async function datasetSeller(directory,payment,origin,port) {
   const versions=await openDatasetVersions({directory});
@@ -180,7 +221,7 @@ async function execute(options) {
   const preservedDirectory=join(directory,'original-preserved'),sellerUrl='http://127.0.0.1:'+sellerPort;
   const resource=options.origin+'/data',reportFile=join(directory,'publisher-programme-result.json');
   let workspace,server,provider,seller,received,cliServer;
-  if(state.phase==='COMPLETE'&&report.sourceRefresh) {
+  if(state.phase==='COMPLETE'&&report.sourceRefresh?.state==='COMPLETE'&&report.mcpReceiving?.passed&&report.managedUpload?.resumed) {
     for(const item of [report.archive,report.editedArchive])
       check(hash(await readFile(item.archiveFile))===item.sha256,'A completed programme archive changed.');
     await privateJson(reportFile,report);
@@ -378,10 +419,74 @@ async function execute(options) {
     const receiveId=received.workspaceId;
     await received.close();received=null;
     cliServer=await launchCLI(receivedDirectory,receiveId);
-    const nativeCLI=createDatasetteClient({url:cliServer.announcement.url,expectedWorkspaceId:receiveId});
+    let nativeCLI=createDatasetteClient({url:cliServer.announcement.url,expectedWorkspaceId:receiveId});
     const cliHealth=await nativeCLI.health();
     const cliStatus=await command(['status','--url',cliServer.announcement.url,'--expected-workspace-id',receiveId]);
     check(cliHealth.workspaceId===receiveId&&cliStatus.value.workspaceId===receiveId,'The actual CLI server could not reopen the complete received workspace.');
+    const shutdownDeclaration={uploadId:state.shutdownUploadId,name:'wri-geothermal.sfds.gz',
+      bytes:String(input.length),sha256:EXPECTED_ARCHIVE},shutdownSplit=Math.floor(input.length/2);
+    await save('CLI_SHUTDOWN_UPLOAD_PREPARED');
+    if(!report.managedUpload?.resumed) {
+      const prefix=await nativeCLI.uploadChunk({...shutdownDeclaration,offset:'0',length:String(shutdownSplit)},
+        input.subarray(0,shutdownSplit));
+      if(!report.managedUpload?.shutdown) {
+        check(prefix.state==='RECEIVING'&&prefix.receivedBytes===String(shutdownSplit)&&
+          prefix.prefixSha256===hash(input.subarray(0,shutdownSplit)),
+          'The managed upload did not retain its original first chunk.');
+        const pending=incompleteUpload(cliServer.announcement.url,receiveId,shutdownDeclaration,input,shutdownSplit);
+        let activeStatus,terminal;
+        try {
+          const deadline=Date.now()+10000;
+          while(Date.now()<deadline) {
+            const current=await nativeCLI.status({signal:AbortSignal.timeout(2000)});
+            if(current.active?.operation==='files.upload'&&current.active.operationId===state.shutdownUploadId) {
+              activeStatus={workspaceId:current.workspaceId,active:current.active};break;
+            }
+            await delay(10);
+          }
+          check(activeStatus,'The native CLI did not admit the original incomplete upload.');
+          terminal=await cliServer.close();cliServer=null;
+        } finally { pending.request.destroy(); }
+        report.managedUpload={declaration:shutdownDeclaration,prefix,
+          interrupted:{input:pending.input,offeredBytes:pending.offeredBytes,active:activeStatus,
+            transport:await pending.result},
+          shutdown:{code:terminal.code,signal:terminal.signal,stderr:terminal.stderr,
+            startedAt:terminal.startedAt,completedAt:terminal.completedAt,
+            instanceId:cliHealth.instanceId,workspaceId:receiveId}};
+        await save('CLI_UPLOAD_INTERRUPTED');
+      }
+      if(!cliServer) {
+        cliServer=await launchCLI(receivedDirectory,receiveId);
+        nativeCLI=createDatasetteClient({url:cliServer.announcement.url,expectedWorkspaceId:receiveId});
+      }
+      const restarted=await nativeCLI.health(),durable=await nativeCLI.uploadStatus({uploadId:state.shutdownUploadId});
+      check(restarted.workspaceId===receiveId&&
+        restarted.instanceId!==report.managedUpload.shutdown.instanceId,
+        'Managed restart did not reopen the same original workspace in a new instance.');
+      if(durable.state==='FINALIZABLE') {
+        check(durable.receivedBytes===shutdownDeclaration.bytes&&durable.prefixSha256===EXPECTED_ARCHIVE,
+          'The original finalizable managed upload changed its complete prefix.');
+        await nativeCLI.uploadChunk({...shutdownDeclaration,offset:shutdownDeclaration.bytes,length:'0'},Buffer.alloc(0));
+      } else if(durable.state!=='COMPLETE') {
+        check(durable.state==='RECEIVING'&&durable.receivedBytes===String(shutdownSplit)&&
+          durable.prefixSha256===hash(input.subarray(0,shutdownSplit)),
+          'Managed shutdown changed the original durable upload prefix.');
+        const completion=await nativeCLI.uploadChunk({...shutdownDeclaration,offset:durable.receivedBytes,
+          length:String(input.length-Number(durable.receivedBytes))},input.subarray(Number(durable.receivedBytes)));
+        if(completion.state==='FINALIZABLE')
+          await nativeCLI.uploadChunk({...shutdownDeclaration,offset:shutdownDeclaration.bytes,length:'0'},Buffer.alloc(0));
+      }
+      const resumed=await nativeCLI.uploadStatus({uploadId:state.shutdownUploadId});
+      check(resumed.state==='COMPLETE'&&resumed.uploadId===state.shutdownUploadId&&
+        resumed.sha256===EXPECTED_ARCHIVE&&resumed.receivedBytes===String(input.length),
+        'The same managed upload did not finish with all original archive bytes.');
+      report.managedUpload={...report.managedUpload,restarted,durable,resumed};
+      await save('CLI_UPLOAD_RESUMED');
+    } else {
+      const original=await nativeCLI.uploadStatus({uploadId:state.shutdownUploadId});
+      check(original.state==='COMPLETE'&&original.sha256===EXPECTED_ARCHIVE&&
+        original.receivedBytes===String(input.length),'The completed managed upload changed during programme recovery.');
+    }
     state.receivedSelectionInput??={editionId:'wri-geothermal',query:'receiving-edit',
       requestId:state.receivedSelectionRequestId,expectedSelectionHash:(await nativeCLI.status()).selectionHash};
     await save('RECEIVED_EDIT_PREPARED');
@@ -404,7 +509,7 @@ async function execute(options) {
         same(original.input,before.input)&&same(original.result,before.result),
         'Receiving changed the original accepted request or its complete native result.');
     }
-    if(!report.sourceRefresh) {
+    if(report.sourceRefresh?.state!=='COMPLETE') {
       const attemptedAt=new Date().toISOString(),operationId=state.refreshOperationId;
       await save('SOURCE_REFRESH_STARTED');
       const progress={operationId,editionId:state.refreshEditionId,attemptedAt};
@@ -429,6 +534,43 @@ async function execute(options) {
     const unchanged=await received.status();
     check(unchanged.selection.editionSha256===EXPECTED_EDITION&&unchanged.selection.query==='receiving-edit',
       'The fresh source comparison changed the original selected publication.');
+    if(!report.mcpReceiving?.passed) {
+      server=await startDatasetteServer({workspace:received,host:'127.0.0.1',port:state.mcpNativePort??0});
+      const mcpPort=Number(new URL(server.url).port);
+      if(state.mcpNativePort!==undefined)check(state.mcpNativePort===mcpPort,'The original receiving listener port changed.');
+      state.mcpNativePort=mcpPort;
+      const connectionFile=join(directory,'mcp-native-server.json');
+      await privateJson(connectionFile,{schema:'stellar-forge.datasette-server.v1',url:server.url,
+        workspaceId:server.workspaceId,instanceId:server.instanceId,directory:server.directory,pid:process.pid});
+      const originalEdition=await readDatasetteEdition(join(receivedDirectory,'editions','wri-geothermal','edition.json'),
+        {expectedSha256:EXPECTED_EDITION});
+      const workspaceArchive=await received.dispatch('files.inspect',{
+        path:report.receiving.originalArchive,sha256:report.archive.sha256});
+      const originalDatabase=await received.dispatch('files.inspect',{path:'publisher/publisher.sqlite'});
+      const receivingInput={sourceRoot:resolve(dirname(fileURLToPath(import.meta.url)),'../../../..'),
+        connectionFile,outputDirectory:join(directory,'mcp-receiving'),workspaceAlias:'wri',
+        expectedWorkspaceId:receiveId,editionId:'wri-geothermal',expectedEditionSha256:EXPECTED_EDITION,
+        captureId:originalEdition.capture.operationId,expectedCaptureSha256:originalEdition.captureSha256,
+        expectedRows:189,workspaceArchive:{path:workspaceArchive.path,bytes:workspaceArchive.bytes,sha256:workspaceArchive.sha256},
+        requiredNativeFiles:[{path:originalDatabase.path,bytes:originalDatabase.bytes,sha256:originalDatabase.sha256}],
+        originalUpload:report.upload.declaration};
+      if(state.mcpReceivingInput)check(same(state.mcpReceivingInput,receivingInput),
+        'The original MCP receiving operation selected different retained inputs.');
+      else state.mcpReceivingInput=receivingInput;
+      await privateJson(join(directory,'mcp-receiving-input.json'),state.mcpReceivingInput);
+      await save('MCP_RECEIVING_PREPARED');
+      report.mcpReceiving=await runDatasetteMcpReceiving(state.mcpReceivingInput);
+      check(report.mcpReceiving.passed&&report.mcpReceiving.state==='COMPLETE',
+        'The original MCP receiving did not retain its complete source files.');
+      await save('MCP_RECEIVED');
+      await server.close();server=null;
+    }
+    if(report.sourceRefresh?.state!=='COMPLETE') {
+      await save('SOURCE_REFRESH_REQUIRED');
+      throw Object.assign(new Error('Continue the original source acquisition '+state.refreshOperationId+
+        ' to complete its fresh edition and comparison; the publisher and receiving results are retained.'),
+        {code:'DATASETTE_SOURCE_REFRESH_INCOMPLETE'});
+    }
     const last=await received.dispatch('workspace.export',{outputFile:join(directory,'editable-received-workspace.zip')});
     await received.close();received=null;
     report.cli.receiveReused=replayReceive.value.reused;
@@ -442,7 +584,10 @@ async function execute(options) {
       sqlitePreimageRetained:true,independentVersionStore:true,
       receivedReleasePreparedFromSameSnapshot:true,nativeCLIServer:true,
       standaloneCLIReceiving:true,receivedSourceEditable:true,replayPreservesEdits:true,
-      freshOriginalSourceAttemptRetained:true,originalPublicationSelectionPreserved:true};
+      managedCLIUploadShutdown:true,sameUploadPrefixResumed:true,completeMcpReceiving:true,
+      interruptedDownloadResumed:true,allSeventeenMerchantTools:true,
+      freshOriginalSourceAttemptRetained:true,freshOriginalSourceComparisonComplete:true,
+      originalPublicationSelectionPreserved:true};
     report.completedAt=new Date().toISOString();
     await privateJson(reportFile,report);
     await save('COMPLETE');

@@ -278,7 +278,8 @@ export async function runDatasetteMcpReceiving({
       if(value.page.next===null)break;offset=value.page.next;
     }
     need(rows.length===expectedRows,'DATASETTE_RECEIVING_ROW_COUNT');
-    return {columns:first.columns,rows,cellTypes,captureSha256:first.captureSha256,pages};
+    return {columns:first.columns,rows,cellTypes,captureSha256:first.captureSha256,
+      captureFile:first.captureFile,capture:first.capture,pages};
   };
   try{
     journal=await maybeJSON(journalPath);
@@ -297,7 +298,8 @@ export async function runDatasetteMcpReceiving({
         need(same(await identity(join(outputDirectory,'observed',relativePath(name))),pin),'DATASETTE_RECEIVING_EVIDENCE_CHANGED');
       const local=await clientModule.reopenDatasetteExport({directory:join(outputDirectory,'received'),exportId:journal.receiving.exportId,
         expectedManifestSha256:journal.receiving.manifestFile.sha256});
-      return {state:'COMPLETE',passed:true,repeated:true,report:journalPath,export:local,workspaceId:expectedWorkspaceId};
+      return {state:'COMPLETE',passed:true,repeated:true,report:journalPath,export:local,workspaceId:expectedWorkspaceId,
+        exportId:journal.receiving.exportId,manifestSha256:journal.receiving.manifestFile.sha256,result:journal.result};
     }
     await writeJSON(join(outputDirectory,'connection.json'),{
       schema:nativeProvider.DATASETTE_CONNECTION_SCHEMA,workspaces:{
@@ -336,17 +338,39 @@ export async function runDatasetteMcpReceiving({
       journal.upload={...originalUpload,archiveFile:before.native.archiveFile,retainedFile:before.native.retainedFile,
         replayed:true};await save();
     }
-    const savedEdition=current.editions.find(item=>item.id===editionId),savedCapture=current.captures.find(item=>item.operationId===captureId);
-    need(savedEdition?.editionSha256===expectedEditionSha256&&savedCapture&&savedCapture.rowCount===expectedRows&&
-      (expectedCaptureSha256===undefined||savedCapture.captureSha256===expectedCaptureSha256),'DATASETTE_RECEIVING_SOURCE_BINDING');
+    const savedEdition=current.editions.find(item=>item.id===editionId);
+    let savedCapture=current.captures.find(item=>item.operationId===captureId),capture,sourceOperation,captureLocation;
+    need(savedEdition?.editionSha256===expectedEditionSha256,'DATASETTE_RECEIVING_SOURCE_BINDING');
     const edition=await allRows(client,'editions.inspect',{id:editionId});
-    const capture=await allRows(client,'source.inspect',{operationId:captureId});
+    if(savedCapture) {
+      need(savedCapture.rowCount===expectedRows&&
+        (expectedCaptureSha256===undefined||savedCapture.captureSha256===expectedCaptureSha256),
+      'DATASETTE_RECEIVING_SOURCE_BINDING');
+      capture=await allRows(client,'source.inspect',{operationId:captureId});
+      sourceOperation=await nativeRead(client,'operations.inspect',{operationId:captureId});
+      captureLocation='workspace-capture';
+    } else {
+      // A received edition already contains the original capture. Its complete
+      // native edition read verifies that same capture and every retained page;
+      // importing it does not allocate a second acquisition in workspace/captures.
+      need(plain(edition.capture)&&edition.capture.operationId===captureId&&
+        edition.capture.state==='COMPLETE'&&edition.capture.rowCount===expectedRows&&
+        printable(edition.captureFile)&&isAbsolute(edition.captureFile)&&
+        (expectedCaptureSha256===undefined||edition.captureSha256===expectedCaptureSha256),
+      'DATASETTE_RECEIVING_SOURCE_BINDING');
+      savedCapture={...edition.capture,captureFile:edition.captureFile,captureSha256:edition.captureSha256};
+      capture={...edition,inspection:'editions.inspect',editionId,editionSha256:expectedEditionSha256};
+      captureLocation='retained-edition-capture';
+      sourceOperation={schema:'stellar-forge.datasette-received-capture-reference.v1',
+        operationId:captureId,captureLocation,editionId,editionSha256:expectedEditionSha256,
+        captureFile:edition.captureFile,captureSha256:edition.captureSha256,capture:edition.capture};
+    }
     need(edition.captureSha256===savedCapture.captureSha256&&capture.captureSha256===savedCapture.captureSha256&&
       same({columns:edition.columns,rows:edition.rows,cellTypes:edition.cellTypes},
         {columns:capture.columns,rows:capture.rows,cellTypes:capture.cellTypes}),'DATASETTE_RECEIVING_SOURCE_CHANGED');
     await evidence('complete-edition-pages.json',edition);
     await evidence('complete-capture-pages.json',capture);
-    await evidence('original-source-operation.json',await nativeRead(client,'operations.inspect',{operationId:captureId}));
+    await evidence('original-source-operation.json',sourceOperation);
     let files=await inventory(client);
     for(const pin of required)need(files.files.some(file=>fileMatches(file,pin)),'DATASETTE_RECEIVING_REQUIRED_FILE',pin.path);
     if(journal.upload)need(files.files.some(file=>fileMatches(file,journal.upload.retainedFile)),
@@ -392,18 +416,47 @@ export async function runDatasetteMcpReceiving({
       expectedManifestSha256:receiving.manifestFile.sha256,expectedSha256:sample.sha256,offset:0,limit:1},{timeoutMs:300000});
     need(exportChunk.bytesRead===1&&exportChunk.nextOffset===1&&exportChunk.file.sha256===sample.sha256,'DATASETTE_RECEIVING_CHUNK');
     await client.exportFileRelease({exportId:receiving.exportId,readId:exportChunk.readId});
-    journal.download=await client.downloadExport({exportId:receiving.exportId,directory:join(outputDirectory,'received'),
-      expectedManifestSha256:receiving.manifestFile.sha256});
-    need(journal.download.state==='COMPLETE'&&journal.download.files===files.files.length+1,'DATASETTE_RECEIVING_DOWNLOAD');await save();
-    await evidence('first-complete-download.json',journal.download);
+    if(!journal.downloadInterruption) {
+      const controller=new AbortController();
+      try {
+        await client.downloadExport({exportId:receiving.exportId,directory:join(outputDirectory,'received'),
+          expectedManifestSha256:receiving.manifestFile.sha256,chunkSize:32768,signal:controller.signal,
+          async onProgress(progress) {
+            if(progress.bytes>0&&progress.bytes<progress.total&&!journal.downloadInterruption) {
+              journal.downloadInterruption={...progress,recordedAt:new Date().toISOString(),
+                boundary:'original-downloader-fsynced-prefix-and-checkpoint'};
+              await save();
+              controller.abort(Object.assign(new Error('The original receiving programme interrupted its checkpointed transfer.'),
+                {code:'DATASETTE_RECEIVING_CONTROLLED_DOWNLOAD_STOP'}));
+            }
+          }});
+        need(false,'DATASETTE_RECEIVING_PARTIAL_DOWNLOAD_REQUIRED',
+          'The original workspace archive must exercise an actual incomplete download prefix.');
+      } catch(error) {
+        need(controller.signal.aborted&&journal.downloadInterruption,
+          'DATASETTE_RECEIVING_PARTIAL_DOWNLOAD_FAILED',error.message);
+        journal.downloadInterruption.error=errorRecord(error);await save();
+      }
+    }
+    need(journal.downloadInterruption.bytes>0&&
+      journal.downloadInterruption.bytes<journal.downloadInterruption.total,
+    'DATASETTE_RECEIVING_PARTIAL_DOWNLOAD_REQUIRED');
+    await evidence('interrupted-download-prefix.json',journal.downloadInterruption);
     await closeOwner();
-    // The same endpoint and saved manifest are reused by the original downloader.
+    // Reopen the same merchant endpoint after an actual incomplete transfer. Its
+    // original downloader rehashes the durable prefix and resumes the same file.
     client=await openOwner();
     const reconnect=await client.reconnect({workspaceId:expectedWorkspaceId},{timeoutMs:300000});
     need(same(reconnect.status,current)&&same(ownerIdentity(reconnect.native),ownerAtStart),'DATASETTE_RECEIVING_OWNER_CHANGED');
     await evidence('same-owner-reconnect.json',reconnect);
     const manifest=await client.exportManifest({exportId:receiving.exportId});
     need(same(manifest.manifestFile,receiving.manifestFile),'DATASETTE_RECEIVING_EXPORT_CHANGED');
+    journal.download=await client.downloadExport({exportId:receiving.exportId,directory:join(outputDirectory,'received'),
+      expectedManifestSha256:receiving.manifestFile.sha256});
+    need(journal.download.state==='COMPLETE'&&journal.download.resumed===true&&
+      journal.download.resumedBytes>=journal.downloadInterruption.bytes&&
+      journal.download.files===files.files.length+1,'DATASETTE_RECEIVING_DOWNLOAD_RESUME');
+    await evidence('first-complete-download.json',journal.download);
     journal.resumedDownload=await client.downloadExport({exportId:receiving.exportId,directory:join(outputDirectory,'received'),
       expectedManifestSha256:receiving.manifestFile.sha256});
     need(journal.resumedDownload.state==='COMPLETE'&&journal.resumedDownload.resumed===true&&
@@ -426,9 +479,10 @@ export async function runDatasetteMcpReceiving({
     const invoked=[...new Set(journal.calls.filter(call=>call.state==='RETURNED').map(call=>call.tool))].sort();
     need(same(invoked,[...requiredToolNames].sort()),'DATASETTE_RECEIVING_TOOL_COVERAGE');
     journal.result={workspaceId:expectedWorkspaceId,editionId,editionSha256:expectedEditionSha256,
-      captureId,captureSha256:savedCapture.captureSha256,rows:edition.rows.length,columns:edition.columns,
+      captureId,captureLocation,captureSha256:savedCapture.captureSha256,rows:edition.rows.length,columns:edition.columns,
       sourceValuesPreserved:true,originalFiles:files.files.length,downloadFiles:journal.download.files,
       receivedBytes:journal.download.bytes,workspaceArchive:required[0],
+      interruptedDownload:journal.downloadInterruption,resumedPrefixBytes:journal.download.resumedBytes,
       advertisedToolNames:[...TOOL_NAMES],invokedToolNames:invoked,nativeOperations:nativeNames,originalUpload:journal.upload??null,
       originalOwnerUnchanged:true,nativeOwnerClosed:false,
       classification:'Original retained-source, publisher and customer files received through the same 17-tool interface; '+
