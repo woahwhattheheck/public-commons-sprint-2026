@@ -1,0 +1,90 @@
+# 360Giving publisher edition review
+
+Prepare a complete 360Giving publisher file for the original NDJSON workspace and native file jobs. The operator receives the original package, source and registry identity, official schema results, a complete grant inventory, an editable review, exact-value native mapping and a portable receiving edition.
+
+The profile uses the original NDJSON engine for immutable source intake, projection, queries, keyed comparisons and customer project receiving. The domain adapter adds the 360Giving package and publisher review steps.
+
+## Receive the source
+
+Use Python 3.11 or later with the dependencies in requirements.txt. Retain the original HTTP response and decoded JSON when acquisition uses compression. Point --source at the decoded original package and --transport at the original transport file. The optional capture JSON contains the original acquisition metadata.
+
+The registry file is the complete matching dataset record from https://registry.threesixtygiving.org/data.json . Its distribution.downloadURL selects the publisher file. Registry modified describes registry metadata; it is kept with that record.
+
+~~~sh
+python publisher.py prepare \
+  --source /absolute/publisher-original.json \
+  --source-url https://publisher.example/grants.json \
+  --registry /absolute/original-registry-record.json \
+  --capture /absolute/acquisition.json \
+  --transport /absolute/original-response.bin \
+  --out /absolute/publisher-edition
+~~~
+
+Open publisher-edition/review.html. It is a complete local review with grant search and pagination, original JSON for every grant, schema results, review questions, saved browser drafts and downloadable decisions.
+
+The command reads every grant. It preserves the original package bytes and numeric token spelling in the generated grant JSON Lines. Unknown grant properties remain in the full original-grant column. The source is decoded as UTF-8, with duplicate members and non-finite numbers reported as errors.
+
+## Schema and publisher questions
+
+The original pinned 1.4.3 package schema currently references the 1.4.2 grant schema. Both original resources are resolved locally and verified against their Git blob identities. The 1.4.3 grant schema is retained alongside them. Validation uses Draft202012Validator with format checking and exact decimal values; it does not fetch schema references at runtime.
+
+Schema errors identify the complete grant path and official keyword. Publisher questions are presented separately: a date sequence needing context, an identifier scheme needing confirmation, a mismatch with the registered grant prefix, or duplicate grant identities. These questions do not supply replacement facts. The profile sums awarded amounts separately for each original currency.
+
+An original package may contain only grants. The review offers package metadata already present in the retained registry: publisher, licence, title and source locations. These fields are added only when selected in the operator's decision file. Existing different package metadata is retained until the publisher supplies an explicit correction.
+
+## Use the existing native engine
+
+The prepared directory contains grants.ndjson and mapping.json. The mapping preserves monetary values as exact strings and exposes matching state columns for optional data. It retains all organisation, programme and location arrays and the complete original grant. Native equality filters, date ranges, ordering and the grant identifier key remain available.
+
+~~~sh
+starforge dataset-ndjson --workspace /absolute/native-workspace init
+starforge dataset-ndjson --workspace /absolute/native-workspace source \
+  --file /absolute/publisher-edition/grants.ndjson --label "Original publisher edition"
+starforge dataset-ndjson --workspace /absolute/native-workspace plan \
+  --file /absolute/publisher-edition/mapping.json
+starforge dataset-ndjson --workspace /absolute/native-workspace build \
+  --source SOURCE_ID --plan PLAN_ID
+starforge dataset-ndjson --workspace /absolute/native-workspace query \
+  --build BUILD_ID --params '{"where_currency":"GBP","sort":"grant_id","limit":"50"}'
+~~~
+
+Use the exact identifiers returned by the preceding commands. For an active browser console, operate its existing HTTP or MCP connection instead of opening a second workspace process. The existing complete file-job application can receive these same two prepared files and an optional real baseline, then return its full native project and review package. Select sourceFormat=ndjson for grants.ndjson. The same job accepts the original JSON package with sourceFormat=json-array and sourceArrayPointer=/grants, retaining that envelope as a sealed original input; the profile's mapping applies to each selected grant.
+
+Separate funds remain separate datasets. Compare actual editions of the same dataset under the same mapping. Reopening or refetching an unchanged publisher file correctly produces an unchanged comparison.
+
+## Record and apply an operator decision
+
+Download a decision file from the review. Its sourceSha256 selects the exact original edition. Each changed grant field carries the original grant identifier, JSON pointer, expected JSON text, replacement JSON text, reason and publisher/source reference. Numeric replacements remain text until the exact native JSON parser reads them.
+
+~~~sh
+python publisher.py candidate \
+  --workspace /absolute/publisher-edition \
+  --decisions /absolute/review-decisions.json \
+  --out /absolute/publisher-candidate
+~~~
+
+The candidate command preserves the original package and review. It creates candidate-package.json, exact grants.ndjson, the original mapping, the complete entered decisions and a candidate identity. It checks selected original values before changing them and validates the complete candidate against the same official schema.
+
+Add the candidate JSON Lines to the existing native workspace, build it with the original plan and compare the exact two native builds. Carry candidate-package.json and the reviewed changes into the publisher's normal hosting process. The publisher's stable download URL and subsequent source acquisition identify the published edition.
+
+## Complete receiving
+
+~~~sh
+python publisher.py export \
+  --workspace /absolute/publisher-edition \
+  --out /absolute/publisher-receiving.zip
+
+python publisher.py receive \
+  --file /absolute/publisher-receiving.zip \
+  --out /absolute/second-operator-edition
+~~~
+
+The ZIP includes original decoded and transport bytes when supplied, acquisition metadata, the complete registry record, all grant JSON Lines, native mapping, official schemas and attribution, the whole review and its editable decision template, and this complete operator source. Receiving checks every declared member and reopens the original source identity. The second operator can reopen the review and continue the same native project using the NDJSON application's original export/import commands.
+
+The original source-project ZIP remains the native engine's complete reconstructable project. Deliver that project with the publisher receiving ZIP when transferring both the domain review and the selected native build.
+
+## Results and errors
+
+Every command prints one JSON result. Successful native-ready preparation and completed candidate/export/receiving return exit 0. Preparation returns exit 2 with a complete review when official schema errors or duplicate grant identifiers need resolution before the keyed native workflow. File, parsing, schema-resource and selected-source conflicts return exit 1 with a specific message.
+
+Output directories preserve existing bytes. Repeating an unchanged preparation resumes the same original source edition; a different source or changed operator program uses a new edition directory.
