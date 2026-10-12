@@ -1,17 +1,15 @@
 // MIT. Self-service input requests extend the original private customer HTTP host.
 import { jobInputFileExtension } from '../inputs/server.mjs';
 import { readFile } from 'node:fs/promises';
+import { readBrowserAssets } from '../../../distribution/browser-assets.mjs';
 import { need } from '../../../sf30-seller-sdk/jobs/intake/protocol.mjs';
 
 export async function jobIntakeExtension(intake) {
   need(intake && typeof intake.draft === 'function', 'JOB_INTAKE_WORKSPACE_REQUIRED');
   const inputs = await jobInputFileExtension(intake);
-  const additionalAssets = await Promise.all([
-    ['/jobs/request/', 'public/index.html', 'text/html'],
-    ['/jobs/request/app.mjs', 'public/app.mjs', 'text/javascript'],
-    ['/jobs/request/style.css', 'public/style.css', 'text/css'],
-  ].map(async ([route, file, type]) => ({ route, type, bytes: await readFile(new URL(file, import.meta.url)) })));
-  additionalAssets.push(...inputs.additionalAssets);
+  const sources = await readBrowserAssets(new URL('./browser-assets.json', import.meta.url));
+  const additionalAssets = await Promise.all([...sources].map(async ([route, { url, type }]) =>
+    ({ route, type, bytes: await readFile(url) })));
   const authenticatedRoute = async context => {
     if (await inputs.authenticatedRoute(context)) return true;
     const { request, url, send, body, signal } = context;
