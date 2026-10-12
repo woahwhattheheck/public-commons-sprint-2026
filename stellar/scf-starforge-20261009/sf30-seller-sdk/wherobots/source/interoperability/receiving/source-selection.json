@@ -234,13 +234,13 @@
     },
     {
       "path": "merchant-definition.mjs",
-      "sha": "da6e3d00c08a16f61bba6a404d5917c8a3f4111b",
-      "size": 2066
+      "sha": "81e42bb4bb8dd17b507fee4054a1a91f974bef9e",
+      "size": 2150
     },
     {
       "path": "merchant-provider.mjs",
-      "sha": "0ca79fb1f41fabd027007cf488962f5492d090bf",
-      "size": 23204
+      "sha": "d225801314ea37b2d69348a3ed8612649840b314",
+      "size": 24299
     },
     {
       "path": "merchant-setup.mjs",
@@ -363,6 +363,6 @@
       "size": 31204
     }
   ],
-  "revision": "ff33c9cd1042c8c27867fe120ec83f69b907c0ef",
+  "revision": "6e57b6d0d5f19dcb464b0b30f4040802c1809b57",
   "source_parent": "bd9d/wherobots-complete-workspace-20261012"
 }
