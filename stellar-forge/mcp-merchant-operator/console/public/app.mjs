@@ -86,6 +86,7 @@ function renderHost(){
     ['Merchant',host.merchant],['Config file',host.configuration.name],['Config SHA-256',host.configuration.sha256,true],
     ['Host binding',host.configurationFingerprint,true],['Console workspace',host.console.workspaceId,true],
     ['Accepted calls',host.operator.activeCalls],['Console calls',host.console.activeCalls],
+    ['Customer transfers',host.console.customers?.activeDownloads??0],['Customer archives',host.console.customers?.activeArchives??0],
     ['Seller instance',host.operator.instanceId??'No seller managed by this host',true]
   ]);
   $('host-sources').replaceChildren(...(host.sources?.length?host.sources.map(value=>node('p',value.source+(value.label?' · '+value.label:''))):[node('p','No release sources configured.','hint')]));

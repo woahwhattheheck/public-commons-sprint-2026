@@ -65,7 +65,7 @@ export async function createMerchantConsole({operator,configPath,directory,autho
     required:value.inputSchema.required ?? [],schemaSha256:digest(canonical(value))}));
   const active = new Map(); let closing=false,closed;
   const snapshot = () => ({...operator.inspectHost(),configuration,
-    console:{schema:CONSOLE_SCHEMA,workspaceId:store.id,activeCalls:active.size,closing,
+    console:{schema:CONSOLE_SCHEMA,workspaceId:store.id,activeCalls:active.size,closing,customers:customers.summary,
       ...(launchBinding===undefined?{}:{binding:JSON.parse(JSON.stringify(launchBinding))})}});
   const callView = value => {
     const {resultJson,...rest}=value;
@@ -227,7 +227,9 @@ export async function createMerchantConsole({operator,configPath,directory,autho
       if(req.method!=='POST')throw fail('CONSOLE_METHOD','Use the displayed operator action.',405);
       if(!String(req.headers['content-type']??'').toLowerCase().startsWith('application/json'))
         throw fail('CONSOLE_CONTENT_TYPE','Use application/json.',415);
-      const input=await body(req,route==='import'?128*1024*1024:operator.maxRequestBytes);
+      // The console's draft metadata must fit around a full original native packet.
+      // Dispatch still checks the exact original MCP envelope against maxRequestBytes.
+      const input=await body(req,route==='import'?128*1024*1024:operator.maxRequestBytes+8192);
       if(!input||typeof input!=='object'||Array.isArray(input))throw fail('CONSOLE_JSON','Supply an operator request object.',400);
       if(route==='customers'){send(res,202,{delivery:await customers.start(input,req)});return true;}
       if(route==='customer-pause'){
@@ -262,6 +264,17 @@ export async function createMerchantConsole({operator,configPath,directory,autho
   return {
     store,handler,snapshot,startCall,
     beginClose(){closing=true;customers.beginClose();},
-    close(){if(!closed){closing=true;customers.beginClose();closed=(async()=>{await Promise.allSettled([...active.values(),customers.close()]);store.close();})();}return closed;}
+    close(){
+      if(!closed){
+        closing=true;customers.beginClose();
+        closed=(async()=>{
+          const results=await Promise.allSettled([...active.values(),customers.close()]);
+          const errors=results.filter(value=>value.status==='rejected').map(value=>value.reason);
+          if(errors.length)throw Object.assign(new AggregateError(errors,'Original console shutdown is incomplete; retry this owner.'),{code:'CONSOLE_CLOSE_INCOMPLETE'});
+          store.close();
+        })().catch(error=>{closed=undefined;throw error;});
+      }
+      return closed;
+    }
   };
 }
