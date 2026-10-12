@@ -15,7 +15,7 @@ from .model import Reconciliation
 EXPORT_SCHEMA = SCHEMA + ".export"
 MAX_MANIFEST = 16 * 1024 * 1024
 MAX_FILE = 8 * 1024 * 1024 * 1024
-_KINDS = {"rows", "groups", "decisions", "changes"}
+_KINDS = {"rows", "groups", "decisions", "changes", "fields"}
 
 
 def _path(value):
@@ -114,9 +114,18 @@ def _verify_manifest(root, manifest):
             or original.get("workspace_id") != manifest["workspace_id"]
             or original.get("export_id") != manifest["export_id"]):
         fail("ORIGINAL_REPORT_CHANGED")
+    if manifest.get("comparison_rules") != report.get("review", {}).get("comparison_rules"):
+        fail("PACKAGE_COMPARISON_RULES_CHANGED")
     expected_queries = report.get("queries")
-    if not isinstance(expected_queries, list) or {x.get("kind") for x in expected_queries} not in (
-            {"rows", "groups", "decisions"}, _KINDS):
+    if not isinstance(expected_queries, list) or not all(isinstance(x, dict) for x in expected_queries):
+        fail("PACKAGE_QUERY_SET_INVALID")
+    kinds = {x.get("kind") for x in expected_queries}
+    required_kinds = {"rows", "groups", "decisions"}
+    if report.get("review", {}).get("comparison_rules"):
+        required_kinds.add("fields")
+    if report.get("before_run_id") is not None:
+        required_kinds.add("changes")
+    if kinds != required_kinds or len(kinds) != len(expected_queries):
         fail("PACKAGE_QUERY_SET_INVALID")
     summaries = manifest.get("queries")
     if not isinstance(summaries, list) or len(summaries) != len(expected_queries):
@@ -267,6 +276,8 @@ def export_report(workspace, body, directory):
                            "immutable_warehouse": "warehouse/warehouse.duckdb",
                            "command": "python -m stellar_forge_buyer.reconciliation.package receive --directory PACKAGE --destination NEW_PRIVATE_WORKSPACE --manifest-sha256 EXACT_SHA256"},
                 "limits": {"file_bytes": MAX_FILE, "manifest_bytes": MAX_MANIFEST}}
+    if report.get("review", {}).get("comparison_rules"):
+        manifest["comparison_rules"] = report["review"]["comparison_rules"]
     _retain(complete, _json_bytes(manifest))
     return _record(workspace, root, inspect_package(root))
 
