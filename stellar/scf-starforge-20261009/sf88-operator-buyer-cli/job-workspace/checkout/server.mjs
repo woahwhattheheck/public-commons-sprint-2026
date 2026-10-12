@@ -3,13 +3,17 @@ import { readFile } from 'node:fs/promises';
 import { requireValue } from '../state.mjs';
 import { MAX_TICKET_BYTES } from './contract.mjs';
 
-export async function jobCheckoutExtension(checkout) {
+export async function jobCheckoutExtension(checkout, { browserApproval = true } = {}) {
   requireValue(checkout && typeof checkout.start === 'function', 'JOB_CHECKOUT_WORKSPACE_REQUIRED');
   const additionalAssets = await Promise.all([
     ['/jobs/checkout/', 'public/index.html', 'text/html'],
     ['/jobs/checkout/app.mjs', 'public/app.mjs', 'text/javascript'],
     ['/jobs/checkout/style.css', 'public/style.css', 'text/css'],
+    ['/jobs/checkout/approval-panel.mjs', '../../../sf81-buyer-operator-bridge/browser-ui/approval-panel.mjs', 'text/javascript'],
+    ['/jobs/checkout/approval.css', '../../../sf81-buyer-operator-bridge/browser-ui/approval.css', 'text/css'],
   ].map(async ([route, file, type]) => ({ route, type, bytes: await readFile(new URL(file, import.meta.url)) })));
+  requireValue(typeof browserApproval === 'boolean', 'JOB_CHECKOUT_APPROVAL_MODE_INVALID');
+  if (browserApproval) await checkout.enableBrowserApproval();
   const ticketBytes = input => {
     requireValue(typeof input.handoffBase64 === 'string' && input.handoffBase64.length > 0 &&
       input.handoffBase64.length <= Math.ceil(MAX_TICKET_BYTES / 3) * 4 &&
@@ -30,10 +34,12 @@ export async function jobCheckoutExtension(checkout) {
         const input = await body(131072);
         send(await checkout.import({ handoffBytes: ticketBytes(input), label: input.label }), 201);
       } else {
-        const match = /^\/checkouts\/([a-f0-9]{64})(?:\/(start|stop|replace))?$/.exec(path);
+        const match = /^\/checkouts\/([a-f0-9]{64})(?:\/(start|stop|replace|approval))?$/.exec(path);
         requireValue(match, 'JOB_CHECKOUT_ROUTE_NOT_FOUND', 404);
         const [, id, action] = match;
         if (!action && method === 'GET') send(checkout.get(id));
+        else if (action === 'approval' && method === 'GET') send(checkout.approval(id));
+        else if (action === 'approval' && method === 'POST') send(await checkout.decideApproval(id, await body(8192)));
         else if (action === 'start' && method === 'POST') send(await checkout.start(id, await body()), 202);
         else if (action === 'stop' && method === 'POST') send(await checkout.cancel(id, await body()), 202);
         else if (action === 'replace' && method === 'POST') {
