@@ -51,16 +51,20 @@ node stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs prepare
   --dir /absolute/haystack-runtime \
   --archive /absolute/haystack-release/ORIGINAL_PACKAGE.tgz \
   --sha256 ORIGINAL_ARCHIVE_SHA256 \
-  --native --feature schema --feature openapi --feature mcp --operator
+  --operator
 
 node stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs install \
-  --dir /absolute/haystack-runtime
+  --dir /absolute/haystack-runtime --offline
 
 node stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs inspect \
   --dir /absolute/haystack-runtime --load --source
 ~~~
 
-Reuse the maintained installer's original dependency adoption and transfer operations when that complete runtime already exists. The standalone Haystack application uses Node builtins; the managed installation carries the exact selected host dependencies.
+This default operator profile selects `native: false`, `features: []` and `pins: {}`. The complete Haystack application, its registered Merchant provider and managed Applications lifecycle use Node builtins and the maintained local helpers. The host requires Linux, Node 22.16 or newer, Python 3.11 or newer, npm and `flock`. The normal installer writes its package lock and READY state through the original offline installation path.
+
+Select the generic Merchant MCP SDK server deliberately with `--feature mcp` when preparing a separate wider host runtime. Add `--native --feature schema --feature openapi` for those additional integrations. The source selection retains their declarations so the maintained profile can resolve the chosen dependencies.
+
+Reuse the maintained installer's original dependency adoption and transfer operations when that complete runtime already exists.
 
 The examples below use the installed `starforge` command. The same calls can run through the original `runtime-install-cli.mjs run --dir RUNTIME --` prefix.
 
