@@ -138,6 +138,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   commerce-console                           Browser workspace for a prepared commerce session
   dataset-refresh                            Publish and select retained dataset versions
   dataset-publisher                          Publish retained CSV/workbook selections and prepare buyer acquisition
+  hud-income-limits                          Retain published HUD limits, review selections and operate customer releases
   workbook                                   Inspect sources, review mappings and adopt complete workbook editions
   workbook-customer                          Receive published workbooks through the original buyer and Analysis
   workbook-receive                            Complete retained workbook receiving and full SQL export
