@@ -2,6 +2,8 @@
 
 The merchant console and the installed `starforge woo-refund` command record a verified Stellar refund as an order credit in the original WooCommerce order. The accounting adjustment supplies the native reverse-transfer proof. The merchant supplies the credit amount in the order's own currency.
 
+For a digital basket, the credit applies to the same original whole order. Item returns and per-line entitlement decisions use the merchant's ordinary Woo workflow; [BASKET.md](BASKET.md) carries its frozen line and delivery contract.
+
 A refund can be partial or full. Each separate native refund uses its original adjustment UUID. The bridge retains the original gross payment, every verified return, the exact store currency allocation, and the corresponding native WooCommerce refund ID.
 
 ## Select the original verified adjustment
@@ -212,12 +214,13 @@ const current = await recoverRefund(config, delivered.adjustmentId);
 
 ## Install the complete plugin
 
-The portable Woo plugin contains these 14 files:
+The portable Woo plugin contains these 16 files:
 
 ```text
 starforge-sf98-woo.php
 checkout-gateway.php
 checkout-admission.php
+checkout-basket.php
 merchant-console.php
 merchant-console.js
 merchant-console.css
@@ -229,6 +232,7 @@ refund-networks.json
 OPERATIONS.md
 NATIVE_REVIEW.md
 REFUNDS.md
+BASKET.md
 ```
 
 Keep `refund-networks.json` byte-identical to the selected release's canonical `sf86-rpc-transfer-reconcile/networks.json`. The installed merchant package includes the refund CLI and its original accounting/verifier dependencies. Source consumers can import the operator through `@tokenjunkielabs/starforge-merchant/merchant/woocommerce/refunds`.

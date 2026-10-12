@@ -13,8 +13,9 @@ result exports can be reopened while the authoring files or store are offline.
 
 ## Install the same plugin and operator
 
-Install the complete 14-file plugin folder from the same release, including
-`merchant-operator.php`, the merchant console and the native refund assets.
+Install the complete 16-file plugin folder from the same release, including
+`merchant-operator.php`, the merchant console, native refund assets,
+`checkout-basket.php` and its original basket guide.
 The [complete plugin inventory](REFUNDS.md#install-the-complete-plugin) lists
 every file. Both maintained installers copy that same folder. The gateway,
 checkout admission, original order review and refund controls share the store's

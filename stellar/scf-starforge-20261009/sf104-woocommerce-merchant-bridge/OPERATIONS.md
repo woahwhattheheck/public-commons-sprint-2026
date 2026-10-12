@@ -13,11 +13,12 @@ action remains the path to Woo fulfillment.
 
 ## Install the complete plugin
 
-Keep these 14 files together in `wp-content/plugins/starforge-sf98-woo/`:
+Keep these 16 files together in `wp-content/plugins/starforge-sf98-woo/`:
 
 - `starforge-sf98-woo.php`
 - `checkout-gateway.php`
 - `checkout-admission.php`
+- `checkout-basket.php`
 - `merchant-console.php`
 - `merchant-console.js`
 - `merchant-console.css`
@@ -29,6 +30,7 @@ Keep these 14 files together in `wp-content/plugins/starforge-sf98-woo/`:
 - `merchant-refunds.css`
 - `refund-networks.json`
 - `REFUNDS.md`
+- `BASKET.md`
 
 The maintained developer Site's **Prepare WordPress plugin** and merchant setup
 packet copy this complete folder from their selected checkout or installed
