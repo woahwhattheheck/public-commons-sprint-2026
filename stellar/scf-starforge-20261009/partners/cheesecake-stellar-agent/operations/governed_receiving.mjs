@@ -16,7 +16,6 @@ import {createGovernedNativeMcpOperator} from '../../../../../stellar-forge/mcp-
 import {inspectHandoff} from '../application.mjs';
 import {loadApplication} from '../configuration.mjs';
 import {initializeInstalledApplication,inspectInstalledApplication,startInstalledApplication} from '../installed.mjs';
-import {cheesecakeStartup} from '../../../distribution/runtime-workspace/application-cheesecake.mjs';
 
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const endpoint='https://merchant.example/mcp';
@@ -206,9 +205,10 @@ export async function main(args=process.argv.slice(2)) {
     server=await startInstalledApplication({configFile:prepared.configFile,
       expectedSelectionSha256:prepared.selectionSha256,bearerToken:token,port:0});
     assert.equal(control.opens,3);
-    const request={command:'stellar-application',args:['serve','--config',prepared.configFile,
-      '--expected-selection-sha256',prepared.selectionSha256,'--port','0']};
-    assert.equal(cheesecakeStartup(request,JSON.stringify(server.startup)).original.stateDirectory,prepared.stateDirectory);
+    assert.equal(server.startup.stateDirectory,prepared.stateDirectory);
+    assert.equal(server.startup.sourceDirectory,prepared.applicationDirectory);
+    assert.equal(server.startup.launchSourceDirectory,prepared.applicationDirectory);
+    assert.equal(server.startup.runtimeDirectory,prepared.runtimeDirectory);
     const headers={authorization:'Bearer '+token,'content-type':'application/json'};
     const listing=await fetch(server.origin+'/api/requests',{headers});
     assert.equal(listing.status,200);assert.equal((await listing.json()).requests.length,httpIds.length+4);
@@ -229,7 +229,7 @@ export async function main(args=process.argv.slice(2)) {
       scope:'original application/MCP SDK/SQLite/SF36 with local provider and payment fixtures',
       node:process.version,python:control.python,originalHandoffId:original.manifest.handoffId,
       originalReviews,remoteRequests:4,signingCalls:control.signing,signedCalls:control.signed,
-      chargedReservation:'60',resultBytes:bytes.length,resultSha256:hash(bytes),
+      reservedAmount:'60',resultBytes:bytes.length,resultSha256:hash(bytes),
       factoryInstances:control.opens,approvalCancellation:true,grantRevocation:true,
       originalRestartQuoteId:paid.binding.quoteId,httpDownload:true,mcpRead:true,
       sourceFiles:files,workspace:work};
