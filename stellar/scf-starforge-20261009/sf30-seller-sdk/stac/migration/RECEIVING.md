@@ -220,3 +220,52 @@ For an operation created by an earlier helper that has no `workspace-input.json`
 QGZ retains the native QGIS project and auxiliary project data. The maintained workspace additionally carries each referenced source, style and local resource file. Physical native field representations retain the original vector producer's complete field codecs and exact-value/source-row sidecars.
 
 Historical software editions keep their original file contracts. The receiving process first resolves the selected `softwareId`, then verifies that edition’s complete manifest, original file bytes and receiving entrypoint. Older, unselected editions remain in the workspace and archive without being required to contain newer application files.
+
+
+## One complete baseline and corrected cartographic handover
+
+The receiving journey can publish both selected saved maps through the original
+cartography operation before freezing its first complete archive. Add
+`cartography` to the original journey configuration before starting it:
+
+```json
+{
+  "cartography": {
+    "baseline": {
+      "editionId": "ORIGINAL_BASELINE_EDITION",
+      "definitionId": "ORIGINAL_BASELINE_MAP_DEFINITION",
+      "specJson": "COMPLETE_REVIEWED_BASELINE_PUBLICATION_JSON"
+    },
+    "corrected": {
+      "editionId": "ORIGINAL_CORRECTED_EDITION",
+      "definitionId": "ORIGINAL_CORRECTED_MAP_DEFINITION",
+      "specJson": "COMPLETE_REVIEWED_CORRECTED_PUBLICATION_JSON"
+    },
+    "correctionNote": "The operator's substantive explanation of this actual source or mapping correction."
+  }
+}
+```
+
+These values identify the original records; replace the placeholders with the
+real retained choices. Each `specJson` contains the complete publication
+specification described in CARTOGRAPHY.md. Keeping it as original JSON text
+preserves exact decimal and large integer tokens through the outer receiving
+configuration. A spec may omit `projectId`; the journey fills it with the actual
+saved map returned by the selected edition build. If it includes `projectId`,
+that identity must match. Select an additional `requestId` when the same edition
+has more than one build in the original journey.
+
+The operation retains both actual project selections, then calls
+`publish_original_projects` once under its original operation and actor. That
+helper owns the saved plans, baseline render, reviewed corrected-source
+comparison, second render and all six original outputs per publication. Its
+complete publication result remains at `publications/result.json`.
+
+The complete workspace export then includes both publications, all native
+QGZ/QPT/PDF/PNG/plan/receipt files and their original comparison, source and request
+history. The independent receiver selects the final publication's
+`receivingSoftwareId` by default, verifies that exact declared source edition and
+reopens the received and onward copies with the selected native QGIS runtime.
+An explicitly retained `softwareId` remains the operator's selection. Existing
+journeys that omit `cartography` retain their original configuration, actions and
+archive identities.
