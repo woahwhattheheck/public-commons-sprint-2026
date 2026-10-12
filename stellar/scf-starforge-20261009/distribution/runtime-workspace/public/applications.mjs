@@ -104,6 +104,29 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   const wordpress = element('a', 'WordPress order console'); wordpress.target = '_blank';
   wordpress.rel = 'noopener noreferrer'; wordpress.referrerPolicy = 'no-referrer'; wordpress.hidden = true;
   const urlNote = element('p', '', 'note');
+  const navigationRecovery = element('div', undefined, 'result'); navigationRecovery.hidden = true;
+  function savedAddress(label, value) {
+    let url;
+    try { url = new URL(value); } catch { return null; }
+    if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' ||
+        Number(url.port || 80) < 1 || Number(url.port || 80) > 65535 ||
+        url.username || url.password) return null;
+    const row = element('div'), address = element('input');
+    address.type = 'text'; address.value = value; address.readOnly = true;
+    address.setAttribute('aria-label', label + ' saved address');
+    address.addEventListener('focus', () => address.select());
+    const copy = button('Copy ' + label.toLowerCase() + ' address', async () => {
+      address.focus(); address.select();
+      try {
+        if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+        await navigator.clipboard.writeText(value);
+        message(label + ' address copied. Paste it into a new tab’s address bar.');
+      } catch {
+        message(label + ' address selected. Copy it and paste it into a new tab’s address bar.');
+      }
+    });
+    row.append(field(label, address), copy); return row;
+  }
   const relatedApplications = element('div', undefined, 'actions');
   relatedApplications.hidden = true;
   const reviewStart = button('Review start', () => act(async () => {
@@ -128,7 +151,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   }));
   const editButton = button('Edit settings', () => edit(selected()));
   actions.append(open, wordpress, reviewStart, stop, reconnect, continueRun, editButton);
-  selectedPanel.append(selectedTitle, details, actions, relatedApplications, urlNote, operationReview);
+  selectedPanel.append(selectedTitle, details, actions, relatedApplications, navigationRecovery, urlNote, operationReview);
   const history = element('section', undefined, 'panel'); history.hidden = true;
   history.append(element('h3', 'Original operations'));
   const historyRows = element('div'), historyControls = element('div', undefined, 'actions');
@@ -363,7 +386,10 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     if (!app) { outputPanel.hidden = true; return; }
     title.textContent = app.label; phase.textContent = app.phase;
     actions.hidden = Boolean(app.error);
-    if (app.error) { details.replaceChildren(element('p', app.error.message)); outputPanel.hidden = true; historyRows.replaceChildren(); return; }
+    if (app.error) {
+      details.replaceChildren(element('p', app.error.message)); outputPanel.hidden = true; historyRows.replaceChildren();
+      relatedApplications.hidden = navigationRecovery.hidden = true; urlNote.textContent = ''; return;
+    }
     details.replaceChildren(facts([
       ['Application', data.catalog.find(item => item.id === app.kind)?.title ?? app.kind],
       ['Runtime', app.runtime.directory], ['Source commit', app.runtime.sourceCommit],
@@ -399,24 +425,44 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
         }
       } catch { /* Original startup remains visible in its retained output. */ }
     }
-    open.hidden = !current?.privateUrl;
-    if (current?.privateUrl) open.href = current.privateUrl; else open.removeAttribute('href');
+    const navigationChanged = woo && Boolean(current?.privateUrl) &&
+      (wooRun?.schema !== 'stellar-forge.sf104.managed-startup.v1' || wooRun.navigationOrigin !== location.origin);
+    open.hidden = !current?.privateUrl || navigationChanged;
+    if (current?.privateUrl && !navigationChanged) open.href = current.privateUrl; else open.removeAttribute('href');
     open.textContent = app.kind === 'mercury-feed' ? 'Open event feed' : 'Open application';
-    relatedApplications.replaceChildren(...(current?.privateLinks ?? []).flatMap(link => {
+    const related = (current?.privateLinks ?? []).flatMap(link => {
       let url;
       try { url = new URL(link.url); } catch { return []; }
       if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' ||
           Number(url.port || 80) < 1 || Number(url.port || 80) > 65535 ||
           url.username || url.password || typeof link.label !== 'string') return [];
-      const anchor = element('a', link.label); anchor.href = url.href; anchor.target = '_blank';
+      return [{ label: link.label, url: link.url }];
+    });
+    relatedApplications.replaceChildren(...(navigationChanged ? [] : related.map(link => {
+      const anchor = element('a', link.label); anchor.href = link.url; anchor.target = '_blank';
       anchor.rel = woo ? 'noopener' : 'noopener noreferrer';
-      anchor.referrerPolicy = woo ? 'origin' : 'no-referrer'; return [anchor];
-    }));
+      anchor.referrerPolicy = woo ? 'origin' : 'no-referrer'; return anchor;
+    })));
     relatedApplications.hidden = !relatedApplications.childElementCount;
+    navigationRecovery.hidden = !navigationChanged;
+    if (navigationChanged) {
+      const signature = JSON.stringify([app.id, current.id, wooRun?.navigationOrigin, location.origin, current.privateUrl, related]);
+      if (navigationRecovery.dataset.signature !== signature) {
+        navigationRecovery.dataset.signature = signature;
+        navigationRecovery.replaceChildren(
+          element('h4', 'Open the running merchant'),
+          element('p', 'This Applications address differs from the one recorded at merchant startup. Copy a saved address and paste it into a new tab’s address bar. The running service keeps its original access settings.', 'note'),
+          ...[savedAddress('Operations', current.privateUrl), ...related.map(link => savedAddress(link.label, link.url))].filter(Boolean));
+      }
+    } else {
+      navigationRecovery.replaceChildren(); delete navigationRecovery.dataset.signature;
+    }
     const workbookCommand = ['python-workbooks', 'python-workbook-delivery'].includes(app.kind);
     urlNote.textContent = workbookCommand ? (active ? 'The original workbook command is running. Its output is retained below.' :
       current ? 'The original workbook command has ended. Open its retained outcome and complete output below.' :
-      'Review a start to run this original workbook command.') : current?.privateUrl ? 'The link above is the original private application URL. It remains attached to this operation across runtime-console restarts.' :
+      'Review a start to run this original workbook command.') : navigationChanged ?
+      'The original process and saved addresses are still attached to this operation. To restore direct Open buttons here, stop it and review a new start from this Applications address.' :
+      current?.privateUrl ? 'The link above is the original private application URL. It remains attached to this operation across runtime-console restarts at the same address.' :
       active ? current.stop ? 'The original application is draining its work and stopping.' : 'Waiting for the original application to print its local session URL.' :
         current?.url ? 'This operation has ended. Its retained URL is historical; review a new start to open the same saved application data.' :
           'Save and review a start to receive the original application URL.';
