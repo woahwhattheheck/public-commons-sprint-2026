@@ -910,7 +910,15 @@
     "./buyer/mcp/analysis-archives": "./source/stellar-forge/mcp-paid-agent/native-analysis-archive-download.mjs",
     "./seller/geocodio/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/geocodio/source.mjs",
     "./seller/geocodio/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/geocodio/workspace.mjs",
-    "./seller/geocodio/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/geocodio/server.mjs"
+    "./seller/geocodio/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/geocodio/server.mjs",
+    "./seller/jobs/result-delivery": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/result-delivery/dispatcher.mjs",
+    "./seller/jobs/result-delivery/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/result-delivery/config.mjs",
+    "./seller/jobs/result-delivery/store": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/result-delivery/store.mjs",
+    "./seller/jobs/result-delivery/transport": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/result-delivery/transport.mjs",
+    "./seller/jobs/result-delivery/wire": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/result-delivery/wire.mjs",
+    "./buyer/jobs/result-receiver": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/result-receiver/store.mjs",
+    "./buyer/jobs/result-receiver/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/result-receiver/server.mjs",
+    "./runtime-workspace/job-result-receiver": "./source/stellar/scf-starforge-20261009/distribution/runtime-workspace/application-job-result-receiver.mjs"
   },
   "nativePeers": {
     "@x402/core": {

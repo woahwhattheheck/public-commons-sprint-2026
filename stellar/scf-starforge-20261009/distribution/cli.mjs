@@ -60,6 +60,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   chainstack-buyer    Review, execute and recover its exact requests using installed Node/Python runtimes
   operations  Seller + live dashboard         dataset     Dataset API compiler
   jobs                                      Prepare and operate durable paid application jobs
+  jobs delivery                             Send completed original job files and operate retained delivery recovery
+  jobs receiver                             Receive signed completed files, open the private desk and export original results
   jobs-buyer                                Receive accepted jobs, follow execution and retrieve saved results
   job-workspace                             Receive paid jobs, retrieve results and organize research collections
   upstream-tls                               Review supplier certificate references and inspect local TLS credentials
