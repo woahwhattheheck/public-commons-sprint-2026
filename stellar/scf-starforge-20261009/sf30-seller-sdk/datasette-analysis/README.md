@@ -8,6 +8,10 @@ The same private server serves the Datasette operator at /datasette and the
 existing Analysis application at /. They share one AnalysisWorkspace, its
 database, imports, query jobs, reports, workbooks, archives and local capability.
 
+## Installed application
+
+Open **Datasette customer Analysis** in the existing merchant runtime's Applications pane. Select the original Python installation with its workbooks extra, the same Analysis database and operation ID, then use the original review, start, open and stop controls. The source-owned `datasette-analysis` command uses that installed environment and source release. [INSTALLATION.md](INSTALLATION.md) gives the complete installation, source-selection, command-line and receiving workflow.
+
 ## Open the customer workspace
 
 Use the original repository or selected runtime with Python 3.11 or later and
@@ -144,6 +148,13 @@ python3 stellar/scf-starforge-20261009/sf30-seller-sdk/datasette-analysis/cli.py
   --operation-id 7fb57b82ce624d98a7cbdba1e6a5b9d4 \
   --connect
 ~~~
+
+Each new export action snapshots the current saved Analysis work, including
+customer query, report and workbook edits. Its stable request ID selects that
+archive generation; repeating or resuming the same ID reuses the same archive.
+Archive file descriptors carry export_id, and download --export-id selects that
+exact generation. Offline export --request-id also keeps a deliberate generation
+stable across receiving or interruption.
 
 Export uses the original source, query, report, workbook and workspace archive
 producers. The operator lists each selected file by its native identity.

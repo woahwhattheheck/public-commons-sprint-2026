@@ -19,6 +19,7 @@ import sys
 import tempfile
 import threading
 import time
+import uuid
 
 from stellar_forge_buyer.analysis_native_delivery import open_finalized, register_finalized_source
 from stellar_forge_buyer.errors import StateError
@@ -169,8 +170,14 @@ class DatasetteAnalysis:
         record = self._read()
         result = json.loads(encoded(record))
         result["files"] = [item for edition in result["editions"] for item in edition.get("files", [])]
-        if result["exports"]:
-            result["files"] += result["exports"][-1].get("files", [])
+        available_exports = []
+        for exported in result["exports"]:
+            exported["availability"] = self.analysis.archives.availability(
+                exported.get("job_id"), exported.get("status", "COMPLETE"))
+            if exported["availability"]["can_download"]:
+                available_exports.append(exported)
+        if available_exports:
+            result["files"] += available_exports[-1].get("files", [])
         result["jobs"] = [{"phase": phase, **attempts[-1]} for phase, attempts in record["jobs"].items()
                           if attempts]
         if record.get("current_edition"):
@@ -407,6 +414,8 @@ class DatasetteAnalysis:
                 selected = _source.handover(handover)
                 if selected["record"]["delivery"]["kind"] == "retained-source":
                     raw_edition = _source.read_retained(handover)
+                elif selected["record"]["delivery"]["kind"] == "native-edition":
+                    raw_edition = _source.read_native_edition(handover, node=self.analysis.node)
                 else:
                     raw_edition = self._finalized(selected, resume=resume)
                 identity = raw_edition["id"]
@@ -497,7 +506,10 @@ class DatasetteAnalysis:
             right_mapping = right.get("source", {}).get("column_mapping", {})
             keys = [left_mapping.get(key, key) for key in keys]
             require(len(keys) == len(set(keys)), "DATASETTE_COMPARISON_KEYS_INVALID")
-            require(left_mapping.get("rowid", "rowid") not in keys,
+            local_locators = ({left_mapping.get("rowid", "rowid")} |
+                              set(left.get("source", {}).get("local_locator_columns", [])) |
+                              set(right.get("source", {}).get("local_locator_columns", [])))
+            require(not (local_locators & set(keys)),
                     "DATASETTE_BUSINESS_KEY_REQUIRED",
                     "Datasette rowid is a locator within an edition; select the reviewed source key.")
             for key in keys:
@@ -525,38 +537,65 @@ class DatasetteAnalysis:
                     "rows": page.get("rows") or page.get("changes") or [],
                     "page": page, "native": job["result"]}
 
-    def export(self, *, destination=None, resume=False):
+    def export(self, *, destination=None, export_id=None, resume=False):
+        """Snapshot current customer work; a retained export ID replays its archive."""
         with self._mutex:
             self.record = self._read()
             require(any(edition["status"] == "COMPLETE" for edition in self.record["editions"]),
                     "DATASETTE_COMPLETED_EDITION_REQUIRED")
-            availability = self.analysis.archives.review(include_previous_backups=False)
-            require(availability["ready"], "DATASETTE_WORKSPACE_FILES_INCOMPLETE",
-                    json.dumps(availability.get("missing", []), ensure_ascii=False))
-            selection = sha(encoded({
-                "editions": [(item["edition_id"], item["status"]) for item in self.record["editions"]],
-                "comparisons": [(item["id"], item.get("status")) for item in self.record["comparisons"]],
-                "views": self.analysis.database.view_bindings()}))[:32]
-            existing = next((item for item in self.record["exports"] if item["id"] == selection), None)
+            if export_id is None:
+                if resume:
+                    pending = [item for item in self.record["exports"]
+                               if item.get("status") in {"PREPARING", "FAILED"}]
+                    require(len(pending) == 1, "DATASETTE_EXPORT_ID_REQUIRED",
+                            "Resume the retained export ID or create a new archive.")
+                    export_id = pending[0]["id"]
+                else:
+                    export_id = uuid.uuid4().hex
+            require(isinstance(export_id, str) and _ID.fullmatch(export_id),
+                    "DATASETTE_EXPORT_ID_INVALID")
+            existing = next((item for item in self.record["exports"]
+                             if item["id"] == export_id), None)
             if existing is None:
-                self.record["status"] = "COMPLETE"
-                # Record the operation state before the native archive takes its
-                # consistent SQLite snapshot. Native receiving retains this table.
-                self._save()
-                job = self._job("WORKSPACE_EXPORT:" + selection, "workspace-export",
-                                {"include_previous_backups": False}, resume=resume)
-                files = []
-                for native_name, name, filename in (
-                        ("workspace.zip", "workspace", "Datasette_Analysis_Workspace.zip"),
-                        ("archive-manifest.json", "workspace-manifest", "Datasette_Workspace_Manifest.json")):
-                    with self.analysis.archives.download(job["id"], native_name) as (_, descriptor):
-                        files.append({"name": name, "filename": filename, "kind": "archive",
-                                      "native_name": native_name, "job_id": job["id"],
-                                      "bytes": descriptor["bytes"], "sha256": descriptor["sha256"]})
-                existing = {"id": selection, "job_id": job["id"], "workspace": job["result"],
-                            "files": files, "created_at": _now()}
+                existing = {"id": export_id, "status": "PREPARING", "files": [],
+                            "created_at": _now(), "edition_id": self.record["current_edition"],
+                            "workspace_id": self.analysis.identity}
                 self.record["exports"].append(existing)
-                self._emit("EXPORTED", archive_id=job["result"].get("id"))
+                self.record["status"] = "COMPLETE"
+                self._save()
+            if existing.get("status", "COMPLETE") != "COMPLETE":
+                try:
+                    availability = self.analysis.archives.review(include_previous_backups=False)
+                    require(availability["ready"], "DATASETTE_WORKSPACE_FILES_INCOMPLETE",
+                            json.dumps(availability.get("missing", []), ensure_ascii=False))
+                    # Every new export ID snapshots current saved SQL, reports,
+                    # workbooks and customer edits. Replaying that same ID uses
+                    # the original native archive operation and exact snapshot.
+                    existing["status"] = "PREPARING"
+                    self._save()
+                    job = self._job("WORKSPACE_EXPORT:" + export_id, "workspace-export",
+                                    {"include_previous_backups": False}, resume=resume)
+                    files = []
+                    for native_name, name, filename in (
+                            ("workspace.zip", "workspace", "Datasette_Analysis_Workspace.zip"),
+                            ("archive-manifest.json", "workspace-manifest", "Datasette_Workspace_Manifest.json")):
+                        with self.analysis.archives.download(job["id"], native_name) as (_, descriptor):
+                            files.append({"name": name, "filename": filename, "kind": "archive",
+                                          "native_name": native_name, "job_id": job["id"],
+                                          "export_id": export_id,
+                                          "bytes": descriptor["bytes"], "sha256": descriptor["sha256"]})
+                    existing.update(job_id=job["id"], workspace=job["result"], files=files,
+                                    status="COMPLETE", completed_at=_now())
+                    existing.pop("error", None)
+                    self._emit("EXPORTED", export_id=export_id, archive_id=job["result"].get("id"))
+                except BaseException as error:
+                    existing.update(status="FAILED", error=str(error), updated_at=_now())
+                    self._save()
+                    raise
+            require(self.analysis.archives.availability(
+                        existing.get("job_id"), "COMPLETE")["can_download"],
+                    "DATASETTE_EXPORT_RETAINED_SEPARATELY",
+                    "Create a new export ID to deliver the current restored customer workspace.")
             result = dict(existing)
             if destination is not None:
                 directory = private_directory(Path(destination).expanduser().absolute(), create=True)
@@ -583,7 +622,8 @@ class DatasetteAnalysis:
             digest, size = hashlib.sha256(), 0
             with os.fdopen(descriptor, "wb") as output:
                 os.fchmod(output.fileno(), 0o600)
-                with self.open_download(item["name"], edition_id=item.get("edition_id")) as (stream, expected):
+                with self.open_download(item["name"], edition_id=item.get("edition_id"),
+                                        export_id=item.get("export_id")) as (stream, expected):
                     while chunk := stream.read(65536):
                         output.write(chunk)
                         digest.update(chunk)
@@ -598,13 +638,22 @@ class DatasetteAnalysis:
             Path(temporary).unlink(missing_ok=True)
 
     @contextmanager
-    def open_download(self, name, *, edition_id=None):
+    def open_download(self, name, *, edition_id=None, export_id=None):
         record = self._read()
         files = []
         if edition_id is not None or record.get("current_edition"):
             files += self._selected(record, edition_id).get("files", [])
-        if record["exports"]:
-            files += record["exports"][-1].get("files", [])
+        if export_id is not None:
+            selected_export = next((item for item in record["exports"]
+                                    if item["id"] == export_id), None)
+            require(selected_export is not None, "DATASETTE_EXPORT_NOT_FOUND")
+            files += selected_export.get("files", [])
+        else:
+            available_exports = [item for item in record["exports"]
+                                 if self.analysis.archives.availability(
+                                     item.get("job_id"), item.get("status", "COMPLETE"))["can_download"]]
+            if available_exports:
+                files += available_exports[-1].get("files", [])
         item = next((item for item in files if item["name"] == name), None)
         require(item is not None, "DATASETTE_DOWNLOAD_NOT_FOUND")
         content_types = {".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -641,7 +690,8 @@ class DatasetteAnalysis:
             return self.compare(body.get("before"), body.get("after"), keys=body.get("keys"),
                                 resume=body.get("resume", False))
         if action == "export":
-            return self.export(destination=body.get("destination"), resume=body.get("resume", False))
+            return self.export(destination=body.get("destination"), export_id=body.get("export_id"),
+                               resume=body.get("resume", False))
         raise _source.SourceError("DATASETTE_ACTION_UNKNOWN", action)
 
     def close(self):

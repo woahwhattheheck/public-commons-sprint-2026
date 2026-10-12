@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import signal
 from pathlib import Path
 import sys
 import uuid
@@ -14,6 +15,8 @@ CHECKOUT = HERE.parents[3]
 PYTHON = HERE.parents[1] / "sf88-operator-buyer-cli" / "python"
 if str(PYTHON) not in sys.path:
     sys.path.insert(0, str(PYTHON))
+if str(HERE) not in sys.path:
+    sys.path.insert(0, str(HERE))
 
 from stellar_forge_buyer.analysis_workspace import AnalysisWorkspace
 from stellar_forge_buyer.errors import BuyerError
@@ -77,6 +80,7 @@ def parser():
     download.add_argument("--name", required=True)
     download.add_argument("--destination", required=True)
     download.add_argument("--edition-id")
+    download.add_argument("--export-id", help="Original complete workspace export generation ID")
     download.add_argument("--sha256")
     receive = commands.add_parser("receive", help="Restore through the original complete-workspace archive receiver")
     receive.add_argument("--archive", required=True)
@@ -106,7 +110,10 @@ def selection(args):
         return "compare", {"before": args.before, "after": args.after,
                            **({"keys": args.keys} if args.keys else {})}
     if args.command == "export":
-        return "export", {"destination": str(Path(args.destination).expanduser().absolute())} if args.destination else {}
+        body = {"destination": str(Path(args.destination).expanduser().absolute())} if args.destination else {}
+        if args.request_id:
+            body["export_id"] = args.request_id
+        return "export", body
     return "status", {}
 
 
@@ -118,7 +125,7 @@ def connected(args):
                                    "Select the same original operation as the running operator.")
     if args.command == "download":
         return client.download(args.name, args.destination, edition_id=args.edition_id,
-                               expected_sha256=args.sha256)
+                               export_id=args.export_id, expected_sha256=args.sha256)
     if args.command == "request":
         value = client.resume(args.id)["request"] if args.resume else client.request(args.id)
         if args.no_wait or value["status"] != "RUNNING":
@@ -138,9 +145,16 @@ def connected(args):
     return client.wait(request_id, timeout=args.wait_seconds, progress=progress)
 
 
+def _interrupt(signum, frame):
+    raise KeyboardInterrupt
+
+
 def main(argv=None):
     args = parser().parse_args(argv)
+    previous_handler = None
     try:
+        if args.command == "serve":
+            previous_handler = signal.signal(signal.SIGTERM, _interrupt)
         if args.command == "receive":
             value = restore_archive(Path(args.archive).expanduser().absolute(),
                                     Path(args.workspace).expanduser().absolute(),
@@ -184,6 +198,9 @@ def main(argv=None):
             record["request_id"] = error.request_id
         emit(record, stream=sys.stderr)
         return 1
+    finally:
+        if previous_handler is not None:
+            signal.signal(signal.SIGTERM, previous_handler)
 
 
 if __name__ == "__main__":

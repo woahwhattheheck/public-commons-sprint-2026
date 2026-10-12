@@ -209,6 +209,8 @@ class DatasetteOperator:
 
     def _execute(self, request_id, action, body):
         try:
+            if action == "export":
+                body = {**body, "export_id": request_id}
             result = self.model.dispatch(action, body)
             raw = encoded(result).decode()
             with self.analysis.database._connection() as db:
@@ -316,7 +318,7 @@ def create_operator(analysis, *, operation_id, port=0, model_factory=DatasetteAn
                     delivery = descriptor.get("delivery")
                     need(isinstance(delivery, dict), "DATASETTE_HANDOVER_DELIVERY_REQUIRED",
                          "Choose the original source handover with its delivery selection.")
-                    for key in ("manifest", "room", "session"):
+                    for key in ("manifest", "room", "session", "edition"):
                         if delivery.get(key) is not None:
                             need(isinstance(delivery[key], str) and Path(delivery[key]).is_absolute(),
                                  "DATASETTE_HANDOVER_ORIGINAL_PATH_REQUIRED",
@@ -340,8 +342,8 @@ def create_operator(analysis, *, operation_id, port=0, model_factory=DatasetteAn
                 finally:
                     Path(temporary).unlink(missing_ok=True)
 
-            def _download(self, name, edition_id):
-                with controller.model.open_download(name, edition_id=edition_id) as (stream, record):
+            def _download(self, name, edition_id, export_id):
+                with controller.model.open_download(name, edition_id=edition_id, export_id=export_id) as (stream, record):
                     count, digest = record.get("bytes"), record.get("sha256")
                     need(type(count) is int and count >= 0 and isinstance(digest, str)
                          and _HASH.fullmatch(digest),
@@ -408,10 +410,10 @@ def create_operator(analysis, *, operation_id, port=0, model_factory=DatasetteAn
                     if self.command in {"GET", "HEAD"} and len(parts) == 4 and parts[:3] == ["api", "datasette", "requests"] and not query:
                         return self._reply(200, controller.request(parts[3]))
                     if self.command in {"GET", "HEAD"} and url.path == "/api/datasette/download":
-                        need(set(values) in ({"name"}, {"name", "edition_id"}),
+                        need("name" in values and not (set(values) - {"name", "edition_id", "export_id"}),
                              "DATASETTE_DOWNLOAD_SELECTION_REQUIRED",
                              "Select one retained delivery filename and its edition.")
-                        return self._download(values["name"], values.get("edition_id"))
+                        return self._download(values["name"], values.get("edition_id"), values.get("export_id"))
                     if self.command == "POST" and url.path == "/api/datasette/intake" and not query:
                         return self._intake()
                     if self.command == "POST" and url.path == "/api/datasette/requests" and not query:

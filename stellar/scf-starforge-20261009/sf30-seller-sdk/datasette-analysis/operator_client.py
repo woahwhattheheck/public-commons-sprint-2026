@@ -184,10 +184,12 @@ class DatasetteOperatorClient:
                           headers={"Content-Type": "application/json",
                                    "X-Datasette-Filename": quote(path.name)})
 
-    def download(self, name, destination, *, edition_id=None, expected_sha256=None):
+    def download(self, name, destination, *, edition_id=None, export_id=None, expected_sha256=None):
         query = {"name": name}
         if edition_id is not None:
             query["edition_id"] = edition_id
+        if export_id is not None:
+            query["export_id"] = export_id
         path = Path(destination).expanduser().absolute()
         path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         if path.parent.resolve() != path.parent:
