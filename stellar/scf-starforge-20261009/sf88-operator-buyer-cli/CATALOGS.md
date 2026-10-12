@@ -5,7 +5,8 @@ complete paginated acquisition, restart/resume, and a local catalog browser.
 It uses the original SF31 `X402BuyerClient.discover` and public HTTPS/DNS policy,
 composed with the original SF85 CONNECT agent. There is no second discovery
 protocol, payment engine, signer, automatic purchase, or implicit proxy setting.
-Node 22+; no package installation. The source tree must include SF31 and SF85.
+Node 22+; Linux also uses the standard util-linux `flock` command. No Node package
+installation is needed. The source tree must include SF31 and SF85.
 
 ## Capture a whole catalog
 
@@ -84,12 +85,21 @@ page hashes and resumes from the first unsaved offset. A completed acquisition
 makes no new requests. A committed page whose manifest update was interrupted
 is recovered from that same file; it is not fetched again. Files are written
 privately through fsynced same-directory temporary files and atomic publication.
-Do not run this on a shared/network filesystem: the writer lock is host-local.
+Use a private local filesystem for the capture directory.
 
-Linux abstract IPC and Windows named-pipe writer locks disappear when the
-process exits, including a crash. On other Unix systems the private socket can
-survive a forced termination: after confirming no capture process is active,
-remove only `.catalog-writer.sock` in that capture directory and rerun.
+On Linux, the shared [private-directory lock](./private-directory-lock.mjs) holds
+an exclusive `flock` through the parent process's open descriptor. It uses the
+same retained inode across processes and container namespaces that share the
+capture directory. The kernel releases the lock on close or process exit,
+including a crash. The private `.catalog-writer.lock` file remains in place for
+the next invocation; keep that file with the directory. A live writer produces
+`CATALOG_WRITER_ACTIVE_OR_STALE_SOCKET`, and missing or unusable `flock` produces
+`CATALOG_LOCK_UNAVAILABLE`. Apply this update between capture invocations so
+every writer for a directory uses the same locking mechanism.
+
+Windows keeps the original named-pipe lifetime. On other Unix systems the private
+socket can survive a forced termination: after confirming no capture process is
+active, remove only `.catalog-writer.sock` in that capture directory and rerun.
 
 `timeoutMs` defaults to 30000 and covers each entire page including DNS, TLS and
 body consumption. `maxPages` defaults to 1000, accepts 1–10000, and produces an

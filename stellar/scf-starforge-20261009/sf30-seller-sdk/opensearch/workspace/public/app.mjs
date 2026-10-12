@@ -1,6 +1,7 @@
 // MIT. Dependency-free operator UI; downloaded result bytes come from the retained server edition.
 import { createRelevanceController } from '/relevance.mjs';
-let relevance = null;
+import { createDeploymentController } from '/deployment.mjs';
+let relevance = null, deployment = null;
 const $ = id => document.getElementById(id);
 const state = { token: null, workspaceId: null, data: null, draft: null, dirty: false, busy: false,
   pending: null, edition: null, hitPage: 0 };
@@ -34,11 +35,11 @@ async function api(path, payload, retried = false) {
   return data;
 }
 function view(name) {
-  for (const id of ['draft', 'editions', 'relevance', 'packages', 'operations']) $('view-' + id).hidden = id !== name;
+  for (const id of ['draft', 'editions', 'relevance', 'packages', 'operations', 'deployment']) $('view-' + id).hidden = id !== name;
   for (const button of document.querySelectorAll('[data-view]')) button.setAttribute('aria-selected', String(button.dataset.view === name));
 }
 function buttons() {
-  relevance?.buttons();
+  relevance?.buttons(); deployment?.buttons();
   const hasDraft = Boolean(state.draft?.id), held = state.busy || Boolean(state.pending);
   $('save').disabled = held || !state.dirty;
   for (const id of ['validate', 'inspect', 'capture', 'prepare']) $(id).disabled = held || !hasDraft || state.dirty;
@@ -139,6 +140,7 @@ async function acceptOperation(operation) {
   retainPending(null);
   if (operation.state === 'FAILED' || operation.state === 'INTERRUPTED') notice(errorMessage(operation.error), true);
   else if (await relevance.acceptOperation(operation)) return;
+  else if (await deployment.acceptOperation(operation)) return;
   else if (operation.result?.draft) {
     fill(operation.result.draft); notice('Saved ' + operation.result.draft.title + ' at revision ' + operation.result.revision + '.');
   } else if (operation.result?.editionId) {
@@ -157,7 +159,7 @@ async function transmitPending() {
     await acceptOperation(result); await refresh();
   } catch (error) {
     if (error.requestRecorded === false) {
-      const selectedView = state.pending?.kind.startsWith('relevance-') ? 'relevance' : 'draft';
+      const selectedView = state.pending?.kind === 'deployment' ? 'deployment' : state.pending?.kind.startsWith('relevance-') ? 'relevance' : 'draft';
       retainPending(null); view(selectedView);
       notice(errorMessage(error) + ' The editor contents are retained; correct the saved definition and try again.', true);
     } else { notice(errorMessage(error) + ' The original request is retained for recovery.', true); view('operations'); }
@@ -314,7 +316,7 @@ async function refresh() {
   $('source-query').replaceChildren();
   for (const name of Object.keys(state.data.source.queries)) $('source-query').append(element('option', name, { value: name }));
   if (Object.hasOwn(state.data.source.queries, selection)) $('source-query').value = selection;
-  renderDrafts(); renderEditions(); relevance.sync();
+  renderDrafts(); renderEditions(); relevance.sync(); deployment.sync();
   recordList($('package-list'), state.data.packages, item => ({ title: item.title,
     detail: 'Revision ' + item.draftRevision + ' · ' + item.createdAt + ' · ' + item.files.length + ' files' }), openPackage);
   recordList($('operation-list'), state.data.operations, item => ({ title: item.kind + ' · ' + item.state,
@@ -323,7 +325,8 @@ async function refresh() {
 }
 async function attempt(action) { try { await action(); } catch (error) { notice(errorMessage(error), true); } }
 relevance = createRelevanceController({ host: state, api, perform, refresh, notice, view, element, attempt });
-for (const button of document.querySelectorAll('[data-view]')) button.addEventListener('click', () => view(button.dataset.view));
+deployment = createDeploymentController({ host: state, api, perform, recover, notice, view, element, attempt });
+for (const button of document.querySelectorAll('[data-view]')) button.addEventListener('click', () => { view(button.dataset.view); if (button.dataset.view === 'deployment') attempt(() => deployment.refresh()); });
 for (const id of ['draft-title', 'query-name', 'query-json', 'input-json', 'plan-json']) $(id).addEventListener('input', () => { state.dirty = true; summary(); buttons(); });
 $('draft-filter').addEventListener('input', renderDrafts);
 $('new-draft').addEventListener('click', () => attempt(newDraft));
@@ -358,7 +361,7 @@ await attempt(async () => {
     revision: state.pending.payload.expectedRevision }, false);
   else if (state.data.drafts.length) fill(await api('/api/drafts/' + encodeURIComponent(state.data.drafts[0].id)));
   else newDraft();
-  relevance.restorePending(state.pending);
+  relevance.restorePending(state.pending); deployment.restorePending();
   renderPending(); buttons();
   if (state.pending) { view('operations'); notice('The previous browser request is retained. Read its original result or retry its same ID.'); }
   else notice('Workspace reopened. Saved drafts, native result editions and merchant packages are available.');

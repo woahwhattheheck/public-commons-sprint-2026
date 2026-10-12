@@ -102,7 +102,7 @@ function csktm_links($record,$bindings){
     return array('urls'=>$urls,'images'=>$images);
 }
 function csktm_rewrite_html($html,$links){
-    $map=$links['urls']??$links;$images=$links['images']??array();$processor=new WP_HTML_Tag_Processor($html);$mapped=0;$transforms=0;$collapsed=0;
+    $map=$links['urls']??$links;$images=$links['images']??array();$processor=new WP_HTML_Tag_Processor($html);$mapped=0;$transforms=0;$collapsed=0;$promoted=0;$promotedSets=0;
     $rewrite=function($url)use($map,$images,&$mapped,&$transforms){
         if(isset($map[$url])){$mapped++;return $map[$url];}
         $base=preg_replace('/[?#].*$/s','',$url);
@@ -117,8 +117,20 @@ function csktm_rewrite_html($html,$links){
         return $url;
     };
     while($processor->next_tag()){
-        foreach(array('href','src','poster','data-src','data-lazy-src')as$key){$value=$processor->get_attribute($key);if(is_string($value))$processor->set_attribute($key,$rewrite($value));}
-        foreach(array('srcset','data-srcset','data-lazy-srcset')as$key){
+        $tag=$processor->get_tag();$src=$processor->get_attribute('src');
+        foreach(array('href','src','poster','data-src','data-lazy-src','data-opt-src')as$key){$value=$processor->get_attribute($key);if(is_string($value)){$next=$rewrite($value);if($next!==$value)$processor->set_attribute($key,$next);}}
+        // The captured Optimole markup uses a transparent data-URI placeholder.
+        // Inspect the original src before WordPress URL normalization can turn
+        // a scheme-stripped placeholder into an apparent HTTP URL.
+        if($tag==='IMG'&&(!is_string($src)||trim($src)===''||preg_match('/^(?:data:)?image\/[a-z0-9.+-]+[;,]/i',ltrim($src)))){
+            foreach(array('data-opt-src','data-src','data-lazy-src')as$key){
+                $candidate=$processor->get_attribute($key);if(!is_string($candidate))continue;$parts=wp_parse_url($candidate);
+                if(is_array($parts)&&in_array(strtolower($parts['scheme']??''),array('http','https'),true)&&!empty($parts['host'])&&!isset($parts['user'])&&!isset($parts['pass'])){
+                    if($processor->set_attribute('src',$candidate)){$promoted++;break;}
+                }
+            }
+        }
+        foreach(array('srcset','data-srcset','data-lazy-srcset','old-srcset')as$key){
             $set=$processor->get_attribute($key);if(!is_string($set)||str_contains($set,'data:'))continue;
             $parts=array();$nativeUrls=array();$changed=false;
             foreach(explode(',',$set)as$part){
@@ -127,12 +139,17 @@ function csktm_rewrite_html($html,$links){
             }
             // All observed transformation widths now reference one verified
             // original. Do not attach inaccurate derivative-width descriptors.
-            if($changed&&count($nativeUrls)>1&&count(array_unique($nativeUrls))===1){$processor->set_attribute($key,$nativeUrls[0]);$collapsed++;}
-            else $processor->set_attribute($key,implode(', ',$parts));
+            if($changed&&count($nativeUrls)>1&&count(array_unique($nativeUrls))===1){$nextSet=$nativeUrls[0];$collapsed++;}
+            else $nextSet=implode(', ',$parts);
+            $processor->set_attribute($key,$nextSet);
+            $activeSet=$processor->get_attribute('srcset');
+            if($key!=='srcset'&&in_array($tag,array('IMG','SOURCE'),true)&&(!is_string($activeSet)||trim($activeSet)==='')&&trim($nextSet)!==''){
+                $processor->set_attribute('srcset',$nextSet);$promotedSets++;
+            }
         }
     }
     $rewritten=$processor->get_updated_html();$safe=wp_kses_post($rewritten);
-    return array($safe,array('mappedLinks'=>$mapped,'mappedImageTransforms'=>$transforms,'collapsedSourceSets'=>$collapsed,'htmlSanitized'=>$safe!==$rewritten,'sourceHtmlSha256'=>hash('sha256',$html),'nativeHtmlSha256'=>hash('sha256',$safe)));
+    return array($safe,array('mappedLinks'=>$mapped,'mappedImageTransforms'=>$transforms,'collapsedSourceSets'=>$collapsed,'promotedLazyImages'=>$promoted,'promotedSourceSets'=>$promotedSets,'htmlSanitized'=>$safe!==$rewritten,'sourceHtmlSha256'=>hash('sha256',$html),'nativeHtmlSha256'=>hash('sha256',$safe)));
 }
 function csktm_apply($id,$input){
     if(!is_array($input)||!csktm_id($input['operationId']??null)||!csktm_sha($input['sha256']??null))csktm_fail('invalid_apply','Use the exact release hash and stable retained operation ID.');

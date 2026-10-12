@@ -1,0 +1,4525 @@
+<?xml version="1.0" encoding="UTF-8"?><message:GenericData xmlns:message="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message" xmlns:common="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/common" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:generic="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/data/generic" xsi:schemaLocation="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message https://data-api.ecb.europa.eu:443/vocabulary/sdmx/2_1/SDMXMessage.xsd http://www.sdmx.org/resources/sdmxml/schemas/v2_1/common https://data-api.ecb.europa.eu:443/vocabulary/sdmx/2_1/SDMXCommon.xsd http://www.sdmx.org/resources/sdmxml/schemas/v2_1/data/generic https://data-api.ecb.europa.eu:443/vocabulary/sdmx/2_1/SDMXDataGeneric.xsd">
+<message:Header>
+<message:ID>f952b0da-609f-45bb-aa07-8ffdc9da3e9d</message:ID>
+<message:Test>false</message:Test>
+<message:Prepared>2026-10-12T02:08:23.947+02:00</message:Prepared>
+<message:Sender id="ECB"/>
+<message:Structure structureID="ECB_EXR1" dimensionAtObservation="TIME_PERIOD">
+<common:Structure>
+<URN>urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ECB:ECB_EXR1(1.0)</URN>
+</common:Structure>
+</message:Structure>
+</message:Header>
+<message:DataSet action="Replace" validFromDate="2026-10-12T02:08:23.947+02:00" structureRef="ECB_EXR1">
+<generic:Series>
+<generic:SeriesKey>
+<generic:Value id="FREQ" value="A"/>
+<generic:Value id="CURRENCY" value="GBP"/>
+<generic:Value id="CURRENCY_DENOM" value="EUR"/>
+<generic:Value id="EXR_TYPE" value="SP00"/>
+<generic:Value id="EXR_SUFFIX" value="A"/>
+</generic:SeriesKey>
+<generic:Attributes>
+<generic:Value id="SOURCE_AGENCY" value="4F0"/>
+<generic:Value id="TITLE_COMPL" value="ECB reference exchange rate, Pound sterling/Euro, 2.15 pm (C.E.T.)"/>
+<generic:Value id="DECIMALS" value="5"/>
+<generic:Value id="TITLE" value="Pound sterling/Euro ECB reference exchange rate"/>
+<generic:Value id="COLLECTION" value="A"/>
+<generic:Value id="UNIT_MULT" value="0"/>
+<generic:Value id="UNIT" value="GBP"/>
+<generic:Value id="TIME_FORMAT" value="P1Y"/>
+</generic:Attributes>
+<generic:Obs>
+<generic:ObsDimension value="2025"/>
+<generic:ObsValue value="0.8567923137255"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+</generic:Series>
+<generic:Series>
+<generic:SeriesKey>
+<generic:Value id="FREQ" value="A"/>
+<generic:Value id="CURRENCY" value="USD"/>
+<generic:Value id="CURRENCY_DENOM" value="EUR"/>
+<generic:Value id="EXR_TYPE" value="SP00"/>
+<generic:Value id="EXR_SUFFIX" value="A"/>
+</generic:SeriesKey>
+<generic:Attributes>
+<generic:Value id="SOURCE_AGENCY" value="4F0"/>
+<generic:Value id="TITLE_COMPL" value="ECB reference exchange rate, US dollar/Euro, 2.15 pm (C.E.T.)"/>
+<generic:Value id="DECIMALS" value="4"/>
+<generic:Value id="UNIT" value="USD"/>
+<generic:Value id="COLLECTION" value="A"/>
+<generic:Value id="UNIT_MULT" value="0"/>
+<generic:Value id="TITLE" value="US dollar/Euro ECB reference exchange rate"/>
+<generic:Value id="TIME_FORMAT" value="P1Y"/>
+</generic:Attributes>
+<generic:Obs>
+<generic:ObsDimension value="2025"/>
+<generic:ObsValue value="1.1299831372549"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+</generic:Series>
+<generic:Series>
+<generic:SeriesKey>
+<generic:Value id="FREQ" value="D"/>
+<generic:Value id="CURRENCY" value="GBP"/>
+<generic:Value id="CURRENCY_DENOM" value="EUR"/>
+<generic:Value id="EXR_TYPE" value="SP00"/>
+<generic:Value id="EXR_SUFFIX" value="A"/>
+</generic:SeriesKey>
+<generic:Attributes>
+<generic:Value id="SOURCE_AGENCY" value="4F0"/>
+<generic:Value id="TIME_FORMAT" value="P1D"/>
+<generic:Value id="TITLE_COMPL" value="ECB reference exchange rate, Pound sterling/Euro, 2.15 pm (C.E.T.)"/>
+<generic:Value id="DECIMALS" value="5"/>
+<generic:Value id="TITLE" value="Pound sterling/Euro ECB reference exchange rate"/>
+<generic:Value id="COLLECTION" value="A"/>
+<generic:Value id="UNIT_MULT" value="0"/>
+<generic:Value id="UNIT" value="GBP"/>
+<generic:Value id="UNIT_INDEX_BASE" value="99Q1=100"/>
+</generic:Attributes>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-02"/>
+<generic:ObsValue value="0.83118"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-03"/>
+<generic:ObsValue value="0.82993"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-06"/>
+<generic:ObsValue value="0.83098"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-07"/>
+<generic:ObsValue value="0.82915"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-08"/>
+<generic:ObsValue value="0.83403"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-09"/>
+<generic:ObsValue value="0.83808"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-10"/>
+<generic:ObsValue value="0.83693"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-13"/>
+<generic:ObsValue value="0.8416"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-14"/>
+<generic:ObsValue value="0.84288"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-15"/>
+<generic:ObsValue value="0.84313"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-16"/>
+<generic:ObsValue value="0.84258"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-17"/>
+<generic:ObsValue value="0.84453"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-20"/>
+<generic:ObsValue value="0.84588"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-21"/>
+<generic:ObsValue value="0.84553"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-22"/>
+<generic:ObsValue value="0.84466"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-23"/>
+<generic:ObsValue value="0.84468"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-24"/>
+<generic:ObsValue value="0.84413"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-27"/>
+<generic:ObsValue value="0.84106"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-28"/>
+<generic:ObsValue value="0.83868"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-29"/>
+<generic:ObsValue value="0.83723"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-30"/>
+<generic:ObsValue value="0.83685"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-31"/>
+<generic:ObsValue value="0.83608"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-03"/>
+<generic:ObsValue value="0.83136"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-04"/>
+<generic:ObsValue value="0.83188"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-05"/>
+<generic:ObsValue value="0.83085"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-06"/>
+<generic:ObsValue value="0.83688"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-07"/>
+<generic:ObsValue value="0.83353"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-10"/>
+<generic:ObsValue value="0.83283"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-11"/>
+<generic:ObsValue value="0.83355"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-12"/>
+<generic:ObsValue value="0.83338"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-13"/>
+<generic:ObsValue value="0.83313"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-14"/>
+<generic:ObsValue value="0.83215"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-17"/>
+<generic:ObsValue value="0.83133"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-18"/>
+<generic:ObsValue value="0.83025"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-19"/>
+<generic:ObsValue value="0.82838"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-20"/>
+<generic:ObsValue value="0.82823"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-21"/>
+<generic:ObsValue value="0.8276"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-24"/>
+<generic:ObsValue value="0.8283"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-25"/>
+<generic:ObsValue value="0.82908"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-26"/>
+<generic:ObsValue value="0.82868"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-27"/>
+<generic:ObsValue value="0.82673"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-28"/>
+<generic:ObsValue value="0.82608"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-03"/>
+<generic:ObsValue value="0.8253"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-04"/>
+<generic:ObsValue value="0.82788"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-05"/>
+<generic:ObsValue value="0.835"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-06"/>
+<generic:ObsValue value="0.8379"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-07"/>
+<generic:ObsValue value="0.84088"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-10"/>
+<generic:ObsValue value="0.83849"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-11"/>
+<generic:ObsValue value="0.84374"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-12"/>
+<generic:ObsValue value="0.84078"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-13"/>
+<generic:ObsValue value="0.83778"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-14"/>
+<generic:ObsValue value="0.84183"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-17"/>
+<generic:ObsValue value="0.84026"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-18"/>
+<generic:ObsValue value="0.84173"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-19"/>
+<generic:ObsValue value="0.84078"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-20"/>
+<generic:ObsValue value="0.8369"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-21"/>
+<generic:ObsValue value="0.83765"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-24"/>
+<generic:ObsValue value="0.83663"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-25"/>
+<generic:ObsValue value="0.83565"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-26"/>
+<generic:ObsValue value="0.83623"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-27"/>
+<generic:ObsValue value="0.83318"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-28"/>
+<generic:ObsValue value="0.83358"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-31"/>
+<generic:ObsValue value="0.83536"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-01"/>
+<generic:ObsValue value="0.83665"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-02"/>
+<generic:ObsValue value="0.83455"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-03"/>
+<generic:ObsValue value="0.84163"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-04"/>
+<generic:ObsValue value="0.84985"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-07"/>
+<generic:ObsValue value="0.85588"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-08"/>
+<generic:ObsValue value="0.85644"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-09"/>
+<generic:ObsValue value="0.86435"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-10"/>
+<generic:ObsValue value="0.85755"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-11"/>
+<generic:ObsValue value="0.86678"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-14"/>
+<generic:ObsValue value="0.86383"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-15"/>
+<generic:ObsValue value="0.8557"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-16"/>
+<generic:ObsValue value="0.85618"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-17"/>
+<generic:ObsValue value="0.85873"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-22"/>
+<generic:ObsValue value="0.85858"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-23"/>
+<generic:ObsValue value="0.85793"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-24"/>
+<generic:ObsValue value="0.855"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-25"/>
+<generic:ObsValue value="0.8531"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-28"/>
+<generic:ObsValue value="0.8514"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-29"/>
+<generic:ObsValue value="0.8498"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-30"/>
+<generic:ObsValue value="0.8518"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-02"/>
+<generic:ObsValue value="0.8533"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-05"/>
+<generic:ObsValue value="0.8515"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-06"/>
+<generic:ObsValue value="0.8469"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-07"/>
+<generic:ObsValue value="0.8511"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-08"/>
+<generic:ObsValue value="0.8476"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-09"/>
+<generic:ObsValue value="0.8477"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-12"/>
+<generic:ObsValue value="0.8429"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-13"/>
+<generic:ObsValue value="0.8406"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-14"/>
+<generic:ObsValue value="0.8415"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-15"/>
+<generic:ObsValue value="0.8424"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-16"/>
+<generic:ObsValue value="0.8427"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-19"/>
+<generic:ObsValue value="0.8419"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-20"/>
+<generic:ObsValue value="0.8418"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-21"/>
+<generic:ObsValue value="0.8446"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-22"/>
+<generic:ObsValue value="0.8427"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-23"/>
+<generic:ObsValue value="0.8382"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-26"/>
+<generic:ObsValue value="0.8392"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-27"/>
+<generic:ObsValue value="0.8381"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-28"/>
+<generic:ObsValue value="0.8398"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-29"/>
+<generic:ObsValue value="0.8377"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-30"/>
+<generic:ObsValue value="0.8412"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-02"/>
+<generic:ObsValue value="0.8434"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-03"/>
+<generic:ObsValue value="0.8436"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-04"/>
+<generic:ObsValue value="0.8421"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-05"/>
+<generic:ObsValue value="0.8419"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-06"/>
+<generic:ObsValue value="0.8426"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-09"/>
+<generic:ObsValue value="0.8424"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-10"/>
+<generic:ObsValue value="0.8464"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-11"/>
+<generic:ObsValue value="0.8476"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-12"/>
+<generic:ObsValue value="0.8538"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-13"/>
+<generic:ObsValue value="0.8505"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-16"/>
+<generic:ObsValue value="0.8523"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-17"/>
+<generic:ObsValue value="0.8525"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-18"/>
+<generic:ObsValue value="0.8552"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-19"/>
+<generic:ObsValue value="0.8541"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-20"/>
+<generic:ObsValue value="0.8537"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-23"/>
+<generic:ObsValue value="0.8567"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-24"/>
+<generic:ObsValue value="0.8527"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-25"/>
+<generic:ObsValue value="0.8526"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-26"/>
+<generic:ObsValue value="0.8535"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-27"/>
+<generic:ObsValue value="0.8529"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-30"/>
+<generic:ObsValue value="0.8555"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-01"/>
+<generic:ObsValue value="0.8588"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-02"/>
+<generic:ObsValue value="0.8605"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-03"/>
+<generic:ObsValue value="0.8629"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-04"/>
+<generic:ObsValue value="0.8625"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-07"/>
+<generic:ObsValue value="0.8611"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-08"/>
+<generic:ObsValue value="0.8632"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-09"/>
+<generic:ObsValue value="0.8613"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-10"/>
+<generic:ObsValue value="0.8627"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-11"/>
+<generic:ObsValue value="0.8657"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-14"/>
+<generic:ObsValue value="0.8667"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-15"/>
+<generic:ObsValue value="0.8679"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-16"/>
+<generic:ObsValue value="0.8659"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-17"/>
+<generic:ObsValue value="0.8644"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-18"/>
+<generic:ObsValue value="0.8656"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-21"/>
+<generic:ObsValue value="0.8656"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-22"/>
+<generic:ObsValue value="0.8675"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-23"/>
+<generic:ObsValue value="0.8665"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-24"/>
+<generic:ObsValue value="0.8675"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-25"/>
+<generic:ObsValue value="0.8715"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-28"/>
+<generic:ObsValue value="0.8679"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-29"/>
+<generic:ObsValue value="0.865"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-30"/>
+<generic:ObsValue value="0.8622"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-31"/>
+<generic:ObsValue value="0.8649"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-01"/>
+<generic:ObsValue value="0.8665"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-04"/>
+<generic:ObsValue value="0.8704"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-05"/>
+<generic:ObsValue value="0.8693"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-06"/>
+<generic:ObsValue value="0.8717"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-07"/>
+<generic:ObsValue value="0.8673"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-08"/>
+<generic:ObsValue value="0.8671"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-11"/>
+<generic:ObsValue value="0.8656"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-12"/>
+<generic:ObsValue value="0.8621"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-13"/>
+<generic:ObsValue value="0.8631"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-14"/>
+<generic:ObsValue value="0.861"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-15"/>
+<generic:ObsValue value="0.8622"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-18"/>
+<generic:ObsValue value="0.8621"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-19"/>
+<generic:ObsValue value="0.864"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-20"/>
+<generic:ObsValue value="0.8645"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-21"/>
+<generic:ObsValue value="0.8654"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-22"/>
+<generic:ObsValue value="0.8653"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-25"/>
+<generic:ObsValue value="0.8659"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-26"/>
+<generic:ObsValue value="0.8642"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-27"/>
+<generic:ObsValue value="0.8626"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-28"/>
+<generic:ObsValue value="0.8637"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-29"/>
+<generic:ObsValue value="0.8668"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-01"/>
+<generic:ObsValue value="0.8662"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-02"/>
+<generic:ObsValue value="0.8702"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-03"/>
+<generic:ObsValue value="0.8687"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-04"/>
+<generic:ObsValue value="0.8663"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-05"/>
+<generic:ObsValue value="0.8678"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-08"/>
+<generic:ObsValue value="0.8669"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-09"/>
+<generic:ObsValue value="0.8663"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-10"/>
+<generic:ObsValue value="0.865"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-11"/>
+<generic:ObsValue value="0.8647"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-12"/>
+<generic:ObsValue value="0.8653"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-15"/>
+<generic:ObsValue value="0.8641"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-16"/>
+<generic:ObsValue value="0.8656"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-17"/>
+<generic:ObsValue value="0.8675"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-18"/>
+<generic:ObsValue value="0.868"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-19"/>
+<generic:ObsValue value="0.8708"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-22"/>
+<generic:ObsValue value="0.8729"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-23"/>
+<generic:ObsValue value="0.8729"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-24"/>
+<generic:ObsValue value="0.8731"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-25"/>
+<generic:ObsValue value="0.8748"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-26"/>
+<generic:ObsValue value="0.874"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-29"/>
+<generic:ObsValue value="0.8723"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-30"/>
+<generic:ObsValue value="0.8734"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-01"/>
+<generic:ObsValue value="0.8704"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-02"/>
+<generic:ObsValue value="0.8721"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-03"/>
+<generic:ObsValue value="0.8726"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-06"/>
+<generic:ObsValue value="0.8695"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-07"/>
+<generic:ObsValue value="0.8703"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-08"/>
+<generic:ObsValue value="0.8671"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-09"/>
+<generic:ObsValue value="0.8683"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-10"/>
+<generic:ObsValue value="0.8709"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-13"/>
+<generic:ObsValue value="0.8677"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-14"/>
+<generic:ObsValue value="0.8712"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-15"/>
+<generic:ObsValue value="0.8705"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-16"/>
+<generic:ObsValue value="0.8676"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-17"/>
+<generic:ObsValue value="0.8695"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-20"/>
+<generic:ObsValue value="0.8691"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-21"/>
+<generic:ObsValue value="0.8678"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-22"/>
+<generic:ObsValue value="0.8689"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-23"/>
+<generic:ObsValue value="0.8691"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-24"/>
+<generic:ObsValue value="0.8726"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-27"/>
+<generic:ObsValue value="0.8721"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-28"/>
+<generic:ObsValue value="0.876"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-29"/>
+<generic:ObsValue value="0.8807"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-30"/>
+<generic:ObsValue value="0.8801"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-31"/>
+<generic:ObsValue value="0.8816"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-03"/>
+<generic:ObsValue value="0.8765"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-04"/>
+<generic:ObsValue value="0.8795"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-05"/>
+<generic:ObsValue value="0.881"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-06"/>
+<generic:ObsValue value="0.8807"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-07"/>
+<generic:ObsValue value="0.8811"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-10"/>
+<generic:ObsValue value="0.8778"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-11"/>
+<generic:ObsValue value="0.8804"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-12"/>
+<generic:ObsValue value="0.8823"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-13"/>
+<generic:ObsValue value="0.8819"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-14"/>
+<generic:ObsValue value="0.8846"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-17"/>
+<generic:ObsValue value="0.8795"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-18"/>
+<generic:ObsValue value="0.8821"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-19"/>
+<generic:ObsValue value="0.8827"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-20"/>
+<generic:ObsValue value="0.8815"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-21"/>
+<generic:ObsValue value="0.8803"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-24"/>
+<generic:ObsValue value="0.8804"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-25"/>
+<generic:ObsValue value="0.8788"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-26"/>
+<generic:ObsValue value="0.8776"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-27"/>
+<generic:ObsValue value="0.8754"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-28"/>
+<generic:ObsValue value="0.8752"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-01"/>
+<generic:ObsValue value="0.8778"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-02"/>
+<generic:ObsValue value="0.8796"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-03"/>
+<generic:ObsValue value="0.8766"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-04"/>
+<generic:ObsValue value="0.8745"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-05"/>
+<generic:ObsValue value="0.8727"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-08"/>
+<generic:ObsValue value="0.8746"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-09"/>
+<generic:ObsValue value="0.8735"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-10"/>
+<generic:ObsValue value="0.8741"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-11"/>
+<generic:ObsValue value="0.8751"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-12"/>
+<generic:ObsValue value="0.8767"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-15"/>
+<generic:ObsValue value="0.8779"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-16"/>
+<generic:ObsValue value="0.8764"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-17"/>
+<generic:ObsValue value="0.8785"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-18"/>
+<generic:ObsValue value="0.8746"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-19"/>
+<generic:ObsValue value="0.876"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-22"/>
+<generic:ObsValue value="0.8742"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-23"/>
+<generic:ObsValue value="0.8729"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-24"/>
+<generic:ObsValue value="0.8729"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-29"/>
+<generic:ObsValue value="0.8726"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-30"/>
+<generic:ObsValue value="0.8712"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-31"/>
+<generic:ObsValue value="0.8726"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+</generic:Series>
+<generic:Series>
+<generic:SeriesKey>
+<generic:Value id="FREQ" value="D"/>
+<generic:Value id="CURRENCY" value="USD"/>
+<generic:Value id="CURRENCY_DENOM" value="EUR"/>
+<generic:Value id="EXR_TYPE" value="SP00"/>
+<generic:Value id="EXR_SUFFIX" value="A"/>
+</generic:SeriesKey>
+<generic:Attributes>
+<generic:Value id="SOURCE_AGENCY" value="4F0"/>
+<generic:Value id="TITLE_COMPL" value="ECB reference exchange rate, US dollar/Euro, 2.15 pm (C.E.T.)"/>
+<generic:Value id="TIME_FORMAT" value="P1D"/>
+<generic:Value id="DECIMALS" value="4"/>
+<generic:Value id="UNIT" value="USD"/>
+<generic:Value id="COLLECTION" value="A"/>
+<generic:Value id="UNIT_MULT" value="0"/>
+<generic:Value id="UNIT_INDEX_BASE" value="99Q1=100"/>
+<generic:Value id="TITLE" value="US dollar/Euro ECB reference exchange rate"/>
+</generic:Attributes>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-02"/>
+<generic:ObsValue value="1.0321"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-03"/>
+<generic:ObsValue value="1.0299"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-06"/>
+<generic:ObsValue value="1.0426"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-07"/>
+<generic:ObsValue value="1.0393"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-08"/>
+<generic:ObsValue value="1.0286"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-09"/>
+<generic:ObsValue value="1.0305"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-10"/>
+<generic:ObsValue value="1.0304"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-13"/>
+<generic:ObsValue value="1.0198"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-14"/>
+<generic:ObsValue value="1.0245"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-15"/>
+<generic:ObsValue value="1.03"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-16"/>
+<generic:ObsValue value="1.0272"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-17"/>
+<generic:ObsValue value="1.0298"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-20"/>
+<generic:ObsValue value="1.0316"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-21"/>
+<generic:ObsValue value="1.0357"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-22"/>
+<generic:ObsValue value="1.0443"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-23"/>
+<generic:ObsValue value="1.0404"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-24"/>
+<generic:ObsValue value="1.0472"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-27"/>
+<generic:ObsValue value="1.053"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-28"/>
+<generic:ObsValue value="1.0421"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-29"/>
+<generic:ObsValue value="1.0396"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-30"/>
+<generic:ObsValue value="1.0403"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-01-31"/>
+<generic:ObsValue value="1.0393"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-03"/>
+<generic:ObsValue value="1.0274"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-04"/>
+<generic:ObsValue value="1.0335"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-05"/>
+<generic:ObsValue value="1.0422"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-06"/>
+<generic:ObsValue value="1.036"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-07"/>
+<generic:ObsValue value="1.0377"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-10"/>
+<generic:ObsValue value="1.032"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-11"/>
+<generic:ObsValue value="1.0324"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-12"/>
+<generic:ObsValue value="1.037"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-13"/>
+<generic:ObsValue value="1.039"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-14"/>
+<generic:ObsValue value="1.0478"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-17"/>
+<generic:ObsValue value="1.0473"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-18"/>
+<generic:ObsValue value="1.0447"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-19"/>
+<generic:ObsValue value="1.0434"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-20"/>
+<generic:ObsValue value="1.0443"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-21"/>
+<generic:ObsValue value="1.0465"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-24"/>
+<generic:ObsValue value="1.0466"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-25"/>
+<generic:ObsValue value="1.0497"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-26"/>
+<generic:ObsValue value="1.0487"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-27"/>
+<generic:ObsValue value="1.0477"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02-28"/>
+<generic:ObsValue value="1.0411"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-03"/>
+<generic:ObsValue value="1.0465"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-04"/>
+<generic:ObsValue value="1.0557"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-05"/>
+<generic:ObsValue value="1.0694"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-06"/>
+<generic:ObsValue value="1.0796"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-07"/>
+<generic:ObsValue value="1.0857"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-10"/>
+<generic:ObsValue value="1.0845"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-11"/>
+<generic:ObsValue value="1.0912"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-12"/>
+<generic:ObsValue value="1.0886"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-13"/>
+<generic:ObsValue value="1.083"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-14"/>
+<generic:ObsValue value="1.0889"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-17"/>
+<generic:ObsValue value="1.0903"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-18"/>
+<generic:ObsValue value="1.0918"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-19"/>
+<generic:ObsValue value="1.0897"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-20"/>
+<generic:ObsValue value="1.0833"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-21"/>
+<generic:ObsValue value="1.0827"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-24"/>
+<generic:ObsValue value="1.0824"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-25"/>
+<generic:ObsValue value="1.0825"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-26"/>
+<generic:ObsValue value="1.0788"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-27"/>
+<generic:ObsValue value="1.0785"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-28"/>
+<generic:ObsValue value="1.0797"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03-31"/>
+<generic:ObsValue value="1.0815"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-01"/>
+<generic:ObsValue value="1.0788"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-02"/>
+<generic:ObsValue value="1.0803"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-03"/>
+<generic:ObsValue value="1.1097"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-04"/>
+<generic:ObsValue value="1.1057"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-07"/>
+<generic:ObsValue value="1.0967"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-08"/>
+<generic:ObsValue value="1.095"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-09"/>
+<generic:ObsValue value="1.1045"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-10"/>
+<generic:ObsValue value="1.1082"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-11"/>
+<generic:ObsValue value="1.1346"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-14"/>
+<generic:ObsValue value="1.1377"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-15"/>
+<generic:ObsValue value="1.1324"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-16"/>
+<generic:ObsValue value="1.1355"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-17"/>
+<generic:ObsValue value="1.136"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-22"/>
+<generic:ObsValue value="1.1476"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-23"/>
+<generic:ObsValue value="1.1415"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-24"/>
+<generic:ObsValue value="1.1376"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-25"/>
+<generic:ObsValue value="1.1357"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-28"/>
+<generic:ObsValue value="1.1358"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-29"/>
+<generic:ObsValue value="1.1373"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04-30"/>
+<generic:ObsValue value="1.1373"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-02"/>
+<generic:ObsValue value="1.1343"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-05"/>
+<generic:ObsValue value="1.1343"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-06"/>
+<generic:ObsValue value="1.1325"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-07"/>
+<generic:ObsValue value="1.136"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-08"/>
+<generic:ObsValue value="1.1297"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-09"/>
+<generic:ObsValue value="1.1252"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-12"/>
+<generic:ObsValue value="1.1106"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-13"/>
+<generic:ObsValue value="1.1112"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-14"/>
+<generic:ObsValue value="1.1214"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-15"/>
+<generic:ObsValue value="1.1185"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-16"/>
+<generic:ObsValue value="1.1194"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-19"/>
+<generic:ObsValue value="1.1262"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-20"/>
+<generic:ObsValue value="1.1241"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-21"/>
+<generic:ObsValue value="1.1321"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-22"/>
+<generic:ObsValue value="1.1309"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-23"/>
+<generic:ObsValue value="1.1301"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-26"/>
+<generic:ObsValue value="1.1381"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-27"/>
+<generic:ObsValue value="1.1356"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-28"/>
+<generic:ObsValue value="1.1317"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-29"/>
+<generic:ObsValue value="1.1281"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05-30"/>
+<generic:ObsValue value="1.1339"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-02"/>
+<generic:ObsValue value="1.1419"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-03"/>
+<generic:ObsValue value="1.1386"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-04"/>
+<generic:ObsValue value="1.1384"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-05"/>
+<generic:ObsValue value="1.1423"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-06"/>
+<generic:ObsValue value="1.1411"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-09"/>
+<generic:ObsValue value="1.141"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-10"/>
+<generic:ObsValue value="1.1429"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-11"/>
+<generic:ObsValue value="1.1433"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-12"/>
+<generic:ObsValue value="1.1594"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-13"/>
+<generic:ObsValue value="1.1512"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-16"/>
+<generic:ObsValue value="1.1574"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-17"/>
+<generic:ObsValue value="1.1568"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-18"/>
+<generic:ObsValue value="1.1508"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-19"/>
+<generic:ObsValue value="1.1478"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-20"/>
+<generic:ObsValue value="1.1515"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-23"/>
+<generic:ObsValue value="1.1472"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-24"/>
+<generic:ObsValue value="1.1607"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-25"/>
+<generic:ObsValue value="1.1598"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-26"/>
+<generic:ObsValue value="1.1695"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-27"/>
+<generic:ObsValue value="1.1704"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06-30"/>
+<generic:ObsValue value="1.172"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-01"/>
+<generic:ObsValue value="1.181"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-02"/>
+<generic:ObsValue value="1.1755"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-03"/>
+<generic:ObsValue value="1.1782"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-04"/>
+<generic:ObsValue value="1.1767"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-07"/>
+<generic:ObsValue value="1.1728"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-08"/>
+<generic:ObsValue value="1.1718"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-09"/>
+<generic:ObsValue value="1.1698"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-10"/>
+<generic:ObsValue value="1.1709"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-11"/>
+<generic:ObsValue value="1.1683"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-14"/>
+<generic:ObsValue value="1.169"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-15"/>
+<generic:ObsValue value="1.1665"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-16"/>
+<generic:ObsValue value="1.1602"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-17"/>
+<generic:ObsValue value="1.1579"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-18"/>
+<generic:ObsValue value="1.165"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-21"/>
+<generic:ObsValue value="1.1667"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-22"/>
+<generic:ObsValue value="1.1699"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-23"/>
+<generic:ObsValue value="1.1726"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-24"/>
+<generic:ObsValue value="1.1756"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-25"/>
+<generic:ObsValue value="1.1724"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-28"/>
+<generic:ObsValue value="1.1654"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-29"/>
+<generic:ObsValue value="1.1533"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-30"/>
+<generic:ObsValue value="1.1527"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07-31"/>
+<generic:ObsValue value="1.1446"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-01"/>
+<generic:ObsValue value="1.1404"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-04"/>
+<generic:ObsValue value="1.1565"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-05"/>
+<generic:ObsValue value="1.1546"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-06"/>
+<generic:ObsValue value="1.1604"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-07"/>
+<generic:ObsValue value="1.1643"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-08"/>
+<generic:ObsValue value="1.1648"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-11"/>
+<generic:ObsValue value="1.1622"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-12"/>
+<generic:ObsValue value="1.1606"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-13"/>
+<generic:ObsValue value="1.1711"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-14"/>
+<generic:ObsValue value="1.169"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-15"/>
+<generic:ObsValue value="1.1688"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-18"/>
+<generic:ObsValue value="1.1673"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-19"/>
+<generic:ObsValue value="1.1682"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-20"/>
+<generic:ObsValue value="1.1651"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-21"/>
+<generic:ObsValue value="1.1639"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-22"/>
+<generic:ObsValue value="1.1608"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-25"/>
+<generic:ObsValue value="1.1697"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-26"/>
+<generic:ObsValue value="1.1656"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-27"/>
+<generic:ObsValue value="1.1593"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-28"/>
+<generic:ObsValue value="1.1676"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08-29"/>
+<generic:ObsValue value="1.1658"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-01"/>
+<generic:ObsValue value="1.1715"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-02"/>
+<generic:ObsValue value="1.1646"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-03"/>
+<generic:ObsValue value="1.1653"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-04"/>
+<generic:ObsValue value="1.1647"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-05"/>
+<generic:ObsValue value="1.1697"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-08"/>
+<generic:ObsValue value="1.1728"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-09"/>
+<generic:ObsValue value="1.1744"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-10"/>
+<generic:ObsValue value="1.1707"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-11"/>
+<generic:ObsValue value="1.1685"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-12"/>
+<generic:ObsValue value="1.1718"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-15"/>
+<generic:ObsValue value="1.1766"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-16"/>
+<generic:ObsValue value="1.1807"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-17"/>
+<generic:ObsValue value="1.1837"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-18"/>
+<generic:ObsValue value="1.1818"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-19"/>
+<generic:ObsValue value="1.1736"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-22"/>
+<generic:ObsValue value="1.1781"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-23"/>
+<generic:ObsValue value="1.1793"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-24"/>
+<generic:ObsValue value="1.1756"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-25"/>
+<generic:ObsValue value="1.1739"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-26"/>
+<generic:ObsValue value="1.1672"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-29"/>
+<generic:ObsValue value="1.1723"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09-30"/>
+<generic:ObsValue value="1.1741"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-01"/>
+<generic:ObsValue value="1.1724"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-02"/>
+<generic:ObsValue value="1.1754"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-03"/>
+<generic:ObsValue value="1.1734"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-06"/>
+<generic:ObsValue value="1.1678"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-07"/>
+<generic:ObsValue value="1.1666"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-08"/>
+<generic:ObsValue value="1.1627"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-09"/>
+<generic:ObsValue value="1.1611"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-10"/>
+<generic:ObsValue value="1.1568"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-13"/>
+<generic:ObsValue value="1.1569"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-14"/>
+<generic:ObsValue value="1.1553"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-15"/>
+<generic:ObsValue value="1.1622"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-16"/>
+<generic:ObsValue value="1.1649"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-17"/>
+<generic:ObsValue value="1.1681"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-20"/>
+<generic:ObsValue value="1.1655"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-21"/>
+<generic:ObsValue value="1.1607"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-22"/>
+<generic:ObsValue value="1.1587"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-23"/>
+<generic:ObsValue value="1.1593"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-24"/>
+<generic:ObsValue value="1.1612"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-27"/>
+<generic:ObsValue value="1.164"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-28"/>
+<generic:ObsValue value="1.163"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-29"/>
+<generic:ObsValue value="1.1636"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-30"/>
+<generic:ObsValue value="1.155"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10-31"/>
+<generic:ObsValue value="1.1554"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-03"/>
+<generic:ObsValue value="1.1514"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-04"/>
+<generic:ObsValue value="1.1491"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-05"/>
+<generic:ObsValue value="1.1492"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-06"/>
+<generic:ObsValue value="1.1533"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-07"/>
+<generic:ObsValue value="1.1561"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-10"/>
+<generic:ObsValue value="1.1571"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-11"/>
+<generic:ObsValue value="1.1575"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-12"/>
+<generic:ObsValue value="1.1576"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-13"/>
+<generic:ObsValue value="1.1619"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-14"/>
+<generic:ObsValue value="1.1648"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-17"/>
+<generic:ObsValue value="1.1593"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-18"/>
+<generic:ObsValue value="1.159"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-19"/>
+<generic:ObsValue value="1.1583"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-20"/>
+<generic:ObsValue value="1.1514"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-21"/>
+<generic:ObsValue value="1.152"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-24"/>
+<generic:ObsValue value="1.1544"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-25"/>
+<generic:ObsValue value="1.1551"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-26"/>
+<generic:ObsValue value="1.1577"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-27"/>
+<generic:ObsValue value="1.1586"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11-28"/>
+<generic:ObsValue value="1.1566"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-01"/>
+<generic:ObsValue value="1.1646"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-02"/>
+<generic:ObsValue value="1.1614"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-03"/>
+<generic:ObsValue value="1.1668"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-04"/>
+<generic:ObsValue value="1.1666"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-05"/>
+<generic:ObsValue value="1.1645"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-08"/>
+<generic:ObsValue value="1.1655"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-09"/>
+<generic:ObsValue value="1.1637"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-10"/>
+<generic:ObsValue value="1.1634"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-11"/>
+<generic:ObsValue value="1.1714"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-12"/>
+<generic:ObsValue value="1.1731"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-15"/>
+<generic:ObsValue value="1.1753"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-16"/>
+<generic:ObsValue value="1.1776"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-17"/>
+<generic:ObsValue value="1.1722"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-18"/>
+<generic:ObsValue value="1.1719"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-19"/>
+<generic:ObsValue value="1.1712"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-22"/>
+<generic:ObsValue value="1.1745"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-23"/>
+<generic:ObsValue value="1.1786"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-24"/>
+<generic:ObsValue value="1.1787"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-29"/>
+<generic:ObsValue value="1.1766"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-30"/>
+<generic:ObsValue value="1.1757"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12-31"/>
+<generic:ObsValue value="1.175"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+</generic:Series>
+<generic:Series>
+<generic:SeriesKey>
+<generic:Value id="FREQ" value="M"/>
+<generic:Value id="CURRENCY" value="GBP"/>
+<generic:Value id="CURRENCY_DENOM" value="EUR"/>
+<generic:Value id="EXR_TYPE" value="SP00"/>
+<generic:Value id="EXR_SUFFIX" value="A"/>
+</generic:SeriesKey>
+<generic:Attributes>
+<generic:Value id="SOURCE_AGENCY" value="4F0"/>
+<generic:Value id="TITLE_COMPL" value="ECB reference exchange rate, Pound sterling/Euro, 2.15 pm (C.E.T.)"/>
+<generic:Value id="DECIMALS" value="5"/>
+<generic:Value id="TITLE" value="Pound sterling/Euro ECB reference exchange rate"/>
+<generic:Value id="COLLECTION" value="A"/>
+<generic:Value id="UNIT_MULT" value="0"/>
+<generic:Value id="UNIT" value="GBP"/>
+<generic:Value id="UNIT_INDEX_BASE" value="99Q1=100"/>
+<generic:Value id="TIME_FORMAT" value="P1M"/>
+</generic:Attributes>
+<generic:Obs>
+<generic:ObsDimension value="2025-01"/>
+<generic:ObsValue value="0.8390809090909"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02"/>
+<generic:ObsValue value="0.83071"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03"/>
+<generic:ObsValue value="0.8370252380952"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04"/>
+<generic:ObsValue value="0.8537865"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05"/>
+<generic:ObsValue value="0.8434952380952383"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06"/>
+<generic:ObsValue value="0.8498095238095237"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07"/>
+<generic:ObsValue value="0.8646869565217391"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08"/>
+<generic:ObsValue value="0.8652761904761904"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09"/>
+<generic:ObsValue value="0.8689454545454546"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10"/>
+<generic:ObsValue value="0.8715521739130435"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11"/>
+<generic:ObsValue value="0.8799649999999998"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12"/>
+<generic:ObsValue value="0.875"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+</generic:Series>
+<generic:Series>
+<generic:SeriesKey>
+<generic:Value id="FREQ" value="M"/>
+<generic:Value id="CURRENCY" value="USD"/>
+<generic:Value id="CURRENCY_DENOM" value="EUR"/>
+<generic:Value id="EXR_TYPE" value="SP00"/>
+<generic:Value id="EXR_SUFFIX" value="A"/>
+</generic:SeriesKey>
+<generic:Attributes>
+<generic:Value id="SOURCE_AGENCY" value="4F0"/>
+<generic:Value id="TITLE_COMPL" value="ECB reference exchange rate, US dollar/Euro, 2.15 pm (C.E.T.)"/>
+<generic:Value id="DECIMALS" value="4"/>
+<generic:Value id="UNIT" value="USD"/>
+<generic:Value id="COLLECTION" value="A"/>
+<generic:Value id="UNIT_MULT" value="0"/>
+<generic:Value id="UNIT_INDEX_BASE" value="99Q1=100"/>
+<generic:Value id="TITLE" value="US dollar/Euro ECB reference exchange rate"/>
+<generic:Value id="TIME_FORMAT" value="P1M"/>
+</generic:Attributes>
+<generic:Obs>
+<generic:ObsDimension value="2025-01"/>
+<generic:ObsValue value="1.0353727272727"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-02"/>
+<generic:ObsValue value="1.04125"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-03"/>
+<generic:ObsValue value="1.080680952381"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-04"/>
+<generic:ObsValue value="1.1213950000000001"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-05"/>
+<generic:ObsValue value="1.1278047619047618"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-06"/>
+<generic:ObsValue value="1.1516190476190478"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-07"/>
+<generic:ObsValue value="1.1676869565217392"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-08"/>
+<generic:ObsValue value="1.1631428571428575"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-09"/>
+<generic:ObsValue value="1.1732227272727274"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-10"/>
+<generic:ObsValue value="1.1630434782608696"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-11"/>
+<generic:ObsValue value="1.15602"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-12"/>
+<generic:ObsValue value="1.1708714285714283"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+</generic:Series>
+<generic:Series>
+<generic:SeriesKey>
+<generic:Value id="FREQ" value="Q"/>
+<generic:Value id="CURRENCY" value="GBP"/>
+<generic:Value id="CURRENCY_DENOM" value="EUR"/>
+<generic:Value id="EXR_TYPE" value="SP00"/>
+<generic:Value id="EXR_SUFFIX" value="A"/>
+</generic:SeriesKey>
+<generic:Attributes>
+<generic:Value id="SOURCE_AGENCY" value="4F0"/>
+<generic:Value id="TITLE_COMPL" value="ECB reference exchange rate, Pound sterling/Euro, 2.15 pm (C.E.T.)"/>
+<generic:Value id="DECIMALS" value="5"/>
+<generic:Value id="TITLE" value="Pound sterling/Euro ECB reference exchange rate"/>
+<generic:Value id="COLLECTION" value="A"/>
+<generic:Value id="UNIT_MULT" value="0"/>
+<generic:Value id="UNIT" value="GBP"/>
+<generic:Value id="UNIT_INDEX_BASE" value="99Q1=100"/>
+<generic:Value id="TIME_FORMAT" value="P3M"/>
+</generic:Attributes>
+<generic:Obs>
+<generic:ObsDimension value="2025-Q1"/>
+<generic:ObsValue value="0.8357382539683"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-Q2"/>
+<generic:ObsValue value="0.8489537096774193"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-Q3"/>
+<generic:ObsValue value="0.8662939393939396"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-Q4"/>
+<generic:ObsValue value="0.8753125000000002"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+</generic:Series>
+<generic:Series>
+<generic:SeriesKey>
+<generic:Value id="FREQ" value="Q"/>
+<generic:Value id="CURRENCY" value="USD"/>
+<generic:Value id="CURRENCY_DENOM" value="EUR"/>
+<generic:Value id="EXR_TYPE" value="SP00"/>
+<generic:Value id="EXR_SUFFIX" value="A"/>
+</generic:SeriesKey>
+<generic:Attributes>
+<generic:Value id="SOURCE_AGENCY" value="4F0"/>
+<generic:Value id="TITLE_COMPL" value="ECB reference exchange rate, US dollar/Euro, 2.15 pm (C.E.T.)"/>
+<generic:Value id="DECIMALS" value="4"/>
+<generic:Value id="UNIT" value="USD"/>
+<generic:Value id="COLLECTION" value="A"/>
+<generic:Value id="UNIT_MULT" value="0"/>
+<generic:Value id="UNIT_INDEX_BASE" value="99Q1=100"/>
+<generic:Value id="TITLE" value="US dollar/Euro ECB reference exchange rate"/>
+<generic:Value id="TIME_FORMAT" value="P3M"/>
+</generic:Attributes>
+<generic:Obs>
+<generic:ObsDimension value="2025-Q1"/>
+<generic:ObsValue value="1.0523412698413"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-Q2"/>
+<generic:ObsValue value="1.1338032258064514"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-Q3"/>
+<generic:ObsValue value="1.1680863636363632"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+<generic:Obs>
+<generic:ObsDimension value="2025-Q4"/>
+<generic:ObsValue value="1.1634171875"/>
+<generic:Attributes>
+<generic:Value id="OBS_STATUS" value="A"/>
+<generic:Value id="OBS_CONF" value="F"/>
+</generic:Attributes>
+</generic:Obs>
+</generic:Series>
+</message:DataSet>
+</message:GenericData>
