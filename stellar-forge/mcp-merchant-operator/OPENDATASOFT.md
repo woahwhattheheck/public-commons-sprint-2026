@@ -165,3 +165,25 @@ The huwise command is an alias for this same customer client. Keep argument file
 This provider imports the maintained engine only on open. Tool metadata remains source-only; reading configuration does not open a project, start a listener or request a portal. Each opened alias owns one original workbench lease and one optional borrowed browser. File export requests use their own original state lease, and all accepted operations and native descriptors drain on provider shutdown.
 
 Original engine and publication source: stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/. Shared merchant transport, release controls and retained download implementation remain in their existing modules.
+
+
+## Complete native receiving example
+
+The maintained example opens the full authenticated merchant host and its original Huwise browser, captures the complete public Open Data Inception dataset, pages every retained row, exports all four analyst formats, and receives the original complete files through the typed client. It deliberately interrupts the real download after a durable chunk, resumes that same receiving directory, closes its owned resources and reopens every file locally.
+
+With the installed package:
+
+~~~sh
+starforge merchant-huwise-receive --directory /srv/starforge/huwise-receiving
+~~~
+
+From source:
+
+~~~sh
+node stellar-forge/mcp-merchant-operator/examples/opendatasoft-receiving.mjs \
+  --directory /srv/starforge/huwise-receiving
+~~~
+
+To receive an existing original project, add --project /srv/starforge/huwise-workbench. This selects its completed native edition and any associated original source declaration, merchant archive, receiving guide and buyer request. The existing project's analyst notes are preserved. A new example project records its completed row and file review in its own analyst notes and confirms that the earlier immutable export still replays after that later edit.
+
+The default source is https://public.opendatasoft.com and dataset open-data-sources. Use --origin and --dataset for another authorized public portal and dataset. The supplied directory retains the original project, merchant connection, export request, full customer files and native-receiving.json. Repeat the same command and directory after interruption. A completed operation reopens and verifies its original delivery locally.

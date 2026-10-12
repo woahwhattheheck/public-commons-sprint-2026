@@ -154,11 +154,11 @@ export class MerchantOpendatasoftWorkspaces {
       try { await pending; } catch (error) { if (this.#handles.get(name) === pending) this.#handles.delete(name); throw error; }
     }
     const handle = await this.#handles.get(name);
+    if (handle.closing) throw fail('WORKSPACE_CLOSING', 'This original workspace is closing.');
     if (browser) await this.#browser(handle);
     return this.#status(name);
   }
   async #browser(handle) {
-    if (handle.closing) throw fail('WORKSPACE_CLOSING', 'This original workspace is closing.');
     if (handle.browser) return handle.browser;
     if (!handle.browserPending) handle.browserPending = (async () => {
       const { startOpendatasoftServer } = await import(NATIVE + 'workspace/server.mjs');
