@@ -100,6 +100,9 @@ export async function executeJob({jobPath,operationRoot,mode='execute',adapter=n
   const sourceFile=relative(inputRoot,job.source_file),declaration=await readMssqlSourceFile(sourceFile);
   const config=declaration.config;check(sha(await regular(sourceFile))===job.source_sha256,'ORIGINAL_SOURCE_DIFFERS');
   const statePath=path.join(root,'state.json');
+  const unlock=await lock(root,jobHash);
+  // Read authoritative mutable state only after obtaining this operation's lock.
+  try{
   let state=await exists(statePath)?await json(statePath):{
     schema:'commons-bi-sql-server-state/1',job_id:job.job_id,job_sha256:jobHash,origin,driver_ref:DRIVER_REF,
     status:'prepared',generation:0,pages:[],observations:[],events:[],rows:0,native_bytes:0,
@@ -111,7 +114,6 @@ export async function executeJob({jobPath,operationRoot,mode='execute',adapter=n
   if(state.status==='complete')return state;
   if(mode==='inspect')return state;
   if(mode==='execute'&&state.generation>0){check(false,'CONTINUE_EXISTING_OPERATION_EXPLICITLY');}
-  const unlock=await lock(root,jobHash);
   let source=null,timer=null,driverRelease=null,canceled=false,controller=new AbortController();
   const cancel=()=>{canceled=true;controller.abort();};
   process.on('SIGINT',cancel);process.on('SIGTERM',cancel);
@@ -229,8 +231,8 @@ export async function executeJob({jobPath,operationRoot,mode='execute',adapter=n
     if(timer)clearInterval(timer);
     if(source)await source.close().catch(()=>{});
     process.removeListener('SIGINT',cancel);process.removeListener('SIGTERM',cancel);driverRelease?.();
-    await unlock();
   }
+  }finally{await unlock();}
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   const args=Object.fromEntries(process.argv.slice(2).map(v=>{const p=v.indexOf('=');return[p<0?v.slice(2):v.slice(2,p),p<0?true:v.slice(p+1)];}));
