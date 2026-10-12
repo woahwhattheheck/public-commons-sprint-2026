@@ -131,3 +131,10 @@ The original profile's `ATTRIBUTION.md` and `examples/*-capture.json` retain sou
 The authenticated loopback API exposes `/api/state`, `/api/upload`, `/api/requests`, `/api/request`, `/api/resume`, `/api/review`, `/api/native-state`, `/api/query`, `/api/changes`, `/api/changes-file` and `/api/download`. It rejects another Host or Origin and renders grant content as text with a same-origin content policy. The live console uses its installed editor.
 
 The original publisher accepts individual files up to 256 MiB. The complete handoff layer accepts a ZIP up to 1 GiB and 2 GiB expanded, with full membership and identity checks. Native input limits remain those of the original NDJSON workspace. The console permits eight HTTP connections, one accepted operation at a time, and one fund's native Node process at a time.
+
+
+## Saved Applications and connected commands
+
+The same publisher can be saved in the original Applications manager as **360Giving publisher workspace**. Select its private initialized workspace and existing Python, then review, save, connect and start it. The complete setup and source-to-receiver workflow are in [360Giving Applications](../../../../distribution/runtime-workspace/360GIVING_APPLICATIONS.md).
+
+Use `--connection <private connection file>` to operate the running application with the same publisher commands and stable request IDs. Applications keeps that connection path stable when the saved publisher reopens. `changes-file --dataset KEY --comparison SHA256 --out /absolute/complete-changes.jsonl` downloads the complete verified native field changes. The complete managed receiving driver transfers all saved editions, reviews and candidates, then compares full native content after cold reopening both workspaces.
