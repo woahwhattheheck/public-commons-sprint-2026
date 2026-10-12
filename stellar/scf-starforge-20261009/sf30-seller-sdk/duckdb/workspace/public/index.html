@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>DuckDB merchant · Stellar Forge</title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/cloud.css">
   <script type="module" src="/app.mjs"></script>
 </head>
 <body>
@@ -20,6 +21,7 @@
     <div><span>Merchant</span><strong id="runtime-status">—</strong></div>
   </section>
   <nav class="tabs" aria-label="Merchant workflow">
+    <button type="button" data-tab="cloud">Cloud source editions</button>
     <button type="button" data-tab="author">Build a query</button>
     <button type="button" data-tab="queries" aria-current="page">1 · Query review</button>
     <button type="button" data-tab="plan">2 · Merchant plan</button>
@@ -27,6 +29,9 @@
     <button type="button" data-tab="history">Saved revisions</button>
   </nav>
   <main>
+    <section id="cloud" class="tab-panel" hidden aria-label="Cloud source editions, comparisons and handover">
+      <div id="cloud-workspace"></div>
+    </section>
     <section id="author" class="tab-panel" hidden aria-labelledby="author-heading">
       <div class="section-heading"><div><h2 id="author-heading">Build a named query from actual data</h2><p>Inspect the declared database and Parquet files. Choose columns, scalar filters and stable ordering, then carry the query into the same merchant draft.</p></div></div>
       <div id="query-author"></div>
