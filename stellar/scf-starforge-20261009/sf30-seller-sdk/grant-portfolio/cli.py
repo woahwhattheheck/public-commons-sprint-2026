@@ -8,11 +8,13 @@ from pathlib import Path
 import signal
 import sys
 import threading
+import tempfile
 import uuid
 
 from domain import InputError, MAX_JSON, canonical, parse, require
 from managed import require_binding
-from workspace import Workspace
+from workspace import Workspace, sync_dir
+from native_sources import file_info
 
 
 def output(value):
@@ -121,14 +123,31 @@ def main():
             if result["state"] == "COMPLETED":
                 source, descriptor = workspace.export_file(result["result"]["sha256"])
                 destination = Path(args.out).expanduser().absolute()
-                require(not destination.exists(), "Choose a new complete handoff output")
-                with source.open("rb") as inp:
-                    fd = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-                    with os.fdopen(fd, "wb") as out:
-                        while block := inp.read(1024 * 1024):
-                            out.write(block)
-                        out.flush()
-                        os.fsync(out.fileno())
+                expected = {key: descriptor[key] for key in ("sha256", "bytes")}
+                if destination.exists() or destination.is_symlink():
+                    require(destination.is_file() and not destination.is_symlink()
+                            and file_info(destination) == expected,
+                            "The existing output belongs to different complete bytes", "OUTPUT_CONFLICT", 409)
+                else:
+                    fd, name = tempfile.mkstemp(prefix=".grant-export-" + descriptor["sha256"][:16] + "-",
+                                                dir=destination.parent)
+                    temporary = Path(name)
+                    try:
+                        with os.fdopen(fd, "wb") as out, source.open("rb") as inp:
+                            while block := inp.read(1024 * 1024):
+                                out.write(block)
+                            out.flush()
+                            os.fsync(out.fileno())
+                        require(file_info(temporary) == expected, "The complete handoff copy changed")
+                        try:
+                            os.link(temporary, destination)
+                        except FileExistsError:
+                            require(destination.is_file() and not destination.is_symlink()
+                                    and file_info(destination) == expected,
+                                    "The output changed before publication", "OUTPUT_CONFLICT", 409)
+                        sync_dir(destination.parent)
+                    finally:
+                        temporary.unlink(missing_ok=True)
                 result = {**result, "output": str(destination)}
         output(result)
         return 1 if isinstance(result, dict) and result.get("state") == "FAILED" else 0

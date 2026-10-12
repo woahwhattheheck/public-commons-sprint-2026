@@ -41,6 +41,24 @@ The last file uses schema `comic-relief.original-inputs/v1`, operationId `scf-gr
 
 The original International 2015–2022 item is a native Google Sheet and was exported through the connected Drive export operation. The 2022–2026 item is already an XLSX and was received as its original raw file. Preserve these acquisition differences.
 
+### Receive the preserved originals
+
+Run `materialize-originals.py` once inside this same complete operation, passing a private JSON document on stdin:
+
+```json
+{
+  "operationId": "scf-grant-portfolio-comic-relief-9b23-20261012",
+  "outputDirectory": "/absolute/operation/comicrelief-inputs",
+  "sources": [
+    {"name": "comic-relief-cprojects-grants-original.xml", "bytes": 2478357, "url": "https://fresh-authorized-download.example/original", "reference": "notion-file-block://the-original-file-reference"}
+  ]
+}
+```
+
+Supply all five named originals with the exact retained sizes: XML 2,478,357; 2015–2022 XLSX 210,128; 2022–2026 XLSX 39,278; registry JSON 758,668; publisher metadata JSON 4,479 bytes. The example's one source illustrates the fields; it is not a complete request. Replace `url` with an absolute `sourcePath` when the original native receiver already has that complete file. An available original SHA256 can also be supplied as `sha256`.
+
+The private carrier contains current signed download URLs. They are excluded from the saved manifest and all normal output. The permanent operation guard coalesces one receiver; complete source identities are saved before final-file publication, so an interrupted receive checks the same preserved bytes. Each XLSX is read through its original ZIP CRC; the XML inventory comes from the full file; selected registry records remain complete and keyed to their original positions. A completed repeat verifies those original bytes and returns the same manifest.
+
 ## Use the official converter
 
 The preparation calls the original `libcove.lib.converters.convert_spreadsheet` from libcove 0.31.0 and flattentool 0.28.0. Its settings are the original 360Giving root `grants`, title conversion, Meta sheet, vertical package metadata and hash-comment handling. The full native profile's retained 1.4.3 package/current-grant schemas and its referenced 1.4.2 grant schema are verified against their original Git blob identities. Existing jsonref resolution reads that complete local schema closure without changing any schema document.
@@ -56,6 +74,8 @@ python3 -m venv /absolute/converter-python
   --output /absolute/operation/prepared \
   --converter-python /absolute/converter-python/bin/python
 ```
+
+The existing saved publisher owner identified the native schema closure at `/dev/shm/bi-migration-2d58/runtime`, used with `/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3` and that exact directory on `PYTHONPATH`. Reuse it when present in the accepting worker. The preparation explicitly removes this native `PYTHONPATH` only from its converter child so jsonschema 4.x cannot replace the official converter's 3.2.0 dependency.
 
 Use the installed native environment and its existing Node runtime for the next stage. Conversion outputs include the **full** package JSON, full cell and heading source maps, all conversion warnings and a complete converter/schema/source identity. Each saved capture includes the original XLSX identity, exact registry record, current publisher metadata and conversion lineage. The native publisher receives the untouched XLSX as its `transport` input.
 

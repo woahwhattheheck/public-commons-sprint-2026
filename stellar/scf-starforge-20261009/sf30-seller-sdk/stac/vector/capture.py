@@ -2,6 +2,7 @@
 from __future__ import annotations
 import hashlib
 import json
+import math
 import os
 import sqlite3
 from collections import Counter
@@ -9,7 +10,7 @@ from pathlib import Path
 from .common import (CAPTURE, SELECTION, VectorError, need, descriptor, member, file_record,
     verify_manifest, copy_verified, canonical, digest, json_bytes, atomic_json, claim,
     connect_catalog, encoded_value, value_kind, canonical_geometry, require_id,
-    all_files, fsync_directory, read_json)
+    all_files, fsync_directory, read_json, parse_json, number_decimal)
 from .driver import capabilities, source_driver, layers, native_features
 
 def selection_contract(selection):
@@ -21,7 +22,7 @@ def selection_contract(selection):
     sources = selection.get("sources")
     need(isinstance(sources, list) and sources, "VECTOR_SELECTED_SOURCES_REQUIRED")
     seen = set()
-    result = json.loads(canonical(selection))
+    result = parse_json(canonical(selection))
     for source in result["sources"]:
         require_id(source.get("id"), "source.id")
         need(source["id"] not in seen, "VECTOR_DUPLICATE_SOURCE_ID", source["id"])
@@ -55,7 +56,7 @@ def selection_contract(selection):
 def field_stat():
     return {"present": 0, "nulls": 0, "kinds": [], "maxTextBytes": 0,
             "maxTextCharacters": 0, "maxJsonBytes": 0, "minInteger": None,
-            "maxInteger": None, "requiresQuotedString": False}
+            "maxInteger": None, "requiresQuotedString": False, "requiresExactNumber": False}
 
 def add_stat(stat, value):
     kind = value_kind(value)
@@ -69,6 +70,13 @@ def add_stat(stat, value):
     if type(value) is int:
         stat["minInteger"] = str(value if stat["minInteger"] is None else min(value, int(stat["minInteger"])))
         stat["maxInteger"] = str(value if stat["maxInteger"] is None else max(value, int(stat["maxInteger"])))
+    if kind == "number":
+        try:
+            native = float(value)
+            exact = math.isfinite(native) and number_decimal(native) == number_decimal(value)
+        except (OverflowError, ValueError):
+            exact = False
+        stat["requiresExactNumber"] |= not exact
     if type(value) is str:
         stat["maxTextBytes"] = max(stat["maxTextBytes"], len(value.encode("utf-8")))
         stat["maxTextCharacters"] = max(stat["maxTextCharacters"], len(value))
@@ -132,7 +140,9 @@ def create_catalog(root, selection):
         for source in selection["sources"]:
             source_layers = layers(retained_source(root, source), source)
             for meta in source_layers:
-                layer_id = source["id"] if len(source_layers) == 1 else (
+                # GeoPackage can gain a layer in a later source edition. Its existing
+                # native layer keeps its ID regardless of the current layer count.
+                layer_id = source["id"] if source_driver(source) != "GPKG" else (
                     source["id"] + "." + hashlib.sha256(meta["name"].encode()).hexdigest()[:12])
                 counts = {"features": 0, "missingIdentity": 0, "duplicateIdentity": 0,
                           "nullGeometry": 0, "geometryTypes": {}}
@@ -219,7 +229,8 @@ def capture_selection(selection, source_root, directory):
     request = {"schema": "starforge.vector-capture-request.v1", "selection": selection}
     with claim(directory, request) as root:
         if (root / "capture.json").exists():
-            manifest, record = verify_manifest(root, "capture.json", CAPTURE)
+            opened = open_capture(root)
+            manifest, record = opened["manifest"], opened["manifestFile"]
             need(manifest["requestSha256"] == digest(request), "VECTOR_ORIGINAL_REQUEST_CONFLICT")
             return {"directory": str(root), "manifest": manifest, "manifestFile": record, "replayed": True}
         engine = capabilities()
@@ -248,5 +259,37 @@ def capture_selection(selection, source_root, directory):
 
 def open_capture(directory, expected_sha256=None):
     manifest, record = verify_manifest(directory, "capture.json", CAPTURE, expected_sha256)
+    selection = selection_contract(manifest.get("selection"))
+    need(manifest.get("selectionSha256") == digest(selection) and
+         manifest.get("requestSha256") == digest({
+             "schema": "starforge.vector-capture-request.v1", "selection": selection}),
+         "VECTOR_CAPTURE_SELECTION_CHANGED")
+    declared = {item["path"]: descriptor(item) for item in manifest["files"]}
+    need({"catalog.sqlite", "inspection.json"}.issubset(declared),
+         "VECTOR_CAPTURE_INDEX_NOT_DECLARED")
+    for source in selection["sources"]:
+        for original in [descriptor(source)] + [descriptor(item) for item in source.get("members", [])]:
+            expected = {**original, "path": source_target(source, original)}
+            need(declared.get(expected["path"]) == expected,
+                 "VECTOR_CAPTURE_SOURCE_NOT_DECLARED", expected["path"])
+    inspection = read_json(Path(directory) / "inspection.json")
+    need(inspection.get("schema") == "starforge.vector-inspection.v1" and
+         inspection.get("selectionId") == selection["id"] and
+         canonical(inspection.get("sourceEdition")) == canonical(selection["sourceEdition"]) and
+         canonical(inspection.get("counts")) == canonical(manifest.get("counts")) and
+         isinstance(inspection.get("layers"), list), "VECTOR_CAPTURE_INSPECTION_CHANGED")
+    selected = {source["id"]: source for source in selection["sources"]}
+    seen = set()
+    for layer in inspection["layers"]:
+        need(isinstance(layer, dict) and isinstance(layer.get("id"), str) and
+             layer["id"] not in seen and layer.get("sourceId") in selected,
+             "VECTOR_CAPTURE_LAYER_CHANGED")
+        seen.add(layer["id"])
+        source = selected[layer["sourceId"]]
+        need(layer.get("sourceSha256") == source["sha256"] and
+             layer.get("sourcePath") == source["path"] and
+             layer.get("retainedPath") == source_target(source, source) and
+             canonical(layer.get("identity")) == canonical(source["identity"]),
+             "VECTOR_CAPTURE_LAYER_SOURCE_CHANGED", layer["id"])
     return {"directory": str(Path(directory).resolve()), "manifest": manifest,
-            "manifestFile": record, "inspection": read_json(Path(directory) / "inspection.json")}
+            "manifestFile": record, "inspection": inspection}

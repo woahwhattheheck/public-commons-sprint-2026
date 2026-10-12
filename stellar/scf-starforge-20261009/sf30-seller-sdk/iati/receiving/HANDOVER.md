@@ -21,6 +21,7 @@ The packager uses Python 3.11 or later and its standard library on the Linux rec
 | **NOTICE.txt** | The exact supplied publisher attribution text |
 | **runtime/** | The one unchanged original READY distribution archive |
 | **publisher/publisher.xml** | Complete original public publisher source |
+| **publisher/metadata/**, when selected | Complete original official metadata, publisher attribution and acquisition provenance, with links from CONTENTS.md |
 | **publisher/AIDDATA_NIGERIA.md** and **publisher/aiddata-nigeria.json**, when selected | Complete dated AidData attribution, original license observations and source identities |
 | **portfolio/iati-portfolio.zip** | Original portable portfolio, full revision history and native dataset packets |
 | **reports/iati-report.zip** | Original complete report archive for the final reviewed revision |
@@ -31,6 +32,8 @@ The packager uses Python 3.11 or later and its standard library on the Linux rec
 | **guides/** | IATI, domain, operator, runtime, installation and handover guides |
 
 Every retained native report member is copied into the readable report directory. The command verifies its original manifest before copying it and verifies the completed outer archive again before publishing it. It does not summarize or discard row changes, review findings, or source history.
+
+The complete procedure can explicitly select additional public publisher documents through `publisherFiles`. Each selected JSON, Markdown or text file retains its full original bytes and exact declared identity under `publisher/metadata/`. Standalone handover inputs select the same documents in their existing **files** list. Filenames stay in that dedicated directory, are distinct across receiving systems, and cannot replace the original XML or required dataset files.
 
 The customer manifest contains logical archive names and public source/portfolio metadata. It contains no host filesystem paths. A manifest cannot contain its own final digest without a circular dependency, so the separate **result.json** records its SHA-256 and the complete outer ZIP's SHA-256.
 

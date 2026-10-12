@@ -10,6 +10,7 @@
 <button data-section="queries">Saved queries <span id="query-count">0</span></button>
 <button data-section="orders">Download orders <span id="order-count">0</span></button>
 <button data-section="comparison">Compare editions</button>
+<button data-section="vectors">Native vector deliveries</button>
 <button data-section="publication">Publish &amp; query <span id="publication-count">0</span></button>
 <button data-section="customer">Customer acquisitions</button>
 <button data-section="transfer">Project handover</button>
@@ -105,6 +106,59 @@
 <div class="toolbar"><label class="inline">Delivered file<select id="dataset-file"><option>dataset.csv</option><option>dataset.jsonl</option><option>review.html</option><option>manifest.json</option><option>semantics.json</option></select></label><button id="dataset-download" type="button">Download file</button><button id="dataset-accounting" type="button">Payment accounting</button><button id="dataset-finalize" type="button">Finalize acquisition</button></div></div>
 <pre id="customer-result" class="output"></pre></div>
 <div class="card"><h3>Saved customer requests</h3><div class="table-scroll"><table><thead><tr><th>ID</th><th>Acquisition</th><th>Product</th><th>Action</th></tr></thead><tbody id="customer-history"></tbody></table></div></div>
+</section>
+<section id="vectors" class="panel" hidden>
+<div class="section-heading"><div><h2>Native vector deliveries</h2><p>Turn a complete source order into reviewed GeoPackage or Shapefile layers. Original features, field mappings, coordinates and source editions travel together.</p></div>
+<button id="vector-refresh" type="button">Refresh native work</button></div>
+<div id="vector-local-status" role="status" class="help">Opening saved native requests…</div>
+<div id="vector-pending-panel" class="card" hidden><h3>Saved native request</h3><p id="vector-pending-description"></p>
+<label>Requests awaiting an accepted result<select id="vector-pending-select"></select></label>
+<div class="toolbar"><button id="vector-retry" type="button">Retry the exact saved request</button>
+<button id="vector-keep" type="button">Keep in history and edit a new operation</button></div></div>
+<form id="vector-capture-form" class="card"><h3>1. Capture a complete order</h3><div class="form-grid">
+<label class="wide">Complete WFS order<select id="vector-order" required></select></label>
+<label>Source CRS<input id="vector-source-crs" placeholder="The CRS of the original coordinate values" required></label>
+<label>Coordinate order<select id="vector-coordinate-order" required><option value="">Review the source coordinates</option><option value="x,y">x,y — original coordinate values</option></select></label>
+<label class="full">Original feature identity JSON<textarea id="vector-identity" rows="2">{"mode":"feature-id"}</textarea></label></div>
+<p class="help">Use the original order’s CRS and axis information below. The native export can transform a reviewed source CRS; it preserves the original source geometry.</p>
+<pre id="vector-order-details" class="output"></pre><button type="submit" class="primary">Capture native source</button></form>
+<form id="vector-export-form" class="card"><h3>2. Review and export native layers</h3><div class="form-grid">
+<label class="wide">Retained source capture<select id="vector-capture" required></select></label>
+<div class="toolbar"><button id="vector-load-profile" type="button">Load original capture profile</button><button id="vector-profile-download" type="button">Download profile</button></div>
+<div class="full toolbar"><label><input id="vector-format-gpkg" type="checkbox"> GeoPackage</label><label><input id="vector-format-shape" type="checkbox"> Shapefile</label></div>
+<label>Source layer<select id="vector-mapping-layer"></select></label>
+<label>Native layer name<input id="vector-layer-name" maxlength="128" placeholder="Use the original layer identity"></label>
+<label>Layer target CRS<input id="vector-target-crs" placeholder="Preserve or inherit the profile CRS"></label>
+<label>Shapefile long values<select id="vector-long-values"><option value="reference">Keep complete source references</option><option value="error">Require a native DBF value</option></select></label>
+<label>Geometry collections<select id="vector-collections"><option value="split">Keep every part in its native layer</option><option value="error">Require an unsplit native geometry</option></select></label>
+<label class="wide">Load a reviewed profile file<input id="vector-profile-file" type="file" accept=".json,application/json"></label></div>
+<p id="vector-mapping-status" class="help">Load a captured source to review its original fields.</p>
+<div class="table-scroll"><table><thead><tr><th>Original field</th><th>Original value kinds</th><th>GeoPackage name</th><th>Shapefile name</th><th>Representation</th><th>Explicit native type</th></tr></thead><tbody id="vector-mapping-fields"></tbody></table></div>
+<details><summary>Complete native profile and additional settings</summary><label>Original profile JSON<textarea id="vector-profile" rows="14" spellcheck="false"></textarea></label></details>
+<p class="help">Field controls preserve the complete profile and its original numeric values. The captured source CRS stays bound; a layer target CRS requests a native transform. Original source fields remain in the delivery.</p>
+<button type="submit" class="primary">Export and reopen native files</button></form>
+<form id="vector-compare-form" class="card"><h3>Compare source editions</h3><div class="form-grid">
+<label>Earlier capture<select id="vector-before" required></select></label><label>Later capture<select id="vector-after" required></select></label></div>
+<button type="submit">Compare complete original features</button></form>
+<form id="vector-receive-form" class="card"><h3>Receive a native delivery</h3><div class="form-grid">
+<label class="wide">Complete vector ZIP<input id="vector-archive" type="file" accept=".zip,application/zip" required></label>
+<label class="wide">Original manifest SHA256 <span class="optional">optional comparison pin</span><input id="vector-manifest-sha" pattern="[a-f0-9]{64}" maxlength="64"></label></div>
+<p class="help">The selected ZIP’s exact bytes are saved with this request before receiving. Its full native contents are reopened and remain part of this WFS project.</p>
+<button type="submit">Receive and reopen native delivery</button></form>
+<div class="section-heading"><h3>Retained native operations</h3><span id="vector-history-count"></span></div>
+<div class="table-scroll"><table><thead><tr><th>Original operation</th><th>Action</th><th>State</th><th>Manifest</th><th>Actions</th></tr></thead><tbody id="vector-history"></tbody></table></div>
+<div class="toolbar"><button id="vector-history-previous" type="button">Previous operations</button><button id="vector-history-next" type="button">Next operations</button></div>
+<div id="vector-inspection" class="card" hidden><h3>Selected native source and output</h3><div id="vector-selection-summary" class="facts"></div>
+<div class="table-scroll"><table><thead><tr><th>Layer</th><th>Native format</th><th>Features</th><th>Fields</th><th>Coordinates</th></tr></thead><tbody id="vector-layers"></tbody></table></div>
+<div class="table-scroll"><table><thead><tr><th>Source layer</th><th>Field</th><th>Original kinds</th><th>Exact numeric storage</th></tr></thead><tbody id="vector-fields"></tbody></table></div>
+<div class="toolbar"><button id="vector-selected-download" type="button">Download complete native ZIP</button><button id="vector-manifest-download" type="button">Download native manifest</button></div>
+<details><summary>Complete original native JSON</summary><textarea id="vector-native-json" rows="14" readonly spellcheck="false"></textarea></details></div>
+<div id="vector-changes-panel" class="card" hidden><h3>Native source changes</h3><div class="toolbar">
+<label>Change type<select id="vector-change-status"><option value="">All changes</option><option>ADDED</option><option>REMOVED</option><option>CHANGED</option></select></label>
+<button id="vector-changes-previous" type="button">Previous changes</button><button id="vector-changes-next" type="button">Next changes</button><span id="vector-change-count"></span></div>
+<div class="table-scroll"><table><thead><tr><th>Original row key</th><th>Change</th><th>Geometry</th><th>Fields</th><th>Identity review</th><th>Details</th></tr></thead><tbody id="vector-changes"></tbody></table></div>
+<textarea id="vector-change-json" rows="12" readonly spellcheck="false"></textarea></div>
+<pre id="vector-result" class="output"></pre>
 </section>
 <section id="transfer" class="panel" hidden>
 <div class="section-heading"><div><h2>Project handover</h2><p>Transfer complete source documents, feature pages, saved queries, comparisons and dataset editions together.</p></div></div>

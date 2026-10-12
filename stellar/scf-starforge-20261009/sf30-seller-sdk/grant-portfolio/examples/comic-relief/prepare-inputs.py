@@ -23,7 +23,7 @@ FUND_SOURCES = (
      "comic-relief-international-2022-2026-original.xlsx",
      "https://docs.google.com/spreadsheets/d/1mTGkno76vcgUx9SrYmZA41f495IsFbaw/export?format=xlsx"),
 )
-VERSIONS = {"flattentool": "0.28.0", "libcove": "0.31.0", "jsonref": "1.1.0", "openpyxl": "3.1.5"}
+VERSIONS = {"flattentool": "0.28.0", "libcove": "0.31.0", "jsonref": "1.1.0", "openpyxl": "3.1.5", "jsonschema": "3.2.0"}
 OFFICIAL = {
     "datagetter": {"repository": "ThreeSixtyGiving/datagetter", "path": "getter/get.py",
                   "gitBlob": "3d3356d32ce8e23cc12a7de53c96420d78678e42"},
@@ -267,17 +267,30 @@ def prepare(args):
     common = {"coverage": COVERAGE, "originalRegistry": info(inputs / "360giving-original-registry-20261012.json"),
               "publisherMetadata": info(inputs / "comic-relief-360giving-original-publisher-metadata.json")}
     publisher_metadata = read_json(inputs / "comic-relief-360giving-original-publisher-metadata.json")
+    selected_registry = originals["registry"]["selected"]
+    # The maintained publisher uses PYTHONPATH for its jsonschema 4.x closure.
+    # The official converter retains its separate jsonschema 3.2.0 environment.
+    converter_env = dict(os.environ)
+    converter_env.pop("PYTHONPATH", None)
+    converter_env["PYTHONNOUSERSITE"] = "1"
     result = {"schema": FORMAT, "operationId": OPERATION, "coverage": COVERAGE,
               "originalsManifest": info(inputs / "original-file-identities.json"), "sources": [], "metadata": common}
     for key, registry_id, filename, source_url in FUND_SOURCES:
         target = output / key
         command = [args.converter_python, "-B", str(Path(__file__).resolve()), "convert-one",
                    "--file", str(inputs / filename), "--schemas", str(native_schemas), "--output", str(target)]
-        subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=sys.stderr)
+        subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=sys.stderr, env=converter_env)
         conversion = read_json(target / "conversion.json")
         registry = inputs / (registry_id + "-registry.json")
         original_record = read_json(registry)
-        need(any(str(original_record.get(name,"")) == registry_id for name in ("id","identifier","name")), "Selected original registry identity differs")
+        retained_registry = [item for item in selected_registry if item["id"] == registry_id]
+        need(len(retained_registry) == 1, "Select the one retained registry record")
+        actual_registry = info(registry)
+        need(all(actual_registry[field] == retained_registry[0][field] for field in ("bytes", "sha256")),
+             "The complete selected registry record changed")
+        locator = retained_registry[0].get("locatorPath", retained_registry[0].get("jsonPath", []))
+        need(any(str(original_record.get(name,"")) == registry_id for name in ("id","identifier","name"))
+             or (locator and locator[-1] == registry_id), "Selected original registry identity differs")
         metadata = [item for item in publisher_metadata["files"] if item["id"] == registry_id]
         need(len(metadata) == 1, "Select one original publisher metadata record")
         capture = {

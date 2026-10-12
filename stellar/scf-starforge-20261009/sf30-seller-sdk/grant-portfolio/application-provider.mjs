@@ -11,7 +11,9 @@ export default {
   matchRequest(request){return !request.pythonCommand&&request.command==='grant-portfolio';},
   createObserver(request,directory){
     return observeApplicationStartup(request,directory,text=>{
-      if(!text.startsWith('{"schema":"stellar-forge.grant-portfolio-workspace-launch.v1",'))return null;
+      let value;try{value=JSON.parse(text);}catch{return null;}
+      if(value?.schema!=='stellar-forge.grant-portfolio-workspace-launch.v1'||
+        value.status!=='GRANT_PORTFOLIO_WORKSPACE_READY')return null;
       return ()=>grantPortfolioStartup(request,text);
     },{lineLimit:32768});
   },

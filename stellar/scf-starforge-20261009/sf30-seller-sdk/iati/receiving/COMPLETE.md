@@ -74,7 +74,57 @@ SHA256, original URL and acquisition time. The publication date belongs in the
 source label and notice; it is separate from the time the original file was
 acquired.
 
-## Included actual public research input
+## Retain original publisher metadata
+
+The optional `publisherFiles` array selects complete public metadata, attribution
+and source-provenance files to travel with the publisher. Each entry has the
+exact fields `path`, `name`, `bytes` and `sha256`. Paths are absolute original
+sources outside the workspace and output; names are distinct plain filenames
+ending in `.json`, `.md` or `.txt`. Each file is read against its selected byte
+identity before installation and again before customer packaging. The complete
+input freezes the selection, and the final result retains every file identity.
+
+The customer ZIP places these files under `publisher/metadata/` and links them
+from its entry guide. Use the actual complete official metadata, together with
+the XML citation and acquisition provenance. Keep local connection and operation
+state in the owning receiving output.
+
+~~~json
+{
+  "publisherFiles": [
+    {
+      "path": "/absolute/original/metadata.json",
+      "name": "metadata.json",
+      "bytes": 1,
+      "sha256": "FULL_SHA256_OF_THE_ACTUAL_ORIGINAL_METADATA"
+    }
+  ]
+}
+~~~
+
+The example shows the optional field's shape; replace it with the actual
+complete source selection. Up to 32 metadata documents, each up to 64 MiB, are
+accepted. Previously saved inputs without this field retain their original
+input and recovery behavior.
+
+## Included actual public publishers
+
+### Transparency International
+
+The source contains the complete original public XML and official metadata in
+`iati/examples/transparency-international-2026/`. The XML is 131,359 bytes with
+SHA256 `5b31447719873d89c511a11b8da645d398b5ab7fb3c471d35c359f30118a429d`.
+It was acquired at `2026-10-12T09:48:08Z` and declares generation time
+`2026-04-02T00:25:53+00:00`. The unchanged 337-byte official metadata identifies
+`cc-by`. The adjacent README and source provenance preserve the complete
+attribution, original URLs, acquisition and exact file identities.
+
+Select all three metadata documents—original metadata JSON, README.md and
+source-provenance.json—through `publisherFiles`. Use the full README as
+`publisherNotice`. The actual native parser supplies the budget, activity and
+review results used by the full operator workflow.
+
+### AidData Nigeria AIMS
 
 The complete selected source contains the unchanged AidData IATI 2.03 XML at
 `iati/examples/aiddata-nigeria-2016/iati_2.03_NigeriaAIMS_GeocodedResearchRelease.xml`.
@@ -149,6 +199,14 @@ operation. Each stage uses its original private records and APIs.
 Retain the existing output and original native foreground record when handling
 an interruption. A changed source commit, publisher, directory or named actor
 is a changed input and belongs to an explicitly selected separate operation.
+
+For the two included publishers, call the same complete entrypoint sequentially
+with two explicit original inputs in the existing admitted foreground. Each has
+its own operation ID, workspace, output and customer archive. Reuse the exact
+committed bootstrap and original source cache. The first call completes its
+installed Applications, customer handover and result before the second call
+starts. Both outputs retain their full review histories and original source
+metadata. This uses the existing foreground's process and resource ownership.
 
 ## Complete outputs
 

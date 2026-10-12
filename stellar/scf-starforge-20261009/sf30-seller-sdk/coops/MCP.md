@@ -51,7 +51,7 @@ Retain the request before dispatch. After a lost or interrupted response, read `
 | backfill_preview/start/pause/resume/export | Serial historical study and streamed retained parts. |
 | mapping_file, mapping_save | Read-only original JSON convention inspection, explicit selected-target save, retained input-file bytes and revision history. |
 | edition_select/compare, annotation_save | Original selection, streamed comparison and retained review. |
-| dataset_prepare/query | Original SF30 selected snapshot and existing query engine. |
+| dataset_prepare/query | Original SF30 selected snapshot and existing query engine; optional mappingId pins the saved receiving convention and original file. |
 | release_prepare/inspect/activate/start/stop/rollback | Existing SF82 lifecycle and generation controls. |
 | buyer_inspect/receive | Existing SF88/SF100 intents and five-file receiving. |
 | export_create | Original source packages, complete tables and readable reports. |
@@ -59,6 +59,8 @@ Retain the request before dispatch. After a lost or interrupted response, read `
 Every mutating tool requires native fields, a stable operation ID and the current original revision. Products, datum, units and time basis are explicit selections. Source quantities and payment outcomes are never inferred.
 
 For archive pagination, retain the returned revision as `expectedRevision` on every subsequent page. A concurrent change requires restarting that listing. Immutable row paging retains its edition ID, table, dates and selected products.
+
+The existing `merchant_coops_dataset_prepare` payload accepts optional `mappingId`. Its native reservation pins the saved revision, and its result identifies the ordered receiving columns and original mapping-file SHA. Native query field names follow those selected headings. Names must meet the original SF30 column contract (`^[A-Za-z][A-Za-z0-9_]{0,47}$`, excluding reserved names); a mapped value requires the original valueType companion. Later mapping saves leave the prepared dataset and original release source package unchanged.
 
 ## Complete file receiving
 

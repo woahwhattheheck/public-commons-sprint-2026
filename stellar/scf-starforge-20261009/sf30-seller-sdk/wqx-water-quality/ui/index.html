@@ -101,6 +101,26 @@
 </fieldset>
 </div>
 
+
+<div class="panel">
+<div class="section-head"><div><h2>Concentration units and reported limits</h2><p class="caption">Convert explicit mass-per-volume units with exact decimal factors. Review each result, all reported limits and the selected native limit fields together. Qualified, estimated and censored values keep their original source meaning.</p></div><span id="cu-state" class="tag" role="status" aria-live="polite">Prepare a unit change</span></div>
+<p id="cu-context" class="caption"></p>
+<fieldset id="cu-controls" class="ow-controls" disabled><form id="cu-form">
+<div class="two"><label>Result selection<select id="cu-scope"><option value="selected">Selected result targets from the table</option><option value="unit">Every result with one exact source unit</option><option value="limits">Mass/volume limits with an unspecified result unit</option></select></label><label>Source-unit group<select id="cu-source-unit" disabled><option value="">Open a source plan</option></select></label></div>
+<div class="two"><label>Target concentration unit<select id="cu-target-unit" required></select></label><label>Reason for the complete unit change<input id="cu-reason" required maxlength="600" autocomplete="off"></label></div>
+<p id="cu-selected" class="caption" role="status" aria-live="polite">0 result records selected for a unit change</p>
+        <p id="cu-limit-context"></p><div id="cu-preserved"></div>
+<p class="caption">The source-unit group uses the saved plan's exact unit labels. Conversion uses the current reviewed draft and keeps every selected original limit. Density, chemical-basis and logarithmic changes need separate explicit receiving choices.</p>
+<button id="cu-prepare" type="submit" disabled>Prepare result and limit conversions</button>
+</form></fieldset>
+<div id="cu-output" hidden>
+<h3>Complete conversion review</h3><p id="cu-summary" class="caption"></p><p id="cu-guidance" class="caption"></p>
+<div class="table-wrap"><table class="ow-table"><thead><tr><th>Original result</th><th>Current value and unit</th><th>Converted value and unit</th><th>Every reported limit</th><th>Native limit quantities</th><th>Review</th></tr></thead><tbody id="cu-rows"></tbody></table></div>
+<div class="pagination"><button id="cu-prev" type="button" disabled>Previous results</button><span id="cu-page" role="status" aria-live="polite">0 converted results</span><button id="cu-next" type="button" disabled>Next results</button></div>
+<div class="actions"><button id="cu-apply" type="button" disabled>Add paired choices to current draft</button><button id="cu-undo" type="button" disabled>Restore preceding draft</button><button id="cu-json" type="button" disabled>Download complete conversion JSON</button><button id="cu-csv" type="button" disabled>Download complete conversion CSV</button></div>
+</div>
+</div>
+
 <div class="panel">
 <div class="section-head"><h2>Decision draft</h2><span id="rs-draft-count" class="count">0 recorded decisions</span></div>
 <details><summary>Review recorded choices</summary><p id="rs-decisions-summary" class="caption"></p><div class="table-wrap"><table class="ow-table"><thead><tr><th>Source record</th><th>Native field</th><th>Decision</th><th>Reason</th><th>Choice</th></tr></thead><tbody id="rs-decisions"></tbody></table></div></details>

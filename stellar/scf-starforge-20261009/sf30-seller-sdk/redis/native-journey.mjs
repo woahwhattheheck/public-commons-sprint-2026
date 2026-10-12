@@ -3,6 +3,7 @@
 // SF30_REDIS_JOURNEY_TOPOLOGY=cluster|sentinel adds native topology/failover fixtures
 // while preserving the same authoring workspace, generated buyer and release flow.
 // Add SF30_REDIS_JOURNEY_TLS=1 to the Sentinel mode for independent data/monitor CAs.
+// SF30_REDIS_JOURNEY_ACCESS=ssh joins owned OpenSSH forwarding and application shutdown.
 // SF30_REDIS_JOURNEY_COLLECTIONS=1 joins complete List/Set native and customer pages.
 // SF30_REDIS_JOURNEY_SETUP=1 joins the original browser connection setup before CA removal.
 // SF30_REDIS_JOURNEY_APPLICATIONS_CONFIG selects an existing READY runtime/home for
@@ -30,6 +31,9 @@ import { startReleaseConsole } from '../../sf82-seller-pilot/release-console.mjs
 
 const http = process.env.SF30_REDIS_JOURNEY_PROVIDER === 'upstash-rest';
 const topology = process.env.SF30_REDIS_JOURNEY_TOPOLOGY ?? 'standalone';
+const access = process.env.SF30_REDIS_JOURNEY_ACCESS ?? 'direct';
+if (!['direct', 'ssh'].includes(access) || access === 'ssh' && (http || topology === 'standalone'))
+  throw new Error('REDIS_JOURNEY_ACCESS_INVALID');
 if (!['standalone', 'cluster', 'sentinel'].includes(topology) || http && topology !== 'standalone')
   throw new Error('REDIS_JOURNEY_TOPOLOGY_INVALID');
 if (process.env.SF30_REDIS_JOURNEY_PROVIDER && !http) throw new Error('REDIS_JOURNEY_PROVIDER_INVALID');
@@ -98,7 +102,10 @@ const facilitator = createServer(async (req, res) => {
 });
 try {
   if (!http && topology !== 'standalone') {
-    fixture = await (await import('./native-topology.mjs')).startNativeRedisTopology({
+    const startTopology = access === 'ssh'
+      ? (await import('./deployment/native-ssh.mjs')).startNativeRedisSshTopology
+      : (await import('./native-topology.mjs')).startNativeRedisTopology;
+    fixture = await startTopology({
       topology, directory: join(work, 'native-topology'), password, passwordEnv: envName, binary });
     database = fixture.database;
   } else if (!http) {
@@ -265,9 +272,11 @@ try {
   state = await call('/api/restart', { expectedGeneration: 3, instanceId: state.console.instanceId });
   assert.equal((await buy('leaderboard', { offset: '0' }, '10000', 'rank-restored')).rowCount, 2);
   await call('/api/stop', { instanceId: state.console.instanceId });
+  const accessJourney = await fixture?.accessExercise?.();
   const removedSeedKeys = http ? await database.cleanup() : undefined;
   const result = { result: 'PASS', redisVersion: version, nativeClient: http ? 'Upstash REST (HTTPS RESP2)' : '@redis/client@6.2.1', database: fixture?.databaseIndex ?? (http ? 0 : 2),
     ...(topologyJourney ? { topology: topologyJourney } : {}),
+    ...(accessJourney ? { access: accessJourney } : {}),
     ...(http ? { provider: 'upstash-rest', removedSeedKeys, credentialMode: process.env.UPSTASH_REDIS_REST_READ_TOKEN ? 'DEDICATED_READ_TOKEN' : 'OWNED_EPHEMERAL_DATABASE' } : {}),
     nativeStatus, nativeVerifies: verified, nativeSettlements: settled, facilitator: 'LOCAL_PROTOCOL_FIXTURE',
     journeys: [fixture ? 'native ' + topology + ', authentication, topology transition and terminal cleanup'

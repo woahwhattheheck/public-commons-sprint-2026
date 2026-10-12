@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="/unstructured-pipelines.css">
   <link rel="stylesheet" href="/clinical-trials.css">
   <link rel="stylesheet" href="/source-bundles.css">
+  <link rel="stylesheet" href="/citation-review.css">
   <script src="/app.js" type="module"></script>
 </head>
 <body>
@@ -51,6 +52,7 @@
           <button class="tab" data-tab="questions">Questions</button>
           <button class="tab" data-tab="findings">Findings</button>
           <button class="tab" data-tab="revisions">Revisions</button>
+          <button class="tab" data-tab="citation-review" id="citation-review-tab">Update review</button>
           <button class="tab" data-tab="crossref" id="crossref-tab" hidden>DOI metadata</button>
           <button class="tab" data-tab="documents" id="documents-tab">Documents</button>
           <button class="tab" data-tab="pipelines" id="pipelines-tab">Pipeline jobs</button>
@@ -81,6 +83,7 @@
             </aside>
           </div>
         </section>
+        <section id="view-citation-review" hidden></section>
         <section id="view-crossref" hidden></section>
         <section id="view-documents" hidden></section>
         <section id="view-pipelines" hidden></section>
