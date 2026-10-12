@@ -9,6 +9,7 @@ const object = value => value !== null && typeof value === 'object' && !Array.is
 // is terminal, idempotent and includes an in-flight discovery/connect operation.
 function ownedConnection(native, topology) {
   let disposed = false, opening, destruction;
+  const commands = new Set();
   // A failed Cluster/Sentinel seed emits an error before the driver tries the
   // next seed. The awaited connect/command result decides whether a read failed.
   native.on('error', () => {});
@@ -26,13 +27,20 @@ function ownedConnection(native, topology) {
       }
       return opening;
     },
-    async sendCommand(args, { key, ...options } = {}) {
-      if (disposed) throw new RedisConnectionError('SOURCE_CLOSED');
+    sendCommand(args, { key, ...options } = {}) {
+      if (disposed) return Promise.reject(new RedisConnectionError('SOURCE_CLOSED'));
       // The public signatures differ in @redis/client 6.2.1. Every application
       // script has one bound key; the startup capability probe is keyless.
-      if (topology === 'cluster') return native.sendCommand(key, true, args, options);
-      if (topology === 'sentinel') return native.sendCommand(true, args, options);
-      return native.sendCommand(args, options);
+      let command;
+      try {
+        command = Promise.resolve(topology === 'cluster'
+          ? native.sendCommand(key, true, args, options)
+          : topology === 'sentinel' ? native.sendCommand(true, args, options)
+          : native.sendCommand(args, options));
+      } catch (issue) { return Promise.reject(issue); }
+      commands.add(command);
+      command.then(() => commands.delete(command), () => commands.delete(command));
+      return command;
     },
     destroy() {
       disposed = true;
@@ -41,10 +49,11 @@ function ownedConnection(native, topology) {
         // Cluster discovery and Sentinel destruction can finish asynchronously.
         // Do not make connect() await this promise: that would form a cycle.
         if (opening) await opening.catch(() => {});
-        // Retire any socket completed by discovery after the first destroy.
-        if (native.isOpen) {
-          try { await native.destroy(); } catch { /* Native socket already closed. */ }
-        }
+        // An active command may have started a Cluster rediscovery or a
+        // Sentinel reset after opening finished. Join it before the final sweep.
+        while (commands.size) await Promise.allSettled([...commands]);
+        // Discovery may populate node records even after isOpen became false.
+        try { await native.destroy(); } catch { /* Native socket already closed. */ }
       })();
       return destruction;
     },
