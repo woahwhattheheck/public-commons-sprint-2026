@@ -60,7 +60,7 @@ export function normalizePrescientProfile(value){
   const refreshSkewSeconds=value.refreshSkewSeconds??120;
   need(Number.isSafeInteger(refreshSkewSeconds)&&refreshSkewSeconds>=0&&refreshSkewSeconds<=900,'PRESCIENT_REFRESH_SKEW_INVALID');
   return {schema:PROFILE_SCHEMA,name:label(value.name,'PRESCIENT_PROFILE_NAME_REQUIRED'),endpoint,authMode,identityProvider,
-    bindingId:identifier(value.bindingId),allowedOrigins,collections,allowedS3,maxAssetBytes,rights,refreshSkewSeconds};
+    bindingId:identifier(value.bindingId),allowedOrigins,collections,allowedS3,maxAssetBytes:value.maxAssetBytes,rights,refreshSkewSeconds};
 }
 /** A portable profile requests access; it cannot install a receiver's credential binding. */
 export function portablePrescientProfile(profile){

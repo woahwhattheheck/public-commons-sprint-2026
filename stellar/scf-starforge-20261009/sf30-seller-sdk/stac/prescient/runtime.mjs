@@ -32,7 +32,9 @@ async function existingSelectedPath(value,roots){
   need(selected.some(root=>path===root||inside(root,path)),'PRESCIENT_DELIVERY_ROOT_NOT_APPROVED');return path;
 }
 function sourceBinding(delivery){
-  return {bundleSha256:delivery.manifest.bundleSha256,editionId:delivery.manifest.editionId,
+  return {catalogEndpoint:normalizeEndpoint(delivery.edition.query.endpoint),
+    querySha256:configurationDigest(delivery.edition.query),
+    bundleSha256:delivery.manifest.bundleSha256,editionId:delivery.manifest.editionId,
     editionDigest:delivery.manifest.editionDigest,selectionSha256:delivery.manifest.selectionSha256,
     nativeBindingSha256:delivery.manifest.nativeBindingSha256,
     membersSha256:configurationDigest(delivery.members())};
