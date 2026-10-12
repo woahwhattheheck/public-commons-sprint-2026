@@ -14,6 +14,8 @@ import {operateCaseCommissioning,prepareCaseCommissioning,inspectCaseCommissioni
 import {openCaseStore, inspectCaseWriter, recoverCaseWriter, CASE_STATUSES, caseMetadata} from './case-store.mjs';
 import {MAX_WORKSPACE_BYTES} from './workspace-file.mjs';
 import {createCaseSourceDelivery} from './case-source-delivery.mjs';
+import {openCasePackageOperations} from './case-package-operations.mjs';
+import {createCasePackageHttp} from './case-package-http.mjs';
 import {createSourceEditionDeliveryRoutes} from '../../scf_2026/sf49_data_commissioning/source-edition-http.mjs';
 import {openIncidentSources, incidentProblem} from './incident-sources.mjs';
 import {inspectSupportSelection, supportSelectionSha256, createSupportLaunch, supportListenerIdentity} from './managed-launch.mjs';
@@ -39,6 +41,8 @@ const ASSETS = Object.freeze({
   '/commissioning-desk.css': ['commissioning-desk.css', 'text/css; charset=utf-8'],
   '/workspace-files.mjs': ['workspace-files.mjs', 'text/javascript; charset=utf-8'],
   '/case-desk.mjs': ['case-desk.mjs', 'text/javascript; charset=utf-8'],
+  '/case-package-desk.mjs': ['case-package-desk.mjs', 'text/javascript; charset=utf-8'],
+  '/case-package-desk.css': ['case-package-desk.css', 'text/css; charset=utf-8'],
   '/runtime-desk.mjs': ['runtime-desk.mjs', 'text/javascript; charset=utf-8'],
   '/handoff-desk.mjs': ['handoff-desk.mjs', 'text/javascript; charset=utf-8'],
   '/incident-desk.mjs': ['incident-desk.mjs', 'text/javascript; charset=utf-8'],
@@ -121,9 +125,10 @@ function compareUploadedSources(input) {
 export {workorderFromSources} from './workorder-source.mjs';
 
 // Injection is only for the focused loopback HTTP-contract check, not for deployed usage.
-export function createConsoleServer({runCapture = capture, allowLoopback = false, caseStore = null, handoffDesk = null, incidentDesk = null, commercialDesk = null, sourceDelivery = null, launchRecord = () => null} = {}) {
+export function createConsoleServer({runCapture = capture, allowLoopback = false, caseStore = null, handoffDesk = null, incidentDesk = null, commercialDesk = null, sourceDelivery = null, casePackages = null, launchRecord = () => null} = {}) {
   let active = false;
   const sourceRoutes=sourceDelivery?createSourceEditionDeliveryRoutes({service:sourceDelivery.service}):null;
+  const packageRoutes=createCasePackageHttp(casePackages);
   const server = createServer(async (req, res) => {
     for (const [key, value] of Object.entries(HEADERS)) res.setHeader(key, value);
     const port = server.address()?.port;
@@ -136,7 +141,7 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
     }
     const route = (req.url || '').split('?')[0];
     if (req.method === 'GET' && route === '/health') {
-      json(res, 200, {status: 'LOCAL_READY', originalIntake: 'SF70', providerCallsOnPageLoad: 0, paidCalls: 0, casesEnabled:Boolean(caseStore),commercialEnabled:Boolean(commercialDesk),handoffsEnabled:Boolean(handoffDesk),incidentsEnabled:Boolean(incidentDesk),sourceBundlesEnabled:Boolean(sourceDelivery)}); return;
+      json(res, 200, {status: 'LOCAL_READY', originalIntake: 'SF70', providerCallsOnPageLoad: 0, paidCalls: 0, casesEnabled:Boolean(caseStore),commercialEnabled:Boolean(commercialDesk),handoffsEnabled:Boolean(handoffDesk),incidentsEnabled:Boolean(incidentDesk),sourceBundlesEnabled:Boolean(sourceDelivery),casePackagesEnabled:Boolean(casePackages)}); return;
     }
     if (route === '/api/support-launch') {
       if (req.method !== 'GET') {json(res,405,{error:'METHOD_NOT_ALLOWED'});return;}
@@ -156,6 +161,7 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
       } catch { json(res, 500, {error: 'STATIC_ASSET_UNAVAILABLE'}); }
       return;
     }
+    if (await packageRoutes(req,res,{origin:ownOrigin}))return;
     if (route === '/api/services/incident-snapshot') {
       if (req.method!=='GET') {json(res,405,{error:'METHOD_NOT_ALLOWED'});return;}
       if ((req.headers.origin&&req.headers.origin!==ownOrigin)||
@@ -484,12 +490,13 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
   });
   sourceRoutes?.configure(server);
   server.closeSourceDelivery=()=>sourceRoutes?.close()??Promise.resolve();
-  server.once('close',()=>{void server.closeSourceDelivery().catch(()=>{});});
+  server.closeCasePackages=()=>casePackages?.close()??Promise.resolve();
+  server.once('close',()=>{void server.closeCasePackages().finally(()=>server.closeSourceDelivery()).catch(()=>{});});
   return server;
 }
 
 export async function start({port = 0, allowLoopback = false, runCapture = capture, casesDir = null, handoffSources = null,
-  incidentSources = null, sourceDir = null, environment = process.env, startupFormat = 'text', expectedSelectionSha256 = null} = {}) {
+  incidentSources = null, sourceDir = null, packageDir = null, environment = process.env, startupFormat = 'text', expectedSelectionSha256 = null} = {}) {
   if (!Number.isSafeInteger(port) || port < 0 || port > 65535) throw new TypeError('Invalid port');
   if (!['text','json'].includes(startupFormat)) throw new TypeError('Startup format must be text or json');
   if (expectedSelectionSha256 !== null &&
@@ -497,39 +504,43 @@ export async function start({port = 0, allowLoopback = false, runCapture = captu
     throw new TypeError('Managed startup requires the reviewed selection SHA-256 and JSON format');
   if (startupFormat === 'json' && (casesDir === null || incidentSources === null || handoffSources !== null))
     throw new TypeError('Managed startup requires private cases and incident source profiles');
-  if(sourceDir!==null&&casesDir===null)throw new TypeError('Source delivery requires the original saved-case directory.');
+  if((sourceDir!==null||packageDir!==null)&&casesDir===null)throw new TypeError('Source and package delivery require the original saved-case directory.');
   const caseStore = casesDir === null ? null : await openCaseStore(casesDir);
   const commercialDesk=caseStore?openCaseCommercial({store:caseStore,workspaceId:commercialWorkspaceId(resolve(casesDir))}):null;
   const handoffDesk = handoffSources === null ? null : await (await import('./handoff-store.mjs')).openHandoffDesk({configPath:handoffSources,casesDir,environment});
-  let incidentDesk,sourceDelivery,selection=null,launch=null;
+  let incidentDesk,sourceDelivery,casePackages,selection=null,launch=null;
   try {
     sourceDelivery=caseStore?await createCaseSourceDelivery({store:caseStore,
       directory:sourceDir===null?join(resolve(casesDir),'source-bundles'):resolve(sourceDir),environment}):null;
+    casePackages=caseStore?await openCasePackageOperations({store:caseStore,casesDirectory:resolve(casesDir),
+      ...(packageDir===null?{}:{directory:resolve(packageDir)}),sourceDelivery,handoffDesk,
+      python:environment.SCF_PYTHON??'python3',environment}):null;
     incidentDesk = incidentSources === null ? null : await openIncidentSources({configPath:incidentSources,environment});
     if(startupFormat==='json') {
       selection=await inspectSupportSelection({casesDir,incidentSources,allowLoopback,
-        sourceDir:sourceDelivery.directory,incidentSelection:incidentDesk.configuration()});
+        sourceDir:sourceDelivery.directory,packageDir:casePackages.directory,incidentSelection:incidentDesk.configuration()});
       if(expectedSelectionSha256!==null&&supportSelectionSha256(selection)!==expectedSelectionSha256)
         throw Object.assign(new Error('The selected support configuration changed; review the current application before starting.'),
           {code:'SUPPORT_APPLICATION_SELECTION_CHANGED'});
     }
-  } catch(error) {await Promise.allSettled([handoffDesk?.close(),incidentDesk?.close(),sourceDelivery?.close()]);throw error;}
+  } catch(error) {await casePackages?.close().catch(()=>{});await Promise.allSettled([handoffDesk?.close(),incidentDesk?.close(),sourceDelivery?.close()]);throw error;}
   let server;
-  try{server=createConsoleServer({allowLoopback,runCapture,caseStore,handoffDesk,incidentDesk,commercialDesk,sourceDelivery,launchRecord:()=>launch});}
-  catch(error){await Promise.allSettled([handoffDesk?.close(),incidentDesk?.close(),sourceDelivery?.close()]);throw error;}
+  try{server=createConsoleServer({allowLoopback,runCapture,caseStore,handoffDesk,incidentDesk,commercialDesk,sourceDelivery,casePackages,launchRecord:()=>launch});}
+  catch(error){await casePackages?.close().catch(()=>{});await Promise.allSettled([handoffDesk?.close(),incidentDesk?.close(),sourceDelivery?.close()]);throw error;}
   try {await new Promise((resolveListen, reject) => {
     server.once('error', reject);server.listen(port, '127.0.0.1', resolveListen);
-  });}catch(error){await Promise.allSettled([handoffDesk?.close(),incidentDesk?.close(),server.closeSourceDelivery()]);throw error;}
+  });}catch(error){await casePackages?.close().catch(()=>{});await Promise.allSettled([handoffDesk?.close(),incidentDesk?.close(),server.closeSourceDelivery()]);throw error;}
   const url='http://127.0.0.1:'+server.address().port+'/';
   if(selection)launch=createSupportLaunch(selection,url);
   let closing;
   const close=()=>closing??=(async()=>{
     if(launch)launch.state='STOPPING';
-    const results=await Promise.allSettled([handoffDesk?.close(),incidentDesk?.close(),server.closeSourceDelivery()]);
+    const packageResults=await Promise.allSettled([server.closeCasePackages()]);
+    const results=packageResults.concat(await Promise.allSettled([handoffDesk?.close(),incidentDesk?.close(),server.closeSourceDelivery()]));
     await new Promise((done,reject)=>{server.close(error=>error?reject(error):done());server.closeAllConnections();});
     const failed=results.find(result=>result.status==='rejected');if(failed)throw failed.reason;
   })();
-  server.once('close',()=>{if(launch)launch.state='STOPPED';void Promise.allSettled([handoffDesk?.close(),incidentDesk?.close(),server.closeSourceDelivery()]);});
+  server.once('close',()=>{if(launch)launch.state='STOPPED';void server.closeCasePackages().finally(()=>Promise.allSettled([handoffDesk?.close(),incidentDesk?.close(),server.closeSourceDelivery()])).catch(()=>{});});
   return {server,url,close,launch};
 }
 
@@ -547,14 +558,14 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
         if (writerAction) throw new TypeError('Choose one case writer operation');
         writerAction = flag; continue;
       }
-      if (!['--port','--cases-dir','--source-dir','--handoff-sources','--incident-sources','--startup-format','--expected-selection-sha256'].includes(flag)) throw new TypeError('Unknown option: ' + flag);
+      if (!['--port','--cases-dir','--source-dir','--package-dir','--handoff-sources','--incident-sources','--startup-format','--expected-selection-sha256'].includes(flag)) throw new TypeError('Unknown option: ' + flag);
       const value = separator < 0 ? args[++index] : token.slice(separator + 1);
       if (!value || value.startsWith('--')) throw new TypeError('Missing value for ' + flag);
       if (flag === '--port' && !/^\d+$/.test(value)) throw new TypeError('Invalid port');
-      options[{'--port':'port','--cases-dir':'casesDir','--source-dir':'sourceDir','--handoff-sources':'handoffSources','--incident-sources':'incidentSources','--startup-format':'startupFormat','--expected-selection-sha256':'expectedSelectionSha256'}[flag]] = flag === '--port' ? Number(value) : value;
+      options[{'--port':'port','--cases-dir':'casesDir','--source-dir':'sourceDir','--package-dir':'packageDir','--handoff-sources':'handoffSources','--incident-sources':'incidentSources','--startup-format':'startupFormat','--expected-selection-sha256':'expectedSelectionSha256'}[flag]] = flag === '--port' ? Number(value) : value;
     }
     if (writerAction) {
-      if (!options.casesDir || seen.has('--port') || seen.has('--source-dir') || seen.has('--allow-loopback') || seen.has('--handoff-sources') || seen.has('--incident-sources') || seen.has('--startup-format') || seen.has('--expected-selection-sha256'))
+      if (!options.casesDir || seen.has('--port') || seen.has('--source-dir') || seen.has('--package-dir') || seen.has('--allow-loopback') || seen.has('--handoff-sources') || seen.has('--incident-sources') || seen.has('--startup-format') || seen.has('--expected-selection-sha256'))
         throw new TypeError('A case writer operation requires --cases-dir and does not start a server');
       const action = writerAction === '--inspect-case-writer' ? inspectCaseWriter : recoverCaseWriter;
       process.stdout.write(JSON.stringify(await action(options.casesDir), null, 2) + '\n');
@@ -568,7 +579,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
         (options.casesDir ? 'Merchant case desk enabled.\n' : 'Session mode. Use --cases-dir /absolute/private/directory to retain merchant cases.\n'));
     }
   } catch (error) {
-    process.stderr.write('SF74: ' + String(error.message) + '\nUsage: node server.mjs [--cases-dir /absolute/private/directory] [--source-dir /absolute/private/sources] [--handoff-sources PRIVATE_CONFIG.json] [--incident-sources PRIVATE_CONFIG.json] [--port 8784] [--allow-loopback] [--startup-format text|json] [--expected-selection-sha256 SHA256]\n' +
+    process.stderr.write('SF74: ' + String(error.message) + '\nUsage: node server.mjs [--cases-dir /absolute/private/directory] [--source-dir /absolute/private/sources] [--package-dir /absolute/private/packages] [--handoff-sources PRIVATE_CONFIG.json] [--incident-sources PRIVATE_CONFIG.json] [--port 8784] [--allow-loopback] [--startup-format text|json] [--expected-selection-sha256 SHA256]\n' +
       '       node server.mjs --cases-dir /absolute/private/directory --inspect-case-writer|--recover-case-writer\n');
     process.exitCode = 1;
   }
