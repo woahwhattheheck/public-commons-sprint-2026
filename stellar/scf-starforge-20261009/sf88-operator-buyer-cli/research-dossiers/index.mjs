@@ -44,3 +44,7 @@ export {STUDY_PROTOCOL_SCHEMA, STUDY_PROTOCOL_REGISTRY, selectRegisteredStudyPro
 export {STUDY_PROTOCOL_METHODS} from './study-protocol-methods.mjs';
 export {STUDY_PROTOCOL_PROGRAM_FILES, receiveStudyProtocol, inspectStudyProtocolReceiving} from './study-protocol-receiving.mjs';
 export {runStudyProtocolCommand} from './study-protocol-cli.mjs';
+
+export {inspectStudyProtocolBundle,STUDY_PROTOCOL_INSPECTION} from './study-protocol-inspection.mjs';
+export {createStudyProtocolClient,inspectStudyProtocolReceiveRequest,STUDY_PROTOCOL_RECEIVE_REQUEST} from './study-protocol-client.mjs';
+export {runStudyProtocolReview,STUDY_PROTOCOL_PREPARED} from './study-protocol-operator.mjs';
