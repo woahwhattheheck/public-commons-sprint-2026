@@ -462,3 +462,9 @@ The [Python customer guide](../python/RESEARCH-CUSTOMER-UPDATES.md) covers the 1
 The installed `research-template-exchange` command and the original Research workspace carry customer XLSX or delimited templates from source mapping through released files, returned workbook comparison, reviewed corrections and the original assigned-reviewer draft. Versioned layouts, frozen publications, source identities and every full workbook remain with the original dossier and travel through its ordinary or streamed portable handover.
 
 Open the current dossier's Template exchange view, or use the [complete operating guide](template-exchange/README.md). The [receiving guide](template-exchange/native/RECEIVING.md) continues the original study and customer programme, including the authored workbook, actual returned file, whole source-bound review and independent receiving. Existing Python and JavaScript customer workflows use the same dossier history.
+
+## Paid customer delivery and receiving
+
+[Paid delivery](customer-commerce/OPERATING.md) publishes an original frozen customer delivery through an existing Stellar merchant, carries the complete archive through the original Buyer approval and paid-file workflow, and receives the editable dossier, original source workspace and four exact frozen reports. Open **Paid delivery** in this workspace or use `research-client commerce-help` / the installed `research-commerce` command.
+
+The original launcher selects private merchant and Buyer aliases with `--customer-commerce-host`. Complete reviews, native orders and approvals, whole-file downloads, independent working forms and exact saved-request replay stay with the original Research and Buyer workspaces. The [typed client](customer-commerce/client.d.mts), retained terminal operators and full archive receiver use those same native engines. Later customer corrections preserve the purchased delivery and its original completed receiving result.

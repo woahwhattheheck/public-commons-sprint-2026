@@ -9,6 +9,7 @@ import {DOCUMENT_COMMANDS,main as documentMain} from './document-workspace-cli.m
 import {ELIGIBILITY_COMMANDS,main as eligibilityMain} from './eligibility-cli.mjs';
 import {RISK_OF_BIAS_COMMANDS,main as riskOfBiasMain} from './risk-of-bias/cli.mjs';
 import {CUSTOMER_UPDATE_COMMANDS,main as customerUpdateMain} from './customer-updates/cli.mjs';
+import {RESEARCH_COMMERCE_COMMANDS,main as researchCommerceMain} from './customer-commerce/cli.mjs';
 import {STUDY_EXTRACTION_COMMANDS,main as extractionMain} from './study-extraction-cli.mjs';
 import {parseJson,need,safeCode} from '../node/store.mjs';
 
@@ -79,6 +80,17 @@ Commission and deliver complete recurring customer work in the same dossier:
   customer-updates|customer-updates-record|customer-updates-preview|customer-updates-save
   customer-updates-work|customer-updates-export|customer-updates-source-plan
   customer-updates-handover|customer-updates-inspect|customer-updates-receive|customer-updates-operation
+
+Publish and receive a paid original customer delivery:
+  commerce-help
+  commerce-configuration|commerce-list|commerce-publication|commerce-purchase
+  commerce-publication-prepare|commerce-publication-enroll|commerce-purchase-receive|commerce-purchase-prepare
+  commerce-execute|commerce-retrieve|commerce-recover|commerce-finalize|commerce-cancel
+  commerce-reconcile|commerce-receive-dossier|commerce-export|commerce-operation|commerce-replay
+  commerce-archive-inspect|commerce-archive-receive
+
+Run commerce-help for original checkout/Buyer selections, retained complete requests,
+native approval, purchased archive and full editable Research receiving.
 
 Operate full eligibility review in the same original dossier:
   eligibility-help
@@ -167,6 +179,9 @@ const commandOptions=Object.freeze({
 const compact=value=>value?.dossier?{...value,dossier:researchSummary(value.dossier)}:value;
 const selected=value=>Object.fromEntries(Object.entries(value).filter(([,item])=>item!==undefined));
 export async function main(argv=process.argv.slice(2),{output=process.stdout}={}){
+  if(RESEARCH_COMMERCE_COMMANDS.includes(argv[0])){
+    const code=await researchCommerceMain(argv,{stdout:output});if(code)process.exitCode=code;return code;
+  }
   if(CUSTOMER_UPDATE_COMMANDS.includes(argv[0]))return customerUpdateMain(argv,{stdout:output});
   if(DOCUMENT_COMMANDS.includes(argv[0]))return documentMain(argv,{output});
   if(ELIGIBILITY_COMMANDS.includes(argv[0]))return eligibilityMain(argv,{output});
