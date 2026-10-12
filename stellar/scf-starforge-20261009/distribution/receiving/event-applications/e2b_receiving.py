@@ -476,10 +476,20 @@ def selected(path):
             and Path(value["controller_host"]) == root / "controller" / "host"
             and Path(value["records_root"]) == root / "records",
             "The original private receiving paths changed")
+    manifest_raw = regular_file(root / "case" / "case-manifest.json").read_bytes()
     require(value["case_archive_sha256"] == CASE_SHA
             and value["case_manifest_sha256"] == CASE_MANIFEST_SHA
-            and sha256((root / "case" / "case-manifest.json").read_bytes()) == CASE_MANIFEST_SHA,
+            and sha256(manifest_raw) == CASE_MANIFEST_SHA,
             "The retained original case differs")
+    manifest = json.loads(manifest_raw)
+    launchers = [item for item in manifest["files"] if item["path"] == "run-receiving.py"]
+    require(len(launchers) == 1, "The original receiving launcher is required")
+    launcher = regular_file(root / "case" / "run-receiving.py").read_bytes()
+    require(len(launcher) == launchers[0]["bytes"]
+            and sha256(launcher) == launchers[0]["sha256"],
+            "The retained receiving launcher changed")
+    # This exact original launcher verifies every manifest member before the
+    # first workspace write or product process, including all native inputs.
     host = Path(value["controller_host"])
     require(sha256((host / "SOURCE_MANIFEST.json").read_bytes()) == value["controller_source_manifest_sha256"],
             "The retained controller manifest differs")
