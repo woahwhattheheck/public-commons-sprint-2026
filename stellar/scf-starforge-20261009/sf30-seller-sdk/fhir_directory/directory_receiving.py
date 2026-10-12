@@ -15,6 +15,7 @@ from directory_runtime import (BaseWorkspace,InputError,ConflictError,source,pri
     original_workspace,safe_read,now,atomic_json,write_zip)
 from directory_source import retained_file_descriptors
 import directory_schema as schema
+from directory_conformance import KINDS as CONFORMANCE_KINDS
 
 WORKSPACE_PACKET="stellar-forge.human-services-directory-workspace-packet.v1"
 HANDOFF_PACKET="stellar-forge.human-services-directory-handoff-packet.v1"
@@ -81,6 +82,9 @@ class DirectoryReceiving:
             add(r["nativeSnapshot"]);add(r["directorySnapshot"])
             for d in r["files"].values():add(d)
         for r in records["exports"]:add(r["file"])
+        for kind in CONFORMANCE_KINDS:
+            for r in records.get(kind,[]):
+                for d in r.get("files",{}).values():add(d)
         return result
 
     def _directory_write_packet(self,output,registry,members,packet_schema,handoff_id=None):
@@ -258,7 +262,11 @@ class DirectoryReceiving:
         if manifest["registrySha256"]!=manifest["files"]["directory-registry.json"]["sha256"]:raise InputError("Original registry identity differs")
         registry=source.json_value(safe_read(staged["directory-registry.json"],schema.MAX_RECORD))
         if registry.get("schema")!=REGISTRY_SCHEMA or registry.get("workspaceId")!=manifest["workspaceId"]:raise InputError("Directory registry belongs to another original schema or workspace")
-        if set(registry.get("records",{}))!=schema.KINDS-{"receives"}:raise InputError("Complete receiving must retain every original directory collection")
+        present=set(registry.get("records",{}));current=schema.KINDS-{"receives"}
+        # Preserve exact historical registry bytes. The previous complete product
+        # did not yet have the four additive conformance collections.
+        if present not in (current,current-CONFORMANCE_KINDS):
+            raise InputError("Complete receiving must retain every original directory collection")
         from directory_workspace import clean_record
         for kind,rows in registry["records"].items():
             if not isinstance(rows,list)or len(rows)>100000:raise InputError("Original directory collection is not a supported complete array")
@@ -314,6 +322,8 @@ class DirectoryReceiving:
         for r in registry["records"]["handoffs"]:
             self.directory_record("selections",r["selectionId"]);self.directory_conversion(r["conversionId"])
             if r.get("referralJoinId"):self.directory_record("referralJoins",r["referralJoinId"])
+
+        self._verify_conformance_received(registry)
 
     def _receive_directory(self,packet_path,packet_schema):
         path,_,archive_id=file_info(packet_path)

@@ -45,11 +45,13 @@ def main(argv=None):
         command(name).add_argument("--operation",required=True)
     c=command("source-import");c.add_argument("--file",required=True);c.add_argument("--input");c.add_argument("--import-profile")
     c=command("records");c.add_argument("--kind",required=True);c.add_argument("--id");c.add_argument("--offset",type=int,default=0);c.add_argument("--limit",type=int,default=50);c.add_argument("--query",default="")
-    c=command("rows");c.add_argument("--kind",choices=["source","edition","mapping-preview","selection","comparison"],required=True);c.add_argument("--id",required=True)
+    c=command("rows");c.add_argument("--kind",choices=["source","edition","mapping-preview","selection","comparison","conformance-findings","conformance-rows"],required=True);c.add_argument("--id",required=True)
     c.add_argument("--table");c.add_argument("--group",default="findings");c.add_argument("--state");c.add_argument("--offset",type=int,default=0);c.add_argument("--limit",type=int,default=50);c.add_argument("--query",default="")
+    c.add_argument("--severity");c.add_argument("--code");c.add_argument("--finding-source");c.add_argument("--finding-record")
+    c=command("conformance-finding");c.add_argument("--assessment",required=True);c.add_argument("--finding",required=True)
     c=command("row");c.add_argument("--source",required=True);c.add_argument("--record",required=True);c.add_argument("--edition")
     c=command("links");c.add_argument("--edition",required=True);c.add_argument("--record");c.add_argument("--source");c.add_argument("--link");c.add_argument("--offset",type=int,default=0);c.add_argument("--limit",type=int,default=50)
-    c=command("file");c.add_argument("--kind",required=True,choices=["source","source-index","edition-index","comparison-index","row","changes","capture","export","guidance","workspace","handoff"])
+    c=command("file");c.add_argument("--kind",required=True,choices=["source","source-index","edition-index","comparison-index","row","changes","capture","export","guidance","workspace","handoff","conformance-assessment","conformance-review","conformance-comparison"])
     c.add_argument("--id");c.add_argument("--record");c.add_argument("--member");c.add_argument("--out",required=True)
     for name in ["receive-workspace","receive-handoff"]:command(name).add_argument("--file",required=True)
     args=p.parse_args(argv)
@@ -80,7 +82,10 @@ def main(argv=None):
             elif args.kind=="edition":result=ws.directory_edition_rows(args.id,args.offset,args.limit,args.table,args.query)
             elif args.kind=="mapping-preview":result=ws.directory_preview_page(args.id,args.group,args.offset,args.limit)
             elif args.kind=="selection":result=ws.directory_selection_page(args.id,args.offset,args.limit,args.query)
+            elif args.kind=="conformance-findings":result=ws.directory_conformance_findings(args.id,args.offset,args.limit,args.severity,args.table,args.code,args.finding_source,args.finding_record)
+            elif args.kind=="conformance-rows":result=ws.directory_conformance_rows(args.id,args.offset,args.limit,args.table)
             else:result=ws.directory_changes(args.id,args.offset,args.limit,args.state)
+        elif name=="conformance-finding":result=ws.directory_conformance_finding(args.assessment,args.finding)
         elif name=="row":result=ws.directory_edition_row(args.edition,args.source,args.record)if args.edition else ws.directory_source_row(args.source,args.record)
         elif name=="links":
             if bool(args.source)!=bool(args.link):p.error("A selected link target page requires both --source and --link")
@@ -89,7 +94,10 @@ def main(argv=None):
             if args.kind=="workspace":result=ws.export_workspace(args.out)
             elif args.kind=="handoff":result=ws.export_directory_handoff(args.id,args.out)
             else:
-                if args.kind=="source":path,d=ws.directory_source_file(args.id,args.member)
+                if args.kind.startswith("conformance-"):
+                    kind={"conformance-assessment":"conformanceAssessments","conformance-review":"conformanceReviews","conformance-comparison":"conformanceComparisons"}[args.kind]
+                    path,d=ws.directory_conformance_file(kind,args.id,args.member or"package")
+                elif args.kind=="source":path,d=ws.directory_source_file(args.id,args.member)
                 elif args.kind.endswith("-index"):
                     kind={"source-index":"sources","edition-index":"editions","comparison-index":"comparisons"}[args.kind];path,d=ws.directory_index_file(kind,args.id)
                 elif args.kind=="row":path,d=ws.directory_record_file(args.id,args.record)
