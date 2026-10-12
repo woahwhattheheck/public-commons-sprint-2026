@@ -83,9 +83,9 @@ export class MerchantReleaseOperator {
   #config; #managed = null; #busy = false; #closing = false; #active = new Set(); #close; #lastFailure = null;                                  
        
   
-  constructor(config, { stellarExpert, woocommerce, mpp, opensearch, grpc, openapi, accounting, arcgis, opencage } = {}) {
+  constructor(config, { nws, stellarExpert, woocommerce, mpp, opensearch, grpc, openapi, accounting, arcgis, opencage } = {}) {
     this.#config = config;
-    this.#options = { stellarExpert, woocommerce, mpp, opensearch, grpc, openapi, accounting, arcgis, opencage };
+    this.#options = { nws, stellarExpert, woocommerce, mpp, opensearch, grpc, openapi, accounting, arcgis, opencage };
     this.#tools = structuredClone(merchantToolCatalog(config));
     this.#definitions = new Map(this.#tools.map(value => [value.name, value]));
     this.#mutations = new Set(this.#tools.filter(value => !value.annotations.readOnlyHint &&
