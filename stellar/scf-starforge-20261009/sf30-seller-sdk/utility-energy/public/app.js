@@ -83,7 +83,9 @@ function renderState(){
       button('Original',()=>download('/api/original',{id:r.id},r.source_sha256+(r.provider==='greenbutton'?'.xml':'.json'))))}]);
   checkChoices('review-imports',imports,r=>r.name+' · '+r.provider+' · '+Object.entries(r.counts).filter(([,v])=>v).map(([k,v])=>v+' '+k).join(', '),r=>r.counts.intervals>0||r.counts.bills>0);
   const priority=$('review-priority'),before=new Set([...priority.selectedOptions].map(x=>x.value));
-  priority.replaceChildren(...imports.map(r=>{const o=node('option',r.name);o.value=r.id;o.selected=before.has(r.id);return o;}));
+  const originalOrder=[...priority.options].map(option=>option.value),byId=new Map(imports.map(item=>[item.id,item]));
+  const ordered=[...originalOrder.filter(id=>byId.has(id)),...imports.map(item=>item.id).filter(id=>!originalOrder.includes(id))];
+  priority.replaceChildren(...ordered.map(id=>{const r=byId.get(id),o=node('option',r.name);o.value=id;o.selected=before.has(id);return o;}));
   const reviews=state.reviews||[],builds=state.builds||[],exports=state.exports||[];
   for(const id of ['build-review','bill-review'])options(id,reviews,'id',r=>r.name+' · '+r.reviewer,state.active_review);
   options('export-review',reviews.filter(r=>r.build_id),'id',r=>r.name+' · '+short(r.build_id),state.active_review);
@@ -134,6 +136,16 @@ async function browse(){
 async function readSeries(){
   const r=await get('/api/series',{imports:selected('review-imports').join(',')});
   checkChoices('review-series',r.series,row=>row.meter_id+' · '+row.channel+' · '+row.unit+' · '+row.records+' source readings',()=>true);
+}
+function movePriority(direction){
+  const select=$('review-priority');
+  if(direction<0){
+    for(let i=1;i<select.options.length;i++)if(select.options[i].selected&&!select.options[i-1].selected)
+      select.insertBefore(select.options[i],select.options[i-1]);
+  }else{
+    for(let i=select.options.length-2;i>=0;i--)if(select.options[i].selected&&!select.options[i+1].selected)
+      select.insertBefore(select.options[i+1],select.options[i]);
+  }
 }
 function reviewSelection(){
   return{name:$('review-name').value.trim(),import_ids:selected('review-imports'),
@@ -233,6 +245,8 @@ $('refresh').onclick=()=>run(refresh);
 $('portable').onclick=()=>run(()=>download('/api/portable',{},'utility-workspace.zip'));
 $('inspect-close').onclick=()=>$('inspect-dialog').close();
 $('series-refresh').onclick=()=>run(readSeries);
+$('priority-up').onclick=()=>movePriority(-1);
+$('priority-down').onclick=()=>movePriority(1);
 form('import-form',async()=>{for(const file of $('import-files').files){status('Receiving '+file.name+'…');await upload(file);}await browse();});
 form('capture-form',async()=>{const current=await act('capture.start',{name:$('capture-name').value.trim(),
   token_env:$('capture-env').value.trim(),meter_ids:$('capture-meters').value.split(',').map(x=>x.trim()).filter(Boolean),
