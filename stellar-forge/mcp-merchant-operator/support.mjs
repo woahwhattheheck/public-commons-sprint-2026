@@ -139,17 +139,17 @@ function exportFileType(name) {
 }
 
 export class MerchantSupport {
-  #config; #store; #watch = null; #lastWatchExit = null; #closing = false; #close; #incidentSources;
+  #config; #store; #watch = null; #lastWatchExit = null; #closing = false; #close; #incidentSources; #environment;
   #reads = new RetainedFileReads({ errorPrefix: 'SUPPORT' });
-  constructor(config) {
-    this.#config = config;
+  constructor(config, { environment = process.env } = {}) {
+    this.#config = config; this.#environment = environment;
     this.#incidentSources = new MerchantSupportIncidentSources(config.support, {
       profiles: () => this.summary.profiles,
       profile: (alias, sourceDigest) => this.#profile(alias, sourceDigest),
       configurationChanges,
       template: (alias, sourceDigest) => this.#input('workspace', alias, sourceDigest),
       cases: () => this.#cases()
-    });
+    }, { environment });
   }
   get summary() {
     const value = this.#config.support;
@@ -211,7 +211,7 @@ export class MerchantSupport {
     const ready = new Promise((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
     const handle = { controller: new AbortController(), instanceId: null, state: 'STARTING', startedConfiguration: null, done: null };
     this.#watch = handle;
-    handle.done = runIncidentWatch({ directory, signal: handle.controller.signal,
+    handle.done = runIncidentWatch({ directory, signal: handle.controller.signal, environment: this.#environment,
       expectedConfigRevision: args.expectedConfigRevision, expectedConfigHash: args.expectedConfigHash,
       onReady: value => {
         handle.instanceId = value.instanceId; handle.state = 'RUNNING';
@@ -365,7 +365,7 @@ export class MerchantSupport {
           configurationRevision(args.expectedConfigRevision); expected(args.expectedSourceSha256);
           const selected = await this.#profile(args.profile, args.expectedSourceSha256);
           const result = await configureIncidents({ directory: this.#incidents(), config: selected.configuration,
-            expectedConfigRevision: args.expectedConfigRevision });
+            expectedConfigRevision: args.expectedConfigRevision, environment: this.#environment });
           return { ...result, profile: selected.profile, sourceSha256: selected.sourceSha256,
             unchanged: result.configRevision === args.expectedConfigRevision };
         }
@@ -375,13 +375,13 @@ export class MerchantSupport {
         case 'merchant_notifications': return this.#notifications(args);
         case 'merchant_incident_notify': {
           if (args.expectedNotificationId !== undefined && args.expectedNotificationId !== null) caseId(args.expectedNotificationId);
-          return remindIncident({ directory: this.#incidents(), id: caseId(args.id), expectedRevision: configurationRevision(args.expectedRevision),
+          return remindIncident({ directory: this.#incidents(), id: caseId(args.id), expectedRevision: configurationRevision(args.expectedRevision), environment: this.#environment,
             ...(Object.hasOwn(args, 'expectedNotificationId') ? { expectedNotificationId: args.expectedNotificationId } : {}) });
         }
         case 'merchant_notification_update': {
           if (!Number.isSafeInteger(args.expectedAttempts) || args.expectedAttempts < 0 || !['retry', 'cancel'].includes(args.action))
             throw failure('INVALID_PARAMS', 'Choose retry or cancel with the exact original notification attempt count.');
-          return operateNotification({ directory: this.#incidents(), id: caseId(args.id), expectedAttempts: args.expectedAttempts, action: args.action, by: args.by });
+          return operateNotification({ directory: this.#incidents(), id: caseId(args.id), expectedAttempts: args.expectedAttempts, action: args.action, by: args.by, environment: this.#environment });
         }
         case 'merchant_support_sources': {
           if (args.source === undefined && args.kind === undefined) return this.summary;
@@ -403,7 +403,7 @@ export class MerchantSupport {
             nextOffset: offset + limit < found.length ? offset + limit : null,
             notifications: value.notifications.filter(row => ids.has(row.incidentId)), captureStorage: value.captureStorage };
         }
-        case 'merchant_incident_ack': return acknowledgeIncident({ directory: this.#incidents(), id: caseId(args.id), expectedRevision: args.expectedRevision, by: args.by, notes: args.notes });
+        case 'merchant_incident_ack': return acknowledgeIncident({ directory: this.#incidents(), id: caseId(args.id), expectedRevision: args.expectedRevision, by: args.by, notes: args.notes, environment: this.#environment });
         case 'merchant_incident_case': {
           caseId(args.id); caseId(args.incidentId); expected(args.expectedTemplateSha256);
           if (typeof args.routeId !== 'string' || !args.routeId || args.routeId.length > 160) throw failure('INVALID_PARAMS', 'Choose an actual route ID from the original capture.');
