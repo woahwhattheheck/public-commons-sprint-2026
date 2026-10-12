@@ -40,6 +40,13 @@ export const ACTIONS={
  'release.activate':['releaseId','expectedGeneration'],'release.start':['releaseId','expectedGeneration'],'release.stop':['releaseId'],'release.rollback':['releaseId','expectedGeneration'],
  'buyer.inspect':['intentIds'],'buyer.receive':['intentIds'],
  'export.create':['editionId','table','format','mappingId'],
+ "study.save":["studyId","expectedStudyRevision","expectedPreviewSha256","name","project","question","owner","table","mappingId","basisPolicy","members","note"],
+ "study.review":["studyId","studyRevision","studySha256","expectedReviewId","status","actor","note","acknowledgedWarnings"],
+ "study.export":["studyId","studyRevision","studySha256","reviewId"],
+ "study.return.start":["releaseId","format","filename","bytes","note"],
+ "study.return.chunk":["uploadId","offset","base64"],
+ "study.return.finish":["uploadId"],
+ "study.receive":["returnId","comparisonSha256","expectedDecisionId","status","actor","note"],
  'analysis.export':['observationsEditionId','predictionsEditionId','options','analyst']
 };
 export function workspaceSchema({workspaceId,inboxConfigured=false,userAgent}={}){
@@ -48,6 +55,7 @@ export function workspaceSchema({workspaceId,inboxConfigured=false,userAgent}={}
  units:['metric','english'],timeZones:['gmt','lst','lst_ldt'],datums:['MLLW','MHHW','MHW','MTL','MSL','MLW','NAVD','STND','IGLD','LWD','CRD'],
  predictionIntervals:['6','h','hilo'],annotationStatuses:['open','reviewed','follow_up'],
  exportFormats:['json','jsonl','csv','report','source-package'],inboxConfigured,userAgent,
+ study:{schema:'stellar-forge.coops-coastal-study.v1',tables:['observations','predictions'],basisPolicies:['uniform_requests','mixed_native'],maxMembers:64,maxStations:5,maxYears:5,chunkBytes:1048576,maxReturnBytes:1073741824,reviewStatuses:['reviewed','follow_up'],receivingStatuses:['accepted','follow_up'],requiredColumns:['editionId','recordId','sourcePageSha256','sourceRecord','stationId','product','timestamp','timeZone','datum','units','unit','value','valueType','quality','flags'],description:'Reviewed ordered immutable source windows, complete mapped CSV/JSONL and source TAR, and exact returned-file comparison in the original workspace.'},
  analysis:{action:'analysis.export',schema:'stellar-forge.coops-retained-analysis.v1',products:['water_level','predictions'],timeZone:'gmt',predictionInterval:'6',
   quality:['all','verified','preliminary'],outputs:['workbook.html','workbook.json','analysis.json','paired.csv','episodes.csv','unplaced.csv','source/*','manifest.json','README.txt']},
  limits:{windowDays:366,backfillYears:5,rowPage:500,responseBytes:32*1024*1024,captureBytes:256*1024*1024,sourceImportBytes:64*1024*1024,sourceTasks:128,backfillParts:5,mappingFileBytes:64*1024,streamExportBytes:1024*1024*1024,datasetRows:250000,metadataRows:50000},

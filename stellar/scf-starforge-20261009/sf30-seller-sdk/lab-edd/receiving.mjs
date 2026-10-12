@@ -18,6 +18,9 @@ import { sourceMembers, readLabDecisions } from './application.mjs';
 import { reviewTable, parseReviewTable } from './decisions.mjs';
 import { readLabResult } from './result.mjs';
 import { receiveLabProcessOwnership } from './receiving-processes.mjs';
+import { reconcileDeliveries, normalizeReconciliation, previewReconciliation } from './reconciliation.mjs';
+import { parseReconciliationTable } from './reconciliation-table.mjs';
+import { readReconciliationDecisions } from './reconciliation-application.mjs';
 
 const ROOT=fileURLToPath(new URL('.',import.meta.url));
 const SCHEMA='starforge.lab-edd-native-receiving.v1';
@@ -77,43 +80,44 @@ async function extractResult(result,directory){
   }
   return files;
 }
-async function verifyNative(delivery,document,result,signal){
+async function verifyNative(delivery,document,result,signal,{baseline=false}={}){
+  const view=baseline?result.baseline:result,identity=baseline?result.manifest.reconciliation.baseline:result.manifest,prefix=baseline?'baseline/':'';
   const preview=previewDelivery(delivery,document);
-  equal(result.manifest.sourceSha256,delivery.source.sourceSha256,'The native worker changed the original source.');
-  equal(result.document,document,'The native worker changed the full source-bound decision document.');
-  equal(result.manifest.reviewSha256,preview.reviewSha256,'The original native preview and worker review differ.');
-  equal(result.review.report,preview.report,'The complete profile observations changed in the worker.');
+  equal(identity.sourceSha256,delivery.source.sourceSha256,'The native worker changed the original source.');
+  equal(view.document,document,'The native worker changed the full source-bound decision document.');
+  equal(identity.reviewSha256,preview.reviewSha256,'The original native preview and worker review differ.');
+  equal(view.review.report,preview.report,'The complete profile observations changed in the worker.');
   let prepared,error;
   try{prepared=await renderPreparedFiles(delivery,preview,{signal});}
   catch(cause){signal.throwIfAborted();error={code:String(cause.code??'NATIVE_PREPARATION'),message:String(cause.message??cause)};}
   if(error){
-    equal(result.nativePreparation.status,'REVIEW_REQUIRED','A refused native preparation was reported complete.');
-    equal({code:result.nativePreparation.error.code,message:result.nativePreparation.error.message},error,'The native preparation refusal changed.');
+    equal(view.nativePreparation.status,'REVIEW_REQUIRED','A refused native preparation was reported complete.');
+    equal({code:view.nativePreparation.error.code,message:view.nativePreparation.error.message},error,'The native preparation refusal changed.');
   }else{
-    equal(result.nativePreparation.status,'PREPARED','The completed native preparation was not delivered.');
-    equal(result.prepared.map(file=>({filename:file.filename,bytes:file.bytes.length,sha256:file.sha256})),
+    equal(view.nativePreparation.status,'PREPARED','The completed native preparation was not delivered.');
+    equal(view.prepared.map(file=>({filename:file.filename,bytes:file.bytes.length,sha256:file.sha256})),
       prepared.map(file=>({filename:file.filename,bytes:file.size,sha256:file.sha256})),'The actual native receiving files differ from the source-bound renderer.');
   }
-  if(result.nativePreparation.status==='PREPARED'){
-    const nativeDelivery=await inspectDelivery(result.prepared.map(file=>({filename:file.filename,bytes:file.bytes})),delivery.profile,
+  if(view.nativePreparation.status==='PREPARED'){
+    const nativeDelivery=await inspectDelivery(view.prepared.map(file=>({filename:file.filename,bytes:file.bytes})),delivery.profile,
       {encoding:delivery.source.textEncoding??'utf-8',signal});
     const fieldRows=tables=>tables.map(table=>({filename:table.filename,headers:table.headers,keys:table.keys,
       sheetName:table.origin?.sheetName??null,sheetIndex:table.origin?.sheetIndex??null,
       rows:table.rows.map(row=>({rowNumber:row.rowNumber,fields:row.fields}))}));
     equal(fieldRows(nativeDelivery.tables),fieldRows(preview.tables),'The native prepared files changed an original or explicitly selected field value.');
     if(!document.decisions.some(choice=>choice.action!=='keep')){
-      equal(result.prepared.map(file=>({filename:file.filename,sha256:file.sha256})),
+      equal(view.prepared.map(file=>({filename:file.filename,sha256:file.sha256})),
         delivery.originals.map(file=>({filename:file.filename,sha256:file.sha256})),
         'An unchanged receiving file differs from its complete original bytes.');
     }
   }
   for(const format of ['csv','tsv']){
-    const member=result.members.find(file=>file.filename==='decisions.'+format);
+    const member=result.members.find(file=>file.filename===prefix+'decisions.'+format);
     const reopened=parseReviewTable(delivery,member.bytes.toString('utf8'),{format});
     equal(reopened,document,'The full '+format.toUpperCase()+' decision table changed its source-bound choices.');
   }
-  const originalMember=result.members.find(file=>file.filename===result.manifest.originalMembers.source);
-  const originalDescriptor=result.manifest.sourceFiles.find(file=>file.slot==='source');
+  const originalMember=result.members.find(file=>file.filename===result.manifest.originalMembers[baseline?'baseline':'source']);
+  const originalDescriptor=result.manifest.sourceFiles.find(file=>file.slot===(baseline?'baseline':'source'));
   const received=await inspectDelivery(sourceMembers(originalMember.bytes,originalDescriptor,{signal}),delivery.profile,
     {encoding:delivery.source.textEncoding??'utf-8',signal});
   equal(received.source,delivery.source,'The independent result receiver changed the original source identity.');
@@ -123,7 +127,7 @@ async function verifyNative(delivery,document,result,signal){
     throw Error('The same delivered original source changed during independent receiving.');
   return {sourceSha256:delivery.source.sourceSha256,reviewSha256:preview.reviewSha256,
     rows:delivery.tables.reduce((n,table)=>n+table.rows.length,0),decisions:document.decisions.length,
-    nativePreparation:result.nativePreparation,tableRoundTrips:['csv','tsv'],originalReopened:true,sameDelivery:same.counts??null};
+    nativePreparation:view.nativePreparation,tableRoundTrips:['csv','tsv'],originalReopened:true,sameDelivery:same.counts??null};
 }
 function checkedConfig(value,base){
   if(value?.schema!=='starforge.lab-edd-receiving-config.v1'||typeof value.operationId!=='string'||
@@ -141,10 +145,13 @@ function checkedConfig(value,base){
     families:value.families.map(family=>{
       if(typeof family.name!=='string'||!/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(family.name)||seen.has(family.name)||typeof family.sourceFile!=='string')
         throw Error('Each original input family needs a unique stable name and actual source file.');
-      seen.add(family.name);labProfile(family.profile);
+      seen.add(family.name);labProfile(family.profile);if(family.baselineProfile)labProfile(family.baselineProfile);
+      if((family.baselineProfile||family.baselineDecisionsFile||family.reconciliationFile)&&!family.baselineFile)throw Error('The cross-profile family needs its complete original baseline file.');
       return {...family,sourceFile:resolve(base,family.sourceFile),
         ...(family.baselineFile?{baselineFile:resolve(base,family.baselineFile)}:{}),
-        ...(family.decisionsFile?{decisionsFile:resolve(base,family.decisionsFile)}:{})};
+        ...(family.decisionsFile?{decisionsFile:resolve(base,family.decisionsFile)}:{}),
+        ...(family.baselineDecisionsFile?{baselineDecisionsFile:resolve(base,family.baselineDecisionsFile)}:{}),
+        ...(family.reconciliationFile?{reconciliationFile:resolve(base,family.reconciliationFile)}:{})};
     })};
 }
 /** Native execution uses original sealed files and executeJob; each retained family resumes its same identity. */
@@ -176,14 +183,23 @@ export async function receiveLabJobs({configuration,directory,scratch,phase='all
         if(family.sourceBytes!==undefined&&family.sourceBytes!==sourceFile.bytes)throw Error('The original source length changed: '+family.name);
         const familyRoot=join(directory,family.name);await privateDirectory(familyRoot);
         const delivery=await originalDelivery(source,profile,encoding,signal);
+        const baseline=family.baselineFile?await originalDelivery(family.baselineFile,labProfile(family.baselineProfile??family.profile),family.baselineEncoding??encoding,signal):null;
+        const cross=baseline&&baseline.source.profile.id!==delivery.source.profile.id?reconcileDeliveries(delivery,baseline):null;
+        if((family.baselineDecisionsFile||family.reconciliationFile)&&!cross)throw Error('Select the different-profile original baseline for cross-profile receiving.');
         const sourceBinding={...sourceFile,sourceSha256:delivery.source.sourceSha256,profile:delivery.source.profile,
-          ...(family.baselineFile?{baseline:await metadata(family.baselineFile)}:{})};
+          ...(family.baselineFile?{baseline:{...await metadata(family.baselineFile),sourceSha256:baseline.source.sourceSha256,profile:baseline.source.profile}}:{})};
         let state=checkpoint.families[family.name];
         if(state)equal(state.source,sourceBinding,'The retained native family belongs to different original files.');
         else{state=checkpoint.families[family.name]={source:sourceBinding,iterations:{}};await save(checkpoint);}
         const document=family.decisionsFile?readLabDecisions(delivery,await readFile(family.decisionsFile),
           {filename:basename(family.decisionsFile),contentType:contentType(family.decisionsFile)},family.decisionFormat):keepDocument(delivery);
         const decisionsPath=join(familyRoot,'reviewed-decisions.json');await immutable(decisionsPath,Buffer.from(json(document)));
+        const baselineDocument=cross?(family.baselineDecisionsFile?readLabDecisions(baseline,await readFile(family.baselineDecisionsFile),
+          {filename:basename(family.baselineDecisionsFile)},family.baselineDecisionFormat):keepDocument(baseline)):null;
+        const correspondence=cross?(family.reconciliationFile?readReconciliationDecisions(cross,await readFile(family.reconciliationFile),
+          {filename:basename(family.reconciliationFile)},{format:family.reconciliationFormat}):normalizeReconciliation(cross)):null;
+        const baselineDecisionsPath=join(familyRoot,'reviewed-baseline-decisions.json'),correspondencePath=join(familyRoot,'reviewed-reconciliation.json');
+        if(cross){await immutable(baselineDecisionsPath,Buffer.from(json(baselineDocument)));await immutable(correspondencePath,Buffer.from(json(correspondence)));}
         const tableResults={};
         for(const format of ['csv','tsv']){
           const table=reviewTable(delivery,document,{format,scope:family.tableScope??'issues',fields:family.tableFields});
@@ -201,8 +217,13 @@ export async function receiveLabJobs({configuration,directory,scratch,phase='all
           const uploads={source:await stageFile(store,definition,merchant.compiled.publicOrigin,iteration.reference,'source',source,iteration.token,signal)};
           if(family.baselineFile)uploads.baseline=await stageFile(store,definition,merchant.compiled.publicOrigin,iteration.reference,'baseline',family.baselineFile,iteration.token,signal);
           if(name==='reviewed')uploads.decisions=await stageFile(store,definition,merchant.compiled.publicOrigin,iteration.reference,'decisions',decisionsPath,iteration.token,signal);
+          if(name==='reviewed'&&cross){
+            uploads.baseline_decisions=await stageFile(store,definition,merchant.compiled.publicOrigin,iteration.reference,'baseline_decisions',baselineDecisionsPath,iteration.token,signal);
+            uploads.reconciliation=await stageFile(store,definition,merchant.compiled.publicOrigin,iteration.reference,'reconciliation',correspondencePath,iteration.token,signal);
+          }
           const input={profile:profile.id,reviewName:family.name+'-'+name,encoding,expectedSourceSha256:delivery.source.sourceSha256,
             tableScope:family.tableScope??'issues',...(family.tableFields?{tableFields:family.tableFields}:{}),
+            ...(baseline?{baselineProfile:baseline.source.profile.id,baselineEncoding:family.baselineEncoding??encoding,expectedBaselineSha256:baseline.source.sourceSha256}:{}),
             $files:Object.fromEntries(Object.entries(uploads).map(([slot,value])=>[slot,value.file]))};
           const canonical=validateJobInput(definition,input);
           await store.pinJob({origin:merchant.compiled.publicOrigin,reference:iteration.reference,functionId:'laboratoryReview',
@@ -229,6 +250,20 @@ export async function receiveLabJobs({configuration,directory,scratch,phase='all
             iteration.replay={sameReference:row.id,sameInputSha256:row.inputSha256,bytes:replay.length,sha256:sha256(replay)};await save(checkpoint);
           }
           iteration.receiving=await verifyNative(delivery,selectedDocument,result,signal);
+          if(cross){
+            const selectedBaseline=name==='initial'?normalizeDecisions(baseline):baselineDocument;
+            const selectedCorrespondence=name==='initial'?normalizeReconciliation(cross):correspondence;
+            const expectedReview=previewReconciliation(cross,selectedCorrespondence);
+            equal(result.reconciliation.comparison,cross,'The complete original source-pair comparison changed in the worker.');
+            equal(result.reconciliation.review,expectedReview,'The full source-bound correspondence review changed in the worker.');
+            for(const format of ['csv','tsv']){
+              const member=result.members.find(file=>file.filename==='reconciliation/decisions.'+format);
+              equal(parseReconciliationTable(cross,member.bytes.toString('utf8'),{format}),selectedCorrespondence,'The complete correspondence table changed: '+format);
+            }
+            iteration.crossProfile={comparisonSha256:cross.comparisonSha256,documentSha256:expectedReview.documentSha256,
+              reviewSha256:expectedReview.reviewSha256,counts:cross.counts,byKind:cross.byKind,correspondence:expectedReview.counts,
+              baseline:await verifyNative(baseline,selectedBaseline,result,signal,{baseline:true}),tableRoundTrips:['csv','tsv']};
+          }
           iteration.extractedDirectory=join(familyRoot,name+'-received');
           iteration.files=await extractResult(result,iteration.extractedDirectory);
           iteration.manifest=result.manifest;iteration.completedAt??=new Date().toISOString();await save(checkpoint);

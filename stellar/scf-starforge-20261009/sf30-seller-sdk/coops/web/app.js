@@ -13,6 +13,7 @@ function field(form,key,label,value='',type='text',extra=''){return'<label>'+esc
 function area(form,key,label,value='',extra=''){return'<label '+extra+'>'+esc(label)+'<textarea data-form="'+form+'" data-field="'+key+'" name="'+key+'">'+esc(value)+'</textarea></label>';}
 function select(form,key,label,items,value,extra=''){return'<label>'+esc(label)+'<select data-form="'+form+'" data-field="'+key+'" name="'+key+'" '+extra+'>'+items.map(x=>{const v=typeof x==='string'?x:x.value,l=typeof x==='string'?x:x.label;return'<option value="'+esc(v)+'"'+(v===value?' selected':'')+'>'+esc(l)+'</option>';}).join('')+'</select></label>';}
 function subjectBinding(key,value=A.drafts[key]){
+ const coastalStudy=studyUI.binding(key,value);if(coastalStudy)return coastalStudy;
  if(key==='station')return{type:'station',id:value?.profileId||null};
  if(key==='mapping')return{type:'mapping',id:value?.mappingId||null};
  if(key.startsWith('review:'))return{type:'review',editionId:key.slice(7),subject:String(value?.subject??'').trim()};
@@ -20,11 +21,13 @@ function subjectBinding(key,value=A.drafts[key]){
 }
 function recordKey(value){if(value===null||typeof value!=='object')return JSON.stringify(value);if(Array.isArray(value))return'['+value.map(recordKey).join(',')+']';return'{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+recordKey(value[k])).join(',')+'}';}
 function savedSubject(binding,view=A.view){
+ if(binding.type.startsWith('study'))return studyUI.savedSubject(binding,view);
  if(binding.type==='station')return view.stations.find(p=>p.id===binding.id)??null;
  if(binding.type==='mapping')return view.mappings.find(m=>m.id===binding.id)??null;
  return view.annotations.find(a=>a.editionId===binding.editionId&&a.subject===binding.subject)??null;
 }
 function nativeDraft(binding,record,current){
+ if(binding.type.startsWith('study'))return studyUI.nativeDraft(binding,record,current);
  if(!record){const value=clone(current);if(binding.type==='station')value.profileId='';if(binding.type==='mapping')value.mappingId='';return value;}
  if(binding.type==='station')return{profileId:record.id,stationId:record.stationId,label:record.label,owner:record.owner,note:record.note,active:record.active};
  if(binding.type==='mapping')return{mappingId:record.id,name:record.name,table:record.table,columns:clone(record.columns),note:record.note};
@@ -45,7 +48,7 @@ function draft(key,defaults){
  A.draftTokens[key]??=crypto.randomUUID();
  const binding=subjectBinding(key);
  if(binding&&!A.draftBases[key]){
-  const saved=savedSubject(binding),unsaved=(binding.type==='station'||binding.type==='mapping')&&!binding.id;
+  const saved=savedSubject(binding),unsaved=(binding.type==='station'||binding.type==='mapping'||binding.type==='study')&&!binding.id;
   A.draftBases[key]={binding,known:unsaved,record:clone(saved)};
  }
  return A.drafts[key];
@@ -80,6 +83,7 @@ async function resolveDraftConflict(useCurrent){
   A.draftTokens[conflict.key]=crypto.randomUUID();
  }
  const selected=subjectBinding(conflict.key);
+ if(selected.type==='study'){A.drafts[conflict.key].expectedStudyRevision=savedSubject(selected)?.revision??null;delete A.drafts.studyPreview;}
  A.draftBases[conflict.key]={binding:clone(selected),known:true,record:clone(savedSubject(selected))};
  A.draftConflict=null;await persist();$('#dialog').close();renderPage();
  notice(useCurrent?'Current saved fields are open. Review and save any intended changes.':'The entered draft is retained against the version you reviewed. Save when ready.');
@@ -89,6 +93,7 @@ function applyDraftEffect(pending,response){
  if(!A.drafts[effect.key]||A.draftTokens[effect.key]!==effect.token){effect.outcome='different_draft_preserved';return;}
  const record=response.result,binding=effect.binding;
  if(!record||typeof record.id!=='string')throw Object.assign(new Error('The saved record identity is missing from the original reply.'),{uncertain:true});
+ if(binding.type.startsWith('study')){studyUI.applyDraft(effect,response);return;}
  if(binding.type==='station'||binding.type==='mapping'){
   const field=binding.type==='station'?'profileId':'mappingId',current=A.drafts[effect.key][field]||null;
   if(binding.id&&record.id!==binding.id)throw Object.assign(new Error('The original reply refers to another saved record.'),{uncertain:true});
@@ -131,21 +136,26 @@ function applyViewEffects(pending,response){
   A.preview={kind:preview.kind,payload:preview.payload,profile:preview.profile,result:clone(response.result)};
  }
 }
-async function perform(action,payload,{draftKey,editionEffect=null,previewEffect=null}={}){
+async function perform(action,payload,{draftKey,editionEffect=null,previewEffect=null,studyEffect=null}={}){
  if(A.pending)throw new Error('Resolve the retained original request before issuing another action.');
  if(A.busy)throw new Error('The current original request is still in progress.');
  const draftEffect=draftKey?checkDraftSave(draftKey):null;
- A.pending={request:{action,payload:clone(payload),operationId:crypto.randomUUID(),expectedRevision:A.view.revision},draftEffect,editionEffect,previewEffect,createdAt:new Date().toISOString(),state:'prepared'};
+ A.pending={request:{action,payload:clone(payload),operationId:crypto.randomUUID(),expectedRevision:A.view.revision},draftEffect,editionEffect,previewEffect,studyEffect,createdAt:new Date().toISOString(),state:'prepared'};
  await persist();renderPending();return dispatch();
+}
+async function resumeOriginal(request){
+ if(A.pending||A.busy)throw new Error('Reconcile the retained request before resuming another original operation.');
+ if(request?.action!=='study.return.finish'||typeof request.operationId!=='string'||!request.payload?.uploadId||!Number.isSafeInteger(request.expectedRevision))throw new Error('Select the original native comparison request.');
+ A.pending={request:clone(request),createdAt:new Date().toISOString(),state:'prepared'};await persist();renderPending();return dispatch();
 }
 async function dispatch(){
  if(!A.pending||A.busy)return;const pending=A.pending;A.busy=true;pending.state='sending';await persist();renderPending();
  try{
   const response=await api('/api/action',{body:pending.request});
   if(response.operationId!==pending.request.operationId||!response.view)throw Object.assign(new Error('The original action reply did not retain its request identity.'),{uncertain:true});
-  adoptView(response.view);pending.response=response;pending.state=response.state==='RUNNING'?'running':'complete';if(pending.state==='complete'){applyDraftEffect(pending,response);applyViewEffects(pending,response);}await persist();
+  adoptView(response.view);pending.response=response;pending.state=response.state==='RUNNING'?'running':'complete';if(pending.state==='complete'){applyDraftEffect(pending,response);applyViewEffects(pending,response);studyUI.applyEffect(pending,response);}await persist();
   if(pending.state==='running'){notice('The original operation is running. Inspect its native outcome before continuing.');return response;}
-  A.history.push({request:pending.request,response,draftEffect:pending.draftEffect??null,editionEffect:pending.editionEffect?{token:pending.editionEffect.token,editionId:pending.editionEffect.edition.id}:null,previewEffect:pending.previewEffect??null,completedAt:new Date().toISOString()});A.pending=null;A.lastResult=response.result;await persist();renderPending();notice('Saved '+pending.request.action+' at revision '+A.view.revision+(response.reused?' · original request replayed.':'.'));
+  A.history.push(studyUI.completedHistory(pending,response)??{request:pending.request,response,draftEffect:pending.draftEffect??null,editionEffect:pending.editionEffect?{token:pending.editionEffect.token,editionId:pending.editionEffect.edition.id}:null,previewEffect:pending.previewEffect??null,completedAt:new Date().toISOString()});A.pending=null;A.lastResult=response.result;await persist();renderPending();notice('Saved '+pending.request.action+' at revision '+A.view.revision+(response.reused?' · original request replayed.':'.'));
   return response;
  }catch(error){A.pending??=pending;pending.state=error.uncertain?'uncertain':'rejected';pending.error=error.message;pending.status=error.status??null;await persist();renderPending();if([401,403].includes(error.status))notice('Open the current private session URL printed by the original workspace, then retry this retained request.',true);throw error;}
  finally{A.busy=false;}
@@ -355,7 +365,7 @@ function renderOperations(){
 }
 function renderPage(){
  if(!A.view)return;epoch++;$$('[data-tab]').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===A.tab?'page':'false'));
- const render={overview:renderOverview,stations:renderStations,capture:renderCapture,backfills:renderBackfills,editions:renderEditions,compare:renderCompare,mappings:renderMappings,datasets:renderDatasets,customers:renderCustomers,exports:renderExports,operations:renderOperations};
+ const render={studies:studyUI.render,overview:renderOverview,stations:renderStations,capture:renderCapture,backfills:renderBackfills,editions:renderEditions,compare:renderCompare,mappings:renderMappings,datasets:renderDatasets,customers:renderCustomers,exports:renderExports,operations:renderOperations};
  $('#main').innerHTML=(render[A.tab]??renderOverview)();renderPending();
 }
 async function navigate(tab){A.tab=tab;await persist();renderPage();$('#main').focus();}
@@ -404,6 +414,7 @@ document.addEventListener('change',event=>{if(event.target.matches('select[data-
 document.addEventListener('submit',event=>{
  const form=event.target;if(!(form instanceof HTMLFormElement))return;event.preventDefault();
  void (async()=>{
+  if(form.id.startsWith('study-'))return studyUI.submit(form);
   if(form.id==='station-form'){
    const d=clone(draft('station',{}));if(!d.profileId)delete d.profileId;await perform('station.save',d,{draftKey:'station'});await refresh();return;
   }
@@ -447,6 +458,7 @@ document.addEventListener('click',event=>{
  const cmd=control.dataset.cmd,id=control.dataset.id;
  if(!cmd)return;
  void(async()=>{
+  if(cmd.startsWith('study-'))return studyUI.click(cmd,id,control);
   if(cmd==='navigate')return navigate(id);
   if(cmd==='draft-use-current'||cmd==='draft-keep')return resolveDraftConflict(cmd==='draft-use-current');
   if(cmd==='retry'){await dispatch();if(A.edition&&!A.rows)await loadRows();await refresh();return;}
@@ -526,6 +538,7 @@ document.addEventListener('submit',event=>{
 $('#close-dialog').onclick=()=>$('#dialog').close();
 $('#refresh').onclick=()=>{void refresh().catch(e=>notice(e.message,true));};
 window.addEventListener('beforeunload',event=>{if(A.pending){event.preventDefault();event.returnValue='';}});
+const studyUI=globalThis.createCoopsStudyView({A,$,$$,esc,clone,recordKey,details,table,button,heading,field,area,select,badge,draft,setDraft,clearDraft,api,perform,resumeOriginal,refresh,persist,renderPage,navigate,download,modal,notice});
 async function initialize(){
  try{
   A.schema=await api('/api/schema');A.db=await database();A.key=A.schema.workspaceId;adoptView(await api('/api/view'));
