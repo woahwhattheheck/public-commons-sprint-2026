@@ -136,6 +136,13 @@ registration and source-workspace MCP contribution travel with their owners'
 source. Standard package source, registration, runtime transfer and recovery
 commands retain their original interfaces.
 
+The selected source also declares the original managed-command child, container
+runtime child, RPC network catalog and developer portal/generator assets that
+are loaded by path at runtime. The SF43 MCP buyer acceptance module is a real
+production import and is declared explicitly so the builder retains its original
+filename. These source files travel with their original Git identities alongside
+the builder's static import closure.
+
 ## Continue the same release and installation
 
 ~~~sh
