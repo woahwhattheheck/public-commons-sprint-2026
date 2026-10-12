@@ -18,7 +18,7 @@ def load_module(name, path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source", required=True, help="Original native export ZIP")
+    parser.add_argument("--source", required=True, help="Complete native export or explicitly declared original public source-example ZIP")
     parser.add_argument("--prefix", default="source-export")
     parser.add_argument("--out", required=True)
     parser.add_argument("--bagit-module", help="Exact upstream bagit.py; its installed distribution metadata must be available")
@@ -50,6 +50,10 @@ def main():
     workspace = root / "project"
     p.initialize(source_path, workspace, args.prefix)
     project, prepared = p.project_files(workspace)
+    source_profile = project.get("sourceProfile")
+    if source_profile:
+        assert source_profile["archiveSha256"] == source_sha
+        assert (workspace / "source-example.zip").read_bytes() == source_path.read_bytes()
     source_review = p.empty_review(prepared)
     records = prepared["records"]
     if len(records) < 2:
@@ -59,7 +63,7 @@ def main():
          "fields": {"description": ["Public CC0 example selected to exercise descriptive metadata mapping into Archivematica."]},
          "reason": "Authored evaluation description; original provider values remain in the native source."},
         {"identifier": records[-1]["identifier"], "include": False, "fields": {},
-         "reason": "Operator selected a demonstration subset; the complete original edition remains in submission documentation."},
+         "reason": "Operator selected a demonstration subset; the complete original source collection remains in submission documentation."},
     ], "note": "Public, explicitly authored receiving-example decisions."}
     normalized = p.normalize_review(reviewed, prepared)
     current = p.show(workspace)
@@ -125,6 +129,7 @@ def main():
         "schema": "stellar-forge.research-preservation-native-example.v1",
         "completedAt": p.utc(), "sourceArchiveSha256": source_sha,
         "sourcePrefix": args.prefix, "sourceBinding": prepared["binding"],
+        "sourceProfile": source_profile,
         "sourceRecords": len(records), "sourcePages": len(prepared["binding"]["pages"]),
         "upstreamValidator": {"name": "Library of Congress bagit-python", "version": str(bagit.VERSION),
             "sourceSha256": hashlib.sha256(original_path.read_bytes()).hexdigest(), "valid": True},

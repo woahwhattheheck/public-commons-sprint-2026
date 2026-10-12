@@ -197,11 +197,102 @@ def load_original(path, prefix=""):
         raise
 
 
-def source_inventory(src):
-    # Read each member once through the original hash/length checker.
-    for name in sorted(src.manifest["files"]):
+def source_inventory(src, selected=None):
+    # Complete exports retain every declared member. The source-only example
+    # uses its separately verified, explicit original-member closure.
+    for name in sorted(src.manifest["files"] if selected is None else selected):
         yield name, src.read(name)
     yield "manifest.json", src.manifest_bytes
+
+
+def public_example_profile(data, prefix, native_manifest_bytes):
+    """Verify the complete original tjl.public-source-example.v1 carrier."""
+    if len(data) > MAX_MEMBER:
+        raise PreservationError("Public source-example archive exceeds the intake limit")
+    prefix = safe_name(prefix) + "/"
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        entries = {}
+        total = 0
+        for info in archive.infolist():
+            name = safe_name(info.filename.rstrip("/") if info.is_dir() else info.filename)
+            if name in entries:
+                raise PreservationError("Source example has duplicate member names")
+            if info.is_dir():
+                raise PreservationError("Use the original file-only public source-example archive")
+            if ((info.external_attr >> 16) & 0o170000 not in {0, stat.S_IFREG}
+                    or info.file_size > MAX_MEMBER):
+                raise PreservationError("Source example contains an unsupported member")
+            total += info.file_size
+            entries[name] = info
+        if total > MAX_TOTAL or "EXAMPLE_MANIFEST.json" not in entries:
+            raise PreservationError("Invalid public source-example inventory")
+        declaration_bytes = archive.read(entries["EXAMPLE_MANIFEST.json"])
+        declaration = parse_json(declaration_bytes)
+        if (declaration.get("schema") != "tjl.public-source-example.v1"
+                or declaration.get("metadataLicense") != LICENSE
+                or not isinstance(declaration.get("files"), dict)):
+            raise PreservationError("Unsupported explicit source-example declaration")
+        declared = declaration["files"]
+        if set(entries) != set(declared) | {"EXAMPLE_MANIFEST.json"}:
+            raise PreservationError("Public source-example inventory differs from its declaration")
+        for name, entry in declared.items():
+            safe_name(name)
+            if (not isinstance(entry, dict) or type(entry.get("bytes")) is not int
+                    or not SHA_PATTERN.fullmatch(str(entry.get("sha256", "")))):
+                raise PreservationError("Invalid source-example member declaration")
+            body = archive.read(entries[name])
+            if len(body) != entry["bytes"] or digest(body) != entry["sha256"]:
+                raise PreservationError("Source-example checksum mismatch: " + name)
+        manifest_name = prefix + "manifest.json"
+        if (manifest_name not in declared
+                or archive.read(entries[manifest_name]) != native_manifest_bytes
+                or declaration.get("nativeSourceManifestSha256") != digest(native_manifest_bytes)):
+            raise PreservationError("Source example does not bind the exact original native manifest")
+        manifest = parse_json(native_manifest_bytes)
+        full_files = manifest.get("files")
+        if not isinstance(full_files, dict):
+            raise PreservationError("Native source manifest has no declared members")
+        selected = {name[len(prefix):] for name in declared
+                    if name.startswith(prefix) and name != manifest_name}
+        required = {"query.json", "edition.json", "coverage.json"} | {
+            name for name in full_files
+            if name.startswith("pages/")}
+        if selected != required:
+            raise PreservationError("Source example must contain the complete native query/coverage/page closure")
+        for name in selected:
+            if declared[prefix + name] != full_files.get(name):
+                raise PreservationError("Source-example member differs from the original native manifest: " + name)
+        return {"schema": SCHEMA + ".source-profile", "kind": "PUBLIC_SOURCE_EXAMPLE",
+                "archiveBytes": len(data), "archiveSha256": digest(data),
+                "exampleManifestSha256": digest(declaration_bytes),
+                "nativeSourceManifestSha256": digest(native_manifest_bytes),
+                "prefix": prefix.rstrip("/"), "nativeFiles": sorted(selected),
+                "omittedDerivedFiles": {name: full_files[name]
+                    for name in sorted(set(full_files) - selected)}}
+
+
+def source_example_input(path, prefix, src):
+    path = Path(path).absolute()
+    if path.is_symlink():
+        raise PreservationError("Source example must use its original regular file")
+    if not path.is_file() or src.archive is None:
+        return None, None
+    if "EXAMPLE_MANIFEST.json" not in src.archive.namelist():
+        return None, None
+    data = read_regular(path.parent, path.name)
+    return public_example_profile(data, prefix, src.manifest_bytes), data
+
+
+def retained_source_profile(project, archive, native_manifest_bytes):
+    profile = project.get("sourceProfile")
+    if profile is None:
+        return None
+    if not isinstance(profile, dict) or profile.get("kind") != "PUBLIC_SOURCE_EXAMPLE":
+        raise PreservationError("Unsupported saved source profile")
+    expected = public_example_profile(archive, profile.get("prefix", ""), native_manifest_bytes)
+    if profile != expected:
+        raise PreservationError("Saved source profile differs from the complete original example")
+    return profile
 
 
 def normalize_review(value, prepared):
@@ -263,7 +354,11 @@ def project_files(root):
     if project.get("schema") != SCHEMA:
         raise PreservationError("Unsupported preservation workspace")
     prepared, original = load_original(root / "source")
-    original.close()
+    try:
+        if project.get("sourceProfile") is not None:
+            retained_source_profile(project, read_regular(root, "source-example.zip"), original.manifest_bytes)
+    finally:
+        original.close()
     saved = parse_json(read_regular(root, "prepared.json"))
     if saved != prepared or project.get("binding") != prepared["binding"]:
         raise PreservationError("Saved source binding differs from the original edition")
@@ -315,16 +410,20 @@ def initialize(source, workspace, prefix="", *, organization="", contact=""):
     prepared, src = load_original(source, prefix)
     temp = None
     try:
+        source_profile, example_bytes = source_example_input(source, prefix, src)
         if root.exists():
             project, existing = project_files(root)
             if (existing["binding"] != prepared["binding"]
-                    or project.get("organization") != organization or project.get("contact") != contact):
+                    or project.get("organization") != organization or project.get("contact") != contact
+                    or project.get("sourceProfile") != source_profile):
                 raise PreservationError("Existing workspace has different source or contact settings")
             return show(root)
         root.parent.mkdir(parents=True, exist_ok=True)
         temp = Path(tempfile.mkdtemp(prefix="." + root.name + "-", dir=root.parent))
-        for name, body in source_inventory(src):
+        for name, body in source_inventory(src, source_profile["nativeFiles"] if source_profile else None):
             write_new(temp / "source" / name, body)
+        if source_profile:
+            write_new(temp / "source-example.zip", example_bytes)
         frozen = oai_module().prepare(temp / "source")
         if frozen != prepared:
             raise PreservationError("Copied native edition differs from its original preparation")
@@ -335,6 +434,8 @@ def initialize(source, workspace, prefix="", *, organization="", contact=""):
         project = {"schema": SCHEMA, "profile": PROFILE, "createdAt": stamp,
                    "organization": organization, "contact": contact,
                    "binding": prepared["binding"]}
+        if source_profile:
+            project["sourceProfile"] = source_profile
         write_new(temp / "project.json", canonical(project))
         write_new(temp / "prepared.json", canonical(prepared))
         write_new(temp / path, canonical({"schema": SCHEMA + ".revision",
@@ -467,7 +568,7 @@ def human_csv(rows):
     return output.getvalue().encode("utf-8")
 
 
-def report_html(binding, rows, revision, review_sha):
+def report_html(binding, rows, revision, review_sha, source_profile=None):
     e = lambda value: html.escape(str(value), quote=True)
     included = sum(row["include"] for row in rows)
     body = []
@@ -503,6 +604,11 @@ input,select{font:inherit;border:1px solid #777;background:white;padding:8px}lab
     document += "<p>These payloads preserve bibliographic JSON metadata. Each selected record retains its original source hash, " \
         "page and request identity. Descriptive corrections and exclusions are separately recorded; the original edition remains " \
         "in submission documentation, including records excluded from the standalone record selection. Payload metadata is CC0. Reported article-copy rights are a separate source field.</p>"
+    if source_profile:
+        document += "<p>Source package: the original declared source-only example, including every query, coverage and provider-page member. " \
+            "Its complete original example ZIP is retained in submission documentation. The unchanged native manifest also records " + \
+            str(len(source_profile["omittedDerivedFiles"])) + " derived export entries outside this declared example; " \
+            "the full list remains in the saved source profile.</p>"
     document += "<p>Edition <code>" + e(binding["editionId"]) + "</code><br>Query SHA-256 <code>" + \
         e(binding["querySha256"]) + "</code><br>Source manifest SHA-256 <code>" + e(binding["manifestSha256"]) + \
         "</code><br>Review SHA-256 <code>" + e(review_sha) + "</code></p>"
@@ -564,7 +670,7 @@ def file_names(root):
     return sorted(result)
 
 
-def transfer_identity(binding, revision, organization="", contact=""):
+def transfer_identity(binding, revision, organization="", contact="", source_profile=None):
     sender = {"organization": text(organization, "organization"),
               "contact": text(contact, "contact")}
     if any(c in sender["organization"] + sender["contact"] for c in "\r\n"):
@@ -572,7 +678,10 @@ def transfer_identity(binding, revision, organization="", contact=""):
     revision_sha = digest(canonical(revision))
     preimage = {"source": binding["manifestSha256"], "review": revision["reviewSha256"],
                 "revisionRecordSha256": revision_sha, "sender": sender, "profile": PROFILE}
+    if source_profile is not None:
+        preimage["sourceProfile"] = source_profile
     return {"schema": BAG_SCHEMA, "profile": PROFILE,
+            **({"sourceProfile": source_profile} if source_profile is not None else {}),
             "id": "research-" + digest(canonical(preimage))[:24],
             "collectionId": "research-source-" + binding["manifestSha256"][:24],
             "source": binding, "reviewRevision": revision["revision"],
@@ -584,7 +693,9 @@ def bag_information(identity, revision, payload_bytes, payload_files):
     info = [
         ("External-Identifier", identity["id"]),
         ("Bag-Group-Identifier", identity["collectionId"]),
-        ("External-Description", "Reviewed OpenAlex metadata and complete retained native research edition"),
+        ("External-Description", "Reviewed OpenAlex metadata and " +
+         ("complete declared source-only example" if identity.get("sourceProfile") else
+          "complete retained native research edition")),
         ("Bagging-Date", revision["createdAt"][:10]),
         ("Payload-Oxum", str(payload_bytes) + "." + str(payload_files)),
     ]
@@ -603,8 +714,9 @@ def build(workspace, output, expected_revision, *, zipped=False):
         if expected_revision != current["revision"]:
             raise PreservationError("STALE_REVISION: reload the saved review before building")
         rows = mapped_records(prepared, revision["review"])
+        source_profile = project.get("sourceProfile")
         identity = transfer_identity(prepared["binding"], revision,
-                                     project["organization"], project["contact"])
+                                     project["organization"], project["contact"], source_profile)
         bag_id = identity["id"]
         if output.exists():
             prior = verify(output)
@@ -620,7 +732,7 @@ def build(workspace, output, expected_revision, *, zipped=False):
             wanted = {row["identifier"]: row for row in rows if row["include"]}
             written = set()
             try:
-                for name, data in source_inventory(src):
+                for name, data in source_inventory(src, source_profile["nativeFiles"] if source_profile else None):
                     write_new(bag / DOC / "native-export" / name, data)
                     if re.fullmatch(r"pages/[0-9]{8}/response\.json", name):
                         response = parse_json(data)
@@ -635,11 +747,13 @@ def build(workspace, output, expected_revision, *, zipped=False):
                                 written.add(identifier)
             finally:
                 src.close()
+            if source_profile:
+                write_new(bag / DOC / "source-example.zip", read_regular(workspace, "source-example.zip"))
             if written != set(wanted):
                 raise PreservationError("Selected record missing from the original native pages")
             write_new(bag / "data/metadata/metadata.csv", metadata_csv(rows))
             write_new(bag / "data/metadata/review.html",
-                      report_html(prepared["binding"], rows, current["revision"], current["reviewSha256"]))
+                      report_html(prepared["binding"], rows, current["revision"], current["reviewSha256"], source_profile))
             write_new(bag / DOC / "profile.json", canonical(identity))
             write_new(bag / DOC / "source-binding.json", canonical(prepared["binding"]))
             write_new(bag / DOC / "review.json", canonical(revision))
@@ -803,12 +917,17 @@ def _verify_reader(reader):
     sender = identity.get("sender")
     if not isinstance(sender, dict) or set(sender) != {"organization", "contact"}:
         raise PreservationError("Missing frozen bag sender inputs")
-    expected_identity = transfer_identity(binding, revision, sender["organization"], sender["contact"])
+    source_profile = None
+    if identity.get("sourceProfile") is not None:
+        source_profile = retained_source_profile(
+            identity, reader.read(DOC + "source-example.zip"),
+            reader.read(DOC + "native-export/manifest.json"))
+    expected_identity = transfer_identity(binding, revision, sender["organization"], sender["contact"], source_profile)
     if identity != expected_identity:
         raise PreservationError("Transfer identity differs from its immutable revision and sender inputs")
     if info != dict(bag_information(identity, revision, total, len(payload))):
         raise PreservationError("Bag information differs from the frozen transfer identity")
-    if reader.read("data/metadata/review.html") != report_html(binding, rows, revision["revision"], revision["reviewSha256"]):
+    if reader.read("data/metadata/review.html") != report_html(binding, rows, revision["revision"], revision["reviewSha256"], source_profile):
         raise PreservationError("Human receiving report differs from its source and review")
     if reader.read(DOC + "records-review.csv") != human_csv(rows):
         raise PreservationError("Spreadsheet review differs from its source and review")
@@ -835,7 +954,8 @@ def _verify_reader(reader):
         raise PreservationError("Transfer reconciliation differs from its actual selected records")
     src = oai_module().ExportSource(source_path, source_prefix)
     try:
-        native_members = {DOC + "native-export/" + name for name in src.manifest["files"]}
+        native_files = source_profile["nativeFiles"] if source_profile else src.manifest["files"]
+        native_members = {DOC + "native-export/" + name for name in native_files}
         native_members.add(DOC + "native-export/manifest.json")
         if {name for name in payload if name.startswith(DOC + "native-export/")} != native_members:
             raise PreservationError("Original native source member inventory changed")
@@ -844,9 +964,11 @@ def _verify_reader(reader):
             "records-review.csv", "reconciliation.json")}
         expected_payload = record_paths | native_members | expected_documentation | {
             "data/metadata/metadata.csv", "data/metadata/review.html"}
+        if source_profile:
+            expected_payload.add(DOC + "source-example.zip")
         if payload != expected_payload:
             raise PreservationError("Payload has members outside this transfer profile")
-        for name in src.manifest["files"]:
+        for name in native_files:
             safe_name(name)
             src.read(name)
     finally:
