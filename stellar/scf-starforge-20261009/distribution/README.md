@@ -4862,3 +4862,14 @@ The package also exposes `@tokenjunkielabs/starforge-merchant/partners/coingecko
 provides `startMarketWorkspace`. Original source collection and browser
 continuation instructions travel with the component in
 `workspace/acceptance/README.md`.
+
+
+## Merchant cache operations
+
+`starforge cache-operations` opens the maintained cache operating workspace or performs its native commands. The original `openapi-workspace` also opens these controls directly for a saved merchant package. Saved activity snapshots, retention comparisons, live changes, restoration, interrupted-response recovery, HTML reporting and complete history receiving share the original seller's cache manager. See the [operating guide](../sf30-seller-sdk/response-cache/workspace/README.md). Installed exports are `@tokenjunkielabs/starforge-merchant/seller/response-cache/workspace`, its `/server`, and `/report`.
+
+## SDMX sources, exact editions and customer receiving
+
+The installed `starforge sdmx` command and `starforge dataset sdmx` dispatch the same original source workspace. Retain complete SDMX data and structural metadata, inspect exact values, save and compare editions, run the native dataset engine, and transfer the original project/source history. The merchant bridge binds the native snapshot and source lineage to explicit SF30 public terms; publication uses the original version store's current/revision comparison. The customer bridge reviews the live original offer, pins the selected snapshot and continues through the original SF88 page acquisition and data-room delivery.
+
+Public imports: `@tokenjunkielabs/starforge-merchant/seller/sdmx` and `@tokenjunkielabs/starforge-merchant/buyer/sdmx`. The [SDMX operator guide](../sf30-seller-sdk/sdmx/README.md) includes the complete captured ECB case, acquisition receipts, source/edition/receiving CLI, merchant publication and original buyer commands.

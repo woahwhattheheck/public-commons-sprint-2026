@@ -16,7 +16,7 @@ credential headers name environment variables, not values in JSON.
 --check validates both configs and their route bindings without network/listening.
 Without --facilitator, requests return payment challenges and never call a backend.
 See UPSTREAM.md for merchant setup, upstream-tls/README.md for client certificates,
-OAUTH.md for client credentials, and
+UPSTREAM_TRANSPORT.md for named host egress, OAUTH.md for client credentials, and
 oauth-connections/README.md for reviewed authorization-code connections.`;
 
 function parse(args) {
@@ -87,7 +87,8 @@ export async function main(args = process.argv.slice(2), {env=process.env}={}) {
       cachedUpstreamBindings:upstreams.filter(row => row.cache).length,
       oauthUpstreamBindings:upstreams.filter(row => row.oauth2||row.oauthConnection).length,
       tlsUpstreamBindings:upstreams.filter(row => row.tls).length,
-      supplierQuotaBindings:upstreams.filter(row => row.supplierAccount).length}) + '\n');
+      supplierQuotaBindings:upstreams.filter(row => row.supplierAccount).length,
+      upstreamTransports:upstreams.filter(row => row.transport).map(row => ({binding:row.name,...row.transport}))}) + '\n');
     await application.close();
     return null;
   }
@@ -111,6 +112,8 @@ export async function main(args = process.argv.slice(2), {env=process.env}={}) {
   if (application.supplierQuotaSnapshot) session.supplierQuotaSnapshot = application.supplierQuotaSnapshot;
   session.operationControl = application.operationControl;
   session.invalidateUpstreamCache = application.invalidateCache;
+  session.cacheBinding = application.cacheBinding;
+  session.cacheManagement = application.cacheManagement;
   const nativeClose = session.close.bind(session);
   let closing, cleanup;
   const closeApplication = () => cleanup ??= session.lifecycle.whenIdle().then(() => application.close());

@@ -1,7 +1,7 @@
 // MIT. Load one launch-time credential snapshot into Node's original TLS engine.
 import { constants, openSync, fstatSync, readSync, closeSync } from 'node:fs';
 import { isAbsolute, resolve } from 'node:path';
-import { createHash, createPrivateKey, X509Certificate } from 'node:crypto';
+import { createHash, createPrivateKey, X509Certificate, randomBytes } from 'node:crypto';
 import { createSecureContext, checkServerIdentity, DEFAULT_MIN_VERSION } from 'node:tls';
 import { compileUpstreamTls, upstreamTlsReferences, UPSTREAM_TLS_SCHEMA } from './config.mjs';
 
@@ -75,7 +75,10 @@ export function loadUpstreamTls(value, { env = process.env, origin, now = Date.n
   if (profile === undefined) return undefined;
   if (!env || typeof env !== 'object' || Array.isArray(env) || !Number.isFinite(now))
     throw new TypeError('TLS loading requires a host environment and time');
-  const buffers = [], options = { minVersion: profile.minVersion ?? DEFAULT_MIN_VERSION };
+  // Node HTTPS Agent keys pools and resumptions by sessionIdContext, but not by
+  // secureContext. Isolate each loaded identity when a host shares its agent.
+  const sessionIdContext = randomBytes(16).toString('hex');
+  const buffers = [], options = { minVersion: profile.minVersion ?? DEFAULT_MIN_VERSION, sessionIdContext };
   let certificate = null, caCertificates = [], bundleSha256 = null;
   const read = (reference, privateMaterial = false, max) => {
     const bytes = material(env, reference, { privateMaterial, ...(max === undefined ? {} : { max }) });
@@ -114,7 +117,7 @@ export function loadUpstreamTls(value, { env = process.env, origin, now = Date.n
       references: upstreamTlsReferences(profile), certificate: certificate ? certificateSummary(certificate) : null,
       caCertificates: Object.freeze(caCertificates), bundleSha256 });
     const handle = Object.freeze({ snapshot: () => snapshot, toJSON: () => snapshot });
-    contexts.set(handle, Object.freeze({ secureContext, rejectUnauthorized: true, checkServerIdentity }));
+    contexts.set(handle, Object.freeze({ secureContext, sessionIdContext, rejectUnauthorized: true, checkServerIdentity }));
     return handle;
   } finally {
     // OpenSSL owns its native copy. Do not retain JavaScript key buffers or the
