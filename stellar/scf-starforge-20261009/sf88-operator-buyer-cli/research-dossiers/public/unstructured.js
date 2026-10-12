@@ -72,7 +72,7 @@ export function createUnstructuredPanel({root,tab,api,task,notify,getDossier,onR
     return task(async()=>{try{return await action();}catch(error){error.detail=friendly(error);throw error;}},form);
   }
   function renderQuestions(){
-    const selected=$('document-question').value,view=getDossier();
+    const selected=local.pending?.input?.questionId ?? $('document-question').value,view=getDossier();
     $('document-question').replaceChildren(...array(view?.questions).map(question=>{
       const option=element('option',question.text);option.value=question.id;return option;
     }));
@@ -105,11 +105,19 @@ export function createUnstructuredPanel({root,tab,api,task,notify,getDossier,onR
     $('document-profile').textContent=pretty({profile:value.binding.profileId,parameters:value.parameters,
       document:value.document,originalPurchase:value.binding,editionSha256:value.editionSha256});
     $('document-warnings').textContent=array(value.warnings).join(' ');
-    const retained=!!value.retained;$('document-receive-form').hidden=retained;
+    const retained=!!value.retained;$('document-receive-form').hidden=retained&&!local.pending;
     $('document-retained').hidden=!retained;
     $('document-retained').textContent=retained?'Retained as '+value.retained.label+
       '. Evidence selection, notes and findings remain in this dossier.':'';
-    $('document-pending').textContent=local.pending?'A receiving decision is saved. Retry it to recover its original result.':'';
+    const pending=local.pending?.input;
+    if(pending){
+      $('document-label').value=pending.label;
+      if(array(getDossier()?.questions).some(question=>question.id===pending.questionId))$('document-question').value=pending.questionId;
+    }
+    const pendingQuestion=pending&&array(getDossier()?.questions).find(question=>question.id===pending.questionId);
+    $('document-pending').textContent=pending?'Saved decision: '+pending.label+' → '+
+      (pendingQuestion?.text||pending.questionId)+'. Original purchase '+pending.selection.purchaseId+
+      ', reviewed edition '+pending.expectedEditionSha256+'. Retry recovers this exact decision.':'';
     $('document-discard-pending').hidden=!local.pending;
     $('document-receive').textContent=local.pending?'Retry saved receiving decision':'Retain reviewed document';
     $('document-question').disabled=!!local.pending||isBusy();
@@ -202,7 +210,10 @@ export function createUnstructuredPanel({root,tab,api,task,notify,getDossier,onR
     },event.currentTarget);
   });
   $('document-discard-pending').addEventListener('click',()=>withAction(async()=>{
-    await loadList();savePending(null);renderCurrent();
+    await loadList();savePending(null);
+    if(local.current)$('document-label').value=local.current.retained?.label||
+      (local.current.document.filename+' · '+local.current.binding.profileId).slice(0,240);
+    renderQuestions();renderCurrent();
   }));
   root.querySelectorAll('[data-document-download]').forEach(button=>button.addEventListener('click',()=>withAction(async()=>{
     const value=local.current,response=await api(endpoint('/download'),{method:'POST',download:true,
