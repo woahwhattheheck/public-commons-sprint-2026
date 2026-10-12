@@ -10,6 +10,11 @@ An API owner supplies two small files: its ordinary seller configuration and
 its upstream bindings. Existing OpenAPI-derived `offer` routes work too; the
 launcher does not replace their descriptions, schemas or payment terms.
 
+For proxy-managed merchant hosts, [named transport profiles](UPSTREAM_TRANSPORT.md)
+retain the selected environment reference in the same upstream file and SF82
+release review. JSON, file, OAuth and finite streaming requests use the original
+exchange and close with their accepted source work.
+
 For an existing event or record source, the [streaming workflow](STREAMING.md)
 uses these same bindings with `responseMode: "sse"` or `"ndjson"`. It includes
 a real finite telemetry backend, explicit payment-flow examples, byte/time
@@ -123,10 +128,12 @@ contain whole named segments, such as `/v1/items/:itemId`. Those names must
 exist in the original seller route, such as `/items/:itemId`. Values are read
 from the original validated `pathParams` and encoded as individual segments;
 URLs, dot traversal, slashes and encoded-slash inputs cannot select a new host
-or escape the configured path. A fixed public hostname is resolved at socket
-creation using the original SF31 public-address policy. All answers must pass;
-one copied address is supplied to the shared transport's socket lookup.
-Normal TLS certificate and hostname verification remain enabled.
+or escape the configured path. On the default direct route, the fixed public
+hostname is resolved at socket creation using the original SF31 public-address
+policy. All answers must pass; one copied address is supplied to the shared
+transport's socket lookup. An explicitly selected environment-proxy profile
+uses the trusted proxy's target resolution described in [UPSTREAM_TRANSPORT.md](UPSTREAM_TRANSPORT.md).
+Normal TLS certificate and hostname verification remain enabled for both routes.
 
 For a backend on the **same machine**, `http://127.0.0.1:PORT` is also supported
 with `--allow-loopback-upstream`. That explicit flag does not enable other
