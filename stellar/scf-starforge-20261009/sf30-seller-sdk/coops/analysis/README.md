@@ -100,9 +100,9 @@ type AnalysisInput = {
 
 The original provider’s capture/edition identity belongs in editionId. Map its saved request selection directly, and supply the exact original raw response text and digest. Do not regenerate a response body from projected rows. JSON-array source indices are zero-based; the accompanying row field is one-based. Every source reference includes its page number, file name, SHA-256 and original array name.
 
-Explicit GMT timestamps accept YYYYMMDD HH:mm, YYYY-MM-DD HH:mm and ISO UTC strings. If an original request used a date-only YYYYMMDD, the observation begin is midnight and the inclusive end is the day’s final six-minute slot. Analysis endpoints must lie on the observation request’s six-minute grid within the overlapping source requests.
+Explicit GMT timestamps accept YYYYMMDD HH:mm, YYYY-MM-DD HH:mm and ISO UTC strings. If an original request used a date-only YYYYMMDD, the observation begin is midnight and the inclusive end is the day’s final six-minute slot. Original request bounds remain in the source binding. The analysis starts at the first six-minute UTC clock slot at or after the overlapping request begin and ends at the last slot at or before its end. The request can begin between clock slots without shifting the observation cadence. Analyst endpoints must fall on those UTC clock slots (:00, :06, and subsequent six-minute marks).
 
-Original metadata files are verified independently. A datums response’s reported epoch is carried into the context. Conflicting reported epochs reject the join. When only one retained edition reports an epoch, the interface identifies which degree of metadata agreement is available without fabricating a second datum record.
+Original metadata files are verified independently. A datums response’s reported epoch is carried into the context only when its reported station identity or original station-specific MDAPI request URL matches the selected station. A known different station is rejected. Conflicting reported epochs reject the join. When only one retained edition reports an epoch, the interface identifies which degree of metadata agreement is available without fabricating a second datum record.
 
 ## Calculation
 
