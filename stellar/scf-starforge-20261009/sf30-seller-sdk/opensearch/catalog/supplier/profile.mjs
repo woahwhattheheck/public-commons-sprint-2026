@@ -1,3 +1,4 @@
+import { isXChangeProfile,normalizeXChangeProfile,checkXChangeProduct,checkXChangeCoverage } from './xchange/profile.mjs';
 // MIT. Supplier projection checks and explicitly selected ETIM BMEcat export.
 // Pure data transformation; the submission workspace owns original sources and reviews.
 
@@ -240,6 +241,7 @@ function profileBoolean(value,label,nullable=false) { requireValue(typeof value 
 function profileStrings(object,keys,label) { for (const k of keys) requireValue(typeof object[k] === 'string','SUPPLIER_PROFILE',label+'.'+k+' must be a string.'); }
 export function supplierProductTemplate() { return clone(TEMPLATE); }
 export function normalizeSupplierProfile(value = {}) {
+  if(isXChangeProfile(value))return normalizeXChangeProfile(value);
   requireValue(plain(value),'SUPPLIER_PROFILE','Supplier profile must be an object.');
   const defaults = clone(BASE_PROFILE), input = clone(value);
   const allowed = new Set([...Object.keys(defaults),'bounds','source']);
@@ -856,6 +858,7 @@ function checkPartyIds(profile,v){
   }
 }
 export function checkSupplierProduct(product, profile, context = {}) {
+  if(isXChangeProfile(profile))return checkXChangeProduct(product,profile,context);
   const selected=normalizeSupplierProfile(profile),p=clone(product),v=validation(selected);
   if(!plain(p)){v.add('error','PRODUCT_OBJECT','/','A supplier product must be a JSON object.',refs('sonepar','Product data structure'));return freeze({product:p,findings:v.findings})}
   checkEnvelope(selected,v,context.submission??{});
@@ -1053,6 +1056,7 @@ function productXml(p,profile){
  * Only IDs are retained; products and XML are never materialized a second time.
  */
 export function checkSupplierProductCoverage(productIdsIterable, profile, {submission = {}} = {}) {
+  if(isXChangeProfile(profile))return checkXChangeCoverage(productIdsIterable,profile);
   const selected=normalizeSupplierProfile(profile),v=validation(selected),ids=new Set();
   requireValue(productIdsIterable&&typeof productIdsIterable!=='string'&&typeof productIdsIterable[Symbol.iterator]==='function','SUPPLIER_COVERAGE_IDS','Provide the original synchronous immutable supplier-ID iterator.');
   requireValue(plain(submission),'SUPPLIER_COVERAGE_SUBMISSION','Provide the immutable submission metadata object.');
@@ -1092,6 +1096,7 @@ export function exportSupplierProducts(rowsIterable,{profile,submission={},forma
     const metadata=freeze({schema:'stellar-forge.supplier-export.v1',profile:selected,submission:clone(submission),format:'products.jsonl'});
     return {contentType:'application/x-ndjson; charset=utf-8',filename:'supplier-products.jsonl',metadata,body:(function*(){yield JSON.stringify({kind:'supplier-export',...metadata})+'\n';for(const row of rowsIterable)yield JSON.stringify({kind:'review-row',row:clone(row)})+'\n';})()};
   }
+  if(isXChangeProfile(selected))throw failure('XCHANGE_REVIEW_EXPORT_REQUIRED','Export the complete native xChange message from its immutable supplier review.');
   requireValue(['bmecat.xml','bmecat-5.0','xml'].includes(format),'SUPPLIER_EXPORT_FORMAT','Select products.jsonl or bmecat.xml.');
   requireValue(selected.targets.includes('bmecat-5.0'),'SUPPLIER_EXPORT_TARGET','Select the BMEcat 5.0 target before XML export.');
   const global=validation(selected);checkEnvelope(selected,global,submission);checkPartyIds(selected,global);

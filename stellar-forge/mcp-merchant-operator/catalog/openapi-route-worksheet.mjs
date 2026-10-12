@@ -26,6 +26,7 @@ const contextSchema = {
   choices: { type: 'object', additionalProperties: { type: 'string', enum: ['SHEET', 'CURRENT'] } },
   actions: actionsSchema
 };
+export { contextSchema as routeWorksheetContextSchema };
 const paging = { offset: { type: 'integer', minimum: 0 }, limit: { type: 'integer', minimum: 1, maximum: 200 } };
 const authoring = { operationPlans: { type: 'array', maxItems: 64, items: { type: 'object' } }, operationPlansFile: alias };
 const read = { readOnly: true, idempotent: true };

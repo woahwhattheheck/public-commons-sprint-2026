@@ -1,5 +1,6 @@
 // MIT. Blockscout token information on the original SF61 offer compiler.
 import { createHash } from 'node:crypto';
+import { normalizeConnection, connectionForPlan, connectionPath } from './connection.mjs';
 import { importOpenApi } from '../../sf61-openapi-seller-import/importer.mjs';
 import { createSellerServiceConfig } from '../../sf61-openapi-seller-import/service-config.mjs';
 import { prepareReview } from '../../sf88-operator-buyer-cli/prepare.mjs';
@@ -26,7 +27,7 @@ const integer = (n, min, max) => Number.isSafeInteger(n) && n >= min && n <= max
 export const planSha = plan => createHash('sha256').update(JSON.stringify(plan)).digest('hex');
 
 export function validatePlan(input) {
-  fields(input, ['schema', 'publicOrigin', 'accountAlias', 'apiKeyEnv', 'payment', 'chains', 'limits'], 'BLOCKSCOUT_PLAN_INVALID');
+  fields(input, ['schema', 'publicOrigin', 'accountAlias', 'apiKeyEnv', 'payment', 'chains', 'limits', 'connection'], 'BLOCKSCOUT_PLAN_INVALID');
   if (input.schema !== PLAN_SCHEMA) fail('BLOCKSCOUT_PLAN_SCHEMA_INVALID');
   let origin;
   try { origin = new URL(input.publicOrigin); } catch { fail('BLOCKSCOUT_MERCHANT_ORIGIN_INVALID'); }
@@ -57,8 +58,10 @@ export function validatePlan(input) {
   if (Object.entries(ranges).some(([k, [lo, hi]]) => !integer(limits[k], lo, hi)) ||
       limits.dayCredits < limits.creditsPerAttempt || limits.maxStoredBodyBytes < limits.maxResponseBytes)
     fail('BLOCKSCOUT_LIMITS_INVALID');
-  return { schema: PLAN_SCHEMA, publicOrigin: origin.origin, accountAlias: input.accountAlias,
+  const plan = { schema: PLAN_SCHEMA, publicOrigin: origin.origin, accountAlias: input.accountAlias,
     apiKeyEnv: input.apiKeyEnv, payment: structuredClone(input.payment), chains, limits };
+  if (own(input, 'connection')) plan.connection = normalizeConnection(input.connection, plan);
+  return plan;
 }
 
 export function tokenSchema() {
@@ -85,7 +88,7 @@ export function prepareProduct(input) {
     const path = '/' + chain.chainId + '/api/v2/tokens/{address_hash}';
     const id = 'blockscout_' + chain.chainId;
     spec.paths[path] = { get: { operationId: id, summary: chain.name + ' token information',
-      description: 'One Blockscout PRO token-detail read. EVM chain ' + chain.chainId + '. Provider account quota and merchant attempt limits apply.',
+      description: 'One ' + connectionForPlan(plan).providerName + ' token-detail read. EVM chain ' + chain.chainId + '. Provider account quota and merchant attempt limits apply.',
       parameters: [{ in: 'path', name: 'address_hash', required: true,
         schema: { type: 'string', minLength: 42, maxLength: 42, description: '0x followed by exactly 40 ASCII hexadecimal digits; enforced by native admission.' },
         example: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' }],
@@ -111,7 +114,7 @@ export function selectedToken(plan, chainId, address) {
   return { chainId, addressHash: address, chainName: chain.name,
     dataNetwork: 'eip155:' + chainId, paymentNetwork: plan.payment.network,
     url: plan.publicOrigin + '/' + chainId + '/api/v2/tokens/' + address,
-    providerUrl: ORIGIN + '/' + chainId + '/api/v2/tokens/' + address };
+    providerUrl: connectionForPlan(plan).origin + connectionPath(plan, chainId, address) };
 }
 
 export function admitToken(context, chainId, plan) {

@@ -18,7 +18,8 @@ module Starforge
   INTENT = /\A[A-Za-z0-9._:-]{1,128}\z/
   CALL_ID = /\A[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}\z/
   ORIGINAL_FILES = %w[seller-client.mjs seller-client.d.mts seller-openapi.json package.json README.md].freeze
-  RUBY_FILES = %w[seller_client.rb seller_client.rbs seller-client-bridge.mjs seller-buyer-bridge.mjs seller-contract.json rails_receiving.rb customer.rb RUBY.md].freeze
+  LEGACY_RUBY_FILES = %w[seller_client.rb seller_client.rbs seller-client-bridge.mjs seller-buyer-bridge.mjs seller-contract.json rails_receiving.rb customer.rb RUBY.md].freeze
+  RUBY_FILES = %w[seller_client.rb seller_client.rbs seller-client-bridge.mjs seller-buyer-bridge.mjs seller-contract.json rails_receiving.rb customer.rb RUBY.md seller-dataset-bridge.mjs dataset_delivery.rb dataset_receiving.rb dataset_customer.rb rails_dataset.rb DATASETS.md examples/dataset_lifecycle.rb examples/rails_dataset/create_dataset_import_tables.rb examples/rails_dataset/models.rb examples/rails_dataset/import_dataset_job.rb examples/rails_dataset/commission.rb examples/rails_dataset/mapping.json examples/rails_dataset/README.md].freeze
 
   class Error < StandardError
     attr_reader :code, :call_id, :intent_id
@@ -324,15 +325,22 @@ module Starforge
       base = Files.parse(base_bytes)
       Files.need(Files.hash(base_bytes) == @manifest["originalManifestSha256"] &&
         base["sourceSha256"] == @manifest["sourceSha256"], "RUBY_ORIGINAL_EXPORT_CHANGED")
-      [[ORIGINAL_FILES,base["files"]],[RUBY_FILES,@manifest["files"]]].each do |names,entries|
+      selected = @manifest["files"]&.length == LEGACY_RUBY_FILES.length ? LEGACY_RUBY_FILES : RUBY_FILES
+      [[ORIGINAL_FILES,base["files"]],[selected,@manifest["files"]]].each do |names,entries|
         Files.need(entries.is_a?(Array) && entries.map { |item| item["name"] } == names, "RUBY_PACKAGE_INCOMPLETE")
         entries.each do |entry|
-          raw = Files.read(File.join(@directory,entry.fetch("name")))
+          path = File.join(@directory,entry.fetch("name"))
+          Files.directory(File.dirname(path),private: false)
+          raw = Files.read(path)
           Files.need(entry["bytes"].is_a?(Integer) && raw.bytesize == entry["bytes"] &&
             Files.hash(raw) == entry["sha256"], "RUBY_PACKAGE_FILE_CHANGED")
         end
       end
       true
+    end
+    def dataset_available?
+      verify_package!
+      @manifest["files"].any? { |entry| entry["name"] == "seller-dataset-bridge.mjs" }
     end
     def source
       Files.parse(Files.json(@snapshot.slice("schema","sourceSha256","mode","title","origin")))
@@ -469,8 +477,11 @@ module Starforge
             if File.exist?(marker)
               raise Error.new("RUBY_NATIVE_REPLY_UNAVAILABLE_USE_RECOVER",call_id: call_id,intent_id: intent_id)
             end
+            dataset_call = action.start_with?("dataset.")
+            Files.need(!dataset_call || @client.dataset_available?, "RUBY_DATASET_PACKAGE_REQUIRED")
+            bridge = dataset_call ? "seller-dataset-bridge.mjs" : "seller-buyer-bridge.mjs"
             Files.once(marker,Files.json({"requestSha256"=>Files.hash(raw),"callId"=>call_id}))
-            run = @runner.run(File.join(@client.directory,"seller-buyer-bridge.mjs"),
+            run = @runner.run(File.join(@client.directory,bridge),
               [File.join(scope,"request.json")],timeout: @timeout,limit: @output_limit,cancel: token,inherit_stdin: true)
             Files.once(File.join(scope,"process.json"),Files.json({"exitCode"=>run[:status].exitstatus,
               "signal"=>run[:status].termsig,"error"=>run[:error]}))

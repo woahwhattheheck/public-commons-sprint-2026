@@ -79,6 +79,8 @@ The browser's additional source review is the outstanding product operation. The
 
 Invoke the same command and configuration to resume. A completed phase is read from its existing result. If the browser is interrupted after authoring a review, the receiving command preserves that state and points to the exact original report; it does not start the full browser operation again. Resolve the concrete retained browser phase on that owner and continue the remaining command.
 
+Copied original files reach their final path only after the complete bytes have been verified and synced. After all product phases finish, the first complete bundle is recorded before any upload starts. A later delivery continuation reuses that exact bundle and the frozen upload report, skips every completed product phase, and returns `reusedProduct: true`. A completed product whose transfer still needs attention has `productPassed: true` with `DELIVERY_REQUIRES_CONTINUATION`; `transfers.json` retains each actual provider outcome. Reconcile an uncertain provider response before selecting another transfer attempt.
+
 The MCP callback retains its original request ID and export selection. When `finalExport` is explicitly used by a caller, an uncertain mutation reply is reconciled through the original operation reader before any continuation. Full downloads retain their manifest, read handle and exact file identity. The managed callback reuses its original saved application, operation IDs, review and worker journal.
 
 The outer receiving lock serializes this one orchestration. Each original product retains its own existing workspace, file, runtime and worker locks. Python ownership passes sequentially between the browser, MCP, CLI and managed stages.

@@ -23,13 +23,18 @@ export async function mountAccountant({api,perform,operator,attempt,notify}){
   let rows={items:[],total:0,offset:0,limit:PAGE},rowToken=0,selectedRow='';
   let fileData=null,fileToken=0,fileLoading=false,preview=null,previewOffset=0,previewToken=0;
   const labelDrafts=new Map();
-  let buyerData=null,buyerToken=0;
+  let buyerData=null,buyerToken=0,startupSelected=false;
   const buyerMode=()=>$('accountant-source-type').value==='buyer';
+  const startupMode=()=>buyerMode()&&$('accountant-buyer-origin').value==='startup';
+  const startupHandoff=()=>startupMode()?metadata.handoffs.find(row=>row.id===state?.buyerStartup?.handoffId):null;
   const revisionQuery=()=>revisionChoice?{revisionId:revisionChoice}:{};
   const base=()=>'/api/accountant/handoffs/'+encode(selected);
   function controls(){
     const usable=Boolean(state)&&!busy;
-    $('accountant-create').disabled=!usable||!source||source.workspaceRevision!==state?.revision;
+    const retained=startupHandoff();
+    $('accountant-create').disabled=!usable||(!retained&&(!source||source.workspaceRevision!==state?.revision));
+    $('accountant-create').textContent=retained?'Open retained startup handoff':'Retain accountant handoff';
+    $('accountant-name').required=!retained;
     $('accountant-preview').disabled=!usable||!detail||revisionChoice!==''||fileLoading||!fileData;
     $('accountant-apply').disabled=!usable||!preview||revisionChoice!==''||preview.handoffId!==selected||!fileData||fileData.token!==preview.fileToken;
     $('accountant-clear-preview').disabled=busy;
@@ -43,13 +48,14 @@ export async function mountAccountant({api,perform,operator,attempt,notify}){
   }
   function retainLabels(){if(sourceKey&&source)labelDrafts.set(sourceKey,labelsFromForm());}
   function sourceArgs(){
+    if(startupMode())return {buyerStartup:{sha256:state.buyerStartup.sha256}};
     if(buyerMode()){if(!buyerData)throw new Error('Choose the original issued buyer source JSON.');return {buyerSource:{name:buyerData.file.name,sha256:buyerData.sha256,contentBase64:buyerData.base64}};}
     const [kind,value]=$('accountant-source').value.split(':');
     if(!value)throw new Error('Choose a completed reconciliation or retained period close.');
     return kind==='close'?{closeId:value}:{runId:value};
   }
   async function selectSource(){
-    const key=buyerMode()?(buyerData?'buyer:'+buyerData.sha256:''):$('accountant-source').value;if(key===sourceKey&&source&&source.workspaceRevision===state.revision)return;
+    const key=startupMode()?'startup:'+state.buyerStartup.sha256:buyerMode()?(buyerData?'buyer:'+buyerData.sha256:''):$('accountant-source').value;if(key===sourceKey&&source&&source.workspaceRevision===state.revision)return;
     retainLabels();source=null;sourceKey=key;createId=crypto.randomUUID();const token=++sourceToken;controls();
     $('accountant-labels').innerHTML='';$('accountant-source-summary').textContent=key?'Loading the original source…':'Capture a reconciliation to prepare an accountant handoff.';
     if(!key)return;
@@ -71,8 +77,22 @@ export async function mountAccountant({api,perform,operator,attempt,notify}){
     controls();
   }
   function renderSources(){
-    const buyer=buyerMode();$('accountant-merchant-source').hidden=buyer;$('accountant-buyer-source-fields').hidden=!buyer;$('accountant-label-table').hidden=buyer;
-    $('accountant-source').required=!buyer;$('accountant-source').disabled=buyer;$('accountant-buyer-source').required=buyer;$('accountant-buyer-source').disabled=!buyer;
+    const startup=state.buyerStartup;
+    if(state.sourceMode==='buyer'){
+      $('accountant-source-type').value='buyer';$('accountant-source-type').disabled=true;
+      for(const link of $('area-accountant').querySelectorAll('a[href="/bitwave.html"],a[href="/qbo.html"]'))link.hidden=true;
+    }
+    options($('accountant-buyer-origin'),[...(startup?[['startup','Retained startup source · '+startup.name]]:[]),['file','Choose another original issued file']],
+      startup&&!startupSelected?'startup':$('accountant-buyer-origin').value);
+    if(startup&&!startupSelected){startupSelected=true;if(!$('accountant-name').value)$('accountant-name').value=(startup.source.periodClose.period.name+' · accountant handoff').slice(0,160);}
+    const buyer=buyerMode(),retained=startupMode();
+    $('accountant-merchant-source').hidden=buyer;$('accountant-buyer-source-fields').hidden=!buyer;$('accountant-label-table').hidden=buyer;
+    $('accountant-source').required=!buyer;$('accountant-source').disabled=buyer;
+    $('accountant-buyer-source').required=buyer&&!retained;$('accountant-buyer-source').disabled=!buyer||retained;
+    $('accountant-buyer-source').hidden=$('accountant-buyer-file-label').hidden=retained;
+    $('accountant-buyer-startup').hidden=!retained;
+    if(retained)$('accountant-buyer-startup').innerHTML=esc(startup.name)+' · '+esc(startup.bytes)+' bytes · SHA256 <code>'+esc(startup.sha256)+'</code><br><a download href="/api/accountant/startup/source">Download retained original</a> · This startup source reuses its original handoff ID: '+esc(startup.handoffId);
+    $('accountant-buyer-source-status').hidden=retained;
     const completed=state.runs.filter(run=>run.status==='complete');
     const choices=[...metadata.closes.map(close=>['close:'+close.id,'Close · '+close.name+' · revision '+close.revision]),...completed.map(run=>['run:'+run.id,'Run · '+run.name+' · '+date(run.createdAt)])];
     options($('accountant-source'),choices.length?choices:[['','No completed sources yet']]);
@@ -144,6 +164,7 @@ export async function mountAccountant({api,perform,operator,attempt,notify}){
     renderHistory();await selectHandoff(wanted,{reset:false});controls();
   }
   $('accountant-source-type').addEventListener('change',()=>{sourceKey='';source=null;renderSources();});
+  $('accountant-buyer-origin').addEventListener('change',()=>{sourceKey='';source=null;renderSources();});
   $('accountant-buyer-source').addEventListener('change',()=>attempt(async()=>{
     const file=$('accountant-buyer-source').files[0],token=++buyerToken;buyerData=null;source=null;sourceKey='';createId=crypto.randomUUID();controls();
     if(!file){$('accountant-buyer-source-status').textContent='Choose an issued source exported by the buyer workspace.';return;}
@@ -159,8 +180,10 @@ export async function mountAccountant({api,perform,operator,attempt,notify}){
   $('accountant-source').addEventListener('change',()=>attempt(selectSource));
   $('accountant-create-form').addEventListener('input',()=>{createId=crypto.randomUUID();retainLabels();});
   $('accountant-create-form').addEventListener('submit',event=>{event.preventDefault();attempt(async()=>{
+    const retained=startupHandoff();
+    if(retained){await selectHandoff(retained.id);notify('The original startup handoff is open with its retained source and return history.');return;}
     if(!source||source.workspaceRevision!==state.revision)throw new Error('Accounting changed. Refresh the selected source before saving this handoff.');
-    const body={revision:state.revision,id:createId,...sourceArgs(),name:$('accountant-name').value.trim(),actor:operator(),labels:labelsFromForm()};
+    const body={revision:state.revision,id:startupMode()?state.buyerStartup.handoffId:createId,...sourceArgs(),name:$('accountant-name').value.trim(),actor:operator(),labels:labelsFromForm()};
     await perform({path:'/api/accountant/handoffs',body,description:'accountant handoff',message:'Accountant handoff retained. Download its CSV or complete archive, then import the returned bookkeeping file.',success:async result=>{createId=crypto.randomUUID();await selectHandoff(result.record.id);await refresh(result.state);}});
   });});
   $('accountant-list').addEventListener('click',event=>{const target=event.target.closest('[data-accountant-id]');if(target)attempt(()=>selectHandoff(target.dataset.accountantId));});

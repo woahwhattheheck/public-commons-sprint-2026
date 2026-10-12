@@ -1,5 +1,6 @@
 // MIT. Complete cold accounting-state recovery over the original SF101 engine.
 import {constants} from 'node:fs';
+import {accountingSourceMode,buyerStartupDescriptor,readBuyerStartup,validateBuyerStartupBytes,BUYER_STARTUP_LIMIT} from './buyer-startup.mjs';
 import {copyFile,link,lstat,mkdir,mkdtemp,open,readdir,realpath,rm,unlink} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {spawn} from 'node:child_process';
@@ -64,8 +65,10 @@ async function digest(path,signal){
 }
 function rootsFor(state,root,directory){
   need(object(state)&&state.schema===STATE&&Number.isSafeInteger(state.revision)&&object(state.sources)&&Array.isArray(state.runs)&&Array.isArray(state.proofs)&&object(state.notes),'ACCOUNTING_RECOVERY_WORKSPACE','Select an existing original accounting workspace.');
+  const buyer=accountingSourceMode(state)==='buyer';
+  if(buyer)buyerStartupDescriptor(directory,state);
   const roots=[{name:'Accounting',path:beneath(root,directory),kind:'directory'},
-    ...[['Outbox','outboxDir','directory'],['Proofs','proofDir','directory'],['Terms','termsFile','file'],['Recovered','recoveredDir','directory']]
+    ...(buyer?[]:[['Outbox','outboxDir','directory'],['Proofs','proofDir','directory'],['Terms','termsFile','file'],['Recovered','recoveredDir','directory']])
       .filter(([,key])=>key!=='recoveredDir'||state.sources[key]!==undefined)
       .map(([name,key,kind])=>({name,path:beneath(root,state.sources[key]),kind}))];
   for(const other of roots.slice(1))need(!inside(directory,other.path)&&!inside(other.path,directory),'ACCOUNTING_RECOVERY_OVERLAP','The accounting workspace must remain separate from its external sources.');
@@ -241,6 +244,7 @@ export async function accountingRecoveryStatus({directory}={}){
 async function retainedSources(directory,stateRoot,signal,hostSources){
   need(!(await info(join(directory,RESTORE_MARKER))),'ACCOUNTING_RECOVERY_INCOMPLETE','Complete the retained restore before taking another backup.');
   const stateBytes=await readBytes(join(directory,'workspace.json'),32_000_000),state=JSON.parse(stateBytes),roots=rootsFor(state,stateRoot,directory);
+  if(accountingSourceMode(state)==='buyer')await readBuyerStartup(directory,state);
   const {profile,readVersions}=await resolveLiveHostSources(hostSources,stateRoot,signal),hostRoots=additionalHostRoots(profile,roots);
   const extras=await extrasFor(state,stateRoot,directory,[...roots,...hostRoots],path=>readBytes(path,200_000));
   const before=await inventory([...roots,...hostRoots],extras,stateRoot,{signal});
@@ -333,6 +337,7 @@ async function restoredMapping(stage,manifest,{directory,stateRoot,hostSources})
     need(bytes.length===entry.size&&hash(bytes)===entry.sha256,'ACCOUNTING_RECOVERY_SOURCE_CHANGED','An authenticated staging source changed.');
     return bytes;
   };
+  if(accountingSourceMode(state)==='buyer')validateBuyerStartupBytes(directory,state,await readStaged(state.sources.buyerSourceFile,BUYER_STARTUP_LIMIT));
   if(profile){
     need(typeof hostSources==='function','ACCOUNTING_RECOVERY_HOST_PROFILE_REQUIRED',
       'Open recovery with the original configured host source profile before restoring its authorization files.');

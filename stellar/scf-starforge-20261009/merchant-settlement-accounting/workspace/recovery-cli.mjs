@@ -23,7 +23,8 @@ Use the existing merchant-accounting-workspace command, or node workspace/server
 
 Stop the workspace and original input writers before backup or restore.
 Set the private passphrase in the named host environment variable; do not pass its value on the command line.
-Backup preserves original workspace, outbox, proofs, terms, recovered settlements and saved recovery inputs.
+Merchant backup preserves original workspace, outbox, proofs, terms, recovered settlements and saved recovery inputs.
+Buyer-source mode preserves its complete accounting directory and exact retained issued source; it requires no merchant source roots.
 Restore uses the original absolute paths, creates missing files, and reuses only identical existing bytes.
 Changed existing files are preserved. Resume an interrupted restore with the SAME backup and paths.
 Optional --expected-sha256 pins the encrypted manifest for inspect, verify and restore.

@@ -42,16 +42,19 @@ function cell(tr, text, small) {
 function number(value) { return value === null || value === undefined ? 'Unknown' : value.toLocaleString(); }
 function showStatus(value) {
   status = value; const p = value.provider, l = p.limits, q = p.providerQuota;
-  $('identity').textContent = p.accountAlias + ' · ' + (value.source === 'blockscout-pro' ? 'Blockscout PRO' : 'Loopback contract fixture') + ' · ' + value.paymentNetwork + ' payments';
+  const unit = p.budgetUnit ?? 'credits', instance = unit === 'requests';
+  $('identity').textContent = p.accountAlias + ' · ' + (value.source === 'loopback-contract-fixture' ? 'Loopback contract fixture' : value.connection?.providerName ?? 'Blockscout PRO') + ' · ' + value.paymentNetwork + ' payments';
+  $('history-budget-label').textContent = instance ? 'Local requests' : 'Local credits';
+  $('budget-explanation').textContent = 'Local budgets count provider attempts in ' + unit + '. Provider balances are timestamped observations of the shared account. The original merchant journal records payment settlement.';
   $('admission').textContent = p.admission.allowed ? 'Available for a selected read' : names[p.admission.code] ?? p.admission.code;
   $('local-usage').textContent = number(p.localUsage.attempts) + ' / ' + number(l.dayAttempts) + ' attempts';
   $('local-detail').textContent = p.day + ' UTC · ' + number(p.localUsage.configuredCredits) + ' / ' + number(l.dayCredits) +
-    ' configured credits · ' + number(l.creditsPerAttempt) + ' per attempt';
-  $('provider-credits').textContent = q ? number(q.creditsRemaining) + ' credits remaining' : 'No provider observation';
+    ' configured ' + unit + ' · ' + number(l.creditsPerAttempt) + ' per attempt';
+  $('provider-credits').textContent = q ? (instance ? number(q.rateRemaining) + ' rate-window requests remaining' : number(q.creditsRemaining) + ' credits remaining') : 'No provider observation';
   $('provider-rate').textContent = q ? number(q.rateRemaining) + ' / ' + number(q.rateLimit) + ' rate-window requests · reported reset ' + number(q.resetMs) + ' ms' : 'A provider response supplies the account headers.';
   if (p.quotaEstimates?.requests) $('provider-rate').textContent += ' · local conservative availability ' + number(p.quotaEstimates.requests.available) + ' requests after ' + number(p.quotaEstimates.requests.reserved) + ' reserved requests';
   $('provider-age').textContent = q ? q.observedAt + ' · ' + (q.fresh ? 'Within the configured observation window' : 'Observation is older than the configured window') : '';
-  if (p.quotaEstimates?.credits) $('provider-age').textContent += ' · local conservative availability ' + number(p.quotaEstimates.credits.available) + ' credits after ' + number(p.quotaEstimates.credits.reserved) + ' reserved credits';
+  if (!instance && p.quotaEstimates?.credits) $('provider-age').textContent += ' · local conservative availability ' + number(p.quotaEstimates.credits.available) + ' credits after ' + number(p.quotaEstimates.credits.reserved) + ' reserved credits';
   $('retention').textContent = number(p.retention.records) + ' attempts';
   $('retention-detail').textContent = number(p.retention.bodyBytes) + ' / ' + number(l.maxStoredBodyBytes) + ' response bytes · ' +
     number(p.retention.inProgress) + ' in progress · ' + number(p.states.outcome_unknown ?? 0) + ' interrupted outcomes';
@@ -307,6 +310,220 @@ $('use-latest-revision').addEventListener('click', () => {
   renderReconciliation();
 });
 
+
+const PRO_PROVIDER_ORIGIN = 'https://api.blockscout.com';
+const PRO_PROVIDER_SOURCE = 'https://docs.blockscout.com/api-reference/tokens/retrieve-detailed-information-about-a-specific-token';
+let connectionSource, connectionReview, displayedConnectionReview, connectionChanges, connectionPackage;
+let connectionRevision = 0, connectionSourceEpoch = 0, connectionHistoryEpoch = 0, connectionNext = '', connectionBusy = false;
+function changedConnection() {
+  connectionRevision++; connectionReview = null; displayedConnectionReview = null; connectionChanges = null;
+  $('connection-review').hidden = true; $('connection-prepared').hidden = true;
+}
+function connectionMode() {
+  const instance = $('connection-mode').value === 'instance', anonymous = $('connection-auth').value === 'none';
+  $('connection-origin').readOnly = !instance; $('connection-auth').disabled = !instance;
+  $('connection-chain-field').hidden = !instance; $('connection-chain').required = instance;
+  $('connection-pro-limits').hidden = instance;
+  for (const id of ['connection-day-credits', 'connection-credit-cost', 'connection-credit-floor']) $(id).disabled = instance;
+  $('connection-env').disabled = anonymous; $('connection-env').required = !anonymous;
+  $('connection-budget-help').textContent = instance
+    ? 'Instance usage counts one local request per attempt. Its daily request ceiling, rate and concurrency apply to the selected instance account.'
+    : 'PRO usage counts the configured credit cost for each provider attempt. Review the endpoint tariff and shared account allowance before choosing these ceilings.';
+}
+async function loadConnection() {
+  if (connectionBusy) return;
+  const epoch = ++connectionSourceEpoch; changedConnection();
+  const revision = connectionRevision; $('connection-fields').disabled = true;
+  try {
+  const result = await request('/api/connection');
+  if (epoch !== connectionSourceEpoch || revision !== connectionRevision) return;
+  connectionSource = result; changedConnection();
+  const c = result.connection, p = result.plan;
+  $('connection-current').textContent = c.providerName + ' · ' + c.origin + ' · account ' + p.accountAlias +
+    (c.reviewedAt ? ' · contract reviewed ' + c.reviewedAt : ' · existing PRO plan; enter the time of this connection review');
+  for (const [id, value] of [
+    ['connection-mode', c.mode], ['connection-account', p.accountAlias], ['connection-name', c.providerName],
+    ['connection-origin', c.origin], ['connection-auth', c.authentication.kind], ['connection-env', p.apiKeyEnv],
+    ['connection-source', c.sourceUrl], ['connection-reviewed-at', c.reviewedAt ?? ''],
+    ['connection-day-attempts', p.limits.dayAttempts], ['connection-per-second', p.limits.perSecond],
+    ['connection-in-flight', p.limits.maxInFlight], ['connection-day-credits', p.limits.dayCredits],
+    ['connection-credit-cost', p.limits.creditsPerAttempt], ['connection-credit-floor', p.limits.minProviderCredits]
+  ]) $(id).value = String(value);
+  $('connection-chain').replaceChildren();
+  for (const chain of p.chains) {
+    const option = document.createElement('option'); option.value = chain.chainId;
+    option.textContent = chain.name + ' (' + chain.chainId + ')'; $('connection-chain').append(option);
+  }
+  if (c.chainId) $('connection-chain').value = c.chainId;
+  $('connection-fields').disabled = false; connectionMode();
+  } finally {
+    if (epoch === connectionSourceEpoch) { $('connection-fields').disabled = !connectionSource; connectionMode(); }
+  }
+}
+function selectedConnectionChanges() {
+  const instance = $('connection-mode').value === 'instance', kind = $('connection-auth').value;
+  const dayAttempts = Number($('connection-day-attempts').value);
+  return {
+    connection: {
+      schema: 'stellar-forge.blockscout-connection.v1',
+      mode: instance ? 'instance' : 'pro', origin: $('connection-origin').value.trim(),
+      ...(instance ? { chainId: $('connection-chain').value } : {}),
+      authentication: { kind, ...(kind === 'api-key-header' ? { header: 'x-api-key' } : {}) },
+      providerName: $('connection-name').value.trim(), sourceUrl: $('connection-source').value.trim(),
+      reviewedAt: $('connection-reviewed-at').value.trim()
+    },
+    accountAlias: $('connection-account').value.trim(),
+    apiKeyEnv: kind === 'none' ? connectionSource.plan.apiKeyEnv : $('connection-env').value.trim(),
+    limits: { dayAttempts, perSecond: Number($('connection-per-second').value),
+      maxInFlight: Number($('connection-in-flight').value),
+      dayCredits: instance ? dayAttempts : Number($('connection-day-credits').value),
+      creditsPerAttempt: instance ? 1 : Number($('connection-credit-cost').value),
+      minProviderCredits: instance ? 0 : Number($('connection-credit-floor').value) }
+  };
+}
+function connectionValue(td, value) {
+  if (value && typeof value === 'object') {
+    const pre = document.createElement('pre'); pre.textContent = JSON.stringify(value, null, 2); td.append(pre);
+  } else td.textContent = value === null ? 'None' : String(value);
+}
+function showConnectionReview(value, retained = false) {
+  displayedConnectionReview = value;
+  $('connection-review').hidden = false;
+  $('connection-review-summary').textContent = value.connection.providerName + ' · ' + value.connection.origin +
+    ' · account ' + value.plan.accountAlias + ' · ' + value.plan.chains.length + ' data chain(s)';
+  $('connection-state-plan').textContent = value.requiresNewMerchantState
+    ? 'Start this provider account in a new private merchant state directory. The reviewed package retains the selected Stellar payment terms.'
+    : 'After draining the original merchant, select this package with the same private merchant state. Its provider usage and retained responses continue under the same account.';
+  $('connection-changes').replaceChildren();
+  for (const row of value.changes) {
+    const tr = document.createElement('tr'); cell(tr, row.name);
+    connectionValue(cell(tr, ''), row.before); connectionValue(cell(tr, ''), row.after); $('connection-changes').append(tr);
+  }
+  if (!value.changes.length) {
+    const tr = document.createElement('tr'); cell(tr, 'Same reviewed settings'); cell(tr, 'Current plan'); cell(tr, 'Current plan');
+    $('connection-changes').append(tr);
+  }
+  $('connection-routes').replaceChildren();
+  for (const row of value.connection.routes) {
+    const tr = document.createElement('tr'); cell(tr, row.name, row.chainId);
+    cell(tr, row.providerTemplate); cell(tr, row.merchantTemplate); $('connection-routes').append(tr);
+  }
+  $('connection-review-json').textContent = json(value);
+  $('prepare-connection').hidden = retained; $('prepare-connection').disabled = retained;
+}
+function showConnectionPackage(value, cached) {
+  connectionPackage = { ...value, ...(cached ? { cached } : {}) };
+  $('connection-prepared').hidden = false;
+  $('connection-prepared-summary').textContent = value.connection.providerName + ' · account ' + value.connection.accountAlias +
+    ' · ' + number(value.bundle.bytes) + ' bytes · ' + value.status;
+  const { cached: omitted, ...summary } = connectionPackage;
+  $('connection-prepared-json').textContent = json(summary);
+}
+async function readConnectionPackage(id, expected) {
+  const response = await request('/api/connection/packages/' + id, undefined, true);
+  const bytes = await response.arrayBuffer(), advertised = response.headers.get('x-content-sha256');
+  const actual = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(v => v.toString(16).padStart(2, '0')).join('');
+  if (!/^[a-f0-9]{64}$/.test(advertised ?? '') || actual !== advertised ||
+      expected && (actual !== expected.sha256 || bytes.byteLength !== expected.bytes)) throw Error('The saved package bytes changed.');
+  const value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+  if (value.schema !== 'stellar-forge.blockscout-connection-package.v1' || value.review?.reviewSha256 !== id)
+    throw Error('The saved package belongs to a different connection review.');
+  return { bytes, value, sha256: actual };
+}
+async function openConnectionPackage(id, expected) {
+  if (connectionBusy) return;
+  changedConnection(); const revision = connectionRevision;
+  const saved = await readConnectionPackage(id, expected);
+  if (revision !== connectionRevision) return;
+  connectionReview = null; connectionChanges = null;
+  showConnectionReview(saved.value.review, true);
+  showConnectionPackage({ status: 'SAVED_PACKAGE_REOPENED', id, planSha256: saved.value.review.planSha256,
+    connection: saved.value.review.connection,
+    bundle: { bytes: saved.bytes.byteLength, sha256: saved.sha256, download: '/api/connection/packages/' + id } }, saved.bytes);
+  message('The complete saved deployment and its reviewed plan are open.');
+}
+async function loadConnections(reset = false) {
+  if (reset) { connectionHistoryEpoch++; connectionNext = ''; $('connection-packages').replaceChildren(); }
+  const epoch = connectionHistoryEpoch, query = new URLSearchParams({ limit: '20' });
+  if (connectionNext) query.set('after', connectionNext);
+  const page = await request('/api/connection/history?' + query);
+  if (epoch !== connectionHistoryEpoch) return;
+  for (const row of page.items) {
+    const tr = document.createElement('tr'); cell(tr, row.createdAt);
+    cell(tr, row.connection.accountAlias, row.connection.providerName); cell(tr, row.connection.mode, row.connection.origin);
+    const td = cell(tr, '', number(row.bytes) + ' bytes'), button = document.createElement('button');
+    button.type = 'button'; button.className = 'row-button'; button.textContent = 'Open saved package';
+    button.addEventListener('click', () => action(button, () => openConnectionPackage(row.id, row)));
+    td.prepend(button); $('connection-packages').append(tr);
+  }
+  connectionNext = page.nextAfter; $('more-connections').hidden = connectionNext === null;
+  $('connection-history-empty').textContent = $('connection-packages').children.length ? '' : 'Prepared deployment packages will appear here.';
+}
+$('connection-form').addEventListener('input', changedConnection);
+$('connection-form').addEventListener('change', event => {
+  changedConnection();
+  if (event.target.id === 'connection-mode') {
+    if ($('connection-mode').value === 'pro') {
+      $('connection-origin').value = PRO_PROVIDER_ORIGIN; $('connection-name').value = 'Blockscout PRO';
+      $('connection-source').value = PRO_PROVIDER_SOURCE; $('connection-auth').value = 'bearer';
+      if (connectionSource?.connection.mode === 'instance') {
+        $('connection-credit-cost').value = '20'; $('connection-credit-floor').value = '20';
+        $('connection-day-credits').value = String(Number($('connection-day-attempts').value) * 20);
+      }
+    } else {
+      if ($('connection-origin').value === PRO_PROVIDER_ORIGIN) $('connection-origin').value = '';
+      if ($('connection-name').value === 'Blockscout PRO') $('connection-name').value = '';
+      if ($('connection-source').value === PRO_PROVIDER_SOURCE) $('connection-source').value = '';
+    }
+    $('connection-reviewed-at').value = '';
+  }
+  connectionMode();
+});
+$('connection-review-time').addEventListener('click', () => {
+  changedConnection(); $('connection-reviewed-at').value = new Date().toISOString();
+});
+$('reload-connection').addEventListener('click', () => {
+  if (!connectionBusy) action($('reload-connection'), loadConnection);
+});
+$('connection-form').addEventListener('submit', event => {
+  event.preventDefault();
+  action(event.submitter, async () => {
+    if (!connectionSource) return;
+    const revision = connectionRevision, changes = selectedConnectionChanges();
+    const value = await request('/api/connection/review', { sourcePlanSha256: connectionSource.planSha256, changes });
+    if (revision !== connectionRevision) return;
+    connectionReview = value; connectionChanges = changes; showConnectionReview(value);
+    message('Review the resolved provider routes, account, limits and deployment state before preparing this package.');
+  });
+});
+$('prepare-connection').addEventListener('click', () => action($('prepare-connection'), async () => {
+  const reviewed = connectionReview, changes = connectionChanges;
+  if (!reviewed || !changes || connectionBusy) return;
+  connectionBusy = true; $('connection-fields').disabled = true;
+  try {
+    let result;
+    try {
+      result = await request('/api/connection/prepare', { sourcePlanSha256: reviewed.sourcePlanSha256,
+        changes, reviewSha256: reviewed.reviewSha256 });
+    } catch (original) {
+      try { connectionBusy = false; await openConnectionPackage(reviewed.reviewSha256); await loadConnections(true); return; }
+      catch { throw original; }
+    }
+    showConnectionPackage(result); await loadConnections(true);
+    message('The complete deployment package is saved and ready to receive on the selected installation.');
+  } finally { connectionBusy = false; $('connection-fields').disabled = false; connectionMode(); }
+}));
+$('download-connection-review').addEventListener('click', () => {
+  if (displayedConnectionReview) download(json(displayedConnectionReview), 'blockscout-connection-review-' + displayedConnectionReview.reviewSha256 + '.json');
+});
+$('download-connection-package').addEventListener('click', () => action($('download-connection-package'), async () => {
+  const selectedPackage = connectionPackage; if (!selectedPackage) return;
+  const bytes = selectedPackage.cached ?? (await readConnectionPackage(selectedPackage.id, selectedPackage.bundle)).bytes;
+  download(bytes, 'blockscout-connection-' + selectedPackage.id + '.json');
+}));
+$('refresh-connections').addEventListener('click', () => action($('refresh-connections'), () => loadConnections(true)));
+$('more-connections').addEventListener('click', () => action($('more-connections'), () => loadConnections()));
+
 function selection() { return { chainId: $('chain').value, addressHash: $('address').value.trim() }; }
 $('token-form').addEventListener('input', () => { formRevision++; prepared = null; $('prepared').hidden = true; });
 $('token-form').addEventListener('change', () => { formRevision++; prepared = null; $('prepared').hidden = true; });
@@ -362,5 +579,5 @@ try {
   if (!/^[a-f0-9]{64}$/.test(token)) throw Error('Open the private provider-desk URL printed by the merchant launcher.');
   await refresh(); const links = await request('/api/navigation');
   for (const id of ['operations', 'availability', 'fulfillment']) if (links[id]) $(id).href = links[id];
-  await loadHistory(true);
+  await loadHistory(true); await loadConnection(); await loadConnections(true);
 } catch (e) { message(e.message); }

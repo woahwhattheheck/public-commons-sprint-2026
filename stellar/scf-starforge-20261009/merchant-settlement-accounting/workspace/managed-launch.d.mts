@@ -15,11 +15,17 @@ export interface AccountingManagedInput {
   name:string;path:string;type:'file'|'directory';device?:string;inode?:string;
   bytes?:number;sha256?:string;exists?:boolean;
 }
+export interface BuyerAccountingWorkspaceBinding {
+  schema:'stellar-forge.accounting-workspace-binding.v1';directory:string;
+  workspaceId:string;sourcesSha256:string;
+  sources:{sourceMode:'buyer';buyerSourceFile:string;buyerSourceSha256:string;buyerSourceBytes:number};
+}
 export interface AccountingLaunchInspection {
   binding:{
     schema:typeof ACCOUNTING_MANAGED_SCHEMA;settings:ManagedAccountingSettings;
     oauth:Record<string,unknown>;selectionRoot:Record<string,unknown>|null;
     selections:{quickbooks:string|null;xero:string|null};inputs:AccountingManagedInput[];
+    workspaceBinding?:BuyerAccountingWorkspaceBinding;
   };
   bindingSha256:string;
   /** Full private native source. Use review when returning operator metadata. */
@@ -29,6 +35,7 @@ export interface AccountingLaunchInspection {
     connectionsFile:string|null;selectionDirectory:string|null;connectionsSha256:string|null;
     profiles:Array<Record<string,unknown>>;selections:{quickbooks:string|null;xero:string|null};
     inputs:AccountingManagedInput[];targets:AccountingSelectionSummaries;recoveryStartPaused:boolean;
+    sourceMode:'merchant'|'buyer';workspaceBinding:BuyerAccountingWorkspaceBinding|null;
   };
 }
 export interface AccountingManagedStartup {
@@ -36,12 +43,12 @@ export interface AccountingManagedStartup {
   instanceId:string;pid:number;startedAt:string;directory:string;selectionDirectory:string|null;
   requestedPort:number;port:number;bindingSha256:string;connectionsFile:string|null;
   connectionsSha256:string|null;profileCount:number;selections:{quickbooks:string|null;xero:string|null};
-  url:string;connectionsUrl:string|null;
+  url:string;connectionsUrl:string|null;workspaceBinding?:BuyerAccountingWorkspaceBinding;
 }
 export interface OriginalAccountingHost {
   readonly url:string;readonly server:Server;readonly workspace:unknown;readonly accountant:unknown;
-  readonly qbo:unknown;readonly xero:unknown;readonly bitwave:unknown;readonly collection:unknown;
-  readonly statements:unknown;readonly delivery:unknown;readonly maintenance:unknown;
+  readonly qbo?:unknown;readonly xero:unknown;readonly bitwave?:unknown;readonly collection?:unknown;
+  readonly statements?:unknown;readonly delivery?:unknown;readonly maintenance:unknown;
   close():Promise<void>;
 }
 export interface ManagedAccountingOwner {

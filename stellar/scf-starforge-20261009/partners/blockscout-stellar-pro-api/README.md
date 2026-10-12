@@ -1,6 +1,6 @@
 # Blockscout token-information merchant
 
-This package turns the configured Blockscout PRO token-information route into a
+This package turns a configured Blockscout token-information connection into a
 complete Stellar Forge merchant. A customer selects an EVM chain and token
 address, reviews the original offer, pays through the original Stellar buyer,
 and receives the exact retained provider JSON. The provider desk keeps account
@@ -51,13 +51,28 @@ An asset's bridge-origin fields remain separate from the requested data chain.
 
 Supply the existing provider credential through the environment variable named
 by `apiKeyEnv`. The default name is `BLOCKSCOUT_PRO_API_KEY`. The application
-reads it once at launch and sends `Authorization: Bearer …` only to the fixed
-`https://api.blockscout.com` origin. The plan, generated package, buyer offer,
+reads it once at launch. PRO sends `Authorization: Bearer …` to the fixed
+`https://api.blockscout.com` origin. A reviewed operator-controlled instance
+uses its selected HTTPS origin and explicit authentication mechanism. The plan, generated package, buyer offer,
 operator browser and stored quota records carry the variable name and account
 alias. Credential rotation takes effect on the next drained restart.
 
 [CONTRACT.md](CONTRACT.md) records the exact first-party route, response fields,
 quota units, error behavior and service terms used by this package.
+
+## Review and receive provider connections
+
+The desk includes a complete provider connection editor, change review, atomic
+package preparation, saved-package history and exact downloads. Select the
+actual PRO service or a reviewed operator-controlled installation, configure
+its account identity and local limits, then receive the complete package on
+the target installation. The receiver rebuilds its trusted entry against the
+installed source. Existing plans, payment terms and account histories continue
+through the original merchant lifecycle.
+
+[CONNECTIONS.md](CONNECTIONS.md) contains the full browser and five-command CLI
+workflow, the exact connection contract, account-state selection, interrupted
+preparation recovery and installed distribution interfaces.
 
 ## Prepare and start the complete merchant
 
@@ -412,7 +427,7 @@ provider database closes.
 
 Prepare any changed plan in a new package directory. To select an earlier
 price/package after draining, start `serve` with that package and the **same**
-merchant state directory. Historical attempts retain their original plan
+merchant state directory for that provider account and connection. Historical attempts retain their original plan
 hash; local account usage, paused routes and settlement records survive the
 selection. The generated trusted handler module can also be used by the
 existing SF82 release tools, with `BLOCKSCOUT_ACCOUNTING_DIRECTORY` set to

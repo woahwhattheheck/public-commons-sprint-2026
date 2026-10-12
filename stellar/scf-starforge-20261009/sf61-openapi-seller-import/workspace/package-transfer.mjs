@@ -56,6 +56,7 @@ function packageIdentity(project,manifestBytes,{name=project.name}={}) {
     sourceSha256:project.manifest.files[project.manifest.sourceFile??'original-openapi.json'],
     planSha256:project.manifest.files['merchant-plan.json'],
     ...(project.sourceRevision?{sourceRevisionSha256:project.manifest.files['source-revision.json']}:{}),
+    ...(project.operationPolicy?{operationPolicySha256:project.manifest.files['operation-policy.json']}:{}),
     createdAt:project.manifest.createdAt};
 }
 async function existingPackage(parent,name) {
@@ -87,7 +88,8 @@ export async function inspectMerchantPackage({parent,name}) {
       offersSha256:files.get('compiled/offers.json').sha256,
       serviceConfigSha256:files.get('compiled/seller-service.json').sha256},
     files:closure.files,totalBytes:closure.totalBytes,
-    ...(project.sourceRevision?{sourceRevision:project.sourceRevision}:{}),provenance:original.provenance};
+    ...(project.sourceRevision?{sourceRevision:project.sourceRevision}:{}),
+    ...(project.operationPolicy?{operationPolicy:project.operationPolicy}:{}),provenance:original.provenance};
 }
 function pageOptions({after='',limit=25}={}) {
   if(typeof after!=='string'||after.length>64||!Number.isSafeInteger(limit)||limit<1||limit>200)
@@ -249,6 +251,7 @@ export async function receiveMerchantPackage({parent,directory:input,name,expect
   const result=(project,recovered)=>({state:'RECEIVED',name:target,folder:project.folder,exportId:manifest.exportId,
     manifestSha256:sha(bytes),package:packageIdentity(project,contents.get('merchant-package.json')),
     manifest:project.manifest,...(project.sourceRevision?{sourceRevision:project.sourceRevision}:{}),
+    ...(project.operationPolicy?{operationPolicy:project.operationPolicy}:{}),
     release:releaseCommands(project.folder,target),recovered});
   const recover=async()=>{
     let saved;

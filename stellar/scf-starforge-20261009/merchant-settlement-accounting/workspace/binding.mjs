@@ -3,6 +3,7 @@ import {constants} from 'node:fs';
 import {open,lstat,realpath} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {cwCanonical,cwHash} from '../accountant/cryptoworth-csv.mjs';
+import {accountingSourceMode,buyerStartupDescriptor} from './buyer-startup.mjs';
 const SCHEMA='stellar-forge.merchant-accounting-workspace.v1',SHA=/^[a-f0-9]{64}$/;
 const plain=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
 const fail=(code,message)=>Object.assign(new Error(message),{code});
@@ -11,8 +12,9 @@ export function accountingWorkspaceBinding(directory,state){
   directory=resolve(directory);
   need(plain(state)&&state.schema===SCHEMA&&typeof state.createdAt==='string'&&Number.isFinite(Date.parse(state.createdAt))&&plain(state.sources),
     'INVALID_ACCOUNTING_BINDING','Select an initialized original accounting workspace.');
-  const sources={};
-  for(const field of ['outboxDir','proofDir','termsFile','recoveredDir']){
+  const buyer=accountingSourceMode(state)==='buyer',descriptor=buyer?buyerStartupDescriptor(directory,state):null;
+  const sources=buyer?{sourceMode:'buyer',buyerSourceFile:descriptor.path,buyerSourceSha256:descriptor.sha256,buyerSourceBytes:descriptor.bytes}:{};
+  for(const field of buyer?[]:['outboxDir','proofDir','termsFile','recoveredDir']){
     const value=state.sources[field];
     if(field==='recoveredDir'&&value===undefined)continue;
     need(typeof value==='string'&&value===resolve(value)&&value!=='/'&&!/[\u0000-\u001f\u007f]/.test(value),

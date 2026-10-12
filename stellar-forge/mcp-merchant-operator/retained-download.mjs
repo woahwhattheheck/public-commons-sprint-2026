@@ -170,8 +170,20 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
       throw failure(error.message === 'FLEET_STATE_ALREADY_OWNED' ? errorPrefix + '_DOWNLOAD_BUSY' : errorPrefix + '_DOWNLOAD_LEASE_UNAVAILABLE',
         error.message === 'FLEET_STATE_ALREADY_OWNED' ? 'Another client owns this download directory.' : 'The download requires the original Linux flock lease (util-linux).');
     }
+    let operationError;
     try { return await operation({ root, stateDirectory, lease }); }
-    finally { await lease.close(); }
+    catch (error) { operationError = error; throw error; }
+    finally {
+      try { await lease.close(); }
+      catch (error) {
+        // Preserve the same original lease owner for the caller's cleanup path.
+        // The lease itself owns its one-shot descriptor-close semantics.
+        const primary = operationError ?? error;
+        primary.close = () => lease.close();
+        if (operationError) primary.closeError = error;
+        throw primary;
+      }
+    }
   }
   const partialName = file => nestedFiles ? 'part-' + sha(Buffer.from(file.name)) + '.part' : file.name + '.part';
   async function validateNestedRoot(context, manifest) {

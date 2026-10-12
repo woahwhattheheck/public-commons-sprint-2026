@@ -1,0 +1,161 @@
+{
+  "schema": "dpsa.diso.diagrams.v1",
+  "diagrams": [
+    {
+      "id": "M01-U02-Q06",
+      "width": 640,
+      "height": 360,
+      "title": "Who carries this responsibility?",
+      "subtitle": "Place the role label in each responsibility panel.",
+      "png": "images/M01-U02-Q06.png",
+      "svg": "images/M01-U02-Q06.svg",
+      "cards": [
+        {
+          "key": "A",
+          "x": 16,
+          "y": 48,
+          "width": 296,
+          "height": 138,
+          "lines": [
+            "Owns the information purpose",
+            "and the service outcome."
+          ],
+          "drop": {
+            "x": 36,
+            "y": 142
+          }
+        },
+        {
+          "key": "B",
+          "x": 328,
+          "y": 48,
+          "width": 296,
+          "height": 138,
+          "lines": [
+            "Receives the delegated DISO's",
+            "accountability under the Directive."
+          ],
+          "drop": {
+            "x": 348,
+            "y": 142
+          }
+        },
+        {
+          "key": "C",
+          "x": 16,
+          "y": 202,
+          "width": 296,
+          "height": 138,
+          "lines": [
+            "Advises on security risk",
+            "and control effectiveness."
+          ],
+          "drop": {
+            "x": 36,
+            "y": 296
+          }
+        },
+        {
+          "key": "D",
+          "x": 328,
+          "y": 202,
+          "width": 296,
+          "height": 138,
+          "lines": [
+            "Carries the relevant statutory",
+            "information-officer responsibilities."
+          ],
+          "drop": {
+            "x": 348,
+            "y": 296
+          }
+        }
+      ]
+    },
+    {
+      "id": "M08-U02-Q12",
+      "width": 640,
+      "height": 400,
+      "title": "Review the complete service architecture",
+      "subtitle": "Match each marked boundary to its required control.",
+      "png": "images/M08-U02-Q12.png",
+      "svg": "images/M08-U02-Q12.svg",
+      "cards": [
+        {
+          "key": "A",
+          "x": 16,
+          "y": 54,
+          "width": 296,
+          "height": 144,
+          "lines": [
+            "Staff sign in through the",
+            "departmental identity service."
+          ],
+          "drop": {
+            "x": 30,
+            "y": 154
+          }
+        },
+        {
+          "key": "B",
+          "x": 328,
+          "y": 54,
+          "width": 296,
+          "height": 144,
+          "lines": [
+            "The API receives a record ID",
+            "and a requested payment action."
+          ],
+          "drop": {
+            "x": 342,
+            "y": 154
+          }
+        },
+        {
+          "key": "C",
+          "x": 16,
+          "y": 232,
+          "width": 296,
+          "height": 144,
+          "lines": [
+            "Supplier support connects to",
+            "selected departmental datasets."
+          ],
+          "drop": {
+            "x": 30,
+            "y": 332
+          }
+        },
+        {
+          "key": "D",
+          "x": 328,
+          "y": 232,
+          "width": 296,
+          "height": 144,
+          "lines": [
+            "The recovery site needs keys",
+            "and access during an outage."
+          ],
+          "drop": {
+            "x": 342,
+            "y": 332
+          }
+        }
+      ],
+      "arrows": [
+        {
+          "x1": 312,
+          "y1": 117,
+          "x2": 328,
+          "y2": 117
+        },
+        {
+          "x1": 312,
+          "y1": 295,
+          "x2": 328,
+          "y2": 295
+        }
+      ]
+    }
+  ]
+}

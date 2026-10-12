@@ -1,7 +1,7 @@
 # Managed accounting connections
 
-The Accounting application combines the original settlement workspace, original
-OAuth connection registry, and native QuickBooks and Xero company selection.
+The Accounting application combines the original merchant or issued-buyer workspace,
+original OAuth connection registry, and native accounting company selection.
 Registration lives in Applications. Consent and native company review live at
 the accounting application's **Connections** page. Journal plans, provider
 responses, accountant returns, customer statements and recovery keep their
@@ -9,8 +9,8 @@ original accounting owners.
 
 ## Register the accounting provider
 
-Choose a compatible installed runtime in Applications and select the merchant
-accounting application. Use the existing connection setup panel to import the
+Choose a compatible installed runtime in Applications and select the Accounting
+workspace application. Use the existing connection setup panel to import the
 native QuickBooks or Xero definition. Its catalog reports whether the selected
 runtime supplies that provider and shows the exact shipped source identity.
 
@@ -43,10 +43,11 @@ publisher is documented in
 
 ## Start and authorize
 
-Choose the accounting workspace directory and its original source inputs.
-Existing accounting workspaces reopen their retained data. A new workspace
-uses the same outbox, proof and terms inputs as the original accounting
-launcher. Applications reviews and creates the necessary private output
+Choose the accounting workspace directory. Existing merchant and buyer
+workspaces reopen their retained data. A new merchant workspace uses the same
+outbox, proof and terms inputs as the original accounting launcher. Initialize
+an issued-buyer workspace with the original buyer command below before reviewing
+its Applications start. Applications reviews and creates the necessary private output
 directories before starting the command.
 
 The optional selection directory defaults to a sibling named
@@ -66,6 +67,47 @@ workspace, refresh authorization, inspect the actual returned grant and approve
 it with its reviewer and reference. The original OAuth controller retains
 codes, state, verifier, access tokens, rotations and revocation records privately.
 The browser retains public operation IDs for exact continuation.
+
+## Open an issued buyer period
+
+Use the original buyer command to retain the actual issued period in its own
+accounting workspace:
+
+```sh
+node stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/server.mjs buyer init \
+  --workspace /private/buyer-accounting \
+  --source /private/issued-buyer-accountant-source.json \
+  --operator "Accountant name"
+```
+
+Choose that initialized directory in the same Accounting application. Register
+the original Xero definition and use its existing Connections consent and
+tenant-selection flow. Leave the merchant outbox, proof, terms and recovered
+delivery fields empty for this buyer workspace.
+
+The start review identifies **Issued buyer period** and shows the original
+workspace ID, source-configuration SHA-256, retained source path, byte count
+and issued-source SHA-256. The source remains in the workspace's own
+`inputs/` directory. The managed launcher reads those original bytes and
+passes the reviewed workspace/source pair into the existing Store after it
+acquires its writer lease. A different issued source requires a current
+application review.
+
+The original **Accountant handoff** page opens the retained startup source.
+Review its actual period and allocations, then continue the saved first-handoff
+UUID and its existing return history. The Xero page uses the active reviewed
+tenant for the original buyer journal and returned-bookkeeping workflow.
+Accounting valuation and account mapping remain explicit in that plan.
+
+After saving a different Xero selection, stop and review the same application
+again to activate it. After restoring the buyer workspace through the original
+operating-backup workflow, review the restored directory before starting it.
+The managed startup retains the same source binding alongside its company
+selection, so the original issued period and returned bookkeeping stay
+connected when the process reopens.
+
+The full initialization, source, accountant return and backup commands are in
+[Buyer periods, accountant returns and Xero](BUYER_ACCOUNTING.md).
 
 ## Review the actual accounting target
 
@@ -203,7 +245,11 @@ try {
 ```
 
 The example assumes the declared private directories and original registry
-already exist. An embedding host performs the user's launch review before
+already exist. For an initialized buyer directory, `inspection.review.sourceMode`
+is `buyer`, and `inspection.review.workspaceBinding` contains its original
+workspace/source pair and retained issued-source identity. The same managed
+launcher forwards that pair to the original Store; an embedding host does not
+need a second buyer connection wrapper. An embedding host performs the user's launch review before
 passing the retained digest. Applications supplies that review and directory
 creation through its existing command owner.
 
