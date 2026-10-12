@@ -274,7 +274,7 @@ async function compare(){
   const result=context.beforeId&&context.afterId?await api.compare(context.beforeId,context.afterId):null;
   const regs=state.editions.filter(row=>row.kind==='registry'),ledgers=state.editions.filter(row=>row.kind==='ledger');
   return '<h1>Compare source editions</h1><p>Compare complete keyed original records, including additions, removals and changed fields. Carry unchanged payment assignments forward into selected fresh source editions.</p>'+compareForm()+
-    (result?table(['Table','Earlier','Later','Added','Removed','Changed'],Object.entries(result.tables).map(([name,row])=>[h(name),h(row.counts.before),h(row.counts.after),h(row.counts.added),h(row.counts.removed),h(row.counts.changed)]))+
+    (result?table(['Table','Earlier retained rows','Later retained rows','Comparison','Added','Removed','Changed values','Source detail differences'],Object.entries(result.tables).map(([name,row])=>[h(name),h(row.counts.before),h(row.counts.after),h(row.comparisonStatus==='unavailable'?row.note:'Available in both editions'),h(row.counts.added??'—'),h(row.counts.removed??'—'),h(row.counts.changed??'—'),h(row.counts.sourceDifferences===null?'—':row.counts.sourceDifferences||0)]))+
       '<a class="button" href="'+h(api.url('compare',{beforeId:context.beforeId,afterId:context.afterId,format:'csv'}))+'" download>Export full comparison CSV</a>'+json(result):'')+
     '<form class="panel grid" data-form="carry"><h2 class="span-all">Carry unchanged payment assignments</h2>'+
       select('Previous registry edition','fromRegistryEditionId',regs,'','id','label','Choose registry edition',true)+
