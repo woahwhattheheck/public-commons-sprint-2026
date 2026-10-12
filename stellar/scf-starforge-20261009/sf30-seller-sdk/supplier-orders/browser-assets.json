@@ -43,6 +43,34 @@
         "../opensearch/workspace/public/file-sha256.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/style.css",
+      [
+        "public/style.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/app.mjs",
+      [
+        "public/app.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/transport.mjs",
+      [
+        "public/transport.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/public/transport.mjs",
+      [
+        "public/transport.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }
