@@ -1,82 +1,186 @@
-# SF-41: original-source Bazaar research and provider replay
+# Bazaar capture and source replay
 
-MIT. This is an executable full-corpus read-only research workbench for the ACTUAL mainline x402 Bazaar discovery implementation. It does not create a new Bazaar implementation, synthesize provider items, pay origins, verify or settle payments, or claim live settlement. Existing Muse, cloud and local logged-in workers should run broadly against authorized ORIGINAL facilitator captures. No GitHub Actions or hosted CI.
+Capture complete public or authorized facilitator catalogs, replay them through the
+original Bazaar catalog and HTTP handler, and compare ranking implementations on the
+same records. The workbench uses Node and the existing source modules.
 
-## Source and protocol anchors
+The package is MIT licensed. Its main entry points are:
 
-- Original source: [BazaarCatalog](../../../scf46-stellar-bazaar/src/catalog.mjs). Pinned default Git blob SHA-1 at this revision: 7b4390f9a119399bdb8e27db5796697f1314da8b (original first SF41 runner pinned 66beed7c3a4b617ab90680ec5fe8318e934e74f7, which is now historical). run.mjs verifies the actual imported source bytes in Git blob format and refuses to run if changed. Generated run output records the **expected source Git blob SHA-1**, **actual source Git blob SHA-1**, and content SHA-256. No automatic "latest" or unverified checkout fallback.
-- Exact [x402 Bazaar extension](https://github.com/x402-foundation/x402/blob/main/specs/extensions/bazaar.md) permits read-only GET /discovery/resources (offset pagination) and GET /discovery/search (query/cursor), with filters type/payTo/network/scheme/extensions. Opaque cursor values must be reused unchanged. This does not permit paid origin calls as part of discovery.
-- [Stellar x402 documentation](https://developers.stellar.org/docs/build/agentic-payments/x402): no mainnet payment or private wallet keys are part of this workflow.
-- [SF49 first-party issue ledger](../../scf_2026/SF49_PUBLIC_SIGNALS_20261009.json): nine public reports; public-issue-query-probes.json contains derived, UNLABELED engineering queries. They are not live user query logs and not a search relevance ground truth. To add true judgments, supply known relevant canonical entry IDs and a label_source URI per query.
-- Lane ownership: SF24 owns real-corpus quality labels; SF42 owns search index optimization; SF45 owns resilient client; SF50 owns quote-term reconciliation. This SF41 workstream supplies original captures, strict native source replay, performance/provenance and reusable Muse/cloud experiments, not a duplicate search system.
+| Command | Purpose |
+| --- | --- |
+| `capture.mjs` | Save every original resources page, its raw bytes and capture manifest |
+| `run.mjs` | Ingest the capture through the maintained catalog, run queries and exercise HTTP pagination |
+| `ranking-comparison.mjs` | Compare original one-shot and indexed ranking sources inside a replay |
 
-## Capture native provider filters without scope drift
+## Capture a complete catalog
 
-The official x402 Bazaar `GET /discovery/resources` contract supports five
-read-only filters: `type`, `payTo`, `scheme`, `network`, `extensions`.
-Pass any subset using distinct CLI flags (each option at most once). Each requested offset page uses
-identical filters, and `sources.json` saves the exact `filters` object. Original
-page URLs retain the native query; replay coverage rejects altered, missing,
-duplicated or undeclared filter parameters. Unfiltered historical manifests
-without `filters` remain compatible, but filtered and unfiltered captures
-must never be presented as the same native corpus.
+From the repository root:
 
-To target the public Stellar testnet catalog documented by Vellar (read-only):
+```sh
+node stellar/scf-starforge-20261009/sf41-real-source-replay/capture.mjs \
+  --url https://vellar-facilitator-testnet-production.up.railway.app/discovery/resources \
+  --id vellar-stellar-testnet \
+  --out /absolute/new-vellar-capture \
+  --permission public-read \
+  --network stellar:testnet
+```
 
-    node stellar/scf-starforge-20261009/sf41-real-source-replay/capture.mjs \
-      --url https://vellar-facilitator-testnet-production.up.railway.app/discovery/resources \
-      --id vellar-stellar-testnet --out /tmp/scf41-vellar-testnet \
-      --permission public-read --network stellar:testnet
+Use a new output directory. The original collector supports `--type`, `--payTo`,
+`--scheme`, `--network` and `--extensions`, with each flag at most once. For an
+authenticated provider, select its existing credential using
+`--permission authorized-operator --bearer-env VARIABLE_NAME`.
 
-The URL is a first-party documented endpoint; this command is not itself a
-claim of provider uptime, an executed network request, or a payment. Run
-against the genuinely observed provider and preserve the resulting native bytes,
-SHA-256 and capture timestamp. Scope checks prove the same query filters were
-requested across pages, not that a provider truthfully applied them to every row.
-To compare an unfiltered baseline, capture separately into a different folder.
+The collector preserves identical filters across offset pages. It reads through the
+declared total, or through an explicit empty terminal page when the provider omits a
+total. A short page alone does not end a capture. A changing total, duplicate page
+or discontinuous offset fails the capture. Each response has a 16 MiB streaming limit.
 
-## Collect complete real provider resources
+`sources.json` records the exact GET URL, response status, retrieval time, raw-byte
+SHA-256, access mode and pagination coverage. The page files retain the original
+JSON response bytes. Keep the manifest and those files together. Filters define the
+captured corpus: a Stellar testnet capture and an unfiltered provider capture are
+different inputs.
 
-From project root, using an operator-authorized *actual* HTTPS facilitator whose original GET resources endpoint is accessible:
+## Replay the original catalog and HTTP surface
 
-    node stellar/scf-starforge-20261009/sf41-real-source-replay/capture.mjs --url https://facilitator.example.org/discovery/resources --id provider-01 --out /tmp/scf41-provider --permission public-read
+`run.mjs` imports the maintained
+[`BazaarCatalog`](../../../scf46-stellar-bazaar/src/catalog.mjs),
+`validateCatalogEntry` and `createDiscoveryServer`. It checks the catalog's actual
+Git blob hash before importing captures into the existing catalog.
 
-Example hostname is a PLACEHOLDER, not a claimed live resource. Operators MUST substitute an original confirmed provider endpoint, not a web-search result, spoof, or undocumented proxy.
+Supply the exact catalog blob from the checkout being evaluated:
 
-If an actual original provider requires auth, use an EXISTING authorized environment variable (never paste tokens into code, Slack, URL or argument):
+```sh
+node stellar/scf-starforge-20261009/sf41-real-source-replay/run.mjs \
+  --manifest /absolute/new-vellar-capture/sources.json \
+  --queries stellar/scf-starforge-20261009/sf41-real-source-replay/public-issue-query-probes.json \
+  --out /absolute/new-replay \
+  --repeat 5 \
+  --catalog-blob CATALOG_GIT_BLOB
+```
 
-    node stellar/scf-starforge-20261009/sf41-real-source-replay/capture.mjs --url https://facilitator.example.org/discovery/resources --id provider-02 --out /tmp/scf41-provider-auth --permission authorized-operator --bearer-env SCF41_FACILITATOR_TOKEN
+`CATALOG_GIT_BLOB` is the complete lowercase 40-character Git blob SHA for
+`scf46-stellar-bazaar/src/catalog.mjs`. The built-in historical pin is
+`7b4390f9a119399bdb8e27db5796697f1314da8b`; the explicit override supports newer
+maintained checkouts. Both expected and observed hashes appear in the report.
 
-capture.mjs restricts traffic to original HTTPS facilitator GET /discovery/resources; never accesses payment origin, /settle or /verify. It refuses redirects, honors relevant Retry-After headers and fetches ALL native offset pages without an arbitrary max-page quota. Raw response bytes, origin URL, status, retrieval timestamp, SHA-256, declared access mode and measured latency are saved in sources.json and page files. This is *real provider retrieval*, not reverse-engineered page text.
+Ingestion uses the original provider field mapping: a resource URL string becomes a
+resource object, and top-level description, service name, tags and icon URL fill
+missing resource fields. Original payment options, Bazaar schemas and MCP tool
+metadata are retained. Every rejected row and conflicting duplicate canonical key
+is recorded. The capture manifest and each raw page checksum are checked before
+scoring.
 
-A complete capture checks native pagination offset, total and duplicates across all pages. Short pages are not terminal while more rows remain. Without a total, capture continues to the explicit empty page. Each response streams through a 16 MiB per-page limit; saved artifacts use exclusive creation to protect prior runs. The manifest records `pagination_coverage`. After an interrupted capture, choose a new output directory. Run the five source-level regressions with `node --test stellar/scf-starforge-20261009/sf41-real-source-replay/test/capture-integrity.test.mjs`; existing Muse/local teams handle full first-party source execution separately.
+The replay runs the actual catalog search, then opens its original HTTP handler on
+an ephemeral loopback port. It traverses the complete resources list and every search
+cursor, checks total coverage and verifies direct-call/HTTP first-page agreement.
 
-Replay now verifies the exact saved capture manifest **before** scoring: for a single-provider `SCF-SF41/capture-v1` manifest it checks native page URLs, contiguous offsets, row sum, stable declared total and, if total is omitted, a final explicitly empty page. A historical truncated capture with an unmet declared total is refused rather than silently benchmarked. For intentionally combined cross-provider `sources` arrays, raw-byte hashes still apply and the replay report records `inputs.capture_coverage.verified=false` with status `MIXED_PROVIDERS`; do not present a merged array as one proven-complete provider corpus. For independently complete providers, preserve each original capture manifest and report per-provider totals first. `native_capture_coverage_verified` is a page-completeness statement, **not** a payment/settlement or production success statement. Focused offline checks: `node --test stellar/scf-starforge-20261009/sf41-real-source-replay/test/replay-capture-coverage.test.mjs`.
+| Output | Contents |
+| --- | --- |
+| `run.json` | Source and input hashes, capture coverage, row counts and measured latency |
+| `cases.json` | Actual query/filter sets, ranked canonical IDs and per-run timings |
+| `original-http-pages.json` | Complete HTTP search cursor results |
+| `ingest-anomalies.json` | Original source/page/row rejection and duplicate details |
 
-For several authorized independent captures, combine the sources arrays in one sources.json, copying exact raw JSON pages into that manifest's directory and avoiding conflicting filenames. Each SHA256 is independently rechecked.
+For one provider, replay verifies the contiguous original page chain and declared
+total or explicit empty terminal page. A combined multi-provider manifest retains
+individual byte checksums and is identified as a mixed corpus; preserve each
+provider's original manifest for its individual completeness result.
 
-## Full native source replay
+## Compare lexical ranking sources
 
-    node stellar/scf-starforge-20261009/sf41-real-source-replay/run.mjs --manifest /tmp/scf41-provider/sources.json --queries stellar/scf-starforge-20261009/sf41-real-source-replay/public-issue-query-probes.json --out /tmp/scf41-run --repeat 5
+The existing result cache is useful for serving repeated queries. To measure the
+lexical engine itself, select the complete baseline and candidate
+`ranking.mjs` files:
 
-The runner imports the ACTUAL owner BazaarCatalog/createDiscoveryServer/validateCatalogEntry; no forks or mocks.
+```sh
+node stellar/scf-starforge-20261009/sf41-real-source-replay/run.mjs \
+  --manifest /absolute/new-vellar-capture/sources.json \
+  --queries stellar/scf-starforge-20261009/sf41-real-source-replay/public-issue-query-probes.json \
+  --out /absolute/new-ranking-comparison \
+  --repeat 5 \
+  --catalog-blob CATALOG_GIT_BLOB \
+  --ranking-baseline /absolute/baseline/scf46-stellar-bazaar/src/ranking.mjs \
+  --ranking-candidate /absolute/candidate/scf46-stellar-bazaar/src/ranking.mjs \
+  --ranking-repeat 60
+```
 
-The original Bazaar source can legitimately evolve as other authorized engineering owners merge. First verify the intended source **commit and actual contents Git blob SHA-1**, then supply `--catalog-blob <40 lowercase hex Git blob SHA-1>` explicitly whenever using a different approved checkout. The run refuses any non-hex or mismatched supplied pin, rather than silently accepting drift. The default is only for the source revision used for this two-file fix; use the known source commit and verify SHA before cross-version comparisons. A blob override does not change imported code or prove current-provider behavior. The original provider captures and their hashes are independently required unchanged. Payment terms, MCP identity, network, resource URL and discovery schema are never invented. It only adapts documented original provider fields (top-level metadata or resource URL strings) and records every structurally rejected entry with original source/page/index. Duplicate canonical identities with different terms are flagged, not silently overwritten. Full manifest and query SHA256 are preserved.
+Both files must export the original `rankBazaarEntries` function and
+`BazaarRankingIndex` class. Their raw bytes, Git blob hashes and SHA-256 hashes
+are recorded. The original catalog supplies the exact normalized rows and applies
+the original query filters before each selected subset reaches the rankers.
 
-Every query is repeated against actual BazaarCatalog.search. The runner opens an ephemeral localhost listener backed by the REAL createDiscoveryServer and exercises complete native GET /discovery/resources and GET /discovery/search cursor traversal, native resource count coverage, loop protection and direct function/GET first-page parity. Output is:
-- run.json — actual source SHA; original raw file hashes; row counts/rejections; duplicate conflicts; p50/p95 runtime and HTTP latency.
-- cases.json — each run's actual original ranked canonical IDs, query/filter set and candidate comparison if supplied.
-- original-http-pages.json — real original native server complete cursor pages and canonical IDs.
-- ingest-anomalies.json — first-party source row rejections and canonical key/payment conflicts.
+The comparison first checks exact canonical IDs, floating-point scores and order
+between each source's one-shot and indexed APIs. It then records baseline/candidate
+result additions, removals, rank changes and score changes for every query.
 
-The checked-in nine issue-linked queries are **not scored as relevance ground truth**. Actual unlabeled runs provide native execution, structural fidelity and latency only. To compare retrieval precision/recall, construct independent real relevance judgments that refer to accepted canonical item IDs and include provenance.
+First preparation is measured separately. Three warmup batches precede the default
+60 measured batches, alternating which source runs first. Each batch contains the
+complete original query set and bypasses the outer result cache. The resulting
+`ranking-comparison.json` includes individual samples, median and p95 batch time,
+process CPU time, memory observations and each maintained index's token/posting
+counters. Memory observations describe the replay process holding both indexes;
+the counters describe each index's own retained state.
 
-## Compare real candidate on identical source corpus
+A separate schema-query section derives queries from the captured HTTP query/body
+fields and MCP argument schemas. Each query retains the actual property name,
+title, description, schema location and canonical source row. It records where those
+source rows appear in each ranking, along with all observed result changes. The
+walk follows local references and schema composition within the original document,
+using the same 128-node, depth-16 and 32-child traversal bounds as the maintained
+request metadata index. These additional queries do not enter the nine-probe timing
+batches. They measure discoverability of published request annotations.
 
-A trusted local candidate must export async function search(catalog, URLSearchParams) returning native-shaped resources/pagination. Invoke run.mjs with --candidate /absolute/path/to/candidate.mjs. Baseline and candidate receive the same original full source snapshot, validated entries, filters and query set. Compare latency on the same machine; scoring occurs only for queries with independent actual judgments. SF42 can adapt its index module with a thin wrapper. No candidate is inferred to have better ranking from latency alone.
+The regular `run.json` links that comparison and records how many queries changed.
+This retains the existing end-to-end catalog and HTTP replay beside the lexical
+comparison, with their different timing scopes stated explicitly.
 
-## Muse/cloud instructions
+A separate custom search experiment can still use `--candidate /absolute/module.mjs`.
+That module exports `search(catalog, URLSearchParams)` and returns the original
+resources/pagination response shape.
 
-Capture ALL authorized pages for every original provider, full query labels and original per-page SHAs. Do not cap to a token-budget-friendly handful of samples. Replay on each source revision pin. Include original network/provider status and actual UTC timestamps; test source order and genuine provider row churn, stale opaque cursor failure, method/route mismatch, MCP canonical IDs and financial/HR/payroll-like vertical query variants when available from real sources. Run broader matrix of seeds/queries/repeats on existing local/Muse engines, preserving the genuine original artifacts. Compare frozen incumbent to actual candidate on identical version/inputs, not an imaginary protocol or fabricated purchase receipts. Post run manifests and output hashes in #sim-data and route failures to SF24/SF42/SF45/SF50 owners.
+## Interpret the queries and results
 
-SCF submission and outside outreach remain on owner HOLD. Do not trigger GitHub-hosted workflows or large unrelated repository test suites.
+The checked-in nine queries come from the
+[first-party issue source ledger](../../scf_2026/SF49_PUBLIC_SIGNALS_20261009.json).
+Each retains its full issue URL, ID, query, page size and original filter. They
+exercise reported developer needs such as method/body handling, MCP discovery,
+pricing and spend control.
+
+The probe file is an engineering workload. Its observed ranked results and timing
+can compare source changes. Search relevance labels require independently selected
+canonical resource IDs and a source for those judgments; the existing query format
+supports `relevant` and `label_source` for that purpose.
+
+Request-schema indexing can legitimately add matches or change scores. Compare the
+actual changed rows and their published metadata alongside the measured preparation,
+query and memory cost. Keep the captured corpus and query file fixed for a source
+comparison. A fresh provider capture is a separate run so source improvements and
+provider changes can be assessed independently.
+
+## Continue through the native buyer
+
+The merchant workspace's
+[`catalog-native-journey.mjs`](https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/main/stellar-forge/mcp-paid-agent/catalog-native-journey.mjs)
+extends the observed workflow through the installed buyer SDK: complete discovery,
+selection from a later original page, durable preparation, original operator
+execution, history and complete saved-result download.
+
+That journey connects to the actual configured native workspace, using its existing
+route, payment terms, operator approval and signer. Its phase timings describe the
+client process and observed MCP round trips. Keep those results beside the catalog
+replay to assess search performance and the full developer workflow.
+
+## Protocol and maintenance references
+
+The current contract is the
+[x402 Bazaar extension](https://github.com/x402-foundation/x402/blob/main/specs/extensions/bazaar.md).
+Stellar integration guidance is maintained in
+[Stellar Developer Docs](https://developers.stellar.org/docs/build/agentic-payments/x402).
+The [SCF RFP](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/rfp-track)
+calls for natural-language ranking, ongoing quality evaluation, HTTP and MCP
+discovery, complete pagination and working agent purchases.
+
+Run comparisons on the same native runtime and machine when assessing timing.
+Retain Node version, source hashes, current CPU load, complete provider captures
+and the original query provenance with the resulting measurements.
