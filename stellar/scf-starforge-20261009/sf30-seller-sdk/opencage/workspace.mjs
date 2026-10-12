@@ -188,7 +188,7 @@ export class GeocodeWorkspace {
     if(await exists(join(this.releaseRoot,'state.json')))merchant=await releaseStatus(this.releaseRoot);
     return {schema:WORKSPACE,identity:this.configuration.identity,configuration:structuredClone(this.configuration),
       source:this.source.inspect(),requests,merchant,ownsRunningRelease:Boolean(this.runtime),
-      ...(limit!==null?{pagination:{offset,limit,total:ids.length,nextOffset:offset+limit<ids.length?offset+limit:null}}:{}),
+      ...(limit!==null?{pagination:{offset,limit,total:ids.length,indexSha256:digest(jsonBytes({workspaceIdentity:this.configuration.identity,ids})),nextOffset:offset+limit<ids.length?offset+limit:null}}:{}),
       totals:{requests:ids.length,completed:limit===null?requests.filter(r=>r.state==='COMPLETE').length:null,
         selected:limit===null?requests.filter(r=>r.selectedIndex!==null && r.selectedIndex!==undefined).length:null}};
   }
@@ -413,11 +413,14 @@ export class GeocodeWorkspace {
     if(this._closing)return this._closing;
     this.closing=true;
     return this._closing=(async()=>{
-      try {await this._batchOpening;await this._batches?.close();}
+      try {await this._batchOpening;await this._batches?.stopForClose();}
       finally {
         await this.queue;
-        try {await this.runtime?.close();}
-        finally {try {await this.source.close();} finally {await this.lease.close();}}
+        try {await this._batchOpening;await this._batches?.close();}
+        finally {
+          try {await this.runtime?.close();}
+          finally {try {await this.source.close();} finally {await this.lease.close();}}
+        }
       }
     })();
   }

@@ -50,6 +50,11 @@ function csvSource(bytes) {
   if(!records.length)fail('GEOCODE_CSV_NO_DATA_ROWS');
   return {bytes,headers,records};
 }
+export function inspectCsvSource(bytes){
+  const source=csvSource(bytes);
+  return {sourceSha256:digest(source.bytes),sourceBytes:source.bytes.length,headers:source.headers,
+    rowCount:source.records.length,preview:source.records.slice(0,20).map((values,index)=>({ordinal:index+1,values}))};
+}
 function mappingFor(product,headers,raw) {
   fields(raw,['idColumn','queryColumn','addressColumns','latitudeColumn','longitudeColumn','separator','options','optionColumns'],'CSV mapping');
   const column=value=>{
@@ -115,6 +120,41 @@ function sourceIdentity(value) {
     querySha256:digest(jsonBytes({productId:value.request.productId,query:value.request.query})),
     responseSha256:value.responseSha256,captureIdentity:value.captureIdentity};
 }
+export function decodeBatchAttempt(review,row,attempt,receipt,previousRequest,previous=null){
+  fields(receipt,['schema','batchId','reviewSha256','ordinal','attempt','requestId','previousRequestId',
+    'expectedResponseSha256','reason','acknowledgeUncertain','reviewedPredecessor','createdAt'],'CSV attempt receipt');
+  const id=requestId(review.batchId,row.ordinal,attempt),priorId=requestId(review.batchId,row.ordinal,attempt-1);
+  if(attempt<2||attempt>100||receipt.schema!=='stellar-forge.opencage-csv-attempt.v1'||
+      receipt.batchId!==review.batchId||receipt.reviewSha256!==review.reviewSha256||
+      receipt.ordinal!==row.ordinal||receipt.attempt!==attempt||receipt.requestId!==id||
+      receipt.previousRequestId!==priorId||typeof receipt.reason!=='string'||!receipt.reason||
+      receipt.reason!==text(receipt.reason,'new attempt reason',500)||
+      typeof receipt.acknowledgeUncertain!=='boolean'||typeof receipt.createdAt!=='string'||
+      !Number.isFinite(Date.parse(receipt.createdAt))||previousRequest.id!==priorId||
+      previousRequest.productId!==review.productId||!same(previousRequest.query,row.query))
+    fail('GEOCODE_CSV_ATTEMPT_RECEIPT_CHANGED');
+  const saved=receipt.reviewedPredecessor;
+  fields(saved,['requestSha256','state','responseSha256','captureIdentity','candidateCount'],'CSV reviewed predecessor');
+  if(saved.requestSha256!==digest(jsonBytes(previousRequest))||!object(saved.state)||
+      saved.responseSha256!==receipt.expectedResponseSha256||
+      saved.responseSha256!==null&&!HASH.test(saved.responseSha256)||
+      saved.captureIdentity!==null&&!HASH.test(saved.captureIdentity)||
+      !Number.isSafeInteger(saved.candidateCount)||saved.candidateCount<0||saved.candidateCount>100)
+    fail('GEOCODE_CSV_ATTEMPT_RECEIPT_CHANGED');
+  const prior={...saved,request:previousRequest,candidates:Array(saved.candidateCount)};
+  if(!['EXCEPTION','NEEDS_RECONCILIATION'].includes(statusFor(prior))||
+      !saved.captureIdentity&&(saved.responseSha256!==null||!receipt.acknowledgeUncertain||
+        !['DISPATCHING','RECONCILE_RESULT'].includes(saved.state.state))||
+      saved.captureIdentity&&saved.state.state!=='COMPLETE')
+    fail('GEOCODE_CSV_ATTEMPT_RECEIPT_CHANGED');
+  // A late result may complete a predecessor that was explicitly reviewed as uncertain.
+  // Captures already present at review remain bound to their original identity and state.
+  if(previous&&(!same(previous.request,previousRequest)||saved.captureIdentity&&
+      (previous.captureIdentity!==saved.captureIdentity||previous.responseSha256!==saved.responseSha256||
+       !same(previous.state,saved.state)||previous.candidates.length!==saved.candidateCount)))
+    fail('GEOCODE_CSV_ATTEMPT_RECEIPT_CHANGED');
+  return receipt;
+}
 function reviewBody(configuration,source,product,mapping,{label,fileName,reuse,supersedesBatchId}) {
   const rows=mappedRows(product,source,mapping);
   const body={schema:BATCH_REVIEW,workspaceIdentity:configuration.identity,planSha256:configuration.planSha256,
@@ -155,8 +195,18 @@ function getMeta(db,key){const row=db.prepare('SELECT value FROM metadata WHERE 
 function putMeta(db,key,value){db.prepare('INSERT INTO metadata(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(key,JSON.stringify(value));}
 
 export class GeocodeBatches {
-  constructor(workspace){this.workspace=workspace;this.entries=new Map();this.active=null;this.closing=false;}
-  async review({bytes,productId,mapping,label,fileName,reuseRequestIds=[],supersedesBatchId=null}) {
+  constructor(workspace){
+    this.workspace=workspace;this.entries=new Map();this.openingEntries=new Map();this.readOperations=new Set();
+    this.active=null;this.closing=false;this.closed=false;this.closePromise=null;
+  }
+  _trackedRead(operation){
+    if(this.closed)return Promise.reject(Object.assign(new Error('The batch owner is closed'),{code:'GEOCODE_BATCH_CLOSING'}));
+    const pending=Promise.resolve().then(operation);this.readOperations.add(pending);
+    void pending.then(()=>this.readOperations.delete(pending),()=>this.readOperations.delete(pending));
+    return pending;
+  }
+  review(input){return this._trackedRead(()=>this._review(input));}
+  async _review({bytes,productId,mapping,label,fileName,reuseRequestIds=[],supersedesBatchId=null}) {
     const configuration=await this.workspace._configuration(),source=csvSource(bytes);
     const product=productFor(configuration.plan,identifier(productId));
     mapping=mappingFor(product,source.headers,mapping);
@@ -194,7 +244,14 @@ export class GeocodeBatches {
       return this.status(review.batchId);
     });
   }
-  async _load(id,{initialize=false}={}) {
+  async _load(id,options={}) {
+    checkedBatch(id);
+    if(this.entries.has(id))return this.entries.get(id);
+    if(this.openingEntries.has(id))return this.openingEntries.get(id);
+    const opening=this._openEntry(id,options);this.openingEntries.set(id,opening);
+    try{return await opening;}finally{this.openingEntries.delete(id);}
+  }
+  async _openEntry(id,{initialize=false}={}) {
     checkedBatch(id);
     if(this.entries.has(id))return this.entries.get(id);
     const root=join(this.workspace.directory,'batches',id);
@@ -242,9 +299,24 @@ export class GeocodeBatches {
   _row(entry,ordinal) {
     rowNumber(ordinal);
     const native=entry.db.prepare('SELECT * FROM rows WHERE ordinal=?').get(ordinal),row=entry.rows[ordinal-1];
-    if(!native||!row||row.ordinal!==ordinal||native.request_id!== (row.error?null:requestId(entry.id,ordinal,native.attempt)))
+    if(!native||!row||row.ordinal!==ordinal||!Number.isSafeInteger(native.attempt)||native.attempt<1||native.attempt>100||native.request_id!== (row.error?null:requestId(entry.id,ordinal,native.attempt)))
       fail('GEOCODE_CSV_ROW_BINDING_CHANGED');
     return {row,native};
+  }
+  _attemptReceipt(entry,id,selected,receipt,previous){
+    if(!selected||!previous||!object(receipt)||receipt.requestId!==id)fail('GEOCODE_CSV_ATTEMPT_RECEIPT_CHANGED');
+    return decodeBatchAttempt(entry.review,selected.row,selected.attempt,receipt,previous.request,previous);
+  }
+  async _reviewedAttempt(entry,ordinal,attempt){
+    for(let number=2;number<=attempt;number++){
+      const id=requestId(entry.id,ordinal,number),path=join(entry.root,'attempts',id+'.json');
+      if(!await exists(path))fail('GEOCODE_CSV_ATTEMPT_RECEIPT_REQUIRED');
+      const receipt=await readJson(path,65536),previousId=requestId(entry.id,ordinal,number-1);
+      if(!await exists(join(this.workspace.directory,'requests',previousId,'request.json')))
+        fail('GEOCODE_CSV_ATTEMPT_PREDECESSOR_REQUIRED');
+      const previous=await this.workspace.get(previousId);
+      this._attemptReceipt(entry,id,{ordinal,attempt:number,row:entry.rows[ordinal-1]},receipt,previous);
+    }
   }
   async observe(value) {
     const parsed=CAPTURE_ID.exec(value.request.id);
@@ -253,6 +325,7 @@ export class GeocodeBatches {
     if(!await exists(join(this.workspace.directory,'batches',id,'intake','manifest.json')))return;
     const entry=await this._load(id),ordinal=parseInt(parsed[2],36),{row,native}=this._row(entry,ordinal);
     if(native.request_id!==value.request.id)return;
+    await this._reviewedAttempt(entry,ordinal,native.attempt);
     if(value.request.productId!==entry.review.productId||!same(value.request.query,row.query))
       fail('GEOCODE_CSV_CAPTURE_QUERY_CHANGED');
     if(this.workspace.readOnly)return;
@@ -271,6 +344,7 @@ export class GeocodeBatches {
   async _readCurrent(entry,ordinal) {
     const {row,native}=this._row(entry,ordinal);
     if(!native.request_id)return {row,native,value:null};
+    await this._reviewedAttempt(entry,ordinal,native.attempt);
     const path=join(this.workspace.directory,'requests',native.request_id,'request.json');
     if(!await exists(path))return {row,native,value:null};
     const value=await this.workspace.get(native.request_id);
@@ -307,19 +381,14 @@ export class GeocodeBatches {
     if(await exists(attemptsRoot))for(const name of (await readdir(attemptsRoot)).sort()){
       if(!name.endsWith('.json'))continue;
       const id=name.slice(0,-5),selected=inspectId(id),receipt=await readJson(join(attemptsRoot,name),65536);
-      if(!selected||receipt.schema!=='stellar-forge.opencage-csv-attempt.v1'||receipt.batchId!==entry.id||
-          receipt.reviewSha256!==entry.review.reviewSha256||receipt.ordinal!==selected.ordinal||
-          receipt.attempt!==selected.attempt||receipt.requestId!==id||selected.attempt<2||
-          receipt.previousRequestId!==requestId(entry.id,selected.ordinal,selected.attempt-1)||
-          typeof receipt.reason!=='string'||!receipt.reason||typeof receipt.acknowledgeUncertain!=='boolean'||
-          !Number.isFinite(Date.parse(receipt.createdAt)))fail('GEOCODE_CSV_ATTEMPT_RECEIPT_CHANGED');
       const previous=retained.get(receipt.previousRequestId)?.value;
-      if(!previous||previous.responseSha256!==(receipt.expectedResponseSha256??null)||
-          !['EXCEPTION','NEEDS_RECONCILIATION'].includes(statusFor(previous))||
-          !previous.captureIdentity&&previous.state.state!=='PREPARED'&&!receipt.acknowledgeUncertain)
-        fail('GEOCODE_CSV_ATTEMPT_RECEIPT_CHANGED');
+      this._attemptReceipt(entry,id,selected,receipt,previous);
       receipts.set(id,{...selected,receipt});
     }
+    for(const [id,item] of retained)if(item.attempt>1&&!receipts.has(id))
+      fail('GEOCODE_CSV_ATTEMPT_RECEIPT_REQUIRED');
+    for(const {attempt,receipt} of receipts.values())if(attempt>2&&!receipts.has(receipt.previousRequestId))
+      fail('GEOCODE_CSV_ATTEMPT_PREDECESSOR_REQUIRED');
     let changed=0;
     transaction(entry.db,()=>{
       entry.db.exec('DELETE FROM attempts; DELETE FROM cache');
@@ -351,17 +420,19 @@ export class GeocodeBatches {
     return {batchId:entry.id,revision:getMeta(entry.db,'revision'),changedRows:changed,
       originalRequests:retained.size,reviewedRetries:receipts.size,sourceSha256:entry.review.sourceSha256};
   }
-  async list() {
+  list(){return this._trackedRead(()=>this._list());}
+  async _list() {
     const root=join(this.workspace.directory,'batches');
     if(!await exists(root))return [];
     const results=[];
     for(const id of (await readdir(root)).sort()){
       if(!BATCH_ID.test(id))continue;
-      const entry=await this._load(id);results.push(await this.status(id,{offset:0,limit:1,includeRows:false}));
+      const entry=await this._load(id);results.push(await this._status(id,{offset:0,limit:1,includeRows:false}));
     }
     return results;
   }
-  async status(id,options={}) {
+  status(id,options={}){return this._trackedRead(()=>this._status(id,options));}
+  async _status(id,options={}) {
     const entry=await this._load(id),{offset,limit,status}=page(options),db=entry.db;
     const where=status==='SELECTED'?"json_extract(summary,'$.selectedIndex') IS NOT NULL":status?'status=?':'1=1';
     const params=status&&status!=='SELECTED'?[status]:[];
@@ -382,10 +453,11 @@ export class GeocodeBatches {
       active:this.active?.batchId===id?{runId:this.active.runId,stopRequested:this.active.stopRequested}:null,
       run:latest,total:entry.rows.length,filteredTotal:total,offset,rows,nextOffset:offset+limit<total?offset+limit:null};
   }
-  async row(id,ordinal){
+  row(id,ordinal){return this._trackedRead(()=>this._rowView(id,ordinal));}
+  async _rowView(id,ordinal){
     const entry=await this._load(id),value=await this._readCurrent(entry,rowNumber(ordinal));
     return {batchId:id,row:value.row,attempt:value.native.attempt,requestId:value.native.request_id,
-      result:value.value,revision:getMeta(entry.db,'revision')};
+      status:value.value?statusFor(value.value):value.native.status,result:value.value,revision:getMeta(entry.db,'revision')};
   }
   async start({batchId,runId}) {
     checkedBatch(batchId);identifier(runId);
@@ -499,7 +571,9 @@ export class GeocodeBatches {
       const receiptPath=join(await privateDirectory(join(entry.root,'attempts')),id+'.json');
       const body={schema:'stellar-forge.opencage-csv-attempt.v1',batchId,reviewSha256:entry.review.reviewSha256,
         ordinal,attempt,requestId:id,previousRequestId:native.request_id,expectedResponseSha256:expectedResponseSha256??null,
-        reason,acknowledgeUncertain:acknowledgeUncertain===true};
+        reason,acknowledgeUncertain:acknowledgeUncertain===true,
+        reviewedPredecessor:{requestSha256:digest(jsonBytes(value.request)),state:structuredClone(value.state),
+          responseSha256:value.responseSha256,captureIdentity:value.captureIdentity,candidateCount:value.candidates.length}};
       const priorReceipt=await exists(receiptPath)?await readJson(receiptPath,65536):null;
       if(priorReceipt){const {createdAt,...saved}=priorReceipt;if(!same(saved,body))fail('GEOCODE_CSV_ATTEMPT_RECEIPT_CHANGED');}
       const receipt={...body,createdAt:priorReceipt?.createdAt??now()};
@@ -514,7 +588,7 @@ export class GeocodeBatches {
   }
   async select({batchId,ordinal,expectedRequestId,responseSha256,expectedRevision,index,note=''}) {
     return this.workspace._serial(async()=>{
-      const entry=await this._load(batchId),{native}=this._row(entry,rowNumber(ordinal));
+      const entry=await this._load(batchId),{native}=await this._readCurrent(entry,rowNumber(ordinal));
       if(native.request_id!==expectedRequestId)fail('GEOCODE_CSV_ATTEMPT_REVIEW_CHANGED');
       const result=await this.workspace._select({id:expectedRequestId,responseSha256,expectedRevision,index,note});
       await this.observe(result);return this.row(batchId,ordinal);
@@ -530,10 +604,44 @@ export class GeocodeBatches {
       return exportGeocodeBatch(this.workspace,this,entry,input);
     });
   }
-  async close(){
-    if(this.closing)return;
+  source(batchId){return this._trackedRead(async()=>(await this._load(checkedBatch(batchId))).intake.files.get('source.csv'));}
+  deliveries(input={}){return this._trackedRead(()=>this._deliveries(input));}
+  async _deliveries({batchId}={}){
+    if(batchId!==undefined)checkedBatch(batchId);
+    const root=join(this.workspace.directory,'batch-deliveries'),results=[];
+    if(!await exists(root))return results;
+    for(const exportId of (await readdir(root)).sort()){
+      if(!/^csv-[a-f0-9]{20}-[a-f0-9]{16}$/.test(exportId))continue;
+      const manifest=await readJson(join(root,exportId,'manifest.json'),1048576),{identity,...body}=manifest;
+      if(manifest.schema!=='stellar-forge.opencage-csv-delivery.v1'||manifest.exportId!==exportId||
+          identity!==digest(jsonBytes(body))||manifest.workspaceIdentity!==this.workspace.configuration.identity)
+        fail('GEOCODE_CSV_DELIVERY_CHANGED');
+      if(batchId!==undefined&&manifest.batchId!==batchId)continue;
+      results.push(manifest);
+    }
+    return results;
+  }
+  openDelivery(exportId){return this._trackedRead(()=>this._openDelivery(exportId));}
+  async _openDelivery(exportId){
+    identifier(exportId);
+    const {GeocodeBatchDelivery}=await import('./batch-delivery.mjs');
+    const delivery=await GeocodeBatchDelivery.open(join(this.workspace.directory,'batch-deliveries',exportId));
+    if(delivery.manifest.exportId!==exportId||delivery.manifest.workspaceIdentity!==this.workspace.configuration.identity)
+      fail('GEOCODE_CSV_DELIVERY_CHANGED');
+    return delivery;
+  }
+  async stopForClose(){
     this.closing=true;
     if(this.active){this.active.stopRequested=true;this.active.wake?.();await this.active.promise;}
-    for(const entry of this.entries.values())entry.db.close();this.entries.clear();
+  }
+  close(){
+    return this.closePromise??=(async()=>{
+      await this.stopForClose();this.closed=true;
+      await Promise.allSettled([...this.readOperations]);
+      await Promise.allSettled([...this.openingEntries.values()]);
+      const outcomes=await Promise.allSettled([...this.entries.values()].map(entry=>Promise.resolve().then(()=>entry.db.close())));
+      this.entries.clear();
+      if(outcomes.some(result=>result.status==='rejected'))fail('GEOCODE_CSV_INDEX_CLOSE_FAILED');
+    })();
   }
 }
