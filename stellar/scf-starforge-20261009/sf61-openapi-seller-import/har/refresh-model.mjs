@@ -103,10 +103,47 @@ const labels = {
   responses: 'Response status, media, observed shapes and recording coverage',
 };
 
+
+const RETAINED_SCHEMA = 'stellar.har-refresh-retained-route.v1';
+function retainedState(operation) {
+  const value = operation['x-har-refresh-retained'];
+  if (!value) return null;
+  if (value.schema !== RETAINED_SCHEMA || !sha(value.sourceSha256) ||
+      !['GET', 'HEAD', 'DELETE', 'POST', 'PUT', 'PATCH'].includes(value.method) ||
+      typeof value.origin !== 'string' || !Array.isArray(value.groups) ||
+      !value.groups.length || !value.groups.every(id => typeof id === 'string') ||
+      !Number.isSafeInteger(value.entries) || value.entries < 1 ||
+      !value.observations || !Array.isArray(value.observations.paths) ||
+      !value.observations.paths.length || !value.observations.paths.every(path => typeof path === 'string' && path.startsWith('/')))
+    throw new TypeError('Invalid retained HAR route provenance');
+  let origin;
+  try { origin = new URL(value.origin); } catch { throw new TypeError('Invalid retained HAR route origin'); }
+  if (!['http:', 'https:'].includes(origin.protocol) || origin.origin !== value.origin)
+    throw new TypeError('Invalid retained HAR route origin');
+  return value;
+}
+function optionalPattern(path) {
+  if (typeof path !== 'string' || !path.startsWith('/') || path.startsWith('//') ||
+      /[?#\\\s]/.test(path) || /[{}]/.test(path.replace(/\{[A-Za-z_][A-Za-z0-9_]*\}/g, ''))) return null;
+  return pathPattern(path);
+}
+function remember(row, sourceSha256, groups, observed) {
+  return {
+    schema: RETAINED_SCHEMA, sourceSha256, method: row.method, origin: row.origin,
+    groups: groups.map(group => group.id), entries: groups.reduce((n, group) => n + group.entryIds.length, 0),
+    observations: clone(observed),
+  };
+}
+function uniqueId(id, used, suffix) {
+  let candidate = id, n = 2;
+  while (used.has(candidate)) candidate = id.slice(0, 80) + suffix + n++;
+  used.add(candidate); return candidate;
+}
+
 /**
- * Match exact semantic source keys first, then a unique previously reviewed path
- * template with the same method and origin. Entry/group ordinals are never IDs
- * across captures. Ambiguous observations remain separate, unselected rows.
+ * Current selected routes own their exact matches and unique path templates.
+ * Previously selected but now dormant routes keep their authored identity across
+ * editions; returning observations require explicit selection and acknowledgment.
  */
 export function createRefreshPlan(before, previousReview, after, previousRevision) {
   checkInventory(before); checkInventory(after);
@@ -117,17 +154,34 @@ export function createRefreshPlan(before, previousReview, after, previousRevisio
   const selected = previousReview.operations.filter(operation => operation.enabled).map(operation => {
     const groups = operation.groups.map(id => beforeById.get(id));
     return { operation, groups, pattern: pathPattern(operation.path), method: groups[0].method,
-      origin: groups[0].origin, next: [], exact: [], template: [] };
+      origin: groups[0].origin, observed: observations(groups), sourceSha256: before.sourceSha256,
+      previousGroups: groups.map(group => group.id), previousEntries: groups.reduce((n, group) => n + group.entryIds.length, 0),
+      retained: false, next: [], exact: [], template: [] };
+  });
+  const dormant = previousReview.operations.filter(operation => !operation.enabled && operation['x-har-refresh-retained']).map(operation => {
+    const retained = retainedState(operation);
+    return { operation, groups: [], pattern: optionalPattern(operation.path), method: retained.method,
+      origin: retained.origin, observed: retained.observations, sourceSha256: retained.sourceSha256,
+      previousGroups: retained.groups, previousEntries: retained.entries,
+      retained: true, next: [], exact: [], template: [] };
   });
   const exactOwners = new Map();
   for (const row of selected) for (const group of row.groups) exactOwners.set(sourceKey(group), row);
   const unassigned = [], ambiguous = [];
+  const templates = (rows, group) => rows.filter(row => row.method === group.method &&
+    row.origin === group.origin && row.pattern?.test(group.path));
   for (const group of after.groups) {
     const exact = exactOwners.get(sourceKey(group));
     if (exact) { exact.next.push(group); exact.exact.push(group.id); continue; }
-    const candidates = selected.filter(row => row.method === group.method && row.origin === group.origin && row.pattern.test(group.path));
+    let candidates = templates(selected, group), match = 'template';
+    if (!candidates.length) {
+      candidates = dormant.filter(row => row.method === group.method && row.origin === group.origin &&
+        row.observed.paths.includes(group.path));
+      match = 'exact';
+      if (!candidates.length) { candidates = templates(dormant, group); match = 'template'; }
+    }
     if (candidates.length === 1) {
-      candidates[0].next.push(group); candidates[0].template.push(group.id);
+      candidates[0].next.push(group); candidates[0][match].push(group.id);
     } else {
       const detail = { groupId: group.id, method: group.method, origin: group.origin, path: group.path,
         newlyObserved: !oldKeys.has(sourceKey(group)), matchingOperationIds: candidates.map(row => row.operation.id) };
@@ -143,34 +197,34 @@ export function createRefreshPlan(before, previousReview, after, previousRevisio
     schema: REFRESH_SCHEMA, previousSourceSha256: before.sourceSha256,
     previousReviewSha256: previousRevision, candidateSourceSha256: after.sourceSha256,
   };
-  const operations = [];
-  for (const row of selected) {
-    const previous = observations(row.groups), candidate = row.next.length ? observations(row.next) : null;
+  const operations = [], usedIds = new Set();
+  for (const row of [...selected, ...dormant]) {
+    const previous = row.observed, candidate = row.next.length ? observations(row.next) : null;
     const changes = candidate ? Object.keys(labels).filter(key => canonical(previous[key]) !== canonical(candidate[key]))
       .map(key => ({ section: key, label: labels[key], previous: previous[key], candidate: candidate[key] })) : [];
-    const status = !candidate ? 'not-observed' : changes.length ? 'changed' : 'carried';
+    const status = !candidate ? 'not-observed' : row.retained ? 'returned' : changes.length ? 'changed' : 'carried';
     const migrated = clone(row.operation);
+    migrated.id = uniqueId(migrated.id, usedIds, '_retained_');
     migrated.groups = row.next.map(group => group.id);
-    migrated.enabled = row.next.length > 0;
+    migrated.enabled = row.next.length > 0 && !row.retained;
     migrated.reviewed = status === 'carried' && row.operation.reviewed === true;
-    // Preserve an unavailable route's authored values for explicit remapping.
     if (row.next.length) Object.assign(migrated, decisionMaps(row.operation, row.next));
+    if (migrated.enabled) delete migrated['x-har-refresh-retained'];
+    else if (row.next.length) migrated['x-har-refresh-retained'] = remember(row, after.sourceSha256, row.next, candidate);
+    else if (!row.retained) migrated['x-har-refresh-retained'] = remember(row, before.sourceSha256, row.groups, previous);
     review.operations.push(migrated);
     operations.push({
-      operationId: row.operation.id, method: row.method, origin: row.origin, path: row.operation.path, status,
-      previousGroups: row.groups.map(group => group.id), candidateGroups: migrated.groups,
-      previousEntries: row.groups.reduce((n, group) => n + group.entryIds.length, 0),
-      candidateEntries: row.next.reduce((n, group) => n + group.entryIds.length, 0),
+      operationId: migrated.id, previousOperationId: row.operation.id, method: row.method, origin: row.origin,
+      path: row.operation.path, status, previouslySelected: !row.retained, comparisonSourceSha256: row.sourceSha256,
+      previousGroups: row.previousGroups, candidateGroups: migrated.groups,
+      previousEntries: row.previousEntries, candidateEntries: row.next.reduce((n, group) => n + group.entryIds.length, 0),
       exactMatches: row.exact, templateMatches: row.template, changes,
       previousDecisions: clone(row.operation),
     });
   }
-  const usedIds = new Set(review.operations.map(operation => operation.id));
   const pendingIds = new Set(unassigned.map(group => group.groupId));
   for (const operation of newReview(after).operations.filter(operation => pendingIds.has(operation.groups[0]))) {
-    let id = operation.id, n = 2;
-    while (usedIds.has(id)) id = operation.id + '_new_' + n++;
-    operation.id = id; usedIds.add(id); review.operations.push(operation);
+    operation.id = uniqueId(operation.id, usedIds, '_new_'); review.operations.push(operation);
   }
   const report = {
     schema: 'stellar.har-refresh-report.v1',
@@ -179,14 +233,15 @@ export function createRefreshPlan(before, previousReview, after, previousRevisio
     candidate: { sourceSha256: after.sourceSha256, capturedEntries: after.totalEntries,
       groups: after.groups.length, rejectedEntries: clone(after.rejected) },
     summary: {
-      previousSelected: selected.length,
+      previousSelected: selected.length, previousRetained: dormant.length,
       carried: operations.filter(operation => operation.status === 'carried').length,
       changed: operations.filter(operation => operation.status === 'changed').length,
       notObserved: operations.filter(operation => operation.status === 'not-observed').length,
+      returned: operations.filter(operation => operation.status === 'returned').length,
       unselectedGroups: unassigned.length, ambiguousGroups: ambiguous.length,
     },
     operations, unassigned, ambiguous,
-    interpretation: 'Differences describe the retained captures. A missing observation does not establish removal of a provider operation, and observed shapes do not define an authoritative API contract.',
+    interpretation: 'Differences describe the retained captures. Dormant route comparisons use their last recorded observation source, identified on each row. A missing observation does not establish removal of a provider operation, and observed shapes do not define an authoritative API contract.',
   };
   return { report, review };
 }

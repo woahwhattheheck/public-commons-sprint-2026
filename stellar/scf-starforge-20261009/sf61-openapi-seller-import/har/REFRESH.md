@@ -78,13 +78,17 @@ path template with the same method and origin. For example, a new
 operation that previously contained `/items/a`. New sample membership appears in
 the comparison and reopens that operation's acknowledgment. A candidate matching
 multiple reviewed templates remains unselected so the operator can assign it to
-the intended route.
+the intended route. Current selected operations own their matches first. Only
+remaining observations are considered for retained dormant routes, using their
+last observed paths and original method/origin or a unique reviewed template.
+If retained routes conflict, their observations remain separate for explicit remapping.
 
 | Result | Initial candidate behavior |
 | --- | --- |
 | Same observed contract and captured paths | Preserve operation ID, authored examples, field decisions and acknowledgment |
 | Changed observation | Preserve operation ID and authored values; reopen acknowledgment and initialize new fields as unresolved |
-| Previously selected route absent from this capture | Retain its authored values in an unselected row for explicit remapping |
+| Previously selected route absent from this capture | Retain its identity, authored values and last observed source in an unselected row across later editions |
+| Retained route observed again | Restore its source-group mapping and authored decisions, keeping it unselected and unacknowledged until the operator chooses inclusion |
 | New or ambiguous observation | Add an unselected original-review row with unresolved field decisions |
 
 Changing only the number or order of equivalent observations does not reset an
@@ -193,8 +197,13 @@ export or package without the sender's paths.
 
 To process another capture, use this packet's `candidate/` and the selected
 candidate revision as the previous workspace/revision in the next `refresh prepare`.
-Each packet retains its adjacent source pair, and the previous saved review keeps
-any earlier refresh lineage. Keep older packets when the full multi-edition raw
+Each packet retains its adjacent source pair. A temporarily absent route keeps
+its authored identity and last observed source/shape in the saved review's
+`x-har-refresh-retained` operation record. It can remain absent across multiple
+editions, then regain source groups without losing its reviewed ID, safe examples
+or field decisions. Returning rows remain unselected until explicitly included
+and acknowledged. The comparison identifies that row's last observed source even
+when it predates the adjacent pair. Keep older packets when the full multi-edition raw
 capture history is needed; the workflow does not duplicate the entire history
 into each new packet.
 
