@@ -77,8 +77,9 @@ function historyRows(history,id,parent){
   const rows=history.history;
   for(const item of rows)requireThat(plain(item) &&
     /^[a-f0-9]{32}$/i.test(item.opportunityId??'') &&
-    (item.opportunityId===id || item.opportunityId===parent ||
-      item.parentOpportunityId===parent || item.parentOpportunityId===id),'NOTICE_HISTORY_ID_CHANGED');
+    (item.opportunityId===id || item.parentOpportunityId===id ||
+      (typeof parent==='string' && /^[a-f0-9]{32}$/i.test(parent) &&
+        (item.opportunityId===parent || item.parentOpportunityId===parent))),'NOTICE_HISTORY_ID_CHANGED');
   return rows.map((row,index)=>({...copy(row),sourcePointer:'/history/'+index}));
 }
 const asIssued=value=>value===undefined || value===null?null:typeof value==='string'?value:String(value);
