@@ -9,6 +9,13 @@ source content, compare revisions, export a readable report and reopen the same
 portable project elsewhere. Identical sources are grouped by DOI or URL while
 each original edition occurrence and content variant remains available.
 
+## Use the same workspace from clients and merchant tools
+
+The [Research client guide](RESEARCH_CLIENT.md) covers the authenticated SDK,
+`research-client` CLI, original saved Crossref lifecycle and merchant attachment.
+It includes revision-pinned section reads, complete retained source exports,
+streamed portable reopen and managed Applications startup records.
+
 ## Open the operator
 
 Use the complete sprint source checkout and its existing Node 22+ runtime.
