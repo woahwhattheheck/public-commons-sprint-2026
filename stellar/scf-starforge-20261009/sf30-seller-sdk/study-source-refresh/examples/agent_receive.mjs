@@ -14,7 +14,7 @@ const canonical = value => Array.isArray(value) ? '[' + value.map(canonical).joi
     JSON.stringify(key) + ':' + canonical(value[key])).join(',') + '}' : JSON.stringify(value);
 const equal = (left, right) => canonical(left) === canonical(right);
 function need(value, message) { if (!value) throw new Error(message); }
-const sleep = milliseconds => new Promise(done => setTimeout(done, milliseconds));
+const sleep = milliseconds => new Promise(done => { const timer = setTimeout(done, milliseconds); timer.unref(); });
 
 async function save(path, value) {
   const temporary = path + '.new';
@@ -34,7 +34,7 @@ async function command(node, cli, args, directory, logName) {
   });
   child.stderr.on('data', part => { if (Buffer.concat(errors).length < 65536) errors.push(part); });
   const result = await new Promise((done, reject) => {
-    child.once('error', reject); child.once('exit', (code, signal) => done({code, signal}));
+    child.once('error', reject); child.once('close', (code, signal) => done({code, signal}));
   });
   await save(join(directory, logName + '.json'), {args, ...result,
     stdout:Buffer.concat(output).toString('utf8'), stderr:Buffer.concat(errors).toString('utf8')});
@@ -229,6 +229,9 @@ export async function receiveOriginalStudyPackage(options) {
           const still = await sourceOwner.inspect();
           need(still.original.instance_id === source.original.instance_id, 'Closing Merchant changed its borrowed operator');
           mcp = await start();
+          const borrowed = await mcp.tool('open', {workspace:'source'});
+          need(borrowed.original.instance_id === source.original.instance_id &&
+            borrowed.state === 'BORROWED_ORIGINAL_OPERATOR', 'Restart did not reopen the same borrowed source');
           transfer = await mcp.tool('receive_begin', declaration);
           await record('same-transfer-reopened', {transferId:transfer.transferId, receivedParts:transfer.receivedParts,
             borrowedInstance:still.original.instance_id});
@@ -240,6 +243,8 @@ export async function receiveOriginalStudyPackage(options) {
     if (readId) await mcp.tool('file_release',{workspace:'source',snapshotId:archive.id,readId});
     transfer = await mcp.tool('receive_commit',{workspace:'receiving',transferId:transfer.transferId});
     need(transfer.file.sha256 === archive.file.sha256 && transfer.file.bytes === archive.file.bytes, 'Complete original transfer changed');
+    const receiving = await mcp.tool('open', {workspace:'receiving'});
+    need(receiving.state === 'OWNED_ORIGINAL_OPERATOR', 'This private receiving operation already has another operator owner');
     const imported = await native('package_import','receiving',{input:{transferId:transfer.transferId},expectedSha256:archive.file.sha256});
     need(imported.package_id === verified.package_id, 'Native receiving selected another package');
     const receivedReport = await native('property_selection_report','receiving',{selection_id:selectionId});

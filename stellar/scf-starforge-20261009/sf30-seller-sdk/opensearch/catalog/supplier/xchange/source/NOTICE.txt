@@ -1,0 +1,21 @@
+ETIM xChange source notice
+
+The original ETIM xChange 2.0 JSON Schema declares:
+  Copyright 2025 ETIM International
+  Apache License, Version 2.0
+  https://www.apache.org/licenses/LICENSE-2.0
+
+This directory preserves the original schema and publisher sample from:
+https://etim.de/wp-content/uploads/2025/12/ETIM-xChange_V2.0-2025-11-27.zip
+
+The schema is retained without modification. The publisher sample is retained
+without modification, including its original environmental-rules URI with a
+trailing space. The product records a separate reasoned correction when that
+example is used as a receiving demonstration. Source identities and the exact
+finding are recorded in RULES.json.
+
+The surrounding implementation and authored rule summaries use the repository's
+MIT license. ETIM International and 2BA are the sources of the cited standards
+and recipient rules; this implementation is an independent software workflow.
+
+The Apache License text accompanying the schema is in LICENSE-ETIM.txt.

@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { readPrivate, fault } from '../../postgres/publisher/files.mjs';
+import { parseOpendatasoftJson } from '../capture.mjs';
 
 const staticRoot = fileURLToPath(new URL('./static/', import.meta.url));
 const receivingGuideFile = new URL('../publisher/RECEIVING.md', import.meta.url);
@@ -13,6 +14,9 @@ const assets = new Map([
   ['/', ['index.html', 'text/html; charset=utf-8']],
   ['/app.js', ['app.js', 'text/javascript; charset=utf-8']],
   ['/app.css', ['app.css', 'text/css; charset=utf-8']],
+  ['/tenant', ['tenant.html', 'text/html; charset=utf-8']],
+  ['/tenant.js', ['tenant.js', 'text/javascript; charset=utf-8']],
+  ['/tenant.css', ['tenant.css', 'text/css; charset=utf-8']],
 ]);
 const formats = new Set(['json', 'csv', 'geojson', 'html']);
 function json(response, value, status = 200) {
@@ -21,7 +25,7 @@ function json(response, value, status = 200) {
   response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'content-length': bytes.length });
   response.end(bytes);
 }
-async function readBody(request, limit = 131072) {
+async function readBody(request, limit = 131072, nativeNumbers = false) {
   if (!/^application\/json(?:\s*;|$)/i.test(String(request.headers['content-type'] ?? '')))
     throw fault('ODS_JSON_REQUIRED', 'Send a JSON object.', 415);
   let size = 0; const chunks = [];
@@ -31,7 +35,7 @@ async function readBody(request, limit = 131072) {
     chunks.push(chunk);
   }
   let value;
-  try { value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks))); }
+  try { const raw = Buffer.concat(chunks); value = nativeNumbers ? parseOpendatasoftJson(raw):JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(raw)); }
   catch { throw fault('ODS_INVALID_JSON', 'Enter valid UTF-8 JSON.'); }
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw fault('ODS_JSON_OBJECT_REQUIRED', 'Send a JSON object.');
   return value;
@@ -147,6 +151,19 @@ export async function startOpendatasoftServer({
       const p = url.searchParams;
       if (request.method === 'GET') {
         if (parts[0] === 'status' && parts.length === 1) return json(response, workbench.status());
+        if (parts[0] === 'tenant-targets' && parts.length === 1) return json(response, await workbench.tenantTargets());
+        if (parts[0] === 'tenant-datasets' && parts.length === 1) return json(response, await workbench.tenantDatasets(scalar(p,'target'),{
+          ...(scalar(p,'datasetId') ? { dataset_id:scalar(p,'datasetId') }: {}),offset:integer(p,'offset',0),limit:integer(p,'limit',20),
+        }));
+        if (parts[0] === 'tenant-plans' && parts.length === 2) return json(response, await workbench.tenantPlan(parts[1]));
+        if (parts[0] === 'tenant-deliveries' && parts.length === 2) return json(response, await workbench.tenantExport(parts[1]));
+        if (parts[0] === 'tenant-deliveries' && parts[2] === 'download' && parts.length === 3)
+          return archive(response, await workbench.tenantExport(parts[1]), children);
+        if (parts[0] === 'tenant-deliveries' && parts[2] === 'guide' && parts.length === 3) {
+          const entry = await workbench.tenantExport(parts[1]);
+          return download(response, await readPrivate(join(entry.directory,'TENANT-INGESTION.md'),16777216),
+            'text/markdown; charset=utf-8','huwise-tenant-' + entry.id + '.md');
+        }
         if (parts[0] === 'search' && parts.length === 1) {
           const query = { limit: integer(p, 'limit', 20), offset: integer(p, 'offset', 0) };
           for (const key of ['where', 'order_by', 'lang']) { const value = scalar(p, key); if (value) query[key] = value; }
@@ -199,14 +216,33 @@ export async function startOpendatasoftServer({
           return archive(response, item(workbench, 'exports', parts[1]), children);
       }
       if (request.method === 'POST') {
-        const input = await readBody(request, parts[0] === 'editions' && parts[2] === 'notes' && parts.length === 3 ? 4194304 : 131072);
+        const input = await readBody(request, parts[0] === 'tenant-plans' ? 8388608 : parts[0] === 'editions' && parts[2] === 'notes' && parts.length === 3 ? 4194304 : 131072, parts[0] === 'tenant-plans');
         if (parts[0] === 'datasets' && parts[2] === 'preview' && parts.length === 3)
           return json(response, await workbench.previewRecords(parts[1], input));
         if (parts[0] === 'exports' && parts[2] === 'offer' && parts.length === 3)
           return json(response, await workbench.buyerOffer(parts[1], input));
         if (parts[0] === 'cancel' && parts.length === 1) return json(response, await workbench.cancel());
         let started;
-        if (parts[0] === 'capture' && parts.length === 1) started = await workbench.startCapture(input);
+        if (parts[0] === 'tenant-plans' && parts.length === 1) {
+          if (Object.hasOwn(input,'planJson')) {
+            if (Object.keys(input).length !== 1 || typeof input.planJson !== 'string') throw fault('ODS_TENANT_INPUT_INVALID','Send the complete planJson string or the plan object.');
+            started = await workbench.prepareTenantPlan(input.planJson);
+          } else started = await workbench.prepareTenantPlan(input);
+        }
+        else if (parts[0] === 'tenant-plans' && parts.length === 3) {
+          const actions = {
+            inspect: () => workbench.inspectTenantPlan(parts[1]),
+            review: () => workbench.reviewTenantPlan(parts[1],input),
+            apply: () => workbench.applyTenantPlan(parts[1],input),
+            recover: () => workbench.recoverTenantPlan(parts[1],input),
+            status: () => workbench.refreshTenantStatus(parts[1]),
+            receive: () => workbench.receiveTenantPlan(parts[1],input),
+            export: () => workbench.exportTenantPlan(parts[1]),
+          };
+          if (!Object.hasOwn(actions,parts[2])) throw fault('ODS_ROUTE_NOT_FOUND','Choose an available tenant action.',404);
+          started = await actions[parts[2]]();
+        }
+        else if (parts[0] === 'capture' && parts.length === 1) started = await workbench.startCapture(input);
         else if (parts[0] === 'import' && parts.length === 1) {
           if (typeof input.manifestFile !== 'string' || !input.manifestFile.trim())
             throw fault('ODS_CAPTURE_FILE_REQUIRED', 'Enter the existing capture manifest path on this host.');

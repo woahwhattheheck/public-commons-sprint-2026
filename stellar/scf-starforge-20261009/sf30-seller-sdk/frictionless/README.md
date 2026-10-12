@@ -1,10 +1,10 @@
 # Frictionless Data Package merchant
 
-Turn a retained [Frictionless Data Package](https://datapackage.org/standard/data-package/) into a reviewed, versioned dataset served by the existing Starforge merchant. The package reader retains the publisher's exact descriptor, CSV/JSON data, external schemas and dialects, source references and licensing metadata. The original SF30 publisher owns extraction, review, publication, schedules and its browser; the original SF82 store owns merchant releases; the original SF88/SF100 customer workflow owns acquired pages.
+Turn a retained [Frictionless Data Package](https://datapackage.org/standard/data-package/) into a reviewed, versioned dataset served by the existing Starforge merchant. The package reader retains the publisher's exact descriptor, CSV/TSV/JSON/Parquet data, external schemas and dialects, source references and licensing metadata. The original SF30 publisher owns extraction, review, publication, schedules and its browser; the original SF82 store owns merchant releases; the original SF88/SF100 customer workflow owns acquired pages.
 
 ## Run the product
 
-Requires Linux, Python 3.10+, Node 22.16+ and util-linux `flock`. Python uses only its standard library. Set `SF_FRICTIONLESS_PYTHON` to a trusted installed Python executable when `python3` is not the selected runtime.
+Requires Linux, Python 3.10+, Node 22.16+ and util-linux `flock`. CSV, TSV and JSON use Python's standard library. Parquet uses the already maintained Wherobots PyArrow decoder and its optional installed runtime, described below. Set `SF_FRICTIONLESS_PYTHON` to a trusted installed Python executable when `python3` is not the selected runtime.
 
 From the repository root:
 
@@ -69,7 +69,7 @@ Each output alias must be a safe native dataset column name. Each projection exp
 
 | Choice | Result |
 | --- | --- |
-| `type: string`, `representation: physical` | Preserves the source's scalar text, including zero padding, decimal spelling and literal markers. |
+| `type: string`, `representation: physical` | Preserves source scalar text for text formats; Parquet uses the exact typed representation described below. |
 | `type: integer` | Requires a logical integer exactly representable by the native JavaScript integer range. |
 | `type: number` | Requires a finite logical number whose decimal value survives the native JSON number representation exactly. |
 | `type: boolean` | Uses the source schema's accepted boolean representation. |
@@ -290,3 +290,109 @@ Both used the original SF82 public testnet example terms from `examples/upstream
 The original release digest is `b4cdc19f8de5164929c220966e1d7007653ccea927425e138f153ab6f2ed7394`; the independent receiving release digest is `04fa41fe829506fae2e7cc843c01eb41fa7b3419d0c04246b3815c6828f219b9`. The live offer retained SHA-256 `7338def7750903814f37d3ffe531813cc53276306a0d348e1e9f594352067961` across both merchants. Each buyer configuration contains its own new intent and operation identity.
 
 The complete original source, streamed archive, native merchant/customer results and receiving instructions are attached to the [original Frictionless delivery thread](https://tokenjunkielabs.slack.com/archives/C0BTB4SUCP9/p1791764771161389). The received source supports another fresh publication through the steps above.
+
+## Parquet resources and complete PUDL receiving
+
+The same capture, source review, publication, merchant release and source-transfer commands accept a resource with `format: parquet`. When the resource omits `format`, a declared path or list of paths ending in `.parquet` selects that format. An explicit format remains authoritative. All declared members and every row group are read in their original order.
+
+### Use the original installed Arrow runtime
+
+The Parquet adapter imports the maintained [Wherobots output reader](../wherobots/source/wherobots_operator/editions.py). Keep that component beside Frictionless in the complete SF30 source or installed distribution. It owns the Arrow decoding and typed nested values. The adapter applies the existing Frictionless field mapping, schema checks and reviewed projection.
+
+Use the trusted Python interpreter already configured with the Wherobots PyArrow requirement. The current original [requirements](../wherobots/source/requirements.txt) pin `pyarrow==26.0.0`. The local Parquet operation needs that Arrow dependency; it does not open a Wherobots account or submit a remote job.
+
+~~~bash
+export SF_FRICTIONLESS_PYTHON=/private/arrow-runtime/bin/python
+"$SF_FRICTIONLESS_PYTHON" -c 'import pyarrow; print(pyarrow.__version__)'
+node cli.mjs inspect-capture --capture /private/pudl-release/capture.json
+~~~
+
+Inspection records the actual installed PyArrow version, physical column types and nullability, complete metadata row count, row-group count, original geometry metadata when present, and each member's exact byte length and SHA-256. The original reader processes bounded batches with its threaded/prebuffered reads disabled. The normal private-file checks and a before/after file identity check cover the retained source while the native reader is open.
+
+### Review typed values before publication
+
+A Parquet file contains typed values rather than an original CSV spelling. Its complete binary bytes remain in the source capture. The physical string projection uses these representations:
+
+| Original Parquet value | Retained projection representation |
+| --- | --- |
+| Null | Native null when the projection chooses `missing: null`; choose a missing policy explicitly. |
+| String and dictionary string | The complete original string, including leading zeroes. |
+| Signed or unsigned integer | Decimal integer text, without conversion through a floating-point value. |
+| Decimal | Decimal text with the original value and scale represented by Arrow's Decimal value. |
+| Finite floating-point number | Python's round-tripping representation of the original native value. The original binary file retains its bit representation. |
+| Boolean | `true` or `false`. |
+| Date | ISO calendar date. |
+| Timestamp | Exact epoch ticks rendered as ISO datetime, keeping the original seconds/milliseconds/microseconds/nanoseconds and declared timezone. |
+| Time | Exact clock time at the original unit precision. |
+| Duration | Exact signed ISO seconds duration. |
+| Binary, list, map or struct | The existing reader's lossless JSON representation, including its original typed markers. |
+
+Logical schema validation still precedes projection. A native numeric publication requires an exact finite value; a reviewed physical string projection can retain declared NaN or infinity when the source constraints allow it. A typed structure that does not meet its declared scalar schema requires a source review. Schema constraints and required/unique/primary-key checks run over the complete resource. The native dataset's safe integer and number rules remain unchanged; a string representation retains larger integers and decimals when a native numeric column cannot represent them exactly.
+
+A resource's Table Schema matches columns by the existing `fieldsMatch` contract, including exact, equal, subset, superset and partial matches. Physical column names and schema field names stay bound through that mapping. CSV dialect overrides are rejected for Parquet. The original descriptor and its declared dialect remain retained for source review.
+
+### Select one complete PUDL edition
+
+[PUDL's original access guide](https://docs.catalyst.coop/pudl/en/stable/data_access.html) publishes Parquet files and a full Frictionless descriptor. Its [2026.9.0 release notes](https://docs.catalyst.coop/pudl/en/stable/release_notes.html) describe `pudl.duckdb` built from processed Parquet and retirement of processed `pudl.sqlite` in 2027. Raw, minimally processed FERC SQLite is a separate source product.
+
+Choose the actual published version or one retained nightly edition before capture. Use its original descriptor URL and declared resource paths. Record the descriptor's complete bytes/hash, package ID, created timestamp, git SHA/tags and source DOI/version metadata. A current documentation version or a guessed bucket prefix does not identify the downloaded dataset edition.
+
+This coherent generator, plant and annual-operator workflow uses four complete original tables:
+
+| Original resource | Primary key | Purpose |
+| --- | --- | --- |
+| `core_eia__entity_generators` | `plant_id_eia, generator_id` | Original harvested generator attributes. |
+| `core_eia__entity_plants` | `plant_id_eia` | Original plant identity, name, geography and timezone. |
+| `core_eia860__scd_plants` | `plant_id_eia, report_date` | Dated plant attributes and reported operator identity. |
+| `core_eia__entity_utilities` | `utility_id_eia` | Utility identity and name. |
+
+The selected original code definitions have 20, 12, 41 and 2 fields respectively. Inspect the captured descriptor as the authority for the selected release. Each table fits the existing 64-column native projection contract. Retain every field and row of each selected table; the full descriptor also preserves the declarations for resources outside this selection.
+
+~~~bash
+node cli.mjs capture \
+  --descriptor "$PUDL_DESCRIPTOR_URL" \
+  --resource core_eia__entity_generators \
+  --resource core_eia__entity_plants \
+  --resource core_eia860__scd_plants \
+  --resource core_eia__entity_utilities \
+  --output /private/pudl-release
+node cli.mjs inspect-capture --capture /private/pudl-release/capture.json
+node cli.mjs suggest-source --capture /private/pudl-release/capture.json --output /private/pudl-source.json
+~~~
+
+For each single-file resource, compare the descriptor's original `bytes` and `hash` with the captured member. Keep the original descriptor and retrieval results if the live source changes; complete a consistent edition before saving a publication plan. Do not edit a retained descriptor to conceal an edition mismatch.
+
+Review all four suggested queries. Use the original ID/date/string fields and choose a null policy for every nullable field. A conservative full-column handover uses physical strings with `missing: null`; an explicit logical integer or boolean projection is also available where the complete source passes the original native type checks. Name and compare the same complete projection at both receiving locations.
+
+Use section 3 to save, extract, inspect, review and publish each of the four queries into its own original version store. Choose the original primary-key fields as the extraction order when editing each generated plan. Raise a default row or byte ceiling only after reading the full source inspection and preserving a finite complete-table limit. A successful candidate contains the entire selected resource.
+
+### Preserve relationships and customer query meaning
+
+The reader checks the declared required/unique/primary keys. It retains all foreign-key declarations for the selected resources. The migration operator separately checks the concrete joins that the selected customer workflow uses:
+
+- Generators' non-null `plant_id_eia` values resolve to the original plant table.
+- Dated plant rows resolve to the plant entity table.
+- Non-null dated `utility_id_eia` values resolve to the utility entity table.
+- Annual `report_date` remains the original date; retain the source's annual/monthly relationship rules when comparing a different resource family.
+
+Keep null counts, duplicate-key results, full row counts and unmatched-join results with the receiving package. These checks describe the selected tables and joins. PUDL's complete foreign-key validation remains in its original processing checks; the current processed DuckDB product does not install every declared foreign key.
+
+The harvested entity tables and dated plant table have different time semantics. Join a generator to its plant using the source key, and join a dated operator record using its original `report_date`. An undated entity row is not evidence of annual generation or annual available capacity. Any customer report that depends on generation, ownership, fuel or operating capacity needs its corresponding original PUDL tables and an explicit source contract.
+
+### Receive, reopen and move an existing SQLite consumer
+
+Export the complete four-query source and retain all four reviewed publication plans with it:
+
+~~~bash
+node cli.mjs source-export --source /private/pudl-source.json --output /private/pudl-source.tar.gz
+node cli.mjs source-receive --archive /private/pudl-source.tar.gz --sha256 RETURNED_ARCHIVE_SHA --output /private/pudl-received
+node cli.mjs review-source --source /private/pudl-received/source.json
+~~~
+
+Follow section 6 to rebuild each plan at the receiving location while preserving its reviewed dataset contract, extraction order and limits. Run the complete original extract/review/publish operation again. Compare every selected query, source-member identity, row count, key and published scalar value. A new target's path belongs in its own freshly prepared merchant release.
+
+For a customer migration, retain the current SQLite edition and the complete original queries first. Build the new DuckDB or Parquet-backed consumer from the same selected release and all required tables. Compare complete query results using original keys, explicit null/date handling and the same selected source edition. Keep the old consumer available until the receiving operator approves the matched reports and completes close/reopen and restore. A comparison against a differently dated public release describes a data update as well as an engine migration.
+
+Direct DuckDB access to the public bucket follows PUDL's documented anonymous path-style S3 configuration. A retained local Parquet copy can be queried offline. The source archive, original descriptor, reviewed projections, source/member identities and complete native outputs travel together so the receiving operator can reproduce the selected edition without relying on a mutable public URL.
+
+PUDL's published data and documentation use [CC-BY-4.0](https://github.com/catalyst-cooperative/pudl/blob/bb9eac77cd9c60e3139716c0b220afabdf569f26/README.md); preserve its attribution and source DOI metadata. Its software is MIT. Keep any customer's separate private-input and publication terms in that customer's agreed workshare.
