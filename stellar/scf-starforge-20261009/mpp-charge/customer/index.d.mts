@@ -87,6 +87,10 @@ export interface CustomerResourcePreview {status:number;headers:Record<string,st
   contractSha256:string;offerId:string;
   preview:{kind:'text';text:string;truncated:boolean}|{kind:'binary';text:null;truncated:boolean}}
 export interface CustomerWorkbench {
+  review(options:{profile:CustomerWorkbenchProfile;revision:number}):Promise<{
+    profile:CustomerWorkbenchProfile;profileId:string;revision:number;contractSha256:string}>;
+  inspect(purchaseId:string):Promise<PurchaseView>;
+  resourceChunk(options:{purchaseId:string;expectedSha256:string;offset?:number;limit?:number}):Promise<CustomerResponseChunk>;
   intake(document:MppContract|CustomerBundle|string):Promise<CustomerDraft>;
   fetch(options:{origin:string;transport?:Record<string,unknown>}):Promise<CustomerDraft>;
   configure(options:{profile:CustomerWorkbenchProfile;revision:number}):Promise<{kind:string;profileId:string;revision:number}>;
@@ -107,3 +111,14 @@ export function customerPurchaseAction(options:{workspace:NativeWorkspace;purcha
   action:'inspect'|'execute'|'resume'|'finalize';environment?:Record<string,string|undefined>}):Promise<PurchaseView>;
 export function customerResource(options:{workspace:NativeWorkspace;purchaseId:string}):Promise<CustomerResult>;
 export function customerResourcePreview(options:{workspace:NativeWorkspace;purchaseId:string}):Promise<CustomerResourcePreview>;
+
+export const MAX_CUSTOMER_CHUNK_BYTES:49152;
+export interface CustomerResponseChunk {
+  schema:'stellar-forge.mpp-customer-response-chunk.v1';purchaseId:string;
+  contractSha256:string;offerId:string;transaction:string;receipt:NativeReceipt;accounting:Record<string,unknown>;
+  status:number;headers:Record<string,string>;sha256:string;bytes:number;offset:number;length:number;
+  nextOffset:number|null;complete:boolean;encoding:'base64';chunkSha256:string;data:string;
+}
+export function inspectCustomerPurchase(options:{workspace:NativeWorkspace;purchaseId:string}):Promise<PurchaseView>;
+export function customerResourceChunk(options:{workspace:NativeWorkspace;purchaseId:string;
+  expectedSha256:string;offset?:number;limit?:number}):Promise<CustomerResponseChunk>;

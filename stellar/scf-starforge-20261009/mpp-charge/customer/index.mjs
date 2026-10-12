@@ -6,4 +6,5 @@ export { CUSTOMER_BUNDLE_SCHEMA, CUSTOMER_EXPORT_SCHEMA, CUSTOMER_FILES, createC
   parseCustomerBundle, exportCustomerPackage, receiveCustomerBundle, inspectCustomerExport,
   resumeCustomerExport, readCustomerBundleFile } from './export.mjs';
 export { WORKBENCH_SCHEMA, customerWorkbenchProfile, readCustomerDocument, createCustomerWorkbench,
-  customerPurchaseAction, customerResource, customerResourcePreview } from './workbench.mjs';
+  customerPurchaseAction, customerResource, customerResourcePreview, inspectCustomerPurchase,
+  customerResourceChunk, MAX_CUSTOMER_CHUNK_BYTES } from './workbench.mjs';

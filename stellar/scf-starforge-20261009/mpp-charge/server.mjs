@@ -6,7 +6,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { privateDirectory } from '../distribution/runtime-workspace/storage.mjs';
 import { openWorkspace, requireValue, now, json } from './storage.mjs';
-import { merchantConfig, buyerConfig, MAX_BODY, absolute } from './config.mjs';
+import { merchantConfig, buyerConfig, MAX_BODY, absolute, envName } from './config.mjs';
 import { createMerchant, storedResponse } from './merchant.mjs';
 import { preparePurchase, executePurchase, finalizePurchase, purchaseView } from './buyer.mjs';
 import { versions } from './runtime.mjs';
@@ -97,16 +97,23 @@ export async function exportResponse({workspace,group='purchases',recordId,desti
   try{await handle.writeFile(bytes);await handle.sync();}finally{await handle.close();}
   return {path:destination,bytes:bytes.length,sha256:record.response.sha256,status:record.response.status};
 }
-export async function serveWorkspace({directory,port=8787,environment=process.env}) {
+export async function serveWorkspace({directory,port=8787,environment=process.env,tokenEnv}) {
+  const token=tokenEnv===undefined?randomBytes(32).toString('hex'):environment[envName(tokenEnv)];
+  requireValue(typeof token==='string' && /^[a-f0-9]{64}$/.test(token),'MPP_WORKSPACE_TOKEN_INVALID');
   const workspace=await openWorkspace(directory);
   const customerWorkbench=createCustomerWorkbench({workspace,environment});
-  const token=randomBytes(32).toString('hex'),tokenBytes=Buffer.from(token);
+  const tokenBytes=Buffer.from(token);
   const jobs=new Map();let merchantServer=null,merchantTransition=false,origin,closed=false;
   function authorized(request) {
     requireValue(request.headers.authorization?.startsWith('Bearer '),'MPP_WORKSPACE_AUTH_REQUIRED',401);
     const candidate=Buffer.from(request.headers.authorization.slice(7));
     requireValue(candidate.length===tokenBytes.length && timingSafeEqual(candidate,tokenBytes),'MPP_WORKSPACE_AUTH_REQUIRED',401);
     requireValue(!request.headers.origin || request.headers.origin===origin,'MPP_WORKSPACE_ORIGIN_INVALID',403);
+  }
+  async function identity() {
+    const metadata=await workspace.metadata();
+    return {schema:'stellar-forge.mpp-console-identity.v1',pid:process.pid,ppid:process.ppid,origin,
+      workspace:workspace.root,createdAt:metadata.createdAt,versions};
   }
   async function snapshot() {
     return {schema:'stellar-forge.mpp-console.v1',metadata:await workspace.metadata(),versions,
@@ -144,6 +151,15 @@ export async function serveWorkspace({directory,port=8787,environment=process.en
         }}));return;
       }
       authorized(request);
+      if(request.method==='GET' && url.pathname==='/api/identity') {
+        await send(response,Response.json(await identity(),{headers:{'cache-control':'no-store'}}));return;
+      }
+      const jobPath=/^\/api\/jobs\/([a-f0-9-]{36})$/.exec(url.pathname);
+      if(request.method==='GET' && jobPath) {
+        const job=jobs.get(jobPath[1]);requireValue(job,'MPP_JOB_NOT_FOUND',404);
+        const {promise,...observation}=job;
+        await send(response,Response.json(observation,{headers:{'cache-control':'no-store'}}));return;
+      }
       if(request.method==='GET' && url.pathname==='/api/state') {await send(response,Response.json(await snapshot()));return;}
       if(request.method==='GET' && ['/api/customer','/api/customer/contract','/api/customer/openapi','/api/customer/package'].includes(url.pathname)) {
         requireValue([...url.searchParams.keys()].every(key=>key==='profileId') &&
@@ -173,9 +189,23 @@ export async function serveWorkspace({directory,port=8787,environment=process.en
           offset:Number(url.searchParams.get('offset')??0),limit:Number(url.searchParams.get('limit')??50)
         }),{headers:{'cache-control':'no-store'}}));return;
       }
-      const customerResourcePath=/^\/api\/customer-workbench\/purchases\/([^/]+)\/(preview|response)$/.exec(url.pathname);
+      const customerPurchasePath=/^\/api\/customer-workbench\/purchases\/([^/]+)$/.exec(url.pathname);
+      if(request.method==='GET' && customerPurchasePath) {
+        await send(response,Response.json(await customerWorkbench.inspect(decodeURIComponent(customerPurchasePath[1])),
+          {headers:{'cache-control':'no-store'}}));return;
+      }
+      const customerResourcePath=/^\/api\/customer-workbench\/purchases\/([^/]+)\/(preview|response|file)$/.exec(url.pathname);
       if(request.method==='GET' && customerResourcePath) {
         const purchaseId=decodeURIComponent(customerResourcePath[1]);
+        if(customerResourcePath[2]==='file') {
+          requireValue([...url.searchParams.keys()].every(key=>['expectedSha256','offset','limit'].includes(key)) &&
+            [...url.searchParams.keys()].every(key=>url.searchParams.getAll(key).length===1),
+            'MPP_CUSTOMER_RESPONSE_RANGE_INVALID');
+          await send(response,Response.json(await customerWorkbench.resourceChunk({
+            purchaseId,expectedSha256:url.searchParams.get('expectedSha256'),
+            offset:Number(url.searchParams.get('offset')??0),limit:Number(url.searchParams.get('limit')??49152)
+          }),{headers:{'cache-control':'private, no-store'}}));return;
+        }
         if(customerResourcePath[2]==='preview') {
           await send(response,Response.json(await customerWorkbench.resourcePreview(purchaseId),
             {headers:{'cache-control':'no-store'}}));return;
@@ -212,6 +242,8 @@ export async function serveWorkspace({directory,port=8787,environment=process.en
         result=await customerWorkbench.intake(body.document);
       } else if(url.pathname==='/api/customer-workbench/fetch') {
         result=await customerWorkbench.fetch(body);
+      } else if(url.pathname==='/api/customer-workbench/review') {
+        result=await customerWorkbench.review(body);
       } else if(url.pathname==='/api/customer-workbench/configure') {
         result=await customerWorkbench.configure(body);
       } else if(url.pathname==='/api/customer-workbench/preview') {
@@ -275,7 +307,11 @@ export async function serveWorkspace({directory,port=8787,environment=process.en
   try {
     await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(portNumber(port),'127.0.0.1',resolve);});
     origin='http://127.0.0.1:'+server.address().port;
-    return {workspace,url:origin+'/#'+token,origin,snapshot,close:async()=>{
+    const initialIdentity=await identity(),privateUrl=origin+'/#'+token;
+    const readiness=Object.freeze({schema:'stellar-forge.mpp-console-ready.v1',
+      pid:process.pid,ppid:process.ppid,origin,privateUrl,workspace:workspace.root,createdAt:initialIdentity.createdAt,
+      versions,tokenEnv:tokenEnv??null});
+    return {workspace,url:privateUrl,origin,snapshot,identity,readiness,close:async()=>{
       if(closed) return;closed=true;
       await new Promise(resolve=>server.close(resolve));
       await Promise.allSettled([...jobs.values()].map(job=>job.promise));
