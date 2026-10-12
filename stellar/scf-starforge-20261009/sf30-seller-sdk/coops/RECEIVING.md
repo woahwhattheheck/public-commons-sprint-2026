@@ -85,9 +85,10 @@ The function performs these existing staff operations:
 7. Receives its actual downloaded mapping convention as version 2 of the explicitly selected original target, makes one entered heading change, downloads both original input-file revisions and retains a new mapped export while preserving all earlier handoffs.
 8. Imports that exact reviewed package through the native file-input form. The receiving edition has its own native identity while preserving original response bytes and source-observed times. It carries the earlier review as imported provenance.
 9. Runs the original comparison and retains every comparison change entry. A byte-preserving import has no added, removed or changed values; any original ambiguous duplicate groups remain evidence.
-10. Prepares the original SF30 dataset and reads its actual first/next cursor pages. It does not clone the native dataset implementation.
-11. Captures the explicitly selected historical study through serial bounded child captures and retains the complete streamed CSV/JSONL plus each child's actual source coverage.
-12. Reopens the same origin again and checks the retained source editions, review, mapping, immutable exports, later draft and original dataset result at desktop and 390-pixel widths.
+10. Selects the exact saved version 2 mapping in the original dataset form, prepares that SF30 snapshot and reads its actual first/next cursor pages using the receiving headings. The receipt pins the original mapping file and ordered convention.
+11. Saves a later version 3 convention through the normal mapping editor, then reads the earlier dataset again. Its original version 2 headings, source mapping, snapshot and query result remain unchanged.
+12. Captures the explicitly selected historical study through serial bounded child captures and retains the complete streamed CSV/JSONL plus each child's actual source coverage.
+13. Reopens the same origin again and checks the retained source editions, review, mapping, immutable exports, later draft and original dataset result at desktop and 390-pixel widths.
 
 The default historical leg is two years of hourly heights. This is a selected receiving workload, not a claim that five years have already been captured. The application supports separately selected studies up to five calendar years, with annual-sized editions and provider-specific request chunks.
 
