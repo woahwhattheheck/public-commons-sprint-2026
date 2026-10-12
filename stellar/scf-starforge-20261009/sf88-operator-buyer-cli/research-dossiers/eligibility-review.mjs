@@ -443,7 +443,7 @@ function applyEligibilityAction(state,model,request,createdAt){
   return {impactReview:{id:entityId('eiq',state,request),reviewId:review.id,impactId:impact.id,
     fingerprint:impact.fingerprint,kind:impact.kind,workSetId:data.workSetId??impact.workSetId??null,
     disposition:data.disposition,reason:text(data.reason,'ELIGIBILITY_IMPACT_REASON_REQUIRED'),
-    impact:clone(impact),...common}};
+    impact:clone(Object.fromEntries(Object.entries(impact).filter(([key])=>key!=='lastReview'))),...common}};
 }
 
 /** One original request produces one append-only event and one dossier commit. */

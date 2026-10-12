@@ -6,6 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {ResearchWorkspaceClient,researchSummary} from './workspace-client.mjs';
 import {readResearchHostFile} from './workspace-files.mjs';
 import {DOCUMENT_COMMANDS,main as documentMain} from './document-workspace-cli.mjs';
+import {ELIGIBILITY_COMMANDS,main as eligibilityMain} from './eligibility-cli.mjs';
 import {parseJson,need,safeCode} from '../node/store.mjs';
 
 const usage=String.raw`Research workspace client
@@ -70,6 +71,15 @@ Operate the saved original Crossref acquisition:
   crossref-stop --id DOSSIER --operation ID
   crossref-receive --id DOSSIER --operation ID --input REVIEWED_RECEIVE.json
 
+Operate full eligibility review in the same original dossier:
+  eligibility-help
+  eligibility-view|eligibility-queue|eligibility-review|eligibility-export
+  eligibility-create|eligibility-protocol|eligibility-workset|eligibility-decide
+  eligibility-resolve|eligibility-study|eligibility-apply|eligibility-impact
+
+Run eligibility-help for original request fields, revision-pinned queues,
+independent review, resolution, full exports and same-request recovery.
+
 Review a retained correction or retraction notice:
   citation-updates --id DOSSIER [--revision N --notice ID --status all|pending|reviewed --offset N --limit N]
   citation-review --id DOSSIER --input REVIEW_REQUEST.json
@@ -132,6 +142,7 @@ const compact=value=>value?.dossier?{...value,dossier:researchSummary(value.doss
 const selected=value=>Object.fromEntries(Object.entries(value).filter(([,item])=>item!==undefined));
 export async function main(argv=process.argv.slice(2),{output=process.stdout}={}){
   if(DOCUMENT_COMMANDS.includes(argv[0]))return documentMain(argv,{output});
+  if(ELIGIBILITY_COMMANDS.includes(argv[0]))return eligibilityMain(argv,{output});
   const [command,...args]=argv;
   if(!command||['help','--help','-h'].includes(command)){output.write(usage);return;}
   need(Object.hasOwn(commandOptions,command),'COMMAND_UNKNOWN');
