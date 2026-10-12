@@ -138,7 +138,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlsplit(self.path)
-        public = parsed.path in {"/", "/index.html", "/app.js", "/report-server.js", "/sql-server.js", "/billing.js", "/billing.css", "/azure-exports.js", "/azure-exports.css", "/tourism.js", "/tourism.css", "/style.css", "/favicon.ico"}
+        public = parsed.path in {"/", "/index.html", "/app.js", "/report-server.js", "/sql-server.js", "/billing.js", "/billing.css", "/azure-exports.js", "/azure-exports.css", "/tourism.js", "/tourism.css", "/load_forecast.js", "/load_forecast.css", "/style.css", "/favicon.ico"}
         if not self.allowed(authenticate=not public):
             return
         try:
@@ -160,6 +160,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.send(200, service.store.history(params["kind"], params["id"]))
             elif parsed.path == "/api/events":
                 self.send(200, service.store.events())
+            elif parsed.path == "/api/load/preview":
+                self.send(200, service.load.preview(params))
             elif parsed.path == "/api/tourism/example":
                 from .tourism_example import example_configuration
                 self.send(200, example_configuration())

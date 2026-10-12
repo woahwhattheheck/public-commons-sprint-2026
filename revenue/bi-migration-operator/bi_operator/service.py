@@ -19,9 +19,10 @@ from .sql_server import SqlServer, SQL_KINDS
 from .billback import Billing, KINDS as BILLING_KINDS
 from .azure_exports import AzureExports, KINDS as AZURE_KINDS
 from .tourism import Tourism, KINDS as TOURISM_KINDS
+from .load_forecast import LoadForecast, KINDS as LOAD_KINDS
 from .store import Store, Conflict, digest, encoded, identifier, now
 
-KINDS = ("source", "dataset", "plan", "artifact", "capture", "comparison", "rollout", "support", "usage", "delivery", "backup", "server_report", "server_bundle", "server_job", "server_result") + BILLING_KINDS + AZURE_KINDS + TOURISM_KINDS
+KINDS = ("source", "dataset", "plan", "artifact", "capture", "comparison", "rollout", "support", "usage", "delivery", "backup", "server_report", "server_bundle", "server_job", "server_result") + BILLING_KINDS + AZURE_KINDS + TOURISM_KINDS + LOAD_KINDS
 
 
 def decoded_file(request):
@@ -61,6 +62,7 @@ class Service:
         self.billing = Billing(self)
         self.azure = AzureExports(self)
         self.tourism = Tourism(self)
+        self.load = LoadForecast(self)
         self.actions = {
             "source.import": self.source_import, "source.assign": self.source_assign,
             "dataset.import": self.dataset_import, "dataset.correct": self.dataset_correct,
@@ -83,6 +85,7 @@ class Service:
         self.actions.update(self.billing.actions)
         self.actions.update(self.azure.actions)
         self.actions.update(self.tourism.actions)
+        self.actions.update(self.load.actions)
 
     def close(self):
         self.sql.close()
@@ -147,6 +150,8 @@ class Service:
                     payload["volume_count"] = len(payload.get("groups", []))
                     for field in ("groups", "segments"):
                         payload.pop(field, None)
+                if kind == "load_received":
+                    payload.pop("retained", None)
                 if kind == "comparison":
                     payload["result"].pop("differences", None)
                 if kind == "artifact":
