@@ -100,28 +100,164 @@ def same_stable_host(original, current):
                 all(char in "0123456789abcdef" for char in value)) for value in values))
 
 
-def process_identity(pid, boot_id):
+def proc_status(path):
+    values = {}
+    for line in Path(path).read_text().splitlines():
+        key, separator, value = line.partition(":")
+        if separator:
+            values[key] = value.strip()
+    return values
+
+
+def proc_view():
+    cached = getattr(proc_view, "_retained", None)
+    if cached is not None:
+        return cached
+    raw = Path("/proc/self/stat").read_text()
+    visible_pid = int(raw.split("(", 1)[0].strip())
+    status = proc_status("/proc/self/status")
+    namespace_pids = [int(value) for value in status.get("NSpid", "").split()]
+    if not namespace_pids:
+        if visible_pid != os.getpid():
+            raise OriginalClosureError("The proc mount does not expose the original caller PID mapping.")
+        namespace_pids = [visible_pid]
+    if namespace_pids[0] != visible_pid or namespace_pids[-1] != os.getpid():
+        raise OriginalClosureError("The original caller's proc and syscall PID identities disagree.")
+    # This process's final column identifies the caller namespace. A descendant
+    # may have additional columns; its final column is not our syscall PID.
+    cached = {"pid": os.getpid(), "procPid": visible_pid,
+              "namespaceColumn": len(namespace_pids) - 1,
+              "pidNamespace": os.readlink("/proc/self/ns/pid"),
+              "childrenPath": "/proc/thread-self/children"}
+    proc_view._retained = cached
+    return cached
+
+
+def proc_identity(proc_pid, boot_id, view):
     try:
-        raw = Path("/proc") / str(pid) / "stat"
-        value = raw.read_text()
+        directory = Path("/proc") / str(proc_pid)
+        raw = (directory / "stat").read_text()
+        fields = raw[raw.rfind(")") + 2:].split()
+        if len(fields) < 20 or int(raw.split("(", 1)[0].strip()) != proc_pid:
+            raise OriginalClosureError("The original mounted-proc identity is incomplete.")
+        status = proc_status(directory / "status")
+        namespace_pids = [int(value) for value in status.get("NSpid", "").split()]
+        if not namespace_pids and view["namespaceColumn"] == 0:
+            namespace_pids = [proc_pid]
+        column = view["namespaceColumn"]
+        if (len(namespace_pids) <= column or namespace_pids[0] != proc_pid or
+                namespace_pids[column] <= 0):
+            raise OriginalClosureError("The original child has no PID in the caller namespace.")
+        try:
+            namespace = os.readlink(directory / "ns" / "pid")
+        except FileNotFoundError:
+            namespace = None
+        again = (directory / "stat").read_text()
+        current = again[again.rfind(")") + 2:].split()
+        if len(current) < 20 or current[19] != fields[19]:
+            return None
+        if namespace is None and current[0] not in ("Z", "X"):
+            raise OriginalClosureError("The original live child namespace cannot be observed.")
     except FileNotFoundError:
         return None
-    # The parenthesized comm may itself contain spaces and parentheses.
-    fields = value[value.rfind(")") + 2:].split()
-    if len(fields) < 20:
-        raise OriginalClosureError("The original process identity is incomplete.")
-    return {"pid": pid, "parentPid": int(fields[1]), "processGroup": int(fields[2]),
-            "session": int(fields[3]), "state": fields[0], "startTicks": fields[19],
-            "bootId": boot_id}
+    parent_proc_pid = int(fields[1])
+    def caller_value(name, fallback):
+        values = [int(value) for value in status.get(name, "").split()]
+        return values[column] if len(values) > column else fallback if column == 0 else None
+    return {"pid": namespace_pids[column], "procPid": proc_pid,
+            "parentPid": (view["pid"] if parent_proc_pid == view["procPid"] else
+                          os.getppid() if proc_pid == view["procPid"] else None),
+            "parentProcPid": parent_proc_pid,
+            "processGroup": caller_value("NSpgid", int(fields[2])),
+            "session": caller_value("NSsid", int(fields[3])),
+            "procProcessGroup": int(fields[2]), "procSession": int(fields[3]),
+            "pidNamespace": namespace, "namespaceColumn": column,
+            "state": current[0], "startTicks": fields[19], "bootId": boot_id}
+
+
+def direct_child_proc_pids(view):
+    """Find only this actual parent's children; no command or resource census."""
+    if view.get("childrenMode") != "parent-stat":
+        try:
+            values = [int(value) for value in Path(view["childrenPath"]).read_text().split()]
+            view["childrenMode"] = "children-file"
+            return values
+        except FileNotFoundError:
+            # Some hosts omit the task-children interface.
+            # The original parent identity still supports an ownership lookup.
+            view["childrenMode"] = "parent-stat"
+    children = []
+    with os.scandir("/proc") as entries:
+        for entry in entries:
+            if not entry.name.isascii() or not entry.name.isdecimal():
+                continue
+            try:
+                value = (Path("/proc") / entry.name / "stat").read_text()
+            except (FileNotFoundError, ProcessLookupError):
+                continue
+            fields = value[value.rfind(")") + 2:].split()
+            if len(fields) < 20 or int(value.split("(", 1)[0].strip()) != int(entry.name):
+                raise OriginalClosureError("The process-parent ownership lookup was incomplete.")
+            if int(fields[1]) == view["procPid"]:
+                children.append(int(entry.name))
+    return children
+
+
+def pidfd_proc_pid(pid, view):
+    """Use the original syscall identity to read its proc-view PID when exposed."""
+    try:
+        descriptor = os.pidfd_open(pid, 0)
+    except ProcessLookupError:
+        return None
+    try:
+        try:
+            info = proc_status(Path("/proc/self/fdinfo") / str(descriptor))
+        except (FileNotFoundError, ProcessLookupError):
+            return None
+        value = info.get("Pid")
+        if value is None:
+            return None
+        proc_pid = int(value)
+        if proc_pid <= 0:
+            return None
+        pids = [int(value) for value in info.get("NSpid", "").split()]
+        if pids and (len(pids) <= view["namespaceColumn"] or pids[0] != proc_pid or
+                     pids[view["namespaceColumn"]] != pid):
+            return None
+        return proc_pid
+    finally:
+        os.close(descriptor)
+
+
+def process_identity(pid, boot_id, proc_pid=None):
+    view = proc_view()
+    if proc_pid is not None:
+        candidates = [proc_pid]
+    elif pid == view["pid"]:
+        candidates = [view["procPid"]]
+    else:
+        mapped = pidfd_proc_pid(pid, view)
+        if mapped is not None:
+            identity = proc_identity(mapped, boot_id, view)
+            if identity is not None and identity["pid"] == pid:
+                return identity
+        candidates = direct_child_proc_pids(view)
+        if view["namespaceColumn"] == 0 and pid not in candidates:
+            candidates.append(pid)
+    for candidate in candidates:
+        identity = proc_identity(candidate, boot_id, view)
+        if identity is not None and identity["pid"] == pid:
+            return identity
+    return None
 
 
 def owned_children(boot_id):
-    """Read this launcher's kernel-owned child list, never select processes by name."""
-    filename = Path("/proc") / str(os.getpid()) / "task" / str(os.getpid()) / "children"
+    """Use this thread's kernel-owned list, mapped into the caller's PID namespace."""
+    view = proc_view()
     children = []
-    for value in filename.read_text().split():
-        identity = process_identity(int(value), boot_id)
-        if identity is not None and identity["parentPid"] == os.getpid():
+    for value in direct_child_proc_pids(view):
+        identity = proc_identity(value, boot_id, view)
+        if identity is not None and identity["parentProcPid"] == view["procPid"]:
             children.append(identity)
     return children
 
@@ -147,13 +283,16 @@ def wait_original(child, timeout):
 
 def signal_owned_child(identity, signum, boot_id):
     """Pin an actual current child before signalling; PID reuse cannot retarget it."""
+    if identity.get("bootId") != boot_id:
+        return
     try:
         descriptor = os.pidfd_open(identity["pid"], 0)
     except ProcessLookupError:
         return
     try:
-        current = process_identity(identity["pid"], boot_id)
+        current = process_identity(identity["pid"], boot_id, proc_pid=identity.get("procPid"))
         if (current is None or current["parentPid"] != os.getpid() or
+                current["procPid"] != identity.get("procPid", current["procPid"]) or
                 current["startTicks"] != identity["startTicks"]):
             return
         try:
@@ -276,7 +415,7 @@ def reconcile_previous_closure(private, boot_id, host_identity):
     for identity in result.get("remainingChildren") or []:
         if identity.get("bootId") != boot_id:
             continue
-        current = process_identity(identity["pid"], boot_id)
+        current = process_identity(identity["pid"], boot_id, proc_pid=identity.get("procPid"))
         if current is not None and current["startTicks"] == identity.get("startTicks"):
             observed.append(current)
     result["closureObservation"] = {"observedAt": time.time(), "originalIdentities": observed}
