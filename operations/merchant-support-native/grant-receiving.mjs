@@ -5,7 +5,7 @@ import {spawn,execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {createHash,randomUUID} from 'node:crypto';
 import assert from 'node:assert/strict';
-import {operateGrantCompletion,verifyReceivedGrantCompletion} from './grant-completion-native.mjs';
+import {operateGrantCompletion,verifyReceivedGrantCompletion,verifyGrantCompletionAgent} from './grant-completion-native.mjs';
 const execute=promisify(execFile);
 const sha=raw=>createHash('sha256').update(raw).digest('hex');
 const defer=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
@@ -128,6 +128,7 @@ export async function receiveGrantSupport({selected,context,handoffPath,merchant
     report.completionReceiving=await verifyReceivedGrantCompletion({server,caseId:imported.id,page,stage,completion:report.completion});
     await page.close();page=null;await server.stop();server=null;
     report.cliReceipt=cliReceipt;report.imported=imported;report.retainedDirectory=stage;
+    report.agentCompletion=await verifyGrantCompletionAgent({selected,grant:report,stage,note});
     await mark('original CLI and case import reopened the same support source and rendered report',{originalCaseId:caseId,reopenedCaseId:imported.id,sourceCount:received.sources.length});
     report.status='COMPLETE';report.completedAt=new Date().toISOString();await save();
     return report;

@@ -7,3 +7,6 @@ export {TERMS,PACKAGE,compileGeocodeSeller,packageGeocodeMerchant,inspectGeocode
 export {WORKSPACE,CAPTURE,OBSERVATION,GeocodeWorkspace} from './workspace.mjs';
 export {DELIVERY,GeocodeDelivery} from './customer.mjs';
 export {createGeocodeServer} from './server.mjs';
+
+export { GeocodeBatches, inspectCsvSource, BATCH, BATCH_REVIEW, MAX_CSV_BYTES, MAX_CSV_ROWS } from './batch.mjs';
+export { GeocodeBatchDelivery, BATCH_DELIVERY } from './batch-delivery.mjs';

@@ -1,0 +1,55 @@
+{
+  "schema": "stellar-forge.redis-source.v1",
+  "connection": {
+    "host": "127.0.0.1",
+    "port": 6379,
+    "database": 0,
+    "tls": "local-plaintext"
+  },
+  "maxConnections": 4,
+  "maxPending": 16,
+  "connectTimeoutMs": 3000,
+  "idleTimeoutMs": 30000,
+  "startupTimeoutMs": 5000,
+  "queries": {
+    "list_feed": {
+      "kind": "list",
+      "key": "merchant:collections:queue",
+      "parameters": {
+        "offset": {
+          "type": "integer",
+          "minimum": "0",
+          "maximum": "10000000",
+          "default": "0"
+        }
+      },
+      "offset": "offset",
+      "columns": [
+        "index",
+        "value"
+      ],
+      "maxRows": 100,
+      "maxBytes": 65536,
+      "timeoutMs": 1500
+    },
+    "member_catalog": {
+      "kind": "set",
+      "key": "merchant:collections:members",
+      "parameters": {
+        "cursor": {
+          "type": "string",
+          "maxLength": 20,
+          "default": "0"
+        }
+      },
+      "cursor": "cursor",
+      "scanCount": 100,
+      "columns": [
+        "member"
+      ],
+      "maxRows": 1000,
+      "maxBytes": 65536,
+      "timeoutMs": 1500
+    }
+  }
+}

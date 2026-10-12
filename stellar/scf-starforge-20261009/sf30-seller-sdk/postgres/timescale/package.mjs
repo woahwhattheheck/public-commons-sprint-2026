@@ -69,7 +69,9 @@ function exportTimescaleWorkspace(workspace,input){
       }
       const skip=new Set(['publisher.lock','writer.lock','writer.lease','control.json','control.sock']);
       async function walk(directory,prefix){
-        await privateDirectory(directory);directories.push(prefix);
+        await privateDirectory(directory);
+        await privateDirectory(join(stage,prefix),true);
+        directories.push(prefix);
         for(const item of (await readdir(directory,{withFileTypes:true})).sort((a,b)=>a.name.localeCompare(b.name))){
           const source=join(directory,item.name),path=prefix+'/'+item.name;
           if(source===workspace.settings.targetDirectory||skip.has(item.name)||item.name.startsWith('.pending-')||

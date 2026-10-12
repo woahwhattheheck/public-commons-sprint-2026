@@ -16,6 +16,9 @@ from urllib.parse import urlsplit, parse_qsl
 import zipfile
 
 PACKET = "stellar-forge.clinicaltrials-packet.v1"
+BATCH_PACKET = "stellar-forge.clinicaltrials-packet.v2"
+PACKET_SCHEMAS = frozenset((PACKET, BATCH_PACKET))
+MAX_MANIFEST = 16 * 1024 * 1024
 PROVIDER = "clinicaltrials-gov"
 ORIGIN = "https://clinicaltrials.gov"
 MAX_PACKET = 128 * 1024 * 1024
@@ -120,16 +123,21 @@ class Packet:
                      0 <= entry.file_size <= 512 * 1024 * 1024,
                      "CLINICALTRIALS_PACKET_MEMBER_SIZE")
                 total += entry.file_size
-                need(total <= MAX_TOTAL + 8 * 1024 * 1024, "CLINICALTRIALS_PACKET_TOTAL_LIMIT")
+                need(total <= MAX_TOTAL + MAX_MANIFEST, "CLINICALTRIALS_PACKET_TOTAL_LIMIT")
                 self.entries[member] = entry
             need("manifest.json" in self.entries, "CLINICALTRIALS_PACKET_MANIFEST_REQUIRED")
-            self.manifest_bytes = self.read("manifest.json", 8 * 1024 * 1024)
+            self.manifest_bytes = self.read("manifest.json", MAX_MANIFEST)
             self.manifest = document(self.manifest_bytes)
-            need(isinstance(self.manifest, dict) and self.manifest.get("schema") == PACKET and
+            need(isinstance(self.manifest, dict) and self.manifest.get("schema") in PACKET_SCHEMAS and
                  self.manifest.get("application") == "stellar-forge.clinicaltrials-workspace.v1" and
                  isinstance(self.manifest.get("files"), dict) and
                  isinstance(self.manifest.get("captures"), list),
                  "CLINICALTRIALS_ORIGINAL_PACKET_REQUIRED")
+            batches = self.manifest.get("batches", [])
+            need(isinstance(batches, list) and
+                 (self.manifest["schema"] != BATCH_PACKET or "batches" in self.manifest) and
+                 (not batches or self.manifest["schema"] == BATCH_PACKET),
+                 "CLINICALTRIALS_BATCH_PACKET_REQUIRED")
             declared = self.manifest["files"]
             need(set(declared) | {"manifest.json"} == set(self.entries),
                  "CLINICALTRIALS_PACKET_UNDECLARED_MEMBER")
@@ -192,7 +200,7 @@ class Packet:
         return {"schema": "stellar-forge.clinicaltrials-research-input.v1",
                 "packetSha256": self.sha, "packetBytes": self.stat.st_size,
                 "manifestSha256": digest(self.manifest_bytes),
-                "originalSchema": PACKET, "createdAt": self.manifest.get("createdAt"),
+                "originalSchema": self.manifest["schema"], "createdAt": self.manifest.get("createdAt"),
                 "captures": [{key: row.get(key) for key in keys} for row in self.manifest["captures"]],
                 "nativeBuilds": self.manifest.get("native", {}).get("builds", []),
                 "memberCount": len(self.entries) - 1,
@@ -356,7 +364,7 @@ class Packet:
                 "completedAt": capture.get("completedAt"), "nativeBuilds": builds
             },
             "sourcePages": source_pages, "sourceVersions": versions,
-            "sourcePacket": {"schema": PACKET, "sha256": self.sha, "bytes": self.stat.st_size,
+            "sourcePacket": {"schema": self.manifest["schema"], "sha256": self.sha, "bytes": self.stat.st_size,
                              "manifestSha256": digest(self.manifest_bytes), "base64": encoded_packet}
         }
 

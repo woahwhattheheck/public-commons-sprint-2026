@@ -32,7 +32,9 @@ Select the merchant's existing native facilitator. Public deployment uses its cr
 
 Opening or refreshing Applications does not start the service. Starting it can deliver already-pending notices through the original worker. A successful notice acknowledges the original event; it does not itself mark a Woo order paid. Independent merchant transaction review and release remain in WordPress.
 
-The original Operations server allows only the explicitly recorded Applications origin to open its HTML through a user navigation. Woo links send that origin as their referrer; every other application keeps its existing policy. API calls keep the native same-origin restrictions. If the runtime workspace is reopened on a different port while a Woo service remains running, use its recorded local Operations address directly, or stop and review a new start from the current workspace before using the managed Open link.
+The original Operations server allows only the explicitly recorded Applications origin to open its HTML through a user navigation. Woo links send that origin as their referrer; every other application keeps its existing policy. API calls keep the native same-origin restrictions. Loopback HTTP origins and listener addresses use the browser's canonical form, including the default port 80.
+
+If Applications is reopened on a different port while the Woo service remains running, its **Open the running merchant** panel replaces direct Operations and fulfillment links with the exact saved addresses. Use **Copy Operations address** or **Copy original fulfillment address**, then paste the address into a new tab's address bar. If clipboard access is unavailable, the same field selects its complete address for manual copying. The original process, outbox owner and configured access origin remain unchanged. The WordPress console link still opens the original store. To restore direct managed Open buttons from the new Applications address, stop the service and review a new start there; do not launch another owner of the same outbox.
 
 ## One outbox, one original delivery owner
 
@@ -84,7 +86,7 @@ Applications supplies `--expected-config-sha256`, `--expected-source-sha256` and
 
 For a receiving host, preserve the original merchant configuration, complete outbox (including its binding and worker journals), original WordPress database/plugin configuration, selected runtime source/manifest and private environment through their existing private recovery paths. Keep the original absolute paths when restoring this managed case. Do not copy only a dashboard URL or a plaintext secret into a public package.
 
-A complete service-lifecycle receiving can reuse an already completed order and outbox without creating another payment. Record its actual source/runtime, reviewed selection, worker lease, startup, Operations navigation, Stop/drain and same-outbox reopen. Any controlled facilitator or local WordPress transport remains explicitly identified in that outcome.
+A complete service-lifecycle receiving can reuse an already completed order and outbox without creating another payment. Record its actual source/runtime, reviewed selection, worker lease, startup, Operations navigation, changed-port Applications reopening, Stop/drain and same-outbox reopen. Any controlled facilitator or local WordPress transport remains explicitly identified in that outcome.
 
 ## Source registration and receiving status
 

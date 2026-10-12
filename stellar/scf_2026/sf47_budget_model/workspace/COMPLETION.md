@@ -33,6 +33,8 @@ Calendar calculations add 90 days with date arithmetic. For example, in an expli
 
 An issuer-confirmed extension uses **Record issuer extension** on the selected payment. Retain the confirmation date, later deadline, original reference and relevant attachments. The original 90-day deadline remains visible. The applicable deadline is the latest recorded confirmation effective on the selected calendar or actual submission date. An extension request alone does not change the clock.
 
+A later correction to linked work or a deployment keeps the saved assignment history intact. Preview identifies changed cost, contributor or tranche associations so the operator can update the current assignment before preparing another form. Full case receiving preserves those historical saved rows and their original events.
+
 The saved submission preserves the frozen form even if the operating case has subsequently changed. Its command receipt reports `preparedSourceCurrent` to identify that relationship, and `submittedWithinDeadline` for the actual submitted date. Repeated original form references are rejected; retrying the same exact request returns its original result.
 
 ## Interrupted saves and concurrent work

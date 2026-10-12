@@ -131,6 +131,7 @@ Optional hooks preserve native selection rules:
 | `validateSettings(type, settings)` | Synchronous provider-specific selection checks after the shared field normalization. |
 | `checkRuntime(type, settings, runtime, context)` | Required source checks on the selected actual runtime, before command preparation. |
 | `resourceKey(type, settings, {hash})` | The original shared workspace or provider resource identity when the default kind/directory identity differs. |
+| `runArguments({command, args, requestId})` | Synchronous binding of the original retained run ID into a copied argument list immediately before its managed request is saved. |
 | `verifyLaunch(request, operationDirectory)` | Original current-input checks immediately before the managed worker launches its process. |
 | `prepareChild(request, operationDirectory, originalArgs, environment)` | An already existing alternative native launch path, such as the installed Python lifecycle. |
 
@@ -138,6 +139,14 @@ A returned `resourceKey` from preparation continues to take precedence over the
 fallback identity. Review/Save and Start compare the same current inputs and
 source/runtime bindings. The registry does not change those checks or create
 another resource-lock directory.
+
+The optional `runArguments` hook runs after Review Start's current inputs and
+release checks, with the same operation ID used by the retained managed request.
+It returns an array of strings. The worker and Continue reuse the saved arguments;
+they do not call this hook again or choose another operation ID. Redis setup uses
+it to pass `--setup-operation` to its original connection server so interruption
+after workspace creation can reopen that same saved workspace. Ordinary command
+preparation and all providers without the hook keep their reviewed arguments.
 
 ## Original output readers
 

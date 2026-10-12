@@ -13,7 +13,7 @@ const copy = value => JSON.parse(JSON.stringify(value));
 function fail(code, message) { throw Object.assign(new TypeError(message), { code, status: 400 }); }
 function ensure(value, code, message) { if (!value) fail(code, message); }
 const hookNames = ['catalog', 'prepare', 'matchRequest', 'createObserver',
-  'validateSettings', 'checkRuntime', 'resourceKey', 'verifyLaunch', 'prepareChild'];
+  'validateSettings', 'checkRuntime', 'resourceKey', 'verifyLaunch', 'prepareChild', 'runArguments'];
 
 function validateProvider(value, id, path) {
   ensure(plain(value) && value.schema === APPLICATION_PROVIDER_SCHEMA && value.id === id,
