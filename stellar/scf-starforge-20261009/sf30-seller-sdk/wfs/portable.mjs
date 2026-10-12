@@ -9,6 +9,9 @@ import { readWfsProject, readWfsCatalog, getWfsOrder, getWfsPublication } from '
 import { exactFile, reconcileRetainedFile, readWfsDocument, optionalJson } from './source.mjs';
 import { endpointUrl, normalizeWfsSelection, wfsItemsUrl, wfsRequest, checkWfsCoverage } from './protocol.mjs';
 
+import { isWfsVectorPath,wfsVectorFiles,inspectWfsVectorMembers,verifyWfsVectors,
+  wfsVectorMutableReplayPath } from './vector.mjs';
+
 export const WFS_PROJECT_BUNDLE_SCHEMA = 'stellar-forge.wfs-project-bundle.v1';
 export const WFS_PROJECT_BUNDLE_DEFAULT_BYTES = 256 * 1024 * 1024;
 const PROJECT = 'stellar-forge.wfs-project.v1';
@@ -42,6 +45,9 @@ function budget(maxBytes = WFS_PROJECT_BUNDLE_DEFAULT_BYTES) {
   return maxBytes;
 }
 function cleanPath(path) {
+  if(typeof path==='string'&&path.startsWith('native-vectors/')){
+    need(isWfsVectorPath(path),'WFS_BUNDLE_PATH_INVALID');return path;
+  }
   need(typeof path === 'string' && path.length > 0 && path.length <= 1024 &&
     path.split('/').every(p => /^[A-Za-z0-9_.-]+$/.test(p) && !['.','..'].includes(p)),
     'WFS_BUNDLE_PATH_INVALID');
@@ -54,6 +60,7 @@ function pageFile(name) {
 function allowed(path) {
   cleanPath(path);
   if (path === 'project.json') return true;
+  if(path.startsWith('native-vectors/'))return isWfsVectorPath(path);
   const p = path.split('/');
   if (['sources','schemas'].includes(p[0]) && OP.test(p[1] ?? '')) {
     return p.length === 3 && DOC_FILES.has(p[2]) ||
@@ -416,8 +423,10 @@ function unpack(bundle,{maxBytes = WFS_PROJECT_BUNDLE_DEFAULT_BYTES} = {}) {
   need(index.id === bundle.project.id && index.name === bundle.project.name &&
     index.revision === bundle.project.revision,'WFS_BUNDLE_PROJECT_CHANGED');
   const closure = validateBindings(index,view);
+  closure.vectors=inspectWfsVectorMembers(index,view);
   const counts = Object.fromEntries(ARRAYS.map(name => [name,index[name].length]));
   counts.pending = index.pending !== null;
+  counts.nativeVectors=closure.vectors.operations.length;
   return {index,view,closure,inspection:{schema:bundle.schema,bundleSha256,project:clone(bundle.project),
     totalBytes:total,encodedBytes,files:rows,counts}};
 }
@@ -471,6 +480,7 @@ async function selectedFiles(directory,indexBytes,maximum) {
     for (const candidate of [...names])
       if (candidate.startsWith(base+'/') && !selected.has(candidate)) names.delete(candidate);
   }
+  for(const name of await wfsVectorFiles(directory))names.add(name);
   const files=[];let total=0;
   for (const name of sorted(names)) {
     const value = name === 'project.json' ? indexBytes : await readPrivate(join(directory,name),maximum-total);
@@ -479,13 +489,14 @@ async function selectedFiles(directory,indexBytes,maximum) {
   }
   return {files,total};
 }
-async function verifyOriginal(directory,closure) {
+async function verifyOriginal(directory,closure,options={}) {
   for (const path of closure.documents) await readWfsDocument(join(directory,path));
   for (const path of closure.captures) await readCapture(join(directory,path));
   for (const path of closure.publications) await reopenExport(join(directory,path));
+  await verifyWfsVectors(directory,closure.vectors,options);
 }
 /** Snapshot under the original project lease, without changing any source or index. */
-export async function exportWfsProject({directory,maxBytes = WFS_PROJECT_BUNDLE_DEFAULT_BYTES}) {
+export async function exportWfsProject({directory,maxBytes = WFS_PROJECT_BUNDLE_DEFAULT_BYTES,python,signal}) {
   const maximum=budget(maxBytes);directory=resolve(directory);await privateDirectory(directory);
   const release=await acquireWorkspace(directory);
   try {
@@ -495,7 +506,7 @@ export async function exportWfsProject({directory,maxBytes = WFS_PROJECT_BUNDLE_
     const body={schema:WFS_PROJECT_BUNDLE_SCHEMA,project:{id:index.id,name:index.name,revision:index.revision,
       indexSha256:digest(indexBytes),indexBytes:indexBytes.length},totalBytes:selected.total,files:selected.files};
     const bundle={...body,bundleSha256:identity(body)}, checked=unpack(bundle,{maxBytes:maximum});
-    await verifyOriginal(directory,checked.closure);
+    await verifyOriginal(directory,checked.closure,{python,signal});
     need((await readPrivate(join(directory,'project.json'),indexBytes.length)).equals(indexBytes),
       'WFS_BUNDLE_INDEX_CHANGED');
     return bundle;
@@ -550,15 +561,16 @@ function descendant(original,current) {
     need(current.pending && ['id','kind','payloadSha256','expectedRevision'].every(k=>current.pending[k]===original.pending[k]),
       'WFS_RECEIVING_PENDING_CHANGED');
 }
-async function verifyCompletedReceive(directory,checked,current) {
+async function verifyCompletedReceive(directory,checked,current,options={}) {
   for(const file of checked.view.map.values()) {
-    if(file.path==='project.json'||/\/(?:pending-response|last-error|unreceived-response)\.json$/.test(file.path))continue;
+    if(file.path==='project.json'||/\/(?:pending-response|last-error|unreceived-response)\.json$/.test(file.path)||
+      wfsVectorMutableReplayPath(file.path,checked.closure.vectors))continue;
     if(/^orders\/[a-f0-9]{64}\/capture\/capture\.json$/.test(file.path)&&
       checked.view.json(file.path).complete===false)continue;
     const actual=await hashPrivate(join(directory,file.path),file.bytes);
     need(actual.bytes===file.bytes&&actual.hash===file.sha256,'WFS_RECEIVING_RETAINED_MEMBER_CHANGED',file.path);
   }
-  await verifyOriginal(directory,checked.closure);
+  await verifyOriginal(directory,checked.closure,options);
   for(const source of current.sources)await readWfsCatalog(directory,source.id);
   for(const schema of current.schemas) {
     const actual=await readWfsDocument(join(directory,schema.directory));
@@ -599,7 +611,7 @@ async function requireOwnedTarget(directory,intent,view) {
   await visit();
 }
 /** Receive the exact whole project. Repeating a completed receive preserves later customer work. */
-export async function receiveWfsProject({directory,bundle,id,maxBytes = WFS_PROJECT_BUNDLE_DEFAULT_BYTES,signal}) {
+export async function receiveWfsProject({directory,bundle,id,maxBytes = WFS_PROJECT_BUNDLE_DEFAULT_BYTES,signal,python}) {
   signal?.throwIfAborted();
   const maximum=budget(maxBytes), checked=unpack(bundle,{maxBytes:maximum});
   directory=resolve(directory);
@@ -629,7 +641,7 @@ export async function receiveWfsProject({directory,bundle,id,maxBytes = WFS_PROJ
     if(state?.state==='COMPLETE'&&await exists(finalPath)) {
       await reconcileRetainedFile(finalPath,bundle.project.indexSha256);
       const current=await readWfsProject(directory);descendant(checked.index,current);
-      await verifyCompletedReceive(directory,checked,current);
+      await verifyCompletedReceive(directory,checked,current,{python,signal});
       // The complete receipt owns the transfer; later project revisions are never rewritten.
       return receivingResult(state,directory,current.revision,true);
     }
@@ -648,7 +660,7 @@ export async function receiveWfsProject({directory,bundle,id,maxBytes = WFS_PROJ
       await durableTree(parent);directories.add(parent);
       await exactFile(target,checked.view.get(file.path));
     }
-    signal?.throwIfAborted();await verifyOriginal(directory,checked.closure);signal?.throwIfAborted();
+    signal?.throwIfAborted();await verifyOriginal(directory,checked.closure,{python,signal});signal?.throwIfAborted();
     // Finish all payload parent entries before the ready marker or visible index.
     for(const path of [...directories].sort((a,b)=>b.length-a.length))await syncDirectory(path);
     await syncDirectory(dirname(directory));

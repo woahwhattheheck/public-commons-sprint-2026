@@ -24,8 +24,12 @@ export async function readWfsWorkspaceConfiguration(path) {
     need(plain(value.inputs??{})&&plain(value.merchantProfiles??{}),'Declare original input/profile objects.');
     for(const [name,item]of Object.entries(value.inputs??{})){
       need(alias.test(name)&&Object.keys(value.inputs).length<=128,'Declare at most128 original input aliases.');
-      fields(item,['label','path','kind','sha256'],'host input');need(item.kind==='project'&&sha.test(item.sha256??''),'Pin the complete project file and its SHA256.');
-      entry.inputs[name]={label:text(item.label??name,'input label',240),path:resolve(base,text(item.path,'input file')),kind:item.kind,sha256:item.sha256};
+      fields(item,['label','path','kind','sha256','manifestSha256'],'host input');
+      need(['project','vector','vector-profile'].includes(item.kind)&&sha.test(item.sha256??''),'Pin the complete original input file and its SHA256.');
+      need(item.kind==='vector'?item.manifestSha256===undefined||sha.test(item.manifestSha256):item.manifestSha256===undefined,
+        'When supplied, a vector manifest SHA256 must match the original native package.');
+      entry.inputs[name]={label:text(item.label??name,'input label',240),path:resolve(base,text(item.path,'input file')),kind:item.kind,sha256:item.sha256,
+        ...(item.manifestSha256?{manifestSha256:item.manifestSha256}:{})};
     }
     for(const [name,item]of Object.entries(value.merchantProfiles??{})){
       need(alias.test(name)&&Object.keys(value.merchantProfiles).length<=32,'Declare at most32 merchant profiles.');
@@ -43,7 +47,10 @@ export async function readWfsHostInput(entry,name,expectedSha256) {
   if(expectedSha256!==undefined)need(expectedSha256===input.sha256,'The requested input differs from its host selection.');
   const bytes=await readBytes(input.path,LIMITS.projectBytes);
   need(hash(bytes)===input.sha256,'The original input changed.','WFS_INPUT_CHANGED',409);
-  const value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));
+  if(input.kind==='vector')return {input,bytes,sha256:input.sha256};
+  const sourceText=new TextDecoder('utf-8',{fatal:true}).decode(bytes);
+  if(input.kind==='vector-profile')return {input,bytes,sourceText,sha256:input.sha256};
+  const value=JSON.parse(sourceText);
   need(value?.schema===('stellar-forge.wfs-project-bundle.v1'),'The original input format differs from its declaration.');
   return {input,bytes,value,sha256:input.sha256};
 }

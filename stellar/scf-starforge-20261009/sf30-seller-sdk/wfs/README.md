@@ -99,7 +99,7 @@ starforge wfs order --project /srv/wfs/parcels \
   --id acquire-parcels-1 --revision 3 --query QUERY_SHA --name "First acquisition"
 ```
 
-Every mutation requires a stable operation ID and the current project revision. Read `show` to obtain the current revision when joining an existing project. IDs contain 1–96 ASCII letters, digits, underscores or hyphens, beginning with a letter or digit. Reusing the same ID with different inputs is a conflict.
+Every source-project mutation requires a stable operation ID and the current project revision. Read `show` to obtain the current revision when joining an existing project. IDs contain 1–96 ASCII letters, digits, underscores or hyphens, beginning with a letter or digit. Reusing the same ID with different inputs is a conflict.
 
 An optional `--limits` JSON sets the original acquisition's `pageBytes`, `totalBytes`, `maxPages` and `requestTimeoutMs`. Acquisition retains the accepted prefix and its next request if a provider error, capacity limit or cancellation interrupts it.
 
@@ -133,6 +133,110 @@ The order view reports accepted rows, pages, bytes, next request, completeness, 
 The read interface displays original numeric lexemes as text; each feature's `featureJson` and the full raw files preserve the original JSON number tokens. The feature download writes the complete GeoJSON with the retained source and coordinate description.
 
 Coordinate representations remain literal. The project keeps the requested `srsName`, returned coordinate metadata and original geometry. Choose the source's advertised axis convention when specifying a bounding box. The desk preserves that representation throughout comparison and delivery.
+
+## Native GeoPackage and Shapefile delivery
+
+Open **Native vectors** in the same project browser to capture a completed order, review its field and coordinate mapping, produce native files, compare complete source editions, and receive an existing native ZIP. The CLI, browser and merchant MCP tools use the same original operation directories and native engine.
+
+Select the existing Python with Fiona/GDAL using `--python /absolute/venv/bin/python`. The application uses that executable for native inspection, export and receiving. The original source order is already retained; this workflow reads its complete original feature download.
+
+### Capture the selected order and its coordinate meaning
+
+Read `order-show` first. Use the actual coordinate reference and x/y interpretation of the returned source bytes. The requested WFS CRS, returned CRS metadata and original coordinate description remain in the saved binding. Replace `SOURCE_CRS` below with that reviewed source CRS.
+
+~~~sh
+starforge wfs vector-capture --project /srv/wfs/parcels \
+  --id native-source-1 --order ORDER_SHA \
+  --source-crs SOURCE_CRS --coordinate-order x,y \
+  --python /absolute/venv/bin/python
+
+starforge wfs vector-show --project /srv/wfs/parcels \
+  --id native-source-1 --python /absolute/venv/bin/python
+
+starforge wfs vector-document --project /srv/wfs/parcels \
+  --id native-source-1 --document profile \
+  --out /srv/wfs/operator/native-profile.json
+~~~
+
+The capture retains the original order binding, exact GeoJSON, source receipt, native selection, complete native feature catalog and ready export profile. Its default logical source ID derives from the original project, service endpoint and qualified type name, so later orders from the same source can be compared. `--source-id` and `--selection-id` select explicit existing logical identities when needed.
+
+Feature identity defaults to the original feature ID. To use actual source properties, pass `--identity` with a complete JSON file such as `{"mode":"fields","fields":["parcel_id"]}`. The native inspection keeps missing and duplicate identities with their original occurrences.
+
+### Review the complete profile and export
+
+Use the downloaded original profile as the starting point. Its `layers` map is keyed by the exact source layer IDs reported by native inspection. Review `formats`, native layer names, field order, per-field representation and target CRS using the [native mapping contract](../stac/vector/README.md#review-native-representation).
+
+The original `assignSourceCrs` and `sourceCoordinateBinding` remain attached to the capture. A new source interpretation belongs in a new capture. A `targetCrs` on that retained layer requests a transform through the existing native engine. The complete profile travels as exact JSON text, preserving original numeric tokens and additional native metadata.
+
+~~~sh
+starforge wfs vector-export --project /srv/wfs/parcels \
+  --id native-delivery-1 --capture native-source-1 \
+  --profile /srv/wfs/operator/native-profile.json \
+  --python /absolute/venv/bin/python
+
+starforge wfs vector-file --project /srv/wfs/parcels \
+  --id native-delivery-1 \
+  --out /srv/wfs/exports/parcels-native.zip \
+  --python /absolute/venv/bin/python
+~~~
+
+The original engine writes GeoPackage and Shapefile files, their companions, complete source copies, field mappings and feature-to-native-row bindings. It reopens the actual native files before the WFS operation records completion. The selected manifest identifies every native file and its original source. Native field capacities, exact-number representation and coordinate precision follow that same engine's mapping rules.
+
+### Compare and receive complete editions
+
+Capture the later completed order under a new native source ID such as `native-source-2`, keeping the same logical source and feature identity choices. Then compare both complete captures:
+
+~~~sh
+starforge wfs vector-compare --project /srv/wfs/parcels \
+  --id native-comparison-1 --before native-source-1 --after native-source-2 \
+  --python /absolute/venv/bin/python
+
+starforge wfs vector-changes --project /srv/wfs/parcels \
+  --id native-comparison-1 --offset 0 --limit 100 \
+  --python /absolute/venv/bin/python
+
+starforge wfs vector-file --project /srv/wfs/parcels \
+  --id native-comparison-1 \
+  --out /srv/wfs/exports/parcels-comparison.zip \
+  --python /absolute/venv/bin/python
+
+starforge wfs vector-receive --project /srv/wfs/received-parcels \
+  --id received-native-1 --source /srv/wfs/exports/parcels-native.zip \
+  --manifest-sha ORIGINAL_NATIVE_MANIFEST_SHA \
+  --python /absolute/venv/bin/python
+~~~
+
+The receiving project must already exist. Native delivery and comparison ZIPs are both accepted. The request always pins the complete archive SHA256; `--manifest-sha` also checks a separately supplied original manifest identity. Receiving reopens all selected original files through the native reader. The comparison's full delivery retains both complete source editions; paged changes keep each exact original change row as `valueJson`.
+
+### Continue the original operation
+
+~~~sh
+starforge wfs vector-list --project /srv/wfs/parcels --offset 0 --limit 100
+starforge wfs vector-resume --project /srv/wfs/parcels \
+  --id native-delivery-1 --python /absolute/venv/bin/python
+~~~
+
+Each native operation owns one stable ID, immutable original request and complete result. These operations use the original project lease and their own history under `native-vectors/`; the source project's existing revision history stays intact. Repeating an ID with its exact original inputs reopens its completed result or continues its saved native work.
+
+The browser saves the complete request in its project-specific IndexedDB journal before sending it. **Retry saved request** sends those same inputs after a lost reply. **Keep in history** retains the earlier request while allowing a deliberately new operation with corrected inputs. The server's original completed receipt remains authoritative when its response is interrupted.
+
+If a receiving command was interrupted immediately after saving its request and before copying the original ZIP, repeat `vector-receive` with the same ID and file. Once the archive is retained, `vector-resume` uses that original copy.
+
+Whole-project export and receiving include these native requests, source copies, profiles, native files, comparisons and interrupted operations under their original relative paths. Completed native manifests and their files are reopened before a received project becomes visible. Later legitimate continuation in the receiver is retained when the same project handover is replayed. The existing complete-project capacity applies to all included native bytes.
+
+### Use the original application and MCP host
+
+| Interface | Original native operations |
+| --- | --- |
+| Application actions | `vector-capture`, `vector-export`, `vector-compare`, `vector-receive`, `vector-resume` |
+| Application reads | `vectors`, `vector`, `vector-changes` |
+| Original file download | `vector` returns the complete ZIP; `vector-document` selects `manifest`, `inspection`, `profile` or `receiving` |
+| Merchant tools | `merchant_wfs_vector_capture`, `merchant_wfs_vector_export`, `merchant_wfs_vector_compare`, `merchant_wfs_vector_receive`, `merchant_wfs_vector_resume` |
+| Verified file reads | Existing `merchant_wfs_file_read` with `kind: "vector"` or `"vector-document"` |
+
+The existing host configuration's `inputs` accepts `kind: "vector"` for a complete ZIP and `kind: "vector-profile"` for a complete profile. Each entry keeps its original absolute or configuration-relative path and SHA256. A vector input may also pin `manifestSha256`. The export tool accepts either exact `profileJson` or one host-selected `profileInput`; receiving uses the original host alias and expected archive SHA256.
+
+Public API consumers can import these native functions from the existing `/seller/wfs` entry or the source-owned `/seller/wfs/vector` export. Applications, the CLI and MCP retain the original project and browser owner throughout the workflow.
 
 ## Compare editions and publish a dataset
 
