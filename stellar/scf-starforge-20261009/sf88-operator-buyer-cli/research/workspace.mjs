@@ -401,16 +401,35 @@ export async function openResearchWorkspace(directory){
     return bytes;
   }
   // Freeze one edition/review snapshot, then render only the files a caller consumes.
-  async function prepareExport(id,{includePages=true,includeNative=true}={}){
-    const e=await edition(id),generated=researchExportPlan(e.analysis,{title:e.record.label,query:e.query,coverage:e.coverage,decisions:e.decisions.items});
+  async function prepareExport(id,{includePages=true,includeNative=true,includeAnalysis=true}={}){
+    check(typeof includeAnalysis==='boolean','EXPORT_ANALYSIS_OPTION_INVALID');
+    const e=await edition(id,{records:includeAnalysis});
+    // Source consumers need the saved cohort, not its generated report set.
+    // Validate one response at a time and preserve the full export's coverage semantics.
+    if(!includeAnalysis){
+      const membership=new Set();
+      for(const p of e.pages){
+        const directory=join(e.directory,'pages',String(p.index).padStart(8,'0'));
+        const raw=await frozenPageBytes(directory,p,'response.json'),value=pageValue(raw,e.query.entity);
+        check(value.results.length===p.records&&value.meta.count===p.totalReported&&value.meta.next_cursor===p.nextCursor,'PAGE_METADATA_CHANGED');
+        for(const row of value.results)membership.add(row.id);
+        if(p.nativeSha256){
+          const nativeRaw=await frozenPageBytes(directory,p,'buyer-result.json');
+          nativeOf(parseJson(nativeRaw),raw);
+        }
+      }
+      if(e.coverage.state==='COMPLETE'&&e.coverage.reportedCounts.some(n=>n!==membership.size))
+        e.coverage.warnings.push('The unique received membership differs from a provider-reported count; records were retrieved over the stated period.');
+    }
+    const generated=includeAnalysis?researchExportPlan(e.analysis,{title:e.record.label,query:e.query,coverage:e.coverage,decisions:e.decisions.items}):{};
     check(plain(generated),'RESEARCH_EXPORT_INVALID');
     const renderers=new Map(Object.entries(generated).map(([name,render])=>{
       check(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,120}$/.test(name)&&typeof render==='function','EXPORT_NAME_INVALID');
       return [name,()=>Buffer.from(render())];
     }));
-    for(const [name,value] of Object.entries({'edition.json':e.record,'query.json':e.query,'coverage.json':e.coverage,'decisions.json':e.decisions,'analysis.json':e.analysis}))
+    for(const [name,value] of Object.entries({'edition.json':e.record,'query.json':e.query,'coverage.json':e.coverage,'decisions.json':e.decisions,...(includeAnalysis?{'analysis.json':e.analysis}:{})}))
       renderers.set(name,()=>jsonBytes(value));
-    renderers.set('report.html',()=>Buffer.from(renderResearchReport({title:e.record.label,query:e.query,coverage:e.coverage,analysis:e.analysis})));
+    if(includeAnalysis)renderers.set('report.html',()=>Buffer.from(renderResearchReport({title:e.record.label,query:e.query,coverage:e.coverage,analysis:e.analysis})));
     renderers.set('page-index.json',()=>jsonBytes({pages:e.pages}));
     if(includePages)for(const p of e.pages){
       const prefix='pages/'+String(p.index).padStart(8,'0'),directory=join(e.directory,prefix);
@@ -488,7 +507,8 @@ export async function openResearchWorkspace(directory){
     if(name==='buyer-result.json'&&nativeRaw)return nativeRaw;
     return frozenPageBytes(directory,p,name);
   }
-  return {root,query,saveQuery,listQueries,createEdition,edition,listEditions,receivePage,receiveBuyerResult,receiveResultFile,
+  // Extensions share the original workspace lock. A transaction must not call another mutation.
+  return {root,transaction:serial,query,saveQuery,listQueries,createEdition,edition,listEditions,receivePage,receiveBuyerResult,receiveResultFile,
     setDecision,copyDecisions,recoverPendingPage,gatherEdition,compare,report,exportFiles,exportEntries,exportManifest,exportFile,export:exportEdition,pageBytes,
     async close(){await pending;closed=true;}};
 }

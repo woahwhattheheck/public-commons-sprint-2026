@@ -11,7 +11,7 @@ existing accounting keys and ledger.
 
 ## Runtime and installation
 
-Use Node.js 20 or later on the original POSIX operator machine, its original
+Use Node.js 22.16 or later on the original POSIX operator machine, its original
 SF88 Python runtime and operator workspace, the maintained x402 core/stellar
 2.28.0 payment engine, and the maintained Stellar SDK satisfying **^16.3.0**.
 The browser needs the Freighter extension. Its companion Node package,

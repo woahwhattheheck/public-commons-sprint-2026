@@ -1,0 +1,30 @@
+{
+  "url": "https://data-api.ecb.europa.eu/service/datastructure/ECB/ECB_EXR1/1.0?references=none",
+  "final_url": "https://data-api.ecb.europa.eu/service/datastructure/ECB/ECB_EXR1/1.0?references=none",
+  "request_headers": {
+    "Accept": "application/vnd.sdmx.structure+xml;version=2.1",
+    "Accept-Encoding": "identity",
+    "User-Agent": "Commons-SDMX-source-capture/1.0"
+  },
+  "status": 200,
+  "response_headers": {
+    "Server": "myracloud",
+    "Date": "Mon, 12 Oct 2026 00:08:08 GMT",
+    "Content-Type": "application/vnd.sdmx.structure+xml;version=2.1",
+    "Transfer-Encoding": "chunked",
+    "Connection": "close",
+    "Cache-Control": "no-cache, no-store, max-age=0, must-revalidate",
+    "Content-Disposition": "attachment;filename=data.xml",
+    "Expires": "0",
+    "Pragma": "no-cache",
+    "Strict-Transport-Security": "max-age=31536000 ; includeSubDomains",
+    "Vary": "origin, access-control-request-method, access-control-request-headers",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "X-Xss-Protection": "0"
+  },
+  "retrieved_at": "2026-10-12T00:08:08.729350+00:00",
+  "path": "ecb-exr-dsd.xml",
+  "bytes": 24416,
+  "sha256": "90d31a494f6f839b3fa72c89c0afe74c81451cd2eb8b19d3e919182128f3e2a7"
+}

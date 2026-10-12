@@ -1,0 +1,49 @@
+{
+  "schema": "stellar-forge.nocodb-source.v1",
+  "server": "https://app.nocodb.com",
+  "apiVersion": "v3",
+  "baseId": "REPLACE_WITH_ACTUAL_BASE_ID",
+  "tableId": "REPLACE_WITH_ACTUAL_TABLE_ID",
+  "viewId": null,
+  "where": null,
+  "sourceOrder": [
+    {
+      "field": "REPLACE_WITH_ACTUAL_ID_FIELD",
+      "direction": "asc"
+    }
+  ],
+  "connection": {
+    "kind": "rest",
+    "tokenEnv": "NOCODB_READ_TOKEN",
+    "pageSize": 100,
+    "requestIntervalMs": 250,
+    "maxPageBytes": 16777216,
+    "maxCaptureBytes": 67108864,
+    "maxPages": 10000,
+    "maxRows": 1000000,
+    "timeoutMs": 300000
+  },
+  "queries": {
+    "catalog": {
+      "columns": {
+        "record_id": {
+          "source": "$recordId",
+          "type": "string",
+          "encoding": "identity-text"
+        },
+        "title": {
+          "source": "REPLACE_WITH_ACTUAL_TITLE_FIELD",
+          "providerType": "SingleLineText",
+          "type": "string"
+        },
+        "price_text": {
+          "source": "REPLACE_WITH_ACTUAL_PRICE_FIELD",
+          "providerType": "Decimal",
+          "type": "string",
+          "encoding": "number-text",
+          "nullable": true
+        }
+      }
+    }
+  }
+}

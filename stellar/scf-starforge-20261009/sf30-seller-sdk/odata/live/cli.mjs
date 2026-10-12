@@ -2,14 +2,15 @@
 import { writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { prepareDraft,prepareFromWorkspace,writePackage,readPackage,prepareBuyerHandoff,receivePage,readJson } from './client.mjs';
+import { prepareDraft,prepareFromWorkspace,templateFromWorkspace,writePackage,readPackage,prepareBuyerHandoff,receivePage,readJson } from './client.mjs';
 import { templatePlan,json } from './config.mjs';
 import { startODataMerchant } from './merchant.mjs';
 const HELP=`Live OData merchant and customer
 
 node odata/live/cli.mjs COMMAND [options]
 
-  template --catalog catalog.json --out plan.json
+  template --catalog catalog.json [--entity-set NAME] --out plan.json
+  template --workspace DIRECTORY --saved-plan ID --out plan.json
   package --catalog catalog.json --plan plan.json --query selection.json --out NEW_DIRECTORY
   package --workspace DIRECTORY --saved-plan ID --plan plan.json --operation ID --out NEW_DIRECTORY
   inspect --package DIRECTORY
@@ -33,7 +34,9 @@ export async function main(args=process.argv.slice(2)){
   const {command,options:o}=parse(args),options={allowLoopback:o['allow-loopback']==='true'};
   let result;
   if(command==='template'){
-    result=templatePlan(await readJson(required(o.catalog,'catalog')),{...(o.origin?{publicOrigin:o.origin}:{})});
+    if(o.workspace){const {openODataWorkspace}=await import('../workspace.mjs'),workspace=await openODataWorkspace({directory:resolve(o.workspace)});
+      try{result=await templateFromWorkspace(workspace,{planId:required(o['saved-plan'],'saved-plan'),publicOrigin:o.origin});}finally{await workspace.close();}}
+    else result=templatePlan(await readJson(required(o.catalog,'catalog')),{...(o.origin?{publicOrigin:o.origin}:{}),...(o['entity-set']?{entitySet:o['entity-set']}:{})});
     await writeFile(resolve(required(o.out,'out')),json(result),{flag:'wx',mode:0o600});result={path:resolve(o.out)};
   }else if(command==='package'){
     const plan=await readJson(required(o.plan,'plan'));let prepared;
