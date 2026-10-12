@@ -4,6 +4,7 @@ import { join, basename, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { validatePlan, planSha, PLAN_SCHEMA } from '../product.mjs';
 import { connectionForPlan, connectionSummary } from '../connection.mjs';
+import { normalizeBlockscoutDeployment } from '../deployment.mjs';
 import { BUNDLE_SCHEMA, reviewConnection, inspectConnectionBundle,
   prepareConnectionPackage, receiveConnectionBundle } from '../connection-setup.mjs';
 import { readPackage } from '../cli.mjs';
@@ -17,6 +18,7 @@ const TYPES = Object.freeze({
   sources: /^[a-f0-9]{64}$/, reviews: /^[a-f0-9]{64}$/,
   packages: /^[a-f0-9]{24}$/, bindings: /^[a-f0-9]{24}$/,
   'application-reviews': /^[a-f0-9]{24}$/, applications: /^[a-f0-9]{24}$/,
+  'application-revisions': /^[a-f0-9]{64}$/,
   'launch-reviews': /^[a-f0-9]{24}$/, runs: /^[a-f0-9-]{36}$/,
   operations: /^[a-f0-9-]{36}$/,
 });
@@ -135,7 +137,9 @@ function page(items, { after = '', limit = 30 } = {}) {
 }
 function safeSettings(value, packageDirectory) {
   keys(value, ['stateDirectory', 'facilitator', 'environmentFile', 'port', 'operationsPort',
-    'deskPort', 'drainGraceMs', 'allowLocalFacilitator']);
+    'deskPort', 'drainGraceMs', 'allowLocalFacilitator', 'deploymentMode']);
+  normalizeBlockscoutDeployment({ mode: value.deploymentMode ?? 'paid', facilitator: value.facilitator,
+    allowLocalFacilitator: value.allowLocalFacilitator ?? false });
   absolute(value.stateDirectory);
   const result = { ...value, packageDirectory };
   for (const name of ['port', 'operationsPort', 'deskPort'])
@@ -181,7 +185,7 @@ export async function openConnectionWorkspace({ directory } = {}) {
         current.settings?.packageDirectory === pkg.directory,
         'CONNECTION_WORKSPACE_APPLICATION_CHANGED',
         'The saved merchant was changed in Applications. Review its current configuration there before continuing.', 409);
-      return fn(model, selected);
+      return fn(model, selected, current);
     });
   }
   async function packageAt(id) {
@@ -268,6 +272,46 @@ export async function openConnectionWorkspace({ directory } = {}) {
       });
       return { review: row };
     }
+    if (action === 'deployment-review') {
+      keys(input, ['applicationId', 'expectedRevision', 'settings']);
+      need(/^[a-f0-9]{64}$/.test(input.expectedRevision ?? ''), 'CONNECTION_WORKSPACE_REVISION_REQUIRED');
+      keys(input.settings, ['deploymentMode', 'facilitator', 'environmentFile', 'allowLocalFacilitator']);
+      need(['paid', 'challenge-only'].includes(input.settings.deploymentMode),
+        'BLOCKSCOUT_DEPLOYMENT_MODE_INVALID', 'Select the mode for this reviewed deployment.');
+      return forApplication(input.applicationId, async (model, selected, current) => {
+        need(current.revision === input.expectedRevision, 'CONNECTION_WORKSPACE_APPLICATION_CHANGED',
+          'Reopen the current merchant revision before reviewing activation.', 409);
+        const { selected: pkg } = await packageAt(selected.packageId);
+        const { packageDirectory, ...originalSettings } = current.settings;
+        const changes = { ...input.settings }, updated = { ...originalSettings, ...changes };
+        // Null clears only optional references. Credential values never enter this request.
+        for (const key of ['facilitator', 'environmentFile'])
+          if (changes[key] === null) delete updated[key];
+        const settings = safeSettings(updated, pkg.directory);
+        need(hash(settings) !== hash(current.settings), 'CONNECTION_WORKSPACE_DEPLOYMENT_UNCHANGED',
+          'The selected deployment already has these settings.');
+        const review = await model.applicationsReview({ runtimeId: current.runtimeId, kind: 'blockscout',
+          label: current.label, settings, applicationId: current.id, expectedRevision: current.revision,
+          ...(current.homeId ? { homeId: current.homeId } : {}),
+          ...(current.providerId ? { providerId: current.providerId } : {}) });
+        need(hash(review.settings) !== hash(current.settings), 'CONNECTION_WORKSPACE_DEPLOYMENT_UNCHANGED',
+          'The selected deployment already has these normalized settings.');
+        need(review.applicationId === current.id && review.previousRevision === current.revision &&
+          review.settings.packageDirectory === packageDirectory &&
+          review.settings.stateDirectory === current.settings.stateDirectory,
+          'CONNECTION_WORKSPACE_APPLICATION_CHANGED', undefined, 409);
+        const row = await retained(root, 'application-reviews', review.id, {
+          bindingId: selected.bindingId, packageId: selected.packageId, original: review,
+          applicationId: current.id, previousRevision: current.revision,
+          deployment: { before: { mode: current.settings.deploymentMode ?? 'paid',
+            facilitator: current.settings.facilitator ?? null, environmentFile: current.settings.environmentFile ?? null,
+            allowLocalFacilitator: current.settings.allowLocalFacilitator ?? false },
+            after: { mode: settings.deploymentMode, facilitator: settings.facilitator ?? null,
+              environmentFile: settings.environmentFile ?? null, allowLocalFacilitator: settings.allowLocalFacilitator ?? false } },
+        });
+        return { review: row };
+      });
+    }
     if (action === 'application-save') {
       keys(input, ['reviewId']);
       const selected = await get('application-reviews', input.reviewId);
@@ -277,11 +321,38 @@ export async function openConnectionWorkspace({ directory } = {}) {
       const originalRequestId = raw.slice(0, 8) + '-' + raw.slice(8, 12) + '-' + raw.slice(12, 16) + '-' +
         raw.slice(16, 20) + '-' + raw.slice(20, 32);
       const result = await withRuntime(selected.bindingId,
-        model => model.applicationsSave({ requestId: originalRequestId, reviewId: selected.original.id }));
-      const row = await retained(root, 'applications', result.applicationId, {
+        model => model.applicationsSave({ requestId: originalRequestId, reviewId: selected.original.id,
+          ...(selected.applicationId ? { applicationId: selected.applicationId } : {}) }));
+      let row;
+      if (selected.applicationId) {
+        need(result.applicationId === selected.applicationId, 'CONNECTION_WORKSPACE_APPLICATION_CHANGED', undefined, 409);
+        const previous = await get('applications', selected.applicationId);
+        need(previous.bindingId === selected.bindingId && previous.packageId === selected.packageId,
+          'CONNECTION_WORKSPACE_APPLICATION_CHANGED', undefined, 409);
+        if (previous.revision === result.revision) {
+          need(previous.reviewId === selected.id, 'CONNECTION_WORKSPACE_APPLICATION_CHANGED', undefined, 409);
+          row = previous;
+        } else {
+          need(previous.revision === selected.previousRevision, 'CONNECTION_WORKSPACE_APPLICATION_CHANGED',
+            'Reopen the same saved deployment operation before changing the merchant again.', 409);
+          await retained(root, 'application-revisions', hash({ applicationId: previous.id, revision: previous.revision }),
+            { applicationId: previous.id, application: previous });
+          row = { ...previous, reviewId: selected.id, revision: result.revision,
+            previousRevision: previous.revision, updatedAt: operationCreatedAt };
+          // The original Applications save is already durable. Keep both exact desk
+          // revisions before moving its pointer; a lost write resumes that same save.
+          await retained(root, 'application-revisions', hash({ applicationId: row.id, revision: row.revision }),
+            { applicationId: row.id, application: row });
+          await saveJSON(pathFor(root, 'applications', row.id), row, true);
+        }
+      } else row = await retained(root, 'applications', result.applicationId, {
         bindingId: selected.bindingId, packageId: selected.packageId, reviewId: selected.id, revision: result.revision,
       });
-      return { ...result, originalRequestId, application: row };
+      return { ...result, originalRequestId, application: row,
+        ...(selected.applicationId ? { revisionRecords: {
+          previous: hash({ applicationId: row.id, revision: selected.previousRevision }),
+          current: hash({ applicationId: row.id, revision: row.revision }),
+        } } : {}) };
     }
     if (action === 'reconnect') {
       keys(input, ['applicationId']);
