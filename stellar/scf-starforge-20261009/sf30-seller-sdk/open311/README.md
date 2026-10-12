@@ -2,6 +2,8 @@
 
 Connect a public service-request endpoint, retain its original responses, review changing cases, assign internal work, and deliver a complete customer workspace. The same application provides a local browser desk, an operating CLI, a typed source client, original-file export, and receiving into another workspace.
 
+[Source collections](COLLECTIONS.md) extend that desk across complete fixed-date selections: durable run/pause/recovery, cap-aware subdivision with retained parent responses, consolidated case queues, every original source version, version-bound review, and complete collection reports and receiving. The collection workflow uses the same store, browser and merchant tools.
+
 Use **Node 22.13 or newer**. The workspace uses built-in SQLite; the protocol client and domain functions use only Node built-ins.
 
 ## Open the desk
@@ -14,7 +16,7 @@ node open311/cli.mjs serve --workspace /private/municipal-desk --port 0
 
 The command prints one compact startup JSON line containing the local URL, workspace ID and launch binding. The Applications launcher can pass --expected-workspace-id and --expected-binding-sha256 to reopen that exact workspace. Keep one persistent workspace directory so the connection records, captures, reviews and operation history reopen together. The browser interface and CLI use that same workspace.
 
-A connection has a stable ID, endpoint and optional jurisdiction. Its endpoint and jurisdiction remain bound to that ID after source capture. Add another connection ID for a different source.
+A connection has a stable ID, endpoint and optional jurisdiction. Its endpoint and jurisdiction remain bound to that ID after source capture or a saved collection plan. Add another connection ID for a different source.
 
 ## Connect an actual provider
 
