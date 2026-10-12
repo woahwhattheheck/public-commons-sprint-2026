@@ -217,3 +217,11 @@ The original **Delivery operations → Operating forecast** workspace now saves 
 ## Review the actual adoption cohort and prepare its evidence
 
 **Delivery operations → Cohort acceptance** evaluates the pinned proposal's original seven-/fourteen-day purchase cohort, accountable buyer/merchant/facilitator associations, complete useful output, returning intent groups, deployed recovery/support and source coverage. Its immutable review preserves all original observations, current/gross outcomes, exact quantities and findings. The same **Tranche completion** screen can select those exact reviews for the original paid-tranche preparation and complete export. Use [OPERATIONS-COHORT.md](OPERATIONS-COHORT.md) for the full operator, CLI, recovery and receiving workflow. Proposed targets and missing award/customer evidence retain their actual status.
+
+## Commission a complete customer installation
+
+**Delivery operations → Customer installations** brings the original task, source, commercial terms, selected deployments, receiving application and funded work into one usable assignment. Each save freezes a complete edition, selected original work/purchase/outcome records, acceptance results and retained source files. Operators can edit a later edition while continuing to read or export an earlier one.
+
+Use [INSTALLATIONS.md](INSTALLATIONS.md) for the complete commissioning, acceptance, operator recovery and independent receiving workflow. **Export complete handover** includes the whole original Operations case, every saved installation edition, the selected edition and a readable offline installation document. The receiving workspace opens that selected edition through its existing complete-case import.
+
+The matching Python and Node managed launch readers identify the full installed operating source, including these modules and mounted controls. Adopt both launch readers and the complete runtime together, then reopen the saved workspace from that release. Existing plan and case records continue in their original database.

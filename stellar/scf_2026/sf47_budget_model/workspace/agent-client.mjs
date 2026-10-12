@@ -367,6 +367,12 @@ export class GrantWorkspaceClient {
       portfolios:() => '/api/operations/' + cid() + '/portfolios',
       portfolio:() => '/api/operations/' + cid() + '/portfolios/' + id(args.portfolioId, 'portfolio'),
       review:() => '/api/operations/' + cid() + '/reviews/' + id(args.reviewId, 'review'),
+      installations:() => '/api/operations/' + cid() + '/installations',
+      installation:() => '/api/operations/' + cid() + '/installations/' + id(args.installationId,'installation') +
+        (args.revision === undefined ? '' : '?revision=' + integer(args.revision,'Installation edition',1,500)),
+      'installation-history':() => '/api/operations/' + cid() + '/installations/' + id(args.installationId,'installation') +
+        '/history?limit=' + integer(args.limit ?? 25,'Installation history page',1,100) +
+        (args.before === undefined ? '' : '&before=' + integer(args.before,'Earlier installation edition',1,500)),
       completion:() => '/api/operations/' + cid() + '/completion' +
         (args.asOfDate === undefined ? '' : '?asOfDate=' + encodeURIComponent(completionDate(args.asOfDate))),
     };
@@ -439,6 +445,37 @@ export class GrantWorkspaceClient {
       'GRANT_INVALID_INPUT', 'Use the original saved alternative ID, including base for the base allocation.');
     return this.#request('/api/operations/' + caseId + '/portfolio-selection',
       {body:{expectedVersion, portfolioId, alternativeId}, mutation:false});
+  }
+  installationSeed(caseId, expectedVersion) {
+    id(caseId,'operation'); integer(expectedVersion,'Current case version');
+    return this.#request('/api/operations/'+caseId+'/installation-seed',
+      {body:{expectedVersion},mutation:false});
+  }
+  installationPreview(caseId, body) {
+    id(caseId,'operation');
+    exact(body,['expectedVersion','installationId','expectedRevision','document'],
+      ['expectedVersion','installationId','expectedRevision','document']);
+    integer(body.expectedVersion,'Current case version'); integer(body.expectedRevision,'Current installation edition',0,500);
+    if(body.installationId!==null)id(body.installationId,'installation');
+    need(body.installationId===null?body.expectedRevision===0:body.expectedRevision>=1,
+      'GRANT_INVALID_INPUT','Select edition zero for a new installation or the original current installation edition.');
+    object(body.document,'Complete installation document');
+    return this.#request('/api/operations/'+caseId+'/installation-preview',{body,mutation:false});
+  }
+  installationSave(caseId, body) {
+    id(caseId,'operation');
+    exact(body,['expectedVersion','requestId','actor','note','installationId','expectedRevision','document','expectedPreviewSha256'],
+      ['expectedVersion','requestId','actor','note','installationId','expectedRevision','document','expectedPreviewSha256']);
+    integer(body.expectedVersion,'Current case version'); integer(body.expectedRevision,'Current installation edition',0,500);
+    requestId(body.requestId); sha(body.expectedPreviewSha256);
+    text(body.actor,'Actual installation operator',300); text(body.note,'Installation edition reason',12000);
+    if(body.installationId!==null)id(body.installationId,'installation');
+    need(body.installationId===null?body.expectedRevision===0:body.expectedRevision>=1,
+      'GRANT_INVALID_INPUT','Select edition zero for a new installation or the original current installation edition.');
+    object(body.document,'Complete installation document');
+    const {installationId,expectedRevision,document,expectedPreviewSha256,...original}=body;
+    return this.#request('/api/operations/'+caseId+'/command',{originalRequestId:body.requestId,
+      body:{...original,action:'installation.save',data:{installationId,expectedRevision,document,expectedPreviewSha256}}});
   }
   cohortSeed(caseId, expectedVersion, tranche) {
     id(caseId,'operation'); integer(expectedVersion,'Current case version'); integer(tranche,'Cohort tranche',2,3);
@@ -541,6 +578,8 @@ export class GrantWorkspaceClient {
       case:() => '/api/operations/' + id(args.caseId, 'operation') + '/export.zip',
       forecast:() => '/api/operations/' + id(args.caseId, 'operation') + '/forecasts/' + id(args.forecastId, 'forecast') + '/export.zip',
       portfolio:() => '/api/operations/' + id(args.caseId, 'operation') + '/portfolios/' + id(args.portfolioId, 'portfolio') + '/export.zip',
+      installation:() => '/api/operations/' + id(args.caseId,'operation') + '/installations/' + id(args.installationId,'installation') +
+        '/export.zip?revision=' + integer(args.revision,'Selected installation edition',1,500),
       source:() => '/api/operations/' + id(args.caseId, 'operation') + '/sources/' + id(args.sourceId, 'source'),
       completion:() => '/api/operations/' + id(args.caseId,'operation') + '/completion-reviews/' + id(args.reviewId,'review') + '/export.zip',
       cohort:() => '/api/operations/' + id(args.caseId,'operation') + '/cohort-reviews/' + id(args.reviewId,'review') + '/export.zip',

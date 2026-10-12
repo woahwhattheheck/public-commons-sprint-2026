@@ -314,13 +314,16 @@ export function mountInstallations({container,current,api,saveApi,session,mutati
     const matching=session.drafts[original.draftKey];
     if(matching?.token===original.draftToken){
       const laterEdits=!same(matching.document,original.document)||matching.note!==original.note;
-      delete session.drafts[original.draftKey];
       if(laterEdits){
-        matching.key=row.id;matching.installationId=row.id;matching.expectedRevision=row.revision;matching.dirty=true;
-        session.drafts[row.id]=matching;
-        if(session.draftKey===original.draftKey){session.draftKey=row.id;session.mode='edit';}
+        const occupying=session.drafts[row.id];
+        const retainedKey=occupying&&occupying.token!==matching.token?original.draftKey:row.id;
+        if(retainedKey!==original.draftKey)delete session.drafts[original.draftKey];
+        matching.key=retainedKey;matching.installationId=row.id;matching.expectedRevision=row.revision;matching.dirty=true;
+        session.drafts[retainedKey]=matching;
+        if(session.draftKey===original.draftKey){session.draftKey=retainedKey;session.mode='edit';}
         session.notice='Saved edition '+row.revision+'. Your later edits remain in the draft for its next edition.';
       }else{
+        delete session.drafts[original.draftKey];
         if(session.draftKey===original.draftKey){session.draftKey=null;session.mode='saved';session.selected={id:row.id,revision:row.revision};selectedRow=row;}
         session.notice='Saved complete installation edition '+row.revision+' with its original selected records and files.';
       }

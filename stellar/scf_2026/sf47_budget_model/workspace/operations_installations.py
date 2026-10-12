@@ -345,10 +345,11 @@ def report(snapshot, document):
         item["purchases"] += 1
         if row["state"] != "VOID" and row["settlementStatus"] == "SETTLED":
             item["settledAtomic"] += int(row["amountStroops"])
-        if row.get("feesStroops") is None:
-            item["unknownFees"] += 1
-        else:
-            item["reportedFeesAtomic"] += int(row["feesStroops"])
+        if row["state"] != "VOID":
+            if row.get("feesStroops") is None:
+                item["unknownFees"] += 1
+            else:
+                item["reportedFeesAtomic"] += int(row["feesStroops"])
     for row in groups.values():
         row["settledAtomic"], row["reportedFeesAtomic"] = str(row["settledAtomic"]), str(row["reportedFeesAtomic"])
     costs = {row["id"]: row for row in snapshot["plan"]["scenario"]["future_costs"]}

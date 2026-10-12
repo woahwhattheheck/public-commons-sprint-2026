@@ -16,8 +16,52 @@ from model import Problem, canonical
 SCHEMA = "stellar-forge.sf47.workspace-launch.v1"
 SELECTION_SCHEMA = "stellar-forge.sf47.workspace-selection.v1"
 SOURCE = Path(__file__).resolve().parent
-BOOT_FILES = ("../budget.py", "cli.py", "server.py", "model.py",
-              "launcher.mjs", "launch.mjs", "managed_launch.py")
+# Keep the original managed Python/Node source selection identical.
+BOOT_FILES = (
+    "../budget.py",
+    "cli.py",
+    "server.py",
+    "model.py",
+    "launcher.mjs",
+    "launch.mjs",
+    "managed_launch.py",
+    "workshare_intake.py",
+    "operations.py",
+    "operations_domain.py",
+    "operations_http.py",
+    "operations_cli.py",
+    "operations_intake.py",
+    "operations_support.py",
+    "operations_buyer.py",
+    "operations_completion.py",
+    "operations_cohort.py",
+    "operations_installations.py",
+    "forecast.py",
+    "portfolio.py",
+    "portfolio_schedule.py",
+    "index.html",
+    "app.mjs",
+    "style.css",
+    "operations.mjs",
+    "operations.css",
+    "operations_support.mjs",
+    "operations_buyer.mjs",
+    "operations_buyer.css",
+    "operations_completion.mjs",
+    "operations_completion.css",
+    "operations_cohort.mjs",
+    "operations_cohort.css",
+    "operations_installations.mjs",
+    "operations_installations.css",
+    "forecast.mjs",
+    "forecast.css",
+    "portfolio.mjs",
+    "portfolio.css",
+    "support_handoff.mjs",
+    "buyer_handoff.mjs",
+    "agent-client.mjs",
+    "agent-contracts.mjs"
+)
 PRIVATE_NAME = "managed-launch.json"
 
 
