@@ -471,6 +471,7 @@
     "./buyer/object": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-session.mjs",
     "./buyer/object-description": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-description.mjs",
     "./merchant/mcp": "./source/stellar-forge/mcp-merchant-operator/operator.mjs",
+    "./merchant/mcp/catalog": "./source/stellar-forge/mcp-merchant-operator/catalog.mjs",
     "./merchant/mcp/openapi": "./source/stellar-forge/mcp-merchant-operator/openapi-workspace.mjs",
     "./merchant/mcp/openapi/client": "./source/stellar-forge/mcp-merchant-operator/openapi-workspace-client.mjs",
     "./merchant/mcp/sf61-connection": "./source/stellar-forge/mcp-merchant-operator/sf61-connection.mjs",
@@ -770,17 +771,7 @@
     "./grant/demo": {
       "types": "./source/stellar/scf_2026/presentation/reviewer/workspace.d.mts",
       "import": "./source/stellar/scf_2026/presentation/reviewer/workspace.mjs"
-    },
-    "./merchant/mcp/n8n": {
-      "types": "./source/stellar-forge/mcp-merchant-operator/n8n-workspace.d.mts",
-      "import": "./source/stellar-forge/mcp-merchant-operator/n8n-workspace.mjs"
-    },
-    "./merchant/mcp/n8n/client": {
-      "types": "./source/stellar-forge/mcp-merchant-operator/n8n-workspace-client.d.mts",
-      "import": "./source/stellar-forge/mcp-merchant-operator/n8n-workspace-client.mjs"
-    },
-    "./merchant/n8n/agent-operations": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/n8n/agent-operations.mjs",
-    "./merchant/n8n/transfer-format": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/n8n/transfer-format.mjs"
+    }
   },
   "nativePeers": {
     "@x402/core": {

@@ -529,7 +529,7 @@ export interface N8nFileChunk {
   exportId: Sha256;
   manifestSha256: Sha256;
   readId: string;
-  file: { name: N8nFileRequest['file']; bytes: number; sha256: Sha256; type: string };
+  file: { name: N8nFileRequest['file']; bytes: number; sha256: Sha256; contentType: string };
   offset: number;
   bytesRead: number;
   nextOffset: number | null;
