@@ -17,6 +17,9 @@ from .dataset import RowSummary, RelationalWriter, all_headers, export_query, qu
 from .delivery import ReceivedPackage, Sink, azure_sql, html_report, power_query, readme
 from .measures import currency_context, measure_profile, project_measures
 from .projection import FAMILIES, Projection, available_fields, data_dictionary, selected_fields
+from .timephased_contract import MAX_FACTS, PROJECTION as TIMEPHASED_PROJECTION, normalize_profile as timephased_profile
+from .timephased_native import capture as capture_timephased
+from .timephased import project_rows as project_timephased
 
 ACTIONS = frozenset({
     "archive_save", "archive_review", "archive_publish", "archive_query_export",
@@ -101,10 +104,12 @@ class ArchiveWorkspace:
             edition_ids.add(eid)
         coverage = available_fields(self.portfolio.read_edition(member["edition_id"]) for member in members)
         profile = value.get("profile") or {}
-        require(isinstance(profile, dict) and set(profile) <= {"columns", "metrics"},
+        require(isinstance(profile, dict) and set(profile) <= {"columns", "metrics", "timephased"},
                 "archive_profile", "Select original report columns and exact-grain metrics.")
         columns = selected_fields({"columns": profile["columns"]} if "columns" in profile else {}, coverage)
         normalized = {**columns, "metrics": measure_profile(profile.get("metrics"), coverage)}
+        if profile.get("timephased") is not None:
+            normalized["timephased"] = timephased_profile(profile["timephased"], coverage)
         return {"schema": "portfolio.archive-definition.v1", "name": name, "description": description,
                 "members": members, "profile": normalized}
 
@@ -154,28 +159,92 @@ class ArchiveWorkspace:
             return self._run_locked(request_id, kind, arguments)
 
     def _run_locked(self, request_id, kind, arguments):
-        """Called under the original B lock; A supplies its existing durable operation."""
+        """B owns this action; acquire native before A only for missing calculations."""
         checked_id(request_id)
         require(kind in ACTIONS and isinstance(arguments, dict),
                 "archive_action", "Select an original archive action and its saved arguments.")
+        # Completed requests, publication and receiving use retained source only.
+        # Release the initial A lock before taking the process-wide native lock:
+        # original intake/export/capture use native -> A in this same process.
         with self.portfolio.store.operation(request_id, kind, arguments) as operation:
             completed = operation.result()
             if completed is not None:
                 return completed
             self._check_running()
-            if kind == "archive_save":
-                result = self._save(request_id, arguments)
-            elif kind == "archive_review":
-                result = self._review(request_id, arguments, operation)
-            elif kind == "archive_publish":
-                result = self._publish(request_id, arguments, operation)
-            elif kind == "archive_query_export":
-                result = self._query_export(request_id, arguments, operation)
-            elif kind == "archive_inspect":
-                result = self._inspect(arguments)
-            else:
-                result = self._receive(request_id, arguments, operation)
-            return operation.complete(result)
+            if kind != "archive_review" or not self._needs_native(arguments, operation):
+                return operation.complete(self._dispatch(request_id, kind, arguments, operation))
+        with self.portfolio.native.locked():
+            with self.portfolio.store.operation(request_id, kind, arguments) as operation:
+                completed = operation.result()
+                if completed is not None:
+                    return completed
+                self._check_running()
+                return operation.complete(self._dispatch(request_id, kind, arguments, operation))
+
+    def _dispatch(self, request_id, kind, arguments, operation):
+        if kind == "archive_save":
+            return self._save(request_id, arguments)
+        if kind == "archive_review":
+            return self._review(request_id, arguments, operation)
+        if kind == "archive_publish":
+            return self._publish(request_id, arguments, operation)
+        if kind == "archive_query_export":
+            return self._query_export(request_id, arguments, operation)
+        if kind == "archive_inspect":
+            return self._inspect(arguments)
+        return self._receive(request_id, arguments, operation)
+
+    def _timephased_limit(self, definition):
+        profile = definition["profile"].get("timephased")
+        if profile is None:
+            return
+        assignments = sum(len(edition["model"]["assignments"]) for _, edition in self._selected(definition))
+        facts = assignments * len(profile["periods"]) * len(profile["series"])
+        require(facts <= MAX_FACTS, "timephased_fact_limit",
+                "Keep this complete cohort calculation within two million assignment-period facts.",
+                {"facts": facts, "assignments": assignments, "periods": len(profile["periods"]),
+                 "series": len(profile["series"])})
+
+    def _needs_native(self, args, operation):
+        require(set(args) == {"cohort_id", "expected_revision"}, "archive_review",
+                "Review the current saved cohort revision.")
+        cohort = self._index(args["cohort_id"])
+        if self._replay(cohort, operation.request_id, "archive_review", args) is not None:
+            return False
+        if args["expected_revision"] != cohort["revision"]:
+            raise TargetError("STALE_REVISION", "Reopen the selected cohort before reviewing its reporting projection.")
+        if operation.phase("review") is not None:
+            return False
+        definition = self.store.read(cohort["definition_sha256"])
+        if definition["profile"].get("timephased") is None:
+            return False
+        self._timephased_limit(definition)
+        if operation.phase("timephased-inputs") is not None:
+            return False
+        return any(operation.phase("timephased-" + row["edition_id"]) is None
+                   for row in definition["members"])
+
+    def _capture_inputs(self, definition, operation):
+        profile = definition["profile"].get("timephased")
+        if profile is None:
+            return None
+        self._timephased_limit(definition)
+        retained = operation.phase("timephased-inputs")
+        if retained is None:
+            retained = {}
+            for member, edition in self._selected(definition):
+                self._check_running()
+                phase = "timephased-" + edition["id"]
+                selected = operation.phase(phase)
+                if selected is None:
+                    selected = capture_timephased(self.portfolio, self.store, edition, profile,
+                        operation.path / "timephased" / (edition["id"] + ".jsonl"), stopped=self.stopped)
+                    operation.checkpoint(phase, selected)
+                retained[edition["id"]] = selected
+            operation.checkpoint("timephased-inputs", retained)
+        require(isinstance(retained, dict) and set(retained) == {row["edition_id"] for row in definition["members"]},
+                "timephased_original_inputs", "Retain one exact native calculation for every selected project edition.")
+        return retained
 
     def _save(self, request_id, args):
         require(set(args) <= {"cohort_id", "expected_revision", "name", "description", "members", "profile"},
@@ -199,28 +268,56 @@ class ArchiveWorkspace:
         cohort.pop("review_sha256", None)
         return self._commit(cohort, request_id, "archive_save", args, {"definition_sha256": ref["sha256"]})
 
-    def _summary(self, definition):
+    def _emit_projection(self, definition, emit, *, timephased_inputs=None, directory=None, closure=None):
         profile = definition["profile"]
-        summary = RowSummary(all_headers(profile))
-        projection = Projection(profile, summary.emit)
+        projection = Projection(profile, emit)
         findings, totals = [], []
+        selected_time = profile.get("timephased")
+        phase_result = {"captures": [], "totals_count": 0, "totals_preview": []}
+        if selected_time is not None:
+            self._timephased_limit(definition)
+            require(isinstance(timephased_inputs, dict)
+                    and set(timephased_inputs) == {row["edition_id"] for row in definition["members"]},
+                    "timephased_original_inputs", "Use every exact retained native calculation in this cohort.")
+            require(directory is not None, "timephased_scratch", "Select this original action's scratch directory.")
+            Path(directory).mkdir(parents=True, exist_ok=True, mode=0o700)
+        else:
+            require(timephased_inputs is None, "timephased_unselected",
+                    "This original reporting profile has no native period calculation.")
         for member, edition in self._selected(definition):
+            if closure is not None:
+                closure.edition(edition["id"])
             projection.member(member, edition)
             current, _, errors = project_measures(member, edition, profile["metrics"],
-                                                  emit=lambda row: summary.emit("measure_contributions", row))
+                                                  emit=lambda row: emit("measure_contributions", row))
             for row in current:
-                summary.emit("measure_totals", row)
+                emit("measure_totals", row)
             totals.extend(current)
             common = {"project_key": member["project_key"], "edition_id": edition["id"]}
             for finding in errors:
                 projection.finding(common, finding, "reporting")
             findings.extend({**common, **row} for row in edition.get("findings", []))
             findings.extend({**common, **row} for row in errors)
+            if selected_time is not None:
+                original = timephased_inputs[edition["id"]]
+                result = project_timephased(member, edition, selected_time, original, self.store, emit,
+                                           directory, stopped=self.stopped)
+                if closure is not None:
+                    closure.operator_file(original["sha256"], original["bytes"])
+                phase_result["captures"].append(result["capture"])
+                phase_result["totals_count"] += result["totals_count"]
+                available = 200 - len(phase_result["totals_preview"])
+                phase_result["totals_preview"].extend(result["totals_preview"][:available])
+                for finding in result["findings"]:
+                    projection.finding(common, finding, "timephased")
+                findings.extend({**common, **row} for row in result["findings"])
         findings.extend(projection.relationship_findings)
         coverage = available_fields(edition for _, edition in self._selected(definition))
         selected = {family: set(profile["columns"].get(family, [])) for family in FAMILIES}
         metric_family = "tasks" if profile["metrics"]["grain"] == "leaf_tasks" else profile["metrics"]["grain"]
         selected[metric_family].update(item["field"] for item in profile["metrics"]["measures"])
+        if selected_time is not None:
+            selected["assignments"].update(item["field"] for item in selected_time["series"])
         for family, fields in coverage.items():
             for info in fields:
                 if info["field"] in selected[family] and len(info["definitions"]) > 1:
@@ -231,7 +328,14 @@ class ArchiveWorkspace:
                     selected_finding = {"id": digest(finding), **finding}
                     findings.append(selected_finding)
                     projection.finding({"project_key": None, "edition_id": None}, selected_finding, "reporting")
-        return {**summary.value(), "findings": findings, "measure_totals": totals, "field_coverage": coverage}
+        return {"findings": findings, "measure_totals": totals, "field_coverage": coverage,
+                **({"timephased": phase_result} if selected_time is not None else {})}
+
+    def _summary(self, definition, *, timephased_inputs=None, directory=None):
+        summary = RowSummary(all_headers(definition["profile"]))
+        metadata = self._emit_projection(definition, summary.emit, timephased_inputs=timephased_inputs,
+                                         directory=directory)
+        return {**summary.value(), **metadata}
 
     def _review(self, request_id, args, operation):
         require(set(args) == {"cohort_id", "expected_revision"}, "archive_review", "Review the current saved cohort revision.")
@@ -244,12 +348,15 @@ class ArchiveWorkspace:
         selected = operation.phase("review")
         if selected is None:
             definition = self.store.read(cohort["definition_sha256"])
+            timephased_inputs = self._capture_inputs(definition, operation)
             review = {"schema": "portfolio.archive-review.v1", "cohort_id": cohort["id"],
                       "cohort_revision": cohort["revision"] + 1, "definition_sha256": cohort["definition_sha256"],
                       "name": definition["name"], "description": definition["description"],
                       "members": definition["members"], "profile": definition["profile"],
-                      "projection": "portfolio.archive-projection.v1", "created_at": now(),
-                      **self._summary(definition)}
+                      "projection": TIMEPHASED_PROJECTION if timephased_inputs is not None else "portfolio.archive-projection.v1",
+                      "created_at": now(),
+                      **({"timephased_inputs": timephased_inputs} if timephased_inputs is not None else {}),
+                      **self._summary(definition, timephased_inputs=timephased_inputs, directory=self._stage(request_id))}
             ref = self._put(review)
             selected = operation.checkpoint("review", {"sha256": ref["sha256"]})
         review = self.store.read(selected["sha256"])
@@ -298,27 +405,16 @@ class ArchiveWorkspace:
             sink = Sink(stage / "payload")
             closure = SourceClosure(self.portfolio, self.store, sink)
             writer = RelationalWriter(stage / "derived", definition["profile"])
-            projection = Projection(definition["profile"], writer.emit)
-            totals = []
             try:
-                for member, edition in self._selected(definition):
-                    closure.edition(edition["id"])
-                    projection.member(member, edition)
-                    current, _, errors = project_measures(member, edition, definition["profile"]["metrics"],
-                        emit=lambda row: writer.emit("measure_contributions", row))
-                    for row in current:
-                        writer.emit("measure_totals", row)
-                    totals.extend(current)
-                    for finding in errors:
-                        projection.finding({"project_key": member["project_key"], "edition_id": edition["id"]}, finding, "reporting")
-                for finding in review["findings"]:
-                    if finding.get("code") == "archive_definition_variation" and "project_key" not in finding:
-                        projection.finding({"project_key": None, "edition_id": None}, finding, "reporting")
+                metadata = self._emit_projection(definition, writer.emit,
+                    timephased_inputs=review.get("timephased_inputs"), directory=stage / "period-totals", closure=closure)
                 dataset = writer.finish(sink)
             finally:
                 writer.close()
+            totals = metadata["measure_totals"]
             require(dataset["tables"] == review["tables"] and dataset["table_sha256"] == review["table_sha256"]
-                    and dataset["columns"] == review["columns"] and totals == review["measure_totals"],
+                    and dataset["columns"] == review["columns"] and totals == review["measure_totals"]
+                    and metadata.get("timephased") == review.get("timephased"),
                     "archive_projection_changed", "The current projection differs from the operator's exact saved review.")
             sink.add_bytes("cohort.json", canonical(definition), role="cohort_definition")
             sink.add_bytes("data-dictionary.json", canonical(data_dictionary(definition["profile"], dataset["columns"])), role="data_dictionary")
@@ -495,9 +591,11 @@ class ArchiveWorkspace:
             definition_ref = self._put(definition)
             require(definition_ref["sha256"] == review["definition_sha256"],
                     "archive_received_definition_hash", "The restored source cohort differs from its original reviewed definition.")
-            recalculated = self._summary(definition)
+            recalculated = self._summary(definition, timephased_inputs=review.get("timephased_inputs"),
+                                           directory=stage / "period-totals")
             require(all(recalculated[key] == review[key] for key in
-                        ("tables", "table_sha256", "columns", "measure_totals")),
+                        ("tables", "table_sha256", "columns", "measure_totals"))
+                    and recalculated.get("timephased") == review.get("timephased"),
                     "archive_received_source_projection", "The reporting database differs from the complete restored native source projection.")
             self._put(review)
             artifacts = []
