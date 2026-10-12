@@ -65,7 +65,8 @@
     "stellar/scf-starforge-20261009/partners/coingecko-stellar-market",
     "stellar/scf-starforge-20261009/sf61-bazaar-explorer",
     "stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent",
-    "stellar/scf-starforge-20261009/partners/unstructured"
+    "stellar/scf-starforge-20261009/partners/unstructured",
+    "stellar/scf_2026/presentation/reviewer"
   ],
   "browserAssets": [
     {
@@ -455,7 +456,8 @@
     "baserow-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/publisher/cli.mjs",
     "baserow-deployment": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/deployment-cli.mjs",
     "baserow-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/cli.mjs",
-    "stac": "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/cli.mjs"
+    "stac": "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/cli.mjs",
+    "grant-demo": "stellar/scf_2026/presentation/reviewer/cli.mjs"
   },
   "exports": {
     "./seller/opencage": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opencage/index.mjs",
@@ -1134,7 +1136,11 @@
     "./seller/stac/processing": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/processing/workspace.mjs",
     "./seller/stac/processing/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/processing/provider.mjs",
     "./buyer/stac/processing": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/processing/portable.mjs",
-    "./seller/stac/processing/cirrus": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/processing/cirrus.mjs"
+    "./seller/stac/processing/cirrus": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/processing/cirrus.mjs",
+    "./grant/demo": {
+      "types": "./source/stellar/scf_2026/presentation/reviewer/workspace.d.mts",
+      "import": "./source/stellar/scf_2026/presentation/reviewer/workspace.mjs"
+    }
   },
   "nativePeers": {
     "@x402/core": {
