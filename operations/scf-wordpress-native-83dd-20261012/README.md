@@ -113,7 +113,7 @@ python -B checkpoint_frames.py \
   --output /absolute/private/SCF_WordPress_Control_Checkpoint.json
 ```
 
-Save that exact small file through the operator's existing persistent file workflow and retain the returned file identity and version. The source carrier contains no private checkpoint. The emitted native failure digest remains the selection for recovery.
+Save that exact small file through the operator's existing persistent file workflow and retain the returned file identity and version. The source carrier contains no private checkpoint. After the actual native command ends, its existing full continuation archive also carries the retained checkpoint, caught error, restore journal and courier-adoption metadata. The emitted native failure digest remains the selection for recovery.
 
 A lost portion of the transfer can be retrieved from the same retained courier without rereading the entire record:
 
@@ -121,7 +121,7 @@ A lost portion of the transfer can be retrieved from the same retained courier w
 {"action":"checkpoint-read","sha256":"ACTUAL_CHECKPOINT_SHA256","offset":0,"limit":12288}
 ```
 
-These offsets refer to compressed bytes. Repeat the same selection and advance using `next_offset`. `{"action":"checkpoint"}` obtains the current eligible checkpoint; an unchanged checkpoint retains the same raw digest. Ordinary status and heartbeat responses stay concise and never resend its full data.
+These offsets refer to compressed bytes. Repeat the same selection and advance using `next_offset`. `{"action":"checkpoint"}` resends the current eligible checkpoint's complete frames; an unchanged checkpoint retains the same raw digest. Ordinary status and heartbeat responses stay concise and never resend its full data.
 
 ### Restore through the original receiver
 
