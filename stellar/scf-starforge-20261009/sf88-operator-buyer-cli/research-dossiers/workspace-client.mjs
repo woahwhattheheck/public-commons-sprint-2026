@@ -110,7 +110,8 @@ export class ResearchWorkspaceClient{
   #json(route,body,options={}){
     return this.#run(async()=>{
       const bytes=body===undefined?undefined:JSON.stringify(body);
-      const maximum=/^\/api\/dossiers\/[^/]+\/source-bundles\/(?:preview|receive)(?:\?projection=metadata)?$/.test(route)
+      const maximum=/^\/api\/dossiers\/[^/]+\/citation-updates\/reviews(?:\?projection=metadata)?$/.test(route)?16*1024*1024:
+        /^\/api\/dossiers\/[^/]+\/source-bundles\/(?:preview|receive)(?:\?projection=metadata)?$/.test(route)
         ?128*1024*1024+65536:96*1024*1024+65536;
       need(bytes===undefined||Buffer.byteLength(bytes)<=maximum,'RESEARCH_REQUEST_TOO_LARGE');
       return this.#request(route,{...options,body:bytes,headers:{...(options.headers??{}),
@@ -215,6 +216,8 @@ export class ResearchWorkspaceClient{
   startCrossref(id,operationId,{expectedPlanSha256}={}){return this.#json(operationPath(id,operationId)+'/start',{expectedPlanSha256});}
   stopCrossref(id,operationId){return this.#json(operationPath(id,operationId)+'/stop',{});}
   receiveCrossref(id,operationId,input){return this.#json(operationPath(id,operationId)+'/receive?projection=metadata',input);}
+  citationUpdates(id,options={}){return this.#json(dossierPath(id)+'/citation-updates'+parameters(options));}
+  reviewCitationUpdate(id,input){return this.#json(dossierPath(id)+'/citation-updates/reviews?projection=metadata',input);}
 
   objectInputs(id,{after,snapshot,limit,...options}={}){
     return this.#json(dossierPath(id)+'/pipelines/objects'+parameters({after,snapshot,limit}),undefined,options);
@@ -271,9 +274,9 @@ export class ResearchWorkspaceClient{
       return saved;
     }));
   }
-  exportDossier(id,{format='json.gz',file,...options}={}){
+  exportDossier(id,{format='json.gz',file,revision,...options}={}){
     need(['json','json.gz','md','html'].includes(format),'EXPORT_FORMAT_INVALID');
-    return this.#download(dossierPath(id)+'/export'+parameters({format}),file,options);
+    return this.#download(dossierPath(id)+'/export'+parameters({format,revision}),file,options);
   }
   exportCrossrefEdition(id,operationId,{file,...options}={}){
     return this.#download(operationPath(id,operationId)+'/edition',file,options);
