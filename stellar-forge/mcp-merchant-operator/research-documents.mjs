@@ -76,7 +76,7 @@ export async function callResearchDocuments(client,name,args,{source}={}){
 }
 
 /** Uses the existing Research download, export ledger and complete chunk reader. */
-export async function exportResearchDocuments(client,args,{file}={}){
+export async function exportResearchDocuments(client,args,{file,download=work=>work()}={}){
   const {documents,pipelines}=facades(client),spec=RESEARCH_DOCUMENT_EXPORTS[args.kind];
   if(!spec)throw failure('INVALID_PARAMS','Select an original document or pipeline export.');
   const common=['workspace','dossierId','kind','expectedSha256'],id=args.dossierId;
@@ -86,21 +86,21 @@ export async function exportResearchDocuments(client,args,{file}={}){
     exact(args,[...common,'purchaseId','editionId','expectedEditionSha256'],
       ['workspace','dossierId','kind','expectedEditionSha256']);
     const original=documentSelection(args);
-    result=await documents.download(id,{...options,selection:original,kind:spec.documentFile,
-      expectedEditionSha256:args.expectedEditionSha256});
+    result=await download(()=>documents.download(id,{...options,selection:original,kind:spec.documentFile,
+      expectedEditionSha256:args.expectedEditionSha256}));
     selection={dossierId:id,...original,expectedEditionSha256:args.expectedEditionSha256};
   }else if(spec.pipelinePart){
     const field=spec.pipelinePart==='input'?'inputId':'outputId';
     exact(args,[...common,'operationId',field],['workspace','dossierId','kind','operationId',field]);
-    result=await pipelines[spec.pipelinePart==='input'?'downloadInput':'downloadOutput'](
-      id,args.operationId,args[field],options);
+    result=await download(()=>pipelines[spec.pipelinePart==='input'?'downloadInput':'downloadOutput'](
+      id,args.operationId,args[field],options));
     selection={dossierId:id,operationId:args.operationId,[field]:args[field]};
   }else{
     exact(args,[...common,'operationId','outputId','editionId','expectedEditionSha256'],
       ['workspace','dossierId','kind','expectedEditionSha256']);
     const original=pipelineSelection(args);
-    result=await pipelines.downloadReceived(id,{...options,selection:original,kind:spec.pipelineFile,
-      expectedEditionSha256:args.expectedEditionSha256});
+    result=await download(()=>pipelines.downloadReceived(id,{...options,selection:original,kind:spec.pipelineFile,
+      expectedEditionSha256:args.expectedEditionSha256}));
     selection={dossierId:id,...original,expectedEditionSha256:args.expectedEditionSha256};
   }
   return {result,selection};

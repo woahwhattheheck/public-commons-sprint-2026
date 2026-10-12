@@ -205,24 +205,38 @@ export class MerchantResearchWorkspaces{
   }
   async #retain(entry,args){
     const spec=kind(args.kind),temporary=join(entry.directory,'.export-'+randomUUID()+'.'+spec.extension);
-    let result,selection;
+    let result,selection,verification;
+    const download=async work=>{
+      try{return await work();}
+      catch(error){
+        if(error.code!=='RESEARCH_EXPORTED_FILE_CHANGED'||error.destinationPublished!==true||
+          error.file?.file!==temporary)throw error;
+        // The original receiver completed this file. Verify and retain those
+        // actual bytes before reporting the reviewed-digest mismatch.
+        const original=await openResearchSource(temporary,256*1024*1024,{sha256:checkedDigest(error.file.sha256)});
+        try{if(original.bytes!==error.file.bytes)throw failure('RESEARCH_EXPORT_CHANGED','The completed download length differs.');}
+        finally{await original.close();}
+        verification={state:'DIGEST_MISMATCH',expectedSha256:args.expectedSha256,actualSha256:error.file.sha256};
+        return error.file;
+      }
+    };
     try{
       if(args.kind.startsWith('document-')||args.kind.startsWith('pipeline-')){
-        ({result,selection}=await exportResearchDocuments(entry.client,args,{file:temporary}));
+        ({result,selection}=await exportResearchDocuments(entry.client,args,{file:temporary,download}));
       }else if(args.kind.startsWith('clinicaltrials-')){
-        ({result,selection}=await exportResearchClinicalTrials(entry.client,args,{file:temporary}));
+        ({result,selection}=await exportResearchClinicalTrials(entry.client,args,{file:temporary,download}));
       }else if(spec.format){
         exact(args,['workspace','dossierId','kind','expectedSha256'],['workspace','dossierId','kind']);
-        result=await entry.client.exportDossier(args.dossierId,{format:spec.format,file:temporary,expectedSha256:args.expectedSha256});
+        result=await download(()=>entry.client.exportDossier(args.dossierId,{format:spec.format,file:temporary,expectedSha256:args.expectedSha256}));
         selection={dossierId:args.dossierId,revision:result.revision??null};
       }else if(args.kind==='crossref-edition'){
         exact(args,['workspace','dossierId','kind','operationId','expectedSha256'],['workspace','dossierId','kind','operationId']);
-        result=await entry.client.exportCrossrefEdition(args.dossierId,args.operationId,{file:temporary,expectedSha256:args.expectedSha256});
+        result=await download(()=>entry.client.exportCrossrefEdition(args.dossierId,args.operationId,{file:temporary,expectedSha256:args.expectedSha256}));
         selection={dossierId:args.dossierId,operationId:args.operationId};
       }else if(args.kind==='retained-edition'){
         exact(args,['workspace','dossierId','kind','editionId','revision','expectedSha256'],['workspace','dossierId','kind','editionId']);
-        result=await entry.client.exportRetainedEdition(args.dossierId,args.editionId,{file:temporary,
-          revision:args.revision,expectedSha256:args.expectedSha256});
+        result=await download(()=>entry.client.exportRetainedEdition(args.dossierId,args.editionId,{file:temporary,
+          revision:args.revision,expectedSha256:args.expectedSha256}));
         selection={dossierId:args.dossierId,editionId:args.editionId,revision:result.revision??null};
       }else if(['source-content','source-record','source-file'].includes(args.kind)){
         const fields=['workspace','dossierId','kind','editionId','key','revision','expectedSha256'];
@@ -231,14 +245,14 @@ export class MerchantResearchWorkspaces{
         exact(args,fields,required);
         const options={editionId:args.editionId,key:args.key,revision:args.revision,file:temporary,
           expectedSha256:args.expectedSha256};
-        result=args.kind==='source-file'?await entry.client.exportSourceFile(args.dossierId,{...options,name:args.fileName}):
-          await entry.client.exportSource(args.dossierId,{...options,part:args.kind==='source-record'?'record':'content'});
+        result=await download(()=>args.kind==='source-file'?entry.client.exportSourceFile(args.dossierId,{...options,name:args.fileName}):
+          entry.client.exportSource(args.dossierId,{...options,part:args.kind==='source-record'?'record':'content'}));
         selection={dossierId:args.dossierId,editionId:args.editionId,key:args.key,
           revision:result.revision,occurrenceId:result.occurrenceId,
           ...(args.kind==='source-file'?{fileName:args.fileName}:{})};
       }else{
         exact(args,['workspace','dossierId','kind','before','after','expectedSha256'],['workspace','dossierId','kind','before','after']);
-        result=await entry.client.exportComparison(args.dossierId,{before:args.before,after:args.after,file:temporary,expectedSha256:args.expectedSha256});
+        result=await download(()=>entry.client.exportComparison(args.dossierId,{before:args.before,after:args.after,file:temporary,expectedSha256:args.expectedSha256}));
         selection={dossierId:args.dossierId,before:args.before,after:args.after};
       }
       const retained=this.#file(entry,args.kind,result.sha256);
@@ -260,9 +274,10 @@ export class MerchantResearchWorkspaces{
       }
       const receipt={schema:'stellar-forge.research-export-receipt.v1',receiptId:randomUUID(),
         workspaceId:entry.client.workspaceId,kind:args.kind,exportId:result.sha256,bytes:result.bytes,
-        sourceFilename:result.filename,contentType:result.contentType,retainedAt:new Date().toISOString(),selection};
+        sourceFilename:result.filename,contentType:result.contentType,retainedAt:new Date().toISOString(),selection,
+        ...(verification?{verification}:{})};
       await writeJson(join(entry.directory,'receipt-'+receipt.receiptId+'.json'),receipt,{exclusive:true});
-      return {workspace:entry.alias,...receipt,state:'RETAINED'};
+      return {workspace:entry.alias,...receipt,state:verification?'RETAINED_DIGEST_MISMATCH':'RETAINED'};
     }finally{await unlink(temporary).catch(error=>{if(error.code!=='ENOENT')throw error;});}
   }
   async #exportsPage(entry,{dossierId,offset=0,limit=30,snapshot}={}){
