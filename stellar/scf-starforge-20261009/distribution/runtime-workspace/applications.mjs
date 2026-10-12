@@ -12,13 +12,16 @@ import { secEdgarApplication, prepareSecEdgarApplication } from './application-s
 import { jobResultReceiverApplication, prepareJobResultReceiverApplication } from './application-job-result-receiver.mjs';
 import { sheetsApplication, prepareSheetsApplication } from './application-sheets.mjs';
 import { atlasApplication, prepareAtlasApplication } from './application-atlas.mjs';
+import { n8nApplication, prepareN8nApplication } from './application-n8n.mjs';
 import { redisApplication, prepareRedisApplication } from './application-redis.mjs';
 import { openApiApplication, prepareOpenApiApplication } from './application-openapi.mjs';
+import { arcgisAgentApplication, prepareArcgisAgentApplication } from './application-arcgis.mjs';
 import { jobCheckoutApplication, validateJobCheckoutSelection, prepareJobCheckoutApplication } from './application-job-checkout.mjs';
 import { datasetBuyerApplication, prepareDatasetBuyerApplication } from './application-dataset-buyer.mjs';
 import { pricingApplication, validatePricingSelection, preparePricingApplication } from './application-pricing.mjs';
 import { collectionsApplication, prepareCollectionsApplication } from './application-collections.mjs';
 import { grantApplication, prepareGrantApplication } from './application-grant.mjs';
+import { fredApplication, prepareFredApplication } from './application-fred.mjs';
 import { eventFeedApplications, prepareEventFeedApplication } from './application-event-feed.mjs';
 import { tenderlyApplication, prepareTenderlyApplication } from './application-tenderly.mjs';
 import { browserWalletApplication, prepareBrowserWalletApplication } from './application-browser-wallet.mjs';
@@ -50,6 +53,7 @@ const common = [
 ];
 export const APPLICATION_CATALOG = Object.freeze([
   atlasApplication(common),
+  n8nApplication(common),
   ...PYTHON_APPLICATION_CATALOG,
   ...eventFeedApplications(common),
   blockscoutApplication(common),
@@ -61,11 +65,13 @@ export const APPLICATION_CATALOG = Object.freeze([
   jobResultReceiverApplication(common),
   sheetsApplication(common),
   redisApplication(common),
+  arcgisAgentApplication(common),
   jobCheckoutApplication(common),
   datasetBuyerApplication(common),
   pricingApplication(common),
   collectionsApplication(common),
   grantApplication(common),
+  fredApplication(common),
   tenderlyApplication(common),
   browserWalletApplication(common),
   rssAtomApplication(common),
@@ -221,7 +227,10 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     const value = await inputPath(settings[name], kind, missing, privateOnly); inputs.push(value); return value;
   };
   const option = (name, value) => { if (value !== undefined && value !== '') args.push(name, String(value)); };
-  if (type.id === 'mpp') {
+  if (type.id === 'fred') {
+    const original = await prepareFredApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'mpp') {
     const original = await prepareMppApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs); mppBinding = original.binding;
   } else if (type.id === 'stellar-application') {
@@ -253,6 +262,9 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   } else if (type.id === 'redis') {
     const original = await prepareRedisApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'arcgis-agent') {
+    const original = await prepareArcgisAgentApplication(settings, inputPath, runtimeDirectory);
+    args.push(...original.args); inputs.push(...original.inputs);
   } else if (type.id === 'job-checkout') {
     const original = await prepareJobCheckoutApplication(settings, runtimeDirectory, inputPath);
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
@@ -279,6 +291,9 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   } else if (type.id === 'catalog-atlas') {
     const original = await prepareAtlasApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'n8n-merchant') {
+    const original = await prepareN8nApplication(settings, inputPath, runtimeDirectory);
+    args.push(...original.args); inputs.push(...original.inputs);
   } else if (type.id === 'rss-atom') {
     const original = await prepareRssAtomApplication(settings, {
       inputPath, selectedExecutable, runtimeDirectory, applicationEnvironment,
@@ -430,6 +445,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
 }
 function resourceKey(type, settings) {
   if (type.python) return pythonApplicationResource(type, settings);
+  if (type.id === 'arcgis-agent') return hash({ family: 'merchant-mcp', directory: settings.configurationFile });
   const value = settings.outputParent ?? settings.workspaceDirectory ?? settings.directory ??
     settings.outputDirectory ?? settings.stateDirectory ?? settings.datasetFile;
   // Feeds and XML retain the same original SQLite workspace and writer.

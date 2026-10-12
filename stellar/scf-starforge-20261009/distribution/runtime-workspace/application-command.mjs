@@ -8,13 +8,16 @@ import { secEdgarStartup } from './application-sec-edgar.mjs';
 import { jobResultReceiverStartup } from './application-job-result-receiver.mjs';
 import { sheetsStartup } from './application-sheets.mjs';
 import { atlasStartup } from './application-atlas.mjs';
+import { n8nStartup } from './application-n8n.mjs';
 import { redisStartup } from './application-redis.mjs';
 import { openApiStartup } from './application-openapi.mjs';
+import { arcgisAgentStartup } from './application-arcgis.mjs';
 import { jobCheckoutStartup } from './application-job-checkout.mjs';
 import { datasetBuyerStartup } from './application-dataset-buyer.mjs';
 import { pricingStartup } from './application-pricing.mjs';
 import { collectionsStartup } from './application-collections.mjs';
 import { grantStartup } from './application-grant.mjs';
+import { fredStartup } from './application-fred.mjs';
 import { tenderlyStartup } from './application-tenderly.mjs';
 import { browserWalletOutputReader, browserWalletStartup, verifyBrowserWalletLaunch } from './application-browser-wallet.mjs';
 import { rssAtomStartup } from './application-rss-atom.mjs';
@@ -96,6 +99,22 @@ export function observeApplicationOutput(request, directory, context = {}) {
     // Read only the maintained CLI's startup announcement. Later user-entered
     // terminal text and provider payloads cannot select a different application.
     text = text.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '').trim();
+    if (request.command === 'n8n-merchant') {
+      if (!text.startsWith('{"schema":"stellar-forge.n8n-merchant-launch.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await n8nStartup(request, text, context);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
     if (request.command === 'stellar-application') {
       if (!text.startsWith('{"schema":"stellar-forge.application-installed-startup.v1",')) return;
       saving = saving.then(async () => {
@@ -191,6 +210,22 @@ export function observeApplicationOutput(request, directory, context = {}) {
           });
         }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       }
+      return;
+    }
+    if (request.command === 'fred' && text.startsWith('{') &&
+        text.includes('"schema":"stellar-forge.fred-workspace-startup.v1"')) {
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await fredStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       return;
     }
     if (request.command === 'dataset-ndjson') {
@@ -322,14 +357,16 @@ export function observeApplicationOutput(request, directory, context = {}) {
       }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       return;
     }
-    if (request.command === 'blockscout' || request.command === 'tenderly-workspace' || request.command === 'redis') {
-      const tenderly = request.command === 'tenderly-workspace', redis = request.command === 'redis';
-      const startupSchema = redis ? 'stellar-forge.redis-workspace-startup.v1' :
+    if (['blockscout', 'tenderly-workspace', 'redis', 'arcgis-agent'].includes(request.command)) {
+      const tenderly = request.command === 'tenderly-workspace', redis = request.command === 'redis',
+        arcgis = request.command === 'arcgis-agent';
+      const startupSchema = arcgis ? 'stellar-forge.arcgis-agent-workspace-startup.v1' :
+        redis ? 'stellar-forge.redis-workspace-startup.v1' :
         tenderly ? 'stellar-forge.tenderly-workspace-startup.v1' : 'stellar-forge.blockscout-startup.v1';
       if (!text.startsWith('{"schema":"' + startupSchema + '",')) return;
       saving = saving.then(async () => {
         if (seen) return;
-        const startup = await (redis ? redisStartup : tenderly ? tenderlyStartup : blockscoutStartup)(request, text);
+        const startup = await (arcgis ? arcgisAgentStartup : redis ? redisStartup : tenderly ? tenderlyStartup : blockscoutStartup)(request, text);
         const url = startup && privateUrl(startup.url);
         if (!url) return;
         seen = true;

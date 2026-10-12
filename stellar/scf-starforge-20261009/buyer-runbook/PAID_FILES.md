@@ -8,8 +8,8 @@ the commerce workspace.
 
 ## Start the customer workspace
 
-Use the private operator preset described in
-[WORKSPACE.md](WORKSPACE.md#receive-a-private-merchant-request). The preset
+Use **Local buyer setup** in the same console, or the existing private launcher
+preset described in [OPERATOR_SETUP.md](OPERATOR_SETUP.md). The preset
 selects the local actor, service, payer, Python executable, signer source and
 maximum total and daily spending limits. A customer can receive orders using an
 empty private configuration directory; preparing an order adds its ordinary SF88
@@ -26,7 +26,10 @@ node stellar/scf-starforge-20261009/buyer-runbook/cli.mjs workspace \
 
 Open the printed loopback URL. Keep the process in the original operator terminal
 for acquisition approval. The existing parent directories must be canonical
-local paths, and the configuration directory must exist with mode `0700`.
+local paths. An explicitly selected configuration directory must exist with
+mode `0700`; omitting `--configs` on a new workspace creates its private directory.
+The operator preset can also be saved through Local buyer setup, without a
+launcher file.
 
 The merchant supplies the order handoff and its private claim token through the
 agreed customer handoff. Set that token in the corresponding environment variable
@@ -70,6 +73,9 @@ The reviewed order, host settings and budget stay fixed once preparation starts.
 If preparation is interrupted, reopen the order and choose **Resume local buyer
 setup**. The original initializer resumes its retained inputs, keys and ledger.
 A restart after final config publication adopts that same prepared buyer.
+Changing the active host preset leaves this retained preparation intact; the
+resume action continues with its saved settings. Pending orders whose preparation
+has not started show when their review differs from the current host preset.
 
 ## Purchase, retrieve and reopen
 

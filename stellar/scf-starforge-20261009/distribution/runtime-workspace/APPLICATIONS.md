@@ -7,6 +7,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Application | Maintained command | Original workflow |
 | --- | --- | --- |
 | Catalog Atlas | atlas | Retained catalog intake, offer comparison, exact native buyer preparation and complete workspace receiving |
+| n8n automation merchant | n8n-merchant serve | Configuration review, original preparation, paid jobs, retained workflow executions, customer results and stop/reopen |
 | API merchant authoring | openapi-workspace | Source intake, paid routes, saved packages, seller preview and operations |
 | Merchant pricing and scenario planning | revenue-workspace | Original usage, saved commercial reviews, exact demand/price/cost scenarios, exports and seller price changes |
 | Redis and Valkey merchant authoring | redis workspace open | Saved products, source profiles, live previews, customer packages and managed release controls |
@@ -15,6 +16,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | OData source and live merchant | dataset odata | Saved source metadata, typed queries, retained editions, live paid pages, buyer handoffs and received records |
 | SEC EDGAR source operator | sec-edgar workspace | Original company facts and filings, retained source editions, merchant drafts and complete customer exports |
 | Google Sheets source authoring | sheets-source workspace serve | Retained workbook observations, typed source projections, original dataset publisher and merchant receiving |
+| ArcGIS merchant workspace | arcgis-agent serve | One original browser and MCP service for source capture, field mapping, publication, staged deployments and complete customer files |
 | Dataset preview | dataset-workspace | A dataset configuration file or retained dataset state, native query and preview |
 | Dataset buyer | buyer-dataset-workspace | Original acquisitions, received rows and files, private customer history and Python analysis |
 | Request collections | buyer-collections-workspace | Grouped request review, original approvals and runs, retained outcomes and verified customer file downloads |
@@ -66,6 +68,20 @@ commercial exports, reviewed price changes and managed stop/reopen.
 ## Catalog Atlas
 
 The complete [managed Atlas workflow](../../sf61-bazaar-explorer/APPLICATIONS.md) covers new and retained directories, reviewed installed source, original private launch, stop/reopen, native buyer continuation and whole-workspace receiving.
+
+## ArcGIS merchant workspace
+
+Select the original merchant configuration JSON and an ArcGIS workspace alias from its `arcgisWorkspaceConnection`. The configuration also references the original `publisherConnection` and release store. The installed runtime must contain `arcgis-workspace-launcher.mjs` and the maintained ArcGIS publisher/workbench.
+
+Use **Local port** for the browser and **MCP port** for the agent service; each accepts `0` for an available loopback port. **MCP token environment name** defaults to `MCP_ACCESS_TOKEN`. Set its value, together with any declared source credential, through the host environment or the existing private environment JSON field. Credential values remain on the host.
+
+Review retains the exact merchant JSON and both connection files, the original publisher directory and the installed launcher/configuration source. Startup checks their configuration SHA-256, opens one original merchant MCP owner, and attaches the browser to that owner. Its native startup record supplies the actual browser URL, MCP endpoint, persistent workbench ID and current publisher/workbench instance IDs to the saved managed operation.
+
+Use the browser for source intake, field mapping, edition selection, extraction, publication and deployment, or use the MCP tools against that same state. Closing only the ArcGIS browser listener leaves the merchant owner available. Stopping the saved application closes the owner and drains all attached resources. A later start reopens its saved captures, editions, plans and delivery history.
+
+Applications prevents a second managed launch of the same merchant configuration. The publisher retains its own native writer lease. A changed connection file requires a fresh application review; source records and ordinary workspace progress continue through their original controls.
+
+See `stellar-forge/mcp-merchant-operator/ARCGIS_WORKSPACE.md` in the selected source for complete configuration, native request recovery, deployment and file-delivery instructions.
 
 ## Publisher initialization and reopening
 
@@ -434,6 +450,18 @@ Choose **SEC EDGAR source operator** to open the original private operator works
 ## Retained recovery and job destinations
 
 The existing **Merchant recovery** selection also retains each declared capture-plan file when available. Completed captures can reopen when a live plan is unavailable; the original recovery workspace requires the current plan for a fresh capture review. Existing job applications retain every original private destination returned by their selected checkout helper, including Request, approval, Jobs, library and collections.
+
+## Economic data editions
+
+Choose **Economic data editions** to reopen the initialized FRED project, retained public tables or explicit API vintages, saved reviews and merchant editions, and the original configured buyer. The standard managed terminal carries customer approval; the same application stops and reopens its project and buyer journal. Select the original merchant port already routed by the publication HTTPS origin separately from the private UI port. The complete input, source, customer, export and receiving workflow is in [FRED Applications](FRED_APPLICATIONS.md).
+
+## n8n automation merchant
+
+Choose **n8n automation merchant** and select the private merchant directory. For a new merchant or an interrupted preparation, select its original configuration file. Review reads the selected installed source and original configuration; Start initializes or resumes that same preparation before opening the merchant. Existing merchants reopen with their original configuration, application, paid jobs and dispatch history.
+
+The installed command verifies its selected source against the managed execution copy, then opens the original seller, customer, operations and automation consoles. Applications binds Open to the actual managed child, private launch record and authenticated original listener. The private environment file supplies the configuration’s n8n API and webhook reference names. Stop drains the original services and job worker before another start reopens the same state.
+
+The [complete n8n Applications guide](N8N_APPLICATIONS.md) covers first-run preparation, installed source selection, native workflow setup, credentials, ports, original job execution, customer delivery, unresolved execution recovery and stop/reopen.
 
 ## JSON Lines datasets
 
