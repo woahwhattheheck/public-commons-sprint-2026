@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url';
 import { createMcpToolHandler } from '../mcp-paid-agent/http-tools.mjs';
 import { loadOAuthResourceHost } from '../mcp-paid-agent/oauth-host.mjs';
 import { openMerchantOperator } from './operator.mjs';
-import { initializeMerchant, initializeFleetMerchant, initializeAccountingMerchant, initializeReceivingMerchant, initializePythonWorkspaceMerchant, initializePublisherMerchant, initializeS3WorkspaceMerchant, initializeOpenSearchWorkspaceMerchant, initializeSocrataWorkspaceMerchant, initializeGeocodioWorkspaceMerchant, initializeWebDavWorkspaceMerchant, initializeSheetsWorkspaceMerchant, initializeCkanWorkspaceMerchant, initializeTenderlyWorkspaceMerchant, initializeRedisWorkspaceMerchant, initializeUSASpendingWorkspaceMerchant, initializeSourceWorkspaceMerchant, initializeHarWorkspaceMerchant, initializePricingMerchant, initializeWooCommerceMerchant, initializeBuyerExpenseMerchant, failure } from './config.mjs';
+import { initializeMerchant, initializeFleetMerchant, initializeAccountingMerchant, initializeReceivingMerchant, initializePythonWorkspaceMerchant, initializeGraphqlWorkspaceMerchant, initializePublisherMerchant, initializeS3WorkspaceMerchant, initializeOpenSearchWorkspaceMerchant, initializeSocrataWorkspaceMerchant, initializeGeocodioWorkspaceMerchant, initializeWebDavWorkspaceMerchant, initializeSheetsWorkspaceMerchant, initializeCkanWorkspaceMerchant, initializeTenderlyWorkspaceMerchant, initializeRedisWorkspaceMerchant, initializeUSASpendingWorkspaceMerchant, initializeSourceWorkspaceMerchant, initializeHarWorkspaceMerchant, initializePricingMerchant, initializeWooCommerceMerchant, initializeBuyerExpenseMerchant, failure } from './config.mjs';
 
 const HELP = `Starforge merchant MCP
 
@@ -20,6 +20,7 @@ const HELP = `Starforge merchant MCP
        [--accounting ACCOUNTING_JSON]
   init-receiving --dir NEW_DIRECTORY --receiving RECEIVING_CONNECTION_JSON [--name NAME]
   init-python-workspaces --dir NEW_DIRECTORY --python-workspaces CONNECTION_JSON [--name NAME]
+  init-graphql-workspaces --dir NEW_DIRECTORY --connection GRAPHQL_WORKSPACE_CONNECTION.json [--name NAME]
   init-publishers --dir NEW_DIRECTORY --connection PUBLISHER_CONNECTION.json [--name NAME]
   init-s3-workspaces --dir NEW_DIRECTORY --connection S3_WORKSPACE_CONNECTION.json [--name NAME]
   init-opensearch-workspaces --dir NEW_DIRECTORY --connection OPENSEARCH_WORKSPACE_CONNECTION.json
@@ -63,6 +64,9 @@ const HELP = `Starforge merchant MCP
   inspect-har --url MCP_ENDPOINT --export-id EXPORT_ID [--token-env ENVIRONMENT_NAME]
   download-har --url MCP_ENDPOINT --export-id EXPORT_ID --out PRIVATE_DIRECTORY
        [--token-env ENVIRONMENT_NAME] [--chunk-bytes BYTES] [--manifest-sha256 REVIEWED_DIGEST]
+  inspect-graphql --url MCP_ENDPOINT --export-id EXPORT_ID [--token-env ENVIRONMENT_NAME]
+  download-graphql --url MCP_ENDPOINT --export-id EXPORT_ID --out PRIVATE_DIRECTORY
+       [--token-env ENVIRONMENT_NAME] [--chunk-bytes BYTES] [--manifest-sha256 REVIEWED_DIGEST]
   inspect-support|inspect-client --url MCP_ENDPOINT --export-id EXPORT_ID [--token-env ENVIRONMENT_NAME]
   download-support --url MCP_ENDPOINT --export-id EXPORT_ID --out PRIVATE_DIRECTORY
        [--token-env ENVIRONMENT_NAME] [--chunk-bytes BYTES] [--manifest-sha256 REVIEWED_DIGEST] [--cases-dir PRIVATE_CASES]
@@ -94,9 +98,12 @@ BUYER_EXPENSES.md covers original buyer ledger capture, exact allocations, named
 review/close/reopen, transactional request recovery, customer SDK and receiving.
 An existing merchant can attach --buyer-expenses PRIVATE_CONNECTION_JSON.
 Every ordinary init form also accepts --receiving RECEIVING_CONNECTION_JSON
-and --python-workspaces CONNECTION_JSON. Attach original XML/NDJSON consoles with
---source-workspaces CONNECTION_JSON; SOURCE_WORKSPACES.md covers shared browser/agent
-operations and complete resumable exports. Attach original HAR consoles with
+and --python-workspaces CONNECTION_JSON. Add --graphql-workspaces CONNECTION_JSON
+for the original saved GraphQL authoring, retained preview, merchant/revision,
+deployment and host workflow. GRAPHQL_WORKSPACES.md covers browser handover,
+native release ownership and resumable original files. Attach original XML/NDJSON
+consoles with --source-workspaces CONNECTION_JSON; SOURCE_WORKSPACES.md covers
+shared browser/agent operations and complete resumable exports. Attach original HAR consoles with
 --har-workspaces CONNECTION_JSON; HAR_WORKSPACE.md covers source review, capture editions,
 exact merchant packages, complete receiving adoption and resumable native files.
 Attach CKAN with --ckan-workspaces CONNECTION_JSON
@@ -328,6 +335,37 @@ export async function main(args = process.argv.slice(2)) {
       process.stdout.write(JSON.stringify(result) + '\n'); return result;
     } finally { process.off('SIGINT', stop); process.off('SIGTERM', stop); }
   }
+  if (command === 'init-graphql-workspaces') {
+    const options = pairs(rest, ['--dir', '--connection', '--name']);
+    if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
+    const result = await initializeGraphqlWorkspaceMerchant({ directory: options.get('--dir'), connection: options.get('--connection'),
+      ...(options.has('--name') ? { name: options.get('--name') } : {}) });
+    process.stdout.write(JSON.stringify(result) + '\n'); return result;
+  }
+  if (command === 'inspect-graphql' || command === 'download-graphql') {
+    const downloading = command === 'download-graphql';
+    const options = pairs(rest, ['--url', '--export-id', '--token-env',
+      ...(downloading ? ['--out', '--chunk-bytes', '--manifest-sha256'] : [])]);
+    for (const key of ['--url', '--export-id', ...(downloading ? ['--out'] : [])])
+      if (!options.has(key)) throw failure('CONFIGURATION_ERROR', 'Supply ' + key + '.');
+    const rawChunk = options.get('--chunk-bytes');
+    if (rawChunk !== undefined && !/^[1-9][0-9]{0,5}$/.test(rawChunk))
+      throw failure('CONFIGURATION_ERROR', 'Use a whole chunk byte count from 1 to 196608.');
+    const { inspectGraphqlWorkspaceFiles, downloadGraphqlWorkspaceFiles } = await import('./graphql-workspace-download.mjs');
+    const controller = new AbortController();
+    const stop = () => controller.abort(failure('GRAPHQL_DOWNLOAD_INTERRUPTED', 'Run the same download command to continue its verified original files.'));
+    process.once('SIGINT', stop); process.once('SIGTERM', stop);
+    try {
+      const common = { url: options.get('--url'), exportId: options.get('--export-id'),
+        tokenEnv: options.get('--token-env') ?? 'MCP_ACCESS_TOKEN', signal: controller.signal };
+      const result = downloading ? await downloadGraphqlWorkspaceFiles({ ...common, directory: options.get('--out'),
+        ...(rawChunk === undefined ? {} : { chunkSize: Number(rawChunk) }),
+        ...(options.has('--manifest-sha256') ? { expectedManifestSha256: options.get('--manifest-sha256') } : {}),
+        onProgress: value => process.stderr.write(JSON.stringify(value) + '\n') })
+        : await inspectGraphqlWorkspaceFiles(common);
+      process.stdout.write(JSON.stringify(result) + '\n'); return result;
+    } finally { process.off('SIGINT', stop); process.off('SIGTERM', stop); }
+  }
   if (command === 'init-python-workspaces') {
     const options = pairs(rest, ['--dir', '--python-workspaces', '--name']);
     if (!options.has('--dir') || !options.has('--python-workspaces')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --python-workspaces.');
@@ -414,7 +452,7 @@ export async function main(args = process.argv.slice(2)) {
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
   if (command === 'init') {
-    const options = pairs(rest, ['--dir', '--workspace', '--python', '--python-root', '--duckdb-package', '--duckdb-python', '--s3-package', '--postgres-package', '--mysql-package', '--clickhouse-package', '--jsonrpc-package', '--sqlite-package', '--sqlite-snapshot-max-bytes', '--sqlite-snapshot-timeout-ms', '--spec', '--selections', '--bindings', '--upstreams', '--name', '--seller-port', '--handlers', '--facilitator', '--catalog', '--facilitators', '--fleet-plan', '--accounting', '--support', '--receiving', '--python-workspaces', '--source-workspaces', '--har-workspaces', '--ckan-workspaces', '--pricing', '--woocommerce', '--buyer-expenses', '--release-store'], ['--allow-local-facilitator', '--allow-loopback-upstream']);
+    const options = pairs(rest, ['--dir', '--workspace', '--python', '--python-root', '--duckdb-package', '--duckdb-python', '--s3-package', '--postgres-package', '--mysql-package', '--clickhouse-package', '--jsonrpc-package', '--sqlite-package', '--sqlite-snapshot-max-bytes', '--sqlite-snapshot-timeout-ms', '--spec', '--selections', '--bindings', '--upstreams', '--name', '--seller-port', '--handlers', '--facilitator', '--catalog', '--facilitators', '--fleet-plan', '--accounting', '--support', '--receiving', '--python-workspaces', '--graphql-workspaces', '--source-workspaces', '--har-workspaces', '--ckan-workspaces', '--pricing', '--woocommerce', '--buyer-expenses', '--release-store'], ['--allow-local-facilitator', '--allow-loopback-upstream']);
     for (const key of options.has('--workspace') || options.has('--python') || options.has('--duckdb-package') || options.has('--s3-package') || options.has('--postgres-package') || options.has('--mysql-package') || options.has('--jsonrpc-package') || options.has('--sqlite-package') || options.has('--clickhouse-package') ? ['--dir'] : ['--dir', '--spec', '--selections', '--bindings'])
       if (!options.has(key)) throw failure('CONFIGURATION_ERROR', 'Missing ' + key);
     const runtime = { port: portNumber(options.get('--seller-port'), 0) };
@@ -424,7 +462,7 @@ export async function main(args = process.argv.slice(2)) {
     if (options.has('--allow-loopback-upstream')) runtime.allowLoopbackUpstream = true;
     const result = await initializeMerchant({ directory: options.get('--dir'), spec: options.get('--spec'),
       selections: options.get('--selections'), bindings: options.get('--bindings'),
-      workspace: options.get('--workspace'), upstreams: options.get('--upstreams'), runtime, catalog: options.get('--catalog'), facilitators: options.get('--facilitators'), fleetPlan: options.get('--fleet-plan'), accounting: options.get('--accounting'), support: options.get('--support'), receiving: options.get('--receiving'), pythonWorkspaces: options.get('--python-workspaces'), sourceWorkspaces: options.get('--source-workspaces'), harWorkspaces: options.get('--har-workspaces'), ckanWorkspaces: options.get('--ckan-workspaces'), pricing: options.get('--pricing'), woocommerce: options.get('--woocommerce'), buyerExpenses: options.get('--buyer-expenses'), releaseStore: options.get('--release-store'),
+      workspace: options.get('--workspace'), upstreams: options.get('--upstreams'), runtime, catalog: options.get('--catalog'), facilitators: options.get('--facilitators'), fleetPlan: options.get('--fleet-plan'), accounting: options.get('--accounting'), support: options.get('--support'), receiving: options.get('--receiving'), pythonWorkspaces: options.get('--python-workspaces'), graphqlWorkspaces: options.get('--graphql-workspaces'), sourceWorkspaces: options.get('--source-workspaces'), harWorkspaces: options.get('--har-workspaces'), ckanWorkspaces: options.get('--ckan-workspaces'), pricing: options.get('--pricing'), woocommerce: options.get('--woocommerce'), buyerExpenses: options.get('--buyer-expenses'), releaseStore: options.get('--release-store'),
       python: options.get('--python'), pythonRoot: options.get('--python-root'),
       duckdbPackage: options.get('--duckdb-package'), duckdbPython: options.get('--duckdb-python'),
       s3Package: options.get('--s3-package'), postgresPackage: options.get('--postgres-package'), mysqlPackage: options.get('--mysql-package'),
@@ -436,7 +474,7 @@ export async function main(args = process.argv.slice(2)) {
       ...(options.has('--name') ? { name: options.get('--name') } : {}) });
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
-  if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init, init-buyer-expenses, expenses, init-woocommerce, init-fleet, init-pricing, init-accounting, init-receiving, init-python-workspaces, init-sheets-workspaces, init-ckan-workspaces, init-tenderly-workspaces, init-redis-workspaces, init-usaspending-workspaces, init-source-workspaces, init-har-workspaces, inspect-har, download-har, init-s3-workspaces, init-opensearch-workspaces, init-publishers, serve, maintenance, adjustments, platforms, statements, inspect-support, inspect-client, inspect-s3, download-support, download-client, download-s3, reopen-support, download-python or reopen-python.');
+  if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init, init-buyer-expenses, expenses, init-woocommerce, init-fleet, init-pricing, init-accounting, init-receiving, init-python-workspaces, init-graphql-workspaces, init-sheets-workspaces, init-ckan-workspaces, init-tenderly-workspaces, init-redis-workspaces, init-usaspending-workspaces, init-source-workspaces, init-har-workspaces, inspect-har, download-har, init-s3-workspaces, init-opensearch-workspaces, init-publishers, serve, maintenance, adjustments, platforms, statements, inspect-support, inspect-client, inspect-graphql, inspect-s3, download-support, download-client, download-graphql, download-s3, reopen-support, download-python or reopen-python.');
   const options = pairs(rest, ['--config', '--port', '--token-env', '--oauth-config']);
   if (!options.has('--config')) throw failure('CONFIGURATION_ERROR', 'Supply --config.');
   const session = await startMerchantMcp({ configPath: options.get('--config'), port: portNumber(options.get('--port'), 3211),
