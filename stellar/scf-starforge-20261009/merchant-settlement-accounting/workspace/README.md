@@ -2,6 +2,10 @@
 
 This local operator application keeps a merchant's reconciliations, imported original verification results, recovered original purchase outcomes, exception reviews, comparisons, and downloads together across restarts. It runs the existing `merchant-settlement-accounting/reconcile.mjs` engine and the existing CLI's report writer directly. The original SF98 journal reader, SF86 proof classifications, explicit recovered-settlement reader, multi-option identity, and exact monetary arithmetic remain the accounting source.
 
+## Buyer-only accounting startup
+
+An operator with an issued SF36 buyer period can initialize this same workspace with `--buyer-source ABS --buyer-operator NAME`. The original file, source context and first-handoff identity are retained inside the native Store. The browser opens its accountant review, Xero and recovery workflow. [Buyer startup, CLI, source binding and complete receiving](BUYER_ACCOUNTING.md#start-with-an-issued-buyer-period) documents the complete path; merchant outbox/proof/terms paths are not part of a buyer source configuration.
+
 ## Xero journals
 
 Open **Xero journals** from the Accountant handoff panel to retain an organization and chart of accounts, explicitly value original payments and verified refunds, create balanced native drafts, reconcile returned journals, and apply the original accountant return. The [complete Xero workflow](XERO.md) includes the operator interface, existing distribution subcommand, retained source downloads and original-workspace recovery.

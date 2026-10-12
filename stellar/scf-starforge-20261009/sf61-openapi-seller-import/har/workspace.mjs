@@ -364,15 +364,15 @@ export async function openHarConsole({parent}) {
     }
     return retained;
   }
-  async function saveMerchant({capturedSource,specText,plan,name}) {
+  async function saveMerchant({capturedSource,specText,plan,name,operationPolicy}) {
     await checkSource(capturedSource,specText,plan);
     const current = await opened(capturedSource,true), bytes = encode(plan);
     if (bytes.length > HAR_DECISION_LIMIT) fail('Merchant plan exceeds the original 4 MiB limit');
     return temporary(async directory => {
       const planFile = join(directory,'merchant-plan.json'); await writeNew(planFile,bytes);
       return current.packet
-        ? packageRefresh({directory:current.directory,revision:current.saved.revision,planFile,parent:output,name})
-        : saveHarMerchant({workspace:current.workspace.root,revision:current.saved.revision,planFile,parent:output,name});
+        ? packageRefresh({directory:current.directory,revision:current.saved.revision,planFile,parent:output,name,operationPolicy})
+        : saveHarMerchant({workspace:current.workspace.root,revision:current.saved.revision,planFile,parent:output,name,operationPolicy});
     });
   }
   async function copy(value, destination) {

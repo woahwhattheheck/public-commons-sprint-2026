@@ -80,6 +80,15 @@ export function validateProfile(raw) {
   if (p.gateway_mapping) validateMapping(p.gateway_mapping, p.route_export);
   return p;
 }
+/** Use the same native receiving transport contract for first creation and setup recovery. */
+export function validateReceivingTransport(original,receivingTransport) {
+  need(object(receivingTransport)&&Object.keys(receivingTransport).every(k=>['store_url','checkout_url','reason'].includes(k)),
+    'RECEIVING_TRANSPORT_INVALID','Select only the local receiving URLs and the reason for this transport.');
+  const reason=label(receivingTransport.reason);
+  const profile=validateProfile({...original,store_url:receivingTransport.store_url,checkout_url:receivingTransport.checkout_url,transport:'loopback_receiving'});
+  need(loopback(new URL(profile.store_url)),'RECEIVING_LOOPBACK_REQUIRED','The explicit receiving transport must use a loopback host.');
+  return {profile,reason};
+}
 function validateMapping(m, route) {
   need(object(m) && safeId(m.productId) && m.enabled === 'yes' && object(m.storefront), 'MAPPING_INVALID', 'Import the original enabled product mapping with its actual product ID.');
   need(typeof m.storefront.currency === 'string' && /^[A-Z][A-Z0-9]{2,9}$/.test(m.storefront.currency), 'MAPPING_CURRENCY', 'The mapping needs its saved store currency.');
@@ -174,11 +183,9 @@ export class CartWorkspace {
       const original=validateProfile(profile), at=now(), events=[]; let p=original;
       if(profileBytes)need(digest(parseJSON(profileBytes,'Native store profile'))===digest(profile),'PROFILE_SOURCE_MISMATCH','The original profile bytes and selected profile differ.');
       if(receivingTransport!==null) {
-        need(object(receivingTransport)&&Object.keys(receivingTransport).every(k=>['store_url','checkout_url','reason'].includes(k)),'RECEIVING_TRANSPORT_INVALID','Select only the local receiving URLs and the reason for this transport.');
-        const reason=label(receivingTransport.reason);
-        p=validateProfile({...original,store_url:receivingTransport.store_url,checkout_url:receivingTransport.checkout_url,transport:'loopback_receiving'});
-        need(loopback(new URL(p.store_url)),'RECEIVING_LOOPBACK_REQUIRED','The explicit receiving transport must use a loopback host.');
-        events.push({sequence:1,at,type:'transport.receiving_selected',detail:{from:{store_url:original.store_url,checkout_url:original.checkout_url},to:{store_url:p.store_url,checkout_url:p.checkout_url},reason}});
+        const selected=validateReceivingTransport(original,receivingTransport);
+        p=selected.profile;
+        events.push({sequence:1,at,type:'transport.receiving_selected',detail:{from:{store_url:original.store_url,checkout_url:original.checkout_url},to:{store_url:p.store_url,checkout_url:p.checkout_url},reason:selected.reason}});
       }
       const profileSource=profileBytes?this.storeObject(profileBytes,'native-store-profile'):null;
       atomic(this.path, JSON.stringify({schema:SCHEMA,revision:0,created_at:at,updated_at:at,profile:p,profile_source:profileSource,source:SOURCE,carts:[],catalogs:[],events},null,2)+'\n',true);

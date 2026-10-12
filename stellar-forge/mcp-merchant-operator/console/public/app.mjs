@@ -1,8 +1,9 @@
 // MIT. Operator UI over the original authenticated host and retained native calls.
+import { createWorkflowPage } from './workflows.mjs';
 const $=id=>document.getElementById(id);
 const state={token:'',host:null,profiles:[],profile:null,details:null,page:'host',tools:[],tool:null,
   definition:null,draft:null,dirty:false,offset:0,next:null,total:0,call:null,recovery:new Map(),customer:null,
-  profileMode:'new',poll:null,importPacket:null};
+  profileMode:'new',poll:null,polling:false,pollDelay:1500,sessionEpoch:0,profileEpoch:0,callOpenSeq:0,toolOpenSeq:0,importPacket:null};
 const text=(node,value)=>{node.textContent=value??'';return node;};
 const node=(tag,value,className)=>{const valueNode=document.createElement(tag);if(value!==undefined)text(valueNode,value);if(className)valueNode.className=className;return valueNode;};
 const pretty=value=>JSON.stringify(value,null,2);
@@ -15,15 +16,17 @@ const plain=value=>Boolean(value&&typeof value==='object'&&!Array.isArray(value)
 function notice(message,error=false){text($('notice'),message);$('notice').dataset.error=String(error);$('notice').hidden=!message;}
 function action(button,fn){button.addEventListener('click',()=>busy(button,fn));}
 async function busy(button,fn){const disabled=button.disabled;button.disabled=true;try{await fn();}catch(error){notice((error.code?error.code+': ':'')+error.message,true);}finally{button.disabled=disabled;syncControls();}}
-async function api(path,{method='GET',body,raw=false}={}){
+async function api(path,{method='GET',body,raw=false,epoch=state.sessionEpoch}={}){
+  if(epoch!==state.sessionEpoch)throw new Error('The operator connection changed. Reopen this original action in its saved profile.');
   const response=await fetch('/operator/api/'+path,{method,credentials:'same-origin',cache:'no-store',
     headers:{authorization:'Bearer '+state.token,...(body===undefined?{}:{'content-type':'application/json'})},
     ...(body===undefined?{}:{body:JSON.stringify(body)})});
   if(!response.ok){
     let packet;try{packet=await response.json();}catch{}
     const error=new Error(packet?.error?.message??packet?.error_description??'The original host returned HTTP '+response.status+'.');
+    error.status=response.status;
     error.code=packet?.error?.code??packet?.error??'HTTP_'+response.status;
-    if(response.status===401){text($('connection-state'),'Token required');$('connection-state').dataset.state='ERROR';}
+    if(response.status===401&&epoch===state.sessionEpoch){text($('connection-state'),'Token required');$('connection-state').dataset.state='ERROR';}
     throw error;
   }
   return raw?response:response.json();
@@ -58,7 +61,7 @@ function setPage(name){
   document.querySelectorAll('[data-page]').forEach(value=>name===value.dataset.page?value.setAttribute('aria-current','page'):value.removeAttribute('aria-current'));
 }
 function syncControls(){
-  updateRun();
+  updateRun();workflowPage.sync();
   for(const id of ['rename-profile','export-profile','native-status'])$(id).disabled=!state.profile;
   $('previous-tools').disabled=state.offset===0;$('next-tools').disabled=state.next===null;
   if(state.customer){$('resume-customer').disabled=Boolean(state.customer.active);$('pause-customer').disabled=!state.customer.active;$('download-customer').disabled=!state.customer.localFiles;}
@@ -85,9 +88,9 @@ function renderHost(){
   properties($('host-details'),[
     ['Merchant',host.merchant],['Config file',host.configuration.name],['Config SHA-256',host.configuration.sha256,true],
     ['Host binding',host.configurationFingerprint,true],['Console workspace',host.console.workspaceId,true],
-    ['Accepted calls',host.operator.activeCalls],['Console calls',host.console.activeCalls],
-    ['HTTP requests',host.console.activeRequests??0],['Incomplete bodies',host.console.pendingBodies??0],
+    ['Accepted calls',host.operator.activeCalls],['Console calls',host.console.activeCalls],['Active workflows',host.console.workflows?.activeRuns??0],
     ['Customer transfers',host.console.customers?.activeDownloads??0],['Customer archives',host.console.customers?.activeArchives??0],
+    ['HTTP requests',host.console.activeRequests??0],['Incomplete bodies',host.console.pendingBodies??0],
     ['Seller instance',host.operator.instanceId??'No seller managed by this host',true]
   ]);
   $('host-sources').replaceChildren(...(host.sources?.length?host.sources.map(value=>node('p',value.source+(value.label?' · '+value.label:''))):[node('p','No release sources configured.','hint')]));
@@ -112,44 +115,59 @@ function renderBinding(){
   for(const id of ['rename-profile','export-profile','native-status'])$(id).disabled=!state.profile;
   updateRun();
 }
-async function refreshHost(){state.host=await api('host');renderHost();}
+async function refreshHost(){const epoch=state.sessionEpoch,host=await api('host',{epoch});if(epoch!==state.sessionEpoch)return;state.host=host;renderHost();}
 async function loadProfiles(selectId=state.profile?.id){
-  const packet=await api('profiles');state.host=packet.host;state.profiles=packet.profiles;
+  const epoch=state.sessionEpoch,selection=state.profileEpoch,packet=await api('profiles',{epoch});
+  if(epoch!==state.sessionEpoch||selection!==state.profileEpoch)return;state.host=packet.host;state.profiles=packet.profiles;
   $('profiles').replaceChildren(new Option('Choose a profile',''),...packet.profiles.map(value=>new Option(value.name+' · r'+value.revision,value.id)));
   const chosen=packet.profiles.find(value=>value.id===selectId)??packet.profiles[0];
+  if(state.profile?.id!==chosen?.id)state.profileEpoch++;
   state.profile=chosen??null;$('profiles').value=chosen?.id??'';
   renderHost();await loadProfile();
 }
 async function loadProfile(){
-  if(!state.profile){state.details={drafts:[],calls:[],deliveries:[]};renderProfile();return;}
-  const packet=await api('profile/'+encodeURIComponent(state.profile.id));
-  state.profile=packet.profile;state.details=packet;renderProfile();
+  if(!state.profile){state.details={drafts:[],calls:[],deliveries:[]};renderProfile();workflowPage.profileChanged();return;}
+  const epoch=state.sessionEpoch,selection=state.profileEpoch,profileId=state.profile.id;
+  const packet=await api('profile/'+encodeURIComponent(profileId),{epoch});
+  if(epoch!==state.sessionEpoch||selection!==state.profileEpoch||state.profile?.id!==profileId)return;
+  state.profile=packet.profile;state.details=packet;renderProfile();await workflowPage.refresh();schedulePoll();
 }
 function renderProfile(){
   const packet=state.details??{drafts:[],calls:[],deliveries:[]};
   text($('request-count'),packet.calls.length);text($('customer-count'),packet.deliveries.length);
-  renderBinding();renderDrafts();renderCalls();renderCustomers();
+  renderBinding();renderDrafts();renderCalls();renderCustomers();workflowPage.profileChanged();
   if(state.customer){const current=packet.deliveries.find(value=>value.id===state.customer.id);if(current){state.customer=current;renderCustomer();}}
   schedulePoll();
 }
 function schedulePoll(){
+  if(state.polling)return;
   clearTimeout(state.poll);
   if(!state.token)return;
-  const pending=state.details?.calls.some(value=>value.receiving==='ACTIVE')||state.details?.deliveries.some(value=>value.active);
-  if(pending)state.poll=setTimeout(async()=>{try{await Promise.all([refreshHost(),loadProfile()]);if(state.call&&state.details.calls.some(value=>value.id===state.call.id&&value.state!==state.call.state))await openCall(state.call.id,false);}catch(error){notice(error.message,true);}},1500);
+  const pending=workflowPage.hasActive||state.details?.calls.some(value=>value.receiving==='ACTIVE')||state.details?.deliveries.some(value=>value.active);
+  if(pending)state.poll=setTimeout(async()=>{
+    state.polling=true;const epoch=state.sessionEpoch,profileId=state.profile?.id;
+    try{
+      await Promise.all([refreshHost(),loadProfile()]);
+      if(epoch===state.sessionEpoch&&profileId===state.profile?.id&&state.call&&state.details.calls.some(value=>value.id===state.call.id&&value.state!==state.call.state))await openCall(state.call.id,false);
+      state.pollDelay=1500;
+    }catch(error){if(epoch===state.sessionEpoch)notice(error.message,true);state.pollDelay=Math.min(30000,state.pollDelay*2);}
+    finally{state.polling=false;schedulePoll();}
+  },state.pollDelay);
 }
 async function connect(){
+  const epoch=++state.sessionEpoch;state.profileEpoch++;state.pollDelay=1500;
   state.token=$('access-token').value.trim();
   if(!state.token)throw new Error('Enter the original merchant access token.');
-  await loadProfiles();$('connect-panel').hidden=true;$('connected').hidden=false;$('disconnect').hidden=false;
+  await loadProfiles();if(epoch!==state.sessionEpoch)return;$('connect-panel').hidden=true;$('connected').hidden=false;$('disconnect').hidden=false;
   $('access-token').value='';await loadTools();notice(state.profile?'Opened '+state.profile.name+'.':'Create a named profile to retain requests and customer receiving.');
 }
 function disconnect(){
+  state.sessionEpoch++;state.profileEpoch++;
   clearTimeout(state.poll);state.token='';state.host=null;state.profile=null;state.details=null;state.call=null;state.customer=null;
   $('connected').hidden=true;$('connect-panel').hidden=false;$('disconnect').hidden=true;text($('connection-state'),'Disconnected');
   $('connection-state').removeAttribute('data-state');notice('');$('access-token').value='';
   for(const id of ['call-result','call-arguments','customer-json'])$(id).textContent='';
-  $('native-arguments').value='';
+  $('native-arguments').value='';workflowPage.reset();
 }
 function profileForm(mode){
   state.profileMode=mode;$('profile-form').hidden=false;$('profile-name').value=mode==='rename'?requireProfile().name:'';$('profile-name').focus();
@@ -196,7 +214,9 @@ function sample(schema,key='',depth=0){
   return '';
 }
 async function chooseTool(name,{draft=null,arguments:args,recoveryOf}={}){
-  const packet=await api('tool/'+encodeURIComponent(name));state.definition=packet.definition;state.tool=name;state.draft=draft;state.recoveryOf=recoveryOf??draft?.recoveryOf??null;
+  const epoch=state.sessionEpoch,selection=state.profileEpoch,sequence=++state.toolOpenSeq;
+  const packet=await api('tool/'+encodeURIComponent(name),{epoch});if(epoch!==state.sessionEpoch||selection!==state.profileEpoch||sequence!==state.toolOpenSeq)return;
+  state.definition=packet.definition;state.tool=name;state.draft=draft;state.recoveryOf=recoveryOf??draft?.recoveryOf??null;
   $('tool-empty').hidden=true;$('tool-detail').hidden=false;text($('tool-title'),name);text($('tool-description'),packet.definition.description);
   const annotation=packet.definition.annotations??{};
   $('tool-tags').replaceChildren(tag(packet.family),tag(annotation.readOnlyHint?'Read':'Change'),
@@ -223,22 +243,41 @@ function argumentsValue(){
 }
 async function saveDraft(copy=false){
   const profile=requireProfile();if(!state.definition)throw new Error('Choose a configured native tool.');
+  const epoch=state.sessionEpoch,selection=state.profileEpoch,toolSequence=state.toolOpenSeq,
+    selectedDraftId=state.draft?.id??null,name=$('draft-name').value,argumentText=$('native-arguments').value;
+  const current=()=>epoch===state.sessionEpoch&&selection===state.profileEpoch&&state.profile?.id===profile.id;
   const old=copy?null:state.draft;
-  const body={profileId:profile.id,name:$('draft-name').value,tool:state.tool,arguments:argumentsValue(),
+  const body={profileId:profile.id,name,tool:state.tool,arguments:argumentsValue(),
     ...(old?{id:old.id,expectedRevision:old.revision}:{}),...(state.recoveryOf?{recoveryOf:state.recoveryOf}:{})};
-  const packet=await api('drafts',{method:'POST',body});state.draft=packet.draft;state.dirty=false;
-  $('native-arguments').value=pretty(JSON.parse(packet.draft.argumentsJson));await loadProfile();updateRun();notice('Saved '+packet.draft.name+' · revision '+packet.draft.revision+'.');
+  const packet=await api('drafts',{method:'POST',body,epoch});if(!current())return;
+  if(toolSequence===state.toolOpenSeq&&(state.draft?.id??null)===selectedDraftId&&
+      $('draft-name').value===name&&$('native-arguments').value===argumentText){
+    state.draft=packet.draft;state.dirty=false;
+    $('native-arguments').value=pretty(JSON.parse(packet.draft.argumentsJson));
+  }
+  await loadProfile();if(!current())return;
+  updateRun();notice('Saved '+packet.draft.name+' · revision '+packet.draft.revision+'.');
 }
 async function runDraft(){
-  const profile=requireProfile(),draft=state.draft;
+  const profile=requireProfile(),draft=state.draft,epoch=state.sessionEpoch,selection=state.profileEpoch;
+  const current=()=>epoch===state.sessionEpoch&&selection===state.profileEpoch&&state.profile?.id===profile.id;
   if(!draft||state.dirty)throw new Error('Save the displayed revision first.');
   const callId=uid();state.pendingCall=callId;
   try{
-    await api('calls',{method:'POST',body:{id:callId,profileId:profile.id,draftId:draft.id,draftRevision:draft.revision,expectedHostFingerprint:state.host.configurationFingerprint}});
-    await loadProfile();await openCall(callId);notice('Accepted '+draft.tool+' with the saved native arguments.');
+    await api('calls',{method:'POST',epoch,body:{id:callId,profileId:profile.id,draftId:draft.id,draftRevision:draft.revision,expectedHostFingerprint:state.host.configurationFingerprint}});
+    if(!current())return;
+    await loadProfile();if(!current())return;
+    await openCall(callId);if(current())notice('Accepted '+draft.tool+' with the saved native arguments.');
   }catch(error){
-    try{await loadProfile();if(state.details.calls.some(value=>value.id===callId)){await openCall(callId);notice('The original request is retained. Open its current return and recovery actions.');return;}}catch{}
-    throw error;
+    if(!current())return;
+    try{
+      await loadProfile();if(!current())return;
+      if(state.details.calls.some(value=>value.id===callId)){
+        await openCall(callId);if(current())notice('The original request is retained. Open its current return and recovery actions.');
+        return;
+      }
+    }catch{}
+    if(current())throw error;
   }
 }
 function renderDrafts(){
@@ -260,7 +299,10 @@ function renderCalls(){
   },value=>openCall(value.id),state.profile?'No native calls in this profile.':'Select or create a profile.');
 }
 async function openCall(id,navigate=true){
-  state.call=await api('call/'+encodeURIComponent(id));const value=state.call,args=JSON.parse(value.argumentsJson);
+  const epoch=state.sessionEpoch,profileSelection=state.profileEpoch,sequence=navigate?++state.callOpenSeq:state.callOpenSeq;
+  const selected=await api('call/'+encodeURIComponent(id),{epoch});
+  if(epoch!==state.sessionEpoch||profileSelection!==state.profileEpoch||sequence!==state.callOpenSeq||!navigate&&state.call?.id!==id)return;
+  state.call=selected;const value=state.call,args=JSON.parse(value.argumentsJson);
   $('call-empty').hidden=true;$('call-detail').hidden=false;text($('call-title'),value.tool);text($('call-state'),value.receiving==='RETURN_PENDING'?'RETURN_PENDING':value.state==='COMPLETE'?'RETURNED':value.state);
   $('call-state').dataset.state=value.state;
   properties($('call-details'),[
@@ -275,20 +317,29 @@ async function openCall(id,navigate=true){
   text($('call-message'),value.receiving==='RETURN_PENDING'?'The original call is retained without an active return in this process. Use its native operation identifiers in a read or recovery tool.':value.error?value.error.code+': '+value.error.message:value.state==='COMPLETE'?'The exact returned JSON is retained for download.':'The original tool is running.');
   $('download-result').disabled=value.state!=='COMPLETE';$('reopen-draft').disabled=false;
   const selection=customerSelection(value,result);$('use-customer').hidden=!selection;state.customerSelection=selection;
-  await recoveryChoices(value);
+  if(!await recoveryChoices(value,{epoch,profileSelection,sequence}))return;
+  if(epoch!==state.sessionEpoch||profileSelection!==state.profileEpoch||sequence!==state.callOpenSeq||state.call?.id!==id)return;
   renderCalls();if(navigate)setPage('requests');
 }
-async function recoveryChoices(call){
-  const packet=await api('recovery/'+encodeURIComponent(call.id));state.recovery.clear();
+async function recoveryChoices(call,{epoch,profileSelection,sequence}){
+  const packet=await api('recovery/'+encodeURIComponent(call.id),{epoch});
+  if(epoch!==state.sessionEpoch||profileSelection!==state.profileEpoch||sequence!==state.callOpenSeq||state.call?.id!==call.id)return false;
+  state.recovery.clear();
   for(const value of packet.items)state.recovery.set(value.definition.name,{...value,kind:'Read'});
   for(const value of packet.controls??[])state.recovery.set(value.definition.name,{...value,kind:'Control'});
   $('recovery-tools').replaceChildren(...[...state.recovery].map(([name,value])=>new Option(value.kind+' · '+name,name)));
   $('recovery-panel').hidden=state.recovery.size===0;
+  return true;
 }
 async function nativeStatus(){
-  const profile=requireProfile(),packet=await api('tool/merchant_status');
-  const saved=await api('drafts',{method:'POST',body:{profileId:profile.id,name:'Inspect native merchant status',tool:packet.definition.name,arguments:{}}});
-  await chooseTool(saved.draft.tool,{draft:saved.draft});await runDraft();
+  const profile=requireProfile(),epoch=state.sessionEpoch,selection=state.profileEpoch;
+  const current=()=>epoch===state.sessionEpoch&&selection===state.profileEpoch&&state.profile?.id===profile.id;
+  const packet=await api('tool/merchant_status',{epoch});if(!current())return;
+  const saved=await api('drafts',{method:'POST',epoch,body:{profileId:profile.id,name:'Inspect native merchant status',tool:packet.definition.name,arguments:{}}});
+  if(!current())return;
+  await chooseTool(saved.draft.tool,{draft:saved.draft});
+  if(!current()||state.draft?.id!==saved.draft.id||state.tool!==saved.draft.tool)return;
+  await runDraft();
 }
 function customerSelection(call,result){
   const args=JSON.parse(call.argumentsJson),family=call.tool.startsWith('merchant_opensearch_deployment_')?'opensearch':call.tool.startsWith('merchant_client_export')?'core':null;
@@ -304,8 +355,13 @@ function fillCustomer(value){
   $('customer-workspace-field').hidden=value.family!=='opensearch';$('customer-workspace').required=value.family==='opensearch';setPage('customers');
 }
 async function receiveCustomer(selection){
-  const profile=requireProfile(),body={profileId:profile.id,...selection,expectedHostFingerprint:state.host.configurationFingerprint};
-  const packet=await api('customers',{method:'POST',body});state.customer=packet.delivery;await loadProfile();renderCustomer();notice('Receiving the reviewed original customer export '+body.exportId+'.');
+  const profile=requireProfile(),epoch=state.sessionEpoch,profileSelection=state.profileEpoch,customerId=state.customer?.id??null;
+  const current=()=>epoch===state.sessionEpoch&&profileSelection===state.profileEpoch&&state.profile?.id===profile.id;
+  const body={profileId:profile.id,...selection,expectedHostFingerprint:state.host.configurationFingerprint};
+  const packet=await api('customers',{method:'POST',body,epoch});if(!current())return;
+  if((state.customer?.id??null)===customerId)state.customer=packet.delivery;
+  await loadProfile();if(!current())return;
+  renderCustomer();notice('Receiving the reviewed original customer export '+body.exportId+'.');
 }
 function renderCustomers(){
   selectionList($('customer-list'),state.details?.deliveries??[],state.customer?.id,(button,value)=>{
@@ -335,7 +391,7 @@ function renderCustomer(){
 $('connect-form').addEventListener('submit',event=>{event.preventDefault();busy(event.submitter,connect);});
 action($('disconnect'),disconnect);
 document.querySelectorAll('[data-page]').forEach(button=>action(button,()=>setPage(button.dataset.page)));
-$('profiles').addEventListener('change',async()=>{try{state.profile=state.profiles.find(value=>value.id===$('profiles').value)??null;state.draft=null;state.call=null;state.customer=null;await loadProfile();renderTools();$('call-detail').hidden=true;$('call-empty').hidden=false;renderCustomer();}catch(error){notice(error.message,true);}});
+$('profiles').addEventListener('change',async()=>{try{state.profileEpoch++;state.profile=state.profiles.find(value=>value.id===$('profiles').value)??null;workflowPage.profileChanged();state.draft=null;state.call=null;state.customer=null;await loadProfile();renderTools();$('call-detail').hidden=true;$('call-empty').hidden=false;renderCustomer();}catch(error){notice(error.message,true);}});
 action($('new-profile'),()=>profileForm('new'));action($('rename-profile'),()=>profileForm('rename'));action($('cancel-profile'),()=>{$('profile-form').hidden=true;});
 $('profile-form').addEventListener('submit',event=>{event.preventDefault();busy(event.submitter,saveProfile);});
 action($('bind-profile'),bindProfile);action($('export-profile'),()=>download('export/'+encodeURIComponent(requireProfile().id),requireProfile().id+'-operator-profile.json'));
@@ -360,5 +416,7 @@ action($('refresh-customers'),()=>loadProfile());
 action($('resume-customer'),()=>receiveCustomer(state.customer.identity));
 action($('pause-customer'),async()=>{await api('customer-pause',{method:'POST',body:{id:state.customer.id}});await loadProfile();notice('Pause requested at the original receiving checkpoint.');});
 action($('download-customer'),()=>download('customer-archive/'+encodeURIComponent(state.customer.id),state.customer.identity.exportId+'.tar.gz'));
+const workflowPage=createWorkflowPage({state,$,node,text,pretty,when,tag,properties,selectionList,action,busy,api,notice,uid,
+  requireProfile,loadProfile,openCall,chooseTool,download,schedulePoll});
 const bootstrap=new URLSearchParams(location.hash.slice(1)).get('token');
 if(bootstrap){history.replaceState(null,'',location.pathname+location.search);$('access-token').value=bootstrap;busy($('connect-form').querySelector('button'),connect);}

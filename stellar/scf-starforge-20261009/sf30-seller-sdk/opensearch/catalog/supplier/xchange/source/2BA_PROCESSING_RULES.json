@@ -1,0 +1,90 @@
+{
+  "schema": "stellar-forge.2ba-processing-source.v1",
+  "observedAt": "2026-10-12",
+  "sourceCommit": "44635e042603ed7099dce413d94aa7ab83e9bbda",
+  "sources": [
+    {
+      "url": "https://www.2ba.nl/wp-content/uploads/parameters.zip",
+      "role": "Actual downloaded namespace, original XML filename and publisher element order",
+      "retrievedAt": "2026-10-12T09:19:17.772428+00:00",
+      "archiveSha256": "b7b7a88138ac29952a712af412d33de6010bb45bc414ad50c1dd2ad90a2a682f",
+      "xmlSha256": "a1e7a2e4d920126eecd45fa6cb603d9da2deeb508dc9ae0ab4de8b08f2db1d2e"
+    },
+    {
+      "url": "https://www.2ba.nl/en/documentation/file-exchange/file-upload/process-parameters/",
+      "role": "Parameter names, envelope, limits, default values and attachment choices"
+    },
+    {
+      "url": "https://www.2ba.nl/documentatie/bestandsuitwisseling/upload-bestanden/process-parameters/",
+      "role": "Original-language parameter spelling and full versus mutation attachment descriptions"
+    },
+    {
+      "url": "https://www.2ba.nl/en/documentation/file-exchange/etim-xchange-v2-0/",
+      "role": "Native filename, FULL/CHANGE recipient effects and original MDX URL policy"
+    },
+    {
+      "url": "https://www.2ba.nl/en/documentation/file-exchange/file-upload/introduction/",
+      "role": "Compressed input formats and operator upload routes"
+    },
+    {
+      "url": "https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT",
+      "revision": "6.3.10",
+      "role": "Streaming ZIP64, CRC-32 and raw Deflate member envelope"
+    }
+  ],
+  "decisions": {
+    "parameterFile": "parameters.xml",
+    "namespace": "http://www.2ba.nl",
+    "root": "UCProcessParameters",
+    "nativeCodes": "Pinned xChange AttachmentTypeSpecification MDX enum; no MD-to-MDX alias",
+    "archive": "Exactly two flat members: parameters.xml and the complete selected native xChange JSON",
+    "nativeHeader": "Preserved; parameter override is recorded as effective recipient processing",
+    "legacyProfiles": "The processing key is absent unless explicitly selected",
+    "retainedArchiveLimitBytes": 8589934592,
+    "namespaceSource": "Downloaded original parameters.xml; inline documentation currently differs with an HTTPS namespace."
+  },
+  "originalInlineExample": {
+    "sourceUrl": "https://www.2ba.nl/en/documentation/file-exchange/file-upload/process-parameters/",
+    "root": "UCProcessParameters",
+    "namespace": "https://www.2ba.nl",
+    "children": [
+      "PackageDescription",
+      "OverrulePackageMutationCode",
+      "PackageMutationCode"
+    ]
+  },
+  "originalExampleArchive": {
+    "url": "https://www.2ba.nl/wp-content/uploads/parameters.zip",
+    "retrievedAt": "2026-10-12T09:19:17.772428+00:00",
+    "file": "parameters.zip",
+    "bytes": 387,
+    "sha256": "b7b7a88138ac29952a712af412d33de6010bb45bc414ad50c1dd2ad90a2a682f",
+    "gitBlob": "0a222bb57f4abe5e74ee895709f1638739c8c1f6",
+    "localFile": "2BA_parameters_example.zip",
+    "member": {
+      "file": "parameters.xml",
+      "bytes": 446,
+      "sha256": "a1e7a2e4d920126eecd45fa6cb603d9da2deeb508dc9ae0ab4de8b08f2db1d2e",
+      "gitBlob": "cb891b51299aacec45427dcea6150236234d58d1",
+      "localFile": "2BA_parameters_example.xml"
+    },
+    "observations": {
+      "root": "UCProcessParameters",
+      "defaultNamespace": "http://www.2ba.nl",
+      "childOrder": [
+        "GeneratedBy",
+        "PackageDescription",
+        "SendReportToEmail",
+        "ReportLanguage"
+      ],
+      "reportLanguage": "NL",
+      "newline": "CRLF",
+      "hasFinalNewline": false
+    },
+    "acquisitionFile": "2BA_PARAMETERS_ORIGINAL.json"
+  },
+  "modellingReleaseReferences": {
+    "file": "2BA_RECEIVING_REFERENCES.json",
+    "requirement": "Select the authoritative published modelling-class code/version and pin its actual source bytes for each receiving product."
+  }
+}

@@ -35,5 +35,8 @@
   },
   "merchantProviders": {
     "opendatasoft-workspaces": "stellar-forge/mcp-merchant-operator/providers/opendatasoft-workspaces.mjs"
-  }
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/automation/UPSTREAM_LICENSE.txt"
+  ]
 }

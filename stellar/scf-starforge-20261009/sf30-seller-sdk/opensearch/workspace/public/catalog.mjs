@@ -41,7 +41,7 @@ export function createCatalogController({ host, api, perform, refresh, recover, 
     '<section id="cat-panel-setup" aria-label="Catalog sources and mapping">',
     '<div class="two-column"><label>Catalog title<input id="cat-title" maxlength="120" autocomplete="off"></label><label>Tenant identifier<input id="cat-tenant" maxlength="256" autocomplete="off"><span class="help">Use the retained organization identifier for this catalog.</span></label></div>',
     '<h3>Map original material fields</h3><p class="help">Enter a CSV header or JSON Pointer. Complex fields also accept a declared constant, text join or retained lookup as JSON. Identifier values keep their original text.</p>',
-    '<div class="actions"><button id="cat-sap" type="button">Map SAP product columns</button><label>Identifier matching<select id="cat-policy"><option value="exact">Exact original identifiers</option><option value="casefold">Explicit case-insensitive lookup</option></select></label></div>',
+    '<div class="actions"><button id="cat-sap" type="button">Map SAP product columns</button><button id="cat-xchange" type="button">Map ETIM xChange products</button><label>Identifier matching<select id="cat-policy"><option value="exact">Exact original identifiers</option><option value="casefold">Explicit case-insensitive lookup</option></select></label></div>',
     '<div id="cat-fields" class="cat-field-grid"></div>',
     '<details><summary>References, attributes, unit aliases and deltas</summary>',
     '<div class="two-column"><label>Material reference mappings<textarea id="cat-references" class="code" rows="8" spellcheck="false">[]</textarea><span class="help">Each entry declares kind, value and an optional delimiter. Supplier accounts belong in attributes.</span></label><label>Retained source attributes<textarea id="cat-attributes" class="code" rows="8" spellcheck="false">{}</textarea></label></div>',
@@ -54,7 +54,7 @@ export function createCatalogController({ host, api, perform, refresh, recover, 
     '<div class="actions"><button id="cat-save" type="button" class="primary">Save catalog mapping</button><span id="cat-saved" class="help">New catalog</span></div>',
     '<article><h3>Retain an original source file</h3><p class="help">The workspace streams the selected bytes into a retained source. The browser keeps its size and checksum with the original request.</p>',
     '<label>Original CSV, TSV, JSONL or JSON file<input id="cat-file" type="file" accept=".csv,.tsv,.jsonl,.ndjson,.json,text/csv,application/json"></label>',
-    '<div class="two-column"><label>File format<select id="cat-format"><option value="csv">CSV</option><option value="tsv">TSV</option><option value="jsonl">JSON Lines</option><option value="json">JSON document</option></select></label><label id="cat-delimiter-label">CSV delimiter<input id="cat-delimiter" maxlength="1" value=","></label></div>',
+    '<div class="two-column"><label>File format<select id="cat-format"><option value="csv">CSV</option><option value="tsv">TSV</option><option value="jsonl">JSON Lines</option><option value="json">JSON document</option><option value="xchange-json">ETIM xChange 2.0 document</option></select></label><label id="cat-delimiter-label">CSV delimiter<input id="cat-delimiter" maxlength="1" value=","></label></div>',
     '<div id="cat-tabular"><label class="cat-check"><input id="cat-header" type="checkbox" checked> The first row contains field names.</label><label id="cat-columns-label" hidden>Headerless column names as a JSON array<textarea id="cat-columns" class="code" rows="3" spellcheck="false">[]</textarea></label></div>',
     '<label id="cat-rows-path-label" hidden>JSON Pointer to the rows array<input id="cat-rows-path" placeholder="/records"><span class="help">Leave empty when the document itself is the rows array.</span></label>',
     '<details><summary>Source provenance</summary><div class="two-column"><label>Original source URL<input id="cat-source-url" type="url" placeholder="https://"></label><label>Publisher<input id="cat-publisher" maxlength="240"></label></div><div class="two-column"><label>Source revision<input id="cat-source-revision" maxlength="240"></label><label>Source kind<input id="cat-source-kind" maxlength="80" placeholder="supplier-catalog"></label></div><label>Source note<textarea id="cat-source-note" rows="3" maxlength="1600"></textarea></label></details>',
@@ -391,7 +391,7 @@ export function createCatalogController({ host, api, perform, refresh, recover, 
   }
   function formatValue() {
     const kind = $('cat-format').value;
-    if (kind === 'jsonl') return { kind };
+    if (['jsonl','xchange-json'].includes(kind)) return { kind };
     if (kind === 'json') return { kind, rowsPath: $('cat-rows-path').value };
     const hasHeader = $('cat-header').checked;
     return { kind, hasHeader, ...(kind === 'csv' ? { delimiter: $('cat-delimiter').value } : {}),
@@ -510,6 +510,11 @@ export function createCatalogController({ host, api, perform, refresh, recover, 
       weightUnit: 'WEIGHTUNIT', width: 'WIDTH', depth: 'DEPTH', height: 'HEIGHT', dimensionUnit: 'DIMENSIONUNIT' };
     fillMapping(mapping); changed(); notice('SAP product columns are mapped. Review the selected source fields and save the mapping.');
   });
+  $('cat-xchange').addEventListener('click', () => attempt(() => read(async () => {
+    const template = await api('/api/catalog/supplier/profile?target=xchange-2.0');
+    fillMapping(template.catalogMapping);$('cat-format').value='xchange-json';formatControls();changed();
+    notice('The complete native xChange product and supplier context are mapped. Save this mapping, then retain and review the original document.');
+  })));
   $('cat-use-lookup').addEventListener('click', () => attempt(async () => {
     const lines = id => $(id).value.split(/\r?\n/).map(value => value.trim()).filter(Boolean);
     const lookup = { sourceId: $('cat-lookup-source').value, key: lines('cat-lookup-key'), from: lines('cat-lookup-from'),

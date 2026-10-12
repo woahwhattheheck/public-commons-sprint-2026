@@ -1,0 +1,826 @@
+{
+  "schema": "dpsa.diso.module.v1",
+  "id": "M12",
+  "title": "Business continuity, disaster recovery and resilience",
+  "rfpSection": "Terms of Reference §8, Module 12",
+  "summary": "Translate public-service priorities into practical continuity arrangements, measurable recovery objectives and rehearsed restoration that preserves trustworthy records and accountable decisions.",
+  "outcomes": [
+    "Use a business impact analysis to prioritise minimum critical services.",
+    "Distinguish recovery time, recovery point and wider continuity needs.",
+    "Evaluate dependencies and supplier arrangements across the complete service.",
+    "Plan exercises, reconciliation and return to normal operation."
+  ],
+  "realExample": {
+    "title": "Estonia establishes a Data Embassy for critical datasets",
+    "sourceIds": [
+      "CASE-ESTONIA-EMBASSY"
+    ],
+    "documentedOutcome": "The European Commission's Estonia factsheet describes the established Data Embassy in Luxembourg, holding copies of government-selected critical datasets.",
+    "discussion": "The case shows a concrete continuity arrangement beyond an ordinary local backup. Examine the choices about critical information, independent recovery dependencies and governance.",
+    "scope": "The cited factsheet describes live operation from the embassy as a subsequent phase, not a completed outcome. The example does not authorise South African cross-border data placement or replace local legal and departmental requirements."
+  },
+  "units": [
+    {
+      "id": "M12-U01",
+      "title": "Recover the service that people need",
+      "estimatedMinutes": 150,
+      "objectives": [
+        "Prioritise services through business impact rather than system prestige.",
+        "Set and interpret recovery time and recovery point objectives.",
+        "Identify the people, data and technical dependencies needed for minimum service."
+      ],
+      "chapters": [
+        {
+          "id": "M12-U01-C01",
+          "title": "Continuity begins with the public obligation",
+          "bodyHtml": "<p>Business continuity asks how the department will sustain its essential work during disruption. ICT recovery is one part of that answer. A restored application is of little use if no authorised staff can sign in, residents cannot reach the office, the payment approver is unavailable or the paper fallback has no secure storage. Start with the minimum service that must continue and the harm caused by delay.</p>\n<p>A business impact analysis examines how consequences develop over time. Record the service, affected people, critical deadlines, peak periods, minimum capacity, information needs and dependencies. Consider dignity, access, legal or administrative obligations, financial effects and the workload needed to catch up. The cheapest or newest system is not necessarily the most critical. A small identity service may be a dependency for many visible services.</p>\n<p>The public-service ICT continuity directive assigns the Head of Department responsibility for the continuity arrangements and an ICT Disaster Recovery Team led by the GITO. The DISO contributes the security view: trustworthy recovery, appropriate access, incident coordination and the risk of unsafe shortcuts. Work through the department's established business continuity and risk management structures.</p>",
+          "sourceIds": [
+            "CONTINUITY-2022"
+          ]
+        },
+        {
+          "id": "M12-U01-C02",
+          "title": "RTO and RPO answer different questions",
+          "bodyHtml": "<p>The recovery time objective, or RTO, concerns the duration within which the required service is to be recovered after disruption. The recovery point objective, or RPO, concerns how recent the recoverable data must be. A four-hour RTO and a thirty-minute RPO mean different things: the service must meet the agreed recovery condition within four hours, using a recoverable data point that meets the thirty-minute objective.</p>\n<p>Define when the clock starts and what counts as recovered in the departmental plan. Starting the clock only when a manager declares a disaster can hide an earlier period of lost service. Restoring a database is a technical milestone; the agreed service condition may also require identity, network access, validation, staff and a minimum transaction capacity. Include those steps when assessing whether the RTO is realistic.</p>\n<p>An RPO is an objective, not a guarantee that lost records can be recreated. If a disruption occurs at 09:00 and the last usable copy is from 02:00, the recovery point is seven hours old. A daily backup alone does not demonstrate a thirty-minute RPO. Additional retained transactions, tested replication or a controlled reconstruction process may be needed, depending on the actual design. Check the usable recovery point, not merely the time printed on a backup job.</p>",
+          "sourceIds": [
+            "CONTINUITY-2022"
+          ]
+        },
+        {
+          "id": "M12-U01-C03",
+          "title": "Design an independent, usable recovery route",
+          "bodyHtml": "<p>A continuity arrangement should survive the disruption it is intended to address. If the recovery instructions, decryption keys, administrator identity and supplier contact list are available only through the failed service, the plan contains circular dependencies. Keep approved, protected access to the resources needed for recovery, with named custodians and a way to use them when the ordinary route is unavailable.</p>\n<p>Map dependencies in the order they must become usable. A recovered application may need a database, key service, identity provider, network route and external payment interface. Determine which can recover in parallel, which require a prior step and which share a failure domain. A supplier's data-centre availability commitment does not automatically establish the department's end-to-end service recovery.</p>\n<p>Compare options with their costs and limitations. A second location may reduce one local hazard but still share the same identity or control plane. Offline or separated copies can support some threats but require tested retrieval and reconstruction. Manual service may preserve urgent access while creating reconciliation and privacy work. The Estonia case supplies a real example of deliberate critical-data continuity; the department must make its own authorised placement, access and recovery decisions.</p>",
+          "sourceIds": [
+            "CASE-ESTONIA-EMBASSY",
+            "CONTINUITY-2022"
+          ]
+        }
+      ],
+      "application": {
+        "title": "The 09:00 registry outage",
+        "instructionsHtml": "<p>Allow about 60 minutes. A fictional provincial registry receives about 300 applications per hour. Management has approved a four-hour RTO and a thirty-minute RPO for its minimum public service. The outage begins at 09:00. The most recent usable full backup is from 02:00; a separate transaction log may cover later work but has not been restored in a recent exercise. The technical team estimates two hours to restore the database, forty minutes to recover identity and forty-five minutes for service validation. Identity recovery instructions are stored inside the unavailable identity service.</p>\n<p>Prepare a continuity decision note. Calculate the known recovery-point gap, identify the unproven and circular dependencies, propose a sensible sequence and define evidence required before claiming the objectives are met. Include a controlled minimum-service fallback for urgent applications.</p>",
+        "deliverable": "A dependency and recovery sequence, a minimum-service fallback and an objective assessment.",
+        "suggestedAnswerHtml": "<p>The known usable full copy is seven hours old, so it does not meet the thirty-minute RPO. The transaction log might improve the recovery point, but it must be retrieved, restored and reconciled before its coverage can be relied upon. Preserve the original records and record any gaps rather than inventing missing applications.</p>\n<p>Break the circular access dependency with an approved protected recovery route for identity instructions and credentials. Some database and identity work may run in parallel if the actual design permits, but validation and minimum service depend on both. The stated task durations are planning estimates, not proof of a four-hour end-to-end recovery. Measure from the disruption and include access, validation and service capacity.</p>\n<p>Use authorised staff, numbered temporary application records and protected storage for an agreed urgent subset. Explain to residents what the fallback can do and how they will receive confirmation. Reconcile each temporary record and any uncertain transaction exactly once when the service returns. Ask the service owner to accept the demonstrated recovery state and any remaining exceptions through the approved plan.</p>",
+        "rubric": [
+          {
+            "criterion": "Correctly interprets both recovery objectives and the seven-hour gap",
+            "points": 3
+          },
+          {
+            "criterion": "Finds the circular and untested dependencies",
+            "points": 3
+          },
+          {
+            "criterion": "Proposes a plausible complete service sequence",
+            "points": 2
+          },
+          {
+            "criterion": "Designs controlled fallback and reconciliation",
+            "points": 2
+          }
+        ]
+      },
+      "reflection": {
+        "prompt": "Which dependency could prevent your most important service from recovering even after its main database is restored?",
+        "guidanceHtml": "<p>Name the dependency, its owner, the assumed recovery route and the practical observation that would establish whether the route works.</p>"
+      },
+      "quiz": {
+        "id": "M12-U01-QUIZ",
+        "title": "Recover the service that people need — knowledge check",
+        "passPercent": 75,
+        "attempts": 0,
+        "questions": [
+          {
+            "id": "M12-U01-Q01",
+            "type": "multichoice",
+            "name": "M12-U01-Q01",
+            "promptHtml": "<p>What should primarily determine recovery priority?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "The impact of disruption on minimum critical services, people and departmental obligations.",
+                "fraction": 100,
+                "feedbackHtml": "Use business impact and service dependencies to guide recovery."
+              },
+              {
+                "textHtml": "The original purchase price of each system.",
+                "fraction": 0,
+                "feedbackHtml": "Cost does not establish the service's criticality."
+              },
+              {
+                "textHtml": "The order in which technical teams submitted requests.",
+                "fraction": 0,
+                "feedbackHtml": "Queue order may not reflect public-service harm."
+              },
+              {
+                "textHtml": "The visibility of a system's executive sponsor.",
+                "fraction": 0,
+                "feedbackHtml": "Priority needs an accountable impact assessment."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Use business impact and service dependencies to guide recovery.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M12-U01-Q02",
+            "type": "multichoice",
+            "name": "M12-U01-Q02",
+            "promptHtml": "<p>A service has a four-hour RTO and a thirty-minute RPO. What does the RPO address?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "The required recency of the recoverable data point.",
+                "fraction": 100,
+                "feedbackHtml": "Recovery time and recovery point are distinct requirements."
+              },
+              {
+                "textHtml": "The maximum time the recovery team may spend restoring servers.",
+                "fraction": 0,
+                "feedbackHtml": "That is a recovery-duration issue associated with the RTO."
+              },
+              {
+                "textHtml": "The period before staff are permitted to report the outage.",
+                "fraction": 0,
+                "feedbackHtml": "Reporting and escalation should follow the incident and continuity plan."
+              },
+              {
+                "textHtml": "The guaranteed time to recreate every missing transaction manually.",
+                "fraction": 0,
+                "feedbackHtml": "An objective does not prove that reconstruction is possible."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Recovery time and recovery point are distinct requirements.</p>",
+            "sourceIds": [
+              "CONTINUITY-2022"
+            ]
+          },
+          {
+            "id": "M12-U01-Q03",
+            "type": "multichoice",
+            "name": "M12-U01-Q03",
+            "promptHtml": "<p>An outage starts at 09:00 and the last usable backup is from 02:00. What is the known recovery-point age?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Seven hours.",
+                "fraction": 100,
+                "feedbackHtml": "Measure the data point against the disruption time."
+              },
+              {
+                "textHtml": "Thirty minutes, because that is the approved RPO.",
+                "fraction": 0,
+                "feedbackHtml": "The objective is not the observed recovery point."
+              },
+              {
+                "textHtml": "Two hours, because the restore is estimated to take two hours.",
+                "fraction": 0,
+                "feedbackHtml": "Restore duration is different from the age of recovered data."
+              },
+              {
+                "textHtml": "Zero, because the backup job completed successfully.",
+                "fraction": 0,
+                "feedbackHtml": "A successful old copy still has a data-recency gap."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Measure the data point against the disruption time.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M12-U01-Q04",
+            "type": "multichoice",
+            "name": "M12-U01-Q04",
+            "promptHtml": "<p>The recovery instructions can only be opened through the failed identity service. What is the problem?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "A circular dependency prevents use of the recovery route when it is needed.",
+                "fraction": 100,
+                "feedbackHtml": "Recovery resources need an approved route that survives the relevant failure."
+              },
+              {
+                "textHtml": "The instructions are necessarily confidential and therefore cannot be used during recovery.",
+                "fraction": 0,
+                "feedbackHtml": "Protected information can have an authorised emergency access route."
+              },
+              {
+                "textHtml": "The RPO automatically becomes the same as the RTO.",
+                "fraction": 0,
+                "feedbackHtml": "The dependency does not change the meaning of the two objectives."
+              },
+              {
+                "textHtml": "A supplier contact list alone resolves the issue.",
+                "fraction": 0,
+                "feedbackHtml": "The team still needs usable authority and access to the required recovery resources."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Recovery resources need an approved route that survives the relevant failure.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M12-U01-Q05",
+            "type": "multichoice",
+            "name": "M12-U01-Q05",
+            "promptHtml": "<p>A database is restored within two hours, but staff cannot authenticate for another three. What can be said about a four-hour service RTO?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "The database milestone alone does not demonstrate the service RTO; required access and service validation also matter.",
+                "fraction": 100,
+                "feedbackHtml": "Assess the end-to-end recovery condition defined by the plan."
+              },
+              {
+                "textHtml": "The RTO was met because database restoration is always the only criterion.",
+                "fraction": 0,
+                "feedbackHtml": "Recovery must satisfy the agreed service condition."
+              },
+              {
+                "textHtml": "The RTO clock restarts when identity recovery begins.",
+                "fraction": 0,
+                "feedbackHtml": "Restarting the clock hides part of the service disruption."
+              },
+              {
+                "textHtml": "The service RTO is irrelevant once any technical component is available.",
+                "fraction": 0,
+                "feedbackHtml": "The service objective remains the management requirement."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Assess the end-to-end recovery condition defined by the plan.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M12-U01-Q06",
+            "type": "multichoice",
+            "name": "M12-U01-Q06",
+            "promptHtml": "<p>What does the cited Estonia Data Embassy factsheet establish?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "An established arrangement holding copies of selected critical government datasets.",
+                "fraction": 100,
+                "feedbackHtml": "Keep the documented example within its actual scope."
+              },
+              {
+                "textHtml": "That every public service had already failed over and run live from the embassy.",
+                "fraction": 0,
+                "feedbackHtml": "The cited source describes live operation as a subsequent phase."
+              },
+              {
+                "textHtml": "That South African departments may place any data abroad without further assessment.",
+                "fraction": 0,
+                "feedbackHtml": "The foreign example does not supply local legal or departmental authority."
+              },
+              {
+                "textHtml": "That a remote copy removes the need for recovery exercises.",
+                "fraction": 0,
+                "feedbackHtml": "Copies must still be usable within a complete recovery route."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Keep the documented example within its actual scope.</p>",
+            "sourceIds": [
+              "CASE-ESTONIA-EMBASSY"
+            ]
+          },
+          {
+            "id": "M12-U01-Q07",
+            "type": "multichoice",
+            "name": "M12-U01-Q07",
+            "promptHtml": "<p>Which inputs belong in a business impact analysis? Select all correct answers.</p>",
+            "single": false,
+            "answers": [
+              {
+                "textHtml": "How the consequences of lost service develop over time.",
+                "fraction": 50,
+                "feedbackHtml": "Time-dependent harm helps determine priority and objectives."
+              },
+              {
+                "textHtml": "Minimum service capacity and supporting dependencies.",
+                "fraction": 50,
+                "feedbackHtml": "Recovery must sustain a defined useful service."
+              },
+              {
+                "textHtml": "Only the replacement cost of the main server.",
+                "fraction": -50,
+                "feedbackHtml": "A narrow asset cost misses public-service effects."
+              },
+              {
+                "textHtml": "An assumption that every system has identical criticality.",
+                "fraction": -50,
+                "feedbackHtml": "Different services and dependencies create different impacts."
+              }
+            ],
+            "generalFeedbackHtml": "<p>The analysis connects disruption to the department's actual work.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M12-U01-Q08",
+            "type": "multichoice",
+            "name": "M12-U01-Q08",
+            "promptHtml": "<p>Which questions test whether an alternate recovery arrangement is usable? Select all correct answers.</p>",
+            "single": false,
+            "answers": [
+              {
+                "textHtml": "Can authorised staff obtain the required keys and instructions during the assumed failure?",
+                "fraction": 50,
+                "feedbackHtml": "Recovery depends on practical access to its resources."
+              },
+              {
+                "textHtml": "Do the alternate and primary routes share a failure that could disable both?",
+                "fraction": 50,
+                "feedbackHtml": "Shared dependencies can undermine apparent redundancy."
+              },
+              {
+                "textHtml": "Does the supplier brochure use the word resilient?",
+                "fraction": -50,
+                "feedbackHtml": "A label does not establish the actual service design."
+              },
+              {
+                "textHtml": "Can the plan omit manual records because they are outside the main database?",
+                "fraction": -50,
+                "feedbackHtml": "Fallback records affect trustworthy service restoration and reconciliation."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Evaluate the complete recovery route and its failure assumptions.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M12-U01-Q09",
+            "type": "truefalse",
+            "name": "M12-U01-Q09",
+            "promptHtml": "<p>Business continuity is complete whenever an ICT backup exists.</p>",
+            "correct": false,
+            "trueFeedbackHtml": "This is incorrect. Continuity also requires people, facilities, authority, communication, service capacity and usable recovery.",
+            "falseFeedbackHtml": "Continuity also requires people, facilities, authority, communication, service capacity and usable recovery.",
+            "generalFeedbackHtml": "<p>Continuity also requires people, facilities, authority, communication, service capacity and usable recovery.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M12-U01-Q10",
+            "type": "truefalse",
+            "name": "M12-U01-Q10",
+            "promptHtml": "<p>An untested transaction log may help meet an RPO, but its existence alone does not establish a usable recovery point.</p>",
+            "correct": true,
+            "trueFeedbackHtml": "The log must be recoverable, applicable and reconciled with the restored data.",
+            "falseFeedbackHtml": "This is incorrect. The log must be recoverable, applicable and reconciled with the restored data.",
+            "generalFeedbackHtml": "<p>The log must be recoverable, applicable and reconciled with the restored data.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M12-U01-Q11",
+            "type": "matching",
+            "name": "M12-U01-Q11",
+            "promptHtml": "<p>Match each continuity concept to its meaning.</p>",
+            "pairs": [
+              {
+                "promptHtml": "Business impact analysis",
+                "answer": "Consequences and priorities of disrupted services"
+              },
+              {
+                "promptHtml": "RTO",
+                "answer": "Time objective for the required recovery"
+              },
+              {
+                "promptHtml": "RPO",
+                "answer": "Recency objective for recoverable data"
+              },
+              {
+                "promptHtml": "Minimum critical service",
+                "answer": "The useful service that must continue during disruption"
+              }
+            ],
+            "generalFeedbackHtml": "<p>Use each concept for the decision it actually supports.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M12-U01-Q12",
+            "type": "gapselect",
+            "name": "M12-U01-Q12",
+            "promptHtml": "<p>A useful recovery plan restores the required [[1]], and includes its supporting [[2]].</p>",
+            "choices": [
+              {
+                "text": "service",
+                "group": 1
+              },
+              {
+                "text": "dependencies",
+                "group": 1
+              },
+              {
+                "text": "server only",
+                "group": 1
+              },
+              {
+                "text": "unverified assumptions",
+                "group": 1
+              }
+            ],
+            "correctChoices": [
+              1,
+              2
+            ],
+            "generalFeedbackHtml": "<p>The public outcome depends on the complete service, not one component.</p>",
+            "sourceIds": []
+          }
+        ]
+      }
+    },
+    {
+      "id": "M12-U02",
+      "title": "Exercise, reconcile and return to normal",
+      "estimatedMinutes": 150,
+      "objectives": [
+        "Design a recovery exercise around the approved service condition.",
+        "Reconcile fallback and uncertain transactions without duplication.",
+        "Make return-to-normal decisions with clear authority and remaining risks."
+      ],
+      "chapters": [
+        {
+          "id": "M12-U02-C01",
+          "title": "Exercise the actual recovery assumptions",
+          "bodyHtml": "<p>A document review can find missing contacts and unclear decisions. A tabletop can reveal coordination problems. A technical restoration can establish whether a copy is usable. An end-to-end service exercise can reveal dependencies and capacity limits. Choose the exercise that addresses the uncertainty you need to resolve, and state what it will and will not cover.</p>\n<p>Define the starting condition, approved scope, participating roles, protected test data, success criteria and stop conditions. Use a representative recovery route and record material differences from production. Do not introduce an unapproved live outage to make an exercise seem realistic. Where a production step must be exercised, obtain the actual operational authority and protect ongoing service.</p>\n<p>Record observed times and outcomes, including failed steps. A nominal four-hour target is not met if the database is ready in three hours but the minimum service becomes usable in five. An exercise can still be valuable when it fails: it identifies a specific design or operational change. Assign the change and demonstrate the corrected behaviour before representing the objective as achieved.</p>",
+          "sourceIds": [
+            "CONTINUITY-2022",
+            "NCSC-EXERCISE-GUIDE"
+          ]
+        },
+        {
+          "id": "M12-U02-C02",
+          "title": "Reconcile records and uncertain transactions",
+          "bodyHtml": "<p>Recovery is also an information-integrity task. A manual queue may contain applications received while the digital system was unavailable. A payment request may have reached an external provider even though the department never received its response. Replaying everything can duplicate a payment or a decision; ignoring everything can lose a resident's application. Preserve the original identifiers and observations needed to reconcile each case.</p>\n<p>For fallback work, record a stable reference, time, responsible staff member, action taken and confirmation state. On return, compare these records with the recovered system and external acknowledgements. Distinguish known completed, known unprocessed and unresolved cases. Resolve uncertain effects through the relevant original record or provider before repeating an irreversible action. Record corrections without erasing the original sequence.</p>\n<p>Plan the catch-up work and its capacity. Staff may need to enter temporary records, verify exceptions and contact affected residents. Protect the temporary records throughout transfer and retain or dispose of them under the applicable records rules. A recovery declaration that ignores the backlog can conceal a continued service failure.</p>",
+          "sourceIds": [
+            "NARSSA-RECORDS"
+          ]
+        },
+        {
+          "id": "M12-U02-C03",
+          "title": "Return to normal is a management decision",
+          "bodyHtml": "<p>Before returning to normal, establish that the agreed service condition is met, access and monitoring are functioning, the recovered data is trustworthy and material outstanding issues have owners. Confirm the recovery point and any data gap, backlog or temporary control. The technical team's completion report informs the decision; it does not automatically settle every business consequence.</p>\n<p>The public-service continuity directive gives the Head of Department a role in declaring normal operation after the recovery review. Apply the department's actual plan and delegations, and communicate a consistent status to staff, suppliers and service users. Avoid saying 'fully restored' when an important function remains unavailable. State the useful service available and any temporary arrangements in clear language.</p>\n<p>Review the disruption and the recovery without rewriting the history. Preserve the initial assumptions, observed results and decisions. Update the business impact analysis, contact routes, supplier commitments and recovery design where the evidence warrants it. Schedule the necessary follow-up exercise and ensure the corrected plan remains accessible to the next duty team.</p>",
+          "sourceIds": [
+            "CONTINUITY-2022"
+          ]
+        }
+      ],
+      "application": {
+        "title": "The service is online, but the work is not finished",
+        "instructionsHtml": "<p>Allow about 60 minutes. In a fictional exercise, disruption begins at 09:00. The database is restored at 12:10 using a verified 08:45 recovery point. Authentication and service validation finish at 13:40. The approved objectives are a four-hour RTO and a thirty-minute RPO. Staff recorded 120 numbered temporary applications, and a batch of 20 payments has an uncertain external acknowledgement. The team proposes replaying the payment batch and announcing full recovery as soon as the database is online.</p>\n<p>Assess the objectives, write a safe reconciliation plan and draft a short recovery status for management. Define what must be checked before normal operation is declared. Preserve the difference between this exercise and an actual production incident.</p>",
+        "deliverable": "An objective result, a reconciliation table design and a management recovery statement.",
+        "suggestedAnswerHtml": "<p>The verified recovery point is fifteen minutes before disruption and meets the thirty-minute RPO for the data covered by that verification. The required service becomes usable at 13:40, four hours and forty minutes after disruption, so the four-hour RTO is missed by forty minutes. Database restoration at 12:10 is an intermediate milestone.</p>\n<p>Reconcile the 120 temporary applications by their original references against the recovered system, recording whether each is already present, needs controlled entry or requires investigation. Read the original external payment status for each of the 20 uncertain requests before any deliberate repeat. Keep the original requests and acknowledgements; do not treat a lost response as proof of failure.</p>\n<p>The management statement should describe the service now available, the demonstrated recovery-point result, the missed time objective, remaining reconciliation and any temporary controls. Name the owners and the decision route for normal operation. Record the exercise finding and improve the dependency or validation sequence that caused the delay before claiming a successful rerun.</p>",
+        "rubric": [
+          {
+            "criterion": "Calculates the RTO and RPO results correctly",
+            "points": 3
+          },
+          {
+            "criterion": "Preserves and reconciles all temporary application identities",
+            "points": 2
+          },
+          {
+            "criterion": "Resolves uncertain payment effects before any repeat",
+            "points": 3
+          },
+          {
+            "criterion": "Communicates the actual state and accountable next decisions",
+            "points": 2
+          }
+        ]
+      },
+      "reflection": {
+        "prompt": "What temporary process in your continuity plan creates records that must later be reconciled?",
+        "guidanceHtml": "<p>Describe how those records are identified, protected, compared with the recovered service and handled after the reconciliation is complete.</p>"
+      },
+      "quiz": {
+        "id": "M12-U02-QUIZ",
+        "title": "Exercise, reconcile and return to normal — knowledge check",
+        "passPercent": 75,
+        "attempts": 0,
+        "questions": [
+          {
+            "id": "M12-U02-Q01",
+            "type": "multichoice",
+            "name": "M12-U02-Q01",
+            "promptHtml": "<p>Which exercise best establishes whether a backup can restore the required application data?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "A controlled technical restoration with defined validation criteria.",
+                "fraction": 100,
+                "feedbackHtml": "Choose the exercise that directly addresses the uncertainty."
+              },
+              {
+                "textHtml": "A contact-list review without accessing any backup.",
+                "fraction": 0,
+                "feedbackHtml": "That can validate contacts, not the usability of the stored data."
+              },
+              {
+                "textHtml": "A tabletop discussion that assumes every recovery step succeeds.",
+                "fraction": 0,
+                "feedbackHtml": "A discussion does not observe the technical restoration."
+              },
+              {
+                "textHtml": "A count of backup jobs marked complete.",
+                "fraction": 0,
+                "feedbackHtml": "Job completion does not establish restore usability."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Choose the exercise that directly addresses the uncertainty.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M12-U02-Q02",
+            "type": "multichoice",
+            "name": "M12-U02-Q02",
+            "promptHtml": "<p>Disruption begins at 09:00 and the required service is usable at 13:40. Was a four-hour RTO met?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "No; the service recovery took four hours and forty minutes.",
+                "fraction": 100,
+                "feedbackHtml": "Measure the complete agreed recovery from the defined disruption point."
+              },
+              {
+                "textHtml": "Yes, if the database was restored before 13:00.",
+                "fraction": 0,
+                "feedbackHtml": "The agreed service condition includes its required dependencies and validation."
+              },
+              {
+                "textHtml": "Yes, because the recovery team started work after 09:40.",
+                "fraction": 0,
+                "feedbackHtml": "Delaying the start of work does not remove earlier service loss."
+              },
+              {
+                "textHtml": "The RTO cannot be assessed because the RPO is separate.",
+                "fraction": 0,
+                "feedbackHtml": "The supplied service times are sufficient to assess this RTO."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Measure the complete agreed recovery from the defined disruption point.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M12-U02-Q03",
+            "type": "multichoice",
+            "name": "M12-U02-Q03",
+            "promptHtml": "<p>A verified recovery point is 08:45 for a 09:00 disruption. What is the result against a thirty-minute RPO?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "The fifteen-minute recovery-point age meets that objective for the verified data scope.",
+                "fraction": 100,
+                "feedbackHtml": "State the point, the age and the data scope."
+              },
+              {
+                "textHtml": "It fails because recovery itself took more than thirty minutes.",
+                "fraction": 0,
+                "feedbackHtml": "Recovery duration and recovery-point age are different."
+              },
+              {
+                "textHtml": "It proves every external transaction completed exactly once.",
+                "fraction": 0,
+                "feedbackHtml": "The data point does not establish all external effects."
+              },
+              {
+                "textHtml": "It guarantees there were no records created after 08:45.",
+                "fraction": 0,
+                "feedbackHtml": "The objective permits a defined gap; actual later records need reconciliation."
+              }
+            ],
+            "generalFeedbackHtml": "<p>State the point, the age and the data scope.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M12-U02-Q04",
+            "type": "multichoice",
+            "name": "M12-U02-Q04",
+            "promptHtml": "<p>A payment request may have committed externally, but its response was lost. What should happen before repeating it?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Inspect the original provider or transaction record to resolve the actual effect.",
+                "fraction": 100,
+                "feedbackHtml": "Preserve identity and determine the effect before a deliberate repeat."
+              },
+              {
+                "textHtml": "Repeat immediately because no local success response exists.",
+                "fraction": 0,
+                "feedbackHtml": "A lost response can follow a committed action."
+              },
+              {
+                "textHtml": "Delete the original request so the new one has a clean history.",
+                "fraction": 0,
+                "feedbackHtml": "The original identity is needed for reconciliation."
+              },
+              {
+                "textHtml": "Assume it succeeded and close the case without readback.",
+                "fraction": 0,
+                "feedbackHtml": "Uncertainty should be resolved using the relevant evidence."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Preserve identity and determine the effect before a deliberate repeat.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M12-U02-Q05",
+            "type": "multichoice",
+            "name": "M12-U02-Q05",
+            "promptHtml": "<p>A recovery exercise misses its objective. What is the most useful result?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "A recorded finding, an owned correction and a later demonstration of the repaired behaviour.",
+                "fraction": 100,
+                "feedbackHtml": "An honest exercise outcome guides practical improvement."
+              },
+              {
+                "textHtml": "Change the target after the exercise and relabel the original result a pass.",
+                "fraction": 0,
+                "feedbackHtml": "That obscures the approved objective and actual outcome."
+              },
+              {
+                "textHtml": "Discard the exercise because a failed test has no value.",
+                "fraction": 0,
+                "feedbackHtml": "The failure can reveal a concrete weakness to fix."
+              },
+              {
+                "textHtml": "Repeat the same procedure without addressing the failed step.",
+                "fraction": 0,
+                "feedbackHtml": "Repetition does not by itself repair the known cause."
+              }
+            ],
+            "generalFeedbackHtml": "<p>An honest exercise outcome guides practical improvement.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M12-U02-Q06",
+            "type": "multichoice",
+            "name": "M12-U02-Q06",
+            "promptHtml": "<p>The application is online but the temporary application backlog is unresolved. Which statement is appropriate?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Describe the available service and the remaining backlog, with owners and reconciliation arrangements.",
+                "fraction": 100,
+                "feedbackHtml": "Communicate the actual service condition and remaining work precisely."
+              },
+              {
+                "textHtml": "Announce full recovery without mentioning the backlog.",
+                "fraction": 0,
+                "feedbackHtml": "Users and management may still face a material service limitation."
+              },
+              {
+                "textHtml": "Declare that nothing has recovered because some work remains.",
+                "fraction": 0,
+                "feedbackHtml": "That ignores useful service already restored."
+              },
+              {
+                "textHtml": "Erase the temporary records to make the service state consistent.",
+                "fraction": 0,
+                "feedbackHtml": "Those records represent work that must be reconciled and retained appropriately."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Communicate the actual service condition and remaining work precisely.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M12-U02-Q07",
+            "type": "multichoice",
+            "name": "M12-U02-Q07",
+            "promptHtml": "<p>Which details should a controlled recovery exercise define? Select all correct answers.</p>",
+            "single": false,
+            "answers": [
+              {
+                "textHtml": "The starting condition, scope and success criteria.",
+                "fraction": 50,
+                "feedbackHtml": "These establish what the exercise is intended to demonstrate."
+              },
+              {
+                "textHtml": "Authority, safety boundaries and stop conditions.",
+                "fraction": 50,
+                "feedbackHtml": "These protect the ongoing service and participants."
+              },
+              {
+                "textHtml": "An assumption that all untested dependencies are functioning.",
+                "fraction": -50,
+                "feedbackHtml": "That can conceal the very uncertainty the exercise should expose."
+              },
+              {
+                "textHtml": "A requirement to hide failed steps from the final report.",
+                "fraction": -50,
+                "feedbackHtml": "Failures are useful observations for improvement."
+              }
+            ],
+            "generalFeedbackHtml": "<p>A meaningful exercise is both authorised and capable of testing its assumptions.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M12-U02-Q08",
+            "type": "multichoice",
+            "name": "M12-U02-Q08",
+            "promptHtml": "<p>Which actions support trustworthy reconciliation? Select all correct answers.</p>",
+            "single": false,
+            "answers": [
+              {
+                "textHtml": "Retain original fallback identifiers and confirmation states.",
+                "fraction": 50,
+                "feedbackHtml": "These let staff join the same work across systems."
+              },
+              {
+                "textHtml": "Separate completed, unprocessed and unresolved cases.",
+                "fraction": 50,
+                "feedbackHtml": "Each state needs a different next action."
+              },
+              {
+                "textHtml": "Replay every external request to ensure none was missed.",
+                "fraction": -50,
+                "feedbackHtml": "This can create duplicate effects."
+              },
+              {
+                "textHtml": "Treat every missing local response as proof of nonexecution.",
+                "fraction": -50,
+                "feedbackHtml": "A remote effect may have occurred before the response was lost."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Reconciliation preserves the original work and resolves uncertainty case by case.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M12-U02-Q09",
+            "type": "truefalse",
+            "name": "M12-U02-Q09",
+            "promptHtml": "<p>A successful backup job proves that all staff, identity, communication and supplier dependencies will recover within the service RTO.</p>",
+            "correct": false,
+            "trueFeedbackHtml": "This is incorrect. A backup observation covers only part of the complete service recovery.",
+            "falseFeedbackHtml": "A backup observation covers only part of the complete service recovery.",
+            "generalFeedbackHtml": "<p>A backup observation covers only part of the complete service recovery.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M12-U02-Q10",
+            "type": "truefalse",
+            "name": "M12-U02-Q10",
+            "promptHtml": "<p>Return-to-normal reporting should identify material temporary controls and remaining data or workload gaps.</p>",
+            "correct": true,
+            "trueFeedbackHtml": "Management needs the actual service state and outstanding consequences before deciding.",
+            "falseFeedbackHtml": "This is incorrect. Management needs the actual service state and outstanding consequences before deciding.",
+            "generalFeedbackHtml": "<p>Management needs the actual service state and outstanding consequences before deciding.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M12-U02-Q11",
+            "type": "matching",
+            "name": "M12-U02-Q11",
+            "promptHtml": "<p>Match each recovery observation to the next useful action.</p>",
+            "pairs": [
+              {
+                "promptHtml": "Contact number is obsolete",
+                "answer": "Repair and verify the contact route"
+              },
+              {
+                "promptHtml": "Backup restores but data validation fails",
+                "answer": "Investigate the data and correct the recovery method"
+              },
+              {
+                "promptHtml": "External payment response is uncertain",
+                "answer": "Read the original transaction effect"
+              },
+              {
+                "promptHtml": "Temporary applications remain",
+                "answer": "Reconcile stable references and plan catch-up capacity"
+              }
+            ],
+            "generalFeedbackHtml": "<p>Each observation should lead to a specific owned action.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M12-U02-Q12",
+            "type": "ddwtos",
+            "name": "M12-U02-Q12",
+            "promptHtml": "<p>Before normal operation is declared, establish the actual service [[1]] and assign owners to material [[2]].</p>",
+            "choices": [
+              {
+                "text": "condition",
+                "group": 1
+              },
+              {
+                "text": "remaining issues",
+                "group": 1
+              },
+              {
+                "text": "announcement length",
+                "group": 1
+              },
+              {
+                "text": "unrecorded assumptions",
+                "group": 1
+              }
+            ],
+            "correctChoices": [
+              1,
+              2
+            ],
+            "generalFeedbackHtml": "<p>A recovery decision should reflect the demonstrated state and unresolved consequences.</p>",
+            "sourceIds": []
+          }
+        ]
+      }
+    }
+  ]
+}

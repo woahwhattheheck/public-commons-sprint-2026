@@ -13,6 +13,10 @@ import { openHandover, describeHandover, receiveHandover } from './handover.mjs'
 import { startAnalysisWorkspace } from '../../sf88-operator-buyer-cli/tenderly-analysis/server.mjs';
 
 export const HELP='Safe / Palmera original transaction review\n\n'+
+'Public recorded Safe source\n'+
+'  public-read --caller-root DIRECTORY --out DIRECTORY [--rpc-env NAME | --rpc HTTPS_URL] [--source FILE] [--label TEXT]\n'+
+'  public-open --directory DIRECTORY\n'+
+'  public-caller --directory DIRECTORY --out FILE [--caller-root DIRECTORY] [--rpc-env NAME]\n\n'+
 'Capture and prepare\n'+
 '  capture --module FILE --context FILE --out DIRECTORY [--label TEXT]\n'+
 '  selection --directory DIRECTORY\n'+
@@ -77,6 +81,11 @@ async function completed(buyer,id) {
   need(result,'SAFE_COMPLETE_RESULT_REQUIRED');return result;
 }
 export async function runCLI(argv=process.argv.slice(2),{write=value=>process.stdout.write(JSON.stringify(value,null,2)+'\n')}={}) {
+  const publicCommands={'public-read':'read','public-open':'open','public-caller':'caller'};
+  if(Object.hasOwn(publicCommands,argv[0])) {
+    const {runPublicSafeCLI}=await import('./receiving/public-safe-cli.mjs');
+    return runPublicSafeCLI([publicCommands[argv[0]],...argv.slice(1)],{write});
+  }
   const parsed=parseArgs({args:argv,allowPositionals:true,strict:true,
     options:Object.fromEntries([...valueOptions.map(name=>[name,{type:'string'}]),['help',{type:'boolean',short:'h'}]])});
   const options=parsed.values,command=parsed.positionals[0];

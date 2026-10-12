@@ -535,6 +535,12 @@
       await refresh(); notice("Retained action reopened: " + pending.title + ".");
       if (result.record?.data.schema === "cskt.engagement.entry.v1") { state.entry = result.record; state.tab = "entries"; await loadEntries(true); }
       if (result.record?.data.schema === "cskt.engagement.mail.v1") { state.selectedMail = result.record; state.tab = "mail"; await loadMail(true); }
+      const createdMail = result.copy || result.mail;
+      if (createdMail?.id) {
+        state.selectedMail = await api("/mail/" + createdMail.id);
+        state.tab = "mail"; state.mailFilters.search = createdMail.entryId;
+        state.mailFilters.formId = ""; state.mailFilters.state = ""; await loadMail(true);
+      }
       if (result.result?.schema === "cskt.engagement.received.v1") { state.receiving = result.result; state.tab = "receiving"; }
       render();
     }

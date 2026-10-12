@@ -39,7 +39,8 @@ export const ACTIONS={
  'release.prepare':['datasetId','origin','path','payment'],'release.inspect':['releaseId'],
  'release.activate':['releaseId','expectedGeneration'],'release.start':['releaseId','expectedGeneration'],'release.stop':['releaseId'],'release.rollback':['releaseId','expectedGeneration'],
  'buyer.inspect':['intentIds'],'buyer.receive':['intentIds'],
- 'export.create':['editionId','table','format','mappingId']
+ 'export.create':['editionId','table','format','mappingId'],
+ 'analysis.export':['observationsEditionId','predictionsEditionId','options','analyst']
 };
 export function workspaceSchema({workspaceId,inboxConfigured=false,userAgent}={}){
  return{schema:'stellar-forge.coops-workspace-schema.v1',workspaceId,title:'Coastal Source Operations',source:SOURCE_CONTRACT,
@@ -47,6 +48,8 @@ export function workspaceSchema({workspaceId,inboxConfigured=false,userAgent}={}
  units:['metric','english'],timeZones:['gmt','lst','lst_ldt'],datums:['MLLW','MHHW','MHW','MTL','MSL','MLW','NAVD','STND','IGLD','LWD','CRD'],
  predictionIntervals:['6','h','hilo'],annotationStatuses:['open','reviewed','follow_up'],
  exportFormats:['json','jsonl','csv','report','source-package'],inboxConfigured,userAgent,
+ analysis:{action:'analysis.export',schema:'stellar-forge.coops-retained-analysis.v1',products:['water_level','predictions'],timeZone:'gmt',predictionInterval:'6',
+  quality:['all','verified','preliminary'],outputs:['workbook.html','workbook.json','analysis.json','paired.csv','episodes.csv','unplaced.csv','source/*','manifest.json','README.txt']},
  limits:{windowDays:366,backfillYears:5,rowPage:500,responseBytes:32*1024*1024,captureBytes:256*1024*1024,sourceImportBytes:64*1024*1024,sourceTasks:128,backfillParts:5,streamExportBytes:1024*1024*1024,datasetRows:250000,metadataRows:50000},
  defaults:{products:['water_level'],units:'metric',timeZone:'gmt',datum:'MLLW',predictionInterval:'6'},
  sourceImport:{schema:'stellar-forge.coops-capture-package.v1',description:'An exact exported source edition with every original response and capture/query identity.'},

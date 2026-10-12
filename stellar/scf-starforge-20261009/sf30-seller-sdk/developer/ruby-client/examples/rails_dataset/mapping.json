@@ -1,0 +1,57 @@
+{
+  "schema": "stellar-forge.rails-dataset-mapping.v1",
+  "key_columns": [
+    "external_id"
+  ],
+  "columns": {
+    "external_id": {
+      "field": "id",
+      "type": "string",
+      "stringify": false,
+      "null": "assign",
+      "missing": "error"
+    },
+    "name": {
+      "field": "name",
+      "type": "string",
+      "null": "assign",
+      "missing": "preserve"
+    },
+    "amount": {
+      "field": "amount",
+      "type": "decimal",
+      "null": "assign",
+      "missing": "preserve"
+    },
+    "quantity": {
+      "field": "quantity",
+      "type": "integer",
+      "null": "assign",
+      "missing": "preserve"
+    },
+    "active": {
+      "field": "active",
+      "type": "boolean",
+      "null": "assign",
+      "missing": "preserve"
+    },
+    "observed_on": {
+      "field": "observed_on",
+      "type": "date",
+      "null": "assign",
+      "missing": "preserve"
+    },
+    "recorded_at": {
+      "field": "recorded_at",
+      "type": "datetime",
+      "null": "assign",
+      "missing": "preserve"
+    }
+  },
+  "removal": {
+    "strategy": "archive",
+    "column": "source_active",
+    "active": true,
+    "inactive": false
+  }
+}

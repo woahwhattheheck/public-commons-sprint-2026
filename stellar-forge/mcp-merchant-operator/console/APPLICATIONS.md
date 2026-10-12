@@ -2,7 +2,7 @@
 
 **Merchant operator** opens the existing authenticated merchant console from a saved Applications selection. The same process owns the MCP listener, native tool calls, retained request history and customer file transfers. The interface uses the original merchant configuration and the operator workspace you select.
 
-The console’s [operating guide](README.md) covers Host, Tools, Requests and Customers, including saved request revisions, original recovery calls, portable profiles and customer downloads.
+The console’s [operating guide](README.md) covers Host, Tools, Requests, Workflows and Customers. [Saved workflows](WORKFLOWS.md) connects original request revisions into complete merchant operations, with retained inputs, native result conditions, pause/recovery, named receiving ownership and complete profile return.
 
 ## Save the original merchant
 
@@ -27,9 +27,9 @@ After the runtime is connected, use **Review Start** and **Start**. Applications
 
 **Open** leads to the original `/operator/` page on that same listener. For a fixed bearer host, the private Open address supplies the token in the URL fragment. The original page removes that fragment and keeps the token in memory. For an OAuth host, Open displays the original token sign-in interface, and the original resource host applies its configured authorization to each native operation.
 
-The Host view gives a lightweight snapshot of configured tools and provider ownership. Searching tools and reopening history use the original console. Running a saved request sends its exact original arguments through the configured merchant provider. Customer transfers retain the original export identity, file hashes and resumable transfer state.
+The Host view gives a lightweight snapshot of configured tools and provider ownership. Searching tools and reopening history use the original console. Running a saved request sends its exact original arguments through the configured merchant provider. Workflows arrange those immutable request revisions into complete operations and retain each native call before continuing. Customer transfers retain the original export identity, file hashes and resumable transfer state.
 
-**Stop** closes the owned listener and drains the original console and provider lifecycle. Retained request revisions, completed returns, customer files and the SQLite workspace remain in the selected directory. Start the same saved application to reopen that workspace. A new process gets a new instance identity while the workspace keeps its original identity.
+**Stop** closes the owned listener and drains the original console and provider lifecycle. It requests workflow pauses and retains each accepted native request's original outcome. Saved workflow editions, run inputs, ordered progress, request revisions, completed returns, customer files and the SQLite workspace remain in the selected directory. Start the same saved application to reopen that workspace, inspect the retained run and choose **Continue same run**. A new process gets a new instance identity while the workspace keeps its original identity.
 
 Applications uses the existing merchant configuration resource key to prevent conflicting managed owners. The native console also retains an ownership lease in its selected private directory. These controls keep multiple launchers from acquiring the same saved console at the same time.
 
@@ -46,6 +46,16 @@ The product-owned adapter passes a complete selection to the original native com
 The native host includes the managed binding in its original console snapshot. The Applications observer verifies the returned startup record, selected source files, configuration files and SQLite identity before exposing Open. Fixed bearer starts also verify the authenticated original host snapshot. OAuth starts retain the native host’s internal binding and use the original authorization flow when the user connects.
 
 Installed-source adoption can change the source directory path while retaining the selected source bytes. The binding records both the selected runtime source directory and the adopted release directory.
+
+## Move an unfinished workflow between Applications
+
+Open the destination **Merchant operator** application with its own private console workspace. Its **Host** page supplies the actual destination workspace ID and configuration fingerprint. Review an imported profile and bind it to that host before receiving execution ownership.
+
+On the current owner, pause the unfinished workflow and let its accepted native request return. Use **Hand over and export profile** with the destination identity and a concrete note, then import the complete resulting profile into the destination. Only the named owner continues its remaining native steps. The same process supports a later return to the original source workspace.
+
+Select transfer checkpoints that fit the provider lifecycle. For the original seven-step merchant operation, transfer after staging and after the seller's own Stop result, keeping Start and Stop with the same native merchant owner. The complete [workflow operating guide](WORKFLOWS.md#hand-over-a-paused-run-and-return-it) covers review-copy import, original call recovery, owner release, append-only history receiving and return.
+
+A port change or Applications Stop/reopen preserves the saved console identity. A changed merchant configuration or adopted runtime still goes through the original current-source review and profile binding. Keep the native release/provider state with its existing maintained transfer operation.
 
 ## Continue the original customer receiving operation
 
@@ -77,4 +87,4 @@ The contribution `distribution/contributions/merchant-console.json` registers `c
 
 The managed helper exposes `prepareMerchantConsoleSelection`, `startManagedMerchantConsole` and `verifyManagedMerchantConsoleStartup` for original callers that already own their selected runtime and private state. The original `startMerchantMcp` API keeps `consoleDirectory` optional and accepts a managed binding for the same console instance.
 
-The existing distribution component includes the complete merchant operator source, browser assets and receiving modules. The product contribution adds the managed receiving command and its public module exports. The shared Applications catalog, lifecycle, permission checks and managed runtime builder remain the integration surface.
+The existing distribution component includes the complete merchant operator source, browser assets and receiving modules, including `console/workflow-records.mjs`, `console/workflows.mjs`, `console/public/workflows.mjs` and `receiving/workflow-journey.mjs`. Its recursive source selection carries these files with the original merchant component. The product contribution adds the managed receiving command and its public module exports. The shared Applications catalog, lifecycle, permission checks and managed runtime builder remain the integration surface.

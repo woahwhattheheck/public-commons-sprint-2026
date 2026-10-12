@@ -23,9 +23,13 @@ const excludedDirs = new Set(['test', 'tests', 'fixtures', 'snapshots', 'node_mo
 
 function isRuntimeFile(path, explicitRuntime = false) {
   const parts = path.split('/');
-  return !parts.some(part => excludedDirs.has(part) || part.startsWith('.')) &&
+  // Retained source data can have an original fixtures path. Only explicitly
+  // declared data gets this exception; executable fixtures stay excluded.
+  const declaredData = explicitRuntime && /\.(?:csv|json|txt|parquet)$/i.test(path);
+  return !parts.some(part => part.startsWith('.') ||
+    (excludedDirs.has(part) && !(part === 'fixtures' && declaredData))) &&
     (explicitRuntime || !excludedName.test(parts.at(-1))) &&
-    (supported.test(path) || (explicitRuntime && /\.zip$/i.test(path)) ||
+    (supported.test(path) || (explicitRuntime && /\.(?:zip|parquet)$/i.test(path)) ||
       ['LICENSE', 'go.mod', 'Cargo.lock'].includes(parts.at(-1)) ||
       (explicitRuntime && ['COPYING', 'DESCRIPTION'].includes(parts.at(-1))));
 }

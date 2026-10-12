@@ -9,6 +9,7 @@ import {renderAdjustmentCsv,renderAdjustmentHtml} from '../adjustments.mjs';
 import {freezeAccountantAdjustments} from '../accountant/adjustments.mjs';
 import {inspectBuyerSource,isBuyerHandoff} from '../accountant/buyer-source.mjs';
 import {createBuyerReturnPacket} from '../accountant/buyer-return.mjs';
+import {accountingSourceMode,readBuyerStartup,buyerStartupView} from './buyer-startup.mjs';
 
 export const ACCOUNTANT_CSV_BYTES=64*1024*1024;
 export const ACCOUNTANT_REQUEST_BYTES=Math.ceil(ACCOUNTANT_CSV_BYTES*4/3)+500_000;
@@ -93,13 +94,30 @@ export class AccountantWorkspace{
     return {buyerSourceBytes:raw,source:inspected.source,inspected};
   }
   async prepareBuyer(value){
-    const selected=this.buyerSource(value.buyerSource),v=selected.inspected;
+    check(value&&typeof value==='object'&&!Array.isArray(value)&&(value.buyerSource!==undefined||value.buyerStartup!==undefined),'BUYER_SOURCE_REQUIRED','Choose the retained startup source or an original issued buyer file.');
+    const selected=await this.source({buyerSource:value.buyerSource,buyerStartup:value.buyerStartup}),v=selected.inspected;
     return {source:v.source,period:v.document.issued.period,totals:v.document.issued.totals,creditTotals:v.document.issued.credit_totals??[],netTotals:v.document.issued.net_totals??v.document.issued.totals,options:[],rowCount:v.rows.length,
       workspaceRevision:this.workspace.state.revision,sourceKind:'buyer-expense-period',buyerSourceSha256:v.sha256,rows:v.rows.slice(0,25),retainedRows:v.rows.length};
   }
-  async source({runId,closeId=null,buyerSource}){
+  async startup(){
+    if(accountingSourceMode(this.workspace.state)!=='buyer')return {available:false,sourceMode:'merchant'};
+    const source=await readBuyerStartup(this.workspace.directory,this.workspace.state);
+    return {available:true,sourceMode:'buyer',source:buyerStartupView(this.workspace.directory,this.workspace.state),workspaceRevision:this.workspace.state.revision};
+  }
+  async startupFile(){
+    const source=await readBuyerStartup(this.workspace.directory,this.workspace.state);
+    return {bytes:source.bytes,name:'original-issued-buyer-source.json',type:'application/json; charset=utf-8'};
+  }
+  async source({runId,closeId=null,buyerSource,buyerStartup}){
+    if(buyerStartup!==undefined){
+      check(buyerSource===undefined&&!runId&&!closeId&&buyerStartup&&typeof buyerStartup==='object'&&!Array.isArray(buyerStartup)&&
+        Object.keys(buyerStartup).length===1&&buyerStartup.sha256===this.workspace.state.buyerStartup?.sha256,
+        'ACCOUNTANT_SOURCE_AMBIGUOUS','Select the exact retained buyer startup source.');
+      const selected=await readBuyerStartup(this.workspace.directory,this.workspace.state);
+      return {buyerSourceBytes:selected.bytes,source:selected.inspected.source,inspected:selected.inspected};
+    }
     if(buyerSource!==undefined){check(!runId&&!closeId,'ACCOUNTANT_SOURCE_AMBIGUOUS','Choose one original buyer source or merchant source.');return this.buyerSource(buyerSource);}
-    const workspace=this.workspace;let periodCloseBytes=null,reviewNotesBytes=null,periodClose=null,adjustmentsBytes=null,adjustmentFiles=null;
+    const workspace=this.workspace;workspace.merchantSources();let periodCloseBytes=null,reviewNotesBytes=null,periodClose=null,adjustmentsBytes=null,adjustmentFiles=null;
     if(closeId){
       check(workspace.periods,'ACCOUNTING_PERIODS_UNAVAILABLE','Open this workspace with the maintained recorded-activity periods module.');
       const close=workspace.periods.closeRow(closeId);
@@ -137,8 +155,10 @@ export class AccountantWorkspace{
   async create(value){
     const workspace=this.workspace;
     return workspace.serial(async()=>{
-      const handoffId=id(value.id??randomUUID()),name=label(value.name,'handoff name'),actor=label(value.actor,'operator',1000);
-      const request={runId:value.runId??null,closeId:value.closeId??null,name,actor,labels:value.labels??[],...(value.buyerSource!==undefined?{buyerSource:copy(value.buyerSource)}:{})},requestSha256=hash(json(request));
+      const startup=value.buyerStartup!==undefined;
+      const handoffId=id(value.id??(startup?workspace.state.buyerStartup?.handoffId:randomUUID())),name=label(value.name,'handoff name'),actor=label(value.actor,'operator',1000);
+      if(startup)check(handoffId===workspace.state.buyerStartup?.handoffId,'BUYER_STARTUP_HANDOFF_ID','Use the retained startup handoff ID to recover this same source review.',409);
+      const request={runId:value.runId??null,closeId:value.closeId??null,name,actor,labels:value.labels??[],...(value.buyerSource!==undefined?{buyerSource:copy(value.buyerSource)}:{}),...(value.buyerStartup!==undefined?{buyerStartup:copy(value.buyerStartup)}:{})},requestSha256=hash(json(request));
       const prior=records(workspace).find(item=>item.id===handoffId);
       if(prior){check(prior.requestSha256===requestSha256,'HANDOFF_REQUEST_CONFLICT','This request ID already belongs to another handoff.',409);return {record:copy(prior),duplicate:true,state:workspace.view()};}
       workspace.expected(value.revision);check(records(workspace).length<2000,'ACCOUNTANT_HANDOFF_LIMIT','This workspace already retains 2,000 accountant handoffs.');
@@ -223,6 +243,8 @@ export class AccountantWorkspace{
 export async function handleAccountantRequest(accountant,{method,path,query={},value}){
   const parts=path.split('/').filter(Boolean);if(parts[0]!=='api'||parts[1]!=='accountant')return null;
   if(parts.length===2&&method==='GET')return {value:accountant.view()};
+  if(path==='/api/accountant/startup'&&method==='GET')return {value:await accountant.startup()};
+  if(path==='/api/accountant/startup/source'&&method==='GET')return {file:await accountant.startupFile()};
   if(path==='/api/accountant/source'&&method==='GET')return {value:await accountant.prepare(query)};
   if(path==='/api/accountant/buyer-source/preview'&&method==='POST')return {value:await accountant.prepareBuyer(value)};
   if(path==='/api/accountant/handoffs'&&method==='POST')return {value:await accountant.create(value)};

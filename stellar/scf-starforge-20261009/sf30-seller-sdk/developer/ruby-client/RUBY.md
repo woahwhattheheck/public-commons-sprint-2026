@@ -4,6 +4,8 @@ A seller can deliver its current OpenAPI contract as a complete Ruby customer pa
 
 The package also includes a durable receiving service for Rails jobs. A stable business key selects one native intent. The application can restart, recover the same operation, import its complete saved response, and resume database processing without requesting another purchase.
 
+For complete paginated datasets, use [Dataset receiving and Rails editions](DATASETS.md). That workflow retains the original native acquisition, receives every SF100 data file, previews all mapped row changes and commits the selected edition with its application receipt. The complete migration, models, job and commissioning command are delivered in [examples/rails_dataset](examples/rails_dataset/README.md).
+
 ## Create and deliver the customer package
 
 Use the current seller OpenAPI exported by the maintained merchant workspace:
@@ -26,7 +28,7 @@ An already completed JavaScript customer export can receive its Ruby companions 
 starforge client ruby resume --dir /absolute/existing-customer-export
 ~~~
 
-The exporter preserves the original five JavaScript files and their existing client-export.json. It adds eight Ruby application files and writes ruby-client.json after every companion is complete. Each file carries an exact byte count and SHA-256. The Ruby manifest also binds the original client-export.json and seller source hash.
+The exporter preserves the original five JavaScript files and their existing client-export.json. The current edition adds 21 Ruby/application files and writes ruby-client.json after every companion is complete. Each file carries an exact byte count and SHA-256. The Ruby manifest also binds the original client-export.json and seller source hash.
 
 | File | Purpose |
 | --- | --- |
@@ -38,6 +40,14 @@ The exporter preserves the original five JavaScript files and their existing cli
 | rails_receiving.rb | Stable business-job preparation, explicit execution and receiving |
 | customer.rb | Runnable customer CLI and one repeatable operator journey |
 | RUBY.md | This operating and Rails integration guide |
+| seller-dataset-bridge.mjs | Original Dataset session, recovery and complete SF100 receiving |
+| dataset_delivery.rb, dataset_receiving.rb | Exact offline dataset rows and durable acquisition/receiving service |
+| dataset_customer.rb, examples/dataset_lifecycle.rb | Complete operator CLI and original-session customer continuation |
+| rails_dataset.rb | Complete mapping/revision preview and transaction importer |
+| DATASETS.md | Dataset operation, source contract and receiving guide |
+| examples/rails_dataset/ | Migration, models, job, commission command, mapping and application guide |
+
+Inspection and copy preserve existing complete eight-file Ruby editions. Export to a new destination for the current full Dataset/Rails edition; completed existing packages retain their original manifests. The current exporter includes and verifies every nested Rails example file.
 
 Use exact-copy delivery when transferring an existing package:
 

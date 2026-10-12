@@ -120,3 +120,16 @@ Await workspace close before moving or reopening its SQLite directory. If an ori
 Open **Material catalogs** to retain original CSV, TSV, JSONL or JSON sources; map material identifiers, text, references and quantity units; review full or delta editions; and select the intended catalog revision. Customer decisions bind the exact selected material, with changed matches returned for review after later editions. The same view exports native OpenSearch index, bulk, delta and query files and opens an original merchant query draft.
 
 The complete [material catalog operating guide](../catalog/GUIDE.md) covers real SAP source examples, declared text and unit lookups, exact quantity conversion, source upload recovery, portable customer catalog receiving and the installed batch CLI. This view uses the existing workspace directory, operation IDs, SQLite store and local session.
+
+
+## Supplier delivery
+
+Open **Supplier delivery** for the selected material catalog and edition. Choose the original Sonepar/BMEcat profile, **ETIM xChange 2.0**, or **2BA xChange 2.0**, then save the submission and review its complete product set.
+
+For native xChange, the file upload uses the **ETIM xChange JSON** format and **Map ETIM xChange** retains the complete product, original supplier/catalogue headers and numeric-token context. Submission settings can inherit those headers or replace a complete header with an explicit reason. Supplier header overrides select the original supplier key. The **Full profile JSON** editor shows when it owns the pending profile; Apply returns those values to the form.
+
+Select a product to inspect its original and corrected values. A numeric value retains its exact source spelling; a complete JSON subtree carries its numeric metadata with it. Removing a native correction restores the original numeric metadata for that field while keeping other saved corrections. Source identity and headers remain tied to their source; headers change through submission settings.
+
+The **Recipient effects** table shows complete product and trade-item before/after values, their native identifiers and supplier identity. Filter by kind, action, identifier or supplier name, and page through the full selected review. For CHANGE, select the actual previous recipient review and exact catalogue-version reference. For FULL, review the absent-product and absent-trade-item effects before using the delivery.
+
+Download the review, product and correction files together with the native delivery and full catalog handover. The receiver reopens the source, complete immutable review chain, corrections and recipient state. See the [native xChange guide](../catalog/supplier/xchange/GUIDE.md) for field semantics and source rules, and the [complete receiving operation](../receiving/XCHANGE_NATIVE.md) for its original publisher example.
