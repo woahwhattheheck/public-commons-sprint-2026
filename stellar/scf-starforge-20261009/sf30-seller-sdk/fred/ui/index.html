@@ -4,7 +4,7 @@
 <body>
 <header><div><p class="eyebrow">STELLAR FORGE</p><h1>Economic editions</h1><p id="project-title">Opening project…</p></div><button id="refresh" type="button">Refresh state</button></header>
 <p class="source-notice">This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. By using this application, users agree to the <a href="https://fred.stlouisfed.org/docs/api/terms_of_use.html" target="_blank" rel="noopener noreferrer">FRED API Terms of Use</a>.</p>
-<nav aria-label="Workspace sections"><button data-tab="source" class="active">Source</button><button data-tab="editions">Editions & review</button><button data-tab="publication">Merchant</button><button data-tab="customer">Customer</button><button data-tab="recovery">History & handover</button></nav>
+<nav aria-label="Workspace sections"><button data-tab="source" class="active">Source</button><button data-tab="editions">Editions & review</button><button data-tab="recurring">Recurring briefings</button><button data-tab="publication">Merchant</button><button data-tab="customer">Customer</button><button data-tab="recovery">History & handover</button></nav>
 <main>
 <div id="message" role="status" aria-live="polite"></div>
 <section id="summary" class="metrics" aria-label="Project summary"></section>
@@ -53,6 +53,57 @@
 <div class="buttons"><button id="compare">Compare source editions</button><button id="download-comparison">Download full comparison</button></div><pre id="comparison-summary">Select the same series and observation interval in two captures.</pre><div id="comparison" class="table-wrap"></div>
 <div class="buttons"><button id="compare-previous">Previous changes</button><button id="compare-next">Next changes</button></div>
 </section>
+
+<section data-panel="recurring" hidden>
+<h2>Recurring briefings</h2>
+<p>Save a reviewed briefing's series and comparison methods, then apply that selection to later retained source. Each saved successor keeps its original report and a comparison with the selected predecessor.</p>
+<p><a href="/recurring-guide" target="_blank" rel="noopener">Operating guide and command reference</a></p>
+<div id="recurring-recovery" class="box" hidden><h3>Saved action</h3><p id="recurring-recovery-text"></p><div class="buttons"><button id="recurring-resume">Continue saved action</button><button id="recurring-discard">Clear unsent browser request</button></div></div>
+<div class="box">
+<h3>Save a briefing template</h3>
+<form id="template-form" class="form-grid">
+<label class="wide">Saved analyst briefing<select id="template-review" required></select></label>
+<label class="wide">Template name<input id="template-name" maxlength="160" required></label>
+<label>Calendar months<input id="template-months" type="number" min="1" max="1200" value="12" required></label>
+<label>Window anchor<select id="template-anchor"><option value="latest_all">Earliest latest observation date across the selected series</option><option value="latest_any">Latest observation date across the selected series</option></select></label>
+<label>Months to omit at the end<input id="template-lag" type="number" min="0" max="1200" value="0" required></label>
+<label>Earlier template version<select id="template-previous"><option value="">Create a new template</option></select></label>
+<p class="wide briefing-method">Monthly windows include complete calendar months. Quarterly and annual source dates label their observation periods. Missing observations remain part of the source and its coverage.</p>
+<div class="wide"><button type="submit" id="template-save">Save template</button></div>
+</form>
+</div>
+<div class="box">
+<h3>Prepare the next briefing</h3>
+<div class="form-grid">
+<label class="wide">Template<select id="recurring-template"></select></label>
+<label class="wide">Retained source capture<select id="recurring-capture"></select></label>
+<label>Compare with<select id="recurring-previous"><option value="">Original template briefing</option></select></label>
+<label>Specific observation date, optional<input id="recurring-anchor" type="date"><small>Leave empty to use the template's saved anchor rule.</small></label>
+<label class="wide">Review note<textarea id="recurring-note" rows="3" maxlength="8000"></textarea></label>
+</div>
+<div id="recurring-template-detail"></div>
+<div class="buttons"><button id="recurring-preview">Preview next briefing</button><button id="recurring-save" disabled>Save reviewed successor</button></div>
+</div>
+<div class="box">
+<h3>Saved successor history</h3>
+<label>Successor<select id="recurring-history"></select></label>
+<div class="buttons"><button id="recurring-open">Open successor</button><button id="recurring-use">Continue from this successor</button><button id="recurring-report">Open saved briefing</button><button id="recurring-html">Download offline comparison</button><button id="recurring-csv">Download full comparison CSV</button><button id="recurring-json">Download complete comparison JSON</button></div>
+<p>Publish a saved successor through the existing Merchant section. Its reviewed source, report and payment terms remain part of the same economic project.</p>
+</div>
+<div id="recurring-report-panel" class="box">
+<h3>Source coverage and changes</h3>
+<p id="recurring-status" role="status" aria-live="polite">Choose a template and retained source to preview the next briefing.</p>
+<div id="recurring-summary" class="metrics"></div>
+<h4>Source coverage</h4><div id="recurring-coverage" class="table-wrap"></div>
+<h4>Changes in series meaning</h4><div id="recurring-meaning" class="table-wrap"></div>
+<h4>Changes in source context</h4><div id="recurring-source" class="table-wrap"></div>
+<label class="check"><input id="recurring-changes-only" type="checkbox" checked>Show changed comparisons only</label>
+<div id="recurring-changes" class="table-wrap"></div>
+<div class="buttons"><button id="recurring-previous-page" disabled>Previous comparisons</button><button id="recurring-next-page" disabled>Next comparisons</button></div>
+<p id="recurring-page"></p>
+</div>
+</section>
+
 <section data-panel="publication" hidden>
 <h2>Operate a reviewed merchant edition</h2><p>Publish a saved review with the merchant’s original public payment terms. Each edition keeps a stable snapshot and its own public resource path.</p>
 <form id="publication-form" class="form-grid"><label class="wide">Saved review<select id="review-select"></select></label><label>Public HTTPS origin<input id="public-origin" type="url" placeholder="https://your-merchant.example" required></label><label>Resource path<input id="public-path" value="/economic-data" required></label>

@@ -30,9 +30,23 @@ export const fredBriefingSelection = {
       } } }
   }
 };
+const templateId = { type: 'string', pattern: '^fred-template-[a-f0-9]{64}$' };
+const successorId = { type: 'string', pattern: '^fred-successor-[a-f0-9]{64}$' };
+const calendarDate = { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' };
+const changePage = { offset: { type: 'integer', minimum: 0, maximum: 60000 },
+  limit: { type: 'integer', minimum: 1, maximum: 500 }, changesOnly: { type: 'boolean' } };
+const successorSelection = { templateId, captureId: digest, anchorDate: calendarDate,
+  baselineReviewId: digest, previousSuccessorId: successorId, note: { type: 'string', maxLength: 8000 } };
+export const fredBriefingTemplateWindow = {
+  type: 'object', additionalProperties: false, properties: {
+    months: { type: 'integer', minimum: 1, maximum: 1200 },
+    anchor: { type: 'string', enum: ['latest_all', 'latest_any'] },
+    lagMonths: { type: 'integer', minimum: 0, maximum: 1200 }
+  }
+};
 export const fredFileSelection = {
-  kind: { type: 'string', enum: ['source', 'comparison', 'project', 'customer', 'briefing'] },
-  captureId: digest, before: digest, after: digest, publicationId: digest, intentId: operation, reviewId: digest,
+  kind: { type: 'string', enum: ['source', 'comparison', 'project', 'customer', 'briefing', 'briefing-successor'] },
+  captureId: digest, before: digest, after: digest, publicationId: digest, intentId: operation, reviewId: digest, successorId,
   format: { type: 'string', enum: ['html', 'csv', 'json', 'manifest'] }
 };
 export function fredWorkspaceTools(tool) {
@@ -62,6 +76,22 @@ export function fredWorkspaceTools(tool) {
     tool('merchant_fred_briefing', 'Open a saved analyst briefing, original comparison page and complete HTML/CSV/JSON/manifest file descriptors. Follow nextOffset; use file_read with kind briefing for the full selected file.', {
       ...workspace, reviewId: digest, offset
     }, ['workspace', 'reviewId'], read),
+    tool('merchant_fred_briefing_templates', 'Page retained recurring templates or saved successors from the original project. Keep expectedRevision while following nextOffset. Each template retains its original review and observation-date window.', {
+      ...workspace, kind: { type: 'string', enum: ['templates', 'successors'] }, offset, limit, expectedRevision: revision
+    }, ['workspace'], read),
+    tool('merchant_fred_briefing_template_save', 'Save an immutable recurring briefing template from an original saved analyst review. Select calendar months and latest_all or latest_any observation-date anchor. previousTemplateId records an edited definition without replacing its predecessor.', {
+      ...recorded, reviewId: digest, name: { type: 'string', minLength: 1, maxLength: 160 },
+      window: fredBriefingTemplateWindow, previousTemplateId: templateId
+    }, ['workspace', 'id', 'expectedRevision', 'reviewId'], change),
+    tool('merchant_fred_briefing_successor_preview', 'Preview the next complete report using the selected retained capture and template. Inspect exact rolling dates, missing coverage, source-meaning changes, economic revisions and report lineage. Retain previewId and the same note/anchor/baseline selection for saving. offset/limit page report changes.', {
+      ...workspace, ...successorSelection, ...changePage
+    }, ['workspace', 'templateId', 'captureId'], read),
+    tool('merchant_fred_briefing_successor_save', 'Save the exact reviewed successor preview through the original project operation. Supply previewId and the same template, capture, anchor, preceding report and note. The resulting original review publishes through merchant_fred_publish.', {
+      ...recorded, ...successorSelection, previewId: digest
+    }, ['workspace', 'id', 'expectedRevision', 'templateId', 'captureId', 'previewId'], change),
+    tool('merchant_fred_briefing_successor', 'Open one retained successor, its exact preceding report and paged full comparison. changesOnly=false includes unchanged economic values and their source-context changes. Complete JSON/CSV/HTML is available through file_read with kind briefing-successor.', {
+      ...workspace, successorId, ...changePage
+    }, ['workspace', 'successorId'], read),
     tool('merchant_fred_configure', 'Save the complete original FRED selection with its stable operation ID and reviewed project revision.', {
       ...recorded, selection: object
     }, ['workspace', 'id', 'expectedRevision', 'selection'], change),
@@ -105,7 +135,7 @@ export function fredWorkspaceTools(tool) {
       ['workspace', 'publicationId', 'intentId'], { openWorld: true }),
     tool('merchant_fred_recover', 'Recover the original intent, native receipt and retained response without preparing another payment. Use file_read for the complete delivered bytes.', purchase,
       ['workspace', 'publicationId', 'intentId'], { idempotent: true, openWorld: true }),
-    tool('merchant_fred_file_read', 'Read complete original source, comparison, analyst briefing, project export or saved customer-delivery bytes in retained chunks. Continue the returned readId/offset; verify the complete file SHA256.', {
+    tool('merchant_fred_file_read', 'Read complete original source, comparison, analyst briefing, recurring successor, project export or saved customer-delivery bytes in retained chunks. Continue the returned readId/offset; verify the complete file SHA256.', {
       ...workspace, ...fredFileSelection, expectedSha256: digest,
       readId: { type: 'string', minLength: 1, maxLength: 96 }, offset: { type: 'integer', minimum: 0, maximum: 268435456 },
       limit: { type: 'integer', minimum: 1, maximum: MAX_RETAINED_CHUNK_BYTES }

@@ -2,7 +2,7 @@
 
 Operate a retained FRED economic product from the installed command, a typed JavaScript client, or the existing authenticated merchant MCP host. All three paths attach to the original economic workspace: the same project, source captures, reviews, publication, merchant listener, configured SF88 buyer and saved customer intents.
 
-The client covers official source intake, complete public-table imports, combined macro editions, observations and revision comparisons, projection review, publication, merchant control, customer preparation/execution/recovery, complete downloads and project receiving. The MCP family contains 30 tools and loads its runtime only when that configured family is used.
+The client covers official source intake, complete public-table imports, combined macro editions, observations and revision comparisons, projection review, publication, merchant control, customer preparation/execution/recovery, complete downloads and project receiving. The MCP family contains 35 tools and loads its runtime only when that configured family is used.
 
 ## Start or reconnect the original workspace
 
@@ -165,7 +165,8 @@ The existing host also accepts its configured --oauth-config resource host. Keep
 | Area | Tools |
 | --- | --- |
 | Original scope and sources | merchant_fred_workspaces, status, inputs, input_inspect |
-| Retained project and revisions | records, record, operation, observations, compare |
+| Retained project and revisions | records, record, operation, observations, compare, briefing_preview, briefing |
+| Recurring report definitions and editions | briefing_templates, briefing_template_save, briefing_successor_preview, briefing_successor_save, briefing_successor |
 | Source and edition authoring | configure, capture, import, combine, select, review, publish, abandon |
 | Merchant and customer | merchant_start, merchant_stop, publication, requests, preview, prepare, buy, recover |
 | Complete files and reconnect | file_read, file_release, disconnect |
@@ -214,4 +215,111 @@ The agent tools are `merchant_fred_briefing_preview` and `merchant_fred_briefing
 
 [BRIEFINGS.md](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fred/BRIEFINGS.md) gives the full authoring, exact period/unit/missing-value rules, native customer and project reopening flow. [The completed offline macro report](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/briefing.html) includes all actual report data and local downloads; [its complete original capture](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/macro-source.capture.json) imports directly into the existing project. The source keeps all 2,219 observations; its January 2024–September 2026 briefing selects 75 observations and produces 150 exact comparisons.
 
-A project containing saved briefings exports the explicit v2 bundle, including the complete report files for every reviewed briefing. The native receiver validates the original source/calculations/files and restores those same bytes. Source-only projects continue using their original v1 bundle and edition identities.
+Projects with saved briefings use the explicit v2 bundle until a recurring template is retained. Recurring projects use v3: the complete templates and successor lineage remain in the original project state, and the existing briefing inventory carries every full saved report. The native receiver validates the original source, calculations, files and lineage and restores those same bytes. Source-only projects keep their original v1 bundle and edition identities.
+
+## Continue an economic briefing with a reusable definition
+
+A recurring template carries the original saved briefing's series, comparison methods, decimal precision, notes and source meaning. Its window determines which original observation dates enter the next report. Create each next briefing explicitly against a selected retained capture.
+
+The complete domain and native operating guide is [TEMPLATES.md](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fred/TEMPLATES.md). The maintained [window input](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-template-window.json) selects twelve calendar months with the earliest latest recorded observation date among the selected series. Dates label the source's own periods; a quarterly date and a monthly date keep their original meanings.
+
+### Save the definition and inspect the next edition
+
+Start from a saved analyst review returned by the existing briefing workflow. Use its complete review ID and the current project revision:
+
+~~~sh
+starforge fred-workspace briefing-template-save --connection /PRIVATE/fred-client.json \
+  --workspace macro --id ORIGINAL_TEMPLATE_OPERATION --revision CURRENT_REVISION \
+  --review ORIGINAL_BRIEFING_REVIEW_SHA --name "Monthly economic briefing" \
+  --window-file stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-template-window.json
+
+starforge fred-workspace briefing-templates --connection /PRIVATE/fred-client.json \
+  --workspace macro --kind templates --offset 0 --limit 50
+~~~
+
+The result retains its complete template ID, original review/capture and immutable definition. The IDs have the form fred-template- followed by 64 hexadecimal characters. To edit a definition, create a new template from its reviewed source and pass the previous template ID with --previous-template. Both definitions remain in the same project.
+
+Import or acquire the next complete source through the existing source commands. Then preview it with the selected template:
+
+~~~sh
+starforge fred-workspace briefing-successor-preview --connection /PRIVATE/fred-client.json \
+  --workspace macro --template ORIGINAL_TEMPLATE_ID --capture NEXT_CAPTURE_SHA \
+  --note-file /PRIVATE/NEXT_REVIEW.txt --offset 0 --limit 100 --changes-only true
+~~~
+
+Review the returned calendar dates, per-series coverage, missing values, meaningChanges and comparison. The window uses original observation dates including missing markers. latest_all selects the earliest latest date across the selected series; latest_any selects the latest. lagMonths moves the end backward by whole calendar months. An explicit --anchor-date YYYY-MM-DD pins a chosen calendar reference. The original source supplies every reported current and baseline observation.
+
+The comparison separates new periods, earlier additions, periods leaving the window, changed comparison methods, revisions and unchanged economic values. Source time-basis and retrieval-context changes remain visible separately. Use --changes-only false to inspect unchanged values together with their original context. Numeric deltas apply only where units, frequency and seasonal adjustment agree. An absent baseline or original missing marker keeps its explicit source state.
+
+offset and limit page the report comparison. Retain the same template, capture, anchor, preceding report, review note and previewId while reading later pages. The new briefing measures remain available in the preview's first page and, after saving, through the existing briefing command.
+
+### Save, publish and receive the reviewed successor
+
+The preview returns the exact previewId for this source, calculation and review note. Save with that same selection and the current project revision:
+
+~~~sh
+starforge fred-workspace briefing-successor-save --connection /PRIVATE/fred-client.json \
+  --workspace macro --id ORIGINAL_SUCCESSOR_OPERATION --revision CURRENT_REVISION \
+  --template ORIGINAL_TEMPLATE_ID --capture NEXT_CAPTURE_SHA --preview-id REVIEWED_PREVIEW_SHA \
+  --note-file /PRIVATE/NEXT_REVIEW.txt
+
+starforge fred-workspace briefing-successor --connection /PRIVATE/fred-client.json \
+  --workspace macro --successor SAVED_SUCCESSOR_ID --offset 0 --limit 100 --changes-only false
+
+starforge fred-workspace publish --connection /PRIVATE/fred-client.json \
+  --workspace macro --id ORIGINAL_PUBLICATION_OPERATION --revision CURRENT_REVISION \
+  --review SAVED_SUCCESSOR_REVIEW_SHA --profile native
+~~~
+
+A saved successor has a fred-successor- ID and retains its original template, preceding report, source capture, saved review and complete new report. Its original review ID uses the existing publication, merchant, advertised-file purchase and recovery flow.
+
+The default comparison baseline is the template's originating review. For the following edition, select --previous-successor SAVED_SUCCESSOR_ID from this same template; its saved review becomes the baseline. An explicit --baseline-review must be the origin review or a saved successor review for this template and must agree with --previous-successor when both are supplied. A changed note, anchor or preceding report requires the corresponding new preview.
+
+After an interrupted save, inspect operation with the original operation ID. An exact completed request returns its retained result. The installed client snapshots the complete new mutation input before it awaits connection reads, so later changes to the caller's window object cannot change an in-flight definition.
+
+### Complete change reports and original project receiving
+
+~~~sh
+starforge fred-workspace download --connection /PRIVATE/fred-client.json \
+  --workspace macro --kind briefing-successor --successor SAVED_SUCCESSOR_ID \
+  --format html --out /PRIVATE/briefing-changes.html
+starforge fred-workspace download --connection /PRIVATE/fred-client.json \
+  --workspace macro --kind briefing-successor --successor SAVED_SUCCESSOR_ID \
+  --format csv --out /PRIVATE/briefing-changes.csv
+starforge fred-workspace download --connection /PRIVATE/fred-client.json \
+  --workspace macro --kind briefing-successor --successor SAVED_SUCCESSOR_ID \
+  --format json --out /PRIVATE/briefing-changes.json
+starforge fred-workspace download --connection /PRIVATE/fred-client.json \
+  --workspace macro --kind project --out /PRIVATE/recurring-fred-project.json
+~~~
+
+All three change downloads contain the complete comparison. The offline HTML can filter and page the retained rows locally. The JSON carries the exact template, materialization, successor lineage, full comparison and saved briefing manifest; the client verifies their original binding and complete comparison identity. Every download returns its full byte count and SHA256 and preserves an existing different destination file.
+
+The v3 project contains all original captures, reviews, complete briefing files, templates and successor records. The existing receive command reconstructs the same project and full lineage, after which the normal workspace connection reopens it. Template and successor inventories have pinned-revision paging in the installed CLI/MCP; keep the returned revision while following nextOffset.
+
+### Typed client and authenticated tools
+
+The typed client methods are briefingTemplates, saveBriefingTemplate, previewBriefingSuccessor, saveBriefingSuccessor and briefingSuccessor. The published declarations carry the complete template window, materialization, source coverage, meaning changes, comparison rows, successor records and file selections. The corresponding authenticated tools use the same names under merchant_fred_ with underscores.
+
+~~~js
+const selection = {
+  templateId: originalTemplate.id,
+  captureId: nextRetainedCaptureId,
+  note: reviewedNote
+};
+const preview = await client.previewBriefingSuccessor(selection);
+const current = await client.state();
+const saved = await client.saveBriefingSuccessor({
+  ...selection,
+  previewId: preview.previewId,
+  id: originalSuccessorOperationId,
+  expectedRevision: current.project.revision
+});
+const file = await saveFredFile(client, {
+  kind: 'briefing-successor',
+  successorId: saved.successorId,
+  format: 'json'
+}, '/PRIVATE/briefing-changes.json');
+~~~
+
+merchant_fred_briefing_templates pages either templates or successors. merchant_fred_briefing_template_save and merchant_fred_briefing_successor_save retain the original operation ID and expected revision. The preview and saved comparison tools expose the original source changes before publication. merchant_fred_file_read accepts kind briefing-successor with successorId and format, using the existing complete-file chunks, read IDs and SHA256 checks.
