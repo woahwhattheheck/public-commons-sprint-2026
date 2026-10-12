@@ -292,7 +292,14 @@ export function createMatomoMerchant(store,editions,{environment=process.env}={}
   }
   async function close() {
     if(closing)return closing;
-    closing=(async()=>{await consoleApp?.close();for(const app of [...runtimes.values()])await app.close();runtimes.clear();})();return closing;
+    const pending=(async()=>{
+      const tasks=[];
+      if(consoleApp){const selected=consoleApp;tasks.push(Promise.resolve().then(()=>selected.close()).then(()=>{if(consoleApp===selected)consoleApp=null;}));}
+      for(const [id,app] of [...runtimes])tasks.push(Promise.resolve().then(()=>app.close()).then(()=>{if(runtimes.get(id)===app)runtimes.delete(id);}));
+      const results=await Promise.allSettled(tasks),failed=results.find(result=>result.status==='rejected');
+      if(failed)throw failed.reason;
+    })();
+    closing=pending;void pending.catch(()=>{if(closing===pending)closing=null;});return pending;
   }
   return Object.freeze({list,merchant,state,configure,resumeConfiguration,save,preview,exportPackage,recoverPackage,packageRecord,releases,stage,diff,select,start,stop,openConsole,
     delivery,prepareDelivery,recoverDelivery,inspectDelivery,reviewDelivery,publishDelivery,deliveryFile,close});

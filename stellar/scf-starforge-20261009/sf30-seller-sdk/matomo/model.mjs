@@ -51,7 +51,11 @@ export async function openMatomoWorkspace({directory,create=false,source,sourceF
       throw fault('MATOMO_ARTIFACT_NOT_FOUND',undefined,404);
     }
     let closing;
-    const close=()=>closing??=(async()=>{try{await store.close();}finally{await merchant.close();}})();
+    const close=()=>{
+      if(closing)return closing;
+      const pending=store.close({beforeRelease:()=>merchant.close()});
+      closing=pending;void pending.catch(()=>{if(closing===pending)closing=null;});return pending;
+    };
     return Object.freeze({store,captures,editions,comparisons,merchant,handover,state,perform,sourceRead,artifact,close,operationNames:Object.keys(operations)});
   }catch(error){await store.close();throw error;}
 }

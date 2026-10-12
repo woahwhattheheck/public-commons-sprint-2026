@@ -121,7 +121,7 @@ export class MerchantMatomoWorkspaces {
       workspaces:Object.entries(this.#config.matomoWorkspaces?.workspaces??{}).map(([workspace,definition])=>{
         const entry=this.#entries.get(workspace);
         return {workspace,label:definition.label,workspaceId:definition.workspaceId,workspaceIdentity:definition.identity,
-          open:Boolean(entry),opening:this.#opening.has(workspace),closing:Boolean(entry?.closing),
+          open:Boolean(entry),opening:this.#opening.has(workspace),closing:Boolean(entry?.closing||entry?.closeRequested),
           instanceId:entry?.instanceId??null,browserUrl:entry?.service.url??null};
       })};
   }
@@ -134,7 +134,7 @@ export class MerchantMatomoWorkspaces {
   #entry(alias,{allowClosing=false}={}) {
     this.#definition(alias);const entry=this.#entries.get(alias);
     if(!entry)throw failure('MATOMO_WORKSPACE_NOT_OPEN','Explicitly open this original Matomo workspace first.');
-    if(entry.closing&&!allowClosing)throw failure('MATOMO_WORKSPACE_CLOSING','This original workspace instance is closing.');
+    if((entry.closing||entry.closeRequested)&&!allowClosing)throw failure('MATOMO_WORKSPACE_CLOSING','This original workspace instance is closing.');
     return entry;
   }
   #scope(entry){return 'matomo:'+entry.alias+':'+this.#definition(entry.alias).directory;}
@@ -164,7 +164,7 @@ export class MerchantMatomoWorkspaces {
       try {
         service=await startMatomoWorkspace({directory:definition.directory,environment,
           allowLoopback:definition.allowLoopbackSource,port:0,...(definition.python?{python:definition.python}:{})});
-        entry={alias,service,model:service.model,instanceId:service.instanceId,pending:new Set(),closing:null};
+        entry={alias,service,model:service.model,instanceId:service.instanceId,pending:new Set(),closing:null,closeRequested:false};
         this.#entries.set(alias,entry);
         await inspectMatomoWorkspace(definition.directory,{expectedIdentity:definition.identity,allowLoopback:definition.allowLoopbackSource});
         if(this.#closing)throw failure('MATOMO_WORKSPACE_CLOSING','The merchant operator is closing.');
@@ -179,6 +179,7 @@ export class MerchantMatomoWorkspaces {
     try{return await pending;}finally{this.#opening.delete(alias);}
   }
   async #closeEntry(entry) {
+    entry.closeRequested=true;
     if(!entry.closing) {
       const pending=(async()=>{
         // Ask the original owner to abort/drain first. Waiting on active calls

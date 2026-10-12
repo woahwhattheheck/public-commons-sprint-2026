@@ -121,6 +121,7 @@ export async function openMatomoStore({directory, create = false, source, enviro
     db.prepare("UPDATE captures SET state='INTERRUPTED' WHERE state='CAPTURING'").run();
     const sourceClient = () => client ??= createMatomoSource(settings.source, {env: environment, allowLoopback});
     let client, active = null, closed = false, closing;
+    let beforeReleaseDone = false, clientClosed = false, databaseClosed = false, leaseReleased = false;
     function transaction(fn) {
       db.exec('BEGIN IMMEDIATE');
       try { const result = fn(); db.exec('COMMIT'); return result; }
@@ -259,14 +260,21 @@ export async function openMatomoStore({directory, create = false, source, enviro
       if (!active || active.id !== id) throw fault('MATOMO_OPERATION_NOT_ACTIVE', 'Read the retained action before another cancellation.', 409);
       active.controller.abort(); return {operationId: id, cancelling: true};
     }
-    async function close() {
+    async function close({beforeRelease} = {}) {
       if (closing) return closing;
       closed = true; active?.controller.abort();
-      closing = (async () => {
-        try { await active?.promise?.catch(() => {}); await client?.close(); }
-        finally { db.close(); await release(); }
+      const pending = (async () => {
+        await active?.promise?.catch(() => {});
+        // Keep this original lease while its owning model drains merchant
+        // processes. Failed cleanup retains the same instance for an explicit retry.
+        if (!beforeReleaseDone) { await beforeRelease?.(); beforeReleaseDone = true; }
+        if (!clientClosed) { await client?.close(); clientClosed = true; }
+        if (!databaseClosed) { db.close(); databaseClosed = true; }
+        if (!leaseReleased) { await release(); leaseReleased = true; }
       })();
-      return closing;
+      closing = pending;
+      void pending.catch(() => { if (closing === pending) closing = null; });
+      return pending;
     }
     return {directory, settings, db, transaction, revision, bump, event, state, action, perform, request, cancel, close};
   } catch (error) { db?.close(); await release(); throw error; }

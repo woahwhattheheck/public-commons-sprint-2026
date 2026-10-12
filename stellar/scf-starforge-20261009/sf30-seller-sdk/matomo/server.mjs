@@ -101,8 +101,16 @@ export async function startMatomoWorkspace({port=0,...options}={}) {
   origin='http://127.0.0.1:'+server.address().port;hosts=new Set([new URL(origin).host]);
   async function close(){
     if(closing)return closing;stopping=true;
-    closing=(async()=>{try{await model.close();await Promise.allSettled([...pending.values()].map(x=>x.promise));}
-      finally{await new Promise((done,fail)=>{server.close(e=>e?fail(e):done());server.closeIdleConnections?.();});}})();return closing;
+    const owned=(async()=>{
+      const results=await Promise.allSettled([model.close(),Promise.allSettled([...pending.values()].map(x=>x.promise))]);
+      let listenerIssue;
+      try{
+        if(server.listening)await new Promise((done,fail)=>{server.close(e=>e&&e.code!=='ERR_SERVER_NOT_RUNNING'?fail(e):done());server.closeIdleConnections?.();});
+      }catch(error){listenerIssue=error;}
+      const failed=results.find(result=>result.status==='rejected');
+      if(failed)throw failed.reason;if(listenerIssue)throw listenerIssue;
+    })();
+    closing=owned;void owned.catch(()=>{if(closing===owned)closing=null;});return owned;
   }
   return {server,model,origin,token,instanceId,url:origin+'/#'+token,close};
 }
