@@ -259,11 +259,11 @@ export interface KafkaConfiguredTopic {
 }
 export interface KafkaReceivedProject {
   schema: 'stellar-forge.kafka-receiving.v1'; id: KafkaId;
-  projection: KafkaId; source: KafkaId; plan: KafkaId; build: KafkaId; captures: KafkaId[];
-  receivedAt: string; manifestSha256: KafkaId; reconstructed: true;
+  projection: KafkaId; source: KafkaId; plan: KafkaId; build: KafkaBuildView; captures: KafkaId[];
+  receivedAt: string; manifestSha256: KafkaId; reconstructed: true; reopened?: boolean;
 }
-export interface KafkaReceivedNative extends KafkaJsonObject {
-  source: KafkaId; plan: KafkaId; build: KafkaId;
+export interface KafkaReceivedNative {
+  source: KafkaId; plan: KafkaId; build: KafkaBuildView; reconstructed: true;
 }
 /** Payment terms are passed intact to the original NDJSON merchant preparer. */
 export interface KafkaMerchantRequest {
