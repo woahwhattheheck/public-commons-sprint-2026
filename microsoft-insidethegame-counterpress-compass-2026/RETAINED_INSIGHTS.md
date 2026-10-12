@@ -6,7 +6,7 @@ Counterpress carries a completed model explanation with the original saved match
 
 1. Start or reopen a match and pause at a counterpress moment.
 2. Choose the club, fan or analyst view, and language before requesting the optional insight.
-3. Select the existing insight button. Match playback, the deterministic caption and the press sequence remain usable while the original provider completes its work.
+3. Select the optional insight or **Explain with tools** button. Match playback, the deterministic caption and the press sequence remain usable while the original provider completes its work.
 4. Save the match. If the match is already saved and editable, the existing review autosave includes the completed insight.
 5. Return to that exact frame and view. The same button opens the saved explanation.
 6. Open the existing coach review and choose two to four saved matches. Explanations whose original moment is in the selected observed prefix and half appear beside that match's source events and notes.
@@ -16,7 +16,7 @@ A change of club, audience, language or observed event is a different view. Coun
 
 ## Storage and restart
 
-Keep `COUNTERPRESS_ARCHIVE_DIR` on a private persistent volume and run one application server per directory, following the original saved-match deployment. Saved matches stay in the existing archive. The `insights/` subdirectory carries the original commentary operation identity and completed response across application restarts.
+Keep `COUNTERPRESS_ARCHIVE_DIR` on a private persistent volume and run one application server per directory, following the original saved-match deployment. Saved matches stay in the existing archive. The `insights/` subdirectory carries the legacy commentary operation and `agent-insights/` carries the Microsoft Agent Framework workflow. Each preserves its original operation identity and completed response across application restarts. Their separate prompt editions stay distinct in the archive and player.
 
 Before the server asks its provider to do work, it saves the original provider session ID under a key derived from the provider edition and the complete observed-prefix identity. A newly opened player session reuses that provider identity. The provider remains responsible for its model request, tools, admission and completed job records.
 
@@ -34,6 +34,7 @@ A retained explanation records:
 - Club, audience and language.
 - SHA-256 of the ordered original observed event values.
 - Original provider operation, session, prompt edition and reported model.
+- For Microsoft tool insights, the actual SDK version, worker workflow, tool-call identities and original per-turn provider job/request records.
 - The completed caption, explanation and capture time.
 
 Package import recomputes the original engine snapshot from the retained event prefix and verifies these bindings before the explanation joins the saved review. Unrecognized properties are discarded. The archive retains at most 24 explanations per match and keeps its existing package and review size limits.

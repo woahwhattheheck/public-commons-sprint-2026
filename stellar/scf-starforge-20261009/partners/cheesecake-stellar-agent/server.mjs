@@ -9,7 +9,7 @@ import { loadApplication } from './configuration.mjs';
 import { applicationTools } from './application.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const ACTIONS = new Set(['review','execute','status','recover','read']);
+const ACTIONS = new Set(['review','execute','status','recover','read','cancel','spending','reconcile']);
 const TYPES = { '/': ['index.html','text/html; charset=utf-8'],
   '/index.html': ['index.html','text/html; charset=utf-8'],
   '/app.js': ['app.js','text/javascript; charset=utf-8'],
@@ -74,12 +74,14 @@ async function body(req) {
   return data;
 }
 function publicIdentity(application, context, info) {
-  const {schema,applicationId,handoffId,manifestSha256} = application.identity;
+  const {schema,applicationId,handoffId,manifestSha256,remoteMcp} = application.identity;
   return {schema,applicationId,handoffId,manifestSha256,subject:context.subject,
+    ...(remoteMcp ? {remoteMcp} : {}),
     server:{id:info.id,startedAt:info.startedAt},
     operatorProfileConfigured:info.operatorProfileConfigured,
     mcp:{path:'/mcp',protocolVersion:info.protocolVersion,tools:info.tools},
-    actions:[...ACTIONS]};
+    actions:[...ACTIONS].filter(action => ['review','execute','status','recover','read'].includes(action) ||
+      application.supportsAction?.(action))};
 }
 
 /**
@@ -147,7 +149,7 @@ export async function createApplicationHandler({application,context,bearerToken,
       }
       if (path === '/api/requests' && req.method === 'GET')
         return send(res,200,await application.requests(current));
-      const route = path.match(/^\/api\/requests\/([^/]+)\/(review|execute|status|recover|read|download)$/);
+      const route = path.match(/^\/api\/requests\/([^/]+)\/(review|execute|status|recover|read|download|cancel|spending|reconcile)$/);
       if (!route) return send(res,404,{error:{code:'APPLICATION_ROUTE_NOT_FOUND',message:'No such operator endpoint.'}});
       let intent;
       try { intent = decodeURIComponent(route[1]); } catch { throw fail('APPLICATION_ID_INVALID'); }
@@ -155,7 +157,8 @@ export async function createApplicationHandler({application,context,bearerToken,
       if(action === 'download') {
         if(req.method !== 'GET') return send(res,405,{error:{code:'METHOD_NOT_ALLOWED',message:'Use GET for a retained response download.'}},
           'application/json; charset=utf-8',{'Allow':'GET'});
-        const artifact = await application.call(current,'read',intent,{format:'base64',limitBytes:1048576,signal:controller.signal});
+        const artifact = await application.call(current,'read',intent,{format:'base64',
+          limitBytes:application.responseByteLimit?.(intent) ?? 1048576,signal:controller.signal});
         need(typeof artifact.data === 'string','APPLICATION_RESULT_FORMAT_INVALID');
         const raw = Buffer.from(artifact.data,'base64');
         const filename = intent.replaceAll(/[^A-Za-z0-9._-]/g,'_') + '.response';
@@ -165,7 +168,7 @@ export async function createApplicationHandler({application,context,bearerToken,
       if (req.method !== 'POST') return send(res,405,{error:{code:'METHOD_NOT_ALLOWED',message:'Use POST with a JSON object for this action.'}},
         'application/json; charset=utf-8',{'Allow':'POST'});
       const options = await body(req);
-      const allowed = action === 'read' ? ['format','limitBytes'] : [];
+      const allowed = action === 'read' ? ['format','limitBytes'] : action === 'reconcile' ? ['transaction'] : [];
       need(Object.keys(options).every(key=>allowed.includes(key)),'APPLICATION_OPTIONS_INVALID');
       const result = await application.call(current,action,intent,{...options,signal:controller.signal});
       return send(res,200,result);
@@ -189,7 +192,7 @@ export async function createApplicationServer({configFile,bearerToken=process.en
       sourceRoot:loaded.sourceRoot,allowedOrigins:origins,operatorProfileConfigured:Boolean(loaded.config.operatorProfile)});
     server=createServer((req,res)=>{
       // Accept only this listener's selected host; DNS rebinding cannot grant the bearer or current host authority.
-      if(req.headers.host!==server.operatorHost) return send(res,400,{error:{code:'APPLICATION_HOST_INVALID',message:'Use the selected loopback origin.'}});
+      if(req.headers.host!==server.operatorHost&&req.headers.host!==server.operatorCanonicalHost) return send(res,400,{error:{code:'APPLICATION_HOST_INVALID',message:'Use the selected loopback origin.'}});
       void component.handler(req,res);
     });
     server.requestTimeout=45000;server.headersTimeout=15000;server.keepAliveTimeout=5000;
@@ -198,8 +201,9 @@ export async function createApplicationServer({configFile,bearerToken=process.en
       server.listen({host,port},()=>{server.removeListener('error',reject);resolveListen();});
     });
     const address=server.address(),authority=(host==='::1'?'[::1]':host)+':'+address.port;
-    const origin='http://'+authority;
-    server.operatorHost=authority;origins.add(origin);
+    const addressUrl=new URL('http://'+authority),origin=addressUrl.origin;
+    server.operatorHost=authority;server.operatorCanonicalHost=addressUrl.host;
+    origins.add(origin);origins.add('http://'+authority);
     async function close() {
       if(closed)return closed;
       closed=(async()=>{
@@ -210,7 +214,8 @@ export async function createApplicationServer({configFile,bearerToken=process.en
       })();
       return closed;
     }
-    return {server,origin,address,identity:publicIdentity(loaded.application,loaded.context,component.info),close};
+    return {server,origin,address,identity:publicIdentity(loaded.application,loaded.context,component.info),
+      launchBinding:loaded.launchBinding,close};
   } catch(error) {
     component?.close();if(server?.listening)await new Promise(done=>server.close(done));
     await loaded.close();throw error;

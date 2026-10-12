@@ -244,7 +244,7 @@ function editionsPage(){
   content+=card('Export the original publisher input','<form data-form="export" data-submit="export"><div class="grid">'+
  select('export','merchantId','Retained merchant terms',state.merchants.map(x=>[x.id,x.origin+x.path+' · '+x.payment.amount+' atomic']),merchant?.id??'')+
  field('export','reviewer','Export reviewer','','text','','required')+
- area('export','note','Export note','',false)+'</div><p class="help">The export contains exact dataset.csv, dataset.json, source.json and the original compiled seller.json beside its manifest.</p><div class="actions"><button type="submit" class="primary"'+(!merchant?' disabled':'')+'>Create reviewed merchant export</button></div></form>');
+ area('export','note','Export note','',false)+'</div><p class="help">The export keeps the original dataset.csv, dataset.json, source.json and compiled seller.json entrypoints. Its declared webdav/ source folder retains every original capture, collection response, mapping and reviewed edition byte through the shared publisher and SF82 release.</p><div class="actions"><button type="submit" class="primary"'+(!merchant?' disabled':'')+'>Create reviewed merchant export</button></div></form>');
  }
  if(state.exports.length)content+=card('Complete merchant exports',table(['Created','Native snapshot','Files','Action'],state.exports.slice().reverse().map(row=>'<tr><td>'+esc(when(row.createdAt))+'</td><td class="hash">'+esc(row.snapshot)+'</td><td>'+row.files.map(file=>fileButton(file.path,'export',row.id,file.path)).join(' ')+'</td><td>'+button('Prepare original publisher','prepare-export',{id:row.id},true)+'</td></tr>')));
  return frame('Dataset and merchant','Build an immutable edition through the original dataset loader, inspect its actual query result, and export its validated public merchant definition.',content);
@@ -474,7 +474,7 @@ async function submit(form){
   const selected=currentEdition();if(!selected)throw new Error('Select a dataset edition.');
   const result=await mutate('edition.export',{editionId:selected.id,merchantId:r.merchantId,reviewer:r.reviewer,note:r.note});
   clearDraft('export');drafts.prepare={...(drafts.prepare??{}),exportId:result.id};remember();
-  message('Created the complete four-file original publisher input.');
+  message('Created the original publisher input with its complete declared source files.');
  }else if(name==='prepare'){
   const input={exportId:r.exportId,title:r.title};if(r.productId)input.productId=r.productId;
   const result=await mutate('publisher.prepare',input);productId=result.productId;publisher=result.state;nativeResult={action:'publisher.prepare',result:result.result};

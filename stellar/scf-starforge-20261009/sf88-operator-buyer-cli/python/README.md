@@ -30,6 +30,7 @@ consume and reopen the original saved response through the native parser.
 | An approved private file | `Buyer.from_paid_file` | The original order handoff, native purchase and separate merchant entitlement; `retrieve_file` and local `recover_file` |
 | A paginated dataset | `DatasetAcquisition.create` | The original dataset session, selected snapshot, per-page attempts and SF100 data room; `recover`, explicit continuation, verified typed rows and original accounting |
 | An acquired dataset in PostgreSQL | `PostgresWarehouse` and `DatasetMapping` | Complete transactional COPY, exact types and keys, retained source editions, stable application views, edition comparison and database reopening; [receiving guide](POSTGRESQL.md) |
+| A local analytical workspace for delivered datasets | `DuckDBWorkspace` and `stellar-forge-duckdb` | Retained source editions, reviewed mappings, versioned views, saved SQL, Parquet/CSV exports and portable receiving; [DuckDB guide](DUCKDB.md) |
 | A large object | `ObjectBuyer.prepare` | The original object descriptor, chunk queue and assembly receipts; reopen, recover, continue, consume verified streamed files and finalize original reservations |
 
 Each entry point keeps the original source of its state. Dataset and object

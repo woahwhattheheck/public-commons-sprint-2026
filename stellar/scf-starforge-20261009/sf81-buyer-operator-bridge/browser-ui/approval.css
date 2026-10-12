@@ -1,0 +1,45 @@
+/* Shared local operator approval. Neutral, readable and independent of host styles. */
+.operator-approval { margin-top: 22px; border: 1px solid #929292; border-left: 4px solid #333; border-radius: 3px; padding: 18px; background: #fafafa; color: #222; min-width: 0; }
+.operator-approval * { box-sizing: border-box; }
+.operator-approval [hidden] { display: none !important; }
+.operator-approval .approval-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+.operator-approval h3 { margin: 0; font: 620 16px/1.4 ui-sans-serif, system-ui, sans-serif; letter-spacing: -.01em; text-transform: none; }
+.operator-approval h4 { margin: 20px 0 7px; font: 650 12px/1.5 ui-sans-serif, system-ui, sans-serif; }
+.operator-approval .approval-status { display: inline-block; border: 1px solid #b5b5b5; border-radius: 3px; padding: 3px 8px; background: #fff; font: 600 11px/1.5 ui-sans-serif, system-ui, sans-serif; }
+.operator-approval .approval-summary, .operator-approval .approval-help, .operator-approval .approval-feedback { font: 400 13px/1.6 ui-sans-serif, system-ui, sans-serif; margin: 0 0 13px; overflow-wrap: anywhere; }
+.operator-approval .approval-help { color: #595959; font-size: 12px; }
+.operator-approval .approval-feedback:empty { display: none; }
+.operator-approval .approval-feedback { border-left: 3px solid #555; padding-left: 10px; }
+.operator-approval .approval-amount-line { display: flex; align-items: baseline; flex-wrap: wrap; gap: 9px; margin: 16px 0 12px; font-variant-numeric: tabular-nums; }
+.operator-approval .approval-amount { font: 600 25px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-wrap: anywhere; }
+.operator-approval .approval-unit { color: #5e5e5e; font: 400 12px/1.5 ui-sans-serif, system-ui, sans-serif; }
+.operator-approval .approval-request { border: 1px solid #d1d1d1; background: #fff; padding: 10px; margin: 0 0 14px; font: 400 12px/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-wrap: anywhere; white-space: pre-wrap; unicode-bidi: plaintext; }
+.operator-approval .approval-facts { display: grid; grid-template-columns: minmax(105px, 165px) minmax(0, 1fr); gap: 8px 14px; margin: 0 0 16px; font: 400 12px/1.55 ui-sans-serif, system-ui, sans-serif; }
+.operator-approval .approval-facts dt { color: #5e5e5e; }
+.operator-approval .approval-facts dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; unicode-bidi: plaintext; }
+.operator-approval .approval-table-wrap { overflow-x: auto; margin-bottom: 18px; }
+.operator-approval .approval-budget { width: 100%; border-collapse: collapse; border: 1px solid #d1d1d1; background: #fff; font: 400 12px/1.6 ui-sans-serif, system-ui, sans-serif; }
+.operator-approval .approval-budget caption { text-align: left; color: #666; font-size: 11px; padding: 0 0 6px; }
+.operator-approval .approval-budget th, .operator-approval .approval-budget td { padding: 8px 9px; border-bottom: 1px solid #dedede; text-align: right; vertical-align: top; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.operator-approval .approval-budget thead th { background: #eee; font-weight: 600; }
+.operator-approval .approval-budget th:first-child { text-align: left; }
+.operator-approval .approval-budget tbody th { font-weight: 450; }
+.operator-approval .approval-budget tr[data-exceeded="true"] > * { font-weight: 650; background: #e8e8e8; }
+.operator-approval details { border-top: 1px solid #d6d6d6; margin: 12px 0 16px; padding-top: 10px; }
+.operator-approval summary { cursor: pointer; color: #333; font: 550 12px/1.6 ui-sans-serif, system-ui, sans-serif; }
+.operator-approval details[open] summary { margin-bottom: 11px; }
+.operator-approval pre { margin: 0; padding: 11px; border: 1px solid #d7d7d7; background: #fff; max-height: 320px; overflow: auto; font: 400 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; direction: ltr; unicode-bidi: plaintext; }
+.operator-approval .approval-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 17px; }
+.operator-approval button { min-height: 38px; padding: 8px 13px; border: 1px solid #8e8e8e; border-radius: 3px; color: #222; background: #fff; font: 550 13px/1.5 ui-sans-serif, system-ui, sans-serif; cursor: pointer; }
+.operator-approval button:hover:not(:disabled) { background: #ededed; border-color: #555; }
+.operator-approval button.approval-approve { color: #fff; background: #292929; border-color: #292929; }
+.operator-approval button.approval-approve:hover:not(:disabled) { background: #444; }
+.operator-approval button:disabled { opacity: .45; cursor: default; }
+.operator-approval button:focus-visible, .operator-approval summary:focus-visible, .operator-approval pre:focus-visible { outline: 2px solid #222; outline-offset: 3px; }
+@media (max-width: 620px) {
+  .operator-approval { padding: 13px; }
+  .operator-approval .approval-facts { grid-template-columns: 105px minmax(0, 1fr); gap: 7px 10px; }
+  .operator-approval .approval-amount { font-size: 21px; }
+  .operator-approval .approval-budget th, .operator-approval .approval-budget td { padding: 7px; font-size: 11px; }
+}
+

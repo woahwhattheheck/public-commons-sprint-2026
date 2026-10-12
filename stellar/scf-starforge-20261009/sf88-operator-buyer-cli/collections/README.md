@@ -48,7 +48,15 @@ resource, selected accepted terms, original operator and signer, private evidenc
 directory and intended response file. A request body or operation ticket keeps
 its existing original format. Select the existing configuration files in the
 collection form, inspect the request list and grouped caps, and save a named
-collection. The browser provides the exact terminal command for execution.
+collection. Select queued requests and choose **Run selected here**. The workspace
+uses the original browser approval by default; review and approve each original
+request as it appears. **Pause** drains the current request and retains the
+remaining selection for review.
+
+The original terminal command is also available. Add `--approval-mode terminal`
+to the `serve` command when the workspace should use terminal approval exclusively.
+The [workspace guide](WORKSPACE.md) covers browser approval, interrupted launches,
+reopening and the complete private API.
 
 ## Review and retain the actual inputs
 
@@ -138,7 +146,7 @@ A source or intent conflict is visible in the collection. If a previously
 recorded queue job is later missing, restore the original inbox through its
 existing recovery procedure.
 
-Run explicitly selected entries in the original operator terminal:
+From a terminal, run explicitly selected entries in the original operator workflow:
 
 ```sh
 starforge buyer-collections run \
@@ -270,7 +278,9 @@ await collections.close();
 ```
 
 The browser uses the same preview, create, list, inspect, enqueue, cancel,
-recover and export methods. Terminal callers use
+recover and export methods. Its server retains each selected browser launch
+and starts the original collection command with the original approval channel.
+Direct controller callers use
 `run({id,intentIds,expectedManifestSha256,signal,workspaceByIntent})`.
 Each mutable collection action carries its inspected immutable manifest digest.
 Original queue errors remain visible under their existing `INBOX_*` names;
@@ -314,5 +324,5 @@ node --max-old-space-size=192 \
 The chosen parent directory must already exist. The example retains its
 original inbox, request collection, exported files and
 `lifecycle-result.json` there. Its three clearly named example profiles use a
-preparation-only signer. Use your actual private operator configurations and
-the terminal run command above for a customer purchase.
+preparation-only signer. Use your actual private operator configurations with
+**Run selected here** or the terminal run command above for a customer purchase.
