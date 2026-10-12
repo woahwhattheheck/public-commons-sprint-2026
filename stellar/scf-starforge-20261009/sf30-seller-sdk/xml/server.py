@@ -38,7 +38,8 @@ class OperatorServer(ThreadingHTTPServer):
         self.assets_directory = assets_directory or HERE / "public"
         self.slots = threading.BoundedSemaphore(8)
         super().__init__(("127.0.0.1", port), handler_class or Handler)
-        self.origin = f"http://127.0.0.1:{self.server_port}"
+        authority = "127.0.0.1" if self.server_port == 80 else f"127.0.0.1:{self.server_port}"
+        self.origin = "http://" + authority
         self.url = self.origin + "/#" + self.token
 
     def process_request(self, request, client_address):

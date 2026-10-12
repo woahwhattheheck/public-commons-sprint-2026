@@ -366,6 +366,7 @@ The loopback n8n console uses its printed fragment token as Bearer authorization
 
 | Endpoint | Contract |
 | --- | --- |
+| `GET /api/launch` | Original current private launch identity, when started through the native launch command. |
 | `GET /api/state` | Configuration, environment reference availability, original job summaries, full dispatch records, service addresses. |
 | `GET /api/jobs/:id` | Original full job and its dispatch record. |
 | `POST /api/jobs` | `{functionId,input,label?,reference?}` → original private handoff. |
@@ -379,6 +380,12 @@ The loopback n8n console uses its printed fragment token as Bearer authorization
 
 A stale revision returns a conflict and the operator refreshes the same original records. The UI preserves drafts, selections, and reasons while visible-page refresh updates state. Private export includes job input, attempts, histories, settlement records, and result metadata; download the original result separately for its complete bytes. Keep the exported records in the merchant's private operational storage.
 
+## Open through Applications
+
+The existing Applications launcher can initialize this merchant from its original configuration or reopen its prepared directory. Select the original READY runtime, private merchant directory and private environment, then use Review, Save, Start, Open and Stop. The original preparation can complete an interrupted first launch from the same input; a completed merchant retains its source identity and existing state.
+
+The [complete Applications guide](../../distribution/runtime-workspace/N8N_APPLICATIONS.md) covers configuration, local service ports, worker startup, the original live console identity, complete operator work and same-directory reopening.
+
 ## Native receiving on an existing n8n engine
 
 Run the included receiving command from the same host as a current n8n engine. It uses the engine's native public API to import and publish the provided invoice child and generated wrapper, prepares this original merchant, runs its original SF30 application Worker, and verifies the real result and saved execution.
@@ -390,7 +397,7 @@ node "$SF_MERCHANT_SOURCE/n8n/examples/native-receiving.mjs" \
   --directory /srv/starforge/receiving/invoice-automation-001
 ```
 
-Select a new absolute directory under an existing canonical parent. The key is read from the named private file and requires the existing n8n account's workflow read/create/publish/unpublish and execution read permissions. The command uses the canonical `/publish` and `/unpublish` public endpoints and requires a same-host loopback engine because its temporary receiving wrapper uses no webhook credential.
+Select a new absolute directory under an existing canonical parent. The key is read from the named private file and requires the existing n8n account's `workflow:list`, `workflow:read`, `workflow:create`, `workflow:activate`, `workflow:deactivate`, `execution:list`, and `execution:read` API scopes. The command uses the canonical `/publish` and `/unpublish` public endpoints and requires a same-host loopback engine because its temporary receiving wrapper uses no webhook credential.
 
 The same operation creates the original private job through the authenticated operator API, verifies the invoice result against its declared integer-minor-unit calculation, retains both original native executions, closes and reopens the same merchant, and invokes another original Worker. Recovery must return identical retained bytes with unchanged dispatch and execution IDs. It also renews the original purchase handoff and exports the complete original job history. The original SF30 buyer and settlement operation remains the receiving path for paid customer delivery.
 
