@@ -1,6 +1,6 @@
 // MIT. Ruby customer continuation of the ORIGINAL five-file JS seller export.
 import { constants } from 'node:fs';
-import { readFile, open, lstat, mkdir, link, unlink, realpath } from 'node:fs/promises';
+import { readFile, open, lstat, mkdir, link, unlink, realpath, readdir } from 'node:fs/promises';
 import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash, randomUUID } from 'node:crypto';
@@ -10,8 +10,11 @@ import { exportSellerClient, inspectSellerClientExport, readSellerClientFile,
 export const RUBY_CLIENT_MANIFEST = 'ruby-client.json';
 export const LEGACY_RUBY_CLIENT_FILES = Object.freeze(["seller_client.rb","seller_client.rbs","seller-client-bridge.mjs","seller-buyer-bridge.mjs","seller-contract.json","rails_receiving.rb","customer.rb","RUBY.md"]);
 export const LEGACY_DATASET_RUBY_CLIENT_FILES = Object.freeze(["seller_client.rb","seller_client.rbs","seller-client-bridge.mjs","seller-buyer-bridge.mjs","seller-contract.json","rails_receiving.rb","customer.rb","RUBY.md","seller-dataset-bridge.mjs","dataset_delivery.rb","dataset_receiving.rb","dataset_customer.rb","rails_dataset.rb","DATASETS.md","examples/dataset_lifecycle.rb","examples/rails_dataset/create_dataset_import_tables.rb","examples/rails_dataset/models.rb","examples/rails_dataset/import_dataset_job.rb","examples/rails_dataset/commission.rb","examples/rails_dataset/mapping.json","examples/rails_dataset/README.md"]);
-export const RUBY_CLIENT_FILES = Object.freeze([...LEGACY_DATASET_RUBY_CLIENT_FILES,...["native_dataset.rb","native_dataset_receiving.rb","native_dataset_customer.rb","NATIVE_DATASETS.md","examples/native_dataset_lifecycle.rb"]]);
-export const NATIVE_RUBY_CLIENT_FILES = Object.freeze(["seller_client.rb","seller_client.rbs","dataset_delivery.rb","native_dataset.rb","native_dataset_receiving.rb","native_dataset_customer.rb","rails_dataset.rb","NATIVE_DATASETS.md","DATASETS.md","examples/native_dataset_lifecycle.rb","examples/rails_dataset/create_dataset_import_tables.rb","examples/rails_dataset/models.rb","examples/rails_dataset/import_dataset_job.rb","examples/rails_dataset/commission.rb","examples/rails_dataset/mapping.json","examples/rails_dataset/README.md"]);
+export const LEGACY_COMPLETE_RUBY_CLIENT_FILES = Object.freeze([...LEGACY_DATASET_RUBY_CLIENT_FILES,...["native_dataset.rb","native_dataset_receiving.rb","native_dataset_customer.rb","NATIVE_DATASETS.md","examples/native_dataset_lifecycle.rb"]]);
+export const DATASET_OPERATOR_FILES = Object.freeze(["examples/rails_dataset/operator/workspace.rb","examples/rails_dataset/operator/jobs.rb","examples/rails_dataset/operator/controller.rb","examples/rails_dataset/operator/commission.rb","examples/rails_dataset/operator/README.md","examples/rails_dataset/operator/install.rb","examples/rails_dataset/operator/operator.css","examples/rails_dataset/operator/views/layouts/starforge_dataset_operator.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/index.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/show.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/changes.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/history.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/attachments.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/error.html.erb"]);
+export const RUBY_CLIENT_FILES = Object.freeze([...LEGACY_COMPLETE_RUBY_CLIENT_FILES,...DATASET_OPERATOR_FILES]);
+export const LEGACY_NATIVE_RUBY_CLIENT_FILES = Object.freeze(["seller_client.rb","seller_client.rbs","dataset_delivery.rb","native_dataset.rb","native_dataset_receiving.rb","native_dataset_customer.rb","rails_dataset.rb","NATIVE_DATASETS.md","DATASETS.md","examples/native_dataset_lifecycle.rb","examples/rails_dataset/create_dataset_import_tables.rb","examples/rails_dataset/models.rb","examples/rails_dataset/import_dataset_job.rb","examples/rails_dataset/commission.rb","examples/rails_dataset/mapping.json","examples/rails_dataset/README.md"]);
+export const NATIVE_RUBY_CLIENT_FILES = Object.freeze([...LEGACY_NATIVE_RUBY_CLIENT_FILES,...DATASET_OPERATOR_FILES]);
 export const NATIVE_RUBY_CLIENT_MANIFEST = 'native-dataset-client.json';
 const NATIVE_SCHEMA = 'stellar-forge.ruby-native-dataset-client.v1';
 const NATIVE_SELECTION = 'native-client-source.json';
@@ -92,7 +95,7 @@ async function publishOnce(directory, name, bytes) {
 }
 function fileRecord(name, bytes) { return { name, bytes: bytes.length, sha256: sha(bytes) }; }
 function checkManifest(value, original) {
-  const expected = [LEGACY_RUBY_CLIENT_FILES,LEGACY_DATASET_RUBY_CLIENT_FILES,RUBY_CLIENT_FILES]
+  const expected = [LEGACY_RUBY_CLIENT_FILES,LEGACY_DATASET_RUBY_CLIENT_FILES,LEGACY_COMPLETE_RUBY_CLIENT_FILES,RUBY_CLIENT_FILES]
     .find(files => value?.files?.length === files.length);
   if (!value || value.schema !== SCHEMA || value.sourceSha256 !== original.sourceSha256 ||
       value.originalManifestSha256 !== original.manifestFile.sha256 || !Array.isArray(value.files) || !expected ||
@@ -305,7 +308,7 @@ end
 `;
 }
 async function payloads(original) {
-  return new Map([
+  const result = new Map([
     ['seller_client.rb', await readFile(new URL('./seller_client.rb', import.meta.url))],
     ['seller_client.rbs', Buffer.from(declarations(original.snapshot))],
     ['seller-client-bridge.mjs', await readFile(new URL('./request-bridge.mjs', import.meta.url))],
@@ -333,6 +336,8 @@ async function payloads(original) {
     ['NATIVE_DATASETS.md', await readFile(new URL('./NATIVE_DATASETS.md', import.meta.url))],
     ['examples/native_dataset_lifecycle.rb', await readFile(new URL('./examples/native_dataset_lifecycle.rb', import.meta.url))],
   ]);
+  for(const name of DATASET_OPERATOR_FILES) result.set(name,await readFile(new URL('./'+name,import.meta.url)));
+  return result;
 }
 
 /** Inspect complete original JS and Ruby source bytes, without executing them. */
@@ -355,7 +360,8 @@ export async function inspectRubySellerClient({ directory } = {}) {
   return { state: 'COMPLETE', directory, sourceSha256: original.sourceSha256,
     origin: original.origin, mode: original.mode, operations: original.operations,
     capabilities:manifest.files.length === LEGACY_RUBY_CLIENT_FILES.length ? ['single-response'] :
-      ['single-response','dataset','rails-dataset-editions',...(manifest.files.some(item=>item.name==='native_dataset.rb')?['direct-sf100-dataset']:[])],
+      ['single-response','dataset','rails-dataset-editions',...(manifest.files.some(item=>item.name==='native_dataset.rb')?['direct-sf100-dataset']:[]),
+        ...(manifest.files.some(item=>item.name==='examples/rails_dataset/operator/controller.rb')?['rails-dataset-operator']:[])],
     manifest, manifestSha256: sha(await bytesAt(directory, RUBY_CLIENT_MANIFEST, 131072)),
     files: [...original.files, original.manifestFile, ...manifest.files] };
 }
@@ -433,9 +439,11 @@ function nativeManifest(files) {
   return {schema:NATIVE_SCHEMA,files:[...files].map(([name,bytes])=>fileRecord(name,bytes))};
 }
 function checkNativeManifest(value) {
-  if (!value || value.schema !== NATIVE_SCHEMA || !Array.isArray(value.files) ||
-      value.files.length !== NATIVE_RUBY_CLIENT_FILES.length || value.files.some((file,index)=>
-        file?.name !== NATIVE_RUBY_CLIENT_FILES[index] || !Number.isSafeInteger(file.bytes) ||
+  const expected = [LEGACY_NATIVE_RUBY_CLIENT_FILES,NATIVE_RUBY_CLIENT_FILES]
+    .find(files=>files.length===value?.files?.length);
+  if (!value || value.schema !== NATIVE_SCHEMA || !Array.isArray(value.files) || !expected ||
+      value.files.length !== expected.length || value.files.some((file,index)=>
+        file?.name !== expected[index] || !Number.isSafeInteger(file.bytes) ||
         file.bytes < 1 || file.bytes > LIMIT || typeof file.sha256 !== 'string' ||
         !/^[a-f0-9]{64}$/.test(file.sha256)))
     throw error('NATIVE_MANIFEST_INVALID','Choose the complete original native Ruby package');
@@ -458,15 +466,18 @@ export async function inspectNativeRubyClient({directory}={}) {
       throw error('NATIVE_FILE_CHANGED','The selected native customer source differs: '+item.name);
   }
   return {state:'COMPLETE',directory,manifest,manifestSha256:sha(bytes),
-    capabilities:['direct-sf100-dataset','offline-dataset-receiving','rails-dataset-editions'],
+    capabilities:['direct-sf100-dataset','offline-dataset-receiving','rails-dataset-editions',
+      ...(manifest.files.some(file=>file.name==='examples/rails_dataset/operator/controller.rb')?['rails-dataset-operator']:[])],
     files:manifest.files};
 }
 
 async function finishNative(directory, selected, payload) {
   const manifest = checkNativeManifest(JSON.parse(selected.toString('utf8')));
-  if(JSON.stringify(manifest)!==JSON.stringify(nativeManifest(payload)))
+  const selectedPayload = new Map(manifest.files.map(item=>[item.name,payload.get(item.name)]));
+  if([...selectedPayload.values()].some(bytes=>!Buffer.isBuffer(bytes)) ||
+    JSON.stringify(manifest)!==JSON.stringify(nativeManifest(selectedPayload)))
     throw error('NATIVE_SOURCE_CHANGED','Resume with the source edition retained in native-client-source.json');
-  for(const [name,bytes] of payload) await publishOnce(directory,name,bytes);
+  for(const [name,bytes] of selectedPayload) await publishOnce(directory,name,bytes);
   await publishOnce(directory,NATIVE_RUBY_CLIENT_MANIFEST,selected);
   return inspectNativeRubyClient({directory});
 }
@@ -485,8 +496,19 @@ export async function exportNativeRubyClient({out}={}) {
 export async function completeNativeRubyClient({directory}={}) {
   const current = await inspectNativeRubyClient({directory});
   if(current.state==='COMPLETE') return {...current,reused:true};
-  const selected = await bytesAt(current.directory,NATIVE_SELECTION,131072);
-  return finishNative(current.directory,selected,await nativePayloads());
+  const payload = await nativePayloads();
+  let selected;
+  try { selected = await bytesAt(current.directory,NATIVE_SELECTION,131072); }
+  catch(cause) {
+    if(cause.code!=='ENOENT') throw cause;
+    const info = await lstat(current.directory);
+    if((typeof process.getuid==='function' && info.uid!==process.getuid()) || (info.mode&0o077)!==0 ||
+      (await readdir(current.directory)).length!==0)
+      throw error('NATIVE_SOURCE_REQUIRED','Select the original source for this nonempty interrupted package');
+    selected = json(nativeManifest(payload));
+    await publishOnce(current.directory,NATIVE_SELECTION,selected);
+  }
+  return finishNative(current.directory,selected,payload);
 }
 
 export async function copyNativeRubyClient({directory,out,resume=false}={}) {

@@ -5,7 +5,7 @@ import {lstat,realpath} from 'node:fs/promises';
 import {resolve,dirname,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {
-  BUNDLE_SCHEMA,inspectSourceEditionWorkorder,receiveSourceEditionWorkorder
+  BUNDLE_SCHEMA,SOURCE_EDITION_LIMITS,inspectSourceEditionWorkorder,receiveSourceEditionWorkorder
 } from './source-edition-workorder.mjs';
 import {
   privateDirectory,fileDigest
@@ -13,10 +13,13 @@ import {
 
 export const SOURCE_ARCHIVE_SCHEMA='stellar-forge.sf49.source-edition-archive.v1';
 export const SOURCE_ARCHIVE_LIMITS=Object.freeze({
-  fileBytes:8*1024**3,sourceBytes:16*1024**3,
-  // The original SF49 inventory also retains its bounded native handoff/output.
-  expandedBytes:16*1024**3+256*1024**2,
-  archiveBytes:16*1024**3+272*1024**2,members:72,metadataBytes:2*1024**2
+  fileBytes:SOURCE_EDITION_LIMITS.fileBytes,sourceBytes:SOURCE_EDITION_LIMITS.sourceBytes,
+  handoffBytes:SOURCE_EDITION_LIMITS.handoffBytes,termsBytes:SOURCE_EDITION_LIMITS.termsBytes,
+  // The original accepted inventory, plus its exact manifest. ZIP framing and
+  // bounded compression overhead have a separate upload allowance.
+  expandedBytes:SOURCE_EDITION_LIMITS.bundleBytes+SOURCE_EDITION_LIMITS.metadataBytes,
+  archiveBytes:SOURCE_EDITION_LIMITS.bundleBytes+SOURCE_EDITION_LIMITS.metadataBytes+16*1024**2,
+  members:72,metadataBytes:SOURCE_EDITION_LIMITS.metadataBytes
 });
 const NATIVE=fileURLToPath(new URL('./source-edition-archive.py',import.meta.url));
 const SHA=/^[a-f0-9]{64}$/;
@@ -59,7 +62,7 @@ export function validateSourceArchiveManifest(value) {
       !file.path.split('/').some(part=>!part||part==='.'||part==='..')&&!names.has(file.path),
       'SF49_ARCHIVE_PATH_INVALID');
     ensure(typeof file.bytes==='string'&&/^(0|[1-9][0-9]{0,15})$/.test(file.bytes)&&
-      Number.isSafeInteger(Number(file.bytes))&&SHA.test(file.sha256),'SF49_ARCHIVE_FILE_PIN_INVALID');
+      Number.isSafeInteger(Number(file.bytes))&&Number(file.bytes)<=SOURCE_ARCHIVE_LIMITS.fileBytes&&SHA.test(file.sha256),'SF49_ARCHIVE_FILE_PIN_INVALID');
     total+=Number(file.bytes);names.add(file.path);
   }
   ensure(names.has('manifest.json')&&total<=SOURCE_ARCHIVE_LIMITS.expandedBytes,'SF49_ARCHIVE_SIZE_LIMIT');
@@ -74,7 +77,11 @@ function sameEnvelope(actual,inspected) {
 }
 async function native(input,{python=process.env.SCF_PYTHON||'python3',environment=process.env,signal}={}) {
   ensure(typeof python==='string'&&python&&!python.includes('\0'),'SF49_ARCHIVE_PYTHON_INVALID');
-  const request=Buffer.from(JSON.stringify(input)+'\n');
+  ensure(Number.isSafeInteger(SOURCE_EDITION_LIMITS.handoffBytes)&&SOURCE_EDITION_LIMITS.handoffBytes>0&&
+    SOURCE_EDITION_LIMITS.handoffBytes<=SOURCE_EDITION_LIMITS.fileBytes,'SF49_ARCHIVE_NATIVE_HANDOFF_LIMIT');
+  // Only the original server-derived constant crosses this private child ABI.
+  // Browser metadata cannot select or expand the archive policy.
+  const request=Buffer.from(JSON.stringify({...input,nativeHandoffBytes:SOURCE_EDITION_LIMITS.handoffBytes})+'\n');
   ensure(request.length<=SOURCE_ARCHIVE_LIMITS.metadataBytes,'SF49_ARCHIVE_METADATA_LIMIT');
   if(signal?.aborted)throw problem('SF49_ARCHIVE_ABORTED','The original archive operation was cancelled.',409);
   return new Promise((accept,reject)=>{

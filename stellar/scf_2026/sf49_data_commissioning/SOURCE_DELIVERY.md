@@ -119,9 +119,11 @@ Use the existing --python option when the maintained Python interpreter is not n
 
 ## Size boundaries and transport
 
-An original attachment can be up to 8 GiB. The original SF49 source allowance remains 16 GiB, including its reserved handoff and terms space. The native support handoff can be 224 MiB. The portable ZIP admits the complete resulting inventory and its bounded metadata, at most 72 members.
+An original attachment can be up to 8 GiB. The original SF49 source allowance remains 16 GiB, including its reserved handoff and terms space. The handoff allowance comes directly from SF74's exported `MAX_HANDOFF_BYTES`: `2 × (MAX_RUNTIME_BYTES + MAX_WORKSPACE_BYTES) + 1 MiB`. The current workspace codec accounts for commissioning and Service content. The source service uses this same value when reserving space and hashing the selected handoff; it does not keep a separate fixed handoff cap. Once the original handoff and terms have been read, the native builder checks their actual byte counts together with the selected attachments against the same 16 GiB ceiling. An accepted transfer can therefore continue after the installed handoff allowance grows without reducing its already accepted attachment budget.
 
-These limits are separate from the original commissioning editor's 48 MiB inline-material and 64 MiB case-JSON boundaries. Large source files and archives use raw HTTP file streams. The only JSON request contains bounded selection, identity and role metadata.
+The portable ZIP admits the original carrier's complete inventory plus its exact manifest, at most 72 members. Its expanded ceiling is `16 GiB + MAX_HANDOFF_BYTES + 3 × 2 MiB`; its compressed upload ceiling adds 16 MiB for ZIP framing and bounded compression overhead. The native Node carrier passes its installed handoff allowance to the original Python streaming policy. The public HTTP request cannot choose these limits. The state API reports the current derived values.
+
+These limits are separate from the original commissioning editor's 48 MiB inline-material and 64 MiB commissioning-record boundaries. The complete saved case retains the original codec's exported `MAX_WORKSPACE_BYTES`, including its existing Service fields. Large source files and archives use raw HTTP file streams. The only JSON request contains bounded selection, identity and role metadata.
 
 Direct download links support one HTTP byte range. A complete download hashes its opened file while streaming and verifies its final chunk before completing. Range/HEAD responses identify the retained whole-file SHA; the receiving path still verifies the full archive and all members.
 

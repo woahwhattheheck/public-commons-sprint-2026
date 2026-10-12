@@ -13,6 +13,12 @@ export const REQUEST_SCHEMA='stellar-forge.sf49.source-edition-workorder-request
 export const BUNDLE_SCHEMA='stellar-forge.sf49.source-edition-workorder.v1';
 export const ATTACHMENT_SCHEMA='stellar-forge.sf49.source-edition-attachments.v1';
 const MAX_META=2*1024*1024,MAX_TERMS=1024*1024,MAX_ATTACHMENT=8*1024**3,MAX_TOTAL=16*1024**3;
+// The original runtime owns its handoff allowance. All transfer and archive
+// admission derives from these same original carrier boundaries.
+export const SOURCE_EDITION_LIMITS=Object.freeze({
+  metadataBytes:MAX_META,termsBytes:MAX_TERMS,fileBytes:MAX_ATTACHMENT,sourceBytes:MAX_TOTAL,
+  handoffBytes:MAX_HANDOFF_BYTES,bundleBytes:MAX_TOTAL+MAX_HANDOFF_BYTES+2*MAX_META
+});
 const nativePaths={
   workorder:'../../scf-starforge-20261009/sf77-merchant-workorder/workorder.mjs',
   runtimeSupport:'../../scf-starforge-20261009/sf74-merchant-support-console/runtime-support.mjs',
@@ -193,7 +199,7 @@ async function checkedNativeSource() {
   ensure(canonical(current)===canonical(loadedNativeSource),'Native source changed after this process opened; reopen the original pinned installation');
   return current;
 }
-async function attachmentInput(file) {
+async function attachmentInput(file,maximum) {
   if(!file)return [];
   const document=json(await readBounded(file,MAX_META));
   fields(document,['schema','files'],'attachment selection');
@@ -206,7 +212,7 @@ async function attachmentInput(file) {
     ensure(typeof value.role==='string'&&value.role.trim()===value.role&&value.role.length>0&&value.role.length<=160&&!/[\x00-\x1f\x7f]/.test(value.role),'Invalid attachment role');
     ensure(baseName(value.name)&&typeof value.path==='string'&&value.path.length>0,'Invalid attachment name or input path');
     ensure(bytesOK(value.bytes,MAX_ATTACHMENT)&&digestOK(value.sha256),'Attachment needs its original byte count and SHA-256');
-    total+=value.bytes;ensure(total<=MAX_TOTAL-MAX_HANDOFF_BYTES-MAX_TERMS,'Attachment inventory exceeds the total limit');
+    total+=value.bytes;ensure(total<=maximum,'Attachment inventory exceeds the total limit');
     return {id:value.id,role:value.role,name:value.name,path:'attachments/'+value.id+'/'+value.name,bytes:value.bytes,sha256:value.sha256,input:path.resolve(base,value.path)};
   });
 }
@@ -252,7 +258,10 @@ export async function prepareSourceEditionWorkorder({handoff,terms,attachments,o
   ensure(identity(operationId),'A stable operationId is required');
   const out=path.resolve(directory);
   const supportBytes=await readBounded(handoff,MAX_HANDOFF_BYTES),termsBytes=await readBounded(terms,MAX_TERMS);
-  const selected=await attachmentInput(attachments),retained=await retainedRequest(out),stages=retained?[]:await requestStages(out);
+  // These original inputs are already held. Admission uses their exact size so a
+  // retained transfer survives a later increase in the installed handoff allowance.
+  const selected=await attachmentInput(attachments,MAX_TOTAL-supportBytes.length-termsBytes.length),
+    retained=await retainedRequest(out),stages=retained?[]:await requestStages(out);
   const stageIdentities=new Map(stages.map(value=>[value.generatedAt+'|'+value.sha256,value]));
   ensure(stageIdentities.size<=1,'Multiple first-request stages need the original operator to resolve their identity');
   const staged=[...stageIdentities.values()][0];

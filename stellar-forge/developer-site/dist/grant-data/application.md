@@ -1,202 +1,135 @@
-# Stellar Discovery Trust Layer
+# Reviewer application
 
-## Build application · SCF #46 · Open Track
+**Stellar Discovery Trust Layer — TokenJunkieLabs — SCF #46 Build / Open Track**
 
-**TokenJunkieLabs requests USD 38,000 equivalent in XLM for 400 prospective delivery hours over 150 days from actual award acceptance.** The work installs a useful paid Stellar service with two independently operated merchants, two independent buyer operators and the same selected operation through two independently operated facilitators.
+## Project and requested outcome
 
-The product is open-source, self-hostable merchant and buyer tooling. It carries an approved API request, dataset or paid MCP tool through native settlement, complete useful output, fulfillment and operating handover. The merchant controls its source and terms. The buyer controls its keys, request and spending. Another engineer can reopen the installation and recover unfinished work.
+We are building open-source, self-hostable software for operating paid APIs, datasets and agent tools on Stellar. A merchant selects the resource and commercial terms; a buyer approves a specific request and controls its wallet and spending. The software carries that agreement through native settlement, complete usable output, fulfillment, recovery and handover to another engineer.
 
-The working development baseline comprises **18 distinct team-operated purchases totaling 411,000 stroops, or 0.0411 native testnet XLM**, with network fees recorded separately. The funded milestones establish independent customer operation, repeated use and production receiving from that baseline.
+We request **USD 38,000 for 400 prospective delivery hours over 150 days from actual award acceptance**. The award will fund the remaining source, consumer and deployment engineering for **two independently operated merchants and two independent buyer operators**, including completion of the same useful operation through **two independently operated facilitators**. The delivered result will be a maintainable service on Stellar mainnet, with recurring customer use and an independently completed recovery and handover.
 
-### Application at a glance
+The existing product supplies the architecture, merchant and buyer workspaces, source adapters, payment integration, result receiving and operating controls. The six funded packages below apply that product to the selected customers’ actual sources, applications and hosts. They include installation-specific implementation and defects, provider integration, deployed threat response, production release and technical receiving.
 
-| Item | Proposed or observed basis |
-| --- | --- |
-| Applicant | Bryce Muhlnickel, United States individual operating TokenJunkieLabs |
-| Category and track | Developer Tooling · Open Track · Global / Not region-specific |
-| Requested work | Six future integration and deployment packages, 400 hours at the USD 95/hour planning assumption |
-| Delivery windows | Installed services and handover by day 30; repeated testnet use and threat response by day 90; mainnet operation and production receiving by day 150 |
-| Interest state | Interest acknowledged October 11, 2026; awaiting the full application invitation |
-| Round dates | Full Build deadline November 8, 2026; panel review November 11–18; community voting November 23–December 3 |
-| Award timing | Award distribution is undated. The implementation clock begins at actual award acceptance. |
+## Customer problem, need and adoption
 
-## 1. Customer problem and commercial model
+API and data operators want to sell useful operations to applications and agents while retaining source rights, access rules and commercial control. Buyers need the complete result they approved, in a form their existing application can use. Staff also need to recover an interrupted paid request and transfer the working service to another maintainer.
 
-An API or data-service operator needs to expose a useful resource to agent applications while retaining access rules, source meaning and commercial control. A buyer needs the complete result it approved and a way to resolve an interrupted paid request. The difficult join spans four records: approved request, settled transfer, delivered output and accepted fulfillment or accounting.
+That task joins four records: the approved request, the settled transfer, the delivered output and the accepted fulfillment or accounting. A payment confirmation alone does not show whether a multi-page dataset is complete, whether its values retained their original meaning, or whether an order reached its intended state. The customer’s useful task can contain several priced requests, so its aggregate cost and complete output must remain visible.
 
-Current x402 reports show the practical need for that join. One October 2 report described payment-bearing requests rejected because a merchant required POST while the reference client retried GET; health and catalogue checks had appeared normal. The author subsequently corrected the server. An October 3 report described settlement without a discovery listing, with later indexing and facilitator diagnostics in the thread. These were Base deployments. They show how a healthy catalogue or settled payment can leave the customer's task unfinished. Our Stellar implementation retains the exact request and each original outcome so the unfinished step can be recovered. [Method report](https://github.com/x402-foundation/x402/issues/3657) · [Discovery report](https://github.com/x402-foundation/x402/issues/3677)
+Public October 2–3 x402 reports illustrate this operational need: one merchant rejected payment-bearing requests because its POST requirement differed from a client’s GET retry; another reported settlement without its expected discovery listing. These reports concerned Base deployments, and their follow-ups include a corrected server and successful indexing. They inform the request, discovery and recovery joins we implement on Stellar.
 
-We serve recurring API/data-service operators, the developers using their results and agencies commissioned to integrate them. A fixed-fee implementation delivers one agreed operation and a handover the receiving engineer can maintain. Further care has its own scope. The commissioning payer, merchant controlling the resource and independent buyer may be different organizations. The workorder names each role, its source and host authority, payment responsibility and acceptance owner. The merchant retains its API or product receipts; TokenJunkieLabs invoices the implementation.
+Our current human conversations provide more specific customer learning:
 
-The selected customer task and the priced unit are recorded together. A complete report may require several paid pages. A handover may contain many files or transport chunks. The buyer retains per-request and aggregate spending controls while the operating record shows whether the whole task is complete. A later reporting period, changed source edition, fresh query or new order gives the same buyer a reason to use the service again.
+|Organization|Observed response|Proposed useful implementation|
+|  ---  |  ---  |  ---  |
+|Veridex|Invited an open testnet design partnership after declining a third-party testing budget.|One agreed testnet route and buyer adaptation, proposed at $1,500 over five business days.|
+|Nansen|Referred the proposal internally and confirmed on October 12 that the Holdings detail was included.|Read-only Ethereum Holdings data, Stellar testnet payment and source/operator handover, proposed at $2,400 over five business days.|
+|CoCart|Founder Sébastien Dumont asked about introductions, the payer, referral compensation, responsibilities and contracting.|One customer’s headless cart, native WooCommerce checkout, payment/order operation and receiving, proposed at $7,200 for 60 hours over fifteen business days.|
+|Blockscout|Mojmir Racak expressed interest on October 12 and reported no current integration budget.|One approved PRO API token-information operation, buyer integration and handover, proposed at $4,800 over ten business days.|
 
-## 2. Product architecture and control
 
-Six connected components form the application: the merchant's private source/release workspace; its HTTP or MCP operation; the native Stellar SDK and configured facilitator; the buyer's private approval and spending state; complete result and delivery records; and merchant fulfillment/accounting. Merchant and buyer services run on their operators' hosts. Approved operations are public; administration, provider credentials, signer references and operating state stay private.
+These conversations identify the practical selection decisions: a recurring buyer task, usable source rights, an accountable merchant host, an independent receiving application and an agreed commissioning payer. A participating platform and the organization paying for its integration can be different organizations. For CoCart, the first merchant or agency and commissioning arrangement remain to be selected. Bryce owns these favorable relationships and subsequent agreements.
 
-| Stage | Implemented customer control |
-| --- | --- |
-| Review and publish | Review a source edition or named live query, its arguments and schema, public fields, output limits and complete payment alternatives. Save rights, route, network, asset, recipient, atomic amount and authorization lifetime. Changes or withdrawal become new reviewed states. |
-| Connect the source | Preserve original types, missing/null values, pagination and snapshot/live meaning. Customer-controlled credential or OAuth aliases select access and the existing quota/cache state. Retain the edition behind each result. |
-| Approve and purchase | Save the actual endpoint, method or tool, arguments, payment option and result scope. Match remote schema and challenge to that selection before signing. Keep the per-payment ceiling and the application's aggregate reservation/budget owner. |
-| Settle and deliver | Use the configured native SDK/facilitator for verification and settlement. Save the server's response, full output, byte identity and durable merchant notification. Independently reconcile transaction network, asset, payer, payee and atomic amount. |
-| Use and maintain | Receive every selected page or file into the customer's existing application, query, report or workbook. Preserve the parent acquisition and earlier source editions. Existing order and finance authorities control fulfillment, refunds and accounting. |
-| Deploy and receive | Select the release, HTTPS service, restricted administration and supervision. Drain, restart, roll back and restore with the original configuration, history and complete customer files. |
+For each funded installation, the original workorder will name the payer, merchant, buyer and receiving operator; the source and authorized access; the exact request, complete output and priced unit; the host and receiving application; and the person accepting delivery. It will record what makes a later purchase useful, such as a fresh period, changed source edition or new customer request. The implementation team then takes that same task through deployment, complete result receiving, recurring use and maintainer handover.
 
-The native x402 flow reuses the existing Exact Stellar scheme, token contracts and facilitator supported/verification/settlement interfaces. For paid MCP, the HTTP endpoint, tool and arguments remain distinct from the payment resource. An unsigned call obtains the challenge; the full payment option must match the saved quote before the signed call is dispatched. The official MCP SDK transports the payment and settlement metadata.
+## Why Stellar and what we contribute
 
-Server confirmation, independently observed transfer, complete useful output, receiver acknowledgment and order fulfillment remain separately visible. An uncertain signed reply retains its dispatch state for reconciliation. Reopening a consumed quote returns saved work. Recovery of a complete retained result uses that saved result. A new request or changed purchase gets its own review. Complete export and restore carry the configuration, history and referenced files; the receiving host supplies current authorized secret references.
+Stellar is the settlement layer for the approved operation. Buyer approval binds the complete request to its network, asset, recipient and integer atomic amount. The native Stellar SDK and configured payment service verify and settle the authorization; the application connects that outcome to the original source, useful result and merchant fulfillment. Buyers control signing and aggregate spending. Merchants control their resources, terms and order actions.
 
-Browser, CLI, MCP and installed Applications use these same saved workspaces. Native source registrations connect setup, operation and lifecycle while preserving each source adapter's data semantics. The existing request-collection, buyer-to-Operations and document-analysis extensions retain their own original recovery operations; their pending native receiving stages are reported separately from the completed examples below.
+We compose existing ecosystem infrastructure. The x402 Exact Stellar scheme and facilitator supply payment verification and settlement. Vellar’s optional discovery extension publishes eligible settled resources to its catalogue. OpenZeppelin, Veridex and Periplo supply relevant payment infrastructure; Rumble Fish is developing facilitator, discovery and SDK capabilities. Our existing MPP Charge workbench retains that protocol’s own challenge, authorization and recovery model. We use the existing SDK and token contracts.
 
-## 3. Why Stellar and the ecosystem fit
+Our contribution is the repeated source-to-customer operation around those components: preserve the source’s types and pagination; review the exact request and terms; acquire the complete result; receive it into an existing application, report or workbook; and reopen the operating state after interruption or on another authorized host. This gives Stellar merchants a reusable path from a paid endpoint to an independently maintainable customer installation.
 
-Stellar settles the approved operation. Buyer approval binds the complete request to its network, asset, recipient and integer atomic amount. Existing libraries and payment services sign, verify and settle; our application connects the transfer to complete output and practical merchant fulfillment.
+A retained comparison found 27 Vellar offers and two Periplo offers with no shared seller/route identity. The two-facilitator milestone therefore includes the actual registration and integration work for the same useful service. Its completion will demonstrate that a merchant can change payment infrastructure while preserving the customer operation. Reusable integration, receiving and operating improvements will return to the public source.
 
-| Existing component | What it supplies | What this product contributes |
-| --- | --- | --- |
-| Native Stellar x402 and OpenZeppelin facilitator | Supported payment options, buyer-authorization verification and settlement | The approved HTTP/MCP request, original source, complete output and recoverable receiving operation |
-| Vellar discovery | Optional discovery extension and best-effort catalogue updates independent of settlement | Saved offer/schema/terms and a complete source edition that remains usable through customer review and handover |
-| Stellar MPP | Charge for individual requests; Session with funded channels and cumulative commitments | An existing Charge workbench that retains the native challenge, request and merchant profile through concurrent preparation and restart |
+## Defined architecture and operating behavior
 
-OpenZeppelin, Vellar, Veridex and Periplo remain payment-infrastructure choices. Rumble Fish is developing facilitator, discovery and SDK capabilities. We build on those components and return reusable integration and receiving improvements to the public source.
+The system has six components: the merchant’s private source/release workspace; its public HTTP or MCP operation; the native Stellar SDK and selected facilitator; the buyer’s private approval and spending state; complete result and delivery records; and merchant fulfillment/accounting. Node.js supplies the merchant and buyer interfaces. Source adapters and customer applications retain their own native data and operating semantics.
 
-A retained comparison found 27 Vellar offers and two Periplo offers with no shared seller/route identity. The funded two-facilitator deployment therefore includes registering and integrating the same useful operation with both. Each completion will retain the selected provider's actual scheme, network, asset and fee policy. This makes the cost and effort of changing payment infrastructure observable while the merchant service and buyer task remain defined.
+|Stage|Implemented behavior|
+|  ---  |  ---  |
+|Review and publish|The merchant selects a source edition or named live query, request schema, public output, limits and resolved payment options. It reviews rights, route, network, asset, recipient, amount and authorization lifetime. Later source or terms changes become reviewed states.|
+|Connect the source|Adapters preserve types, missing and null values, pagination, keys, units, time basis and snapshot/live behavior. Customer-controlled credential or OAuth references select authorized access. The output identifies its source edition.|
+|Approve and purchase|The buyer retains the endpoint, method or MCP tool, arguments, selected terms and scope. The remote schema and challenge must match before signing. Per-payment limits and the application’s existing reservation/budget owner govern spend.|
+|Settle and deliver|The facilitator verifies and settles the native authorization. The application retains the server outcome, complete output and durable merchant notification. Independent RPC reconciliation checks the transaction’s network, asset, parties and atomic amount.|
+|Use and continue|The receiving application opens all pages and files required by the agreed task. Its parent acquisition retains the paid requests and incomplete coverage. Earlier acquired output remains available when a later source edition changes.|
+|Operate and hand over|The customer selects its release, HTTPS service, restricted administration and supervision. A receiving engineer can drain, restart, roll back and restore it with the original operating history and complete customer files.|
 
-[Stellar x402 documentation](https://developers.stellar.org/docs/build/agentic-payments/x402) · [Stellar MPP documentation](https://developers.stellar.org/docs/build/agentic-payments/mpp)
 
-## 4. Completed development work
+For paid MCP, the HTTP endpoint, tool and arguments remain distinct from the payment resource. An unsigned call obtains the challenge. Its full payment option, including authorization timeout, must match the saved quote before the buyer retains dispatch state and sends the signed tool call. The official MCP SDK carries payment and settlement metadata; HTTP operations use the native HTTP transport.
 
-The existing product supplies an operated foundation for the future customer deployments.
+Recovery keeps server confirmation, independently observed transfer, complete output, receiver acknowledgment and fulfillment separately visible. An uncertain signed response retains its original dispatch state for reconciliation. Reopening an acquired result uses the saved work; an unfinished delivery continues from its original intent. A changed request or new purchase receives a new review. Export and restore carry the configuration selection, history and complete referenced files, while the receiving host supplies current authorized secret references.
 
-| Completed operation | Useful result and its boundary |
-| --- | --- |
-| Queens HPD data | From a 1,342-row source, the reviewed selection received all 144 rows in pages of 100 and 44. Both 10,000-stroop native testnet transfers finalized. The complete CSV/JSONL edition reopens with source and accounting. |
-| Paid MySQL agent query | The MariaDB HPD Preservation/minimum-20 query returned 100 rows, 14 columns and all 53,468 bytes for 50,000 stroops on testnet. Scalar strings and the declared truncation indicator remained intact. It reopened with signing disconnected and in another installation. These are project-event records, rather than a count of unique buildings or current vacancies. |
-| Order and receiving | WordPress/WooCommerce applied USD 1.00 and USD 1.50 credits to a USD 2.50 order and reopened both as applied, using controlled reverse-transfer RPC responses in that development exercise. CoCart completed guest-cart actions, native checkout, order handover and receiving of all 48 saved objects. |
-| Filing analysis | A 10,000-stroop testnet purchase delivered Genpact's 2024–2025 comparison: four disclosure pairs, five findings and all 1,027,807 bytes. The editable workspace reopened, repeated receipt preserved its revision, and backup/restore reproduced the comparison elsewhere. |
-| Supplier catalogue | Both original SAP SHINE SPS11/SPS12 editions contained 106 materials. The operator identified 106 supplier-only changes, reviewed the edition and retained exact identifiers and quantities: 12.500 EA remained 25/2. The original compiler built two 11-file merchant packages. Complete receiving preserved later customer decisions when an earlier bundle was imported. |
+The same workspaces are available through the browser, terminal, typed clients and MCP. The captured-API product connects reusable route policies to a saved operator procedure, exact native configuration review, continued publication and complete customer files. Its collaboration workflow supports independent draft edits, explicit resolution of overlapping changes and portable working-edit files. The original draft and package writers retain the save, export and receiving lifecycle. This supports installation work by multiple operators while preserving the selected source, procedures and earlier decisions.
 
-Across the development record, 18 distinct team-operated purchases transferred 411,000 stroops / 0.0411 native testnet XLM. Fees are separate. These purchases cover HTTP/MCP, DuckDB/Parquet, RPC, MySQL, Routescan, Socrata, an API plan, Huwise, Genpact, Blockscout and StellarExpert. Independent-customer mainnet adoption is the prospective funded outcome.
+## Working product and demonstrated results
 
-The filmed MySQL purchase is independently identifiable: transaction **50d61d1102bfcf960af44171e5248e0899ed6d99cec1951a62075f9a65a6cbed**, ledger **5,145,195**, completed **October 11, 2026 at 20:12:58 UTC**. Its complete result SHA-256 is **4c22f8a26d48156c3e07543328b62ca6f993ce60856166d6805dc0660d9acb8d**.
+Our current network record comprises **18 distinct team-operated development purchases totaling 411,000 stroops, or 0.0411 native testnet XLM**, with fees tracked separately. The retained register connects each purchase to its original transaction and complete output. The funded customer milestones extend this foundation to independently operated services and buyers.
 
-An installed incident-to-case operation completed an observation gap, notification retry, acknowledgment, recovery and support-case reopening. Encrypted merchant recovery and off-host restore are delivered components. The private grant reviewer completed its 14-phase desktop and 390-pixel mobile journey, including full result reads, Buyer close/export, cold reopening and second-operator receiving, with zero new payments and its processes closed. The later managed-Applications and merchant receiving continuations retain their pending state.
+Three completed operations show the useful result:
 
-The complete economic briefing is another usable output: a 15-file offline report with all 2,219 original observations, 75 selected observations and 150 comparisons, plus saved review and CSV/JSON. Its unemployment, prices and GDP views preserve units, missing values and retrieval dates. Opening that example initiates no paid operation.
+|Operation|Completed result|
+|  ---  |  ---  |
+|Municipal data|A Queens HPD source contained 1,342 building-in-project rows. The selected result received all 144 rows in paid pages of 100 and 44. Both 10,000-stroop transfers finalized, and the full CSV/JSONL edition reopened with source and accounting.|
+|Paid agent query|The MariaDB HPD Preservation/minimum-20 query returned all 100 rows, 14 columns and 53,468 bytes for one 50,000-stroop purchase. Scalar strings and its declared truncation indicator were retained. The purchase reopened with signing disconnected; its packet and complete result reopened in another directory. These are project-event records.|
+|Filing analysis|A 10,000-stroop purchase delivered the Genpact 2024–2025 comparison: four disclosure pairs, five findings and all 1,027,807 bytes. The editable analyst workspace reopened it, repeat receipt preserved its revision, and backup/restore reproduced the comparison in another installation.|
 
-## 5. Funded work and acceptance
 
-The six prospective packages total **400 hours / USD 38,000** at the **USD 95/hour planning assumption**. Day zero is actual award acceptance.
+The identified agent-query example completed on October 11 at 20:12:58 UTC, Stellar testnet ledger **5,145,195**, transaction **50d61d1102bfcf960af44171e5248e0899ed6d99cec1951a62075f9a65a6cbed**. Its full result SHA-256 is **4c22f8a26d48156c3e07543328b62ca6f993ce60856166d6805dc0660d9acb8d**. This identifies the operated result underlying the product demonstration.
 
-| Package and delivery window | Hours / USD | Remaining work and assessed completion |
-| --- | --- | --- |
-| T1 · Merchant-resource integration · days 1–30 | 80 / 7,600 | Connect both selected merchants' actual sources, runtimes, authorized access, typed input/output, public routes, payment terms and buyer setup. Each merchant operates one agreed HTTP or MCP service on its host; the buyer opens the complete selected result in its actual application. |
-| T1 · Authority and handover · days 1–30 | 40 / 3,800 | Integrate source/terms change or withdrawal, receiving-engineer configuration and installation-specific recovery. A second accountable operator reopens each installation and completes the agreed change while earlier acquired output remains usable under its original terms. |
-| T2 · Provider and ledger deployment · days 31–90 | 70 / 6,650 | Register and integrate the same useful service with two independently operated facilitators and the customer's buyer/ledger owner. Two independent buyers complete at least ten useful testnet purchases in total during seven consecutive calendar days ending by day 90. Original intents, observed transfers, full outputs and provider attribution are retained. |
-| T2 · Deployed threat response · days 31–90 | 50 / 4,750 | Complete the deployment-specific threat model, monitoring/notification setup and material remediation. The customer operates an interrupted settled purchase and a merchant-delivery failure through acknowledgment, recovery and useful output. |
-| T3 · Mainnet merchant rollout · days 91–150 | 90 / 8,550 | Integrate both production hosts, network/asset/account configuration, recurring task, controlled release and rollback. Both merchants operate on mainnet; two independent buyers complete at least thirty useful purchases in total during fourteen consecutive calendar days ending by day 150, and both return for a distinct purchase on another day. |
-| T3 · Production recovery and handover · days 91–150 | 70 / 6,650 | Complete supervision, off-host retention, key rotation, receiving-host restore and reconciliation after the backup point. An authorized engineer restores original state/files, measures recovery, reconciles later operations and completes an independent maintainer's support case. |
-| **Total** | **400 / 38,000** | **Two merchants, two buyers, two facilitators and an independently maintainable mainnet service.** |
+Complete receiving has also preserved all sixteen rows of a Census workbook across CSV, JSONL, SQLite, browser and Rust clients; a later edition identified fifteen unchanged rows and one changed row while the earlier customer retained its original values. The supplier workflow imported both complete 106-material SAP SHINE publisher editions, reviewed their supplier changes and reopened the full catalogue handover. An installed incident-to-case operation completed an observation gap, notification retry, acknowledgment, recovery and support-case reopening.
 
-The allocation is 320 engineering hours and 80 integration/handover hours: 96 + 24 in T1, 96 + 24 in T2, and 128 + 32 in T3. The three windows cost USD 11,400 / 11,400 / 15,200. Bryce assigns actual contributors, rates and working-day availability within those packages.
+The captioned **3-minute-32-second product/team film** follows the native HPD query, saved terms, one 0.005-testnet-XLM purchase, complete result, download and reopening. Its editable companion includes eleven clips, captions, script, result and rendering tools. The reviewer workbench has completed original-packet receiving, full-result reads, export, cold reopening and second-operator receiving across desktop and 390-pixel mobile views.
 
-Each installation starts from one complete workorder: recurring task and commissioning payer; merchant, buyer and receiving operators; source rights and access; selected host/runtime; exact request, full output and priced unit; approved network, asset and terms; repeat-use trigger and acceptance owner. The source contract identifies snapshot/live behavior, keys, field/time meaning, limits and completeness. T1 implements those concrete joins into the existing product.
+## Three funded tranches and six priced deliverables
 
-Each performed adaptation is assigned once to its grant package or a separately sold commercial workorder. The grant pays for future Stellar integration, deployment, technical recovery and handover. Existing implementation, routine operation, sales and purchased usage have separate records. Usage targets carry no purchase subsidy. Existing compute is the starting resource; incremental service reserve and the planned hosted Actions budget are both USD 0.
+Day zero is actual award acceptance. The proposed rate assumption is **$95 per hour**. Every package below is prospective Stellar integration and deployment work using the existing architecture.
 
-## 6. Customer selection and repeat use
+|Tranche / window|Deliverable and remaining work|Hours / cost|Completion criterion|
+|  ---  |  ---  |  ---  |  ---  |
+|T1 — days 1–30|Merchant-resource integration: implement both customers’ authorized source/runtime, typed consumer mappings, routes, native terms and buyer setup.|80 / $7,600|Each independent merchant operates one agreed useful HTTP or MCP service on its host. Its buyer opens the complete result in the actual receiving application, retaining source meaning and payment selection.|
+|T1 — days 1–30|Authority and handover: integrate source/terms change or withdrawal, receiving-engineer configuration, installation defects and recovery procedure.|40 / $3,800|A second accountable operator reopens each installation and completes the agreed change or withdrawal. The offered state changes as reviewed and earlier acquired output remains available under its original terms.|
+|T2 — days 31–90|Provider and ledger deployment: register and integrate the same selected service with two independent facilitators, retaining each actual payment scheme, requirements and fee policy.|70 / $6,650|Two independent buyer operators complete at least ten useful testnet purchases in total across the two buyers during seven consecutive days ending by day 90. The same useful operation completes through both facilitators; every completion joins its original intent, native transfer and full output.|
+|T2 — days 31–90|Deployed threat response: implement the customer-specific threat assessment, monitoring, notifications and material remediation.|50 / $4,750|The customer operates two installed response cases: an interrupted settled purchase and a merchant-delivery failure. Both retain the original financial outcome, unfinished step, acknowledgment, recovery and useful result.|
+|T3 — days 91–150|Mainnet rollout: integrate both production hosts, network/asset/account configuration, recurring consumer use, controlled release, rollback and deployment fixes.|90 / $8,550|Both merchants operate on mainnet. Two independent buyers complete at least thirty useful purchases in total across the two buyers within fourteen consecutive days ending by day 150, with both returning for a distinct completed purchase on another day. Amounts and fees remain separately reported by asset.|
+|T3 — days 91–150|Production recovery and handover: finish supervision, off-host retention, key rotation, receiving-host restore and reconciliation after the backup point.|70 / $6,650|An authorized receiving engineer restores the original state and customer files, reconciles later operations, measures recovery time and completes an independent maintainer’s support case.|
+|**Total**|**Two merchant installations, recurring independent use and a maintainable mainnet service.**|**400 / $38,000**|**Complete useful operations and independently received operating state.**|
 
-Four human conversations inform the current decisions. Veridex invited an open testnet design partnership after declining an external testing budget; the subsequent proposal is USD 1,500 over five business days. Nansen referred a proposed read-only Holdings integration internally and confirmed on October 12 that the Holdings detail was included; its proposal is USD 2,400 over five business days. CoCart's founder asked about introductions, the commissioning payer, referral compensation, responsibilities and contracting; its proposal is USD 7,200, 60 planned hours and fifteen business days. Blockscout expressed interest on October 12 and reported no current integration budget; the proposed workshare is USD 4,800 over ten business days.
 
-Bryce owns these favorable relationships and subsequent agreements. The first CoCart customer remains to be selected. Source-platform participation and the organization commissioning an installation are recorded separately. These responses are customer learning and proposed work, with acceptance and collected revenue retaining their actual stages.
+Tranche delivery costs are **$11,400 / $11,400 / $15,200**. The allocation comprises **320 engineering hours and 80 integration/handover hours**: 96 + 24 in T1, 96 + 24 in T2, and 128 + 32 in T3.
 
-Selection favors a recurring buyer task, permitted source, accountable merchant host, independent receiving application and agreed payer. The buyer engineer connects the operation to the application's existing authorization, signer, aggregate budget and destination. The receiving engineer uses the full output, records corrections and reopens the same operation. The maintainer completes a source or terms change, recovery or receiving task during handover.
+The workorder assigns every adaptation once to its grant package or separately commissioned commercial scope. Award funds cover future Stellar integration, deployment fixes and technical receiving. Existing implementation, routine operations, sales and purchased usage sit outside that allocation. The usage targets include no purchase subsidy. Existing compute is the starting resource; the incremental service reserve and planned hosted Actions budget are both $0.
 
-Eight October 12 data-platform proposals apply this method to AceMQ, OpsTree, Cazton, Natron, Severalnines, Altinity, Percona and ScaleGrid. Their separately retained scopes total USD 52,500 for 350 planned hours, priced at USD 150/hour. At the common USD 95/hour labor assumption, modeled labor is USD 33,250 and the remainder before other costs is USD 19,250. A 25% labor overrun leaves USD 10,937.50 before other costs. These are proposed economics; they do not select the funded customers or establish revenue. Scope, original customer ownership and actual effort determine the next implementation estimate.
+## Threat response and outcome measurement
 
-The six funded packages retain their own hours. Qualified commercial work is scheduled and costed separately so the same adaptation is assigned once. No combination of overlapping offer cohorts is presented as booked business.
+The day-90 deliverable includes a deployment-specific threat model and monitoring plan. It assigns thresholds, notification destinations and accountable responders to the selected hosts.
 
-## 7. Threat response and useful-outcome measurement
+The response design addresses changed requests or terms before dispatch; uncertain payment and incomplete delivery; unauthorized access to private state; observation or notification failure; and restart or local-state loss. Controls retain exact approved context, scoped authority, original financial outcomes, incomplete output and the relevant backup. Operational measures include outstanding age, useful observation coverage, alert and acknowledgment time, recovered output and restore duration. The two customer-operated response cases exercise the actual installed recovery path.
 
-T2 includes the actual deployment's threat assessment, monitoring thresholds, notification destinations, accountable responders and material remediation.
+Each merchant’s output must be used by an independent buyer. A completed purchase joins a distinct approved intent, an independently observed native transfer and complete useful output. Counts deduplicate transactions within their network and each independent organization or person across agents and wallets. Reporting includes completed/attempted purchases, complete/started parent datasets or files, returning buyers, accepted handovers and the cohort’s partial, unresolved, canceled and refunded outcomes. Required fulfillment remains separately visible. Reopening an acquired result or resuming its file download continues the original purchase.
 
-| Failure to operate | Control and observation |
-| --- | --- |
-| Changed source, request or terms | Match exact source generation, request and approved payment alternative before dispatch. Retain rejection cause, quote age, source expiry and capacity refusal. |
-| Uncertain payment or incomplete delivery | Reconcile the original intent and transfer, retain partial output/entitlement state and recover unfinished work. Measure outstanding age and time to useful output. |
-| Unauthorized access or exposed private state | Validate issuer, audience, subject, scopes, expiry and current authority. Restrict administration and protect credentials, keys, claim tokens, private bodies and backups; retain access/rotation observations. |
-| Observation or notification failure | Keep the last useful capture, incident and original notification attempts. Retry the same event; measure coverage, alert, acknowledgment and recovery time. |
-| Restart or state loss | Restore the selected backup and reconcile later operations. Reopen the same support case and full output on the receiving host; measure time, retained history and active effort. |
+For each installation we record the existing customer task and, where available, a prior execution’s active effort, manual corrections and time to useful output. We compare the installed and recurring task against that same input/output definition, retaining the actual source population or period. Customer acceptance and unresolved corrections accompany those measurements. This assesses practical value: usable output, less manual work, repeat demand and a service the customer’s engineer can maintain.
 
-Count each independent organization or person once across agents and wallets. A completed purchase joins one distinct approved intent, an independently observed native transfer and complete useful output. Transactions are deduplicated within their network; amounts and fees retain their asset and atomic units. Required fulfillment remains separately visible.
+## Delivery capacity, payment timing and sustainability
 
-Report completed/attempted purchases, complete/started parent tasks, returning buyers and accepted handovers. Keep partial, unresolved, canceled and refunded outcomes in the same cohort. A result reopen, delivery retry or transport chunk continues the original result. Returning use follows a fresh period, input or customer request. Payment, full output and recovery retain separate actual clocks.
+SCF’s four payments would be **$3,800 at award acceptance, then $7,600, $11,400 and $15,200 after the respective milestone approvals**. These payment amounts differ from the cost of performing each tranche. The request is expressed in USD-equivalent value and paid in XLM using SCF’s scheduled-payment-day conversion method.
 
-For each customer, record the previous method and, where available, the active effort and corrections of a prior execution. Compare the installed task against the same input/output definition, retaining the actual period and population so a larger later source remains visible. Record customer acceptance, incomplete coverage and unresolved corrections. Measure active implementation/support effort separately from elapsed access or review delays, and merchant receipts separately from service invoices and collected business cash.
+The complete resource study retains the six packages, dependencies, 400 hours and $38,000 budget. With an illustrative December 7, 2026 start and its explicit working-day calendar, **25 engineering plus eight integration/handover hours per week** is the lowest examined timely allocation. All six tasks finish within their deadlines: T1 on January 6 and final handover on April 13, ahead of the illustrative May 6 day-150 target. The awarded schedule will use the actual start, named contributors and their working availability.
 
-## 8. Capacity and cash plan
+The selected schedule’s modeled peak additional cash requirement is **$17,250 with a 14-day review/payment lag, $23,275 at 30 days and $26,600 at 60 days**, under its stated labor-accrual assumptions. The opening-cash field is currently unentered. This makes the resource and payment-timing requirement explicit; the operating case records actual contributor payment commitments, receipts and work dates as they are established. Commercial proposals retain their own stages, assignments and collections.
 
-The delivery plan uses the original six packages, 400 hours and USD 38,000. A completed native scheduling comparison assumes award acceptance on **December 7, 2026**, Monday–Friday availability, and closures on December 25, January 1, January 18 and February 15. These are scenario inputs, not an announced award date or an assigned staffing commitment.
+Each tranche completion form will be submitted within 90 calendar days of receiving the previous tranche payment. Actual receipt dates set those form deadlines; the 30/90/150-day delivery plan runs from award acceptance. The same grant case retains the completed deliverables, submissions, payments and any SCF-confirmed schedule amendment.
 
-At 18 engineering plus eight operations hours weekly, one T1 task finishes nine calendar days late. At 24 plus eight it finishes one day late. **25 engineering plus eight operations hours is the lowest examined timely allocation**: all six tasks are scheduled, with zero late tasks and zero collection-timing findings. T1 finishes January 6; final handover finishes April 13, 23 days before the original May 6 target. Actual award timing and named contributor availability will replace the planning calendar.
+The commercial model combines the open-source core, fixed-fee implementation of one agreed customer operation and separately scoped care. Merchants retain their resource receipts, while TokenJunkieLabs invoices its agreed engineering and handover. Our existing partner workflow researches a concrete service, prepares the complete editable implementation workshare, agrees receiving and maintenance responsibilities, and records delivery effort and collections. Eight October 12 data-platform proposals total $52,500 for 350 planned hours; these are proposed fees in their original company records. Actual acceptance, effort and support demand inform later pricing. Grant and commercial work keep their own funding assignments.
 
-SCF's four payments are 10%, 20%, 30% and 40%: USD-equivalent 3,800 / 7,600 / 11,400 / 15,200 for this request. Tranche delivery costs are 11,400 / 11,400 / 15,200. SCF pays XLM using its scheduled-payment conversion basis. Actual receipt dates, rather than a forecast award or payout date, anchor the completion-form deadlines.
+## Applicant, experience and submission
 
-| Assumed review/payment lag | Conditional payout days after award acceptance | Original evenly phased cash requirement | Selected 25 + 8 calendar cash requirement | Selected peak date |
-| --- | --- | --- | --- | --- |
-| 14 days | 0 / 44 / 104 / 164 | USD 15,200.00 | USD 17,250.00 | March 20, 2027 |
-| 30 days | 0 / 60 / 120 / 180 | USD 18,746.67 | USD 23,275.00 | April 5, 2027 |
-| 60 days | 0 / 90 / 150 / 210 | USD 26,346.67 | USD 26,600.00 | April 13, 2027 |
+**Bryce Muhlnickel**, the United States individual operating **TokenJunkieLabs**, is accountable for product direction, customer relationships, engineering delivery and operations. The submitted classifications are **Developer Tooling; Open Track; United States team; Global / Not region-specific target markets**.
 
-The selected schedule brings some labor costs forward. Its cash calculation spreads each package's remaining cost across the selected inclusive start/finish interval; the resource calendar assigns engineering and operations hours on working days. The same package totals are preserved. Opening cash remains unentered and these forecasts contain zero observed cash records. Working-capital provision, actual contributor payment dates and actual award/customer receipts are execution inputs to finalize against the agreed terms.
+The published implementation uses JavaScript/Node.js, the Stellar x402 libraries and MCP; Python with typed, versioned SQLite data and saved SQL views; and PHP for native WordPress/WooCommerce mappings and checkout. The completed data, paid-query, receiving and recovery operations demonstrate the relevant implementation experience. Actual contributor roles and allocations are recorded within the delivery plan.
 
-The separate combined-work planning example contains three conditional implementations: USD 21,200 of fees and 144 additional hours / USD 13,680 modeled labor. Its retained entered-date scenario reports a USD 7,680 peak additional requirement; a separate USD 5,000 planning entry reduces it to USD 2,680. A later four-customer scenario including Freeform totals USD 30,000 of proposed fees and 208 additional hours / USD 19,760 modeled labor. Grant plus those proposed deliveries totals 608 hours / USD 57,760 of modeled labor cost. Freeform's actual commencement, work and receipt dates remain unset pending its agreed trigger. These scenarios keep commercial delivery workload visible; they do not supply observed funding for the grant.
+AI agents generated and assisted source code, interfaces, operating scripts, design, documentation and this application. They also performed source review and native operating exercises. Bryce remains responsible for the artifacts, statements and delivery commitments; the team film identifies his role and that assistance.
 
-We will submit each tranche's completion form within 90 calendar days after receipt of the previous tranche payment. The original receipt sets the deadline. Completed deliverables, payment records, actual submissions and any SCF-confirmed extension remain together. The day 30/90/150 implementation plan continues from actual award acceptance.
+SCF acknowledged the individual Build Interest Form on **October 11, 2026 at 14:59:29 UTC**. The current state is **interest submitted and acknowledged, awaiting invitation**. SCF #46’s full Build deadline is **November 8, 2026**, with panel review November 11–18 and community voting November 23–December 3. The delivery clock starts at actual award acceptance.
 
-## 9. Applicant, delivery experience and assistance
-
-Bryce Muhlnickel is the United States individual operating TokenJunkieLabs, accountable for product direction, customer relationships, engineering delivery and operations. Published JavaScript/Node services compose the native x402/Stellar and MCP libraries. Python applications preserve complete acquired data in typed/versioned SQLite tables and saved SQL views. PHP connects native WordPress/WooCommerce product mappings and checkout. The completed paid datasets, native MCP query and customer receiving examples demonstrate the practical integration and recovery foundation for the proposed deployments.
-
-AI agents generated and assisted source code, interface code, operating scripts, design, documentation and application material. They also performed source review and native operating exercises. Bryce remains responsible for the artifacts, statements and delivery commitments. The team film identifies that responsibility and assistance.
-
-SCF acknowledged the individual Build Interest Form on October 11, 2026. The full application remains at **INTEREST_SUBMITTED_AWAITING_INVITATION**. The original submitter will apply the invited form's actual wording and limits to this same substantive narrative. The requested award, work packages and applicant remain unchanged.
-
-## 10. Open the existing work
-
-This page contains the substantive application. The following materials let an engineer inspect the demonstrated product and retain the original source.
-
-### Watch the product and team
-
-The 3-minute-32-second film follows the HPD MySQL query, saved terms, one 0.005 testnet XLM purchase, full 100-row/14-column output, JSON download and reopening with signing disconnected. Its editable companion contains eleven clips, captions, script, query result and rendering tools.
-
-[Watch the product/team film](https://github.com/woahwhattheheck/public-commons-sprint-2026/releases/download/scf-presentation-20261011/stellar-forge-scf46-presentation.mp4) · [Download the editable film companion](https://github.com/woahwhattheheck/public-commons-sprint-2026/releases/download/scf-presentation-20261011/Stellar-Forge-SCF-Presentation-Editable-Companion-20261011.zip)
-
-### Reopen the retained purchase
-
-Use the maintained runtime installation with native Stellar packages, the MCP feature and operator support. Retain the selected source archive, complete lock and READY installation. In Applications choose **Grant purchase reviewer**, select that runtime and a private workbench directory, then use **Review → Save → Connect → Start → Open**. Leaving Packet and SHA-256 empty selects the bundled original purchase; an existing exported packet uses its exact digest. The installed command is:
-
-~~~sh
-starforge grant-demo workbench --dir /srv/starforge/state/grant-review --port 0
-~~~
-
-The full original guide covers private parent ownership, instance access, both retained quotes, complete results, closed Buyer export and receiving. This route reopens retained work; opening the page itself does not launch an application.
-
-[Grant reviewer operating guide](https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/03a93f7c59a703ebc63416ae0e914f07099fef37/products/grant-reviewer/OPERATING.md) · [Runtime installation](https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/03a93f7c59a703ebc63416ae0e914f07099fef37/stellar/scf-starforge-20261009/distribution/RUNTIME_INSTALL.md)
-
-### Read and reuse the economic briefing
-
-Download the complete 15-file economic package and open its offline report. Its source/review/CSV/JSON and receiving guide travel together.
-
-[Economic briefing package](https://github.com/woahwhattheheck/public-commons-sprint-2026/raw/655e527e30fd72ae877d3b11390378a6168ca7e4/stellar-forge/developer-site/dist/examples/fred-briefing-20261012/stellar-forge-economic-briefing-20261012.zip) · [Economic report opening and receiving guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/655e527e30fd72ae877d3b11390378a6168ca7e4/stellar-forge/developer-site/dist/examples/fred-briefing-20261012/START_HERE.md)
-
-### Continue from the original source
-
-[Complete merchant development guide](https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/03a93f7c59a703ebc63416ae0e914f07099fef37/products/merchant-workspace/DEVELOPMENT.md) · [Merchant operating guide](https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/03a93f7c59a703ebc63416ae0e914f07099fef37/products/merchant-workspace/OPERATING.md) · [Original six-package scenario](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/2761cc9a44d511959e224dc7ee5998aa13df7e8e/stellar/scf_2026/sf47_budget_model/sf10_current_candidate.json)
-
-### Issuer references
-
-[SCF #46 dates](https://communityfund.stellar.org/awards/recxrSMYwAl8vcglg) · [Submission criteria](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/submission-criteria) · [Budget and deliverable guidance](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/budget-and-deliverable-guidelines)
-
-Application evidence edition: October 12, 2026. The dated development baseline, prospective milestones and conditional forecasts retain their stated scope.
+The proposed award takes a working merchant/buyer foundation into two independently operated customer services. Reviewers can assess the complete current examples above and then evaluate each funded outcome: installed useful operations, independent recurring purchases, operated threat response, mainnet delivery and another engineer’s successful recovery and handover.
