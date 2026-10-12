@@ -60,7 +60,11 @@ export async function main(args = process.argv.slice(2)) {
     [config,bindings] = await Promise.all([readSellerConfig(options.configPath),readUpstreamBindings(options.upstreamPath)]);
     // Capture environment values once for a stable launch-time credential snapshot.
     const env = {...process.env};
-    application = createUpstreamApplication(config,bindings,{allowLoopback:options.allowLoopback,env});
+    // An unpaid-only listener cannot dispatch upstream. Keep its credential
+    // references valid, and resolve values only if an admitted handler is invoked.
+    // Paid launch and --check retain the original eager credential validation.
+    application = createUpstreamApplication(config,bindings,{allowLoopback:options.allowLoopback,env,
+      deferCredentials:!options.facilitator && !options.check});
     if (options.check) {
       const {compileSellerRoutes} = await import('./resource-server.mjs');
       const origin = config.publicOrigin ? new URL(config.publicOrigin).origin : 'http://127.0.0.1:8423';
