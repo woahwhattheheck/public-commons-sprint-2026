@@ -492,6 +492,13 @@ export class MerchantGrpcWorkspaces {
     if (name === 'merchant_grpc_checkout') return revisionSummary(await this.#json(definition, '/api/checkout', { revision: args.revision, baseRevision: args.baseRevision }));
     if (name === 'merchant_grpc_method') return this.#bounded(workspace, await this.#json(definition, '/api/method', { revision: args.revision, method: args.method }), { revision: args.revision, topic: 'method-schema' });
     if (name === 'merchant_grpc_review') return this.#bounded(workspace, await this.#json(definition, '/api/review', { revision: args.revision }), { revision: args.revision, topic: 'review' });
+    if (name === 'merchant_grpc_validate_input') {
+      if ((args.input === undefined) === (args.file === undefined)) throw fail('INVALID_PARAMS', 'Choose exactly one complete input object or host request file.');
+      const input = args.file === undefined ? args.input : await this.#hostJson(definition, args.file, 'request');
+      if (!plain(input)) throw fail('INVALID_PARAMS', 'Use the complete native operation object.');
+      return this.#bounded(workspace, await this.#json(definition, '/api/validate-input',
+        { revision: args.revision, method: args.method, input }), { revision: args.revision, topic: 'request-preview' });
+    }
     if (name === 'merchant_grpc_call') {
       if ((args.input === undefined) === (args.file === undefined)) throw fail('INVALID_PARAMS', 'Choose exactly one complete input object or host request file.');
       const input = args.file === undefined ? args.input : await this.#hostJson(definition, args.file, 'request');

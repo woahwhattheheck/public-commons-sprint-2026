@@ -1,4 +1,4 @@
-// MIT. Captured single-request methods compiled by the original seller and client generator.
+// MIT. Captured native methods compiled by the original seller and client generator.
 import { mkdir, unlink, rm } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { compileHttpSellerOffer } from '../seller.mjs';
@@ -9,7 +9,8 @@ import { generateSellerClient } from '../developer/client-generator.mjs';
 import { readSellerConfig } from '../serve.mjs';
 import { validateGrpcConfig, validateGrpcLimits } from './config.mjs';
 import { compileProtoSource } from './proto.mjs';
-import { normalizeGrpcRequest, grpcMethodSchema } from './values.mjs';
+import { prepareGrpcInput, grpcOperationSchema } from './request-series.mjs';
+import { normalizeGrpcRequest } from './values.mjs';
 import { fields, text, fail, canonical, sha256, jsonBytes, readJson, readBytes, writeNew, syncDirectory, assertProtoArchiveFits } from './common.mjs';
 
 export const PREPARED_FILES = Object.freeze({
@@ -73,12 +74,15 @@ export function compileGrpcMerchantPlan(contract, plan, { limits: configuredLimi
         route.path.startsWith('/_seller/') || route.path === '/_seller' || route.path.includes('//') ||
         new URL(route.path, origin).pathname !== route.path) fail('GRPC_PUBLIC_PATH_INVALID');
     const selected = contract.methods[route.grpcMethod];
-    if (!selected || selected.requestStream) fail('GRPC_APPROVED_SINGLE_REQUEST_METHOD_REQUIRED');
+    if (!selected || selected.requestStream && !limits.requestStream)
+      fail('GRPC_APPROVED_SINGLE_REQUEST_METHOD_REQUIRED');
     if (selected.responseStream && !limits.stream) fail('GRPC_STREAM_LIMITS_REQUIRED');
-    const example = normalizeGrpcRequest(contract, route.grpcMethod, route.example);
+    const example = selected.requestStream
+      ? prepareGrpcInput(contract, route.grpcMethod, route.example, { limits }).value
+      : normalizeGrpcRequest(contract, route.grpcMethod, route.example);
     const terms = payment(route) ?? inherited;
     if (!terms) fail('GRPC_COMPLETE_PAYMENT_TERMS_REQUIRED');
-    const schema = grpcMethodSchema(contract, route.grpcMethod);
+    const schema = grpcOperationSchema(contract, route.grpcMethod, { limits });
     if (!schema?.request || !schema?.response) fail('GRPC_METHOD_SCHEMA_REQUIRED');
     const offer = compileHttpSellerOffer({ url: origin.origin + route.path, method: 'POST', bodyType: 'json', body: example,
       serviceName: text(route.serviceName, 'GRPC_SERVICE_NAME_REQUIRED', 32),
@@ -95,10 +99,14 @@ export function compileGrpcMerchantPlan(contract, plan, { limits: configuredLimi
       ...(selected.responseStream ? { responseFormat: 'ndjson' } : {}) };
     methods[route.id] = { method: route.grpcMethod, requestType: selected.requestType,
       responseType: selected.responseType, request: schema.request, response: schema.response,
+      ...(selected.requestStream ? { requestStream: true, requestMessage: schema.requestMessage,
+        requestSeries: schema.requestSeries } : {}),
       ...(selected.responseStream ? { responseFormat: 'ndjson', responseStream: true,
         stream: { ...limits.stream, maxRecordBytes: Math.min(limits.maxJsonResponseBytes + 1, 16777216),
           maxDurationMs: limits.timeoutMs },
-        completion: 'A complete response requires an OK native terminal status. One reviewed route payment covers the entire single-request stream.' } : {}) };
+        completion: selected.requestStream
+          ? 'A complete response requires the entire reviewed request sequence to finish its input half and an OK native terminal status. One route payment covers that native call.'
+          : 'A complete response requires an OK native terminal status. One reviewed route payment covers the entire single-request stream.' } : {}) };
     return { id: route.id, path: route.path, handler: 'grpcCall' + index, admit: 'grpcAdmit' + index,
       validateInput: true, maxRequestBytes: limits.maxJsonRequestBytes, offer };
   });

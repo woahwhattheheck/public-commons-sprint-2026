@@ -24,7 +24,7 @@ export function grpcApplication(common) {
   return {
     id: 'grpc-workspace', command: 'grpc-workspace', title: 'gRPC merchant authoring',
     terminal: false, requiredSource: ROOT + 'workspace/managed-launch.mjs',
-    description: 'Reopen the original gRPC source, captured protobuf contract, reviewed methods, merchant editions and retained release controls.',
+    description: 'Reopen the original gRPC source, captured protobuf contract, reviewed methods and message sequences, merchant editions and retained release controls.',
     fields: [
       field('workspaceDirectory', 'Private gRPC workspace', 'path', true,
         'Use the original private directory, or create one directory in an existing private parent. Saved source and release history remain here.'),

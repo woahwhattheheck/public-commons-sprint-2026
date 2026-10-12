@@ -71,6 +71,7 @@ export async function captureGrpcStream({ directory, id, fingerprint, limits, op
     bytes, sha256: hash.digest('hex'), records, lastCompleteByte,
     pendingRecord: bytes !== lastCompleteByte, durable, complete: native.complete && !issue && durable,
     terminalObserved: native.terminalObserved, nativeRecords: native.records,
+    ...(native.requestStream ? { requestStream: native.requestStream } : {}),
     ...(native.grpcCode === undefined ? {} : { grpcCode: native.grpcCode, grpcStatus: native.grpcStatus }),
     ...(issue ? { error: issueCode(issue) } : native.error ? { error: native.error } : {}),
     ...preview.result(), finishedAt: stamp() };

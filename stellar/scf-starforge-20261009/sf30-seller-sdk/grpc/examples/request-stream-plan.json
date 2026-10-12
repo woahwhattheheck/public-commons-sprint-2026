@@ -1,0 +1,70 @@
+{
+  "schema": "stellar-forge.grpc-merchant-plan.v1",
+  "publicOrigin": "https://merchant.example.com",
+  "payment": {
+    "scheme": "exact",
+    "network": "stellar:testnet",
+    "amount": "25000",
+    "asset": "UNVERIFIED_DEMO_ASSET",
+    "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+    "maxTimeoutSeconds": 60
+  },
+  "routes": [
+    {
+      "id": "upload-records",
+      "path": "/records/upload",
+      "grpcMethod": "/forge.requeststreams.RecordBatch/Upload",
+      "serviceName": "Record batch upload",
+      "description": "Send the reviewed finite protobuf sequence and receive its native batch response.",
+      "example": {
+        "messages": [
+          {
+            "sequence": "9007199254740993",
+            "payload": "AAEC",
+            "balances": {
+              "reserve": "-9007199254740993"
+            },
+            "note": "",
+            "account_id": "demo-account"
+          },
+          {
+            "sequence": "18446744073709551614",
+            "payload": "c2FtcGxl",
+            "balances": {
+              "reserve": "9007199254740993"
+            },
+            "customer_id": "9223372036854775806"
+          }
+        ]
+      }
+    },
+    {
+      "id": "exchange-records",
+      "path": "/records/exchange",
+      "grpcMethod": "/forge.requeststreams.RecordBatch/Exchange",
+      "serviceName": "Record exchange",
+      "description": "Send the reviewed finite protobuf sequence while receiving ordered native NDJSON records.",
+      "example": {
+        "messages": [
+          {
+            "sequence": "9007199254740993",
+            "payload": "AAEC",
+            "balances": {
+              "reserve": "-9007199254740993"
+            },
+            "note": "",
+            "account_id": "demo-account"
+          },
+          {
+            "sequence": "18446744073709551614",
+            "payload": "c2FtcGxl",
+            "balances": {
+              "reserve": "9007199254740993"
+            },
+            "customer_id": "9223372036854775806"
+          }
+        ]
+      }
+    }
+  ]
+}
