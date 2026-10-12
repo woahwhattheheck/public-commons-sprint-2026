@@ -7,7 +7,7 @@
 </head>
 <body>
 <header class="top"><div><p class="eyebrow">STELLAR FORGE / MERCHANT SOURCE</p><h1>Google Sheets</h1>
-  <p>Review the original cells, choose public columns, and continue into the dataset publisher.</p></div>
+  <p>Review the original cells, choose public columns, publish the public dataset, and operate its merchant release.</p></div>
   <div class="host"><span id="host-status">Opening workspace</span><small id="workspace-path"></small></div></header>
 <div id="notice" class="notice" role="status" aria-live="polite"></div>
 <section id="recovery" class="recovery" hidden aria-labelledby="recovery-title">
@@ -18,7 +18,7 @@
 </section>
 <fieldset id="workspace-controls">
 <nav aria-label="Source workflow"><button data-view="source" class="selected">1. Observations</button><button data-view="review">2. Public source</button>
-  <button data-view="versions">3. Versions &amp; publisher</button><button data-view="activity">Operations</button><button id="refresh" class="end">Refresh saved state</button></nav>
+  <button data-view="versions">3. Versions &amp; publisher</button><button data-view="deployment">4. Merchant deployment</button><button data-view="activity">Operations</button><button id="refresh" class="end">Refresh saved state</button></nav>
 <main>
 <section data-panel="source">
   <div class="section-title"><h2>Choose the source observation</h2><p>Original files remain private. A Google read happens only when you request one.</p></div>
@@ -84,6 +84,53 @@
     <div class="table-scroll"><table><thead><tr><th>Version / title</th><th>Reviewed source</th><th>Public shape</th><th>Review</th><th>Actions</th></tr></thead><tbody id="versions-body"></tbody></table></div>
   </article>
   <article class="card"><h3>Compare retained sources</h3><div class="actions"><label>Earlier version<select id="compare-left"></select></label><label>Later version<select id="compare-right"></select></label><button id="compare-versions">Compare</button></div><div id="comparison"></div></article>
+</section>
+<section data-panel="deployment" hidden>
+  <div class="section-title"><h2>Deploy a published dataset</h2><button id="deployment-refresh">Refresh deployment state</button></div>
+  <p>The reviewed public dataset continues through the original merchant release store. Source publication and merchant deployment retain separate, explicit reviews.</p>
+  <article class="card">
+    <div class="section-title"><h3>1. Select the original publication</h3><div class="actions"><button id="deployment-runs-prev">Previous</button><span id="deployment-runs-page"></span><button id="deployment-runs-next">Next</button></div></div>
+    <p id="deployment-publisher-note" class="hint">Load the saved publisher runs. Publish the reviewed source in the original publisher first.</p>
+    <div class="table-scroll"><table><thead><tr><th>Original run</th><th>Publication / snapshot</th><th>Matching source</th><th>Deploy</th></tr></thead><tbody id="deployment-runs"></tbody></table></div>
+  </article>
+  <div class="two-columns">
+    <article class="card"><h3>2. Review merchant terms</h3>
+      <p id="deployment-selected-run">Select a completed publication above.</p>
+      <label>Exact saved source version<select id="deployment-version"></select></label>
+      <div class="two-fields"><label>Public merchant origin<input id="deployment-origin" type="url" placeholder="https://merchant.example" autocomplete="off"></label><label>Public data route<input id="deployment-path" value="/data" autocomplete="off"></label></div>
+      <div class="two-fields"><label>Payment scheme<input id="deployment-scheme" value="exact" autocomplete="off"></label><label>Network identifier<input id="deployment-network" placeholder="Network from the reviewed payment configuration" autocomplete="off"></label></div>
+      <label>Payment asset<input id="deployment-asset" placeholder="Exact asset identifier" autocomplete="off"></label>
+      <label>Recipient address<input id="deployment-payto" placeholder="Merchant receiving address" autocomplete="off"></label>
+      <div class="two-fields"><label>Amount in atomic units<input id="deployment-amount" inputmode="numeric" pattern="[0-9]+" placeholder="Exact integer amount" autocomplete="off"></label><label>Payment timeout in seconds<input id="deployment-timeout" type="number" min="1" step="1" value="60"></label></div>
+      <button id="deployment-review" class="primary" disabled>Review original publication and terms</button>
+      <p class="hint">The amount stays an integer string. These public terms are compiled by the original seller configuration. No payment is made by review or staging.</p>
+    </article>
+    <article class="card"><h3>Reviewed deployment</h3><div id="deployment-review-summary" class="empty">Review a published run and its merchant terms.</div>
+      <button id="deployment-prepare" class="primary" disabled>Prepare this reviewed package</button>
+      <p class="hint">The package contains the public CSV, dataset configuration, merchant configuration, public source provenance and original dataset binding. It retains the current host's dataset directory.</p>
+    </article>
+  </div>
+  <article class="card"><h3>3. Inspect and stage the prepared package</h3>
+    <div id="deployment-package-summary" class="empty">Prepare a reviewed package, or select one from the retained operations below.</div>
+    <div id="deployment-files" class="actions"></div>
+    <div class="three-fields"><label>New immutable release ID<input id="deployment-release-id" placeholder="catalog-2026-10" autocomplete="off"></label>
+      <label>Release label<input id="deployment-label" maxlength="240" placeholder="October public catalog"></label>
+      <label>Local listening port<input id="deployment-port" type="number" min="0" max="65535" step="1" value="0"></label></div>
+    <div class="two-fields"><label>Facilitator origin, if required<input id="deployment-facilitator" type="url" placeholder="https://facilitator.example" autocomplete="off"></label>
+      <label class="checkbox-label"><input id="deployment-local-facilitator" type="checkbox">Allow the explicitly selected local facilitator</label></div>
+    <button id="deployment-stage" class="primary" disabled>Stage original merchant release</button>
+    <p class="hint">Staging retains an immutable release. Existing IDs are reused only for the same package, label and normalized runtime. The merchant is selected and started in its original controls.</p>
+  </article>
+  <article class="card"><div class="section-title"><h3>4. Operate the original merchant</h3><span id="deployment-console-state" class="badge">Deployment controls closed</span></div>
+    <div id="deployment-native-summary"></div>
+    <div class="actions"><button id="deployment-console-open" class="primary">Open deployment controls</button><a id="deployment-console-link" class="button" target="_blank" rel="noreferrer" hidden>Go to original deployment controls</a><button id="deployment-console-close" disabled>Close controls and drain owned merchant</button></div>
+    <p>The original controls compare releases, select the active configuration, run or restart the merchant, drain it, roll back and prepare receiving. The existing dataset version store remains authoritative throughout.</p>
+    <p class="hint">Closing this workspace also closes its original publisher and deployment controls, including the merchant owned by those controls. Reopening retains source, packages and release selection; it does not automatically start a merchant. Rollback changes the release configuration and does not rewind published dataset versions.</p>
+  </article>
+  <article class="card"><div class="section-title"><h3>Retained deployment operations</h3><div class="actions"><button id="deployment-ops-prev">Previous</button><span id="deployment-ops-page"></span><button id="deployment-ops-next">Next</button></div></div>
+    <div class="table-scroll"><table><thead><tr><th>Original request</th><th>Action / state</th><th>Updated</th><th>Continue</th></tr></thead><tbody id="deployment-operations"></tbody></table></div>
+    <pre id="deployment-operation-detail" hidden></pre>
+  </article>
 </section>
 <section data-panel="activity" hidden><div class="section-title"><h2>Retained operations</h2><p>Recent original action IDs and outcomes. Recovery uses the same ID.</p></div>
   <article class="card"><div class="table-scroll"><table><thead><tr><th>Operation</th><th>Action</th><th>State</th><th>Updated</th><th>Result / recovery</th></tr></thead><tbody id="operations-body"></tbody></table></div><pre id="operation-detail" hidden></pre></article>

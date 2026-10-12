@@ -490,3 +490,13 @@ files/joins: this guide, sheets-workspace.mjs, and narrow configuration,
 registration/lifecycle and CLI/transport hooks. The original source model,
 browser, Google custody, publisher and seller/buyer implementations remain
 their sole authorities.
+
+## Published Sheets merchant deployment
+
+The same open source model now provides the complete deployment tool family: `merchant_sheets_deployment_status`, `review`, `prepare`, `package`, `stage`, `compare`, `console_open`, `console_close`, `command`, `file_read` and `file_release` (each shortened name retains the `merchant_sheets_deployment_` prefix). A reviewed originally PUBLISHED run and its exact saved source version are bound to explicit public merchant terms, exported as the original dataset-release package and staged by SF82. The browser and MCP use the same original release console and merchant owner.
+
+Review and preparation require the original request UUID and exact review hash; staging requires the package source hash and immutable release ID. Lifecycle commands additionally require the current console instance, original selection generation, inspected release digest and, for stop/restart, the current merchant instance. `operation` and `resume` return currentDeployment separately from historical receipts. An uncertain native command resumes by observing the original current state; it does not automatically repeat that command. Source close drains its original publisher and deployment console/owned merchant.
+
+Package files use the existing retained-file reader with exact package/file/hash/offset binding and its original 256,000,000-byte limit. Source packets and deployment files share the same per-alias reader budget. Explicit binding.json downloads retain their original host-local dataset directory, while ordinary MCP state views omit storage paths. A deployment package does not migrate or rewind the dataset version store.
+
+See [Google Sheets merchant deployment](../../stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/DEPLOYMENT.md) for complete operator steps, exact CLI/API/MCP contracts, original receiving and restart/rollback semantics. This joins the original source model/server/browser/CLI and this existing MCP adapter; no second source store, scheduler, release manager, application registration or native transport is added.
