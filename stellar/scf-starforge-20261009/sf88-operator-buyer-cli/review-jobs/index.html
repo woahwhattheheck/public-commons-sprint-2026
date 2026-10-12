@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Review jobs · Starforge</title><link rel="stylesheet" href="/review-jobs/style.css"></head>
+<body>
+<header><div><p class="eyebrow">STARFORGE / CUSTOMER OPERATIONS</p><h1>Review jobs</h1></div>
+<nav aria-label="Workspace"><button id="intake-open">New job</button><a id="library-link" href="/">Resource library</a><a id="collections-link" href="/collections">Collections</a><button id="refresh">Refresh</button></nav></header>
+<div id="message" role="status" aria-live="polite">Opening private workspace…</div>
+<main>
+<aside><div class="section-head"><h2>Retained jobs</h2><span id="job-count"></span></div>
+<label>Find a job<input id="job-query" type="search" placeholder="Job ID, service, owner"></label>
+<div id="job-list" class="job-list"></div><div class="pager"><button id="prev">Previous</button><span id="page"></span><button id="next">Next</button></div>
+<details><summary>Import sources and native offers</summary>
+<section><h3>Published observations</h3><p class="muted">Only UseTested's free search and review reads are called here.</p>
+<label>Read kind<select id="source-kind"><option value="search">Search</option><option value="review">Service review</option></select></label>
+<label>Query or service ID<input id="source-query" value="x402"></label><button id="source-fetch">Read published source</button>
+<label>Or import retained JSON<input id="source-file" type="file" accept=".json,application/json"></label>
+<label>Original source URL<input id="source-url" value="https://usetested.com/v1/search?q=x402"></label>
+<label>Retrieved at (optional)<input id="source-date" placeholder="2026-10-11T22:34:01Z"></label><button id="source-import">Retain source file</button></section>
+<section><h3>Original Stellar offer</h3><p class="muted">Import a saved native catalog. Its selected HTTP request is reviewed before any execution.</p>
+<label>Catalog JSON<input id="catalog-file" type="file" accept=".json,application/json"></label><button id="catalog-import">Retain catalog</button></section>
+</details>
+</aside>
+<div class="content">
+<section id="intake"><div class="section-head"><h2>Open a customer review job</h2><button id="intake-close" class="subtle">Close</button></div>
+<p>Retain the external job ID and the exact published service observation. The original source's verdict and scoring remain unchanged.</p>
+<label>Source snapshot<select id="source-select"></select></label><p id="source-info" class="mono muted"></p>
+<label>Find a service<input id="service-filter" type="search" placeholder="Service or endpoint"></label>
+<div class="table-scroll source-table"><table><thead><tr><th>Service</th><th>Category</th><th>Published verdict</th><th>Method</th><th>Price text</th></tr></thead><tbody id="services"></tbody></table></div>
+<p id="service-selected">Select a service above.</p>
+<div class="fields two"><label>External job ID<input id="new-id" maxlength="160" required></label><label>Job title<input id="new-title" maxlength="240" required></label>
+<label>Assigned owner<input id="new-owner" maxlength="120" required></label></div>
+<label>Review objective<textarea id="new-objective" maxlength="4000" rows="3" placeholder="What should this operation establish for the customer?"></textarea></label>
+<button id="create">Retain job</button></section>
+<section id="empty"><h2>Choose a retained job</h2><p>A job connects a published observation, one native request, the original result, and a named delivery review.</p></section>
+<div id="workspace" hidden>
+<section><p id="job-id" class="eyebrow"></p><div class="section-head"><h2 id="job-title"></h2><span id="job-revision" class="badge"></span></div>
+<p id="job-objective"></p><dl id="job-summary" class="facts"></dl>
+<div class="fields two"><label>Assigned owner<input id="assigned-owner" maxlength="120" data-draft></label><label>Assignment note<input id="assignment-note" maxlength="4000" data-draft></label></div>
+<button id="assign">Save assignment</button>
+<details><summary>Original published review and source</summary><p id="published-source" class="mono"></p><pre id="published-review"></pre></details>
+</section>
+<section><div class="section-head"><h2>1. Select the native request</h2><span id="binding-state" class="badge">Not prepared</span></div>
+<p class="muted">Choose an original Stellar offer for the operation under review. A published UseTested listing alone does not authorize or configure its merchant.</p>
+<div id="prepare-fields">
+<label>Saved native catalog<select id="catalog-select"></select></label><label>HTTP resource<select id="catalog-row"></select></label>
+<label>Accepted payment option<select id="catalog-accept"></select></label><pre id="accept-details" class="compact"></pre>
+<div class="fields two"><label>Concrete request URL<input id="request-url" type="url" data-draft></label><label>HTTP method<select id="request-method" data-draft><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option><option>HEAD</option></select></label></div>
+<label>Native intent ID (optional)<input id="intent-id" placeholder="Generated deterministically from this job" data-draft></label>
+<label>How this request maps to the published service<textarea id="mapping-note" rows="2" maxlength="4000" data-draft></textarea></label>
+<details><summary>Request headers and body</summary><label>Ordinary headers as JSON<textarea id="request-headers" class="mono" rows="3" data-draft>{}</textarea></label>
+<label>Exact UTF-8 body (leave empty for no body)<textarea id="request-body" class="mono" rows="6" data-draft></textarea></label></details>
+<button id="prepare">Prepare original request</button></div>
+<pre id="binding-details" class="compact" hidden></pre>
+</section>
+<section><div class="section-head"><h2>2. Review and run</h2><span id="native-state" class="badge"></span></div>
+<button id="review">Read exact native review</button><pre id="request-review" class="compact"></pre>
+<div class="fields two"><label>Reviewer name<input id="request-reviewer" maxlength="120" data-draft></label><label>Approval note<input id="request-note" maxlength="4000" data-draft></label></div>
+<button id="approve">Approve this exact request</button><p id="approval-status"></p>
+<div class="actions"><button id="execute">Execute approved request</button><button id="recover">Reconcile original operation</button><button id="finalize">Finalize original accounting</button><button id="cancel" class="subtle">Cancel unattempted request</button><button id="stop" class="subtle" hidden>Stop running operation</button></div>
+<p class="muted">Closing this tab keeps the original operation running. A retained attempt is reconciled under its existing intent; it is never silently repurchased.</p>
+<pre id="native-outcome" class="compact"></pre><div id="actions-history"></div>
+</section>
+<section><div class="section-head"><h2>3. Review the complete result</h2><button id="scan">Refresh retained files</button></div>
+<label>Original delivered file<select id="resource-select"></select></label><dl id="resource-facts" class="facts"></dl>
+<div class="actions"><button id="preview">Preview verified content</button><button id="resource-download">Download complete file</button><a id="resource-open" href="/">Open original library review</a></div>
+<p id="preview-coverage" class="muted"></p><pre id="result-preview"></pre>
+<label>Result reviewer<input id="result-reviewer" maxlength="120" data-draft></label>
+<label>Analyst findings<textarea id="result-note" rows="6" maxlength="16000" data-draft placeholder="Record observations, limitations, and the customer's requested outcome. The source publisher's verdict stays separate."></textarea></label>
+<button id="annotate">Save named result review</button><p id="result-review-status"></p>
+</section>
+<section><div class="section-head"><h2>4. Select delivery</h2><span id="delivery-state" class="badge"></span></div>
+<label>Collection name<input id="delivery-name" maxlength="200" data-draft></label>
+<label>Delivery note<textarea id="delivery-note" rows="3" maxlength="16000" data-draft></textarea></label>
+<button id="deliver">Save delivery edition</button><p id="delivery-details" class="mono"></p>
+<div class="actions"><button id="delivery-download">Download complete collection</button><button id="handoff-download">Download job and source handoff</button></div>
+<p class="muted">The collection contains the original complete result and its pinned analyst review. Receiving uses the installed resource-library collection workflow. Job state and the original operator are backed up together through the native workspace recovery command.</p>
+<details><summary>Backup and receiving</summary><pre class="compact">starforge inbox library collections receive --archive DELIVERY.tar --out /private/received --state /private/reader --sha256 EXPECTED_SHA
+starforge inbox review-jobs backup --state APP --state-root PRIVATE_ROOT --out NEW_BUNDLE --quiesced true --pass-env SF88_BACKUP_PASSPHRASE</pre>
+<p>Stop this foreground workspace and its original native writers before backup. Restore with the original workspace recovery command into the recorded canonical location, then reopen the same job state. Collection receiving can use a separate fresh private directory.</p></details>
+</section>
+</div>
+</div></main>
+<footer>Original SF88 buyer / inbox / resource library · Published observations retain their source and methodology · Private operator workspace</footer>
+<script type="module" src="/review-jobs/app.js"></script></body></html>

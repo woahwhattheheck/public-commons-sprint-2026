@@ -52,6 +52,20 @@ supports interrupted-install continuation, fresh-directory upgrades, recovery,
 and original command launch. See [Customer runtime installation and recovery](RUNTIME_INSTALL.md)
 for the complete workflow and [Runtime profiles](RUNTIME.md) for dependency selection.
 
+### Incoming OAuth for the installed MCP service
+
+The original buyer and merchant MCP launchers accept the same reviewed incoming
+OAuth resource configuration. Use `starforge mcp-oauth` to create and inspect
+that configuration, discover the deployed provider, produce a native Claude Code
+registration and receive the complete authenticated MCP tool catalog.
+
+Select the original `mcp` runtime feature to install its pinned MCP/x402 packages
+and JOSE dependency. The maintained runtime installer reads those versions from
+the selected archive's original MCP package manifest and starts that archive's
+own commands. The [complete installed OAuth guide](source/stellar/scf-starforge-20261009/distribution/MCP_OAUTH.md)
+covers preparation, all five operator commands, buyer/merchant launch, direct API
+imports and recovery. Within the source tree, the same guide is [MCP_OAUTH.md](MCP_OAUTH.md).
+
 ### Runtime installation workspace
 
 Use the private browser workspace to select an original archive, review its exact
@@ -3195,6 +3209,28 @@ For a session review, replace `--history` with that version's `--snapshot` file.
 The included [original pricing guide](../sf97-merchant-revenue-ops/WORKSPACE.md)
 describes history enablement, range selection, source retention and comparisons.
 
+### Plan volume, quote and cost scenarios
+
+In the same `revenue-workspace`, open **Scenario planning** at `/planning`.
+Load a saved pricing review, then compare up to twelve explicit demand, quoted
+price and cost scenarios against that review's original seller configuration
+and selected operations capture. Set optional monthly contribution and margin
+targets to inspect break-even prices, equal unit-price uplifts, or paid-volume
+suggestions that preserve the entered service mix.
+
+Name and save the comparison to reopen its original values, download the plan
+JSON, comparison CSV or selected merchant terms. **Use selected scenario in
+pricing review** imports the chosen commercial assumptions into the existing
+review with the current operations capture. Review and save that draft before
+continuing through the original price-change workflow.
+
+The [scenario planning guide](../sf97-merchant-revenue-ops/PLANNING.md) is included
+at `source/stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/PLANNING.md`.
+Embedded applications can use `./merchant/scenario-planning` for
+`createScenarioReview` and `./merchant/scenario-workspace` for
+`openPlanningWorkspace`. The existing `./merchant/revenue-workspace`
+`startWorkspace` serves the combined pricing and planning UI and API.
+
 ### Turn a saved pricing review into a merchant price change
 
 In **Saved reviews**, choose **Prepare price change**, enter the explicit atomic
@@ -4804,3 +4840,50 @@ Agents can operate the original award capture, enrichment, analyst workshare,
 merchant preparation, buyer delivery receiving and cited dossier applications,
 with their original browser jobs and complete resumable exports. Setup and the
 full workflow are in [USAspending research through MCP](../../../stellar-forge/mcp-merchant-operator/USASPENDING-WORKSPACE.md).
+
+## CoinGecko provider and market operator
+
+The same archive includes the complete CoinGecko provider adapter, research
+workspace, source intake, collections, market comparisons, native purchase
+recovery and portable handover. Use **Node.js 24 or later** for this command.
+From the directory containing the installed toolkit:
+
+```sh
+npx --no-install starforge coingecko --help
+npx --no-install starforge coingecko serve \
+  --state /absolute/private/coingecko-market --port 0
+```
+
+Open the loopback URL printed at startup. The workspace can author requests,
+import original responses, discover offers and organize research immediately.
+To use an existing native buyer, pass `--config /absolute/private/operator-config.json`
+to the same `serve` command. That file names the original buyer configuration
+and workspace; preserve their existing signer, budget and transport bindings.
+The [complete operator guide](../partners/coingecko-stellar-market/README.md)
+describes the configuration and all five endpoint families.
+
+Keep the private state outside the installation directory so a toolkit upgrade
+retains its projects. One server owns that state; multiple browser operators
+share its revision checks. Stop the server before using a mutating CLI command
+against the same state. Read-only `status` and `list` can inspect it while running.
+
+The provider uses the same command entry:
+`starforge coingecko provider compile --plan PLAN.json --out NEW_DEPLOYMENT.json`.
+Its original seller service and paid buyer use the installed native runtime.
+The package also exposes `@tokenjunkielabs/starforge-merchant/partners/coingecko`,
+`/partners/coingecko/contracts`, `/partners/coingecko/market` and
+`/partners/coingecko/workspace` for application imports. The workspace export
+provides `startMarketWorkspace`. Original source collection and browser
+continuation instructions travel with the component in
+`workspace/acceptance/README.md`.
+
+
+## Merchant cache operations
+
+`starforge cache-operations` opens the maintained cache operating workspace or performs its native commands. The original `openapi-workspace` also opens these controls directly for a saved merchant package. Saved activity snapshots, retention comparisons, live changes, restoration, interrupted-response recovery, HTML reporting and complete history receiving share the original seller's cache manager. See the [operating guide](../sf30-seller-sdk/response-cache/workspace/README.md). Installed exports are `@tokenjunkielabs/starforge-merchant/seller/response-cache/workspace`, its `/server`, and `/report`.
+
+## SDMX sources, exact editions and customer receiving
+
+The installed `starforge sdmx` command and `starforge dataset sdmx` dispatch the same original source workspace. Retain complete SDMX data and structural metadata, inspect exact values, save and compare editions, run the native dataset engine, and transfer the original project/source history. The merchant bridge binds the native snapshot and source lineage to explicit SF30 public terms; publication uses the original version store's current/revision comparison. The customer bridge reviews the live original offer, pins the selected snapshot and continues through the original SF88 page acquisition and data-room delivery.
+
+Public imports: `@tokenjunkielabs/starforge-merchant/seller/sdmx` and `@tokenjunkielabs/starforge-merchant/buyer/sdmx`. The [SDMX operator guide](../sf30-seller-sdk/sdmx/README.md) includes the complete captured ECB case, acquisition receipts, source/edition/receiving CLI, merchant publication and original buyer commands.

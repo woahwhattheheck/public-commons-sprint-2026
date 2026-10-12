@@ -42,7 +42,7 @@ function publicMetadata(columns) {
     maxLength:column.max_length,collation:column.collation_name??null,encoding:outputEncoding(column)}));
 }
 export async function describeMssqlResult(pool,sql,query,{timeoutMs=10000,signal,onRequest=()=>{}}={}) {
-  const request=pool.request();request.timeout=timeoutMs;onRequest(request);
+  const request=pool.request({requestTimeout:timeoutMs});onRequest(request);
   const abort=()=>request.cancel();signal?.addEventListener('abort',abort,{once:true});
   try {
     if(signal?.aborted)throw fail('QUERY_ABORTED');
@@ -79,7 +79,7 @@ export async function createMssqlQuerySource({connection,queries,maxConnections=
   };
   const validate=(name,input)=>bindMssqlParameters(definition(name),input);
   try {
-    const request=pool.request();request.timeout=startupTimeoutMs;
+    const request=pool.request({requestTimeout:startupTimeoutMs});
     const result=await request.query("SELECT CONVERT(varchar(128),SERVERPROPERTY('ProductVersion')) AS version,"+
       "CONVERT(int,SERVERPROPERTY('ProductMajorVersion')) AS major");
     version=result.recordset?.[0]?.version;
@@ -110,7 +110,7 @@ export async function createMssqlQuerySource({connection,queries,maxConnections=
       finish(fail(code,name));
     }};
     function finish(error,result){
-      if(done)return;done=true;clearTimeout(timer);signal?.removeEventListener('abort',abort);jobs.delete(job);
+      if(done)return;done=true;clearTimeout(timer);signal?.removeEventListener('abort',abort);
       if(error){failures++;reject(safeError(error,name));}else{completed++;resolve(result);}
     }
     const abort=()=>job.cancel('QUERY_ABORTED');
@@ -127,8 +127,8 @@ export async function createMssqlQuerySource({connection,queries,maxConnections=
         requests.delete(currentRequest);currentRequest=null;active();
         if(JSON.stringify(publicMetadata(observed))!==JSON.stringify(publicMetadata(metadata[name])))
           throw fail('QUERY_PROJECTION_CHANGED',name);
-        const request=pool.request();currentRequest=request;requests.add(request);
-        request.timeout=remaining();request.stream=true;request.arrayRowMode=true;
+        const request=pool.request({requestTimeout:remaining()});currentRequest=request;requests.add(request);
+        request.stream=true;request.arrayRowMode=true;
         for(const [index,parameter]of requestParameters(spec).entries()){
           const type=parameter.type==='bit'?sql.Bit:parameter.type==='float'?sql.Float:
             sql.NVarChar(parameter.length>4000?sql.MAX:parameter.length);
@@ -152,8 +152,8 @@ export async function createMssqlQuerySource({connection,queries,maxConnections=
           try{
             active();
             if(!shape||!Array.isArray(row)||row.length!==spec.columns.length+1)throw fail('QUERY_PROJECTION_CHANGED',name);
-            if(Number(row.at(-1))!==0)throw fail('QUERY_RESULT_TOO_LARGE',name);
             if(output.rows.length>=spec.maxRows){output.truncated=true;return;}
+            if(Number(row.at(-1))!==0)throw fail('QUERY_RESULT_TOO_LARGE',name);
             const item=Object.fromEntries(spec.columns.map((column,index)=>{
               const value=row[index];
               if(value!==null&&typeof value!=='string')throw fail('QUERY_RESULT_ENCODING_CHANGED',name);
@@ -176,7 +176,12 @@ export async function createMssqlQuerySource({connection,queries,maxConnections=
         if(Buffer.byteLength(JSON.stringify(output))>spec.maxBytes)throw fail('QUERY_RESULT_TOO_LARGE',name);
         finish(null,output);
       }catch(error){finish(error);}
-      finally{if(currentRequest)requests.delete(currentRequest);}
+      finally{
+        if(currentRequest)requests.delete(currentRequest);
+        // A canceled pool acquisition still belongs to this source until the
+        // native driver returns. Retain its capacity slot through that cleanup.
+        jobs.delete(job);
+      }
     })();
     return promise;
   }

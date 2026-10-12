@@ -6,7 +6,13 @@ It uses **SF61** to compile the OpenAPI declaration, **SF30** to serve the resul
 
 ## Start the operator
 
-Use Node 24 or later in the original installed Starforge runtime. Start from the repository root:
+Use Node 24 or later in the original installed Starforge runtime. From the directory containing that installation:
+
+    npx --no-install starforge coingecko serve \
+      --state /absolute/private/coingecko-market --port 0 \
+      --config /absolute/private/operator-config.json
+
+The [maintained distribution](../../distribution/README.md) includes the complete provider and operator source, public module exports, browser assets, and portable handover tools. For a source checkout, start from the repository root:
 
     node stellar/scf-starforge-20261009/partners/coingecko-stellar-market/cli.mjs serve \
       --state /absolute/private/coingecko-market --port 8417 \
