@@ -5,8 +5,11 @@ import { readFile, open } from 'node:fs/promises';
 import { pipeline } from 'node:stream/promises';
 import { join } from 'node:path';
 import { randomBytes, randomUUID, timingSafeEqual, createHash } from 'node:crypto';
+import { readBrowserAssets } from '../../distribution/browser-assets.mjs';
 import { privateDirectory, syncDirectory } from './accounting.mjs';
-import { prepareTokenBuyer, error, plain } from './product.mjs';
+import { prepareTokenBuyer, planSha, error, plain } from './product.mjs';
+import { connectionSummary } from './connection.mjs';
+import { reviewConnection, retainConnectionPackage, readRetainedConnection, listRetainedConnections } from './connection-setup.mjs';
 
 const HOST = '127.0.0.1';
 const SECURITY = { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff',
@@ -17,10 +20,10 @@ const TOKEN_HEADER = 'x-blockscout-operator-token';
 export async function startBlockscoutDesk({ application, seller, operations, directory, port = 8425 }) {
   const token = randomBytes(32).toString('hex'), expected = Buffer.from(token);
   const exportsDirectory = join(directory, 'exports'); await privateDirectory(exportsDirectory);
-  const assets = new Map(await Promise.all([
-    ['/', 'index.html', 'text/html; charset=utf-8'], ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
-    ['/style.css', 'style.css', 'text/css; charset=utf-8'],
-  ].map(async ([path, file, type]) => [path, { type, bytes: await readFile(new URL('./public/' + file, import.meta.url)) }])));
+  const connectionExports = join(exportsDirectory, 'connections');
+  const declaredAssets = await readBrowserAssets(new URL('./browser-assets.json', import.meta.url));
+  const assets = new Map(await Promise.all([...declaredAssets].map(async ([path, asset]) =>
+    [path, { type: asset.type, bytes: await readFile(asset.url) }])));
   let origin, authorities, origins, closed = false, closing;
   const allowed = req => {
     const raw = req.headers[TOKEN_HEADER];
@@ -64,6 +67,38 @@ export async function startBlockscoutDesk({ application, seller, operations, dir
       if (req.method === 'GET' && url.pathname === '/api/navigation' && !url.search)
         return respond(res, 200, { operations: operations.url, availability: operations.availabilityControlUrl,
           fulfillment: operations.deliveryControlUrl });
+      if (req.method === 'GET' && url.pathname === '/api/connection' && !url.search)
+        return respond(res, 200, { plan: application.plan, planSha256: planSha(application.plan),
+          connection: connectionSummary(application.plan) });
+      if (req.method === 'POST' && ['/api/connection/review', '/api/connection/prepare'].includes(url.pathname) && !url.search) {
+        const data = await input(req), preparing = url.pathname.endsWith('/prepare');
+        const fields = preparing ? ['sourcePlanSha256', 'changes', 'reviewSha256'] : ['sourcePlanSha256', 'changes'];
+        if (Object.keys(data).length !== fields.length || Object.keys(data).some(key => !fields.includes(key)))
+          throw error('BLOCKSCOUT_CONNECTION_REQUEST_INVALID');
+        const reviewed = reviewConnection(application.plan, data.changes, data.sourcePlanSha256);
+        if (!preparing) return respond(res, 200, reviewed);
+        if (reviewed.reviewSha256 !== data.reviewSha256) throw error('BLOCKSCOUT_CONNECTION_REVIEW_CHANGED', 409);
+        const result = await retainConnectionPackage(reviewed, connectionExports);
+        return respond(res, result.status === 'PREPARED' ? 201 : 200, result);
+      }
+      if (req.method === 'GET' && url.pathname === '/api/connection/history') {
+        const pairs = [...url.searchParams];
+        if (new Set(pairs.map(([key]) => key)).size !== pairs.length || pairs.some(([key]) => !['after', 'limit'].includes(key)))
+          throw error('BLOCKSCOUT_CONNECTION_PAGE_INVALID');
+        const query = Object.fromEntries(pairs);
+        if (query.limit !== undefined) {
+          if (!/^(?:[1-9]\d*)$/.test(query.limit)) throw error('BLOCKSCOUT_CONNECTION_PAGE_INVALID');
+          query.limit = Number(query.limit);
+        }
+        return respond(res, 200, await listRetainedConnections(connectionExports, query));
+      }
+      const connectionPackage = /^\/api\/connection\/packages\/([a-f0-9]{64})$/.exec(url.pathname);
+      if (req.method === 'GET' && connectionPackage && !url.search) {
+        const record = await readRetainedConnection(connectionExports, connectionPackage[1]);
+        return respond(res, 200, record.bytes, {
+          'content-disposition': 'attachment; filename="blockscout-connection-' + connectionPackage[1] + '.json"',
+          'x-content-sha256': record.sha256 });
+      }
       if (req.method === 'GET' && url.pathname === '/api/attempts') {
         const pairs = [...url.searchParams];
         if (new Set(pairs.map(([k]) => k)).size !== pairs.length || pairs.some(([k]) => !['after', 'limit', 'chainId', 'addressHash'].includes(k)))
