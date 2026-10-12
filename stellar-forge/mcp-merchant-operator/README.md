@@ -156,6 +156,41 @@ stores and sessions own these operations. See [FLEET.md](FLEET.md) for the full
 host configuration, all 13 fleet tools, and recovery workflow. Existing merchant
 initialization can include the same fleet with `--fleet-plan`.
 
+
+### Deliver customer SDKs from fleet merchants
+
+The original fleet owner now includes a retained customer handover desk for every
+declared tenant and slot. Generate from the exact owned instance, inspect the
+original receipt and offers, complete an inspected legacy export, and retrieve
+its original manifest and SHA-pinned file chunks. Retained exports remain usable
+after slot retirement and provider reopening.
+
+Use `merchant_fleet_client_list`, `merchant_fleet_client_status`,
+`merchant_fleet_client_generate`, `merchant_fleet_client_adopt`,
+`merchant_fleet_client_manifest`, `merchant_fleet_client_file`, and
+`merchant_fleet_client_file_release` with the selected `tenant` and `slot`.
+The managed fleet workspace exposes the same original customer controls, and
+`fleet-release` supplies a resumable `client-download` command. See
+[the fleet customer handover guide](../../stellar/scf-starforge-20261009/merchant-fleet-gateway/CLIENT_HANDOVER.md)
+for the complete browser, foreground CLI, and authenticated MCP workflow.
+
+### Publish tenant discovery and serve the original buyer explorer
+
+The same fleet owner now operates each tenant's original seller enrollment,
+signed catalogue and native buyer explorer across release slots. Review the
+current serving source and exact payment choices, apply the original signed
+publication, inspect retained resource history, and withdraw a route from an
+older retained release. Interrupted enrollment can be inspected, preserved and
+completed through the original setup workflow.
+
+Use the `merchant_fleet_discovery_*` tools for enrollment, start/stop,
+retained-source inspection, publication review/apply, original history and
+native discovery pages. The managed browser and foreground CLI expose the
+complete workflow over the same lifecycle owner. See
+[the tenant discovery guide](../../stellar/scf-starforge-20261009/merchant-fleet-gateway/DISCOVERY.md)
+for exact inputs, recovery, slot changes and the original buyer preparation
+workflow.
+
 ## Operate a Tenderly simulation merchant
 
 Use `init-tenderly-workspaces --dir NEW_OPERATOR_DIRECTORY --connection CONNECTION.json`
@@ -717,3 +752,16 @@ and dataset files through the host's existing durable file receiver.
 [World Bank setup, source operation, release and customer receiving](WORLDBANK-WORKSPACES.md)
 documents the complete workflow and its original IDs, revisions and file hashes.
 
+
+
+## Managed settlement delivery
+
+The owned merchant fleet exposes the original SF98 delivery workspace for each declared release store. Native SF82 children retain an original source outbox across releases; independently configured accounting and fulfillment destinations keep their own cursor, HMAC environment reference, retry state and original delivery journal.
+
+Use merchant_fleet_delivery_status with tenant and slot to inspect the actual producer, source fingerprint, destination revisions and worker ownership. merchant_fleet_delivery_control forwards the original enroll, pause, sync, drain, start, stop and requeue operations. Input is the original action-specific object. merchant_fleet_delivery_events returns native receipt/outcome pages and exact revisions for maintenance.
+
+For receiving, merchant_fleet_delivery_transfer captures a new immutable ID using expectedSourceFingerprint from status. Inspect named captures with merchant_fleet_delivery_transfers and merchant_fleet_delivery_manifest. The manifest exposes the original complete exchange and its receiving arguments. merchant_fleet_delivery_file reads its exact member bytes using expectedFingerprint, name and expectedSha256, with the existing readId/offset continuation. merchant_fleet_delivery_file_release closes an owned temporary read.
+
+The managed browser’s Settlement delivery section mounts the full original destinations application on the same private origin and streams complete receiving packages. Previously initialized stopped slots remain usable; retained transfer inspection and downloads are independent of live-source availability. Closing the MCP owner cancels original delivery and transfer work before waiting for active serialized calls.
+
+See [Managed settlement delivery](../../stellar/scf-starforge-20261009/merchant-fleet-gateway/DELIVERY.md) for the complete native lifecycle, CLI examples, destination settings, archive layout and original receiving commands.

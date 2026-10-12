@@ -6,13 +6,13 @@ import { openDestinationWorkspace } from './model.mjs';
 import { codeOf, fault, exactKeys } from './storage.mjs';
 
 const contentTypes = { '.html': 'text/html; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
-const operationFields = {
+export const DESTINATION_OPERATION_FIELDS = Object.freeze({
   enroll: ['id', 'label', 'url', 'allowedHost', 'secretEnv', 'routeIds', 'networks', 'history'],
   pause: ['id', 'paused', 'expectedRevision'], sync: ['id'],
   drain: ['id', 'limit', 'concurrency', 'destinationConcurrency', 'timeoutMs'],
   start: ['limit', 'concurrency', 'destinationConcurrency', 'timeoutMs', 'pollMs'], stop: [],
   requeue: ['id', 'eventId', 'expectedRevision', 'expectedDeliveryRevision'],
-};
+});
 const explanations = {
   SOURCE_JOURNAL_CONTINUITY_CHANGED: 'The source journal no longer matches its retained checkpoint. Reopen the original source and destination history before sending.',
   DESTINATION_JOURNAL_CONTINUITY_CHANGED: 'A previously copied original event is missing from this destination journal. Restore its complete original journal before sending.',
@@ -22,20 +22,26 @@ const explanations = {
   SF98_DELIVERY_BUSY: 'The original delivery lease is currently owned by another operation. Its owner appears in the workspace.',
 };
 
-export async function startDestinationsServer({ port = 8478, ...options } = {}) {
-  if (!Number.isInteger(port) || port < 0 || port > 65535) throw fault('INVALID_PORT');
-  const model = await openDestinationWorkspace(options), token = randomBytes(32).toString('hex');
+/** Mount the original UI/controller on an existing authenticated operator host. */
+export async function createDestinationsHandler({ model, origins: allowed, basePath = '' } = {}) {
+  if (!model || !Array.isArray(allowed) || !allowed.length ||
+      !/^(?:\/[A-Za-z0-9_-]+)*$/.test(basePath)) throw fault('EXPLICIT_WORKSPACE_ORIGIN_REQUIRED');
+  const origins = new Set(allowed.map(value => new URL(value).origin));
+  const hostnames = new Set([...origins].map(value => new URL(value).host));
+  const token = randomBytes(32).toString('hex');
+  let closing = false;
   const assets = new Map();
   for (const [path, file] of [['/', 'index.html'], ['/app.mjs', 'app.mjs'], ['/style.css', 'style.css']]) {
     const ext = file.slice(file.lastIndexOf('.'));
     assets.set(path, { bytes: await readFile(new URL('./public/' + file, import.meta.url)), type: contentTypes[ext] });
   }
-  let hostnames = new Set(), origins = new Set(), closing = false, closePromise;
   const headers = { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff',
     'referrer-policy': 'no-referrer', 'cross-origin-resource-policy': 'same-origin',
     'content-security-policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'" };
   const readers = new Set(), operations = new Set();
-  const server = createServer((req, res) => {
+  const handler = async (req, res) => {
+    const requested = new URL(req.url, 'http://localhost').pathname;
+    if (basePath && requested !== basePath && !requested.startsWith(basePath + '/')) return Promise.resolve(false);
     const task = (async () => {
       const reply = (status, value, type = 'application/json; charset=utf-8', extra = {}) => {
         if (res.destroyed) return;
@@ -48,13 +54,18 @@ export async function startDestinationsServer({ port = 8478, ...options } = {}) 
         if (!hostnames.has(req.headers.host) || req.headers.origin && !origins.has(req.headers.origin) ||
             ['cross-site', 'same-site'].includes(req.headers['sec-fetch-site'])) throw fault('WORKSPACE_ORIGIN_REQUIRED', 403);
         const url = new URL(req.url, 'http://' + req.headers.host);
+        const pathname = url.pathname.slice(basePath.length) || '/';
+        if (basePath && url.pathname === basePath) {
+          if (!['GET', 'HEAD'].includes(req.method)) throw fault('NOT_FOUND', 404);
+          return reply(307, 'Open merchant delivery.', 'text/plain', { location: basePath + '/' });
+        }
         if (req.method === 'GET' || req.method === 'HEAD') {
-          const asset = assets.get(url.pathname);
+          const asset = assets.get(pathname);
           if (asset && !url.search) return reply(200, asset.bytes, asset.type);
-          if (url.pathname === '/api/state' && !url.search) return reply(200, { ...await model.state(), session: token });
-          if (url.pathname === '/api/handoff' && !url.search) return reply(200, await model.handoff(),
+          if (pathname === '/api/state' && !url.search) return reply(200, { ...await model.state(), session: token });
+          if (pathname === '/api/handoff' && !url.search) return reply(200, await model.handoff(),
             'application/json; charset=utf-8', { 'content-disposition': 'attachment; filename="sf98-destinations-handoff.json"' });
-          const match = /^\/api\/destinations\/([a-z][a-z0-9-]{0,47})\/events$/.exec(url.pathname);
+          const match = /^\/api\/destinations\/([a-z][a-z0-9-]{0,47})\/events$/.exec(pathname);
           if (match) {
             if ([...url.searchParams.keys()].some(key => !['state', 'offset', 'limit'].includes(key))) throw fault('INVALID_EVENT_QUERY');
             return reply(200, await model.events({ id: match[1], state: url.searchParams.get('state') ?? 'ALL',
@@ -63,7 +74,7 @@ export async function startDestinationsServer({ port = 8478, ...options } = {}) 
           throw fault('NOT_FOUND', 404);
         }
         if (req.method !== 'POST') return reply(405, { code: 'METHOD_NOT_ALLOWED' }, undefined, { allow: 'GET, HEAD, POST' });
-        const action = /^\/api\/(enroll|pause|sync|drain|start|stop|requeue)$/.exec(url.pathname)?.[1];
+        const action = /^\/api\/(enroll|pause|sync|drain|start|stop|requeue)$/.exec(pathname)?.[1];
         if (!action || url.search) throw fault('NOT_FOUND', 404);
         const supplied = Buffer.from(String(req.headers['x-sf98-session'] ?? '')), expected = Buffer.from(token);
         if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) throw fault('WORKSPACE_SESSION_REQUIRED', 403);
@@ -80,7 +91,7 @@ export async function startDestinationsServer({ port = 8478, ...options } = {}) 
         let input;
         try { input = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks))); }
         catch { throw fault('INVALID_JSON'); }
-        exactKeys(input, operationFields[action]);
+        exactKeys(input, DESTINATION_OPERATION_FIELDS[action]);
         const method = action === 'pause' ? 'setPaused' : action;
         return reply(200, await model[method](input));
       } catch (error) {
@@ -92,18 +103,33 @@ export async function startDestinationsServer({ port = 8478, ...options } = {}) 
       }
     })();
     operations.add(task); task.finally(() => operations.delete(task)).catch(() => {});
+    return task.then(() => true);
+  };
+  handler.close = () => { closing = true; for (const req of readers) req.destroy(); };
+  handler.done = () => Promise.allSettled([...operations]);
+  return handler;
+}
+
+export async function startDestinationsServer({ port = 8478, basePath = '', ...options } = {}) {
+  if (!Number.isInteger(port) || port < 0 || port > 65535) throw fault('INVALID_PORT');
+  const model = await openDestinationWorkspace(options);
+  let handler, closePromise;
+  const server = createServer((req, res) => {
+    if (!handler) { res.writeHead(503); res.end(); return; }
+    handler(req, res).then(handled => { if (!handled) { res.writeHead(404); res.end(); } })
+      .catch(() => { if (!res.headersSent) res.writeHead(500); res.end(); });
   });
   server.requestTimeout = 30000; server.headersTimeout = 10000; server.keepAliveTimeout = 2000;
   try {
     await new Promise((done, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', () => { server.off('error', reject); done(); }); });
     const selected = server.address().port, url = 'http://127.0.0.1:' + selected;
-    hostnames = new Set(['127.0.0.1:' + selected, 'localhost:' + selected]);
-    origins = new Set([url, 'http://localhost:' + selected]);
-    return { model, server, url: url + '/', close() {
+    handler = await createDestinationsHandler({ model, basePath,
+      origins: [url, 'http://localhost:' + selected] });
+    return { model, server, url: url + basePath + '/', close() {
       return closePromise ??= (async () => {
-        closing = true; for (const req of readers) req.destroy();
+        handler.close();
         const stopped = new Promise(done => server.close(done)); server.closeIdleConnections?.();
-        await model.close(); await Promise.allSettled([...operations]);
+        await model.close(); await handler.done();
         server.closeAllConnections?.(); await stopped;
       })();
     } };
