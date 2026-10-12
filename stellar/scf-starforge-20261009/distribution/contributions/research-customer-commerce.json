@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "research-customer-commerce",
-  "description": "Publish the complete frozen Research delivery through the original Stellar merchant and receive it through the original Buyer into an editable customer dossier, source workspace and full report history. Includes the scientific Python client, retained complete calls, typed inputs, installed terminal and full two-workspace paid-delivery programme. The existing Merchant Research attachment operates the same full paid workflow and retained requests through twenty native tools.",
+  "description": "Publish the complete frozen Research delivery through the original Stellar merchant and receive it through the original Buyer into an editable customer dossier, source workspace and full report history. Includes the scientific Python client, retained complete calls, typed inputs, installed terminal and full two-workspace paid-delivery programme. The existing Merchant Research attachment operates the same full paid workflow and retained requests through twenty native tools. Includes the original Buyer launch/adoption setup, typed configuration interface and complete same-owner reopening guide.",
   "commands": {
     "research-commerce": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-commerce/cli.mjs"
   },
@@ -16,7 +16,8 @@
     "./buyer/research-dossiers/customer-commerce/publication": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-commerce/publication.mjs",
     "./buyer/research-dossiers/customer-commerce/buyer": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-commerce/buyer.mjs",
     "./buyer/python/research-commerce-delivery": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/research-commerce-delivery.mjs",
-    "./merchant/mcp/research-commerce": "./source/stellar-forge/mcp-merchant-operator/research-commerce.mjs"
+    "./merchant/mcp/research-commerce": "./source/stellar-forge/mcp-merchant-operator/research-commerce.mjs",
+    "./buyer/research-dossiers/customer-commerce/buyer-setup": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-commerce/buyer-setup.mjs"
   },
   "components": [
     "stellar/scf-starforge-20261009/sf101-merchant-receiver",
@@ -39,9 +40,12 @@
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/research_commerce_types.py",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/research_workspace.py",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/README.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-commerce/BUYER_SETUP.md",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-commerce/OPERATING.md",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-commerce/archive.d.mts",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-commerce/archive.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-commerce/buyer-setup.d.mts",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-commerce/buyer-setup.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-commerce/buyer.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-commerce/cli.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-commerce/client.d.mts",
