@@ -148,7 +148,7 @@ Keep the same receiving request, original archive identity and destination after
 
 ## Native receiving continuation
 
-The existing PROJECT-PORTFOLIO-NATIVE-B9D2-20261012 operation already selects the pinned original MPXJ fixtures, including timephased-budget-baseline.mpp. Use the actual edition ID returned for that fixture and the same original runtime/workspace.
+Continue from the same MPXJ runtime and workspace used for source intake. For the supplied timephased-budget-baseline.mpp fixture, select the actual edition ID returned by that intake.
 
 Follow native/README.md. The optional --native-timephased argument derives an explicit weekly profile from that actual fixture's retained raw span bounds and supported native definitions. --timephased-profile selects an already-reviewed explicit profile instead. Both extend the same original archive receiving function and browser helper.
 
