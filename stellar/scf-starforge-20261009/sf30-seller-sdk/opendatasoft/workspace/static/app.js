@@ -105,7 +105,8 @@ function form(key, handler, children, options = {}) {
     key = tab + ':' + (selectedPublication ?? selectedExport ?? '') + ':form-' + formNumber++;
     options = {};
   } else if (!Array.isArray(children)) children = children ? [children] : [];
-  const node = element('form', { 'data-form-key': key, 'data-mutates': options.readOnly ? 'false' : 'true' }, ...children);
+  const fields = element('fieldset', { class: 'form-fields' }, ...children);
+  const node = element('form', { 'data-form-key': key, 'data-mutates': options.readOnly ? 'false' : 'true' }, fields);
   const controls = () => [...node.elements].filter(item => item.name && item.type !== 'submit' && item.type !== 'button');
   const saved = drafts.get(key);
   if (saved) controls().forEach((control, index) => {
@@ -121,10 +122,11 @@ function form(key, handler, children, options = {}) {
     if (!node.isConnected || node.dataset.busy === 'true') return;
     const generation = renderGeneration;
     if (!options.readOnly && state?.active) { message('The project is completing its current operation. Its progress is shown above.'); return; }
+    const submitted = new FormData(node);
     node.dataset.busy = 'true'; remember(); updateBusy();
     protect(async () => {
       if (!current(generation, node)) return;
-      const result = await handler(new FormData(node), node);
+      const result = await handler(submitted, node);
       if (!options.readOnly && result?.operationId) {
         if (state?.operation?.id === result.operationId && state.operation.state === 'COMPLETE') drafts.delete(key);
         else if (pending?.id === result.operationId) pending.formKey = key;
@@ -137,6 +139,8 @@ function updateBusy() {
   for (const node of document.querySelectorAll('[data-operation-button]')) node.disabled = Boolean(state?.active);
   for (const form of document.querySelectorAll('form')) {
     const busy = form.dataset.busy === 'true' || form.dataset.mutates === 'true' && Boolean(state?.active);
+    const fields = form.querySelector(':scope > fieldset.form-fields');
+    if (fields) fields.disabled = busy;
     for (const submit of form.querySelectorAll('button[type=submit]')) submit.disabled = busy;
     form.setAttribute('aria-busy', busy ? 'true' : 'false');
   }
@@ -497,6 +501,9 @@ async function renderEditions(generation) {
       button('Close row', () => { rowDetail.hidden = true; })),
       table(Object.entries(record).map(([field, value]) => ({ field, value })), ['field', 'value']),
       button('Annotate this row', () => {
+        if (state?.active || notesForm?.dataset.busy === 'true') {
+          message('The project is saving its current operation. Continue editing notes when it completes.'); return;
+        }
         rowIndexInput.value = rowIndex; rowTextInput.value = noteRows.get(rowIndex) ?? '';
         rowIndexInput.dispatchEvent(new Event('input', { bubbles: true }));
         notesForm.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); rowTextInput.focus();
@@ -816,19 +823,37 @@ function renderMerchant(generation) {
     element('div', { class: 'meta' }, 'Resource: ' + exported.resource, 'Created: ' + formatDate(exported.createdAt)),
     muted(exported.directory), detail('Complete package manifest and release information', exported),
     row(button('Download complete merchant package', () => download('exports/' + uri(exported.id) + '/download', 'opendatasoft-merchant.tar.gz')),
+      button('Download receiving guide', () => download('exports/' + uri(exported.id) + '/guide', 'opendatasoft-receiving.md')),
       button('Open receiving and handoff', async () => { tab = 'receiving'; await renderView(); }))));
   const stageForm = form('stage:' + exported.id, data => {
     const port = number(data, 'port', 1);
     if (port > 65535) throw new Error('The seller port must be between 1 and 65535.');
+    const facilitator = String(data.get('facilitator') ?? '').trim();
+    const runtime = { port };
+    if (facilitator) {
+      const endpoint = new URL(facilitator);
+      const local = endpoint.protocol === 'http:' &&
+        ['127.0.0.1', 'localhost', '[::1]'].includes(endpoint.hostname);
+      if (endpoint.username || endpoint.password || endpoint.hash ||
+          endpoint.protocol !== 'https:' && !local)
+        throw new Error('Enter the configured HTTPS facilitator, or an explicitly enabled local facilitator.');
+      if (local && data.get('allowLocalFacilitator') !== 'on')
+        throw new Error('Enable the local facilitator option for this loopback address.');
+      runtime.facilitator = facilitator;
+      if (local) runtime.allowLocalFacilitator = true;
+    }
     return act('exports/' + uri(exported.id) + '/stage', {
       expectedManifestSha256: exported.manifestSha256,
       releaseId: String(data.get('releaseId')).trim(), label: String(data.get('label')).trim(),
-      runtime: { port },
+      runtime,
     }, 'merchant');
   }, [
     row(label('Release ID', input('releaseId', 'opendatasoft-' + exported.id.slice(0, 8), 'text', { required: true }), true),
       label('Release label', input('label', 'Huwise dataset edition', 'text', { required: true }), true),
       label('Seller port', input('port', '8423', 'number', { min: 1, max: 65535, required: true }))),
+    label('Payment facilitator URL', input('facilitator', '', 'url', { placeholder: 'https://your-configured-facilitator' })),
+    label('Enable the selected local facilitator', input('allowLocalFacilitator', 'on', 'checkbox')),
+    muted('Choose the configured facilitator for native payment verification and settlement. An empty facilitator selects the original offer-only deployment.'),
     submit('Stage retained merchant package'),
   ]);
   view.append(card(element('h3', {}, 'Seller release'),
@@ -913,11 +938,12 @@ function renderReceiving(generation) {
       muted('Completed and imported captures appear here.')));
 
   view.append(card(element('h3', {}, 'Transfer a merchant release'),
-    muted('Download the complete package from Merchant releases. Its original receiving guide travels with the retained dataset, source, payment configuration and runtime. After extraction on the receiving host, use that package’s documented installation and release commands.'),
+    muted('Download the complete package and its receiving guide. New exports include the guide in their manifest; the companion download supplies the same instructions and exact selected identities for every retained package.'),
     state.exports.length ? state.exports.map(exported => element('article', { class: 'entry' },
       element('strong', {}, exported.resource), muted(formatDate(exported.createdAt)),
       element('div', { class: 'mono break' }, 'Manifest SHA-256: ' + exported.manifestSha256),
       row(button('Download complete package', () => download('exports/' + uri(exported.id) + '/download', 'opendatasoft-merchant.tar.gz')),
+        button('Download receiving guide', () => download('exports/' + uri(exported.id) + '/guide', 'opendatasoft-receiving.md')),
         button('Open release and offer', async () => { selectedExport = exported.id; tab = 'merchant'; await renderView(); })))) :
       muted('Create a package from the reviewed dataset to enable this handoff.')));
 
