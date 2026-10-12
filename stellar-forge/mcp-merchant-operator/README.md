@@ -72,6 +72,16 @@ See [OPENSEARCH_WORKSPACE.md](OPENSEARCH_WORKSPACE.md) for the connection schema
 recovery. The existing original release controls own deployment selection,
 startup, drain, upgrade and rollback.
 
+## Operate a saved Redis merchant
+
+Connect an existing Redis workspace with `init-redis-workspaces --dir NEW_HOST
+--connection REDIS_CONNECTION_JSON`. The browser and 17 agent tools share its
+original model, saved source revisions, query results and package operations.
+The same merchant release controls use that workspace's existing release store.
+Large original records and public customer files have complete resumable downloads.
+See [REDIS.md](REDIS.md) for the host connection, authoring-to-release workflow,
+source continuation and retained operation recovery.
+
 ## Operate existing WooCommerce stores
 
 Connect the current SF104 merchant operator using
