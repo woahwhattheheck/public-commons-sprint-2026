@@ -1,6 +1,10 @@
 /** Guidance from the original merchant host, selected by advertised tool prefixes. */
 const sections = [
   {
+    "prefix": "merchant_clinicaltrials_",
+    "text": "For ClinicalTrials, attach the declared existing console and use its original capture, NCT, source SHA and integer revision. Read the original complete study and official PRS reports before retaining a review or modernization decision. Save the exact action UUID and payload before mutation; inspect that same operation after an interrupted reply. Portable receiving preserves original studies, reviews and source editions in a new receiver; inspect its actual operation/export inventory before continuation. Prepare declared native files and receive their complete SHA-pinned bytes through retained downloads. Closing this attachment drains its own reads and leaves the original Python console owner open."
+  },
+  {
     "prefix": "merchant_api_pass_",
     "text": "For API customers, list the configured workspace aliases and reopen the original saved customer session. Use host-declared file and purchase handles, inspect their complete source hashes, and retain each exact operationId and expectedRevision before dispatch. After an interrupted reply, read merchant_api_pass_operation and recover the same original request and payload. Original purchase, request, approval and recovery semantics remain in the customer service. Page passes and complete customer history at the returned revision. Capture complete original response, review, proof, report or history files under a stable exportId; use the typed client or merchant-api-pass to resume SHA-pinned downloads after either process restarts. Retained exports remain available after the customer service closes. The optional private agent directory reopens the original connection, merchant settings and local MCP client together."
   },
