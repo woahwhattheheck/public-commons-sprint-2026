@@ -58,7 +58,7 @@ The exact stages are:
 | 10–11 | Create a corrected original source edition with every resolved native match ID; review/apply through the same original product; verify no replacement objects |
 | 12 | Export the complete customer archive; cold-restore the same bytes; use the original API to reopen that exact committed journal |
 
-The response-discard stage is a deliberate transport fault after an actual successful native HTTP submission. The original queued ScriptJob, model execution and journal remain real. No output is synthesized to satisfy a product assertion.
+The receiving client deliberately discards a returned successful native submission response and retains that observation. If its carrier ends after submission but before that observation is saved, the same directory recovers the original applied transaction from its journal and completes the stage with `ORIGINAL_APPLY_RECOVERED_WITHOUT_DISCARD_RECEIPT`. The stage and final result retain the actual outcome, original execution reference, available Job identity and transaction journal. Both paths continue the already applied inventory operation.
 
 The changed native default stage requires the normal custom-field update API and original worker/cache behavior. If the actual native source returns a correction elsewhere, preserve its Job and complete error and fix the integration against that source.
 
