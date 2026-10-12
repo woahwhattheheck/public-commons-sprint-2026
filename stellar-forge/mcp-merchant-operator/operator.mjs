@@ -1,4 +1,4 @@
-import { merchantToolCatalog, merchantToolFamilies } from './catalog.mjs';
+import { merchantToolCatalog, merchantToolFamilies, merchantToolFamily } from './catalog.mjs';
 export { MERCHANT_TOOLS } from './catalog.mjs';
 import { MERCHANT_PROVIDERS, merchantProviderConfigured } from './providers.mjs';
 
@@ -21,7 +21,7 @@ function releaseView(release) {
   const { handlers, ...options } = runtime;
   return { ...rest, ...(rest.python ? { python: pythonSourceView(rest.python) } : {}),
     ...(rest.duckdb ? { duckdb: duckdbSourceView(rest.duckdb) } : {}),
-    runtime: { ...options, applicationConfigured: Boolean(handlers || runtime.upstreams || rest.python || rest.duckdb || rest.mysql || rest.postgres || rest.s3 || rest.jsonrpc || rest.sqlite || rest.clickhouse || rest.redis) },
+    runtime: { ...options, applicationConfigured: Boolean(handlers || runtime.upstreams || rest.python || rest.duckdb || rest.mysql || rest.postgres || rest.s3 || rest.jsonrpc || rest.sqlite || rest.clickhouse || rest.redis || rest.opensearch || rest.mssql || rest.grpc || rest.dataset) },
     handlerEntry: handlerEntry ? { sha256: handlerEntry.sha256, bytes: handlerEntry.bytes, scope: handlerEntry.scope } : null };
 }
 function runtimeView(runtime) {
@@ -136,29 +136,12 @@ export class MerchantReleaseOperator {
   }
   async #execute(name, args) {
     if (name.startsWith('merchant_client_export_')) return (await this.#provider('clientExports')).call(name, args);
-    if (name.startsWith('merchant_buyer_expense_')) return (await this.#provider('buyerExpenses')).call(name, args);
-    if (name.startsWith('merchant_accounting_')) return (await this.#provider('accounting')).call(name, args);
-    if (name.startsWith('merchant_woo_')) return (await this.#provider('woocommerce')).call(name, args);
-    if (name.startsWith('merchant_pricing_')) return (await this.#provider('pricing')).call(name, args);
-    if (name.startsWith('merchant_receiving_')) return (await this.#provider('receiving')).call(name, args);
-    if (name.startsWith('merchant_python_')) return (await this.#provider('pythonWorkspaces')).call(name, args);
-    if (name.startsWith('merchant_s3_')) return (await this.#provider('s3Workspaces')).call(name, args);
-    if (name.startsWith('merchant_opensearch_')) return (await this.#provider('opensearchWorkspaces')).call(name, args);
-    if (name.startsWith('merchant_socrata_')) return (await this.#provider('socrataWorkspaces')).call(name, args);
-    if (name.startsWith('merchant_geocodio_')) return (await this.#provider('geocodioWorkspaces')).call(name, args);
-    if (name.startsWith('merchant_webdav_')) return (await this.#provider('webdavWorkspaces')).call(name, args);
-    if (name.startsWith('merchant_sheets_')) return (await this.#provider('sheetsWorkspaces')).call(name, args);
-    if (name.startsWith('merchant_ckan_')) return (await this.#provider('ckanWorkspaces')).call(name, args);
-    if (name.startsWith('merchant_tenderly_')) return (await this.#provider('tenderlyWorkspaces')).call(name, args);
-    if (name.startsWith('merchant_redis_')) return (await this.#provider('redisWorkspaces')).call(name, args);
-    if (name.startsWith('merchant_usaspending_')) return (await this.#provider('usaSpendingWorkspaces')).call(name, args);
-    if (name.startsWith('merchant_source_')) return (await this.#provider('sourceWorkspaces')).call(name, args);
-    if (name.startsWith('merchant_har_')) return (await this.#provider('harWorkspaces')).call(name, args);
-    if (name === 'merchant_publishers' || name.startsWith('merchant_publisher_')) return (await this.#provider('publishers')).call(name, args);
-    if (name.startsWith('merchant_fleet_')) return (await this.#provider('fleet')).call(name, args);
+    const family = merchantToolFamily(name);
+    // These original controllers expose named methods instead of the provider
+    // call protocol; their existing switch cases preserve that native contract.
+    if (family && !['cache', 'discovery', 'facilitators'].includes(family))
+      return (await this.#provider(family)).call(name, args);
     const root = this.#config.releaseStore;
-    if (name.startsWith('merchant_case') || name.startsWith('merchant_incident') || name.startsWith('merchant_notification') || name.startsWith('merchant_support_'))
-      return (await this.#provider('support')).call(name, args);
     switch (name) {
       case 'merchant_status': return this.#status();
       case 'merchant_sources': return this.#sources(args.source);
