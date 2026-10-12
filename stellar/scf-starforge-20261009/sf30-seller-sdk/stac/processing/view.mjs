@@ -93,12 +93,17 @@ export async function mountProcessingView({ root, context: initialContext, api }
     field('Use an existing credential reference', useCredential), field('Credential environment reference', envRef),
     field('Header name', authHeader), field('Header prefix', authPrefix),
     el('p', 'The operator process reads the named credential from its existing environment. Enter no credential value here.', { class: 'muted' }));
-  const configure = button('Save deployment and exact source'); configFields.append(configure);
-  click(configure, async () => action('configure', {
-    deployment: { id: deploymentId.value.trim(), title: deploymentTitle.value.trim(), baseUrl: baseUrl.value.trim(),
-      pageSize: Number(pageSize.value), ...(useCredential.checked ? { credential: {
-        envRef: envRef.value.trim(), header: authHeader.value.trim(), prefix: authPrefix.value } } : {}) },
-    sourceBase64: bytesBase64(await fileBytes(openapiFile)), sourceMetadata: {
+  let retainedConfiguration = null;
+  const sourceChoice = el('p', 'Choose the deployed source file, or open a retained source below.', { class: 'muted' });
+  const configure = button('Save deployment and exact source'); configFields.append(sourceChoice, configure);
+  on(openapiFile, 'change', () => { retainedConfiguration = null; sourceUrl.readOnly = sourceStatus.readOnly = sourceTime.readOnly = false; sourceChoice.textContent = 'Using the selected source file.'; });
+  click(configure, async () => action(retainedConfiguration ? 'configure-retained' : 'configure', {
+    ...(retainedConfiguration ? { deploymentKey: retainedConfiguration } : {}),
+    deployment: { ...(retainedConfiguration ? state.deployments.find(v => v.key === retainedConfiguration).deployment : {}),
+      id: deploymentId.value.trim(), title: deploymentTitle.value.trim(), baseUrl: baseUrl.value.trim(),
+      pageSize: Number(pageSize.value), credential: useCredential.checked ? {
+        envRef: envRef.value.trim(), header: authHeader.value.trim(), prefix: authPrefix.value } : null },
+    ...(!retainedConfiguration ? { sourceBase64: bytesBase64(await fileBytes(openapiFile)) } : {}), sourceMetadata: {
       url: sourceUrl.value.trim() || null, status: sourceStatus.value === '' ? null : Number(sourceStatus.value),
       capturedAt: sourceTime.value.trim() || null
     }
@@ -106,15 +111,40 @@ export async function mountProcessingView({ root, context: initialContext, api }
 
   const inventoryBox = group('1. Read the configured workflow inventory');
   const deployments = el('select'), deploymentInfo = el('p', '', { class: 'muted' });
+  const useRetained = button('Open retained source configuration'), downloadSource = button('Download exact source');
   const discover = button('Read workflow inventory'), prepareInventory = button('Prepare for an externally captured inventory');
   const inventories = el('select'), loadInventory = button('Open saved workflow inventory'), inventorySummary = el('p', '', { class: 'muted' });
   const workflows = el('div');
-  inventoryBox.append(field('Saved deployment and source edition', deployments), deploymentInfo, discover, prepareInventory,
+  inventoryBox.append(field('Saved deployment and source edition', deployments), deploymentInfo, useRetained, downloadSource, discover, prepareInventory,
     field('Saved inventory', inventories), loadInventory, inventorySummary, workflows);
   on(deployments, 'change', () => {
     const d = state?.deployments.find(v => v.key === deployments.value);
     deploymentInfo.textContent = d ? d.deployment.baseUrl + ' · source ' + short(d.source.sha256) + ' · HTTP ' +
-      String(d.source.status ?? 'unknown') + ' · filter ' + d.workflowFilter : '';
+      String(d.source.status ?? 'unknown') + ' · filter ' + d.workflowFilter +
+      (d.deployment.credential ? d.credentialsConfiguredHere ? ' · credential reference configured here' : ' · received credential reference' : ' · public reads') : '';
+  });
+  click(useRetained, async () => {
+    const d = state?.deployments.find(value => value.key === deployments.value);
+    if (!d) throw new Error('Choose a saved deployment and source edition.');
+    retainedConfiguration = d.key;
+    deploymentId.value = d.deployment.id; deploymentTitle.value = d.deployment.title;
+    baseUrl.value = d.deployment.baseUrl; pageSize.value = d.deployment.pageSize;
+    sourceUrl.value = d.source.url ?? ''; sourceStatus.value = d.source.status ?? '';
+    sourceTime.value = d.source.capturedAt ?? ''; openapiFile.value = '';
+    sourceUrl.readOnly = sourceStatus.readOnly = sourceTime.readOnly = true;
+    useCredential.checked = Boolean(d.deployment.credential);
+    envRef.value = d.deployment.credential?.envRef ?? '';
+    authHeader.value = d.deployment.credential?.header ?? 'Authorization';
+    authPrefix.value = d.deployment.credential?.prefix ?? 'Bearer ';
+    sourceChoice.textContent = 'Retained source ' + d.source.sha256 + '. Review this origin and environment reference, then save the configuration here.';
+    configuration.open = true; configure.focus();
+  });
+  click(downloadSource, async () => {
+    const value = await api.read('source', { deploymentKey: deployments.value });
+    const raw = atob(value.contentBase64), bytes = Uint8Array.from(raw, c => c.charCodeAt(0));
+    const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(v => v.toString(16).padStart(2, '0')).join('');
+    if (bytes.length !== value.bytes || hash !== value.sha256) throw new Error('The retained source bytes changed.');
+    download(new Blob([bytes], { type: 'application/json' }), 'filmdrop-source-' + hash + '.json');
   });
   click(discover, () => action('discover', { deploymentKey: deployments.value }));
   click(prepareInventory, () => action('prepare-inventory', { deploymentKey: deployments.value }));
