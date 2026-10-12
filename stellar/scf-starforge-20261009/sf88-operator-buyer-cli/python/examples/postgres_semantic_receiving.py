@@ -21,6 +21,7 @@ from urllib.request import Request, urlopen
 
 from stellar_forge_buyer.postgres_delivery import PostgresWarehouse, load_delivery_report
 from stellar_forge_buyer.postgres_http import serve
+from stellar_forge_buyer.processes import cancellation, run_owned
 from stellar_forge_buyer.storage import dump, parse, private_directory, read, write
 
 
@@ -41,6 +42,17 @@ def exact_file(path, raw):
         write(path, raw, exclusive=True)
     return {"path": str(path), "bytes": len(raw), "sha256": sha(raw)}
 
+
+
+def run_logged(argv, path, *, timeout, text=True):
+    try:
+        completed = run_owned(argv, timeout=timeout, text=text)
+    except subprocess.TimeoutExpired as error:
+        write(path, (error.stdout or b"") + (error.stderr or b""))
+        raise
+    raw = (completed.stdout + completed.stderr)
+    write(path, raw.encode() if isinstance(raw, str) else raw)
+    return completed
 
 @contextmanager
 def opened(warehouse, directory):
@@ -306,24 +318,28 @@ def main():
         config_path = directory / "browser-input.private.json"
         dump(config_path, config)
         driver = Path(__file__).with_name("postgres_semantic_browser.mjs")
-        browser = subprocess.run([args.node, str(driver), str(config_path)],
-                                  capture_output=True, text=True, timeout=300)
-        write(directory / "browser.log", browser.stdout.encode() + browser.stderr.encode())
-        require(browser.returncode == 0, "Open the original browser log for the receiving failure.")
-        result["browser"] = parse(read(directory / "browser" / "receiving.json", 4 * 1024 * 1024))
-        require(result["browser"]["state"] == "COMPLETE", "Original browser receiving is incomplete.")
-        config_path.unlink()
+        try:
+            browser = run_logged([args.node, str(driver), str(config_path)],
+                                 directory / "browser.log", timeout=300)
+            require(browser.returncode == 0, "Open the original browser log for the receiving failure.")
+            result["browser"] = parse(read(directory / "browser" / "receiving.json", 4 * 1024 * 1024))
+            require(result["browser"]["state"] == "COMPLETE" and result["browser"]["browser_closed"],
+                    "Original browser receiving is incomplete.")
+            result["browser"]["processes"] = browser.owned_processes
+        finally:
+            config_path.unlink(missing_ok=True)
         # Exercise the installed CLI against the same committed PostgreSQL state.
         cli_output = directory / "cli-semantics.json"
         command = [sys.executable, "-m", "stellar_forge_buyer.postgres_cli",
                    "--connection-env", args.connection_env, "--schema", args.schema,
                    "--expect-warehouse", warehouse.warehouse_id, "semantics", first_id]
-        cli = subprocess.run(command, capture_output=True, timeout=60)
+        cli = run_logged(command, directory / "cli.log", text=False, timeout=60)
         require(cli.returncode == 0, "The original dictionary CLI did not complete.")
         context = parse(cli.stdout)
         require(context["file"]["sha256"] == sha(source_dictionary), "CLI source dictionary differs.")
         exact_file(cli_output, cli.stdout)
-        result["cli"] = {"version_id": first_id, "path": str(cli_output), "sha256": sha(cli.stdout)}
+        result["cli"] = {"version_id": first_id, "path": str(cli_output), "sha256": sha(cli.stdout),
+                         "processes": cli.owned_processes}
     result["state"] = "RECEIVED"
     result["received_at"] = datetime.now(timezone.utc).isoformat()
     save()
@@ -334,4 +350,5 @@ def main():
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    with cancellation():
+        raise SystemExit(main())
