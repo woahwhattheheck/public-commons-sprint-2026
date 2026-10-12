@@ -197,8 +197,33 @@ def raw_url(ref, path):
             urllib.parse.quote(path, safe="/"))
 
 
-def load_carrier(path, downloader):
-    if path is None:
+def receive_frame(event, maximum, **fields):
+    if sys.stdin.isatty():
+        import tty
+        tty.setraw(sys.stdin.fileno())
+    emit(event, operation_id=OPERATION, **fields)
+    raw = bytearray()
+    while len(raw) <= maximum:
+        part = os.read(sys.stdin.fileno(), 1)
+        require(part, "Source input ended before its complete JSON line")
+        if part == b"\n":
+            break
+        raw.extend(part)
+    require(len(raw) <= maximum, "Source envelope exceeds its declared maximum")
+    value = json.loads(raw)
+    require(isinstance(value, dict), "Receive one JSON object")
+    return value
+
+
+def load_carrier(path, downloader, from_stdin=False):
+    if from_stdin:
+        frame = receive_frame("awaiting-carrier-input", CARRIER_BYTES * 6 + 4096,
+                              name="carrier.json", bytes=CARRIER_BYTES, sha256=CARRIER_SHA256,
+                              format="one JSON line with name and content")
+        require(set(frame) == {"name", "content"} and frame["name"] == "carrier.json"
+                and isinstance(frame["content"], str), "Receive the exact original public carrier")
+        raw = frame["content"].encode("utf-8")
+    elif path is None:
         sibling = pathlib.Path(__file__).absolute().parent / "carrier.json"
         raw = read_regular(sibling, CARRIER_BYTES) if sibling.is_file() else downloader.get(
             raw_url(CARRIER_REF, CARRIER_PATH), CARRIER_BYTES)
@@ -229,23 +254,10 @@ def receive_private(item, selected, use_stdin):
     retained = ROOT / PRIVATE_NAME
     if not use_stdin and retained.exists():
         return validate_file(item, read_regular(retained, item["bytes"]))
-    if sys.stdin.isatty():
-        import tty
-        tty.setraw(sys.stdin.fileno())
-    emit("awaiting-private-input", operation_id=OPERATION, name=PRIVATE_NAME,
-         bytes=item["bytes"], sha256=item["sha256"], format="one JSON line with name and content")
-    # Read only this line, even on a pipe. Later original-courier commands stay on stdin.
-    # Byte-at-a-time reads avoid buffering later control bytes across the final exec.
-    raw = bytearray()
-    maximum = item["bytes"] * 6 + 4096
-    while len(raw) <= maximum:
-        part = os.read(sys.stdin.fileno(), 1)
-        require(part, "Private source input ended before its complete JSON line")
-        if part == b"\n":
-            break
-        raw.extend(part)
-    require(len(raw) <= maximum, "Private source envelope exceeds its declared maximum")
-    frame = json.loads(raw)
+    # No buffering crosses the eventual exec; later courier controls stay on stdin.
+    frame = receive_frame("awaiting-private-input", item["bytes"] * 6 + 4096,
+                          name=PRIVATE_NAME, bytes=item["bytes"], sha256=item["sha256"],
+                          format="one JSON line with name and content")
     require(isinstance(frame, dict) and set(frame) == {"name", "content"} and
             frame["name"] == PRIVATE_NAME and isinstance(frame["content"], str),
             "Receive exactly the original private source name and UTF-8 content")
@@ -312,7 +324,38 @@ def fill_dependency(name, expected, inputs, downloader, cache):
     return {"path": name, "bytes": len(raw), "origin": "pinned-public-source", "written": written}
 
 
-def complete_sources(inputs, downloader, cache, workers):
+def receive_sources(missing, inputs):
+    selections = {name: validate_dependency(name, item, inputs) for name, item in missing.items()}
+    declared = sum((size if size is not None else 32 * 1024 * 1024) for _, size in selections.values())
+    maximum = min(128 * 1024 * 1024, declared * 6 + len(missing) * 4096 + 8192)
+    frame = receive_frame("awaiting-source-input", maximum,
+                          missing=missing, format="one JSON line with sources: [{path, content}]")
+    require(set(frame) == {"sources"} and isinstance(frame["sources"], list),
+            "Receive the original requested source members")
+    values = frame["sources"]
+    require(len(values) == len(missing), "Source bundle must contain every requested member exactly once")
+    validated = {}
+    for item in values:
+        require(isinstance(item, dict) and set(item) == {"path", "content"} and
+                isinstance(item["path"], str) and isinstance(item["content"], str),
+                "Source member must contain only path and UTF-8 content")
+        name = item["path"]
+        require(name in selections and name not in validated, "Source bundle contains another or repeated member")
+        raw = item["content"].encode("utf-8")
+        blob, size = selections[name]
+        require((size is None or len(raw) == size) and git_blob(raw) == blob,
+                "Received original source identity differs: " + name)
+        validated[name] = raw
+    require(set(validated) == set(missing), "Original source bundle membership differs")
+    # Validate the whole requested selection before materializing any member.
+    for name, raw in validated.items():
+        retain_exact(SOURCE / name, raw, 0o755 if inputs["files"][name].get("mode") == "100755" else 0o644)
+    emit("source-round", received=len(validated), bytes=sum(len(raw) for raw in validated.values()),
+         failures=[], origin="received-original-source")
+    return len(validated)
+
+
+def complete_sources(inputs, downloader, cache, workers, source_stdin=False):
     previous = None
     while True:
         report = prepare_once()
@@ -322,6 +365,9 @@ def complete_sources(inputs, downloader, cache, workers):
         signature = (len(report["files"]), tuple(sorted((name, item["sha"]) for name, item in missing.items())))
         require(signature != previous, "Original dependency preparation made no progress")
         previous = signature
+        if source_stdin:
+            receive_sources(missing, inputs)
+            continue
         complete = []
         failures = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
@@ -342,11 +388,14 @@ def complete_sources(inputs, downloader, cache, workers):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--carrier", type=pathlib.Path, help="An exact local copy of the pinned public carrier")
+    carrier_input = parser.add_mutually_exclusive_group()
+    carrier_input.add_argument("--carrier", type=pathlib.Path, help="An exact local copy of the pinned public carrier")
+    carrier_input.add_argument("--carrier-stdin", action="store_true", help="Receive the pinned public carrier as one JSON line")
     private = parser.add_mutually_exclusive_group()
     private.add_argument("--host-finalizer", type=pathlib.Path, help="The exact private fifth source input")
     private.add_argument("--host-finalizer-stdin", action="store_true", help="Receive that original input as one private JSON line")
     parser.add_argument("--source-cache", type=pathlib.Path, help="Optional retained source tree, verified by original Git blob")
+    parser.add_argument("--source-stdin", action="store_true", help="Receive each requested original dependency bundle on stdin")
     parser.add_argument("--no-network", action="store_true", help="Use only exact retained inputs and sources")
     parser.add_argument("--workers", type=int, choices=range(1, 5), default=4)
     mode = parser.add_mutually_exclusive_group()
@@ -364,7 +413,7 @@ def main(argv=None):
     lock_fd = os.open(ROOT / ".bootstrap.lock", os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     with os.fdopen(lock_fd, "a+b") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        carrier, carrier_raw = load_carrier(args.carrier, downloader)
+        carrier, carrier_raw = load_carrier(args.carrier, downloader, args.carrier_stdin)
         host = receive_private(carrier["privateInputs"][0], args.host_finalizer, args.host_finalizer_stdin)
         inputs = json.loads(next(item["content"] for item in carrier["files"] if item["name"] == "input.json"))
         require(inputs["sourceRef"] == SOURCE_REF and inputs["commissioningRef"] == COMMISSIONING_REF,
@@ -376,7 +425,7 @@ def main(argv=None):
         emit("five-inputs-retained", operation_id=OPERATION, carrier_sha256=CARRIER_SHA256,
              files=[{"name": item["name"], "bytes": item["bytes"], "sha256": item["sha256"]}
                     for item in [*carrier["files"], carrier["privateInputs"][0]]])
-        report = complete_sources(inputs, downloader, args.source_cache, args.workers)
+        report = complete_sources(inputs, downloader, args.source_cache, args.workers, args.source_stdin)
         emit("preparation-complete", operation_id=OPERATION, files=len(report["files"]),
              bytes=report["bytes"], source_ref=SOURCE_REF, commissioning_ref=COMMISSIONING_REF)
         if args.prepare_only:
