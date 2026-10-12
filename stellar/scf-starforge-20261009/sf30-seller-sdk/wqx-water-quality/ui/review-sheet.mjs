@@ -1,3 +1,4 @@
+import { mountConcentrations } from './concentrations.mjs';
 // MIT. Complete bulk receiving decisions over the original Open Waters project.
 const $ = id => document.getElementById(id);
 const SCHEMA = 'starforge.wqx-review-sheet.v1';
@@ -36,6 +37,7 @@ export function mountReviewSheets({ api, notice, refresh, openPlan }) {
   let workspace = null, source = null, document = null, page = null, offset = 0, busy = false, searchTimer;
   let version = 0, previewVersion = -1, preview = null, saved = null, dirty = false, sequence = 0;
   const selected = new Map(), targets = new Map(), edits = new Map();
+  let concentrations = null;
   const active = () => Boolean(source && document);
   function currentDocument() {
     if (!active()) throw new Error('Open a saved source plan first.');
@@ -68,6 +70,7 @@ export function mountReviewSheets({ api, notice, refresh, openPlan }) {
     $('rs-preview-state').textContent = currentPreview() ? 'Preview matches this draft and new plan name.' :
       preview ? 'Update the preview to use the current decisions and plan name.' : 'Preview the full native receiving plan before saving.';
     $('rs-preview-output').classList.toggle('rs-stale', Boolean(preview && !currentPreview()));
+    concentrations?.update();
     const set = $('rs-bulk-action').value === 'set';
     $('rs-bulk-value').disabled = !set || busy; $('rs-bulk-reason').required = $('rs-bulk-action').value !== 'keep';
   }
@@ -167,6 +170,7 @@ export function mountReviewSheets({ api, notice, refresh, openPlan }) {
     $('rs-decisions-summary').textContent = edits.size > 100 ? 'Showing the first 100 decisions. The full draft, editable table, preview and exports contain all ' + edits.size.toLocaleString() + '.' : 'All recorded decisions are shown.';
   }
   function resetDraft(value) {
+    concentrations?.discardReport();
     document = documentInput(value); edits.clear(); selected.clear(); targets.clear(); page = null;
     for (const row of document.decisions) if (row.action !== 'keep' || row.reason) edits.set(row.targetId, clone(row));
     preview = null; saved = null; previewVersion = -1; version++; dirty = edits.size > 0; offset = 0; sequence++;
@@ -189,7 +193,7 @@ export function mountReviewSheets({ api, notice, refresh, openPlan }) {
       throw new Error('This sheet belongs to a different edition of its source plan.');
     source = found;
     resetDraft(imported ?? { schema: SCHEMA, sourcePlanId: planId, sourcePlanSha256: sourceHash, decisions: [] });
-    $('rs-source-plan').value = planId; await loadPage(true);
+    $('rs-source-plan').value = planId; await loadPage(true); await concentrations.loadSource(planId);
   }
   function previewPlan(value) { return value?.plan ?? value?.proposedPlan ?? value?.preview; }
   function renderPreview(value) {
@@ -243,6 +247,7 @@ export function mountReviewSheets({ api, notice, refresh, openPlan }) {
     preview = { ...record, plan: await api('/api/open-waters/' + encodeURIComponent(record.newPlanId)) };
     saved = record; dirty = false; previewVersion = version;
     renderPreview(preview); renderDraft(); renderTargets(); renderExports(record); renderStatus();
+    await concentrations.reopen(record);
     notice('Saved decisions, reasons and complete project exports reopened.');
   }
   $('rs-load-form').addEventListener('submit', event => run(async () => { await openSource($('rs-source-plan').value); notice('Source-bound receiving targets opened.'); }, event));
@@ -308,7 +313,7 @@ export function mountReviewSheets({ api, notice, refresh, openPlan }) {
     if (!currentPreview()) throw new Error('Update the full receiving preview before saving.');
     const record = await api('/api/review-sheets', { reviewId: $('rs-review-id').value, document: currentDocument(),
       newPlanId: $('rs-new-plan').value, expectedPreviewSha256: preview.previewSha256 });
-    saved = record; dirty = false; renderDraft(); renderTargets(); renderExports(record); await refresh(); notice('Saved the original decisions, reasons and complete new receiving plan as ' + record.reviewId + '.');
+    saved = record; dirty = false; renderDraft(); renderTargets(); renderExports(record); await refresh(); await concentrations.reopen(record); notice('Saved the original decisions, reasons and complete new receiving plan as ' + record.reviewId + '.');
   }, event));
   $('rs-revise').addEventListener('click', event => run(async () => {
     const original = currentDocument(); resetDraft(original); await loadPage(true); notice('A new decision draft retains the saved choices and has fresh review and plan names.');
@@ -321,6 +326,18 @@ export function mountReviewSheets({ api, notice, refresh, openPlan }) {
     const record = await api('/api/review-sheets/receive', { bundle: JSON.parse(await file.text()) });
     await refresh(true); await openSaved(record.reviewId); notice('The complete source project, decision review and resulting plan have been received and reopened.');
   }, event));
+  concentrations = mountConcentrations({ api, notice, run,
+    context: (fullDocument = false) => ({ document: active() ? (fullDocument ? currentDocument() : {sourcePlanId:document.sourcePlanId, sourcePlanSha256:document.sourcePlanSha256}) : null, version, busy, saved: Boolean(saved),
+      selectedResultIds: [...new Set([...selected.values()].filter(row => row.kind === 'result').map(row => row.sourceKey))] }),
+    applyDocument: async value => {
+      if (saved) throw new Error('Revise the saved review in a new plan before changing units.');
+      const next = documentInput(value);
+      if (next.sourcePlanId !== document.sourcePlanId || next.sourcePlanSha256 !== document.sourcePlanSha256)
+        throw new Error('The unit choices belong to another source plan.');
+      edits.clear(); for (const row of next.decisions) edits.set(row.targetId, clone(row));
+      markChanged(); await loadPage();
+    }
+  });
   for (const [value, label] of KINDS) option($('rs-kind'), value, label);
   renderStatus(); renderDraft();
   return { update(next) {
