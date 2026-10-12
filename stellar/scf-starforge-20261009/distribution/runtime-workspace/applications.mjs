@@ -5,6 +5,7 @@ import { coingeckoApplication, prepareCoingeckoApplication } from './application
 import { oaiApplication, prepareOaiApplication } from './application-oai.mjs';
 import { fiscalDataApplication, prepareFiscalDataApplication } from './application-fiscaldata.mjs';
 import { databentoApplication, prepareDatabentoApplication } from './application-databento.mjs';
+import { opencageApplication, prepareOpenCageApplication } from './application-opencage.mjs';
 import { readdir, lstat, realpath, access } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
@@ -70,6 +71,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   oaiApplication(common),
   fiscalDataApplication(common),
   databentoApplication(common),
+  opencageApplication(common),
   grpcApplication(common),
   atlasApplication(common),
   n8nApplication(common),
@@ -261,7 +263,11 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     const value = await inputPath(settings[name], kind, missing, privateOnly); inputs.push(value); return value;
   };
   const option = (name, value) => { if (value !== undefined && value !== '') args.push(name, String(value)); };
-  if (type.id === 'coingecko') {
+  if (type.id === 'opencage-workspace') {
+    const original = await prepareOpenCageApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'coingecko') {
     const original = await prepareCoingeckoApplication(settings, { inputPath, runtimeDirectory });
     args.push(...original.args); inputs.push(...original.inputs);
     createDirectories.push(...original.createDirectories);

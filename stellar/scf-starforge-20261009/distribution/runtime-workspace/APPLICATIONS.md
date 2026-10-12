@@ -10,6 +10,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Repository metadata editions | oai serve | Original OAI-PMH capture, retained metadata editions, mapping, publisher and complete customer handover |
 | Fiscal Data operations | fiscaldata managed | Named Treasury operator, exact source and decimal editions, comparisons, original merchant and buyer, complete package receiving |
 | Databento migration | databento-workspace managed | Complete original historical-data source, field mapping, named review, retained results and customer handover |
+| OpenCage geocoding | opencage-workbench serve | Original geocoding source, explicit candidate decisions, retained merchant releases and complete customer deliveries |
 | Catalog Atlas | atlas | Retained catalog intake, offer comparison, exact native buyer preparation and complete workspace receiving |
 | n8n automation merchant | n8n-merchant serve | Configuration review, original preparation, paid jobs, retained workflow executions, customer results and stop/reopen |
 | API-pass customer | api-pass-workspace serve | Original API access, saved requests, exact response recovery, private buyer history and customer statements |
@@ -65,6 +66,12 @@ Select a READY installation containing the complete S3 Applications source and i
 **Open application** opens the original S3 authoring workspace. **Open merchant releases** opens its own SF82 release console. The same application owns both consoles and the seller started there. **Stop application** drains the original merchant and closes both windows' listeners; its source, prices, reviews, packages, release generation and customer files remain saved. Port **0** retains this workspace's original authoring port after first launch, so the same browser tab can restore unfinished edits on normal Stop/Start.
 
 The complete [S3 merchant Applications guide](./S3_MERCHANT_APPLICATIONS.md) covers installation selection, review/save, customer delivery, same-workspace receiving, ownership and recovery.
+
+## OpenCage geocoding
+
+Choose the initialized private OpenCage workspace containing its saved source plan and payment terms. Review and save the application, then review its start and open the original geocoding operator. The saved selection binds the immutable configuration and the twelve original source and browser files in both the selected runtime and adopted release.
+
+The same operator retains provider observations, candidate decisions, packages, merchant generations and customer exports. Stop drains its original server, source transport and workspace lease; a later start reopens that saved work with a new private listener. The complete [OpenCage Applications guide](../../sf30-seller-sdk/opencage/APPLICATIONS.md) covers source preparation, merchant and customer work, managed launch and recovery.
 
 ## Save and start
 
