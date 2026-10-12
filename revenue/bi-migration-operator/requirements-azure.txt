@@ -1,0 +1,2 @@
+# Optional, only for native Parquet source partitions.
+pyarrow>=18

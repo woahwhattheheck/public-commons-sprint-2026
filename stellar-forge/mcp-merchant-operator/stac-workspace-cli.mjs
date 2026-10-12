@@ -55,6 +55,21 @@ Processing and receiving:
                     [--wait-ms 60000]
     ACTION is enabled by the original host. Full imports/configuration use aliases.
 
+Prescient customer operation on the same original host:
+  prescient-status
+  prescient-records --kind profiles|reviews|approvals|deliveryReviews|deliveries|operations
+                   [--offset 0 --limit 50 --revision CONFIGURATION_REVISION]
+  prescient-record --kind KIND --id ID [--revision CONFIGURATION_REVISION]
+  prescient-profile --profile-sha SAVED_PROFILE_SHA256
+  prescient-action --name ACTION --input-file INPUT.json --actor REVIEWER
+                   --operation-id SAVED_ID --revision CONFIGURATION_REVISION
+                   [--delivery HOST_DELIVERY_ALIAS]
+    ACTION: profile-save, profile-import, profile-review, profile-approve,
+            connect, session, delivery-review, delivery-export, delivery-open.
+    Use --args-file for a retained complete action. Retry the same original ID,
+    actor, input and revision only after operation inspection. See PRESCIENT.md.
+    Credentials and source/receiving directories remain host-configured.
+
 Complete original downloads:
   download --kind asset --asset-id ID --out NEW_FILE [--sha256 SHA256]
   download --kind report --edition-id ID --format json|csv|html --out NEW_FILE
@@ -62,7 +77,8 @@ Complete original downloads:
            --out NEW_FILE
   download --kind processing-handover --export-id ID --out NEW_FILE
   download --kind processing-source --deployment-key ID --out NEW_FILE
-  download --kind state|edition|comparison|processing-state|processing-read
+  download --kind prescient-profile --profile-sha SAVED_PROFILE_SHA256 --out NEW_FILE
+  download --kind state|edition|comparison|processing-state|processing-read|prescient-state
            [native selection flags] --out NEW_FILE
 
 Use --args-file JSON for complete native tool inputs instead of many flags.
@@ -74,11 +90,12 @@ Reopening reads the same saved workspace and never replays acquisition.
 const fail = message => { throw new StacWorkspaceError('STAC_CLI_USAGE', message); };
 const commands = new Set(['status','records','record','edition','items','item','compare','operation','discover','query-save',
   'search-review','search-acquire','search-resume','search-cancel','asset-review','asset-acquire','asset-range','decision-save','inputs',
-  'input-inspect','input-import','processing-status','processing-read','processing-configure','processing-action','disconnect']);
+  'input-inspect','input-import','processing-status','processing-read','processing-configure','processing-action','disconnect',
+  'prescient-status','prescient-records','prescient-record','prescient-profile','prescient-action']);
 const flagsAllowed = new Set(['connection','workspace','args-file','query-file','input-file','metadata-file','console-url-file','out',
   'workspace-id','label','kind','id','edition-id','item-id','asset-id','query-id','review-id','operation-id','left-edition-id','right-edition-id',
   'asset-key','max-bytes','offset','limit','revision','expected-revision','view-sha','sha256','input','task-id','name','profile','path','format',
-  'edition-ids','include-assets','deployment-key','export-id','wait-ms','help']);
+  'edition-ids','include-assets','deployment-key','export-id','wait-ms','help','actor','delivery','profile-sha']);
 function parse(argv) {
   const command = argv[0] && !argv[0].startsWith('--') ? argv.shift() : 'help', flags = {};
   while (argv.length) {
@@ -111,7 +128,8 @@ async function inputArgs(flags, workspace, command) {
   const simple = { kind:'kind', id:'id', 'edition-id':'editionId', 'item-id':'itemId', 'asset-id':'assetId', 'query-id':'queryId',
     'review-id':'reviewId', 'operation-id':'operationId', 'left-edition-id':'leftEditionId', 'right-edition-id':'rightEditionId',
     'asset-key':'assetKey', input:'input', 'task-id':'taskId', name:'name', profile:'profile', format:'format',
-    'view-sha':'expectedViewSha256', sha256:'expectedSha256', 'deployment-key':'deploymentKey', 'export-id':'exportId' };
+    'view-sha':'expectedViewSha256', sha256:'expectedSha256', 'deployment-key':'deploymentKey', 'export-id':'exportId',
+    actor:'actor', delivery:'delivery', 'profile-sha':'profileSha256' };
   for (const [flag,key] of Object.entries(simple)) if (flags[flag] !== undefined) args[key] = flags[flag];
   for (const [flag,key] of Object.entries({'max-bytes':'maxBytes',offset:'offset',limit:'limit',revision:'expectedRevision','expected-revision':'expectedRevision'}))
     if (flags[flag] !== undefined) args[key] = integer(flags[flag],flag);
@@ -133,7 +151,7 @@ async function initialize(flags) {
   const workspace = flags.workspace ?? 'imagery';
   if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(workspace)) fail('Use a lowercase workspace alias.');
   const entry = { label: flags.label ?? 'STAC imagery workspace', consoleUrlFile: resolve(required(flags,'console-url-file')),
-    ...(flags['workspace-id'] ? { workspaceId: flags['workspace-id'] } : {}), inputs: {}, processingProfiles: {} };
+    ...(flags['workspace-id'] ? { workspaceId: flags['workspace-id'] } : {}), inputs: {}, processingProfiles: {}, prescientDeliveries: {} };
   const value = { schema: STAC_WORKSPACE_CONNECTION_SCHEMA, workspaces: { [workspace]: entry } };
   const file = await open(destination,'wx',0o600);
   try { await file.writeFile(JSON.stringify(value,null,2)+'\n'); await file.sync(); }

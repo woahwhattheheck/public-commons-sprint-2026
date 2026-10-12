@@ -41,11 +41,20 @@ function attachment(res, name, bytes, type='application/json; charset=utf-8') {
     'x-content-sha256':digest(bytes)});
   res.end(bytes);
 }
-export async function createMerchantConsole({operator,configPath,directory,authorization,bearerToken}={}) {
+export async function createMerchantConsole({operator,configPath,directory,authorization,bearerToken,binding}={}) {
   if (!operator || typeof operator.inspectHost !== 'function' || typeof operator.call !== 'function')
     throw fail('CONSOLE_OPERATOR', 'Attach the original configured merchant operator.');
   if (authorization === undefined && (typeof bearerToken !== 'string' || bearerToken.length < 24))
     throw fail('CONSOLE_AUTH', 'Use the original merchant authorization.');
+  let launchBinding;
+  if (binding !== undefined) {
+    try {
+      const encoded=JSON.stringify(binding);
+      if (!encoded || Buffer.byteLength(encoded)>16384) throw new TypeError('binding');
+      launchBinding=JSON.parse(encoded);
+      if (!launchBinding || typeof launchBinding!=='object' || Array.isArray(launchBinding)) throw new TypeError('binding');
+    } catch { throw fail('CONSOLE_BINDING','Use a complete managed console binding up to 16 KiB.',400); }
+  }
   configPath = resolve(configPath);
   const configurationBytes = await readFile(configPath);
   const configuration = {name:basename(configPath),bytes:configurationBytes.length,sha256:digest(configurationBytes)};
@@ -56,7 +65,8 @@ export async function createMerchantConsole({operator,configPath,directory,autho
     required:value.inputSchema.required ?? [],schemaSha256:digest(canonical(value))}));
   const active = new Map(); let closing=false,closed;
   const snapshot = () => ({...operator.inspectHost(),configuration,
-    console:{schema:CONSOLE_SCHEMA,workspaceId:store.id,activeCalls:active.size,closing,customers:customers.summary}});
+    console:{schema:CONSOLE_SCHEMA,workspaceId:store.id,activeCalls:active.size,closing,customers:customers.summary,
+      ...(launchBinding===undefined?{}:{binding:JSON.parse(JSON.stringify(launchBinding))})}});
   const callView = value => {
     const {resultJson,...rest}=value;
     return {...rest,resultBytes:resultJson===null?0:Buffer.byteLength(resultJson),
@@ -125,14 +135,16 @@ export async function createMerchantConsole({operator,configPath,directory,autho
     let url; try { url=new URL(req.url,'http://127.0.0.1'); } catch { return false; }
     if(url.pathname==='/operator' && req.method==='GET'){res.writeHead(302,{location:'/operator/','cache-control':'no-store'});res.end();return true;}
     if(!url.pathname.startsWith('/operator/'))return false;
-    const expected='127.0.0.1:' + req.socket.localPort;
-    if(req.headers.host!==expected){send(res,403,{error:{code:'CONSOLE_HOST',message:'Use this operator’s original loopback address.'}});return true;}
+    const explicit='127.0.0.1:' + req.socket.localPort;
+    const origin=new URL('http://'+explicit).origin;
+    const hosts=new Set([explicit,new URL(origin).host]);
+    if(!hosts.has(req.headers.host)){send(res,403,{error:{code:'CONSOLE_HOST',message:'Use this operator’s original loopback address.'}});return true;}
     if(assets.has(url.pathname) && req.method==='GET'){
       const [file,type]=assets.get(url.pathname),bytes=await readFile(new URL(file,ROOT));
       res.writeHead(200,{...headers(type),'content-length':bytes.length});res.end(bytes);return true;
     }
     if(!url.pathname.startsWith('/operator/api/')){send(res,404,{error:{code:'CONSOLE_ROUTE',message:'Choose an operator page.'}});return true;}
-    if(req.headers.origin && req.headers.origin!=='http://'+expected){
+    if(req.headers.origin && req.headers.origin!==origin && req.headers.origin!=='http://'+explicit){
       send(res,403,{error:{code:'CONSOLE_ORIGIN',message:'Use the original operator page.'}});return true;
     }
     let context;

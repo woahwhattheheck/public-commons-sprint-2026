@@ -1,0 +1,22 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-console",
+  "description": "Saved merchant operator requests, native returns and complete customer receiving",
+  "commands": {
+    "merchant-console-application-receive": "stellar-forge/mcp-merchant-operator/receiving/console-applications.mjs"
+  },
+  "commandDescriptions": {
+    "merchant-console-application-receive": "Continue the original merchant customer through saved Applications, private console Open, Stop and reopen"
+  },
+  "exports": {
+    "./merchant/console/managed": "./source/stellar-forge/mcp-merchant-operator/console/managed.mjs",
+    "./merchant/console/application": "./source/stellar-forge/mcp-merchant-operator/console/application.mjs",
+    "./merchant/console/receiving": "./source/stellar-forge/mcp-merchant-operator/receiving/console-applications.mjs"
+  },
+  "applicationProviders": {
+    "merchant-console": "stellar-forge/mcp-merchant-operator/console/application-provider.mjs"
+  },
+  "supportFiles": [
+    "stellar-forge/mcp-merchant-operator/console/APPLICATIONS.md"
+  ]
+}

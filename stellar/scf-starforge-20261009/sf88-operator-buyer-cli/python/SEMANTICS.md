@@ -2,7 +2,39 @@
 
 The original SF88/SF100 dataset customer retains the reviewed source dictionary alongside the acquired rows. Python can open the dictionary, import the same complete delivery into the existing SQLite database, show definitions beside reviewed SQL aliases, and carry the original source meaning into saved analysis, complete query exports, reports and workbooks.
 
-This is the customer continuation of [the CKAN semantic workflow](../../sf30-seller-sdk/ckan/SEMANTIC_WORKFLOW.md). The existing acquisition, dataset delivery, SQLite, query, report and workbook engines remain the operating path. The full maintained Python component supplies the new module; there is no new runtime dependency or database service.
+This is the shared customer continuation of [the CKAN semantic workflow](../../sf30-seller-sdk/ckan/SEMANTIC_WORKFLOW.md) and the [original OData source product](../../sf30-seller-sdk/odata/). The existing acquisition, dataset delivery, SQLite, query, report and workbook engines remain the operating path. The full maintained Python component supplies the new module; there is no new runtime dependency or database service.
+
+## Preserve the producer's source meaning
+
+The receiving engine recognizes two versioned semantic documents. Their original identities, complete physical schema, selected fields and retained source must agree before the existing customer import can run.
+
+| Producer document | Required source contract | Original SF88 semantic response header |
+| --- | --- | --- |
+| stellar-forge.ckan-semantics.v1 | Retained CKAN capture and reviewed field/CSVW projection | x-ckan-semantics-sha256 |
+| stellar-forge.odata-semantics.v1 | provider odata4, protocolVersion 4.0 or 4.01, service and schema URLs, entity container/set/type, retained CSDL schema and capture digests | x-dataset-semantics-sha256 |
+
+Both use the existing semantics query parameter and x-dataset-snapshot response header. A retained response's selected semantic header must match its body; another recognized semantic header, when present, must agree too. Every page retains the same reviewed meaning, source snapshot and original request/query chain. These producer document names are separate from the receiving format: an original completed SF88 session is SF88_SESSION, while an already finalized direct SF100 room is SF100_SCAN.
+
+The shared Python helper API remains read_delivery_semantics, sql_descriptor, sql_context and same_json. A warehouse or native host composes these original helpers and preserves the document unchanged. It does not need a second provider parser or another semantic validation format.
+
+### OData values and presence states
+
+The original OData publisher exposes each selected source property as an ordered physical pair. The dictionary explicitly joins the value column's stateColumn to the state column, and the state column's valueColumn back to the value. Both retain the same sourceField. The state column is a required string with exactly the declared source-presence states value, null and missing.
+
+| Physical field in the retained Northwind Orders projection | Original source meaning |
+| --- | --- |
+| OrderID | The reviewed value representation of the CSDL OrderID property; sourceDefinition retains the Edm.Int32 type and original entity-key declaration. |
+| OrderID_state | Whether OrderID was present with a value, present as null, or absent from the original source record. Its sourceDefinition carries role source-presence and sourcePath OrderID. |
+| Freight | The reviewed representation of the original Freight property, with its CSDL type and encoding retained. |
+| Freight_state | The source-presence state for Freight, independent of the physical value representation. |
+
+The receiving engine validates those reciprocal pair links and the states actually present in every selected page. Keep the state field when a downstream consumer needs to distinguish an absent property from an explicit source null. A blank physical string can represent an original source null or missing value under the reviewed projection; read the state field instead of inferring source presence from that string.
+
+sourceDefinition describes the original CSDL property, including its type, key membership, nullability and retained facets. projectedDefinition describes the physical customer field. Those two nullability/type descriptions can differ because the publisher preserves source presence and source values through explicit encodings. Inspect encoding and sourceDefinition before choosing calculations. Decimal and Int64 values that the producer preserves as exact text remain exact text in the receiver; structured values encoded as JSON text retain that reviewed representation. The receiver does not silently coerce them to a floating-point number.
+
+The published primary key names value columns. SQL aliases map those physical columns to the reviewed destination names, and the original SQL descriptor states whether the complete key was selected. State columns do not become extra entity keys. Source key declarations remain descriptive; the original immutable-import table does not create an unreviewed uniqueness constraint.
+
+A selected SQL alias changes the SQL name while preserving the dictionary's original published name, sourceField and meaning. For example, mapping OrderID to order_id leaves OrderID_state available under its original physical name. The SQL descriptor records OrderID → order_id, and the full dictionary retains the original reciprocal pair.
 
 ## Receive the original complete delivery
 
@@ -261,6 +293,20 @@ python3 -B \
 ```
 
 Use --report instead of --scan for an existing original SF88 delivery report. Use --columns to supply the actual reviewed mapping for that delivery. The example's two saved queries retain all observations and count the same selected rows.
+
+For the original OData Orders customer room, the same complete program uses its actual finalized scan and reviewed physical alias:
+
+```bash
+PYTHONPATH=/absolute/checkout/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python \
+python3 -B \
+  /absolute/checkout/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/examples/semantic_analysis.py \
+  --scan /absolute/private/odata-finalized-scan.json \
+  --database /absolute/private/odata-analysis \
+  --out /absolute/private/odata-customer \
+  --columns '{"OrderID":"order_id"}'
+```
+
+Use the original producer's complete finalized room and scan. The program derives its row count, physical types, key mapping and source meaning from that retained input and writes the same query, report, workbook and reopened database products. Its separate customer workspace leaves the producer's capture and customer room unchanged.
 
 The complete operation:
 

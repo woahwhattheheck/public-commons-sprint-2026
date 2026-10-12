@@ -1,5 +1,7 @@
 # Embedded merchant operator
 
+Use [Merchant operator in Applications](APPLICATIONS.md) to save the original configuration, connect its installed runtime, and manage Open, Stop and reopening with the same console workspace.
+
 The operator console adds a durable browser workspace to the existing authenticated merchant host. It uses the configured tool catalog, the original provider operations, the original authorization and the existing customer file reader. Applications remains the authority for selecting and starting a merchant profile.
 
 The console contains four working areas:
