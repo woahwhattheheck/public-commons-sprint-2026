@@ -11,7 +11,7 @@ import stat
 import subprocess
 import sys
 
-APPLICATION_COMMIT = "02e086a1feeb551a1531f573d2affe7eb40a818e"
+APPLICATION_COMMIT = "ef4c6c57b08bb67b750aa251ccdaeb79dc84031b"
 REPOSITORY = "woahwhattheheck/public-commons-sprint-2026"
 RECEIVER_SHA256 = "fedc33b92a755fe6e0cdbe7fe9a06f53c7bc19ab49e8115ea2d51512b4025c58"
 PRODUCT = Path("stellar/scf-starforge-20261009/sf30-seller-sdk/sdmx/oecd")

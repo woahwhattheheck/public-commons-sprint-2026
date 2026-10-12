@@ -4,6 +4,16 @@ This handover installs and opens the complete OECD leading-indicator application
 
 Application PR [2171](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2171) is merged at `13953daeb150a90509d1b9e491b22ec5dfd5d767`. The receiving source at `02e086a1feeb551a1531f573d2affe7eb40a818e` includes both reviewed Python startup corrections: restore the OECD module path after the original native imports, and register the explicitly named XML workspace module before its dataclasses execute. The latter reuses only the matching original module and rolls back its own registration after an import failure.
 
+## Source-rights edition and original operation continuation
+
+The complete following source joins all 13 postimages from merged [attribution PR 2273](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2273) at `ef4c6c57b08bb67b750aa251ccdaeb79dc84031b`. It preserves the original selected native engines and adds the complete source citation and downstream acknowledgment to newly authored report version 2. HTML, JSON, CSV, `SOURCE_RIGHTS.json`, and `SOURCE_RIGHTS.md` travel together. Previously saved version-1 reports retain their original bytes and operations.
+
+This complete following carrier contains 290 files. The original 288-file closure remains present, with the reviewed postimages and two new rights files. Each application member in `SOURCE_SELECTION.json` names its exact original `sourceCommit`, Git blob, SHA-256, byte count and mode. The three receiving auxiliaries identify this following edition and preserve the unchanged Git receiver.
+
+Download `OECD_ATTRIBUTION_SOURCE_Part_01_of_2.zip`, `OECD_ATTRIBUTION_SOURCE_Part_02_of_2.zip`, and `OECD_ATTRIBUTION_SOURCE_TRANSFER.json` from the same original source page. Download the complete `receive-oecd-attribution.py.txt` launcher and unchanged `git-object-receiving.py.txt` alongside them. Python can run these literal .py.txt filenames.
+
+For the commands below, use those following filenames and the exact following projection commit from its index. Select a distinct private source cache and source directory, while retaining the original project directory and its existing operation ID or receiving configuration. Keep the original native process running from its original source until it returns; the following source is adopted at that process boundary. The default source-only operation replays a retained completed selection exactly. New operator saves use report version 2; the browser and typed client can create a following revision of the selected existing native project.
+
 ## Receive the complete source
 
 The [original source page](https://app.notion.com/p/3f7dd77231008187956ddf0410cb503d) retains the actual native ZIP attachments and exact transfer index. Download every named part, `OECD_SOURCE_TRANSFER.json`, `git-object-receiving.py`, and `receive-oecd.py` into one original directory. Keep each ZIP filename unchanged and beside the index.
@@ -23,10 +33,10 @@ Use resolved absolute paths. The source cache, source directory and private proj
 Run the source-only authoring operation first on the accepting host:
 
 ```sh
-python3 /ABS/HANDOVER/receive-oecd.py \
-  --source-transfer /ABS/HANDOVER/OECD_SOURCE_TRANSFER.json \
+python3 /ABS/HANDOVER/receive-oecd-attribution.py.txt \
+  --source-transfer /ABS/HANDOVER/OECD_ATTRIBUTION_SOURCE_TRANSFER.json \
   --commit EXACT_PROJECTION_COMMIT_FROM_INDEX \
-  --receiver /ABS/HANDOVER/git-object-receiving.py \
+  --receiver /ABS/HANDOVER/git-object-receiving.py.txt \
   --cache /ABS/OECD_SOURCE_CACHE \
   --source /ABS/OECD_SOURCE \
   --project /ABS/OECD_PROJECT \
@@ -44,7 +54,7 @@ The launched original `examples/create-briefing.mjs` completes these operations 
 3. Save a second editorial edition that carries the customer handover note and retains the exact original observation snapshot.
 4. Export the revised full native dataset and original project ZIP.
 5. Create the separately named `reopened-customer-project` workspace and import that revised original ZIP.
-6. Compare every source row and the exact original HTML, JSON and CSV report bytes after import.
+6. Compare every source row and the exact original report and source-rights file bytes after import.
 7. Return the real capture, both saved edition records, dataset, packet size/hash/path, separate customer workspace identity, and browser launch commands.
 
 The input has 231 original observations for Canada, Germany, France, the United Kingdom, Italy, Japan and the United States, selected from January 2024 onward. Its monthly amplitude-adjusted index retains the provider's complete native values and metadata. The report computes exact Decimal calendar comparisons and marks missing baselines explicitly. The report's selected date window and the customer's complete retained source series are recorded separately.
@@ -60,10 +70,10 @@ The [original F1CB owner thread](https://tokenjunkielabs.slack.com/archives/C0BT
 The product's `examples/receiving.json` documents the original receiving configuration fields. The operator supplies its actual retained configuration. Launch it with the same source carrier and original project:
 
 ```sh
-python3 /ABS/HANDOVER/receive-oecd.py \
-  --source-transfer /ABS/HANDOVER/OECD_SOURCE_TRANSFER.json \
+python3 /ABS/HANDOVER/receive-oecd-attribution.py.txt \
+  --source-transfer /ABS/HANDOVER/OECD_ATTRIBUTION_SOURCE_TRANSFER.json \
   --commit EXACT_PROJECTION_COMMIT_FROM_INDEX \
-  --receiver /ABS/HANDOVER/git-object-receiving.py \
+  --receiver /ABS/HANDOVER/git-object-receiving.py.txt \
   --cache /ABS/OECD_SOURCE_CACHE \
   --source /ABS/OECD_SOURCE \
   --project /ABS/OECD_NATIVE_PROJECT \
