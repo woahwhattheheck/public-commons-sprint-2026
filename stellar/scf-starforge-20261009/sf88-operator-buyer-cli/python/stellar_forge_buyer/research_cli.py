@@ -13,6 +13,7 @@ from .research_documents import ResearchDocumentSource
 from .research_citation_cli import add_citation_commands, run_citation_command
 from .research_extraction_cli import add_extraction_commands, run_extraction_command
 from .research_eligibility_cli import add_eligibility_commands, run_eligibility_command
+from .research_customer_cli import add_customer_commands, run_customer_command
 
 _READ = {"status", "dossiers", "metadata", "section", "compare", "documents-list",
          "documents-review", "documents-elements", "pipelines-list", "pipelines-operation",
@@ -38,6 +39,7 @@ def parser():
     add_citation_commands(commands)
     add_extraction_commands(commands)
     add_eligibility_commands(commands)
+    add_customer_commands(commands)
     commands.add_parser("status")
     saved = commands.add_parser("calls")
     saved.add_argument("--offset", type=int, default=0)
@@ -69,7 +71,9 @@ def parser():
 def main(argv=None):
     arguments = parser().parse_args(argv)
     try:
-        if arguments.command.startswith("eligibility-"):
+        if arguments.command.startswith("customer-"):
+            result = run_customer_command(arguments)
+        elif arguments.command.startswith("eligibility-"):
             result = run_eligibility_command(arguments)
         elif arguments.command.startswith("extraction-"):
             result = run_extraction_command(arguments)
