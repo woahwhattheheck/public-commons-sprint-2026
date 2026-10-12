@@ -374,8 +374,8 @@ try{
         }
       };
       const first=await mark('first-prefix-receiving',async()=>{
-        await resumeWithStatus('capture',false);
         if(!progress.exportIntent){
+          await resumeWithStatus('capture',false);
           const current=await healthRead(operationId);
           progress.exportIntent={throughSequence:current.operation.version,expectedSnapshot:current.operation.snapshot};
           await checkpoint();
@@ -422,7 +422,12 @@ try{
       });
       const closed=await mark('workspace-close-and-reopen',async()=>{
         let current=await healthRead(operationId);
-        if(current.operation.runningHere){await workspace.close();workspace=null;await openWorkspace();current=await healthRead(operationId);}
+        if(current.operation.phase!=='INTERRUPTED'||current.operation.reason!=='workspace_closed'){
+          // An ended prior owner is a different observed transition. Resume the
+          // original UUID inside its remaining budget before the intended close.
+          if(!current.operation.runningHere)current=await resumeWithStatus('close-owned',false,true);
+          await workspace.close();workspace=null;await openWorkspace();current=await healthRead(operationId);
+        }
         assert.equal(current.operation.phase,'INTERRUPTED');assert.equal(current.operation.reason,'workspace_closed');
         assert.equal(current.operation.deadlineAt,progress.originalDeadline);
         return {epoch:current.operation.epochs,version:current.operation.version,reason:current.operation.reason};
