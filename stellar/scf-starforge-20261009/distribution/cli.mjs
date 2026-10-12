@@ -211,6 +211,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   graphql-deployment                         Prepare original GraphQL release and Linux host handoffs
   woo-seller / woo-buyer                     Connect existing WooCommerce orders to native checkout
   grant-workspace                           Revise, export and receive the original SF47 grant delivery plans
+  grant-demo                                Receive, inspect, open and export the original completed grant purchase
   woo-operator                              Review original Stellar transfers and complete selected Woo orders
   woo-refund                                Record verified order credits and receive original refund handoffs
 
