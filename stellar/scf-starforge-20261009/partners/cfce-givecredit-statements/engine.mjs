@@ -1,7 +1,7 @@
 // MIT. Exact donor, pooled payout and carbon attribution over distinct original source editions.
 import {need,copy,plain,text,id,units,decimal,dayOf,windowOf,inWindow,atoms,network,
   validateSourceEdition,sourceSummary,keyForReceipt,txKey} from './source.mjs';
-import {canonical} from '../stellarcarbon-statements/engine.mjs';
+import {canonical,compareEditions as compareCarbonEditions} from '../stellarcarbon-statements/engine.mjs';
 import {paymentFundingCapacity,compareNativeOrder,paymentBeforePayout} from './funding.mjs';
 export {canonical};
 export const WORKSPACE_SCHEMA='stellar-forge.givecredit-workspace.v1';
@@ -518,16 +518,37 @@ export function compareEditions(state,beforeId,afterId){
   const before=editionFor(state,beforeId),after=editionFor(state,afterId);
   need(before.kind===after.kind,'COMPARISON_KIND','Compare two editions of the same source kind.');
   if(before.kind==='ledger'||before.kind==='carbon')need(before.metadata.network===after.metadata.network,'COMPARISON_NETWORK','Compare editions from the same network.');
-  const leftTables=before.kind==='carbon'?before.carbon.tables:before.tables,rightTables=after.kind==='carbon'?after.carbon.tables:after.tables,tables={};
+  if(before.kind==='carbon'){
+    const comparison=compareCarbonEditions({editions:[{...before.carbon,id:before.id},{...after.carbon,id:after.id}]},before.id,after.id);
+    const tables=Object.fromEntries(Object.entries(comparison.tables).map(([name,row])=>[name,{...row,
+      added:row.added.map(value=>({key:value.key,row:value.after})),removed:row.removed.map(value=>({key:value.key,row:value.before}))}]));
+    return {schema:'stellar-forge.givecredit-comparison.v1',before:{id:before.id,label:before.label},after:{id:after.id,label:after.label},kind:before.kind,tables};
+  }
+  const leftTables=before.tables,rightTables=after.tables,tables={};
+  const coverageFor=(source,table)=>{
+    const declared=source.metadata.coverage;
+    if(source.kind==='registry'&&Array.isArray(declared))return {available:declared.includes(table),scope:'Original exported registry tables'};
+    if(source.kind==='registry'&&plain(declared)&&Object.keys(declared).length){
+      const record=declared[table];
+      return {available:Boolean(record)&&!['capturing','interrupted'].includes(record.status),scope:record?.scope||null};
+    }
+    return {available:Array.isArray(source.tables[table]),scope:copy(source.metadata.selection||null)};
+  };
   const identity=(name,row)=>name==='transactions'?txKey(row):row.key||row.id||
     (name==='sink_status'?row.sinking_tx_hash+':'+row.certificate_id:name==='retirement_from_block'?row.retirement_id+':'+row.block_hash:
     name==='distribution_txs'?row.toid:name==='minted_blocks'?row.serial_hash:row.hash||row.serial_hash||row.certificate_id||row.toid);
   for(const table of [...new Set([...Object.keys(leftTables),...Object.keys(rightTables)])]){
     const left=new Map((leftTables[table]||[]).map(row=>[identity(table,row),row])),right=new Map((rightTables[table]||[]).map(row=>[identity(table,row),row]));
-    const added=[],removed=[],changed=[];
+    const added=[],removed=[],changed=[],coverage={before:coverageFor(before,table),after:coverageFor(after,table)};
+    if(!coverage.before.available||!coverage.after.available){
+      tables[table]={comparisonStatus:'unavailable',coverage,
+        note:!coverage.before.available&&!coverage.after.available?'Neither source acquired this table.':!coverage.before.available?'The earlier source did not acquire this table.':'The later source did not acquire this table.',
+        counts:{before:left.size,after:right.size,added:null,removed:null,changed:null},added,removed,changed};
+      continue;
+    }
     for(const [key,row] of right)if(!left.has(key))added.push({key,row:copy(row)});else if(canonical(left.get(key))!==canonical(row))changed.push({key,before:copy(left.get(key)),after:copy(row)});
     for(const [key,row] of left)if(!right.has(key))removed.push({key,row:copy(row)});
-    tables[table]={counts:{before:left.size,after:right.size,added:added.length,removed:removed.length,changed:changed.length},added,removed,changed};
+    tables[table]={comparisonStatus:'available',coverage,note:'Differences between retained original table populations; each edition keeps its acquisition scope.',counts:{before:left.size,after:right.size,added:added.length,removed:removed.length,changed:changed.length},added,removed,changed};
   }
   return {schema:'stellar-forge.givecredit-comparison.v1',before:{id:before.id,label:before.label},after:{id:after.id,label:after.label},kind:before.kind,tables};
 }

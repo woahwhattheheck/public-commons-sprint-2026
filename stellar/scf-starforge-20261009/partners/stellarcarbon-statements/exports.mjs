@@ -90,9 +90,19 @@ export function statementFiles(report,options={}) {
 export function comparisonCSV(report) {
   const rows=[];
   for(const [table,changes] of Object.entries(report.tables)){
+    if(changes.comparisonStatus==='unavailable'){
+      rows.push({table,key:'',change:'UNAVAILABLE',field:'',before:changes.counts.before,after:changes.counts.after,
+        beforeAvailable:changes.coverage.before.available,afterAvailable:changes.coverage.after.available,note:changes.note});
+      continue;
+    }
     for(const row of changes.added)rows.push({table,key:row.key,change:'ADDED',field:'',before:'',after:row.after});
     for(const row of changes.removed)rows.push({table,key:row.key,change:'REMOVED',field:'',before:row.before,after:''});
-    for(const row of changes.changed)for(const field of row.fields)rows.push({table,key:row.key,change:'CHANGED',field:field.name,before:field.before,after:field.after});
+    for(const row of changes.changed)for(const field of row.fields)rows.push({table,key:row.key,change:'CHANGED',field:field.name,before:field.before,after:field.after,note:field.note||''});
+    for(const row of changes.sourceDifferences||[]){
+      for(const field of row.representationChanges)rows.push({table,key:row.key,change:'REPRESENTATION',field:field.name,before:field.before,after:field.after,note:'Equivalent typed value; original source formatting differs.'});
+      for(const field of row.fieldAvailabilityChanges)rows.push({table,key:row.key,change:'FIELD_AVAILABILITY',field:field.name,before:field.before,after:field.after,
+        beforeAvailable:field.beforeAvailable,afterAvailable:field.afterAvailable,note:'The field is reported by only one source edition.'});
+    }
   }
-  return csv(['table','key','change','field','before','after'],rows);
+  return csv(['table','key','change','field','before','after','beforeAvailable','afterAvailable','note'],rows.map(row=>({beforeAvailable:report.tables[row.table].coverage?.before.available??true,afterAvailable:report.tables[row.table].coverage?.after.available??true,...row})));
 }
