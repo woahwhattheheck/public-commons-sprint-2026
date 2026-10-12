@@ -10,7 +10,7 @@ const fmt = v => Number.isFinite(Number(v)) ? Number(v).toLocaleString() : Strin
 const attr = (m, key) => m && m[key] ? m[key].value : '';
 const S = {view:'catalog', state:null, meta:null, source:null, build:null, comparison:null, query:null, catalog:null,
   selected:{}, drafts:{}, cache:new Map(), sourceOffset:0, sourceRows:null, nativeRows:null, nativeCursors:[],
-  changes:null, changesOffset:0, mapping:null, mappingSource:null, busy:false, storageKey:null, pending:null, review:null};
+  changes:null, changesOffset:0, mapping:null, mappingSource:null, handoff:{sourceId:null,source:null,latestHead:null,history:null,selectedRevision:null,store:null,received:null}, busy:false, storageKey:null, pending:null, review:null};
 let token = location.hash.slice(1);
 if (token) { sessionStorage.setItem('erddap-capability', token); history.replaceState(null, '', location.pathname); }
 else token = sessionStorage.getItem('erddap-capability') || '';
@@ -19,8 +19,9 @@ function fail(error) { $('#error').hidden = false; $('#error').textContent = err
 function clearError() { $('#error').hidden = true; $('#error').textContent = ''; }
 function saveDrafts() {
   if (!S.storageKey) return;
-  try { localStorage.setItem(S.storageKey, JSON.stringify({selected:S.selected,drafts:S.drafts,pending:S.pending,view:S.view})); }
-  catch (_) { status('This browser could not save its draft. Keep the original acquisition operation ID before closing.'); }
+  try { const drafts=Object.fromEntries(Object.entries(S.drafts).filter(([key])=>!key.startsWith('provider-handoff:')));localStorage.setItem(S.storageKey, JSON.stringify({selected:S.selected,drafts,pending:S.pending,view:S.view})); }
+  catch (_) { status('Browser settings could not be saved. Keep this page open while completing the current operation.'); }
+  void persistHandoffDrafts().catch(()=>status('The provider draft is still open. Browser storage could not retain it; a save will retry its exact draft write.'));
 }
 function path(id) { return encodeURIComponent(id); }
 async function api(route, options = {}) {
@@ -49,7 +50,7 @@ async function busy(label, action) {
   $$('button').forEach(b => { b.dataset.wasDisabled = b.disabled ? '1' : '0'; b.disabled = true; });
   try { await action(); }
   catch (error) { fail(error); status('The saved source and completed operations remain available.'); }
-  finally { S.busy = false; $$('button').forEach(b => { b.disabled = b.dataset.wasDisabled === '1'; delete b.dataset.wasDisabled; }); }
+  finally { S.busy = false; $('button').forEach(b => { if(Object.prototype.hasOwnProperty.call(b.dataset,'wasDisabled')){b.disabled = b.dataset.wasDisabled === '1'; delete b.dataset.wasDisabled;} }); }
 }
 function field(id, label, value = '', extra = '') {
   return '<label class="field"><span>' + esc(label) + '</span><input id="' + esc(id) + '" value="' + esc(value) + '" ' + extra + '></label>';
@@ -107,11 +108,12 @@ async function refresh(initial = false) {
   $('#workspace-name').textContent = S.state.workspace.name;
   $('#workspace-counts').textContent = fmt(S.state.sources.length) + ' sources · ' + fmt(S.state.builds.length) + ' editions';
   $('#source-count').textContent = S.state.sources.length; $('#edition-count').textContent = S.state.builds.length;
+  if(S.view==='handoffs')await loadHandoff(S.selected.handoffSource||S.selected.source||S.state.sources[0]?.id||null);
   saveDrafts(); render();
 }
 function render() {
   $$('nav [data-view]').forEach(b => b.setAttribute('aria-current',b.dataset.view === S.view ? 'page' : 'false'));
-  const views = {catalog:renderCatalog,sources:renderSources,editions:renderEditions,compare:renderCompare,receive:renderReceive};
+  const views = {catalog:renderCatalog,sources:renderSources,editions:renderEditions,compare:renderCompare,receive:renderReceive,handoffs:renderHandoffs};
   $('#main').innerHTML = (views[S.view] || renderCatalog)();
 }
 function pendingPanel() {
@@ -389,6 +391,8 @@ function renderReceive() {
 }
 
 function captureInputs(eventTarget) {
+  captureHandoff(eventTarget);
+  if($('#handoff-compare-before')) { S.handoff.compareBefore=$('#handoff-compare-before').value;S.handoff.compareAfter=$('#handoff-compare-after').value; }
   if ($('#provider-server')) S.drafts.catalog = {server:$('#provider-server').value,text:$('#catalog-text').value,
     datasetId:$('#dataset-id').value,protocol:$('#dataset-protocol').value};
   if ($('#query-label')) collectSelection();
@@ -477,6 +481,561 @@ function mappingReview(raw) {
     table(['Source field','Original type','Native field','Native type','Nullable','Encoding'],
       p.columns.map(c => [c.source,c.sourceType,c.name,c.type,c.nullable,c.encoding])) + detail('Complete mapping',p)};
 }
+
+/* Provider handoff drafts borrow this process's original source and capability. */
+function handoffKey(id) { return 'provider-handoff:' + id; }
+function handoffRecord() {
+  const id=S.handoff.sourceId;
+  return id ? S.drafts[handoffKey(id)] : null;
+}
+function handoffProfile() {
+  const r=handoffRecord();
+  if(!r)throw new Error('Open a retained source for provider intake.');
+  if(r.fieldErrors && Object.keys(r.fieldErrors).length)throw new Error('Complete the marked structured fields before review.');
+  const value=JSON.parse(r.text);
+  if(!value||Array.isArray(value)||value.sourceId!==S.handoff.sourceId)
+    throw new Error('Keep the complete profile bound to this exact retained source.');
+  return value;
+}
+function handoffAt(value,parts) { for(const key of parts){if(value==null)return undefined;value=value[key];}return value; }
+function handoffSet(value,parts,next) {
+  if(!parts.length||parts.some(x=>['__proto__','constructor','prototype'].includes(String(x))))
+    throw new Error('Unsupported profile field.');
+  let target=value;
+  for(const key of parts.slice(0,-1)){
+    if(!target||typeof target!=='object'||!Object.prototype.hasOwnProperty.call(target,key))
+      throw new Error('Reopen the current complete profile before editing this field.');
+    target=target[key];
+  }
+  target[parts[parts.length-1]]=next;
+}
+function handoffCanonical(value) {
+  if(Array.isArray(value))return '['+value.map(handoffCanonical).join(',')+']';
+  if(value&&typeof value==='object')return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+handoffCanonical(value[k])).join(',')+'}';
+  return JSON.stringify(value);
+}
+function handoffChanged() {
+  const r=handoffRecord();if(!r)return false;
+  try{return handoffCanonical(JSON.parse(r.text))!==handoffCanonical(r.baseProfile)||Boolean(Object.keys(r.fieldErrors||{}).length);}
+  catch(_){return true;}
+}
+function handoffField(parts,label,options={}) {
+  const record=handoffRecord(),profile=JSON.parse(record.text),value=handoffAt(profile,parts),key=JSON.stringify(parts);
+  const id=options.id||'handoff-'+parts.join('-');
+  const attr=' id="'+esc(id)+'" data-handoff-path="'+esc(key)+'"';
+  const locked=options.readonly?' readonly':'';
+  const note=options.hint?'<span class="hint">'+esc(options.hint)+'</span>':'';
+  if(typeof value==='boolean'||options.checkbox)return '<label class="check"><input type="checkbox"'+attr+(value?' checked':'')+
+    (options.readonly?' disabled':'')+'><span>'+esc(label)+note+'</span></label>';
+  let control;
+  if(options.options){
+    control='<select'+attr+(options.readonly?' disabled':'')+'>'+options.options.map(item=>{
+      const [k,text]=Array.isArray(item)?item:[item,item];
+      return '<option value="'+esc(k)+'"'+(String(value==null?'':value)===String(k)?' selected':'')+'>'+esc(text)+'</option>';
+    }).join('')+'</select>';
+  } else if(Array.isArray(value)||(value&&typeof value==='object')||options.json){
+    const raw=record.rawFields&&Object.prototype.hasOwnProperty.call(record.rawFields,key)?record.rawFields[key]:pretty(value==null?[]:value);
+    control='<textarea'+attr+' data-handoff-json="1" class="code" rows="4"'+locked+'>'+esc(raw)+'</textarea>';
+  } else if(options.multiline){
+    control='<textarea'+attr+' rows="'+(options.rows||3)+'"'+locked+'>'+esc(value==null?'':value)+'</textarea>';
+  } else control='<input'+attr+' type="'+esc(options.type||'text')+'" value="'+esc(value==null?'':value)+'"'+locked+'>';
+  return '<label class="field'+(options.wide?' wide':'')+'"><span>'+esc(label)+'</span>'+control+note+
+    (record.fieldErrors&&record.fieldErrors[key]?'<span class="hint" role="alert">'+esc(record.fieldErrors[key])+'</span>':'')+'</label>';
+}
+function captureHandoff(target) {
+  if(!target||S.view!=='handoffs'||!handoffRecord())return;
+  const record=handoffRecord();
+  if(target.id==='handoff-json'){
+    record.text=target.value;record.rawProfile=true;record.rawFields={};record.fieldErrors={};record.preview=null;saveDrafts();return;
+  }
+  if(!target.dataset.handoffPath)return;
+  const parts=JSON.parse(target.dataset.handoffPath),key=JSON.stringify(parts);
+  const profile=JSON.parse(record.text);
+  record.fieldErrors=record.fieldErrors||{};record.rawFields=record.rawFields||{};
+  let next=target.type==='checkbox'?target.checked:target.value;
+  if(target.dataset.handoffJson){
+    try { next=JSON.parse(target.value);delete record.fieldErrors[key];delete record.rawFields[key]; }
+    catch(_) {record.rawFields[key]=target.value;record.fieldErrors[key]='Enter complete JSON with the original value types.';record.preview=null;saveDrafts();return;}
+  }
+  if(target.multiple)next=Array.from(target.selectedOptions).map(x=>x.value);
+  handoffSet(profile,parts,next);
+  if(parts[parts.length-1]!=='reviewed'){
+    const group=parts[0]==='stations'||parts[0]==='variables'?parts.slice(0,2):parts.slice(0,1);
+    const object=handoffAt(profile,group);
+    if(object&&typeof object==='object'&&Object.prototype.hasOwnProperty.call(object,'reviewed')){
+      object.reviewed=false;
+      const checkbox=$('input[data-handoff-path]').find(x=>x.dataset.handoffPath===JSON.stringify([...group,'reviewed']));
+      if(checkbox)checkbox.checked=false;
+    }
+  }
+  record.text=pretty(profile);record.preview=null;
+  const marker=$('#handoff-draft-state');if(marker)marker.textContent='Unsaved profile changes';
+  saveDrafts();
+}
+function handoffReview(review) {
+  if(!review)return empty('Review this profile','Check the actual source, station coverage, time interpretation and disclosures before saving.');
+  return '<div class="notice" id="handoff-review-result" data-ready="'+Boolean(review.ready)+'"><strong>'+
+    (review.ready?'Ready for provider export':'Provider review requires attention')+'</strong><p>'+fmt(review.errorCount||0)+' errors · '+
+    fmt(review.warningCount||0)+' warnings · '+fmt(review.rowCount)+' original rows · '+fmt(review.stationCount)+' station definitions</p></div>'+
+    ((review.issues||[]).length?'<div class="table-scroll"><table><thead><tr><th>Level</th><th>Field</th><th>Review issue</th><th>Count</th><th>Source examples</th></tr></thead><tbody>'+
+      review.issues.map(x=>'<tr><td>'+esc(x.severity)+'</td><td class="wrap">'+esc(x.field||'')+'</td><td class="wrap"><strong>'+esc(x.message)+'</strong><br><code>'+esc(x.code)+'</code></td><td>'+
+        esc(x.count==null?'':x.count)+'</td><td class="wrap">'+esc(x.examples==null?'':pretty(x.examples))+'</td></tr>').join('')+'</tbody></table></div>':'')+
+    detail('Retained time coverage, missing values and source editions',{timeRange:review.timeRange,observedStations:review.observedStations,
+      missingByColumn:review.missingByColumn,emptyStringsByColumn:review.emptyStringsByColumn,csvComparison:review.csvComparison})+
+    detail('Explicit transformation and value policy',{valuePolicy:review.valuePolicy,transformations:review.transformations});
+}
+function handoffDiff(before,after){
+  const changes=[];
+  const walk=(a,b,parts,ap=true,bp=true)=>{
+    if(ap&&bp&&handoffCanonical(a)===handoffCanonical(b))return;
+    if(ap&&bp&&a&&b&&typeof a==='object'&&typeof b==='object'&&Array.isArray(a)===Array.isArray(b)){
+      const keys=Array.from(new Set([...Object.keys(a),...Object.keys(b)]));
+      for(const key of keys)walk(a[key],b[key],[...parts,key],Object.prototype.hasOwnProperty.call(a,key),Object.prototype.hasOwnProperty.call(b,key));
+    }else changes.push({field:parts.join('.'),beforePresent:ap,afterPresent:bp,before:a,after:b});
+  };
+  walk(before,after,[]);
+  const cell=(v,p)=>!p?'<span class="missing">Field absent</span>':scalar(v);
+  return '<p>'+fmt(changes.length)+' profile fields changed.</p>'+(changes.length?'<div class="table-scroll"><table><thead><tr><th>Field</th><th>Before</th><th>After</th></tr></thead><tbody>'+
+    changes.slice(0,300).map(x=>'<tr><td class="wrap">'+esc(x.field)+'</td><td class="wrap">'+cell(x.before,x.beforePresent)+'</td><td class="wrap">'+cell(x.after,x.afterPresent)+'</td></tr>').join('')+
+    '</tbody></table></div>'+(changes.length>300?detail('Complete profile comparison',changes):''):'');
+}
+function handoffSourceColumns(){return S.handoff.source?.inventory?.columns||[];}
+function handoffColumns(blank=true){return [...(blank?[['','Select original field']]:[]),...handoffSourceColumns().map(x=>[x.name,x.name])];}
+function handoffOverview(profile){
+  const source=S.handoff.source,inventory=source.inventory;
+  return '<section class="panel"><h3>Dataset and attribution</h3><div class="form-grid">'+
+    handoffField(['title'],'Dataset title',{id:'handoff-title'})+handoffField(['organization'],'Provider organization',{id:'handoff-organization'})+
+    handoffField(['reviewedBy'],'Profile reviewed by',{id:'handoff-reviewed-by'})+
+    handoffField(['dataEdition'],'Source edition policy',{options:[['require-equivalent','Require equivalent JSON and CSV'],['canonical-json','Use retained canonical JSON explicitly']],
+      hint:'The original JSON and CSV responses stay in the bundle. This selects the authoritative observation values when the provider formats differ.'})+
+    handoffField(['notes'],'Provider handoff notes',{multiline:true,wide:true})+'</div>'+
+    '<dl class="fact-list">'+fact('Source SHA-256',source.id)+fact('Dataset route',inventory.datasetId)+fact('Protocol',inventory.protocol)+
+    fact('Original rows',inventory.rowCount)+fact('JSON / CSV',inventory.csvComparison?.status)+'</dl>'+
+    detail('Original provider metadata and rights',inventory.metadata||{})+'</section>';
+}
+function handoffContacts(profile){
+  let html='<section class="panel"><h3>Technical and scientific contacts</h3><p class="muted">Keep the responsible people and organizations with the dataset’s operating instructions.</p>';
+  for(const kind of ['technical','scientific']){
+    html+='<fieldset class="handoff-group"><legend>'+esc(kind==='technical'?'Technical contact':'Scientific contact')+'</legend><div class="form-grid">'+
+      handoffField(['contacts',kind,'name'],'Name')+handoffField(['contacts',kind,'email'],'Email',{type:'email'})+
+      handoffField(['contacts',kind,'organization'],'Organization')+handoffField(['contacts',kind,'notes'],'Responsibilities / notes',{multiline:true})+'</div></fieldset>';
+  }
+  html+='</section><section class="panel"><h3>License and source access</h3><div class="form-grid">'+
+    handoffField(['license','text'],'License and permitted use',{multiline:true,wide:true})+
+    handoffField(['license','attribution'],'Required attribution',{multiline:true,wide:true})+
+    handoffField(['license','reviewed'],'I reviewed this license and attribution against the original provider terms',{checkbox:true,wide:true})+
+    handoffField(['access','sourceUrl'],'Original source or service URL',{type:'url'})+
+    handoffField(['access','refresh'],'Refresh and availability instructions',{multiline:true})+
+    handoffField(['access','preprocessing'],'Existing preprocessing before this handoff',{multiline:true})+
+    handoffField(['access','documentation'],'Documentation and operating references',{multiline:true})+'</div></section>';
+  return html;
+}
+function handoffTime(profile){
+  return '<section class="panel"><h3>Time interpretation</h3><p>Choose the original observation time field and its explicit representation. The review reports every conversion and preserves the source values.</p><div class="form-grid">'+
+    handoffField(['time','column'],'Original time field',{options:handoffColumns()})+
+    handoffField(['time','representation'],'Time representation',{options:[['iso8601-offset','ISO 8601 with UTC offset'],['unix-seconds','Unix seconds since 1970-01-01 UTC']]})+
+    handoffField(['time','originalTimezone'],'Original timezone',{hint:'Record the provider’s actual timezone or UTC convention.'})+
+    handoffField(['time','calendar'],'Calendar',{options:[['standard','Standard'],['gregorian','Gregorian'],['proleptic_gregorian','Proleptic Gregorian'],['other','Other — explain in notes']]})+
+    handoffField(['time','daylightSaving'],'Daylight-saving convention')+
+    handoffField(['time','notes'],'Time handling notes',{multiline:true})+
+    handoffField(['time','reviewed'],'I reviewed the source time representation, timezone and calendar',{checkbox:true,wide:true})+'</div>'+
+    detail('Original field units',handoffSourceColumns().map(x=>({name:x.name,type:x.type,units:x.units})))+'</section>';
+}
+
+
+function handoffStations(profile){
+  const rows=profile.stations||[],record=handoffRecord();
+  const index=Math.min(Math.max(Number(record.stationIndex)||0,0),Math.max(0,rows.length-1));
+  let html='<section class="panel"><h3>Station definitions</h3><p class="muted">Match every original station value to a stable station identity and its documented deployment. Coordinates and deployment notes remain explicit source-backed inputs.</p>'+
+    handoffField(['stationColumn'],'Original station field',{options:handoffColumns()});
+  if(!rows.length)return html+empty('No station definitions are present','Choose the original station field, then review the current source-derived default profile or import a complete supplied profile.')+'</section>';
+  html+='<div class="table-scroll"><table><thead><tr><th>Original value</th><th>Station ID</th><th>Name</th><th>Position</th><th>Review</th><th>Edit</th></tr></thead><tbody>'+
+    rows.map((x,i)=>'<tr'+(i===index?' class="handoff-selected"':'')+'><td>'+scalar(x.sourceValue)+'</td><td>'+esc(x.id)+'</td><td class="wrap">'+esc(x.name)+'</td><td>'+
+      esc(x.positionKind)+'</td><td>'+esc(x.reviewed?'Reviewed':'Needs review')+'</td><td><button data-action="handoff-station" data-index="'+i+'" aria-current="'+(i===index)+'">Edit station</button></td></tr>').join('')+
+    '</tbody></table></div></section>';
+  const current=rows[index],p=['stations',index],f=(key,label,o={})=>handoffField([...p,key],label,o);
+  html+='<section class="panel" id="handoff-station-editor" data-index="'+index+'"><h3>'+esc(current.name||current.id||'Station definition')+'</h3>'+
+    '<dl class="fact-list">'+fact('Original station value',current.sourceValue)+'</dl><div class="form-grid">'+
+    f('id','Stable station ID')+f('name','Station name')+f('latitude','Latitude')+f('longitude','Longitude')+
+    f('depth','Depth or altitude')+f('depthUnits','Depth units')+
+    f('depthPositive','Positive depth direction',{options:[['','Unspecified'],['up','Up'],['down','Down']]})+
+    f('positionKind','Position meaning',{options:[['fixed','Fixed station'],['mobile','Mobile platform'],['representative','Representative location']]})+
+    f('platformType','Platform type')+f('expectedStart','Expected deployment start')+f('expectedEnd','Expected deployment end')+
+    f('institutions','Participating institutions',{multiline:true})+f('attribution','Station attribution',{multiline:true})+
+    f('links','Station documentation and links',{multiline:true})+f('previousDeployments','Previous deployments',{multiline:true})+
+    f('notes','Station notes',{multiline:true})+f('reviewed','I reviewed this station identity, location and deployment',{checkbox:true,wide:true})+
+    '</div></section>';
+  return html;
+}
+function handoffVariables(profile){
+  const rows=profile.variables||[],record=handoffRecord(),columns=handoffSourceColumns();
+  const index=Math.min(Math.max(Number(record.variableIndex)||0,0),Math.max(0,rows.length-1));
+  let html='<section class="panel"><h3>Variables and source units</h3><p class="muted">Assign roles and provider-facing names to the retained original fields. Source units, numeric tokens, missing values and flags remain unchanged.</p>';
+  if(!rows.length)html+=empty('No variables in this profile','Reopen the complete source-derived profile.');
+  else {
+    html+='<div class="table-scroll"><table><thead><tr><th>Original field</th><th>Provider name</th><th>Role</th><th>Original units</th><th>Review</th><th>Edit</th></tr></thead><tbody>'+
+      rows.map((x,i)=>'<tr'+(i===index?' class="handoff-selected"':'')+'><td>'+esc(x.source)+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.role)+'</td><td>'+
+        scalar(columns.find(c=>c.name===x.source)?.units??null)+'</td><td>'+esc(x.reviewed?'Reviewed':'Needs review')+'</td><td><button data-action="handoff-variable" data-index="'+i+
+        '" aria-current="'+(i===index)+'">Edit variable</button></td></tr>').join('')+'</tbody></table></div>';
+  }
+  html+='</section>';
+  if(rows.length){
+    const current=rows[index],p=['variables',index],f=(key,label,o={})=>handoffField([...p,key],label,o);
+    const column=columns.find(x=>x.name===current.source)||{};
+    html+='<section class="panel" id="handoff-variable-editor" data-index="'+index+'"><h3>'+esc(current.source)+'</h3><dl class="fact-list">'+
+      fact('Original field',current.source)+fact('Original type',column.type)+fact('Original units',column.units??null)+'</dl><div class="form-grid">'+
+      f('name','Provider variable name')+
+      f('role','Variable role',{options:[['time','Time'],['station','Station identity'],['latitude','Latitude'],['longitude','Longitude'],['depth','Depth'],['measurement','Measurement'],['quality','Quality flag'],['other','Other retained field']]})+
+      f('standardName','CF standard name',{hint:'Use the documented standard name or leave it empty for review.'})+
+      f('description','Variable description',{multiline:true})+
+      '<label class="field"><span>Quality flags apply to</span><select multiple size="'+Math.min(Math.max(rows.length,3),8)+'" id="handoff-qc-for" data-handoff-path="'+esc(JSON.stringify([...p,'qcFor']))+'">'+
+      rows.filter(x=>x.source!==current.source).map(x=>'<option value="'+esc(x.source)+'"'+((current.qcFor||[]).includes(x.source)?' selected':'')+'>'+esc(x.source)+'</option>').join('')+
+      '</select><span class="hint">Select the original fields described by this flag variable. An empty selection retains no inferred quality relationship.</span></label>'+
+      f('qcConvention','Flag convention',{options:[['provider','Provider-defined flags'],['QARTOD','QARTOD']],hint:'Choose QARTOD only when the original provider explicitly uses that convention.'})+
+      f('flagDefinitions','Original flag definitions',{multiline:true,wide:true})+
+      f('reviewed','I reviewed this variable’s name, role, units and any flag definitions',{checkbox:true,wide:true})+'</div>'+
+      detail('Original variable metadata',column)+'</section>';
+  }
+  html+='<section class="panel"><h3>Quality and preprocessing disclosures</h3><p class="muted">Describe the processing that actually occurred and the checks a receiving team has requested.</p><div class="form-grid">'+
+    handoffField(['quality','processing'],'Existing quality processing',{multiline:true,wide:true})+
+    handoffField(['quality','requested'],'Requested receiving checks',{options:[['none','No additional checks requested'],['QARTOD','QARTOD checks requested'],['custom','Custom checks requested']]})+
+    handoffField(['quality','checks'],'Requested checks and parameters',{multiline:true})+
+    handoffField(['quality','notes'],'Quality disclosures',{multiline:true,wide:true})+
+    handoffField(['quality','reviewed'],'I reviewed the existing processing and requested checks',{checkbox:true,wide:true})+'</div></section>';
+  return html;
+}
+function handoffHistoryItems(){
+  const value=S.handoff.history;
+  return Array.isArray(value)?value:(value?.revisions||value?.history||[]);
+}
+function handoffSavedRevision(){
+  const value=S.handoff.selectedRevision;
+  return value&&value.sourceId===S.handoff.sourceId?value:null;
+}
+function handoffReviewPage(profile){
+  const record=handoffRecord(),saved=handoffSavedRevision(),review=record.preview?.review||record.preview;
+  let html='<section class="panel"><h3>Review the current draft</h3><p>Review the actual retained observations against this profile, then save the complete version with its current parent revision.</p>'+
+    '<div class="actions"><button class="primary" data-action="handoff-preview">Review profile</button>'+
+    (record.pending?'<button data-action="handoff-retry">Recover the same save</button>':'')+'</div>'+
+    handoffReview(review)+'</section>';
+  html+='<section class="panel"><h3>Saved provider revisions</h3>';
+  const history=handoffHistoryItems();
+  html+=history.length?'<div class="stack">'+history.map(x=>'<button data-action="handoff-revision" data-id="'+esc(x.id)+'" class="list-button" aria-current="'+(saved?.id===x.id)+'"><strong>'+
+    esc(x.profile?.title||x.title||x.id.slice(0,16))+'</strong><small>'+esc(new Date(x.created*1000).toLocaleString())+' · '+esc(x.ready?'Ready':'Review saved')+' · '+esc(x.id.slice(0,16))+
+    '</small></button>').join('')+'</div>':empty('No revision saved','Save a reviewed profile to retain its exact source, review issues and parent.');
+  if(S.handoff.history&&(S.handoff.history.offset||S.handoff.history.nextOffset!=null))html+='<div class="pagination"><span>Revisions '+fmt((S.handoff.history.offset||0)+1)+'–'+fmt((S.handoff.history.offset||0)+history.length)+'</span><div class="actions">'+
+    (S.handoff.history.offset?'<button data-action="handoff-history-page" data-offset="'+Math.max(0,S.handoff.history.offset-100)+'">Previous revisions</button>':'')+
+    (S.handoff.history.nextOffset!=null?'<button data-action="handoff-history-page" data-offset="'+S.handoff.history.nextOffset+'">Next revisions</button>':'')+'</div></div>';
+  if(history.length>1)html+='<div class="row">'+select('handoff-compare-before','Earlier revision',history.map(x=>[x.id,x.id.slice(0,16)]),S.handoff.compareBefore||history[history.length-1].id)+
+    select('handoff-compare-after','Later revision',history.map(x=>[x.id,x.id.slice(0,16)]),S.handoff.compareAfter||history[0].id)+
+    '<button data-action="handoff-compare">Compare profiles</button></div>';
+  if(saved){
+    html+='<div id="handoff-saved-revision" data-id="'+esc(saved.id)+'"><h4>Selected saved revision</h4><dl class="fact-list">'+fact('Revision',saved.id)+fact('Parent',saved.parent||'Initial profile')+
+      fact('Saved',new Date(saved.created*1000).toLocaleString())+fact('Reviewed by',saved.profile.reviewedBy)+'</dl>'+handoffReview(saved.review)+
+      '<div class="actions"><button data-action="handoff-use-revision">Edit from this saved profile</button>'+
+      '<button data-action="handoff-export-review">Download review bundle</button>'+
+      '<button class="primary" data-action="handoff-export-ready"'+(saved.review.ready?'':' disabled')+'>Download ready provider bundle</button></div>'+
+      '<p class="hint">These exports use this immutable saved revision. A review bundle retains open issues; a ready bundle requires the saved profile’s complete source review.</p></div>';
+  }
+  const receipt=S.drafts['handoff-export:'+S.handoff.sourceId];
+  if(receipt)html+='<div class="notice" id="handoff-export-receipt"><strong>Saved export</strong><dl class="fact-list">'+fact('Revision',receipt.revision)+fact('Mode',receipt.mode)+
+    fact('SHA-256',receipt.sha256)+fact('Bytes',receipt.bytes)+'</dl></div>';
+  html+='</section><section class="panel"><details><summary>Complete provider profile JSON</summary><p class="muted">Keep source identities and original value types. Applying this editor updates the same draft.</p>'+
+    '<label class="field"><span>Complete profile</span><textarea id="handoff-json" class="code" rows="20">'+esc(record.text)+'</textarea></label>'+
+    '<button data-action="handoff-apply-json">Apply complete profile</button></details></section>';
+  return html;
+}
+function handoffReceivePanel(){
+  const result=S.drafts.handoffReceived,received=S.handoff.store?.received||[];
+  return '<section class="panel"><h3>Receive a provider handoff</h3><p>Import the complete provider bundle into this workspace. The receiver checks the original source bytes, profile, review, station and variable tables, and observation file before retaining the package.</p>'+
+    '<div class="row"><label class="field"><span>Complete provider handoff ZIP</span><input id="handoff-receive-file" type="file" accept=".zip"></label>'+
+    '<button class="primary" data-action="handoff-receive">Receive provider bundle</button></div>'+
+    (result?'<div class="notice" id="handoff-receive-result" data-revision="'+esc(result.revision)+'"><strong>Provider bundle received</strong><dl class="fact-list">'+
+      fact('Revision',result.revision)+fact('Mode',result.mode)+fact('Original rows',result.rowCount)+fact('Stations',result.stationCount)+fact('SHA-256',result.sha256)+
+      '</dl><button data-action="handoff-open-received" data-id="'+esc(result.sha256)+'">Inspect received profile</button></div>':'')+
+    (received.length?'<h4>Retained received bundles</h4><div class="stack">'+received.map(x=>'<button class="list-button" data-action="handoff-open-received" data-id="'+esc(x.sha256)+'"><strong>'+
+      esc(x.source?.metadata?.title||x.revision.slice(0,16))+'</strong><small>'+esc(x.mode)+' · '+fmt(x.rowCount)+' rows · '+esc(x.sha256.slice(0,16))+'</small></button>').join('')+'</div>':'')+
+    '</section>'+handoffReceivedDetail();
+}
+function renderHandoffs(){
+  const sources=S.state.sources||[],record=handoffRecord();
+  let html='<section class="panel"><div class="panel-head"><div><h2>Provider handoff</h2><p class="muted">Prepare the dataset, stations, variables and operating disclosures for a receiving data team.</p></div></div>'+
+    '<div class="row">'+select('handoff-source','Retained original source',sources.map(x=>[x.id,titleOf(x)]),S.handoff.sourceId||sources[0]?.id)+
+    '<button data-action="handoff-open-source">Open provider intake</button></div></section>';
+  if(!sources.length)return html+handoffReceivePanel()+ '<section class="panel">'+empty('Retain a complete source first','Acquire or import the original ERDDAP responses in Sources, or receive an existing provider handoff above.')+'</section>';
+  if(!record||!S.handoff.source)return html+handoffReceivePanel();
+  let profile;
+  try{if(record.rawProfile)throw new Error('Apply the complete JSON draft first.');profile=JSON.parse(record.text);}
+  catch(_){return html+'<section class="panel" id="handoff-editor" data-source="'+esc(S.handoff.sourceId)+'"><h3>Complete the saved profile draft</h3><label class="field"><span>Complete profile JSON</span><textarea id="handoff-json" class="code" rows="20">'+esc(record.text)+
+    '</textarea></label><button data-action="handoff-apply-json">Apply complete profile</button></section>';}
+  const latest=S.handoff.latestHead;
+  html+='<section class="panel handoff-toolbar" id="handoff-editor" data-source="'+esc(S.handoff.sourceId)+'"><div><strong id="handoff-draft-state">'+(handoffChanged()?'Unsaved profile changes':'Current profile draft')+'</strong><p class="hint">'+
+    'Based on '+esc(record.expectedHead?record.expectedHead.slice(0,16):'the original source')+(latest!==record.expectedHead?' · A newer saved head is available':'')+'</p></div>'+
+    '<div class="actions"><button data-action="handoff-preview" class="primary">Review profile</button><button data-action="handoff-refresh">Refresh saved revisions</button>'+
+    (latest!==record.expectedHead?'<button data-action="handoff-rebase">Review against latest head</button>':'')+
+    (record.pending?'<button data-action="handoff-retry">Recover the same save</button>':'')+'</div></section>'+
+    '<div class="handoff-tabs" role="tablist" aria-label="Provider handoff sections">'+
+      [['overview','Dataset'],['contacts','Contacts and license'],['time','Time'],['stations','Stations'],['variables','Variables and quality'],['review','Review and history']].map(([id,label])=>
+        '<button role="tab" aria-selected="'+((record.tab||'overview')===id)+'" data-action="handoff-tab" data-tab="'+id+'">'+esc(label)+'</button>').join('')+'</div>';
+  const renderers={overview:handoffOverview,contacts:handoffContacts,time:handoffTime,stations:handoffStations,variables:handoffVariables,review:handoffReviewPage};
+  html+=(renderers[record.tab||'overview']||handoffOverview)(profile);
+  if(record.tab==='review')html+=handoffReceivePanel();
+  return html;
+}
+
+
+let handoffDBPromise=null, handoffWriting=null;
+const handoffPendingWrites=new Map();
+function handoffDatabase(){
+  if(!handoffDBPromise)handoffDBPromise=new Promise((resolve,reject)=>{
+    const request=indexedDB.open('erddap-provider-drafts-v1',1);
+    request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains('drafts'))request.result.createObjectStore('drafts');};
+    request.onerror=()=>reject(request.error||new Error('Browser draft storage could not be opened.'));
+    request.onsuccess=()=>{request.result.onversionchange=()=>request.result.close();resolve(request.result);};
+  }).catch(error=>{handoffDBPromise=null;throw error;});
+  return handoffDBPromise;
+}
+function persistHandoffDrafts(){
+  if(!S.storageKey)return Promise.resolve();
+  for(const [key,value] of Object.entries(S.drafts)){
+    if(key.startsWith('provider-handoff:'))handoffPendingWrites.set(S.storageKey+'/'+key,{key:S.storageKey+'/'+key,value:clone(value)});
+  }
+  if(!handoffPendingWrites.size)return handoffWriting||Promise.resolve();
+  if(!handoffWriting)handoffWriting=(async()=>{
+    const db=await handoffDatabase();
+    while(handoffPendingWrites.size){
+      const batch=Array.from(handoffPendingWrites.values());handoffPendingWrites.clear();
+      try{
+        await new Promise((resolve,reject)=>{
+          const tx=db.transaction('drafts','readwrite'), store=tx.objectStore('drafts');
+          for(const item of batch)store.put(item.value,item.key);
+          tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||new Error('The provider draft could not be retained.'));
+          tx.onabort=()=>reject(tx.error||new Error('The provider draft write was interrupted.'));
+        });
+      }catch(error){
+        for(const item of batch)if(!handoffPendingWrites.has(item.key))handoffPendingWrites.set(item.key,item);
+        throw error;
+      }
+    }
+  })().finally(()=>{handoffWriting=null;});
+  return handoffWriting;
+}
+async function retainedHandoffDraft(sourceId){
+  if(S.drafts[handoffKey(sourceId)])return S.drafts[handoffKey(sourceId)];
+  if(handoffWriting)await handoffWriting;
+  const db=await handoffDatabase();
+  const value=await new Promise((resolve,reject)=>{
+    const tx=db.transaction('drafts','readonly'),request=tx.objectStore('drafts').get(S.storageKey+'/'+handoffKey(sourceId));
+    request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);
+  });
+  return value||null;
+}
+function compactHandoffReceipt(value){
+  const keys=['schema','status','version','bytes','sha256','revision','sourceId','profileId','mode','ready','rowCount','stationCount','fileCount','hasObservationCsv','retained'];
+  return Object.fromEntries(keys.filter(k=>Object.prototype.hasOwnProperty.call(value,k)).map(k=>[k,value[k]]));
+}
+async function loadHandoff(sourceId){
+  S.handoff.store=await api('handoffs');
+  if(S.selected.handoffReceived && (S.handoff.store.received||[]).some(x=>x.sha256===S.selected.handoffReceived))
+    S.handoff.received=await api('handoffs/received/'+path(S.selected.handoffReceived));
+  if(!sourceId){S.handoff.sourceId=null;S.handoff.source=null;S.handoff.history=null;S.handoff.selectedRevision=null;return;}
+  if(!(S.state.sources||[]).some(x=>x.id===sourceId))throw new Error('Select an original source retained in this workspace.');
+  const [draft,source,retained]=await Promise.all([
+    api('handoffs/draft?source='+path(sourceId)),cached('sources/'+path(sourceId)),retainedHandoffDraft(sourceId)
+  ]);
+  let record=retained;
+  if(!record||typeof record.text!=='string')record={
+    text:pretty(draft.profile),baseProfile:clone(draft.profile),expectedHead:draft.head,
+    tab:'overview',lastSaved:draft.head,rawFields:{},fieldErrors:{},preview:{profile:draft.profile,review:draft.review}
+  };
+  S.drafts[handoffKey(sourceId)]=record;
+  S.handoff.sourceId=sourceId;S.handoff.source=source;S.handoff.latestHead=draft.head;
+  S.handoff.history=draft.history;S.selected.handoffSource=sourceId;
+  S.handoff.selectedRevision=null;
+  const selected=record.selectedRevision||record.lastSaved||draft.head;
+  if(selected){
+    const value=await cached('handoffs/reviews/'+path(selected));
+    if(value.sourceId!==sourceId)throw new Error('The selected provider revision belongs to another source.');
+    S.handoff.selectedRevision=value;
+  }
+  saveDrafts();await persistHandoffDrafts();
+}
+async function openHandoffs(sourceId){
+  captureInputs();S.view='handoffs';
+  const selected=sourceId||S.selected.handoffSource||S.selected.source||S.state.sources[0]?.id||null;
+  await loadHandoff(selected);saveDrafts();render();
+  status(selected?'Original provider intake opened. Saved draft and revisions are available.':'Provider receiving workspace opened.');
+}
+async function commitHandoff(pending){
+  const payload=clone(pending.payload),sourceId=payload.source;
+  const record=S.drafts[handoffKey(sourceId)];
+  if(!record||S.handoff.sourceId!==sourceId)throw new Error('Reopen the original source for this saved provider request.');
+  if(record.pending&&handoffCanonical(record.pending.payload)!==handoffCanonical(payload))
+    throw new Error('Recover the already-retained provider save before applying another request.');
+  if(!record.pending)record.pending=clone(pending);
+  saveDrafts();await persistHandoffDrafts();
+  let saved;
+  try{saved=await api('handoffs/reviews',{body:payload});}
+  catch(error){
+    if(error.status===409){
+      record.conflict={expectedHead:payload.expectedHead,currentRevision:error.result?.currentRevision??null};
+      S.handoff.latestHead=error.result?.currentRevision??S.handoff.latestHead;
+      saveDrafts();await persistHandoffDrafts();render();
+    }
+    throw error;
+  }
+  if(saved.sourceId!==sourceId||handoffCanonical(saved.profile)!==handoffCanonical(payload.profile))
+    throw new Error('The returned provider revision does not match the original reviewed request.');
+  const unchanged=record.text===pending.draftText;
+  record.baseProfile=clone(saved.profile);record.expectedHead=saved.id;record.lastSaved=saved.id;record.selectedRevision=saved.id;
+  if(unchanged){record.text=pretty(saved.profile);record.rawProfile=false;record.rawFields={};record.fieldErrors={};record.preview={profile:saved.profile,review:saved.review};}
+  else record.preview=null;
+  record.pending=null;record.conflict=null;record.tab='review';
+  S.cache.set('handoffs/reviews/'+path(saved.id),saved);S.handoff.selectedRevision=saved;
+  saveDrafts();await persistHandoffDrafts();
+  const [history,state]=await Promise.all([api('handoffs/history?source='+path(sourceId)+'&limit=100'),api('handoffs')]);
+  S.handoff.history=history;S.handoff.latestHead=history.head;S.handoff.store=state;render();
+  status(unchanged?'Exact reviewed provider revision saved.':'Reviewed revision saved. The newer editor draft is retained.');
+  return saved;
+}
+async function reviewHandoff(){
+  const record=handoffRecord();
+  if(record.pending){await commitHandoff(record.pending);return;}
+  const text=record.text,profile=handoffProfile(),sourceId=S.handoff.sourceId,expectedHead=record.expectedHead??null;
+  const preview=await api('handoffs/previews',{body:{source:sourceId,profile}});
+  if(record.text===text){record.preview={profile:preview.profile,review:preview.review};saveDrafts();}
+  const payload={source:sourceId,profile:clone(preview.profile),expectedHead};
+  reviewed('Save the reviewed provider profile',
+    '<p>This immutable revision retains the original observations, exact provider profile and all review findings. Draft edits made after this review stay in the editor.</p>'+
+    '<dl class="fact-list">'+fact('Original source',sourceId)+fact('Expected parent',expectedHead||'Initial revision')+'</dl>'+
+    handoffReview(preview.review)+handoffDiff(record.baseProfile,preview.profile)+detail('Complete reviewed profile',preview.profile),
+    'Save reviewed provider profile',async()=>commitHandoff({payload,draftText:text}));
+}
+async function rebaseHandoff(){
+  const record=handoffRecord(),sourceId=S.handoff.sourceId;
+  if(record.pending){
+    try{await commitHandoff(record.pending);return;}
+    catch(error){if(error.status!==409)throw error;}
+  }
+  const draft=await api('handoffs/draft?source='+path(sourceId)),before=clone(record.baseProfile),oldHead=record.expectedHead;
+  S.handoff.latestHead=draft.head;
+  reviewed('Review the latest saved parent',
+    '<p>Keep the current editor draft and use this saved revision as its parent. The next profile review shows the draft’s changes against that parent.</p>'+
+    '<dl class="fact-list">'+fact('Previous parent',oldHead||'Initial source')+fact('Current saved head',draft.head||'Initial source')+'</dl>'+
+    handoffDiff(before,draft.profile)+detail('Current saved profile',draft.profile),
+    'Use latest parent and keep draft',async()=>{
+      record.lastConflict=record.conflict||null;record.pending=null;record.conflict=null;
+      record.expectedHead=draft.head;record.baseProfile=clone(draft.profile);record.preview=null;
+      S.handoff.history=draft.history;S.handoff.latestHead=draft.head;
+      if(draft.head)S.handoff.selectedRevision=await cached('handoffs/reviews/'+path(draft.head));
+      saveDrafts();await persistHandoffDrafts();render();status('Current draft retained against the reviewed saved parent.');
+    });
+}
+async function handoffDownload(route,filename,receipt){
+  const response=await fetch('/api/'+route,{headers:{Authorization:'Bearer '+token},cache:'no-store'});
+  if(!response.ok){const error=await response.json().catch(()=>({}));throw new Error(error.error||'The retained provider bundle could not be read.');}
+  const bytes=await response.arrayBuffer();
+  const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))).map(x=>x.toString(16).padStart(2,'0')).join('');
+  if(bytes.byteLength!==receipt.bytes||digest!==receipt.sha256)throw new Error('The downloaded provider bundle does not match its retained size and SHA-256.');
+  const blob=new Blob([bytes],{type:'application/zip'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+  status(filename+' exported with matching SHA-256 ('+fmt(bytes.byteLength)+' bytes).');
+}
+async function exportHandoff(mode){
+  const saved=handoffSavedRevision();if(!saved)throw new Error('Select an immutable saved provider revision.');
+  const receipt=await api('handoffs/exports',{body:{revision:saved.id,mode}});
+  if(receipt.revision!==saved.id||receipt.mode!==mode)throw new Error('The export receipt belongs to another provider revision.');
+  S.drafts['handoff-export:'+saved.sourceId]=compactHandoffReceipt(receipt);saveDrafts();render();
+  await handoffDownload('handoffs/exports/'+path(saved.id)+'/'+mode,'provider-handoff-'+saved.id.slice(0,16)+'-'+mode+'.zip',receipt);
+}
+function handoffReceivedDetail(){
+  const value=S.handoff.received;if(!value)return '';
+  const receipt=value.receipt,profile=value.profile,source=value.source;
+  return '<section class="panel" id="handoff-received-detail" data-sha="'+esc(receipt.sha256)+'"><div class="panel-head"><div><h3>Received provider profile</h3>'+
+    '<p class="muted">This view reads the original retained bundle.</p></div><span class="tag">'+esc(receipt.mode)+'</span></div>'+
+    '<h4>'+esc(profile.title)+'</h4><dl class="fact-list">'+fact('Provider organization',profile.organization)+fact('Reviewed by',profile.reviewedBy)+
+    fact('Revision',receipt.revision)+fact('Bundle SHA-256',receipt.sha256)+fact('Original source',receipt.sourceId)+fact('Bytes',receipt.bytes)+'</dl>'+
+    handoffReview(value.review)+'<div class="actions"><button data-action="handoff-download-received" data-id="'+esc(receipt.sha256)+'">Download same received bundle</button></div>'+
+    '<h4>Contacts and operating disclosures</h4>'+detail('Technical and scientific contacts',profile.contacts,true)+
+    detail('License and attribution',profile.license,true)+detail('Access and existing preprocessing',profile.access)+detail('Time interpretation',profile.time,true)+
+    '<h4>Station definitions</h4><p>'+fmt((profile.stations||[]).length)+' retained station definitions.</p>'+
+    table(['Original value','Station ID','Name','Latitude','Longitude','Position','Deployment start','Deployment end'],
+      (profile.stations||[]).slice(0,100).map(x=>[x.sourceValue,x.id,x.name,x.latitude,x.longitude,x.positionKind,x.expectedStart,x.expectedEnd]))+
+    ((profile.stations||[]).length>100?'<p class="hint">The first 100 definitions are shown in the table. Every station is available in the complete retained profile below.</p>':'')+
+    '<h4>Variable definitions</h4>'+table(['Original field','Provider name','Role','CF standard name','Quality relationship','Review'],
+      (profile.variables||[]).map(x=>[x.source,x.name,x.role,x.standardName,x.qcFor,x.reviewed]))+
+    detail('Quality processing and requested checks',profile.quality,true)+detail('Original source metadata and field units',source)+
+    detail('Complete retained provider profile',profile)+'</section>';
+}
+const handoffActions={
+  'handoff-open-source':async()=>openHandoffs($('#handoff-source').value),
+  'handoff-tab':async el=>{captureInputs();const r=handoffRecord();r.tab=el.dataset.tab;saveDrafts();render();},
+  'handoff-station':async el=>{captureInputs();handoffRecord().stationIndex=Number(el.dataset.index);saveDrafts();render();},
+  'handoff-variable':async el=>{captureInputs();handoffRecord().variableIndex=Number(el.dataset.index);saveDrafts();render();},
+  'handoff-station-page':async el=>{handoffRecord().stationIndex=Number(el.dataset.index);saveDrafts();render();},
+  'handoff-variable-page':async el=>{handoffRecord().variableIndex=Number(el.dataset.index);saveDrafts();render();},
+  'handoff-preview':async()=>{captureInputs();await reviewHandoff();},
+  'handoff-retry':async()=>{const pending=handoffRecord()?.pending;if(!pending)throw new Error('No provider save is awaiting recovery.');await commitHandoff(pending);},
+  'handoff-refresh':async()=>{captureInputs();await loadHandoff(S.handoff.sourceId);render();status('Saved provider revisions refreshed. Editor draft retained.');},
+  'handoff-rebase':async()=>{captureInputs();await rebaseHandoff();},
+  'handoff-history-page':async el=>{
+    S.handoff.history=await api('handoffs/history?source='+path(S.handoff.sourceId)+'&offset='+Number(el.dataset.offset)+'&limit=100');
+    S.handoff.latestHead=S.handoff.history.head;render();
+  },
+  'handoff-revision':async el=>{
+    const value=await cached('handoffs/reviews/'+path(el.dataset.id));
+    if(value.sourceId!==S.handoff.sourceId)throw new Error('The selected revision belongs to another source.');
+    S.handoff.selectedRevision=value;const r=handoffRecord();r.selectedRevision=value.id;r.tab='review';saveDrafts();render();
+  },
+  'handoff-use-revision':async()=>{
+    const selected=handoffSavedRevision(),record=handoffRecord();if(!selected)throw new Error('Select a saved provider revision.');
+    if(record.pending){await commitHandoff(record.pending);return;}
+    const draft=await api('handoffs/draft?source='+path(selected.sourceId));
+    reviewed('Edit from the saved provider profile',
+      '<p>Use this saved profile as the editor draft, with the current saved head as its parent.</p>'+
+      '<dl class="fact-list">'+fact('Selected revision',selected.id)+fact('Current parent',draft.head||'Initial source')+'</dl>'+
+      handoffDiff(JSON.parse(record.text),selected.profile),'Use selected profile',async()=>{
+        record.text=pretty(selected.profile);record.rawProfile=false;record.rawFields={};record.fieldErrors={};
+        record.baseProfile=clone(draft.profile);record.expectedHead=draft.head;record.preview={profile:selected.profile,review:selected.review};record.tab='overview';
+        S.handoff.latestHead=draft.head;S.handoff.history=draft.history;saveDrafts();await persistHandoffDrafts();render();
+      });
+  },
+  'handoff-compare':async()=>{
+    const before=$('#handoff-compare-before').value,after=$('#handoff-compare-after').value;
+    const [a,b]=await Promise.all([cached('handoffs/reviews/'+path(before)),cached('handoffs/reviews/'+path(after))]);
+    if(a.sourceId!==b.sourceId||a.sourceId!==S.handoff.sourceId)throw new Error('Compare revisions of the same retained source.');
+    S.handoff.compareBefore=before;S.handoff.compareAfter=after;
+    reviewed('Compare provider revisions','<dl class="fact-list">'+fact('Earlier revision',a.id)+fact('Later revision',b.id)+'</dl>'+
+      handoffDiff(a.profile,b.profile)+detail('Earlier source review',a.review)+detail('Later source review',b.review),null,null);
+  },
+  'handoff-apply-json':async()=>{
+    const record=handoffRecord(),text=record.text,profile=handoffProfile();
+    const value=await api('handoffs/previews',{body:{source:S.handoff.sourceId,profile}});
+    if(record.text!==text){status('Profile reviewed. A newer editor draft is retained; apply it when complete.');return;}
+    record.text=pretty(value.profile);record.rawProfile=false;record.rawFields={};record.fieldErrors={};
+    record.preview={profile:value.profile,review:value.review};record.tab='overview';saveDrafts();await persistHandoffDrafts();render();
+    status('Complete provider profile applied to the same draft.');
+  },
+  'handoff-export-review':async()=>exportHandoff('review'),
+  'handoff-export-ready':async()=>exportHandoff('ready'),
+  'handoff-receive':async()=>{
+    const result=await upload('handoffs/receive',$('#handoff-receive-file').files[0]);
+    S.drafts.handoffReceived=compactHandoffReceipt(result);saveDrafts();
+    S.handoff.store=await api('handoffs');S.handoff.received=await api('handoffs/received/'+path(result.sha256));
+    S.selected.handoffReceived=result.sha256;saveDrafts();render();status('Original provider bundle received and reopened with its exact source review.');
+  },
+  'handoff-open-received':async el=>{
+    const id=el.dataset.id||S.drafts.handoffReceived?.sha256;
+    if(!id)throw new Error('Select a retained provider bundle.');
+    S.handoff.received=await api('handoffs/received/'+path(id));S.selected.handoffReceived=id;
+    S.drafts.handoffReceived=compactHandoffReceipt(S.handoff.received.receipt);saveDrafts();render();
+  },
+  'handoff-download-received':async el=>{
+    const value=await api('handoffs/received/'+path(el.dataset.id));
+    await handoffDownload('handoffs/received/'+path(el.dataset.id)+'/bundle','received-provider-handoff-'+el.dataset.id.slice(0,16)+'.zip',value.receipt);
+  }
+};
+
 const actions = {
   refresh:async () => { captureInputs(); await refresh(); status('Saved workspace refreshed. Draft inputs retained.'); },
   search:async () => { captureInputs(); const d=S.drafts.catalog; S.catalog=await api('search',{body:{server:d.server,text:d.text,page:1,limit:25}}); render(); status('Original provider catalogue page retained.'); },
@@ -577,6 +1136,7 @@ const actions = {
   },
   'received-edition':async () => openBuild(S.drafts.received.build.id)
 };
+Object.assign(actions,handoffActions);
 document.addEventListener('input',event=>captureInputs(event.target));
 document.addEventListener('change',event=>{
   captureInputs(event.target);
@@ -586,7 +1146,7 @@ document.addEventListener('submit',event=>event.preventDefault());
 document.addEventListener('click',event=>{
   const view=event.target.closest('[data-view]');
   if(view) {
-    if(S.busy)return;captureInputs();S.view=view.dataset.view;saveDrafts();render();clearError();return;
+    if(S.busy)return;captureInputs();if(view.dataset.view==='handoffs'){void busy('Opening provider handoff…',()=>openHandoffs());return;}S.view=view.dataset.view;saveDrafts();render();clearError();return;
   }
   const el=event.target.closest('[data-action]');
   if(!el)return;
