@@ -479,7 +479,18 @@ export async function createProcessingController({ stacWorkspace, directory, con
         deployment: entry.deployment, source: entry.source, routes: Object.keys(entry.contract.routes),
         workflowFilter: entry.contract.workflowFilter, configuredAt: entry.configuredAt })),
       editions: state.editions.map(summarize), reviews: state.reviews, associations: state.associations,
-      imports: state.imports, operations: state.operations };
+      imports: state.imports, operations: state.operations, exports: await (async () => {
+        if (!await exists(handovers)) return [];
+        const values = [];
+        for (const id of (await readdir(handovers)).filter(v => /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(v))) {
+          const path = join(handovers, id, 'manifest.json');
+          if (!await exists(path)) continue;
+          const manifest = await readJson(path, 128 * 1024 * 1024);
+          if (manifest.schema === 'scf-stac-processing-handover/v1') values.push({ id, digest: manifest.digest,
+            editionIds: manifest.editionIds, bytes: manifest.bytes, createdAt: manifest.createdAt });
+        }
+        return values;
+      })() };
   };
   const selected = value => { need(typeof value === 'string' && value.length > 0 && value.length <= 2048,
     'PROCESSING_SAVED_IDENTIFIER_REQUIRED'); return value; };
