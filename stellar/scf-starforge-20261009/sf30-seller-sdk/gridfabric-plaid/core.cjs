@@ -8,7 +8,7 @@ const TABLES=Object.freeze(['instances','instance_editions','sources','source_ro
   'reports','report_rows','management_operations','management_receipts','operations']);
 const ACTIONS=Object.freeze(['configure_instance','import_source','save_mapping','activate_mapping','record_opt_decision',
   'build_report','reconcile_distribution','prepare_management','begin_management','finish_management',
-  'reconcile_management','begin_device_action','finish_device_action','reconcile_device_action','recover_dispatches']);
+  'reconcile_management','begin_device_action','finish_device_action','reconcile_device_action','recover_dispatches','project_event_history','resume_event_callback']);
 const SCHEMA='stellar-forge.gridfabric-plaid.workspace.v1';
 const TERMINAL_DEVICE=new Set(['ACKNOWLEDGED','RECONCILED_COMPLETE','RECONCILED_NOT_APPLIED','SUPERSEDED']);
 function createEngine({store,files,sha256Utf8,now,newId,publicContract}) {
@@ -297,6 +297,7 @@ function createEngine({store,files,sha256Utf8,now,newId,publicContract}) {
     report.status=report.issue_count?'NEEDS_SOURCE':'READY';
     if(report.status==='READY'){const reports=Array.from(groups,([specifier,reportIntervals])=>({...((groups.size>1)?{reportIdentifier:{reportSpecifierId:specifier}}:{}),reportIntervals}));report.response_file=rawFile(canonical({onQueryIntervalsResponseMessage:{reports}}),'Plaid_Report_Response_'+report_id+'.json');}
     put('reports',report_id,report,{scope:instance.instance_id});
+    if(report.status==='READY')put('meta','report-cache:'+recordId(instance.instance_id,mapping.mapping_id,query),{report_id,mapping_id:mapping.mapping_id,response_file:report.response_file,created_at:now()});
     return {report_id,status:report.status,row_count:report.row_count,issue_count:report.issue_count,response_file:report.response_file,issues:report.issues};
   }
 
@@ -318,17 +319,19 @@ function createEngine({store,files,sha256Utf8,now,newId,publicContract}) {
     });
   }
   function eventKey(instance_id,event_id) {return recordId('event',instance_id,event_id);}
-  function optFor(instance_id,event_id) {
-    const list=collect('opt_decisions',{scope:eventKey(instance_id,event_id),order:'desc'});
+  function optFor(instance_id,event_id,resource_ids=[]) {
+    const list=collect('opt_decisions',{scope:eventKey(instance_id,event_id)}).filter(d=>d.resource_id===''||resource_ids.includes(d.resource_id));
+    list.sort((a,b)=>(b.decision_revision||0)-(a.decision_revision||0)||(a.created_at<b.created_at?1:a.created_at>b.created_at?-1:0));
     return list.length?list[0]:null;
   }
   function recordOpt(input) {
     const instance=must('instances',input.instance_id);text(input.event_id,'event_id');text(input.reviewer,'reviewer');
+    assert(input.resource_id===undefined||typeof input.resource_id==='string','INVALID_RESOURCE_ID','resource_id must be an exact string or omitted for the whole event.');
     assert(publicContract.management.opt_types.includes(input.opt_type),'INVALID_OPT_TYPE','Use optIn or optOut.');
     text(input.opt_reason,'opt_reason');const evidence=sourceEvidence(input.source_evidence||[],true),id=newId();
     const event=get('events',eventKey(instance.instance_id,input.event_id));
     const record={opt_decision_id:id,instance_id:instance.instance_id,event_id:input.event_id,event_revision:event?event.current_revision:null,
-      opt_type:input.opt_type,opt_reason:input.opt_reason,resource_id:input.resource_id||'',reviewer:input.reviewer,source_evidence:evidence,created_at:now(),status:'REVIEWED'};
+      opt_type:input.opt_type,opt_reason:input.opt_reason,resource_id:input.resource_id||'',reviewer:input.reviewer,source_evidence:evidence,decision_revision:workspace().revision+1,created_at:now(),status:'REVIEWED'};
     put('opt_decisions',id,record,{scope:eventKey(instance.instance_id,input.event_id),sort:record.created_at+'\u0000'+id});
     return {opt_decision_id:id,event_id:input.event_id,opt_type:input.opt_type,status:'REVIEWED'};
   }
@@ -339,14 +342,15 @@ function createEngine({store,files,sha256Utf8,now,newId,publicContract}) {
     const signal=kind==='END'?null:binding.signal_pointer===undefined?undefined:pointer(raw,binding.signal_pointer,false);
     if(kind!=='END')assert(signal!==undefined,'UNBOUND_EVENT_SIGNAL','Bind and preserve the original signal payload before queuing a device action.');
     const targets=binding.targets_pointer===undefined?undefined:pointer(eventDocument,binding.targets_pointer,false);
-    const devices=selectedDevices(instance,targets,binding),decision=optFor(instance.instance_id,event.event_id),actions=[];
-    if(kind!=='END'&&decision&&decision.opt_type==='optOut')return {actions:[],status:'OPTED_OUT',opt_decision_id:decision.opt_decision_id};
-    if(kind!=='END')assert(decision&&decision.opt_type==='optIn','OPT_DECISION_REQUIRED','A reviewed optIn decision is required before device action dispatch.',{event_id:event.event_id});
+    const devices=selectedDevices(instance,targets,binding),actions=[],needs_decision=[],opted_out=[];
     for(const device of devices) {
-      const id=recordId('device',instance.instance_id,event.event_id,event.current_revision,kind,intervalId===undefined?null:intervalId,effective===undefined?null:effective,device.device_id);
-      if(get('device_actions',id)){actions.push(id);continue;}
+      const resource_ids=device.target_ids&&device.target_ids.resourceId||[],decision=optFor(instance.instance_id,event.event_id,resource_ids);
+      if(kind!=='END'&&decision&&decision.opt_type==='optOut'){opted_out.push({device_id:device.device_id,opt_decision_id:decision.opt_decision_id});continue;}
+      if(kind!=='END'&&(!decision||decision.opt_type!=='optIn')){needs_decision.push(device.device_id);continue;}
+      const id=recordId('device',instance.instance_id,event.event_id,event.current_revision===null?{revision:null,definition:event.definition_sha256||null,signal_sha256:digest(signal===undefined?null:signal)}:event.current_revision,kind,intervalId===undefined?null:intervalId,effective===undefined?null:effective,device.device_id);
+      const existing=get('device_actions',id);if(existing){assert(canonical(existing.signal)===canonical(signal===undefined?null:signal),'CONFLICTING_INTERVAL_SIGNAL','The same event edition and interval identity contain conflicting original signal payloads.',{device_action_id:id},409);actions.push(id);continue;}
       const request={schema:'stellar-forge.plaid-device-action.v1',device_action_id:id,instance_id:instance.instance_id,event_id:event.event_id,
-        event_revision:event.current_revision,device_id:device.device_id,adapter_id:device.adapter_id||device.device_id,
+        event_revision:event.current_revision,device_id:device.device_id,adapter_id:device.adapter_id||device.device_id,device_resource_ids:clone(resource_ids),
         action_kind:kind,interval_id:intervalId===undefined?null:clone(intervalId),effective_start_timet:effective===undefined?null:effective,
         signal:clone(signal===undefined?null:signal),targets:clone(targets===undefined?null:targets),callback_id,opt_decision_id:decision?decision.opt_decision_id:null};
       const body=canonical(request),created_at=now();
@@ -356,9 +360,9 @@ function createEngine({store,files,sha256Utf8,now,newId,publicContract}) {
         {scope:eventKey(instance.instance_id,event.event_id)});
       actions.push(id);
     }
-    return {actions,status:devices.length?'ACTIONS_QUEUED':'NO_CONFIGURED_DEVICES'};
+    return {actions,needs_decision,opted_out,status:needs_decision.length?'NEEDS_REVIEW':actions.length?'ACTIONS_QUEUED':opted_out.length?'OPTED_OUT':'NO_CONFIGURED_DEVICES'};
   }
-  function eventProjection(instance,kind,payload,callback,binding) {
+  function eventProjection(instance,kind,payload,callback,binding,{queue_devices=true,preserve_distributions=false}={}) {
     const selected=binding.events_pointer!==undefined?pointer(payload,binding.events_pointer,true):[pointer(payload,binding.event_pointer===undefined?'':binding.event_pointer,true)];
     assert(Array.isArray(selected),'INVALID_BOUND_EVENTS','The reviewed events pointer must select an array.');
     const projected=[],issues=[];
@@ -378,14 +382,16 @@ function createEngine({store,files,sha256Utf8,now,newId,publicContract}) {
       const edition={event_revision_id:edition_id,event_key:key,instance_id:instance.instance_id,event_id,revision,callback_id:callback.callback_id,kind,
         document_sha256:document_hash,document:clone(document),created_at,status:state};
       put('event_revisions',edition_id,edition,{scope:key});
-      if(state!=='CURRENT'){projected.push({event_id,revision,status:state,event_revision_id:edition_id});continue;}
+      if(state!=='CURRENT'){projected.push({event_id,revision,status:state,event_revision_id:edition_id});if(state!=='STALE')issues.push({event_id,code:'EVENT_'+state,message:'The retained event edition cannot replace the current projection without resolving its original revision information.'});continue;}
       const event={...(old||{}),event_key:key,instance_id:instance.instance_id,event_id,current_revision:revision,
         current_edition_id:edition_id,created_at:old?old.created_at:created_at,updated_at:created_at,last_callback_id:callback.callback_id,last_callback_kind:kind,
         definition_sha256:definition?document_hash:old?old.definition_sha256||null:null,
         definition_by_kind:{...(old&&old.current_revision===revision?old.definition_by_kind||{}:{}),...(definition?{[kind]:document_hash}:{})},
         original_event:clone(document),status:old?old.status:'RECEIVED',last_projection_status:'PROJECTED'};
-      if(['OnEvent','OnDistributeEventStart'].includes(kind))event.status='RECEIVED';
+      if(['OnEvent','OnDistributeEventStart'].includes(kind))event.status=old&&old.current_revision===revision?old.status:'RECEIVED';
       if(kind==='OnEventStart'||kind==='OnEventIntervalStart')event.status='ACTIVE';
+      if(kind==='OnEventStart'){event.last_interval_callback_id=null;event.last_interval_identity=null;}
+      if(kind==='OnEventIntervalStart'){event.last_interval_callback_id=callback.callback_id;const iid=binding.interval_id_pointer===undefined?null:pointer(payload,binding.interval_id_pointer,false),effective=binding.interval_start_pointer===undefined?null:pointer(payload,binding.interval_start_pointer,false),signal=binding.signal_pointer===undefined?null:pointer(payload,binding.signal_pointer,false);event.last_interval_identity={interval_id:iid===undefined?null:clone(iid),effective_start_timet:effective===undefined?null:effective,signal_sha256:digest(signal===undefined?null:signal)};}
       if(kind==='OnEventRampUp')event.status='RAMPING';
       if(kind==='OnEventCancel')event.status='CANCEL_REQUESTED';
       if(kind==='OnEventArchive')event.status='ARCHIVED';
@@ -395,8 +401,8 @@ function createEngine({store,files,sha256Utf8,now,newId,publicContract}) {
         for(const action of collect('device_actions',{scope:key,tag:'QUEUED'})){action.status='SUPERSEDED';action.superseded_by_event_revision_id=edition_id;action.updated_at=now();put('device_actions',action.device_action_id,action,{scope:key});}
       }
       let device=null;
-      if(kind==='OnEventIntervalStart'||kind==='OnEventComplete'){
-        try{device=queueDevice(instance,event,kind==='OnEventComplete'?'END':'SET',payload,callback.callback_id,binding,document);}
+      if(queue_devices&&(kind==='OnEventIntervalStart'||kind==='OnEventComplete')){
+        try{device=queueDevice(instance,event,kind==='OnEventComplete'?'END':'SET',payload,callback.callback_id,binding,document);if(device.needs_decision.length){const issue={event_id,code:'OPT_DECISION_REQUIRED',message:'Some selected devices need a reviewed opt decision.',details:{device_ids:device.needs_decision}};issues.push(issue);event.last_projection_status='NEEDS_REVIEW';event.projection_issue=issue;put('events',key,event,{scope:instance.instance_id});}}
         catch(e){if(!(e instanceof M.DomainError))throw e;const issue={event_id,code:e.code,message:e.message,details:e.details};issues.push(issue);event.last_projection_status='NEEDS_REVIEW';event.projection_issue=issue;put('events',key,event,{scope:instance.instance_id});}
       }
       projected.push({event_id,revision,status:event.status,event_revision_id:edition_id,device});
@@ -405,6 +411,7 @@ function createEngine({store,files,sha256Utf8,now,newId,publicContract}) {
       const external=binding.distribution_id_pointer===undefined?null:pointer(payload,binding.distribution_id_pointer,false);
       const distribution_id=external===undefined||external===null?newId():recordId('distribution',instance.instance_id,external);
       const previous=get('distributions',distribution_id);
+      if(preserve_distributions&&previous)return {events:projected,issues,distribution_id,status:issues.length?'NEEDS_REVIEW':'PROJECTED'};
       put('distributions',distribution_id,{distribution_id,instance_id:instance.instance_id,external_id:clone(external===undefined?null:external),
         callback_id:callback.callback_id,event_ids:projected.map(e=>e.event_id),status:'OPEN',created_at:previous?previous.created_at:now(),updated_at:now(),source_complete:false},
         {scope:instance.instance_id});
@@ -413,20 +420,24 @@ function createEngine({store,files,sha256Utf8,now,newId,publicContract}) {
     return {events:projected,issues,status:issues.length?'NEEDS_REVIEW':'PROJECTED'};
   }
 
+  function applyDistributionAbsence(instance_id,distribution_id,event_ids) {
+    const present=new Set(event_ids),absent=[];
+    for(const event of collect('events',{scope:instance_id})){
+      if(present.has(event.event_id)||['COMPLETE','ARCHIVED'].includes(event.status))continue;
+      event.status='ABSENT_FROM_COMPLETE_DISTRIBUTION';event.absent_distribution_id=distribution_id;event.updated_at=now();
+      put('events',event.event_key,event,{scope:instance_id});absent.push(event.event_id);
+      for(const action of collect('device_actions',{scope:event.event_key,tag:'QUEUED'})){
+        if(action.action_kind==='END')continue;action.status='SUPERSEDED';action.superseded_by_distribution_id=distribution_id;action.updated_at=now();
+        put('device_actions',action.device_action_id,action,{scope:event.event_key});}
+    }
+    return absent;
+  }
   function reconcileDistribution(input) {
     const distribution=must('distributions',input.distribution_id);text(input.reviewer,'reviewer');
     const evidence=sourceEvidence(input.source_evidence||[],true);
     assert(input.complete===true,'INCOMPLETE_DISTRIBUTION','An absence reconciliation requires a reviewed complete event distribution.');
     assert(Array.isArray(input.event_ids)&&input.event_ids.every(x=>typeof x==='string'&&x.length)&&new Set(input.event_ids).size===input.event_ids.length,'INVALID_DISTRIBUTION_IDS','Provide the complete unique event identifier array.');
-    const present=new Set(input.event_ids),absent=[];
-    for(const event of collect('events',{scope:distribution.instance_id})){
-      if(present.has(event.event_id)||['COMPLETE','ARCHIVED'].includes(event.status))continue;
-      event.status='ABSENT_FROM_COMPLETE_DISTRIBUTION';event.absent_distribution_id=distribution.distribution_id;event.updated_at=now();
-      put('events',event.event_key,event,{scope:distribution.instance_id});absent.push(event.event_id);
-      for(const action of collect('device_actions',{scope:event.event_key,tag:'QUEUED'})){
-        if(action.action_kind==='END')continue;action.status='SUPERSEDED';action.superseded_by_distribution_id=distribution.distribution_id;action.updated_at=now();
-        put('device_actions',action.device_action_id,action,{scope:event.event_key});}
-    }
+    const absent=applyDistributionAbsence(distribution.instance_id,distribution.distribution_id,input.event_ids);
     distribution.status='RECONCILED';distribution.source_complete=true;distribution.event_ids=clone(input.event_ids);distribution.absent_event_ids=absent;
     distribution.reviewer=input.reviewer;distribution.source_evidence=evidence;distribution.reconciled_at=now();distribution.updated_at=now();
     put('distributions',distribution.distribution_id,distribution,{scope:distribution.instance_id});
@@ -518,6 +529,7 @@ function createEngine({store,files,sha256Utf8,now,newId,publicContract}) {
     assert(action.endpoint,'DEVICE_ADAPTER_NOT_CONFIGURED','Configure the device adapter before the native callback queues a device action.',{},409);
     const event=must('events',eventKey(action.instance_id,action.event_id));
     if(action.action_kind!=='END')assert(event.current_revision===action.event_revision&&['ACTIVE','RAMPING'].includes(event.status),'EVENT_NO_LONGER_ACTIVE','This queued action belongs to a superseded or inactive event.',{status:event.status},409);
+    if(action.action_kind!=='END'){assert(event.last_interval_identity&&canonical(event.last_interval_identity)===canonical({interval_id:action.interval_id,effective_start_timet:action.effective_start_timet,signal_sha256:digest(action.signal)}),'INTERVAL_NO_LONGER_CURRENT','A newer native interval supersedes this queued device setting.',{device_action_id:action.device_action_id,current_interval_callback_id:event.last_interval_callback_id||null},409);const edition=must('instance_editions',action.instance_edition_id),device=edition.devices.find(d=>d.device_id===action.device_id),resources=action.device_resource_ids||(device&&device.target_ids&&device.target_ids.resourceId)||[],decision=optFor(action.instance_id,action.event_id,resources);assert(decision&&decision.opt_type==='optIn','OPT_DECISION_CHANGED','The applicable current decision no longer permits this queued device setting.',{device_action_id:action.device_action_id,opt_decision_id:decision?decision.opt_decision_id:null},409);action.dispatch_opt_decision_id=decision.opt_decision_id;}
     action.status='SENDING';action.attempt_id=newId();action.started_at=now();action.updated_at=now();
     put('device_actions',action.device_action_id,action,{scope:eventKey(action.instance_id,action.event_id)});
     return {device_action_id:action.device_action_id,attempt_id:action.attempt_id,instance_id:action.instance_id,action_kind:action.action_kind,
@@ -564,6 +576,74 @@ function createEngine({store,files,sha256Utf8,now,newId,publicContract}) {
     }
     return {recovered};
   }
+
+  function projectHistory(input) {
+    const instance=must('instances',input.instance_id);text(input.reviewer,'reviewer');
+    const evidence=sourceEvidence(input.source_evidence||[],true),projection_id=newId(),created_at=now();
+    const eventKinds=new Set(['OnDistributeEventStart','OnEvent','OnEventStart','OnEventIntervalStart','OnEventCancel','OnEventArchive','OnEventComplete','OnEventRampUp']);
+    const saved=collect('callbacks',{scope:instance.instance_id}).filter(c=>eventKinds.has(c.kind)&&c.header);
+    saved.sort((a,b)=>(a.first_received_revision||0)-(b.first_received_revision||0)||(a.created_at<b.created_at?-1:a.created_at>b.created_at?1:a.callback_id<b.callback_id?-1:1));
+    const unbound=saved.filter(c=>!instance.bindings[c.kind]||instance.bindings[c.kind].event_id_pointer===undefined);
+    assert(unbound.length===0,'INCOMPLETE_HISTORY_BINDINGS','Bind every retained event callback kind before rebuilding the current event projection.',{callback_kinds:Array.from(new Set(unbound.map(c=>c.kind)))},409);
+    for(const old of collect('events',{scope:instance.instance_id})){
+      const event={...old,current_revision:null,current_edition_id:null,definition_sha256:null,definition_by_kind:{},
+        status:'REPROJECTING',last_interval_callback_id:null,last_interval_identity:null,last_callback_id:null,last_callback_kind:null,updated_at:created_at};
+      put('events',event.event_key,event,{scope:instance.instance_id});
+    }
+    const timeline=saved.map(callback=>({kind:'callback',revision:callback.first_received_revision||0,created_at:callback.created_at,callback}));
+    for(const operation of collect('operations',{})){
+      if(operation.action!=='reconcile_distribution')continue;
+      const distribution=get('distributions',operation.input.distribution_id);
+      if(distribution&&distribution.instance_id===instance.instance_id)timeline.push({kind:'reconciliation',revision:operation.result.revision,created_at:operation.created_at,operation});
+    }
+    timeline.sort((a,b)=>a.revision-b.revision||(a.created_at<b.created_at?-1:a.created_at>b.created_at?1:0));
+    let projected=0,reapplied_reconciliations=0;const issues=[];
+    for(const item of timeline) {
+      if(item.kind==='reconciliation'){applyDistributionAbsence(instance.instance_id,item.operation.input.distribution_id,item.operation.input.event_ids);reapplied_reconciliations++;continue;}
+      const callback=item.callback;
+      const payload=JSON.parse(readFile(callback.request_file.sha256)),binding=instance.bindings[callback.kind];
+      const result=eventProjection(instance,callback.kind,payload,callback,binding,{queue_devices:false,preserve_distributions:true});projected++;
+      for(const issue of result.issues)issues.push({callback_id:callback.callback_id,...issue});
+      callback.projection_history=[...(callback.projection_history||[]),{projection_id,instance_edition_id:instance.edition_id,created_at,result}];
+      put('callbacks',callback.callback_id,callback,{scope:instance.instance_id,tag:callback.processing_status});
+    }
+    return {projection_id,instance_id:instance.instance_id,instance_edition_id:instance.edition_id,projected_callbacks:projected,reapplied_reconciliations,
+      reviewer:input.reviewer,source_evidence:evidence,issue_count:issues.length,issues,status:issues.length?'NEEDS_REVIEW':'PROJECTED'};
+  }
+  function resumeEventCallback(input) {
+    const callback=must('callbacks',input.callback_id),instance=must('instances',callback.instance_id);
+    text(input.reviewer,'reviewer');text(input.event_id,'event_id');const evidence=sourceEvidence(input.source_evidence||[],true);
+    assert(callback.kind==='OnEventIntervalStart'&&callback.header,'INVALID_CALLBACK_CONTINUATION','Only an original accepted interval-start context can prepare its device settings.',{},409);
+    const binding=instance.bindings.OnEventIntervalStart;
+    assert(binding&&binding.event_id_pointer!==undefined,'UNPROJECTED_SCHEMA','Configure the reviewed interval binding first.',{},409);
+    const payload=JSON.parse(readFile(callback.request_file.sha256));
+    const documents=binding.events_pointer!==undefined?pointer(payload,binding.events_pointer,true):[pointer(payload,binding.event_pointer===undefined?'':binding.event_pointer,true)];
+    assert(Array.isArray(documents),'INVALID_BOUND_EVENTS','The reviewed event selector must produce an array.');
+    const matches=documents.filter(d=>pointer(d,binding.event_id_pointer,false)===input.event_id);
+    assert(matches.length===1,'AMBIGUOUS_CALLBACK_EVENT','The retained callback must contain exactly one selected event.');
+    const event=must('events',eventKey(instance.instance_id,input.event_id));
+    assert(Object.prototype.hasOwnProperty.call(input,'expected_event_revision')&&input.expected_event_revision===event.current_revision,
+      'EVENT_REVISION_CHANGED','The current event edition differs from the reviewed continuation.',{current_revision:event.current_revision},409);
+    assert(event.status==='ACTIVE'&&event.last_interval_callback_id===callback.callback_id,
+      'INTERVAL_NO_LONGER_CURRENT','Project the saved event history and select its still-active latest native interval before continuing.',{status:event.status,current_interval_callback_id:event.last_interval_callback_id||null},409);
+    const originalRevision=binding.revision_pointer===undefined?null:pointer(matches[0],binding.revision_pointer,false);
+    assert((originalRevision===undefined?null:originalRevision)===event.current_revision,'CALLBACK_REVISION_MISMATCH','The original callback edition is not the current event edition.',{},409);
+    if(binding.interval_id_pointer!==undefined){
+      assert(Object.prototype.hasOwnProperty.call(input,'expected_interval_id'),'MISSING_INTERVAL_ID','Retain the reviewed original interval identity.');
+      assert(canonical(input.expected_interval_id)===canonical(pointer(payload,binding.interval_id_pointer,true)),'INTERVAL_ID_CHANGED','The reviewed interval identity differs from the original callback.',{},409);
+    }
+    if(binding.interval_start_pointer!==undefined){
+      assert(input.expected_effective_start_timet===pointer(payload,binding.interval_start_pointer,true),'INTERVAL_START_CHANGED','The reviewed effective start differs from the original callback.',{},409);
+    }
+    const result=queueDevice(instance,event,'SET',payload,callback.callback_id,binding,matches[0]),continuation_id=newId(),created_at=now();
+    const continuation={continuation_id,instance_edition_id:instance.edition_id,event_id:event.event_id,event_revision:event.current_revision,
+      reviewer:input.reviewer,source_evidence:evidence,created_at,result};
+    callback.continuations=[...(callback.continuations||[]),continuation];
+    put('callbacks',callback.callback_id,callback,{scope:instance.instance_id,tag:callback.processing_status});
+    event.last_projection_status=result.status==='NEEDS_REVIEW'?'NEEDS_REVIEW':'PROJECTED';event.last_continuation_id=continuation_id;event.updated_at=created_at;
+    put('events',event.event_key,event,{scope:instance.instance_id});
+    return {continuation_id,callback_id:callback.callback_id,event_id:event.event_id,status:result.status,device_actions:result.actions,needs_decision:result.needs_decision,opted_out:result.opted_out};
+  }
   function callbackResponse(instance,kind,payload,record) {
     if(kind==='OnHeartbeat')return {http_status:200,body_utf8:'',processing_status:'RECORDED'};
     if(kind==='OnRegisterReports') {
@@ -572,7 +652,8 @@ function createEngine({store,files,sha256Utf8,now,newId,publicContract}) {
       return {http_status:200,body_utf8:readFile(mapping.registration_response_file.sha256),processing_status:'REGISTERED_RESPONSE',mapping_id:mapping.mapping_id};
     }
     if(kind==='OnQueryIntervals') {
-      const result=buildReport({instance_id:instance.instance_id,query:payload.onQueryIntervalsMessage},record.callback_id);
+      const query=queryShape(payload.onQueryIntervalsMessage),cached=instance.active_mapping_id?get('meta','report-cache:'+recordId(instance.instance_id,instance.active_mapping_id,query)):null;
+      const result=cached?{report_id:cached.report_id,status:'READY',response_file:cached.response_file,issue_count:0}:buildReport({instance_id:instance.instance_id,query},record.callback_id);
       return {http_status:result.status==='READY'?200:503,body_utf8:result.response_file?readFile(result.response_file.sha256):'',
         processing_status:result.status,report_id:result.report_id,issue_count:result.issue_count};
     }
@@ -609,7 +690,7 @@ function createEngine({store,files,sha256Utf8,now,newId,publicContract}) {
       const input_file=rawFile(raw_utf8,'Plaid_Callback_'+newId()+'.json'),callback_id=recordId('callback',instance_id,callback_kind,input_file.sha256),
         delivery_id=newId(),created_at=now(),old=get('callbacks',callback_id);
       const basis=canonical([instance.edition_id,instance.active_mapping_id]);
-      let record=old||{callback_id,instance_id,kind:callback_kind,request_file:input_file,created_at,delivery_count:0,attempts:[],header:null};
+      let record=old||{callback_id,instance_id,kind:callback_kind,request_file:input_file,created_at,first_received_revision:w.revision+1,delivery_count:0,attempts:[],header:null};
       record.delivery_count++;record.last_delivery_at=created_at;
       const reusable=old&&(old.http_status===200||old.processing_basis===basis);
       let replayed=false;
@@ -634,7 +715,7 @@ function createEngine({store,files,sha256Utf8,now,newId,publicContract}) {
         const response_file=rawFile(result.body_utf8,'Plaid_Callback_Response_'+callback_id+'_'+record.attempts.length+'.txt','text/plain');
         const attempt={attempt_id:newId(),created_at,http_status:result.http_status,processing_status:result.processing_status,response_file,
           processing_basis:basis,...Object.fromEntries(Object.entries(result).filter(([key])=>!['http_status','body_utf8','processing_status'].includes(key)))};
-        record={...record,...attempt,attempts:[...record.attempts,attempt]};
+        record={...record,...attempt,created_at:record.created_at,attempts:[...record.attempts,attempt]};
       }
       put('callbacks',callback_id,record,{scope:instance_id,tag:record.processing_status});
       const delivery={delivery_id,callback_id,instance_id,kind:callback_kind,request_file:input_file,created_at,replayed,http_status:record.http_status,
@@ -652,7 +733,7 @@ function createEngine({store,files,sha256Utf8,now,newId,publicContract}) {
     prepare_management:prepareManagement,begin_management:beginManagement,finish_management:finishManagement,
     reconcile_management:input=>reconcileDispatch(input,'management'),
     begin_device_action:beginDevice,finish_device_action:finishDevice,reconcile_device_action:input=>reconcileDispatch(input,'device'),
-    recover_dispatches:recoverDispatches
+    recover_dispatches:recoverDispatches,project_event_history:projectHistory,resume_event_callback:resumeEventCallback
   };
   function execute(action,input,{request_id,expected_revision}={}) {
     assert(ACTIONS.includes(action),'UNKNOWN_ACTION','The requested action is not available.');
