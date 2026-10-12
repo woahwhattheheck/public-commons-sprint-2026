@@ -112,7 +112,7 @@ const payment = object({
   scheme: choice(['exact']), network: choice(['stellar:testnet','stellar:pubnet']), asset: string(100),
   amount: matching(/^[1-9][0-9]*$/), payTo: string(100), maxTimeoutSeconds: number(1,86400)
 }, ['scheme','network','asset','amount','payTo','maxTimeoutSeconds']);
-const nativeQuery = { type: 'object', additionalProperties: { type: 'string' } };
+const nativeQuery = string(8192);
 const id = matching(SHORT_ID), edition = matching(SHA), dataset = matching(DATASET_ID), release = matching(RELEASE_ID);
 const actions = [
   ['watch.add','Retain an asset watch and its operator note.', {network:choice(['public','testnet']),asset:string(100),label:string(),note:string(4000)}, ['asset']],
@@ -123,7 +123,7 @@ const actions = [
   ['edition.compare','Retain the complete keyed comparison of two original editions, including its full downloadable changes file.', {leftId:edition,rightId:edition}, ['leftId','rightId']],
   ['annotation.save','Save source-linked review notes and preserve the original note history.', {editionId:edition,subject:string(300),note:string(12000),status:choice(['open','reviewed','follow_up'])}, ['editionId','subject','note','status']],
   ['dataset.prepare','Prepare the exact selected edition using the original SF30 dataset engine and full source-page closure.', {editionId:edition,name:string()}, ['editionId']],
-  ['dataset.query','Query the retained original dataset; pass schema-defined field/filter/sort/cursor parameters as exact strings. The original journal records this query.', {datasetId:dataset,query:nativeQuery}, ['datasetId']],
+  ['dataset.query','Query the retained original dataset; pass the original URL-encoded query string with schema-defined field/filter/sort/cursor parameters. The original journal records this query.', {datasetId:dataset,query:nativeQuery}, ['datasetId']],
   ['release.prepare','Prepare an original SF82 publisher release with explicitly reviewed origin, path and Stellar payment terms.', {datasetId:dataset,origin:string(2048),path:string(1024),payment}, ['datasetId','origin','payment']],
   ['release.inspect','Inspect the selected original publisher, release generation and runtime readiness; retain the resulting original journal entry.', {releaseId:release}, ['releaseId'], {openWorld:true}],
   ['release.activate','Activate the exact original prepared release with the current publisher generation.', {releaseId:release,expectedGeneration:number(0)}, ['releaseId','expectedGeneration'], {destructive:true}],
