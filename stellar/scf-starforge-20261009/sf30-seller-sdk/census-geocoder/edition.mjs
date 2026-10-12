@@ -5,7 +5,9 @@ import { buildDatasetSellerConfig } from '../dataset-cli.mjs';
 import { csvLine } from '../postgres/publisher/plan.mjs';
 import { bytes, digest, identity, readPrivate, readJson, createFile, hashPrivate,
   privateDirectory, acquireWorkspace, syncDirectory, fault, stamp } from '../postgres/publisher/files.mjs';
-import { COLUMNS, COORDINATE_MEANING, API_GUIDE, only } from './source.mjs';
+import { COLUMNS, COORDINATE_MEANING, API_GUIDE, MAX_INPUT_BYTES, MAX_RESPONSE_BYTES, only,
+  inputAddresses, parseBatchResponse } from './source.mjs';
+import { customerSource, customerResults } from './customer-intake.mjs';
 
 export const EDITION_SCHEMA = 'stellar-forge.census-geocoder-edition.v1';
 export async function writeExact(path, value) {
@@ -67,17 +69,44 @@ export async function reopenEdition(directory) {
   if (config.file !== 'dataset.csv') throw fault('GEOCODER_EDITION_CONFIG');
   const native = await loadDatasetConfig(join(directory, 'dataset.json'));
   if (identity(native.describe()) !== identity(manifest.dataset)) throw fault('GEOCODER_EDITION_CHANGED');
+  const customerFiles = ['source/customer-input.csv', 'source/customer-mapping.json', 'source/customer-binding.json',
+    'customer-results.csv', 'customer-results.json'];
+  if (manifest.customer !== undefined || customerFiles.some(name => manifest.files.some(file => file.path === name))) {
+    if (!manifest.customer || customerFiles.some(name => !manifest.files.some(file => file.path === name)))
+      throw fault('GEOCODER_CUSTOMER_EDITION_INCOMPLETE');
+    const mapping = await readJson(join(directory, 'source/customer-mapping.json'), 2 * 1024 * 1024);
+    const binding = await readJson(join(directory, 'source/customer-binding.json'), 65536);
+    const source = customerSource(await readPrivate(join(directory, 'source/customer-input.csv'), MAX_INPUT_BYTES), { header: mapping.sourceHeader });
+    const batch = await readJson(join(directory, 'source/batch.json'));
+    const submitted = await readPrivate(join(directory, 'source/submitted.csv'), MAX_INPUT_BYTES);
+    const captured = parseBatchResponse(await readPrivate(join(directory, 'source/response.csv'), MAX_RESPONSE_BYTES),
+      inputAddresses(submitted).records, batch.selection.returnType);
+    const review = await readJson(join(directory, 'review.json'));
+    const reviewed = reviewSelection(review.plan, captured);
+    if (review.id !== manifest.reviewId || review.batchId !== batch.id || review.attemptId !== manifest.attemptId ||
+        review.responseSha256 !== captured.responseSha256 || review.selectedRows !== reviewed.selectedRows || review.omittedRows !== reviewed.omittedRows)
+      throw fault('GEOCODER_CUSTOMER_REVIEW_CHANGED');
+    const joined = customerResults({ source, mapping, binding }, batch, submitted, captured, review,
+      selectRows(captured.rows, reviewed.plan).map(row => row.record_id));
+    if (identity(joined.description) !== identity(manifest.customer) ||
+        identity(manifest.source.customer) !== identity(joined.description))
+      throw fault('GEOCODER_CUSTOMER_EDITION_CHANGED');
+    for (const [name, exact] of Object.entries(joined.files))
+      if (!(await readPrivate(join(directory, name), 64 * 1024 * 1024)).equals(exact))
+        throw fault('GEOCODER_CUSTOMER_EDITION_CHANGED', name);
+  }
   return { ...manifest, directory, datasetPath: join(directory, 'dataset.json'),
     sellerPath: manifest.files.some(file => file.path === 'seller.json') ? join(directory, 'seller.json') : null };
 }
-export async function createEdition({ directory, batch, attempt, review, captured, originals, payment, origin, path = '/geocodes' }) {
+export async function createEdition({ directory, batch, attempt, review, captured, originals, payment, origin, path = '/geocodes', customer = null }) {
   if ((payment === undefined) !== (origin === undefined)) throw fault('GEOCODER_TERMS_REQUIRED', 'Set public payment terms and origin together.');
   const reviewed = reviewSelection(review.plan, captured);
   if (review.responseSha256 !== captured.responseSha256 || review.batchId !== batch.id || review.attemptId !== attempt.id ||
       review.selectedRows !== reviewed.selectedRows || review.omittedRows !== reviewed.omittedRows)
     throw fault('GEOCODER_REVIEW_CHANGED', 'Review this exact retained response before building its edition.');
   const plan = reviewed.plan, operationId = identity({ batch: batch.id, attempt: attempt.id, review: review.id,
-    responseSha256: captured.responseSha256, payment: payment ?? null, origin: origin ?? null, path });
+    responseSha256: captured.responseSha256, payment: payment ?? null, origin: origin ?? null, path,
+    ...(customer ? { customerMappingSha256: digest(bytes(customer.mapping)), customerBindingSha256: digest(bytes(customer.binding)) } : {}) });
   directory = resolve(directory); await privateDirectory(directory, true);
   const release = await acquireWorkspace(directory);
   try {
@@ -88,6 +117,8 @@ export async function createEdition({ directory, batch, attempt, review, capture
     } catch (error) { if (error.code !== 'ENOENT') throw error; }
     await writeExact(join(directory, 'preparing.json'), bytes({ schema: EDITION_SCHEMA, operationId }));
     const rows = selectRows(captured.rows, plan);
+    const joinedCustomer = customer ? customerResults(customer, batch, originals['submitted.csv'], captured, review,
+      rows.map(row => row.record_id)) : null;
     const csv = Buffer.from(csvLine(plan.columns) + rows.map(row => csvLine(plan.columns.map(name =>
       row[name] === null ? '' : String(row[name])))).join(''));
     if (csv.length > 64 * 1024 * 1024) throw fault('GEOCODER_EDITION_SIZE');
@@ -103,9 +134,12 @@ export async function createEdition({ directory, batch, attempt, review, capture
     await writeExact(join(directory, 'review.json'), bytes(review));
     await privateDirectory(join(directory, 'source'), true);
     const files = ['dataset.csv', 'dataset.json', 'review.json'];
-    for (const [name, value] of Object.entries(originals)) {
+    for (const [name, value] of Object.entries({ ...originals, ...joinedCustomer?.originals })) {
       if (!safePath(name) || name.includes('/')) throw fault('GEOCODER_ORIGINAL_NAME');
       await writeExact(join(directory, 'source', name), value); files.push('source/' + name);
+    }
+    for (const [name, value] of Object.entries(joinedCustomer?.files ?? {})) {
+      await writeExact(join(directory, name), value); files.push(name);
     }
     const source = { schema: 'stellar-forge.census-geocoder-provenance.v1', provider: 'U.S. Census Bureau',
       apiGuide: API_GUIDE, batchId: batch.id, attemptId: attempt.id, selection: batch.selection,
@@ -114,14 +148,16 @@ export async function createEdition({ directory, batch, attempt, review, capture
       originalRows: captured.rows.length, publishedRows: rows.length, counts: captured.counts,
       coordinateMeaning: COORDINATE_MEANING, numericCoordinates: 'Native numeric columns use IEEE-754; coordinate_text retains the original provider coordinate token.',
       geographyCodes: 'FIPS, tract, block and derived GEOIDs are text with original leading zeros.',
-      reviewId: review.id, reviewSha256: digest(bytes(review)), retainedSourceDirectory: 'source' };
+      reviewId: review.id, reviewSha256: digest(bytes(review)), retainedSourceDirectory: 'source',
+      ...(joinedCustomer ? { customer: joinedCustomer.description } : {}) };
     await writeExact(join(directory, 'source.json'), bytes(source)); files.push('source.json');
     if (payment !== undefined) {
       const seller = await buildDatasetSellerConfig(native, { payment, origin, path });
       await writeExact(join(directory, 'seller.json'), bytes(seller)); files.push('seller.json');
     }
     const manifest = { schema: EDITION_SCHEMA, operationId, createdAt: stamp(), batchId: batch.id,
-      attemptId: attempt.id, reviewId: review.id, dataset: native.describe(), source, files: [] };
+      attemptId: attempt.id, reviewId: review.id, dataset: native.describe(), source,
+      ...(joinedCustomer ? { customer: joinedCustomer.description } : {}), files: [] };
     for (const name of files) {
       const file = await hashPrivate(join(directory, name), 64 * 1024 * 1024);
       manifest.files.push({ path: name, bytes: file.bytes, sha256: file.hash });
