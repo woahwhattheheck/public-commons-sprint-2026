@@ -320,6 +320,63 @@ function renderComparisons(){
       el('div',{class:'downloads'},btn('Inspect changes','comparison-open',item.id,item.status!=='READY'),creationRetry(item,'comparison'))])):
     empty('Create a comparison to inspect changes between reviewed editions.'));
 }
+function observationTable(total){
+  const values=[];
+  for(const [side,observations] of [['Left',total.leftObservations],['Right',total.rightObservations]]){
+    for(const group of arr(observations?.groups))values.push([
+      side,Object.entries(group.key??{}).map(([key,value])=>key+' = '+text(value)).join(' · ')||'All selected rows',
+      group.first?.date??'—',group.first?.value??'—',group.last?.date??'—',group.last?.value??'—',group.change??'—']);
+  }
+  return values.length?el('div',{class:'table-wrap'},table(
+    ['Edition','Series','First date','First value','Last date','Last value','Exact change'],values,
+    ['','','mono','mono numeric','mono','mono numeric','mono numeric'])):
+    el('p',{class:'muted small'},'No dated numeric observations exist for this measure in the selected editions.');
+}
+function measureComparison(value){
+  const totals=Object.entries(value??{});
+  if(!totals.length)return empty('No measures were selected for this comparison.');
+  return el('div',{class:'measure-comparisons'},totals.map(([field,total])=>{
+    const heading=total.left?.label||total.right?.label||field;
+    const context=el('details',{class:'measure-context'},el('summary',{},'Field interpretation and null markers'),
+      ['left','right'].map(side=>el('div',{},el('h5',{},side==='left'?'Left edition':'Right edition'),
+        readout([['Unit',total[side]?.unit],['Scale',total[side]?.scale],
+          ['Null marker',total[side]?.nullToken===null?'JSON null':total[side]?.nullToken??'JSON null']]),
+        el('p',{},total[side]?.notes??''))));
+    return el('section',{class:'measure-card'},
+      el('div',{class:'measure-heading'},el('div',{},el('h4',{},heading),el('p',{class:'mono muted small'},field)),
+        badge(total.compatible?'MATCHING UNITS':'UNIT REVIEW')),
+      el('p',{class:'small muted'},total.compatible?
+        'Unit '+total.unit+' · scale '+total.scale+' · original decimal precision':
+        'Left unit '+text(total.left?.unit)+' × '+text(total.left?.scale)+' · right unit '+text(total.right?.unit)+' × '+text(total.right?.scale)),
+      el('h5',{},'Dated observations'),observationTable(total),
+      el('details',{class:'measure-arithmetic'},el('summary',{},'Arithmetic across selected rows'),
+        el('p',{class:'small muted'},'These sums use every numeric observation in each selected row set. For a stock series, use the dated observations above to inspect its change.'),
+        el('div',{class:'table-wrap'},table(['Edition','Exact row sum','Numeric values','Null markers','Other values'],[
+          ['Left',total.leftSum,count(total.leftNumericRows),count(total.leftMissingRows??0),count(total.leftNonNumericRows)],
+          ['Right',total.rightSum,count(total.rightNumericRows),count(total.rightMissingRows??0),count(total.rightNonNumericRows)]
+        ],['','mono numeric','numeric','numeric','numeric'])),
+        readout([['Right minus left',total.delta],['Comparable row pairs',total.participatingRows],
+          ['Pairs with null markers',total.missingPairRows??0],['Pairs with other values',total.nonNumericPairRows??0]])),
+      context);
+  }));
+}
+function comparisonRows(rows,totals){
+  if(!arr(rows).length)return empty('No rows match this comparison view.');
+  return el('div',{class:'comparison-records'},rows.map(row=>{
+    const fields=[...new Set([...Object.keys(row.left??{}),...Object.keys(row.right??{})])];
+    const changed=new Set(arr(row.changes).map(change=>change.field));
+    const identity=Object.entries(row.key??{}).map(([key,value])=>key+' = '+text(value)).join(' · ');
+    return el('details',{class:'comparison-record'},el('summary',{},
+      badge(row.status),el('span',{class:'mono'},identity||'Row '+count(row.ordinal+1)),
+      el('span',{class:'muted small'},count(changed.size)+' fields changed')),
+      el('div',{class:'table-wrap'},table(['Field','Left value','Right value','Exact delta','Unit / scale'],fields.map(field=>[
+        el('span',{class:changed.has(field)?'changed-field mono':'mono'},field),
+        row.left&&Object.hasOwn(row.left,field)?valueNode(row.left[field]):'—',
+        row.right&&Object.hasOwn(row.right,field)?valueNode(row.right[field]):'—',
+        row.deltas?.[field]??'—',totals?.[field]?.compatible?totals[field].unit+' × '+totals[field].scale:'—'
+      ]),['','mono','mono','mono numeric','mono'])));
+  }));
+}
 async function openComparison(id,offset=0){
   const retained=state.comparisons.find(item=>item.id===id);
   if(retained&&retained.status!=='READY'){
@@ -336,8 +393,8 @@ async function openComparison(id,offset=0){
   const summary=detail.summary;
   $('comparison-metrics').replaceChildren(...metric([['Left rows',summary.leftRows],['Right rows',summary.rightRows],['Added',summary.added],
     ['Removed',summary.removed],['Changed',summary.changed],['Unchanged',summary.unchanged]]));
-  $('comparison-measures').replaceChildren(genericTable(summary.measureTotals));
-  $('comparison-rows').replaceChildren(genericTable(detail.rows));
+  $('comparison-measures').replaceChildren(measureComparison(summary.measureTotals));
+  $('comparison-rows').replaceChildren(comparisonRows(detail.rows,summary.measureTotals));
   paginate('comparison-pagination',detail,next=>openComparison(id,next));
   $('comparison-files').replaceChildren(files('comparison',id,detail.files));
 }
