@@ -4,12 +4,16 @@ import argparse
 import base64
 import datetime as dt
 import hashlib
+import fcntl
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
 import re
 import subprocess
 import sys
+import stat
+import uuid
 from urllib.error import HTTPError
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
@@ -44,11 +48,63 @@ def https(value):
 
 
 def write_new(path, data):
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    with os.fdopen(fd, "wb") as stream:
-        stream.write(data)
-        stream.flush()
-        os.fsync(stream.fileno())
+    """Publish complete bytes with the original create-only contract."""
+    temporary = path.with_name("." + path.name + "." + uuid.uuid4().hex + ".tmp")
+    owned = False
+    try:
+        fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        owned = True
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.link(temporary, path, follow_symlinks=False)
+        directory_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+    finally:
+        if owned:
+            temporary.unlink(missing_ok=True)
+
+
+def retain_exact(path, data):
+    """Reuse completed bytes directly, including on a nearly full filesystem."""
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    except FileNotFoundError:
+        try:
+            write_new(path, data)
+            return
+        except FileExistsError:
+            fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    with os.fdopen(fd, "rb") as stream:
+        info = os.fstat(stream.fileno())
+        need(stat.S_ISREG(info.st_mode) and not info.st_mode & 0o077
+             and info.st_size == len(data), "Retained file differs: " + path.name)
+        need(stream.read(len(data) + 1) == data, "Retained bytes differ: " + path.name)
+
+
+@contextmanager
+def output_operation(directory):
+    directory.mkdir(mode=0o700, exist_ok=True)
+    info = directory.lstat()
+    need(stat.S_ISDIR(info.st_mode) and not info.st_mode & 0o077
+         and info.st_uid == os.getuid(), "Use the original private output directory")
+    fd = os.open(directory / ".receiving.lock",
+                 os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    try:
+        lock_info = os.fstat(fd)
+        need(stat.S_ISREG(lock_info.st_mode) and not lock_info.st_mode & 0o077,
+             "Original receiving lock must be private")
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise ValueError("The original receiving operation is already running")
+        yield
+    finally:
+        os.close(fd)
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -117,7 +173,8 @@ def capture(args):
     return complete_capture(directory, body, supported, response, args.url, args.facilitator)
 
 
-def complete_capture(directory, body, supported, response, url, facilitator):
+def complete_capture(directory, body, supported, response, url, facilitator, *, resume=False):
+    retain = retain_exact if resume else write_new
     need(supported["status"] == 200, "Facilitator supported response must be HTTP 200")
     kinds = json.loads(supported["bodyUtf8"]).get("kinds", [])
     need(any(k.get("x402Version") == 2 and k.get("scheme") == "exact"
@@ -130,9 +187,9 @@ def complete_capture(directory, body, supported, response, url, facilitator):
     challenge_bytes = base64.b64decode(header, validate=True)
     challenge = json.loads(challenge_bytes)
     index = select_offer(challenge, url)
-    write_new(directory / "payment-required.json", challenge_bytes)
+    retain(directory / "payment-required.json", challenge_bytes)
     # Only the envelope changes. Preserve the entire original challenge as its row.
-    write_new(directory / "offers.json", encoded({"resources": [challenge]}))
+    retain(directory / "offers.json", encoded({"resources": [challenge]}))
     names = ["request.json", "supported.http.json", "challenge.http.json",
              "payment-required.json", "offers.json"]
     manifest = {"schema": SCHEMA, "seller": url, "method": "POST",
@@ -141,7 +198,7 @@ def complete_capture(directory, body, supported, response, url, facilitator):
                 "acceptIndex": index, "selectedOffer": challenge["accepts"][index],
                 "files": {name: {"sha256": sha((directory / name).read_bytes()),
                                  "bytes": (directory / name).stat().st_size} for name in names}}
-    write_new(directory / "capture.json", encoded(manifest))
+    retain(directory / "capture.json", encoded(manifest))
     return {"status": "ORIGINAL_HTTP_SOURCE_CAPTURED", "directory": str(directory),
             "manifestSha256": sha((directory / "capture.json").read_bytes()),
             "selectedOffer": manifest["selectedOffer"]}
@@ -162,12 +219,13 @@ def restore(args):
     need(response["url"] == url and response["method"] == "POST"
          and supported["url"] == facilitator.rstrip("/") + "/supported"
          and supported["method"] == "GET", "Original HTTP sources changed")
-    directory = Path(args.directory).resolve()
-    directory.mkdir(mode=0o700)
-    write_new(directory / "request.json", body)
-    write_new(directory / "supported.http.json", encoded(supported))
-    write_new(directory / "challenge.http.json", encoded(response))
-    return complete_capture(directory, body, supported, response, url, facilitator)
+    directory = Path(args.directory).absolute()
+    need(directory.resolve() == directory, "Use the original unaliased capture path")
+    with output_operation(directory):
+        retain_exact(directory / "request.json", body)
+        retain_exact(directory / "supported.http.json", encoded(supported))
+        retain_exact(directory / "challenge.http.json", encoded(response))
+        return complete_capture(directory, body, supported, response, url, facilitator, resume=True)
 
 
 def read_capture(directory):
@@ -195,40 +253,98 @@ def read_capture(directory):
     return root, manifest
 
 
+PREPARE_REVIEW_JS = """
+import {readFile} from 'node:fs/promises';
+import {pathToFileURL} from 'node:url';
+const {prepareReview} = await import(pathToFileURL(process.argv[1]).href);
+const result = prepareReview(await readFile(process.argv[2]), JSON.parse(process.argv[3]));
+process.stdout.write(JSON.stringify({configSha256:result.configSha256,
+    dataBase64:result.data.toString('base64')}));
+"""
+
+
 def prepare(args):
     root, manifest = read_capture(args.capture)
     checkout = Path(args.checkout).resolve()
     cli = checkout / NATIVE
     need(cli.is_file(), "Complete Commons checkout and original SF88 CLI required")
     need(re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", args.intent_id), "Stable intent ID required")
-    output = Path(args.directory).resolve()
-    output.mkdir(mode=0o700)
-    write_new(output / "request.json", (root / "request.json").read_bytes())
-    argv = [args.node, str(cli), "--prepare", "--discovery", str(root / "offers.json"),
-            "--row", str(manifest["rowIndex"]), "--accept", str(manifest["acceptIndex"]),
-            "--intent-id", args.intent_id, "--url", manifest["seller"], "--method", "POST",
-            "--body-file", str(output / "request.json"), "--content-type", "application/json",
-            "--response-out", str(output / "metar-result.json"),
-            "--out", str(output / "review.json")]
-    result = subprocess.run(argv, cwd=checkout, check=True, text=True, capture_output=True)
-    native_result = json.loads(result.stdout)
-    write_new(output / "native-prepare.json", encoded(native_result))
-    reviewed = subprocess.run([args.node, str(cli), "--review", "--config",
-                               str(output / "review.json")],
-                              cwd=checkout, check=True, text=True, capture_output=True)
-    review = json.loads(reviewed.stdout)
-    write_new(output / "native-review.json", encoded(review))
-    record = {"schema": "commons.agentsmith.native-preparation.v1",
-              "captureManifestSha256": sha((root / "capture.json").read_bytes()),
-              "checkout": str(checkout), "nativeCliSha256": sha(cli.read_bytes()),
-              "intentId": args.intent_id, "sourceDirectory": str(root),
-              "reviewConfig": str(output / "review.json"),
-              "nativeResult": native_result,
-              "reviewConfigSha256": sha((output / "review.json").read_bytes())}
-    write_new(output / "preparation.json", encoded(record))
-    return {"status": "NATIVE_BUYER_REVIEW_PREPARED", "directory": str(output),
-            "config": str(output / "review.json"),
-            "intentId": args.intent_id, "nativeReview": review}
+    output = Path(args.directory).absolute()
+    need(output.resolve() == output, "Use the original unaliased request path")
+    body = (root / "request.json").read_bytes()
+    review_path = output / "review.json"
+    record_path = output / "preparation.json"
+    with output_operation(output):
+        retain_exact(output / "request.json", body)
+        # The original pure preparer binds a pre-existing draft before resuming
+        # around the original create-only CLI. Request/output paths stay fixed.
+        selection = {"rowIndex": manifest["rowIndex"], "acceptIndex": manifest["acceptIndex"],
+                     "intentId": args.intent_id, "url": manifest["seller"], "method": "POST",
+                     "bodyFile": str(output / "request.json"), "bodyBytes": len(body),
+                     "bodySha256": sha(body), "headers": {"Content-Type": "application/json"},
+                     "responseOut": str(output / "metar-result.json")}
+        derived = subprocess.run(
+            [args.node, "--input-type=module", "-e", PREPARE_REVIEW_JS,
+             str(cli.parent / "prepare.mjs"), str(root / "offers.json"),
+             json.dumps(selection)], cwd=checkout, check=True, text=True, capture_output=True)
+        expected = json.loads(derived.stdout)
+        config_bytes = base64.b64decode(expected["dataBase64"], validate=True)
+        need(sha(config_bytes) == expected["configSha256"], "Original preparer result changed")
+        prior_record = json.loads(record_path.read_bytes()) if record_path.exists() else None
+        if prior_record is not None:
+            need(prior_record.get("schema") == "commons.agentsmith.native-preparation.v1"
+                 and prior_record.get("intentId") == args.intent_id
+                 and prior_record.get("sourceDirectory") == str(root)
+                 and prior_record.get("captureManifestSha256") == sha((root / "capture.json").read_bytes())
+                 and prior_record.get("reviewConfigSha256") == sha(config_bytes),
+                 "Reopen the original preparation and its stable intent")
+        native_path = output / "native-prepare.json"
+        if review_path.exists():
+            retain_exact(review_path, config_bytes)
+            if native_path.exists():
+                native_result = json.loads(native_path.read_bytes())
+                need(native_result.get("configPath") == str(review_path)
+                     and native_result.get("configSha256") == sha(config_bytes),
+                     "Original preparation result differs")
+            else:
+                # This is the actual original prepareReview result after a
+                # completed draft survived interruption before its stdout saved.
+                native_result = {"mode": "OFFLINE_CONFIG_REOPENED",
+                                 "configPath": str(review_path),
+                                 "configSha256": expected["configSha256"],
+                                 "intentId": args.intent_id,
+                                 "sourceFileSha256": sha((root / "offers.json").read_bytes())}
+                retain_exact(native_path, encoded(native_result))
+        else:
+            need(prior_record is None and not native_path.exists(),
+                 "Restore the original reviewed configuration before continuing")
+            argv = [args.node, str(cli), "--prepare", "--discovery", str(root / "offers.json"),
+                    "--row", str(manifest["rowIndex"]), "--accept", str(manifest["acceptIndex"]),
+                    "--intent-id", args.intent_id, "--url", manifest["seller"], "--method", "POST",
+                    "--body-file", str(output / "request.json"), "--content-type", "application/json",
+                    "--response-out", str(output / "metar-result.json"), "--out", str(review_path)]
+            result = subprocess.run(argv, cwd=checkout, check=True, text=True, capture_output=True)
+            native_result = json.loads(result.stdout)
+            retain_exact(review_path, config_bytes)
+            retain_exact(native_path, encoded(native_result))
+        reviewed = subprocess.run(
+            [args.node, str(cli), "--review", "--config", str(review_path)],
+            cwd=checkout, check=True, text=True, capture_output=True)
+        review = json.loads(reviewed.stdout)
+        review_result = output / "native-review.json"
+        if not review_result.exists():
+            retain_exact(review_result, encoded(review))
+        record = {"schema": "commons.agentsmith.native-preparation.v1",
+                  "captureManifestSha256": sha((root / "capture.json").read_bytes()),
+                  "checkout": str(checkout), "nativeCliSha256": sha(cli.read_bytes()),
+                  "intentId": args.intent_id, "sourceDirectory": str(root),
+                  "reviewConfig": str(review_path), "nativeResult": native_result,
+                  "reviewConfigSha256": sha(config_bytes)}
+        if prior_record is None:
+            retain_exact(record_path, encoded(record))
+        return {"status": "NATIVE_BUYER_REVIEW_REOPENED" if prior_record else "NATIVE_BUYER_REVIEW_PREPARED",
+                "directory": str(output), "config": str(review_path),
+                "intentId": args.intent_id, "nativeReview": review}
 
 
 def main():

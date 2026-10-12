@@ -147,6 +147,7 @@ export class Sf61WorkspaceClient {
       }
       return await consume(response);
     } catch (error) {
+      if (method === 'POST' && error.code === 'SF61_RESPONSE_TOO_LARGE' && !error.status) error.outcomeUnknown = true;
       if (error.status || error.code?.startsWith('SF61_') || error.code === 'INVALID_PARAMS') throw error;
       const issue = sf61Failure('SF61_CONSOLE_OPERATION_INTERRUPTED', 'The original console request was interrupted. Reopen the saved package, review or export to continue this operation.');
       if (method === 'POST') issue.outcomeUnknown = true; throw issue;
