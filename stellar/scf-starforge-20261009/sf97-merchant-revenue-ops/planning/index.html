@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Scenario planning · Stellar Forge</title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/planning/style.css"><script type="module" src="/planning/browser.mjs"></script></head>
+<body><main>
+<header><div><p class="eyebrow">Stellar Forge / Merchant operations</p><h1>Scenario planning</h1><p class="subtitle">Compare demand, quoted prices and costs. Carry your chosen plan into a merchant pricing review.</p></div><a class="planning-back" href="/">Merchant pricing</a></header>
+<p id="notice" role="status" aria-live="polite">Loading saved merchant reviews.</p>
+<section class="panel" aria-labelledby="source-title">
+  <div class="section-head"><h2 id="source-title">Starting review</h2><span id="source-status" class="muted small"></span></div>
+  <form id="source-form" class="planning-source"><label>Saved pricing review<select id="source-review" required></select></label><button id="load-source" type="submit">Load review</button></form>
+  <p class="muted small">Each comparison uses one saved seller configuration, its original operations capture and commercial assumptions. Enter your own demand and cost scenarios.</p>
+  <div id="source-facts" class="source-facts"></div><p id="source-warning" class="source-note" hidden></p>
+</section>
+<section id="planning-editor" hidden>
+  <div class="planning-grid">
+    <aside class="panel"><div class="section-head"><h2>Scenarios</h2><span id="scenario-count" class="muted small"></span></div><nav id="scenario-list" aria-label="Commercial scenarios"></nav><div class="planning-scenario-actions"><button id="add-scenario" type="button">Add scenario</button><button id="copy-scenario" type="button">Duplicate selected</button></div><p class="muted small">The saved review remains the baseline.</p></aside>
+    <section class="panel" aria-labelledby="editor-title"><div class="section-head"><h2 id="editor-title">Scenario assumptions</h2><button id="remove-scenario" type="button">Remove scenario</button></div>
+      <form id="scenario-form">
+        <div class="fields"><label>Scenario name<input id="scenario-label" maxlength="100" required></label><label>Shared monthly fixed cost · USD<input id="scenario-fixed" inputmode="decimal" placeholder="Unknown"><small>Blank means the cost is unknown.</small></label></div>
+        <details class="planning-goals"><summary>Decision targets</summary><div class="fields"><label>Monthly contribution after fixed cost · USD<input id="goal-contribution" inputmode="decimal" placeholder="Optional"></label><label>Contribution margin after fixed cost · %<input id="goal-margin" inputmode="decimal" placeholder="Optional"></label></div><p class="muted small">Price suggestions use an equal USD uplift per paid request across the selected service mix. Volume suggestions preserve the ratios in your entered targets.</p></details>
+        <h3>Service assumptions</h3><p class="muted small">USD quotes remain separate from the merchant’s atomic payment amounts. Unknown costs stay blank. Monthly paid volumes are your explicit planning inputs.</p>
+        <div id="route-editor"></div><div id="route-paging" class="table-paging" hidden><button id="previous-routes" type="button">Previous services</button><span id="route-caption"></span><button id="next-routes" type="button">Next services</button></div>
+      </form>
+    </section>
+  </div>
+  <section class="panel planning-review-actions"><div><h2>Compare the scenarios</h2><p id="edit-status" class="muted small">Calculate after editing your assumptions.</p></div><button id="calculate" class="primary" type="button">Calculate comparison</button></section>
+</section>
+<section id="comparison-panel" class="panel" aria-labelledby="comparison-title" hidden>
+  <div class="section-head"><h2 id="comparison-title">Commercial comparison</h2><span id="comparison-caption" class="muted small"></span></div>
+  <div id="comparison-table"></div><p class="muted small">The same original merchant analyzer calculates every column. Monthly values use the explicit paid-volume targets; the saved observation remains attached to the comparison.</p>
+  <label class="planning-detail-choice">Inspect scenario<select id="detail-scenario"></select></label>
+  <div id="scenario-metrics" class="totals"></div><div id="scenario-unknown"></div>
+  <details class="coverage-detail"><summary>Service contribution and break-even</summary><div id="scenario-routes"></div></details>
+  <section class="planning-goal-results"><h3>Break-even and decision targets</h3><div id="goal-status"></div><div id="goal-suggestions"></div></section>
+  <div class="planning-save"><label>Comparison name<input id="plan-label" maxlength="100" placeholder="October demand and cost plans"></label><button id="save-plan" class="primary" type="button">Save comparison</button></div>
+  <div id="saved-actions" class="button-row" hidden><a id="apply-plan" class="planning-link-button" href="/">Use selected scenario in pricing review</a><a id="download-plan">Plan JSON</a><a id="download-csv">Comparison CSV</a><a id="download-terms">Selected merchant terms</a></div>
+  <p id="saved-note" class="muted small"></p>
+</section>
+<section class="panel" aria-labelledby="saved-title"><div class="section-head"><h2 id="saved-title">Saved comparisons</h2><span id="saved-count" class="muted small"></span></div><div id="saved-plans"></div></section>
+<footer><p class="small muted">Saved comparisons keep their original review, explicit inputs and selected commercial results. Applying a scenario opens a draft in the merchant pricing workspace, where you review and save it with the current operations source.</p></footer>
+</main></body></html>
