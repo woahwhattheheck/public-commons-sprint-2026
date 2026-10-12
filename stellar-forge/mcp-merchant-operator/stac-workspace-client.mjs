@@ -395,6 +395,8 @@ export class StacWorkspaceClient {
     if (!Object.hasOwn(STAC_PRESCIENT_ACTIONS, name)) fail('STAC_CLIENT_CAPABILITY_INVALID', 'Choose a declared original Prescient action.');
     const definition = STAC_PRESCIENT_ACTIONS[name], common = ['actor', 'operationId', 'expectedRevision'];
     object(body, 'Prescient action');
+    // Session establishment awaits I/O. Validate and dispatch one owned JSON snapshot.
+    body = JSON.parse(canonicalStacJSON(body));
     if (Object.keys(body).some(key => !common.includes(key) && !definition.fields.includes(key)) ||
         [...common, ...definition.required].some(key => !Object.hasOwn(body, key)))
       fail('STAC_CLIENT_INPUT_INVALID', 'Supply exactly the selected native action fields, actor, operationId and configuration revision.');

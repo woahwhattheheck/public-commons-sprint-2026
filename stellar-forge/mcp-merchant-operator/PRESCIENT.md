@@ -153,9 +153,9 @@ and optional `refreshSkewSeconds` fields. Use the original form/export and
 operator guide for those reviewed values. There is no token, password,
 environment-file path or arbitrary request-header field.
 
-Only explicit `connect` or `session` actions start or refresh the native SDK.
-Original imagery acquisition subsequently uses the approved original source
-adapter. Profile review and customer package verification retain their existing
+Among these Prescient administration actions, only `connect` and `session`
+start or refresh the native SDK. Original imagery discovery and acquisition also
+use the approved original source adapter and can open its configured SDK. Profile review and customer package verification retain their existing
 offline behavior; they do not purchase or reacquire source data.
 
 ## Carry the full customer result to its receiver
