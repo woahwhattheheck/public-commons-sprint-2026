@@ -79,6 +79,22 @@ async function reviewedInput({ publisher, runId, version, terms }) {
     fail('SHEETBEST_DEPLOYMENT_TERMS_INVALID', issue.message ?? 'Review the original public seller terms.', 400);
   }
   const merchantBytes = bytes(merchant);
+  const plan = publisher.plan(selected.planId), observation = manifest.extraction.observation.capture;
+  if (observation.rowCount !== manifest.dataset.rowCount ||
+      manifest.extraction.rowCount !== manifest.dataset.rowCount)
+    fail('SHEETBEST_DEPLOYMENT_ROW_COUNT_CHANGED', 'The complete capture and published candidate must retain the same original rows.');
+  const projection = plan.data.sourceQuery.projection;
+  const publicationReview = {
+    query: plan.data.query, capturedAt: observation.receivedAt, captureSha256: observation.manifestSha256,
+    sourceRows: observation.rowCount, emittedRows: manifest.dataset.rowCount,
+    rowScope: 'ALL_CAPTURED_ROWS', allCapturedRows: true,
+    columns: manifest.dataset.columns.map(column => {
+      const spec = projection[column.name];
+      if (!spec) fail('SHEETBEST_DEPLOYMENT_COLUMN_CHANGED');
+      return { alias: column.name, ...structuredClone(spec), datasetType: column.type };
+    }),
+    order: structuredClone(plan.data.extraction.order),
+  };
   const source = {
     schema: SHEETBEST_DEPLOYMENT_SCHEMA,
     sourcePlan: { id: version.id, sourceSha256: version.sourceSha256,
@@ -91,7 +107,8 @@ async function reviewedInput({ publisher, runId, version, terms }) {
     publication: { reviewId: selected.reviewId, snapshot: selected.publication.snapshot,
       revision: selected.publication.revision, mode: selected.publication.mode,
       recordedAt: selected.publication.recordedAt },
-    merchant: { configurationSha256: digest(merchantBytes) }
+    merchant: { configurationSha256: digest(merchantBytes) },
+    publicationReview
   };
   const sourceBytes = bytes(source);
   const review = {
@@ -100,6 +117,7 @@ async function reviewedInput({ publisher, runId, version, terms }) {
     runId: selected.runId, planId: selected.planId, candidateDigest: selected.candidateDigest,
     snapshot: manifest.dataset.snapshot, rows: manifest.dataset.rowCount,
     dataset: structuredClone(manifest.dataset), terms: normalizedTerms,
+    publicationReview, audience: 'PRIVATE_MERCHANT_STAGING',
     sellerSha256: digest(merchantBytes), packageSourceSha256: digest(sourceBytes),
     reviewSha256: identity({ source, config: parse(configBytes), merchant })
   };

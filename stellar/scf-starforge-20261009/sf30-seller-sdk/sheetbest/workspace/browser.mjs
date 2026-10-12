@@ -260,12 +260,26 @@ function renderQuery(){
   editorColumns=mapFrom(captureView.fields,draft.queries[queryName].columns);editorOrders=clone(draft.orders[queryName]??[]);
   fieldTable($('draft-fields'),captureView.fields,editorColumns,()=>{change();renderOrders();});renderOrders();
 }
+function renderPublicationReview(out,review){
+  if(!review)return;
+  out.append(node('p','Captured '+review.capturedAt+' · Source '+review.sourceRows+' rows · Emitted '+review.emittedRows+' rows','help'));
+  out.append(node('p',review.allCapturedRows
+    ? 'All captured rows are included. Only the selected columns below may be published; this source does not filter rows.'
+    : 'Review the original source and emitted row counts before retaining this projection.','note'));
+  out.append(node('p','Query '+review.query+' · Order: '+review.order.map(value=>value.column+' '+value.direction.toUpperCase()).join(', ')+' · Nulls last; original row order breaks ties.','help'));
+  const columns=node('div',null,'table-wrap');
+  table(columns,['Public alias','Original field','Type','Explicit null','Empty string'],review.columns.map(c=>[
+    c.alias,c.source,c.datasetType??c.type,c.nullable?'Allowed':'Rejected',c.empty==='null'?'Convert to null':'Preserve'
+  ]));out.append(columns);
+}
 function renderPreview(){
   const out=$('preview');out.replaceChildren();out.hidden=!preview;
   $('save-version').disabled=!preview||dirty||preview.draftRevision!==draftRevision;
   $('preview-draft').disabled=dirty||!draft;
   if(!preview)return;out.append(node('h3','Complete row validation'),node('p','Every configured scalar in every captured row was validated through the original source reader. Samples below show at most 25 rows per query.','help'));
-  for(const [name,value]of Object.entries(preview.reports)){out.append(node('h4',name+' · '+value.report.rowCount+' rows'));const wrap=node('div',null,'table-wrap');
+  for(const [name,value]of Object.entries(preview.reports)){out.append(node('h4',name+' · '+value.report.rowCount+' rows'));
+    renderPublicationReview(out,value.publicationReview);
+    out.append(node('h5','Projected sample · up to 25 rows'));const wrap=node('div',null,'table-wrap');
     const sample=value.sample,keys=sample.length?Object.keys(sample[0]):Object.keys(draft.queries[name].columns);
     table(wrap,keys,sample.map(row=>keys.map(k=>shown(row[k]))));out.append(wrap);}
 }
@@ -304,7 +318,11 @@ async function refreshDeployment(){
 function renderDeploymentReview(){
   const out=$('deployment-review');out.replaceChildren();out.hidden=!deploymentReview;
   $('prepare-deployment').disabled=!deploymentReview;
-  if(deploymentReview)out.append(node('h4','Reviewed original publication'),jsonView(deploymentReview));
+  if(deploymentReview){
+    out.append(node('h4','Reviewed original publication'));
+    renderPublicationReview(out,deploymentReview.publicationReview);
+    out.append(node('p','This five-file package is private merchant staging. Its binding retains the original absolute dataset path. Use the original release client export for customer delivery.','note'),jsonView(deploymentReview));
+  }
 }
 function guarded(action){return async event=>{event?.preventDefault();if(busy||pending)return;try{await action();}catch(issue){notice(errorMessage(issue),true);}};}
 for(const b of document.querySelectorAll('[data-view]'))b.addEventListener('click',()=>tab(b.dataset.view));
