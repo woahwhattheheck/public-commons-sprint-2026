@@ -488,7 +488,8 @@ export async function openResearchWorkspace(directory){
     if(name==='buyer-result.json'&&nativeRaw)return nativeRaw;
     return frozenPageBytes(directory,p,name);
   }
-  return {root,query,saveQuery,listQueries,createEdition,edition,listEditions,receivePage,receiveBuyerResult,receiveResultFile,
+  // Extensions share the original workspace lock. A transaction must not call another mutation.
+  return {root,transaction:serial,query,saveQuery,listQueries,createEdition,edition,listEditions,receivePage,receiveBuyerResult,receiveResultFile,
     setDecision,copyDecisions,recoverPendingPage,gatherEdition,compare,report,exportFiles,exportEntries,exportManifest,exportFile,export:exportEdition,pageBytes,
     async close(){await pending;closed=true;}};
 }
@@ -503,15 +504,18 @@ export function createBuyerPageFetcher({buyer,requestForPage,buyerOptions={}}){
     if(await exists(operation.configPath)){
       const config=await readJson(operation.configPath);
       for(const key of ['url','method','expect'])check(canonical(config.operation[key]??null)===canonical(proposed[key]??null),'NATIVE_PAGE_REQUEST_CHANGED',undefined,409);
+      // Follow only a successor explicitly prepared by the original SDK operator.
+      // The logical page intent, request and edition cursor remain unchanged.
+      if(typeof operation.followUnpaidContinuation==='function')operation=await operation.followUnpaidContinuation();
       result=await operation.recover();
       if(result===null){
         const state=await operation.inspect();
         check(state.state==='PREPARED','NATIVE_PAGE_RESULT_PENDING','Continue the existing buyer operation and receive its saved result.',409);
-        result=await operation.execute({review:await operation.review(),signal});
+        result=await operation.execute({review:await operation.review({signal}),signal});
       }
     }else{
       operation=await buyer.fromRequest({...proposed,intentId,signal},buyerOptions);
-      result=await operation.execute({review:await operation.review(),signal});
+      result=await operation.execute({review:await operation.review({signal}),signal});
     }
     const bytes=await result.bytes({limit:MAX_PAGE_BYTES,signal});
     return {bytes,nativeRecord:result.record,source:{kind:'NATIVE_BUYER_RESPONSE',url:proposed.url,
