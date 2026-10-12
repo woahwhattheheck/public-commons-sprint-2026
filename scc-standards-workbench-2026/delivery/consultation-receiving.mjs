@@ -14,6 +14,8 @@ for(const key of ["source","workspace","output","python","playwright","chromium"
 const port=config.port||18976,base="http://127.0.0.1:"+port;
 fs.mkdirSync(config.output,{recursive:true});fs.mkdirSync(config.workspace,{recursive:true});
 const progressFile=path.join(config.output,"progress.json");
+const previousFailure=path.join(config.output,"failure.json");
+if(fs.existsSync(previousFailure)){const raw=fs.readFileSync(previousFailure);const name="failure-"+createHash("sha256").update(raw).digest("hex")+".json";fs.renameSync(previousFailure,path.join(config.output,name));}
 const progress=fs.existsSync(progressFile)?JSON.parse(fs.readFileSync(progressFile,"utf8")):{schema:"scc-consultation-journey/v1",steps:{},started_at:new Date().toISOString()};
 const save=(file,value)=>{fs.mkdirSync(path.dirname(file),{recursive:true});const tmp=file+".next";fs.writeFileSync(tmp,JSON.stringify(value,null,2)+"\n");fs.renameSync(tmp,file);};
 const hash=raw=>createHash("sha256").update(raw).digest("hex");
@@ -23,6 +25,7 @@ const sourceManifest=()=>{
  visit(config.source);return rows;
 };
 const initialSource=sourceManifest(),sourceIdentity=hash(JSON.stringify(initialSource));
+const sourceTransition=Boolean(progress.source_identity&&progress.source_identity!==sourceIdentity);
 if(progress.source_identity&&progress.source_identity!==sourceIdentity){
  if(config.continuation_from_source_identity!==progress.source_identity||typeof config.source_change_note!=="string"||!config.source_change_note.trim())throw Error("The retained review journey's source changed. Set the exact continuation_from_source_identity and a source_change_note to continue its existing case after the completed prior invocation.");
  (progress.source_revisions??=[]).push({previous_identity:progress.source_identity,current_identity:sourceIdentity,recorded_at:new Date().toISOString(),note:config.source_change_note});
@@ -98,7 +101,9 @@ async function exportedResponse(file){
 const savedResponse=name=>path.join(config.output,name);
 try{
  await start(config.workspace);
- const playwright=await import(pathToFileURL(config.playwright).href);
+ const importedPlaywright=await import(pathToFileURL(config.playwright).href);
+ const playwright=importedPlaywright.chromium?importedPlaywright:importedPlaywright.default;
+ if(!playwright?.chromium)throw Error("The configured Playwright module does not export Chromium.");
  browser=await playwright.chromium.launch({headless:true,executablePath:config.chromium,args:["--no-sandbox","--disable-dev-shm-usage"]});
  const context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});
  context.on("page",page=>{page.on("pageerror",e=>pageErrors.push(String(e)));page.on("dialog",dialog=>dialog.accept());});
@@ -159,6 +164,16 @@ try{
   assert.equal(original.packet_sha256,packet.packet_sha256);assert.equal(original.packet.source_edition_sha256,packet.source_edition_sha256);
   assert.equal(original.packet.edition.snapshot.cases.length,8);return{packet_id:packetId,sha256:hash(fs.readFileSync(packetZip))};
  });
+ if(sourceTransition){
+  const originalPacket=JSON.parse(fs.readFileSync(path.join(recipient,"packet.json"),"utf8"));
+  const priorZip=fs.readFileSync(packetZip),priorArchive=savedResponse("reviewer-packet-prior-"+hash(priorZip)+".zip");
+  if(!fs.existsSync(priorArchive))fs.writeFileSync(priorArchive,priorZip);
+  const currentZip=await api("/api/projects/"+projectId+"/export?audience=consultation&packet_id="+packetId);
+  fs.writeFileSync(packetZip,currentZip);unzip(packetZip,recipient);
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(recipient,"packet.json"),"utf8")),originalPacket);
+  (progress.recipient_source_revisions??=[]).push({at:new Date().toISOString(),packet_id:packetId,source_identity:sourceIdentity,previous_zip_sha256:hash(priorZip),current_zip_sha256:hash(currentZip)});
+  save(progressFile,progress);
+ }
  reviewer=await context.newPage();reviewer.setDefaultTimeout(25000);await reviewer.goto(pathToFileURL(path.join(recipient,"reviewer.html")).href);
  const firstFile=savedResponse("Authored_Review_Response_v1.json");
  await stage("offline_authored_response",async()=>{
@@ -174,7 +189,7 @@ try{
    [first,"Authored observation: retain the Census reference date separately from the municipal change date.",proposedEn,proposedFr],
    [second,"Authored observation: confirm that a missing value remains distinct from a recorded zero.","",""]
   ]){
-   await reviewer.locator('[data-clause="'+clause.id+'"]').click();
+   await reviewer.locator('#outline [data-clause="'+clause.id+'"]').click();
    await reviewer.locator('[data-add-comment="'+clause.id+'"]').click();
    const d=reviewer.locator("#comment-dialog");
    await d.locator('[name="body"]').fill(body);await d.locator('[name="proposed_text_en"]').fill(en);await d.locator('[name="proposed_text_fr"]').fill(fr);
@@ -185,6 +200,34 @@ try{
   await reviewer.screenshot({path:savedResponse("reviewer-bilingual.png"),fullPage:true});
   return{file:firstFile,response_id:response.response_id,entry_ids:response.comments.map(r=>r.id),sha256:hash(fs.readFileSync(firstFile))};
  });
+
+ await stage("recipient_progress_and_readable_return",async()=>{
+  await reviewer.locator("#open-file").setInputFiles(firstFile);
+  await reviewer.locator("#saved").filter({hasText:/The saved draft is open for this exact packet\.|Le brouillon enregistré est ouvert pour ce dossier exact\./}).waitFor();
+  await reviewer.locator('#outline [data-clause="'+first.id+'"]').click();
+  const mark=reviewer.locator('[data-reviewer-action="mark-read"]');
+  if(await mark.getAttribute("aria-pressed")!=="true")await mark.click();
+  const draftFile=savedResponse("Reviewer_Progress_Draft.json");
+  await download(reviewer,reviewer.locator("#save-draft"),draftFile);
+  const draft=JSON.parse(fs.readFileSync(draftFile,"utf8"));
+  assert.ok(draft.read_clause_ids.includes(first.id));
+  await reviewer.reload();
+  await reviewer.locator("#open-file").setInputFiles(draftFile);
+  await reviewer.locator("#saved").filter({hasText:/The saved draft is open for this exact packet\.|Le brouillon enregistré est ouvert pour ce dossier exact\./}).waitFor();
+  await reviewer.locator('#outline [data-clause="'+first.id+'"]').click();
+  assert.equal(await reviewer.locator('[data-reviewer-action="mark-read"]').getAttribute("aria-pressed"),"true");
+  await reviewer.locator("#preview-response").click();
+  const copy=savedResponse("Reviewer_Response_Readable_Copy.html");
+  await download(reviewer,reviewer.locator('[data-reviewer-action="summary"]'),copy);
+  const text=fs.readFileSync(copy,"utf8"),returned=JSON.parse(fs.readFileSync(firstFile,"utf8"));
+  assert.equal(returned.comments.length,2);
+  for(const comment of returned.comments)assert.ok(text.includes(comment.body.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;")));
+  assert.equal("read_clause_ids" in returned,false);
+  assert.equal("outline_filter" in returned,false);
+  assert.equal(draft.response.response_id,returned.response_id);
+  return{read_clauses:draft.read_clause_ids.length,response_id:returned.response_id,readable_copy:copy,readable_sha256:hash(fs.readFileSync(copy)),comments:returned.comments.length};
+ });
+
  const firstResponse=await stage("retain_first_original",async()=>{
   const sha=hash(fs.readFileSync(firstFile)),found=(await project()).review.responses.find(r=>r.source_sha256===sha);
   return found?.id||await receive(firstFile,packetId);
@@ -282,9 +325,46 @@ try{
   await showResponse(correctedResponse);assert.ok((await operator.locator("#review-response-detail").innerText()).includes("Additional explanation"));
   return{project_id:projectId,revision:after.revision,archive_sha256:hash(raw),reopened_workspace:reopened,counts:after.collection_counts};
  });
+
+ await stage("exact_package_desktop_phone_review:"+sourceIdentity,async()=>{
+  const views=[],capture=async(page,name,width,height)=>{
+   const output=savedResponse(name+".png"),viewport=savedResponse(name+"-viewport.png");
+   await page.screenshot({path:output,fullPage:true});await page.screenshot({path:viewport,fullPage:false});
+   const measured=await page.evaluate(()=>({viewport:innerWidth,document_width:document.documentElement.scrollWidth,title:document.querySelector("#main h1,#main h2")?.textContent||"",text:document.querySelector("#main")?.innerText||""}));
+   const row={name,width,height,document_width:measured.document_width,heading:measured.title,text:measured.text,screenshot:path.basename(output),viewport_screenshot:path.basename(viewport),sha256:hash(fs.readFileSync(output))};
+   views.push(row);return row;
+  };
+  await reviewer.locator("#open-file").setInputFiles(correctedFile);
+  await reviewer.locator("#language").selectOption("bilingual");
+  for(const [label,width,height] of [["desktop",1440,1000],["phone",390,844]]){
+   await reviewer.setViewportSize({width,height});
+   for(const view of ["instructions","document","cases","comments","return"]){
+    await reviewer.locator('[data-view="'+view+'"]').click();
+    await reviewer.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    const row=await capture(reviewer,"reviewer-"+label+"-"+view,width,height);
+    assert.ok(row.document_width<=width+1,"Reviewer "+view+" overflows the "+width+" px viewport.");
+   }
+   await selectProject();await operator.setViewportSize({width,height});
+   const sections=await operator.locator("#nav [data-section]").evaluateAll(nodes=>nodes.map(n=>n.dataset.section));
+   for(const section of sections){
+    await operator.locator('#nav [data-section="'+section+'"]').click();
+    await operator.waitForLoadState("networkidle");
+    await capture(operator,"operator-"+label+"-"+section,width,height);
+   }
+   await operator.locator('#nav [data-section="consultation"]').click();
+   for(const tab of ["packets","responses","revisions"]){
+    await operator.locator('[data-review="tab"][data-tab="'+tab+'"]').click();
+    await capture(operator,"operator-"+label+"-consultation-"+tab,width,height);
+   }
+  }
+  await reviewer.setViewportSize({width:1440,height:1000});await operator.setViewportSize({width:1440,height:1000});
+  save(savedResponse("buyer-views.json"),{captured_at:new Date().toISOString(),views});
+  return{main_views:views.length,recipient_views:views.filter(v=>v.name.startsWith("reviewer-")).length,desktop_width:1440,phone_width:390,source_identity:sourceIdentity,review_file:"buyer-views.json"};
+ });
+
  assert.deepEqual(sourceManifest(),initialSource,"The producer source changed during the native review journey.");
  assert.deepEqual(pageErrors,[]);
- const outputs=fs.readdirSync(config.output).filter(n=>/\.(zip|json|png)$/.test(n)&&!["progress.json","result.json","failure.json"].includes(n)).map(name=>{const raw=fs.readFileSync(savedResponse(name));return{name,bytes:raw.length,sha256:hash(raw),private:name.endsWith(".private.zip")};});
+ const outputs=fs.readdirSync(config.output).filter(n=>/\.(zip|json|png|html)$/.test(n)&&!["progress.json","result.json","failure.json"].includes(n)).map(name=>{const raw=fs.readFileSync(savedResponse(name));return{name,bytes:raw.length,sha256:hash(raw),private:name.endsWith(".private.zip")};});
  save(savedResponse("result.json"),{schema:"scc-consultation-journey-result/v1",completed_at:new Date().toISOString(),project_id:projectId,source_identity:sourceIdentity,source_files:initialSource,steps:Object.keys(progress.steps),page_errors:pageErrors,outputs});
  process.stdout.write(JSON.stringify({completed:true,project_id:projectId,output:config.output,page_errors:pageErrors.length})+"\n");
 }catch(error){save(savedResponse("failure.json"),{at:new Date().toISOString(),stage:progress.active,project_id:projectId,message:String(error),stack:error.stack,page_errors:pageErrors});throw error;}
