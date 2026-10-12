@@ -288,6 +288,9 @@ def parser():
     target = command("serve", "Open the original private browser workspace")
     target.add_argument("--port", type=int, default=0)
     target.add_argument("--access-file")
+    target.add_argument("--startup-format", choices=("legacy", "managed"), default="legacy")
+    target.add_argument("--expected-selection-sha256", help="Original managed launch review")
+    target.add_argument("--source-directory", help="Installed original source selected by Applications")
     output_option(command("list", "List saved plans and current revisions"))
     target = command("show", "Read a saved revision or one complete source/planning/report section")
     plan_options(target)
@@ -345,6 +348,11 @@ def operate(args):
         argv = [str(HERE / "server.py"), "--workspace", args.workspace, "--scenario", args.scenario, "--port", str(args.port)]
         if args.access_file:
             argv.extend(("--access-file", args.access_file))
+        argv.extend(("--startup-format", args.startup_format))
+        if args.expected_selection_sha256 is not None:
+            argv.extend(("--expected-selection-sha256", args.expected_selection_sha256))
+        if args.source_directory is not None:
+            argv.extend(("--source-directory", args.source_directory))
         previous = sys.argv
         try:
             sys.argv = argv

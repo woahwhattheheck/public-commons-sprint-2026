@@ -6,6 +6,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { openWorkspaceStore, plain } from './store.mjs';
+import { createWorkspaceFiles } from './files.mjs';
 import { inspectDraftSchema, reviewDraft, exportDraft, readExport, exportView, startDraftMerchant,
   compareDraft, reviseDraft, readRevisionReport } from './merchant.mjs';
 import { prepareDeployment, readDeployment, deploymentView, inspectDeployment, stageDeployment,
@@ -255,7 +256,8 @@ export async function startWorkspace({ workspace, port = 0, noSignals = false } 
     const handler = () => close().catch(() => { process.exitCode = 1; });
     signals.push([name, handler]); process.once(name, handler);
   }
-  return { url: origin + '/#' + token, origin, token, directory: store.root, close };
+  return { url: origin + '/#' + token, origin, token, directory: store.root,
+    files: createWorkspaceFiles(store), close };
 }
 export async function main(args = process.argv.slice(2)) {
   if (args.length === 1 && args[0] === '--help') { console.log(HELP); return; }

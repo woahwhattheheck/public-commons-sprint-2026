@@ -1,0 +1,24 @@
+{
+  "url": "https://schemas.macrobond.com/webclientapi.swagger.json",
+  "final_url": "https://schemas.macrobond.com/webclientapi.swagger.json",
+  "retrieved_at": "2026-10-12T00:50:09.771126+00:00",
+  "status": 200,
+  "content_type": "application/json",
+  "bytes": 13318,
+  "sha256": "fc4b93c0caa694d493c6a85c8490d54fad6b3db1a297ef84985a0e6aed6f25d2",
+  "headers": {
+    "Date": "Mon, 12 Oct 2026 00:50:19 GMT",
+    "Server": "Apache",
+    "X-Content-Type-Options": "nosniff",
+    "X-XSS-Protection": "1; mode=block",
+    "Content-Security-Policy": "default-src 'self' data:; script-src 'self' data: 'unsafe-inline' 'unsafe-eval' https://www.google.com/ ; style-src 'self' data: 'unsafe-inline' https://www.google.com ; frame-src 'self' data: 'unsafe-inline' http://app0.macrobondfinancial.com",
+    "X-Content-Security-Policy": "default-src 'self' data:; script-src 'self' data: 'unsafe-inline' 'unsafe-eval' https://www.google.com/ ; style-src 'self' data: 'unsafe-inline' https://www.google.com ; frame-src 'self' data: 'unsafe-inline'",
+    "X-WebKit-CSP": "default-src 'self' data:; script-src 'self' data: 'unsafe-inline' 'unsafe-eval' https://www.google.com/ ; style-src 'self' data: 'unsafe-inline' https://www.google.com ; frame-src 'self' data: 'unsafe-inline'",
+    "Last-Modified": "Mon, 12 Oct 2026 00:40:01 GMT",
+    "ETag": "\"3406-65d99f03193cc\"",
+    "Accept-Ranges": "bytes",
+    "Content-Length": "13318",
+    "Connection": "close",
+    "Content-Type": "application/json"
+  }
+}
