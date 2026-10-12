@@ -42,7 +42,7 @@ The project materializes under `/dev/7108-iati-publisher-native` only inside the
 
 The selected existing dependencies are recorded in `launch-input.json`: primary Node 24.19.0, Python 3.12.14 with Expat 2.8.3, existing Chromium 155.0.8059.39 and primary Playwright. The original native host is `/workspace/scratch/dbc61db6310c/native-runtime-recovery-62c14ca9/host`. Its CLI SHA-256 is `014fbbec7f9a3827ba135b8072be0eb37293bf22429fbfc6cad73697f428c776`. The protected source-10f5 Git donor is reused read-only.
 
-The original native resource declaration is 1,024 MiB for the whole operation, including memory-backed files, plus 128 MiB reserve; 384 MiB private growth; 6 MiB shared return growth; and 1 MiB disk reserve. These are declared estimates. The actual maintained allocator decides admission against current resources. The full source, installation, managed copies, workspaces, reports, complete archives, browser and return processing belong to this one lifecycle.
+The full local-file return configuration declares 1,024 MiB for the whole operation, including memory-backed files, plus 128 MiB reserve; 384 MiB private growth; 6 MiB shared return growth; and 1 MiB disk reserve. These are declared estimates. The actual maintained allocator decides admission against current resources. The full source, installation, managed copies, workspaces, reports, complete archives, browser and return processing belong to this one lifecycle.
 
 ## Prepare the shared intake
 
@@ -112,3 +112,24 @@ The shared return contains:
 The complete ZIPs and state archive are saved before the private namespace ends. The shared return is checked against the original 6 MiB growth declaration before copies, accounting for exact already-published files on retry. Archive and copy failures retain the same live namespace in their original local custody phase until saving can complete. If the original native terminal record has not been observed, the foreground preserves the namespace and reports `ORIGINAL_NATIVE_TERMINAL_PENDING`.
 
 Inspect the actual customer result and original runtime receipts, read both complete delivered ZIPs, and review the returned desktop/mobile images before reporting the native customer outcome. The source intake's independently verified identities remain the basis for that receiving.
+
+
+## Direct stdin continuation for the retained shared-space interruption
+
+The actual shared intake stopped with ENOSPC after 712,704 acknowledged bytes. Its original hash-qualified partial remains at the selected shared path. The complete source carrier and its gzip identity above are unchanged.
+
+The additive `--intake-stdin` option receives that same gzip in the original foreground's private `/dev` project before admission. `stdin-launch.py` places only the exact selected foreground and `stdin-input.json` into that same private namespace and then uses `execv` to continue its process. The receiver holds the existing shared intake lock while checking the complete original prefix. It records the actual shared file's size, hash and identity without modifying or removing it.
+
+For an extracted carrier, start the selected stdin continuation once:
+
+```bash
+python3 -B stdin-launch.py --source-directory /absolute/path/to/this/carrier
+```
+
+Retain that process and send newline-delimited JSON frames through its stdin after `PRIVATE_INTAKE_TRANSFER_READY`. Each frame has exactly `index`, `offset` and `data`; `data` is standard base64 for at most 24,576 consecutive gzip bytes. Begin with index and offset zero. Every acknowledged `PRIVATE_INTAKE_CHUNK_RETAINED` has been fsynced. An already retained prefix is compared against those same bytes before missing bytes are appended. The final compressed size/SHA-256, decoded SHA-256 and source/operation identities must all match before `PRIVATE_SOURCE_INPUT_READY` and the original native admission.
+
+The source-only preparation helper may also be invoked in memory through its exported Python `launch_from_bytes(foreground_source, configuration_bytes)`. This uses the same maintained code when no extra shared file can be written. The complete foreground and configuration remain immutable inputs in the private receiving archive and in this Git-backed carrier.
+
+The selected `stdin-input.json` uses `returnMode: "durable"`, 2 MiB shared growth and the original 1 MiB reserve. Whole private growth and memory declarations remain 384 MiB and 1,024+128 MiB. The two full customer ZIPs and complete receiving-state archive still pass through the same single original saving workflow. Shared `customerArchives` contain the exact file IDs, names, complete byte counts and SHA-256 values returned by that successful save. Original upload observations, complete customer results, compressed native record and all eight selected QA images are copied to the shared return. Every actual copy checks the full shared-byte limit and retains the same namespace if it cannot complete.
+
+The existing `launch-input.json` continues to select the full local-ZIP return. An omitted return mode retains that behavior. No product source, publisher selection, native operation ID or controller is changed by the stdin continuation.
