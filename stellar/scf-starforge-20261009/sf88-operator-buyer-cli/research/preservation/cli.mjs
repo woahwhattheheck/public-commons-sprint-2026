@@ -4,9 +4,14 @@ import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
 
 export async function main(argv=process.argv.slice(2)){
-  const roda=argv[0]==='roda';
-  const script=fileURLToPath(new URL(roda?'./roda.py':'./preservation.py',import.meta.url));
-  const child=spawn(process.env.STELLAR_FORGE_PYTHON||'python3',['-B',script,...(roda?argv.slice(1):argv)],{stdio:'inherit'});
+  const routes=new Map([
+    ['roda','./roda.py'],['roda-client','./roda_client.py'],
+    ['preservica','./preservica.py'],['preservica-client','./preservica_client.py'],
+    ['workbench','./workbench.py'],
+  ]);
+  const route=routes.get(argv[0]);
+  const script=fileURLToPath(new URL(route||'./preservation.py',import.meta.url));
+  const child=spawn(process.env.STELLAR_FORGE_PYTHON||'python3',['-B',script,...(route?argv.slice(1):argv)],{stdio:'inherit'});
   const handlers=new Map();
   for(const signal of ['SIGINT','SIGTERM']){
     const handler=()=>child.kill(signal);handlers.set(signal,handler);process.on(signal,handler);
