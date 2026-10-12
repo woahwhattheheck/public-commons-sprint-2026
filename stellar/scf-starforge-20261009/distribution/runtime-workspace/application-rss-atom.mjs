@@ -61,7 +61,7 @@ export async function prepareRssAtomApplication(settings, {
   need(plain(observed) && observed.schema === BINDING && observed.workspace === workspace.path &&
     observed.sourceRoot === sourceRoot && plain(observed.workspaceIdentity) && plain(observed.python) &&
     plain(observed.source) && hex(observed.sha256), 'APPLICATION_FEEDS_BINDING_CHANGED');
-  const { sha256, ...core } = observed;
+  const { sha256, sourceRoot: inspectedSourceRoot, ...core } = observed;
   need(digest(JSON.stringify(canonical(core)) + '\n') === sha256, 'APPLICATION_FEEDS_BINDING_CHANGED');
   need(await realpath(observed.python.executable) === await realpath(python.executable) &&
     Array.isArray(observed.python.version) && observed.python.version.length === 3 &&

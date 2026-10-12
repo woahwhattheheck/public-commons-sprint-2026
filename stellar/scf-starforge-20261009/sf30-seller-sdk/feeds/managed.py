@@ -73,7 +73,10 @@ def inspect_binding(directory):
                   "version":list(sys.version_info[:3])},
         "source":{name:source_digest(SOURCE/name) for name in SOURCE_FILES},
     }
-    return value | {"sha256":digest(json_bytes(value))}
+    # The managed installer copies these exact source bytes into its release.
+    # Keep the observed execution location while binding the original byte closure.
+    bound = {k:v for k,v in value.items() if k != "sourceRoot"}
+    return value | {"sha256":digest(json_bytes(bound))}
 
 def require_binding(directory, expected):
     value = inspect_binding(directory)

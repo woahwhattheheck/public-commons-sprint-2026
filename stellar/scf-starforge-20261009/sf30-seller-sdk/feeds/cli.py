@@ -93,9 +93,13 @@ def main():
                 binding = require_binding(ws.root, a.expected_binding)
             server = OperatorServer(ws, a.port)
             previous = {}
+            stopping = False
             def stop(signum, frame):
+                nonlocal stopping
                 ws.cancel_capture()
-                raise KeyboardInterrupt()
+                if not stopping:
+                    stopping = True
+                    raise KeyboardInterrupt()
             try:
                 for signum in (signal.SIGINT, signal.SIGTERM):
                     previous[signum] = signal.signal(signum, stop)
@@ -110,6 +114,7 @@ def main():
             except KeyboardInterrupt:
                 pass
             finally:
+                stopping = True
                 ws.cancel_capture()
                 server.server_close()
                 server.join_worker()

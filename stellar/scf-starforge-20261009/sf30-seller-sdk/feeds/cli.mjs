@@ -29,7 +29,7 @@ export async function main(input = process.argv.slice(2)) {
   try {
     const code = await new Promise((done, reject) => {
       child.once('error', reject);
-      child.once('exit', (status, signal) => done(status ?? (signal === 'SIGINT' ? 130 : 1)));
+      child.once('close', (status, signal) => done(status ?? (signal === 'SIGINT' ? 130 : signal === 'SIGTERM' ? 143 : 1)));
     });
     if (code) process.exitCode = code;
     return code;

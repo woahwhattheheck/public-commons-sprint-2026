@@ -71,7 +71,7 @@ prepareRssAtomApplication(settings, {
 await rssAtomStartup(request, compactLine)
 ~~~
 
-The catalog ID is **rss-atom**; its existing installed command is **dataset-feeds**. Preparation returns **args**, **inputs** and the original read-only **binding**. Append the common **--port** exactly once. Keep all returned input records in the existing review/save/start comparison; the original Python command checks the selected binding again before opening and after acquiring its workspace lease.
+The catalog ID is **rss-atom**; its existing installed command is **dataset-feeds**. Preparation returns **args**, **inputs** and the original read-only **binding**. Append the common **--port** exactly once. Keep all returned input records in the existing review/save/start comparison; the original Python command checks the selected binding again before opening and after acquiring its workspace lease. The binding covers the original source bytes across the installer's retained-runtime and adopted-release copies; the startup retains the actual executing source root.
 
 For this application, use the same physical workspace resource as the original XML application. The current shared state-resource mechanism owns save/start conflicts and cross-application reopening.
 
