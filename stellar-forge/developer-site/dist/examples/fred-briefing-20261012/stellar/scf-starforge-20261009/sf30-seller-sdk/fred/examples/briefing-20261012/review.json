@@ -1,0 +1,68 @@
+{
+  "id": "af00af636c9397ac146966fed06588ef531594c65bc1ec289eada76b4af97802",
+  "captureId": "4c7fc88552da69b9448054334bad10b72afee056ed93bcd2fb741d698dde042c",
+  "policy": {
+    "fields": [
+      "series",
+      "date",
+      "value",
+      "missing",
+      "as_of",
+      "time_basis",
+      "realtime_start",
+      "realtime_end",
+      "units",
+      "frequency",
+      "seasonal_adjustment"
+    ],
+    "filters": [
+      "series",
+      "missing"
+    ],
+    "ranges": [
+      "date"
+    ],
+    "sorts": [
+      "date",
+      "series"
+    ],
+    "defaultLimit": 25,
+    "maxLimit": 100
+  },
+  "note": "Original three-series analyst briefing.",
+  "briefing": {
+    "schema": "stellar-forge.fred-briefing-spec.v1",
+    "title": "U.S. economic briefing — retained October 2026 source",
+    "start": "2024-01-01",
+    "end": "2026-09-01",
+    "decimalPlaces": 6,
+    "notes": "Original BLS unemployment and consumer price series, with BEA nominal GDP. UNRATE differences are percentage points. CPI and GDP relative changes compare the exact native periods; quarterly nominal GDP keeps its original seasonally adjusted annual rate units. Each series retains its original publisher update and public-table retrieval time.",
+    "series": [
+      {
+        "id": "UNRATE",
+        "comparisons": [
+          "previous_period",
+          "year_earlier"
+        ],
+        "relativeChange": false
+      },
+      {
+        "id": "CPIAUCSL",
+        "comparisons": [
+          "previous_period",
+          "year_earlier"
+        ],
+        "relativeChange": true
+      },
+      {
+        "id": "GDP",
+        "comparisons": [
+          "previous_period",
+          "year_earlier"
+        ],
+        "relativeChange": true
+      }
+    ]
+  },
+  "reviewedAt": "2026-10-12T08:12:37.862Z"
+}
