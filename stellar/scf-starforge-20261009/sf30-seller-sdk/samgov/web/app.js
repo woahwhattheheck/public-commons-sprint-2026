@@ -113,7 +113,7 @@ function searchesView() {
 function editionOptions(current,includeBlank=false) {
  return (includeBlank?option('','Choose retained edition',current):'')+[...(state.workspace.editions||[])].reverse().map(e=>option(e.id,e.name+' · '+e.rowCount+' notices · '+date(e.createdAt),current)).join('');
 }
-function reviewFor(editionId,noticeId) {return(state.workspace.reviews||[]).find(r=>r.editionId===editionId&&r.noticeId===noticeId);}
+function reviewFor(editionId,noticeId) {return(state.workspace.reviews||[]).findLast(r=>r.editionId===editionId&&r.noticeId===noticeId);}
 async function loadRecord(id,{offset=state.offset,limit=state.limit,search=state.search}={}) {
  return api('/api/records/'+encodeURIComponent(id)+'?'+new URLSearchParams({offset,limit,search}));
 }

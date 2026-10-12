@@ -21,6 +21,8 @@ function contents(packet) {
       !Array.isArray(packet.editions) || !Array.isArray(packet.sources))
     throw Object.assign(new Error('A complete SAM.gov portable packet is required.'), {code: 'SAM_PACKET_REQUIRED', status: 400});
   const workspace = packet.workspace;
+  const latestReviews = new Map((workspace.reviews || []).map(item =>
+    [item.editionId + '\0' + item.noticeId, item]));
   const handoff = packet.handoffId ? (workspace.handoffs || []).find(item => item.id === packet.handoffId) : null;
   const selectionId = packet.selectionId || handoff?.selectionId || null;
   const selection = selectionId ? (workspace.selections || []).find(item => item.id === selectionId) : null;
@@ -31,8 +33,7 @@ function contents(packet) {
     const ids = selection ? new Set(selection.noticeIds) : null;
     for (const notice of edition.rows || []) {
       if (ids && !ids.has(notice.noticeId)) continue;
-      rows.push({edition, notice, review: (workspace.reviews || []).find(item =>
-        item.editionId === edition.id && item.noticeId === notice.noticeId) || null});
+      rows.push({edition, notice, review: latestReviews.get(edition.id + '\0' + notice.noticeId) || null});
     }
   }
   const sourceIds = new Set();
