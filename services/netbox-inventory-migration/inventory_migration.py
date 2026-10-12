@@ -1130,7 +1130,23 @@ def _track_channel_rename(obj, models, alias, user, tracked):
         parent_id=obj.pk, channel_id__isnull=False).order_by("pk")[:MAX_OBJECTS + 1])
     if len(children) > MAX_OBJECTS:
         raise InventoryError("The native channel rename exceeds 5,000 affected interfaces.")
-    tracked.setdefault("renames", []).append((obj, old_name, obj.name))
+    arguments = (old_name, obj.name, alias)
+    invocation = {"object": obj, "arguments": arguments, "completed": False}
+    # The pinned native on_commit lambda performs this instance method lookup
+    # when it runs. Forward to the ORIGINAL bound method exactly once; this
+    # avoids rerunning a previously skipped name collision after another parent
+    # has freed its target name. No global model or connection callback queue
+    # is changed, and rollback discards the original callback normally.
+    def run_original(old, new, database):
+        if (old, new, database) != arguments:
+            raise InventoryError("A native channel callback differs from its retained rename.")
+        if invocation["completed"]:
+            return
+        rename(old, new, database)
+        invocation["completed"] = True
+    invocation["run"] = run_original
+    obj._rename_channel_subinterfaces = run_original
+    tracked.setdefault("renames", []).append(invocation)
     captured = tracked.setdefault("children", {})
     for child in children:
         _allowed(user, Interface, "view", child, alias)
@@ -1146,18 +1162,21 @@ def _track_channel_rename(obj, models, alias, user, tracked):
 
 
 def _apply_native_channel_renames(tracked, models, alias, user):
-    """Run the SAME native deferred work after all source saves, in this transaction.
+    """Complete original native callbacks once, in their registration order.
 
-    The original on_commit callback remains registered. Once the original
-    method has resolved these names, that callback observes the same resolved
-    children. The original collision, length and custom-name behavior is kept.
+    All mapped source saves precede this step, matching the native deferred
+    rename's ordering. The original commit callback joins the same invocation.
     """
-    for original, old_name, new_name in tracked.get("renames", []):
+    for invocation in tracked.get("renames", []):
+        original = invocation["object"]
+        old_name, new_name, database = invocation["arguments"]
         parent = _one(models["interfaces"], alias, {"pk": original.pk}, user, lock=True)
         if parent is None:
             raise InventoryError("A selected native channel parent disappeared before its rename.")
         _allowed(user, models["interfaces"], "change", parent, alias)
-        parent._rename_channel_subinterfaces(old_name, new_name, alias)
+        if parent.name != new_name or database != alias:
+            raise InventoryError("A selected channel parent changed before its native rename.")
+        invocation["run"](old_name, new_name, database)
 
 
 def _finalize_channel_renames(tracked, models, alias, user, inverse):
