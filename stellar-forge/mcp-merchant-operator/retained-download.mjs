@@ -63,7 +63,7 @@ export async function openMerchantFileClient({ url, tokenEnv = 'MCP_ACCESS_TOKEN
 
 /** Owner adapters supply the original manifest parser, names and identity schema. */
 export function createRetainedDownload({ manifestName, parseManifest, maximumBytes, stateSchema,
-  resultSchema, toolPrefix, errorPrefix, clientName, describe = () => ({}), connect: openClient = openMerchantFileClient, nestedFiles = false,
+  resultSchema, toolPrefix, errorPrefix, clientName, describe = () => ({}), connect: openClient = openMerchantFileClient, nestedFiles = false, readLease = true,
   validateExportId = value => identifier(value, 'Export ID') }) {
   async function connect(provided, options) {
     if (provided === undefined) return openClient({ ...options, errorPrefix, clientName });
@@ -223,8 +223,9 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
   function chunkBytes(result, file, offset, limit, exportId, manifestSha256, readId) {
     const size = Math.min(limit, file.bytes - offset);
     if (result.exportId !== exportId || result.manifestSha256 !== manifestSha256 || result.file?.name !== file.name ||
-        result.file?.bytes !== file.bytes || result.file?.sha256 !== file.sha256 || !validReadId(result.readId) ||
-        readId && result.readId !== readId || result.offset !== offset || result.bytesRead !== size || result.encoding !== 'base64' ||
+        result.file?.bytes !== file.bytes || result.file?.sha256 !== file.sha256 ||
+        (readLease ? !validReadId(result.readId) || readId && result.readId !== readId
+          : result.readId !== undefined && result.readId !== null) || result.offset !== offset || result.bytesRead !== size || result.encoding !== 'base64' ||
         result.nextOffset !== (offset + size < file.bytes ? offset + size : null) || typeof result.data !== 'string')
       throw failure(errorPrefix + '_DOWNLOAD_CHUNK_CONFLICT', 'The returned chunk does not match its pinned original file and byte offset.');
     const bytes = Buffer.from(result.data, 'base64');

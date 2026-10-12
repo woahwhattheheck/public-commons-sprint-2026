@@ -1,5 +1,6 @@
 // MIT. Private research dossier operator over the maintained dossier engine.
 import { createServer } from 'node:http';
+import { pipeline } from 'node:stream/promises';
 import { readFile } from 'node:fs/promises';
 import { isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -163,6 +164,17 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
         const data = await readJson(req, MAX_CONTROL_BODY);
         send(201, await store.create(selectedFields(data, ['title', 'description']))); return;
       }
+      if (req.method === 'POST' && path === '/api/reopen-stream') {
+        const type = (req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+        requireValue(['application/json', 'application/gzip', 'application/x-gzip', 'application/octet-stream'].includes(type),
+          'PORTABLE_BODY_REQUIRED');
+        const declared = req.headers['content-length'];
+        if (declared !== undefined) {
+          requireValue(/^[0-9]+$/.test(declared), 'CONTENT_LENGTH_INVALID');
+          requireValue(Number(declared) <= 256 * 1024 * 1024, 'UPLOAD_SIZE_LIMIT');
+        }
+        send(200, await store.reopenStream(req)); return;
+      }
       if (req.method === 'POST' && path === '/api/reopen') {
         const data = await readJson(req, MAX_PORTABLE_BODY);
         requireValue(plain(data.portable), 'PORTABLE_DOSSIER_REQUIRED');
@@ -203,7 +215,13 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       }
       if (req.method === 'GET' && action === 'export') {
         const format = url.searchParams.get('format');
-        requireValue(['json', 'md', 'html'].includes(format), 'EXPORT_FORMAT_INVALID');
+        requireValue(['json', 'json.gz', 'md', 'html'].includes(format), 'EXPORT_FORMAT_INVALID');
+        if (format === 'json' || format === 'json.gz') {
+          const result = await store.exportStream(id, {compression: format === 'json.gz' ? 'gzip' : 'none'});
+          res.writeHead(200, {...headers, 'Content-Type': result.contentType,
+            'Content-Disposition': 'attachment; filename="' + safeFilename(result.filename) + '"'});
+          await pipeline(result.body, res); return;
+        }
         const result = await store.exportDossier(id, {format});
         requireValue(typeof result.body === 'string' || result.body instanceof Uint8Array, 'EXPORT_BODY_INVALID');
         const type = {'json': 'application/json; charset=utf-8', md: 'text/markdown; charset=utf-8',
@@ -297,8 +315,8 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       if (res.headersSent) {res.destroy(); return;}
       const code = safeCode(error);
       const status = code === 'AUTH_REQUIRED' ? 401 : ['HOST_REFUSED', 'ORIGIN_REFUSED'].includes(code) ? 403 :
-        ['REVISION_CONFLICT','ROUTESCAN_RECORD_BUSY','CROSSREF_OPERATION_RUNNING_ELSEWHERE','UNSTRUCTURED_REVIEWED_EDITION_CHANGED','UNSTRUCTURED_RECEIVING_LABEL_CONFLICT'].includes(code) ? 409 : code === 'ENOENT' || code === 'DOSSIER_NOT_FOUND' ? 404 :
-          code === 'UPLOAD_SIZE_LIMIT' ? 413 : 400;
+        ['REVISION_CONFLICT','PORTABLE_HISTORY_CONFLICT','ROUTESCAN_RECORD_BUSY','CROSSREF_OPERATION_RUNNING_ELSEWHERE','UNSTRUCTURED_REVIEWED_EDITION_CHANGED','UNSTRUCTURED_RECEIVING_LABEL_CONFLICT'].includes(code) ? 409 : code === 'ENOENT' || code === 'DOSSIER_NOT_FOUND' ? 404 :
+          ['UPLOAD_SIZE_LIMIT','PORTABLE_SIZE_LIMIT','PORTABLE_RECORD_SIZE_LIMIT'].includes(code) ? 413 : 400;
       send(status, {error: code, ...(error.openAlexImport ? {openAlexImport:error.openAlexImport} : {})});
     }
   });
