@@ -115,6 +115,10 @@ export function inspectDirectusSource(input){
     return r.data;
   };
   const principalURL='users/me?fields=id%2Crole%2Cstatus';
+  const serverBefore=exact('server-before','server/info'),serverAfter=exact('server-after','server/info');
+  if(serverBefore.type!=='object'||serverAfter.type!=='object'||serverBefore.value.version?.value!=='12.5.0'||serverAfter.value.version?.value!=='12.5.0')
+    throw fault('DIRECTUS_SERVER_VERSION','A complete source must retain both actual Directus 12.5.0 server observations.',409);
+  const observedServer=nativePlain(serverBefore);
   const p=principal(exact('principal-before',principalURL));
   const endPrincipal=principal(exact('principal-after',principalURL));
   if(canonical(p)!==canonical(endPrincipal))throw fault('DIRECTUS_PRINCIPAL_CHANGED','The authenticated user changed during source capture.',409);
@@ -179,7 +183,7 @@ export function inspectDirectusSource(input){
     name:typeof document.name==='string'?document.name:'Directus '+collection,base_url:base,recorded_at:document.recorded_at??null,
     source:{provider:'directus',protocolVersion:'12.5',upstreamCommit:DIRECTUS_UPSTREAM,
       body_kind:'original-authenticated-http-json',consistency:'two-matched-complete-reads'},
-    principal:p,native_schema:nativeSchema,schema_sha256:hash(canonical(schemaRaw)),
+    principal:p,server:{version:observedServer.version,queryLimit:observedServer.queryLimit??null,license:observedServer.license??null},native_schema:nativeSchema,schema_sha256:hash(canonical(schemaRaw)),
     scope:{collection,primary_key:pk,singleton:schema.singleton,selected_query:document.scope.selected_query??{},
       query,complete:true,observed_items:first.total,observed_pages:[first.pages,second.pages],
       consistency:'two-matched-complete-reads',snapshot_isolation:false},

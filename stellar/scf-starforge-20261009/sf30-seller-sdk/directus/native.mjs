@@ -29,7 +29,7 @@ class NativeOperation{
   constructor(options,action,input){
     this.options=options;this.action=action;this.base=directusBase(options.baseUrl);
     if(!ID.test(options.operationId??''))throw fault('DIRECTUS_OPERATION_ID','Use a stable operationId of 8–128 letters, digits or . _ : -.');
-    this.operationId=options.operationId;this.intent={action,baseUrl:this.base,...input};
+    this.operationId=options.operationId;this.intent={action,baseUrl:this.base,expectedVersion:'12.5.0',...input};
     this.requestSha256=hash(canonical(this.intent));this.history=[];
     if(!Array.isArray(options.history??[]))throw fault('DIRECTUS_NATIVE_HISTORY','Pass the original operation event array.');
     for(const event of options.history??[]){
@@ -132,10 +132,13 @@ class NativeOperation{
     const prior=this.history.find(v=>v.phase==='principal');
     const read=await this.get('authenticated-user-'+(this.initialLength||'initial'),'users/me?fields=id%2Crole%2Cstatus',false);
     const principal=dataObject(read,'Authenticated principal');
+    const serverRead=await this.get('authenticated-server-'+(this.initialLength||'initial'),'server/info',false);
+    const server=dataObject(serverRead,'Directus server information');
+    if(server.version!=='12.5.0')throw fault('DIRECTUS_SERVER_VERSION','This native source contract requires actual Directus 12.5.0. Observed: '+String(server.version??'missing')+'.',409);
     if(typeof principal.id!=='string'||!principal.id)throw fault('DIRECTUS_PRINCIPAL','The native token must identify its original user.');
     if(prior&&canonical(prior.principal)!==canonical(principal))
       throw fault('DIRECTUS_PRINCIPAL_CHANGED','This retained operation belongs to a different native user or role.',409);
-    if(!prior)await this.emit('principal',{principal});
+    if(!prior)await this.emit('principal',{principal,server:{version:server.version,queryLimit:server.queryLimit??null,license:server.license??null}});
     return principal;
   }
   async run(fn){
@@ -189,6 +192,7 @@ export async function captureDirectusSource(options={}){
       const read=await op.get(id,relative);ids.push(id);return read;
     };
     await retain('principal-before','users/me?fields=id%2Crole%2Cstatus');
+    await retain('server-before','server/info');
     const c=await retain('collection-before','collections/'+encodeURIComponent(collection));
     const f=await retain('fields-before','fields/'+encodeURIComponent(collection));
     await retain('relations-before','relations/'+encodeURIComponent(collection));
@@ -220,6 +224,7 @@ export async function captureDirectusSource(options={}){
     await retain('fields-after','fields/'+encodeURIComponent(collection));
     await retain('relations-after','relations/'+encodeURIComponent(collection));
     await retain('principal-after','users/me?fields=id%2Crole%2Cstatus');
+    await retain('server-after','server/info');
     const capture={schema:SOURCE_SCHEMA,name,base_url:op.base,recorded_at:now(),
       protocol:{provider:'directus',contractVersion:'12.5',upstreamCommit:DIRECTUS_UPSTREAM},
       scope:{collection,selected_query,query,primary_key:pk,page_size:pageSize},
