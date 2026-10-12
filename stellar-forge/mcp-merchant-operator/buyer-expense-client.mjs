@@ -37,7 +37,7 @@ export async function receiveBuyerExpenseProject({archive,directory,expectedSha2
   if(typeof python!=='string'||python.includes('\0')||(python!=='python3'&&!python.startsWith('/')))
     throw Object.assign(new Error('Select python3 or an absolute Python interpreter path.'),{code:'BUYER_EXPENSE_RECEIVING_ARGUMENTS'});
   const script=fileURLToPath(new URL('../../stellar/scf-starforge-20261009/sf36-spend-governor/expense-workspace/receive.py',import.meta.url));
-  const child=spawn(python,[script,'--archive',archive,'--directory',directory,'--expected-sha256',expectedSha256],{shell:false,stdio:['ignore','pipe','pipe']});
+  const child=spawn(python,['-B',script,'--archive',archive,'--directory',directory,'--expected-sha256',expectedSha256],{shell:false,stdio:['ignore','pipe','pipe']});
   return new Promise((resolve,reject)=>{
     let out='',err='';child.stdout.on('data',b=>{if(out.length<100000)out+=b.toString('utf8');});
     child.stderr.on('data',b=>{if(err.length<4000)err+=b.toString('utf8');});

@@ -107,7 +107,7 @@ async function awaitExit(session,timeout=35000) {
   finally{clearTimeout(timer);}
 }
 export class MerchantBuyerExpenses {
-  #config;#root;#sessions=new Map();#active=new Set();#closing=false;#close;#reads=new RetainedFileReads({errorPrefix:'BUYER_EXPENSE'});
+  #config;#root;#sessions=new Map();#lanes=new Map();#active=new Set();#closing=false;#close;#reads=new RetainedFileReads({errorPrefix:'BUYER_EXPENSE'});
   constructor(config){this.#config=config.buyerExpenses;this.#root=join(config.exportsDirectory,'buyer-expenses');}
   get summary(){return {configured:Boolean(this.#config),workspaces:Object.keys(this.#config?.workspaces ?? {}),open:[...this.#sessions].map(([workspace,s])=>({workspace,instanceId:s.instanceId,workspaceId:s.workspaceId,closing:s.closing})),...this.#reads.summary};}
   #selection(name){identifier(name);const value=this.#config?.workspaces[name];if(!value)throw fail('WORKSPACE','Choose a host-declared expense workspace alias.');return value;}
@@ -127,10 +127,11 @@ export class MerchantBuyerExpenses {
   }
   async #get(s,path){return parse(await this.#bytes(s,path));}
   async #open(name) {
-    const selection=this.#selection(name),existing=this.#sessions.get(name);
-    if(existing&&existing.child.exitCode===null&&existing.child.signalCode===null&&!existing.closing)return {workspace:name,instanceId:existing.instanceId,workspaceId:existing.workspaceId,...compactReport(await this.#get(existing,'/api/state'))};
-    if(existing){await this.#reads.closeScope(name);this.#sessions.delete(name);}
-    const child=spawn(selection.python,[SERVER,'--state',selection.directory,'--port','0'],{stdio:['ignore','pipe','pipe'],shell:false});
+    const selection=this.#selection(name);let existing=this.#sessions.get(name);
+    if(existing?.closing){await this.#closeOne(name,existing.instanceId);existing=this.#sessions.get(name);}
+    if(existing&&existing.child.exitCode===null&&existing.child.signalCode===null)return {workspace:name,instanceId:existing.instanceId,workspaceId:existing.workspaceId,...compactReport(await this.#get(existing,'/api/state'))};
+    if(existing)this.#sessions.delete(name);
+    const child=spawn(selection.python,['-B',SERVER,'--state',selection.directory,'--port','0'],{stdio:['ignore','pipe','pipe'],shell:false});
     const session={child,exited:exited(child),instanceId:randomUUID(),active:new Set(),closing:false};
     child.stderr.on('data',()=>{});let output='',timer;
     try {
@@ -159,8 +160,10 @@ export class MerchantBuyerExpenses {
   async #closeOne(name,instanceId) {
     const s=this.#sessions.get(name);
     if(!s||s.instanceId!==instanceId)throw fail('INSTANCE','Select the exact expense-server instance owned by this MCP host.');
-    s.closing=true;await Promise.allSettled([...s.active]);await this.#reads.closeScope(name);
-    s.child.kill('SIGTERM');const outcome=await awaitExit(s);this.#sessions.delete(name);
+    // Calls for this alias reach close only after all previously admitted chains.
+    // A timed-out close remains tracked; the same close/open can await its real exit.
+    const firstClose=!s.closing;s.closing=true;await Promise.allSettled([...s.active]);
+    if(firstClose)s.child.kill('SIGTERM');const outcome=await awaitExit(s);this.#sessions.delete(name);
     if(outcome.code!==0)throw fail('SHUTDOWN_FAILED','The original expense server did not complete a normal shutdown.');
     return {workspace:name,instanceId,closed:true};
   }
@@ -274,8 +277,15 @@ export class MerchantBuyerExpenses {
     const action=name.slice(PREFIX.length),definition=BUYER_EXPENSE_ACTIONS[action];
     if(!name.startsWith(PREFIX)||!definition)throw fail('TOOL','Choose an original buyer expense operation.');
     validateBuyerExpenseArguments(action,args);
-    const task=this.#execute(name,args);this.#active.add(task);
-    try{return await task;}finally{this.#active.delete(task);}
+    // Serialize the complete native call chain for each workspace, including
+    // startup, source checks, export commits and shutdown. Other aliases and
+    // immutable export reads remain independent.
+    const alias=args.workspace;
+    const task=alias===undefined?Promise.resolve().then(()=>this.#execute(name,args))
+      :(this.#lanes.get(alias)??Promise.resolve()).catch(()=>{}).then(()=>this.#execute(name,args));
+    if(alias!==undefined)this.#lanes.set(alias,task);
+    this.#active.add(task);
+    try{return await task;}finally{this.#active.delete(task);if(alias!==undefined&&this.#lanes.get(alias)===task)this.#lanes.delete(alias);}
   }
   close() {
     if(!this.#close){this.#closing=true;this.#close=(async()=>{await Promise.allSettled([...this.#active]);
