@@ -1,4 +1,5 @@
 // MIT. Carry accepted customer sections into the maintained SCF reviewer edition.
+const FEDERAL = '## Federal awards: complete funding research, workshares and receiving';
 const WEBHOOK = '## Webhook customer adoption: complete event tasks and operator handover';
 const OPENFN = '## OpenFn: paid workflow commissioning and complete receiving';
 const REFERRAL = '## Referral implementation: source changes, returned outcomes and complete receiving';
@@ -132,6 +133,17 @@ export function receiveGrantCustomerSources(index, companion) {
     if (previous.url && previous.url !== url) delete source.git_blob;
     if (at < 0) index.sources.push(source); else index.sources[at] = source;
   };
+  const federal = section(companion, FEDERAL)?.text || '';
+  receive('federal-awards-readme', 'Federal awards complete product guide',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(products\/federal-awards\/README\.md)/, federal);
+  receive('federal-awards-operating', 'Federal awards installed operating guide',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(products\/federal-awards\/OPERATING\.md)/, federal);
+  receive('federal-awards-receiving', 'Federal awards complete workspace receiving',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(products\/federal-awards\/RECEIVING\.md)/, federal);
+  receive('federal-awards-report-guide', 'Complete funding report, merchant and buyer receiving',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(products\/federal-awards\/FUNDING_REPORTS\.md)/, federal);
+  receive('federal-awards-federal-awards', 'Federal awards complete product selection',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(stellar\/scf-starforge-\d{8}\/distribution\/selections\/federal-awards\.json)/, federal);
   const webhook = section(companion, WEBHOOK)?.text || '';
   const openfn = section(companion, OPENFN)?.text || '';
   receive('webhook-customer-commissioning', 'Complete webhook customer commissioning',
