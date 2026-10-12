@@ -202,7 +202,9 @@ try:
     # This imports the installed selected-dataset family and original Clinical MCP leaf.
     import_targets = [
         SOURCE / "stellar/scf-starforge-20261009/sf30-seller-sdk/socrata/publisher.mjs",
-        SOURCE / "stellar-forge/mcp-merchant-operator/clinicaltrials-workspace.mjs"
+        SOURCE / "stellar-forge/mcp-merchant-operator/clinicaltrials-workspace.mjs",
+        SOURCE / "stellar-forge/mcp-merchant-operator/config.mjs",
+        SOURCE / "stellar-forge/mcp-merchant-operator/serve.mjs"
     ]
     import_script = "\n".join("await import(" + json.dumps(path.as_uri()) + ");" for path in import_targets)
     preflight = subprocess.run([NODE, "--input-type=module", "-e", import_script],
@@ -274,6 +276,8 @@ try:
             "portableReopen": True, "resumeJournal": resume_journal
         }, "mcp-run")
         report["mcp"] = read_child_report(mcp_directory)
+        if report["mcp"].get("toolCount") != 42:
+            raise RuntimeError("The complete installed Clinical MCP catalog must contain its original 42 tools")
         phase("same_console_complete_mcp_receiving", passed=report["mcp"].get("passed"))
     except BaseException as exc:
         report["mcp"] = {"passed": False, "error": str(exc), "observed": read_child_report(mcp_directory)}
