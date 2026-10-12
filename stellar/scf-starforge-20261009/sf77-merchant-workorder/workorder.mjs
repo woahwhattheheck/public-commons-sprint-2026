@@ -18,6 +18,16 @@ const https = value => {try {const u = new URL(value); return u.protocol === 'ht
 const utc = value => typeof value === 'string' && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z$/.test(value) && Number.isFinite(Date.parse(value));
 const usd = value => typeof value === 'number' && Number.isFinite(value) && value >= 0 && Math.abs(value * 100 - Math.round(value * 100)) < 1e-7;
 const fmt = value => value === null ? 'WITHHELD UNTIL OWNER APPROVES' : new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(value);
+function economicsText(commercial) {
+  if(commercial.priceApproval!=='OWNER_APPROVED_PROPOSAL'||commercial.approvedFeeUsd==null)
+    return 'Proposal fee is not owner-approved; delivery margin is not calculated.';
+  if(commercial.approvedCostUsd==null)
+    return 'Delivery cost: not recorded. Margin: unknown. The owner-approved fee remains the recorded proposal price.';
+  const cost=commercial.approvedCostUsd,fee=commercial.approvedFeeUsd;
+  const margin=Number(((fee-cost)/fee*100).toFixed(2));
+  return 'Recorded delivery cost: '+fmt(cost)+'. Margin before other costs: '+margin.toFixed(2)+'%.'+
+    (cost>fee?' Recorded cost exceeds the approved fee by '+fmt(cost-fee)+'. The owner-approved fee remains unchanged.':'');
+}
 const modeLabel = mode => mode === true ? 'Credentialed browser policy' : mode === false ? 'Noncredentialed browser policy' : 'UNKNOWN — original evidence does not establish the mode';
 const changeGroups = [
   ['notReobservedWithCompleteAfterCatalog','Not reobserved · complete after catalog and matching credential mode'],
@@ -62,9 +72,10 @@ function finishPacket({generatedAt,scope,baseline,repairReview=null,runtimeRevie
   if (c.costUsd !== null && c.costUsd !== undefined) ensure(usd(c.costUsd), 'Cost must be nonnegative USD with <=2 decimal places');
   const proposedFee = c.feeUsd ?? null, cost = c.costUsd ?? null;
   const priceApproved = c.priceApproval==='OWNER_APPROVED_PROPOSAL';
-  if (priceApproved) ensure(proposedFee!==null && cost!==null && https(c.approvalReceiptUrl), 'Owner-approved price needs fee, cost and actual receipt');
-  const margin = priceApproved ? (proposedFee-cost)/proposedFee : null;
-  ensure(!priceApproved || margin >= 0, 'Approved proposal cannot be loss-making without owner revision');
+  if (priceApproved) ensure(proposedFee!==null && https(c.approvalReceiptUrl), 'Owner-approved price needs fee and actual receipt');
+  // Price approval is independent of an internal cost estimate. Keep unknown cost
+  // and margin unknown; a recorded adverse margin does not revise the approved fee.
+  const margin = priceApproved && cost!==null ? (proposedFee-cost)/proposedFee : null;
   const contactAllowed = terms.merchantConsent.status==='CONFIRMED', delivery=deliveryTerms(terms.delivery);
   const steps=delivery?[...milestones.slice(0,-1),{key:'owner-delivery',title:'Owner-entered delivery and acceptance',
     type:'OWNER_SCOPE_REVIEW',acceptance:[delivery.scope&&'Scope: '+delivery.scope,
@@ -76,7 +87,7 @@ function finishPacket({generatedAt,scope,baseline,repairReview=null,runtimeRevie
       consentStatus:terms.merchantConsent.status,consentReceipt:contactAllowed?terms.merchantConsent.receiptUrl:null},
     scope,baseline,repairReview,...(runtimeReview?{sourceKind:'RUNTIME',runtimeReview}:{}),
     commercial:{priceApproval:c.priceApproval,approvedFeeUsd:priceApproved?proposedFee:null,approvedCostUsd:priceApproved?cost:null,
-      ownerReceipt:priceApproved?c.approvalReceiptUrl:null,marginPercent:priceApproved?Number((margin*100).toFixed(2)):null,
+      ownerReceipt:priceApproved?c.approvalReceiptUrl:null,marginPercent:margin===null?null:Number((margin*100).toFixed(2)),
       proposedWindow:text(terms.proposedWindow)||'UNSCHEDULED'},
     ...(delivery?{delivery}:{}),milestones:steps,
     readiness:contactAllowed&&priceApproved?'READY_FOR_OWNER_TO_REVIEW_UNSENT_OFFER':'INTERNAL_UNSENT_PACKET',
@@ -127,7 +138,9 @@ export function buildPacket(intake, terms, inputHash, generatedAt, recheck=null)
 
 /** Build the same workorder from original SF74 sources; never invent an SF70 report. */
 export function buildRuntimePacket({supportText,inputs},terms,generatedAt=new Date().toISOString()) {
-  const runtimeReview=reviewRuntime(supportText,inputs),latest=runtimeReview.after??runtimeReview.before;
+  // This review is part of the retained workorder generation. Bind its render
+  // timestamp to the caller's saved time; original capture times stay unchanged.
+  const runtimeReview={...reviewRuntime(supportText,inputs),generatedAt},latest=runtimeReview.after??runtimeReview.before;
   ensure(latest.caseMatches, 'Use the latest runtime capture\'s saved case mapping or attach a source for the current mapping');
   const s=latest.scope.inputs;
   // Runtime records need no unrelated discovery/CORS assessment. Optional saved
@@ -176,6 +189,7 @@ export function renderChecklist(p) {
     `Buyer Origin: ${p.scope.buyerOrigin||'Not recorded'}; network: ${p.scope.network||'Not recorded'}; payTo: ${p.scope.payTo||'Not recorded'}`,
     `Browser credential mode: ${modeLabel(p.scope.browserCredentialed)}`,
     `Seller consent: ${p.seller.consentStatus}; fee: ${fmt(p.commercial.approvedFeeUsd)}; price approval: ${p.commercial.priceApproval}`,
+    economicsText(p.commercial),
     '',runtime?'Acceptance boxes are open. The original runtime review records observed operations and source coverage; the merchant records its agreement and acceptance separately.':
       'Every box below is OPEN. Any original SF76 comparison below is an unpaid technical observation; it does not certify merchant fixes, authorize outbound contact, record seller acceptance, or issue invoices.', ''
   ];
@@ -256,7 +270,7 @@ export function renderHtml(p) {
 <div class="cards"><div class="card"><small>${runtime?'Original runtime case':'Original SF70 observation'}</small><strong>${runtime?'Retained operational sources':esc(p.baseline.originalState)}</strong></div><div class="card"><small>${runtime?'Observed conditions / context':'Remediation candidates / unknowns'}</small><strong>${runtime?p.baseline.observedCount+' / '+p.baseline.contextCount:p.baseline.highCount+' / '+p.baseline.unknownCount}</strong></div><div class="card"><small>Seller permission record</small><strong>${p.seller.consentStatus==='CONFIRMED'?'Recorded':'Not recorded'}</strong></div><div class="card"><small>Approved proposal fee</small><strong>${esc(fmt(p.commercial.approvedFeeUsd))}</strong></div></div>
 <h2>Technical scope</h2><dl class="scope"><dt>Saved merchant resource</dt><dd>${esc(p.scope.resource||'Not recorded')}</dd><dt>Facilitator discovery</dt><dd>${esc(p.scope.catalog||'Not recorded')}</dd><dt>Intended buyer operation</dt><dd>${esc(p.scope.intendedRetryMethod)} from ${esc(p.scope.buyerOrigin||'Origin not recorded')}</dd><dt>Browser credential mode</dt><dd>${esc(modeLabel(p.scope.browserCredentialed))}</dd><dt>Saved Stellar payment mapping</dt><dd>${esc(p.scope.network||'Network not recorded')} · ${esc(p.scope.payTo||'Recipient not recorded')}</dd>${runtime?'<dt>Observed route</dt><dd>'+esc(p.scope.routeId)+' · '+esc(p.scope.observedPath??'Original process packet route')+'</dd>':''}<dt>Original source timestamp / SHA-256</dt><dd>${esc(p.baseline.observedAt)} · <span class="digest">${esc(p.baseline.sourceSha256)}</span></dd></dl>
 ${delivery}<h2>Source-recorded observations</h2><ul class="scope">${findings}</ul>${runtime?renderRuntimeHtml(runtime):renderRepairHtml(p.repairReview)}
-<h2>Delivery and acceptance</h2>${milestones}<h2>Commercial handoff</h2><p class="warning">Approved proposal fee: ${esc(fmt(p.commercial.approvedFeeUsd))}. Proposed delivery window: ${esc(p.commercial.proposedWindow)}. Merchant agreement, acceptance and payment are recorded separately.</p>
+<h2>Delivery and acceptance</h2>${milestones}<h2>Commercial handoff</h2><p class="warning">Approved proposal fee: ${esc(fmt(p.commercial.approvedFeeUsd))}. Proposed delivery window: ${esc(p.commercial.proposedWindow)}. Merchant agreement, acceptance and payment are recorded separately.</p><p class="warning">${esc(economicsText(p.commercial))}</p>
 <p class="muted">${runtime?'This workorder uses the original saved runtime review. HTTP responses, native notices, merchant inbox delivery and customer fulfillment keep their original meanings.':'The original SF70 observations cover unpaid discovery and browser readiness. They do not record a settled payment or merchant acceptance.'} Original source JSON remains unchanged.</p><footer>SF77 merchant workorder · ${esc(p.generatedAt)}</footer></body></html>`;
 }
 
