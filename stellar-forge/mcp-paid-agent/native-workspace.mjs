@@ -13,6 +13,7 @@ import {createNativeAnalysis, nativeAnalysisActions} from './native-analysis.mjs
 import {createNativeDuckDB,nativeDuckDBActions} from './native-duckdb.mjs';
 import {createNativeCollections,nativeCollectionActions} from './native-collections.mjs';
 import {createNativeCollectionRecovery,nativeCollectionRecoveryActions} from './native-collections-recovery.mjs';
+import {createNativeOperationsHandoff,nativeOperationsHandoffActions} from './native-operations-handoff.mjs';
 import {NATIVE_SOURCE,nativeSourceFiles,checkNativeSourceFiles,sealNativeSource,
   registerNativeSourceInbox,selectedNativeSourceInbox} from './native-analysis-sources.mjs';
 import {createSavedFileReader} from './native-file.mjs';
@@ -278,6 +279,7 @@ export async function openNativeWorkspace(directory) {
   const collections=createNativeCollections({manifest,isClosed:()=>closed});
   const collectionRecovery=createNativeCollectionRecovery({manifest,registerCollections:collections.register,isClosed:()=>closed});
   const duckdb=createNativeDuckDB({manifest,isClosed:()=>closed});
+  const operationsHandoff=createNativeOperationsHandoff({manifest,currentWorkspace,runOwned,isClosed:()=>closed});
   async function retained(intentId) {
     const path = join(root, 'requests', intentKey(intentId));
     await privateDirectory(path);
@@ -495,6 +497,7 @@ export async function openNativeWorkspace(directory) {
       if(nativeDuckDBActions.includes(action))return duckdb.call(args,context);
       if(nativeCollectionActions.includes(action))return collections.call(args,context);
       if(nativeCollectionRecoveryActions.includes(action))return collectionRecovery.call(args,context);
+      if(nativeOperationsHandoffActions.includes(action))return operationsHandoff.call(args,context);
       need(Object.hasOwn(allowedFields, action) &&
         Object.keys(args).every(key => key === 'action' || allowedFields[action].includes(key)), 'MCP_NATIVE_ARGUMENTS_INVALID');
       if (action !== 'history') intentKey(args.intentId);
@@ -531,7 +534,7 @@ export async function openNativeWorkspace(directory) {
     async close() {
       if (closed) return;
       closed = true; shutdown.abort();
-      await Promise.allSettled([objects.close(), datasets.close(), analysis.close(), collections.close(), collectionRecovery.close(), duckdb.close(), ...preparing.values(), ...[...active.values()].map(value => value.promise)]);
+      await Promise.allSettled([objects.close(), datasets.close(), analysis.close(), collections.close(), collectionRecovery.close(), duckdb.close(), operationsHandoff.close(), ...preparing.values(), ...[...active.values()].map(value => value.promise)]);
     },
   };
 }
