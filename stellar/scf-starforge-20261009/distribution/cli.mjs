@@ -33,6 +33,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   census-publisher                         Publish Census ACS observations and complete original source deliveries
   usaspending-research                      Capture federal awards, review prime workshares and operate saved editions
   usaspending-dossier                       Receive award editions, write research findings and recover source packets
+  opportunity                               Operate source-bound requirements, team decisions and complete proposal handoffs
   weather-operations                        Operate weather sources, decisions, frozen reports and original recovery
   usgs-water                                Acquire USGS observations, review hydrology and operate paid editions
   water-quality                             Review WQX samples, detection limits and complete paid data editions

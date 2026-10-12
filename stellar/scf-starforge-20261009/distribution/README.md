@@ -4844,6 +4844,41 @@ See the [award research operating guide](../sf30-seller-sdk/usaspending/README.m
 and [complete dossier receiving guide](../sf30-seller-sdk/usaspending/DOSSIER.md)
 for configuration, original acquisition, operator use and portable handover.
 
+## Opportunity requirements, teaming and proposal handoff
+
+The installed `starforge opportunity` family operates the company and opportunity
+workspace through its original source store and HTTP application:
+
+~~~sh
+starforge opportunity --help
+starforge opportunity serve --workspace /absolute/private/opportunity
+~~~
+
+The workflow retains source bytes and their original dossier editions, receives
+complete USAspending award exports, binds capability and past-performance records
+to evidence, and records each numbered requirement's response disposition,
+coverage review, owner and draft response. Team decisions, dependent milestones,
+questions, source-change review and named handoffs stay in the same versioned
+workspace. The LGNDX/MCC reference seed supplies the retained company and RFI
+sources, its 34 numbered items and the reviewed response rules.
+
+The original `seed`, `action`, `show`, `source` and `compare` commands support
+the same operator work from a terminal. `export` produces complete portable
+JSON with immutable named HTML/Markdown/CSV handoffs and original dossier source
+bytes; `receive` reopens that project or advances an identical history. The
+workspace needs Node's built-in modules; the original optional award-workspace
+path uses its existing SQLite implementation.
+
+Import `openOpportunityStore` from
+`@tokenjunkielabs/starforge-merchant/partners/lgndx-opportunity-operations`.
+The `/package`, `/sources`, `/cli` and `/server` subpaths expose the same
+delivery, source, terminal and HTTP modules. The model, CLI and server declarations
+travel beside their original modules. Follow the
+[complete opportunity operator guide](../partners/lgndx-opportunity-operations/README.md)
+for source-bound decisions, the actual MCC response rules, all terminal options
+and the complete receiving workflow. In an installed package the guide is
+`source/stellar/scf-starforge-20261009/partners/lgndx-opportunity-operations/README.md`.
+
 ## Federal award research for agents
 
 The existing `merchant-mcp` command includes `init-usaspending-workspaces`.

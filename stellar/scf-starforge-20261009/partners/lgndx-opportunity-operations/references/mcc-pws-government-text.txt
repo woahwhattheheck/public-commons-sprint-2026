@@ -1,0 +1,547 @@
+L52: UNCLASSIFIED
+L53: 
+L54: Development and Enterprise Applications - OM&E
+L55: 
+L56: Performance Work Statement Application Development – Operations, Maintenance & Enhancements (OM&E)
+L57: 
+L58: Contracting and Grants Management Division and Office of the Chief Information Officer
+L59: 
+L60: Contents
+L61: 1.0  | Scope  | 2
+L62: 2.0  | Background, Current Environment, and Objectives  | 3
+L63: 2.1  | Background  | 3
+L64: 2.2  | Current Environment  | 4
+L65: 2.3  | Objectives  | 4
+L66: 3.0  | Place of Performance  | 5
+L67: 4.0  | Tasks  | 6
+L68: 4.1  | Contract Program Management  | 6
+L69: 4.1.1  | Program Management  | 6
+L70: 4.1.2  | Phase-In/Phase-Out  | 7
+L71: 4.1.3  | Policy and Governance Implementation  | 8
+L72: 4.1.4  | Solutions Architecture Support  | 8
+L73: 4.1.5  | Technical Product Evaluation Support  | 9
+L74: 4.2  | Operations, Maintenance, and Enhancements  | 9
+L75: 4.2.1  | Background  | 9
+L76: 4.2.2  | Functional Areas of Service  | 10
+L77: 4.2.3  | DevSecOps Objectives  | 17
+L78: 4.2.4  | Technical Training  | 17
+L79: 4.3  | Surge Support and New Product Development  | 18
+L80: 4.3.1  | Scope of Future Work  | 18
+L81: 4.3.2  | Surge Support Services  | 19
+L82: 4.4  | Application Administration  | 19
+L83: 4.4.1  | Application Administration  | 19
+L84: 4.5  | ODCs  | 19
+L85: 5.0  | Labor Requirements  | 20
+L86: 5.1  | Key Personnel  | 20
+L87: 5.2  | Clearance Requirements  | 20
+L88: 5.3  | Personal Identity Verification of Contractor Personnel  | 20
+L89: 1.0 Scope
+L90: The scope of this Performance Work Statement (PWS) is intended to cover Contractor support of all services required to provide application engineering, operations and maintenance (O&M) support, platform customization and configuration, and Tier 3 user support across all enterprise applications to support the information technology requirements of Millennium Challenge Corporation (MCC) Office of the Chief Information Officer (OCIO) Digital Services Team.
+L91: The services to be acquired also include program management and administrative support necessary for the administration of this award. The following categories of activities are within the total scope of this Contract, and the contractor must have proven experience providing support for these activities within a federal agency:
+L92: · Application/Solution requirements, development, testing, maintenance, enhancement, and support
+L93: 
+L94: · Data management systems and tools requirements, development, testing, maintenance, enhancement and support
+L95: 
+L96: · Artificial Intelligence (AI)/Machine Learning (ML) strategy, governance and program management
+L97: 
+L98: · AI-related data readiness support and engineering
+L99: 
+L100: · AI model development and experimentation
+L101: 
+L102: · Website development, testing, maintenance, enhancement, and support
+L103: · Data analytics, enterprise reporting and business intelligence
+L104: 
+L105: · Continuous Integration/Continuous Delivery (CI/CD) integration support, including pipeline enhancements and maintenance
+L106: 
+L107: · Customization and configuration of low-code platforms
+L108: 
+L109: · Process automation (e.g., Testing)
+L110: 
+L111: · Data governance establishment and implementation support
+L112: 
+L113: · Technical and end-user training, including the production of training materials
+L114: 
+L115: · Business analysis and consulting
+L116: 
+L117: · Technical analysis and consulting
+L118: · Portfolio and project management
+L119: 
+L120: · Product evaluation support
+L121: 
+L122: · User Interface/User Experience (UI/UX) design
+L123: 
+L124: · Application security support
+L125: 
+L126: · Enterprise and solutions architecture support
+L127: 
+L128: · Identity lifecycle management support
+L129: 
+L130: · Agile coaching
+L131: 
+L132: · Open Data standardization and reporting
+L133: 
+L134: · Other general support tasks as requested
+L135: See Section 4.1 for specific tasks related to Contract Program Management, Architecture, and Security; Section 4.2 for Operations, Maintenance, and Enhancements (OME); Section 4.3 for Surge Support and New Development; and Section 4.4 for Infrastructure.
+L136: 
+L137: 2.0 Background, Current Environment, and Objectives
+L138: 
+L139: 2.1 Background
+L140: The Millennium Challenge Corporation (MCC) is an innovative and independent U.S. foreign assistance agency that is helping to lead the fight against global poverty. Created by the U.S. Congress in January 2004 with strong bipartisan support, MCC has changed the conversation on how best to deliver smart U.S. foreign assistance by focusing on good policies, country ownership, and results. MCC provides time-limited grants promoting economic growth, reducing poverty, and strengthening institutions.
+L141: These investments not only support stability and prosperity in partner countries but also enhance American interests.
+L142: The agency’s Office of the Chief Information Officer (OCIO) designs, deploys, protects, and supports information technology that allows MCC’s staff to maximize their productivity and effectiveness in executing the agency’s core mission of reducing poverty through economic growth. OCIO is organized into several branches, including Cybersecurity, Digital Services, Production Operations (including Infrastructure Services), and Enterprise Support Services.
+L143: The OCIO’s vision is to empower their MCC colleagues, Accountable Entity (AE) partners, and open data consumers to successfully collaborate on complex programs, often in challenging environments, supported by appropriate technology that “just works.”
+L144: 2.2 Current Environment
+L145: 
+L146: The MCC network supports approximately 550 users, consisting of 250 Full-Time Employees (FTEs), and around 300 non-employees. Approximately 95 percent (95%) of MCC staff are located at its facility in Washington D.C. (Franklin Court, 1099 14th St N.W).
+L147: Approximately 75 percent (75%) of MCC’s employees travel internationally on a regular basis. Those staff who are directly supporting MCC’s relationship with the compact recipients are located in developing countries around the world or working at other remote locations.
+L148: MCC is currently standardized on Microsoft solutions wherever applicable, and the agency is 95% Cloud based. OCIO continues to prioritize the enhanced utilization of Cloud technologies and investments to further utilize its AWS and Office 365 (O365) Cloud capabilities.
+L149: 
+L150: An inventory of MCC’s current technical environment as related to the contract scope is available in Appendix B.
+L151: 
+L152: 2.3 Objectives
+L153: The purpose of the procurement is to cover all services and support required to provide application engineering services for the MCC information technology environment, operate and maintain MCC’s databases in a secure manner, develop solutions, and provide Tier 3 support across all enterprise applications.
+L154: It is important to note that MCC requires flexibility to adjust to the agile IT environment and to support any new technologies or processes in line with evolving industry offerings, fluctuating budgetary availability, federal IT guidance, and new MCC business requirements. As a result, this award will allow the partnership between MCC and the Contractor to evolve over time, enabling continuous improvement and responsiveness to changes in the agency’s environment.
+L155: To support this effort, the Contractor shall provide personnel with proven experience working on mature, highly agile product teams with deep expertise in application engineering services including development, testing, business analysis, user interface design, and end-user support. This includes teams that work on .NET/C# custom software development and configuration and customization of low-code platforms.
+L156: The agency is seeking to optimize its existing technology capabilities while advancing modernization to its IT tools and processes. Accordingly, the agency requires a Contractor who demonstrates the following attributes:
+L157: Agile Software Development: One of MCC’s primary goals for this procurement is to enhance the agency’s IT platforms and applications with the delivery of frequent, high-quality releases. MCC requires contractors to demonstrate they utilize modern, agile scrum teams and culture in their current development work across the federal government and their approach to bringing this capability to MCC.
+L158: Flexible and Dynamic: The Contractor must demonstrate the ability to draw from a deep pool of highly skilled personnel with diverse expertise and technical capabilities. MCC expects the contractor to provide subject matter experts with proven experience in advanced platform and application development. The Contractor must show clear evidence of its established pool of qualified engineers and specialists – resources that can be deployed quickly to meet evolving agency needs.
+L159: Experienced and Innovative: The Contractor selected should have experience in delivering innovative solutions to increase the effectiveness and efficiency of IT platforms within the federal government.
+L160: DevSecOps: To enhance delivery of services and operations, MCC wants to further extend its DevSecOps practices to seamlessly develop and deploy software in an automated fashion. The incoming contractor should demonstrate substantial experience both exceling in a DevSecOps working model as well as maintaining and enhancing a CI/CD pipeline. Additionally, MCC will require professionals with substantial expertise creating and executing automated test scripts and code reviews that adhere to security protocol.
+L161: Cost Effective: MCC requires an award structure that allows flexible adjustment of service levels and support based upon changes in the federal budget and evolving agency priorities. The Contractor must be able to tailor service levels, provide modular options that can scale up or down as needed, and maintain a flexible environment that accommodates emerging technologies and shifting business needs.
+L162: MCC also seeks a partner capable of building and sustaining cloud-based applications while efficiently managing both operations and maintenance (O&M) and new feature development to achieve cost savings.
+L163: 3.0 Place of Performance
+L164: Work shall be primarily performed at the Contractor’s office or telework site. Key personnel are expected to be in the Washington, D.C. Metro area. Core hours are generally 9:00 a.m. through 3:00 p.m. Eastern time, Monday through Friday. Contractor personnel are expected to conform to customer Agency normal operating hours for meetings and response times.
+L165: Government space may be assigned for this support, but the Contractor site or telework site is the anticipated primary place of performance for work under this agreement. If the work being conducted must be completed at MCC or with direct access to the MCC network, equipment will be issued and desk space identified if applicable. Contractor meetings shall be conducted at MCC headquarters located in Washington, D.C., the Contractor’s location, or virtually at the discretion of the Government.
+L166: The Contractor will be provided access to the MCC network as well as any testing, staging, development, and production environments as needed to complete the work outlined in the PWS.
+L167: 4.0 Tasks
+L168: 
+L169: 4.1 Contract Program Management
+L170: 
+L171: 4.1.1 Program Management
+L172: The Contractor shall provide an Program Manager (PM) who will be responsible for the technical and functional activities required for the effective management of the entirety of this contract, including productivity and management tasks such as Project Management, Quality Assurance, and program level Change Management. An ideal PM is one who will focus on technical quality management, delivery and metric accountability, and act as a partner to MCC working collaboratively to achieve the contract goals.
+L173: The Contractor shall be responsible for program control and management for this effort including, but not limited to:
+L174: 
+L175: · Managing personnel (including development, training, and evaluation)
+L176: 
+L177: · Allocating and scheduling resources/staffing, including after-hours support as needed
+L178: 
+L179: · Developing and maintaining cost, schedule, and performance
+L180: 
+L181: · Coordinating and communicating with Government management and other OCIO Contractors
+L182: 
+L183: · Communicating timelines for high-level objectives and project completion
+L184: · Ensuring physical security of Contractor-operated facilities, including security of networks, equipment, and other infrastructure components used in support of this contract
+L185: 
+L186: · Providing assistance to the Government in establishing priorities and meeting the needs of the MCC user community
+L187: 
+L188: · Managing customer relationships
+L189: 
+L190: · Meeting appropriate Government standards
+L191: 
+L192: · Establishing management structures and organization
+L193: · Institute and maintain an effective, efficient, and responsive management organization that shall oversee all contractor personnel and subcontractor resources used in the performance of this contract, and engage regularly (at least quarterly) with Contractor leadership for performance updates and pulse checks
+L194: · Responsible for ensuring that all Government-authorized projects, tasks and work activities are performed in a timely and cost-effective manner while maintaining the highest quality of performance
+L195: 
+L196: · Management structure and organization shall be capable of ensuring, at a minimum, that the following functional and personnel requirements are met:
+L197: 
+L198: · A technically proficient and professionally capable staff is established and maintained throughout the life of the contract
+L199: · Personnel turnover is minimized, and individuals are motivated to achieve excellent performance
+L200: 
+L201: · A plan for addressing a surge in staff when needed by the Government is developed and implemented
+L202: 
+L203: · A plan for utilizing highly skilled or SME staff as needed for special projects when needed by the Government is developed and implemented
+L204: 
+L205: · A plan for staffing for new technical skills deemed necessary by MCC is developed
+L206: · A plan for accommodating staff under this contract at Contractor facilities, if deemed necessary by the Government during the course of the contract, is provided
+L207: 
+L208: · Contractor personnel are phased in without interruption
+L209: 
+L210: · Contractor personnel are effectively managed to ensure adequate staffing at all times
+L211: 
+L212: · Reporting of performance to the Government is consistent and accurate
+L213: 
+L214: · Problem resolution is conducted with minimal disruption to the activities being performed under the contract
+L215: · Continuous feedback on performance is provided to MCC personnel on all areas of contract performance
+L216: 
+L217: · Process improvements are made on a continuous basis to improve both the timeliness and quality of work products
+L218: 
+L219: · Risks are identified, assessed, and mitigated
+L220: 
+L221: · All contractual requirements are met
+L222: 
+L223: · Adequate implementation and management of subcontractor(s) is ensured
+L224: 
+L225: · Effective quality management is conducted in accordance with the Contractor’s Quality Control Plan (QCP)
+L226: · A cooperative and collaborative working relationship is developed with contractors from other companies supporting MCC and MCC FTE staff Additionally, it is the sole responsibility of the Contractor to manage both offsite and onsite staff as specified:
+L227: 
+L228: · Oversee and manage Contractor staff and work assignments.
+L229: 
+L230: · Provide input and feedback on MCC management data and information calls.
+L231: 
+L232: · Attend OCIO meetings as needed.
+L233: · Participate as a key staff member of Digital Services regarding business operations, planning, and mitigating risks/issues.
+L234: 
+L235: · Maintain responsibility for all deliverables.
+L236: 
+L237: · Notify Government Contracting Officer’s Representative (COR) of staff vacation, sick, and telework schedules.
+L238: 
+L239: 4.1.2 Phase-In/Phase-Out
+L240: 
+L241: The Phase-In/Phase-Out process is defined as a smooth transition from one Contractor to another, in order to maintain the program’s integrity required under this, previous, and future agreements.
+L242: The Contractor shall take all actions necessary to achieve a successful transition from any incumbent Contractor/MCC Staff to the Contractor/MCC Staff.
+L243: 
+L244: 4.1.2.1 Phase-In
+L245: The Phase-In Process shall be limited to sixty (60) calendar days. The overlap between old and new contractors allows for a smooth transition from one contract to another and prevents a lapse in service for the Government.
+L246: The Contractor shall submit to the Government a phase-in plan as a part of their proposal and shall specifically address their proposed approach to, in coordination with existing contractors, planning and implementing a transition designed to mitigate any disruption or degradation of services.
+L247: 4.1.2.2 Phase-Out
+L248: 
+L249: The Contractor shall remain functional and operational up until the point of expiration or cancelation/termination. The Contractor shall submit to the Government a phase-out plan sixty (60) calendar days before the contract’s completion or cancelation/termination. The phase-out plan shall address not less than the following:
+L250: 
+L251: · Procedure for retaining the staffing levels necessary to maintain required contract services through the day of the contract expiration or termination.
+L252: · Procedure and responsibility for performing physical inventory and reconciliation of Government Furnished Equipment (GFE) and Government Furnished Information (GFI).
+L253: 
+L254: · Procedure and responsibility for reconciling and certifying material and equipment on-hand levels and accuracy.
+L255: 
+L256: · Procedure for transferring knowledge and documentation.
+L257: 
+L258: · List of all ongoing tasks and activities of the current staff, including a summary description of the work.
+L259: · For each task/activity, a Phase-Out Plan shall include upcoming milestones and their individual status, the level of effort being applied, and current or anticipated risks associated with task completion.
+L260: The Contractor shall coordinate its phase-out activities with any future Contractor/Contractors and MCC Staff to ensure a smooth and orderly transition at the end of the contract’s period of performance. The Contractor shall remove all Contractor-owned property from the Government spaces or facilities by close of business on the last day of the contract.
+L261: 
+L262: 4.1.3 Policy and Governance Implementation
+L263: The Contractor shall provide MCC with assistance for establishing federal data and IT policies. The Contractor may be required to support the implementation and adoption of technical governance activities.
+L264: 
+L265: 4.1.4 Solutions Architecture Support
+L266: 
+L267: The Contractor shall provide Enterprise and AI Architects, or other appropriate labor categories, for the following support:
+L268: 
+L269: · Identify the future state of Enterprise Applications
+L270: 
+L271: · Architectural reviews of AI solutions
+L272: 
+L273: · Design of secure AI pipelines
+L274: · Provide an analysis of alternatives when required
+L275: 
+L276: · Support OCIO with developing and enforcing architectural standards to include the review of current and proposed MCC applications
+L277: 
+L278: · Support prototyping/piloting solutions
+L279: 
+L280: · Support the integration of external data with existing MCC solutions
+L281: 
+L282: 4.1.5 Technical Product Evaluation Support
+L283: The purpose of technical evaluation support is to provide MCC with the ability to effectively evaluate the functional and technical merits of various hardware and software programs, including programming languages and IT systems. As required, the Contractor shall provide technical evaluation on any product, ensure compliance with security protocols, and provide recommendations in the form of reports or presentations.
+L284: In addition, this support service shall give MCC a means of obtaining cost/benefit analysis information on analysis, software life-cycle modeling, findings, and recommendations in reports, briefing, and/or presentations.
+L285: The software evaluation services in this task area include not only evaluation of commercial off-the-shelf (COTS) software packages, but also the characteristic evaluation of third-party designed, customized software, third-party Contractor enhancements to existing software, and programming languages. The hardware and software evaluation services in this task area include an analysis of new, existing, and upcoming technologies.
+L286: The Contractor shall provide a written technical analysis report upon completion of the evaluation.
+L287: At a minimum, the Contractor shall be required to document the problem definition, provide analysis of available technologies, detail the pros/cons of any alternatives, and define technical features and functionality aspects of the topic or technology under review.
+L288: 
+L289: Technical production evaluation support shall include, but is not limited to, the following:
+L290: 
+L291: · Evaluate products for best technical fit to the requirement.
+L292: · Fit shall be determined by the products' quality, functionality, reliability, compatibility with other major office automation products, expendability, usability, availability, and cost
+L293: 
+L294: · Evaluations requiring actual demonstration of a product or a variety of vendor products, the Contractor shall be responsible for the performance or coordination of the vendor performance of the demonstration(s)
+L295: 
+L296: · Cost-benefit analysis for AI adoption
+L297: 
+L298: · AI security & data protection assessments
+L299: · Quick-turn evaluations of emerging AI technologies
+L300: 
+L301: 4.2 Operations, Maintenance, and Enhancements
+L302: 
+L303: 4.2.1 Background
+L304: Digital Services is responsible for some Tier 2 and all Tier 3 support of their portfolio of applications and systems. This includes operational support, maintenance assistance (data loading, testing in support of patches, etc.), user support, and enhancements on an ad-hoc basis as defined later in this section. Additionally, the Contractor shall work with MCC’s existing operations and security vendors to improve DevSecOps practices and tools throughout our teams.
+L305: 
+L306: 4.2.1.1 Current Operational Applications
+L307: A complete listing of MCC’s applications and their supporting technologies can be found in Appendix B. MCC has several applications, most of which are written in C# with a .NET framework or are Power Platform-based applications. A smaller number of applications are written in PHP, Python, or are customized on platforms such as ServiceNow and Box.com.
+L308: 
+L309: 4.2.1.2 Current Support Activities
+L310: 
+L311: There are three distinct areas where support is provided today:
+L312: · Application Support/Enhancement – Provides support for applications, including but not limited to those listed Appendix B. Delivers cutting-edge solutions for custom (.NET/C#), and Microsoft 365 solutions , such as the Power Platform, Power BI, SharePoint Online, Copilot Agents, and Forms, that are available in the Government Commercial Cloud. Monitors, manages, and executes requests in queue for new SharePoint workflows, sites, and pages.
+L313: Creates reports and analytical data products using charts, visualizations, and other innovative techniques. Supports other miscellaneous solutions on an ad-hoc basis. Helps to establish governance for the data and content stored within the solutions.
+L314: · Data Support –Creates solutions for auto data loading, mappings, and integrations between internal and external systems. Proposes and implements performance and process improvements to application databases when needed.
+L315: · Application Administrator Support – Provides support for low-code platforms such as ServiceNow, Box.com, SharePoint and Power Platform. Monitors application performance and ensures security and efficiency. Responds to security or usability concerns and troubleshooting issues. Assists with establishing and enforcing governance of content and data stored in the platforms.
+L316: 
+L317: 4.2.2 Functional Areas of Service
+L318: The Contractor shall provide support services for all applications and services within the Digital Services portfolio. Access to environments will be provided, but changes to production go through a change control process and are executed by another vendor or through OCIO’s CI/CD pipeline.
+L319: SharePoint, ServiceNow and Box.com are exceptions, with elevated permissions provided to the Contractor/ The Contractor shall perform the tasks and requirements specified below to provide support services to Digital Services. The Contractor shall provide at a minimum the indicated products or services, in the stated specifications or higher.
+L320: 4.2.2.1 Operations
+L321: 
+L322: The Contractor shall provide application and information system management, database administration, and Tier 3 support for applications within the Digital Services portfolio.
+L323: MCC has an IT Service Desk that provides support for MCC's Business Applications by creating a central point of contact for MCC users. The IT Service Desk provides all Tier 1 and most Tier 2 support for all MCC Business Applications to all MCC users globally and provides best effort support for Tier 3. Tier 1 issues are typically related to access, and Tier 2 issues deal with known problems that tend to be more complex.
+L324: The Contractor will not be expected to manage the IT Service Desk; MCC has contracted with another vendor for this purpose.
+L325: The Contractor shall be expected to provide Tier 3 support for applications for MCC and AE users. This may include VIP desk side support and support for applications, software, and related services in cases where the issue is not a known issue.
+L326: 
+L327: The Contractor shall document all requests for service using the MCC approved service ticketing system and shall serve as a liaison between MCC users and the IT Service Desk when needed.
+L328: For work that requires Tier 3 services, the Contractor shall be provided information and requirements regarding use of existing systems for tracking activities and communicating with MCC users, which is currently ServiceNow.
+L329: The Contractor shall also take an active part in implementing solutions by working with the MCC vendor(s) and other MCC contractors to aide them in getting the server/application connected to the MCC Network and on GFE. The Contractor shall work as the liaison between vendors and other MCC IT support groups to ensure the server and applications are performing efficiently.
+L330: The Contractor shall coordinate and cooperate with other MCC Contractors responsible for system and network administration, but actual administration is not required under this Contract. This will apply to all production, development and test staging environments within the scope of the Digital Services portfolio.
+L331: The Contractor shall provide emergency software development support as required for Continuity of Operations/Disaster Support. This will be covered within proposed staffing levels and does not constitute dedicated staffing.
+L332: 
+L333: Specific activities may include:
+L334: 
+L335: · Troubleshooting reported issues
+L336: 
+L337: · Developing workarounds and documentation if a fix is needed
+L338: 
+L339: · Developing troubleshooting scripts for the Service Desk for commonly reported issues
+L340: 
+L341: · Developing desk guides for frequently asked questions
+L342: · Receiving Tier 3 support tickets and documenting all actions provided in appropriate ticketing system (ServiceNow, SharePoint list)
+L343: 
+L344: · Coordinating with business representatives to communicate high level status of requests from that business
+L345: 
+L346: · Identifying an issue as a bug or enhancement
+L347: 
+L348: · Data Management
+L349: 
+L350: · Manual importing and exporting of data, as needed
+L351: 
+L352: · Developing automated data exports and imports
+L353: · Supporting Open Data initiatives and management of the Open Data catalogs on mcc.gov/data and data.mcc.gov/evaluations
+L354: 
+L355: · Running tests to:
+L356: 
+L357: · Identify errors in application operations
+L358: 
+L359: · Ensure applications are tested under 'real world' loads and scenarios
+L360: 
+L361: · Establish and test cybersecurity practices
+L362: 
+L363: · Periodically check major program applications for errors
+L364: 
+L365: · Test and validate applications that have been modified to correct operational problems
+L366: 
+L367: · MCC FISMA Compliance
+L368: · Providing security compliance advice and support in areas of Operations, to include Database and Applications
+L369: 
+L370: · Reviewing application and security audit logs
+L371: 
+L372: · Application Troubleshooting
+L373: 
+L374: · Supporting Application developers with application issues not related to core responsibilities
+L375: 
+L376: · Supporting O&M Contractors with issues relating to installation and/or configuration of applications/network
+L377: 
+L378: 4.2.2.2 Maintenance
+L379: Maintenance of applications and systems including COTS products, custom built solutions, and databases.
+L380: 
+L381: The Contractor shall provide maintenance support for patches and updates executed by MCC’s operations vendor when the patches or updates may have an impact on an application or system within the Digital Services Portfolio. This includes testing to validate the application or system is still functioning as anticipated after the change.
+L382: The Contractor is expected to provide O&M support responsible for providing Tier 3 level support to existing application and software features. This includes proposing a strategy for how required fixes will be prioritized as well as providing a schedule for addressing said fixes.
+L383: 
+L384: 4.2.2.2.1 Custom Applications/Systems
+L385: The Contractor shall conduct maintenance of applications, platforms and systems managed or developed by the Digital Services branch. The following maintenance activities apply to all offerings within the Digital Services portfolio:
+L386: 
+L387: · Provide testing support for patching of operating systems, servers, cloud-based platforms and tools, and other changes that may impact existing applications within the development, testing, staging, and production environments
+L388: · Develop fixes for reported issues for all technologies and applications within the Digital Services Portfolio (i.e. MCC MIS, Selection, etc.).
+L389: 
+L390: · Pre-emptively evaluate applications, suggest improvements (security/performance), and make approved changes
+L391: 
+L392: · Modify applications to eliminate operational errors ('bugs') and/or correct system performance
+L393: 
+L394: · Enhance code and make necessary configuration updates to improve the efficiency of the custom and platform-based applications
+L395: · Provide enhancement suggestions based on analysis of data collected through the Service Desk
+L396: 
+L397: · Report on system/application usage statistics
+L398: 
+L399: · Regularly track and report on status of critical issues identified; communicate to impacted users/stakeholders as statuses change
+L400: 
+L401: · Actively monitor and maintain Service Desk tickets assigned to Digital Services for resolution
+L402: · Certify compatibility with existing applications in their operational environment prior to having them deployed to the production environment by the OCIO Infrastructure Team
+L403: 
+L404: · Ensure compliance with MCC software licensing agreements
+L405: 
+L406: · Continue implementation of automated testing tools and utilities for all existing and new applications
+L407: 
+L408: · Performance testing tools are not used at this time. However, they may be considered and/or implemented at some point in the future
+L409: 
+L410: · Maintain mcc.gov web pages
+L411: · Identify issues that can be handled by Tier 1 and 2 Service Desk Support for transition to those staff as applicable
+L412: 
+L413: · Write Knowledge Base (KB) articles addressing repeatable processes
+L414: 
+L415: · Provide KB articles and training to Service Desk staff
+L416: 
+L417: 4.2.2.2.2 Database and Data Maintenance
+L418: The MCC Data & Analytics program has been consistently recognized for its transparency and the quality of the data provided. The Contractor shall provide maintenance services for both the data and the databases, to include:
+L419: 
+L420: · Maintain Data Warehouse, Enterprise Data Mart (EDM), and Databus
+L421: 
+L422: · Maintain relevant datasets including accompanying assets including dictionaries, data models and class diagrams
+L423: 
+L424: · Continue expansion of above to support ongoing data consolidation and reporting.
+L425: · Make any necessary fixes supporting the transport of data to the Data Warehouse, EDM, and/or Databus
+L426: 
+L427: · Maintain data applications and Analytic products
+L428: 
+L429: · Reports, dashboards, and data visualizations, built using PowerBI, JavaScript D3 libraries, SSRS, native or compatible cloud.gov functionality, and other charting and visualization tools
+L430: 
+L431: · Maintain current Web Service API for serving datasets
+L432: 
+L433: · Maintain data dictionaries, data models and class diagrams
+L434: · Maintain and enhance MCC’s Open Data platform
+L435: 
+L436: · Produce regular open data reports to share with external entities
+L437: 
+L438: · Publish all MCC’s public data assets to data.gov
+L439: 
+L440: · Troubleshoot any compatibility issues that may prevent MCC from publishing to data.gov
+L441: 
+L442: · International Aid Transparency Initiative (IATI) Maintenance & Enhancements
+L443: · Provide support to a monthly and quarterly open data publication process by managing the data collection processes, validating data loaded correctly, and loading data into a MySQL database for publication.
+L444: 
+L445: · Provide support to monthly and quarterly MCC reporting cycles
+L446: 
+L447: · Support the automation of the data publication process
+L448: 
+L449: · Ad-hoc scripting of data exports
+L450: 
+L451: · Develop scripts to support data migration needs and make data corrections
+L452: · Develop solutions to share and consume data between internal and external systems
+L453: 
+L454: 4.2.2.3 Enhancements
+L455: 
+L456: The Contractor shall support enhancements of all applications within the Digital Services portfolio as needed. Enhancement tasks, may include, but are not limited to, the following:
+L457: 
+L458: · Development of application functional and/or technical enhancements in close coordination with Product Owners
+L459: · Work directly with business stakeholders and end users to understand their needs and document them in the user story hierarchy with support of the relevant Product Owner
+L460: 
+L461: · Develop functional test plans in concert with development
+L462: 
+L463: · Study existing system operations, documentation, input/output data, reports, maintenance records, and any other system related documentation and technical or performance commentary
+L464: 
+L465: · Document recommendations for new solution requirements and specifications
+L466: · Ensure enhancements are free from security defects
+L467: 
+L468: · Test new system or application/system enhancements
+L469: 
+L470: · Develop technical approach recommendations
+L471: 
+L472: · Develop project plans including milestones for technical enhancements or new applications
+L473: 
+L474: · Perform quality assurance and systems acceptance testing
+L475: 
+L476: · Conduct presentations to management on new systems or application enhancements
+L477: 
+L478: · Analyze any existing information, make recommendations, and conduct data cleanup, as necessary
+L479: · Use a rapid, repetitive development process in a joint team environment with MCC to review visual design, demonstrate capabilities, review progress, and gain acceptance of the product through its development cycleUpon delivery of a release to the Government for testing, the Contractor shall coordinate the installation of the release into the testing environment, including but not limited to, refreshing the testing environment with data from the production environment, stripped of all Privacy Act information, if necessary.
+L480: · Upon acceptance of a release, the Contractor shall support the installation of the release into the production environment
+L481: 
+L482: · Prepare and conduct user training for all new systems developed or system enhancements
+L483: 
+L484: · Prepare ad-hoc reports pulling from existing databases or creating new reports within applications
+L485: 
+L486: · Creation of business models to support ad-hoc requirements
+L487: The Contractor shall provide knowledge, technical proficiency, and experience with enterprise Data Warehousing and reporting solutions. Tasks associated with this activity include, but may not be limited to:
+L488: 
+L489: · Continued enhancements to the analysis layer, publication store, and the creation of additional API endpoints. It would include:
+L490: 
+L491: · Migration of existing databases into the warehouse and integrated into the analysis layer
+L492: 
+L493: · Implementation of an ad-hoc reporting tool that queries the data warehouse
+L494: · Development of additional data feeds from MCC systems
+L495: 
+L496: · Development of data dictionaries, data models, and class diagrams
+L497: Additionally, the Contractor shall develop new applications that support MCC business requirements and operate within MCC's infrastructure specifications, policies, and guidance. Any commercial database packages utilized to develop data sets shall comply with MCC standards.
+L498: The Contractor shall develop normalized data sets, apply maintenance of data sets (for creation, change, or deletion of records), and provide the necessary interfaces to link these data sets into an Intranet/Internet capable environment. The Contractor may use 'middleware' commercial packages consistent with MCC standards to integrate data sets for the purposes of collecting data, integrating with web pages, or providing data set files or services.
+L499: Middleware must be proposed and agreed to by the Government to ensure that it meets information security standards and that out year maintenance and support are budgeted.
+L500: 4.2.2.3.1 Custom Application Development and Support
+L501: The Contractor shall develop customized applications utilizing the programming languages identified in Appendix B of this document or other programming languages (as necessary). All solutions must be responsive for desktops and mobile devices. The Contractor shall have experience with mobile application development and mobile security, utilizing industry standard protocols and practices. The mobile applications will support multiple mobile OS platforms including Android and Apple.
+L502: The Contractor may also be tasked with migrating data from MCC’s databases to cloud-hosted solutions. COTS products can be proposed as solutions for customer requirements. Specifics will be included in each new development task.
+L503: The Contractor shall be familiar with federal information security standards and have experience with incorporating multiple authentication methods, allowing for secure, phishing-resistant authentication into MCC systems, where necessary.
+L504: The Contractor may be asked to develop a work plan and methodology for the development of technical requirements, propose a programming language(s) platform, software assurance methodology, and means to present draft and final presentations of application functionality to the Government for application approval and use consistent with MCC standards.
+L505: System security updates, test plans and results, database schema, data dictionary modifications, interface design document, and a functional design document may be required with each release of new software and with any major modifications.
+L506: The Contractor shall actively develop and maintain scripts and code used to generate internal and external datasets, as well as support the creation and enhancement of Web Services and APIs that enable users to access or query these datasets. In addition, the Contractor may be responsible for creating user interfaces and data visualizations, leveraging data accessed through the API for both internal and external stakeholders.
+L507: Although an another contract provides general infrastructure support, the Contractor shall provide database administration expertise in connection with the applications they develop and support.
+L508: This includes, but is not limited to, database architecture design and implementation, dataset normalization, data migration support, data management application creation, troubleshooting data and structure issues, data recovery, building indexes, load balancing, backup and restore services, database and application tuning, and assisting with the infrastructure DBAs (Database Administrators) as needed as an expert. Current database standards are MS SQL Server (enterprise) and MySQL.
+L509: Additional database platforms may be required to support cloud application development.
+L510: 4.2.2.3.2 Content Development, Usability, and Graphic Design Support The Contractor shall be required to engage in user-centered design employing usability and user experience (UX) techniques such as personas, task analysis, card sorts, interviews, analysis of search and website metrics, wireframes, and recorded usability tests for specific features. This includes conducting necessary research to validate that any proposed designs produce a positive benefit to end users.
+L511: The Contractor shall be expected to develop and maintain documentation of design decisions. The Contractor may be required to develop, configure, analyze, and present reports on web site use and search engine metrics utilizing tools such as Google Analytics.
+L512: The Contractor may be required to configure and maintain search engine software or appliances. The Contractor shall maintain and support Intranet and Internet web sites, as needed. The deployment of website content shall be developed and deployed using MCC standard tools and formats and adhere to MCC policy and guidance. The Contractor shall develop web-capable graphics, video, and text content; as well as, graphics suitable for a variety of print media, including both raster and vector graphics.
+L513: To perform these tasks, the Contractor shall be required to use graphics packages, such as Adobe Systems Creative Cloud, Figma, PowerPoint, and others as they become available.
+L514: Graphics shall be developed and deployed using MCC standard tools and formats. The Contractor shall ensure that all content developed for electronic media are appropriately formatted and sized for the target media, which shall include mobile devices. All graphics deployed electronically should be optimized to a reasonable scale for fast loading by the target audience.
+L515: 
+L516: 4.2.3 DevSecOps Objectives
+L517: The Contractor shall be required to work jointly with MCC’s operations and security vendors to maintain a DevSecOps culture that removes silos between teams, incorporates security throughout the development process, and promotes continuous improvement and automation. MCC has a CI/CD pipeline that automates deployments. MCC expects to continue enhance the pipeline by incorporating automated unit testing, and adding robust, automated system monitoring.
+L518: Additionally, the Contractor shall jointly with MCC’s operations and security vendors, be responsible for the iterative configuration of the CI/CD pipeline and its on-going maintenance.
+L519: 4.2.4 Technical Training
+L520: 
+L521: The Contractor may be required to provide training on a variety of areas, including, but not limited to, software (COTS, Government off-the-shelf (GOTS), and custom-built), application usage, best practices, and related topics. Training shall be provided at the Contractor's site or at agreed upon MCC location(s).
+L522: Presentation of training may take the form of formally structured classroom presentation, ad-hoc training, on-demand webcast training to a number of users in a workplace setting, short instructional videos, one-on-one desk-side training, or other forms as specified by the individual Contract. The Contractor shall troubleshoot and provide customers with knowledgeable 'how to' assistance, which requires a thorough understanding of applications and the supported business process.
+L523: This includes the development of training materials to facilitate self-support, including technical system guides, application user guides, and knowledge base articles. This may require communication with application database/development teams. The Contractor shall also provide user assistance for applications and/or referral to appropriate level for handling.
+L524: All technical training curriculum created shall be the property of the Government and shall not be utilized for another purpose for use without written permission of the Contracting Officer (CO).
+L525: 
+L526: 4.3 Surge Support and New Product Development
+L527: 
+L528: 4.3.1 Scope of Future Work
+L529: The Contractor shall be expected to support a variety of new development initiatives that have not yet been identified and are not listed in Appendix B. The initiatives will follow the requirements outlined above in Operations, Maintenance, and Enhancements.
+L530: New development work tasks issued by MCC are expected to be performed in accordance with industry best practices, NIST, OMB, and MCC policy and guidance in a consistent manner. Each new development task issued will include a SOW with a defined scope of work that is within the overall scope of the base contract. The Contractor shall provide a proposal with pricing that will be evaluated by MCC.
+L531: 
+L532: The Contractor shall be expected to propose the roles needed to support the development team.
+L533: All application development activities shall be formally documented. Information System Operation and Maintenance procedures shall likewise be documented. For new applications, deliverables, assumptions, risks, and requirement documentation shall be established and are expected to include, but are not limited to:
+L534: 
+L535: · System Design
+L536: 
+L537: · Test Plan, Determination, Cases, Files/Data, and Problem Support
+L538: 
+L539: · Development, Data Migration, Integration, and Implementation Plans
+L540: · Operations and Maintenance, Administrative, and Training Documentation
+L541: 
+L542: · Certification and Accreditation
+L543: 
+L544: · System Documentation
+L545: 
+L546: · Configuration Requests
+L547: 
+L548: · Version Control Document
+L549: 
+L550: · Authorization to Operate
+L551: 
+L552: · Lessons Learned/Retrospective Notes
+L553: 
+L554: · Bug/Enhancement Requests
+L555: 
+L556: · Disposition Plan for any legacy systems being replaced
+L557: 
+L558: · Staffing Plan
+L559: Required documents shall be identified in the new development task based on project tailoring to ensure a minimum set of documentation is produced that assists with maintenance, governance, and operations.
+L560: 
+L561: Documentation shall be delivered in electronic form (MCC current standards include both Microsoft Word and Excel), as specified.
+L562: Documentation that has changed shall be delivered in electronic form (MCC current standards include both Microsoft Word and Excel), as specified through new development tasks, with every major and minor release. User Manuals for an application shall be written with clarity that enables a brand-new user, without a programming or computer background, to understand the details contained therein.
+L563: MCC encourages Contractors to propose development methodologies along with their technical approach. MCC supports multiple methodologies, including agile, test-driven, and other industry accepted methodologies.
+L564: 
+L565: MCC shall provide relevant details in the SOW of a given new development task as it is available but shall continue to work with the Contractor as needed if the task results in new infrastructure that needs to be implemented within MCC’s network.
+L566: 
+L567: 4.3.2 Surge Support Services
+L568: The Contractor shall provide surge support services, which are within the scope of the existing contract. These support services may cross all task and subtask areas within the contract. The Contractor shall account for surge activities and provide the resources necessary to accommodate them without burdening the Government and Contractor’s operational staff. During the life of the contract, the workload in any one area may grow significantly for a period of time.
+L569: Each surge task shall be requested to the Contractor in writing by MCC, with specific requirements. The Contractor shall be required to, within fourteen (14) calendar days, propose corresponding schedules, deliverables, labor requirements, ODC requirements, and budgets. MCC shall formally approve the Contractor’s plans for tasking and schedule before surge resources begin work.
+L570: 
+L571: 4.4 Application Administration
+L572: 
+L573: 4.4.1 Application Administration
+L574: The Contractor shall monitor and be responsible for the performance and operation of cloud-based applications to manage the response times of the application and closely monitor the performance of Digital Services products. Tasks associated with this work include, but are not limited to:
+L575: 
+L576: · The Contractor shall track and inventory applications, monitor, measure and assure the performance of applications and implement an effective monitoring solution
+L577: · The Contractor shall coordinate triage response to performance faults and degradations
+L578: 
+L579: · The Contractor shall analyze and report application performance to MCC management
+L580: 
+L581: 4.5 ODCs
+L582: 
+L583: The Contractor shall provide other than labor services, including procurement of equipment, travel, licenses, software, etc., as directed by the Government. The Contractor will provide procurement support as needed by the Government related to activities in this acquisition.
+L584: This requirement is optional and shall be utilized if deemed necessary during the life of the contract. The Contractor shall provide the total costs of non-labor tools per year to the Government.
+L585: 
+L586: 5.0 Labor Requirements
+L587: 
+L588: 5.1 Key Personnel
+L589: Critical to performance of this Contract are the positions identified as key and the experience of the people in those positions. The proposed key positions as well as proposed staff shall show experience in the different skill sets necessary and the different functions to be performed. Key personnel required for this contract can be found in Section H of this solicitation.
+L590: 
+L591: 5.2 Clearance Requirements
+L592: At a minimum, the background investigation will consist of a National Agency Checks with Law and Credit (NACLC) for a Moderate Risk Public Trust (MRPT) position and fingerprint imaging to be reported to FBI national databases and reported to MCC Security. Certain specific positions may require a higher level of background investigation.
+L593: 
+L594: 5.3 Personal Identity Verification of Contractor Personnel
+L595: The Contractor shall comply with agency personal identity verification procedures identified in the contract that implement Homeland Security Presidential Directive 12 (HSPD-12), Office of Management and Budget (OMB) guidance M-05-24, and Federal Information Processing Standards Publication (FIPS PUB) Number 201.
+L596: The Contractor shall insert this clause in all subcontracts when the subcontractor is required to have physical access to a federally controlled facility or access to a Federal information system.
+L597: 
+L598: Page 4 of 23MCC PWS DRAFT image1.png

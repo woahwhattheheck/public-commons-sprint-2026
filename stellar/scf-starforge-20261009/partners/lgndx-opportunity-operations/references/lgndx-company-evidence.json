@@ -1,0 +1,103 @@
+{
+  "schema": "tjlabs.lgndx.company-evidence.v1",
+  "retrievedAt": "2026-10-12T01:38:56Z",
+  "companyName": "LGNDX INC.",
+  "website": "https://lgndx.com/",
+  "contact": {
+    "email": "hello@lgndx.com",
+    "sourceUrl": "https://lgndx.com/contact",
+    "sourceLocator": "Email our team",
+    "role": "Published general business recipient; route to IX/EVO ecosystem integration owner"
+  },
+  "identities": [
+    {
+      "type": "UEI",
+      "value": "PZGRB9Q1S7A3",
+      "sourceId": "funded-prime-response",
+      "sourceLocator": "results: generated_internal_id CONT_AWD_47QACA26C0069_4732_-NONE-_-NONE- / Recipient UEI"
+    },
+    {
+      "type": "CAGE",
+      "value": "108J4",
+      "sourceUrl": "https://lgndx.com/contact",
+      "basis": "Company-published footer"
+    }
+  ],
+  "location": {
+    "city": "Washington, D.C.",
+    "sourceUrl": "https://lgndx.com/contact",
+    "basis": "Company-published headquarters"
+  },
+  "claims": [
+    {
+      "id": "company-evo-community",
+      "sourceUrl": "https://lgndx.com/product/apollo-evo",
+      "locator": "Ecosystem Integration",
+      "claim": "EVO is designed to connect existing community tools, pipelines and vendor lists, supporting curated problem sets, teaming and progression while communities retain their operating rules.",
+      "status": "company_published"
+    },
+    {
+      "id": "company-ix-workflow",
+      "sourceUrl": "https://ix.lgndx.com/",
+      "locator": "For innovative companies / For program teams",
+      "claim": "IX describes opportunity and Q&A deadlines, capability and past-performance records, partner comparison, and preparation of requirements packages.",
+      "status": "company_published"
+    },
+    {
+      "id": "company-ix-access",
+      "sourceUrl": "https://ix.lgndx.com/",
+      "locator": "Get early access",
+      "claim": "The current page offers early-access instructions when IX.MIL launches.",
+      "status": "company_published"
+    },
+    {
+      "id": "company-applied-rd",
+      "sourceUrl": "https://lgndx.com/vertical/applied-rd",
+      "locator": "SBIR, R&D & Federal Delivery",
+      "claim": "LGNDX describes taking research and government briefs into operational software, integrating existing environments, and preparing systems for federal evaluation and sustainment.",
+      "status": "company_published"
+    }
+  ],
+  "pastPerformanceContext": {
+    "internal_id": 363067991,
+    "Award ID": "47QACA26C0069",
+    "Recipient Name": "LGNDX INC.",
+    "Recipient UEI": "PZGRB9Q1S7A3",
+    "Start Date": "2026-09-25",
+    "End Date": "2026-10-30",
+    "Base Obligation Date": "2026-09-25",
+    "Last Modified Date": "2026-09-29 10:42:59",
+    "Award Amount": 285000,
+    "Awarding Agency": "General Services Administration",
+    "Awarding Sub Agency": "Federal Acquisition Service",
+    "Funding Agency": "Department of Commerce",
+    "Funding Sub Agency": "International Trade Administration",
+    "Description": "NATIONAL ARTIFICIAL INTELLIGENCE CENTER",
+    "NAICS": {
+      "code": "541511",
+      "description": "CUSTOM COMPUTER PROGRAMMING SERVICES"
+    },
+    "PSC": {
+      "code": "DA01",
+      "description": "IT AND TELECOM - BUSINESS APPLICATION/APPLICATION DEVELOPMENT SUPPORT SERVICES (LABOR)"
+    },
+    "generated_internal_id": "CONT_AWD_47QACA26C0069_4732_-NONE-_-NONE-",
+    "recipient_id": "ee9ce429-0924-8dc6-cb29-fc39c03457d0-C",
+    "awarding_agency_id": 614,
+    "agency_slug": "general-services-administration",
+    "sourceId": "funded-prime-response",
+    "sourceCaptureId": "funded-prime-capture",
+    "interpretation": "An original federal award record and its reported value and period. The record is background for qualification; company response and performance assertions need their own source review."
+  },
+  "receivingContract": {
+    "publishedApi": null,
+    "selectedWorkshare": "One agreed native export/import mapping between an existing community pipeline and the source/decision/proposal package.",
+    "customerInputs": [
+      "Selected existing pipeline and receiving owner",
+      "Actual export/import field specification and a representative export",
+      "Authorized community, company and opportunity sources",
+      "Required response package format and review roles",
+      "Existing host/access arrangements and acceptance workflow"
+    ]
+  }
+}
