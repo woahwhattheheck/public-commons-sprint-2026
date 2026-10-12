@@ -10,7 +10,8 @@ const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 
 /** The original native owner supplies the same running workspace, adopted review and prepared customer. */
 export async function runGrpcUpgradeAgentReceiving({ sourceRoot, sourceCommit, directory,
-  consoleUrlFile, reviewId, preparationId, environment = process.env, applicationCalls } = {}) {
+  consoleUrlFile, reviewId, preparationId, environment = process.env, applicationCalls,
+  client: suppliedClient, workspaceAlias = 'upgrade' } = {}) {
   sourceRoot = resolve(required(sourceRoot, 'Supply the complete selected source root.'));
   directory = resolve(required(directory, 'Supply this original receiving output directory.'));
   consoleUrlFile = resolve(required(consoleUrlFile, 'Supply the original running workspace URL file.'));
@@ -49,20 +50,25 @@ export async function runGrpcUpgradeAgentReceiving({ sourceRoot, sourceCommit, d
   record.reviewSha256 = original.reviewSha256; record.revision = revision;
   record.sourceFiles = await Promise.all(['grpc-upgrades.mjs', 'grpc-workspace.mjs', 'grpc-upgrade-download.mjs']
     .map(async path => ({ path: merchantPath + path, sha256: hash(await readFile(join(sourceRoot, merchantPath, path))) })));
-  const connectionPath = join(directory, 'connection.json'), configPath = join(directory, 'merchant-agent', 'merchant-mcp.json');
-  try { await access(connectionPath); }
-  catch { await atomicJson(connectionPath, { schema: 'stellar-forge.grpc-workspace-connection.v1',
-    workspaces: { upgrade: { consoleUrlFile } } }, { exclusive: true }); }
-  try { await access(configPath); }
-  catch { await initializeGrpcWorkspaceMerchant({ directory: join(directory, 'merchant-agent'), connection: connectionPath }); }
-  const env = { ...environment, GRPC_UPGRADE_MCP_TOKEN: randomBytes(32).toString('hex') };
-  let merchant;
+  required(/^[a-z0-9][a-z0-9_-]{0,63}$/.test(workspaceAlias), 'Use the original configured workspace alias.');
+  let merchant, client = suppliedClient;
   try {
-    merchant = await startMerchantMcp({ configPath, port: record.mcpPort ?? 0,
-      tokenEnv: 'GRPC_UPGRADE_MCP_TOKEN', environment: env });
-    record.mcpPort = Number(new URL(merchant.url).port); await checkpoint();
-    const client = await openMerchantFileClient({ url: merchant.url, tokenEnv: 'GRPC_UPGRADE_MCP_TOKEN', environment: env });
-    const call = (name, args = {}) => client.call('merchant_grpc_' + name, { workspace: 'upgrade', ...args }, { timeoutMs: 60000 });
+    if (!client) {
+      const connectionPath = join(directory, 'connection.json'), configPath = join(directory, 'merchant-agent', 'merchant-mcp.json');
+      try { await access(connectionPath); }
+      catch { await atomicJson(connectionPath, { schema: 'stellar-forge.grpc-workspace-connection.v1',
+        workspaces: { [workspaceAlias]: { consoleUrlFile } } }, { exclusive: true }); }
+      try { await access(configPath); }
+      catch { await initializeGrpcWorkspaceMerchant({ directory: join(directory, 'merchant-agent'), connection: connectionPath }); }
+      const env = { ...environment, GRPC_UPGRADE_MCP_TOKEN: randomBytes(32).toString('hex') };
+      merchant = await startMerchantMcp({ configPath, port: record.mcpPort ?? 0,
+        tokenEnv: 'GRPC_UPGRADE_MCP_TOKEN', environment: env });
+      record.mcpPort = Number(new URL(merchant.url).port); await checkpoint();
+      client = await openMerchantFileClient({ url: merchant.url, tokenEnv: 'GRPC_UPGRADE_MCP_TOKEN', environment: env });
+    }
+    required(typeof client.call === 'function' && typeof client.endpoint === 'string', 'Use the original initialized retained-file MCP client.');
+    record.workspaceAlias = workspaceAlias; record.ownsMerchant = Boolean(merchant);
+    const call = (name, args = {}) => client.call('merchant_grpc_' + name, { workspace: workspaceAlias, ...args }, { timeoutMs: 60000 });
     const receiveFull = async (value, name) => {
       if (value.state !== 'COMPLETE_RESULT_RETAINED') return value;
       const delivery = value.delivery;

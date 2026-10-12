@@ -297,14 +297,16 @@ The composable driver experiments/grpc-upgrade-agent-phase-20261012-9b23.mjs
 accepts the original running console's private URL file, adopted review UUID
 and already-prepared customer UUID. Its exported runGrpcUpgradeAgentReceiving
 function takes sourceRoot, sourceCommit, directory, consoleUrlFile, reviewId,
-preparationId and the original environment. The native owner can supply an
+preparationId and the original environment. Supply client and workspaceAlias to
+reuse the original initialized retained-file MCP client and configured workspace;
+its listener remains with the native owner. The native owner can supply an
 applicationCalls callback to record the same service's call count before/after.
 
 It operates all six agent tools over the actual MCP endpoint, pages complete
 native changes/methods/routes, recovers the original review/adoption through
 both agent and CLI, interrupts/resumes/repeats four-file receiving, reopens the
 CLI export through the original compiler, and receives/loads all seven original
-customer files. It closes its own MCP listener and saves the original IDs,
+customer files. It closes an MCP listener only when it created that listener, and saves the original IDs,
 source/receiving hashes and continuation under upgrade-agent-receiving.json.
 Invoke it within the owner's original upgrade journey once its adopted review
 and preparation are available.
