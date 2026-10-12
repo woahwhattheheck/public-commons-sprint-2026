@@ -22,7 +22,7 @@ export async function openODataLiveOperations({workspace,nativeFactoryFor,env=pr
   const root=join(workspace.directory,'live'),products=join(root,'products'),running=new Map();
   await mkdir(products,{recursive:true,mode:0o700});let tail=Promise.resolve(),closing=false;
   function sequence(operation){const task=tail.then(async()=>{if(closing)throw fault('ODATA_LIVE_CLOSED','Reopen live operations.');
-    const lease=await acquireReleaseLease(root,'control.lock');try{return await operation();}finally{await lease.close();}});
+    const lease=await acquireReleaseLease(root,'state.lock');try{return await operation();}finally{await lease.close();}});
     tail=task.catch(()=>{});return task;}
   async function profile(id){id=identifier(id,'live service ID');const value=await readJson(join(products,id,'profile.json'));
     if(value.schema!=='stellar-forge.odata-live-profile.v1'||value.id!==id)throw fault('ODATA_LIVE_PROFILE','The retained live service identity differs.',409);return value;}
