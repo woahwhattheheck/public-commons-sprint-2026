@@ -127,7 +127,7 @@ export function createGrpcHealthWorkspace({ directory, loadRevision, selection, 
     await append(entry, 'lifecycle', { phase: 'RUNNING', reason,
       remainingDurationMs: remaining, remainingEvents });
     if (closing) { await append(entry, 'lifecycle', { phase: 'INTERRUPTED', reason: 'workspace_closed' }); return; }
-    const controller = new AbortController(), job = { controller, promise: null };
+    const controller = new AbortController(), job = { controller, promise: null, entry, stopping: null };
     jobs.set(entry.operation.id, job);
     job.promise = Promise.resolve().then(async () => {
       const available = Date.parse(entry.operation.deadlineAt) - Date.now();
@@ -160,15 +160,23 @@ export function createGrpcHealthWorkspace({ directory, loadRevision, selection, 
     for (const id of (await readdir(directory)).filter(name => UUID.test(name)).sort()) {
       const entry = await load(id), summary = await settled(entry);
       if (!['RUNNING', 'PREPARED'].includes(summary.phase)) continue;
-      const terminal = [...entry.events].reverse().find(event => event.kind === 'native' && event.data.type === 'terminal')?.data;
-      const latest = [...entry.events].reverse().find(event => event.kind === 'native' && event.data.type === 'status')?.data;
-      // Recover an already-observed unary terminal. Reading this journal never
-      // repeats Check/List merely because its final HTTP reply was interrupted.
-      if (entry.operation.request.kind !== 'watch' && terminal?.complete && latest) {
+      const terminalEvent = [...entry.events].reverse().find(event => event.kind === 'native' && event.data.type === 'terminal');
+      const statusEvent = [...entry.events].reverse().find(event => event.kind === 'native' && event.data.type === 'status');
+      const control = [...entry.events].reverse().find(event => event.kind === 'control');
+      const terminal = terminalEvent?.data, latest = statusEvent?.data;
+      // The unary source emits status only after its original call returned.
+      // Both a returned value and a retained failure therefore have a first
+      // outcome even if the workspace died before appending its result record.
+      if (entry.operation.request.kind !== 'watch' && (latest || terminal)) {
+        const cancelled = !latest && terminal?.grpcStatus === 'CANCELLED' && control &&
+          control.sequence < terminalEvent.sequence;
+        const cancellation = cancelled ? control.data.action === 'workspace_close' ? 'workspace_closed' : 'operator_cancelled' : undefined;
+        const reason = latest ? 'COMPLETED' : cancelled ? 'CANCELLED' :
+          terminal.grpcStatus === 'UNIMPLEMENTED' ? 'UNIMPLEMENTED' : 'NATIVE_ERROR';
         await finish(entry, { schema: 'stellar-forge.grpc-health-observation.v1',
-          protocolSha256: entry.operation.protocolSha256, reason: 'COMPLETED', latest,
-          updates: summary.updates, connections: summary.connections, terminal,
-          eventCount: summary.nativeEvents, recoveredFromOriginalTerminal: true });
+          protocolSha256: entry.operation.protocolSha256, reason, ...(latest ? { latest } : {}),
+          updates: summary.updates, connections: summary.connections, ...(terminal ? { terminal } : {}),
+          eventCount: summary.nativeEvents, recoveredFromOriginalJournal: true }, cancellation);
       } else await append(entry, 'lifecycle', { phase: 'INTERRUPTED', reason: 'previous_workspace_owner_ended' });
     }
   }
@@ -209,8 +217,15 @@ export function createGrpcHealthWorkspace({ directory, loadRevision, selection, 
   async function cancel(body) {
     held(); fields(body, ['id'], 'GRPC_HEALTH_CANCEL_FIELDS_INVALID');
     const id = grpcHealthId(body.id), job = jobs.get(id);
-    if (job) { job.controller.abort('operator_cancelled'); await job.promise; }
+    if (job) await stopJob(job, 'operator_cancelled');
     return read({ id });
+  }
+  async function stopJob(job, reason) {
+    if (!job.stopping) job.stopping = (async () => {
+      try { await append(job.entry, 'control', { action: reason === 'workspace_closed' ? 'workspace_close' : 'stop' }); }
+      finally { job.controller.abort(reason); }
+    })();
+    try { await job.stopping; } finally { await job.promise; }
   }
   async function read(body) {
     assertHeld(); fields(body, ['id', 'afterSequence', 'throughSequence', 'expectedSnapshot', 'limit', 'section', 'serviceFilter'], 'GRPC_HEALTH_READ_FIELDS_INVALID');
@@ -270,9 +285,9 @@ export function createGrpcHealthWorkspace({ directory, loadRevision, selection, 
   function close() {
     if (closed) return closed;
     closing = true;
-    for (const job of jobs.values()) job.controller.abort('workspace_closed');
+    const owned = [...jobs.values()];
     closed = (async () => {
-      const outcomes = await Promise.allSettled([...jobs.values()].map(job => job.promise));
+      const outcomes = await Promise.allSettled(owned.map(job => stopJob(job, 'workspace_closed')));
       const errors = [...new Set([...outcomes.filter(row => row.status === 'rejected').map(row => row.reason),
         ...[...cache.values()].map(entry => entry.fault).filter(Boolean)])];
       if (errors.length) throw Object.assign(new AggregateError(errors, 'GRPC_HEALTH_CLOSE_FAILED'), { code: 'GRPC_HEALTH_CLOSE_FAILED' });
