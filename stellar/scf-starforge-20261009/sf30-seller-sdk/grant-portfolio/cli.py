@@ -12,7 +12,7 @@ import tempfile
 import uuid
 
 from domain import InputError, MAX_JSON, canonical, parse, require
-from managed import require_binding
+from managed import require_binding, inspect_connection
 from workspace import Workspace, sync_dir
 from native_sources import file_info
 
@@ -28,6 +28,8 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("init")
     commands.add_parser("binding")
+    connection = commands.add_parser("connection")
+    connection.add_argument("--file", required=True)
     commands.add_parser("state")
     serve = commands.add_parser("serve")
     serve.add_argument("--port", type=int, default=0)
@@ -67,6 +69,9 @@ def main():
     export.add_argument("--out", required=True)
     args = parser.parse_args()
     os.umask(0o077)
+    if args.command == "connection":
+        output(inspect_connection(args.workspace, args.file))
+        return 0
     if args.command == "binding":
         output(require_binding(args.workspace))
         return 0
@@ -86,10 +91,7 @@ def main():
                 output(console.start(binding, args.connection_file))
                 stopped.wait()
             finally:
-                if console.http_thread.is_alive():
-                    console.close()
-                else:
-                    console.http.server_close()
+                console.close()
             return 0
         if args.command in {"init", "state"}:
             result = workspace.state()

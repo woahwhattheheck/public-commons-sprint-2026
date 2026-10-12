@@ -9,12 +9,13 @@ from pathlib import Path
 import queue
 import secrets
 import stat
+import tempfile
 import threading
 from urllib.parse import parse_qs, urlsplit
 
 from domain import *
 from native_sources import file_info
-from workspace import ACTIONS
+from workspace import ACTIONS, sync_dir
 
 HERE = Path(__file__).resolve().parent
 
@@ -225,40 +226,80 @@ class Console:
                 self.queue.task_done()
 
     def start(self, binding, connection_file=None):
-        from managed import startup
+        from managed import startup, connection_record
         if connection_file is not None:
             selected = Path(connection_file).expanduser().absolute()
-            require(selected.parent.resolve(strict=True) == selected.parent, "Use an original connection directory")
-            info = selected.parent.stat()
-            require(info.st_uid == os.getuid() and not info.st_mode & 0o077, "Keep the console connection in a private directory")
-            fd = os.open(selected, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
+            require(not self.workspace.closed and str(self.workspace.root) == binding["workspace"]
+                    and self.workspace.marker["workspaceId"] == binding["workspaceId"],
+                    "Start the original console while owning its selected workspace writer")
+            # Workspace acquired its original exclusive flock before this console
+            # was constructed. A prior native writer therefore cannot remain live.
+            previous = connection_record(selected, binding)
+            if previous["exists"]:
+                observed = connection_record(selected, binding)
+                require(observed == previous, "The original retained connection changed", "CONNECTION_CHANGED", 409)
+                selected.unlink()
+                sync_dir(selected.parent)
             value = startup(self, binding, selected)
+            data = canonical(value)
+            descriptor, filename = tempfile.mkstemp(prefix=".grant-console-", dir=selected.parent)
+            temporary = Path(filename)
+            temporary_identity = temporary.lstat()
+            linked = False
             try:
-                with os.fdopen(fd, "wb") as output:
-                    output.write(canonical(value))
+                with os.fdopen(descriptor, "wb") as output:
+                    output.write(data)
                     output.flush()
                     os.fsync(output.fileno())
+                temporary.chmod(0o600)
+                # The public private-file name becomes visible only after the
+                # complete launch is durable. A competing file is never replaced.
+                os.link(temporary, selected)
+                linked = True
+                temporary.unlink()
+                sync_dir(selected.parent)
                 self.connection = (selected, selected.stat().st_ino, file_info(selected)["sha256"])
             except BaseException:
-                selected.unlink(missing_ok=True)
+                if linked and selected.exists() and not selected.is_symlink():
+                    current = selected.lstat()
+                    if (current.st_dev, current.st_ino) == (temporary_identity.st_dev, temporary_identity.st_ino):
+                        selected.unlink()
                 raise
+            finally:
+                temporary.unlink(missing_ok=True)
         else:
             value = startup(self, binding)
         self.launch = value
-        self.worker.start()
-        self.http_thread.start()
+        try:
+            self.worker.start()
+            self.http_thread.start()
+        except BaseException:
+            self.close()
+            raise
         return value
 
     def close(self):
         if self.closing:
             return
         self.closing = True
-        self.http.shutdown()
-        self.http.server_close()
-        self.http_thread.join()
-        self.queue.put(None)
-        self.worker.join()
-        if self.connection:
-            path, inode, expected = self.connection
-            if path.exists() and not path.is_symlink() and path.stat().st_ino == inode and file_info(path)["sha256"] == expected:
-                path.unlink()
+        try:
+            # shutdown waits for serve_forever, so only call it for a running
+            # server. A failed thread start still needs the bound socket closed.
+            if self.http_thread.is_alive():
+                self.http.shutdown()
+            self.http.server_close()
+            if self.http_thread.ident is not None:
+                self.http_thread.join()
+        finally:
+            try:
+                # The writer may already have started when the HTTP thread
+                # fails to start. Release that original queue owner as well.
+                if self.worker.ident is not None:
+                    self.queue.put(None)
+                    self.worker.join()
+            finally:
+                if self.connection:
+                    path, inode, expected = self.connection
+                    if path.exists() and not path.is_symlink() and path.stat().st_ino == inode and file_info(path)["sha256"] == expected:
+                        path.unlink()
+                        sync_dir(path.parent)
