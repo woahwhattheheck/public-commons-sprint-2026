@@ -44,3 +44,6 @@ export { startCollectionsWorkspace, serveCollections } from '../sf88-operator-bu
 export { SDMX_MERCHANT_RELEASE_SCHEMA, prepareSdmxMerchant, readSdmxMerchant,
   startSdmxMerchant, publishSdmxMerchant } from '../sf30-seller-sdk/sdmx/merchant.mjs';
 export { reviewSdmxBuyer, prepareSdmxBuyer } from '../sf30-seller-sdk/sdmx/customer.mjs';
+
+export { openFrictionlessPublisher } from '../sf30-seller-sdk/frictionless/model.mjs';
+export { prepareFrictionlessRelease, stageFrictionlessRelease } from '../sf30-seller-sdk/frictionless/release.mjs';
