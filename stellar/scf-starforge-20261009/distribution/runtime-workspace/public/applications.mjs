@@ -484,21 +484,22 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       details.replaceChildren(element('p', app.error.message)); outputPanel.hidden = true; historyRows.replaceChildren();
       relatedApplications.hidden = navigationRecovery.hidden = true; urlNote.textContent = ''; return;
     }
+    const connected = app.connectionReady ?? Boolean(app.release);
     details.replaceChildren(facts([
       ['Application', data.catalog.find(item => item.id === app.kind)?.title ?? app.kind],
       ['Runtime', app.runtime.directory], ['Source commit', app.runtime.sourceCommit],
       ['Release', app.release?.id ?? 'Original runtime connection pending'], ['Managed home', app.homeDirectory],
-      ['Runtime connection', app.release ? 'CONNECTED' : app.adoption?.phase ?? 'PENDING'],
+      ['Runtime connection', connected ? 'CONNECTED' : app.adoption?.phase ?? 'PENDING'],
       ['Application revision', app.revision], ['Current operation', app.current?.id ?? 'No launch yet'],
       ...(app.current?.applicationProvider ? [['Run provider', app.current.applicationProvider.id + ' · ' + app.current.applicationProvider.sha256]] : []),
     ]));
-    if (!app.release && app.adoption?.state?.error?.message)
+    if (!connected && app.adoption?.state?.error?.message)
       details.append(element('p', app.adoption.state.error.message, 'note'));
     const current = app.current, active = Boolean(current?.active), unsettled = ['PENDING', 'QUEUED', 'RUNNING', 'INTERRUPTED'].includes(current?.phase);
-    reviewStart.disabled = !app.release || active || unsettled;
+    reviewStart.disabled = !connected || active || unsettled;
     stop.disabled = !current || !active && !unsettled;
     stop.textContent = current?.phase === 'PENDING' || current?.phase === 'QUEUED' ? 'Cancel pending start' : 'Stop application';
-    reconnect.hidden = Boolean(app.release);
+    reconnect.hidden = connected;
     reconnect.disabled = Boolean(app.adoption?.active);
     reconnect.textContent = app.adoption?.active ? 'Connecting runtime…' :
       app.adoption?.phase === 'FAILED' ? 'Retry runtime connection' :
