@@ -1,0 +1,368 @@
+{
+  "schema": "starforge.wherobots.selected-source.v1",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/wherobots/source",
+  "base_revision": "18e917b947d70589dcbaea68dc63d0c181955b4c",
+  "publisher_source_revision": "f9e6e9416126b98513e010318a4076220a00c610",
+  "base_files": [
+    {
+      "path": "OUTPUTS.md",
+      "sha": "7bd559701d01240d10100ea145de77e5c1d4aca0",
+      "size": 8980
+    },
+    {
+      "path": "README.md",
+      "sha": "0a4512f9d81848b709b73230c5ae18e101308afc",
+      "size": 9892
+    },
+    {
+      "path": "index.mjs",
+      "sha": "e76866c253365e157a0f210f2ab3291e08eb2f07",
+      "size": 7783
+    },
+    {
+      "path": "operate.py",
+      "sha": "3fc27055692bf39a765b5f15d52539e38fc6c69d",
+      "size": 97
+    },
+    {
+      "path": "requirements.txt",
+      "sha": "9399c394975fdcde26121612faa5cb6701cead0f",
+      "size": 77
+    },
+    {
+      "path": "contracts/customer-workflow.v1.schema.json",
+      "sha": "3704565decb058ce1747f0937cdb8a0cc56f2fda",
+      "size": 10746
+    },
+    {
+      "path": "interoperability/README.md",
+      "sha": "1946f8836d7e80279cb420d310970bf942ea5c44",
+      "size": 5010
+    },
+    {
+      "path": "interoperability/fixtures/GEOPARQUET-LICENSE.txt",
+      "sha": "6b774b69be014251e6c54c62c3952f9c15480a17",
+      "size": 11356
+    },
+    {
+      "path": "interoperability/fixtures/example-1.0.0.parquet",
+      "sha": "287c81fd6c57c480669cd2dbd058f756cbd25340",
+      "size": 27798
+    },
+    {
+      "path": "interoperability/fixtures/example-1.1.0.parquet",
+      "sha": "c025304efa5c1975ddcf6bcad2e444fb4d842e40",
+      "size": 29834
+    },
+    {
+      "path": "interoperability/fixtures/example-metadata-1.0.0.json",
+      "sha": "6043282bc975759070379e2245cf659d9b8ef7ea",
+      "size": 3239
+    },
+    {
+      "path": "interoperability/fixtures/example-metadata-1.1.0.json",
+      "sha": "e1d437a83aa5b03e4e541b49f7b360ed0cdf0b7c",
+      "size": 3623
+    },
+    {
+      "path": "interoperability/fixtures/example-metadata-current.json",
+      "sha": "4694be490840810b76b92a208d5842dbfc91822b",
+      "size": 3460
+    },
+    {
+      "path": "interoperability/fixtures/example.csv",
+      "sha": "12d05f52f145a858f7c2e5727e00ed2bd447896e",
+      "size": 44980
+    },
+    {
+      "path": "interoperability/fixtures/manifest.json",
+      "sha": "e0df210b4bfab1cd84e13b58653857758d262fc0",
+      "size": 3907
+    },
+    {
+      "path": "interoperability/native_receiving.py",
+      "sha": "56ee7d22304d461a36a76accbef5ba0174e35413",
+      "size": 18480
+    },
+    {
+      "path": "providerSDK/source.json",
+      "sha": "2f902f823eecc1eb0518046671530ae46698e555",
+      "size": 544
+    },
+    {
+      "path": "wherobots_operator/__init__.py",
+      "sha": "2b70a276ff926480bf2eb55b34a5381f5e16ba26",
+      "size": 83
+    },
+    {
+      "path": "wherobots_operator/__main__.py",
+      "sha": "eb53e2f31b2f703ad32ef64b8a41faa3e7d18e08",
+      "size": 48
+    },
+    {
+      "path": "wherobots_operator/cli.py",
+      "sha": "b98e37505086300093c99382d3e7d483bf64c2fe",
+      "size": 9520
+    },
+    {
+      "path": "wherobots_operator/editions.py",
+      "sha": "57ab009e1be917d3cc465268201c93a7e5acd238",
+      "size": 52750
+    },
+    {
+      "path": "wherobots_operator/native.py",
+      "sha": "533c23661d194729bece6b042bd40e462e3fb75f",
+      "size": 32199
+    },
+    {
+      "path": "wherobots_operator/portable.py",
+      "sha": "d8d7950efbd20408d30ff2766f48994be25bf645",
+      "size": 38316
+    },
+    {
+      "path": "wherobots_operator/server.py",
+      "sha": "c625ea492f928b7d40bddaa7180bbe72a00076da",
+      "size": 19186
+    },
+    {
+      "path": "wherobots_operator/storage.py",
+      "sha": "8da6483ea86056e1a93fd0cab57c158d1b2e9dd5",
+      "size": 13144
+    },
+    {
+      "path": "wherobots_operator/web/app.js",
+      "sha": "98b8fe0616161f75a5c5347b28a11d780851871e",
+      "size": 40397
+    },
+    {
+      "path": "wherobots_operator/web/index.html",
+      "sha": "3591c2fb7bce7429b30f3596d019645d04a29754",
+      "size": 2090
+    },
+    {
+      "path": "wherobots_operator/web/style.css",
+      "sha": "e404db8b5ae00c82e2ed1423f0f2be7018b149db",
+      "size": 5126
+    },
+    {
+      "path": "wherobots_operator/workflow.py",
+      "sha": "c3a7724052fae0fb04e206c236e51918485f014e",
+      "size": 31204
+    }
+  ],
+  "files": [
+    {
+      "path": "contracts/customer-workflow.v1.schema.json",
+      "sha": "3704565decb058ce1747f0937cdb8a0cc56f2fda",
+      "size": 10746
+    },
+    {
+      "path": "index.d.mts",
+      "sha": "f9c57ca2990a1dae094a8a6f0836a52a43997594",
+      "size": 18216
+    },
+    {
+      "path": "index.mjs",
+      "sha": "59614a380a5b9d0411775dd765a117b26c4575d1",
+      "size": 4635
+    },
+    {
+      "path": "interoperability/fixtures/example-1.0.0.parquet",
+      "sha": "287c81fd6c57c480669cd2dbd058f756cbd25340",
+      "size": 27798
+    },
+    {
+      "path": "interoperability/fixtures/example-1.1.0.parquet",
+      "sha": "c025304efa5c1975ddcf6bcad2e444fb4d842e40",
+      "size": 29834
+    },
+    {
+      "path": "interoperability/fixtures/example-metadata-1.0.0.json",
+      "sha": "6043282bc975759070379e2245cf659d9b8ef7ea",
+      "size": 3239
+    },
+    {
+      "path": "interoperability/fixtures/example-metadata-1.1.0.json",
+      "sha": "e1d437a83aa5b03e4e541b49f7b360ed0cdf0b7c",
+      "size": 3623
+    },
+    {
+      "path": "interoperability/fixtures/example-metadata-current.json",
+      "sha": "4694be490840810b76b92a208d5842dbfc91822b",
+      "size": 3460
+    },
+    {
+      "path": "interoperability/fixtures/example.csv",
+      "sha": "12d05f52f145a858f7c2e5727e00ed2bd447896e",
+      "size": 44980
+    },
+    {
+      "path": "interoperability/fixtures/GEOPARQUET-LICENSE.txt",
+      "sha": "6b774b69be014251e6c54c62c3952f9c15480a17",
+      "size": 11356
+    },
+    {
+      "path": "interoperability/fixtures/manifest.json",
+      "sha": "e0df210b4bfab1cd84e13b58653857758d262fc0",
+      "size": 3907
+    },
+    {
+      "path": "interoperability/merchant_receiving.mjs",
+      "sha": "72b4d45c91ae4ad3e2bffaadbe10b94b3f69bd85",
+      "size": 13811
+    },
+    {
+      "path": "interoperability/native_receiving.py",
+      "sha": "56ee7d22304d461a36a76accbef5ba0174e35413",
+      "size": 18480
+    },
+    {
+      "path": "interoperability/README.md",
+      "sha": "1946f8836d7e80279cb420d310970bf942ea5c44",
+      "size": 5010
+    },
+    {
+      "path": "MERCHANT_CLIENT.md",
+      "sha": "f723519c9a77f4f59063c24d376e27fb38c91332",
+      "size": 14564
+    },
+    {
+      "path": "merchant-client.mjs",
+      "sha": "f950507a56d4f378dc8a93cd9305aa7a0bf5eb54",
+      "size": 36592
+    },
+    {
+      "path": "merchant-definition.mjs",
+      "sha": "81e42bb4bb8dd17b507fee4054a1a91f974bef9e",
+      "size": 2150
+    },
+    {
+      "path": "merchant-provider.mjs",
+      "sha": "d225801314ea37b2d69348a3ed8612649840b314",
+      "size": 24299
+    },
+    {
+      "path": "merchant-setup.mjs",
+      "sha": "d5b4f0d6be9ac080e9b58a7050295cd3d97dfee4",
+      "size": 1539
+    },
+    {
+      "path": "merchant-tools.mjs",
+      "sha": "74604b1116075116a5baf5d183e521e4a9dd832f",
+      "size": 4677
+    },
+    {
+      "path": "MERCHANT.md",
+      "sha": "7cf94302db6948fdaf34e22168549c10b556ccc5",
+      "size": 11593
+    },
+    {
+      "path": "operate.py",
+      "sha": "3fc27055692bf39a765b5f15d52539e38fc6c69d",
+      "size": 97
+    },
+    {
+      "path": "operator-cli.mjs",
+      "sha": "5562f992dada0a05dcb693fedcfe5f03c2daba54",
+      "size": 1377
+    },
+    {
+      "path": "OUTPUTS.md",
+      "sha": "8a4a3ab18a0bb6019e0f4f29cb493c35764ec9ab",
+      "size": 9352
+    },
+    {
+      "path": "providerSDK/LICENSE.txt",
+      "sha": "63b49eb8b5f87d2ab6c8a4a40231c70a757cdba7",
+      "size": 10767
+    },
+    {
+      "path": "providerSDK/source.json",
+      "sha": "2f902f823eecc1eb0518046671530ae46698e555",
+      "size": 544
+    },
+    {
+      "path": "README.md",
+      "sha": "5498f4554eb10304c88729312824adb8f49383bd",
+      "size": 11078
+    },
+    {
+      "path": "requirements.txt",
+      "sha": "9399c394975fdcde26121612faa5cb6701cead0f",
+      "size": 77
+    },
+    {
+      "path": "tools.mjs",
+      "sha": "56990e69d0c1f671ebcdfbfe530acae0af5487fb",
+      "size": 4975
+    },
+    {
+      "path": "wherobots_operator/__init__.py",
+      "sha": "2b70a276ff926480bf2eb55b34a5381f5e16ba26",
+      "size": 83
+    },
+    {
+      "path": "wherobots_operator/__main__.py",
+      "sha": "eb53e2f31b2f703ad32ef64b8a41faa3e7d18e08",
+      "size": 48
+    },
+    {
+      "path": "wherobots_operator/cli.py",
+      "sha": "77baf159535b3b87157f6dec08297170b109369f",
+      "size": 12359
+    },
+    {
+      "path": "wherobots_operator/editions.py",
+      "sha": "57ab009e1be917d3cc465268201c93a7e5acd238",
+      "size": 52750
+    },
+    {
+      "path": "wherobots_operator/exports.py",
+      "sha": "4a26305f27c1bf3355d7757313fcfcccde589543",
+      "size": 6384
+    },
+    {
+      "path": "wherobots_operator/native.py",
+      "sha": "533c23661d194729bece6b042bd40e462e3fb75f",
+      "size": 32199
+    },
+    {
+      "path": "wherobots_operator/portable.py",
+      "sha": "37ec56965f0dc51720ca2b91842fcfb6a3263606",
+      "size": 38464
+    },
+    {
+      "path": "wherobots_operator/server.py",
+      "sha": "c625ea492f928b7d40bddaa7180bbe72a00076da",
+      "size": 19186
+    },
+    {
+      "path": "wherobots_operator/storage.py",
+      "sha": "fb94d9c49d4a4594a351e3b3b85354e6c3a8066f",
+      "size": 14451
+    },
+    {
+      "path": "wherobots_operator/web/app.js",
+      "sha": "98b8fe0616161f75a5c5347b28a11d780851871e",
+      "size": 40397
+    },
+    {
+      "path": "wherobots_operator/web/index.html",
+      "sha": "3591c2fb7bce7429b30f3596d019645d04a29754",
+      "size": 2090
+    },
+    {
+      "path": "wherobots_operator/web/style.css",
+      "sha": "e404db8b5ae00c82e2ed1423f0f2be7018b149db",
+      "size": 5126
+    },
+    {
+      "path": "wherobots_operator/workflow.py",
+      "sha": "c3a7724052fae0fb04e206c236e51918485f014e",
+      "size": 31204
+    }
+  ],
+  "revision": "6e57b6d0d5f19dcb464b0b30f4040802c1809b57",
+  "source_parent": "bd9d/wherobots-complete-workspace-20261012"
+}

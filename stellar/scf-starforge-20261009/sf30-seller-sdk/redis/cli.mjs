@@ -21,7 +21,7 @@ const HELP = `Redis / Valkey merchant (Node 22.16+)
              [--max-in-flight 64] [--drain-grace-ms 60000] [--availability-dir DIRECTORY]
   run        Alias for start.
   serve      --source source.json --config service.json [same launch options]
-  workspace  create|open|inspect|save|preview|prepare|stage|resume [workspace options]
+  workspace  setup|create|open|inspect|save|preview|prepare|stage|resume [workspace options]
 Credentials come from passwordEnv, sentinelPasswordEnv or tokenEnv. init/describe/inspect/prepare/verify are offline.
 Seller documentation and operations use the original developer portal and local operator interface.`;
 

@@ -179,3 +179,39 @@ node timescale/native-demo.mjs --directory "$TIMESCALE_HOME/native-demo" --conne
 ```
 
 It retains one operation record and native transaction markers for its input setup, then operates two editions, a batched refresh, an atomic refresh after late input, complete aggregate comparisons, a native job schedule change, all edition decisions, original publisher extraction/publication, whole export/receive and the original customer dataset reader. The final customer rows must preserve `9007199254740996.50` exactly. Reuse the same directory to continue its original work. Its HTTP phase reads the actual listener and HTML; DOM/browser execution is a separate real browser step. The new native schema and completed package remain available to the customer engineer after the run. The job is disabled by the operated native schedule change.
+
+
+## Complete the browser and merchant receiving workflow
+
+After the original native operation finishes, its native-demo.json and original workspace are the inputs to the merchant receiving executable. The native result must be complete on the selected TimescaleDB 2.30.2 installation. Keep its original result, source configuration, dataset and phase UUIDs in place.
+
+From the repository root, use the installed Playwright module and Chromium executable on that same Linux host:
+
+```bash
+node stellar-forge/mcp-merchant-operator/timescale-workspace-native-receiving.mjs \
+  --native-result "$TIMESCALE_HOME/native-demo/native-demo.json" \
+  --directory "$TIMESCALE_HOME/merchant-receiving" \
+  --playwright /absolute/installed/node_modules/playwright \
+  --chromium /absolute/installed/chromium/chrome-headless-shell
+```
+
+Replace the two /absolute/installed paths with the existing module and executable. The receiving directory is private and separate from the original native workspace. This receiver configures the source-owned Timescale provider, opens one merchant owner and its original scheduler, validates the Applications startup record, and uses that owner's borrowed browser listener. It continues the already-completed capture request with its original UUID and input, so that step returns the retained edition.
+
+The real browser then opens both original editions and downloads their complete JSON files. It visits every captured native table and page, searches the original job, displays every edition difference, opens the original refresh/job/publication plans and downloads the full native aggregate comparison. The original publisher displays the four customer rows, including the exact decimal 9007199254740996.50. The browser's only new operation is its complete workspace export. It retains the UI's actual UUID and request body before forwarding that request to the original listener, so an interrupted receiving attempt can continue the same export.
+
+Reopening the operator restores its edition, aggregate, time window, selected columns, saved plan, native table, search and row page. The browser receiving workflow exercises an unsaved column selection across a real page reload and then restores the original four publication columns. It saves browser-receiving.json, the complete original JSON downloads and the UI-created native package beneath the receiving directory. A viewport image is attempted as an optional presentation artifact; its file status is recorded separately.
+
+After the browser closes only its own Chromium resources, the same merchant owner performs its full MCP export. The installed downloader retains an interrupted prefix, continues the complete files, checks the native package, receives it into a portable customer project and opens that project with the original dataset loader. It also closes the borrowed browser listener while the merchant owner stays available, and reopens the original owner with the same published dataset and export. The resulting receiving.json names the actual completed phases and outputs. A later invocation reuses the same records and receiving identity.
+
+For an already-open borrowed listener, the browser arm is also callable directly:
+
+```bash
+node stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/browser-receiving.mjs \
+  --url http://127.0.0.1:ACTUAL_PORT/ \
+  --native-result "$TIMESCALE_HOME/native-demo/native-demo.json" \
+  --directory "$TIMESCALE_HOME/browser-receiving" \
+  --playwright /absolute/installed/node_modules/playwright \
+  --chromium /absolute/installed/chromium/chrome-headless-shell
+```
+
+Use the URL printed by that original listener. The browser arm preserves the listener, publisher, scheduler and database ownership of its caller. Its local receiving record and individual browser JSON downloads have a 64 MiB limit; exceeding a limit stops with the retained original output available. The full native package and installed merchant downloader retain their separately documented file and manifest limits. A parsed or installed driver alone does not mark a native phase complete; completion comes from the original operation's recorded results.
