@@ -1,0 +1,88 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "migration-workspaces",
+  "description": "Complete native GIS mapping, QGIS projects, corrected cartographic publication and portable receiving through the original merchant host",
+  "commands": {
+    "migration-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/merchant/receiving.mjs"
+  },
+  "commandDescriptions": {
+    "migration-workspace": "Operate original native GIS migration workspaces and receive complete source, maps and publications"
+  },
+  "exports": {
+    "./seller/stac/migration": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/merchant/index.d.mts",
+      "default": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/merchant/client.mjs"
+    },
+    "./buyer/stac/migration": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/merchant/index.d.mts",
+      "default": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/merchant/client.mjs"
+    },
+    "./merchant/mcp/migration": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/merchant/index.d.mts",
+      "default": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/merchant/client.mjs"
+    }
+  },
+  "merchantProviders": {
+    "migration-workspaces": "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/merchant/provider.mjs"
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/CARTOGRAPHY.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/CARTOGRAPHY_BROWSER.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/RECEIVING.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/__init__.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/cartography.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/cartography_native.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/engine.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/examples/cartography_journey.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/examples/receiving_journey.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/merchant/MERCHANT.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/merchant/client.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/merchant/index.d.mts",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/merchant/provider.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/merchant/receiving.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/merchant/tools.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/native.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/plan.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/public/app.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/public/cartography.css",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/public/cartography.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/public/index.html",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/public/styles.css",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/receiving.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/server.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/source-files.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/migration/workspace.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/qgis/OPERATIONS.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/qgis/RECEIVING_RUN.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/qgis/__init__.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/qgis/cli.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/qgis/connection.schema.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/qgis/examples/receive_project.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/qgis/native.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/qgis/operator.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/qgis/package.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/qgis/source.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qgis/LICENSE",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qgis/OPERATIONS.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qgis/VECTOR_RECEIVING.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qgis/starforge_stac/__init__.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qgis/starforge_stac/cli.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qgis/starforge_stac/metadata.txt",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qgis/starforge_stac/model.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qgis/starforge_stac/plugin.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qgis/starforge_stac/postgis/__init__.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qgis/starforge_stac/qgis_project.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qgis/starforge_stac/vector_source.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/vector/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/vector/__init__.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/vector/archive.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/vector/capture.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/vector/common.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/vector/comparison.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/vector/driver.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/vector/engine.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/vector/json.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/vector/materialize.py"
+  ]
+}
