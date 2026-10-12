@@ -2,6 +2,7 @@
 import { blockscoutStartup } from './application-blockscout.mjs';
 import { atlasStartup } from './application-atlas.mjs';
 import { redisStartup } from './application-redis.mjs';
+import { arcgisAgentStartup } from './application-arcgis.mjs';
 import { jobCheckoutStartup } from './application-job-checkout.mjs';
 import { datasetBuyerStartup } from './application-dataset-buyer.mjs';
 import { tenderlyStartup } from './application-tenderly.mjs';
@@ -113,14 +114,16 @@ export function observeApplicationOutput(request, directory, context = {}) {
       }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       return;
     }
-    if (request.command === 'blockscout' || request.command === 'tenderly-workspace' || request.command === 'redis') {
-      const tenderly = request.command === 'tenderly-workspace', redis = request.command === 'redis';
-      const startupSchema = redis ? 'stellar-forge.redis-workspace-startup.v1' :
+    if (['blockscout', 'tenderly-workspace', 'redis', 'arcgis-agent'].includes(request.command)) {
+      const tenderly = request.command === 'tenderly-workspace', redis = request.command === 'redis',
+        arcgis = request.command === 'arcgis-agent';
+      const startupSchema = arcgis ? 'stellar-forge.arcgis-agent-workspace-startup.v1' :
+        redis ? 'stellar-forge.redis-workspace-startup.v1' :
         tenderly ? 'stellar-forge.tenderly-workspace-startup.v1' : 'stellar-forge.blockscout-startup.v1';
       if (!text.startsWith('{"schema":"' + startupSchema + '",')) return;
       saving = saving.then(async () => {
         if (seen) return;
-        const startup = await (redis ? redisStartup : tenderly ? tenderlyStartup : blockscoutStartup)(request, text);
+        const startup = await (arcgis ? arcgisAgentStartup : redis ? redisStartup : tenderly ? tenderlyStartup : blockscoutStartup)(request, text);
         const url = startup && privateUrl(startup.url);
         if (!url) return;
         seen = true;

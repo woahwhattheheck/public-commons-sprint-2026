@@ -47,6 +47,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   huwise                                    Alias for the same Opendatasoft data workspace
   arcgis                                    Capture ArcGIS layers and receive native Esri FeatureSets
   arcgis-publisher                          Publish reviewed ArcGIS data with original merchant and buyer handoff
+  arcgis-agent                              Open the original ArcGIS browser and MCP service over one saved publisher
   sftp                                      Inspect, capture and resume pinned private report files
   sftp-publisher                            Publish retained file datasets with original refresh and buyer handoff
   sftp-workspace                            Author SFTP reports, exact merchant terms and native publications
