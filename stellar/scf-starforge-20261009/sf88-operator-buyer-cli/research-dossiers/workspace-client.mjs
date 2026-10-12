@@ -3,8 +3,10 @@ import {isAbsolute,resolve} from 'node:path';
 import {Readable} from 'node:stream';
 import {createEuropePmcClient} from './europe-pmc-client.mjs';
 import {createCustomerUpdatesClient} from './customer-updates/client.mjs';
+import {createResearchCommerceClient} from './customer-commerce/client.mjs';
 import {createClinicalTrialsClient} from './clinical-trials-client.mjs';
 import {createStudyExtractionClient} from './study-extraction-client.mjs';
+import {createStudyProtocolClient} from './study-protocol-client.mjs';
 import {createTemplateExchangeClient} from './template-exchange/client.mjs';
 import {createDocumentWorkspaceClient,createPipelineWorkspaceClient,sendPipelineFiles} from './document-workspace-client.mjs';
 import {BuyerError,need,object,parseJson,safeCode} from '../node/store.mjs';
@@ -104,7 +106,11 @@ export class ResearchWorkspaceClient{
       if(!response.ok){
         let detail={};try{detail=parseJson(await readResponse(response,65536));}catch{}
         throw new BuyerError(safeCode(detail.error,'RESEARCH_HTTP_REJECTED'),{status:response.status,
-          ...(detail.openAlexImport?{openAlexImport:detail.openAlexImport}:{})});
+          ...(detail.openAlexImport?{openAlexImport:detail.openAlexImport}:{}),
+          ...(typeof detail.outcomeUnknown==='boolean'?{outcomeUnknown:detail.outcomeUnknown}:{}),
+          ...(detail.researchCommerce?{researchCommerce:detail.researchCommerce}:{}),
+          ...(detail.requestId?{requestId:detail.requestId}:{}),
+          ...(detail.closeError?{researchCommerceClose:detail.closeError}:{})});
       }
       return await consume(response);
     }catch(error){
@@ -126,12 +132,12 @@ export class ResearchWorkspaceClient{
     return this.#run(async()=>{
       const bytes=body===undefined?undefined:JSON.stringify(body);
       const templateRoute=/^\/api\/research\/dossiers\/[^/]+\/template-exchange(?:\/|\?|$)/.test(route);
-      const maximum=templateRoute?48*1024*1024:/^\/api\/dossiers\/[^/]+\/(?:citation-updates|eligibility|extraction(?:\/publications)?|risk-of-bias|customer-updates)\/reviews(?:\?projection=metadata)?$/.test(route)?16*1024*1024:
+      const maximum=route.startsWith('/api/customer-commerce/')?2*1024*1024:templateRoute?48*1024*1024:/^\/api\/dossiers\/[^/]+\/(?:citation-updates|eligibility|extraction(?:\/publications)?|risk-of-bias|customer-updates)\/reviews(?:\?projection=metadata)?$/.test(route)?16*1024*1024:
         /^\/api\/dossiers\/[^/]+\/source-bundles\/(?:preview|receive)(?:\?projection=metadata)?$/.test(route)
         ?128*1024*1024+65536:96*1024*1024+65536;
       need(bytes===undefined||Buffer.byteLength(bytes)<=maximum,'RESEARCH_REQUEST_TOO_LARGE');
       return this.#request(route,{...options,body:bytes,headers:{...(options.headers??{}),
-        ...(bytes===undefined?{}:{'Content-Type':'application/json'})}},async response=>parseJson(await readResponse(response,templateRoute?PORTABLE_LIMIT:(route.startsWith('/api/europe-pmc')||/^\/api\/dossiers\/[^/]+\/customer-updates(?:\/|\?|$)/.test(route))?64*1024*1024:RESEARCH_CONTROL_LIMIT)));
+        ...(bytes===undefined?{}:{'Content-Type':'application/json'})}},async response=>parseJson(await readResponse(response,templateRoute?PORTABLE_LIMIT:(route.startsWith('/api/europe-pmc')||route.startsWith('/api/customer-commerce/')||/^\/api\/dossiers\/[^/]+\/customer-updates(?:\/|\?|$)/.test(route))?64*1024*1024:RESEARCH_CONTROL_LIMIT)));
     });
   }
   async status(options={}){
@@ -211,6 +217,12 @@ export class ResearchWorkspaceClient{
       },id,input,options)),
     });
   }
+  customerCommerce(){
+    return createResearchCommerceClient({
+      request:(route,body,options)=>this.#json(route,body,options),
+      download:(route,file,options)=>this.#download(route,file,options),
+    });
+  }
   customerUpdates(){
     return createCustomerUpdatesClient({
       request:(route,body,options)=>this.#json(route,body,options),
@@ -247,6 +259,7 @@ export class ResearchWorkspaceClient{
   startCrossref(id,operationId,{expectedPlanSha256}={}){return this.#json(operationPath(id,operationId)+'/start',{expectedPlanSha256});}
   stopCrossref(id,operationId){return this.#json(operationPath(id,operationId)+'/stop',{});}
   receiveCrossref(id,operationId,input){return this.#json(operationPath(id,operationId)+'/receive?projection=metadata',input);}
+  studyProtocol(){return createStudyProtocolClient({client:this,run:work=>this.#run(work)});}
   studyExtraction(){return createStudyExtractionClient({request:(route,body,options)=>this.#json(route,body,options),
     download:(route,file,options)=>this.#download(route,file,options)});}
   extraction(id,options={}){return this.studyExtraction().extraction(id,options);}

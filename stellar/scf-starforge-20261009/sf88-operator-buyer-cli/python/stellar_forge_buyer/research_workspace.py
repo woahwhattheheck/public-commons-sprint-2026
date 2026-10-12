@@ -108,14 +108,15 @@ def _file_delivery(value):
 
 
 class ResearchWorkspace:
-    def __init__(self, *, checkout, connection_file, directory, node="node",
+    def __init__(self, *, checkout, connection_file=None, directory, node="node",
                  environment=None, timeout=360, request_timeout_ms=120000,
                  expected_workspace_id=None):
         if (type(request_timeout_ms) is not int or not 1000 <= request_timeout_ms <= 900000 or
                 expected_workspace_id is not None and (not isinstance(expected_workspace_id, str) or not _WORKSPACE.fullmatch(expected_workspace_id))):
             raise StateError("RESEARCH_CLIENT_OPTIONS_INVALID")
         self.directory = private_directory(Path(directory))
-        self.connection_file = Path(connection_file).expanduser().absolute()
+        self.connection_file = (Path(connection_file).expanduser().absolute()
+                                if connection_file is not None else None)
         self.runtime = Runtime(checkout, node=node, environment=environment,
                                timeout=timeout, output_limit=_LIMIT)
         self.request_timeout_ms = request_timeout_ms
@@ -185,11 +186,16 @@ class ResearchWorkspace:
                 self._active.discard(event)
                 self._condition.notify_all()
 
-    def _invoke(self, action, value, request_file, *, mutating=False, event):
+    def _invoke(self, action, value, request_file, *, mutating=False, local=False, event):
+        if local and (action not in {"commerce-operation", "commerce-archive-inspect",
+                                    "commerce-archive-receive"} or
+                      mutating and action != "commerce-archive-receive"):
+            raise StateError("RESEARCH_LOCAL_ACTION_INVALID")
         request = {"schema": _CALL, "action": action, "input": deepcopy(value),
-                   "connectionFile": str(self.connection_file),
                    "timeoutMs": self.request_timeout_ms}
-        if self.workspace_id:
+        if self.connection_file is not None:
+            request["connectionFile"] = str(self.connection_file)
+        if self.workspace_id and not local:
             request["expectedWorkspaceId"] = self.workspace_id
         _json(request)
         dump(request_file, request, exclusive=True)
@@ -216,35 +222,41 @@ class ResearchWorkspace:
         elif "outcomeUnknown" in result:
             record["outcomeUnknown"] = bool(result["outcomeUnknown"])
         if result.get("workspaceId"):
+            if local:
+                raise StateError("RESEARCH_LOCAL_WORKSPACE_CHANGED")
             self._bind(result["workspaceId"])
         return record
 
-    def _read(self, action, value=None, *, cancel_event=None, _owned_event=None):
+    def _read(self, action, value=None, *, cancel_event=None, _owned_event=None, local=False):
         with self._operation(cancel_event, owned_event=_owned_event) as event:
             with tempfile.TemporaryDirectory(prefix=".research-read-", dir=self.directory) as temporary:
                 record = self._invoke(action, value or {}, Path(temporary) / "request.json",
-                                      event=event)
+                                      event=event, local=local)
             return _value(record)
 
     def _directory_for_call(self, request_id, *, create=False):
         selected = self.directory / "calls" / digest(_request_id(request_id).encode())
         return private_directory(selected, create=create)
 
-    def _write(self, action, value, *, request_id, replay_safe, resume=False, cancel_event=None):
+    def _write(self, action, value, *, request_id, replay_safe, resume=False, cancel_event=None,
+               local=False):
         with self._operation(cancel_event) as event:
             return self._write_call(action, value, request_id=request_id, replay_safe=replay_safe,
-                                    resume=resume, event=event)
+                                    resume=resume, event=event, local=local)
 
-    def _write_call(self, action, value, *, request_id, replay_safe, resume, event):
+    def _write_call(self, action, value, *, request_id, replay_safe, resume, event, local=False):
         request_id = _request_id(request_id)
-        if self.workspace_id is None:
+        if local and action != "commerce-archive-receive":
+            raise StateError("RESEARCH_LOCAL_ACTION_INVALID")
+        if self.workspace_id is None and not local:
             self._read("status", _owned_event=event)
         value = parse(_json(value))
         selected = self._directory_for_call(request_id, create=True)
         with lock(selected):
             path = selected / "request.json"
             identity = {"schema": _CALL, "requestId": request_id, "action": action,
-                        "input": value, "workspaceId": self.workspace_id, "replaySafe": bool(replay_safe)}
+                        "input": value, "workspaceId": None if local else self.workspace_id,
+                        "replaySafe": bool(replay_safe), **({"local": True} if local else {})}
             if path.exists():
                 saved = parse(read(path, 32 * 1024 * 1024))
                 if _json({k: saved[k] for k in identity}) != _json(identity):
@@ -272,7 +284,7 @@ class ResearchWorkspace:
                                            "number": len(existing) + 1}, exclusive=True)
             try:
                 record = self._invoke(action, value, attempt / "call.json", mutating=True,
-                                      event=event)
+                                      event=event, local=local)
             except StateError as error:
                 if error.code not in {"RESEARCH_CLIENT_CLOSED", "NATIVE_CANCEL_EVENT_INVALID"}:
                     raise
@@ -307,7 +319,8 @@ class ResearchWorkspace:
         """Replay only an original native idempotent request, with unchanged IDs."""
         saved = self.call_record(request_id)["request"]
         return self._write(saved["action"], saved["input"], request_id=request_id,
-                           replay_safe=saved["replaySafe"], resume=True, cancel_event=cancel_event)
+                           replay_safe=saved["replaySafe"], resume=True, cancel_event=cancel_event,
+                           local=saved.get("local", False))
 
     def status(self, *, cancel_event=None):
         return self._read("status", cancel_event=cancel_event)
@@ -339,6 +352,11 @@ class ResearchWorkspace:
     def eligibility(self, dossier_id):
         from .research_eligibility import ResearchEligibility
         return ResearchEligibility(self, dossier_id)
+
+    def commerce(self):
+        """Paid customer publications, original Buyer calls and complete receiving."""
+        from .research_commerce import ResearchCommerce
+        return ResearchCommerce(self)
 
     def customer_updates(self, dossier_id):
         """Recurring customer commissioning, original delivery and receiving."""
