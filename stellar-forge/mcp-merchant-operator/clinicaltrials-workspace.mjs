@@ -17,6 +17,7 @@ const NCT = /^NCT[0-9]{8}$/;
 const MAX_FILE = 256_000_000;
 const MAX_JSON = 16 * 1024 * 1024;
 const MAX_REQUEST = 128 * 1024;
+const MAX_PRS = 64 * 1024 * 1024;
 const FILE_KINDS = ['source', 'packet', 'prs'];
 const PUBLISHER_KINDS = ['draft-csv', 'draft-review', 'buyer-config', 'session-manifest', 'session-csv', 'session-jsonl', 'session-review'];
 const fail = (code, message, details = {}) => Object.assign(new Error(message), { code, ...details });
@@ -183,7 +184,7 @@ export function clinicalTrialsWorkspaceTools(tool) {
       { ...selection, kind: { type: 'string', enum: ['captures', 'reviews', 'prs', 'prsPlans', 'prsReconciliations', 'exports', 'sources', 'plans', 'builds', 'comparisons'] }, ...pagination }, ['workspace', 'kind'], read),
     tool('merchant_clinicaltrials_capture', 'Inspect a retained provider capture and its original source pages, request, provider version and completeness.', { ...selection, captureId: id }, ['workspace', 'captureId'], read),
     tool('merchant_clinicaltrials_studies', 'Page the actual retained study cohort. Preserve the original capture and continue its returned offset; query searches the saved studies.',
-      { ...selection, captureId: id, offset: pagination.offset, limit: pagination.limit, query: { type: 'string', maxLength: 1000 } }, ['workspace', 'captureId'], read),
+      { ...selection, captureId: id, offset: pagination.offset, limit: pagination.limit, query: { type: 'string', maxLength: 200 } }, ['workspace', 'captureId'], read),
     tool('merchant_clinicaltrials_study', 'Read one complete original nested study, its NCT ID, exact JSON hash and source page.', { ...selection, captureId: id, nctId: { type: 'string', pattern: NCT.source } }, ['workspace', 'captureId', 'nctId'], read),
     tool('merchant_clinicaltrials_study_compare', 'Compare the same original NCT study across two retained capture editions.',
       { ...selection, beforeId: id, afterId: id, nctId: { type: 'string', pattern: NCT.source } }, ['workspace', 'beforeId', 'afterId', 'nctId'], read),
@@ -199,6 +200,11 @@ export function clinicalTrialsWorkspaceTools(tool) {
       { ...selection, file: alias }, ['workspace'], read),
     tool('merchant_clinicaltrials_prs_upload', 'Send one complete host-declared PRS XML through the original raw-byte intake and original official protocol/results validator.',
       { ...mutation, file: alias, expectedSha256: digest, schema: { type: 'string', enum: ['protocol', 'results'] } }, ['workspace', 'file', 'expectedSha256', 'schema', 'expectedRevision', 'requestId'], {}),
+    tool('merchant_clinicaltrials_prs_candidate', 'Retain a complete host-declared reviewed XML candidate against its original PRS document. Uses the native candidate comparison with the reviewed file SHA256, revision and request UUID.',
+      { ...mutation, file: alias, expectedSha256: digest, originalId: digest,
+        reviewedBy: { type: 'string', minLength: 1, maxLength: 160 },
+        note: { type: 'string', minLength: 1, maxLength: 8192 } },
+      ['workspace','file','expectedSha256','originalId','reviewedBy','note','expectedRevision','requestId'], {}),
     tool('merchant_clinicaltrials_restore', 'Receive one complete declared ClinicalTrials package through the existing receiving console and its original workspace lease.',
       { ...mutation, file: alias, expectedSha256: digest }, ['workspace', 'file', 'expectedSha256', 'expectedRevision', 'requestId'], {}),
     tool('merchant_clinicaltrials_file_prepare', 'Retain one complete declared native export, capture source member, contract, PRS XML/report or original publisher file for verified resumable delivery. Reads the original bytes once.',
@@ -392,8 +398,9 @@ export class MerchantClinicalTrialsWorkspaces {
   }
   #json(definition, route, body, requestId) {
     const payload = body === undefined ? undefined : JSON.stringify(body);
-    if (payload !== undefined && Buffer.byteLength(payload) > MAX_REQUEST)
-      throw fail('INVALID_PARAMS', 'Native JSON exceeds 128 KiB. Use original retained files for complete source intake.');
+    const maximum = body?.action === 'prs.candidate' ? MAX_PRS + 1024 * 1024 : MAX_REQUEST;
+    if (payload !== undefined && Buffer.byteLength(payload) > maximum)
+      throw fail('INVALID_PARAMS', 'Native JSON exceeds its original request limit. Use declared complete input files for source and PRS intake.');
     return this.#request(definition, route, { body: payload, requestId,
       headers: payload === undefined ? {} : { 'Content-Type': 'application/json' } },
       async response => JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await responseBytes(response, MAX_JSON))));
@@ -503,7 +510,7 @@ export class MerchantClinicalTrialsWorkspaces {
     if (!file || file.kind !== kind) throw fail('INVALID_PARAMS', 'Choose a host-declared ' + kind + ' file handle.');
     if (kind === 'prs' && !['protocol','results'].includes(input.schema))
       throw fail('INVALID_PARAMS', 'Choose the original protocol or results XML schema.');
-    const { handle, info } = await fileHandle(file.path, MAX_FILE); let stream;
+    const { handle, info } = await fileHandle(file.path, kind === 'prs' ? MAX_PRS : MAX_FILE); let stream;
     try {
       const digest = createHash('sha256');
       for await (const chunk of handle.createReadStream({ autoClose: false, start: 0 })) digest.update(chunk);
@@ -517,6 +524,7 @@ export class MerchantClinicalTrialsWorkspaces {
           'Content-Type': kind === 'prs' ? 'application/xml' : 'application/zip',
           'Content-Length': String(info.size), 'X-Request-Id': input.requestId,
           'X-Expected-Revision': String(input.expectedRevision), 'X-Clinical-Name': encodeURIComponent(name),
+          'X-Clinical-Sha256': originalSha,
           ...(kind === 'prs' ? { 'X-Clinical-Schema': input.schema } : {}) } },
         async response => JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await responseBytes(response, MAX_JSON))));
       const after = await handle.stat();
@@ -525,6 +533,26 @@ export class MerchantClinicalTrialsWorkspaces {
           input.requestId + ' and its retained body SHA before continuing.');
       return result;
     } finally { stream?.destroy(); await handle.close(); }
+  }
+  async #candidate(definition, input) {
+    checked(input.requestId, UUID, 'original request UUID'); integer(input.expectedRevision, 0);
+    checked(input.expectedSha256, SHA, 'reviewed candidate SHA256'); checked(input.originalId, SHA, 'original PRS document');
+    text(input.reviewedBy, 'Reviewer', 160); text(input.note, 'Review note', 8192);
+    const file = definition.files[checked(input.file, ALIAS, 'candidate file alias')];
+    if (!file || file.kind !== 'prs') throw fail('INVALID_PARAMS', 'Choose a declared reviewed PRS candidate file.');
+    const data = await bytes(file.path, MAX_PRS), originalSha = sha(data);
+    if (originalSha !== input.expectedSha256 || file.sha256 && file.sha256 !== originalSha)
+      throw fail('CLINICALTRIALS_FILE_CHANGED', 'Complete candidate XML differs from the reviewed SHA256.');
+    let xml;
+    try { xml = new TextDecoder('utf-8', { fatal: true }).decode(data); }
+    catch { throw fail('INVALID_PARAMS', 'The original reviewed candidate route accepts complete UTF-8 XML.'); }
+    const result = await this.#json(definition, '/api/clinical/action', {
+      action: 'prs.candidate', payload: { originalId: input.originalId, xml,
+        name: text(file.name ?? basename(file.path), 'Candidate filename'),
+        reviewedBy: input.reviewedBy, note: input.note },
+      expectedRevision: input.expectedRevision, requestId: input.requestId
+    }, input.requestId);
+    return result;
   }
   async #execute(name, args) {
     if (name === 'merchant_clinicaltrials_workspaces') return this.summary;
@@ -576,6 +604,10 @@ export class MerchantClinicalTrialsWorkspaces {
       await this.#state(definition);
       return native(await this.#upload(definition, input, name.endsWith('prs_upload') ? 'prs' : 'packet'));
     }
+    if (name === 'merchant_clinicaltrials_prs_candidate') {
+      await this.#state(definition);
+      return native(await this.#candidate(definition, input));
+    }
     if (name === 'merchant_clinicaltrials_action') {
       checked(input.requestId, UUID, 'original request UUID'); integer(input.expectedRevision, 0);
       if (!actionNames.includes(input.action) && !(typeof input.action === 'string' && /^(publisher|dossier)\.[a-z][a-z0-9_.-]{0,95}$/.test(input.action)))
@@ -604,8 +636,8 @@ export class MerchantClinicalTrialsWorkspaces {
       else if (key === 'nctId') parameters[key] = checked(input[key], NCT, 'NCT identifier');
       else if (key === 'requestId') parameters[key] = checked(input[key], UUID, 'original request UUID');
       else if (key === 'query') {
-        if (typeof input[key] !== 'string' || input[key].length > 1000 || /[\x00-\x1f]/.test(input[key]))
-          throw fail('INVALID_PARAMS', 'Use a saved-study search string of up to 1000 printable characters.');
+        if (typeof input[key] !== 'string' || input[key].length > 200 || /[\x00-\x1f]/.test(input[key]))
+          throw fail('INVALID_PARAMS', 'Use a saved-study search string of up to 200 printable characters.');
         parameters[key] = input[key];
       } else parameters[key] = text(input[key], 'Original ' + key);
     }

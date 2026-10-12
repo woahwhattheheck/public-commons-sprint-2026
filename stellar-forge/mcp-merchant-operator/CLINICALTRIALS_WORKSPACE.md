@@ -103,6 +103,7 @@ It prints every exact schema. The call command accepts a short action such as st
 | action | Reviewed native action with original integer revision and UUID |
 | files | Actual declared input byte counts and hashes |
 | prs_upload | Full raw XML intake through the original PRS route |
+| prs_candidate | Complete declared XML candidate and native comparison against its original document |
 | restore | Full raw ClinicalTrials package receiving through the existing console |
 | file_prepare | One complete original native file retained for delivery |
 | exports | Saved complete MCP delivery manifests after reply loss or restart |
@@ -185,7 +186,7 @@ Use files to inspect the actual host-declared XML and its complete SHA256. Prs_u
 
 The attachment streams the complete XML with the native request headers. It checks the reviewed hash before sending and uses the same open file descriptor. The original controller binds the received body hash to its request and calls the maintained PRS leaf with the exact official schemas.
 
-Read prs for the original report, document ID, schema errors and legacy elements. Prs.candidate accepts originalId, complete reviewed XML, name, reviewedBy and note. Native JSON limits apply to inlined candidate content; original full XML intake uses the raw file tool.
+Read prs for the original report, document ID, schema errors and legacy elements. Prs.candidate accepts originalId, complete reviewed XML, name, reviewedBy and note. For a complete host-selected candidate, use prs_candidate with the declared prs file handle, expectedSha256, originalId, reviewedBy, note, revision and UUID. It reads that complete UTF-8 XML and invokes the same native candidate comparison. Original PRS inputs/candidates retain the leaf's 64 MiB XML limit.
 
 Prs.plan takes the original documentId, a decisions array, reviewer and rationale. Each decision preserves elementId, action remove/keep/replace and reason; replacement includes the original leaf's replacement value. Read the complete frozen record with prs_plan, then apply that exact record using prs.apply {documentId,planId}.
 
@@ -282,7 +283,7 @@ Keep the full action JSON, UUID and selected input SHA until its terminal outcom
 | INTERRUPTED | Same request plus the original source/controller recovery path |
 | UNKNOWN | Reconcile the original state and exact attempted request before explicitly resubmitting that saved request |
 
-CLINICALTRIALS_OPERATION_UNCERTAIN includes the original UUID after a lost action/upload response. The attachment makes no automatic mutation retry. A UUID remains bound to its original body, revision and file hash. The browser and MCP operation reader inspect the same record.
+CLINICALTRIALS_OPERATION_UNCERTAIN includes the original UUID after a lost action/upload response. The attachment makes no automatic mutation retry. Keep the original UUID, body, reviewed revision and file hash together. The controller binds the UUID to its original action/payload and checks the current revision when creating a new operation. The browser and MCP operation reader inspect the same record.
 
 Console reconnection reads the same host reference. Complete MCP deliveries survive either process restart in the private exports directory and remain listed by exports. Temporary verified reads are disposable; complete original bytes and manifests remain. Storage errors preserve the actual local error code so the operator can restore capacity/access and continue the same record.
 
