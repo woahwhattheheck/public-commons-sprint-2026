@@ -198,3 +198,7 @@ a retained business result does not conceal a later closure/write failure.
 the run that wrote it. Do not include that private directory in a shared source
 or receiving package. Complete public source, mapping, export and review
 artifacts are identified by the original operator result.
+
+## Reviewed study query handoff
+
+When the declared study leg is selected, the same original journey also uses its exact released CSV in the native SF30 query. It retains the complete released rows and values, original study/review/mapping/source identities, downloadable native configuration/provenance, actual first/next cursor pages and an original-request replay after a committed response is lost. It then preserves that dataset through the later unreviewed working study and same-origin reopen. The two complete native metadata files are `Study_Native_Source_Manifest.json` and `Study_Native_Dataset_Config.json`; `Study_Native_Dataset_Receipt.json` and the actual native query files record the selected snapshot. The `released_study_native_dataset_and_query` phase and `ids.studyDataset` name the saved result. Native query capacity remains 250,000 rows / 256 MiB, so the operator must explicitly prepare/review a narrower complete study if a selected delivery exceeds that bound. The existing original publisher controls accept the resulting dataset with actual entered terms; this receiving result alone does not claim publisher activation or a buyer payment.
