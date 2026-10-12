@@ -171,6 +171,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   s3                                         Inspect and configure selected object-store resources
   python-merchant                            Inspect, diagnose and serve a Python application
   python-workspace                           Author Python sources, run private previews and operate native releases
+  diffbot-workspace                          Review retained web data, publish customer editions and reopen handoffs
+  diffbot-acquire                            Retain original Diffbot Account, Extract and Bulk results
   merchant-readiness                         Review every configured Stellar receiving account
   availability                              Review, pause and resume a running seller's selected routes
   cube-onboarding                            Capture and prepare reviewed Cube reports as a merchant
