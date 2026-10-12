@@ -383,7 +383,12 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       editingId = null; configurationReview = startReview = null;
       label.value = type.title; runtime.value = descriptor.runtime.runtimeId; kind.value = type.id;
       const values = { installationId: descriptor.installationId };
-      if (descriptor.command === 'analysis') {
+      if (descriptor.command === 'duckdb') {
+        values.workspaceDirectory = value('--workspace');
+        values.port = descriptor.args.includes('--port') ? Number(value('--port')) : 0;
+        if (descriptor.args.includes('--export-root')) values.exportRoot = value('--export-root');
+        if (descriptor.args.includes('--handoff-root')) values.handoffRoot = value('--handoff-root');
+      } else if (descriptor.command === 'analysis') {
         values.databaseDirectory = value('--database');
         if (descriptor.args.includes('--node')) values.nodeExecutable = value('--node');
         values.port = descriptor.args.includes('--port') ? Number(value('--port')) : 0;

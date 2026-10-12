@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { resolve, posix } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { openGitSource } from './git-source.mjs';
+import { openGitSource, MAX_SOURCE_FILE_BYTES, MAX_SOURCE_BYTES } from './git-source.mjs';
 import { createBrowserAssetIndex } from './browser-assets.mjs';
 import { readDistributionBuildPin, recoverCompletedDistribution, openDistributionBuild,
   inspectDistributionBuild } from './build-state.mjs';
@@ -22,7 +22,8 @@ function isRuntimeFile(path, explicitRuntime = false) {
   const parts = path.split('/');
   return !parts.some(part => excludedDirs.has(part) || part.startsWith('.')) &&
     (explicitRuntime || !excludedName.test(parts.at(-1))) &&
-    (supported.test(path) || ['LICENSE', 'go.mod', 'Cargo.lock'].includes(parts.at(-1)));
+    (supported.test(path) || (explicitRuntime && /\.zip$/i.test(path)) ||
+      ['LICENSE', 'go.mod', 'Cargo.lock'].includes(parts.at(-1)));
 }
 function valuesDeep(value) {
   return typeof value === 'string' ? [value] : Object.values(value).flatMap(valuesDeep);
@@ -92,9 +93,9 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   if (spec.schema !== 'stellar-forge.merchant-distribution.v1') throw new TypeError('Unsupported distribution specification');
   const excluded = new Set(spec.excludeFiles ?? []);
   const explicitRuntime = new Set(spec.supportFiles);
-  // Exact maintained runtime files can override a test-like filename, such as
-  // the MCP buyer's imported acceptance descriptor. Directory, extension,
-  // explicit exclusion and regular-file checks still apply.
+  // Explicit support files include maintained ZIP data and can override a
+  // test-like filename. Undeclared archives remain outside source selection;
+  // directory, explicit exclusion and regular-file checks still apply.
   const selected = tree.filter(item => isRuntimeFile(item.path, explicitRuntime.has(item.path)) && !excluded.has(item.path) &&
     (spec.components.some(root => item.path.startsWith(root + '/')) || explicitRuntime.has(item.path)));
   for (const root of spec.components)
@@ -109,8 +110,8 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
     const loaded = source.readFiles(items);
     for (const [path, bytes] of loaded) {
       totalBytes += bytes.length;
-      if (bytes.length > 2 * 1024 * 1024 || totalBytes > 32 * 1024 * 1024)
-        throw new RangeError('Distribution source size exceeded');
+      if (bytes.length > MAX_SOURCE_FILE_BYTES || totalBytes > MAX_SOURCE_BYTES)
+        throw new RangeError(`Distribution source exceeds ${MAX_SOURCE_BYTES} bytes: ${totalBytes}`);
       sources.set(path, bytes);
     }
     return loaded;
@@ -222,6 +223,15 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
     mode: item.mode === '100755' ? 0o755 : 0o644 }));
   for (const [path, bytes] of Object.entries({ 'package.json': metadataBytes, 'manifest.json': Buffer.from(json(manifest)),
     'README.md': readme, 'LICENSE': license })) files.push({ path, bytes, mode: 0o644 });
+  // Match the original runtime-unpack.py limits before publishing an archive.
+  // Source, generated manifest, package metadata, README and license all count.
+  const packageBytes = files.reduce((sum, file) => sum + file.bytes.length, 0);
+  if (packageBytes > MAX_SOURCE_BYTES)
+    throw new RangeError(`Distribution package exceeds ${MAX_SOURCE_BYTES} unpacked bytes: ${packageBytes}`);
+  for (const file of files)
+    if (file.bytes.length > 4 * 1024 * 1024)
+      throw new RangeError('Distribution package member exceeds 4 MiB: ' + file.path);
+
   const operation = await openDistributionBuild({ output: out, resume, manifest, files,
     onProgress: (phase, details) => source.progress(phase, details) });
   try {

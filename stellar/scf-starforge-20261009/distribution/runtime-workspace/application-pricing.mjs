@@ -23,6 +23,8 @@ export function pricingApplication(common) {
       field('snapshotFile', 'Original session traffic export'),
       field('historyFile', 'Original retained usage export'),
       field('nativeOutbox', 'Existing native settlement outbox'),
+      field('supplierUsageFile', 'Original supplier usage export'),
+      field('accountingReportFile', 'Original accounting report'),
       field('sourcePackage', 'Original API merchant package'),
       field('releaseStore', 'Existing seller release store', 'path', false,
         'Optional; select its original API merchant package above.'),
@@ -63,6 +65,8 @@ export async function preparePricingApplication(settings, { inputPath, runtimeDi
     ['snapshotFile', '--snapshot', 'file', true, false],
     ['historyFile', '--history', 'file', true, false],
     ['nativeOutbox', '--native-outbox', 'directory', false, true],
+    ['supplierUsageFile', '--supplier-usage', 'file', true, false],
+    ['accountingReportFile', '--accounting-report', 'file', true, false],
     ['sourcePackage', '--source-package', 'directory', false, false],
     ['releaseStore', '--release-store', 'directory', false, true],
     ['releaseRuntime', '--release-runtime', 'file', false, false],
@@ -109,9 +113,18 @@ export function pricingStartup(request, text) {
     planning.origin === url.origin && planning.pathname === '/planning' &&
     !planning.username && !planning.password && !planning.search && !planning.hash,
   'APPLICATION_PRICING_STARTUP_CHANGED');
+  const links = [{ label: 'Scenario planning', url: planning.href }];
+  if (value.costsUrl !== undefined) {
+    let costs;
+    try { costs = new URL(value.costsUrl); } catch { need(false, 'APPLICATION_PRICING_STARTUP_CHANGED'); }
+    need(costs.origin === url.origin && costs.pathname === '/economics' &&
+      !costs.username && !costs.password && !costs.search && !costs.hash,
+      'APPLICATION_PRICING_STARTUP_CHANGED');
+    links.push({ label: 'Supplier costs', url: costs.href });
+  }
   return {
     url: url.href,
-    links: [{ label: 'Scenario planning', url: planning.href }],
+    links,
     original: { schema: STARTUP, state, configPath, configSha256, pid: value.pid },
   };
 }

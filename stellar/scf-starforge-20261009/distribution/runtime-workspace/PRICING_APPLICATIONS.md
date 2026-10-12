@@ -118,3 +118,22 @@ configuration, installation adoption, process history, stopping and reopening.
 The existing SF97 model and planning workspace own all calculations, review
 versions, exports and application of selected commercial terms. These files are
 part of the maintained distribution's original runtime-workspace subtree.
+
+## Supplier costs and complete recovery
+
+The original pricing workspace also opens its **Supplier costs** application on
+`/economics`; Applications exposes that link when the original process announces
+it. Optional **Original supplier usage export** and **Original accounting report**
+fields retain the original context file paths for explicit capture in that
+workspace. Those source files may be temporarily unavailable when reopening
+saved reviews. The original cost workspace retains bills, credits and quotes,
+reviewed allocations, corrected editions and cost-linked pricing decisions.
+
+Its complete pricing-and-cost backup includes the saved scenario plans and
+referenced pricing versions. Use the original `revenue-workspace
+--restore-cost-workspace BACKUP.tar --state NEW_DIRECTORY` operation with the
+original seller and observation arguments to receive a backup once, then select
+that existing private workspace in Applications. Subsequent managed starts open
+the same received records. See the original
+[Supplier costs guide](../../sf97-merchant-revenue-ops/economics/README.md) for
+source capture, allocation, comparison, backup and restore.

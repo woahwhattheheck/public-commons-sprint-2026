@@ -12,7 +12,7 @@ const fail = code => { throw Object.assign(new Error(code), {code}); };
 const commands = {init:['--workspace','--catalog','--max-response-bytes','--response-timeout-ms'],
   call:['--input'], serve:['--port'], report:['--out'], inspect:[],
   'objects-register':['--description'], 'datasets-register':['--description'],
-  'analysis-register':['--name','--database']};
+  'analysis-register':['--name','--database'], 'analysis-inbox-register':['--name','--inbox']};
 function parse(args) {
   const [command, ...rest] = args;
   if (!Object.hasOwn(commands, command) || rest.length % 2) fail('MCP_NATIVE_CLI_ARGUMENTS_INVALID');
@@ -47,6 +47,7 @@ async function main(args) {
       'objects-register --dir ABS --description ORIGINAL_S3_OBJECTS_JSON\n' +
       'datasets-register --dir ABS --description ORIGINAL_SF30_DATASET_DESCRIPTION_JSON\n' +
       'analysis-register --dir ABS --name ALIAS --database RUNNING_ORIGINAL_ANALYSIS_DIRECTORY\n' +
+      'analysis-inbox-register --dir ABS --name ALIAS --inbox EXISTING_ORIGINAL_SF88_INBOX\n' +
       'inspect --dir ABS\nreport --dir ABS --out NEW_HTML\n');
     return;
   }
@@ -66,6 +67,12 @@ async function main(args) {
     } finally { await native.close(); }
   }
   const native = await openNativeWorkspace(directory);
+  if (command === 'analysis-inbox-register') {
+    try {
+      if(!v['--name']||!v['--inbox'])fail('MCP_NATIVE_SOURCE_INBOX_REGISTRATION_REQUIRED');
+      return print(await native.registerSourceInbox({name:v['--name'],inbox:v['--inbox']}));
+    } finally {await native.close();}
+  }
   if (command === 'analysis-register') {
     try {
       if (!v['--name'] || !v['--database']) fail('MCP_NATIVE_ANALYSIS_REGISTRATION_REQUIRED');
@@ -122,4 +129,5 @@ main(process.argv.slice(2)).catch(error => {
   process.stderr.write(JSON.stringify({error:code, retry:'NO_AUTOMATIC_RETRY'}) + '\n');
   process.exitCode = 1;
 });
+
 
