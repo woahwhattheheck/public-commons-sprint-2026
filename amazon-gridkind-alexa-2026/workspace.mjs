@@ -3,9 +3,10 @@ import {mkdirSync,lstatSync,existsSync,chmodSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
 import {DEMO,inputs} from './engine.mjs';
+import {inspectWeek} from './weekly.mjs';
 
 const FORMAT='gridkind-household/v1';
-const KINDS=new Set(['scenario','plan','approval','execution','cancel','comparison','restore']);
+const KINDS=new Set(['scenario','plan','approval','execution','cancel','comparison','restore','week']);
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const clone=value=>structuredClone(value);
 function stable(value){
@@ -176,9 +177,10 @@ export function openHouseholdWorkspace({directory,sourcePins={}}){
         if(data.state.proposal)requireValue(typeof data.state.proposal.id==='string'&&Number.isSafeInteger(data.state.proposal.revision)&&data.state.proposal.revision>=1,'Invalid saved proposal.');
       }
       if(data.kind==='comparison')requireValue(data.detail?.report?.schema==='gridkind-rate-robustness-v1'&&Array.isArray(data.detail.report.alternatives),'Invalid saved tariff comparison.');
+      if(data.kind==='week')inspectWeek(data.detail?.report);
       ids.add(data.id);sequence=data.sequence;
     }
-    return {name:home.name,records:records.length,plans:records.filter(r=>r.kind==='plan').length,comparisons:records.filter(r=>r.kind==='comparison').length,sourceId:home.id,sha256:bundle.sha256};
+    return {name:home.name,records:records.length,plans:records.filter(r=>r.kind==='plan').length,comparisons:records.filter(r=>r.kind==='comparison').length,weeks:records.filter(r=>r.kind==='week').length,sourceId:home.id,sha256:bundle.sha256};
   }
   function importHousehold(id,expected,bundle,name){
     const preview=inspectImport(bundle);

@@ -103,5 +103,44 @@
     "operating": "products/human-services-directory/OPERATING.md",
     "receiving": "products/human-services-directory/RECEIVING.md",
     "sourceNotice": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/SOURCE_NOTICE.md"
+  },
+  "nativeReceivingOperation": {
+    "operation": "SCF-HUMAN-SERVICES-DIRECTORY-RECEIVING-450E-20261012",
+    "driver": {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_receiving.py",
+      "predecessorGitBlob": "0c7aab40c742ebd14d1efcfb8b8d2877c4aafe44",
+      "gitBlob": "b20bd2d78c1f1136946f8a75173e7862d610bbb4",
+      "bytes": 23478,
+      "sha256": "ab07c73ddb25a23cc1323629bc0d2ceebdff20e85bf8b2d15df6a266f3a6c03b"
+    },
+    "completeSourceArchive": {
+      "repository": "woahwhattheheck/Commons",
+      "bytes": 1813699,
+      "sha256": "cbba8849a00597c7e5e9a9ad013a263907c9e6f42acbd1ba1e637a6b2d32d086",
+      "gitBlob": "89bbfa1c49eebc8c9786cc7ee6361607f04b71c5",
+      "sourceFiles": 280,
+      "sourceBytes": 8193081,
+      "manifest": {
+        "path": "SOURCE_FILES.json",
+        "bytes": 133190,
+        "sha256": "00a0d8cc2d72627871ba1d387005e8bd0140e54da2400d5c9d5e20e09eabd1b9"
+      },
+      "predecessor": {
+        "repository": "woahwhattheheck/Commons",
+        "archiveGitBlob": "ed3e2ab4174f2b9a1209552d2d8e31d8fb52c4d7",
+        "archiveBytes": 1812562,
+        "archiveSha256": "66b762a4657ff93b6803cd6939e44fca3bf17c6c7295c02483c535bfc44df1de",
+        "manifestBytes": 131561,
+        "manifestSha256": "f1b5bdf26b6da6e4f52d9840578b2e97283b122a986d9eaf6f03b0082bd62789"
+      }
+    },
+    "materializer": {
+      "repository": "woahwhattheheck/Commons",
+      "gitBlob": "0a6b539164e43d90e9b4f547c802b1037e5e1ed0",
+      "bytes": 12387,
+      "sha256": "c4bebf09d44d7fc588c9f582a6868ca0ba643c8bfa104e568093900a8536a8fe"
+    },
+    "receivingBehavior": "Create missing private destination ancestors through the original directory guard before retaining connected inputs or exported files. Existing different source bytes remain a conflict. The source successor preserves all other 279 source files and every original source capsule.",
+    "continuation": "Restore the original complete workspace and DIRECTORY_JOURNEY.json, retain its predecessor source manifests, and continue the same operation and workspace UUID. Completed original journal steps are read back and reused."
   }
 }

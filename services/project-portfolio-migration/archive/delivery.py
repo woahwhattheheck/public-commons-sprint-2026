@@ -14,6 +14,8 @@ import zipfile
 
 from portfolio.storage import canonical, digest, file_identity, open_regular, require, sync_directory
 from portfolio_target.storage import write_bytes
+from .timephased_contract import PROJECTION as TIMEPHASED_PROJECTION
+from .timephased_report import report_section as timephased_report, guide_section as timephased_guide
 
 SCHEMA = "portfolio.archive-package.v1"
 
@@ -167,7 +169,9 @@ class ReceivedPackage:
             manifest = self.manifest
             require(manifest.get("schema") == SCHEMA and digest(manifest["review"]) == manifest["review_sha256"]
                     and manifest["review"].get("schema") == "portfolio.archive-review.v1"
-                    and manifest["review"].get("projection") == "portfolio.archive-projection.v1"
+                    and manifest["review"].get("projection") == (TIMEPHASED_PROJECTION
+                        if manifest["review"].get("profile", {}).get("timephased") is not None
+                        else "portfolio.archive-projection.v1")
                     and manifest.get("approval", {}).get("review_sha256") == manifest["review_sha256"],
                     "archive_manifest_schema", "The archive must name its exact reviewed cohort and reporting projection.")
             files = manifest.get("files")
@@ -320,7 +324,7 @@ th{background:#f1f1f1}code{overflow-wrap:anywhere}a{color:#222}p{max-width:100ch
 <section><h2>Complete relational delivery</h2><p><a href="portfolio.sqlite">SQLite database</a> · <a href="power-query.m">Power Query import</a> · <a href="azure-sql.sql">Azure SQL table schema</a> · <a href="data-dictionary.json">Column dictionary</a> · <a href="manifest.json">Original source and file inventory</a></p>""" + counts + """</section>
 <section><h2>Source findings and reporting definitions</h2><p>The original schedules, field definitions, native JSON, calendars and companion files are retained in this package. Local date/time values retain their original semantics.</p>""" + findings + """</section>
 <section><h2>Receiving and ongoing use</h2><p>Use the existing Portfolio migration desk Archive section to receive this complete ZIP. It restores the selected immutable source records and reporting database into the original workspace. Existing projects and native target operations stay in their current catalogues. Use the portable whole-workspace command for the complete working operator and its history.</p><p>Import CSV through the supplied Power Query function to preserve text, leading zeroes, exact numbers and quoted line breaks. Convert financial or duration values only with explicit original currency and native unit choices. The SQLite query interface provides <code>decimal_sum(value_text)</code> for exact decimal sums.</p></section>
-</body></html>"""
+""" + timephased_report(review) + """</body></html>"""
 
 
 def readme(review):
@@ -365,4 +369,4 @@ Receiving does not run MPXJ, contact a native target or change existing project 
 
 Original source files and metadata can contain confidential customer information.
 Deliver this selected package to its intended recipient through the existing case.
-"""
+""" + timephased_guide(review)
