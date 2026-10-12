@@ -68,7 +68,7 @@ Supported asset addresses are s3://bucket/key and the standard https://bucket.s3
       timeoutMs: 300000
     });
 
-Construction starts one private Python worker, imports the unchanged SDK, checks the original source hashes and validates effective settings. The returned metadata contains the actual SDK source revision, installed version, endpoint, catalog URL, authentication mode and allowed origins.
+Construction starts one private Python worker, imports the unchanged SDK, checks the original source hashes and validates effective settings. An optional constructor signal cancels and drains that worker during initialization, before the caller has received its close handle. Pass the host's owned AbortSignal when construction belongs to a running service. The returned metadata contains the actual SDK source revision, installed version, endpoint, catalog URL, authentication mode and allowed origins.
 
 | Method | Input and result |
 | --- | --- |
