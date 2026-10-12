@@ -204,3 +204,42 @@ contract are documented in jobs/README.md. Set WQX_JOB_TEMP_ROOT to an existing
 private scratch directory in the original worker's environment. The temporary
 source project is confined to that directory and the job returns its full
 operating result through the original output lifecycle.
+
+## Receive the complete installed application
+
+The maintained `receive-managed.mjs` command operates through the actual installed
+Runtime Workspace and Applications HTTP routes. It attaches the existing READY
+runtime, reviews and saves the selected WQX application, adopts that original
+runtime, starts its original managed command, consumes all eleven report/source
+downloads, stops the original process, and starts the same saved project again.
+Each complete download is streamed and compared with the original project
+engine's filename, byte count and SHA-256. It retains the original source,
+scientific review and Open Waters plan throughout both launches.
+
+Copy `managed-receiving.example.json` into the private receiving directory, set
+mode 0600, and fill `runtimeDirectory`, `expectedSourceCommit` and
+`expectedManifest` from the actual completed runtime installation. Select the
+existing received `projectDirectory`, its original `reviewId` and `planId`.
+The independently received project from `jobs/receive.mjs` can be used directly.
+To receive into a new project, also set `bundleFile` to the complete original
+Open Waters JSON and retain its actual review and plan IDs. The project's parent
+must already be private.
+
+```sh
+node --expose-gc --max-old-space-size=384 \
+  stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/receive-managed.mjs \
+  /absolute/private/water-receiving/managed-input.json
+```
+
+The command retains `managed-receiving.json` beside its original Applications
+controller. Use the same configuration and directory after a reconnect. Save,
+adoption and managed Start use their retained native operation IDs; an incomplete
+reading attempt that was already stopped keeps its original record before a
+following managed attempt starts. A completed run includes both original launch
+identities, the stable project binding, all 32 application/download reads and
+22 complete report/source transfers. The original full data and result archives
+remain in the selected project and original scientific receiving operation.
+
+The command uses the existing source/runtime profile and native dependencies.
+It does not install another runtime. The controller and original workspace retain
+the normal Applications Open, Stop and recovery controls.
