@@ -28,6 +28,33 @@ All CLI paths below are absolute. Set `SAFE_REVIEW_CLI` to this directory's `cli
 node "$SAFE_REVIEW_CLI" --help
 ```
 
+## Installed package
+
+The source-owned `palmera-safe-review` registration includes this entire component and its receiving inputs in the normal merchant package. Use the installed command to run the same original CLI:
+
+```sh
+starforge registrations --source palmera-safe-review
+starforge registrations --command safe-review
+starforge safe-review --help
+starforge safe-review selection --directory "$REVIEW_ROOT/selection-a"
+starforge safe-review recover --intent safe-review-a --state "$REVIEW_ROOT/buyer-state" --runtime "$BUYER_RUNTIME"
+starforge safe-review receive --from "$REVIEW_ROOT/handover-a" --out "$REVIEW_ROOT/received/handover-a" --analysis "$REVIEW_ROOT/received/analysis"
+```
+
+Every command in the workflow below is available by replacing `node "$SAFE_REVIEW_CLI"` with `starforge safe-review`. Arguments, original buyer state, merchant selection and receiving directories keep the same meaning.
+
+Applications can import the maintained interfaces directly:
+
+```js
+import { SafeSimulationBuyer } from '@tokenjunkielabs/starforge-merchant/buyer/safe-review';
+import { preparePalmeraSelection, prepareSafeSelection } from '@tokenjunkielabs/starforge-merchant/buyer/safe-review/transaction';
+import { prepareSafePurchase } from '@tokenjunkielabs/starforge-merchant/buyer/safe-review/preparation';
+import { exportHandover, openHandover, receiveHandover } from '@tokenjunkielabs/starforge-merchant/buyer/safe-review/handover';
+import { readPublicSafe } from '@tokenjunkielabs/starforge-merchant/buyer/safe-review/receiving';
+```
+
+The package includes the original native buyer, Tenderly customer and analysis source dependencies. The calling application supplies its existing Palmera / Safe SDK, provider and wallet connection. For the public receiving input, the loader resolves Protocol Kit from that exact caller-owned Palmera package and checks both recorded SDK versions.
+
 ## 1. Capture the transaction already selected in Palmera
 
 The application integration uses the original objects directly:
