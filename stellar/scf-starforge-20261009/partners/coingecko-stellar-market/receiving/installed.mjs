@@ -1,20 +1,21 @@
 // Receive through an original READY runtime or the selected original builder and installer.
 import { mkdir, readFile, writeFile, rename, lstat, realpath } from 'node:fs/promises';
 import { resolve, join, isAbsolute } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { pathToFileURL, fileURLToPath } from 'node:url';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createHash, randomUUID } from 'node:crypto';
+import { readCoinGeckoSourceContinuation, receiveCoinGeckoApplication } from './applications.mjs';
 
 const exec = promisify(execFile), hash = x => createHash('sha256').update(x).digest('hex');
 const args = process.argv.slice(2), selected = {};
 for(let i=0;i<args.length;i+=2) {
- if(!['--selection','--work','--output','--retained-runtime'].includes(args[i]) || !args[i+1] ||
-    Object.hasOwn(selected,args[i].slice(2))) throw new Error('Use --selection FILE --work DIRECTORY --output DIRECTORY [--retained-runtime FILE]');
+ if(!['--selection','--work','--output','--retained-runtime','--source-predecessor'].includes(args[i]) || !args[i+1] ||
+    Object.hasOwn(selected,args[i].slice(2))) throw new Error('Use --selection FILE --work DIRECTORY --output DIRECTORY [--retained-runtime FILE] [--source-predecessor FILE]');
  selected[args[i].slice(2)] = args[i+1];
 }
 if(!selected.selection || !selected.work || !selected.output)
- throw new Error('Use --selection FILE --work DIRECTORY --output DIRECTORY [--retained-runtime FILE]');
+ throw new Error('Use --selection FILE --work DIRECTORY --output DIRECTORY [--retained-runtime FILE] [--source-predecessor FILE]');
 const inputPath=resolve(selected.selection), work=resolve(selected.work), output=resolve(selected.output);
 const inputBytes=await readFile(inputPath), input=JSON.parse(inputBytes);
 const B='stellar/scf-starforge-20261009/';
@@ -41,6 +42,20 @@ if(retainedPath){
    .every(key=>/^[a-f0-9]{64}$/.test(retained[key]??'')),
  'ORIGINAL_READY_RUNTIME_DESCRIPTOR_REQUIRED');
 }
+const sourcePredecessor=selected['source-predecessor']?
+ await readCoinGeckoSourceContinuation(resolve(selected['source-predecessor']),input):null;
+let continuationReceiver=null;
+if(sourcePredecessor){
+ need(retained,'SOURCE_CORRECTION_READY_RUNTIME_REQUIRED');
+ need(typeof input.driver==='string'&&input.driver.length>0,'ORIGINAL_RECEIVING_DRIVER_REQUIRED');
+ const receiverPath=fileURLToPath(new URL('./applications.mjs',import.meta.url));
+ const receiverInfo=await lstat(receiverPath);
+ need(receiverInfo.isFile()&&!receiverInfo.isSymbolicLink()&&
+  await realpath(receiverPath)===receiverPath,'SOURCE_CONTINUATION_RECEIVER_PATH_CHANGED');
+ continuationReceiver={path:receiverPath,sha256:hash(await readFile(receiverPath)),originalDriver:input.driver};
+}
+const predecessorSelection=sourcePredecessor?
+ {path:sourcePredecessor.path,sha256:sourcePredecessor.sha256}:null;
 const runtimeSelection=retained?{kind:'retained',path:retainedPath,sha256:hash(retainedBytes)}:
  {kind:'build',sourceCommit:input.sourceCommit};
 await mkdir(work,{recursive:true,mode:0o700});await mkdir(output,{recursive:true,mode:0o700});
@@ -54,6 +69,14 @@ need(state.inputSha256===hash(inputBytes),'ORIGINAL_INSTALLED_SELECTION_CHANGED'
 need(state.schema==='stellar-forge.coingecko-installed-receiving.v1'&&
  state.stages&&typeof state.stages==='object'&&!Array.isArray(state.stages),
  'ORIGINAL_INSTALLED_CHECKPOINT_INVALID');
+if(Object.hasOwn(state,'sourcePredecessor'))
+ need(JSON.stringify(state.sourcePredecessor)===JSON.stringify(predecessorSelection),
+  'ORIGINAL_SOURCE_PREDECESSOR_CHANGED');
+else {
+ need(!sourcePredecessor||!Object.keys(state.stages).length&&!state.preparation&&!state.runtime&&!state.result,
+  'SOURCE_CONTINUATION_SEPARATE_PREFIX_REQUIRED');
+ state.sourcePredecessor=predecessorSelection;
+}
 const runtimeStarted=async()=>Boolean(state.preparation||state.runtime||state.result||
  await exists(join(work,'runtime','preparation.json'))||
  await exists(join(work,'runtime','runtime-install.json'))||
@@ -195,13 +218,40 @@ const receiving={
  originalSources:input.originalSources,actor:input.actor,
  playwrightModule:input.playwrightModule,browserExecutable:input.browserExecutable,
  ...(input.browserArgs!==undefined?{browserArgs:input.browserArgs}:{}),
- ...(input.configurationFile?{configurationFile:input.configurationFile}:{})
+ ...(input.configurationFile?{configurationFile:input.configurationFile}:{}),
+ ...(input.allowLocalMerchant===true?{allowLocalMerchant:true}:{}),
+ ...(predecessorSelection?{sourceContinuation:predecessorSelection,
+  sourceContinuationReceiver:continuationReceiver}:{})
 };
 const manifest=join(work,'applications-receiving.json');
 if(await exists(manifest))need(JSON.stringify(JSON.parse(await readFile(manifest,'utf8')))===JSON.stringify(receiving),'ORIGINAL_APPLICATION_MANIFEST_CHANGED');
 else await save(manifest,receiving);
-const driver=await import(pathToFileURL(input.driver).href);
-const result=await driver.receiveCoinGeckoApplication({manifest,output});
+// An explicit source correction must execute this paired receiver; the original
+// configured driver remains recorded history and may still contain the defect.
+const result=sourcePredecessor?await receiveCoinGeckoApplication({manifest,output}):
+ await (await import(pathToFileURL(input.driver).href)).receiveCoinGeckoApplication({manifest,output});
+if(sourcePredecessor){
+ const recorded=result.sourceContinuation;
+ need(recorded&&recorded.descriptorSha256===sourcePredecessor.sha256&&
+  typeof recorded.path==='string'&&recorded.path===resolve(recorded.path)&&
+  /^[a-f0-9]{64}$/.test(recorded.sha256??''),'SOURCE_CONTINUATION_RECEIPT_REQUIRED');
+ const before=await lstat(recorded.path);
+ need(before.isFile()&&!before.isSymbolicLink()&&before.size<=4*1024*1024&&
+  await realpath(recorded.path)===recorded.path,'SOURCE_CONTINUATION_RECEIPT_CHANGED');
+ const bytes=await readFile(recorded.path),after=await lstat(recorded.path),receipt=JSON.parse(bytes);
+ need(before.dev===after.dev&&before.ino===after.ino&&before.size===after.size&&
+  before.mtimeMs===after.mtimeMs&&before.ctimeMs===after.ctimeMs&&
+  bytes.length===recorded.bytes&&hash(bytes)===recorded.sha256&&
+  receipt.schema==='stellar-forge.coingecko-source-continuation-receipt.v1'&&
+  receipt.descriptor?.sha256===sourcePredecessor.sha256&&
+  receipt.successorManifestSha256===hash(await readFile(manifest))&&
+  receipt.receiver?.path===continuationReceiver.path&&receipt.receiver?.sha256===continuationReceiver.sha256&&
+  receipt.originalConfiguredDriver===input.driver&&
+  receipt.selectedRuntime?.sourceCommit===state.runtime.sourceCommit&&
+  receipt.selectedRuntime?.sourceManifestSha256===state.runtime.sourceManifestSha256,
+ 'SOURCE_CONTINUATION_RECEIPT_CHANGED');
+}
 state.result={applicationId:result.applicationId,projectId:result.projectId,completedAt:result.completedAt,
- requestedSourceCommit:input.sourceCommit,selectedSourceCommit:result.sourceCommit,runtimeSelection:state.runtimeSelection};
+ requestedSourceCommit:input.sourceCommit,selectedSourceCommit:result.sourceCommit,runtimeSelection:state.runtimeSelection,
+ ...(result.sourceContinuation?{sourceContinuation:result.sourceContinuation}:{})};
 await persist();say({complete:true,...state.result});
