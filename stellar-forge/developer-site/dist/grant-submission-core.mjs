@@ -15,6 +15,16 @@ export const ANSWERS = [
   ['capacity','Delivery capacity, payment timing and sustainability'],
   ['applicant','Applicant, experience and submission'],
 ];
+// Later canonical headings retain the same nine saved-answer identities.
+const ANSWER_HEADINGS = new Map([
+  ...ANSWERS.map(([id, title]) => [title, id]),
+  ["Customer problem, first payer and adoption", "need"],
+  ["Why Stellar and how the product differs", "stellar"],
+  ["Defined architecture and customer operation", "architecture"],
+  ["Working foundation and demonstrated customer results", "product"],
+  ["Threat response and measurable acceptance", "outcomes"],
+  ["Capacity, payment timing and sustainability", "capacity"],
+]);
 export const REQUIREMENTS = [
   {id:'complete',title:'A complete answer within the form',answers:ANSWERS.map(x=>x[0]),detail:'Include the facts needed for review in the answers themselves.'},
   {id:'need',title:'Demonstrated customer need',answers:['need','product'],detail:'Explain actual use or validated need and relevant experience.'},
@@ -54,7 +64,7 @@ export function measureText(value){
 export function parseAnswers(markdown){
   string(markdown,'Original application');
   const matches=[...markdown.matchAll(/^## ([^\r\n]+)\r?$/gm)];
-  need(JSON.stringify(matches.map(x=>x[1]))===JSON.stringify(ANSWERS.map(x=>x[1])),'Use the complete original application with its nine canonical answers in order.');
+  need(JSON.stringify(matches.map(x=>ANSWER_HEADINGS.get(x[1])))===JSON.stringify(ANSWERS.map(x=>x[0])),'Use the complete application with its nine original answer identities and accepted headings in order.');
   return matches.map((match,index)=>({id:ANSWERS[index][0],title:match[1],
     text:markdown.slice(match.index+match[0].length,index+1<matches.length?matches[index+1].index:markdown.length).replace(/^\r?\n/,'').trim()}));
 }
