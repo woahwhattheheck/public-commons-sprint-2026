@@ -1,0 +1,61 @@
+{
+  "schema": "stellar-forge.python-buyer-native-return.v1",
+  "operation": "SF88-PYTHON-STARTUP-4BF5-20261012",
+  "source": "728b14bd0bfbacee5578ad91ed02dfca2f2411c5",
+  "session_id": 81168,
+  "source_members": 66,
+  "public_interfaces": 52,
+  "native_state": "COMPLETE",
+  "process_exit_code": 1,
+  "delivery_state": "transfer_failed",
+  "phases": [
+    {
+      "state": "ORIGINAL_API_PHASE_COMPLETE",
+      "mode": "baseline",
+      "public_count": 52,
+      "storage_modules": [
+        "stellar_forge_buyer",
+        "stellar_forge_buyer.acquisitions",
+        "stellar_forge_buyer.client",
+        "stellar_forge_buyer.dataset_semantics",
+        "stellar_forge_buyer.datasets",
+        "stellar_forge_buyer.duckdb_agent",
+        "stellar_forge_buyer.duckdb_dataset",
+        "stellar_forge_buyer.duckdb_semantics",
+        "stellar_forge_buyer.duckdb_spatial",
+        "stellar_forge_buyer.errors",
+        "stellar_forge_buyer.inbox",
+        "stellar_forge_buyer.objects",
+        "stellar_forge_buyer.postgres_delivery",
+        "stellar_forge_buyer.recovery",
+        "stellar_forge_buyer.requests",
+        "stellar_forge_buyer.research_documents",
+        "stellar_forge_buyer.research_workspace",
+        "stellar_forge_buyer.result",
+        "stellar_forge_buyer.runtime",
+        "stellar_forge_buyer.storage",
+        "stellar_forge_buyer.streams"
+      ],
+      "storage_import_wall_seconds": 0.1124017330002971,
+      "storage_import_cpu_seconds": 0.10736573900000002,
+      "storage_import_maxrss_kib": 35104
+    },
+    {
+      "state": "ORIGINAL_API_PHASE_COMPLETE",
+      "mode": "candidate",
+      "public_count": 52,
+      "storage_modules": [
+        "stellar_forge_buyer",
+        "stellar_forge_buyer.errors",
+        "stellar_forge_buyer.storage"
+      ],
+      "storage_import_wall_seconds": 0.007075888992403634,
+      "storage_import_cpu_seconds": 0.007064858,
+      "storage_import_maxrss_kib": 35104
+    }
+  ],
+  "original_stdout": "{\"state\":\"ORIGINAL_SOURCE_REUSE\",\"matched\":19,\"native_reads\":47,\"commit\":\"728b14bd0bfbacee5578ad91ed02dfca2f2411c5\"}\n{\"state\":\"ORIGINAL_API_PHASE_COMPLETE\",\"mode\":\"baseline\",\"public_count\":52,\"storage_modules\":[\"stellar_forge_buyer\",\"stellar_forge_buyer.acquisitions\",\"stellar_forge_buyer.client\",\"stellar_forge_buyer.dataset_semantics\",\"stellar_forge_buyer.datasets\",\"stellar_forge_buyer.duckdb_agent\",\"stellar_forge_buyer.duckdb_dataset\",\"stellar_forge_buyer.duckdb_semantics\",\"stellar_forge_buyer.duckdb_spatial\",\"stellar_forge_buyer.errors\",\"stellar_forge_buyer.inbox\",\"stellar_forge_buyer.objects\",\"stellar_forge_buyer.postgres_delivery\",\"stellar_forge_buyer.recovery\",\"stellar_forge_buyer.requests\",\"stellar_forge_buyer.research_documents\",\"stellar_forge_buyer.research_workspace\",\"stellar_forge_buyer.result\",\"stellar_forge_buyer.runtime\",\"stellar_forge_buyer.storage\",\"stellar_forge_buyer.streams\"],\"storage_import_wall_seconds\":0.1124017330002971,\"storage_import_cpu_seconds\":0.10736573900000002,\"storage_import_maxrss_kib\":35104}\n{\"state\":\"ORIGINAL_API_PHASE_COMPLETE\",\"mode\":\"candidate\",\"public_count\":52,\"storage_modules\":[\"stellar_forge_buyer\",\"stellar_forge_buyer.errors\",\"stellar_forge_buyer.storage\"],\"storage_import_wall_seconds\":0.007075888992403634,\"storage_import_cpu_seconds\":0.007064858,\"storage_import_maxrss_kib\":35104}\n{\"state\":\"PYTHON_BUYER_IMPORT_COMPLETE\",\"operation\":\"SF88-PYTHON-STARTUP-4BF5-20261012\",\"commit\":\"728b14bd0bfbacee5578ad91ed02dfca2f2411c5\",\"report\":\"/dev/python-buyer-startup-4bf5/native-result.json\",\"delivery\":{\"results\":[{\"local_path\":\"/dev/python-buyer-startup-4bf5/native-result.json\",\"purpose\":\"create_library_file\",\"status\":\"failed\",\"error_code\":\"transfer_failed\",\"message\":\"file transfer failed\"}]}}\n{\"state\":\"PYTHON_BUYER_IMPORT_FAILED\",\"schema\":\"stellar-forge.python-buyer-import-failure.v1\",\"operation\":\"SF88-PYTHON-STARTUP-4BF5-20261012\",\"commit\":\"728b14bd0bfbacee5578ad91ed02dfca2f2411c5\",\"phase\":\"COMPLETE\",\"error\":{\"type\":\"RuntimeError\",\"message\":\"Original report upload is incomplete\"},\"root\":\"/dev/python-buyer-startup-4bf5\"}\nTraceback (most recent call last):\n  File \"<string>\", line 172, in <module>\nRuntimeError: Original report upload is incomplete\n",
+  "execution": "The original one-call source reader materialized and verified all selected SDK members, then executed the same PHASE body retained in verify.py. It froze its native report COMPLETE before the original artifact transfer failed.",
+  "observations": "Single native receiving run; startup times describe this observed process pair. Both processes reported the same maximum resident memory.",
+  "portableSourceCommit": "3c06ccbb0821039621398f3ccd87efe5a24b6a9c"
+}
