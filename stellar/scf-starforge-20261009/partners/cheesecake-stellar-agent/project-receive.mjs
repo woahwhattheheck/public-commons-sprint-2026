@@ -160,7 +160,7 @@ export async function receiveApplicationProject(options) {
         sourceRoot:absolute(options.sourceRoot),passphraseEnv:options.passphraseEnv};
       await publishBytes(join(directory,'receiver.json'),json(receiver));
       await syncDirectory(directory);
-      return {schema:PROJECT,status:'APPLICATION_PROJECT_RECEIVED',directory,...receiver,
+      return {...receiver,schema:PROJECT,status:'APPLICATION_PROJECT_RECEIVED',directory,
         requests:opened.record.application.requests.length,
         resultBytes:opened.record.application.results.reduce((n,row)=>n+row.bytes,0),
         financialOwners:opened.verified.map(row=>({kind:row.kind,...row.value})),
@@ -339,6 +339,10 @@ export async function restoreApplicationProject(options) {
   });
 }
 async function verifyLiveBindings(loaded,record,context) {
+  need(isDeepStrictEqual(loaded.config,record.config)&&
+    loaded.launchBinding?.configFile===record.configFile&&
+    loaded.launchBinding?.configurationSha256===record.configurationSha256,
+    'APPLICATION_PROJECT_LIVE_CONFIGURATION_CHANGED');
   need(loaded.config.applicationId===record.config.applicationId&&loaded.config.subject===record.config.subject&&
     loaded.application.identity.handoffId===record.application.identity.handoffId&&
     loaded.application.identity.manifestSha256===record.application.identity.manifestSha256&&
@@ -382,13 +386,28 @@ export async function openReceivedApplicationProject({directory,sourceRoot,subje
   const results=new Map(record.application.results.map(row=>[row.intentId,row]));
   const byKind=kind=>new Map(record.application[kind].map(row=>[row.intentId,row.value]));
   const reviews=byKind('reviews'),outcomes=byKind('outcomes'),spending=byKind('spending');
-  let closed=false,live=null,liveTask,releaseLive,transition;
+  let closed=false,live=null,liveTask,releaseLive,transition,closeTask;
+  const active=new Set();
+  function track(operation){
+    need(!closed,'APPLICATION_PROJECT_CLOSED');
+    const task=Promise.resolve().then(operation);
+    active.add(task);
+    const done=()=>active.delete(task);task.then(done,done);
+    return task;
+  }
+  function beginTransition(operation){
+    need(!transition&&!live,'APPLICATION_PROJECT_TRANSITION_RUNNING');
+    const task=track(operation);transition=task;
+    const done=()=>{if(transition===task)transition=null;};task.then(done,done);
+    return task;
+  }
   async function permitted(context,action,request){
     need(!closed&&object(context)&&typeof context.subject==='string','APPLICATION_AUTHENTICATED_SUBJECT_REQUIRED');
     const fresh=await received(directory);need(fresh.receiver.recordSha256===receiver.recordSha256,
       'APPLICATION_PROJECT_RECEIVER_CHANGED');
     need(await authorize({context:structuredClone(context),action,applicationId:record.config.applicationId,
       request:request?structuredClone(request):null})===true,'APPLICATION_AUTHORIZATION_DENIED');
+    need(!closed,'APPLICATION_PROJECT_CLOSED');
   }
   class CapturedFile extends native.VerifiedFile {
     constructor(row){super();this.row=row;}
@@ -401,7 +420,7 @@ export async function openReceivedApplicationProject({directory,sourceRoot,subje
     selectedIntentIds:Object.freeze([...requests.keys()]),
     responseByteLimit(intentId){return requests.get(intentId)?.responseByteLimit??(requests.get(intentId)?.requestKind==='mcp'?2097152:1048576);},
     supportsAction(action){return live?live.application.supportsAction?.(action):action==='spending'&&spending.size>0;},
-    async requests(context){
+    async requests(context){return track(async()=>{
       await permitted(context,'list',null);
       if(live)return live.application.requests(context);
       const selected=[];
@@ -411,8 +430,8 @@ export async function openReceivedApplicationProject({directory,sourceRoot,subje
       }
       return {applicationId:record.config.applicationId,handoffId:record.application.identity.handoffId,requests:selected,
         project:{mode:'RECEIVED',recordSha256:receiver.recordSha256}};
-    },
-    async call(context,action,intentId,options={}){
+    });},
+    async call(context,action,intentId,options={}){return track(async()=>{
       const request=requests.get(intentId);need(request,'APPLICATION_REQUEST_NOT_SELECTED');
       await permitted(context,action,request);
       if(live)return live.application.call(context,action,intentId,options);
@@ -437,35 +456,55 @@ export async function openReceivedApplicationProject({directory,sourceRoot,subje
           new TextDecoder('utf-8',{fatal:true}).decode(raw);
       }
       return artifact;
-    },
+    });},
     async project(context,action,options={}){
-      await permitted(context,'project-'+action,null);
       need(['inspect','restore','reattach','open','close-live'].includes(action),'APPLICATION_PROJECT_ACTION_INVALID');
-      if(action==='inspect')return inspectReceivedApplicationProject({directory,sourceRoot,mode:options.mode??'restore'});
-      if(action==='close-live'){
-        releaseLive?.();await liveTask;return {schema:PROJECT,status:'APPLICATION_PROJECT_LIVE_CLOSED'};
-      }
-      need(!transition&&!live,'APPLICATION_PROJECT_TRANSITION_RUNNING');
-      const settings={directory,sourceRoot,environment,passphraseEnv:passphraseEnv??receiver.passphraseEnv,
-        expectedRecordSha256:options.expectedRecordSha256,mode:action==='reattach'?'reattach':options.mode??'restore',
-        signal:options.signal};
-      if(action!=='open'){
-        transition=restoreApplicationProject(settings);
-        try{return await transition;}finally{transition=null;}
-      }
-      need(context.subject===record.config.subject,'APPLICATION_PROJECT_ORIGINAL_SUBJECT_REQUIRED');
-      let ready,failed;
-      const opened=new Promise((accept,reject)=>{ready=accept;failed=reject;});
-      transition=opened;
-      liveTask=withRestoredApplicationProject(settings,async loaded=>{
-        live=loaded;ready({schema:PROJECT,status:'APPLICATION_PROJECT_LIVE_OPEN',recovery:loaded.recovery,
-          identity:loaded.application.identity});
-        await new Promise(resolve=>{releaseLive=resolve;});
-      }).catch(error=>{failed(error);throw error;}).finally(()=>{live=null;releaseLive=null;liveTask=null;});
-      liveTask.catch(()=>{});
-      try{return await opened;}finally{transition=null;}
+      if(action==='inspect'||action==='close-live')return track(async()=>{
+        await permitted(context,'project-'+action,null);
+        if(action==='inspect')return inspectReceivedApplicationProject({directory,sourceRoot,mode:options.mode??'restore'});
+        // An opening transition owns the future live release callback. Wait until it has
+        // either installed that callback or failed before asking the operator to close.
+        await transition?.catch(()=>{});
+        releaseLive?.();await liveTask;
+        return {schema:PROJECT,status:'APPLICATION_PROJECT_LIVE_CLOSED'};
+      });
+      // Reserve the transition synchronously, before host authorization can suspend.
+      // close() can therefore drain every accepted operation and a concurrent open
+      // cannot start a second original owner while the first is awaiting permission.
+      return beginTransition(async()=>{
+        await permitted(context,'project-'+action,null);
+        const settings={directory,sourceRoot,environment,passphraseEnv:passphraseEnv??receiver.passphraseEnv,
+          expectedRecordSha256:options.expectedRecordSha256,mode:action==='reattach'?'reattach':options.mode??'restore',
+          signal:options.signal};
+        if(action!=='open')return restoreApplicationProject(settings);
+        need(context.subject===record.config.subject,'APPLICATION_PROJECT_ORIGINAL_SUBJECT_REQUIRED');
+        let ready,failed;
+        const opened=new Promise((accept,reject)=>{ready=accept;failed=reject;});
+        liveTask=withRestoredApplicationProject(settings,async loaded=>{
+          need(!closed,'APPLICATION_PROJECT_CLOSED');
+          live=loaded;
+          await new Promise(resolve=>{
+            releaseLive=resolve;
+            ready({schema:PROJECT,status:'APPLICATION_PROJECT_LIVE_OPEN',recovery:loaded.recovery,
+              identity:loaded.application.identity});
+          });
+        }).catch(error=>{failed(error);throw error;}).finally(()=>{live=null;releaseLive=null;liveTask=null;});
+        liveTask.catch(()=>{});
+        return opened;
+      });
     },
-    async close(){if(closed)return;closed=true;await transition?.catch(()=>{});releaseLive?.();await liveTask?.catch(()=>{});},
+    close(){
+      if(closeTask)return closeTask;
+      closed=true;
+      // Releasing a live host starts its original broker cancellation before pending
+      // request drains. An opening host sees closed before its callback is exposed.
+      releaseLive?.();
+      closeTask=(async()=>{
+        await Promise.allSettled([...active]);
+        releaseLive?.();await liveTask?.catch(()=>{});
+      })();
+      return closeTask;
+    },
   };
   return application;
 }

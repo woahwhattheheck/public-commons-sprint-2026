@@ -13,6 +13,8 @@ const native = await import(pathToFileURL(join(source,'stellar-forge/mcp-paid-ag
 const names=['SF36_CONSENT_KEY_B64','SF36_AUDIT_KEY_B64','SF36_OPERATOR_KEY_B64'];
 const environment={...process.env,MCP_BACKUP_PASSPHRASE:randomBytes(32).toString('base64')};
 for(const name of names)environment[name]=randomBytes(32).toString('base64');
+const fixtureEnvironment=Object.fromEntries([...names,'MCP_BACKUP_PASSPHRASE'].map(name=>[name,environment[name]]));
+await writeFile(join(operation,'fixture-environment.json'),JSON.stringify(fixtureEnvironment,null,2)+'\n', {mode:0o600,flag:'wx'});
 const owner=join(operation,'owner'),bundle=join(operation,'encrypted');
 const setup=spawnSync(python,['-I','-B',join(operation,'fixture.py'),source,owner],
  {env:environment,encoding:'utf8'});

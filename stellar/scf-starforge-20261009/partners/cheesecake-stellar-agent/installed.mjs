@@ -64,7 +64,7 @@ export async function installedApplicationPaths() {
   }
   return {schema:'stellar-forge.application-installed-paths.v1',sourceRoot,applicationDirectory,
     runtimeDirectory,operatorGuide:join(applicationDirectory,'OPERATOR.md'),
-    installedGuide:join(applicationDirectory,'INSTALLED.md')};
+    installedGuide:join(applicationDirectory,'INSTALLED.md'),projectGuide:join(applicationDirectory,'PROJECT_RECOVERY.md')};
 }
 async function selection(config, {requireState = true,managedSourceDirectory} = {}) {
   const paths = await installedApplicationPaths();
@@ -197,11 +197,14 @@ const help = [
   '  starforge stellar-application init --dir NEW_PRIVATE_DIRECTORY --id APPLICATION_ID',
   '    --subject HOST_SUBJECT --handoff ORIGINAL_HANDOFF_DIRECTORY',
   '    [--profile ORIGINAL_OPERATOR_PROFILE] [--authorization TRUSTED_MODULE] [--remote REMOTE_SELECTION_JSON]',
+  '    [--project-profile PRIVATE_PROJECT_PROFILE_JSON]',
   '  starforge stellar-application inspect --config PRIVATE_APPLICATION_JSON',
   '  starforge stellar-application serve --config PRIVATE_APPLICATION_JSON [--port 0] [--host 127.0.0.1|::1]',
   '    [--expected-selection-sha256 REVIEWED_SOURCE_SHA256] [--managed-source SELECTED_APPLICATION_DIRECTORY]',
   '  starforge stellar-application list|verify-source --config PRIVATE_APPLICATION_JSON',
   '  starforge stellar-application review|execute|status|recover|read|export|cancel|spending|reconcile ...',
+  '  starforge stellar-application project-help',
+  '  starforge stellar-application project-configure|project-snapshot|project-receive|project-serve ...',
   '',
   'Serve uses STELLAR_APP_ACCESS_TOKEN from the protected process environment.',
   'Enter that token in the original browser connection field. Payment approval uses the original terminal.',
