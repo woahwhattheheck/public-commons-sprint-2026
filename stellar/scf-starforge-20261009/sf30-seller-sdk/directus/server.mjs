@@ -19,13 +19,28 @@ import {DIRECTUS_OPERATOR_LAUNCH_SCHEMA,verifyDirectusOperatorSourceSelection} f
 
 const HERE=path.dirname(fileURLToPath(import.meta.url));
 const ID=/^[A-Za-z0-9_.:-]{8,128}$/;
+async function syncDirectory(directory){
+  const handle=await fsp.open(directory,'r');
+  try{await handle.sync();}finally{await handle.close();}
+}
+async function durableDirectory(directory){
+  const first=await fsp.mkdir(directory,{recursive:true,mode:0o700});
+  if(first===undefined)return;
+  const stop=path.dirname(path.resolve(first));let current=path.resolve(directory);
+  for(;;){
+    await syncDirectory(current);if(current===stop)return;
+    const parent=path.dirname(current);
+    if(parent===current)throw fault('OPERATOR_DIRECTORY','The created operator directory ancestry changed.');
+    current=parent;
+  }
+}
 async function saveJson(file,value){
   const temporary=file+'.'+randomUUID()+'.tmp';
   let handle;
   try{
     handle=await fsp.open(temporary,'wx',0o600);
     await handle.writeFile(JSON.stringify(value,null,2)+'\n');await handle.sync();await handle.close();handle=null;
-    await fsp.rename(temporary,file);
+    await fsp.rename(temporary,file);await syncDirectory(path.dirname(file));
   }finally{await handle?.close();await fsp.unlink(temporary).catch(e=>{if(e.code!=='ENOENT')throw e;});}
 }
 async function body(req,limit=2*1024*1024){
@@ -42,7 +57,7 @@ export async function startDirectusOperator({directory,workspaceDirectory,source
   if(!['127.0.0.1','::1','localhost'].includes(host))throw fault('OPERATOR_HOST','Use a loopback host for this private operator.');
   if(!Number.isSafeInteger(port)||port<0||port>65535)throw fault('OPERATOR_PORT','Choose a port from 0 to 65535.');
   if(typeof token!=='string'||!/^[A-Za-z0-9_-]{32,256}$/.test(token))throw fault('OPERATOR_TOKEN','Use a private URL-safe operator credential.');
-  const requested=path.resolve(directory??'.directus-operator');await fsp.mkdir(requested,{recursive:true,mode:0o700});
+  const requested=path.resolve(directory??'.directus-operator');await durableDirectory(requested);
   const selectedSource=await verifyDirectusOperatorSourceSelection({directory:requested,workspaceDirectory,sourceDirectory,expectedSelectionSha256});
   const root=selectedSource.selection.directory,instanceId='directus-instance-'+randomUUID();
   const lease=acquireDatasetLease(root),registryFile=path.join(root,'operator.json'),launchFile=path.join(root,'operator-launch.json');
@@ -53,10 +68,12 @@ export async function startDirectusOperator({directory,workspaceDirectory,source
   const closeOwned=async()=>{
     let failure;
     try{await nativeOperations.close();}catch(error){failure=error;}
-    for(const service of merchants.values())try{await service.close();}catch(error){failure??=error;}
-    merchants.clear();
-    try{await workspace?.close();}catch(error){failure??=error;}
+    for(const [key,service]of [...merchants.entries()]){
+      try{await service.close();if(merchants.get(key)===service)merchants.delete(key);}
+      catch(error){failure??=error;}
+    }
     if(failure)throw failure;
+    await workspace?.close();
   };
   const serial=job=>{const result=tail.then(()=>{if(closing)throw fault('OPERATOR_CLOSING','The operator is closing.',409);lease.assertHeld();return job();});tail=result.catch(()=>{});return result;};
   try{
@@ -223,7 +240,7 @@ export async function startDirectusOperator({directory,workspaceDirectory,source
           if(typeof operationId!=='string'||!ID.test(operationId))throw fault('OPERATOR_REQUEST','Retain a stable receiving request ID.');
           const result=await scoped(req,async()=>{
             if(nativeOperations.active)throw fault('DIRECTUS_NATIVE_RUNNING','Let the active native request finish before receiving another workspace.',409);
-            const uploads=path.join(root,'uploads');await fsp.mkdir(uploads,{recursive:true,mode:0o700});
+            const uploads=path.join(root,'uploads');await durableDirectory(uploads);
             const temporary=path.join(uploads,operationId+'.partial-'+randomUUID()),digest=createHash('sha256');let bytes=0;
             const meter=new Transform({transform(chunk,encoding,callback){bytes+=chunk.length;if(bytes>MAX_SOURCE_BYTES)return callback(fault('OPERATOR_PROJECT_SIZE','Select a complete project up to 256 MiB.',413));digest.update(chunk);callback(null,chunk);}});
             try{
@@ -274,18 +291,19 @@ export async function startDirectusOperator({directory,workspaceDirectory,source
     return {url:origin,token,state,launch:publicLaunch(),close(){
       if(closePromise)return closePromise;
       closing=true;closePromise=(async()=>{
-        try{
-          let failure;
-          try{await new Promise(resolve=>server.close(resolve));await tail;}catch(error){failure=error;}
-          try{await closeOwned();}catch(error){failure??=error;}
-          if(failure)throw failure;
-          lease.assertHeld();await saveJson(launchFile,{...launch,state:'stopped',stoppedAt:new Date().toISOString()});
-        }finally{await lease.close();}
-      })();return closePromise;
+        if(server.listening)await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));
+        await tail;await closeOwned();
+        lease.assertHeld();await saveJson(launchFile,{...launch,state:'stopped',stoppedAt:new Date().toISOString()});
+        await lease.close();
+      })().catch(error=>{closePromise=null;throw error;});return closePromise;
     }};
   }catch(error){
-    try{try{if(server?.listening)await new Promise(resolve=>server.close(resolve));await tail;}finally{await closeOwned();}}
-    finally{await lease.close();}
+    try{
+      if(server?.listening)await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));
+      await tail;await closeOwned();await lease.close();
+    }catch(cleanupError){
+      throw new AggregateError([error,cleanupError],'The original Directus operator could not finish its startup cleanup.',{cause:error});
+    }
     throw error;
   }
 }

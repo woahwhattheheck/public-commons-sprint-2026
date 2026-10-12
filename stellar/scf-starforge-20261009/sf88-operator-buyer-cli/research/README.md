@@ -375,6 +375,41 @@ The receiver stores one immutable execution selection under the original buyer s
 
 A page with an explicitly selected pending preapproval recovery plan continues through `executePreapprovalRecovery` using that saved plan's exact hash and review. It first reopens the final selected intent through the receiver's source-aware opener. Gathering never creates a preapproval recovery plan; the operator's existing selected plan, original workspace and fresh exact-request approval remain the execution path.
 
+### Change a retained runtime selection
+
+The native adapter records its selected source once. To adopt a later reviewed replacement, first close the previous retrieval session and read the current selection's `selectionSha256` from `await retrieval.snapshot()`. Pass that exact SHA with the complete replacement descriptor:
+
+```js
+const retrieval = await openResearchRetrieval({
+  buyerProfile: originalBuyerProfileFile,
+  clientFile: originalSellerClientFile,
+  productId: originalProductId,
+  nativeRuntimeSource: replacementSourceDescriptor,
+  nativeFileReservation: replacementFileReservationDescriptor,
+  expectedRuntimeSelectionSha256: inspectedSelectionSha256,
+});
+```
+
+The CLI exposes the same explicit comparison:
+
+```sh
+node research/cli.mjs gather \
+  --workspace /private/research \
+  --edition-id original-edition \
+  --buyer-profile /private/buyer/profile.json \
+  --client /private/seller-client/client.mjs \
+  --product original-product \
+  --runtime-source /private/repaired-runtime.json \
+  --file-reservation /private/file-reservation.json \
+  --expected-runtime-selection-sha256 EXACT_CURRENT_SELECTION_SHA256
+```
+
+The new immutable record is stored at `research-runtime-selections/successors/<previous-selection-sha256>.json`. It binds the previous record's exact path and digest, the unchanged retrieval/profile/client/account identity, and the complete replacement source and allocator. One successor can be published for each prior selection. A runtime directory identifies one immutable source-and-allocator profile; a changed profile requires a distinct canonical directory, so ordinary operations that recorded only their runtime directory can still reopen exactly. Repeating the same selection after a lost return reopens its existing record. A different selection or stale expected SHA fails without replacing any record. Later opens follow the retained history and verify the current complete source; the snapshot exposes every selected source directory and digest.
+
+Only new page intents use the new default runtime. An existing operation keeps its original source and configuration. An ordinary page prepared by an earlier retained selection reopens through that exact selection's source and allocator, even after another runtime becomes the default. If it has an explicitly prepared same-intent preapproval recovery plan, the adapter reopens that plan's recorded controller and executes only its saved review and plan hash. Preparing such a plan is an operator action described in [PREAPPROVAL_RECOVERY.md](../node/PREAPPROVAL_RECOVERY.md#select-a-repaired-runtime-for-the-same-intent). An ordinary prepared operation without such a plan retains its original execution route.
+
+The original query, cursor page intent, paid-result identity, provider response bytes and shared ledger are unchanged by this source selection. Direct OpenAlex API mode rejects native runtime-selection options.
+
 ## Aviary audio and video migration
 
 The [Aviary migration workbench](aviary/README.md) preserves an original audiovisual collection, its reviewed mapping into Aviary's five native tables, local assets, rights and relationships. Its browser interface handles mapping revisions, complete row review, original API migration progress, recovery and portable handoff.
