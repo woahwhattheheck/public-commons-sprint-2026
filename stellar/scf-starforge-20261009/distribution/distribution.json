@@ -85,6 +85,10 @@
     {
       "server": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/server.mjs",
       "manifest": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/browser-assets.json"
+    },
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/workbench/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/workbench/browser-assets.json"
     }
   ],
   "supportFiles": [
@@ -872,6 +876,8 @@
     "./catalog/atlas/workspace": "./source/stellar/scf-starforge-20261009/sf61-bazaar-explorer/workspace.mjs",
     "./catalog/atlas/transfer": "./source/stellar/scf-starforge-20261009/sf61-bazaar-explorer/workspace-transfer.mjs",
     "./catalog/explorer": "./source/stellar/scf-starforge-20261009/sf61-bazaar-explorer/server.mjs",
+    "./seller/arcgis/workbench": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/workbench/model.mjs",
+    "./seller/arcgis/workbench/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/workbench/server.mjs",
     "./seller/upstream-tls": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-tls/profile.mjs",
     "./seller/upstream-tls/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-tls/config.mjs"
   },

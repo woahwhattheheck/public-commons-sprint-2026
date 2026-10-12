@@ -289,7 +289,7 @@ $('import-form').addEventListener('submit', event => { event.preventDefault(); r
   if ($('capture-time').value) meta.capturedAt = new Date($('capture-time').value).toISOString();
   await api('/api/import?' + new URLSearchParams(meta), { method: 'POST', headers: { 'content-type': 'application/octet-stream' }, body: file });
   await refresh({ message: 'Capture imported with its exact original bytes.' }); await showCapture(id); $('new-product-edition').value = id;
-}));
+}); });
 function defaultSourceUrl() {
   const cik = $('capture-cik').value.trim(); if (!/^\d{1,10}$/.test(cik)) return;
   const padded = cik.padStart(10, '0');
