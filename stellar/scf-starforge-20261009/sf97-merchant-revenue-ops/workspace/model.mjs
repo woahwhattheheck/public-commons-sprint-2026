@@ -6,6 +6,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import { merchantRoutes, merchantTerms, analyze, createReport, readJson, liveSnapshot } from '../analyze.mjs';
 import { normalizeTrafficHistoryReport } from '../../sf30-seller-sdk/operations/history.mjs';
 import { resolveSellerConfigPaths, validateSellerServiceConfig } from '../../sf30-seller-sdk/serve.mjs';
+import { openEconomics } from '../economics/model.mjs';
+import { requireCompletedRestore } from '../economics/archive.mjs';
 import { createRepricingReview } from './repricing.mjs';
 import { prepareRepricingSource, writeRepricingSource, stageRepricingSource } from './repricing-source.mjs';
 
@@ -92,7 +94,7 @@ function calendarDay(value) {
 }
 
 export async function openWorkspace({config, directory, snapshot, history:historyFile, opsUrl, nativeOutbox,
-  sourcePackage, releaseStore, releaseRuntime = {}} = {}) {
+  sourcePackage, releaseStore, releaseRuntime = {}, supplierUsage, accountingReport} = {}) {
   if (!isAbsolute(directory ?? '') || resolve(directory) !== directory || directory === '/')
     throw fault('ABSOLUTE_WORKSPACE_REQUIRED', 'Workspace must be an absolute, normalized private directory.');
   if (!config || !(snapshot || historyFile || opsUrl) || (opsUrl && (snapshot || historyFile)))
@@ -151,6 +153,7 @@ export async function openWorkspace({config, directory, snapshot, history:histor
   }
   await seller();
   await privateDirectory(directory, true);
+  await requireCompletedRestore(directory);
   for (const name of ['versions','successors','pending','decisions','decision-successors','staged-releases'])
     await privateDirectory(join(directory,name), true);
   const captures = new Map();
@@ -227,11 +230,11 @@ export async function openWorkspace({config, directory, snapshot, history:histor
       nativeAttached:Boolean(nativeOutbox), history:entries.slice(-100).reverse().map(summary),
       repricing:await repricingState()};
   }
-  async function prepared(input) {
+  async function prepared(input, fixedObservation = null) {
     const source = await seller();
     if (input.sellerSha256 !== source.hash)
       throw fault('SELLER_CHANGED', 'Seller configuration changed. Refresh and review the current payment choices.', 409);
-    const observed = captures.get(input.snapshotSha256);
+    const observed = fixedObservation ?? captures.get(input.snapshotSha256);
     if (!observed) throw fault('SNAPSHOT_EXPIRED', 'Refresh operations to capture the selected original source again.', 409);
     const terms = merchantTerms(source.value,input.commercial), termsBytes = encode(terms);
     const report = analyze(source.value,observed.value,terms,
@@ -256,7 +259,7 @@ export async function openWorkspace({config, directory, snapshot, history:histor
     await syncDirectory(folder);
     return files;
   }
-  async function save(input) {
+  async function save(input, costContext = null) {
     if (!input || !VERSION.test(input.requestId) ||
         !(input.expectedRevision === null || REVISION.test(input.expectedRevision)) ||
         typeof input.label !== 'string' || !input.label.trim() || input.label.length > 100)
@@ -270,12 +273,14 @@ export async function openWorkspace({config, directory, snapshot, history:histor
     }
     if ((entries.at(-1)?.revision ?? null) !== input.expectedRevision)
       throw fault('REVISION_CHANGED', 'Another tab saved a review. Reload the saved version before replacing it.', 409);
-    const {source,observed,termsBytes,report} = await prepared(input);
+    const {source,observed,termsBytes,report} = await prepared(input,costContext?.observed);
     const sourceFile = observed.kind === PERIOD ? 'history.json' : 'snapshot.json';
     const version = randomUUID(), pending = join(directory,'pending',version), final = join(directory,'versions',version);
     await privateDirectory(pending,true); let published = false, moved = false;
     try {
       for (const [name,bytes] of [['seller.json',source.bytes],[sourceFile,observed.bytes],['terms.json',termsBytes]])
+        await writeOnce(join(pending,name),bytes);
+      if (costContext) for (const [name,bytes] of Object.entries(costContext.files))
         await writeOnce(join(pending,name),bytes);
       const result = await createReport(['--config',join(pending,'seller.json'),'--terms',join(pending,'terms.json'),
         observed.kind === PERIOD ? '--history' : '--snapshot',join(pending,sourceFile),'--output',join(pending,'report'),
@@ -287,7 +292,7 @@ export async function openWorkspace({config, directory, snapshot, history:histor
         snapshotSha256:observed.hash,sessionId:report.sessionId,overview:report.overview,
         observationKind:observed.kind,sourceFile,sourceSelection:observed.selection,
         observation:savedObservation(observed),
-        native:result.native,files};
+        native:result.native,...(costContext ? {costOrigin:costContext.binding} : {}),files};
       const manifest = encode(value), revision = digest(manifest);
       await writeOnce(join(pending,'manifest.json'),manifest);
       await syncDirectory(pending);
@@ -530,6 +535,60 @@ export async function openWorkspace({config, directory, snapshot, history:histor
     } finally { await rm(pending,{force:true}).catch(()=>{}); }
     return result;
   }
+
+  async function economicsSource(version) {
+    const original=await originalPricing(version),entry=original.entry;
+    const reportBytes=await savedFile(entry,'report/report.json'),current=await seller().catch(()=>null);
+    return {version:entry.value.version,revision:entry.revision,label:entry.value.label,
+      sellerSha256:entry.value.sellerSha256,sellerChanged:current?.hash!==entry.value.sellerSha256,
+      reportBytes,report:JSON.parse(reportBytes.toString('utf8')),
+      commercial:commercialInputs(original.termsValue,merchantRoutes(original.sellerValue)),
+      files:{...entry.value.files,'manifest.json':{bytes:encode(entry.value).length,sha256:entry.revision}},
+      readFile:name=>name==='manifest.json'?privateBytes(join(directory,'versions',version,'manifest.json')):savedFile(entry,name)};
+  }
+  async function fixedCostSource(sourceVersion) {
+    const original=await originalPricing(sourceVersion),entry=original.entry,kind=entry.value.observationKind??SESSION;
+    const bytes=await savedFile(entry,entry.value.sourceFile??'snapshot.json'),value=JSON.parse(bytes.toString('utf8'));
+    const observed={bytes,value,hash:digest(bytes),kind,selection:entry.value.sourceSelection??{kind,from:null,to:null,routeId:null},
+      normalized:kind===PERIOD?normalizeTrafficHistoryReport(value):null};
+    observationMetadata(observed);return {original,observed};
+  }
+  async function previewCostPricing({sourceVersion,commercial}) {
+    const {original,observed}=await fixedCostSource(sourceVersion);
+    const terms=merchantTerms(original.sellerValue,commercial),termsBytes=encode(terms);
+    return analyze(original.sellerValue,observed.value,terms,{seller:digest(original.sellerBytes),terms:digest(termsBytes),
+      snapshot:observed.hash,...(observed.kind===PERIOD?{history:observed.hash}:{})});
+  }
+  async function saveCostPricing({sourceVersion,commercial,requestId,expectedRevision,label,costBinding,costFiles}) {
+    const {original,observed}=await fixedCostSource(sourceVersion);
+    return save({requestId,expectedRevision,label,sellerSha256:digest(original.sellerBytes),snapshotSha256:observed.hash,
+      commercial,costProposal:costBinding},{observed,binding:costBinding,files:costFiles});
+  }
+  async function pricingBackup() {
+    const files=[],decisions=await decisionHistory(),pricingEntries=await history();
+    for(const entry of pricingEntries){
+      const version=entry.value.version;
+      for(const name of Object.keys(entry.value.files))files.push({name:'versions/'+version+'/'+name,read:()=>savedFile(entry,name)});
+      files.push({name:'versions/'+version+'/manifest.json',read:()=>privateBytes(join(directory,'versions',version,'manifest.json'))});
+      const next=(entry.value.previousRevision??'root')+'.json';
+      files.push({name:'successors/'+next,read:()=>privateBytes(join(directory,'successors',next))});
+    }
+    for(const entry of decisions){
+      const decision=entry.value.decision;
+      for(const name of Object.keys(entry.value.files))files.push({name:'decisions/'+decision+'/'+name,read:()=>decisionFile(entry,name)});
+      files.push({name:'decisions/'+decision+'/manifest.json',read:()=>privateBytes(join(directory,'decisions',decision,'manifest.json'))});
+      const next=(entry.value.previousRevision??'root')+'.json';
+      files.push({name:'decision-successors/'+next,read:()=>privateBytes(join(directory,'decision-successors',next))});
+      if(await stageReceipt(decision))files.push({name:'staged-releases/'+decision+'.json',
+        read:()=>privateBytes(join(directory,'staged-releases',decision+'.json'))});
+    }
+    return {files,pricingVersions:pricingEntries.map(entry=>entry.value.version),
+      requiredCostEditions:pricingEntries.map(entry=>entry.value.costOrigin?.edition).filter(Boolean),
+      pricingRevision:pricingEntries.at(-1)?.revision??null,decisionRevision:decisions.at(-1)?.revision??null};
+  }
+  const economics=await openEconomics({directory,pricingSource:economicsSource,
+    listPricing:async()=>[...(await history())].reverse().map(summary),
+    savePricing:saveCostPricing,previewPricing:previewCostPricing,pricingBackup,supplierUsage,accountingReport});
   return {state,preview,save,download,loadVersion,compare,repricingSource,previewRepricing,
-    saveRepricing,downloadRepricing,stageRepricing};
+    saveRepricing,downloadRepricing,stageRepricing,economics};
 }
