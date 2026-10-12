@@ -32,7 +32,7 @@ function verifyManifest(manifest, { captureId, reviewId } = {}) {
     manifest.manifestSha256 === digest(manifestIdentity(manifest)), 'The retained briefing manifest changed.', 'FRED_BRIEFING_IDENTITY_CHANGED');
   need((captureId === undefined || captureId === manifest.captureId) && (reviewId === undefined || reviewId === manifest.reviewId),
     'Select the briefing from its original capture and review.', 'FRED_BRIEFING_IDENTITY_CHANGED');
-  need(manifest.calculationVersion === 'FRED_EXACT_PERIOD_V1' && manifest.rendererVersion === 'FRED_OFFLINE_REPORT_V1' &&
+  need(manifest.calculationVersion === 'FRED_EXACT_PERIOD_V1' && ['FRED_OFFLINE_REPORT_V1', 'FRED_OFFLINE_REPORT_V2'].includes(manifest.rendererVersion) &&
     Array.isArray(manifest.files) && manifest.files.length === BRIEFING_MEMBERS.length, 'Use the original complete briefing file inventory.');
   for (let index = 0; index < BRIEFING_MEMBERS.length; index++) {
     const actual = manifest.files[index], expected = BRIEFING_MEMBERS[index];
@@ -70,7 +70,7 @@ export function createFredBriefingFiles({ capture, review } = {}) {
   const buffers = [Buffer.from(JSON.stringify(report) + '\n'), Buffer.from(fredBriefingCsv(report)), Buffer.from(renderFredBriefing(report))];
   const files = BRIEFING_MEMBERS.map((definition, index) => ({ ...member(definition, buffers[index]), body: buffers[index] }));
   const manifest = { schema: BRIEFING_FILES, captureId: report.captureId, reviewId: report.reviewId, reportId: report.reportId,
-    calculationVersion: body.calculation.version, rendererVersion: 'FRED_OFFLINE_REPORT_V1',
+    calculationVersion: body.calculation.version, rendererVersion: 'FRED_OFFLINE_REPORT_V2',
     files: files.map(({ body, ...descriptor }) => descriptor) };
   manifest.manifestSha256 = digest(manifestIdentity(manifest)); verifyManifest(manifest);
   const manifestBytes = jsonBytes(manifest);
@@ -120,7 +120,17 @@ export async function retainFredBriefingFiles({ directory, value } = {}) {
   });
 }
 export async function prepareFredBriefingFiles({ directory, capture, review } = {}) {
-  return retainFredBriefingFiles({ directory, value: createFredBriefingFiles({ capture, review }) });
+  const value = createFredBriefingFiles({ capture, review });
+  // Existing reviewed reports keep their exact rendering and downloads.
+  try {
+    const retained = await readFredBriefingFiles(directory, {
+      captureId: value.manifest.captureId, reviewId: value.manifest.reviewId, includeFiles: true,
+    });
+    need(canonical(retained.report) === canonical(value.report),
+      'The retained report differs from the original source and review.', 'FRED_BRIEFING_SOURCE_CHANGED');
+    return retained;
+  } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  return retainFredBriefingFiles({ directory, value });
 }
 export async function readFredBriefingFiles(directory, { captureId, reviewId, includeFiles = false } = {}) {
   directory = resolve(directory);
