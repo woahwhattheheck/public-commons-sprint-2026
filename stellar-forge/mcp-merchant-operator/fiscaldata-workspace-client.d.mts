@@ -95,11 +95,14 @@ export interface RecordBinding {id:string;revision:number;sha256:string|null;}
 export type RefreshCapturePolicy = {mode:'source'}|{mode:'window';dateField:string;days:number;lagDays?:number;baseFilter:string};
 export interface RefreshComparisonPolicy {keyFields:string[];measureFields:string[];}
 export interface RefreshBriefingPolicy {title:string;audience?:string;notes?:string;rowsPerPage?:number;}
-export interface RefreshPlanSave {
-  id?:string;expectedRevision?:number;requestId:string;name:string;
+export interface RefreshPlanFields {
+  requestId:string;name:string;
   baselineEditionId:string;expectedBaselineSha256:string;capture?:RefreshCapturePolicy;
   comparison?:RefreshComparisonPolicy;briefing?:RefreshBriefingPolicy;notes?:string;
 }
+export type RefreshPlanSave = RefreshPlanFields & (
+  {id?:never;expectedRevision?:never} | {id:string;expectedRevision:number}
+);
 export interface RefreshPlanDefinition {
   name:string;baseline:RecordBinding;source:SourceRecord;review:Omit<EditionReview,'id'|'expectedRevision'>;
   schema:Array<{source:string;type:string|null;label:string|null;format:string|null}>;
