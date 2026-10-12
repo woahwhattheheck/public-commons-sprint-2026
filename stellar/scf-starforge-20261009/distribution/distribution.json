@@ -423,7 +423,8 @@
     "grpc": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/start.mjs",
     "grpc-contract": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/cli.mjs",
     "grpc-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/workspace/server.mjs",
-    "grpc-example": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/examples/server.mjs"
+    "grpc-example": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/examples/server.mjs",
+    "sec-edgar-download": "stellar-forge/mcp-merchant-operator/sec-edgar-download.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -1012,7 +1013,10 @@
     "./seller/grpc/prepare": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/prepare.mjs",
     "./seller/grpc/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/workspace/model.mjs",
     "./seller/grpc/workspace/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/workspace/server.mjs",
-    "./seller/grpc/releases": "./source/stellar/scf-starforge-20261009/sf82-seller-pilot/release-grpc.mjs"
+    "./seller/grpc/releases": "./source/stellar/scf-starforge-20261009/sf82-seller-pilot/release-grpc.mjs",
+    "./merchant/mcp/sec-edgar": "./source/stellar-forge/mcp-merchant-operator/sec-edgar-tools.mjs",
+    "./merchant/mcp/sec-edgar-transfer": "./source/stellar-forge/mcp-merchant-operator/sec-edgar-transfer.mjs",
+    "./merchant/mcp/sec-edgar-download": "./source/stellar-forge/mcp-merchant-operator/sec-edgar-download.mjs"
   },
   "nativePeers": {
     "@x402/core": {
