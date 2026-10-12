@@ -1,5 +1,6 @@
 // MIT. Reviewed configuration for the maintained Development Seed STAC Auth Proxy.
 import { createHash } from 'node:crypto';
+import { PUBLIC_PROXY_FILENAME, PUBLIC_PROXY_FACTORY, PUBLIC_PROXY_SOURCE_REF, PUBLIC_PROXY_DEPENDENCY, PUBLIC_PROXY_SOURCE } from './public-proxy-runtime.mjs';
 
 export const POLICY_SCHEMA = 'scf-eoapi-deployment-policy/v1';
 export const POLICY_PACKAGE_SCHEMA = 'scf-eoapi-policy-package/v1';
@@ -23,6 +24,7 @@ const SECRET_KEY = /^(?:authorization|cookie|password|secret|token|credential|cr
 const COMMON_CONFORMANCE = ['basic-cql2', 'cql2-text', 'cql2-json'].map(name => 'http://www.opengis.net/spec/cql2/1.0/conf/' + name);
 const ITEMS_CONFORMANCE = ['filter', 'features-filter'].map(name => 'http://www.opengis.net/spec/ogcapi-features-3/1.0/conf/' + name);
 const COLLECTIONS_CONFORMANCE = ['https://api.stacspec.org/v1.0.0/core', 'http://www.opengis.net/spec/ogcapi-common-2/1.0/conf/simple-query'];
+const PUBLIC_OPENAPI_UNSET = ['OPENAPI_SPEC_ENDPOINT', 'OPENAPI_AUTH_SCHEME_NAME', 'OPENAPI_AUTH_SCHEME_OVERRIDE', 'SWAGGER_UI_ENDPOINT', 'SWAGGER_UI_INIT_OAUTH'];
 const STAC_CONFORMANCE_VERSION = 'v1\\.0\\.0(?:-[\\w\\.]+)?';
 export class DeploymentPolicyError extends Error {
   constructor(code, path, detail = '') { super(code + (path ? ': ' + path : '') + (detail ? ' — ' + detail : '')); this.name = 'DeploymentPolicyError'; this.code = code; this.path = path; }
@@ -128,7 +130,14 @@ export function normalizeDeploymentPolicy(input) {
   const deployment = object(input.deployment, 'deployment'), upstream = object(input.upstream, 'upstream'), identity = object(input.identity, 'identity');
   exactKeys(deployment, ['id', 'eoapiVersion', 'authProxyVersion', 'sourceRef', 'publicUrl', 'rootPath', 'rootPathSkipPrefixes'], 'deployment');
   exactKeys(upstream, ['url', 'conformsTo', 'networkBoundary'], 'upstream');
-  exactKeys(identity, ['discoveryUrl', 'internalDiscoveryUrl', 'audiences', 'policyOwner'], 'identity');
+  exactKeys(identity, ['mode', 'discoveryUrl', 'internalDiscoveryUrl', 'audiences', 'policyOwner'], 'identity');
+  need(identity.mode === undefined || ['oidc', 'public'].includes(identity.mode), 'EOAPI_IDENTITY_MODE_INVALID', 'identity.mode');
+  const publicMode = identity.mode === 'public';
+  if (publicMode) need(!['discoveryUrl', 'internalDiscoveryUrl', 'audiences'].some(key => Object.hasOwn(identity, key)), 'EOAPI_PUBLIC_IDENTITY_MUST_BE_UNSET', 'identity');
+  if (publicMode) {
+    need([PUBLIC_PROXY_DEPENDENCY.version, 'v' + PUBLIC_PROXY_DEPENDENCY.version].includes(deployment.authProxyVersion), 'EOAPI_PUBLIC_NATIVE_VERSION_REQUIRED', 'deployment.authProxyVersion');
+    need(deployment.sourceRef === PUBLIC_PROXY_SOURCE_REF, 'EOAPI_PUBLIC_NATIVE_SOURCE_REQUIRED', 'deployment.sourceRef');
+  }
   const id = string(deployment.id, 'deployment.id', 160); need(IDENT.test(id), 'EOAPI_DEPLOYMENT_ID_INVALID', 'deployment.id');
   const publicUrl = url(deployment.publicUrl, 'deployment.publicUrl');
   const rootPath = deployment.rootPath ?? new URL(publicUrl).pathname.replace(/\/$/, '');
@@ -141,9 +150,13 @@ export function normalizeDeploymentPolicy(input) {
   const publicEndpoints = publicRules(routing.publicEndpoints ?? {}), privateEndpoints = privateRules(routing.privateEndpoints ?? {});
   const filtering = input.filtering ?? {}; exactKeys(filtering, ['items', 'collections'], 'filtering');
   const filters = { items: filter(filtering.items, 'filtering.items'), collections: filter(filtering.collections, 'filtering.collections') };
+  if (publicMode) {
+    need(routing.defaultPublic && Object.keys(privateEndpoints).length === 0, 'EOAPI_PUBLIC_ROUTES_REQUIRED', 'routing');
+    need(filters.items === null && filters.collections === null, 'EOAPI_PUBLIC_RECORD_FILTERS_MUST_BE_UNSET', 'filtering');
+  }
   const conformsTo = unique(list(upstream.conformsTo ?? [], 'upstream.conformsTo').map(value => string(value, 'upstream.conformsTo', 2000)));
-  const audiences = unique(list(identity.audiences, 'identity.audiences', 100).map(value => string(value, 'identity.audiences', 2000)));
-  need(audiences.length, 'EOAPI_EXPLICIT_AUDIENCE_REQUIRED', 'identity.audiences');
+  const audiences = publicMode ? [] : unique(list(identity.audiences, 'identity.audiences', 100).map(value => string(value, 'identity.audiences', 2000)));
+  need(publicMode || audiences.length, 'EOAPI_EXPLICIT_AUDIENCE_REQUIRED', 'identity.audiences');
   const operator = object(input.operator, 'operator'); exactKeys(operator, ['name', 'retentionDays', 'sourceVersionNotes'], 'operator');
   need(Number.isSafeInteger(operator.retentionDays) && operator.retentionDays >= 0 && operator.retentionDays <= 36500, 'EOAPI_RETENTION_INVALID', 'operator.retentionDays');
   const rights = list(input.collectionRights, 'collectionRights', 1000).map((value, index) => {
@@ -158,12 +171,13 @@ export function normalizeDeploymentPolicy(input) {
   const origins = unique(list(cors.origins ?? [], 'cors.origins', 100).map(value => { const origin = url(value, 'cors.origins'); need(new URL(origin).origin === origin, 'EOAPI_CORS_ORIGIN_REQUIRED', 'cors.origins'); return origin; }));
   const headerNames = (values, path) => unique(list(values, path, 100).map(value => { need(typeof value === 'string' && /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/.test(value), 'EOAPI_HEADER_NAME_INVALID', path); return value; }));
   need(cors.credentials === undefined || typeof cors.credentials === 'boolean', 'EOAPI_CORS_CREDENTIALS_INVALID', 'cors.credentials');
+  need(!publicMode || cors.credentials === false, 'EOAPI_PUBLIC_CORS_CREDENTIALS_MUST_BE_FALSE', 'cors.credentials');
   need(cors.maxAge === undefined || Number.isSafeInteger(cors.maxAge) && cors.maxAge >= 0 && cors.maxAge <= 86400, 'EOAPI_CORS_AGE_INVALID', 'cors.maxAge');
   return {
     schema: POLICY_SCHEMA, title: string(input.title, 'title', 300),
     deployment: { id, eoapiVersion: string(deployment.eoapiVersion, 'deployment.eoapiVersion', 200), authProxyVersion: string(deployment.authProxyVersion, 'deployment.authProxyVersion', 200), sourceRef: string(deployment.sourceRef, 'deployment.sourceRef', 300), publicUrl, rootPath, rootPathSkipPrefixes: skip },
     upstream: { url: url(upstream.url, 'upstream.url'), conformsTo, networkBoundary: string(upstream.networkBoundary, 'upstream.networkBoundary', 2000) },
-    identity: { discoveryUrl: url(identity.discoveryUrl, 'identity.discoveryUrl'), ...(identity.internalDiscoveryUrl ? { internalDiscoveryUrl: url(identity.internalDiscoveryUrl, 'identity.internalDiscoveryUrl') } : {}), audiences, policyOwner: string(identity.policyOwner, 'identity.policyOwner', 300) },
+    identity: publicMode ? { mode: 'public', policyOwner: string(identity.policyOwner, 'identity.policyOwner', 300) } : { ...(identity.mode ? { mode: identity.mode } : {}), discoveryUrl: url(identity.discoveryUrl, 'identity.discoveryUrl'), ...(identity.internalDiscoveryUrl ? { internalDiscoveryUrl: url(identity.internalDiscoveryUrl, 'identity.internalDiscoveryUrl') } : {}), audiences, policyOwner: string(identity.policyOwner, 'identity.policyOwner', 300) },
     routing: { defaultPublic: routing.defaultPublic, publicEndpoints, privateEndpoints }, filtering: filters,
     cors: { origins, methods: checkedMethods(cors.methods ?? ['GET', 'POST', 'OPTIONS'], 'cors.methods'), headers: headerNames(cors.headers ?? ['Authorization', 'Content-Type'], 'cors.headers'), credentials: cors.credentials ?? true, exposeHeaders: headerNames(cors.exposeHeaders ?? [], 'cors.exposeHeaders'), maxAge: cors.maxAge ?? 600 },
     collectionRights: rights, operator: { name: string(operator.name, 'operator.name', 300), retentionDays: operator.retentionDays, sourceVersionNotes: string(operator.sourceVersionNotes ?? '', 'operator.sourceVersionNotes', 4000, true) }
@@ -171,19 +185,23 @@ export function normalizeDeploymentPolicy(input) {
 }
 const json = value => JSON.stringify(value);
 export function compileDeploymentPolicy(input) {
-  const policy = normalizeDeploymentPolicy(input), environment = {
-    UPSTREAM_URL: policy.upstream.url, OIDC_DISCOVERY_URL: policy.identity.discoveryUrl,
-    ALLOWED_JWT_AUDIENCES: json(policy.identity.audiences), DEFAULT_PUBLIC: String(policy.routing.defaultPublic),
+  const policy = normalizeDeploymentPolicy(input), publicMode = policy.identity.mode === 'public', environment = {
+    UPSTREAM_URL: policy.upstream.url,
+    ...(publicMode ? {} : { OIDC_DISCOVERY_URL: policy.identity.discoveryUrl, ALLOWED_JWT_AUDIENCES: json(policy.identity.audiences) }),
+    DEFAULT_PUBLIC: String(policy.routing.defaultPublic),
     PUBLIC_ENDPOINTS: json(policy.routing.publicEndpoints), PRIVATE_ENDPOINTS: json(policy.routing.privateEndpoints),
     ROOT_PATH: policy.deployment.rootPath, ROOT_PATH_SKIP_PREFIXES: policy.deployment.rootPathSkipPrefixes.join(','),
-    CHECK_CONFORMANCE: 'true', WAIT_FOR_UPSTREAM: 'true', ENABLE_AUTHENTICATION_EXTENSION: 'true',
+    CHECK_CONFORMANCE: 'true', WAIT_FOR_UPSTREAM: 'true', ENABLE_AUTHENTICATION_EXTENSION: publicMode ? 'false' : 'true',
     CORS_ALLOW_ORIGINS: policy.cors.origins.join(','), CORS_ALLOW_METHODS: policy.cors.methods.join(','),
     CORS_ALLOW_HEADERS: policy.cors.headers.join(','), CORS_ALLOW_CREDENTIALS: String(policy.cors.credentials),
     CORS_EXPOSE_HEADERS: policy.cors.exposeHeaders.join(','), CORS_MAX_AGE: String(policy.cors.maxAge)
   };
+  if (publicMode) environment.EOAPI_IDENTITY_MODE = 'public';
   if (policy.identity.internalDiscoveryUrl) environment.OIDC_DISCOVERY_INTERNAL_URL = policy.identity.internalDiscoveryUrl;
   const unset = ['PROXY_OPTIONS', 'ITEMS_FILTER', 'COLLECTIONS_FILTER', 'ITEMS_FILTER_PATH', 'COLLECTIONS_FILTER_PATH'];
   if (!policy.identity.internalDiscoveryUrl) unset.push('OIDC_DISCOVERY_INTERNAL_URL');
+  if (publicMode) unset.push('OIDC_DISCOVERY_URL', 'ALLOWED_JWT_AUDIENCES', ...PUBLIC_OPENAPI_UNSET);
+  else if (policy.identity.mode === 'oidc') unset.push('EOAPI_IDENTITY_MODE');
   for (const [kind, value] of Object.entries(policy.filtering)) {
     const prefix = kind.toUpperCase() + '_FILTER_';
     if (value) { environment[prefix + 'CLS'] = value.classPath; environment[prefix + 'ARGS'] = json(value.args); environment[prefix + 'KWARGS'] = json(value.kwargs); }
@@ -210,12 +228,14 @@ export function compileDeploymentPolicy(input) {
   const review = {
     sourceRef: policy.deployment.sourceRef, authProxyVersion: policy.deployment.authProxyVersion, policyOwner: policy.identity.policyOwner,
     defaultAccess: policy.routing.defaultPublic ? 'public' : 'authenticated',
+    ...(policy.identity.mode ? { identityMode: policy.identity.mode } : {}),
+    ...(publicMode ? { runtime: { filename: PUBLIC_PROXY_FILENAME, factory: PUBLIC_PROXY_FACTORY, dependency: { ...PUBLIC_PROXY_DEPENDENCY }, sourceSha256: createHash('sha256').update(PUBLIC_PROXY_SOURCE).digest('hex') } } : {}),
     routePrecedence: { public: 'When defaultPublic is false, public rules are checked before private rules.', private: 'The first matching private rule in the recorded order selects its required scopes.' },
     routes: [...Object.entries(policy.routing.publicEndpoints).flatMap(([pattern, methods], index) => methods.map(method => ({ pattern, order: index + 1, method, access: 'public', scopes: [], active: !policy.routing.defaultPublic, matching: 'case-sensitive, as written' }))),
       ...Object.entries(policy.routing.privateEndpoints).flatMap(([pattern, entries], index) => entries.map(value => ({ pattern, order: index + 1, method: Array.isArray(value) ? value[0] : value, access: 'authenticated', scopes: Array.isArray(value) && value[1] ? value[1].split(' ') : [], active: true, matching: 'case-insensitive; proxy normalizes one trailing slash' })))],
     recordFilters: clone(policy.filtering), requirements, collectionRights: clone(policy.collectionRights),
     upstreamBoundary: policy.upstream.networkBoundary, retentionDays: policy.operator.retentionDays,
-    sourceReferences: [...POLICY_SOURCES], findings
+    sourceReferences: [...POLICY_SOURCES, ...(publicMode ? ['https://github.com/developmentseed/stac-auth-proxy/tree/' + PUBLIC_PROXY_SOURCE_REF] : [])], findings
   };
   const digest = policyDigest(policy);
   return { schema: 'scf-eoapi-policy-compilation/v1', id: 'eoapi-policy-' + digest.slice(0, 24), digest, policy, environment, unset, review, ready: !findings.length };
@@ -245,7 +265,8 @@ export function applyDeploymentEnvironment(existing, compilation) {
 export function deploymentPolicyMarkdown(compilation) {
   const escape = value => String(value ?? '').replaceAll('|', '\\|').replaceAll('\n', ' ');
   const lines = ['# ' + compilation.policy.title, '', 'Policy version: `' + compilation.id + '`', '',
-    'The selected upstream STAC Auth Proxy applies authentication and record access. This package records the reviewed deployment configuration and the original collection access terms.', '',
+    compilation.policy.identity.mode === 'public' ? 'This public-source policy uses the included native public factory without an identity provider. It preserves the selected STAC Auth Proxy request, path, link, CORS and reverse-proxy components and the original collection access terms.' : 'The selected upstream STAC Auth Proxy applies authentication and record access. This package records the reviewed deployment configuration and the original collection access terms.', '',
+    ...(compilation.policy.identity.mode === 'public' ? ['## Public runtime', '', 'Use the included `' + PUBLIC_PROXY_FILENAME + '` with the selected `' + PUBLIC_PROXY_DEPENDENCY.package + '==' + PUBLIC_PROXY_DEPENDENCY.version + '` runtime at source `' + PUBLIC_PROXY_SOURCE_REF + '`. The factory checks the selected native construction source before starting. Load environment.json after removing every setting in unset-environment.json, then launch:', '', '```sh', 'python -m uvicorn ' + PUBLIC_PROXY_FACTORY + ' --factory --app-dir PACKAGE_DIRECTORY', '```', '', 'The original Auth Proxy application always initializes OIDC. Public mode therefore uses this included factory. It performs upstream-only startup checks and removes caller Authorization, Cookie and Proxy-Authorization before forwarding. The upstream remains public; private routes, record filters, identity settings, authentication annotations and credentialed CORS are excluded by its typed settings.', ''] : []),
     '| Setting | Selected value |', '| --- | --- |',
     ...[['eoAPI version', compilation.policy.deployment.eoapiVersion], ['Auth Proxy version', compilation.policy.deployment.authProxyVersion], ['Source revision', compilation.policy.deployment.sourceRef], ['Public URL', compilation.policy.deployment.publicUrl], ['Policy owner', compilation.review.policyOwner], ['Default access', compilation.review.defaultAccess], ['Upstream boundary', compilation.review.upstreamBoundary], ['Receiving retention days', compilation.review.retentionDays]].map(([key, value]) => '| ' + key + ' | ' + escape(value) + ' |'), '',
     '## Routes', '', compilation.review.routePrecedence.public + ' ' + compilation.review.routePrecedence.private, '', '| Order within access class | Pattern | Method | Access | Required scopes, all | Active |', '| --- | --- | --- | --- | --- | --- |',
