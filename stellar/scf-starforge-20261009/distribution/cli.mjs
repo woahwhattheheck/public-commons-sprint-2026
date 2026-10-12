@@ -165,6 +165,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-accounting-recovery               Review, import and reopen an original completed purchase
   merchant-accounting-maintenance            Back up, recover and reopen the same merchant MCP accounting workspace
   merchant-accounting-adjustments            Review, retain and reconcile original merchant cancellations and refunds
+  merchant-accounting-statements             Retain, recover and deliver original customer statements through MCP
   merchant-accounting-platforms              Review, retain and reconcile original QuickBooks and Xero operations
   s3                                         Inspect and configure selected object-store resources
   python-merchant                            Inspect, diagnose and serve a Python application
