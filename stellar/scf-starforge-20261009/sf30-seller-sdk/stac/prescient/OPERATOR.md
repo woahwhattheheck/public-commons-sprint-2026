@@ -129,6 +129,12 @@ The browser and CLI dispatch the same operations. Every write supplies the actua
 
 A lost response is resolved by replaying the **same** command body and operation ID. A completed operation returns its original result. An interrupted operation retains its original source and review identity; a changed input under that ID is a conflict. Do not replace a receiving or source identity to make a retry proceed. Corrected inputs are a new reviewed operation while the original remains in history.
 
+The **Retained browser actions** panel saves each exact request in workspace-scoped browser storage before dispatch. It retains the actor, path, body, operation ID, expected revision and body hash. Browser locks coordinate tabs using the same local workspace. A lost response or reload leaves that same action available as **Retry original action**; a native completion is read through its original handler before the missing response is accepted. Clicking the original form again with the same inputs also selects its retained action.
+
+**Restore saved inputs** recovers the admitted form values. Edited inputs create a distinct reviewed request. **Prepare new action** is an explicit choice after a completed action or a definite refusal before admission; it prepares a new ID without sending it. An unresolved action keeps its original ID and revision. Download **retained actions** before changing the service address or browser storage, then use **Reopen saved action record** in the same original workspace. This validates every exact request and does not dispatch automatically. A receiving workspace with a different ID refuses the sender's action record. Imported completion text is not accepted as a native result; retry goes through the original handler.
+
+The browser's **Saved operation outcomes** also shows actions created by the CLI and original clients. For an interrupted connection, session, delivery review, export or receiving action, **Continue original action** uses the retained browser body when present, otherwise the native record's original actor and source/review inputs with the same operation ID. The existing operation lock reconciles a still-running action. Completed rows expose their saved outcome without starting another action.
+
 Useful commands:
 
 ```sh
