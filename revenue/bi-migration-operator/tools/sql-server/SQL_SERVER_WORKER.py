@@ -215,7 +215,10 @@ def package_result(job_path, operation, *, checkpoint=False):
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o100600 << 16
             archive.writestr(info, body)
-        archive.writestr("MANIFEST.json", encode(manifest) + b"\n")
+        info = zipfile.ZipInfo("MANIFEST.json", (2026, 1, 1, 0, 0, 0))
+        info.compress_type = zipfile.ZIP_DEFLATED
+        info.external_attr = 0o100600 << 16
+        archive.writestr(info, encode(manifest) + b"\n")
     data = output.getvalue()
     if len(data) > MAX_FILE:
         raise ValueError("The compressed receiving package exceeds 64 MiB; original files remain retained.")
@@ -338,7 +341,7 @@ def operation_lock(operation):
     finally:
         handle.close()
 
-def run(job_path, operation, *, mode="execute", node=None):
+def run(job_path, operation, *, mode="execute", node=None, driver_node_modules=None):
     job_path, operation = Path(job_path).resolve(), Path(operation).resolve()
     job, raw = verify_job(job_path)
     if job["origin"] != "sqlserver":
@@ -371,7 +374,10 @@ def run(job_path, operation, *, mode="execute", node=None):
             log_path = operation / ("controller-" + str(number).zfill(4) + ".log")
             with log_path.open("ab") as output:
                 os.chmod(log_path, 0o600)
-                child = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=output, stderr=subprocess.STDOUT)
+                environment = dict(os.environ)
+                if driver_node_modules:
+                    environment["BI_SQL_NODE_MODULES"] = str(Path(driver_node_modules).resolve())
+                child = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=output, stderr=subprocess.STDOUT, env=environment)
                 intent.update(state="running", pid=child.pid)
                 atomic(control_path, encode(intent) + b"\n")
                 code = child.wait()
@@ -393,9 +399,10 @@ def main():
     parser.add_argument("--job", required=True)
     parser.add_argument("--operation", required=True)
     parser.add_argument("--node")
+    parser.add_argument("--driver-node-modules", help="Reuse an existing directory containing mssql 12.7.4; no package copy")
     parser.add_argument("--mode", choices=("execute", "continue", "inspect"), default="execute")
     args = parser.parse_args()
-    value = run(args.job, args.operation, mode=args.mode, node=args.node)
+    value = run(args.job, args.operation, mode=args.mode, node=args.node, driver_node_modules=args.driver_node_modules)
     print(json.dumps(value, ensure_ascii=False))
 
 if __name__ == "__main__":

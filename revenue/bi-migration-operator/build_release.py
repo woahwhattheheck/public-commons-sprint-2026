@@ -55,7 +55,10 @@ def main():
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o100644 << 16
             package.writestr(info, path.read_bytes())
-        package.writestr("Commons-BI-Operator/RELEASE.json",
+        release_info = zipfile.ZipInfo("Commons-BI-Operator/RELEASE.json", date_time=(2026, 1, 1, 0, 0, 0))
+        release_info.compress_type = zipfile.ZIP_DEFLATED
+        release_info.external_attr = 0o100644 << 16
+        package.writestr(release_info,
                          json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
     with zipfile.ZipFile(output) as package:
         for item in manifest["files"]:

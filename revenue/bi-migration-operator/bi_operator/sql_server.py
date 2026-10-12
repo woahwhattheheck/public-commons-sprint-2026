@@ -58,7 +58,10 @@ def packed(files, schema):
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o100600 << 16
             archive.writestr(info, body)
-        archive.writestr("MANIFEST.json", encoded(manifest).encode() + b"\n")
+        info = zipfile.ZipInfo("MANIFEST.json", (2026, 1, 1, 0, 0, 0))
+        info.compress_type = zipfile.ZIP_DEFLATED
+        info.external_attr = 0o100600 << 16
+        archive.writestr(info, encoded(manifest).encode() + b"\n")
     if len(output.getvalue()) > 64 * 1024 * 1024:
         raise ValueError("The portable ZIP exceeds the 64 MiB receiving input limit.")
     return output.getvalue()
@@ -469,10 +472,14 @@ class SqlServer:
         args = [sys.executable, str(target / "worker/SQL_SERVER_WORKER.py"), "--job", str(target / "job.json"),
                 "--operation", str(operation), "--node", node, "--mode", mode]
         log = operation / ("host-" + str(number).zfill(4) + ".log")
+        environment = dict(os.environ)
+        existing_driver = NATIVE / "core" / "mssql" / "node_modules"
+        if not environment.get("BI_SQL_NODE_MODULES") and (existing_driver / "mssql/package.json").is_file():
+            environment["BI_SQL_NODE_MODULES"] = str(existing_driver)
         with log.open("ab") as output:
             os.chmod(log, 0o600)
             child = subprocess.Popen(args, cwd=target, stdin=subprocess.DEVNULL, stdout=output, stderr=subprocess.STDOUT,
-                                     start_new_session=os.name != "nt")
+                                     start_new_session=os.name != "nt", env=environment)
         self.children[job["id"]] = child
         return self.store.put("sql_job", {**job["payload"], "status": "running", "local_pid": child.pid},
                               job["id"], job["revision"], actor)
@@ -670,7 +677,8 @@ class SqlServer:
             column = next(c for c in table["columns"] if c["name"] == field["target"])
             native_type = metadata[field["source"]]["type"].lower()
             destination_type = str(column.get("data_type") or column.get("type") or "unknown")
-            if native_type.startswith(("decimal", "numeric", "money", "bigint", "datetimeoffset", "binary", "varbinary")):
+            field["conversion"] = "boolean_text" if destination_type == "boolean" else "exact"
+            if native_type.startswith(("decimal", "numeric", "money", "bigint", "datetime", "time", "binary", "varbinary")):
                 findings.append({"source": field["source"], "native_type": native_type,
                                  "target": field["target"], "target_type": destination_type,
                                  "review": "Retain the exact server text/binary/offset and explicitly review the receiving model's conversion."})
@@ -693,7 +701,18 @@ class SqlServer:
         headers, rows = read_csv(self.store.bytes(capture["payload"]["file"]["digest"]))
         fields = p["fields"]
         targets = [f["target"] for f in fields]
-        mapped = [{f["target"]: row[f["source"]] for f in fields} for row in rows]
+        mapped = []
+        null_token = capture["payload"]["null_token"]
+        for row in rows:
+            converted = {}
+            for field in fields:
+                cell = row[field["source"]]
+                if field.get("conversion") == "boolean_text" and cell != null_token:
+                    if cell not in ("1", "0", "true", "false"):
+                        raise ValueError("A mapped Boolean has no exact 1/0 or true/false native value.")
+                    cell = "true" if cell in ("1", "true") else "false"
+                converted[field["target"]] = cell
+            mapped.append(converted)
         blob = self.store.blob(csv_bytes(targets, mapped), p["table"] + "-sql-source.csv", "text/csv")
         value = copy.deepcopy(plan["payload"])
         target_table = next(t for t in value["project"]["tables"] if t["name"] == p["table"])

@@ -3,7 +3,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import crypto from 'node:crypto';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { createRequire, registerHooks } from 'node:module';
 import { readMssqlSourceFile, openMssqlSourceFile } from './core/mssql/config.mjs';
 import { inspectMssqlCatalog } from './core/mssql/catalog.mjs';
 
@@ -57,6 +58,24 @@ async function lock(root,jobHash){
   }
   throw new Error('NATIVE_LOCK_UNAVAILABLE');
 }
+async function bindExistingDriver(){
+  const selected=process.env.BI_SQL_NODE_MODULES;
+  let requireFrom;
+  if(selected){
+    check(path.isAbsolute(selected),'EXISTING_DRIVER_DIRECTORY_MUST_BE_ABSOLUTE');
+    requireFrom=createRequire(path.join(path.dirname(selected),'__commons_driver_resolution__.cjs'));
+  }else requireFrom=createRequire(path.join(path.dirname(fileURLToPath(import.meta.url)),'core/mssql/package.json'));
+  let manifestPath,entry;
+  try{manifestPath=requireFrom.resolve('mssql/package.json');entry=requireFrom.resolve('mssql');}
+  catch{throw new Error('MSSQL_DRIVER_UNAVAILABLE');}
+  const raw=await regular(manifestPath,1048576),manifest=JSON.parse(raw.toString('utf8'));
+  check(manifest.name==='mssql'&&manifest.version==='12.7.4','ORIGINAL_DRIVER_VERSION_REQUIRED');
+  const hook=selected?registerHooks({resolve(specifier,context,nextResolve){
+    return nextResolve(specifier==='mssql'?pathToFileURL(entry).href:specifier,context);
+  }}):null;
+  return{runtime:{node:process.versions.node,driver_version:manifest.version,driver_manifest_sha256:sha(raw),
+    mode:selected?'existing-profile-runtime':'original-worker-runtime'},release:()=>hook?.deregister()};
+}
 function cellKey(row,keys){
   const result=keys.map(k=>row[k.column]);
   check(result.every(x=>typeof x==='string'),'NONNULL_EXACT_CURSOR_REQUIRED');
@@ -93,7 +112,7 @@ export async function executeJob({jobPath,operationRoot,mode='execute',adapter=n
   if(mode==='inspect')return state;
   if(mode==='execute'&&state.generation>0){check(false,'CONTINUE_EXISTING_OPERATION_EXPLICITLY');}
   const unlock=await lock(root,jobHash);
-  let source=null,timer=null,canceled=false,controller=new AbortController();
+  let source=null,timer=null,driverRelease=null,canceled=false,controller=new AbortController();
   const cancel=()=>{canceled=true;controller.abort();};
   process.on('SIGINT',cancel);process.on('SIGTERM',cancel);
   const parent=process.ppid;
@@ -113,6 +132,9 @@ export async function executeJob({jobPath,operationRoot,mode='execute',adapter=n
     timer=setInterval(async()=>{
       try{if(await exists(cancelPath)||process.ppid!==parent)cancel();}catch{cancel();}
     },250);
+    if(adapter)state.runtime={node:process.versions.node,mode:'protocol-example'};
+    else{const driver=await bindExistingDriver();state.runtime=driver.runtime;driverRelease=driver.release;}
+    await save();
     const use=adapter??{open:openMssqlSourceFile,catalog:inspectMssqlCatalog};
     if(job.action==='catalog'){
       state.pending={kind:'catalog',table:job.table??null,started_at:stamp(),generation:state.generation};await save();
@@ -206,7 +228,7 @@ export async function executeJob({jobPath,operationRoot,mode='execute',adapter=n
   }finally{
     if(timer)clearInterval(timer);
     if(source)await source.close().catch(()=>{});
-    process.removeListener('SIGINT',cancel);process.removeListener('SIGTERM',cancel);
+    process.removeListener('SIGINT',cancel);process.removeListener('SIGTERM',cancel);driverRelease?.();
     await unlock();
   }
 }
