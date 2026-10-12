@@ -1044,9 +1044,9 @@ function renderCollectionControls() {
   text('collection-pause',current?.pauseRequested ? 'Pause requested' : 'Pause after current source');
   for(const id of ['collection-inspect','collection-copy','collection-export-report','collection-export-csv','collection-export-json','collection-export-workspace'])$(id).disabled=!current;
   if(waiting)text('collection-run-help','The saved source outcome gives a resume time of '+date(current.resumeAt)+'. The original progress remains available below.');
-  else if(current?.state==='LIMITED')text('collection-run-help','These minimum-size source windows still reached the declared cap. Copy this plan to choose a finer supported query precision or a more specific source filter; the current originals stay available.');
+  else if(current?.state==='LIMITED')text('collection-run-help',collectionStrategy(current)==='pages' ? 'The source repeated a full page or reached a saved traversal limit. Inspect the original page and problem, then copy this plan with a useful source filter when appropriate; the current originals stay available.' : 'These minimum-size source windows still reached the declared cap. Copy this plan to choose a finer supported query precision or a more specific source filter; the current originals stay available.');
   else if(current?.state==='RUNNING')text('collection-run-help','This original run is collecting the saved period. Pause retains the current source response before stopping. Progress refreshes from the local journal.');
-  else text('collection-run-help','Run processes this saved plan. A paused or interrupted run resumes its remaining windows through a new retained run command after the original outcome is reconciled.');
+  else text('collection-run-help','Run processes this saved plan. A paused or interrupted run resumes its remaining source members through a new retained run command after the original outcome is reconciled.');
 }
 function scheduleCollectionRefresh(delay=2500) {
   clearTimeout(collectionRefreshTimer);

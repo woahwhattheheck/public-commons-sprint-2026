@@ -339,7 +339,7 @@ function renderSources() {
   renderTable($('sources-table'), [
     { label: 'Source collection', render: row => textPair(row.name || row.id, row.id) },
     { label: 'Jurisdiction / source', render: row => textPair(row.connection?.label || row.connection?.id, row.connection?.baseUrl) },
-    { label: 'Coverage', render: row => textPair(fmt(row.summary?.state), whole(row.summary?.counts?.originalCaptureCount) + ' originals · ' + whole(row.summary?.counts?.limitedWindows) + ' limited windows') },
+    { label: 'Coverage', render: row => textPair(fmt(row.summary?.state), whole(row.summary?.counts?.originalCaptureCount) + ' originals · ' + whole(row.summary?.counts?.limitedWindows) + ' unresolved source members') },
     { label: 'Cases', className: 'number', render: row => whole(row.summary?.counts?.uniqueRequests) },
     { label: 'Original file', render: row => textPair(whole(row.bytes) + ' bytes', short(row.sha256, 18)) },
     { label: 'Inspect', className: 'actions-cell', render: row => button('Open source', () => inspectSource(row.id)) }
@@ -689,16 +689,34 @@ function renderCoverage() {
     heading.append(textPair(coverage.connection.label || coverage.connection.id, coverage.sourceId),
       actionGroup(button('Inspect original source', () => inspectSource(coverage.sourceId))));
     section.append(heading);
-    const query = node('p', coverage.query.start_date + ' → ' + coverage.query.end_date, 'mono');
+    const updated = coverage.selectionTimeBasis === 'updated';
+    const pages = coverage.traversal === 'pages';
+    const selection = coverage.query ?? {};
+    const start = updated ? selection.updated_after : selection.start_date;
+    const end = updated ? selection.updated_before : selection.end_date;
+    section.append(node('p', (updated ? 'Source update period: ' : 'Source creation period: ') +
+      fmt(start) + ' → ' + fmt(end), 'mono'));
+    if (updated && (selection.start_date || selection.end_date))
+      section.append(node('p', 'Additional source creation filter: ' + fmt(selection.start_date) +
+        ' → ' + fmt(selection.end_date), 'mono'));
+    if (!updated && (selection.updated_after || selection.updated_before))
+      section.append(node('p', 'Additional source update filter: ' + fmt(selection.updated_after) +
+        ' → ' + fmt(selection.updated_before), 'mono'));
+    if (coverage.populationDescription)
+      section.append(node('p', coverage.populationDescription, 'help'));
     const counts = coverage.summary.counts;
-    section.append(query, node('p', fmt(coverage.summary.state) + ' · ' + whole(counts.originalCaptureCount) + ' original responses · ' +
-      whole(counts.uniqueRequests) + ' source cases · ' + whole(counts.changedRequests) + ' changed cases · ' + whole(counts.limitedWindows) + ' limited windows', 'help'));
+    section.append(node('p', fmt(coverage.summary.state) + ' · ' + (pages ? 'Numbered source pages' : 'Source date windows') +
+      ' · ' + whole(counts.originalCaptureCount) + ' original responses · ' +
+      whole(counts.uniqueRequests) + ' source cases · ' + whole(counts.changedRequests) + ' changed cases · ' +
+      whole(counts.limitedWindows) + ' unresolved source members', 'help'));
     if (coverage.unresolvedWindows.length) {
-      const details = node('details'), summary = node('summary', whole(coverage.unresolvedWindows.length) + ' unresolved or unfinished source windows');
+      const details = node('details'), summary = node('summary', whole(coverage.unresolvedWindows.length) + ' unresolved or unfinished source members');
       const table = node('div');
       renderTable(table, [
-        { label: 'Window', render: item => item.id }, { label: 'Start', render: item => item.startDate },
-        { label: 'End', render: item => item.endDate }, { label: 'State / problem', render: item => textPair(item.state, item.problem?.code || item.problem || item.lastError?.message || '') },
+        { label: 'Source member', render: item => textPair(item.page ? 'Page ' + item.page : 'Window', item.id) },
+        { label: 'Start', render: item => item.startDate },
+        { label: 'End', render: item => item.endDate },
+        { label: 'State / problem', render: item => textPair(item.state, item.problem?.code || item.problem || item.lastError?.message || '') },
         { label: 'Original capture', render: item => item.captureId ?? 'No capture saved' }
       ], coverage.unresolvedWindows);
       details.append(summary, table); section.append(details);
@@ -726,7 +744,7 @@ function selectedReportRows() {
   return report.rows.filter(row => (!group || row.group === group) && (!status || JSON.stringify(row.sourceStatus ?? null) === status) &&
     (!target || row.target.state === target) && (!review || row.reviewStatus === review) &&
     (!$('report-issues-only').checked || row.issues.length) &&
-    (!query || [row.serviceRequestId, row.description, row.address, row.agency, row.assignee, row.group, row.sourceStatus].map(value => fmt(value)).join('\n').toLocaleLowerCase().includes(query)));
+    (!query || [row.serviceRequestId, row.description, row.address, row.agency, row.assignee, row.group, row.sourceStatus, row.sourceStatusNotes, ...(Array.isArray(row.source?.notes) ? row.source.notes.map(note => note?.description ?? '') : [])].map(value => fmt(value)).join('\n').toLocaleLowerCase().includes(query)));
 }
 function renderReportRows() {
   const rows = selectedReportRows(), pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE)); reportPage = Math.min(reportPage, pages - 1);
@@ -746,16 +764,20 @@ function inspectCase(row) {
   inspect('Source case ' + row.serviceRequestId, {
     serviceRequestId: row.serviceRequestId, key: row.key, sourceSha256: row.sourceSha256,
     requestedAt: row.requestedAt, updatedAt: row.updatedAt, expectedAt: row.expectedAt,
+    sourceClosedAt: row.sourceClosedAt ?? null, sourceStatusNotes: row.sourceStatusNotes ?? null,
+    originalPublicNotes: row.source?.notes ?? null,
     sourceStatus: row.sourceStatus, reportingStatus: row.reportingStatus, serviceGroup: row.group,
     mappedPriority: row.priority, mappingId: row.mappingId, assignee: row.assignee,
     internalReview: row.review, reviewNeedsRebase: row.reviewNeedsRebase,
     target: row.target, policyId: row.policyId, sourceExpectedAt: row.sourceExpectedAt, reviewDueAt: row.reviewDueAt, policyDueAt: row.policyDueAt,
-    ageMinutes: row.ageMinutes, resolutionMinutes: row.resolutionMinutes, businessMinutes: row.businessMinutes,
+    ageMinutes: row.ageMinutes,
+    'Source case-closure duration': { minutes: row.resolutionMinutes, closedAt: row.sourceClosedAt ?? null },
+    businessMinutes: row.businessMinutes,
     calculationIssues: row.issues, reviewerComment: report.requestComments[row.key] ?? null,
     sourceSelection: { sourceId: row.sourceId, captureId: row.captureId, observedAt: row.observedAt,
       sourceSha256: row.sourceSha256, occurrenceCount: row.observationCount, versionCount: row.versionCount, occurrences: row.occurrences },
     originalSource: row.source
-  }, 'The source case, its exact retained version, target calculation and internal review are shown together.',
+  }, 'Original source closure notes, the provider-defined case-closure time, the exact retained source version, target calculation and internal review are shown together.',
   [button('Open retained source collection', () => inspectSource(row.sourceId)),
     button('Prepare source-linked reviewer comment', () => startCaseComment(row))]);
 }

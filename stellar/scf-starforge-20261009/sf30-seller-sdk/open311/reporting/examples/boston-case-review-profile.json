@@ -313,6 +313,26 @@
       },
       "group": "Transport and access",
       "mappedPriority": null
+    },
+    {
+      "id": "boston-service-27",
+      "name": "Pruning Request",
+      "priority": 100,
+      "selector": {
+        "serviceCode": "75c7d377-d6f2-4870-b3ad-236ff17259be"
+      },
+      "group": "Street environment",
+      "mappedPriority": null
+    },
+    {
+      "id": "boston-service-28",
+      "name": "Street Light Other",
+      "priority": 100,
+      "selector": {
+        "serviceCode": "11d12a6d-6ca7-426a-8905-0e1929527419"
+      },
+      "group": "Transport and access",
+      "mappedPriority": null
     }
   ],
   "statusMappings": {
