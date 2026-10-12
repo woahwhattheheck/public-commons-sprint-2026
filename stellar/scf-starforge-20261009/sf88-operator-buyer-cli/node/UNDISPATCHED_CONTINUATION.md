@@ -98,7 +98,7 @@ The authorization source reader returns a safe metadata snapshot. Signed payload
 
 ## Actual receiving case
 
-The first receiving case is the retained OpenAlex greenhouse ground-source page-three operation. Its previous expiry successor entered the original signer, then encountered `ENOSPC`. The native stdout survived while the final SDK result file did not. The full recorder read returned `SIGNING_STARTED_NOT_DISPATCHED`, an inactive writer, and four records ending at `signing-input`. This path turns those recorded facts into the next source-bound original operation while preserving the earlier reservations and accepted source pages.
+The first receiving case is a retained research page operation. Its previous expiry successor entered the original signer, then encountered `ENOSPC`. The native stdout survived while the final SDK result file did not. The full recorder read returned `SIGNING_STARTED_NOT_DISPATCHED`, an inactive writer, and four records ending at `signing-input`. This path turns those recorded facts into the next source-bound original operation while preserving the earlier reservations and accepted source pages.
 
 A second actual receiving case retained the unsigned 402 headers and the original operator-approved request before `ENOSPC` prevented entry to the signer. The reader reconstructed the exact original request, returned `UNSIGNED_RESPONSE_HEADERS_RETAINED` with `signingEntered: false`, and retained the preceding case's snapshot byte-for-byte. Preparing another successor still requires the original reserved-row audit and usable destination storage.
 

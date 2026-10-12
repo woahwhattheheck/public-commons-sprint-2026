@@ -534,8 +534,19 @@ export function createBuyerPageFetcher({buyer,requestForPage,buyerOptions={}}){
       result=await operation.recover();
       if(result===null){
         const state=await operation.inspect();
-        check(state.state==='PREPARED','NATIVE_PAGE_RESULT_PENDING','Continue the existing buyer operation and receive its saved result.',409);
-        result=await operation.execute({review:await operation.review({signal}),signal});
+        const pending=state.preapprovalRecovery?.pending;
+        if(state.state==='PREAPPROVAL_RECOVERY_PREPARED'&&pending){
+          check(pending.status==='PREPARED'&&pending.intentId===operation.intentId&&
+            /^[a-f0-9]{64}$/.test(pending.planSha256??'')&&
+            typeof operation.executePreapprovalRecovery==='function','NATIVE_PAGE_PREAPPROVAL_PLAN_INVALID',undefined,409);
+          // Consume only the plan already selected by the original operator.
+          // The SDK rechecks that exact review, process, source and zero-reservation audit.
+          result=await operation.executePreapprovalRecovery({
+            expectedPlanSha256:pending.planSha256,review:pending.review,signal});
+        }else{
+          check(state.state==='PREPARED','NATIVE_PAGE_RESULT_PENDING','Continue the existing buyer operation and receive its saved result.',409);
+          result=await operation.execute({review:await operation.review({signal}),signal});
+        }
       }
     }else{
       operation=await buyer.fromRequest({...proposed,intentId,signal},buyerOptions);

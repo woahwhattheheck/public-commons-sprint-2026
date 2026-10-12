@@ -2,8 +2,9 @@
 import { spawn } from 'node:child_process';
 import { open, lstat, mkdtemp, rm, realpath } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
-import { absolute, privateDirectory, readBytes, parseJson, jsonBytes, object, need, BuyerError, safeCode, currentFileReservation, digest, writeBytes, withFileReservation } from './store.mjs';
+import { absolute, privateDirectory, readBytes, parseJson, jsonBytes, object, need, BuyerError, safeCode, currentFileReservation, digest, writeBytes, withFileReservation, now } from './store.mjs';
 import { normalizeNativeFileReservation, createNativeFileReservation } from './file-reservation.mjs';
+import { captureChildProcessIdentity } from './process-identity.mjs';
 
 
 async function allocateOutput(fileHandle, path, kind, bytes, signal, reserveFile) {
@@ -45,6 +46,9 @@ async function closeOutput(fileHandle, { reserved = false, reset = false, limit 
   if (failure) throw failure;
 }
 
+export const resultRecordLimit = runtime => Math.min(2147483647, 2 * runtime.outputLimit + 16384);
+export const attemptRecordLimit = 65536;
+
 export class NativeRuntime {
   constructor({ runtimeDirectory, node = process.execPath, environment = process.env,
     timeoutMs = 360000, cleanupGraceMs = 15000, outputLimit = 1048576, reserveFile, nativeFileReservation, nativeRuntimeSource }) {
@@ -68,21 +72,43 @@ export class NativeRuntime {
     return this.nativeFileReservation ? createNativeFileReservation(this.nativeFileReservation) : null;
   }
 
-  async run(args, { directory, signal, started, entryFile = this.cli, resultFile, resultLimit = this.outputLimit } = {}) {
+  async run(args, options = {}) {
+    const launch = { invoked: false, settled: false, nativeProcessStarted: false, command: null, commandSha256: null };
+    try {
+      const result = await this._run(args, options, launch);
+      return { ...result, nativeProcessStarted: launch.nativeProcessStarted,
+        command: launch.command, commandSha256: launch.commandSha256 };
+    } catch (error) {
+      if (!launch.invoked || launch.settled && !launch.nativeProcessStarted)
+        throw new BuyerError(safeCode(error?.code, 'NATIVE_PRESPAWN_FAILED'), {
+          nativeProcessStarted: false, command: launch.command, commandSha256: launch.commandSha256,
+          ...(error?.outputCleanupFailed === true ? { outputCleanupFailed: true } : {}),
+        });
+      throw error;
+    }
+  }
+
+  async _run(args, { directory, signal, started, beforeSpawn, entryFile = this.cli, resultFile,
+    resultLimit = this.outputLimit } = {}, launch) {
     need(Array.isArray(args) && args.every(value => typeof value === 'string' && !value.includes('\0')), 'NATIVE_ARGUMENTS_INVALID');
     need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
     need(Number.isSafeInteger(resultLimit) && resultLimit > 0 && resultLimit <= 268435456, 'NATIVE_RESULT_LIMIT_INVALID');
+    entryFile = absolute(entryFile);
+    need(beforeSpawn === undefined || typeof beforeSpawn === 'function', 'NATIVE_BEFORE_SPAWN_INVALID');
+    launch.command = [this.node, entryFile, ...args];
+    launch.commandSha256 = digest(jsonBytes(launch.command));
     need(!signal?.aborted, 'OPERATION_ABORTED_BEFORE_START');
     if (this.nativeRuntimeSource !== undefined) {
       const { verifySuccessorRuntimeSource } = await import('./runtime-source.mjs');
       const binding = await verifySuccessorRuntimeSource(this.nativeRuntimeSource, { signal });
       need(binding.directory === this.directory, 'NATIVE_RUNTIME_SOURCE_DIRECTORY_MISMATCH');
     }
-    entryFile = absolute(entryFile);
     need((await lstat(entryFile)).isFile(), 'NATIVE_CLI_REQUIRED');
     // ESM resolves parent directory links before evaluating a main-entry guard.
     // Pass that same real filename in argv while keeping the regular-file check.
     entryFile = await realpath(entryFile);
+    launch.command = [this.node, entryFile, ...args];
+    launch.commandSha256 = digest(jsonBytes(launch.command));
     directory = await privateDirectory(directory, { create: false });
     resultFile = resultFile === undefined ? join(directory, 'stdout.json') : absolute(resultFile);
     need(dirname(resultFile) === directory, 'NATIVE_RESULT_PATH_INVALID');
@@ -105,6 +131,8 @@ export class NativeRuntime {
       await withFileReservation({ reserveFile, signal },
         () => writeBytes(requestPath, request, { exclusive: true }));
       nativeArgs = [bootstrap, requestPath, digest(request)];
+      launch.command = [this.node, ...nativeArgs];
+      launch.commandSha256 = digest(jsonBytes(launch.command));
     }
     const stdoutPath = join(directory, 'stdout.json');
     const stderrPath = join(directory, 'stderr.log');
@@ -142,19 +170,25 @@ export class NativeRuntime {
     };
     const abort = () => stop('OPERATION_ABORTED');
     try {
+      if (beforeSpawn) await beforeSpawn({ command: [...launch.command], commandSha256: launch.commandSha256 });
+      need(!signal?.aborted, 'OPERATION_ABORTED_BEFORE_START');
       await new Promise(resolveClose => {
         try {
+          launch.invoked = true;
           child = spawn(this.node, nativeArgs, {
             cwd: this.directory, env: this.environment, shell: false,
             stdio: ['inherit', stdout.fd, stderr.fd], windowsHide: true,
           });
-        } catch { localError = 'NATIVE_START_FAILED'; resolveClose(); return; }
+        } catch { localError = 'NATIVE_START_FAILED'; launch.settled = true; resolveClose(); return; }
         child.once('error', () => { localError ??= 'NATIVE_PROCESS_ERROR'; });
         child.once('spawn', () => {
-          startRecording = Promise.resolve().then(() => started?.(child.pid)).catch(() => stop('ATTEMPT_STATE_WRITE_FAILED'));
+          launch.nativeProcessStarted = true;
+          startRecording = Promise.resolve().then(async () => {
+            if (started) await started(child.pid, await captureChildProcessIdentity(child.pid));
+          }).catch(() => stop('ATTEMPT_STATE_WRITE_FAILED'));
         });
         child.once('close', (code, nativeSignal) => {
-          closed = true; exitCode = code; exitSignal = nativeSignal; resolveClose();
+          closed = true; launch.settled = true; exitCode = code; exitSignal = nativeSignal; resolveClose();
         });
         timeout = setTimeout(() => stop('NATIVE_TIMEOUT'), this.timeoutMs);
         timeout.unref();
@@ -216,4 +250,21 @@ export class NativeRuntime {
       return run.output;
     } finally { await rm(directory, { recursive: true, force: true }); }
   }
+}
+
+/** A definite closed pre-spawn failure qualifies; an unknown interruption does not. */
+export function unstartedAttempt(attempt, observation) {
+  if (observation?.nativeProcessStarted !== false || !Array.isArray(observation.command) ||
+      observation.command.some(value => typeof value !== 'string') ||
+      digest(jsonBytes(observation.command)) !== observation.commandSha256) return null;
+  const observedAt = now(), startedAt = attempt.startedAt ?? attempt.createdAt;
+  return { ...attempt, state: 'NOT_DISPATCHED', startedAt, endedAt: observedAt,
+    nativeStart: {
+      schema: 'stellar-forge.node-native-start-receipt.v1',
+      nativeProcessStarted: false, phase: 'BEFORE_SPAWN',
+      attemptStartedAt: startedAt, observedAt,
+      errorCode: safeCode(observation.errorCode ?? observation.code, 'NATIVE_PRESPAWN_FAILED'),
+      command: [...observation.command], commandSha256: observation.commandSha256,
+    },
+  };
 }

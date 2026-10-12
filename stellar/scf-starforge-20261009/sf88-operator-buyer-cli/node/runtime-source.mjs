@@ -102,7 +102,8 @@ export async function readSuccessorRuntimeSource(value,{signal}={}){
     'workspace.mjs','operation-ticket.mjs','node/client.mjs','node/runtime.mjs',
     'node/store.mjs','node/unpaid-continuation.mjs','node/expired-continuation.mjs',
     'node/authorization-dispatch.mjs','node/runtime-source.mjs',
-    'node/file-reservation.mjs','node/reserved-entry.mjs',
+    'node/file-reservation.mjs','node/reserved-entry.mjs','node/process-identity.mjs',
+    'node/preapproval-recovery.mjs','node/preapproval-native-record.py','dataset-unpaid.mjs',
   ].map(path=>prefix+'/'+path);
   const siblingPrefix=prefix.includes('/')?prefix.slice(0,prefix.lastIndexOf('/')+1):'';
   required.push(...[

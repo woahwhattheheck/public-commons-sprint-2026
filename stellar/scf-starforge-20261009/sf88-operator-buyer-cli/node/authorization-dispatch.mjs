@@ -55,9 +55,10 @@ const PINS = Object.freeze({
 const PROTECTED_SOURCE_PROFILE = Object.freeze({
   id:'ORIGINAL_AUTHORIZATION_WITH_HELD_FILE_RESERVATIONS_V1',
   execute:'366544e23c3e1c1bd70b993dce3a5a16d133d8357e63ccec8dd2dfac0c97c4b2', wire:'8ab92a2b590c973b6b44f259e6cdeddf16a1cd4840f9dc1adbb436cf59c85f11', store:'5232d58fd2ac4e3666bdd13cb73322bd53785d9e0994b1511200b1dd15d89531',
-  runtime:'180e520ac21b7112c89f8dceed85226f29a3a1d6047c63f74835658921e432e5', bootstrap:'aabc20e221b269957ff9e32115500980d27e32e3292ad9e338c7a1fff9eddac4',
-  provider:'56362274bad8b536f8928234da773fe7aef4c15773911dfe087e4970a400c06c', runtimeSource:'fc5aedb68fa3ef4e32436298e3aed5a281e48084461469c69fe80f02ec8517ac',
+  runtime:'96c57344c965e519069ab694d6f9a85ea856a448a134c6041730dcef8e026551', bootstrap:'aabc20e221b269957ff9e32115500980d27e32e3292ad9e338c7a1fff9eddac4',
+  provider:'56362274bad8b536f8928234da773fe7aef4c15773911dfe087e4970a400c06c', runtimeSource:'d99256fcb72fd9956f62aad7c070beb627c1d5b140e0ccc858f8866d03118954',
   responseFile:'1aa6e71f1b308a4ea71b61ee597323c41da379408e75633bcc62246f3818c295',
+  processIdentity:'8b5d942d8b80f90e9197e12a9280689285e4c0ee0376d31f601c77726900921c',
 });
 
 async function protectedEntrySource({runtime, directory, operation, bound, reader, signerSources, signal}) {
@@ -66,6 +67,7 @@ async function protectedEntrySource({runtime, directory, operation, bound, reade
     ['reservationBootstrap',join(runtime,'node/reserved-entry.mjs'),'bootstrap'],
     ['reservationProvider',join(runtime,'node/file-reservation.mjs'),'provider'],
     ['reservationRuntimeSource',join(runtime,'node/runtime-source.mjs'),'runtimeSource'],
+    ['reservationProcessIdentity',join(runtime,'node/process-identity.mjs'),'processIdentity'],
     ['reservationResponseFile',resolve(runtime,'../sf31-buyer-client/response-file.mjs'),'responseFile'],
   ];
   for (const [name,path,key] of paths) {
