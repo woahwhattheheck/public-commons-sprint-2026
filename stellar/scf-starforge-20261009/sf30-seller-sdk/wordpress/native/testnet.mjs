@@ -43,7 +43,12 @@ const SOURCE_PINS={
   "sf30-seller-sdk/socrata/publisher.mjs": "f029528f7feb0e4c9d52ede00314d8c7eb8a9280",
   "sf30-seller-sdk/wordpress/native/journey.mjs": "13fd6cb86b0e9069264b9f93ecae4fda721c659b",
   "sf30-seller-sdk/wordpress/native/seed.php": "b3acc5400af2e693cb80a89467df39cbb8324e06",
-  "sf30-seller-sdk/wordpress/native/prepare.mjs": "549737ce2a640c447fd3aa6d524633cbb62b9182"
+  "sf30-seller-sdk/wordpress/native/prepare.mjs": "549737ce2a640c447fd3aa6d524633cbb62b9182",
+  "sf30-seller-sdk/wordpress/native/component-source.json": "4f32402434a5f404441474916ae9650bd00de940",
+  "sf30-seller-sdk/wordpress/native/mu-plugin.php": "45b107b554bfa67eb116a9182fa26860114b9b66",
+  "sf30-seller-sdk/wordpress/native/receive.py": "38e5b3031f00ea8d123e7e6712996abf7ad96903",
+  "sf82-checkout-evidence/evidence.mjs": "513f6735a8b358526d13916347d5f9d1f15c6133",
+  "sf43-agent-commerce/verify.mjs": "262d68a31e5c9f41e9809a3f45c77d4e39bd5d60"
 };
 async function privateDirectory(path, create = false) {
   if (create) {
@@ -442,11 +447,48 @@ async function retainedSessions(ctx) {
  }
  return sessions;
 }
+async function recoverOriginalSessions(ctx,native,terms) {
+ const selected=await retainedSessions(ctx),observations=[];
+ if(!selected.length)return observations;
+ const directory=join(ctx.output,'session-recovery');
+ await privateDirectory(directory,true);
+ const evidence=await import(pathToFileURL(join(ctx.input.sourceRoot,SCF,'sf82-checkout-evidence/evidence.mjs')));
+ for(const session of selected) {
+  // Original SF88 checks its retained lock owner before reclaiming that lock.
+  // A live original buyer remains authoritative and recovery rejects it.
+  const before=await native.recoverDatasetSession(session.acquisition);
+  const observation={schema:'stellar-forge.wordpress-original-session-recovery.v1',
+   operationId:ctx.input.operationId,productId:session.productId,buyerId:session.buyerId,
+   acquisition:session.acquisition,originalIntent:session.originalIntent,observedAt:time(),
+   before,checkout:null,after:before,buyerInvocations:0,signerInvocations:0};
+  if(before.status==='RECONCILIATION_REQUIRED'&&before.stoppedPage?.intentId) {
+   try {
+    observation.checkout=await evidence.recoverCheckoutEvidence({
+     outputDir:join(session.acquisition,'evidence'),intentId:before.stoppedPage.intentId,
+     trustedPayer:terms.payer,rpcEndpoint:RPC});
+   }catch(error) {
+    if(error.code!=='ENOENT')throw error;
+    observation.checkout={intentId:before.stoppedPage.intentId,checkpointAvailable:false};
+   }
+   observation.after=await native.recoverDatasetSession(session.acquisition);
+  }
+  const file=join(directory,session.buyerId+'-'+randomUUID()+'.json'),bytes=jsonBytes(observation);
+  await saveBytes(file,bytes,{createOnly:true});
+  observations.push({productId:session.productId,buyerId:session.buyerId,
+   status:observation.after.status,file,sha256:hash(bytes),bytes:bytes.length});
+  requireValue(['READY','COMPLETE'].includes(observation.after.status),
+   'ORIGINAL_DATASET_CONTINUATION_REQUIRED',
+   'Original acquisition '+session.acquisition+' retains '+observation.after.status+
+   '; inspect the unchanged page and recovery observation '+file+'.');
+ }
+ return observations;
+}
 async function reviewPending(ctx,native,broker,terms,decided) {
  for(const selected of await retainedSessions(ctx)) {
   const root=join(selected.acquisition,'pages');
   const entries=(await readdir(root,{withFileTypes:true})).filter(x=>/^[0-9]{6}$/.test(x.name)).sort((a,b)=>a.name.localeCompare(b.name));
-  for(const entry of entries) {
+  // Original SF88 runs pages serially; only its last retained page can await review.
+  for(const entry of entries.slice(-1)) {
    requireValue(entry.isDirectory()&&!entry.isSymbolicLink(),'ORIGINAL_PAGE_DIRECTORY_REQUIRED');
    const cfg=await readJson(join(root,entry.name,'config.json'),true);
    if(!cfg)continue;
@@ -642,6 +684,8 @@ async function hostPhase(ctx) {
   const acceptancePath=join(ctx.results,'NATIVE_ACCEPTANCE.json');
   acceptance=await readJson(acceptancePath,true);
   if(!acceptance?.passed) {
+   result.sessionRecovery=await recoverOriginalSessions(ctx,native,terms);
+   requireValue(!interrupted,'ORIGINAL_OPERATION_INTERRUPTED');
    log=await open(join(ctx.output,'native-journey.log'),'a',0o600);
    running=startChild(process.execPath,[join(HERE,'journey.mjs'),'--config',ctx.selector],
     {env:environment,stdio:['ignore',log.fd,log.fd,lease]});
