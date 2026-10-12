@@ -155,3 +155,28 @@ Known version-1 workspace opening adds only the trusted `api_requests` table. Th
 The trusted `receive.py --archive ABS_ZIP --directory NEW_ABS_DIRECTORY --expected-sha256 SHA256` verifies the complete package and known native database schema, then retains the included source and database in a new private directory. An interrupted receive can continue only with the same archive SHA. It executes no archive code or SQL, imports no original ledger and replays no source capture or payment. Older complete projects without request history remain explicitly identifiable as legacy. New projects advertise `mcp_quote_capture: native-readonly-v1`; receiving requires the complete original reader files and verifies that manifest source kinds match the native database.
 
 The maintained merchant MCP host now exposes the same full capture/allocation/review/close/export/receiving workflow. Its [buyer expense guide](../../../../stellar-forge/mcp-merchant-operator/BUYER_EXPENSES.md) documents host-declared ledger and quote-source aliases, exact tool schemas, SDK/CLI use and retained request/export recovery. No additional accounting or payment engine is involved.
+
+## Original customer refunds and buyer returns
+
+Credits & returns completes original customer refund receiving in this same expense workspace. The maintained SF104 `receiveRefund`, `inspectRefund` and `bindRefundAdjustment` validate the original packet, released purchase identity, store-currency mapping and retained reverse-transfer observation. The buyer source copies only the selected original local packet into its own private intake. It makes no network request, merchant mutation or payment.
+
+Receive the exact original handoff directory, manifest SHA-256 and store URL. Retain its operation provenance and select `operational` or `development`; one workspace keeps one context. Development WordPress/facilitator operations remain development records even when their saved native proof uses a testnet network name. They belong in a separate project from actual buyer payments.
+
+Review the retained purchase and return. Bind to the exact existing native payment, or explicitly register the original reviewed merchant purchase carried by the packet. The purchase identity, amount, asset and payer/recipient must match; subsequent packets for that original order keep the same expense target. Native returned units and Woo store-currency credit remain independent original values. An APPLIED store credit is not used as a substitute for the original reverse-transfer proof.
+
+Allocate the purchase, then allocate each return against its remaining original cost-center, project and account dimensions. The sum must equal the original native returned amount. Cumulative returns cannot exceed the purchase or its original dimensions, and one original reverse-transfer event cannot be allocated twice. Assign the recognition date explicitly; original approval and transfer timestamps keep their own source meaning. Saved allocation editions retain their predecessors.
+
+Period review shows gross purchases, native returns and net expense by original network/asset. Pending packets need an acceptance/rejection decision; uncoded or changed returns need coding or an explicit period disposition. Reopen a closed period before changing its return coding. Each corrected close retains the earlier close, original source packets, coding and named review. A later-period return can produce a negative net amount without changing the original period.
+
+The accountant ZIP includes original purchase captures, each used refund manifest/member byte, return allocations, original store-credit outcomes and exact net native totals. Complete project receiving includes the same SQLite decisions, request history, original packet bytes and the original reader source closure. Its trusted receiver verifies all four new native tables and feature metadata; earlier projects without buyer-credit tables remain supported. No original ledger, quote database or signer is needed to open retained state.
+
+### Native HTTP controls
+
+- `POST /api/refund-packets`: capture `{name, provenance, data_context, directory, manifest_sha256, site_url}`.
+- `GET /api/refund-packets` and `GET /api/refund-packets/ID`: paged intake history and exact source review.
+- `POST /api/refund-packets/ID/decision`: `{decision, operator, reason, purchase_item_id?, register_original_purchase?}`.
+- `GET /api/refund-packets/ID/original`: the unchanged original customer packet plus its separate buyer intake description.
+- `GET /api/credits`, `GET /api/credits/ID`: paged returns, current purchase binding, related returns and coding history.
+- `POST /api/credits/ID/coding`: the existing exact allocation shape with the current return `basis`.
+
+Each mutation uses the existing `{expected_revision, payload, request_id?}` envelope and original transactional request recovery. A received successor packet is imported through Credits; immutable packet sources are not rebound as ledger files. The existing customer MCP and SDK expose these same controls through host-declared refund aliases.

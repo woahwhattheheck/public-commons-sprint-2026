@@ -18,6 +18,14 @@ NATIVE_OUTCOMES = ("source_name", "request_id", "quote_day", "native_status", "p
                    "quoted_amount", "settled_actual", "receipt_ref", "observation_sha256", "payer", "recipient",
                    "result_file_status", "result_file_sha256", "result_file_bytes", "result_preview_sha256", "result_preview_bytes",
                    "source_capture", "missing")
+CREDIT_FIELDS = ("credit_id", "item_id", "source_name", "source_capture", "packet_id", "manifest_sha256",
+    "adjustment_id", "refund_id", "order_reference", "network", "asset", "original_transaction", "transaction",
+    "transfer_identity", "observation_sha256", "native_return", "recognition_date", "native_transfer_at",
+    "center_code", "center_name", "project", "account_code", "amount", "memo", "coding_id", "line", "data_context")
+CREDIT_OUTCOMES = ("credit_id", "item_id", "source_name", "source_capture", "packet_id", "manifest_sha256",
+    "site_url", "order_reference", "adjustment_id", "refund_id", "merchant_status", "store_amount", "currency",
+    "store_credit_applied", "native_return", "network", "asset", "transfer_at", "observed_at",
+    "transaction", "original_transaction", "transfer_identity", "observation_sha256", "coding_id", "data_context")
 CSS = """
 :root{color-scheme:light;font-family:system-ui,sans-serif;color:#202224;background:#f2f3f3}
 *{box-sizing:border-box}body{margin:0;font-size:14px;line-height:1.55}
@@ -67,8 +75,9 @@ def units(value, row, labels):
     if not label:
         return "<span class='number'>" + esc(value) + "</span> base units"
     precision = label["decimals"]
-    padded = value.zfill(precision + 1)
-    shown = padded if not precision else padded[:-precision] + "." + padded[-precision:]
+    sign = "-" if str(value).startswith("-") else ""
+    padded = str(value).removeprefix("-").zfill(precision + 1)
+    shown = sign + (padded if not precision else padded[:-precision] + "." + padded[-precision:])
     return "<span class='number'>" + esc(shown) + "</span> " + esc(label["symbol"]) + "<br><small>" + esc(value) + " base units</small>"
 
 
@@ -101,14 +110,31 @@ def render_issued(doc):
           esc((r.get("result_file") or {}).get("status", "No complete-file record")) + "<br><code>" +
             esc((r.get("result_file") or {}).get("sha256") or (r.get("result_preview") or {}).get("bodySha256")) + "</code>"]
          for r in doc.get("native_payment_outcomes", [])])
-    native_section = ("<section><h2>Original MCP payment outcomes</h2>" + native_payments +
-        "<p class='muted'>These original quotes retain their quoted terms, buyer status, saved payment observation and recorded result metadata. Native spending reservations remain in their separate ledger source.</p></section>") if doc.get("native_payment_outcomes") else ""
+    native_section = ("<section><h2>Original native purchase outcomes</h2>" + native_payments +
+        "<p class='muted'>These original sources retain the purchase or quote identity, native payment observation and available result metadata. Store currency mappings and native spending reservations remain separate.</p></section>") if doc.get("native_payment_outcomes") else ""
     sources = table(["Source", "Accepted capture", "Captured at", "Projection"],
         [[esc(r["name"]), "<code>" + esc(r["current_capture"]) + "</code>", esc(r.get("capture_time")),
           "<code>" + esc(r.get("projection_sha256")) + "</code>"] for r in doc["source_captures"]])
     cost_centers = table(["Cost center", "Network / asset", "Native amount"],
         [[esc(r["center_code"] + " · " + r["center_name"]), esc(r["network"]) + "<br><code>" + esc(r["asset"]) + "</code>",
           units(r["amount"], r, labels)] for r in doc["by_cost_center"]])
+    credit_section = ""
+    if doc.get("merchant_credit_outcomes") or doc.get("credit_allocations"):
+        native_returns = table(["Order / refund", "Original native return", "Original store credit", "Native operation / packet"],
+            [[esc(r["order_reference"]) + " / " + esc(r.get("refund_id") or r["adjustment_id"]) + "<br><small>" + esc(r["site_url"]) + "</small>",
+              units(r["native_return"], r, labels) + "<br><code>" + esc(r["transaction"]) + "</code><br>" + esc(r["transfer_at"]),
+              esc(r["store_amount"] + " " + r["currency"]) + "<br>" + esc(r["merchant_status"]),
+              esc(r["data_context"]) + "<br><code>" + esc(r["manifest_sha256"]) + "</code>"]
+             for r in doc.get("merchant_credit_outcomes", [])])
+        return_lines = table(["Recognition", "Cost center / project", "Account", "Returned native amount", "Original refund"],
+            [[esc(r["recognition_date"]), esc(r["center_code"] + " · " + r["center_name"]) + "<br>" + esc(r["project"]),
+              esc(r["account_code"]), units(r["amount"], r, labels), "<code>" + esc(r["adjustment_id"]) + "</code>"]
+             for r in doc.get("credit_allocations", [])])
+        net = table(["Network / asset", "Net native expense", "Lines"],
+            [[esc(r["network"]) + "<br><code>" + esc(r["asset"]) + "</code>", units(r["amount"], r, labels), esc(r["lines"])]
+             for r in doc.get("net_totals", [])])
+        credit_section = ("<section><h2>Buyer credits and returns</h2><p>Store-currency credit and native returned units retain their independent original mappings. Returns reduce the original expense allocation.</p>" +
+                          native_returns + "<h3>Return allocation lines</h3>" + return_lines + "<h3>Net native expense</h3>" + net + "</section>")
     style_hash = base64.b64encode(hashlib.sha256(CSS.encode()).digest()).decode()
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -117,12 +143,13 @@ def render_issued(doc):
 <body><main><header><div class="eyebrow">Starforge / Buyer expense operations</div><h1>{esc(period['name'])}</h1>
 <div class="meta"><span>{esc(period['from_day'])} — {esc(period['through_day'])}</span><span>Issued edition {doc['sequence']}</span><span>{esc(doc['created_at'])}</span></div>
 <p class="muted">Amounts retain their original network, asset and exact base units. Recognition dates are assigned by the operator; original reservation and quote-creation dates keep their source meanings. Outstanding ledger authorizations are carried separately. Currency conversion is outside this edition.</p>
-<dl><dt>Review owner</dt><dd>{esc(reviewer['reviewer'])} · {esc(reviewer['role'])}</dd><dt>Review conclusion</dt><dd>{esc(reviewer['notes'])}</dd>
+<dl><dt>Operation context</dt><dd>{esc(doc.get("data_context", "operational"))}</dd><dt>Review owner</dt><dd>{esc(reviewer['reviewer'])} · {esc(reviewer['role'])}</dd><dt>Review conclusion</dt><dd>{esc(reviewer['notes'])}</dd>
 <dt>Issued edition</dt><dd><code>{esc(doc['id'])}</code></dd><dt>Source and decision context</dt><dd><code>{esc(doc['context_sha256'])}</code></dd></dl></header>
 <section><h2>Allocated expenses</h2>{totals}<h3>Cost-center totals</h3>{cost_centers}</section>
 <section><h2>Allocation lines</h2>{allocations}</section>
 <section><h2>Outstanding native reservations</h2>{outstanding}</section>
 {native_section}
+{credit_section}
 <section><h2>Exception decisions</h2>{decisions}</section>
 <section><h2>Retained source captures</h2>{sources}<p class="muted">{esc(doc['basis'])}. The private JSON and source files retain the exact original rows and reviewer decisions.</p></section>
 </main></body></html>
@@ -134,12 +161,22 @@ def accountant_packet(doc):
                "period.json": (json.dumps(doc, ensure_ascii=True, indent=2) + "\n").encode(),
                "allocations.csv": csv_text(doc["allocations"], FIELDS).encode(),
                "outstanding-reservations.csv": csv_text(doc["outstanding_reservations"], OUTSTANDING).encode(),
+               "credit-allocations.csv": csv_text(doc.get("credit_allocations", []), CREDIT_FIELDS).encode(),
+               "original-merchant-credits.csv": csv_text(doc.get("merchant_credit_outcomes", []), CREDIT_OUTCOMES).encode(),
+               "net-native-expense.csv": csv_text(doc.get("net_totals", doc["totals"]), ("network", "asset", "amount", "lines")).encode(),
                "native-mcp-payment-outcomes.csv": csv_text(doc.get("native_payment_outcomes", []), NATIVE_OUTCOMES).encode(),
                "exception-decisions.json": (json.dumps(doc["issues"], ensure_ascii=True, indent=2) + "\n").encode(),
                "README.txt": b"Open issued.html for the reviewed period. JSON retains exact base-unit strings and source rows. Import every amount and identifier column as text in spreadsheet software. The capture basis remains the original SF36 statement projection and any explicitly retained MCP quote/payment observations. Each source keeps its own dates and classifications. This packet performs no wallet or finality action and applies no currency conversion. Keep this operator/accountant export private.\n"}
     for source in doc["native_captures"]:
         entries["sources/" + source["id"] + ".json"] = (json.dumps(source, ensure_ascii=True, indent=2) + "\n").encode()
+    for packet in doc.get("refund_packets", []):
+        prefix = "refund-packets/" + packet["id"] + "/"
+        native = packet["native"]
+        entries[prefix + "manifest.json"] = base64.b64decode(native["manifest_base64"], validate=True)
+        for member in native["files"]:
+            entries[prefix + member["name"]] = base64.b64decode(member["base64"], validate=True)
     entries["manifest.json"] = (json.dumps({"schema": "stellar-forge.buyer-expense-export.v1", "close_id": doc["id"],
+        "data_context": doc.get("data_context", "operational"),
         "files": [{"path": name, "bytes": len(value), "sha256": hashlib.sha256(value).hexdigest()} for name, value in sorted(entries.items())]}, indent=2) + "\n").encode()
     out = io.BytesIO()
     with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as archive:

@@ -2,7 +2,7 @@ const content = document.querySelector("#content");
 const noticeBox = document.querySelector("#notice");
 const dirty = new Set();
 let serial = 0;
-const view = {tab:"expenses", item:null, source:null, capture:null, period:null, review:null, close:null, issue:null,
+const view = {tab:"expenses", item:null, credit:null, refundPacket:null, creditOffset:0, refundOffset:0, source:null, capture:null, period:null, review:null, close:null, issue:null,
               periodEdit:false, setting:"centers", center:null, expensesOffset:0, captureOffset:0, sourceOffset:0,
               historyOffset:0, activityOffset:0, query:"", filterSource:"", filterStatus:""};
 let state = null;
@@ -48,7 +48,7 @@ async function api(path, body) {
 }
 async function refreshState() {
   state=await api("/api/state");
-  document.querySelector("#revision").textContent="Revision "+state.revision;
+  document.querySelector("#revision").textContent="Revision "+state.revision+(state.data_context==="development"?" · Development operation":"");
   document.body.dataset.revision=String(state.revision);
 }
 async function save(form,path,payload) {
@@ -144,13 +144,13 @@ function unit(value,row,labels=state.labels) {
   if(value===null||value===undefined)return "Not established";
   const raw=String(value);const label=labels.find(l=>l.network===row.network&&l.asset===row.asset);
   if(!label)return raw+" base units";
-  const n=raw.padStart(label.decimals+1,"0");
-  const shown=label.decimals?n.slice(0,-label.decimals)+"."+n.slice(-label.decimals):n;
+  const sign=raw.startsWith("-")?"-":"";const n=raw.replace(/^-/,"").padStart(label.decimals+1,"0");
+  const shown=sign+(label.decimals?n.slice(0,-label.decimals)+"."+n.slice(-label.decimals):n);
   return raw+" base units · "+shown+" "+label.symbol;
 }
 function totalCards(report) {
   const host=el("div",{class:"cards"});
-  for(const [title,rows] of [["Allocated settled actual",report.totals],["Outstanding reserved maximum",report.outstanding_totals]]){
+  for(const [title,rows] of [["Allocated settled actual",report.totals],...(report.credit_totals?.length?[["Allocated native returns",report.credit_totals],["Net native expense",report.net_totals]]:[]),["Outstanding reserved maximum",report.outstanding_totals]]){
     const c=el("section",{class:"card muted"},el("h3",{},title));
     if(!rows.length)c.append(el("p",{},"0 base units"));
     for(const row of rows)c.append(el("p",{class:"code"},row.network+" / "+row.asset),el("p",{class:"allocation-total"},unit(row.amount,row,report.labels||state.labels)));
@@ -184,6 +184,7 @@ async function render(){
   document.body.dataset.tab=view.tab;
   if(view.tab==="expenses")await renderExpenses();
   if(view.tab==="sources")await renderSources();
+  if(view.tab==="credits")await renderCredits();
   if(view.tab==="periods")await renderPeriods();
   if(view.tab==="settings")await renderSettings();
   if(view.tab==="activity")await renderActivity();
@@ -213,11 +214,11 @@ async function renderExpense(){
   content.append(button("← Expense list",()=>navigate(()=>{view.item=null;}),"small"));
   heading("Expense allocation",item.source_name+" · "+r.request_id);
   const native=el("section",{class:"card"},el("div",{class:"card-header"},el("h2",{},"Original native row"),badge(item.status)),
-    facts([["Service",r.service],["Network / asset",r.network+" / "+r.asset],[r.source_kind==="mcp_quote"?"MCP quote creation day":"Native reservation day",r.day],["Settled actual",unit(r.settled_base_units,r)],
-           ["Outstanding reservation",r.source_kind==="mcp_quote"?"Not a reservation source":unit(r.reserved_base_units,r)],[r.source_kind==="mcp_quote"?"Original quoted amount":"Original authorized maximum",r.amount||"Not established"],["Receipt reference",r.receipt_ref||"No receipt reference"],
+    facts([["Service",r.service],["Network / asset",r.network+" / "+r.asset],[r.native_date_basis||(r.source_kind==="mcp_quote"?"MCP quote creation day":"Native reservation day"),r.day],["Settled actual",unit(r.settled_base_units,r)],
+           ["Outstanding reservation",r.source_kind&&r.source_kind!=="sf36_ledger"?"Not a reservation source":unit(r.reserved_base_units,r)],[r.source_kind==="woo_refund"?"Original bound purchase":r.source_kind==="mcp_quote"?"Original quoted amount":"Original authorized maximum",r.amount||"Not established"],["Receipt reference",r.receipt_ref||"No receipt reference"],
            ["Request digest",r.request_digest],["Proof digest",r.proof_sha256||"—"],["Accepted source capture",item.capture_id]]));
   content.append(native);
-  if(r.native_detail){
+  if(r.native_detail&&r.source_kind!=="woo_refund"){
     const n=r.native_detail,file=n.result_file;
     content.append(el("section",{class:"card"},el("h2",{},"Original MCP purchase"),
       facts([["Buyer state",n.native_status],["Payment observation",n.classification],["Original signed dispatch",n.signed_request_dispatched?"Recorded":"None recorded"],
@@ -230,6 +231,14 @@ async function renderExpense(){
         ["Recorded digest",file?.sha256||n.result_preview?.bodySha256||"Unknown"]]),
       el("p",{class:"quiet"},"The source capture retains the original quote, receipt, observation and recorded result metadata. Purchased bytes remain in the native buyer's result inbox."),
       el("details",{},el("summary",{},"Inspect retained payment and result fields"),el("pre",{class:"pre"},JSON.stringify(n,null,2)))));
+  }
+  if(r.source_kind==="woo_refund"){
+    const n=r.native_detail;
+    content.append(el("section",{class:"card"},el("h2",{},"Original merchant purchase"),
+      facts([["Operation context",n.data_context],["Store / order",n.site_url+" / "+n.order_reference],
+        ["Original store amount",n.store_amount+" "+n.store_currency],["Buyer payer",n.payer],["Merchant recipient",n.recipient]]),
+      el("p",{class:"quiet"},"The original native purchase and store currency mapping are retained separately. Return allocations use the exact native units."),
+      button("Open credits and returns",()=>navigate(()=>{view.tab="credits";}),"small")));
   }
   if(item.missing||r.state!=="settled"){
     content.append(el("section",{class:"card"},el("h2",{},"Review this row in its period"),el("p",{},"This original row is not available for expense allocation. Its period retains the native payment or reservation state and any required carry-forward or exclusion decision."),
@@ -280,15 +289,15 @@ async function renderSources(){
     const source=selectedSource();
     content.append(button("← All sources",()=>navigate(()=>{view.source=null;}),"small"));
     content.append(el("section",{class:"card"},el("div",{class:"card-header"},el("h2",{},source.name),badge(source.pending.length+" pending")),
-      facts([[source.kind==="mcp_quote"?"Original MCP quote directory":"Original ledger",source.path],["Source provenance",source.provenance||"—"],["Accepted capture",source.current_capture||"None"],
+      facts([[source.immutable_intake?"Original customer packet":source.kind==="mcp_quote"?"Original MCP quote directory":"Original ledger",source.path],["Source provenance",source.provenance||"—"],["Accepted capture",source.current_capture||"None"],
         ["Projection digest",source.projection_sha256||"—"],["Native rows / source transitions",String(source.rows??0)+" / "+String(source.journal_events??0)],["Captured",source.capture_time||"—"]]),
-      el("div",{class:"actions"},button(source.kind==="mcp_quote"?"Capture original MCP quotes":"Capture original ledger",async()=>{if(!discard())return;const result=await mutate("/api/sources/"+source.id+"/capture");view.capture=result.id;view.captureOffset=0;await redrawAfter("New native capture is awaiting review.");},"primary"))));
+      el("div",{class:"actions"},source.immutable_intake?button("Import successor refund packet",()=>navigate(()=>{view.tab="credits";view.refundPacket=null;view.credit=null;}),"primary"):button(source.kind==="mcp_quote"?"Capture original MCP quotes":"Capture original ledger",async()=>{if(!discard())return;const result=await mutate("/api/sources/"+source.id+"/capture");view.capture=result.id;view.captureOffset=0;await redrawAfter("New native capture is awaiting review.");},"primary"))));
     const data=await api("/api/sources/"+source.id+"/captures?offset="+view.sourceOffset+"&limit=20");
     content.append(el("section",{class:"card"},el("h2",{},"Capture history"),
       table(["Captured","State","Native rows","Changes",""],data.items.map(c=>[c.created_at,badge(c.status),(c.source.records??c.source.reservations),c.change_count,
         button("Review capture",()=>navigate(()=>{view.capture=c.id;view.captureOffset=0;}),"small")])),
       pager(data,x=>navigate(()=>{view.sourceOffset=x;}),20)));
-    content.append(formCard(source.kind==="mcp_quote"?"Rebind moved original MCP source":"Rebind moved original ledger",[
+    if(!source.immutable_intake)content.append(formCard(source.kind==="mcp_quote"?"Rebind moved original MCP source":"Rebind moved original ledger",[
       {name:"path",label:source.kind==="mcp_quote"?"New original MCP quote directory":"New original ledger path",value:source.path,wide:true,required:true},
       {name:"operator",label:"Source owner",required:true},
       {name:"reason",label:"Rebinding reason",multiline:true,required:true,wide:true}
@@ -296,7 +305,7 @@ async function renderSources(){
       {intro:"Use the same original buyer source after moving it. Its retained request identities and terms are checked before the new locator is saved."}).card);
     return;
   }
-  content.append(table(["Source / kind","Original source","Accepted rows","Pending captures",""],state.sources.map(s=>[el("div",{},s.name,el("div",{class:"quiet"},s.kind==="mcp_quote"?"Native MCP quotes":"SF36 ledger")),el("span",{class:"code"},s.path),String(s.rows??0),String(s.pending.length),
+  content.append(table(["Source / kind","Original source","Accepted rows","Pending captures",""],state.sources.map(s=>[el("div",{},s.name,el("div",{class:"quiet"},s.kind==="woo_refund"?"Original customer refund packets":s.kind==="mcp_quote"?"Native MCP quotes":"SF36 ledger")),el("span",{class:"code"},s.path),String(s.rows??0),String(s.pending.length),
     button("Open source",()=>navigate(()=>{view.source=s.id;view.sourceOffset=0;}),"small")])));
   content.append(formCard("Register original buyer ledger",[
     {name:"name",label:"Source name",required:true},
@@ -350,12 +359,12 @@ async function renderSettings(){
     current?{cancel:()=>navigate(()=>{view.center=null;})}:{}).card);
 }
 
-function nativeOutcomeSection(report, title="Original MCP payment outcomes"){
+function nativeOutcomeSection(report, title="Original native purchase outcomes"){
   const rows=report.native_payment_outcomes||[];
   if(!rows.length)return null;
   return el("section",{class:"card"},el("h2",{},title),
-    el("p",{class:"quiet"},"Quoted amounts stay separate from matched expense and native budget reservations. These are the payment and result facts retained in this source edition."),
-    localTable(["Original quote / source","Quote day","Buyer / payment state","Quoted / matched base units","Original transaction / result"],rows.map(r=>[
+    el("p",{class:"quiet"},"Original purchase and quote facts retain their source context. Quoted prices, store currency values and native spending reservations remain separate."),
+    localTable(["Original request / source","Original source day","Buyer / payment state","Quoted / matched base units","Original transaction / result"],rows.map(r=>[
       el("div",{class:"long code"},r.request_id,el("div",{class:"quiet"},r.source_name)),r.quote_day,
       el("div",{},r.native_status,el("div",{class:"quiet"},r.payment_classification),r.missing?el("div",{},"Absent from latest source"):null),
       el("div",{class:"code"},r.quoted_amount??"Unknown",el("div",{},"Matched: "+(r.settled_actual??"Not established")),
@@ -400,6 +409,7 @@ async function renderPeriods(){
       {intro:"The figures below describe current retained source and coding. The issued edition above keeps the exact source, classifications and reviewer state from its close."}).card);
   }
   const outcomes=nativeOutcomeSection(report);if(outcomes)content.append(outcomes);
+  const creditSection=creditReportSection(report);if(creditSection)content.append(creditSection);
   const issues=el("section",{class:"card"},el("h2",{},"Source, payment and reservation review"));
   if(!report.issues.length)issues.append(el("p",{},"No source or coding exception remains in this period."));
   for(const issue of report.issues){
@@ -408,7 +418,8 @@ async function renderPeriods(){
     if(issue.disposition)c.append(el("p",{class:"quiet"},issue.disposition.kind+" · "+issue.disposition.operator+": "+issue.disposition.reason));
     if(period.state==="OPEN"){
       if(issue.allowed_kinds.length)c.append(button(issue.resolved?"Revise decision":"Record decision",()=>navigate(()=>{view.issue=issue.code+"|"+issue.item_id;}),"small"));
-      else c.append(button("Open source review",()=>navigate(()=>{view.tab="sources";view.source=issue.group.source_id;view.capture=null;}),"small"));
+      else if(issue.group?.packet_id||issue.credit_id)c.append(button("Open return review",()=>navigate(()=>{view.tab="credits";view.refundPacket=issue.group?.packet_id||null;view.credit=issue.credit_id||null;}),"small"));
+      else c.append(button("Open source review",()=>navigate(()=>{view.tab="sources";view.source=issue.group?.source_id||null;view.capture=null;}),"small"));
     }issues.append(c);
   }
   content.append(issues);
@@ -467,13 +478,178 @@ async function renderIssued(){
       button("Download accountant packet",()=>download("/api/closes/"+doc.id+"/packet","accountant-edition-"+doc.sequence+".zip")),
       button("Download edition JSON",()=>download("/api/closes/"+doc.id,"accountant-edition-"+doc.sequence+".json")))));
   content.append(totalCards(doc));
-  const outcomes=nativeOutcomeSection(doc,"Frozen original MCP payment outcomes");if(outcomes)content.append(outcomes);
+  const creditSection=creditReportSection(doc,true);if(creditSection)content.append(creditSection);
+  const outcomes=nativeOutcomeSection(doc,"Frozen original native purchase outcomes");if(outcomes)content.append(outcomes);
   content.append(el("section",{class:"card"},el("h2",{},"Frozen allocation lines"),
     localTable(["Date","Cost center","Project / account","Network / asset","Exact base units","Original request"],doc.allocations.map(l=>[l.recognition_date,l.center_code+" · "+l.center_name,
       el("div",{},l.project||"—",el("div",{class:"code"},l.account_code||"—")),l.network+" / "+l.asset,l.amount,el("span",{class:"code"},l.request_id)]))));
   content.append(el("section",{class:"card"},el("h2",{},"Retained source captures"),
     table(["Source","Capture","Projection digest"],doc.source_captures.map(c=>[c.name,c.current_capture,el("span",{class:"code"},c.projection_sha256)]))));
 }
+
+function creditReportSection(report,frozen=false){
+  const records=report.merchant_credit_outcomes||[], lines=report.credit_allocations||[];
+  if(!records.length&&!lines.length)return null;
+  const section=el("section",{class:"card"},el("h2",{},(frozen?"Frozen ":"")+"Buyer credits and returns"),
+    el("p",{class:"quiet"},"Operation context: "+(report.data_context||"operational")+". Native returned units and the merchant's store-currency credit are separate original values."));
+  section.append(localTable(["Order / refund","Native reverse transfer","Store credit / state","Source / original packet"],
+    records.map(r=>[el("div",{},r.order_reference+" / "+(r.refund_id||r.adjustment_id),el("div",{class:"quiet"},r.site_url)),
+      el("div",{},unit(r.native_return,r,report.labels||state.labels),el("div",{class:"code long"},r.transaction),el("small",{},r.transfer_at)),
+      el("div",{},r.store_amount+" "+r.currency,el("div",{},r.merchant_status)),
+      el("div",{},r.source_name,el("div",{class:"code long"},r.manifest_sha256))])));
+  if(lines.length)section.append(el("h3",{},"Return allocation lines"),localTable(
+    ["Recognition date","Cost center / project","Account","Returned native units","Original refund"],
+    lines.map(l=>[l.recognition_date,l.center_code+" · "+l.center_name+" / "+(l.project||"—"),
+      l.account_code||"—",unit(l.amount,l,report.labels||state.labels),el("span",{class:"code"},l.adjustment_id)])));
+  return section;
+}
+async function renderCredits(){
+  if(view.refundPacket)return renderRefundPacket();
+  if(view.credit)return renderCredit();
+  heading("Buyer credits and returns","Receive an original customer refund packet, review its purchase binding, and allocate the exact returned units against the original expense. Previously issued periods remain available.");
+  if(state.data_context==="development")content.append(el("p",{class:"notice"},"Development operation workspace. The retained original operator provenance remains attached to every purchase, return and issued report."));
+  const credits=await api("/api/credits?offset="+view.creditOffset+"&limit=20");
+  content.append(el("section",{class:"card"},el("h2",{},"Retained buyer returns"),
+    table(["Order / refund","Native returned units","Original store credit","Allocation",""],credits.items.map(c=>[
+      el("div",{},c.native.order_reference+" / "+(c.native.refund_id||c.native.adjustment_id),el("div",{class:"quiet"},c.source_name)),
+      unit(c.native.amount,c.native),c.native.store_amount+" "+c.native.currency+" · "+c.native.original_operation_status,
+      badge(c.status),button("Open return",()=>navigate(()=>{view.credit=c.id;}),"small")])),
+    pager(credits,x=>navigate(()=>{view.creditOffset=x;}),20)));
+  const packets=await api("/api/refund-packets?offset="+view.refundOffset+"&limit=20");
+  content.append(el("section",{class:"card"},el("h2",{},"Original refund intake"),
+    table(["Captured source","Original adjustment","Review",""],packets.items.map(p=>[
+      el("div",{},p.name,el("div",{class:"quiet"},p.created_at)),el("span",{class:"code"},p.credit.adjustment_id),
+      badge(p.status),button("Review packet",()=>navigate(()=>{view.refundPacket=p.id;}),"small")])),
+    pager(packets,x=>navigate(()=>{view.refundOffset=x;}),20)));
+  content.append(formCard("Receive original refund packet",[
+    {name:"name",label:"Refund source name",required:true},
+    {name:"data_context",label:"Original operation context",value:state.data_context||"operational",choices:[
+      {value:"operational",label:"Operational records"},{value:"development",label:"Development operation"}]},
+    {name:"directory",label:"Original refund handoff directory",required:true,wide:true,
+      help:"Select the exact retained customer packet directory containing its original manifest.json."},
+    {name:"manifest_sha256",label:"Original manifest SHA-256",required:true,wide:true,maxlength:64},
+    {name:"site_url",label:"Original store URL",required:true,wide:true},
+    {name:"provenance",label:"Original operation provenance",required:true,multiline:true,wide:true,
+      help:"Retain the original operator, operation and whether its transfer observation came from a development or operational source."}
+  ],"Receive and review original packet",async(values,form)=>{
+    const result=await save(form,"/api/refund-packets",values);view.refundPacket=result.id;
+    await redrawAfter("The original customer receiver retained this exact packet. Review its purchase and return before acceptance.");
+  },{intro:"The maintained customer receiver validates the original manifest, purchase mapping and reverse-transfer observation. This action reads the selected local packet and retains a private buyer copy."}).card);
+}
+async function renderRefundPacket(){
+  const packet=await api("/api/refund-packets/"+view.refundPacket), p=packet.purchase, c=packet.credit;
+  content.append(button("← Credits and returns",()=>navigate(()=>{view.refundPacket=null;}),"small"));
+  heading("Original refund review",packet.name+" · "+packet.data_context);
+  content.append(el("section",{class:"card"},el("div",{class:"card-header"},el("h2",{},"Retained customer packet"),badge(packet.status)),
+    facts([["Original source directory",packet.source_directory],["Manifest digest",packet.manifest_sha256],
+      ["Operation provenance",packet.provenance],["Original adjustment",c.adjustment_id],
+      ["Order / store",p.order_reference+" / "+p.site_url],["Original native purchase",unit(p.amount,p)],
+      ["Native return",unit(c.amount,c)],["Original store purchase",p.store_amount+" "+p.currency],
+      ["Original store credit",c.store_amount+" "+c.currency],["Merchant operation state",c.original_operation_status],
+      ["Original payment transaction",p.transaction],["Return transaction",c.transaction],
+      ["Return transfer time",c.transfer_at],["Original observed time",c.observed_at]]),
+    button("Download original packet",()=>download("/api/refund-packets/"+packet.id+"/original","original-refund-"+c.adjustment_id+".zip"),"small")));
+  content.append(el("section",{class:"card"},el("h2",{},"Immutable original members"),
+    localTable(["Member","Bytes","SHA-256"],packet.files.map(f=>[f.name,String(f.bytes),el("span",{class:"code long"},f.sha256)]))));
+  if(packet.status==="PENDING"){
+    content.append(formCard("Decide original refund intake",[
+      {name:"decision",label:"Source decision",choices:[{value:"ACCEPT",label:"Accept original purchase and return"},{value:"REJECT",label:"Reject retained packet"}]},
+      {name:"purchase_item_id",label:"Matching retained purchase",choices:[{value:"",label:"Choose an existing original purchase"},...packet.matching_purchases.map(i=>({value:i.id,label:i.source_name+" / "+i.request_id+" · "+i.coding_status}))],wide:true},
+      {name:"register_original_purchase",label:"Register the original reviewed purchase from this packet",type:"checkbox",value:false,wide:true,
+        help:"Use this when this exact original payment is not already an expense source. It creates a buyer projection of the retained original purchase; it does not make a payment."},
+      {name:"operator",label:"Buyer source reviewer",required:true},
+      {name:"reason",label:"Buyer source decision",required:true,multiline:true,wide:true}
+    ],"Save refund source decision",async(values,form)=>{
+      const saved=await save(form,"/api/refund-packets/"+packet.id+"/decision",values);
+      if(saved.credit_id){view.refundPacket=null;view.credit=saved.credit_id;}
+      await redrawAfter("Refund source decision retained with its exact original purchase.");
+    },{intro:"Choose the exact existing purchase or explicitly register the original purchase carried by this packet. The source keeps native units, store currency and original operation context."}).card);
+  }else{
+    content.append(el("section",{class:"card"},el("h2",{},"Saved source decision"),
+      facts([["Reviewer",packet.operator],["Decision time",packet.reviewed_at],["Reason",packet.reason]]),
+      packet.credit_id?button("Open return allocation",()=>navigate(()=>{view.credit=packet.credit_id;view.refundPacket=null;}),"primary"):null));
+  }
+}
+async function renderCredit(){
+  const credit=await api("/api/credits/"+view.credit), n=credit.native, item=credit.purchase_item;
+  content.append(button("← Credits and returns",()=>navigate(()=>{view.credit=null;}),"small"));
+  heading("Return allocation",credit.source_name+" · order "+n.order_reference+" / refund "+(n.refund_id||n.adjustment_id));
+  content.append(el("section",{class:"card"},el("div",{class:"card-header"},el("h2",{},"Original buyer return"),badge(credit.status)),
+    facts([["Operation context",credit.data_context],["Original purchase",unit(credit.purchase.amount,credit.purchase)],
+      ["Verified native return",unit(n.amount,n)],["Store credit",n.store_amount+" "+n.currency+" · "+n.original_operation_status],
+      ["Transfer time",n.transfer_at],["Original payment transaction",n.original_transaction],["Return transaction",n.transaction],
+      ["Original packet digest",credit.manifest_sha256],["Purchase allocation state",item.status]]),
+    el("div",{class:"actions"},button("Open original purchase",()=>navigate(()=>{view.tab="expenses";view.item=item.id;}),"small"),
+      button("Review original packet",()=>navigate(()=>{view.refundPacket=credit.packet_id;view.credit=null;}),"small"))));
+  const original=item.coding;
+  if(!original||original.basis!==item.basis){
+    content.append(el("section",{class:"card"},el("h2",{},"Review the original purchase allocation"),
+      el("p",{},"Allocate the current original purchase before assigning its return. Each return must fit the original cost center, project and account dimensions."),
+      button("Allocate original purchase",()=>navigate(()=>{view.tab="expenses";view.item=item.id;}),"primary")));return;
+  }
+  const dimensions=[];
+  for(const line of original.allocations){
+    const existing=dimensions.find(d=>d.center_id===line.center_id&&d.project===line.project&&d.account_code===line.account_code);
+    if(existing)existing.amount=(BigInt(existing.amount)+BigInt(line.amount)).toString();else dimensions.push({...line});
+  }
+  const used=new Map();
+  for(const other of credit.related_credits)for(const l of other.coding?.allocations||[]){
+    const key=JSON.stringify([l.center_id,l.project,l.account_code]);used.set(key,(used.get(key)||0n)+BigInt(l.amount));
+  }
+  const centerName=id=>{const c=state.centers.find(c=>c.id===id);return c?c.code+" · "+c.name:id;};
+  content.append(el("section",{class:"card"},el("h2",{},"Original allocation capacity"),
+    table(["Cost center","Project / account","Original base units","Other allocated returns","Remaining"],dimensions.map(d=>{
+      const u=used.get(JSON.stringify([d.center_id,d.project,d.account_code]))||0n;
+      return [centerName(d.center_id),d.project+" / "+d.account_code,d.amount,u.toString(),(BigInt(d.amount)-u).toString()];
+    })),
+    credit.related_credits.length?el("details",{},el("summary",{},"Contributing original returns"),localTable(
+      ["Adjustment","Native return","Recognition / coding edition"],credit.related_credits.map(c=>[
+        el("span",{class:"code"},c.adjustment_id),c.amount,c.coding?c.coding.recognition_date+" / "+c.coding.id:"Uncoded"]))):null));
+  const previous=credit.coding, rows=el("tbody"), total=el("p",{class:"allocation-total","aria-live":"polite"});
+  const f=formCard("Allocate native return",[
+    {name:"recognition_date",label:"Return recognition date",type:"date",value:previous?.recognition_date||"",required:true,
+      help:"Choose its accounting date. The original reverse-transfer time remains a separate native source field."},
+    {name:"operator",label:"Return allocation owner",value:previous?.operator||"",required:true},
+    {name:"memo",label:"Return memo",value:previous?.memo||"",multiline:true,wide:true}
+  ],"Save return allocation edition",async(values,form)=>{
+    const allocations=[...rows.children].map(tr=>{
+      const selected=tr.querySelector('[data-key="dimension"]').value;
+      const index=selected===""?-1:Number(selected),d=dimensions[index];
+      if(!d)throw new Error("Choose a current original purchase dimension for every return line.");
+      return {center_id:d.center_id,project:d.project,account_code:d.account_code,
+        amount:tr.querySelector('[data-key="amount"]').value,memo:tr.querySelector('[data-key="memo"]').value};
+    });
+    await save(form,"/api/credits/"+credit.id+"/coding",{...values,basis:credit.basis,allocations});
+    await redrawAfter("Return allocation edition retained against the exact original purchase.");
+  });
+  function recompute(){
+    let sum=0n,valid=true;for(const input of rows.querySelectorAll('[data-key="amount"]')){
+      if(!/^(0|[1-9][0-9]*)$/.test(input.value)){valid=false;break;}sum+=BigInt(input.value);
+    }total.textContent=(valid?sum.toString():"Invalid amount")+" / "+n.amount+" returned native base units";
+  }
+  function add(line={}){
+    const tr=el("tr"), number=++serial;
+    const selected=dimensions.findIndex(d=>d.center_id===line.center_id&&d.project===(line.project||"")&&d.account_code===(line.account_code||""));
+    const choices=[{value:"",label:"Choose original allocation"},...dimensions.map((d,i)=>({value:String(i),label:centerName(d.center_id)+" / "+(d.project||"No project")+" / "+(d.account_code||"No account")}))];
+    for(const def of [{name:"dimension",label:"Original allocation line "+number,choices,value:selected>=0?String(selected):line.center_id?"":dimensions.length===1?"0":""},
+      {name:"amount",label:"Returned base units line "+number,value:line.amount??"0",inputmode:"numeric"},
+      {name:"memo",label:"Return line memo "+number,value:line.memo||""}]){
+      const part=field(def);part.input.dataset.key=def.name;tr.append(el("td",{},part.wrap));
+    }
+    tr.append(el("td",{},button("Remove",()=>{tr.remove();dirty.add(f.form);recompute();},"small")));
+    rows.append(tr);tr.addEventListener("input",recompute);recompute();
+  }
+  for(const line of previous?.allocations||[{amount:n.amount}])add(line);
+  const head=el("tr");for(const h of ["Original purchase dimension","Returned base units","Line memo",""])head.append(el("th",{},h));
+  f.form.insertBefore(el("div",{class:"detail"},el("h3",{},"Return allocation lines"),
+    el("div",{class:"table-wrap allocation-table"},el("table",{},el("thead",{},head),rows)),
+    el("div",{class:"actions"},button("Add return allocation line",()=>{add();dirty.add(f.form);},"small")),total),f.actions);
+  content.append(f.card);
+  if(credit.coding_history.length)content.append(el("section",{class:"card"},el("h2",{},"Retained return allocation editions"),
+    localTable(["Saved","Recognition","Owner","Edition"],credit.coding_history.map(c=>[c.created_at,c.recognition_date,c.operator,
+      el("details",{},el("summary",{},c.id),el("pre",{class:"pre"},JSON.stringify(c,null,2)))]))));
+}
+
 async function renderActivity(){
   heading("Workspace activity","Saved source, coding and period actions remain in their original sequence.");
   const data=await api("/api/activity?offset="+view.activityOffset+"&limit=50");

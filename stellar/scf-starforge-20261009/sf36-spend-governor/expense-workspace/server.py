@@ -152,6 +152,16 @@ class Handler(BaseHTTPRequestHandler):
         store = self.server.store
         if path == "/api/state":
             return self.send(store.state())
+        if path == "/api/refund-packets":
+            return self.send(store.refund_packets(**self.paging(query)))
+        if path == "/api/credits":
+            return self.send(store.credits(**self.paging(query)))
+        if len(parts) == 3 and parts[:2] == ["api", "credits"]:
+            return self.send(store.credit(parts[2]))
+        if len(parts) == 3 and parts[:2] == ["api", "refund-packets"]:
+            return self.send(store.refund_packet(parts[2]))
+        if len(parts) == 4 and parts[:2] == ["api", "refund-packets"] and parts[3] == "original":
+            return self.send(store.refund_original(parts[2]), content_type="application/zip", filename="original-buyer-refund-packet.zip")
         if path == "/api/expenses":
             return self.send(store.expenses(query=query.get("q", [""])[0], source=query.get("source", [""])[0],
                                             status=query.get("status", [""])[0], **self.paging(query)))
@@ -196,12 +206,16 @@ class Handler(BaseHTTPRequestHandler):
 
     def change(self, path, parts, payload, expected):
         store = self.server.store
-        fixed = {"/api/sources": store.register_source, "/api/centers": store.save_center,
+        fixed = {"/api/sources": store.register_source, "/api/refund-packets": store.capture_refund, "/api/centers": store.save_center,
                  "/api/labels": store.save_labels, "/api/periods": store.save_period}
         if path in fixed:
             return (fixed[path](payload, expected))
         if len(parts) == 4 and parts[0] == "api":
             group, ident, action = parts[1:]
+            if group == "refund-packets" and action == "decision":
+                return store.decide_refund(ident, payload, expected)
+            if group == "credits" and action == "coding":
+                return store.save_credit_coding(ident, payload, expected)
             if group == "sources":
                 if action == "capture":
                     return (store.capture(ident, expected))
