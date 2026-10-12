@@ -664,6 +664,45 @@ under the unique `attempt-*` directory. The original full stage logs stay under
 resolver Python, package hashes, wheel and expanded bytes, and portable archive
 hash. Retain those actual outputs before a temporary execution mount ends.
 
+### Launch through the installed native host
+
+The maintained `launch-public-cohort.py` prepares this exact public producer
+through the selected host's original admission and foreground interfaces. It
+verifies all 40 original source files, the published engine and wrappers, and
+the existing connected-file helpers before preparing the private plan. Its
+`--ledger-reference` selects an existing native request so the producer uses
+that host's actual shared memory and disk ledgers.
+
+Run the caller inside the execution that owns the temporary work directory,
+and keep that foreground alive through the saved-file responses:
+
+```bash
+/absolute/python3.12 /absolute/python-runtime/launch-public-cohort.py \
+  --host /absolute/existing-native-host \
+  --control /absolute/retained/public-cohort-control \
+  --work /absolute/private-temporary/public-cohort \
+  --payload /absolute/matching-python-runtime \
+  --source /absolute/e287-original-python-project \
+  --library-session /absolute/existing/connected-library-session.py \
+  --library-helpers /absolute/existing/library-helper \
+  --ledger-reference /absolute/existing-native-record/request.json
+```
+
+The payload directory contains the matching `engine.py`,
+`run-public-cohort.sh` and `public-cohort-foreground.py` from this source
+edition. The caller uses CPython 3.12 and retains the original operation ID,
+source and candidate selection. It declares the complete public producer's
+512 MiB memory allowance with 128 MiB reserve, 256 MiB temporary output and
+2 MiB shared control, with the original 32 MiB disk reserve. Admission still
+uses the selected host's actual shared ledgers and available capacity.
+
+Current hosts expose `launch_options` for composing the original command.
+For a retained older host, the caller uses that host generation's original
+inline run/start option declaration, including its installed runtime and
+storage option functions. Both paths call the same `native.start` with
+`ForegroundLaunch`. The retained host implementation and admission remain
+the execution authority.
+
 ### Retain public output from the same temporary foreground
 
 When the host uses an execution-local temporary mount, the optional
