@@ -68,7 +68,7 @@ The canonical merchant identity is the selected HTTPS .test origin. The owning n
 
 A fresh WordPress bootstrap runs the native `wp rewrite structure /%postname%/` command before product/profile export. This keeps the real exported checkout URL consistent with WordPress's saved permalink configuration and the subsequent checkout request.
 
-The MariaDB instance binds to its own ephemeral loopback TCP port. PHP sessions, uploads and runtime temporary files live under the owned root. The source installs local receiving controls for mail, updates and scheduled background work. Native children are closed when the owning runtime exits.
+The MariaDB instance binds to its own ephemeral loopback TCP port. PHP sessions, uploads and runtime temporary files live under the owned root. Before WordPress installation, the source installs local receiving controls for mail, updates, scheduled background work and WordPress HTTP. `WP_HTTP_BLOCK_EXTERNAL` and the receiving-only HTTP filter allow loopback requests and reject optional remote WordPress/WooCommerce requests. The owned store's real CoCart REST and Woo checkout requests continue through its loopback transport. Native children are closed when the owning runtime exits.
 
 ## Original browser operation and recovery
 
