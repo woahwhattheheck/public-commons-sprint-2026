@@ -765,3 +765,7 @@ and dataset files through the host's existing durable file receiver.
 [World Bank setup, source operation, release and customer receiving](WORLDBANK-WORKSPACES.md)
 documents the complete workflow and its original IDs, revisions and file hashes.
 
+
+## STAC imagery and processing customers
+
+Attach the original STAC analyst host through [the STAC customer guide](./STAC.md). The Node client, `starforge stac-workspace` command and `merchant_stac_*` tools share native query/review/capture/continuation, full scene and comparison views, retained assets, analyst decisions and complete imagery/Cirrus handovers. `merchant-mcp init-stac-workspaces --dir NEW_DIRECTORY --connection CONNECTION.json` uses the existing private native host connection; credentials and provider sessions remain with that host.
