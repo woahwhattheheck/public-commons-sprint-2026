@@ -5,16 +5,21 @@ import argparse
 import datetime as dt
 from decimal import Decimal
 import hashlib
+import io
 import json
+import os
 from pathlib import Path, PurePosixPath
 import re
 import sys
+import tempfile
 import zipfile
 
 FORMAT = "stellar-forge.360giving-publisher.v1"
 DECISIONS = "stellar-forge.360giving-decisions.v1"
 HERE = Path(__file__).resolve().parent
 MAX_BYTES = 256 * 1024 * 1024
+PENDING_PREFIX = ".360giving-pending-"
+RECEIVING_INTENT = ".360giving-receiving.json"
 
 class PublisherError(Exception):
     pass
@@ -88,14 +93,36 @@ def digest(data):
 def blob_id(data):
     return hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + b"\0" + data).hexdigest()
 
-def write_exact(path, data):
+def publish_file(path, write):
+    """Publish one fully synced original file without replacing a final path."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary = tempfile.mkstemp(prefix=PENDING_PREFIX, dir=path.parent)
+    try:
+        with os.fdopen(descriptor, "w+b") as handle:
+            write(handle)
+            handle.flush()
+            os.fsync(handle.fileno())
+        try:
+            os.link(temporary, path)
+        except FileExistsError:
+            need(raw_file(path) == raw_file(temporary),
+                 "Existing edition has different bytes: " + str(path))
+        if os.name == "posix":
+            directory = os.open(path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+            try:
+                os.fsync(directory)
+            finally:
+                os.close(directory)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+
+def write_exact(path, data):
+    path = Path(path)
     if path.exists():
         need(raw_file(path) == data, "Existing edition has different bytes: " + str(path))
         return
-    with path.open("xb") as handle:
-        handle.write(data)
+    publish_file(path, lambda handle: handle.write(data))
 
 def write_json(path, value):
     write_exact(path, (exact(value) + "\n").encode("utf-8"))
@@ -246,7 +273,7 @@ def artifact_files(directory):
         if path.is_file():
             need(not path.is_symlink(), "Receiving source must contain regular files")
             relative = path.relative_to(directory).as_posix()
-            if relative == "manifest.json":
+            if relative in ("manifest.json", RECEIVING_INTENT) or path.name.startswith(PENDING_PREFIX):
                 continue
             data = raw_file(path)
             result.append({"path": relative, "bytes": len(data), "sha256": digest(data)})
@@ -296,7 +323,7 @@ def prepare(args):
     decisions = {"schema": DECISIONS, "sourceSha256": receipt["sha256"], "reviewer": "",
                  "reviewedAt": "", "reviews": [], "metadataFromRegistry": [], "changes": []}
     write_json(directory / "decisions-template.json", decisions)
-    for relative in ["publisher.py", "review.html", "review.js", "review.css", "README.md", "requirements.txt", "ATTRIBUTION.md"]:
+    for relative in ["publisher.py", "cli.mjs", "review.html", "review.js", "review.css", "README.md", "requirements.txt", "ATTRIBUTION.md"]:
         write_exact(directory / "operator" / relative, raw_file(HERE / relative))
     for path in sorted(schema_root.iterdir()):
         if path.is_file():
@@ -394,7 +421,6 @@ def export(args):
     directory = Path(args.workspace).resolve()
     original_manifest = verify_workspace(directory)
     destination = Path(args.out).resolve()
-    need(not destination.exists(), "Choose a new complete receiving ZIP path")
     need(directory not in destination.parents, "Export outside the retained source edition")
     content = {row["path"]: raw_file(directory / row["path"])
                for row in original_manifest["files"]}
@@ -444,45 +470,99 @@ def export(args):
     manifest_bytes = (exact(manifest) + "\n").encode("utf-8")
     need(sum(len(data) for data in content.values()) + len(manifest_bytes) <= MAX_BYTES,
          "Complete receiving package exceeds the 256 MiB input limit")
-    with zipfile.ZipFile(destination, "x", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
-        for name, data in sorted(content.items()):
-            archive.writestr(name, data)
-        archive.writestr("manifest.json", manifest_bytes)
-    data = raw_file(destination)
+    complete = {**content, "manifest.json": manifest_bytes}
+    if destination.exists():
+        data = raw_file(destination)
+        _, previous = archive_content(data)
+        need(previous == complete, "Existing receiving ZIP contains a different original edition or review")
+    else:
+        def write_archive(handle):
+            with zipfile.ZipFile(handle, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+                for name, data in sorted(complete.items()):
+                    entry = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+                    entry.create_system = 3
+                    entry.external_attr = (0o100600 << 16)
+                    entry.compress_type = zipfile.ZIP_DEFLATED
+                    archive.writestr(entry, data, compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+        publish_file(destination, write_archive)
+        data = raw_file(destination)
     print(exact({"file": str(destination), "bytes": len(data), "sha256": digest(data),
                  "members": len(manifest["files"]) + 1, "sourceSha256": manifest["sourceSha256"],
                  "review": manifest.get("review")}))
     return 0
 
+def archive_content(payload):
+    """Validate the exact captured archive bytes before changing a receiver."""
+    with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+        members = archive.infolist()
+        names = [row.filename for row in members]
+        need(len(names) == len(set(names)) and "manifest.json" in names,
+             "Invalid complete receiving member list")
+        need(sum(row.file_size for row in members) <= MAX_BYTES,
+             "Receiving package exceeds the original limit")
+        for row in members:
+            path = PurePosixPath(row.filename)
+            need(not path.is_absolute() and path.as_posix() == row.filename and
+                 all(part not in ("", ".", "..") for part in path.parts) and "\\" not in row.filename,
+                 "Invalid receiving member path")
+            need(row.filename != RECEIVING_INTENT and
+                 not any(part.startswith(PENDING_PREFIX) for part in path.parts),
+                 "Receiving package uses a reserved operation path")
+            need(not row.is_dir() and (row.external_attr >> 16) & 0o170000 != 0o120000
+                 and not row.flag_bits & 1, "Receiving package contains an unsupported member")
+        manifest_bytes = archive.read("manifest.json")
+        manifest = parse(manifest_bytes.decode("utf-8"))
+        need(manifest.get("schema") == FORMAT and isinstance(manifest.get("files"), list),
+             "Unsupported receiving package schema")
+        expected = {row["path"]: row for row in manifest["files"]}
+        need(len(expected) == len(manifest["files"]) and "manifest.json" not in expected and
+             set(names) == set(expected) | {"manifest.json"},
+             "Receiving package has missing, repeated or undeclared files")
+        content = {"manifest.json": manifest_bytes}
+        for name, row in expected.items():
+            data = archive.read(name)
+            need(len(data) == row["bytes"] and digest(data) == row["sha256"],
+                 "Receiving content differs: " + name)
+            content[name] = data
+        return manifest, content
+
 def receive(args):
     archive_path = Path(args.file).resolve()
     directory = Path(args.out).resolve()
-    need(not directory.exists(), "Receive into a new operator directory")
     payload = raw_file(archive_path)
-    with zipfile.ZipFile(archive_path) as archive:
-        members = archive.infolist()
-        names = [row.filename for row in members]
-        need(len(names) == len(set(names)) and "manifest.json" in names, "Invalid complete receiving member list")
-        need(sum(row.file_size for row in members) <= MAX_BYTES, "Receiving package exceeds the original limit")
-        for row in members:
-            p = PurePosixPath(row.filename)
-            need(not p.is_absolute() and all(part not in ("", ".", "..") for part in p.parts) and "\\" not in row.filename,
-                 "Invalid receiving member path")
-            need(not row.is_dir() and (row.external_attr >> 16) & 0o170000 != 0o120000, "Receiving package contains a non-file")
-        manifest = parse(archive.read("manifest.json").decode("utf-8"))
-        need(manifest.get("schema") == FORMAT, "Unsupported receiving package schema")
-        expected = {row["path"]: row for row in manifest["files"]}
-        need(set(names) == set(expected) | {"manifest.json"}, "Receiving package has missing or undeclared files")
-        for name, row in expected.items():
-            data = archive.read(name)
-            need(len(data) == row["bytes"] and digest(data) == row["sha256"], "Receiving content differs: " + name)
+    manifest, content = archive_content(payload)
+    intent = {"schema": FORMAT + ".receiving", "archiveSha256": digest(payload),
+              "archiveBytes": len(payload), "sourceSha256": manifest["sourceSha256"]}
+    reused = False
+    if directory.exists():
+        need(directory.is_dir() and not directory.is_symlink(), "Use the original receiving directory")
+        retained_intent = (directory / RECEIVING_INTENT).exists()
+        if retained_intent:
+            need(exact(json_file(directory / RECEIVING_INTENT)) == exact(intent),
+                 "Continue the original archive selected for this receiving directory")
+        if (directory / "manifest.json").exists():
+            verify_workspace(directory)
+            need(all(raw_file(directory / name) == data for name, data in content.items()),
+                 "The completed receiver contains a different original archive")
+            reused = True
+        elif not retained_intent:
+            need(all(path.name.startswith(PENDING_PREFIX) and path.is_file() and not path.is_symlink()
+                     for path in directory.iterdir()),
+                 "Select a new directory or the same original receiving operation")
+    else:
         directory.mkdir(parents=True)
-        for name in names:
-            write_exact(directory / name, archive.read(name))
+    if not reused:
+        write_json(directory / RECEIVING_INTENT, intent)
+        for name, data in content.items():
+            if name != "manifest.json":
+                write_exact(directory / name, data)
+        # The complete manifest is published after every original member.
+        write_exact(directory / "manifest.json", content["manifest.json"])
     reopened = verify_workspace(directory)
     print(exact({"directory": str(directory), "archiveSha256": digest(payload),
                  "sourceSha256": reopened["sourceSha256"], "grantCount": reopened["grantCount"],
-                 "files": len(reopened["files"]), "nativeInputReady": reopened["nativeInputReady"]}))
+                 "files": len(reopened["files"]), "nativeInputReady": reopened["nativeInputReady"],
+                 "reused": reused}))
     return 0
 
 def main():
