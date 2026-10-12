@@ -1,14 +1,14 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "haystack-workspace",
-  "description": "Native building grids, assigned corrective work, complete evidence, explicit review, source editions and recipient returns",
+  "description": "Native building grids, assigned corrective work, complete evidence, explicit review, source editions and recipient returns; original point-list mapping, reviewed semantic models and native Brick validation",
   "commands": {
     "haystack": "stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/cli.mjs",
     "haystack-mcp": "stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/mcp.mjs"
   },
   "commandDescriptions": {
-    "haystack": "Operate native building grids, typed proposals, assigned corrective work, reviewer decisions and complete recipient returns",
-    "haystack-mcp": "Serve the complete native Haystack action catalog over local MCP stdio"
+    "haystack": "Operate original building grids, corrective work, point-list mapping, saved semantic models, native Brick validation and complete contractor returns",
+    "haystack-mcp": "Serve the complete original native action catalog, including point-list modelling and contractor-return decisions, over local MCP stdio"
   },
   "exports": {
     "./seller/haystack": {
@@ -30,7 +30,13 @@
     "./seller/haystack/mcp": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/protocol.mjs",
     "./seller/haystack/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/merchant.mjs",
     "./seller/haystack/json": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/json-codec.mjs",
-    "./seller/haystack/corrective-work": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/corrective-work.mjs"
+    "./seller/haystack/corrective-work": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/corrective-work.mjs",
+    "./seller/haystack/semantic-model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/semantic-model.mjs",
+    "./seller/haystack/merchant-client": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/merchant-client.mjs",
+    "./seller/haystack/merchant-tools": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/merchant-tools.mjs",
+    "./seller/haystack/application-provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/application-provider.mjs",
+    "./seller/haystack/semantic-receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/SEMANTIC_RECEIVING.mjs",
+    "./seller/haystack/semantic-browser": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/SEMANTIC_BROWSER.mjs"
   },
   "applicationProviders": {
     "haystack-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/application-provider.mjs"

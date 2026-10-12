@@ -77,7 +77,7 @@ export class HaystackClient {
   }
   async request(action, args = {}, options = {}) {
     if (!this.identity) await this.connect(options);
-    check(typeof action === "string" && /^[a-z]+\.[a-z]+$/.test(action) && args !== null && typeof args === "object" && !Array.isArray(args), "Use a declared action and complete arguments object.");
+    check(typeof action === "string" && /^[a-z]+(?:\.[a-z]+){1,2}$/.test(action) && args !== null && typeof args === "object" && !Array.isArray(args), "Use a declared action and complete arguments object.");
     return this.call("/api/action", { method: "POST", body: stringifyJson({ action, args: clone(args) }), signal: options.signal });
   }
   async *pages(action, args = {}, options = {}) {
