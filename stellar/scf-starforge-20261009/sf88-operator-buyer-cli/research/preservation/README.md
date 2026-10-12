@@ -35,10 +35,25 @@ Use the actual export's prefix. Omit `--prefix` when selecting
 the native export directory itself. A completed export contains the original
 `manifest.json`, query, edition, coverage and all pages.
 
-Initialization retains every member named by the native manifest. It compares
-all lengths and SHA-256 values, then reruns the original preparation on the
-copied source. An existing workspace with the same source and entered contact
-settings reopens as the same project.
+The source intake recognizes two explicit closures:
+
+| Source | Retained and verified closure |
+|---|---|
+| Complete native research export | Every member declared by the original native manifest |
+| Original `tjl.public-source-example.v1` ZIP | Every member declared by `EXAMPLE_MANIFEST.json`, the complete original ZIP, and every native query/edition/coverage/provider-page member |
+
+For a complete export, initialization compares every declared length and
+SHA-256 value. The public example also has an exact ZIP inventory check:
+its declaration must contain the unchanged native manifest and the entire
+query, edition, coverage and page/request/response closure. Its source profile
+lists derived export members that the example intentionally omitted.
+The original native manifest remains unchanged.
+
+Both paths rerun the original research preparation on the retained native
+source. An existing workspace with the same source, source profile and entered
+contact settings reopens as the same project. A missing file in an ordinary
+complete export is an error; the explicit example declaration defines the
+only additional intake profile.
 
 Optional `--organization` and `--contact`
 values become the BagIt sender information. Enter the actual transferring
@@ -156,7 +171,9 @@ import CSV.
 | `data/records/W….json` | Selected original metadata objects, canonicalized with the original mapper and checked against original record digests |
 | `data/metadata/metadata.csv` | File-level descriptive metadata using the documented bag paths |
 | `data/metadata/review.html` | Searchable receiving report with source, selection and entered review context |
-| `data/metadata/submissionDocumentation/native-export/` | Complete original export and its exact manifest |
+| `data/metadata/submissionDocumentation/native-export/` | The selected complete native closure and its unchanged original manifest |
+| `…/source-example.zip` | The complete, byte-identical original example carrier when its explicit profile is selected |
+| `…/profile.json` | Transfer identity, source profile, original example hashes and declared derived omissions |
 | `…/source-binding.json` | Original edition, query, page and request identities |
 | `…/review.json` | Saved review revision, content and digest |
 | `…/mapping.json` | Original descriptive values, reviewed values, source and decisions per work |
@@ -183,7 +200,9 @@ python3 -B research/preservation/preservation.py verify \
 ```
 
 The verifier checks both payload manifests, both tag manifests, exact inventories
-and the Payload-Oxum. It also verifies the original research pages and request
+and the Payload-Oxum. For the source-only example it independently opens the
+retained original carrier, verifies its whole inventory and checksums, and
+rederives the same source profile before accepting the transfer identity. It also verifies the original research pages and request
 chain, reconstructs the review mapping, and compares the actual metadata CSV,
 human report, selected raw records and reconciliation. The receiver publishes
 its complete verified directory atomically. Repeating a receive adopts the same
@@ -259,10 +278,31 @@ python3 -B research/preservation/preservation.py build \
 The decoded source example is 145,901 bytes, SHA-256
 `948c5c85a3ec88cf26ab9bae2ebcda284ea429dfa3c8240ac2565e30b278f77b`.
 It contains the original two provider pages and 169 unique work IDs from the
-retained public Directory of Open Access Journals research query. The metadata
+retained public Directory of Open Access Journals research query. Its explicit
+example declaration names all 14 members plus the declaration itself. The
+10 native source members include the unchanged full manifest; 27 derived
+entries listed by that manifest lie outside this source-only example. The
+transfer retains the whole original example ZIP and records every omitted
+derived entry in its source profile. Its identity binds the original archive,
+the profile, the saved review revision and entered sender information. The metadata
 license is CC0. The accompanying example journey creates a baseline transfer,
 records an explicitly authored descriptive note and selection, builds the
-reviewed transfer, reopens it and compares the two.
+reviewed transfer, reopens it and compares the two. It then restores the original selection as a
+new immutable revision and verifies that the collection identity stays stable
+while the versioned transfer identity changes. A damaged transfer is rejected
+before publication.
+
+With the original BagIt 1.9.0 validator available:
+
+```sh
+python3 -B research/preservation/examples/run_public_example.py \
+  --source research/oai/example/OpenAlex_CIIM_Source_Example_20261012.zip \
+  --prefix source-export --out /absolute/preservation-native-receiving
+```
+
+The resulting `receiving-result.json` contains the exact product and upstream
+validator hashes, source profile, original page binding, all three transfer
+receipts, replay/reopen results and damaged-transfer rejection.
 
 ## Source and contract references
 
