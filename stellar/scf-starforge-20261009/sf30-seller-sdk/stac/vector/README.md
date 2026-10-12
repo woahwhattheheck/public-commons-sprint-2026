@@ -88,7 +88,9 @@ Identity choices are:
 Feature IDs and declared property keys remain typed. A missing feature ID uses
 its original row position and records that choice. Duplicate identities keep
 every occurrence. Comparison identifies repeated or incomplete keys explicitly,
-including ambiguity present in only one edition.
+including ambiguity present in only one edition. A GeoPackage layer keeps its
+logical ID from the selected source and original native layer name; adding a
+neighboring layer does not rename its existing features.
 
 ~~~sh
 node stac/vector/cli.mjs capture \
@@ -107,6 +109,14 @@ features. Its inspection records each layer's actual native schema, CRS, field
 presence, nulls, original value kinds, value capacities, identity multiplicity
 and complete sample feature JSON. A GeoJSON stream is read incrementally;
 features are not reduced to a sample.
+
+GeoJSON integers and fractional values enter the catalog without first being
+rounded to floating point. Original numeric spelling remains in the retained
+source file; the catalog keeps exact typed numeric values. Native fields are
+used where the target can preserve a value. A fractional value beyond native
+double precision uses exact JSON text, or its full original-value reference
+when the Shapefile field capacity requires it. An explicit native field rule
+that would round such a value returns a field-mapping error.
 
 ### Join the original STAC receiver
 
@@ -202,7 +212,14 @@ The default preserves original coordinates and CRS. A supplied sourceCrs fills
 missing metadata and must agree with an existing reported CRS. assignSourceCrs
 is an explicit coordinate assignment. targetCrs requests a native transform.
 Each layer records original, assigned, source and target CRS, action and x/y
-coordinate order.
+coordinate order. Every original ordinate must have an exact decimal
+roundtrip through the native engine's double representation; a value that
+would lose precision returns VECTOR_COORDINATE_PRECISION_REQUIRES_REVIEW.
+The complete original geometry remains in the captured source.
+
+Receiving checks the declared coordinate mapping against the original source
+and saved profile, recalculates the selected transform, and matches every
+native geometry or split part to that original feature.
 
 Shapefile output separates geometry families and dimensions. A selected
 GeometryCollection split preserves every part's original path, row key and
@@ -415,22 +432,46 @@ STAC bridge, ExactNumber, parseExactJSON and stringifyExactJSON. Use the supplie
 encoder for native data round trips. The ordinary JSON.stringify display of an
 ExactNumber is a string; stringifyExactJSON emits its original numeric token.
 
-The original STAC CLI can dispatch vector-* before opening an analyst workspace:
+The maintained distribution installs the complete workflow as **stac-vector**.
+Use the selected native Python environment with the installed command:
 
-~~~javascript
-if (command.startsWith("vector-")) {
-  const {runVectorCommandCLI} = await import("./vector/cli.mjs");
-  const value = await runVectorCommandCLI({command, flags});
-  process.stdout.write(value.text || value.outputJson + "\n");
-  if (value.close) await keepOpen(value.close);
-  return;
-}
+~~~sh
+starforge stac-vector help
+starforge stac-vector capabilities --python /absolute/venv/bin/python
+starforge stac-vector serve \
+  --root /absolute/customer-files \
+  --python /absolute/venv/bin/python
 ~~~
 
-Packaging should carry all stac/vector files, including Python modules,
-browser assets and the exact JSON adapter. The module adds no package-manager
-dependency to the original Node distribution. The selected native Python/GDAL
-environment is an explicit runtime input.
+The original STAC CLI also dispatches vector-* commands before opening an analyst
+workspace. It preserves the native command's exact JSON output and keeps the
+original service close and signal handling:
+
+~~~sh
+node stac/cli.mjs vector-help
+node stac/cli.mjs vector-capture \
+  --selection /absolute/original-selection.json \
+  --source-root /absolute/original-files \
+  --out /absolute/vector-capture \
+  --python /absolute/venv/bin/python
+~~~
+
+The source-owned [distribution contribution](../../../distribution/contributions/stac-vector.json)
+carries all 20 vector files, including the native Python modules, original
+receiving examples, browser assets and exact JSON adapter. The server and the
+package builder use the same [browser asset manifest](browser-assets.json);
+the existing shared asset loader resolves those four routes from the retained
+source tree.
+
+| Installed export | Interface |
+| --- | --- |
+| ./seller/stac/vector | Native file operations, exact JSON and original STAC bridge |
+| ./seller/stac/vector/wfs | Original WFS order-to-vector receiving bridge |
+| ./seller/stac/vector/operator | Local authenticated browser operator |
+| ./buyer/stac/vector | Complete original vector file receiving |
+
+The selected native Python/GDAL environment remains an explicit runtime input.
+The vector Node interfaces use the existing distribution dependencies.
 
 ## Run the complete native receiving journeys
 
@@ -441,7 +482,7 @@ The native journey accepts an actual original selection and source directory:
   --selection /absolute/original-selection.json \
   --source-root /absolute/original-source-files \
   --out /absolute/vector-native-run \
-  --qgis-source /absolute/maintained-stac/qgis
+  --qgis-source /absolute/maintained-stac/qgis/starforge_stac
 ~~~
 
 It captures the actual selected source, writes both formats, interrupts the

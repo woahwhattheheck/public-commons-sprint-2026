@@ -5,11 +5,10 @@ import { mkdir, readFile, writeFile, readdir, lstat, realpath, rename, open, lin
 import { createReadStream } from "node:fs";
 import { pipeline } from "node:stream/promises";
 import { resolve, dirname, relative, sep, basename } from "node:path";
-import { fileURLToPath } from "node:url";
+import { readBrowserAssets } from "../../../distribution/browser-assets.mjs";
 import { runVectorCommand, normalizeRequest, VectorOperationError } from "./index.mjs";
 import { parseExactJSON, stringifyExactJSON, ExactNumber } from "./json.mjs";
 
-const HERE = dirname(fileURLToPath(import.meta.url));
 const MAX_BODY = 16 * 1024 * 1024;
 const COMMANDS = new Set(["capabilities", "capture", "inspect", "export", "open", "receive",
   "compare", "open-comparison", "changes", "receive-comparison", "bundle", "receive-bundle"]);
@@ -211,9 +210,7 @@ export async function startVectorServer(options = {}) {
   if (!["127.0.0.1", "::1"].includes(host)) throw error("VECTOR_LOCAL_BIND_REQUIRED");
   const port = options.port ?? 0;
   let origin;
-  const staticFiles = { "/vector/": ["public/index.html", "text/html"],
-    "/vector/app.js": ["public/app.js", "text/javascript"],
-    "/vector/style.css": ["public/style.css", "text/css"], "/vector/json.mjs": ["json.mjs", "text/javascript"] };
+  const staticFiles = await readBrowserAssets(new URL("./browser-assets.json", import.meta.url));
   const server = http.createServer(async (req, res) => {
     try {
       if (req.headers.host !== new URL(origin).host) throw error("VECTOR_HOST_MISMATCH", undefined, 403);
@@ -222,9 +219,9 @@ export async function startVectorServer(options = {}) {
       if (req.method === "GET" && url.pathname === "/") {
         res.writeHead(302, { location: "/vector/" }); res.end(); return;
       }
-      if (req.method === "GET" && staticFiles[url.pathname]) {
-        const [file, mime] = staticFiles[url.pathname], raw = await readFile(resolve(HERE, file));
-        res.writeHead(200, { "content-type": mime + "; charset=utf-8", "content-length": raw.length,
+      if (req.method === "GET" && staticFiles.has(url.pathname)) {
+        const { url: assetUrl, type: mime } = staticFiles.get(url.pathname), raw = await readFile(assetUrl);
+        res.writeHead(200, { "content-type": mime, "content-length": raw.length,
           "cache-control": "no-store", "x-content-type-options": "nosniff",
           "content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'" });
         res.end(raw); return;

@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import copy
 import json
+import math
+from decimal import Decimal
 from pathlib import PurePosixPath
 
 from .model import (HASH, asset_key, descriptor, directory,
@@ -54,9 +56,90 @@ def _unique_object(pairs):
     return result
 
 
+def _decimal_json(value):
+    """Serialize a finite JSON number without applying the Decimal context."""
+    require(value.is_finite(), "VECTOR_NONFINITE_JSON", "Retain finite native metadata numbers.")
+    # Preserve earlier native-float spellings only when this conversion is exact.
+    try:
+        native = float(value)
+        if math.isfinite(native) and Decimal(str(native)) == value:
+            return json.dumps(native, allow_nan=False)
+    except (OverflowError, ValueError):
+        pass
+    sign, digits, exponent = value.as_tuple()
+    digits = list(digits)
+    while len(digits) > 1 and digits[-1] == 0:
+        digits.pop()
+        exponent += 1
+    coefficient = "".join(str(digit) for digit in digits)
+    prefix = "-" if sign else ""
+    if not any(digits):
+        return prefix + "0.0"
+    adjusted = len(digits) + exponent - 1
+    if -6 <= adjusted <= 20:
+        point = len(digits) + exponent
+        if point <= 0:
+            text = "0." + "0" * -point + coefficient
+        elif point >= len(digits):
+            text = coefficient + "0" * (point - len(digits)) + ".0"
+        else:
+            text = coefficient[:point] + "." + coefficient[point:]
+        return prefix + text
+    mantissa = coefficient[0] + ("." + coefficient[1:] if len(coefficient) > 1 else "")
+    return prefix + mantissa + "e" + ("+" if adjusted >= 0 else "") + str(adjusted)
+
+def _exact_json(value):
+    if value is None:
+        return "null"
+    if type(value) is bool:
+        return "true" if value else "false"
+    if type(value) is int:
+        return str(value)
+    if isinstance(value, Decimal):
+        return _decimal_json(value)
+    if type(value) is float:
+        require(math.isfinite(value), "VECTOR_NONFINITE_JSON", "Retain finite native metadata numbers.")
+        return json.dumps(value, allow_nan=False)
+    if type(value) is str:
+        return json.dumps(value, ensure_ascii=False)
+    if isinstance(value, (list, tuple)):
+        return "[" + ",".join(_exact_json(item) for item in value) + "]"
+    if isinstance(value, dict):
+        require(all(isinstance(key, str) for key in value), "VECTOR_JSON_KEY_INVALID", "Retain native JSON object keys.")
+        return "{" + ",".join(_exact_json(key) + ":" + _exact_json(value[key])
+                              for key in sorted(value)) + "}"
+    raise TypeError(type(value).__name__)
+
+def _invalid_number(value):
+    require(False, "VECTOR_NONFINITE_JSON", "Retain finite native metadata numbers.", value=value)
+
+
+def _model_number(text):
+    """Keep the shared QGIS model JSON-safe without rounding precise metadata."""
+    value = Decimal(text)
+    require(value.is_finite(), "VECTOR_NONFINITE_JSON", "Retain finite native metadata numbers.")
+    try:
+        native = float(value)
+        if math.isfinite(native) and Decimal(str(native)) == value:
+            return native
+    except (OverflowError, ValueError):
+        pass
+    return {"$vector_number": _decimal_json(value)}
+
+
+def _exact_document(body):
+    return json.loads(body.decode("utf-8"), object_pairs_hook=_unique_object,
+                      parse_float=Decimal, parse_constant=_invalid_number)
+
+
+def _exact_value_sha(value):
+    return sha_bytes((_exact_json(value) + "\n").encode("utf-8"))
+
+
 def _original_json(path):
     _, body = read_json(path)
-    return json.loads(body.decode("utf-8"), object_pairs_hook=_unique_object), body
+    return json.loads(body.decode("utf-8"), object_pairs_hook=_unique_object,
+                      parse_float=_model_number, parse_constant=_invalid_number), body
 
 
 def _same_descriptor(left, right):
@@ -73,6 +156,7 @@ class VectorReceivingSource:
         self.root = directory(root)
         self.manifest, self.manifest_body = _original_json(member(self.root, self.manifest_name))
         self.manifest_sha256 = self.id = sha_bytes(self.manifest_body)
+        exact_manifest = _exact_document(self.manifest_body)
         require(expected_manifest_sha256 is None or expected_manifest_sha256 == self.id,
                 "RECEIVING_MANIFEST_CHANGED", "The original vector export manifest changed.")
         manifest = self.manifest
@@ -85,6 +169,7 @@ class VectorReceivingSource:
         _hash(manifest.get("selectionSha256"), "selection")
         self.files = {}
         self._verified_metadata = set()
+        self._metadata_bodies = {}
         for raw in manifest["files"]:
             record = descriptor(raw)
             require(record["path"] != self.manifest_name and record["path"] not in self.files,
@@ -99,11 +184,14 @@ class VectorReceivingSource:
                     "Keep the original source-row and native-row binding files.", path=name)
         self.capture = self._metadata(capture["path"])
         captured = self.capture
+        exact_capture = _exact_document(self._metadata_bodies[capture["path"]])
         require(isinstance(captured, dict) and captured.get("schema") == CAPTURE_SCHEMA and
                 isinstance(captured.get("selection"), dict) and isinstance(captured.get("files"), list) and
                 captured.get("selectionSha256") == manifest["selectionSha256"] and
                 captured["selection"].get("sourceEdition") == manifest["sourceEdition"] and
-                value_sha(captured["selection"]) == manifest["selectionSha256"],
+                _exact_value_sha(exact_capture["selection"]) == manifest["selectionSha256"] and
+                _exact_json(exact_capture["selection"].get("sourceEdition")) ==
+                _exact_json(exact_manifest.get("sourceEdition")),
                 "VECTOR_ORIGINAL_EDITION_CHANGED", "Keep the original captured selection and source edition.")
         _text(captured["selection"].get("id"), "selection ID")
         nested_names = set()
@@ -119,10 +207,13 @@ class VectorReceivingSource:
         require("inspection.json" in nested_names and "catalog.sqlite" in nested_names,
                 "VECTOR_ORIGINAL_CATALOGUE", "Keep the producer's original layer inventory and feature catalogue.")
         self.inspection = self._metadata("source/inspection.json")
+        exact_inspection = _exact_document(self._metadata_bodies["source/inspection.json"])
         require(isinstance(self.inspection, dict) and
                 self.inspection.get("schema") == "starforge.vector-inspection.v1" and
                 self.inspection.get("selectionId") == captured["selection"]["id"] and
                 self.inspection.get("sourceEdition") == manifest["sourceEdition"] and
+                _exact_json(exact_inspection.get("sourceEdition")) ==
+                _exact_json(exact_manifest.get("sourceEdition")) and
                 isinstance(self.inspection.get("layers"), list),
                 "VECTOR_ORIGINAL_INVENTORY", "The original layer inventory belongs to a different capture.")
         self._source_layers = {}
@@ -140,8 +231,14 @@ class VectorReceivingSource:
                 native.get("sourceFeatures") == {"path": SOURCE_FEATURES} and
                 native.get("bindings") == {"path": NATIVE_BINDINGS} and
                 native.get("formats") == manifest["profile"].get("formats") and
-                self._metadata("native/native.json") == native,
+                self._metadata("native/native.json") == native and
+                _exact_json(_exact_document(self._metadata_bodies["native/native.json"])) ==
+                _exact_json(exact_manifest["native"]),
                 "VECTOR_NATIVE_METADATA_CHANGED", "Keep the producer's exact native layer and row-binding inventory.")
+        for layer in exact_manifest["native"]["layers"]:
+            require(_exact_json(layer.get("sourceReference", {}).get("sourceEdition")) ==
+                    _exact_json(exact_manifest["sourceEdition"]), "VECTOR_LAYER_PROVENANCE",
+                    "The native layer must retain the exact original source edition.")
         verification = native["verification"]
         require(isinstance(verification, dict) and
                 verification.get("schema") == "starforge.vector-native-verification.v1" and
@@ -152,6 +249,7 @@ class VectorReceivingSource:
         self.source = {
             "schema": VECTOR_SCHEMA, "sourceKind": self.sourceKind, "manifestSha256": self.id,
             "sourceEdition": copy.deepcopy(self.edition),
+            "sourceEditionJson": _exact_json(exact_manifest["sourceEdition"]),
             "selectionSha256": manifest["selectionSha256"], "sourceCapture": copy.deepcopy(capture),
             "profile": copy.deepcopy(manifest["profile"]), "nativeEngine": copy.deepcopy(native["engine"]),
         }
@@ -199,6 +297,7 @@ class VectorReceivingSource:
         require(len(body) == record["bytes"] and sha_bytes(body) == record["sha256"],
                 "VECTOR_METADATA_CHANGED", "The consumed original metadata bytes changed.", path=name)
         self._verified_metadata.add(name)
+        self._metadata_bodies[name] = body
         return value
 
     def _native_bundle(self, layer):

@@ -12,5 +12,8 @@
   "commandDescriptions": {
     "dataset-360giving": "Prepare, review, correct, export and receive complete 360Giving publisher editions; example runs both retained SCVO funds",
     "dataset-360giving-workspace": "Save publisher reviews and candidates, operate original native grant datasets, and export or receive complete customer handoffs; example runs both original SCVO funds"
+  },
+  "applicationProviders": {
+    "ndjson-360giving": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/ndjson-360giving.mjs"
   }
 }

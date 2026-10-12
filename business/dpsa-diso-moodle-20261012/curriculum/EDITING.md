@@ -8,6 +8,7 @@ The authoritative teaching source is the JSON in this directory. Each module con
 | --- | --- |
 | course.json | Ordered module catalog and references to the shared source, glossary, media and diagram files |
 | modules/M01.json through modules/M13.json | Complete editable teaching and assessment source |
+| workbooks.json | Complete practical exhibits, editable working tables, decision prompts and worked guidance for all26units |
 | sources.json | Official source titles, URLs, editions, relevant provisions and the use made of each source |
 | glossary.json | 58 original definitions linked to sources and modules |
 | media/scripts.json | 13 editable videos, each with four complete narration scenes and on-screen text |
@@ -24,6 +25,14 @@ Keep each module, unit, chapter and question ID stable when revising the same te
 The application contains instructionsHtml, a deliverable, suggestedAnswerHtml and a ten-point rubric. The reflection contains the prompt and guidanceHtml. The native course places the worked answer and reflection guidance behind completion of the personal workbook, allowing learners to make their own attempt first.
 
 Read the whole unit after an edit. Check that the objectives are taught, the exercise can be completed from the available information, and the suggested answer explains the reasoning. Keep the unit connected to the service responsibilities of a DISO rather than turning it into a technical configuration manual.
+
+## Edit practical working documents
+
+workbooks.json contains one item for each stable unitId. Its exhibits provide concrete fictional records and observations; tasks supply the working table headings and row labels; decisionPrompts guide the learner's judgement. The workedExampleHtml contains the reasoning and calculations released in the unit's suggested-answer page after the practice submission. Keep those answers out of exhibits, task labels and prompts.
+
+Edit the linked module application and workbook as one teaching activity. Keep every exhibit row the same width as its headings. Check the scenario arithmetic, population definitions and time references against the worked guidance. Supplied estimates remain planning inputs, while observed exercise results remain results. Use sourceIds for the applicable official material and retain the distinction between a fictional scenario and a reported public-service example.
+
+The compiler embeds the same working documents in the native Book and practice activity, writes one editable Markdown workbook per unit and produces Complete_DISO_Practice_Workbook.html. The instructor guide includes the worked practical guidance. The full edition has26workbooks,30exhibits,55working tables and78decision prompts.
 
 ## Preserve source authority
 
