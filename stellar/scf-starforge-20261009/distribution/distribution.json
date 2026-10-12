@@ -1012,7 +1012,11 @@
     "./seller/grpc/prepare": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/prepare.mjs",
     "./seller/grpc/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/workspace/model.mjs",
     "./seller/grpc/workspace/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/workspace/server.mjs",
-    "./seller/grpc/releases": "./source/stellar/scf-starforge-20261009/sf82-seller-pilot/release-grpc.mjs"
+    "./seller/grpc/releases": "./source/stellar/scf-starforge-20261009/sf82-seller-pilot/release-grpc.mjs",
+    "./seller/fred/receiver": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/receiver.mjs",
+    "./merchant/mcp/har-workspaces": "./source/stellar-forge/mcp-merchant-operator/har-workspace.mjs",
+    "./merchant/mcp/har-export": "./source/stellar-forge/mcp-merchant-operator/har-export.mjs",
+    "./merchant/mcp/har-download": "./source/stellar-forge/mcp-merchant-operator/har-download.mjs"
   },
   "nativePeers": {
     "@x402/core": {

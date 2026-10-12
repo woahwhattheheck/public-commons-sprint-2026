@@ -8,6 +8,7 @@ import { datasetBuyerStartup } from './application-dataset-buyer.mjs';
 import { collectionsStartup } from './application-collections.mjs';
 import { grantStartup } from './application-grant.mjs';
 import { tenderlyStartup } from './application-tenderly.mjs';
+import { browserWalletOutputReader, browserWalletStartup, verifyBrowserWalletLaunch } from './application-browser-wallet.mjs';
 import { eventFeedOutputReader, eventFeedStartup, verifyEventFeedLaunch } from './application-event-feed.mjs';
 import { constants } from 'node:fs';
 import { StringDecoder } from 'node:string_decoder';
@@ -49,6 +50,7 @@ export async function applicationEnvironment(path, expectedSha256) {
 }
 export async function prepareApplicationCommand(request, directory, originalArgs) {
   await verifyEventFeedLaunch(request, directory);
+  await verifyBrowserWalletLaunch(request, directory);
   const { environment } = await applicationEnvironment(request.environmentFile, request.environmentSha256);
   if (request.pythonCommand) return preparePythonManagedChild(dirname(dirname(directory)), request, environment);
   if (request.terminal) {
@@ -79,11 +81,29 @@ export function observeApplicationOutput(request, directory, context = {}) {
   let buffer = '', seen = false, datasetMarker = false, saveError = null, closed = false, saving = Promise.resolve();
   const decoder = new StringDecoder('utf8');
   const eventOutput = eventFeedOutputReader(request);
+  const walletOutput = browserWalletOutputReader(request);
   function line(text) {
     if (seen || !request.applicationId) return;
     // Read only the maintained CLI's startup announcement. Later user-entered
     // terminal text and provider payloads cannot select a different application.
     text = text.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '').trim();
+    if (walletOutput) {
+      for (const value of walletOutput(text)) {
+        saving = saving.then(async () => {
+          if (seen) return;
+          const startup = await browserWalletStartup(request, value, directory);
+          const url = startup && privateUrl(startup.url);
+          if (!url) return;
+          seen = true;
+          await saveJSON(join(directory, 'application-url.json'), {
+            schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+            operationId: directory.split('/').at(-1), command: request.command,
+            source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+          });
+        }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      }
+      return;
+    }
     if (request.command === 'grant-workspace') {
       if (!text.startsWith('{"schema":"stellar-forge.sf47.workspace-launch.v1",')) return;
       saving = saving.then(async () => {
