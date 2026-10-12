@@ -29,22 +29,11 @@ Select the declared `workbooks` extra for Excel delivery. Select `agents` when t
 
 The full [Python receiving operation](../../scf-starforge-20261009/distribution/python-runtime/NATIVE_RECEIVING.md) covers the original source installer, exact wheel cohort, primary installation, offline transfer, customer copy and managed Applications lifecycle. It also records actual wheel and expanded byte requirements before the receiving host starts its workload. Use that source-owned operation for a new receiving environment.
 
-The customer application owns its private database and original launch control. In Applications, select that database and the inspected Python runtime, review and save the Analysis entry, then Start and Open. Stop drains the owned service; reopening preserves the original database and uses the new service's actual private launch capability.
-
-A host that already has the selected environment can use the original CLI:
-
-~~~sh
-/absolute/installed/python -m stellar_forge_buyer.analysis_workspace \
-  --database /private/customer/analysis \
-  --checkout /absolute/received/source \
-  --node /absolute/selected/node serve --port 0
-~~~
-
-The command reports its listening address and private launch-file location. Keep the private URL and customer paths with that host. A workbook client reads the current launch record when it connects.
-
 ## Bring the acquired result into Analysis
 
 Use the original complete purchase result or acquisition. Keep the merchant/source edition, request, payment intent, response and receiving decision attached to it.
+
+Run the local `source` and `response` commands below while Analysis is stopped; they acquire the same workspace lock as the service. Complete all required registrations, then start Analysis in the next section. For an existing open application, use Stop before running another local registration command.
 
 ### Original dataset acquisition
 
@@ -58,7 +47,7 @@ A complete captured dataset is registered by its original native session. Regist
   --session /private/customer/original-dataset-session
 ~~~
 
-Open Sources in Analysis. Review the registered source revision and its complete rows, then use the existing import workflow to choose the column mapping and create the typed edition. A changed source registration uses the original expected revision.
+A changed source registration uses the original expected revision.
 
 ### Original paid HTTP or MCP result
 
@@ -73,11 +62,28 @@ For an SEC HTTP query or a selected OData live response, register the original B
   --result /private/customer/original-buyer-result.json --format json
 ~~~
 
-A retained native MCP result uses the same command with `--input-kind mcp` and its original `--manifest /private/customer/original-result.meta.json`. The browser's response mapping workflow reviews the actual row selection, types and schema before creating the edition.
+A retained native MCP result uses the same command with `--input-kind mcp` and its original `--manifest /private/customer/original-result.meta.json`. After startup, the browser's response mapping workflow reviews the actual row selection, types and schema before creating the edition.
 
 For a paginated live OData task, retain the ordered original response chain and terminal continuation alongside the individual page intents. Register the required original responses, select their actual row mappings, and save the analytical query over the intended complete set of typed views. The customer job's complete result and the individual page payments stay linked. A short page alone does not establish completion.
 
 The response CLI's complete source options are defined in the [original AnalysisWorkspace](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/e28755f20dd4f9cb932d82fb59feb48424e327e7/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/analysis_workspace.py). Existing typed-stream and object receiving use their own original source records through that same adapter.
+
+## Start Analysis and review the registered inputs
+
+The customer application owns its private database and original launch control. In Applications, select that database and the inspected Python runtime, review and save the Analysis entry, then Start and Open. Stop drains the owned service; reopening preserves the original database and uses the new service's actual private launch capability.
+
+A host that already has the selected environment can use the original CLI:
+
+~~~sh
+/absolute/installed/python -m stellar_forge_buyer.analysis_workspace \
+  --database /private/customer/analysis \
+  --checkout /absolute/received/source \
+  --node /absolute/selected/node serve --port 0
+~~~
+
+The command reports its listening address and private launch-file location. Keep the private URL and customer paths with that host. A workbook client reads the current launch record when it connects.
+
+Open Sources and review each registered source revision and its complete rows. Use the existing import workflow to choose the column mapping and create the typed edition. For a registered HTTP or MCP response, review its actual row selection, types and schema in the response mapping workflow before creating the edition.
 
 ## Save a useful analytical result
 

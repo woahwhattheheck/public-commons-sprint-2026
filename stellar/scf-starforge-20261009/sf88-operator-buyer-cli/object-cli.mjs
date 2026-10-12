@@ -38,6 +38,8 @@ analysis-review --state ABS --session SAVED_NAME --name SOURCE --format json|csv
 analysis-open --state ABS [--session SAVED_NAME --name SOURCE --format json|csv --review SHA256]
               [--analysis-python ABS]
 analysis-status --state ABS [--analysis-python ABS]
+research-open --state ABS --session NAME --research-connection-file ABS_PRIVATE_STARTUP
+              --research-directory ABS_RESEARCH
 operator status --state ABS [--operator-settings ABS]
 operator review --state ABS [--file PRIVATE_DRAFT | --from-revision PRESET_ID]
                 [--note REASON] [--expect STATE_SHA256]
@@ -169,6 +171,7 @@ export async function main(tokens = process.argv.slice(2)) {
   if (tokens.length === 0 || tokens.length === 1 && ['help','--help'].includes(tokens[0])) {
     process.stdout.write(HELP); return;
   }
+  if (tokens[0] === 'research-open') { await researchCommand(tokens.slice(1)); return; }
   if (tokens[0] === 'operator') { await operatorCommand(tokens); return; }
   if (['backup-review','backup','backup-verify','backup-restore'].includes(tokens[0])) {
     await recoveryCommand(tokens); return;
@@ -232,6 +235,28 @@ export async function main(tokens = process.argv.slice(2)) {
     !['FINALIZED','IDEMPOTENT_FINALIZED','NO_PAYMENT_REQUIRED','NOT_ATTEMPTED'].includes(entry.outcome)))
     process.exitCode=2;
   return report;
+}
+
+
+async function researchCommand(tokens) {
+  const names=['state','session','research-connection-file','research-directory'],flags={};
+  need(tokens.length%2===0,'OBJECT_FLAG_VALUE_REQUIRED');
+  for(let i=0;i<tokens.length;i+=2) {
+    const key=tokens[i].startsWith('--')?tokens[i].slice(2):'';
+    need(names.includes(key)&&!Object.hasOwn(flags,key)&&typeof tokens[i+1]==='string'&&
+      tokens[i+1].length>0&&!tokens[i+1].startsWith('--'),'OBJECT_FLAG_INVALID_OR_REPEATED');
+    flags[key]=tokens[i+1];
+  }
+  need(names.every(key=>flags[key]),'OBJECT_RESEARCH_CONNECTION_AND_SELECTION_REQUIRED');
+  const {openObjectWorkspace}=await import('./object-workspace/model.mjs');
+  const model=await openObjectWorkspace({stateDirectory:flags.state,
+    researchConnectionFile:flags['research-connection-file'],researchDirectory:flags['research-directory']});
+  try {
+    const view=await model.view({session:flags.session,section:'delivery'});
+    need(view.selected,'OBJECT_WORKSPACE_SESSION_REQUIRED');
+    const result=await model.openResearch({session:flags.session,expectedRevision:view.selected.revision});
+    process.stdout.write(JSON.stringify(result,null,2)+'\n');return result;
+  } finally {await model.close();}
 }
 
 async function analysisCommand([command,...tokens]) {
