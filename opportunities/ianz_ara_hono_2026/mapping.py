@@ -49,9 +49,9 @@ def validate_native_schema(value):
                 raise WorkspaceError("Retain each actual native field name and type.")
     return copy(value)
 
-def local_schema():
+def local_schema(environment_id="local-reference-receiver"):
     return {"schema": "ianz.native-schema/v1", "product": "Ara Hono local receiving store",
-            "environment_id": "local-reference-receiver", "version": "1",
+            "environment_id": environment_id, "version": "1",
             "import_contract": {"format": "ianz.native-import/v1", "request_identity": "request_id",
                                 "external_key_upsert": True, "references": "two_pass_external_keys"},
             "document_model": {"identity": ["document_key", "document_edition_id"],
@@ -212,8 +212,6 @@ def export_dataset(records, profile):
             # Scope editions are individually selected; source and programme/rate
             # support rows remain complete to resolve original references.
             if entity == "scope_item" and source not in selected:
-                continue
-            if entity in {"mapping_profile", "receiving_run"}:
                 continue
             selected_records[entity].append(record)
     for entity, rows in selected_records.items():
