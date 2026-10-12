@@ -221,8 +221,12 @@ async function runBrowserJourney({ original, root, receipt, step, draft }) {
         ['asset', 'asset'], ['payto', 'payTo'], ['timeout', 'maxTimeoutSeconds']])
         await page.locator('#merchant-' + field).fill(String(draft.merchant[key]));
       await page.locator('#merchant-queries').fill(JSON.stringify(draft.queries, null, 2));
-      receipt.browserPublicationId = await page.locator('#publication-id').inputValue();
-      await step('browser-merchant-request-selected', { publicationId: receipt.browserPublicationId, editionId: manifest.editionId });
+      if (receipt.browserPublicationId) {
+        await page.locator('#publication-id').fill(receipt.browserPublicationId);
+      } else {
+        receipt.browserPublicationId = await page.locator('#publication-id').inputValue();
+        await step('browser-merchant-request-selected', { publicationId: receipt.browserPublicationId, editionId: manifest.editionId });
+      }
       const response = page.waitForResponse(r => new URL(r.url()).pathname === '/api/prepare' && r.request().method() === 'POST');
       await page.locator('#prepare-merchant').click();
       const result = await response;
