@@ -90,13 +90,15 @@ def export_review(store, record):
             mappings += [[source["id"], source["revision"], mapping["id"], mapping["sheet"], encoded(mapping)]
                          for mapping in normalised["mappings"]]
             missing += [[source["id"], source["revision"], row["mapping_id"], row["sheet"], row["cell"],
-                         row["period_label"], row["source_geography"]] for row in normalised["missing_cells"]]
+                         row["period_label"], row["source_geography"], row.get("source_year", ""), row.get("source_month", ""),
+                         row.get("year_cell", ""), row.get("month_cell", "")] for row in normalised["missing_cells"]]
     sheets.append(("Source inventory", ["Source", "Revision", "Label", "Publisher", "Vintage", "Published",
         "Publication role", "Original URL", "Original filename", "Original bytes", "Original SHA256",
         "Normalized SHA256", "Source review"], sources))
     sheets.append(("Original observations", ["Source", "Revision", "Vintage", *[f.replace("_", " ") for f in ROW_FIELDS]], observations))
     sheets.append(("Table mappings", ["Source", "Revision", "Mapping", "Sheet", "Complete mapping"], mappings))
-    sheets.append(("Missing original cells", ["Source", "Revision", "Mapping", "Sheet", "Cell", "Period", "Source geography"], missing))
+    sheets.append(("Missing original cells", ["Source", "Revision", "Mapping", "Sheet", "Cell", "Period", "Source geography",
+        "Original year", "Original month", "Year cell", "Month cell"], missing))
     for name, headers, rows in sheets:
         files["tables/" + re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") + ".csv"] = csv_file(headers, rows)
     files["Load_Forecast_Review.xlsx"] = workbook(sheets, 6)

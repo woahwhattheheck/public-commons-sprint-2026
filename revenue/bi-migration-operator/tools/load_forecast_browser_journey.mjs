@@ -23,6 +23,7 @@ page.on('request',r=>{if(r.method()==='POST'&&new URL(r.url()).pathname.startsWi
 const click=a=>page.locator('[data-action="'+a+'"]').click();
 const field=id=>page.locator('[id="'+id+'"]');
 const fill=(id,v)=>field(id).fill(String(v));
+async function choose(id,v){await field(id).selectOption(v);await page.waitForFunction(()=>document.body.dataset.busy!=='true');}
 const ref=r=>({kind:r.kind,id:r.id,revision:r.revision});
 const value=r=>r.id+'@'+r.revision;
 const hash=async filename=>createHash('sha256').update(await readFile(filename)).digest('hex');
@@ -53,10 +54,11 @@ async function remember(){await writeFile(path.join(first.output,'browser-action
 try{
  await mkdir(first.output,{recursive:true});
  await openLoad(first.url);await pane('sources');
- await field('lf-source-select').selectOption(value(first.packet));
+ await choose('lf-source-select',value(first.packet));
  await field('lf-source-table').waitFor();
  if(await field('lf-source-table').inputValue()!=='observations'||await page.locator('.lf-table tbody tr').count()<1)throw Error('The structured original observation is not visible.');
- await field('lf-source-select').selectOption(value(first.current));
+ await choose('lf-source-select',value(first.current));
+ await page.getByRole('heading',{name:'PJM 2026 original load forecast data',exact:true}).waitFor();
  await page.locator('summary').filter({hasText:'Source description'}).click();
  const basisId='lf-map-0-defaults.basis',originalBasis=await field(basisId).inputValue();
  await fill(basisId,originalBasis+' ');
@@ -69,9 +71,9 @@ try{
  if(await field('lf-missing-ack').count())await field('lf-missing-ack').check();
  const current=await saved('load.source.accept',()=>click('lf-accept'));
  send({phase:'ORIGINAL_SOURCES_ACCEPTED',rows:current.payload.row_count,original_sha256:current.payload.original.digest});
- await pane('plans');await click('lf-new-plan');
- await field('lf-plan-baseline').selectOption(value(first.baseline));
- await field('lf-plan-current').selectOption(value(current));
+ await pane('plans');await click('lf-new-plan');await page.waitForFunction(()=>document.body.dataset.busy!=='true');
+ await choose('lf-plan-baseline',value(first.baseline));
+ await choose('lf-plan-current',value(current));
  for(const [key,v]of Object.entries({label:'PJM monthly energy forecast editions — 2025 and 2026',client:'Pennsylvania resource-adequacy source review',prepared_for:'Analyst and receiving operator',first_year:2025,last_year:2046,purpose:'Compare the published monthly energy forecasts for the exact selected PJM areas and original year/month cells.',assumptions:'Each named area stays separate. Original YEAR/MONTH cells form calendar months; published GWh converts exactly to MWh. Only compatible common observations are compared; unmatched horizons remain visible. Monthly endpoint CAGR can reflect seasonality and is not an independent demand model or an accuracy score.'}))await fill('lf-plan-'+key,v);
  const prepared=await saved('load.review.prepare',()=>click('lf-prepare-review'));
  await page.locator('[data-action="lf-row-decision"]').first().click();
@@ -110,7 +112,7 @@ try{
  send({phase:'RECEIVING_COMPLETE',received:ref(received),adopted:ref(adopted),review:ref(receivedReview),backup:backupFile,package_sha256:await hash(receivedZip)});
  const cold=await receive();if(cold.phase!=='COLD_REOPEN')throw Error('Expected the original restored-workspace continuation.');
  await openLoad(cold.url);await pane('receiving');
- await field('lf-received-select').selectOption(value(adopted));
+ await choose('lf-received-select',value(adopted));
  const coldZip=await download(page.locator('[data-action="lf-download-received"]'),'Load_Forecast_Review_Cold.zip');
  if(await hash(coldZip)!==exported.payload.package.digest)throw Error('Cold restoration changed the retained delivery.');
  await click('lf-open-adopted');
