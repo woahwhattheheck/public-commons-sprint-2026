@@ -1,142 +1,158 @@
-# Existing Applications console integration
+# Paid application jobs in Applications
 
-The paid-job customer is an original application entry in the maintained runtime-workspace catalog. It uses that catalog’s existing runtime adoption, reviewed inputs, managed command, terminal, lifecycle and URL observer.
+The **Paid application jobs** entry opens the complete customer workflow in the maintained Applications console. A customer selects a merchant function, prepares a request, reviews its original checkout, approves the payment, follows execution and receives the verified result into the existing resource library. Request, Checkout, Jobs, Library and Collections share one private customer directory and one running application.
 
-The full customer command is already registered as job-workspace. Its entry is sf88-operator-buyer-cli/job-workspace/cli.mjs. The typed package entry remains ./buyer/job-workspace; checkout is model.checkout on that existing API.
+The installed command is `job-workspace`. The Applications producer is the existing [application-job-checkout.mjs](../../../distribution/runtime-workspace/application-job-checkout.mjs). It composes the selected runtime, reviewed files, managed command, original terminal, stop and recovery already supplied by [Applications](../../../distribution/runtime-workspace/APPLICATIONS.md).
 
-This handoff was prepared against Applications PR1345 source 5e5c4023b73c767675d0608ee1f90c70333eed27: applications.mjs blob4400b1e6d35ee911d71c7943cf36d528b50806e7 and application-command.mjs blob0914ca7c5f5c93f7c12ca1e68832edb4b9eb99d7. Its original owner composes these additions with the current Object Buyer, GoldRush, research and Python entries.
+## Select and start the customer
 
-## Catalog and reviewed inputs
+Choose **Paid application jobs** from a READY installation containing the current paid-jobs customer, merchant intake and original browser approval bridge. The source interface is exported by that installation's `sf88-operator-buyer-cli/job-workspace/launch.mjs`; the launcher reads it from the selected installation before preparing a start.
 
-Add one entry to the existing APPLICATION_CATALOG:
+Complete these settings:
+
+| Setting | Meaning |
+| --- | --- |
+| Private job customer directory | Reopen the existing customer, or choose one new directory in an existing private parent. |
+| Original initialized operator workspace | Select the existing original buyer workspace containing `workspace.json` and `operator.json`. |
+| Original private Node buyer profile | Select this private, owned profile instead of an operator workspace. Exactly one operator source is required. |
+| Approval interface | `browser` by default. `terminal` explicitly selects the original managed terminal. |
+| Open page | `request` by default; also accepts `checkout`, `jobs`, `library` or `collections`. |
+| Terminal Python executable | The original managed terminal uses the reviewed executable, defaulting to `/usr/bin/python3`. |
+| Local port | Use `0` to choose an available loopback port. |
+| Private environment JSON | Optional original environment selection. Credentials remain in that private file or the original operator source. |
+
+Use the console's **Review configuration**, **Save configuration**, **Review start** and **Start reviewed application** actions. Each step retains the original reviewed runtime and file identities. Select **Open application** once its actual startup appears. The selected landing opens directly, and the run exposes links to the other four destinations.
+
+The original managed terminal remains available for lifecycle output. With browser approval, the payment decision appears in the customer's Checkout page. With terminal approval, use the original Applications terminal panel when the original buyer presents its prompt.
+
+The selected installed runtime supplies the native SF88 source. Applications does not take a separate customer-entered runtime path for this product. The producer pins the original CLI, buyer client, customer host, launch reader, intake and checkout controllers. Browser mode additionally pins the selected original bridge. The existing runtime profile and source manifest retain the remainder of the installation.
+
+## Request, review and receive
+
+On **Request**, enter the merchant's public HTTPS origin and load its actual function catalog. The catalog supplies the available function IDs, input schema and example, exact payment terms, output type and limits. Select the desired function and enter its real input. The merchant operator controls function selection and payment configuration; see the [merchant intake guide](../../../sf30-seller-sdk/jobs/intake/README.md).
+
+If the catalog requires an intake access key, enter it through the private request controls. The key remains part of that private request's credential custody. It is not a public application setting or URL parameter.
+
+Save the request draft, inspect its input and terms, then choose **Prepare job**. The customer saves its original reference, claim and selected function before sending the merchant request. The merchant creates the original prepared job, and the customer retains the exact returned ticket before importing it into Checkout. The [Request guide](../intake/README.md) covers request recovery, key updates and withdrawal.
+
+Open the linked **Checkout**. Its offline review is performed by the original SF88 buyer using the retained ticket and selected operator source. Inspect the actual reviewed resource, network, asset, recipient and maximum atomic amount. Start the original checkout operation and use its selected approval interface.
+
+In browser mode, the page shows the original SF62 approval snapshot for that specific original intent and active task. Review the displayed request and make the original decision. Changing a checkout, cancelling its task or closing the host closes that pending review with its owner. The shared browser bridge and original buyer own decision validation.
+
+When the original paid response accepts the job, the customer retains that accepted response and its original buyer operation. **Jobs** shows its current status and original execution history. Fetch the completed result to receive its verified bytes into the resource library. Library metadata retains the original job identity, accepted source, result size and SHA-256. Open the resource, label it, add it to a collection and export it through the existing library and collection controls.
+
+An interrupted browser request does not discard the saved operation. **Request** retries the same saved merchant reference and claim when preparation needs recovery. **Checkout** reopens its original native operation after an attempt. **Jobs** reopens its accepted buyer and result. These are separate stages of the same customer workflow.
+
+## Choose the page without creating another customer
+
+The landing selection only changes which original page Applications opens:
+
+| Landing | Destination | Useful for |
+| --- | --- | --- |
+| `request` | `/jobs/request/` | New input requests and retained preparation recovery |
+| `checkout` | `/jobs/checkout/` | Reviewing tickets, approval and original buyer recovery |
+| `jobs` | `/jobs/` | Accepted jobs, status, result retrieval and labels |
+| `library` | `/` | Received resources, previews and original resource operations |
+| `collections` | `/collections` | Organizing and reopening retained resources |
+
+The same host issues all five private links. Their capability remains in the original URL fragment and private managed-run record. Switching pages does not start another process or create a second customer store.
+
+To change a saved application's landing or approval interface, stop its existing run, edit and save the reviewed configuration, then review and start the same application again. Keep its original customer directory. Existing imported checkouts retain their originally selected native runtime and operator source; the selected installation supplies the defaults for future imports.
+
+## Direct installed command and library API
+
+The same application can be started directly:
+
+~~~sh
+starforge job-workspace serve \
+  --state /private/job-customer \
+  --operator-workspace /private/original-buyer \
+  --approval-mode browser \
+  --landing request \
+  --port 0
+~~~
+
+Replace `--operator-workspace` with `--operator-profile` when using the original private Node profile. A direct operator may also use the existing `--runtime` option for an explicit original SF88 source; the managed Applications producer derives this path from its selected installation.
+
+The `serve` command accepts both interface options. Standalone `checkout-execute` continues to use its original terminal approval. The existing request, checkout, accepted-job and library commands keep their saved state and operation identities.
+
+The typed `./buyer/job-workspace` entry exports the same host and launch helpers:
+
+~~~js
+const host = await startJobCustomerWorkspace({
+  model,
+  port: 0,
+  browserApproval: true,
+  landing: 'request',
+});
+
+// host.entryUrl is the selected original page.
+// host.launch is the exact private startup announcement.
+await host.close();
+await model.close();
+~~~
+
+The host closes its intake tasks, original checkout child and browser broker before its owning model releases the customer lease. Repeated close calls share their actual completion.
+
+## Existing catalog, command and observer joins
+
+The maintained shared writer retains these three existing hooks:
+
+~~~js
+jobCheckoutApplication(common);
+validateJobCheckoutSelection(settings);
+
+const original = await prepareJobCheckoutApplication(
+  settings, runtimeDirectory, inputPath,
+);
+args.push(...original.args);
+inputs.push(...original.inputs);
+createDirectories.push(...original.createDirectories);
+~~~
+
+Their signatures are unchanged. The common branch continues to append the port once and handle terminal Python, private environment selection and the existing managed state resource. Keep the current application ID `job-checkout`, command `job-workspace` and original resource-key behavior for the selected customer directory.
+
+The prepared command now contains reviewed `--approval-mode` and `--landing` arguments. The source reader exports `JOB_WORKSPACE_APPLICATIONS`, with schema `stellar-forge.sf88.job-workspace-applications.v1`, the original launch schema and the supported mode and landing names. The producer requires this actual selected-source interface before preparing a new managed launch. Older original launch records remain readable by their original API without assigning them an invented mode.
+
+The existing `job-workspace` stdout branch awaits:
+
+~~~js
+const startup = await jobCheckoutStartup(request, line);
+~~~
+
+It returns `{url, links, original}`. Save all three in the existing serialized `application-url.json` write:
 
 ~~~js
 {
-  id: 'job-checkout',
-  command: 'job-workspace',
-  requiredSource: 'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/checkout/controller.mjs',
-  title: 'Paid application jobs',
-  terminal: true,
-  description: 'Review and purchase a prepared application job, follow execution, retrieve the verified result and use the original resource library.',
-  fields: [
-    field('stateDirectory', 'Private job customer directory', 'path', true),
-    field('operatorWorkspace', 'Original initialized operator workspace'),
-    field('operatorProfile', 'Original private Node buyer profile'),
-    field('terminalPython', 'Terminal Python executable', 'path', false,
-      'Defaults to /usr/bin/python3; the existing managed PTY owns the application process.'),
-    ...common,
-  ],
-},
-~~~
-
-In normalizeSettings, require exactly one original operator source for this application:
-
-~~~js
-if (type.id === 'job-checkout')
-  need(Boolean(settings.operatorWorkspace) !== Boolean(settings.operatorProfile),
-    'APPLICATION_JOB_OPERATOR_SELECTION_REQUIRED',
-    'Choose the existing original operator workspace or Node buyer profile');
-~~~
-
-The state directory is private and may be newly created inside an existing private parent through the maintained createDirectories mechanism. Keep its original resourceKey behavior, which already uses settings.stateDirectory.
-
-Pin the selected operator directory and its original workspace.json/operator.json, or the selected private profile file. Profile bytes must be a regular private file owned by the account running the application. Credentials stay in the original signer/environment; applicationEnvironment remains the source of the selected private environment file.
-
-The original native runtime is derived from the selected, inspected merchant runtime, never from a customer-provided command argument. applicationCommand currently receives type/settings. Pass its selected runtime directory as a third argument, then add this branch:
-
-~~~js
-} else if (type.id === 'job-checkout') {
-  const state = await path('stateDirectory', 'directory', true, true);
-  if (!state.exists) createDirectories.push(state.path);
-  if (settings.operatorWorkspace) {
-    await path('operatorWorkspace', 'directory', false, true);
-    for (const name of ['workspace.json', 'operator.json'])
-      inputs.push(await inputPath(join(settings.operatorWorkspace, name), 'file'));
-  } else {
-    await path('operatorProfile', 'file');
-    const profile = await lstat(settings.operatorProfile);
-    need(!(profile.mode & 0o077) &&
-      (process.getuid === undefined || profile.uid === process.getuid()),
-      'APPLICATION_JOB_PRIVATE_PROFILE_REQUIRED');
-  }
-  const original = await inspectMerchantRuntime(selectedRuntimeDirectory, { load: false });
-  const native = join(original.sourceRoot,
-    'stellar/scf-starforge-20261009/sf88-operator-buyer-cli');
-  inputs.push(await inputPath(join(native, 'cli.mjs'), 'file'));
-  inputs.push(await inputPath(join(native, 'job-workspace', 'launch.mjs'), 'file'));
-  args.push('serve');
-  option('--state', settings.stateDirectory);
-  option('--operator-workspace', settings.operatorWorkspace);
-  option('--operator-profile', settings.operatorProfile);
-  option('--runtime', native);
+  // Keep the current schema, applicationId, operationId,
+  // command, source and observedAt fields.
+  url: startup.url,
+  links: startup.links,
+  original: startup.original,
 }
 ~~~
 
-Supply selectedRuntimeDirectory at the four existing applicationCommand call sites:
+The additive shared-writer change is `links: startup.links` in that existing job-workspace branch. The original Applications model already exposes retained link arrays as `privateLinks`; its current view renders those links alongside the chosen application entry.
 
-| Existing operation | Original selected directory |
-| --- | --- |
-| reviewApplication | runtime.directory from its preceding inspectMerchantRuntime |
-| saveApplication | reviewed.runtime.directory |
-| reviewApplicationStart | saved.runtime.directory |
-| prepareApplicationStart | saved.runtime.directory |
+The producer reads the selected source's `readJobWorkspaceLaunch` before accepting a startup. It matches the private customer path, native runtime, operator selection, actual PID, instance UUID, all five canonical local routes, approval mode, landing and chosen entry URL against the original private launch file. A standalone stdout URL does not select a destination.
 
-All existing command/source/input hashes and managed-run bindings continue to apply. The original common terminalPython, port and environment handling runs after this branch.
-
-The resulting original command is:
-
-~~~text
-starforge job-workspace serve --state ABS_PRIVATE_CUSTOMER --operator-workspace ABS_ORIGINAL_OPERATOR --runtime ABS_SELECTED_SOURCE_SF88 --port PORT
-~~~
-
-The profile variant replaces --operator-workspace with --operator-profile. The customer server owns one lease and one active native checkout. The original managed PTY owns process-group stop and same-run recovery. The private checkout host initializes the shared original browser approval broker and displays the native payment decision in its Checkout view; standalone commands retain terminal approval.
-
-## Ready output and original private launch
-
-Serve writes its private startup file before printing one JSON line. The file is always:
-
-~~~text
-ABS_PRIVATE_CUSTOMER/job-workspace-launch.json
-~~~
-
-Its schema is stellar-forge.sf88.job-workspace-launch.v1 and its fields are:
-
-| Field | Binding |
-| --- | --- |
-| state | LISTENING while this server is open; CLOSED after its close completes |
-| directory | Exact private customer directory |
-| runtimeDirectory | Exact selected original SF88 source directory |
-| operatorSelection | Selected original workspace/profile path and runtime |
-| pid | Actual customer Node process |
-| instanceId | Unique UUID for this server instance |
-| privateLaunch | Original private startup file |
-| url | Original /jobs/ view, including its private fragment |
-| checkoutUrl | Original /jobs/checkout/ view on the same private host |
-| libraryUrl | Original resource-library view on that host |
-| collectionsUrl | Original collections view on that host |
-
-The customer exports readJobWorkspaceLaunch from its existing typed entry and from job-workspace/launch.mjs. The Applications observer can use the original helper after matching the announcement schema and the reviewed command’s --state and --runtime:
+The original launch schema remains `stellar-forge.sf88.job-workspace-launch.v1`. New launches include `approvalMode`, `landing` and `entryUrl` alongside the established customer, source, operator, listener and private-file fields. The reader accepts these optional expectations:
 
 ~~~js
-const ready = await readJobWorkspaceLaunch({
-  directory: selectedState,
-  runtimeDirectory: selectedNativeRuntime,
-  ...(selectedOperatorWorkspace ? { operatorWorkspace: selectedOperatorWorkspace } : {}),
-  ...(selectedOperatorProfile ? { operatorProfile: selectedOperatorProfile } : {}),
-  pid: originalCustomerPid,
+await readJobWorkspaceLaunch({
+  directory,
+  runtimeDirectory,
+  operatorWorkspace,
+  pid,
+  approvalMode: 'browser',
+  landing: 'request',
 });
 ~~~
 
-The helper verifies the private customer directory, source binding, selected operator when supplied, active launch state, PID when supplied, and the four exact loopback/token routes. The original terminal runner can supply its actual customer child PID. The announcement’s instanceId and privateLaunch must match the returned private file.
+## Stop, reopen and continue the native result
 
-Select ready.checkoutUrl for this catalog entry and save it through the existing application-url.json mechanism with source original-command-stdout. Read the private record before advertising the link; the announcement by itself is only a candidate.
+**Stop application** addresses the existing managed run. The original host drains preparation requests and native children, closes its approval broker and HTTP listener, marks its own launch instance CLOSED, and releases the customer through its original owner. The retained Requests, Checkouts, accepted jobs, verified resources and collections remain in the same directory.
 
-The exact observer branch fits inside the current line function before its common candidate parser. It can chain its asynchronous read onto the existing saving promise. The selected paths come from the already reviewed request.args, whose hash is checked by managed-command. The maintained command URL observer retains ownership of the original application ID, operation ID and error lifecycle.
+Reopen the saved application to inspect its earlier run. A new reviewed start opens that same customer and produces a fresh private listener. Continue an unfinished stage from its existing request, original checkout operation or accepted-job entry.
 
-## Customer reopen and shutdown
-
-A new launch opens the same state directory and its original checkout/buyer/library records. Existing checkouts retain their originally selected runtime and operator source. An installed upgrade supplies the new source for future imports while older operations continue to reference their retained source.
-
-Native creation, offline review and purchase execution receive the existing AbortSignal. Shutdown drains input preparation, revokes the selected pending browser review, waits for the original child and accepted-result intake, closes the shared approval broker, then closes the library and releases the customer lease. An interrupted original attempt remains recoverable through the same checkout, even when its response arrives after a client disconnect.
-
-The Applications runtime/source checks and the customer’s saved input and permanent attempt are complementary. Keep the original operation identity when reopening or recovering this application.
+The native browser continuation in this directory exercises the same merchant intake, original approval, SDK, worker, result and collection path. Its completed-core cloud mode receives the original finished merchant records and earlier result before continuing the customer phases. The [cloud continuation guide](../../../sf30-seller-sdk/jobs/CLOUD_NATIVE.md) describes that original state transfer and the retained outputs.

@@ -70,6 +70,19 @@ Programmatic receiving accepts `{version: "commons.retained-public-table-set.v1"
 
 Each customer row keeps that series' own public-table retrieval date. The manifest retains each original full retrieval timestamp plus a collection window; the edition's summary date is the latest collection date. The original source JSON contains every table's text and digest. The complete project export and receiving operation carry the combined edition and its selected original captures together.
 
+
+## Run the complete native receiving operation
+
+The [executable receiver](RECEIVER.md) drives the same original source, saved review, configured native seller and Buyer, two actual cursor pages, complete source/CSV deliveries, original intent recovery, project export and received-project reopen:
+
+```sh
+starforge fred receiver --project /absolute/private/economic-project \
+  --config /absolute/private/fred-receiver.json
+```
+
+The private configuration selects the existing operator resources. The included complete UNRATE table is the default input; the macro source starter can compose all three original series. The receiver retains the original project and selected native intents at every step. After an interrupted host, repeat the same command or use `--phase browser` to finish the actual browser/download/reopen portion of a completed native operation. Browser settings can change independently of the retained payment operation.
+
+
 ## Select the source and vintage
 
 The source selection has this format:

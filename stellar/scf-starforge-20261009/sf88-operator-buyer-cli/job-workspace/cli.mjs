@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { openJobWorkspace } from './model.mjs';
 import { startJobCustomerWorkspace } from './server.mjs';
+import { JOB_WORKSPACE_APPLICATIONS } from './launch.mjs';
 import { absolute, readBytes, parseJson } from '../node/store.mjs';
 import { requireValue, failure } from './state.mjs';
 import { INTAKE_HELP, INTAKE_COMMAND_OPTIONS, runIntakeCommand } from './intake/cli.mjs';
@@ -47,6 +48,7 @@ const HELP = [
   'First open: repeat --buyer-root ABS and --file-root ABS for existing external',
   'buyers/results. Owned buyers/artifacts are included. Reopen without roots.',
   'serve: --port N --approval-mode browser|terminal (default browser).',
+  '       --landing request|checkout|jobs|library|collections (default request).',
   'watch/fetch: --deadline-ms N --poll-ms N.',
   'The running workspace owns its original lease; use the browser while it runs.',
   'Ctrl-C stops the current local operation and retains its original state.',
@@ -65,7 +67,7 @@ export async function runJobWorkspaceCommand(args = process.argv.slice(2), {
   if (!args.length || args.includes('--help')) { print(HELP); return; }
   const [command, ...rest] = args;
   const selection = ['--operator-workspace','--operator-profile','--runtime','--native-timeout-ms'];
-  const specific = { serve: ['--port', '--approval-mode', ...selection], status: [],
+  const specific = { serve: ['--port', '--approval-mode', '--landing', ...selection], status: [],
     list: ['--query','--state-filter','--view','--offset','--limit'],
     show: ['--entry'], register: ['--buyer-directory','--label'],
     retain: ['--acceptance-file','--handoff-file','--claim-token-file','--label'],
@@ -98,7 +100,9 @@ export async function runJobWorkspaceCommand(args = process.argv.slice(2), {
     if (flags.has(flag)) checkout[key] = flags.get(flag);
   if (flags.has('--native-timeout-ms')) checkout.timeoutMs = number('--native-timeout-ms');
   const approvalMode = flags.get('--approval-mode') ?? 'browser';
-  requireValue(['browser','terminal'].includes(approvalMode), 'JOB_APPROVAL_MODE_INVALID');
+  requireValue(JOB_WORKSPACE_APPLICATIONS.approvalModes.includes(approvalMode), 'JOB_APPROVAL_MODE_INVALID');
+  const landing = flags.get('--landing') ?? 'request';
+  requireValue(JOB_WORKSPACE_APPLICATIONS.landings.includes(landing), 'JOB_WORKSPACE_LANDING_INVALID');
   const model = await openJobWorkspace({ directory: flags.get('--state'), checkout,
     ...(buyerRoots.length ? { buyerRoots } : {}), ...(fileRoots.length ? { fileRoots } : {}) });
   let host, selected = null, checkoutId = null;
@@ -112,7 +116,7 @@ export async function runJobWorkspaceCommand(args = process.argv.slice(2), {
   try {
     if (command === 'serve') {
       host = await startJobCustomerWorkspace({ model, port: number('--port') ?? 0,
-        browserApproval: approvalMode === 'browser' });
+        browserApproval: approvalMode === 'browser', landing });
       // One startup record fits the original Applications stdout observer. The
       // private launch file binds that URL to this PID, state and installed source.
       print(JSON.stringify(host.launch) + '\n');

@@ -16,6 +16,8 @@ const HELP = `SQL Server merchant (Node 22.16+)
   query    --source source.json --query NAME --input input.json [--output NEW_FILE]
   prepare  --source source.json --plan merchant-plan.json --directory NEW_DIRECTORY
   verify   --directory PREPARED_DIRECTORY
+  receive  --source source.json --plan merchant-plan.json --query NAME --input input.json
+           --directory NEW_PRIVATE_DIRECTORY [--table NAME] [--route ROUTE_ID]
   workspace --source source.json --state PRIVATE_DIRECTORY [--port 8441]
            [--seller-port 0] [--operations-port 0] [--facilitator HTTPS_URL]
   run      --directory PREPARED_DIRECTORY [--port 8423] [--operations-port 8424]
@@ -60,7 +62,7 @@ export async function main(args = process.argv.slice(2)) {
     if (options.has(flag)) throw new TypeError('MSSQL_DUPLICATE_OPTION');
     if (['--allow-local-facilitator', '--no-operations'].includes(flag)) { options.set(flag, true); continue; }
     if (!['--directory', '--source', '--config', '--plan', '--table', '--query', '--input', '--output',
-      '--port', '--operations-port', '--facilitator', '--availability-dir'].includes(flag) || !args[i + 1] || args[i + 1].startsWith('--'))
+      '--port', '--operations-port', '--facilitator', '--availability-dir', '--route'].includes(flag) || !args[i + 1] || args[i + 1].startsWith('--'))
       throw new TypeError(HELP);
     options.set(flag, args[++i]);
   }
@@ -69,6 +71,7 @@ export async function main(args = process.argv.slice(2)) {
   const allowed = { init: ['--directory'], describe: ['--source'], catalog: ['--source', '--table'],
     preflight: ['--source'], query: ['--source', '--query', '--input', '--output'],
     prepare: ['--source', '--plan', '--directory'], verify: ['--directory'],
+    receive: ['--source', '--plan', '--query', '--input', '--directory', '--table', '--route'],
     run: ['--directory', ...launch], serve: ['--source', '--config', ...launch] };
   if (!Object.hasOwn(allowed, command)) throw new TypeError(HELP);
   if ([...options.keys()].some(flag => !allowed[command].includes(flag))) throw new TypeError('MSSQL_OPTION_NOT_VALID_FOR_COMMAND');
@@ -80,6 +83,13 @@ export async function main(args = process.argv.slice(2)) {
   else if (command === 'prepare') {
     required('--source', '--plan', '--directory');
     result = await prepareMssqlSeller({ sourceFile, planFile: options.get('--plan'), directory: options.get('--directory') });
+  } else if (command === 'receive') {
+    required('--source', '--plan', '--query', '--input', '--directory');
+    const { receiveMssqlSeller } = await import('./receive.mjs');
+    result = await receiveMssqlSeller({ sourceFile, planFile: options.get('--plan'), query: options.get('--query'),
+      inputFile: options.get('--input'), directory: options.get('--directory'), table: options.get('--table'),
+      routeId: options.get('--route') });
+    if (result.status !== 'COMPLETED') process.exitCode = 1;
   } else if (command === 'verify') { required('--directory'); result = await verifyPreparedMssqlSeller(options.get('--directory')); }
   else if (command === 'preflight' || command === 'query') {
     required('--source'); if (command === 'query') required('--query', '--input');
