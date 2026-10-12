@@ -127,6 +127,13 @@
         "../blockworks/comparison-view.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/har-browser.mjs",
+      [
+        "../har/browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

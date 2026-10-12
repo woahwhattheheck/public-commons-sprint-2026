@@ -15,7 +15,7 @@ node odata/live/cli.mjs COMMAND [options]
   package --workspace DIRECTORY --saved-plan ID --plan plan.json --operation ID --out NEW_DIRECTORY
   inspect --package DIRECTORY
   serve --package DIRECTORY --state PRIVATE_DIRECTORY [--port 8423 --operations-port 8424] [--facilitator HTTPS_URL]
-  buyer --package DIRECTORY --operation ID --request request.json --intent STABLE_INTENT --out NEW_DIRECTORY
+  buyer --package DIRECTORY --operation ID --request request.json --intent STABLE_INTENT --out NEW_DIRECTORY [--request-directory FINAL_DIRECTORY]
   receive --package DIRECTORY --operation ID --response saved-response.json --out NEW_DIRECTORY
 
 Use original odata/cli.mjs to connect, inspect metadata, and save/review queries.
@@ -48,7 +48,7 @@ export async function main(args=process.argv.slice(2)){
     const prepared=await readPackage(required(o.package,'package'),options);
     if(command==='inspect')result={manifest:prepared.manifest,plan:prepared.plan,selection:prepared.selection};
     else if(command==='buyer')result=await prepareBuyerHandoff(prepared,{operation:required(o.operation,'operation'),request:await readJson(required(o.request,'request')),
-      intentId:required(o.intent,'intent'),directory:required(o.out,'out')});
+      intentId:required(o.intent,'intent'),directory:required(o.out,'out'),requestDirectory:o['request-directory']??o.out});
     else if(command==='receive')result=await receivePage(prepared,{operation:required(o.operation,'operation'),responsePath:required(o.response,'response'),directory:required(o.out,'out')});
     else if(command==='serve'){
       let nativeFactory=null;
