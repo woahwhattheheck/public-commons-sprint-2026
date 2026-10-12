@@ -8,6 +8,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | --- | --- | --- |
 | Catalog Atlas | atlas | Retained catalog intake, offer comparison, exact native buyer preparation and complete workspace receiving |
 | API merchant authoring | openapi-workspace | Source intake, paid routes, saved packages, seller preview and operations |
+| gRPC merchant authoring | grpc-workspace | Captured protobuf source, exact typed requests and terms, saved merchant editions, retained release controls and customer files |
 | Merchant pricing and scenario planning | revenue-workspace | Original usage, saved commercial reviews, exact demand/price/cost scenarios, exports and seller price changes |
 | Redis and Valkey merchant authoring | redis workspace open | Saved products, source profiles, live previews, customer packages and managed release controls |
 | MPP merchant and customer | mpp serve | Saved merchant/customer profiles, original offers, purchases, packages, governor terminal and retained response receiving |
@@ -56,6 +57,24 @@ A selected runtime must actually contain the command. XML and Object Buyer addit
 The API projects folder may be an existing private directory or one new directory in an existing private parent. Saving creates that one reviewed folder if needed. Source and dataset paths retain their original meanings.
 
 The runtime console and original application have separate capability URLs. The latter is captured only from the selected CLI's startup announcement and retained privately against its original operation ID. It is never inferred from a configured port, source example or arbitrary terminal text.
+
+## gRPC merchant authoring
+
+Choose **gRPC merchant authoring** from a runtime containing the native gRPC
+transport and managed workspace support. Select the original private workspace
+directory, or one new directory in an existing private parent, and review the
+listener ports and private environment. Save creates only the reviewed directory;
+Start binds its current source revision and the selected native launcher bytes.
+
+**Open application** uses the original instance's private launch record and an
+authenticated live response. Capture and edit the protobuf contract, review
+native methods and exact payment terms, prepare customer files, and operate the
+original seller and retained releases in that same workspace. **Stop** drains the
+owned native resources even if an in-flight request fails; a fresh reviewed start
+reopens the retained state without repeating earlier calls.
+
+Follow [gRPC merchant authoring in Applications](GRPC_APPLICATIONS.md) for the
+complete setup, saved-source selection, native opening, Stop and recovery workflow.
 
 ## Merchant pricing and scenario planning
 
