@@ -199,7 +199,7 @@ async function runWorkbook(python, source, flags, destination = null) {
     });
     child.stderr.on('data', bytes => {stderr=(stderr+bytes.toString()).slice(-16000);});
     child.once('error',error=>{if(!settled){settled=true;reject(error);}});
-    child.once('exit',(code,signal)=>{
+    child.once('close',(code,signal)=>{
       if(settled)return;settled=true;
       if(code!==0){reject(new Error('Original workbook operation exited '+(signal??code)+': '+stderr));return;}
       try {accept(JSON.parse(Buffer.concat(chunks).toString('utf8')));}
