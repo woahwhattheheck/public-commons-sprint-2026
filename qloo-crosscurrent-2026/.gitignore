@@ -1,5 +1,0 @@
-.env
-*.log
-node_modules/
-.private/
-api-responses/

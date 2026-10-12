@@ -1,3 +1,0 @@
-source_key,match_id,address,interface_key,vrf_id,status,dns_name,primary
-switch-v4,,192.0.2.10/24,switch-eth0,,active,switch.example.invalid,true
-switch-v6,,2001:db8::10/64,switch-eth0,,active,switch.example.invalid,true

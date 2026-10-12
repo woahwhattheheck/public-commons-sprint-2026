@@ -1,6 +1,0 @@
-{
-  "name": "Reviewed environmental source",
-  "baseUrl": "https://example.invalid/connected-systems/",
-  "allowedOrigins": [],
-  "authorizationEnv": null
-}

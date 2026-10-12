@@ -1,1 +1,0 @@
-export function initializeGISMerchantWorkspace(options:{directory:string;connection:string;name?:string;releaseStore?:string}):Promise<{schema:string;configuration:string;state:'INITIALIZED';open311GISWorkspacesConfigured:true;workspaces:{workspace:string;label:string;inputs:string[]}[];hostOwnership:'ORIGINAL_OPEN311_GIS_WORKSPACES'}>;

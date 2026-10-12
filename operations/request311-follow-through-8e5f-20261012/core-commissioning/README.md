@@ -1,9 +1,0 @@
-# Original Manatee core operation
-
-This directory retains the exact source edition and actual result of the completed original-data follow-through core operation. It imported the complete 23-request Manatee cohort and a separate original WorkOrderView error, saved the explicit source mappings, built a request-only edition, assigned and approved an inspect action, saved a reviewed dispatch, imported two original-source-bound reviewer proposals, accepted one and rejected one, exported all eight selected formats, reopened the unchanged workspace and independently received the complete history.
-
-Node.js 24.19.0 returned exit code 0 with empty standard error. The actual result is in result.json. Its complete workspace contained 354,535 bytes, SHA-256 c2ccf1c2f748f21e02ec28521c0c32d0179be4adaf40e16280cd22ac2e086e9f. The file identity describes the output of that operation; the complete receiving file is part of the operating archive when supplied with the delivery.
-
-executed-source.json contains all eleven original source and runner bodies with their byte lengths, SHA-256 values and Git blob IDs. Its inputs list identifies the separate original municipal source file. Materialize those complete relative paths into a new private directory, put the unchanged original input at original.json, and run Node.js against run.mjs. The driver writes the editable workspace, source/reviewer/dispatch exports and native result in that directory. Keep the directory alive through complete archive delivery.
-
-The installed current product and the complete request/order/browser operating programme are published in the parent operation directory. This historical operation remains bound to its original source edition; later profile, comparison, merchant and browser additions have their own operating inputs and outputs.
