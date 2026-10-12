@@ -19,7 +19,7 @@ const writes={
  'commerce-finalize':'purchase-finalize','commerce-cancel':'purchase-cancel','commerce-reconcile':'purchase-reconcile',
  'commerce-receive-dossier':'purchase-receive-dossier',
 };
-export const RESEARCH_COMMERCE_COMMANDS=Object.freeze(['commerce-help','commerce-configuration','commerce-list',
+export const RESEARCH_COMMERCE_COMMANDS=Object.freeze(['commerce-help','commerce-buyer-serve','commerce-buyer-attach','commerce-buyer-status','commerce-configuration','commerce-list',
  'commerce-publication','commerce-purchase',...Object.keys(writes),'commerce-export','commerce-operation',
  'commerce-replay','commerce-archive-inspect','commerce-archive-receive']);
 export const RESEARCH_COMMERCE_USAGE=String.raw`Research paid customer delivery
@@ -27,6 +27,12 @@ export const RESEARCH_COMMERCE_USAGE=String.raw`Research paid customer delivery
 Use the existing private Research listener:
   research-client COMMAND --connection-file /private/research-url.json [--directory /original/research]
   research-dossiers remote COMMAND ...
+
+Configure the original Buyer launch and Research connection:
+  commerce-buyer-serve --input SETUP.json --run-directory /private/research-buyer
+  commerce-buyer-attach --input EXISTING_LAUNCH.json --run-directory /private/research-buyer
+  commerce-buyer-status --run-directory /private/research-buyer [--live]
+  These commands run locally. BUYER_SETUP.md explains the complete setup and reopen.
 
 Inspect the configured original merchant and Buyer applications:
   commerce-configuration
@@ -126,6 +132,8 @@ async function copySavedResult(root,out){
 }
 export async function main(argv=process.argv.slice(2),{stdout=process.stdout,stderr=process.stderr}={}){
  const command=argv[0]??'commerce-help';
+ if(['commerce-buyer-serve','commerce-buyer-attach','commerce-buyer-status'].includes(command))
+  return (await import('./buyer-setup.mjs')).mainResearchBuyerSetup(argv,{stdout,stderr});
  if(command==='commerce-help'||argv.includes('--help')){stdout.write(RESEARCH_COMMERCE_USAGE+'\n');return 0;}
  need(RESEARCH_COMMERCE_COMMANDS.includes(command),'RESEARCH_COMMERCE_COMMAND_INVALID');
  const allowed=new Set(['connection-file','directory',...(permitted[command]??[])]);
