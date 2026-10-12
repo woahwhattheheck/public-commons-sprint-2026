@@ -191,8 +191,20 @@ Select one of the two supported methods:
   This still requires the original prior-year monthly baseline.
 
 Enter downside and upside changes in basis points. One hundred basis points
-equals one percentage point. These are explicit growth sensitivities. The
-screen and output describe the actual assumption used.
+equals one percentage point. Each scenario equals the signed original
+prior-year collection multiplied by the selected growth factor, plus the
+absolute prior-year collection multiplied by that scenario's basis-point
+change divided by 10,000, followed by the same explicit future-month
+adjustment. Round the projection to the selected currency precision before
+applying the adjustment. Positive published baselines retain the original
+percentage-point calculation; a negative net correction keeps its sign in
+the base while the named downside remains lower and upside remains higher.
+
+For example, a published net correction of −110.38, zero growth, an explicit
+200.00 future adjustment and −500/+500 basis points produce 84.10 downside,
+89.62 base and 95.14 upside. The 200.00 is an operator assumption in this
+example. The report retains this calculation rule alongside the selected
+source and plan; these sensitivity ranges are not confidence intervals.
 
 A future adjustment identifies its forecast month, signed currency amount,
 calculation basis and original source reference. It applies after the seasonal
