@@ -8,14 +8,32 @@ if (location.hash) history.replaceState(null, '', location.pathname + location.s
 let current = null, profileId = '', review = null, local = [], reviewEpoch = 0;
 let inventoryRows = [], inventoryCursor = null, journalCursor = null, requestCursor = null;
 const journal = new Map(), requests = new Map();
-let polling = false, lastRequests = '', requestsExpanded = false, starting = false, detailEpoch = 0;
+let polling = false, lastRequests = '', requestsExpanded = false, starting = false, detailEpoch = 0, profileEpoch = 0;
+let lastDeclaredRestores = '';
+const busyButtons = new Set(), publisherSelections = new Map();
 const localResultStamps = new Map();
 const actionNames = {
   push: 'Upload encrypted snapshot', pull: 'Download encrypted snapshot', restore: 'Cold restore',
   snapshot: 'Create encrypted snapshot', verify: 'Verify local encrypted bundle', 'local-verify': 'Verify local encrypted bundle',
+  'publisher-prepare': 'Prepare restored dataset publisher',
 };
-const localCommand = command => command === 'snapshot' || command === 'local-verify';
+const localCommand = command => ['snapshot', 'local-verify', 'publisher-prepare'].includes(command);
+const captureKindNames = {
+  generic: 'Original snapshot plan',
+  'paid-jobs': 'Paid-job merchant with original writer leases',
+  'dataset-publisher': 'Dataset publisher with original writer leases',
+};
 const capturePlans = () => profile()?.capturePlans ?? [];
+const publisherRestores = () => profile()?.publisherRestores ?? [];
+const remoteConfigured = (selected = profile()) => selected?.remoteConfigured === true;
+const remoteAction = action => ['push', 'pull', 'restore', 'resume'].includes(action);
+const defaultAction = () => remoteConfigured() ? 'push' : capturePlans().length ? 'snapshot' :
+  publisherRestores().length ? 'publisher-prepare' : 'verify';
+const supportedAction = action => (!remoteAction(action) || remoteConfigured()) &&
+  (action !== 'snapshot' || capturePlans().length > 0);
+function requireRemote() {
+  if (!remoteConfigured()) throw new Error('This profile uses local recovery. Choose capture, verification, or publisher preparation, or select a profile with a configured remote store.');
+}
 const capturePlan = () => capturePlans().find(item => item.id === $('capture-plan').value);
 const bytes = value => {
   if (!Number.isFinite(value)) return '—';
@@ -60,11 +78,15 @@ function url(path, values) {
 }
 const post = (path, body) => api(path, { method: 'POST', body: JSON.stringify(body) });
 async function task(button, action) {
+  if (button && busyButtons.has(button)) return null;
   const previous = button?.disabled;
-  if (button) button.disabled = true;
+  if (button) { busyButtons.add(button); button.disabled = true; }
   try { return await action(); }
   catch (error) { notice(errorText(error), true); return null; }
-  finally { if (button) button.disabled = previous; updateStart(); }
+  finally {
+    if (button) { busyButtons.delete(button); button.disabled = previous; }
+    syncCapabilities(); updateStart();
+  }
 }
 function button(text, action) {
   const node = element('button', text); node.type = 'button';
@@ -82,10 +104,73 @@ function invalidateReview() {
   review = null; $('review-panel').hidden = true; updateStart();
 }
 function updateStart() {
-  $('start-button').disabled = starting || !review || Boolean(current?.readOnly) || Boolean(current?.active);
+  const allowed = review && review.profileId === profileId &&
+    (localCommand(review.command) || remoteConfigured());
+  $('start-button').disabled = starting || !allowed || Boolean(current?.readOnly) || Boolean(current?.active);
+}
+function syncCapabilities() {
+  const remote = remoteConfigured();
+  for (const option of $('action').options)
+    option.disabled = !supportedAction(option.value);
+  for (const id of ['refresh-inventory', 'inventory-more'])
+    $(id).disabled = !remote || busyButtons.has($(id));
+  $('review-button').disabled = !supportedAction($('action').value) || busyButtons.has($('review-button'));
+  $('inventory-panel').classList.toggle('local-only', !remote);
+  $('inventory-mode-note').hidden = remote;
+}
+function rememberPublisherSelection() {
+  if (!profileId) return;
+  publisherSelections.set(profileId, {
+    mode: $('publisher-source').value,
+    restoreId: $('restore-operation').value,
+    publisherRestoreId: $('publisher-restore').value,
+  });
+}
+function restorePublisherSelection() {
+  const saved = publisherSelections.get(profileId);
+  $('publisher-source').value = saved?.mode ?? (publisherRestores().length ? 'host' : 'remote');
+  $('restore-operation').value = saved?.restoreId ?? '';
+  $('publisher-restore').replaceChildren();
+  const chosen = saved?.publisherRestoreId;
+  if (chosen) {
+    const option = element('option', chosen); option.value = chosen; $('publisher-restore').append(option);
+  }
+}
+function syncPublisherFields(publisher) {
+  const host = $('publisher-source').value === 'host';
+  const selected = $('publisher-restore').value;
+  $('publisher-restore').replaceChildren();
+  for (const item of publisherRestores()) {
+    const option = element('option', item.label + ' · ' + item.id);
+    option.value = item.id; $('publisher-restore').append(option);
+  }
+  if (selected && !publisherRestores().some(item => item.id === selected)) {
+    const option = element('option', 'Saved declared restore is unavailable: ' + selected);
+    option.value = selected; option.disabled = true; $('publisher-restore').append(option);
+  }
+  if (selected) $('publisher-restore').value = selected;
+  if (!publisherRestores().length && !selected) {
+    const option = element('option', 'No restored publishers declared for this profile'); option.value = '';
+    $('publisher-restore').append(option);
+  }
+  $('restored-field').hidden = !publisher;
+  $('publisher-source').disabled = !publisher;
+  $('remote-restored-field').hidden = !publisher || host;
+  $('host-restored-field').hidden = !publisher || !host;
+  $('restore-operation').disabled = !publisher || host; $('restore-operation').required = publisher && !host;
+  $('publisher-restore').disabled = !publisher || !host; $('publisher-restore').required = publisher && host;
+  const selectedRestore = publisherRestores().find(item => item.id === $('publisher-restore').value);
+  $('publisher-restore-help').textContent = selectedRestore ?
+    'Original encrypted bundle: ' + selectedRestore.bundleDirectory + '. Existing cold restore: ' + selectedRestore.restoreDirectory + '.' :
+    'The host administrator declares the original encrypted bundle and its existing plaintext restore within this profile’s roots.';
+  refreshRestoreChoices();
 }
 function syncFields() {
+  if (!supportedAction($('action').value)) { invalidateReview(); $('action').value = defaultAction(); }
   const action = $('action').value, capture = action === 'snapshot', verify = action === 'verify';
+  const publisher = action === 'publisher-prepare';
+  syncPublisherFields(publisher);
+  syncCapabilities();
   const usesBundle = action === 'push' || action === 'restore' || verify;
   const usesRemote = action === 'pull' || action === 'restore';
   $('bundle-field').hidden = !usesBundle; $('bundle').disabled = !usesBundle;
@@ -121,7 +206,8 @@ function syncFields() {
       '. Leave the name empty to use the operation ID.' :
     (action === 'restore' ? 'Plaintext destination under ' : 'Encrypted download under ') +
       (action === 'restore' ? profile()?.restoreRoot : profile()?.downloadRoot) + '.';
-  $('review-button').textContent = capture ? 'Review capture' : verify ? 'Review verification' : 'Review transfer';
+  $('review-button').textContent = capture ? 'Review capture' : verify ? 'Review verification' :
+    publisher ? 'Review restored publisher' : 'Review transfer';
   const selected = $('bundle').value;
   $('bundle').replaceChildren();
   if (action === 'restore') {
@@ -141,15 +227,71 @@ function syncFields() {
   }
 }
 
+function refreshRestoreChoices() {
+  const rows = new Map(journal);
+  for (const row of requests.values())
+    if (row.profileId === profileId && row.operation?.command === 'restore')
+      rows.set(row.operationId, row.operation);
+  $('restored-options').replaceChildren();
+  for (const item of rows.values()) if (item.command === 'restore' && item.status === 'COMPLETE') {
+    const option = element('option'); option.value = item.operationId;
+    option.label = item.operationId + ' · ' + (item.destination ?? item.snapshotId);
+    $('restored-options').append(option);
+  }
+}
+function useRestoredPublisher(id, source = 'remote') {
+  if (source === 'host' && !publisherRestores().some(item => item.id === id))
+    throw new Error('Refresh this profile and select a host-declared restored publisher.');
+  invalidateReview(); $('action').value = 'publisher-prepare';
+  $('operation-id').value = nextId(); $('publisher-source').value = source;
+  if (source === 'host') {
+    syncPublisherFields(true); $('publisher-restore').value = id;
+  } else $('restore-operation').value = id;
+  rememberPublisherSelection();
+  $('sources-quiesced').checked = false; syncFields();
+  $('transfer-heading').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  notice('Review this ' + (source === 'host' ? 'host-declared local restore' : 'completed original restore journal') +
+    ' and its original-to-restored publisher binding before preparing it.');
+}
+function renderDeclaredRestores() {
+  const declared = publisherRestores(), signature = JSON.stringify([profileId, declared]);
+  if (signature === lastDeclaredRestores) return;
+  lastDeclaredRestores = signature;
+  $('publisher-restores-panel').hidden = !declared.length;
+  $('publisher-restores-count').textContent = declared.length;
+  const children = [];
+  for (const item of declared) {
+    const row = element('article');
+    row.append(element('h3', item.label + ' · ' + item.id),
+      element('p', 'Encrypted bundle: ' + item.bundleDirectory, 'mono'),
+      element('p', 'Existing cold restore: ' + item.restoreDirectory, 'mono'));
+    const actions = element('div', undefined, 'actions');
+    actions.append(button('Review publisher recovery', () => useRestoredPublisher(item.id, 'host')));
+    row.append(actions); children.push(row);
+  }
+  $('publisher-restores-list').replaceChildren(...children);
+}
 function newSelection() {
   invalidateReview(); $('operation-id').value = nextId(); $('destination').value = '';
-  $('snapshot').value = ''; $('sources-quiesced').checked = false; $('action').value = 'push'; syncFields();
+  $('snapshot').value = ''; $('sources-quiesced').checked = false; $('action').value = defaultAction(); syncFields();
 }
 
 function intent() {
   const action = $('action').value;
+  if (remoteAction(action)) requireRemote();
   const input = { profileId, action, id: $('operation-id').value.trim() };
   if (action === 'push' || action === 'verify') input.bundleId = $('bundle').value;
+  else if (action === 'publisher-prepare') {
+    rememberPublisherSelection();
+    if ($('publisher-source').value === 'host') {
+      input.publisherRestoreId = $('publisher-restore').value;
+      if (!publisherRestores().some(item => item.id === input.publisherRestoreId))
+        throw new Error('Select a host-declared restored publisher for this profile.');
+    } else {
+      input.restoreId = $('restore-operation').value.trim();
+      if (!input.restoreId) throw new Error('Select the completed original remote restore operation ID.');
+    }
+  }
   else if (action === 'snapshot') {
     if (!$('sources-quiesced').checked) throw new Error('Stop the declared source writers, then explicitly confirm they are quiesced before reviewing a capture.');
     if (!capturePlan()) throw new Error('Select a capture plan declared by the host administrator.');
@@ -167,6 +309,7 @@ function intent() {
 function showReview(value) {
   review = value;
   const isLocal = localCommand(value.command), capture = value.command === 'snapshot';
+  const publisher = value.command === 'publisher-prepare', receiving = value.restoredPublisher;
   const files = value.files ?? value.plan?.files, size = value.plainBytes ?? value.plan?.bytes;
   const details = [
     ['Profile', current?.profiles.find(item => item.id === value.profileId)?.label ?? value.profileId],
@@ -178,7 +321,7 @@ function showReview(value) {
     ['Bucket / prefix', value.store.bucket + '/' + (value.store.prefix ?? '')]);
   if (capture) details.push(
     ['Capture plan', value.capturePlan?.label ?? value.capturePlan?.id ?? value.intent.capturePlanId],
-    ['Capture kind', value.plan?.captureKind === 'paid-jobs' ? 'Paid-job merchant with original writer leases' : 'Original snapshot plan'],
+    ['Capture kind', captureKindNames[value.plan?.captureKind] ?? value.plan?.captureKind ?? captureKindNames.generic],
     ['Plan SHA-256', value.plan?.planSha256 ?? '—'],
     ['Original plan', value.source],
     ['New encrypted bundle', value.destination],
@@ -186,6 +329,24 @@ function showReview(value) {
   else details.push(
     ['Encrypted source', value.source ?? 'Selected remote snapshot'],
     ['Destination', value.destination ?? (isLocal ? 'Verification of the existing encrypted bundle' : 'Immutable remote bundle and completion descriptor')]);
+  if (publisher) {
+    const declared = value.publisherRestore, sourceId = value.options.sourcePublisherRestoreId;
+    if (value.sourceType === 'host-publisher-restore' || sourceId) details.push(
+      ['Recovery source', 'Host-declared restored publisher'],
+      ['Declared restore', declared ? declared.label + ' · ' + declared.id : sourceId],
+      ['Declared encrypted bundle', declared?.bundleDirectory ?? value.source],
+      ['Declared cold restore', declared?.restoreDirectory ?? value.destination]);
+    else details.push(['Recovery source', 'Original remote restore journal'],
+      ['Completed cold restore', value.options.sourceRestoreId]);
+    details.push(
+    ['Original dataset', receiving.originalPaths.datasetDirectory],
+    ['Original publisher', receiving.originalPaths.publisherDirectory],
+    ['Restored dataset', receiving.paths.datasetDirectory],
+    ['Restored publisher', receiving.paths.publisherDirectory],
+    ['Retained seller configuration', receiving.paths.sellerConfigFile ?? 'Use the host’s existing seller configuration'],
+    ['Native preparation ID', receiving.operationId],
+    ['Native review SHA-256', receiving.reviewSha256]);
+  }
   details.push(
     ['Snapshot', value.snapshotId ?? (capture ? 'Assigned by the original capture after creation' : '—')],
     ['Files / bytes', Number.isInteger(files) ? files + ' files · ' + bytes(size) : 'Read and verified by the original engine']);
@@ -198,12 +359,16 @@ function showReview(value) {
     row.append(element('td', root.name), element('td', root.kind), element('td', root.path, 'mono'));
     $('review-roots').append(row);
   }
-  $('review-heading').textContent = capture ? 'Selected capture' : isLocal ? 'Selected verification' : 'Selected transfer';
-  $('start-button').textContent = capture ? 'Start capture' : isLocal ? 'Start verification' : 'Start transfer';
+  renderPublisherReview(publisher ? receiving : null);
+  $('review-heading').textContent = capture ? 'Selected capture' : publisher ? 'Restored publisher binding' :
+    isLocal ? 'Selected verification' : 'Selected transfer';
+  $('start-button').textContent = capture ? 'Start capture' : publisher ? 'Prepare restored publisher' :
+    isLocal ? 'Start verification' : 'Start transfer';
   $('review-state').textContent = value.originalStatus ?? 'REVIEWED';
   $('review-note').textContent = value.originalStatus === 'COMPLETE' ?
     'This original operation is complete. Opening it retains its completed result.' :
     capture ? 'Keep every declared source writer stopped until this capture finishes. Start rereads the exact original plan and binds its roots, output and native capture identity.' :
+    publisher ? 'Preparation reopens the captured work through its original stores and adopts this reviewed dataset path. Keep this operation ID for continuation; the returned paths are used by the normal dataset seller and publisher.' :
     isLocal ? 'The original recovery engine authenticates this exact manifest and every encrypted object. Its result remains attached to this workspace operation.' :
     value.command === 'restore' ? 'The original engine verifies the encrypted bundle and restores into this new destination. Keep the same operation ID to continue.' :
     'Starting repeats the exact selection check and uses the original transfer journal.';
@@ -211,6 +376,35 @@ function showReview(value) {
   $('review-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+function renderPublisherReview(receiving) {
+  $('publisher-review-panel').hidden = !receiving;
+  $('publisher-review-summary').replaceChildren(); $('publisher-versions').replaceChildren();
+  $('publisher-pending').replaceChildren();
+  if (!receiving) return;
+  const dataset = receiving.summary.dataset, publisher = receiving.summary.publisher;
+  const fields = [
+    ['Current dataset snapshot', dataset.current], ['Dataset revision', dataset.revision],
+    ['Publisher revision', publisher.revision], ['Retained candidates', publisher.candidates],
+    ['Original workbooks', publisher.workbooks], ['Saved mappings / editions', publisher.mappings + ' / ' + publisher.mappingEditions],
+    ['Buyer configurations', publisher.buyerConfigurations],
+    ['Preparation phase', receiving.preparation?.phase ?? 'Awaiting explicit preparation'],
+  ];
+  for (const [name, value] of fields)
+    $('publisher-review-summary').append(element('dt', name), element('dd', value ?? '—'));
+  for (const item of dataset.versions ?? []) {
+    const row = element('tr');
+    row.append(element('td', item.snapshot, 'mono'), element('td', bytes(item.sourceBytes)),
+      element('td', date(item.expiresAt)));
+    $('publisher-versions').append(row);
+  }
+  if (!dataset.versions?.length) emptyRow($('publisher-versions'), 'No retained dataset generations.', 3);
+  for (const item of publisher.pendingPublications ?? []) {
+    const row = element('tr');
+    row.append(element('td', item.candidateId, 'mono'), element('td', item.state), element('td', item.publicationId, 'mono'));
+    $('publisher-pending').append(row);
+  }
+  if (!publisher.pendingPublications?.length) emptyRow($('publisher-pending'), 'No pending publication decisions in this capture.', 3);
+}
 function applyState(value, initialize = false) {
   current = value; if (!requestsExpanded) requestCursor = value.nextRequestsCursor;
   for (const row of value.requests) requests.set(row.profileId + '/' + row.operationId, row);
@@ -222,7 +416,11 @@ function applyState(value, initialize = false) {
     $('workspace-reference').textContent = value.id + ' · ' + value.directory;
   }
   const selected = profile();
-  $('store-summary').textContent = selected.store.bucket + '/' + selected.store.prefix + ' · ' + selected.store.region;
+  $('store-label').textContent = remoteConfigured(selected) ? 'Remote store' : 'Recovery mode';
+  $('store-summary').textContent = remoteConfigured(selected) ?
+    selected.store.bucket + '/' + selected.store.prefix + ' · ' + selected.store.region : 'Local recovery';
+  renderDeclaredRestores(); syncCapabilities();
+  if (review && !localCommand(review.command) && !remoteConfigured(selected)) invalidateReview();
   $('passphrase-summary').textContent = selected.passphraseAvailable ? 'Available from host environment' :
     'Set ' + selected.passEnv + ' in the host environment, then restart';
   $('operations-path').textContent = selected.operations;
@@ -230,7 +428,7 @@ function applyState(value, initialize = false) {
     value.active.operationId + (value.active.cancelRequested ? ' · Stop requested; reading the original completion state.' : ' · Original engine is running.') :
     'Original recovery results and transfer journals supply operation status.';
   $('requests-more').hidden = !requestCursor;
-  renderRequests(); updateStart();
+  renderRequests(); refreshRestoreChoices(); updateStart();
 }
 async function refreshState() {
   const initialized = Boolean(current);
@@ -246,9 +444,9 @@ async function refreshState() {
 }
 
 async function refreshBundles() {
-  const selected = profileId;
+  const selected = profileId, generation = profileEpoch;
   const value = await api(url('/api/bundles', { profile: selected }));
-  if (selected !== profileId) return;
+  if (selected !== profileId || generation !== profileEpoch) return;
   const previousBundle = $('bundle').value;
   const previousSnapshot = local.find(item => item.bundleId === previousBundle)?.snapshotId;
   local = value.bundles; $('bundle-count').textContent = local.length;
@@ -260,7 +458,8 @@ async function refreshBundles() {
       element('p', item.files + ' files · ' + bytes(item.plainBytes) + ' · ' + date(item.createdAt)),
       element('p', item.directory, 'mono'));
     const actions = element('div', undefined, 'actions');
-    actions.append(button('Verify', () => useBundle(item, 'verify')), button('Upload', () => useBundle(item, 'push')));
+    actions.append(button('Verify', () => useBundle(item, 'verify')));
+    if (remoteConfigured()) actions.append(button('Upload', () => useBundle(item, 'push')));
     row.append(actions); children.push(row);
   }
   if (!children.length) children.push(element('p', 'No original encrypted bundle manifests were found in the selected host roots.', 'empty'));
@@ -271,6 +470,7 @@ async function refreshBundles() {
     invalidateReview();
 }
 function useBundle(item, action) {
+  if (remoteAction(action)) requireRemote();
   if (!local.some(bundle => bundle.bundleId === item.bundleId && bundle.snapshotId === item.snapshotId))
     throw new Error('Refresh bundles and choose the current original encrypted snapshot.');
   invalidateReview(); $('action').value = action; $('operation-id').value = nextId();
@@ -280,6 +480,7 @@ function useBundle(item, action) {
   notice('Selected ' + item.snapshotId + '. Review the exact ' + (action === 'verify' ? 'local verification.' : 'upload and remote store.'));
 }
 function useSnapshot(row, action) {
+  requireRemote();
   invalidateReview(); $('action').value = action; $('snapshot').value = row.snapshotId;
   $('operation-id').value = nextId(); $('destination').value = ''; $('sources-quiesced').checked = false; syncFields();
   if (action === 'restore') {
@@ -291,6 +492,13 @@ function useSnapshot(row, action) {
 }
 function renderInventory() {
   const tbody = $('inventory-rows'); tbody.replaceChildren();
+  if (!remoteConfigured()) {
+    inventoryRows = []; inventoryCursor = null; $('snapshot-options').replaceChildren();
+    $('inventory-more').hidden = true;
+    $('inventory-observed').textContent = 'Local recovery profile. The host has not selected a remote store.';
+    emptyRow(tbody, 'Capture, verify, and prepare an existing restored publisher through the local controls.');
+    return;
+  }
   for (const item of inventoryRows) {
     const row = element('tr'), id = element('td'), created = element('td', date(item.createdAt));
     id.append(element('code', item.snapshotId, 'snapshot-id'));
@@ -305,9 +513,10 @@ function renderInventory() {
   for (const item of inventoryRows) { const option = element('option'); option.value = item.snapshotId; option.label = date(item.createdAt) + ' · ' + item.files + ' files'; $('snapshot-options').append(option); }
 }
 async function refreshInventory(more = false) {
-  const selected = profileId;
+  if (!remoteConfigured()) { renderInventory(); syncCapabilities(); return; }
+  const selected = profileId, generation = profileEpoch;
   const value = await api(url('/api/inventory', { profile: selected, limit: 20, cursor: more ? inventoryCursor : undefined }));
-  if (selected !== profileId) return;
+  if (selected !== profileId || generation !== profileEpoch || !remoteConfigured()) return;
   const values = more ? new Map(inventoryRows.map(item => [item.snapshotId, item])) : new Map();
   for (const row of value.snapshots) values.set(row.snapshotId, row);
   inventoryRows = [...values.values()]; inventoryCursor = value.nextCursor; renderInventory();
@@ -332,6 +541,14 @@ function restoreSavedSelection(row) {
   $('operation-id').value = saved.id ?? row.operationId;
   $('destination').value = saved.destinationName ?? '';
   $('snapshot').value = saved.snapshotId ?? '';
+  $('restore-operation').value = saved.restoreId ?? '';
+  $('publisher-source').value = saved.publisherRestoreId ? 'host' : 'remote';
+  $('publisher-restore').replaceChildren();
+  if (saved.publisherRestoreId) {
+    const option = element('option', saved.publisherRestoreId); option.value = saved.publisherRestoreId;
+    $('publisher-restore').append(option);
+  }
+  rememberPublisherSelection();
   $('sources-quiesced').checked = false;
   syncFields();
   for (const [id, value] of [['capture-plan', saved.capturePlanId], ['bundle', saved.bundleId]]) {
@@ -346,7 +563,9 @@ function restoreSavedSelection(row) {
   $('transfer-heading').scrollIntoView({ behavior: 'smooth', block: 'start' });
   notice(saved.action === 'snapshot' ?
     'The saved capture selection is open. Stop the declared source writers, confirm their current quiescence, and review again before starting.' :
-    'The saved local verification selection is open. Review the exact original bundle before continuing.');
+    saved.action === 'publisher-prepare' ?
+      'The saved restored-publisher selection is open. Review the original restore and native binding before continuing.' :
+      'The saved local verification selection is open. Review the exact original bundle before continuing.');
 }
 function newCaptureSelection(row) {
   restoreSavedSelection(row);
@@ -355,6 +574,7 @@ function newCaptureSelection(row) {
   notice('The existing capture directory is preserved. Review this new operation and destination after confirming that the original source writers are stopped.');
 }
 async function continueRequest(row) {
+  if (!localCommand(row.review.command)) requireRemote();
   try {
     await post('/api/resume', { profileId: row.profileId, id: row.operationId });
     notice('Continuing the original selection for ' + row.operationId + '.');
@@ -380,6 +600,7 @@ async function reviewSelection(input) {
   }
 }
 async function adopt(id) {
+  requireRemote();
   const value = await reviewSelection({ profileId, action: 'resume', id });
   if (value) notice('Reviewed the original selection for ' + id + '.');
 }
@@ -388,17 +609,23 @@ function renderJournal() {
   for (const item of journal.values()) {
     const row = element('tr'), id = element('td'); id.append(element('code', item.operationId));
     const controls = element('div', undefined, 'actions');
-    controls.append(button('Details', () => details(item.operationId)), button('Review continuation', () => adopt(item.operationId)));
+    controls.append(button('Details', () => details(item.operationId)));
+    const continuation = button('Review continuation', () => adopt(item.operationId));
+    continuation.disabled = !remoteConfigured();
+    if (!remoteConfigured()) continuation.title = 'Remote continuation requires a configured remote store.';
+    controls.append(continuation);
+    if (item.command === 'restore' && item.status === 'COMPLETE')
+      controls.append(button('Review publisher recovery', () => useRestoredPublisher(item.operationId)));
     const use = element('td'); use.append(controls);
     row.append(id, element('td', item.command), element('td', item.status), use); tbody.append(row);
   }
   if (!journal.size) emptyRow(tbody, 'No original recovery operations in this profile’s journal.');
-  $('operations-more').hidden = !journalCursor;
+  $('operations-more').hidden = !journalCursor; refreshRestoreChoices();
 }
 async function refreshJournal(more = false) {
-  const selected = profileId;
+  const selected = profileId, generation = profileEpoch;
   const value = await api(url('/api/operations', { profile: selected, limit: 25, cursor: more ? journalCursor : undefined }));
-  if (selected !== profileId) return;
+  if (selected !== profileId || generation !== profileEpoch) return;
   if (!more) journal.clear();
   for (const row of value.operations) journal.set(row.operationId, row);
   journalCursor = value.nextCursor; renderJournal();
@@ -413,8 +640,9 @@ function progressText(row) {
     if (Number.isInteger(op?.files)) parts.push(op.files + ' files');
     if (Number.isFinite(op?.plainBytes)) parts.push(bytes(op.plainBytes));
     if (op?.verified) parts.push('Original bundle verified');
+    if (op?.prepared?.status === 'RESTORED_PUBLISHER_PREPARED') parts.push('Original dataset and publisher prepared');
     if (op?.status) parts.push(op.status);
-    return parts.join(' · ') || 'Following the retained original capture or local verification.';
+    return parts.join(' · ') || 'Following the retained original local recovery operation.';
   }
   if (!op) return 'Waiting for the original operation journal.';
   const parts = [];
@@ -428,7 +656,7 @@ function progressText(row) {
 
 function renderRequests() {
   const rows = [...requests.values()].filter(row => row.profileId === profileId).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  const signature = JSON.stringify(rows);
+  const signature = JSON.stringify([profileId, remoteConfigured(), rows]);
   if (signature === lastRequests) return;
   lastRequests = signature;
   const children = [];
@@ -440,13 +668,19 @@ function renderRequests() {
       element('p', progressText(row), 'hint'));
     if (isLocal && row.operation?.bundle) item.append(element('p', row.operation.bundle, 'mono'));
     if (isLocal && row.operation?.snapshotId) item.append(element('p', 'Snapshot ' + row.operation.snapshotId, 'mono'));
+    if (row.review.command === 'publisher-prepare') {
+      const selectedId = row.operation?.sourcePublisherRestoreId ?? row.review.options?.sourcePublisherRestoreId;
+      const restoreId = row.operation?.sourceRestoreId ?? row.review.options?.sourceRestoreId;
+      if (selectedId) item.append(element('p', 'Host-declared restored publisher: ' + selectedId, 'hint'));
+      else if (restoreId) item.append(element('p', 'Original restore journal: ' + restoreId, 'hint'));
+    }
     const count = row.operation?.progress?.nextObject, total = row.operation?.files;
     if (Number.isInteger(count) && total > 0) {
       const progress = document.createElement('progress'); progress.max = total; progress.value = count;
       progress.setAttribute('aria-label', 'Encrypted objects completed'); item.append(progress);
     }
     if (row.error) item.append(element('p', row.error.code + ': ' + row.error.message, 'request-error'));
-    if (row.cancelRequested) item.append(element('p', 'Stop requested. The current original capture, verification or restore phase may finish before the final readback.', 'hint'));
+    if (row.cancelRequested) item.append(element('p', 'Stop requested. The current original capture, verification, restore or publisher preparation may finish before the final readback.', 'hint'));
     const retained = row.local?.retainedCaptures ?? row.operation?.retainedCaptures;
     if (Array.isArray(retained) && retained.length) {
       const list = element('details', undefined, 'retained-captures');
@@ -456,7 +690,7 @@ function renderRequests() {
     }
     const controls = element('div', undefined, 'actions');
     if (row.operation) controls.append(button('Details', () => isLocal ? showDetails(row) : details(row.operationId)));
-    if (row.running) controls.append(button('Stop transfer', async () => {
+    if (row.running) controls.append(button('Stop execution', async () => {
       await post('/api/cancel', { profileId: row.profileId, id: row.operationId });
       notice('Stop requested for ' + row.operationId + '. Reading its retained original result.');
       await refreshState();
@@ -467,14 +701,31 @@ function renderRequests() {
           'WORKSPACE_CAPTURE_DESTINATION_DIFFERENT', 'WORKSPACE_CAPTURE_DESTINATION_EXISTS'].includes(row.error?.code);
       if (freshCapture) controls.append(button('New capture selection', () => newCaptureSelection(row)));
       else {
-        controls.append(button('Continue operation', () => continueRequest(row)));
+        const continuation = button('Continue operation', () => continueRequest(row));
+        continuation.disabled = !isLocal && !remoteConfigured();
+        if (continuation.disabled) continuation.title = 'Remote continuation requires a configured remote store.';
+        controls.append(continuation);
         if (isLocal) controls.append(button('Reopen saved selection', () => restoreSavedSelection(row)));
       }
     }
     controls.append(button('View selection', () => showDetails(row)));
+    if (row.review.command === 'restore' && row.operation?.status === 'COMPLETE')
+      controls.append(button('Review publisher recovery', () => useRestoredPublisher(row.operationId)));
+    if (row.operation?.prepared?.status === 'RESTORED_PUBLISHER_PREPARED') {
+      const prepared = row.operation.prepared, paths = element('dl', undefined, 'key-values');
+      for (const [name, path] of [
+        ['Dataset state', prepared.datasetDirectory], ['Publisher workspace', prepared.publisherDirectory],
+        ['Seller configuration', prepared.sellerConfigFile], ['Prepared', date(prepared.preparedAt)],
+      ]) if (path) paths.append(element('dt', name), element('dd', path));
+      item.append(paths, element('p',
+        'Open the normal dataset seller and publisher with these paths and the captured capacity settings. Retained publication decisions remain in the publisher.', 'hint'));
+    }
     if (isLocal && row.operation?.bundle && row.operation?.snapshotId) {
       const bundle = local.find(item => item.directory === row.operation.bundle && item.snapshotId === row.operation.snapshotId);
-      if (bundle) controls.append(button('Verify bundle', () => useBundle(bundle, 'verify')), button('Upload bundle', () => useBundle(bundle, 'push')));
+      if (bundle) {
+        controls.append(button('Verify bundle', () => useBundle(bundle, 'verify')));
+        if (remoteConfigured()) controls.append(button('Upload bundle', () => useBundle(bundle, 'push')));
+      }
     }
     item.append(controls); children.push(item);
   }
@@ -483,33 +734,48 @@ function renderRequests() {
 }
 
 async function loadProfile() {
-  invalidateReview(); detailEpoch++; $('detail-panel').hidden = true; local = []; $('bundle').replaceChildren(); $('capture-plan').replaceChildren(); journal.clear(); inventoryRows = []; inventoryCursor = journalCursor = null;
+  invalidateReview(); detailEpoch++; profileEpoch++; $('detail-panel').hidden = true; local = []; $('bundle').replaceChildren(); $('capture-plan').replaceChildren(); journal.clear(); inventoryRows = []; inventoryCursor = journalCursor = null;
   lastRequests = ''; renderRequests(); renderJournal();
   $('inventory-observed').textContent = 'Refresh to read the selected remote store.';
   emptyRow($('inventory-rows'), 'Remote inventory has not been read for this profile in this session.');
   $('inventory-more').hidden = true; $('snapshot-options').replaceChildren();
-  applyState(current); newSelection();
+  applyState(current); restorePublisherSelection(); newSelection();
+  if (!remoteConfigured()) renderInventory();
+  const selected = profileId, generation = profileEpoch;
   const results = await Promise.allSettled([refreshBundles(), refreshJournal()]);
+  if (selected !== profileId || generation !== profileEpoch) return;
   for (const result of results) if (result.status === 'rejected') notice(errorText(result.reason), true);
 }
-$('profile').addEventListener('change', () => task($('profile'), async () => { profileId = $('profile').value; await loadProfile(); }));
+$('profile').addEventListener('change', () => task($('profile'), async () => {
+  rememberPublisherSelection(); profileId = $('profile').value; await loadProfile();
+}));
 $('action').addEventListener('change', () => { invalidateReview(); $('sources-quiesced').checked = false; syncFields(); });
 $('capture-plan').addEventListener('change', () => { invalidateReview(); $('sources-quiesced').checked = false; syncFields(); });
 $('sources-quiesced').addEventListener('change', invalidateReview);
 for (const id of ['bundle', 'snapshot', 'operation-id', 'destination']) $(id).addEventListener('input', invalidateReview);
+$('restore-operation').addEventListener('input', () => { rememberPublisherSelection(); invalidateReview(); });
+$('publisher-source').addEventListener('change', () => {
+  rememberPublisherSelection(); invalidateReview(); syncFields();
+});
+$('publisher-restore').addEventListener('change', () => {
+  rememberPublisherSelection(); invalidateReview(); syncFields();
+});
 $('new-selection').addEventListener('click', newSelection);
 $('transfer-form').addEventListener('submit', event => {
   event.preventDefault();
   task($('review-button'), async () => {
     const value = await reviewSelection(intent());
     if (value) notice(value.command === 'snapshot' ? 'Review the exact source roots, plan and encrypted output below.' :
-      value.command === 'local-verify' ? 'Review the exact original encrypted bundle below.' : 'Review the exact snapshot, store and destination below.');
+      value.command === 'local-verify' ? 'Review the exact original encrypted bundle below.' :
+      value.command === 'publisher-prepare' ? 'Review the old and restored bindings, saved work, expiry and publication decisions below.' :
+      'Review the exact snapshot, store and destination below.');
   });
 });
 $('discard-review').addEventListener('click', invalidateReview);
 $('start-button').addEventListener('click', () => task($('start-button'), async () => {
   const chosen = review;
-  if (!chosen || starting) return;
+  if (!chosen || starting || chosen.profileId !== profileId) return;
+  if (!localCommand(chosen.command)) requireRemote();
   starting = true; updateStart();
   try {
     const result = await post('/api/start', { selection: chosen.intent, expectedReviewHash: chosen.reviewHash });
@@ -556,7 +822,9 @@ async function boot() {
   }
   try {
     await refreshState(); await loadProfile();
-    notice('Recovery workspace ready. Choose a declared source capture, an original encrypted bundle, or the remote inventory.');
+    notice(remoteConfigured() ?
+      'Recovery workspace ready. Choose a declared source capture, an original encrypted bundle, or the remote inventory.' :
+      'Local recovery workspace ready. Choose a declared source capture, verify an encrypted bundle, or review an existing restored publisher.');
     setTimeout(poll, 5000);
   } catch (error) { notice(errorText(error), true); }
 }

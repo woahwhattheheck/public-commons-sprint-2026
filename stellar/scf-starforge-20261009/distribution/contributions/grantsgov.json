@@ -25,5 +25,8 @@
       "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/grantsgov/server.mjs",
       "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/grantsgov/browser-assets.json"
     }
-  ]
+  ],
+  "applicationProviders": {
+    "grantsgov": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/grantsgov.mjs"
+  }
 }

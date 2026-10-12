@@ -7,7 +7,7 @@
     "merchant-usgs": "stellar-forge/mcp-merchant-operator/usgs-workspace-download.mjs"
   },
   "commandDescriptions": {
-    "usgs-water": "Acquire USGS observations, review hydrology and operate paid editions",
+    "usgs-water": "Acquire USGS observations, review hydrology, operate paid editions and reopen managed Water projects",
     "merchant-usgs": "Inspect Water projects, resume complete native DSS downloads and receive their original handovers"
   },
   "exports": {
@@ -25,5 +25,8 @@
   "supportFiles": [
     "stellar-forge/mcp-merchant-operator/USGS_WORKSPACE.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/MANAGED.md"
-  ]
+  ],
+  "applicationProviders": {
+    "usgs-water": "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-usgs-water.mjs"
+  }
 }

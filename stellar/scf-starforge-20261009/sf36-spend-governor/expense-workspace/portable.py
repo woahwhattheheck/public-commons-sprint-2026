@@ -9,8 +9,11 @@ import zipfile
 from domain import Problem
 from native_mcp import reader_path
 
+ACCOUNTANT_READER_FILES = tuple(json.loads((Path(__file__).resolve().parent / 'accountant-reader-files.json').read_text())['files'])
+CREDIT_READER_FILES = tuple(json.loads((Path(__file__).resolve().parent / 'credit-reader-files.json').read_text())['files'])
+
 APP_FILES = ("native.py", "domain.py", "store.py", "exports.py", "portable.py", "server.py",
-             "public/index.html", "public/app.mjs", "public/style.css", "README.md", "cli.mjs", "receive.py", "native_mcp.py")
+             "public/index.html", "public/app.mjs", "public/style.css", "README.md", "cli.mjs", "receive.py", "native_mcp.py", "native_woo.py", "native_adjustments.py", "credits.py", "credit_store.py", "credit-reader-files.json", "native_accountant.py", "accountant_store.py", "accountant-reader-files.json", "BOOKKEEPING.md")
 MCP_READER_FILES = ("stellar-forge/mcp-paid-agent/expense-statement.mjs",
                     "stellar-forge/mcp-paid-agent/quote-store.mjs",
                     "stellar-forge/mcp-paid-agent/remote-mcp.mjs",
@@ -46,7 +49,7 @@ Use Python 3.11 or newer on a POSIX host. Extract privately, then open the inclu
     python3 prepare_private.py
     python3 app/sf36-spend-governor/expense-workspace/server.py --state project --port 0
 
-Open the complete private URL printed by that command. No repository checkout or dependency installation is required.
+Open the complete private URL printed by that command. No repository checkout is required. Opening retained state uses Python alone; new native MCP captures or refund receiving use the host's Node 22.13+ or Node 24 runtime.
 
 All source captures, original native row identities, allocation editions, exception decisions, period reviews, issued exports and activity history are retained in the included workspace. Sources keep their original type and locator. Opening the project does not read an original buyer source or a key. To refresh after moving the original buyer, use Sources → Rebind and select the same original ledger or MCP quote directory; the application compares its retained native identities before accepting the new locator.
 
@@ -54,9 +57,15 @@ The original buyer ledgers, quote databases, signers, wallet keys and purchased 
 
     python3 app/sf36-spend-governor/expense-workspace/server.py --state project --port 0 --node /absolute/path/to/node
 
-No Node process starts until an operator explicitly captures an MCP source. The saved original SF86 payment observation determines whether a matched transfer is available for allocation; seller response, result metadata and quoted amount remain separate. The expense reader neither contacts an RPC nor initiates, signs or retries a payment. Reconcile an unresolved original payment through its existing buyer operation, then capture and review that source edition here.
+No Node process starts until an operator explicitly captures a native source, imports an original refund packet, or previews an original accountant return. The saved original SF86 payment observation determines whether a matched transfer is available for allocation; seller response, result metadata and quoted amount remain separate. The expense reader neither contacts an RPC nor initiates, signs or retries a payment. Reconcile an unresolved original payment through its existing buyer operation, then capture and review that source edition here.
 
 Native SF36 reservations, settled actual and unused capacity retain their original meanings. MCP quotes create no reservations in this workspace. Quote creation day is a source date, not a payment or accounting date. The operator supplies recognition dates and exact allocations; units remain separate by network and asset. A transfer shared by source rows requires explicit review, and the same exact matched event cannot be included twice in one period or another currently closed period.
+
+Credits and returns retain exact original customer refund packets in the native SQLite state, including their original member bytes. Woo retains its original merchant manifest; generic accounting exports retain their unchanged original JSON and an explicitly labelled buyer-selection manifest. After receiving the complete project, those captured packets open without their former source directories. Importing another Woo packet calls the included unchanged original Woo receiver and its native purchase/refund binding functions. Importing an original merchant adjustment export calls its included original accounting compiler and proof validators, preserving the selected event, original file SHA, optional paid-job binding and every decision. Original cancellations, pending returns and withdrawn requests remain source outcomes. Only an original proof-bound payment and verified returned transfer enter native expense and credit allocations. An export without an original payment proof can still be retained and accepted as a reference-only source; it creates no purchase or returned units. Choose the exact retained manifest hash, store and original operation context. Operational and development inputs remain in separate workspaces.
+
+Each accepted packet either binds to the same original buyer payment or explicitly registers the original reviewed merchant purchase. Allocate the purchase first, then its exact returned units against remaining original cost-center, project and account dimensions. Store-currency credit amounts remain independent of native returned units; no exchange rate is inferred. A return cannot be included twice or moved out of a currently closed period without reopening it. Corrected editions preserve every original issued edition and frozen source packet.
+
+An issued edition can export its exact buyer accountant source to the maintained accounting workspace. That workspace retains typed buyer allocation lines, the original CSV return and Xero explicit-valuation workflow. Import its original buyer-return.json into the same issued edition here. Preview verifies the original handoff, complete preceding accountant revisions and exact frozen source before saving returned references in this same database. Amounts and original issued editions remain unchanged. Complete receiving retains the returned original packet, every accepted reference edition, current handoff choices and the source-owned native validation code. Replacing a different accepted handoff for the same allocation lines requires explicit review; prior returns remain available.
 
 Use Period review to inspect current source/coding decisions, name the reviewer and save a review. Issue a ready edition for a frozen accountant packet. Reopening requires a recorded reason and preserves all previously issued editions. The Complete project download retains runnable source and a consistent SQLite backup for subsequent receiving. Successful optional customer requests are retained in that same database. The trusted installed receive.py can verify and receive the complete ZIP with --archive, --directory and --expected-sha256; it executes no archive code or SQL and can continue only the same exact incomplete receive.
 """
@@ -81,7 +90,7 @@ def _complete_project(store, state):
     for name in ("statement.py", "governor.py", "STATEMENTS.md"):
         entries["app/sf36-spend-governor/" + name] = (app.parent / name).read_bytes()
     native_root = reader_path().parents[2]
-    for name in MCP_READER_FILES:
+    for name in sorted(set(MCP_READER_FILES) | set(CREDIT_READER_FILES) | set(ACCOUNTANT_READER_FILES)):
         path = native_root / name
         if path.is_symlink():
             raise ValueError("Original MCP reader source cannot be a symlink")
@@ -96,6 +105,12 @@ def _complete_project(store, state):
         "workspace": state["id"], "revision": state["revision"],
         "request_recovery": "sqlite-transaction-v1",
         "mcp_quote_capture": "native-readonly-v1",
+        "buyer_credit_capture": "original-native-refund-v2",
+        "data_context": state["data_context"],
+        "buyer_bookkeeping": "issued-accountant-return-v1",
+        "accountant_return_count": state["accountant_return_count"],
+        "credit_count": state["credit_count"],
+        "refund_packet_count": store.connection.execute("SELECT COUNT(*) FROM refund_packets").fetchone()[0],
         "source_kinds": sorted({source.get("kind", "sf36_ledger") for source in state["sources"]}),
         "request_count": store.connection.execute("SELECT COUNT(*) FROM api_requests").fetchone()[0],
         "files": [{"path": name, "bytes": len(value), "sha256": hashlib.sha256(value).hexdigest()} for name, value in sorted(entries.items())]}, indent=2) + "\n").encode()

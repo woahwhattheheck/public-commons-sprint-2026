@@ -85,3 +85,9 @@ Applications supplies `--expected-config-sha256`, `--expected-source-sha256` and
 For a receiving host, preserve the original merchant configuration, complete outbox (including its binding and worker journals), original WordPress database/plugin configuration, selected runtime source/manifest and private environment through their existing private recovery paths. Keep the original absolute paths when restoring this managed case. Do not copy only a dashboard URL or a plaintext secret into a public package.
 
 A complete service-lifecycle receiving can reuse an already completed order and outbox without creating another payment. Record its actual source/runtime, reviewed selection, worker lease, startup, Operations navigation, Stop/drain and same-outbox reopen. Any controlled facilitator or local WordPress transport remains explicitly identified in that outcome.
+
+## Source registration and receiving status
+
+The original `woo-managed` contribution now declares its maintained Applications provider at `distribution/runtime-workspace/application-woo.mjs`. The existing registry loads the catalog, runs the same original preparer and retains the same checked startup record. No product-specific branch is added to the shared Applications lifecycle or stdout observer. The source supports canonical loopback HTTP origins, including the default port 80.
+
+At this source release, the nine original managed modules passed native syntax parsing and the seller/worker lease, cancellation and shutdown joins were independently reviewed. The existing basket, refund, WordPress and original MCP receiving are complete in their own retained operations. The single combined Water/Woo installation and managed service receiving remains in progress; its immutable package source and final operation record will identify the actual executed cut. No managed start/stop or receiving-host outcome is claimed by this source-status paragraph.

@@ -128,7 +128,8 @@ export function mountReceiving(target, {
     catch(error){showNotice(error.message??String(error),true);if(error.details)notice.append(pre(error.details));}
     finally {
       busy=false;root.removeAttribute('aria-busy');
-      for(const [control,disabled] of busyControls)if(control.isConnected)control.disabled=disabled;
+      // A cached receiving root may be detached while its original work finishes.
+      for(const [control,disabled] of busyControls)control.disabled=disabled;
       busyControls.clear();
     }
   }

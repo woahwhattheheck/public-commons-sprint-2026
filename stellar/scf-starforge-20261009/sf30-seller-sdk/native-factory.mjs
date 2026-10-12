@@ -3,7 +3,8 @@
 // exact Stellar server blob b7bf2adcfb48cbf355e401c50ff1eafdee9792a6.
 import { AsyncLocalStorage } from 'node:async_hooks';
 
-export const NATIVE_SDK_VERSION = '2.28.0';
+import { NATIVE_SDK_VERSION } from './native-version.mjs';
+export { NATIVE_SDK_VERSION } from './native-version.mjs';
 const reviewContext = new AsyncLocalStorage();
 const normalize = value => Array.isArray(value) ? value.map(normalize) : value && typeof value === 'object'
   ? Object.fromEntries(Object.keys(value).sort().map(key => [key, normalize(value[key])])) : value;

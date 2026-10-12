@@ -77,11 +77,12 @@ function publicIdentity(application, context, info) {
   const {schema,applicationId,handoffId,manifestSha256,remoteMcp} = application.identity;
   return {schema,applicationId,handoffId,manifestSha256,subject:context.subject,
     ...(remoteMcp ? {remoteMcp} : {}),
+    ...(application.projectCapabilities?{project:application.projectCapabilities,readOnly:Boolean(application.readOnly)}:{}),
     server:{id:info.id,startedAt:info.startedAt},
     operatorProfileConfigured:info.operatorProfileConfigured,
-    mcp:{path:'/mcp',protocolVersion:info.protocolVersion,tools:info.tools},
-    actions:[...ACTIONS].filter(action => ['review','execute','status','recover','read'].includes(action) ||
-      application.supportsAction?.(action))};
+    mcp:{path:'/mcp',protocolVersion:info.protocolVersion,tools:applicationTools(application,context).tools.map(tool=>tool.name)},
+    actions:[...ACTIONS].filter(action => !(application.readOnly&&action==='execute') &&
+      (['review','execute','status','recover','read'].includes(action) || application.supportsAction?.(action)))};
 }
 
 /**
@@ -149,6 +150,20 @@ export async function createApplicationHandler({application,context,bearerToken,
       }
       if (path === '/api/requests' && req.method === 'GET')
         return send(res,200,await application.requests(current));
+      if(path==='/api/project'&&req.method==='GET'){
+        need(typeof application.project==='function','APPLICATION_PROJECT_PROFILE_REQUIRED');
+        return send(res,200,await application.project(current,'inspect',{signal:controller.signal}));
+      }
+      const projectRoute=path.match(/^\/api\/project\/(inspect|snapshot|archives|restore|reattach|open|close-live)$/);
+      if(projectRoute){
+        need(typeof application.project==='function','APPLICATION_PROJECT_PROFILE_REQUIRED');
+        need(req.method==='POST','APPLICATION_PROJECT_POST_REQUIRED');
+        const action=projectRoute[1],options=await body(req);
+        const allowed=action==='snapshot'?['operationId']:action==='inspect'?['mode']:
+          ['restore','reattach','open'].includes(action)?['expectedRecordSha256','mode']:[];
+        need(Object.keys(options).every(key=>allowed.includes(key)),'APPLICATION_OPTIONS_INVALID');
+        return send(res,200,await application.project(current,action,{...options,signal:controller.signal}));
+      }
       const route = path.match(/^\/api\/requests\/([^/]+)\/(review|execute|status|recover|read|download|cancel|spending|reconcile)$/);
       if (!route) return send(res,404,{error:{code:'APPLICATION_ROUTE_NOT_FOUND',message:'No such operator endpoint.'}});
       let intent;
@@ -180,12 +195,21 @@ export async function createApplicationHandler({application,context,bearerToken,
   return {handler,info,close(){stopping=true;for(const controller of controllers)controller.abort();}};
 }
 
-export async function createApplicationServer({configFile,bearerToken=process.env.STELLAR_APP_ACCESS_TOKEN,
-  host='127.0.0.1',port=8767}={}) {
-  need(typeof configFile==='string' && configFile.length>0,'APPLICATION_CONFIG_REQUIRED');
+export async function createApplicationServer({configFile,receivedDirectory,sourceRoot,subject,passphraseEnv,
+  environment=process.env,bearerToken=environment.STELLAR_APP_ACCESS_TOKEN,host='127.0.0.1',port=8767}={}) {
+  need(Boolean(configFile)!==Boolean(receivedDirectory),'APPLICATION_CONFIG_REQUIRED');
   need(['127.0.0.1','::1'].includes(host),'APPLICATION_LOOPBACK_HOST_REQUIRED');
   need(Number.isSafeInteger(port)&&port>=0&&port<=65535,'APPLICATION_PORT_INVALID');
-  const loaded=await loadApplication(configFile),origins=new Set();
+  let loaded;
+  if(receivedDirectory){
+    need(typeof sourceRoot==='string'&&typeof subject==='string'&&subject.trim()===subject&&
+      subject.length>=1&&subject.length<=256,'APPLICATION_HOST_SUBJECT_REQUIRED');
+    const {openReceivedApplicationProject}=await import('./project-receive.mjs');
+    const application=await openReceivedApplicationProject({directory:receivedDirectory,sourceRoot,subject,
+      authorize:async({context})=>context.subject===subject,environment,passphraseEnv});
+    loaded={application,context:Object.freeze({subject}),sourceRoot,config:{},close:()=>application.close()};
+  }else loaded=await loadApplication(configFile,{environment});
+  const origins=new Set();
   let component,server,closed;
   try {
     component=await createApplicationHandler({application:loaded.application,context:loaded.context,bearerToken,

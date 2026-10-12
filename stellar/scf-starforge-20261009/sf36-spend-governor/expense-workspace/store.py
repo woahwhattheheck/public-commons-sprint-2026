@@ -13,6 +13,8 @@ import threading
 
 from domain import Problem, SCHEMA, now, canonical, identifier, text, day, digest, row_key, basis, native_changes, validate_coding, period_view
 from native import capture_source, parse_labels
+from credit_store import CreditStore, CREDIT_DDL
+from accountant_store import AccountantStore, ACCOUNTANT_DDL
 
 DDL = """
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -30,7 +32,7 @@ CREATE TABLE IF NOT EXISTS reviews(id TEXT PRIMARY KEY, period_id TEXT NOT NULL,
 CREATE TABLE IF NOT EXISTS closes(id TEXT PRIMARY KEY, period_id TEXT NOT NULL, sequence INTEGER NOT NULL, created_at TEXT NOT NULL, body TEXT NOT NULL,UNIQUE(period_id,sequence));
 CREATE TABLE IF NOT EXISTS events(sequence INTEGER PRIMARY KEY, created_at TEXT NOT NULL, action TEXT NOT NULL, body TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS api_requests(id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, operation TEXT NOT NULL, created_at TEXT NOT NULL, body TEXT NOT NULL);
-"""
+""" + CREDIT_DDL + ACCOUNTANT_DDL
 
 
 def private_directory(path):
@@ -52,7 +54,7 @@ def page(values, offset=0, limit=50):
             "next": offset + limit if offset + limit < len(values) else None}
 
 
-class Store:
+class Store(CreditStore, AccountantStore):
     def __init__(self, directory, node_executable=None):
         self.root = Path(directory).expanduser().resolve()
         self.root.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -96,6 +98,8 @@ class Store:
             self.connection.execute("INSERT OR IGNORE INTO meta VALUES('revision','0')")
             self.connection.execute("INSERT OR IGNORE INTO meta VALUES('id',?)", (identifier("workspace"),))
             self.connection.execute("INSERT OR IGNORE INTO meta VALUES('labels','[]')")
+            self.connection.execute("INSERT OR IGNORE INTO meta VALUES('data_context',?)",
+                                    ("operational" if self.connection.execute("SELECT COUNT(*) FROM sources").fetchone()[0] else "",))
         except BaseException:
             if self.connection:
                 self.connection.close()
@@ -248,6 +252,10 @@ class Store:
             periods = sorted(self._bodies("periods"), key=lambda p: (p["from_day"], p["id"]), reverse=True)
             return {"schema": SCHEMA, "id": self.connection.execute("SELECT value FROM meta WHERE key='id'").fetchone()[0],
                     "revision": self.revision(), "sources": self._source_views(), "periods": periods,
+                    "data_context": self._data_context(),
+                    "credit_count": self.connection.execute("SELECT COUNT(*) FROM credits").fetchone()[0],
+                    "accountant_return_count": self.connection.execute("SELECT COUNT(*) FROM accountant_returns").fetchone()[0],
+                    "pending_refund_packets": self.connection.execute("SELECT COUNT(*) FROM refund_packets WHERE status='PENDING'").fetchone()[0],
                     "centers": self._bodies("centers"), "labels": json.loads(self.connection.execute("SELECT value FROM meta WHERE key='labels'").fetchone()[0])}
 
     def expenses(self, query="", source="", status="", offset=0, limit=50):
@@ -285,10 +293,11 @@ class Store:
         provenance = text(payload.get("provenance", ""), "Source provenance", maximum=6000, optional=True)
         native = capture_source(path, kind, self.node_executable)
         def operation():
+            context = self._context(payload.get("data_context", "operational"), commit=True)
             if any(s["path"] == native["path"] or s["identity"] == native["identity"] for s in self._bodies("sources")):
                 raise Problem("SOURCE_ALREADY_REGISTERED", "This original source is already registered; refresh or rebind that source", 409)
             source = {"id": identifier("source"), "name": name, "kind": kind, "path": native["path"], "identity": native["identity"],
-                      "provenance": provenance, "created_at": now(), "current_capture": None}
+                      "provenance": provenance, "data_context": context, "created_at": now(), "current_capture": None}
             self._put("sources", source)
             return {"id": source["id"], "source": source, "capture": self._new_capture(source, native)}
         return self._change(expected, "source.register", operation)
@@ -296,6 +305,8 @@ class Store:
     def capture(self, ident, expected):
         with self.lock:
             source = self._get("sources", ident)
+            if source.get("immutable_intake"):
+                raise Problem("REFUND_INTAKE_REQUIRED", "Import the original successor refund packet in Credits; retained customer packets are immutable", 409)
         native = capture_source(source["path"], source.get("kind", "sf36_ledger"), self.node_executable)
         return self._change(expected, "source.capture", lambda: self._new_capture(self._get("sources", ident), native))
 
@@ -304,7 +315,10 @@ class Store:
         reason = text(payload.get("reason"), "Rebinding reason", maximum=3000)
         operator = text(payload.get("operator"), "Source owner", maximum=240)
         with self.lock:
-            kind = self._get("sources", ident).get("kind", "sf36_ledger")
+            source = self._get("sources", ident)
+            if source.get("immutable_intake"):
+                raise Problem("REFUND_INTAKE_REQUIRED", "Use Credits to import the exact successor customer packet; the retained purchase identity stays fixed", 409)
+            kind = source.get("kind", "sf36_ledger")
         native = capture_source(path, kind, self.node_executable)
         def operation():
             source = self._get("sources", ident)
@@ -342,6 +356,18 @@ class Store:
         with self.lock:
             return self._get("captures", ident)
 
+    def _accept_capture(self, captured, source):
+        """Apply a reviewed source edition inside the original mutation transaction."""
+        if captured["parent_id"] != source.get("current_capture"):
+            raise Problem("SOURCE_CHANGED", "A different source edition was accepted; capture again against that edition", 409)
+        self.connection.execute("UPDATE items SET missing=1 WHERE source_id=?", (source["id"],))
+        for row in captured["report"]["rows"]:
+            key = row_key(source["id"], row["request_id"])
+            self.connection.execute("INSERT INTO items VALUES(?,?,?,?,0,?) ON CONFLICT(id) DO UPDATE SET capture_id=excluded.capture_id,missing=0,body=excluded.body",
+                                    (key, source["id"], row["request_id"], captured["id"], canonical(row)))
+        source["current_capture"] = captured["id"]
+        self._put("sources", source)
+
     def decide_capture(self, ident, payload, expected):
         decision = payload.get("decision")
         if decision not in ("ACCEPT", "REJECT"):
@@ -354,15 +380,7 @@ class Store:
             if captured["status"] != "PENDING":
                 raise Problem("CAPTURE_REVIEWED", "This source edition already has a retained decision", 409)
             if decision == "ACCEPT":
-                if captured["parent_id"] != source.get("current_capture"):
-                    raise Problem("SOURCE_CHANGED", "A different source edition was accepted; capture again against that edition", 409)
-                self.connection.execute("UPDATE items SET missing=1 WHERE source_id=?", (source["id"],))
-                for row in captured["report"]["rows"]:
-                    key = row_key(source["id"], row["request_id"])
-                    self.connection.execute("INSERT INTO items VALUES(?,?,?,?,0,?) ON CONFLICT(id) DO UPDATE SET capture_id=excluded.capture_id,missing=0,body=excluded.body",
-                                            (key, source["id"], row["request_id"], ident, canonical(row)))
-                source["current_capture"] = ident
-                self._put("sources", source)
+                self._accept_capture(captured, source)
             captured.update(status="ACCEPTED" if decision == "ACCEPT" else "REJECTED", operator=operator, reason=reason, reviewed_at=now())
             self.connection.execute("UPDATE captures SET status=?,body=? WHERE id=?", (captured["status"], canonical(captured), ident))
             return self._capture_summary(captured)
@@ -449,6 +467,7 @@ class Store:
                             "source_capture":line["source_capture"], "recognition_date":line["recognition_date"]})
             view = period_view(period, self._items(), self._source_views(), {c["id"]: c for c in self._bodies("centers")},
                                self._dispositions(ident), closed_transfers)
+            view = self._credit_period(view)
             labels = json.loads(self.connection.execute("SELECT value FROM meta WHERE key='labels'").fetchone()[0])
             view["labels"] = labels
             view["context_sha256"] = digest([view["context_sha256"], labels])
@@ -514,6 +533,7 @@ class Store:
             value.update(id=identifier("close"), status="CLOSED", sequence=sequence, created_at=now(),
                          previous=period.get("latest_close"), review={k: review[k] for k in ("id", "created_at", "reviewer", "role", "notes", "decision")},
                          native_captures=[self._get("captures", capture_id) for capture_id in sorted(capture_ids)],
+                         refund_packets=self._issued_refund_packets(report),
                          labels=json.loads(self.connection.execute("SELECT value FROM meta WHERE key='labels'").fetchone()[0]))
             value["period"] = period | {"state": "CLOSED", "latest_close": value["id"]}
             self.connection.execute("INSERT INTO closes VALUES(?,?,?,?,?)", (value["id"], ident, sequence, value["created_at"], canonical(value)))

@@ -220,3 +220,19 @@ It retains the original five-file JavaScript export, source-specific operation
 types, a Python request adapter, portable request plans and exact native buyer
 preparation/review/reopening. `status`, `resume` and `copy` operate the retained
 package. Follow [the complete Python customer workflow](developer/python-client/PYTHON.md).
+
+## Ruby and Rails customer applications
+
+`starforge client ruby export --openapi FILE --out NEW_DIRECTORY` delivers the
+same seller contract to Ruby applications. The complete package preserves the
+original JavaScript export, adds generated operation-ID types and portable
+request plans, and uses the installed Node Buyer for native preparation, exact
+review, execution, recovery and saved-response receiving.
+
+Ruby applications can reopen complete file, JSON and CSV responses offline.
+The included Rails receiving service binds a business-job key to the same
+native intent and separates explicit operator execution from background
+receiving and database application. Package `status`, additive `resume`,
+exact-byte `copy` and `copy-resume` retain the delivered edition. The generated
+`customer.rb` command carries one selected real request through the complete
+workflow. Follow [the Ruby and Rails customer guide](developer/ruby-client/RUBY.md).

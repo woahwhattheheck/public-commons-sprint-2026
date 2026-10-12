@@ -1,3 +1,5 @@
+import { platformDefinitions, platformFileNames, base, readOnly, realmId, view, sha256, page, selectedPlan, revision, uuid, actor, timestamp, nullableId, source, sourcePlan, qboPlanViews, response, responseViews, name, alias, companySource } from './catalog/accounting-platforms.mjs';
+export { platformFileNames, platformDefinitions } from './catalog/accounting-platforms.mjs';
 // MIT. Customer operations over the original QuickBooks and Xero accountant controllers.
 import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
@@ -12,65 +14,29 @@ import { normalizeQboCompany } from '../../stellar/scf-starforge-20261009/mercha
 const fail = (code, message) => Object.assign(new Error(message), { code });
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
-const alias = { type: 'string', pattern: '^[a-z0-9][a-z0-9_-]{0,63}$' };
-const uuid = { type: 'string', pattern: '^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$' };
-const sha256 = { type: 'string', pattern: '^[a-f0-9]{64}$' };
-const revision = { type: 'integer', minimum: 1 };
-const actor = { type: 'string', minLength: 1, maxLength: 1000 };
-const name = { type: 'string', minLength: 1, maxLength: 160 };
-const timestamp = { type: 'string', minLength: 1, maxLength: 80 };
-const nullableId = { anyOf: [uuid, { type: 'null' }] };
-const realmId = { type: 'string', pattern: '^[0-9]{1,64}$' };
-const page = { offset: { type: 'integer', minimum: 0 }, limit: { type: 'integer', minimum: 1, maximum: 200 } };
-const base = { workspace: alias };
-const selectedPlan = { ...base, planId: uuid };
-const source = { source: alias, sourceSha256: sha256 };
-const companySource = { companySource: alias, companySourceSha256: sha256 };
-const sourcePlan = { ...base, ...source, ...companySource };
-const response = { ...selectedPlan, ...source, id: uuid, name, actor, createdAt: timestamp, realmId, expectedParentId: nullableId };
-const readOnly = { readOnly: true, idempotent: true };
-const view = values => ({ type: 'string', enum: values });
-const qboPlanViews = ['summary', 'rows', 'lines', 'responses', 'files', 'accounts', 'native-attempts'];
-const responseViews = ['summary', 'errors', 'issues', 'rows'];
-export const platformFileNames = ['plan.json', 'journal-entry.json', 'handoff.json', 'accountant.csv', 'accountant-return.json',
-  'review.html', 'response.json', 'result.json', 'returned.csv', 'return-request.json', 'intent.json', 'request.json', 'receipt.json'];
 
-export const platformDefinitions = [
-  ['merchant_accounting_qbo_connection', 'Read the original configured QuickBooks company/environment and native credential availability. Returns environment-variable names without credential values; no provider request is sent.', { ...base }, ['workspace'], readOnly],
-  ['merchant_accounting_qbo_company_fetch', 'Fetch the original connected QuickBooks CompanyInfo, Preferences and complete paged native chart, including inactive accounts. Each invocation performs native reads; pin expectedCompanySha256 when comparing pages. Default output is compact; snapshot view returns the full original validated company and source documents for the operator to retain in the host-declared journal input.', { ...base, realmId, environment: view(['sandbox', 'production']), expectedCompanySha256: sha256, view: view(['summary', 'accounts', 'snapshot']), ...page }, ['workspace', 'realmId', 'environment'], readOnly],
-  ['merchant_accounting_qbo_post_preview', 'Preview native posting of the exact original reviewed journal to its configured QuickBooks company. Keep the original posting UUID/time, current accountant parent and revision. Returns the native request/plan digests and exact post command; no provider request is sent.', { ...selectedPlan, revision, id: uuid, actor, createdAt: timestamp, expectedParentId: nullableId }, ['workspace', 'planId', 'revision', 'id', 'actor', 'createdAt', 'expectedParentId'], readOnly],
-  ['merchant_accounting_qbo_post', 'Execute the explicitly reviewed original native posting using its exact UUID/time, native preview digest, current parent and workspace revision. The original controller retains the request and native attempts, searches for the exact journal, and links the original accountant return. Reconcile the retained nativePost before an uncertain reply is retried.', { ...selectedPlan, revision, id: uuid, actor, createdAt: timestamp, expectedParentId: nullableId, previewSha256: sha256 }, ['workspace', 'planId', 'revision', 'id', 'actor', 'createdAt', 'expectedParentId', 'previewSha256'], { idempotent: true }],
-  ['merchant_accounting_qbo_post_resume', 'Explicitly continue one retained original native posting. This may perform native query/read and the original allowed POST, so it is an execution action. Keep the selected posting UUID and preview digest; ordinary customer reconciliation reads nativePost without invoking this command. Native throttle and original company/request guards remain authoritative.', { ...selectedPlan, revision, id: uuid, actor, previewSha256: sha256 }, ['workspace', 'planId', 'revision', 'id', 'actor', 'previewSha256'], { idempotent: true }],
-  ['merchant_accounting_qbo_status', 'Read the original QuickBooks workspace, retained journals and accountant handoffs. Page full native inventories before choosing a plan; no provider call is started.', { ...base, view: view(['summary', 'plans', 'handoffs']), ...page }, ['workspace'], readOnly],
-  ['merchant_accounting_qbo_company_preview', 'Inspect an original host-declared CompanyInfo/Preferences/Account input through the native QuickBooks import. Retains exact source and company hashes in the response, with paged actual chart eligibility. No journal or accountant return is saved.', { ...base, ...source, view: view(['summary', 'accounts']), ...page }, ['workspace', 'source'], readOnly],
-  ['merchant_accounting_qbo_handoff', 'Review one original frozen accountant handoff and its current parent before mapping a QuickBooks journal. Page actual payment rows and frozen adjustment context without rewriting its original values.', { ...base, handoffId: uuid, search: { type: 'string', maxLength: 500 }, ...page }, ['workspace', 'handoffId'], readOnly],
-  ['merchant_accounting_qbo_preview', 'Preview a host-declared original journal request using the native QuickBooks engine. An optional declared company source binds its exact original company/chart snapshot. Returns the small exact command envelope for creation, stable original plan ID, native preview hash and paged rows/lines/accounts.', { ...sourcePlan, view: view(['summary', 'rows', 'lines', 'accounts']), ...page }, ['workspace', 'source'], readOnly],
-  ['merchant_accounting_qbo_create', 'Retain the explicitly reviewed QuickBooks draft using the exact source pins, native preview hash and workspace revision returned by qbo_preview. The source carries its original UUID/time; an uncertain reply reuses that same original journal.', { ...sourcePlan, revision, previewSha256: sha256 }, ['workspace', 'source', 'sourceSha256', 'revision', 'previewSha256'], { idempotent: true }],
-  ['merchant_accounting_qbo_plan', 'Read one original QuickBooks journal, retained review/cancellation identities, response history, original files and current accountant parent. Page full responses before reconciling an uncertain import; reading does not submit a posting.', { ...selectedPlan, view: view(qboPlanViews), ...page }, ['workspace', 'planId'], readOnly],
-  ['merchant_accounting_qbo_review', 'Record explicit review of the exact original DRAFT journal and reserve its native company/events. Keep a stable review UUID and the retained plan digest; no QuickBooks posting is sent.', { ...selectedPlan, revision, id: uuid, actor, note: { type: 'string', maxLength: 4000 }, planSha256: sha256 }, ['workspace', 'planId', 'revision', 'id', 'actor', 'planSha256'], { idempotent: true }],
-  ['merchant_accounting_qbo_cancel', 'Record the operator-confirmed cancellation of an unused original QuickBooks journal. Supply its exact plan digest and explicit unusedConfirmed:true. Native matched or booked returns retain their existing accountant workflow.', { ...selectedPlan, revision, id: uuid, actor, note: { type: 'string', minLength: 1, maxLength: 4000 }, planSha256: sha256, unusedConfirmed: { type: 'boolean', enum: [true] } }, ['workspace', 'planId', 'revision', 'id', 'actor', 'note', 'planSha256', 'unusedConfirmed'], { idempotent: true }],
-  ['merchant_accounting_qbo_response_preview', 'Inspect the exact host-declared original QuickBooks response and preview its original accountant return. The stable response UUID/time, realm and current parent remain explicit. Returns source/native preview pins and a command envelope; no provider request is submitted.', { ...response, view: view(responseViews), ...page }, ['workspace', 'planId', 'source', 'id', 'name', 'actor', 'createdAt', 'realmId', 'expectedParentId'], readOnly],
-  ['merchant_accounting_qbo_response_save', 'Retain the explicitly previewed original response and apply/link the same accountant return. Carry the exact response UUID/time, original bytes, parent, source SHA256, preview hash and workspace revision. Repeating a saved response may finish its original PENDING return without another provider request.', { ...response, revision, previewSha256: sha256 }, ['workspace', 'planId', 'source', 'sourceSha256', 'id', 'name', 'actor', 'createdAt', 'realmId', 'expectedParentId', 'revision', 'previewSha256'], { idempotent: true }],
-  ['merchant_accounting_qbo_response_resume', 'Continue the original retained QuickBooks response/accountant return by its existing plan and response IDs. Uses already retained native bytes and return identity; no new provider request or response import is created.', { ...selectedPlan, responseId: uuid, revision, actor }, ['workspace', 'planId', 'responseId', 'revision', 'actor'], { idempotent: true }],
-  ['merchant_accounting_xero_status', 'Read the original Xero contexts, plans, accountant handoffs and connection availability. Page complete retained inventories; no provider call or draft request is started.', { ...base, view: view(['summary', 'contexts', 'plans', 'handoffs']), ...page }, ['workspace'], readOnly],
-  ['merchant_accounting_xero_context', 'Read a retained original Xero organization and actual chart eligibility. Validates its original context bytes and provides paged accounts/files.', { ...base, contextId: uuid, view: view(['summary', 'accounts', 'files']), ...page }, ['workspace', 'contextId'], readOnly],
-  ['merchant_accounting_xero_context_preview', 'Validate a declared original organization/accounts source through the native context engine. Returns exact source/import request pins and a small command envelope; the context has not been retained.', { ...base, ...source, view: view(['summary', 'accounts']), ...page }, ['workspace', 'source'], readOnly],
-  ['merchant_accounting_xero_context_import', 'Retain the explicitly reviewed original organization/account import. Preserve the source bytes, native import request identity and workspace revision. Its stable UUID reconciles an uncertain reply without another import.', { ...base, ...source, revision, previewSha256: sha256 }, ['workspace', 'source', 'sourceSha256', 'revision', 'previewSha256'], { idempotent: true }],
-  ['merchant_accounting_xero_context_capture', 'Read the actual native organization and accounts for one host-declared tenant alias and retain them through the original controller. Supply a stable context UUID and the expected native tenant ID from the declared source view. Reconcile that UUID before retrying an uncertain response; capture makes native reads before import.', { ...base, revision, id: uuid, actor, name, tenant: alias, expectedTenantId: uuid }, ['workspace', 'revision', 'id', 'actor', 'name', 'tenant', 'expectedTenantId']],
-  ['merchant_accounting_xero_source', 'Review original payment/refund components, current accountant baseline, organization chart and active source reservations. Page actual native source before making inclusion and valuation decisions.', { ...base, handoffId: uuid, contextId: uuid, view: view(['components', 'accounts', 'reserved']), ...page }, ['workspace', 'handoffId', 'contextId'], readOnly],
-  ['merchant_accounting_xero_preview', 'Preview a declared original Xero plan using the native source, inclusion/exclusion decisions, valuations and accounts. The source must retain its UUID/time. Returns native plan/source pins, conflicts and a small exact creation command.', { ...base, ...source, view: view(['summary', 'entries', 'excluded', 'journals', 'lines', 'baseline', 'conflicts']), journalIndex: { type: 'integer', minimum: 0 }, ...page }, ['workspace', 'source'], readOnly],
-  ['merchant_accounting_xero_create', 'Retain the exact reviewed original Xero plan with its native preview/source hashes and workspace revision. Replays the native normalized request and stable plan UUID; no draft is sent to Xero.', { ...base, ...source, revision, previewSha256: sha256 }, ['workspace', 'source', 'sourceSha256', 'revision', 'previewSha256'], { idempotent: true }],
-  ['merchant_accounting_xero_plan', 'Read a retained original Xero plan, journal delivery state, operations, captures, accountant return intents/history and native file inventory. Page full original records before reconciling an uncertain response.', { ...selectedPlan, view: view(['summary', 'entries', 'excluded', 'journals', 'lines', 'baseline', 'operations', 'captures', 'returnIntents', 'returns', 'files']), journalIndex: { type: 'integer', minimum: 0 }, ...page }, ['workspace', 'planId'], readOnly],
-  ['merchant_accounting_xero_cancel', 'Cancel an unused original Xero plan after explicit noExternalImport:true confirmation. The original controller rejects attempted or observed delivery and retains the recorded reason and original source.', { ...selectedPlan, revision, actor, reason: { type: 'string', minLength: 1, maxLength: 2000 }, noExternalImport: { type: 'boolean', enum: [true] } }, ['workspace', 'planId', 'revision', 'actor', 'reason', 'noExternalImport'], { idempotent: true }],
-  ['merchant_accounting_xero_operate', 'Start one explicit original create-drafts or refresh operation for the retained plan and host-declared tenant. Preserve the stable operation UUID, action and exact plan digest. Creation uses the original native preflight and retained idempotency keys; an uncertain journal is not automatically resent.', { ...selectedPlan, revision, id: uuid, actor, tenant: alias, action: view(['create-drafts', 'refresh']), planSha256: sha256 }, ['workspace', 'planId', 'revision', 'id', 'actor', 'tenant', 'action', 'planSha256'], { idempotent: true }],
-  ['merchant_accounting_xero_operation', 'Read the original retained Xero operation directly by its existing ID, with paged journal indexes/source files. RUNNING/COMPLETE/FAILED/INTERRUPTED and native errors retain their original meaning. This never starts or refreshes a provider request.', { ...selectedPlan, operationId: uuid, view: view(['summary', 'indexes', 'files', 'journalSources']), ...page }, ['workspace', 'planId', 'operationId'], readOnly],
-  ['merchant_accounting_xero_response_preview', 'Compare a host-declared original response-file set against the original Xero plan. Returns the exact original capture/import binding and a small command envelope; no comparison or accountant return is saved.', { ...selectedPlan, ...source, view: view(['summary', 'journals', 'lines', 'issues', 'unassigned', 'files']), journalIndex: { type: 'integer', minimum: 0 }, ...page }, ['workspace', 'planId', 'source'], readOnly],
-  ['merchant_accounting_xero_response_import', 'Retain the explicitly reviewed original native response-file set and comparison under its stable capture UUID. Source/import pins bind the same actor and original bytes; repeated import reopens the original comparison without a provider request.', { ...selectedPlan, ...source, revision, previewSha256: sha256 }, ['workspace', 'planId', 'source', 'sourceSha256', 'revision', 'previewSha256'], { idempotent: true }],
-  ['merchant_accounting_xero_comparison', 'Read an original retained Xero response comparison and exact native journal statuses. Page journals, lines, issues, unassigned records or source files without calling the provider.', { ...selectedPlan, captureId: uuid, view: view(['summary', 'journals', 'lines', 'issues', 'unassigned', 'files']), journalIndex: { type: 'integer', minimum: 0 }, ...page }, ['workspace', 'planId', 'captureId'], readOnly],
-  ['merchant_accounting_xero_return_preview', 'Preview the original accountant return from a retained native comparison. Keeps later human edits through the original three-way merge. Returns the exact native return hash and CSV SHA256 plus a small application command; full CSV bytes stay in the original engine.', { ...selectedPlan, captureId: uuid, id: uuid, actor, name, createdAt: timestamp, expectedParentId: nullableId, view: view(['summary', 'conflicts', 'skipped', 'assignments', 'results', 'issues', 'missingRows']), ...page }, ['workspace', 'planId', 'captureId', 'id', 'actor', 'name', 'createdAt', 'expectedParentId'], readOnly],
-  ['merchant_accounting_xero_return_apply', 'Apply the explicitly reviewed original accountant return using the native preview hash, exact CSV digest, original return UUID/time/current parent and workspace revision. Existing retained intents recover their same original import; no provider request is submitted.', { ...selectedPlan, captureId: uuid, id: uuid, actor, name, createdAt: timestamp, expectedParentId: nullableId, revision, previewSha256: sha256, csvSha256: sha256 }, ['workspace', 'planId', 'captureId', 'id', 'actor', 'name', 'createdAt', 'expectedParentId', 'revision', 'previewSha256', 'csvSha256'], { idempotent: true }],
-  ['merchant_accounting_xero_return_resume', 'Complete an already retained original accountant return intent. Select its original plan, capture, return ID and preview hash. Reads the exact saved request and lets the original accountant apply/link recover it; creates no new return identity or provider request.', { ...selectedPlan, captureId: uuid, returnId: uuid, previewSha256: sha256 }, ['workspace', 'planId', 'captureId', 'returnId', 'previewSha256'], { idempotent: true }],
-];
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 function pageOf(items, args, viewName) {
   const offset = args.offset ?? 0, limit = args.limit ?? 25;

@@ -6,9 +6,11 @@ import { spawn } from 'node:child_process';
 import { acquireStateLease } from '../../../merchant-fleet-gateway/state-lease.mjs';
 import { atomicJson } from '../../../sf46-release/release-core.mjs';
 import { captureProtoSource, compileProtoSource } from '../proto.mjs';
+import { inspectGrpcReflection, captureGrpcReflection } from '../reflection.mjs';
 import { grpcMethodSchema, normalizeGrpcRequest } from '../values.mjs';
 import { validateGrpcConfig, grpcEnvironmentNames } from '../config.mjs';
 import { createGrpcSource } from '../source.mjs';
+import { captureGrpcStream, inspectGrpcStream } from '../stream-capture.mjs';
 import { compileGrpcMerchantPlan, prepareGrpcSeller, readGrpcPrepared, CUSTOMER_FILES } from '../prepare.mjs';
 import { startGrpcMerchant } from '../merchant.mjs';
 import { assertGrpcWorkspaceBinding } from './binding.mjs';
@@ -34,7 +36,7 @@ function describe(contract) {
   return Object.entries(contract.methods).map(([path, item]) => ({
     path, requestType: item.requestType, responseType: item.responseType,
     requestStream: Boolean(item.requestStream), responseStream: Boolean(item.responseStream),
-    selectable: !item.requestStream && !item.responseStream,
+    selectable: !item.requestStream,
   }));
 }
 function draft(source, protoSource, plan) {
@@ -46,6 +48,29 @@ function draft(source, protoSource, plan) {
   jsonBytes(value, 10485760);
   return { ...value, contract, bundle, id: sha256(canonical(value)) };
 }
+
+function sourceComparison(before, after) {
+  const changed = (oldRows, newRows, key) => {
+    const oldMap = new Map(oldRows.map(value => [value[key], value]));
+    const newMap = new Map(newRows.map(value => [value[key], value]));
+    return {
+      added: [...newMap.keys()].filter(name => !oldMap.has(name)).sort(),
+      removed: [...oldMap.keys()].filter(name => !newMap.has(name)).sort(),
+      changed: [...newMap.keys()].filter(name => oldMap.has(name) &&
+        canonical(oldMap.get(name)) !== canonical(newMap.get(name))).sort(),
+    };
+  };
+  const oldInventory = before?.contract.inventory ?? { files: [], builtins: [], services: [], messages: [], enums: [] };
+  const next = after.inventory;
+  return { previousProtoSha256: before?.protoSource.sha256 ?? null, protoSha256: after.source.sha256,
+    files: changed([...(oldInventory.files ?? []), ...(oldInventory.builtins ?? [])],
+      [...next.files, ...next.builtins], 'path'),
+    services: changed(oldInventory.services, next.services, 'name'),
+    methods: changed(before ? describe(before.contract) : [], describe(after), 'path'),
+    messages: changed(oldInventory.messages, next.messages, 'name'),
+    enums: changed(oldInventory.enums, next.enums, 'name') };
+}
+
 export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDirectory, entrypoints, planFile,
   sellerPort = 0, operationsPort = 0, maxInFlight = 64, drainGraceMs = 60000,
   nativeFactory = null, releaseRuntime, env = process.env, expectedBinding } = {}) {
@@ -53,10 +78,10 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
   const root = await privateDirectory(stateDirectory, true), lease = await acquireStateLease(root);
   const environment = { ...env };
   const retainedRuntime = releaseRuntime === undefined ? (nativeFactory ? null : { port: sellerPort }) : structuredClone(releaseRuntime);
-  const folders = Object.fromEntries(['revisions', 'prepared', 'intents', 'attempts', 'temporary'].map(name => [name, join(root, name)]));
-  let current = null, revisionIndex = [], busy = null, closing = false, closePromise, active = null, previousRun = null;
-  let navigationOrigin = null, releaseConsole = null;
-  const cached = new Map();
+  const folders = Object.fromEntries(['revisions', 'prepared', 'intents', 'attempts', 'temporary', 'reflections'].map(name => [name, join(root, name)]));
+  let current = null, revisionIndex = [], reflectionIndex = [], busy = null, closing = false, closePromise, active = null, previousRun = null;
+  let navigationOrigin = null, releaseConsole = null, activeCall = null;
+  const cached = new Map(), reflectionControllers = new Set();
   const execute = action => {
     if (closing) return Promise.reject(Object.assign(new Error('GRPC_WORKSPACE_CLOSING'), { status: 503 }));
     if (busy) return Promise.reject(Object.assign(new Error('GRPC_WORKSPACE_BUSY'), { status: 409 }));
@@ -176,8 +201,91 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
       generation: current?.generation ?? 0, revisions: revisions.sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
       prepared: prepared.sort((a, b) => b.createdAt.localeCompare(a.createdAt)), intents,
       attempts: attempts.slice(0, 50),
-      attemptCount: attempts.length, runtime: runtime() };
+      attemptCount: attempts.length, reflections: structuredClone(reflectionIndex).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), runtime: runtime() };
   }
+  async function reflectionAction(action, signal) {
+    const controller = new AbortController(); reflectionControllers.add(controller);
+    try { return await action(signal ? AbortSignal.any([signal, controller.signal]) : controller.signal); }
+    finally { reflectionControllers.delete(controller); }
+  }
+  const reflectionInventory = (body, { signal } = {}) => execute(() => {
+    fields(body, ['source', 'protocol'], 'GRPC_REFLECTION_INVENTORY_FIELDS_INVALID');
+    return reflectionAction(signal => inspectGrpcReflection(body.source,
+      { protocol: body.protocol, env: environment, signal }), signal);
+  });
+  function reflectionSummary(value) {
+    return { id: value.id, createdAt: value.createdAt, baseRevision: value.request.baseRevision,
+      target: value.request.source.target, protocol: value.protoSource.reflection.protocol,
+      services: value.protoSource.services, files: value.protoSource.files.length,
+      bytes: value.protoSource.files.reduce((total, file) => total + file.bytes, 0),
+      protoSha256: value.protoSource.sha256, captureSha256: value.captureSha256 };
+  }
+  async function rememberReflection(value) {
+    if (reflectionIndex.some(row => row.id === value.id)) return;
+    const next = [...reflectionIndex, reflectionSummary(value)];
+    await atomicJson(join(root, 'reflections.json'), next); reflectionIndex = next;
+  }
+  async function readReflection(id) {
+    const value = await readJson(join(folders.reflections, identifier(id, UUID) + '.json'), 11534336);
+    if (value.schema !== 'stellar-forge.grpc-workspace-reflection.v1' || value.id !== id ||
+        typeof value.createdAt !== 'string' || value.requestSha256 !== sha256(canonical(value.request)) ||
+        value.captureSha256 !== sha256(canonical({ request: value.request, protoSource: value.protoSource })))
+      fail('GRPC_REFLECTION_CAPTURE_CHANGED', 409);
+    validateGrpcConfig(value.request.source);
+    compileProtoSource(assertProtoArchiveFits(value.protoSource));
+    return value;
+  }
+  async function visibleReflection(value, comparisonBaseRevision = value.request.baseRevision) {
+    const contract = compileProtoSource(value.protoSource);
+    const before = comparisonBaseRevision === null ? null : await revision(identifier(comparisonBaseRevision));
+    return { ...value, comparisonBaseRevision, comparison: sourceComparison(before, contract),
+      summary: reflectionSummary(value), methods: describe(contract), inventory: contract.inventory };
+  }
+  const reflectionOpen = body => execute(async () => {
+    fields(body, ['id', 'baseRevision'], 'GRPC_REFLECTION_OPEN_FIELDS_INVALID');
+    const value = await readReflection(body.id); await rememberReflection(value);
+    return visibleReflection(value, body.baseRevision);
+  });
+  const reflectionCapture = (body, { signal } = {}) => execute(async () => {
+    fields(body, ['id', 'source', 'services', 'protocol', 'expectedInventorySha256', 'baseRevision'],
+      'GRPC_REFLECTION_CAPTURE_FIELDS_INVALID');
+    const id = identifier(body.id, UUID);
+    if (!Array.isArray(body.services) || body.services.some(name => typeof name !== 'string'))
+      fail('GRPC_REFLECTION_SERVICES_INVALID');
+    if (body.baseRevision !== null) identifier(body.baseRevision);
+    const request = { source: validateGrpcConfig(body.source), services: [...body.services].sort(),
+      protocol: body.protocol ?? 'auto', expectedInventorySha256: identifier(body.expectedInventorySha256),
+      baseRevision: body.baseRevision };
+    const requestSha256 = sha256(canonical(request));
+    const existing = await optional(join(folders.reflections, id + '.json'), 11534336);
+    if (existing) {
+      const value = await readReflection(id);
+      if (value.requestSha256 !== requestSha256) fail('GRPC_REFLECTION_OPERATION_REUSED', 409);
+      await rememberReflection(value); return visibleReflection(value);
+    }
+    if (request.baseRevision !== currentId()) fail('GRPC_WORKSPACE_REVISION_CONFLICT', 409);
+    const before = request.baseRevision === null ? null : await revision(request.baseRevision);
+    const captured = await reflectionAction(signal => captureGrpcReflection(request.source,
+      { services: request.services, protocol: request.protocol,
+        expectedInventorySha256: request.expectedInventorySha256, env: environment, signal }), signal);
+    const protoSource = assertProtoArchiveFits(captured.protoSource), contract = compileProtoSource(protoSource);
+    if (request.baseRevision !== currentId()) fail('GRPC_WORKSPACE_REVISION_CONFLICT', 409);
+    const value = { schema: 'stellar-forge.grpc-workspace-reflection.v1', id, createdAt: stamp(),
+      request, requestSha256, protoSource, captureSha256: sha256(canonical({ request, protoSource })),
+      observation: { inventorySha256: captured.inventory.sha256, advertisedServices: captured.inventory.services.length,
+        transferBytes: captured.transferBytes, descriptorRequests: captured.descriptorRequests },
+      comparison: sourceComparison(before, contract) };
+    await writeJsonSnapshot(join(folders.reflections, id + '.json'), value, 11534336);
+    await rememberReflection(value);
+    return visibleReflection(value);
+  });
+  const reflectionSave = body => execute(async () => {
+    fields(body, ['id', 'expectedCaptureSha256', 'baseRevision', 'title', 'plan'], 'GRPC_REFLECTION_SAVE_FIELDS_INVALID');
+    const retained = await readReflection(body.id);
+    if (identifier(body.expectedCaptureSha256) !== retained.captureSha256) fail('GRPC_REFLECTION_CAPTURE_CHANGED', 409);
+    return saveInside({ source: retained.request.source, protoSource: retained.protoSource, plan: body.plan,
+      baseRevision: body.baseRevision, title: body.title });
+  });
   const save = body => execute(() => saveInside(body));
   const capture = body => execute(async () => {
     fields(body, ['directory', 'entrypoints', 'source', 'plan', 'baseRevision', 'title'], 'GRPC_CAPTURE_FIELDS_INVALID');
@@ -200,7 +308,7 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
   };
   const review = body => execute(async () => {
     selected(body.revision); const saved = await revision(body.revision);
-    if (!saved.bundle) fail('GRPC_SELECT_AT_LEAST_ONE_UNARY_METHOD');
+    if (!saved.bundle) fail('GRPC_SELECT_AT_LEAST_ONE_SINGLE_REQUEST_METHOD');
     const source = await createGrpcSource(saved.source, saved.protoSource, { env: environment, contract: saved.contract });
     try {
       const observed = await source.ready();
@@ -211,23 +319,42 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
       await atomicJson(join(root, 'review-' + saved.id + '.json'), report); return report;
     } finally { await source.close(); }
   });
-  async function attemptResult(id, recover = false) {
+  const incompleteStreamAction = 'Inspect the retained response prefix and upstream outcome. An interrupted or non-OK stream is not complete; a new intentional request needs a new operation ID.';
+  async function attemptResult(id, recover = false, inspectStream = true) {
     const file = join(folders.attempts, identifier(id, UUID) + '.json'), saved = await optional(file, 65536);
     if (!saved) return null;
     const inputBytes = await readBytes(join(folders.attempts, id + '.input'), 33554432);
     const input = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(inputBytes));
     if (sha256(canonical(input)) !== saved.inputSha256) fail('GRPC_CALL_INPUT_CHANGED', 409);
     const result = await optional(join(folders.attempts, id + '.output'), 17825792);
+    const streaming = saved.responseFormat === 'ndjson';
+    if (streaming && saved.responseSha256 && !result) fail('GRPC_STREAM_TERMINAL_RESULT_MISSING', 409);
     if (result) {
       if (result.id !== id || result.fingerprint !== saved.fingerprint ||
           result.sha256 !== sha256(canonical(result.output))) fail('GRPC_CALL_OUTPUT_CHANGED', 409);
-      if (saved.phase !== 'COMPLETED' && recover) {
-        Object.assign(saved, { phase: 'COMPLETED', responseSha256: result.sha256, finishedAt: result.completedAt });
+      const phase = streaming && !result.output.complete ? 'OUTCOME_UNCONFIRMED' : 'COMPLETED';
+      if (saved.phase !== phase && recover) {
+        Object.assign(saved, { phase, responseSha256: result.sha256, finishedAt: result.completedAt,
+          ...(phase === 'OUTCOME_UNCONFIRMED' ? { nextAction: incompleteStreamAction } : {}) });
         await atomicJson(file, saved);
       }
       if (saved.responseSha256 && saved.responseSha256 !== result.sha256) fail('GRPC_CALL_OUTPUT_CHANGED', 409);
     }
-    return { ...saved, input, ...(result ? { output: result.output, outputRetained: true } : {}) };
+    let stream;
+    if (streaming && inspectStream) {
+      const selected = await revision(saved.revision);
+      try {
+        ({ capture: stream } = await inspectGrpcStream({ directory: folders.attempts, id,
+          fingerprint: saved.fingerprint, limits: selected.source.limits, expected: result?.output }));
+      } catch (issue) { if (issue.code !== 'ENOENT' || result) throw issue; }
+      if (stream && !result && saved.phase === 'ATTEMPTED' && recover) {
+        Object.assign(saved, { phase: 'OUTCOME_UNCONFIRMED', error: 'GRPC_STREAM_INTERRUPTED',
+          nextAction: incompleteStreamAction });
+        await atomicJson(file, saved);
+      }
+    }
+    return { ...saved, input, ...(result ? { output: result.output, outputRetained: true } : {}),
+      ...(stream ? { stream } : {}) };
   }
   const call = (body, { signal } = {}) => execute(async () => {
     selected(body.revision); identifier(body.id, UUID);
@@ -245,34 +372,71 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
     const earlierInput = await optional(inputPath, 33554432);
     if (earlierInput && sha256(canonical(earlierInput)) !== inputSha256) fail('GRPC_CALL_ID_REUSED_WITH_DIFFERENT_INPUT', 409);
     if (!earlierInput) await writeJsonSnapshot(inputPath, input, 17825792);
+    const streaming = Boolean(saved.contract.methods[body.method].responseStream);
     const attempt = { schema: 'stellar-forge.grpc-workspace-call.v1', id: body.id, revision: saved.id,
-      fingerprint, method: body.method, inputSha256, phase: 'ATTEMPTED', startedAt: stamp() };
+      fingerprint, method: body.method, inputSha256, phase: 'ATTEMPTED', startedAt: stamp(),
+      ...(streaming ? { responseFormat: 'ndjson' } : {}) };
     await atomicJson(file, attempt, { exclusive: true });
+    const controller = new AbortController(), abort = () => controller.abort();
+    activeCall = { id: body.id, controller };
+    signal?.addEventListener('abort', abort, { once: true });
+    if (signal?.aborted) abort();
     let source, called = false;
     try {
+      controller.signal.throwIfAborted();
       source = await createGrpcSource(saved.source, saved.protoSource, { env: environment, contract: saved.contract });
-      called = true;
-      const output = await source.call(body.method, input, { signal });
+      let output;
+      if (streaming) {
+        output = await captureGrpcStream({ directory: folders.attempts, id: body.id, fingerprint,
+          limits: saved.source.limits, openStream() {
+            controller.signal.throwIfAborted(); called = true;
+            return source.stream(body.method, input, { signal: controller.signal });
+          } });
+      } else {
+        called = true;
+        output = await source.call(body.method, input, { signal: controller.signal });
+      }
       const result = { id: body.id, fingerprint, output, sha256: sha256(canonical(output)), completedAt: stamp() };
       await writeJsonSnapshot(join(folders.attempts, body.id + '.output'), result, 17825792);
-      Object.assign(attempt, { phase: 'COMPLETED', responseSha256: result.sha256, finishedAt: result.completedAt });
+      Object.assign(attempt, { phase: streaming && !output.complete ? 'OUTCOME_UNCONFIRMED' : 'COMPLETED',
+        responseSha256: result.sha256, finishedAt: result.completedAt,
+        ...(streaming && !output.complete ? { error: output.error ?? 'GRPC_STREAM_INCOMPLETE',
+          nextAction: incompleteStreamAction } : {}) });
     } catch (issue) {
       // A failed/cancelled transport is not proof that an upstream mutation was
       // not applied. The same operation ID returns its retained attempt.
       Object.assign(attempt, { phase: called ? 'OUTCOME_UNCONFIRMED' : 'NOT_STARTED',
         error: issue.code ?? 'GRPC_CALL_FAILED', ...(issue.grpcCode ? { grpcCode: issue.grpcCode } : {}),
-        finishedAt: stamp(), nextAction: called ?
+        finishedAt: stamp(), nextAction: called ? streaming ? incompleteStreamAction :
           'Inspect the upstream outcome. A new intentional request uses a new operation ID.' :
           'Correct the connection settings or environment, then submit a new intentional request.' });
-    } finally { await source?.close(); }
+    } finally {
+      signal?.removeEventListener('abort', abort);
+      try { await source?.close(); } finally { activeCall = null; }
+    }
     await atomicJson(file, attempt);
-    return attemptResult(body.id, true);
+    return attemptResult(body.id, true, false);
   });
   const readAttempt = body => execute(() => attemptResult(body.id, true));
+  const cancelCall = ({ id }) => {
+    lease.assertHeld(); identifier(id, UUID);
+    if (activeCall?.id === id) {
+      activeCall.controller.abort();
+      return { id, cancellationRequested: true, nextAction: 'Read this same attempt after its native terminal and retained file settle.' };
+    }
+    return { id, cancellationRequested: false, nextAction: 'Inspect the same retained attempt; no other request was cancelled.' };
+  };
+  const streamDownload = (body, { signal } = {}) => execute(async () => {
+    const attempt = await attemptResult(identifier(body.id, UUID), true, false);
+    if (!attempt || attempt.responseFormat !== 'ndjson') fail('GRPC_STREAM_ATTEMPT_REQUIRED', 404);
+    const saved = await revision(attempt.revision);
+    return inspectGrpcStream({ directory: folders.attempts, id: attempt.id, fingerprint: attempt.fingerprint,
+      limits: saved.source.limits, expected: attempt.output, signal, keepOpen: true });
+  });
   const prepare = body => execute(async () => {
     selected(body.revision); identifier(body.id, UUID);
     const saved = await revision(body.revision);
-    if (!saved.bundle) fail('GRPC_SELECT_AT_LEAST_ONE_UNARY_METHOD');
+    if (!saved.bundle) fail('GRPC_SELECT_AT_LEAST_ONE_SINGLE_REQUEST_METHOD');
     const intentPath = join(folders.intents, body.id + '.json'), target = join(folders.prepared, body.id);
     const intent = { schema: 'stellar-forge.grpc-workspace-prepare.v1', id: body.id,
       revision: saved.id, createdAt: stamp() };
@@ -413,6 +577,8 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
   function close() {
     if (closePromise) return closePromise;
     closing = true;
+    activeCall?.controller.abort();
+    for (const controller of reflectionControllers) controller.abort();
     closePromise = (async () => {
       // The request owns its failure; shutdown still closes every owned runtime.
       try { await busy; } catch {}
@@ -432,6 +598,9 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
     for (const directory of Object.values(folders)) await privateDirectory(directory, true);
     revisionIndex = await optional(join(root, 'revisions.json'), 1048576) ?? [];
     if (!Array.isArray(revisionIndex) || revisionIndex.some(row => !REV.test(row.id))) fail('GRPC_WORKSPACE_INDEX_INVALID', 409);
+    reflectionIndex = await optional(join(root, 'reflections.json'), 1048576) ?? [];
+    if (!Array.isArray(reflectionIndex) || reflectionIndex.some(row => !UUID.test(row.id)))
+      fail('GRPC_REFLECTION_INDEX_INVALID', 409);
     current = await optional(join(root, 'current.json'), 65536);
     if (current && (current.schema !== 'stellar-forge.grpc-workspace-current.v1' ||
         !REV.test(current.revision) || !Number.isSafeInteger(current.generation))) fail('GRPC_WORKSPACE_CURRENT_INVALID', 409);
@@ -447,8 +616,8 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
       await saveInside({ source, protoSource, plan, baseRevision: null, title: 'gRPC merchant' });
     }
   } catch (issue) { await lease.close(); throw issue; }
-  return { stateDirectory: root, state, attemptsPage, runtime, save, capture, open, checkout, method, review,
-    call, readAttempt, prepare, run, stop, download, archive, stage, openReleaseConsole, closeReleaseConsole, close,
+  return { stateDirectory: root, state, attemptsPage, runtime, save, capture, reflectionInventory, reflectionCapture, reflectionOpen, reflectionSave, open, checkout, method, review,
+    call, readAttempt, cancelCall, streamDownload, prepare, run, stop, download, archive, stage, openReleaseConsole, closeReleaseConsole, close,
     bindOperationsNavigationOrigin(origin) {
       const url = new URL(origin);
       if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || url.origin !== origin) fail('GRPC_WORKSPACE_ORIGIN_INVALID');

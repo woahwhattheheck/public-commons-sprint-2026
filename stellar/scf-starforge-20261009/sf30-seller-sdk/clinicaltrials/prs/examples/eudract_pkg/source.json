@@ -1,0 +1,53 @@
+{
+  "schema": "stellar-forge.prs-published-example-source.v1",
+  "repository": "shug0131/eudract_pkg",
+  "commit": "8c5412f28a316a5e26f7bdc013f24e24f9000633",
+  "package": "eudract",
+  "version": "1.1.1",
+  "packageDate": "2026-01-15",
+  "authors": [
+    "Simon Bond",
+    "Beatrice Pantaleo"
+  ],
+  "license": "GPL-2",
+  "purpose": "Original publisher test-study XML, retained unchanged for source-format operation.",
+  "files": [
+    {
+      "file": "1234.xml",
+      "path": "inst/extdata/1234.xml",
+      "blob": "5386d86bab47c3ccf26f56e1f70ce47fb6a903ac",
+      "sha256": "b0718215c40d0056bfd0b80ee0aabbeabfd963e40e6e61ec00bc90d095bc7bc0",
+      "bytes": 7853,
+      "url": "https://github.com/shug0131/eudract_pkg/blob/8c5412f28a316a5e26f7bdc013f24e24f9000633/inst/extdata/1234.xml"
+    },
+    {
+      "file": "ct_safety_upload.xml",
+      "path": "inst/extdata/ct_safety_upload.xml",
+      "blob": "96d8d01fd14c11c3ec2f2bb3913a7ddf109c764d",
+      "sha256": "354580e032c5121df3a4f338f84fd3d80a942b85d7dd8297cd9ebe839c91faf7",
+      "bytes": 58198,
+      "url": "https://github.com/shug0131/eudract_pkg/blob/8c5412f28a316a5e26f7bdc013f24e24f9000633/inst/extdata/ct_safety_upload.xml"
+    },
+    {
+      "file": "study_file.xml",
+      "path": "tests/testthat/study_file.xml",
+      "blob": "73bb6c55eee59633583d6f4c9f4355f3b96da685",
+      "sha256": "5865b6713f0c810bd930d2eb37470886596011ace82f073ad524066059828059",
+      "bytes": 87762,
+      "url": "https://github.com/shug0131/eudract_pkg/blob/8c5412f28a316a5e26f7bdc013f24e24f9000633/tests/testthat/study_file.xml"
+    },
+    {
+      "file": "DESCRIPTION",
+      "path": "DESCRIPTION",
+      "blob": "5b812f6eaa490141cfb826d84bb34692dc05e40b",
+      "sha256": "39a7f2115e16d1cd02a664024396948894a0d834e689cd86719b20577311e317",
+      "bytes": 1971,
+      "url": "https://github.com/shug0131/eudract_pkg/blob/8c5412f28a316a5e26f7bdc013f24e24f9000633/DESCRIPTION"
+    }
+  ],
+  "licenseText": {
+    "file": "COPYING",
+    "url": "https://raw.githubusercontent.com/wch/r-source/trunk/share/licenses/GPL-2",
+    "sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643"
+  }
+}

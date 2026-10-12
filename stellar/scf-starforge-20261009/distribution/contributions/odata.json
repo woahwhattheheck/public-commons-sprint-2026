@@ -38,6 +38,13 @@
     "./seller/odata/live-operations": {
       "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live-operations.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live-operations.mjs"
+    },
+    "./seller/odata/semantics": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/semantics.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/semantics.mjs"
     }
+  },
+  "applicationProviders": {
+    "odata": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/odata.mjs"
   }
 }

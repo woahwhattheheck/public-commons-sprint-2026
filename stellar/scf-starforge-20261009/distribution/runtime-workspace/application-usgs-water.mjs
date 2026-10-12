@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { inspectMerchantRuntime } from '../../sf46-release/runtime-package.mjs';
 import { absolute, plain, need, digest, json, canonical, processIdentity } from './storage.mjs';
 import { namespaceProcessIdentity } from './process-identity.mjs';
+import { APPLICATION_PROVIDER_SCHEMA, observeApplicationStartup } from './application-provider.mjs';
 import { WATER_MANAGED_STARTUP, WATER_MANAGED_PROBE, WATER_MANAGED_FILE,
   reviewWaterManagedInputs, readWaterManagedRecord, waterManagedUrl } from '../../sf30-seller-sdk/usgs-water/managed.mjs';
 
@@ -122,3 +123,21 @@ export async function usgsWaterStartup(request, operationDirectory, text, contex
     reviewedInputsSha256: ready.reviewedInputsSha256, inputsSha256: current.sha256,
     process: ready.process, requested: ready.requested } };
 }
+
+/** Register the original Water workflow through the maintained provider loader. */
+export default {
+  schema: APPLICATION_PROVIDER_SCHEMA,
+  id: 'usgs-water',
+  catalog: ({ common }) => [usgsWaterApplication(common)],
+  prepare: (_type, settings, context) => prepareUsgsWaterApplication(settings, context),
+  resourceKey: (_type, settings, { hash }) =>
+    hash({ family: 'usgs-water', directory: absolute(settings.workspaceDirectory) }),
+  matchRequest: request => !request.pythonCommand && request.command === 'usgs-water' &&
+    request.args?.[0] === 'managed',
+  createObserver(request, directory, context) {
+    return observeApplicationStartup(request, directory, text => {
+      if (!text.startsWith('{"schema":"' + WATER_MANAGED_STARTUP + '",')) return null;
+      return () => usgsWaterStartup(request, directory, text, context);
+    });
+  },
+};

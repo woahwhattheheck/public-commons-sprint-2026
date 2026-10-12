@@ -3,6 +3,7 @@
 import { createServer } from 'node:http';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
+import { pipeline } from 'node:stream/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createGrpcWorkspace } from './model.mjs';
@@ -48,13 +49,20 @@ export async function startGrpcWorkspace({ model, port = 8453, managedSelection,
   } catch (issue) { await model.close(); throw issue; }
   const capability = randomBytes(32).toString('hex'), sockets = new Set(), downloads = new Set();
   let origin, authority, explicitAuthority, managed = null, closing = false, closePromise;
+  const streamTickets = new Map();
+  async function releaseTicket(ticket) {
+    const saved = streamTickets.get(ticket);
+    if (saved) { streamTickets.delete(ticket); clearTimeout(saved.timer); await saved.download.close(); }
+  }
   const authorized = req => {
     const token = req.headers['x-workspace-token'];
     return typeof token === 'string' && Buffer.byteLength(token) === capability.length &&
       timingSafeEqual(Buffer.from(token), Buffer.from(capability));
   };
   const actions = { save: 'save', capture: 'capture', open: 'open', checkout: 'checkout',
-    method: 'method', review: 'review', call: 'call', attempt: 'readAttempt', attempts: 'attemptsPage', prepare: 'prepare',
+    'reflection-inventory': 'reflectionInventory', 'reflection-capture': 'reflectionCapture',
+    'reflection-open': 'reflectionOpen', 'reflection-save': 'reflectionSave',
+    method: 'method', review: 'review', call: 'call', 'cancel-call': 'cancelCall', attempt: 'readAttempt', attempts: 'attemptsPage', prepare: 'prepare',
     run: 'run', stop: 'stop', download: 'download', archive: 'archive', stage: 'stage',
     'release-console': 'openReleaseConsole', 'release-close': 'closeReleaseConsole' };
   const server = createServer((req, res) => {
@@ -77,7 +85,42 @@ export async function startGrpcWorkspace({ model, port = 8453, managedSelection,
           'content-security-policy': "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'" });
         return res.end(file.bytes);
       }
+      // Minted only by an authenticated request. A one-use short-lived capability
+      // lets the browser stream to its download manager without buffering a Blob.
+      const streamRoute = /^\/api\/stream-files\/([a-f0-9]{64})$/.exec(url.pathname);
+      if (req.method === 'GET' && streamRoute) {
+        const ticket = streamRoute[1], saved = streamTickets.get(ticket);
+        if (!saved) return response(res, 404, { error: 'GRPC_STREAM_DOWNLOAD_EXPIRED' });
+        streamTickets.delete(ticket); clearTimeout(saved.timer);
+        const { download } = saved;
+        try {
+          await download.assertUnchanged();
+          if (controller.signal.aborted) return;
+          downloads.add(req.socket); res.once('close', () => downloads.delete(req.socket));
+          const capture = download.capture;
+          res.writeHead(200, { 'content-type': 'application/x-ndjson; charset=utf-8',
+            'content-length': capture.bytes, 'content-disposition': 'attachment; filename="' + capture.filename + '"',
+            'x-content-sha256': capture.sha256, 'x-grpc-stream-complete': String(capture.complete),
+            'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer' });
+          if (!capture.bytes) { res.end(); return; }
+          const input = download.handle.createReadStream({ autoClose: false, start: 0, end: capture.bytes - 1,
+            highWaterMark: 65536, signal: controller.signal });
+          await pipeline(input, res, { signal: controller.signal });
+        } finally { await download.close(); }
+        return;
+      }
       if (!authorized(req)) return response(res, 403, { error: 'GRPC_WORKSPACE_CAPABILITY_REQUIRED' });
+      if (req.method === 'POST' && url.pathname === '/api/stream-download') {
+        if (streamTickets.size >= 16) return response(res, 429, { error: 'GRPC_STREAM_DOWNLOAD_CAPACITY' });
+        const download = await model.streamDownload(await body(req), { signal: controller.signal });
+        if (controller.signal.aborted || closing) { await download.close(); return; }
+        const ticket = randomBytes(32).toString('hex');
+        const timer = setTimeout(() => { void releaseTicket(ticket).catch(() => {}); }, 60000);
+        timer.unref?.(); streamTickets.set(ticket, { download, timer });
+        return response(res, 200, { url: '/api/stream-files/' + ticket, expiresInSeconds: 60,
+          filename: download.capture.filename, sha256: download.capture.sha256,
+          bytes: download.capture.bytes, complete: download.capture.complete });
+      }
       if (req.method === 'GET' && url.pathname === '/api/launch' && managed)
         return response(res, 200, managed.value());
       if (req.method === 'GET' && url.pathname === '/api/state') return response(res, 200, await model.state());
@@ -98,7 +141,7 @@ export async function startGrpcWorkspace({ model, port = 8453, managedSelection,
       return response(res, 404, { error: 'GRPC_WORKSPACE_ROUTE_NOT_FOUND' });
     }).catch(issue => {
       if (res.destroyed || res.writableEnded) return;
-      if (res.headersSent) { res.end(); return; }
+      if (res.headersSent) { res.destroy(issue); return; }
       const code = /^[A-Z][A-Z0-9_]+$/.test(issue.code ?? issue.message ?? '') ?
         issue.code ?? issue.message : 'GRPC_WORKSPACE_OPERATION_FAILED';
       response(res, issue.status ?? (issue instanceof TypeError || issue instanceof RangeError ? 422 : 503),
@@ -130,6 +173,7 @@ export async function startGrpcWorkspace({ model, port = 8453, managedSelection,
       closing = true;
       closePromise = (async () => {
         const closed = new Promise(done => server.close(done)); server.closeIdleConnections();
+        await Promise.allSettled([...streamTickets.keys()].map(releaseTicket));
         let recordingIssue, runtimeIssue;
         try { await managed?.transition('DRAINING'); } catch (issue) { recordingIssue = issue; }
         try { await model.close(); } catch (issue) { runtimeIssue = issue; }

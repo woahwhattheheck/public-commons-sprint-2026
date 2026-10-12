@@ -204,3 +204,71 @@ The retained complete project is 87,394 bytes, SHA256 `9156505408514205f52caa6dc
 The subsequent original-purchase continuation reached revision 29 through `mcp_register`, source acceptance, allocation, period review/close and retained export. Four existing MySQL HPD quotes produced one exact-bound 50,000-atomic-unit expense, one separately carried unresolved signed quote and two unsigned rejections. The original D173 allocation and 10,000-unit unsent reservation remained intact; the new issued expense total was 60,000 atomic units in the same original testnet asset.
 
 The complete receiving project retained both native source kinds, all 14 tables, 14 committed requests and 24 project members, including the read-only quote-reader closure. The same case and issued edition reopened with no new source capture or payment. The original buyer's native reconciliation reused its existing optional Stellar SDK runtime; the expense capture itself required only Node's standard library. Desktop and mobile inspection of the included source completed with no page errors, and all owned processes closed.
+
+## Original buyer credits and refund receiving
+
+The same customer host exposes `refund_capture`, `refund_packets`, `refund_packet`, `refund_review`, `credits`, `credit` and `credit_coding_save` under the original `merchant_buyer_expense_` prefix. The JavaScript client derives `refundCapture`, `refundReview`, `creditCodingSave` and the corresponding read methods from the same contract. Successful mutations use the original Store transaction/request recovery and the same per-workspace child lifetime.
+
+Declare the original customer packets on the host, preserving exact source identities:
+
+```json
+{
+  "schema": "stellar-forge.buyer-expense-connection.v1",
+  "workspaces": {
+    "buyer": {
+      "directory": "/operator/buyer-expenses",
+      "refundSources": {
+        "original-return": {
+          "directory": "/received/original-refund",
+          "manifestSha256": "EXACT_ORIGINAL_MANIFEST_SHA256",
+          "siteUrl": "https://original-store.example",
+          "name": "Original customer refund",
+          "provenance": "The original operator, operation and retained source references",
+          "dataContext": "operational"
+        }
+      }
+    }
+  }
+}
+```
+
+The strings above are configuration placeholders. Supply the actual original packet/hash/store and use `development` for a retained development operation. Operational and development records stay in separate native workspaces. Existing `ledgers` and `quoteSources` may also declare `dataContext`, defaulting to `operational`.
+
+Capture the declared alias, inspect its source, then accept/reject the packet with a named reason and either the exact matching purchase item or explicit `register_original_purchase: true`. Read and code the original purchase before its returns. `credit_coding_save` uses the original exact native allocation shape and current return basis. It enforces original purchase dimensions, cumulative capacity and unique native return identity. Original store-currency credit and native returned units are never converted into one another.
+
+The existing `period_report`, `review` and `issued` views now include `credit_allocations`, `credit_totals`, `net_totals`, `credit_by_cost_center`, `net_by_cost_center` and `merchant_credit_outcomes`. Their immutable reports retain the original packet and source context. Reopen before changing a closed period. Use `export` kind `refund-packet` with the original packet ID for the unchanged customer source, or the existing accountant/project forms for a complete handoff. The maintained resumable downloader and trusted included-source receiver handle those original exports.
+
+No merchant mutation, new payment, signer or on-chain observation is initiated by the buyer-credit surface.
+
+### Completed original refund operation
+
+The original 7737/B41A order-18 redelivery completed through this customer interface in a separate development workspace at revision 19: two accepted original packets, one bound purchase, two exact return allocations and three issued editions. Native net progressed from 2500000 to 1500000 to 0 while the separate USD 2.50 purchase and USD 1.00 / USD 1.50 store credits stayed unchanged. Capture/final-close request recovery, host restart, original source/accountant exports and included-source receiving completed without a new payment or merchant call. The earlier operational 60000-unit buyer case was not changed. All 39 tools continue to use the same maintained contract; the added refund controls are part of the existing provider and SDK.
+
+## Native accounting export and paid-job receipt intake
+
+The same customer surface exposes `adjustment_capture` (SDK `adjustmentCapture`) alongside the existing `refund_capture`. Add an `adjustmentSources` object to the existing workspace declaration:
+
+```json
+{
+  "adjustmentSources": {
+    "job_resolution": {
+      "sourceFile": "/srv/starforge/original-merchant/adjustments-export.json",
+      "sourceSha256": "REPLACE_WITH_ORIGINAL_FILE_SHA256",
+      "eventId": "REPLACE_WITH_ORIGINAL_ACCOUNTING_EVENT_ID",
+      "name": "Original merchant adjustment decisions",
+      "provenance": "Record the actual source owner, job and original operation here.",
+      "dataContext": "operational"
+    }
+  }
+}
+```
+
+Replace both placeholders with the exact 64-character lowercase hexadecimal source identities before reading this connection. The host fixes the source path; a customer selects only the `adjustmentSource` alias. For a paid job, optionally declare `expectedJob:{job_id,settlement}` using the original job ID and a selection of the original accounting row's ten fields: `id, receiptFingerprint, transactionFingerprint, network, assetDigest, recipientDigest, amountAtomic, routeId, method, orderReferenceDigest`. Here `id` is the selected row's `eventId`. This binding is separate from the complete native SF98 job record, whose original `orderReference` remains retained by its owner. The native reader checks every selected field and SHA-256 of the original job ID.
+
+`adjustment_capture` retains the unchanged original `stellar-forge.merchant-adjustment-export.v1` JSON and all decisions for the selected event. Its reviewed SHA and selected job/event are retained separately in a buyer-selection manifest. The source remains the original accounting export; this is not a new merchant receipt format.
+
+Use `refund_packet` to inspect nullable `purchase`, plural `credits`, original `adjustments`, `source_sha256`, `source_reference`, original payment status and matching existing payments. Then `refund_review` accepts or rejects the retained selection. A reference-only export needs only the named decision; do not set purchase registration when no independent original payment proof is carried. With a proved purchase, select its existing item or explicitly register it. Every eligible native return gets an individual `credit_id`; `credit_ids` retains the whole selected set. If the same native reverse event is already allocated through another retained source, inspect that original credit and preserve its coding. The additional representation can be retained with an explicit `exclude_from_period` decision; attempting to allocate the same transfer again returns `RETURN_ALREADY_ALLOCATED`. Reopen and issue the affected period to retain the new source decision without rewriting earlier editions.
+
+The existing `credit`, `credit_coding_save`, period review/close/reopen and export operations complete the workflow. The report, review and issued tools add the paged `merchant_adjustment_outcomes` view. Pending returns, cancellations, withdrawn requests and unavailable original-payment proofs remain visible as source decisions without entering returned-unit totals. Optional Woo/store fields are null when not supplied; no exchange rate, currency amount or Woo order is manufactured.
+
+Stable request IDs recover the exact completed intake or period mutation. Stable export IDs recover the same source receipt, accountant edition or complete included-source project. `refund-packet` export retains the original JSON and explicitly named `buyer-selection.json` for generic intake. All other financial, source-context, lifecycle and resumable transfer semantics are unchanged.
