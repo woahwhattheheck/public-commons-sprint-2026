@@ -19,7 +19,7 @@ export async function openOpenFemaWorkspace({directory,inboxDirectory,releaseRun
   const store=await openWorkspaceStore(directory,{schema:WORKSPACE_SCHEMA,initialState:{portfolios:[],portfolioVersions:[],reviews:[],acceptances:[],comparisons:[],selectedPortfolioId:null,selectedVersionId:null}});
   const capture=createOpenFemaCapture({store,fetchImpl,userAgent}),publishers=nativePublishers(store),running=new Map(),controllers=new Map(),cache=new Map();
   await store.mutate(s=>{for(const c of s.captures)if(['RUNNING','IMPORTING'].includes(c.state)){c.state='PAUSED';c.error={code:'OPENFEMA_SESSION_REOPENED',message:'Continue the retained capture in this reopened workspace.'};}});
-  let closed=false,tail=Promise.resolve();
+  let closed=false,closePromise=null,tail=Promise.resolve();
   const releaseCapability=()=>({mode:releaseRuntime.facilitator?'NATIVE_X402':'CHALLENGE_ONLY',port:releaseRuntime.port??0,facilitatorConfigured:Boolean(releaseRuntime.facilitator),allowLocalFacilitator:releaseRuntime.allowLocalFacilitator===true});
   const schema=()=>workspaceSchema({workspaceId:store.read().workspaceId,inboxConfigured:Boolean(inboxDirectory),releaseRuntime:releaseCapability(),userAgent});
   async function version(id){
@@ -206,6 +206,16 @@ export async function openOpenFemaWorkspace({directory,inboxDirectory,releaseRun
     async received(id,name){return readBuyerOutput(store,choose(store.read().receipts,id,'customer delivery'),name);},
     async operation(id){return copy(store.read().operations[id]??null);},
     async waitForCaptures(){await Promise.allSettled([...running.values()]);return view();},
-    async close(){if(closed)return;closed=true;for(const control of controllers.values())control.abort();await Promise.allSettled([...running.values(),tail]);try{await publishers.close();}finally{await store.close();}}
+    close(){
+      if(!closePromise){
+        closed=true;for(const control of controllers.values())control.abort();
+        closePromise=(async()=>{
+          await Promise.allSettled([...running.values(),tail]);
+          await publishers.close();
+          await store.close();
+        })().catch(error=>{closePromise=null;throw error;});
+      }
+      return closePromise;
+    }
   };
 }

@@ -1,0 +1,47 @@
+<!--
+
+  Name:                 opentrans_orderresponse_1_0.dtd
+  Version:              1.0
+  Unchange since:       0.98
+  Date:                 07.09.2001
+  Authors:              Oliver Kelkar (olk),  Fraunhofer IAO Stuttgart
+                        Boris Otto (bo),      Fraunhofer IAO Stuttgart
+                        Volker Schmitz (stz), Universitaet Essen BLI
+			
+
+  Copyright 2000-2001, All Rights Reserved
+  Fraunhofer IAO Stuttgart, Universitaet Essen BLI
+  
+  // Namespace = http://www.opentrans.org/opentrans/1.0/opentrans_orderresponse   
+        
+  This DTD module is identified by the PUBLIC and SYSTEM identifiers:
+        
+  PUBLIC "-//OPENTRANS//DTD OPENTRANS ORDERRESPONSE 1.0//EN"
+  SYSTEM "opentrans_orderresponse_1_0.dtd"
+  
+-->
+
+
+<!ENTITY % OPENBASE SYSTEM "openbase_1_0.dtd">
+
+%OPENBASE;
+
+  <!ELEMENT ORDERRESPONSE (ORDERRESPONSE_HEADER , ORDERRESPONSE_ITEM_LIST , ORDERRESPONSE_SUMMARY)>
+    <!ATTLIST ORDERRESPONSE  
+                     version  CDATA  #FIXED "1.0"
+                     xmlns    CDATA  #FIXED 'http://www.opentrans.org/opentrans/1.0/opentrans_orderresponse'>
+
+  <!ELEMENT ORDERRESPONSE_HEADER (CONTROL_INFO? , ORDERRESPONSE_INFO)>
+
+  <!ELEMENT ORDERRESPONSE_INFO (ORDER_ID , ALT_CUSTOMER_ORDER_ID* , SUPPLIER_ORDER_ID? , ORDER_DATE? ,
+                     ORDERCHANGE_SEQUENCE_ID?, ORDERRESPONSE_DATE , DELIVERY_DATE? , ORDER_PARTIES ,
+                     PRICE_CURRENCY? , REMARK*)>
+
+  <!ELEMENT ORDERRESPONSE_ITEM_LIST (ORDERRESPONSE_ITEM+)>
+
+  <!ELEMENT ORDERRESPONSE_ITEM (LINE_ITEM_ID , ARTICLE_ID , QUANTITY , ORDER_UNIT , 
+                     ARTICLE_PRICE? , DELIVERY_DATE? , SHIPMENT_PARTIES? , SPECIAL_TREATMENT_CLASS* ,
+                     MIME_INFO? , REMARK*)>
+
+  <!ELEMENT ORDERRESPONSE_SUMMARY (TOTAL_ITEM_NUM, TOTAL_AMOUNT?)>
+

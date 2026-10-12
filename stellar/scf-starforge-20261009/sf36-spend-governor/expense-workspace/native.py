@@ -23,4 +23,7 @@ def capture_source(path, kind="sf36_ledger", node=None):
     if kind == "mcp_quote":
         from native_mcp import capture_mcp_quotes
         return capture_mcp_quotes(path, node=node)
-    raise ValueError("Choose an original SF36 ledger or native MCP quote workspace")
+    if kind == "governed_mcp":
+        from native_governed_mcp import capture_governed_mcp
+        return capture_governed_mcp(path, node=node)
+    raise ValueError("Choose an original SF36 ledger, MCP quote workspace or governed MCP source descriptor")

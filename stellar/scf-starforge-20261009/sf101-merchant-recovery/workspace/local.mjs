@@ -9,7 +9,10 @@ const CAPTURE_SCHEMA = 'stellar-forge.merchant-recovery-capture.v1';
 const BUNDLE_SCHEMA = 'stellar-forge.merchant-recovery.v1';
 const PAID_JOBS_SCHEMA = 'stellar-forge.paid-job-recovery-profile.v1';
 const PUBLISHER_SCHEMA = 'stellar-forge.dataset-publisher-recovery-profile.v1';
+const FLEET_SCHEMA = 'stellar-forge.fleet-recovery-profile.v1';
 const TYPED_CAPTURES = {
+  'merchant-fleet': { member: 'merchantFleet', schema: FLEET_SCHEMA,
+    planKey: 'merchantFleetPlan', errorPrefix: 'WORKSPACE_FLEET' },
   'paid-jobs': { member: 'paidJobs', schema: PAID_JOBS_SCHEMA,
     planKey: 'paidJobsPlan', errorPrefix: 'WORKSPACE_PAID' },
   'dataset-publisher': { member: 'datasetPublisher', schema: PUBLISHER_SCHEMA,
@@ -186,6 +189,7 @@ function captureResult(options, found, state, verification) {
     capture: { ...found.manifest.capture }, verified: Boolean(verification),
     original: { snapshot: state.originalSnapshot ?? null, verification: verification ?? null },
     retainedCaptures: [...(state.retainedCaptures ?? [])],
+    ...(state.merchantFleetVerification ? { merchantFleet: { ...state.merchantFleetVerification } } : {}),
     ...(state.paidJobsVerification ? { paidJobs: { ...state.paidJobsVerification } } : {}),
     ...(state.datasetPublisherVerification ? { datasetPublisher: { ...state.datasetPublisherVerification } } : {}) };
 }
@@ -220,6 +224,17 @@ export async function runLocalCapture({ options, state, save, cancelled = () => 
     need(current && current.snapshotId === found.snapshotId &&
       verified.status === 'SNAPSHOT_VERIFIED' && verified.files === found.manifest.fileCount &&
       verified.bytes === found.manifest.totalPlainBytes, 'WORKSPACE_CAPTURE_VERIFICATION_CHANGED');
+    if (declaredKind === 'merchant-fleet') {
+      const planBytes = retainedTypedPlan(state, options, declaredKind);
+      const { inspectCapturedFleetManifest } = await import('../../merchant-fleet-gateway/recovery.mjs');
+      const matched = inspectCapturedFleetManifest({ planBytes, manifest: current.manifest });
+      need(matched?.status === 'FLEET_RECOVERY_CAPTURE_MATCHED' &&
+        matched.planSha256 === options.expectedPlanSha256 && matched.captureId === expected.id &&
+        HEX.test(matched.profileSha256 ?? ''), 'WORKSPACE_FLEET_CAPTURE_VERIFICATION_CHANGED');
+      state.merchantFleetVerification = { schema: FLEET_SCHEMA,
+        planSha256: options.expectedPlanSha256, manifestSha256: current.snapshotId,
+        profileSha256: matched.profileSha256 };
+    }
     if (declaredKind === 'paid-jobs') {
       const planBytes = retainedTypedPlan(state, options, declaredKind);
       const { inspectCapturedPaidJobManifest } = await import('../paid-jobs.mjs');
@@ -270,6 +285,11 @@ export async function runLocalCapture({ options, state, save, cancelled = () => 
     found = await readCapturedBundle(options);
     need(found, 'WORKSPACE_CAPTURE_MANIFEST_MISSING');
     return verifyCaptured();
+  }
+  if (selected.kind === 'merchant-fleet') {
+    const { withFleetRecoveryCapture } = await import('../../merchant-fleet-gateway/recovery.mjs');
+    return withFleetRecoveryCapture({ planFile: options.plan,
+      expectedPlanSha256: expected.planSha256 }, captureAndVerify);
   }
   if (selected.kind === 'paid-jobs') {
     const { withPaidJobRecoveryCapture } = await import('../paid-jobs.mjs');

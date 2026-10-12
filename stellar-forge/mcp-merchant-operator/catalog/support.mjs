@@ -1,6 +1,8 @@
+import {commercialTools} from './commercial.mjs';
 // MIT. Original tool metadata; provider runtimes load only when selected.
 import { CASE_STATUSES } from '../../../stellar/scf-starforge-20261009/sf74-merchant-support-console/case-statuses.mjs';
 import { MAX_RETAINED_CHUNK_BYTES } from '../retained-file-contracts.mjs';
+import {serviceTools} from './service.mjs';
 
 const uuid = { type: 'string', pattern: '^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$' };
 
@@ -35,6 +37,8 @@ const sourceTools = new Set(['merchant_support_profiles', 'merchant_support_conf
 function supportTools(tool) {
   const read = { readOnly: true, idempotent: true };
   return [
+    ...serviceTools(tool),
+    ...commercialTools(tool),
     tool('merchant_support_incident_sources', 'Inspect the original support connection mode, configured incident source IDs/labels, bound source-file digest and host default. Reads no arbitrary path and starts no watcher.', {}, [], read),
     tool('merchant_support_destination', 'Inspect the currently selected source notification configuration at its exact revision. Slack resolves the original host token and reads the actual authenticated workspace/channel; webhook reports configuration resolution. Sends no notification.',
       { incidentSource, expectedConfigRevision: { type: 'integer', minimum: 1 } }, ['expectedConfigRevision'], { ...read, openWorld: true }),
@@ -77,7 +81,17 @@ function supportTools(tool) {
     tool('merchant_case_restore', 'Restore a retained case revision as a new current version through the original writer. Preserves later versions in history and requires the current expected revision.',
       { ...selected, revision: digest }, ['id', 'expectedRevision', 'revision']),
     tool('merchant_case_workorder', 'Prepare the original SF77 workorder from an exact saved case revision, its selected original sources and recorded owner terms. Returns the original packet without seller, payment or contact calls.', selected, ['id', 'expectedRevision'], read),
-    tool('merchant_case_export', 'Publish a private named export of the exact saved case, complete original support handoff and readable support report. includeWorkorder adds the same original SF77 packet, HTML and checklist. Export IDs never replace an existing delivery.',
+    tool('merchant_case_implementation', 'Read the saved merchant implementation, assigned work, original workorders, deliverables, technical/customer receiving and comparable measurements. Use the returned nextOffset to read a full selected section.',
+      { id: uuid, revision: digest, section: {enum:['overview','tasks','materials','receiving','measurements','events','editions','files','comparisons']},
+        offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:200} }, ['id'], read),
+    tool('merchant_case_implementation_prepare', 'Use the original saved case and SF77 builder to create or update its implementation work. Retain one requestId for lost-response recovery; exact replay reopens the original edition. New source fields preserve operator edits for selective adoption.',
+      { ...selected,expectedImplementationRevision:{type:'integer',minimum:0},requestId:text(160),actor:text(200),recordedAt:text(40) },
+      ['id','expectedRevision','expectedImplementationRevision','requestId','actor']),
+    tool('merchant_case_implementation_apply', 'Apply assigned work, original deliverables, source-field choices, receiving/corrections or effort measurements through the original case writer. Supply the exact case and implementation revisions and retain the original requestId and payload for replay.',
+      { ...selected,command:{...object({type:{enum:['record_workorder','select_workorder','update_plan','save_tasks','accept_source_changes','add_material','record_receiving','record_measurement']},
+        requestId:text(160),expectedRevision:{type:'integer',minimum:0},actor:text(200),recordedAt:text(40),payload:{type:'object'}}),
+        required:['type','requestId','expectedRevision','actor','payload']} }, ['id','expectedRevision','command']),
+    tool('merchant_case_export', 'Publish or resume a private named export of the exact saved case, complete original support handoff, implementation and service reports. includeWorkorder adds the original SF77 packet, HTML and checklist. Repeating the same original request completes its retained export or returns its verified completion, including after later case edits.',
       { ...selected, exportId: alias, includeWorkorder: { type: 'boolean' } }, ['id', 'expectedRevision', 'exportId']),
     tool('merchant_support_export_status', 'Inspect a named support export and verify the retained original files against its completion manifest. Reconcile an interrupted export before choosing a new ID.',
       { exportId: alias }, ['exportId'], read),
@@ -96,6 +110,8 @@ function supportTools(tool) {
 }
 
 const exportNames = ['case.json', 'merchant-workspace.json', 'merchant-support.json', 'support.html',
-  'owner-terms.json', 'packet.json', 'seller-packet.html', 'acceptance-checklist.md'];
+  'owner-terms.json', 'packet.json', 'seller-packet.html', 'acceptance-checklist.md',
+  'merchant-commissioning.json','merchant-implementation.html','merchant-implementation-tasks.csv',
+  'merchant-service.json','merchant-service-report.json','merchant-service-report.csv','merchant-service-report.html'];
 
 export { supportTools, alias, digest, uuid, notificationStatuses, page, text, selected, metadataSchema, termsSchema, exportNames, object };

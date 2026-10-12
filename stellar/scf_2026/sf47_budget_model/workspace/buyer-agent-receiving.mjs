@@ -12,9 +12,10 @@ const canonical = value => Array.isArray(value) ? '['+value.map(canonical).join(
   value && typeof value==='object' ? '{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonical(value[key])).join(',')+'}' : JSON.stringify(value);
 const need = (test,message) => {if(!test)throw Object.assign(new Error(message),{code:'BUYER_AGENT_RECEIVING_CONFLICT'});};
 const PINNED = {
-  'stellar/scf_2026/sf47_budget_model/workspace/agent-client.mjs':'ac45bca63b29804f069c140f21b834d60def33ee',
-  'stellar-forge/mcp-merchant-operator/grant-workspace.mjs':'b646d6daf70f2d977b170a94f238cbe52d82eeaa',
-  'stellar-forge/mcp-merchant-operator/catalog/grant-workspace.mjs':'3c7f267dd00b4cee0d934f05817d8b8193d72ed4'
+  'stellar/scf_2026/sf47_budget_model/workspace/agent-contracts.mjs':'9bed2f1855649c5dc07d205a704e1932edb55467',
+  'stellar/scf_2026/sf47_budget_model/workspace/agent-client.mjs':'a6fe73a2e59adfd95c13edd3b68264d50b7aae1c',
+  'stellar-forge/mcp-merchant-operator/grant-workspace.mjs':'6eb6a763f8886894f6ed8a0f7d36958ef6acfc76',
+  'stellar-forge/mcp-merchant-operator/catalog/grant-workspace.mjs':'ae644bd15fa7c72c5ced90ceaac47d974484a1cc'
 };
 async function regular(file) {
   const before=await lstat(file,{bigint:true});
@@ -107,7 +108,7 @@ async function history(client,caseId) {
 export async function receiveBuyerWithAgent(input) {
   need(input&&typeof input==='object'&&!Array.isArray(input),'Use the original receiving configuration.');
   const allowed=['schema','operationId','sourceRoot','sourceHead','workspaceDirectory','outputDirectory','caseId',
-    'originalHandoffPath','sourceSha256','purchaseId','deploymentId','actor','nodeExecutable','pythonExecutable'];
+    'originalHandoffPath','sourceSha256','purchaseId','deploymentId','actor','nodeExecutable','pythonExecutable','cohort'];
   need(Object.keys(input).every(key=>allowed.includes(key)),'The receiving configuration contains an unknown field.');
   need(input.schema==='sf47.native-buyer-agent-phase.v1','Use the original buyer agent phase schema.');
   for(const key of ['sourceRoot','workspaceDirectory','outputDirectory','originalHandoffPath','nodeExecutable','pythonExecutable'])
@@ -138,12 +139,13 @@ export async function receiveBuyerWithAgent(input) {
   const sourceFiles=[];
   for(const[path,expected]of Object.entries(PINNED)) {
     const bytes=await regular(join(input.sourceRoot,path));
-    need(gitBlob(bytes)===expected,'Use the complete original merged55-tool source: '+path);
+    need(gitBlob(bytes)===expected,'Use the complete original buyer/cohort agent source: '+path);
     sourceFiles.push({path,gitBlob:expected,sha256:digest(bytes),bytes:bytes.length});
   }
   const runtime=await import(pathToFileURL(join(input.sourceRoot,'stellar-forge/mcp-merchant-operator/grant-workspace.mjs')).href);
   const clientModule=await import(pathToFileURL(join(input.sourceRoot,'stellar/scf_2026/sf47_budget_model/workspace/agent-client.mjs')).href);
-  need(runtime.grantWorkspaceTools.length===55,'Use the complete original55-tool catalogue.');
+  need(runtime.grantWorkspaceTools.length===58&&['merchant_grant_cohort_seed','merchant_grant_cohort_preview','merchant_grant_cohort_prepare'].every(name=>runtime.grantWorkspaceTools.some(tool=>tool.name===name)),
+    'Use the complete original 58-tool buyer/cohort catalogue.');
   const alias='original',exportsDirectory=await privateDirectory(join(output,'retained'));
   const connectionFile=join(output,'connection.json');
   await retain(connectionFile,{schema:runtime.GRANT_WORKSPACE_CONNECTION_SCHEMA,workspaces:{[alias]:{
@@ -152,7 +154,7 @@ export async function receiveBuyerWithAgent(input) {
   }}},{immutable:true});
   const originalNode=process.env.SF47_BUYER_NODE;
   process.env.SF47_BUYER_NODE=input.nodeExecutable;
-  let provider=null,client=null,result=null,phaseError=null;const shutdownErrors=[],artifacts=[];
+  let provider=null,client=null,result=null,phaseError=null,cohortResult=null;const shutdownErrors=[],artifacts=[];
   const saveArtifact=async(name,bytes,immutable=true)=>{
     const row=await retain(join(output,name),bytes,{immutable});artifacts.push(row);return row;
   };
@@ -232,6 +234,45 @@ export async function receiveBuyerWithAgent(input) {
     const after=(await client.read('case',{caseId:input.caseId})).value;
     need(canonical(selection(after))===canonical(selection(baseline)),'Receiving an attached historical source changed the current original case.');
     need(canonical(await history(client,input.caseId))===canonical(originalHistory),'The repeated source changed the original case history.');
+    if(input.cohort) {
+      const selected=input.cohort;
+      need(selected.request?.action==='cohort.prepare'&&selected.receipt?.recordId===selected.reviewId,
+        'Use the original browser cohort request and exact committed review.');
+      const review=(await client.read('review',{caseId:input.caseId,reviewId:selected.reviewId})).value;
+      need(review.purpose==='COHORT_EVALUATION'&&review.cohort.previewSha256===selected.request.data.expectedPreviewSha256,
+        'The original cohort preparation and reviewed source differ.');
+      const seededSnapshot=await provider.call('merchant_grant_cohort_seed',{workspace:alias,caseId:input.caseId,
+        expectedVersion:after.program.version,tranche:review.cohort.inputs.tranche});
+      const seed=await receiveFile(provider,alias,seededSnapshot,join(output,'original-cohort-seed.json'));artifacts.push(seed.file);
+      const previewSnapshot=await provider.call('merchant_grant_cohort_preview',{workspace:alias,caseId:input.caseId,
+        expectedVersion:after.program.version,inputs:review.cohort.inputs});
+      const previewFile=await receiveFile(provider,alias,previewSnapshot,join(output,'original-cohort-agent-preview.json'));
+      artifacts.push(previewFile.file);const measured=JSON.parse(previewFile.bytes);
+      const typedPreview=await client.cohortPreview(input.caseId,after.program.version,review.cohort.inputs);
+      need(canonical(typedPreview.value)===canonical(measured)&&
+        measured.source.measurementSha256===review.cohort.source.measurementSha256,
+        'The original typed and MCP cohort readers disagree about the retained source.');
+      const {action,data,...envelope}=selected.request,body={...envelope,inputs:data.inputs,expectedPreviewSha256:data.expectedPreviewSha256};
+      const replaySnapshot=await provider.call('merchant_grant_cohort_prepare',{workspace:alias,caseId:input.caseId,...body});
+      const replayFile=await receiveFile(provider,alias,replaySnapshot,join(output,'original-cohort-prepare-replay.json'));artifacts.push(replayFile.file);
+      const typedReplay=await client.cohortPrepare(input.caseId,body);
+      need(canonical(JSON.parse(replayFile.bytes))===canonical(selected.receipt)&&
+        canonical(typedReplay.value)===canonical(selected.receipt),'The original cohort request did not replay its first committed result.');
+      const observedRows=await rows(provider,alias,previewSnapshot,'/observations');
+      need(canonical(observedRows.rows)===canonical(measured.observations),'The original cohort evidence rows were truncated.');
+      const cohortSnapshot=await provider.call('merchant_grant_export',{workspace:alias,kind:'cohort',caseId:input.caseId,reviewId:selected.reviewId});
+      const cohortBundle=await receiveFile(provider,alias,cohortSnapshot,join(output,'Original_Cohort_Agent_Evidence.zip'));artifacts.push(cohortBundle.file);
+      const typedBundle=await client.download('cohort',{caseId:input.caseId,reviewId:selected.reviewId});
+      need(typedBundle.bytes.equals(cohortBundle.bytes)&&cohortBundle.file.sha256===selected.bundle.sha256,
+        'The original browser, typed client and MCP cohort downloads differ.');
+      const latest=(await client.read('case',{caseId:input.caseId})).value;
+      need(canonical(selection(latest))===canonical(selection(after))&&canonical(await history(client,input.caseId))===canonical(originalHistory),
+        'Replaying the original cohort altered the retained operating case or history.');
+      cohortResult={reviewId:selected.reviewId,requestId:selected.request.requestId,caseVersion:latest.program.version,
+        previewSha256:measured.previewSha256,measurementSha256:measured.source.measurementSha256,
+        observations:observedRows.count,observationPages:observedRows.pages,completeExportPages:cohortBundle.pages,
+        bundle:cohortBundle.file,originalPrepareReplayed:true};
+    }
     const source=after.sources.find(row=>row.buyerHandoff?.sourceSha256===input.sourceSha256);
     need(source,'The original received source association is missing.');
     const sourceSnapshot=await provider.call('merchant_grant_export',{workspace:alias,kind:'source',caseId:input.caseId,sourceId:source.id});
@@ -263,7 +304,7 @@ export async function receiveBuyerWithAgent(input) {
       operationId:input.operationId,inputSha256:digest(json(input)),sourceHead:input.sourceHead,sourceFiles,
       caseId:input.caseId,caseVersion:after.program.version,purchaseId:input.purchaseId,deploymentId:input.deploymentId,
       originalSourceId:source.id,originalSourceSha256:input.sourceSha256,originalSourceBytes:handoff.length,
-      requestId:request.body.requestId,receipt,toolCount:runtime.grantWorkspaceTools.length,
+      requestId:request.body.requestId,receipt,cohort:cohortResult,toolCount:runtime.grantWorkspaceTools.length,
       previewFilePages:previewReceipt.previewFilePages,previewRowPages:previewReceipt.previewRowPages,
       purchaseRowPages:purchases.pages,purchaseCount:purchases.count,completeExportPages:bundle.pages,
       managedServices:[firstService,reopenedService],bundle:bundle.file,artifacts:retainedArtifacts,

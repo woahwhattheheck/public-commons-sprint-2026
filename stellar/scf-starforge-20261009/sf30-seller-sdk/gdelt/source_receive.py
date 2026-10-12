@@ -20,6 +20,8 @@ from zip_decode import decode as decode_zip
 
 ATTRIBUTION = "Source: The GDELT Project — https://www.gdeltproject.org/"
 CODEBOOK = "https://data.gdeltproject.org/documentation/GDELT-Event_Codebook-V2.0.pdf"
+GKG_CODEBOOK = "https://data.gdeltproject.org/documentation/GDELT-Global_Knowledge_Graph_Codebook-V2.1.pdf"
+GKG_TABLES = {"articles", "article-entities", "article-measures", "article-details"}
 
 
 def checksum(value):
@@ -27,7 +29,7 @@ def checksum(value):
     return hashlib.sha256(raw).hexdigest()
 
 
-def source_descriptors(record, batch, contract):
+def source_descriptors(record, batch, contract, *, gkg=False):
     body = record.get("body")
     if (record.get("url") not in {
             "https://data.gdeltproject.org/gdeltv2/lastupdate.txt",
@@ -56,14 +58,14 @@ def source_descriptors(record, batch, contract):
             contract.fail("ORIGINAL_MANIFEST_LINES_CHANGED")
         addresses.add(match[3])
         kind = {"export.CSV": "events", "mentions.CSV": "mentions", "gkg.csv": "gkg"}[match[5]]
-        if match[4] == batch and kind != "gkg":
+        if match[4] == batch and (kind == "gkg" if gkg else kind != "gkg"):
             if kind in selected or int(match[1]) > 24 * 1024 * 1024:
                 contract.fail("ORIGINAL_MANIFEST_SELECTION_CHANGED")
             selected[kind] = {"batch": batch, "kind": kind, "bytes": int(match[1]),
                               "md5": match[2].lower(), "advertisedUrl": match[3],
                               "url": re.sub(r"^http:", "https:", match[3]),
                               "member": batch + "." + match[5]}
-    if set(selected) != {"events", "mentions"}:
+    if set(selected) != ({"gkg"} if gkg else {"events", "mentions"}):
         contract.fail("ORIGINAL_MANIFEST_SELECTION_CHANGED")
     return selected
 
@@ -74,7 +76,7 @@ def row_identity(row, contract):
 
 def validate_manifest(value, source_set_id, expected, contract):
     if (value.get("sourceSetId") != source_set_id or value.get("attribution") != ATTRIBUTION
-            or value.get("codebookUrl") != CODEBOOK
+            or value.get("codebookUrl") not in {CODEBOOK, GKG_CODEBOOK}
             or set(expected) != {"source-set.json", "gdelt-schema.json", "review.json"}):
         contract.fail("SOURCE_MANIFEST_CHANGED")
     contract.sha(value.get("reviewId"), "reviewId")
@@ -95,7 +97,8 @@ class GdeltSourceFiles(SourceFiles):
         source_set = parse(self.read_file("source-set.json"))
         if (source_set.get("schema") != "stellar-forge.gdelt-source-set.v1"
                 or source_set.get("attribution") != ATTRIBUTION
-                or source_set.get("codebookUrl") != CODEBOOK
+                or source_set.get("codebookUrl") not in {CODEBOOK, GKG_CODEBOOK}
+                or source_set.get("codebookUrl") != self.manifest.get("codebookUrl")
                 or not isinstance(source_set.get("captures"), list)):
             self.contract.fail("SOURCE_SET_INVALID")
         identity = {key: source_set[key] for key in ("schema", "captures", "attribution", "codebookUrl")}
@@ -103,19 +106,22 @@ class GdeltSourceFiles(SourceFiles):
                 or source_set["sourceSetId"] != self.manifest["sourceSetId"]):
             self.contract.fail("SOURCE_SET_CHANGED")
         batches, captures = [], []
+        gkg = source_set["codebookUrl"] == GKG_CODEBOOK
+        expected_schema = "stellar-forge.gdelt-gkg-capture.v1" if gkg else "stellar-forge.gdelt-capture.v1"
+        expected_kinds = {"gkg"} if gkg else {"events", "mentions"}
         for capture in source_set["captures"]:
             identity = {key: capture[key] for key in ("schema", "batch", "manifest", "sources", "attribution", "codebookUrl")}
-            if (capture.get("schema") != "stellar-forge.gdelt-capture.v1"
+            if (capture.get("schema") != expected_schema
                     or checksum(identity) != capture.get("captureId")
                     or capture.get("attribution") != ATTRIBUTION
-                    or capture.get("codebookUrl") != CODEBOOK
-                    or len(capture.get("sources", [])) != 2):
+                    or capture.get("codebookUrl") != source_set["codebookUrl"]
+                    or len(capture.get("sources", [])) != len(expected_kinds)):
                 self.contract.fail("CAPTURE_CHANGED")
-            descriptors = source_descriptors(capture["manifest"], capture["batch"], self.contract)
+            descriptors = source_descriptors(capture["manifest"], capture["batch"], self.contract, gkg=gkg)
             kinds = set()
             for source in capture["sources"]:
                 kind = source.get("kind")
-                if kind not in {"events", "mentions"} or kind in kinds:
+                if kind not in expected_kinds or kind in kinds:
                     self.contract.fail("SOURCE_TABLE_INVENTORY_CHANGED")
                 kinds.add(kind)
                 descriptor = descriptors[kind]
@@ -143,11 +149,14 @@ class GdeltSourceFiles(SourceFiles):
                 or review["captureIds"] != captures
                 or review.get("semantics") != semantics
                 or semantics.get("schema") != "stellar-forge.gdelt-schema.v1"
-                or semantics.get("captureIds") != captures):
+                or semantics.get("captureIds") != captures
+                or semantics.get("codebookUrl") != source_set["codebookUrl"]
+                or (review.get("policy", {}).get("table") in GKG_TABLES) != gkg):
             self.contract.fail("REVIEW_OR_MEANING_CHANGED")
         return {"sourceSetId": source_set["sourceSetId"], "captureIds": captures, "batches": batches,
                 "reviewId": review["id"], "rowCount": review["rowCount"],
-                "table": review["policy"]["table"], "attribution": ATTRIBUTION}
+                "table": review["policy"]["table"], "attribution": ATTRIBUTION,
+                **({"format": "gkg"} if gkg else {})}
 
     def settle(self):
         """Settle recovered file/directory publication before returning the receipt."""

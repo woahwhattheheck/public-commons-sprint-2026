@@ -11,6 +11,9 @@ This project turns the thirteen-module DPSA DISO curriculum into one editable Mo
 | Authored learning chapters | 78 |
 | Application chapters | 26 |
 | Personal practice workbooks | 26 |
+| Scenario exhibits | 30 |
+| Editable working tables | 55 |
+| Practical decision prompts | 78 |
 | Worked-answer and reflection pages | 26 |
 | Native question-bank questions | 312 |
 | Single-answer multiple choice | 155 |
@@ -27,12 +30,13 @@ This project turns the thirteen-module DPSA DISO curriculum into one editable Mo
 
 Every unit contains twelve assessment questions, a practical deliverable, its review rubric, and reflection. Each module includes a source-linked public-sector example and explicitly fictional application material. The video scripts contain complete original narration, editable screen text, and source references. The image questions retain their editable layout and SVG as well as the PNG background Moodle imports.
 
-The course uses a 75% pass mark, unlimited attempts, the highest result, and immediate computer-graded feedback. Completion requires all twenty-six unit assessments. A personal workbook submission opens the corresponding suggested answer and reflection page through Moodle's completion-based availability. The learner book and handbook contain the exercise; the separate instructor guide contains the worked answers.
+The course uses a 75% pass mark, unlimited attempts, the highest result, and immediate computer-graded feedback. Completion requires all twenty-six unit assessments. A personal workbook submission opens the corresponding suggested answer and reflection page through Moodle's completion-based availability. The learner book and handbook contain each exercise, its concrete scenario exhibits, working tables and decision prompts. The separate instructor guide and completion-gated guidance contain the worked reasoning and calculations. Each practical unit also compiles to an editable Markdown working document, and the complete practice handbook brings all twenty-six together.
 
 ## Source layout
 
 - curriculum/course.json: ordered course and module identities.
 - curriculum/modules/: all thirteen editable module sources.
+- curriculum/workbooks.json: thirty authored scenario exhibits, fifty-five working tables and complete worked guidance across all twenty-six practical units.
 - curriculum/sources.json: original official source catalog and scope notes.
 - curriculum/glossary.json: fifty-eight definitions with references.
 - curriculum/media/scripts.json: thirteen complete four-scene presentations.
@@ -61,7 +65,7 @@ The whole operation performs these phases:
 
 1. Render both editable assessment diagrams.
 2. Render all thirteen narrated, captioned module presentations.
-3. Compile all twenty-six books, assessments, practical activities and guidance pages, plus both handbooks.
+3. Compile all twenty-six books, assessments, practical activities and guidance pages, plus the learner, instructor and practical workbooks.
 4. Start the owned MariaDB database and original Moodle4.5 installation, or use the configured original local installation.
 5. Import all course resources through original Moodle APIs and create the complete native course backup.
 6. Restore that backup into a second original Moodle course, retaining the restore target and controller identities.
@@ -69,7 +73,11 @@ The whole operation performs these phases:
 8. Use the ordinary learner browser to save a workbook, open its guidance, play the captioned presentation, complete an unsuccessful assessment and a successful retry, use all seven question formats, reopen the received course, and receive desktop/mobile views and logout.
 9. Package the editable source, generated learning material, native MBZ, receiving results, and screenshots into the complete course ZIP.
 
-The program keeps its original course, question-bank, learner, attempt, restore and backup identities. Reopening a completed import preserves later course edits. A completed media render and compiled course are reused when their exact files remain present. Partial phases retain their actual native state and logs for correction in the same operation.
+The ordinary browser runner waits for Moodle's asynchronous start/submit confirmation or the actual destination page, and receives the complete PHP output after its streams close. It keeps the same learner attempt through those transitions.
+
+The program keeps its original course, question-bank, learner, attempt, restore and backup identities. Reopening a completed import preserves later course edits. Each completed module presentation is saved with its exact script, renderer, voice, binary and output identities, so an interrupted thirteen-module render continues from its completed presentations. A completed compiled course is also reused when its exact files remain present.
+
+Media PCM, FFmpeg temporary files and browser profiles use the operation's own temporary directory. Their storage stays within the selected operation footprint even when the host's shared temporary volume is full. The original Moodle archive is marked complete only after every member is received. An interrupted extraction reuses exact complete files and finishes exact partial prefixes; different existing source remains available for an explicit source correction. Partial native phases retain their actual course state and logs for continuation in the same operation.
 
 The speech mode for the complete receiving configuration is require. Use an installed local speech voice; the builder supports espeak-ng, espeak, or macOS say. The generated MP4 and MP3 timing comes from the actual PCM audio. Captions and transcripts contain the complete authored narration. The captioned mode can also generate a complete video edition when an editor explicitly chooses it.
 
@@ -96,6 +104,7 @@ The completed operation writes:
 - native/DPSA_DISO_Complete.mbz
 - compiled/Complete_DISO_Course.html
 - compiled/Instructor_Guidance.html
+- compiled/Complete_DISO_Practice_Workbook.html and compiled/workbooks/ with all twenty-six editable Markdown working documents
 - compiled/package.json and SOURCE_MANIFEST.json
 - browser/ with the actual learner receiving and screenshots
 

@@ -707,21 +707,22 @@ class DuckDBWorkspace:
                     prior = parse(current[1].encode())
                     if prior["sql"] == sql and prior["parameters"] == parameters:
                         db.commit()
-                        return prior
+                        return {**prior, "parameters_text": _json(prior["parameters"])}
                     name = prior["name"]
                 record = {"query_id": query_id, "name": name, "revision": revision + 1, "sql": sql,
                           "parameters": parameters, "saved_at": _now()}
                 db.execute("INSERT INTO sf_queries VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET revision=excluded.revision,record=excluded.record", [query_id, name, revision + 1, _json(record)])
                 db.execute("INSERT INTO sf_query_history VALUES(?,?,?)", [query_id, revision + 1, _json(record)])
                 db.commit()
-                return record
+                return {**record, "parameters_text": _json(record["parameters"])}
             except BaseException:
                 db.rollback()
                 raise
 
     def queries(self):
         with self._guard(), self._connection() as db:
-            return {"queries": [parse(row[0].encode()) for row in db.execute("SELECT record FROM sf_queries ORDER BY name").fetchall()]}
+            records = [parse(row[0].encode()) for row in db.execute("SELECT record FROM sf_queries ORDER BY name").fetchall()]
+            return {"queries": [{**record, "parameters_text": _json(record["parameters"])} for record in records]}
 
     def exports(self):
         with self._guard(), self._connection() as db:

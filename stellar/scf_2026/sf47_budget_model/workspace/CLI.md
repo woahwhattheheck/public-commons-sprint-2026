@@ -177,3 +177,31 @@ The earlier source integration [PR1167](https://github.com/woahwhattheheck/publi
 ## Operating forecasts
 
 The original `operations` command includes `forecast-preview`, `forecast-save`, `forecasts`, `forecast-show` and `forecast-export`. Use the same case ID, explicit expected version and stable request ID. Saving additionally requires the exact reviewed preview SHA-256 and complete input JSON. Full examples and source/receiving semantics are in [FORECAST.md](FORECAST.md). The ordinary case `export` and `import` commands carry all immutable saved forecasts with the original source and work/payment records.
+
+## Cohort acceptance and its original tranche join
+
+Use `operations cohort-seed`, `cohort-preview`, `cohort-prepare` and `cohort-export` against the same retained case. Put `--workspace` after `operations` and before the selected action. The seed/preview need the exact current case version; preparation also needs the original actor/request ID, complete reviewed `--inputs` object and exact `--expected-preview-sha256`. An unchanged retry reuses the same request and source.
+
+The complete walkthrough and commands are in [OPERATIONS-COHORT.md](OPERATIONS-COHORT.md). `completion-preview` and `completion-prepare` accept optional `cohortReviewIds` inside their existing `--data` JSON. Native preparation checks the original review's tranche, cutoff, targets and measurement currentness and includes its original sources in the same completion ZIP. Omitting the field preserves the existing behavior. Ordinary case export/import retains all cohort reviews and their original history; it does not create replacement purchases.
+
+## Customer installation commissioning and receiving
+
+The existing `operations` command now includes `installations`, `installation-seed`, `installation-preview`, `installation-save`, `installation-show`, `installation-history` and `installation-export`. They operate the original workspace and case. Seed returns the complete editable `document`; save takes the reviewed document file and appends one immutable installation edition in the same original request transaction.
+
+For example, read the current heads and reopen an exact saved edition:
+
+~~~sh
+python3 workspace/cli.py operations --workspace /absolute/private/workspace \
+  installations --case operation-ORIGINAL
+
+python3 workspace/cli.py operations --workspace /absolute/private/workspace \
+  installation-show --case operation-ORIGINAL \
+  --installation installation-ORIGINAL --revision 1
+
+python3 workspace/cli.py operations --workspace /absolute/private/workspace \
+  installation-export --case operation-ORIGINAL \
+  --installation installation-ORIGINAL --revision 1 \
+  --output /absolute/private/output/complete-installation.zip
+~~~
+
+The complete handover is received by the original `operations import` command, which returns the selected installation alongside the new case identity. Continue with that exact saved edition, its original acceptance input and source closure. Reopen original request IDs after uncertain saves or imports. The complete commissioning input, preview/save options and receiving example are in [INSTALLATIONS.md](INSTALLATIONS.md).

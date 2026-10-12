@@ -304,7 +304,15 @@ For a local development deployment, explicitly choose `local-plaintext`.
 If either the data or Sentinel connection uses this mode, every seed, mapped
 endpoint and discovered destination must be `127.0.0.1`, `::1` or
 `localhost`. The source checks discovered destinations as well as the initial
-profile. Use the verified TLS profiles for a remote deployment.
+profile. Use verified TLS for a directly reachable remote deployment. A complete
+SSH deployment instead owns explicit loopback forwards on the application host,
+as described below.
+
+An optional `nodeAddressPolicy: "mapped-only"` requires every discovered address
+to appear in `nodeAddressMap`. The SSH compiler enables this policy and retains
+both announced endpoints and the corresponding local forwards. Unreviewed
+addresses fail with `REDIS_NODE_ADDRESS_UNMAPPED`, including unknown loopback
+addresses. Profiles that omit the policy keep their existing discovery behavior.
 
 ### Connection lifetime
 
@@ -323,6 +331,38 @@ fall through to another configured seed using the native driver.
 A client deadline ends the reader's request; a script already executing on
 Redis continues according to the server's script lifecycle. Stopping a seller
 uses the existing HTTP drain before closing its source.
+
+## Operate an application through SSH
+
+The installed `redis-ssh` command owns the complete database access inventory and
+the application using it. It supports standalone, Cluster and Sentinel hosts
+that provide SSH access to the database's own loopback interface. Each data node
+and Sentinel monitor has an explicit host identity, credential reference, local
+port and announced-address mapping. The customer application runs on its own
+application host.
+
+Start with the appropriate `deployment/example-*.json` and the full
+[SSH deployment guide](deployment/SSH_DEPLOYMENT.md). Review its semantic digest,
+prepare the original commissioning input, and run that same customer workflow:
+
+~~~sh
+starforge redis-ssh profile --deployment /srv/customer/ssh-deployment.json
+starforge redis-ssh prepare --deployment /srv/customer/ssh-deployment.json --input /srv/customer/commissioning-input.json --output /srv/customer/commissioning-via-ssh.json
+starforge redis-ssh run --deployment /srv/customer/ssh-deployment.json --sha256 REVIEWED_DEPLOYMENT_SHA256 -- starforge redis-commission receive --input /srv/customer/commissioning-via-ssh.json --workspace /srv/customer/commission
+~~~
+
+The original commissioning input retains its selected products, operation IDs,
+prices, customer expectations and release controls. The SSH preparation changes
+only its connection to the reviewed forwards. Set the required environment
+references on the application host before receiving. The complete guide covers
+the original CLI arguments, saved workspace, customer export, managed runtime,
+host-key files, restart behavior and the full native operating journey.
+
+All forwards authenticate before the application starts. A lost connection ends
+that application and its child process group, then closes the remaining
+forwards. The next start opens a fresh group from the same reviewed input. The
+manager pins the exact known-host bytes it uses, retains private-key references
+and uses OpenSSH's existing public-key and host-verification implementation.
 
 ## Grant the command and key permissions
 

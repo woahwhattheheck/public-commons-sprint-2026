@@ -61,7 +61,7 @@ def stop_child(child):
 
 def source_manifest(root):
     names=["erddap_source.py","erddap_workspace.py","erddap_server.py","public/index.html","public/app.js","public/style.css",
-           "delivery/browser-owner.py","delivery/browser-phase.cjs"]
+           "delivery/browser-owner.py","delivery/browser-phase.cjs","provider_handoff.py","provider_handoff_workspace.py"]
     return {name:{"bytes":(root/name).stat().st_size,"sha256":digest(root/name)} for name in names}
 
 def verify_exports(output,result):
@@ -102,6 +102,8 @@ def main():
     parser.add_argument("--operation-root",type=Path,required=True)
     parser.add_argument("--workspace",type=Path)
     parser.add_argument("--source-packet",type=Path,action="append",default=[])
+    parser.add_argument("--handoff-profile",type=Path,action="append",default=[],
+                        help="Complete original provider profile JSON, bound to a retained source")
     parser.add_argument("--temporary-root",type=Path)
     parser.add_argument("--screenshots",action="store_true")
     args=parser.parse_args()
@@ -132,8 +134,10 @@ def main():
         if not node:raise RuntimeError("Select the existing Node runtime")
         os.environ.setdefault("SF30_XML_NODE",node)
         sys.path.insert(0,str(root))
-        from erddap_workspace import Workspace
+        from erddap_workspace import Workspace, load_json
         from erddap_server import OperatorServer
+        from provider_handoff_workspace import HandoffStore
+        from provider_handoff import MAX_PROFILE
         try:
             original=Workspace(workspace,create=not workspace.exists());workspaces.append(original)
             # Each engine is the maintained original native engine. These leases
@@ -154,6 +158,28 @@ def main():
                 seen.add(sha)
                 inputs.append({"path":str(p),"name":p.name,"label":p.stem,"sha256":sha,"bytes":p.stat().st_size})
             input_identity=hashlib.sha256(encoded([{"sha256":x["sha256"],"bytes":x["bytes"],"name":x["name"]} for x in inputs])).hexdigest()
+            handoff_inputs=[];handoff_sources=set();handoffs=HandoffStore(original)
+            for filename in args.handoff_profile:
+                profile_path=filename.resolve()
+                with profile_path.open("rb") as stream:raw=stream.read(MAX_PROFILE+1)
+                if len(raw)>MAX_PROFILE:raise ValueError("The supplied provider profile exceeds the original profile byte limit")
+                profile=load_json(raw)
+                if not isinstance(profile,dict) or profile.get("schema")!="stellar-forge.erddap-provider-handoff.v1":
+                    raise ValueError("Supply the complete direct original provider profile object")
+                source_id=profile.get("sourceId")
+                if source_id in handoff_sources:raise ValueError("Choose one original provider profile per source")
+                if source_id not in seen:raise ValueError("The profile must bind one of this owner's original complete source packets")
+                handoff_sources.add(source_id)
+                # A review bundle preserves unanswered provider appointments.
+                # A fresh packet is imported by the same browser before preview;
+                # an already retained source can be reviewed immediately.
+                retained_ids={item["id"] for item in original.state()["sources"]}
+                preview=handoffs.preview(source_id,profile) if source_id in retained_ids else None
+                chosen=preview["profile"] if preview else profile
+                handoff_inputs.append({"path":str(profile_path),"name":profile_path.name,"bytes":len(raw),
+                    "sha256":hashlib.sha256(raw).hexdigest(),"sourceId":source_id,"profile":chosen,
+                    "profileSha256":hashlib.sha256(encoded(chosen)).hexdigest(),"review":preview["review"] if preview else None})
+            handoff_identity=hashlib.sha256(encoded([{"sourceId":x["sourceId"],"sha256":x["sha256"],"bytes":x["bytes"]} for x in handoff_inputs])).hexdigest()
             ports=load(output/"ports.json",{})
             original_server=OperatorServer(original,ports.get("original",0))
             original_thread=threading.Thread(target=original_server.serve_forever,name="erddap-original-http")
@@ -166,6 +192,7 @@ def main():
                    "workspaceId":original_server.workspace_id,"receiverWorkspaceId":receiver_server.workspace_id,
                    "original":original_server.startup(),"receiver":receiver_server.startup(),
                    "inputs":inputs,"inputManifestSha256":input_identity,"sourceFiles":source_manifest(root),
+                   "handoffProfiles":handoff_inputs,"handoffManifestSha256":handoff_identity,
                    "outputDirectory":str(output),"screenshots":args.screenshots}
             save(output/"ready.private.json",ready)
             generation.update(state="browser",inputManifestSha256=input_identity,sourceFiles=ready["sourceFiles"])
@@ -185,7 +212,7 @@ def main():
             servers.clear()
             for current in reversed(workspaces):current.close()
             workspaces.clear()
-            reopened=[]
+            reopened=[];handoff_reopened=[]
             with Workspace(receiver) as check:
                 for item in result["receiving"]:
                     view=check.build_view(item["build"])
@@ -195,14 +222,26 @@ def main():
                         raise ValueError("The closed and reopened customer workspace differs from its original edition")
                     reopened.append({"build":item["build"],"snapshot":view["native"]["snapshot"],"rowCount":view["rowCount"],
                                      "fields":query["response"]["body"]["fields"],"rows":query["response"]["body"]["rows"]})
-            generation.update(state="complete",receiverReopened=reopened,
+                receiving_handoffs=HandoffStore(check)
+                for item in result.get("providerReceiving",[]):
+                    value=receiving_handoffs.received(item["sha256"])
+                    receipt=value["receipt"]
+                    retained=receiving_handoffs.received_path(item["sha256"])
+                    if (digest(retained)!=item["sha256"] or retained.stat().st_size!=item["bytes"] or
+                        receipt["revision"]!=item["revision"] or receipt["sourceId"]!=item["sourceId"] or
+                        receipt["rowCount"]!=item["rowCount"] or receipt["mode"]!=item["mode"]):
+                        raise ValueError("The reopened provider handoff differs from its original exact bundle")
+                    handoff_reopened.append({"sha256":item["sha256"],"bytes":item["bytes"],"revision":receipt["revision"],
+                        "sourceId":receipt["sourceId"],"mode":receipt["mode"],"rowCount":receipt["rowCount"],
+                        "stationCount":receipt["stationCount"],"ready":receipt["ready"]})
+            generation.update(state="complete",receiverReopened=reopened,handoffReceiverReopened=handoff_reopened,
                               completedAt=datetime.datetime.now(datetime.timezone.utc).isoformat())
             public["status"]="ERDDAP_OPERATOR_RECEIVING_COMPLETE"
             public["result"]={"file":"browser-result.json","bytes":(output/"browser-result.json").stat().st_size,
                               "sha256":digest(output/"browser-result.json")}
             save(public_path,public)
             print(json.dumps({"status":public["status"],"result":str(public_path),"sources":len(inputs),
-                              "builds":len(result["builds"]),"receiverReopened":len(reopened)}),flush=True)
+                              "builds":len(result["builds"]),"receiverReopened":len(reopened),"providerBundlesReopened":len(handoff_reopened)}),flush=True)
         except BaseException as error:
             generation.update(state="failed",error={"type":type(error).__name__,"message":str(error)[:1600]},
                               endedAt=datetime.datetime.now(datetime.timezone.utc).isoformat())

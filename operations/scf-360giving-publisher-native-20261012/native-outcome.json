@@ -1,0 +1,144 @@
+{
+  "operationId": "ODS-360GIVING-DOMAIN-RECEIVING-3AD7-20261012",
+  "executionId": "ODS-360GIVING-DOMAIN-RECEIVING-3AD7-20261012-foreground-20261012T1150",
+  "executionHash": "06183a43f8af4289cf78b6530586c80fe46139c5d45288a137a5c6080f94c9cd",
+  "runtime": {
+    "schema": "scf.360giving-native-runtime.v1",
+    "operationId": "ODS-360GIVING-DOMAIN-RECEIVING-3AD7-20261012",
+    "sourceCommit": "738368670fcac0155b5b8a5c86b09a7ae59bb5c3",
+    "authoredCommit": "c3ad78a04fd1552f75cdcc1de6b46dc6f3044bce",
+    "predecessor": {
+      "commit": "fddc09102c45dfe2940a068cd72b1846a48a040c",
+      "files": 22,
+      "originalCommit": "b670ee2c460f2821b3af0cec9bcd70c5be365e3c",
+      "originalFiles": 21
+    },
+    "python": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+    "pythonVersion": "3.12.14",
+    "node": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+    "nodeVersion": "v24.19.0",
+    "dependencies": {
+      "jsonschema": "4.26.0",
+      "referencing": "0.37.0",
+      "attrs": "26.1.0",
+      "rpds-py": "2026.9.1",
+      "jsonschema-specifications": "2025.9.1"
+    }
+  },
+  "result": {
+    "state": "finalization_pending",
+    "started_at": "2026-10-12T11:52:53.733931+00:00",
+    "supervisor": {
+      "pid": 5,
+      "proc_pid": 3003114,
+      "start_ticks": "8464516",
+      "pgid": 5,
+      "namespace": "pid:[4026533857]",
+      "boot_id": "fbe9c3b0-1940-4d31-b2b6-3f2b4978b008"
+    },
+    "process": {
+      "pid": 7,
+      "proc_pid": 3006040,
+      "start_ticks": "8475855",
+      "pgid": 5,
+      "namespace": "pid:[4026533857]",
+      "boot_id": "fbe9c3b0-1940-4d31-b2b6-3f2b4978b008"
+    },
+    "ended_at": "2026-10-12T11:54:47.255414+00:00",
+    "exit_code": 1,
+    "stop_requested": false,
+    "artifact_selection": {
+      "schema": "commons.native-artifact-selection/v1",
+      "revision": 0,
+      "selection": {
+        "always": [],
+        "success": [
+          "delivery",
+          "domain-outcome.json",
+          "execution-continuation.json",
+          "native-outcome.json",
+          "prior-lifetime.json",
+          "runtime-receipt.json",
+          "saved-operator",
+          "source-history.json",
+          "source-inputs.json",
+          "source-manifest.json"
+        ],
+        "failure": [
+          "delivery",
+          "domain-outcome.json",
+          "execution-continuation.json",
+          "native-outcome.json",
+          "prior-lifetime.json",
+          "runtime-receipt.json",
+          "saved-operator",
+          "source-history.json",
+          "source-inputs.json",
+          "source-manifest.json"
+        ]
+      },
+      "last_amendment": null,
+      "history": "/dev/ods-domain-carrier-3ad791-20261012/records/06183a43f8af4289cf78b6530586c80fe46139c5d45288a137a5c6080f94c9cd/artifact-history",
+      "outcome": "failure",
+      "paths": [
+        "delivery",
+        "domain-outcome.json",
+        "execution-continuation.json",
+        "native-outcome.json",
+        "prior-lifetime.json",
+        "runtime-receipt.json",
+        "saved-operator",
+        "source-history.json",
+        "source-inputs.json",
+        "source-manifest.json"
+      ]
+    },
+    "artifacts": {
+      "manifest": "/dev/ods-domain-carrier-3ad791-20261012/records/06183a43f8af4289cf78b6530586c80fe46139c5d45288a137a5c6080f94c9cd/artifacts.json",
+      "files": 9,
+      "bytes": 758431,
+      "errors": [
+        {
+          "path": "domain-outcome.json",
+          "error": "missing"
+        },
+        {
+          "path": "native-outcome.json",
+          "error": "missing"
+        },
+        {
+          "path": "saved-operator",
+          "error": "missing"
+        }
+      ],
+      "retention": {
+        "schema": "commons.native-artifact-retention/v1",
+        "binding": {
+          "operation_id": "ODS-360GIVING-DOMAIN-RECEIVING-3AD7-20261012-foreground-20261012T1150",
+          "created_at": "2026-10-12T11:52:53.621087+00:00",
+          "project": "/dev/ods-domain-3ad791-20261012/project",
+          "command_sha256": "0058746e6681535da4802b1c0d613476ba879de7c0bc7455c7fbb9f51fb48bfe"
+        },
+        "outcome_sha256": "02af44ccb5044d0be58f7f8836046a8470ba4a57c651afa0af401420cd0b0af3",
+        "snapshot": "eb85b86cd98fc81b7f15663926292b444c0a0722b107d5096fb3705e0fccd03c",
+        "collection_complete": false,
+        "state": "pending",
+        "files": 9,
+        "bytes": 758431,
+        "updated_at": "2026-10-12T11:54:47.269294+00:00"
+      }
+    },
+    "error": "selected_artifacts_incomplete"
+  },
+  "output": "{\"nativeRuntime\": {\"schema\": \"scf.360giving-native-runtime.v1\", \"operationId\": \"ODS-360GIVING-DOMAIN-RECEIVING-3AD7-20261012\", \"sourceCommit\": \"738368670fcac0155b5b8a5c86b09a7ae59bb5c3\", \"authoredCommit\": \"c3ad78a04fd1552f75cdcc1de6b46dc6f3044bce\", \"predecessor\": {\"commit\": \"fddc09102c45dfe2940a068cd72b1846a48a040c\", \"files\": 22, \"originalCommit\": \"b670ee2c460f2821b3af0cec9bcd70c5be365e3c\", \"originalFiles\": 21}, \"python\": \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3\", \"pythonVersion\": \"3.12.14\", \"node\": \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\", \"nodeVersion\": \"v24.19.0\", \"dependencies\": {\"jsonschema\": \"4.26.0\", \"referencing\": \"0.37.0\", \"attrs\": \"26.1.0\", \"rpds-py\": \"2026.9.1\", \"jsonschema-specifications\": \"2025.9.1\"}}}\nTraceback (most recent call last):\n  File \"/dev/ods-domain-3ad791-20261012/project/run-native.py\", line 152, in <module>\n    main()\n  File \"/dev/ods-domain-3ad791-20261012/project/run-native.py\", line 102, in main\n    domain()\n  File \"/dev/ods-domain-3ad791-20261012/project/run-native.py\", line 59, in domain\n    runpy.run_path(str(driver), run_name=\"__main__\")\n  File \"<frozen runpy>\", line 287, in run_path\n  File \"<frozen runpy>\", line 98, in _run_module_code\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"/dev/ods-domain-3ad791-20261012/source/stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/360giving/examples/run_publisher_workflow.py\", line 116, in <module>\n    raise SystemExit(main())\n                     ^^^^^^\n  File \"/dev/ods-domain-3ad791-20261012/source/stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/360giving/examples/run_publisher_workflow.py\", line 40, in main\n    status = api[\"prepare\"](Namespace(\n             ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/dev/ods-domain-carrier-3ad791-20261012/source/738368670fcac0155b5b8a5c86b09a7ae59bb5c3/stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/360giving/publisher.py\", line 318, in prepare\n    errors = schema_errors(package, schema_root)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/dev/ods-domain-carrier-3ad791-20261012/source/738368670fcac0155b5b8a5c86b09a7ae59bb5c3/stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/360giving/publisher.py\", line 148, in schema_errors\n    resources.append((document[\"$id\"], resource))\n                      ~~~~~~~~^^^^^^^\nKeyError: '$id'\nTraceback (most recent call last):\n  File \"/dev/ods-domain-3ad791-20261012/project/run-native.py\", line 152, in <module>\n    main()\n  File \"/dev/ods-domain-3ad791-20261012/project/run-native.py\", line 124, in main\n    subprocess.run([sys.executable, \"-B\", str(Path(__file__).resolve()), \"domain\"], check=True)\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/subprocess.py\", line 571, in run\n    raise CalledProcessError(retcode, process.args,\nsubprocess.CalledProcessError: Command '['/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3', '-B', '/dev/ods-domain-3ad791-20261012/project/run-native.py', 'domain']' returned non-zero exit status 1.\n",
+  "memoryState": "released",
+  "diskState": "released",
+  "diagnosis": "The retained 1.4.2 grant schema has no $id or id. Its original schema-sources.json records its canonical URL and alias; resource registration must retain that URI.",
+  "correctedPublisher": {
+    "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/360giving/publisher.py",
+    "baselineGitBlob": "822efca45b456ed3589699b3350b9890c83ca3a4",
+    "bytes": 33595,
+    "sha256": "ee1936b0508bb1f4ebc4316aed51c1d9d3156d36ea6bee030862bf4b69694d59",
+    "gitBlob": "df289ac59e7642124a07a03253b3b5d197b933d4"
+  }
+}

@@ -64,8 +64,8 @@ export function validateRedisConnectionProfile(c) {
   if (!record(c)) fail('REDIS_CONNECTION_PROFILE_INVALID');
   const topology = c.topology ?? 'standalone';
   const extra = topology === 'standalone' ? ['host', 'port'] :
-    topology === 'cluster' ? ['rootNodes', 'nodeAddressMap'] :
-    topology === 'sentinel' ? ['name', 'sentinelRootNodes', 'nodeAddressMap',
+    topology === 'cluster' ? ['rootNodes', 'nodeAddressMap', 'nodeAddressPolicy'] :
+    topology === 'sentinel' ? ['name', 'sentinelRootNodes', 'nodeAddressMap', 'nodeAddressPolicy',
       'sentinelUsername', 'sentinelPasswordEnv', 'sentinelTls', 'sentinelCaFile'] : null;
   if (!extra || Object.keys(c).some(key => !['topology', ...COMMON, ...extra].includes(key)))
     fail('REDIS_CONNECTION_PROFILE_INVALID');
@@ -86,6 +86,10 @@ export function validateRedisConnectionProfile(c) {
     tlsProfile(c.sentinelTls, c.sentinelCaFile);
   }
   const mapping = topology === 'standalone' ? undefined : addressMap(c);
+  if (c.nodeAddressPolicy !== undefined && c.nodeAddressPolicy !== 'mapped-only')
+    fail('REDIS_NODE_ADDRESS_POLICY_INVALID');
+  if (c.nodeAddressPolicy === 'mapped-only' && !Object.keys(mapping ?? {}).length)
+    fail('REDIS_NODE_ADDRESS_MAP_REQUIRED');
   if (localOnly(c)) {
     // Plaintext is a local receiving mode. Apply it to discovery and mapped
     // destinations as well as the initial seed so promotion cannot leave it.
@@ -96,10 +100,13 @@ export function validateRedisConnectionProfile(c) {
 }
 function resolvedMap(c) {
   const mapping = addressMap(c);
-  if (!localOnly(c)) return mapping;
+  if (!localOnly(c) && c.nodeAddressPolicy !== 'mapped-only') return mapping;
   return address => {
-    const target = Object.hasOwn(mapping ?? {}, address) ? mapping[address] : advertisedEndpoint(address);
-    if (!LOOPBACK.has(target.host)) fail('REDIS_PLAINTEXT_REQUIRES_LOOPBACK');
+    const retained = Object.hasOwn(mapping ?? {}, address);
+    if (!retained && c.nodeAddressPolicy === 'mapped-only')
+      fail('REDIS_NODE_ADDRESS_UNMAPPED');
+    const target = retained ? mapping[address] : advertisedEndpoint(address);
+    if (localOnly(c) && !LOOPBACK.has(target.host)) fail('REDIS_PLAINTEXT_REQUIRES_LOOPBACK');
     return target;
   };
 }

@@ -6,7 +6,7 @@ The operation selects all 830 Orders delivered by the original live query. It ke
 
 ## Source and original input
 
-Use the public Stellar Forge product source at **677ba67611b869daed454d689ddc0201ae7a4654**, including its complete original Node and Python dependencies. Apply this directory's two example files from the same published example revision. The Python runner validates the actual Git blob, byte length and SHA-256 of every selected critical product file and the original Node helper before starting work. It records that selection in the operation and customer delivery.
+Use the complete product source selected by the published 827-file receiving carrier, including its original Node and Python dependencies. The carrier preserves product lineage **677ba67611b869daed454d689ddc0201ae7a4654** and composes all four correction leaves from the same reviewed publication: `odata/live/collection.mjs`, `odata/live/collection-store.mjs`, `odata/live/examples/collection-customer.py` and this guide, beneath `sf30-seller-sdk/`. It also retains the original Node customer helper's workspace-creation identity correction and the unchanged startup and SF82 release-lease dependencies. A fresh checkout must contain the exact critical source leaves embedded in `collection-customer.py`; copying only the two examples onto the old product revision is insufficient. The Python runner validates each selected critical file's actual Git blob, byte length and SHA-256 before starting, then records that complete selection in the operation and customer delivery. Keep `--source-ref 677ba67611b869daed454d689ddc0201ae7a4654` for continuation of the existing R1 journal; the retained source-file identities separately bind the corrected executable source.
 
 The runtime needs the original Node 24 environment and the existing Python Analysis/workbook dependencies, including openpyxl. Reuse the equipped original runtime; its dependency directories belong to their original installer. A thin checkout is suitable when it contains the complete original import closure and the exact reviewed leaves. The expected leaf identities are embedded in collection-customer.py.
 
@@ -119,3 +119,33 @@ For the OData operator, select an empty receiving workspace and restore the full
 ```
 
 The existing browser Restore handles transfers up to its declared 64 MiB input ceiling. For a larger complete collection transfer, the original UI supplies this native-file route and the actual selected workspace/CLI. The native receiver reads the complete file and preserves the same original transfer validation and workspace ownership.
+
+## Original workspace identity and preflight continuation
+
+The retained packet's workspace hash is its original creation identity: schema,
+original directory and creation time. The original workspace identity reader
+validates that record; a receiving-directory relocation retains its original
+directory in the identity comparison. The complete reference workspace file is
+also checked separately against its original 123,591 bytes and SHA-256
+`7b1b2b38bc9b574c53200f9f2708c64e980b73f92fb88625aae652cada653ea9`.
+The prepared customer result retains both identities.
+
+The first customer helper treated that creation identity as a whole-file hash
+and could stop before it created any customer workspace or native job. For that
+specific retained preflight, select the same input, output and product source,
+and add `--resume --resume-source-from ORIGINAL_SELECTION_SHA256` to the command.
+The prior SHA is `selection_sha256` in its existing `customer-operation.json`.
+The runner requires the exact original selection, an empty step history and no
+customer output beyond the original preflight records. It accepts only this
+helper correction and the original identity-reader dependency, retains the full
+prior selection and error in the same journal, and continues the same customer
+operation. Once customer work exists, ordinary `--resume` keeps its original
+source and complete native jobs.
+
+## Continue the original native collection preparation
+
+The collection uses the maintained SF82 per-directory `state.lock` lifetime lease for receiving, row reads, inspection and restore. The lease file belongs to the selected collection directory, and the original helper retains its inode and closes its descriptor when that operation ends.
+
+The first native customer operation exposed an unsupported `collection.lock` caller name before it created the collection. Its five received response pages and merchant workspace were retained in the same operation. The corrected source calls the existing `state.lock` contract and includes that original helper in the runner's immutable source selection.
+
+To continue that exact pre-Analysis preparation, restore its complete operation checkpoint to the same selected output path, retain the original input packet, and run the command above with `--resume --resume-source-from 32b9b87f1ef85efeab180eb395e8c2434845b94a49b1abe655fb157239a4a652`. The runner preserves the previous selection and error, verifies every unchanged input and source, permits only the recorded identity/lease corrections, reopens the original received pages, and continues the original collection. An existing completed collection or Analysis job retains its original source selection.

@@ -3,6 +3,8 @@ import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual as same } from 'node:util';
+import { createNativeSigningTracker, readNativeSigningDiagnostic } from './diagnostics.mjs';
+export { readNativeSigningDiagnostic } from './diagnostics.mjs';
 
 export const SDK_VERSION = '2.28.0';
 const I128 = 170141183460469231731687303715884105727n;
@@ -10,7 +12,11 @@ const object = value => value !== null && typeof value === 'object' && !Array.is
 const atomic = value => typeof value === 'string' && /^[1-9][0-9]{0,38}$/.test(value) && BigInt(value) <= I128;
 
 export class NativeSignerError extends Error {
-  constructor(code) { super(code); this.name = 'NativeSignerError'; this.code = code; }
+  constructor(code, nativeSigning) {
+    super(code); this.name = 'NativeSignerError'; this.code = code;
+    const diagnostic=readNativeSigningDiagnostic(nativeSigning);
+    if(diagnostic)this.nativeSigning=diagnostic;
+  }
 }
 export function requireValue(value, code) { if (!value) throw new NativeSignerError(code); }
 
@@ -98,11 +104,15 @@ export async function createNativeBuyerSigner({ signer, expected, rpcUrl, sdk })
     object(signer) && signer.address === expected.payer && typeof signer.signAuthEntry === 'function',
   'NATIVE_PAYER_MISMATCH');
   const fixed = structuredClone(expected);
-  const nativeSigner = { address: expected.payer, signAuthEntry: signer.signAuthEntry.bind(signer) };
-  if (typeof signer.signTransaction === 'function') nativeSigner.signTransaction = signer.signTransaction.bind(signer);
+  const tracker=createNativeSigningTracker();
+  const nativeSigner = { address: expected.payer,
+    signAuthEntry: tracker.wrap('authorization',signer.signAuthEntry.bind(signer)) };
+  if (typeof signer.signTransaction === 'function')
+    nativeSigner.signTransaction=tracker.wrap('transaction',signer.signTransaction.bind(signer));
   const scheme = new sdk.ExactStellarScheme(Object.freeze(nativeSigner), { url: rpcUrl });
   let attempted = false;
   return Object.freeze({
+    get signingDiagnostic() { return tracker.snapshot(); },
     get readiness() { return Object.freeze({ network: fixed.operation.expect.network, payer: fixed.payer,
       sdkVersions: sdk.versions, provider: 'ORIGINAL_X402_STELLAR', signingAttempts: attempted ? 1 : 0 }); },
     async sign(input) {
@@ -121,11 +131,16 @@ export async function createNativeBuyerSigner({ signer, expected, rpcUrl, sdk })
       client.setSpendControls({ allowedAssets: [{ network: checked.accepted.network,
         asset: checked.accepted.asset, maxAmountPerPayment: checked.intent.maxAtomic }] });
       let result;
-      try { result = await client.createPaymentPayload(checked.challenge); }
-      catch { throw new NativeSignerError('NATIVE_PAYMENT_CREATION_FAILED'); }
-      requireValue(object(result) && result.x402Version === 2 && object(result.payload) &&
+      tracker.start();
+      try { result = await client.createPaymentPayload(checked.challenge); tracker.returned(); }
+      catch(error) { throw new NativeSignerError('NATIVE_PAYMENT_CREATION_FAILED',tracker.failed(error)); }
+      if(!(object(result) && result.x402Version === 2 && object(result.payload) &&
         same(result.accepted, checked.accepted) && same(result.resource, checked.challenge.resource) &&
-        same(result.extensions ?? {}, checked.challenge.extensions ?? {}), 'NATIVE_SDK_ENVELOPE_MISMATCH');
+        same(result.extensions ?? {}, checked.challenge.extensions ?? {}))) {
+        const error=new NativeSignerError('NATIVE_SDK_ENVELOPE_MISMATCH');
+        throw new NativeSignerError(error.code,tracker.failed(error));
+      }
+      tracker.complete();
       // Preserve the official complete envelope; never reconstruct signed bytes.
       return result;
     },

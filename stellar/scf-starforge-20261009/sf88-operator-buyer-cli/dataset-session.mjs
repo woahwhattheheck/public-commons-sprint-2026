@@ -1,6 +1,7 @@
 // MIT. Persistent acquisition using original SF88 execution and SF30 page contracts.
 import { constants } from 'node:fs';
-import { open, mkdir, lstat, readdir, realpath, unlink, stat, rename } from 'node:fs/promises';
+import { open, mkdir, lstat, readdir, realpath, unlink, stat, rename } from './dataset-location.mjs';
+import {datasetStoragePath,withDatasetSessionLocation,datasetLocatedResult} from './dataset-location.mjs';
 import { dirname, join, resolve, isAbsolute } from 'node:path';
 import { hostname } from 'node:os';
 import { randomUUID } from 'node:crypto';
@@ -27,7 +28,7 @@ async function privateDirectory(path) {
   const info = await lstat(path);
   need(info.isDirectory() && !info.isSymbolicLink() &&
     (process.platform === 'win32' || (info.mode & 0o077) === 0), 'DATASET_PRIVATE_DIRECTORY_REQUIRED');
-  need(await realpath(path) === path, 'DATASET_SYMLINK_DIRECTORY_REFUSED');
+  need(await realpath(path) === datasetStoragePath(path), 'DATASET_SYMLINK_DIRECTORY_REFUSED');
 }
 async function syncDirectory(path) {
   if (process.platform === 'win32') return;
@@ -194,7 +195,7 @@ function pageConfig(definition, index, cursor, allocated) {
 
 /** Read the original immutable page lineage for the shared lost-output source
  * adapter. It never acquires, retries, signs or changes the session. */
-export async function readRetainedDatasetAttempt(directory,index) {
+async function readRetainedDatasetAttemptAt(directory,index) {
   need(Number.isSafeInteger(index)&&index>=1&&index<=10000,'DATASET_LOST_OUTPUT_PAGE_REQUIRED');
   await privateDirectory(directory);
   await privateDirectory(join(directory,'pages'));
@@ -395,7 +396,7 @@ async function inspectUnlocked(directory, {expiredContinuation} = {}) {
   }
   return report;
 }
-export async function inspectDatasetSession(directory) {
+async function inspectDatasetSessionAt(directory) {
   let release;
   try { release = await lock(directory); }
   catch (error) {
@@ -437,7 +438,7 @@ async function executionContext(definition,{workspace,environment,executePage}) 
   return {operatorEnvironment,evidenceRpcEndpoint};
 }
 /** Trusted host seam: CLI always supplies the original SF88 execute function. */
-export async function runDatasetSession(directory, {signal, executePage = execute, onPage = () => {},
+async function runDatasetSessionAt(directory, {signal, executePage = execute, onPage = () => {},
   environment = process.env, emitPageSummaries = true, workspace,
   retryUnpaid = false, retryExpired, expectedAttemptSha256} = {}) {
   need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
@@ -522,7 +523,7 @@ export async function runDatasetSession(directory, {signal, executePage = execut
   } finally { await release(); }
 }
 /** Offline crash recovery: remove a proven-dead same-host lock, then read original files. */
-export async function recoverDatasetSession(directory) {
+async function recoverDatasetSessionAt(directory) {
   const release = await lock(directory, true);
   try { return await inspectUnlocked(directory); } finally { await release(); }
 }
@@ -530,7 +531,7 @@ export async function recoverDatasetSession(directory) {
 /** Account for existing page attempts independently of product-file recovery.
  * Session/config/attempt lineage is checked before the shared native worker.
  * Accounting never creates a page or substitutes an earlier purchase attempt. */
-export async function accountDatasetSession(directory, {workspace,offset=0,limit=100,
+async function accountDatasetSessionAt(directory, {workspace,offset=0,limit=100,
   finalize=false,signal,outbox,merchantRoute}={}) {
   need(Number.isSafeInteger(offset)&&offset>=0&&Number.isSafeInteger(limit)&&limit>=1&&limit<=250,
     'DATASET_ACCOUNTING_RANGE_INVALID');
@@ -622,21 +623,23 @@ export async function accountDatasetSession(directory, {workspace,offset=0,limit
       recordAuthority:'ORIGINAL_SF36_LEDGER; PER-PAGE VIEWS ARE SAVED BESIDE THE ORIGINAL ATTEMPT'};
   } finally {await release();}
 }
-export async function exportDatasetManifest(directory, destination) {
+async function exportDatasetManifestAt(directory, destination) {
   need(typeof destination === 'string' && isAbsolute(destination), 'DATASET_ABSOLUTE_EXPORT_REQUIRED');
   const release = await lock(directory);
   try {
     const report = await inspectUnlocked(directory);
     need(report.status === 'COMPLETE', 'DATASET_COMPLETE_SESSION_REQUIRED');
     const manifest = {...report, exportedAt:new Date().toISOString(),
-      pageFiles:report.pages.map(page => page.responsePath),
+      pageFiles:report.pages.map(page => datasetStoragePath(page.responsePath)),
+      ...(datasetStoragePath(directory)===directory?{}:{storageDirectory:datasetStoragePath(directory),
+        originalPageFiles:report.pages.map(page=>page.responsePath)}),
       exporter:'Pass pageFiles in their existing order to the original SF100 buyer dataset delivery tool.'};
     await createJson(destination, manifest);
     return {status:'EXPORTED', path:destination, pages:report.completedPages, rows:report.acquiredRows};
   } finally { await release(); }
 }
 /** Complete the offline acquisition-to-data-room handoff using original SF100. */
-export async function deliverDatasetSession(directory, destination) {
+async function deliverDatasetSessionAt(directory, destination) {
   const release = await lock(directory);
   try {
     const report = await inspectUnlocked(directory);
@@ -648,3 +651,45 @@ export async function deliverDatasetSession(directory, destination) {
 
 // Original canonical validation shared with the fixed SF36 source observer.
 export {validateDefinition as validateDatasetDefinition,pageConfig as datasetPageConfiguration};
+
+/** Receiving changes storage, never the original configuration or page identities. */
+export async function readRetainedDatasetAttempt(directory,...arguments_) {
+  return withDatasetSessionLocation(directory,async logical=>
+    datasetLocatedResult(await readRetainedDatasetAttemptAt(logical,...arguments_)));
+}
+export async function inspectDatasetSession(directory,...arguments_) {
+  return withDatasetSessionLocation(directory,async logical=>
+    datasetLocatedResult(await inspectDatasetSessionAt(logical,...arguments_)));
+}
+export async function runDatasetSession(directory,...arguments_) {
+  return withDatasetSessionLocation(directory,async logical=>
+    datasetLocatedResult(await runDatasetSessionAt(logical,...arguments_)));
+}
+export async function recoverDatasetSession(directory,...arguments_) {
+  return withDatasetSessionLocation(directory,async logical=>
+    datasetLocatedResult(await recoverDatasetSessionAt(logical,...arguments_)));
+}
+export async function accountDatasetSession(directory,...arguments_) {
+  return withDatasetSessionLocation(directory,async logical=>
+    datasetLocatedResult(await accountDatasetSessionAt(logical,...arguments_)));
+}
+export async function exportDatasetManifest(directory,...arguments_) {
+  return withDatasetSessionLocation(directory,async logical=>
+    datasetLocatedResult(await exportDatasetManifestAt(logical,...arguments_)));
+}
+export async function deliverDatasetSession(directory,...arguments_) {
+  return withDatasetSessionLocation(directory,async logical=>
+    datasetLocatedResult(await deliverDatasetSessionAt(logical,...arguments_)));
+}
+
+/** Original single-writer boundary used by complete portable export. */
+export async function withLockedDatasetSession(directory,work,{recoverDead=false}={}) {
+  return withDatasetSessionLocation(directory,async logical=>{
+    const release=await lock(logical,recoverDead);
+    try {
+      const definition=validateDefinition(await readJson(join(logical,'session.json')),logical);
+      return await work({directory:logical,storageDirectory:datasetStoragePath(logical),
+        definition,inspect:()=>inspectUnlocked(logical)});
+    } finally {await release();}
+  });
+}

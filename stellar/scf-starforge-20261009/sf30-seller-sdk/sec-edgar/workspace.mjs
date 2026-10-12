@@ -154,6 +154,30 @@ export async function openEdgarWorkspace(directory, { storeDirectory, title = 'S
       await validateBindings(state.config); return copy(state.config);
     },
     async exportOpenApi() { return merchantOpenApi(compileEdgarMerchant(await this.exportConfig()), 'NATIVE_X402'); },
+    async reviewPortable() {
+      checkOpen();
+      const { reviewEdgarOperator } = await import('./receiving/operator.mjs');
+      return (await reviewEdgarOperator({ directory, storeDirectory: source.root })).summary;
+    },
+    async exportPortable({ exportId: id, expectedReviewSha256 } = {}) {
+      checkOpen();
+      const { exportId } = await import('./receiving/manifest.mjs');
+      const { exportEdgarOperator } = await import('./receiving/operator.mjs');
+      return exportEdgarOperator({ directory, storeDirectory: source.root,
+        outputDirectory: join(directory, 'portable-exports', exportId(id)), expectedReviewSha256 });
+    },
+    async portableExport(id) {
+      checkOpen();
+      const { exportId } = await import('./receiving/manifest.mjs');
+      const { completedEdgarOperatorExport } = await import('./receiving/operator.mjs');
+      return completedEdgarOperatorExport({ outputDirectory: join(directory, 'portable-exports', exportId(id)) });
+    },
+    async portableManifest(id) {
+      checkOpen();
+      const { exportId } = await import('./receiving/manifest.mjs');
+      const { readEdgarOperatorManifest } = await import('./receiving/operator.mjs');
+      return readEdgarOperatorManifest({ outputDirectory: join(directory, 'portable-exports', exportId(id)) });
+    },
     async close() { if (closed) return; closed = true; await source.close?.(); },
   };
 }

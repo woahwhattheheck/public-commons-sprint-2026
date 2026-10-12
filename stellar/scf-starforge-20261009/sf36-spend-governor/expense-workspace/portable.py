@@ -13,8 +13,11 @@ ACCOUNTANT_READER_FILES = tuple(json.loads((Path(__file__).resolve().parent / 'a
 CREDIT_READER_FILES = tuple(json.loads((Path(__file__).resolve().parent / 'credit-reader-files.json').read_text())['files'])
 
 APP_FILES = ("native.py", "domain.py", "store.py", "exports.py", "portable.py", "server.py",
-             "public/index.html", "public/app.mjs", "public/style.css", "README.md", "cli.mjs", "receive.py", "native_mcp.py", "native_woo.py", "native_adjustments.py", "credits.py", "credit_store.py", "credit-reader-files.json", "native_accountant.py", "accountant_store.py", "accountant-reader-files.json", "BOOKKEEPING.md")
+             "public/index.html", "public/app.mjs", "public/style.css", "README.md", "cli.mjs", "receive.py", "native_mcp.py", "native_woo.py", "native_adjustments.py", "credits.py", "credit_store.py", "credit-reader-files.json", "native_accountant.py", "accountant_store.py", "accountant-reader-files.json", "BOOKKEEPING.md", "native_governed_mcp.py", "GOVERNED_MCP.md")
 MCP_READER_FILES = ("stellar-forge/mcp-paid-agent/expense-statement.mjs",
+                    "stellar-forge/mcp-paid-agent/expense-governed-statement.mjs",
+                    "stellar-forge/mcp-paid-agent/native-spend-binding.mjs",
+                    "stellar-forge/mcp-paid-agent/native-spend-configuration.mjs",
                     "stellar-forge/mcp-paid-agent/quote-store.mjs",
                     "stellar-forge/mcp-paid-agent/remote-mcp.mjs",
                     "stellar/scf-starforge-20261009/sf86-rpc-transfer-reconcile/terms.mjs",
@@ -51,9 +54,9 @@ Use Python 3.11 or newer on a POSIX host. Extract privately, then open the inclu
 
 Open the complete private URL printed by that command. No repository checkout is required. Opening retained state uses Python alone; new native MCP captures or refund receiving use the host's Node 22.13+ or Node 24 runtime.
 
-All source captures, original native row identities, allocation editions, exception decisions, period reviews, issued exports and activity history are retained in the included workspace. Sources keep their original type and locator. Opening the project does not read an original buyer source or a key. To refresh after moving the original buyer, use Sources → Rebind and select the same original ledger or MCP quote directory; the application compares its retained native identities before accepting the new locator.
+All source captures, original native row identities, allocation editions, exception decisions, period reviews, issued exports and activity history are retained in the included workspace. Sources keep their original type and locator. Opening the project does not read an original buyer source or a key. To refresh after moving the original buyer, use Sources → Rebind and select the same original ledger, MCP quote directory, or governed-source descriptor; the application compares its retained native identities before accepting the new locator. Governed sources retain their original spending-owner fields and the complete shared-ledger statement. Read app/sf36-spend-governor/expense-workspace/GOVERNED_MCP.md for the complete purchase-to-period workflow.
 
-The original buyer ledgers, quote databases, signers, wallet keys and purchased result bodies remain outside this expense project. Retained captures and accountant editions open independently. New SF36 captures use the unchanged read-only statement API. New MCP captures use the included original SqliteQuoteStore reader in one read-only transaction; they require Node 22.13+ or Node 24. Supply the host interpreter explicitly when needed:
+The original buyer ledgers, quote databases, signers, wallet keys and purchased result bodies remain outside this expense project. Retained captures and accountant editions open independently. New SF36 captures use the unchanged read-only statement API. Governed MCP captures join the original quote snapshot and original request binding to the complete original ledger under the native owner lock, retaining reserved capacity separately from quote observations. New MCP captures use the included original SqliteQuoteStore reader in one read-only transaction; they require Node 22.13+ or Node 24. Supply the host interpreter explicitly when needed:
 
     python3 app/sf36-spend-governor/expense-workspace/server.py --state project --port 0 --node /absolute/path/to/node
 
@@ -105,6 +108,7 @@ def _complete_project(store, state):
         "workspace": state["id"], "revision": state["revision"],
         "request_recovery": "sqlite-transaction-v1",
         "mcp_quote_capture": "native-readonly-v1",
+        "governed_mcp_capture": "original-spending-readonly-v1",
         "buyer_credit_capture": "original-native-refund-v2",
         "data_context": state["data_context"],
         "buyer_bookkeeping": "issued-accountant-return-v1",

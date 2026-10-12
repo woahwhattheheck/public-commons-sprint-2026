@@ -18,7 +18,12 @@ including its provider module. `starforge registrations` includes the effective
 provider count and all declaring source files. The Applications state includes a
 `providers` inventory with each adapter's path, bytes, SHA-256, declaring
 contributions, catalog order and application kind IDs. The existing catalog and
-saved applications remain in their original state fields.
+saved applications remain in their original state fields. Each available catalog
+entry also carries its stable `providerId`. A missing provider file or module is
+listed in `unavailableProviders`, with its declared path and original error;
+available tools remain selectable. A catalog integrity error is returned as
+`catalogError` with an empty catalog. Saved application and operation history,
+Open, Stop and recovery remain readable through their original records.
 
 A checkout reads its selected source files. An installed archive first verifies
 the complete contribution inventory against its original manifest, then verifies
@@ -26,6 +31,57 @@ each provider module's original bytes before importing it. The builder requires
 every declared adapter to be part of its original source selection; its existing
 module collector checks the adapter's static imports. Declarations do not execute
 provider code during packaging.
+
+## Select one provider for a managed run
+
+Review application and Review Start retain `applicationProvider` with schema
+`stellar-forge.runtime-application-provider-binding.v1`, provider `id`,
+application `kind`, original `command`, relative source `path`, `bytes`
+and `sha256`. The review shows that source beside the original runtime and
+command. Saving an application retains the stable provider ID; the next Review
+Start captures its then-current exact source. Start compares that reviewed source
+before preparing and retaining the original run.
+
+The managed request carries that complete binding. Its ordinary worker follows
+the existing request hash, worker lock, QUEUED/RUNNING transition and retained
+command launch. Immediately before launch, the registry reads only the selected
+provider and checks its declared path, byte length and digest before importing
+its module. Its original `matchRequest`, `verifyLaunch`, `prepareChild`
+and startup observer still govern the actual command. Missing files in unrelated
+providers do not become imports of this selected worker.
+
+`readApplicationProvider({id, kind, expected})` exposes this one-provider
+read. `expected` is the complete retained binding, and source readers can
+supply the same `sourceRoot` and selected-distribution options used by the
+original specification reader. The default complete
+`readApplicationProviders()` remains strict. Its explicit
+`{allowUnavailable: true}` option is for catalog presentation: only actual
+missing-file/module errors can appear in `unavailable`. Conflicting IDs or
+kinds, changed installed source, invalid hook contracts and malformed catalog
+entries remain errors.
+
+The original `applications.mjs` entry keeps its synchronous
+`APPLICATION_CATALOG` export and lifecycle exports for direct callers.
+Managed model/worker imports use `applications-core.mjs`, whose lifecycle
+has no catalog import at module initialization. Full distribution builds retain
+both files through the existing distribution component. A source-selection
+recipe that replaces components and previously reached the compatibility entry
+only through the model must keep that entry in its existing `supportFiles`
+if it exposes it to its consumers.
+
+### Reopen a request retained before provider binding
+
+Continue uses the same application run and operation IDs. It reads that run's
+immutable saved application revision, checks its original request/revision
+identity, and selects its retained kind. Before preparing the command it writes
+one `application-provider.json` receipt in the original operation directory,
+binding the provider source to the existing request hash and application
+revision. A later restart checks and reuses that same receipt. The original
+`request.json`, canonical request hash, arguments and run ID remain intact.
+
+Older direct managed callers without an Applications run retain the original
+strict command-matching and ambiguity checks. Ordinary managed commands without
+an application ID continue through their original non-application path.
 
 ## Add or extend a product
 
@@ -203,7 +259,10 @@ At runtime:
 | `APPLICATION_PROVIDER_KIND_DUPLICATE` | Two providers claim the same application kind. Keep that kind with its original owner. |
 | `APPLICATION_PROVIDER_KIND_UNKNOWN` | An application kind has no declared provider in this source. Select the release containing its original contribution. |
 | `APPLICATION_PROVIDER_COMMAND_UNKNOWN` | A managed application request matches no original provider. Correct the source registration or native selector. |
-| `APPLICATION_PROVIDER_COMMAND_AMBIGUOUS` | More than one provider accepts the same managed request. Use the exact original subcommand or flag selector. |
+| `APPLICATION_PROVIDER_COMMAND_AMBIGUOUS` | More than one provider accepts an older unscoped managed request. Use the exact original subcommand or flag selector. |
+| `APPLICATION_PROVIDER_BINDING_INVALID` | A run lacks a valid complete provider binding. Reopen its original retained request or review the selected application source. |
+| `APPLICATION_PROVIDER_BINDING_CHANGED` / `APPLICATION_PROVIDER_REQUEST_CHANGED` | The selected provider's kind or command differs from the reviewed request. Review the intended source instead of redirecting the saved operation. |
+| `APPLICATION_PROVIDER_RECEIVING_CHANGED` / `APPLICATION_PROVIDER_RUN_CHANGED` / `APPLICATION_PROVIDER_REVISION_CHANGED` | A legacy continuation differs from its retained run, immutable application revision or source-selection receipt. Restore those original records and continue the same operation. |
 | `APPLICATION_PROVIDER_LOAD_FAILED` | The declared original module or its dependency cannot load. The error includes the provider ID, path and original cause. |
 
 Unknown module fields, missing hooks, duplicate catalog fields and invalid

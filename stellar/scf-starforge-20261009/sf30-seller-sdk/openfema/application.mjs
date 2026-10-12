@@ -64,9 +64,9 @@ export async function prepareOpenFemaApplication(settings, { inputPath, runtimeD
     inputs.push(file); args.push('--release-runtime', file.path);
   }
   if (settings.userAgent !== undefined) {
-    need(typeof settings.userAgent === 'string' && settings.userAgent.trim() && settings.userAgent.length <= 512 &&
+    need(typeof settings.userAgent === 'string' && settings.userAgent.trim() && settings.userAgent.length <= 240 &&
       !/[\x00-\x1f\x7f]/.test(settings.userAgent), 'APPLICATION_OPENFEMA_USER_AGENT',
-      'Use a printable identifying User-Agent of at most512 characters.');
+      'Use a printable identifying User-Agent of at most 240 characters.');
     args.push('--user-agent', settings.userAgent);
   }
   // workspace.json is mutable operator state. Pin its stable identity in argv,

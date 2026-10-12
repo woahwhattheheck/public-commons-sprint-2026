@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import { openODataWorkspace } from '../../workspace.mjs';
 import { openODataLiveOperations } from '../../live-operations.mjs';
 import { startODataServer } from '../../server.mjs';
+import { odataWorkspaceIdentity } from '../startup.mjs';
 import { readCollectionRows,restoreCollection,collectionAnalysisMapping } from '../collection.mjs';
 import { atomic,formatted,stable } from '../../state.mjs';
 
@@ -38,8 +39,13 @@ async function prepare(input){
     packet.live.sourceBinding===input.sourceBinding&&packet.queryFingerprint===input.queryFingerprint,'Select the reviewed original live input packet.');
   need(packet.responses.length===input.responseFiles.length,'The selected response chain changed.');
   const sourceDirectory=relocate(packetRoot,packet,packet.workspace.directory),serviceId=packet.live.id,collectionId=input.collectionId;
-  const sourceState=await readFile(join(sourceDirectory,'workspace.json'));
-  need(hash(sourceState)===packet.workspace.sha256,'The retained source workspace changed.');
+  const sourceState=await identified(join(sourceDirectory,'workspace.json'),input.workspaceFile);
+  need(input.workspaceFile&&Number.isSafeInteger(input.workspaceFile.bytes)&&/^[a-f0-9]{64}$/.test(input.workspaceFile.sha256),
+    'Select the exact retained original workspace bytes.');
+  const actualIdentity=await odataWorkspaceIdentity(sourceDirectory);
+  const originalIdentity={schema:actualIdentity.schema,directory:packet.workspace.directory,createdAt:actualIdentity.createdAt};
+  need(originalIdentity.schema===packet.workspace.schema&&hash(stable(originalIdentity))===packet.workspace.sha256,
+    'The retained original workspace creation identity changed.');
   const profile=await readFile(join(sourceDirectory,'live','products',serviceId,'profile.json'));
   need(hash(profile)===packet.live.profileSha256,'The retained service profile changed.');
   need(hash(await readFile(join(sourceDirectory,'live','products',serviceId,'package','package.json')))===packet.live.packageManifestSha256,
@@ -128,6 +134,7 @@ async function prepare(input){
   finally{if(reopenedLive)await reopenedLive.close();await reopened.close();}
   const result={schema:'stellar-forge.odata-collection-customer-prepared.v1',packet:{bytes:packetRaw.length,sha256:hash(packetRaw)},
     sourceBinding:input.sourceBinding,queryFingerprint:input.queryFingerprint,originalRows:input.expectedRows,serviceId,collectionId,
+    originalWorkspace:{identity:packet.workspace,bytes:sourceState.length,sha256:hash(sourceState)},
     collection,mapping:collectionAnalysisMapping(collection,{source:input.analysisSource,sourceRevision:1}),
     workspaceDirectory:directory,receivingDirectory,transferResult,sourceRouteFiles:routeFiles,
     originalTransfer:baselinePath,completeTransfer:join(output,'OData_Collection_Workspace.json')};

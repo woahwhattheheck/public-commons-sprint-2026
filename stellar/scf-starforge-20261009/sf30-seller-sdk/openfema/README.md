@@ -79,7 +79,7 @@ The tables are:
 
 Table search and sorting operate over the complete saved table. The visible page can contain up to 1000 records; exports include all retained rows. Source declarations and applicants remain present even when their selected project activity is zero, making empty activity distinguishable from absent source records.
 
-In **Review**, inspect the original detail before recording a decision. Set status, priority, owner, due date and disposition; add a note that explains the decision. For ambiguous applicant joins, select the intended original applicant row and save a note. A later source edition that no longer contains that choice exposes it for review. Project dispositions inherit applicable applicant and disaster decisions. Each review is retained in a new version; acceptance adds the selected version and acceptance note to the saved history.
+In **Review**, inspect the original detail before recording a decision. Table pages and record details stay bound to the selected portfolio and version while requests finish. Changing a table or version replaces that selection; saving a review requires the original record in the portfolio's current version. Set status, priority, owner, due date and disposition; add a note that explains the decision. For ambiguous applicant joins, select the intended original applicant row and save a note. A later source edition that no longer contains that choice exposes it for review. Project dispositions inherit applicable applicant and disaster decisions. Each review is retained in a new version; acceptance adds the selected version and acceptance note to the saved history.
 
 The source measures remain separate:
 
@@ -146,6 +146,10 @@ At a new location, receiving adopts each original dataset publisher through its 
 If receiving is interrupted, repeat the same restore command with the exact archive and directory. It resumes the original publisher adoptions and deterministic release identities, then commits the resulting workspace index once. A completed repeat returns the retained receiving result. The archive capacity is 1 GiB, using ordinary ZIP entries; individual retained files have a 256 MiB limit.
 
 The live complete-workspace download is cached for its current workspace revision. It has byte length, content SHA256, ETag and byte-range support. A state change produces a new archive; a previously saved report or source export remains immutable.
+
+**Continue retained browser work** keeps each interrupted request under its original operation ID and workspace UUID. Open **Handover**, select **Continue**, and the browser reads the saved native outcome or resumes the original request. Other completed actions leave these retained requests available. A large source import keeps its source identity in the browser and reads the complete bundle already retained by the native operation. If the request never reached the workspace, select the same JSON or gzip source file to continue that original operation. The browser checks the complete source identity and limits both compressed and expanded input to 256 MiB.
+
+After a native restart changes the local session URL, **Original operation history** in Handover can reopen the operations stored in that workspace. Their original request, source object and operation ID travel with the complete workspace. An earlier browser request without a workspace binding remains downloadable as a complete original JSON file for review.
 
 ## Automation and CLI
 

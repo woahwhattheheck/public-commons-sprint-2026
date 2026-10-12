@@ -1,4 +1,6 @@
-const ROOT = '/api/runbooks';
+const CLIENT_MOUNT = /^\/portfolio\/clients\/[A-Za-z0-9][A-Za-z0-9._-]{0,79}(?=\/)/.exec(location.pathname)?.[0] ?? '';
+const ROOT = CLIENT_MOUNT + '/api/runbooks';
+if(CLIENT_MOUNT){const navigation=document.createElement('nav'),back=document.createElement('a');back.href='/portfolio.html';back.textContent='Back to firm portfolio';navigation.className='portfolio-return';navigation.append(back);document.body.prepend(navigation);}
 const PHASE = {DRAFT:'Preparation',IN_REVIEW:'In review',CHANGES_REQUESTED:'Changes requested',APPROVED:'Approved'};
 const STATUS = {PENDING:'Pending',COMPLETE:'Complete',NOT_APPLICABLE:'Not applicable',BLOCKED:'Blocked'};
 const KINDS = {book:'edition_saved',file:'file_retained',cycle:'cycle_created',work:'procedure_saved',submit:'preparation_submitted',review:'review_saved',receive:'packet_received'};
@@ -898,9 +900,15 @@ async function boot() {
   try{
     await openDb();await refreshRoot({restore:true});
     S.pending=await loadPending();renderRecovery();
-    if(S.pending?.status?.stage==='COMMITTED'){await finishCommitted(S.pending);return;}
+    const requestedCycle=new URL(location.href).searchParams.get('cycle');
+    if(S.pending?.status?.stage==='COMMITTED'){
+      await finishCommitted(S.pending);
+      if(requestedCycle)await openCycle(requestedCycle);
+      return;
+    }
     const view=S.restoredView||{};
-    if(view.view==='author'&&await readKey(key('author/meta')))await resumeAuthor();
+    if(requestedCycle)await openCycle(requestedCycle);
+    else if(view.view==='author'&&await readKey(key('author/meta')))await resumeAuthor();
     else if(view.view==='schedule'&&await readKey(key('schedule')))await resumeSchedule();
     else if(view.view==='book'&&view.bookId)await openBook(view.bookId,view.editionId);
     else if(view.view==='cycle'&&view.cycleId)await openCycle(view.cycleId,view.stepId);

@@ -1,0 +1,48 @@
+{
+  "schema": "starforge.wqx-concentration-receiving.v1",
+  "operationId": "WQX-CONCENTRATION-POTOMAC-9F77-20261012",
+  "directory": "/workspace/scratch/9f774193b7b4/wqx-concentration-receiving/operation",
+  "sourceCarrier": "/workspace/scratch/9f774193b7b4/wqx-concentration-receiving/selected-source-cd5da917/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/review-sheet/examples/potomac-concentration-source.json",
+  "sourceCarrierSha256": "812f32327f09d871dea9a8f52a5feb3e920c0d854d798383af217efdd52b85ec",
+  "sourcePlanId": "potomac-complete-receiving-plan-01",
+  "sourcePlanSha256": "893c32bd0b9729cc3504244670ecd05c34c51ddf1e44887296c7ea2cb0788e21",
+  "reviewSha256": "ba122f919127c23f701dcbf9cb88314fee46cdace3fd881b971a23b959489631",
+  "captureSha256": "cbb29504ab01598cddb21bde33c918ca92075aad7f53fdac4fb07581371d29d7",
+  "targetUnit": "ug/L",
+  "sourceGroups": [
+    {
+      "unit": "mg/L",
+      "count": 220
+    },
+    {
+      "unit": "ug/L",
+      "count": 40
+    },
+    {
+      "unit": "ng/L",
+      "count": 38
+    }
+  ],
+  "limitOnlyCount": 452,
+  "selectedResults": 749,
+  "sourceResults": 1035,
+  "originalLimits": 1112,
+  "newPlanId": "potomac-concentrations-ug-l-01",
+  "reviewId": "potomac-concentration-review-01",
+  "reason": "Standardize the complete selected mass-per-volume result and every reported limit to ug/L for receiving; preserve unspecified result units and all original scientific context.",
+  "nodeHeapMiB": 768,
+  "playwrightModule": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright",
+  "chromiumExecutable": "/workspace/scratch/7573d13065d5/aurora_ops/browser-runtime/tmp/chromium",
+  "chromiumLibraryPath": "/workspace/scratch/7573d13065d5/aurora_ops/browser-runtime/tmp",
+  "browserTemporaryDirectory": "/dev/wqx-concentration-browser-9f77",
+  "chromiumArgs": [
+    "--no-zygote",
+    "--single-process",
+    "--disable-webgl",
+    "--in-process-gpu",
+    "--font-render-hinting=none",
+    "--disk-cache-size=1048576"
+  ],
+  "supportedLimitOnlyCount": 451,
+  "consideredResults": 750
+}
