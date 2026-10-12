@@ -34,6 +34,9 @@ import { pythonOperationFields, initializePythonWorkspace, reviewPythonRuntime, 
   openPythonBundle } from '../python-runtime/workspace.mjs';
 import { bindPythonApplicationCommand } from '../python-runtime/command-binding.mjs';
 import { openApiConnectionSetupAction } from './openapi-connection-setup.mjs';
+import { sourceBuildOperationFields, initializeSourceBuildWorkspace, sourceBuildWorkspaceState,
+  sourceBuildCatalog, reviewSourceBuild, readSourceBuildReview, normalizeSourceBuildOperation,
+  executeSourceBuildOperation, recoverSourceBuildOperation, openSourceBuildArchive } from './source-build-workspace.mjs';
 
 export const WORKSPACE_SCHEMA = 'stellar-forge.runtime-workspace.v1';
 const WORKER = fileURLToPath(new URL('./worker.mjs', import.meta.url));
@@ -132,6 +135,7 @@ async function jobView(root, id) {
       candidateId: request.candidateId ?? null, pythonInstallationId: request.installationId ?? null } : {}),
     targetId: request.targetId ?? null, imageId: request.imageId ?? null, transferId: request.transferId ?? null,
     cacheTransferId: request.cacheTransferId ?? null,
+    sourceBuildId: request.sourceBuildId ?? null, sourceBuildOutput: request.sourceBuildOutput ?? null,
     targetDirectory: request.targetDirectory ?? null, createdAt: request.createdAt,
     contextDirectory: request.contextDirectory ?? null, transferDirectory: request.transferDirectory ?? null,
     containerDirectory: request.containerDirectory ?? null, reviewId: request.reviewId ?? null,
@@ -167,6 +171,7 @@ const fields = {
   ...imageOperationFields,
   ...transferOperationFields,
   ...pythonOperationFields,
+  ...sourceBuildOperationFields,
   import: ['archive', 'sha256', 'label'],
   prepare: ['archiveId', 'name', 'selection', 'profileId'],
   install: ['runtimeId', 'offline', 'cache', 'nodeHeaders'],
@@ -182,8 +187,19 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
   await initializeApplications(root);
   await initializeTransferWorkspace(root);
   await initializePythonWorkspace(root);
+  await initializeSourceBuildWorkspace(root);
   const model = {
     directory: root,
+    async sourceBuildsState() { return sourceBuildWorkspaceState(root); },
+    async sourceBuildsCatalog(input) { return sourceBuildCatalog(input); },
+    async sourceBuildsReview(input) { return reviewSourceBuild(root, input); },
+    async sourceBuildsReadReview(id) { return readSourceBuildReview(root, id); },
+    async sourceBuildsDownload(id) { return openSourceBuildArchive(root, id); },
+    async recoverSourceBuildOperation(id) {
+      const result = await recoverSourceBuildOperation(root, id);
+      if (result.resume) await spawnWorker(root, id);
+      return result;
+    },
     async pythonState(input) {
       const selected = await entry(root, recordId(input.runtimeId));
       return pythonWorkspaceState(root, { ...input, runtimeDirectory: selected.directory });
@@ -299,6 +315,7 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
       if (request.nodeHeaders !== undefined) absolute(request.nodeHeaders);
       if (request.runtimeId) request.runtimeDirectory = (await entry(root, request.runtimeId)).directory;
       if (Object.hasOwn(pythonOperationFields, request.operation)) await normalizePythonOperation(root, request, id);
+      if (Object.hasOwn(sourceBuildOperationFields, request.operation)) await normalizeSourceBuildOperation(root, request, id);
       if (['install', 'inspect', 'upgrade', 'recover'].includes(request.operation))
         need(request.runtimeDirectory, 'RUNTIME_WORKSPACE_RUNTIME_REQUIRED');
       if (request.runtimeId && !['inspect', 'transfer-export'].includes(request.operation)) {
@@ -486,14 +503,23 @@ export async function executeRuntimeWorkspaceOperation({ directory, operation: i
     if (['SUCCEEDED', 'FAILED'].includes(previous.phase)) return previous;
     need(previous.phase === 'QUEUED', 'RUNTIME_WORKSPACE_INTERRUPTED_REQUEST',
       'Open the retained target runtime and use its original install or recovery operation');
-    const started = { phase: 'RUNNING', attempt: previous.attempt ?? 1, startedAt: now(), updatedAt: now(), pid: process.pid,
+    const started = {
+      ...(request.operation === 'source-build' ? Object.fromEntries(Object.entries(previous).filter(([key]) => key.startsWith('sourceBuild'))) : {}),
+      phase: 'RUNNING', attempt: previous.attempt ?? 1, startedAt: now(), updatedAt: now(), pid: process.pid,
       processStart: await processIdentity() };
     await saveJSON(join(operationDirectory, 'state.json'), started, true);
     try {
       let result;
       const installOptions = { offline: request.offline ?? false, cache: request.cache ?? null,
         ...(request.nodeHeaders ? { nodeHeaders: request.nodeHeaders } : {}) };
-      if (Object.hasOwn(pythonOperationFields, request.operation)) {
+      if (Object.hasOwn(sourceBuildOperationFields, request.operation)) {
+        result = await executeSourceBuildOperation({ root, request, state: previous,
+          retainArchive: (directory, label) => retainArchive(root, directory, label),
+          checkpoint: async value => {
+            Object.assign(started, value, { updatedAt: now() });
+            await saveJSON(join(operationDirectory, 'state.json'), started, true);
+          } });
+      } else if (Object.hasOwn(pythonOperationFields, request.operation)) {
         result = await executePythonOperation({ root, request, operationDirectory, leaseFd: lease.fd,
           checkpoint: async value => {
             Object.assign(started, value, { updatedAt: now() });
