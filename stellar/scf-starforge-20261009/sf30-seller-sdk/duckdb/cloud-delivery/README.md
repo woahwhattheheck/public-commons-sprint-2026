@@ -226,3 +226,7 @@ recovery remain with their existing source/merchant/customer components.
 - [Coin Metrics market candles](https://gitbook-docs.coinmetrics.io/market-data/market-data-overview/market-candles)
 - [Coin Metrics Community data](https://docs.coinmetrics.io/packages/coin-metrics-community-data)
 - [DuckDB insertion-order guarantees](https://duckdb.org/docs/current/sql/dialect/order_preservation)
+
+## Installed remote product
+
+The complete [Cloud client and receiving guide](CLIENT.md) covers the source-owned `cloud-workspace`, `cloud-mcp` and `cloud-remote` commands, typed client, resumed transfers, saved Applications launch and editable merchant receiving. These use this same original DuckDB workspace and its existing native source, review and package identities. The [API contract](API.md#installed-remote-and-resumed-operation) documents the added upload, identity, recovery and draft-adoption routes.
