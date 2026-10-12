@@ -4,13 +4,13 @@ const clone=value=>structuredClone(value);
 const tokenKey='netbox-migration-desk:access';
 const cursorKey='netbox-migration-desk:selection';
 const pendingKey='netbox-migration-desk:active-action';
-const labels={primary_ip:'Primary addresses',sites:'Sites',racks:'Racks',devices:'Devices',interfaces:'Interfaces',ip_addresses:'IP addresses'};
-const singular={primary_ip:'Primary address',sites:'Site',racks:'Rack',devices:'Device',interfaces:'Interface',ip_addresses:'IP address'};
-const catalogKinds={tenant:'tenants',device_type:'device_types',role:'roles',platform:'platforms',location:'locations',vrf:'vrfs'};
-const fieldNames={primary_ip4:'Primary IPv4 address',primary_ip6:'Primary IPv6 address',key:'Source key',match_id:'Existing NetBox ID',device_type:'Device type',asset_tag:'Asset tag',u_height:'Height (U)',starting_unit:'Starting unit',desc_units:'Descending units',facility_id:'Facility ID',mgmt_only:'Management only',dns_name:'DNS name',mtu:'MTU',vrf:'VRF',primary:'Primary address'};
+const labels={primary_ip:'Primary addresses',sites:'Sites',racks:'Racks',devices:'Devices',interfaces:'Interfaces',ip_addresses:'IP addresses',route_targets:'Route targets',vrfs:'VRFs',vlans:'VLANs',prefixes:'Prefixes',cables:'Cables',cable_terminations:'Cable terminations',cable_endpoints:'Cable endpoint caches',cable_paths:'Cable paths',native_effects:'Native endpoint and path effects'};
+const singular={primary_ip:'Primary address',sites:'Site',racks:'Rack',devices:'Device',interfaces:'Interface',ip_addresses:'IP address',route_targets:'Route target',vrfs:'VRF',vlans:'VLAN',prefixes:'Prefix',cables:'Cable'};
+const catalogKinds={tenant:'tenants',device_type:'device_types',role:'roles',platform:'platforms',location:'locations',vrf:'vrfs',group:'vlan_groups',ipam_role:'ipam_roles',bundle:'cable_bundles'};
+const fieldNames={primary_ip4:'Primary IPv4 address',primary_ip6:'Primary IPv6 address',key:'Source key',match_id:'Existing NetBox ID',device_type:'Device type',asset_tag:'Asset tag',u_height:'Height (U)',starting_unit:'Starting unit',desc_units:'Descending units',facility_id:'Facility ID',mgmt_only:'Management only',dns_name:'DNS name',mtu:'MTU',vrf:'VRF',primary:'Primary address',vid:'VLAN ID',rd:'Route distinguisher',enforce_unique:'Enforce unique prefixes and addresses',scope_site:'Site scope',ipam_role:'IPAM role',untagged_vlan:'Untagged VLAN',tagged_vlans:'Tagged VLANs',import_targets:'Import route targets',export_targets:'Export route targets',a_interface:'A interface',b_interface:'B interface',is_pool:'Address pool',mark_utilized:'Mark utilized',length_unit:'Length unit',cable_end:'Cable end',cable_connector:'Cable connector',cable_positions:'Cable positions'};
 const S={token:'',boot:null,project:null,draft:null,baseDraft:null,baseRevision:null,dirty:false,conflict:false,
   tab:'sources',sourceIndex:0,preview:null,edition:null,result:null,corrections:null,activeAction:null,
-  changeQuery:'',changeKind:'',changeAction:'',changePage:0,catalogLabels:new Map(),pollTimer:null,busy:0,mobileOpen:false};
+  changeQuery:'',changeKind:'',changeAction:'',changePage:0,network:null,networkKind:'prefixes',networkQuery:'',networkPage:0,catalogLabels:new Map(),pollTimer:null,busy:0,mobileOpen:false};
 const savedStorage=(store,key,fallback=null)=>{try{return JSON.parse(store.getItem(key))??fallback;}catch{return fallback;}};
 const setStorage=(store,key,value)=>{try{value===null?store.removeItem(key):store.setItem(key,JSON.stringify(value));}catch{}};
 const stable=value=>JSON.stringify(sortObject(value));
@@ -266,16 +266,21 @@ async function sourcePreview(upload,offset=0){
     [button('Close',closeDialog),button('Map this file',()=>{closeDialog();addSourceDialog(upload);},{class:'primary'})]);
 }
 function sourceForFile(file){return S.project.uploads.find(upload=>upload.file===file);}
+
 function newMapping(kind,upload){
   const headers=upload.headers,exact=name=>headers.includes(name)?{column:name}:null;
-  const definition={kind,file:upload.file,key:exact('source_key')??exact('key')??{column:''},fields:{},links:{},catalog:{}};
+  const definition={kind,file:upload.file,key:exact('source_key')??exact('key')??{column:''},fields:{},links:{},catalog:{},many:{}};
   if(exact('match_id'))definition.match_id=exact('match_id');
   for(const field of Object.keys(S.boot.schema.fields[kind]??{}))if(exact(field))definition.fields[field]=exact(field);
   for(const field of Object.keys(S.boot.schema.links[kind]??{})){
     if(exact(field+'_key'))definition.links[field]={...exact(field+'_key'),by:'key'};
     else if(exact(field+'_id'))definition.links[field]={...exact(field+'_id'),by:'id'};
   }
-  for(const field of S.boot.schema.catalog[kind]??[])if(exact(field+'_id'))definition.catalog[field]=exact(field+'_id');
+  for(const field of Object.keys(S.boot.schema.many?.[kind]??{})){
+    if(exact(field+'_keys'))definition.many[field]={...exact(field+'_keys'),by:'key',separator:';'};
+    else if(exact(field+'_ids'))definition.many[field]={...exact(field+'_ids'),by:'id',separator:';'};
+  }
+  for(const field of S.boot.schema.catalog[kind]??[])if(!definition.links[field]&&exact(field+'_id'))definition.catalog[field]=exact(field+'_id');
   if(kind==='ip_addresses'&&exact('primary'))definition.primary=exact('primary');
   return definition;
 }
@@ -301,14 +306,26 @@ async function restoreDialog(){
 }
 
 
+
 function mappingFields(definition){
-  const kind=definition.kind;
+  const kind=definition.kind,links=S.boot.schema.links[kind]??{};
+  const hints={mode:'Native interface mode: access, tagged, tagged-all, or blank. Changing mode can clear native VLAN memberships.',
+    rd:'Use the native route distinguisher when selecting a VRF whose name is shared.',
+    prefix:'IPv4 or IPv6 network. NetBox stores the canonical network prefix.',
+    scope_site:'Assign the prefix to an imported site or an existing Site ID.',
+    a_interface:'Choose one original Interface for the cable A end.',
+    b_interface:'Choose one original Interface for the cable B end.'};
   return [
     {name:'key',group:null,type:'text',required:true,hint:'Stable key used to link rows within this migration.'},
     {name:'match_id',group:null,type:'int',hint:'Existing native ID for a rename, move or correction.'},
-    ...Object.entries(S.boot.schema.fields[kind]??{}).map(([name,type])=>({name,group:'fields',type,required:(S.boot.schema.required_new[kind]??[]).includes(name),hint:(S.boot.schema.required_new[kind]??[]).includes(name)?'Required when creating this object.':''})),
-    ...Object.entries(S.boot.schema.links[kind]??{}).map(([name,target])=>({name,group:'links',type:'link',target,hint:'Match another imported source key or an existing native ID.'})),
-    ...(S.boot.schema.catalog[kind]??[]).map(name=>({name,group:'catalog',type:'int',catalogue:catalogKinds[name],hint:'Select an existing item from the native catalogue, or map an ID column.'})),
+    ...Object.entries(S.boot.schema.fields[kind]??{}).map(([name,type])=>({name,group:'fields',type,required:(S.boot.schema.required_new[kind]??[]).includes(name),
+      hint:hints[name]??((S.boot.schema.required_new[kind]??[]).includes(name)?'Required when creating this object.':'')})),
+    ...Object.entries(links).filter(([name])=>!Object.hasOwn(definition.catalog??{},name)).map(([name,target])=>({name,group:'links',type:'link',target,
+      hint:hints[name]??'Match another imported source key or an existing native ID.'})),
+    ...Object.entries(S.boot.schema.many?.[kind]??{}).map(([name,target])=>({name,group:'many',type:'membership',target,
+      hint:'Complete membership list. Separate source keys or native IDs with a semicolon; select Blank → clear to remove all memberships.'})),
+    ...(S.boot.schema.catalog[kind]??[]).filter(name=>!Object.hasOwn(links,name)||Object.hasOwn(definition.catalog??{},name)).map(name=>({name,group:'catalog',type:'int',catalogue:catalogKinds[name],
+      hint:'Select an existing item from the native catalogue, or map an ID column.'})),
     ...(kind==='ip_addresses'?[{name:'primary',group:null,type:'bool',hint:'Set this address as its assigned device’s primary address.'}]:[])
   ];
 }
@@ -321,7 +338,7 @@ function setExpression(definition,field,expression){
 function renderMapping(){
   const sources=S.draft.mapping.sources;
   if(!sources.length)return panel('Map the source inventory',h('div',{class:'empty'},h('h2',{},'Choose what each source file describes'),
-    h('p',{},'Map sites, racks, devices, interfaces and IP addresses. Relationships can use source keys across your files.'),
+    h('p',{},'Map inventory, route targets, VRFs, VLANs, prefixes, interfaces, addresses and cable endpoints. Relationships and memberships can use source keys across your files.'),
     button(S.project.uploads.length?'Add a source mapping':'Add source files',()=>S.project.uploads.length?addSourceDialog():(S.tab='sources',render()),{class:'primary'})));
   S.sourceIndex=Math.max(0,Math.min(S.sourceIndex,sources.length-1));
   const definition=sources[S.sourceIndex],upload=sourceForFile(definition.file);
@@ -345,12 +362,15 @@ function renderMapping(){
     S.preview&&renderPreview()
   ];
 }
+
 function renderField(definition,field,upload){
   const expression=expressionOf(definition,field),mode=expression?Object.hasOwn(expression,'column')?'column':'value':'none';
+  const multiple=field.group==='many',reference=multiple||field.group==='links';
   const modeSelect=h('select',{'aria-label':title(field.name)+' source mode',onChange:event=>{
     const next=event.target.value;
-    const value=next==='none'?null:next==='column'?{column:''}:{value:field.type==='bool'?false:''};
-    if(value&&field.group==='links')value.by=expression?.by??'key';
+    const value=next==='none'?null:next==='column'?{column:''}:{value:field.type==='bool'?false:multiple?[]:''};
+    if(value&&reference)value.by=expression?.by??'key';
+    if(value&&multiple)value.separator=expression?.separator??';';
     setExpression(definition,field,value);render();
   }},[['none','Not mapped'],['column','CSV column'],['value','Fixed value']].map(([value,label])=>h('option',{value,selected:value===mode},label)));
   let control=null;
@@ -361,26 +381,33 @@ function renderField(definition,field,upload){
   if(mode==='value')control=field.type==='bool'?h('select',{'aria-label':title(field.name)+' fixed value',onChange:event=>{expression.value=event.target.value==='true';markDirty();}},
     h('option',{value:'false',selected:expression.value===false||String(expression.value)==='false'},'No / false'),
     h('option',{value:'true',selected:expression.value===true||String(expression.value)==='true'},'Yes / true')):
-    h('input',{value:expression.value===null?'':String(expression.value??''),'aria-label':title(field.name)+' fixed value',
+    h('input',{value:expression.value===null?'':Array.isArray(expression.value)?expression.value.join(expression.separator??';'):String(expression.value??''),
+      'aria-label':title(field.name)+' fixed value',placeholder:multiple?(expression.by==='id'?'12;34':'source-key-a;source-key-b'):null,
       inputmode:field.type==='int'||field.type==='decimal'?'decimal':'text',
-      onInput:event=>{expression.value=event.target.value;markDirty();}});
+      onInput:event=>{expression.value=multiple&&event.target.value===''?[]:event.target.value;markDirty();}});
   const controls=[modeSelect,control];
-  if(expression&&field.group==='links')controls.push(h('select',{'aria-label':title(field.name)+' reference type',onChange:event=>{expression.by=event.target.value;markDirty();render();}},
+  if(expression&&reference)controls.push(h('select',{'aria-label':title(field.name)+' reference type',onChange:event=>{expression.by=event.target.value;markDirty();render();}},
     h('option',{value:'key',selected:expression.by!=='id'},'By imported source key'),h('option',{value:'id',selected:expression.by==='id'},'By existing native ID')));
-  const catalogue=field.catalogue??(field.group==='links'&&expression?.by==='id'?field.target:null);
-  if(mode==='value'&&catalogue)controls.push(button('Choose from NetBox',()=>chooseCatalogue(catalogue,item=>{
-    expression.value=item.id;markDirty();render();
-  }),{class:'compact','aria-label':'Choose '+title(field.name)+' from NetBox'}));
-  const selectedLabel=mode==='value'&&catalogue?S.catalogLabels.get(catalogue+':'+expression.value):null;
+  const catalogue=field.catalogue??(reference&&expression?.by==='id'?field.target:null);
+  if(mode==='value'&&catalogue)controls.push(button(multiple?'Add from NetBox':'Choose from NetBox',()=>chooseCatalogue(catalogue,item=>{
+    if(multiple){
+      const values=Array.isArray(expression.value)?expression.value:expression.value===null||expression.value===''?[]:String(expression.value).split(expression.separator??';').map(value=>value.trim());
+      if(!values.some(value=>String(value)===String(item.id)))values.push(item.id);
+      expression.value=values;
+    }else expression.value=item.id;
+    markDirty();render();
+  }),{class:'compact','aria-label':(multiple?'Add ':'Choose ')+title(field.name)+' from NetBox'}));
+  const selectedLabel=mode==='value'&&catalogue&&!multiple?S.catalogLabels.get(catalogue+':'+expression.value):null;
   return h('tr',{},h('td',{},h('span',{class:'field-label'},title(field.name),field.required&&h('span',{'aria-label':'Required for new objects'},' *')),
     field.hint&&h('p',{class:'field-hint'},field.hint)),
     h('td',{},h('div',{class:'mapping-control'},controls),selectedLabel&&help(selectedLabel)),
-    h('td',{},h('div',{class:'field-hint'},field.type==='link'?'Relationship':title(field.type)),
+    h('td',{},h('div',{class:'field-hint'},field.type==='link'?'Relationship':multiple?'Complete membership list':title(field.type)),
       expression&&button(expressionSummary(expression),()=>expressionOptions(definition,field),{class:'compact','aria-label':title(field.name)+' conversion options'})));
 }
 function expressionSummary(expression){
   const labels=[];if(expression.blank==='null')labels.push('Blank → clear');else if(expression.blank==='empty')labels.push('Blank → empty');
   if(expression.trim===false)labels.push('Keep spaces');if(expression.lower)labels.push('Lowercase');
+  if(expression.separator)labels.push('Separator '+expression.separator);
   if(expression.values&&Object.keys(expression.values).length)labels.push(fmt(Object.keys(expression.values).length)+' value rules');
   return labels.length?labels.join(' · '):'Options';
 }
@@ -397,27 +424,33 @@ function changeSourceFile(definition){
 }
 
 
+
 function expressionOptions(definition,field){
   const original=expressionOf(definition,field);if(!original)return;
-  const expression=clone(original);
-  const blank=h('select',{'aria-label':'Blank value behavior'},[['omit','Leave unchanged / omit'],['null','Clear with null'],['empty','Keep an empty text value']].map(([value,label])=>h('option',{value,selected:(expression.blank??'omit')===value},label)));
+  const expression=clone(original),multiple=field.group==='many';
+  const blank=h('select',{'aria-label':'Blank value behavior'},[['omit','Leave unchanged / omit'],['null',multiple?'Clear every membership':'Clear with null'],['empty','Keep an empty text value']].map(([value,label])=>h('option',{value,selected:(expression.blank??'omit')===value},label)));
   const trim=h('input',{type:'checkbox',checked:expression.trim!==false,'aria-label':'Trim surrounding spaces'});
   const lower=h('input',{type:'checkbox',checked:expression.lower===true,'aria-label':'Convert text to lowercase'});
-  const pairs=Object.entries(expression.values??{}).map(([key,value])=>({key,type:value===null?'null':typeof value,value:value===null?'':String(value)}));
+  const separator=multiple?h('input',{value:expression.separator??';',maxlength:1,'aria-label':'Membership separator'}):null;
+  const pairs=Object.entries(expression.values??{}).map(([key,value])=>({key,type:value===null?'null':Array.isArray(value)?'array':typeof value,
+    value:value===null?'':Array.isArray(value)?JSON.stringify(value):String(value)}));
   const rows=h('div',{class:'value-map'});
+  const types=[['string','Text'],['number','Number'],['boolean','Boolean'],['null','Null'],...(multiple?[['array','JSON list']]:[])];
   const renderPairs=()=>rows.replaceChildren(...pairs.map((pair,index)=>h('div',{class:'pair'},
     h('input',{value:pair.key,placeholder:'Source value','aria-label':'Source value '+(index+1),onInput:event=>pair.key=event.target.value}),
     h('select',{'aria-label':'Replacement type '+(index+1),onChange:event=>{pair.type=event.target.value;renderPairs();}},
-      [['string','Text'],['number','Number'],['boolean','Boolean'],['null','Null']].map(([value,label])=>h('option',{value,selected:pair.type===value},label))),
+      types.map(([value,label])=>h('option',{value,selected:pair.type===value},label))),
     pair.type==='boolean'?h('select',{'aria-label':'Replacement value '+(index+1),onChange:event=>pair.value=event.target.value},
       h('option',{value:'false',selected:pair.value!=='true'},'false'),h('option',{value:'true',selected:pair.value==='true'},'true')):
-      h('input',{value:pair.value,disabled:pair.type==='null',placeholder:'Replacement value','aria-label':'Replacement value '+(index+1),onInput:event=>pair.value=event.target.value}),
+      h('input',{value:pair.value,disabled:pair.type==='null',placeholder:pair.type==='array'?'["key-a","key-b"]':'Replacement value','aria-label':'Replacement value '+(index+1),onInput:event=>pair.value=event.target.value}),
     button('Remove',()=>{pairs.splice(index,1);renderPairs();},{class:'compact','aria-label':'Remove value rule '+(index+1)}))));
   renderPairs();
   openDialog(title(field.name)+' conversion',h('div',{},h('div',{class:'advanced-grid'},
     h('label',{},'When the source is blank',blank),
+    multiple&&h('label',{},'One-character membership separator',separator),
     h('div',{class:'rule-options'},h('label',{class:'check'},trim,'Trim surrounding spaces'),h('label',{class:'check'},lower,'Convert text to lowercase'))),
     h('div',{class:'spacer'}),h('h3',{},'Explicit value replacements'),help('Translate source values into the values expected by NetBox. For example: In service → active. Blank handling is applied before these replacements.'),
+    multiple&&help('A JSON list preserves each source key or native ID. An empty list clears all memberships.'),
     rows,button('Add value rule',()=>{pairs.push({key:'',type:'string',value:''});renderPairs();},{class:'compact'})),
     [button('Cancel',closeDialog),button('Apply options',()=>{
       const values=[];const used=new Set();
@@ -427,8 +460,10 @@ function expressionOptions(definition,field){
         if(pair.type==='number'){if(pair.value.trim()===''||!Number.isFinite(Number(pair.value)))throw new Error('Enter a finite number for each numeric replacement.');value=Number(pair.value);}
         else if(pair.type==='boolean')value=pair.value==='true';
         else if(pair.type==='null')value=null;
+        else if(pair.type==='array'){try{value=JSON.parse(pair.value);}catch{throw new Error('Enter a valid JSON list for each list replacement.');}if(!Array.isArray(value))throw new Error('A membership replacement must be a JSON list.');}
         values.push([pair.key,value]);
       }
+      if(multiple){if(separator.value.length!==1||separator.value.charCodeAt(0)<32)throw new Error('Choose one printable membership separator.');expression.separator=separator.value;}
       expression.blank=blank.value;expression.trim=trim.checked;expression.lower=lower.checked;
       if(values.length)expression.values=Object.fromEntries(values);else delete expression.values;
       setExpression(definition,field,expression);closeDialog();render();
@@ -469,7 +504,8 @@ function catalogueContext(record){
   if(!record)return'';
   const relation=value=>typeof value==='object'&&value?(value.display??value.name??value.model??'#'+value.id):value;
   return [record.manufacturer&&relation(record.manufacturer),record.model,record.site&&relation(record.site),record.device&&relation(record.device),
-    record.tenant&&relation(record.tenant),record.slug].filter(Boolean).join(' · ');
+    record.tenant&&relation(record.tenant),record.vrf&&relation(record.vrf),record.group&&relation(record.group),record.vid&&'VLAN '+record.vid,
+    record.rd,record.prefix,record.scope&&relation(record.scope),record.label,record.slug].filter(Boolean).join(' · ');
 }
 async function checkPreview(){
   if(!Number.isInteger(S.draft.tenant_id)||S.draft.tenant_id<=0){S.tab='sources';render();throw new Error('Choose the customer tenant in Project settings before checking the source mapping.');}
@@ -504,8 +540,8 @@ async function prepareEdition(){
 
 async function loadEdition(id,{renderAfter=true}={}){
   const result=await api(projectURL('/editions/'+encodeURIComponent(id)));
-  adoptProject(result.project);S.edition=result.edition;S.result=result.result??null;S.corrections=result.corrections??null;
-  S.changePage=0;rememberSelection();
+  adoptProject(result.project);S.edition=result.edition;S.result=result.result??null;S.network=result.network??null;S.corrections=result.corrections??null;
+  S.changePage=0;S.networkPage=0;rememberSelection();
   const active=(result.actions??[]).find(action=>action.id===result.edition.active_action_id&&action.state!=='COMPLETE');
   if(active&&(!S.activeAction||S.activeAction.id!==active.id)){
     S.activeAction=active;retainAction();
@@ -527,6 +563,84 @@ function metrics(counts={}){
     h('div',{class:'metric'},h('span',{},'Reviewed entries'),h('strong',{},fmt(Object.values(counts).reduce((sum,value)=>sum+(Number(value)||0),0)))));
 }
 function actionRunning(){return S.activeAction&&['QUEUED','RUNNING','CONNECTION_INTERRUPTED'].includes(S.activeAction.state);}
+
+const networkColumns={
+  route_targets:['name','description'],
+  vrfs:['name','rd','enforce_unique','import_targets','export_targets'],
+  vlans:['name','vid','status','site','group','ipam_role'],
+  prefixes:['prefix','vrf','vlan','scope_site','status','is_pool','mark_utilized'],
+  interfaces:['device','name','type','mode','vrf','untagged_vlan','tagged_vlans','cable'],
+  ip_addresses:['address','vrf','interface','status','dns_name'],
+  cables:['label','a_interface','b_interface','type','status','length','length_unit']
+};
+function networkValue(value){
+  if(value===null||value===undefined)return '—';
+  if(typeof value==='boolean')return value?'Yes':'No';
+  if(Array.isArray(value))return value.length?value.map(networkValue).join('; '):'None';
+  if(typeof value==='object'){
+    if(value.kind&&Object.hasOwn(value,'key'))return (singular[value.kind]??value.kind)+' / '+value.key;
+    if(value.model&&Object.hasOwn(value,'id'))return value.model+' #'+value.id;
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+function renderNetwork(){
+  const network=S.network;
+  if(!network||network.operation_id!==S.result?.operation_id)return null;
+  const families=Object.keys(network.objects??{}),available=families.filter(kind=>network.objects[kind].length);
+  if(!families.includes(S.networkKind)||(!network.objects[S.networkKind]?.length&&available.length))S.networkKind=available[0]??families[0];
+  const redraw=()=>$('#network-results')?.replaceChildren(...renderNetworkRows());
+  return panel('Network commissioning',h('div',{},
+    h('div',{class:'panel-body'},
+      h('p',{},'Review the routing, VLAN, addressing and physical connections produced by this native edition.'),
+      h('p',{class:'help'},network.prefix_membership),
+      h('div',{class:'toolbar'},
+        h('select',{'aria-label':'Network object family',onChange:event=>{S.networkKind=event.target.value;S.networkPage=0;redraw();}},
+          families.map(kind=>h('option',{value:kind,selected:kind===S.networkKind},(labels[kind]??title(kind))+' · '+fmt(network.counts[kind])))),
+        h('input',{class:'search',type:'search',value:S.networkQuery,placeholder:'Find a network, interface, VLAN or endpoint','aria-label':'Search network commissioning',
+          onInput:event=>{S.networkQuery=event.target.value;S.networkPage=0;redraw();}}))),
+    h('div',{id:'network-results'},renderNetworkRows())));
+}
+function renderNetworkRows(){
+  const network=S.network,kind=S.networkKind,needle=S.networkQuery.trim().toLowerCase();
+  if(!network)return [];
+  const selected=(network.objects[kind]??[]).filter(row=>!needle||JSON.stringify(row).toLowerCase().includes(needle));
+  const limit=25,maxPage=Math.max(0,Math.ceil(selected.length/limit)-1);S.networkPage=Math.min(S.networkPage,maxPage);
+  const start=S.networkPage*limit,rows=selected.slice(start,start+limit),columns=networkColumns[kind]??[];
+  const groups=new Map((network.prefix_groups??[]).map(group=>[group.id,group]));
+  const prefixCell=row=>{
+    const group=groups.get(row.selected_prefix_group??row.prefix_group);
+    if(!group)return h('span',{class:'muted'},kind==='ip_addresses'?'No selected prefix':'—');
+    return h('span',{},h('strong',{},group.prefix),
+      h('span',{class:'secondary-text'},group.vrf===null?'Global routing table':networkValue(group.vrf)),
+      kind==='prefixes'&&h('span',{class:'secondary-text'},group.address_count+' addresses'));
+  };
+  const objectCell=row=>{
+    const url=safeNativeURL(row.native_url);
+    const provenance=row.source&&typeof row.source==='object'?row.source:null;
+    return h('td',{},h('strong',{},row.key),
+      row.native_id&&h('span',{class:'secondary-text'},url?h('a',{href:url,target:'_blank',rel:'noopener noreferrer'},'#'+row.native_id):'#'+row.native_id),
+      provenance&&h('details',{class:'native-meta'},h('summary',{},'Source row '+(provenance.data_row??provenance.row??'—')),h('pre',{},JSON.stringify(provenance,null,2))),
+      h('details',{class:'native-meta'},h('summary',{},'Complete native change'),h('h4',{},'Before'),h('pre',{},JSON.stringify(row.before,null,2)),
+        h('h4',{},'After'),h('pre',{},JSON.stringify(row.after,null,2))));
+  };
+  const membership=['prefixes','ip_addresses'].includes(kind),nativeEffects=kind==='native_effects';
+  const headings=['Source object','Change',...columns.map(title),...(membership?['Selected prefix']:[]),...(nativeEffects?['Native effect']:[])];
+  const redraw=()=>$('#network-results')?.replaceChildren(...renderNetworkRows());
+  return [
+    h('div',{class:'table-wrap'},h('table',{class:'network-table'},h('thead',{},h('tr',{},headings.map(label=>h('th',{scope:'col'},label)))),
+      h('tbody',{},rows.length?rows.map(row=>h('tr',{},objectCell(row),h('td',{},badge(row.action)),
+        columns.map(field=>h('td',{},field==='vrf'&&row.after?.[field]===null?'Global routing table':networkValue(row.after?.[field]))),
+        membership&&h('td',{},prefixCell(row)),
+        nativeEffects&&h('td',{},labels[row.kind]??title(row.kind),h('span',{class:'secondary-text'},String(row.source??''))))):
+        h('tr',{},h('td',{colspan:headings.length,class:'empty'},'No network objects match these filters.'))))),
+    h('div',{class:'panel-body pager'},h('span',{class:'help'},rows.length?'Objects '+fmt(start+1)+'–'+fmt(start+rows.length)+' of '+fmt(selected.length):'0 objects'),
+      h('div',{class:'pagination-buttons'},button('Previous',()=>{S.networkPage--;redraw();},{disabled:S.networkPage===0}),
+        button('Next',()=>{S.networkPage++;redraw();},{disabled:S.networkPage>=maxPage}))),
+    h('div',{class:'panel-body'},help('Build the report or handover in Delivery to download the complete network report, CSV and JSON.'))
+  ];
+}
+
 function renderReview(){
   if(!S.edition)return panel('Prepare a native edition',h('div',{class:'empty'},h('h2',{},'Start with a checked source mapping'),
     h('p',{},'Save and check the mapping, then prepare an edition for native review.'),
@@ -548,6 +662,7 @@ function renderReview(){
       result&&h('div',{class:'detail-list'},h('dt',{},'Target tenant'),h('dd',{},result.tenant?.name??'No tenant selected'),
         h('dt',{},'NetBox'),h('dd',{},result.netbox_version??'—'),
         h('dt',{},'Result'),h('dd',{},badge(result.state??S.edition.state))))),
+    result&&renderNetwork(),
     result&&panel('Object changes',h('div',{},changeFilters(),h('div',{id:'change-results'},renderChangeResults()))),
     result?.generated_components?.length>0&&panel('Device template components',h('div',{},result.generated_components.map(device=>
       h('details',{class:'component-card'},h('summary',{},device.device_key+' · '+Object.entries(device.component_counts??{}).map(([name,count])=>fmt(count)+' '+name.replaceAll('_',' ')).join(' · ')),
@@ -731,6 +846,9 @@ function renderDelivery(){
   const cards=[
     ['handover.zip','Complete handover','Original operation, source CSVs, mapping, native results and the portable workspace.'],
     ['report.html','Review and delivery report','Readable inventory changes and the recorded migration result.'],
+    ['network.html','Network commissioning report','VRFs, VLANs, scoped prefixes, address assignments, cable endpoints and the original native effects.'],
+    ['network.csv','Network commissioning table','Full before/after JSON and source row references for every selected network object and native cable effect.'],
+    ['network.json','Network commissioning data','Typed objects and address-to-prefix groups within the explicitly reviewed VRF.'],
     ['result.json','Native result','The retained native review or applied receipt in its original JSON format.'],
     ['resolved.csv','Resolved object IDs','Native IDs and object URLs for the applied inventory.'],
     ['request.json','Frozen request','The exact source objects prepared for this migration edition.'],
@@ -749,7 +867,7 @@ function renderDelivery(){
     h('section',{class:'downloads','aria-label':'Edition downloads'},cards.map(([file,heading,description])=>h('div',{class:'download-card'},
       h('h3',{},heading),h('p',{class:'muted'},description),
       button('Download '+file,()=>download(editionURL('/download/'+file),file),{
-        disabled:S.busy>0||(file==='resolved.csv'&&!applied)||(['result.json','report.html'].includes(file)&&!ready)})))),
+        disabled:S.busy>0||(file==='resolved.csv'&&!applied)||(['result.json','report.html','network.html','network.csv','network.json'].includes(file)&&!ready)})))),
     panel('Continue this inventory',h('div',{class:'panel-body'},
       h('p',{},'Start a corrected draft from this edition’s retained CSVs and mapping. Applied object IDs are carried into the draft so you can revise existing inventory.'),
       h('div',{class:'toolbar'},button('Start a corrected draft',startCorrectedDraft,{disabled:S.busy>0||Boolean(actionRunning())}),

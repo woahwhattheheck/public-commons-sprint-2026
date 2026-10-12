@@ -21,7 +21,7 @@ SOURCE_COMMIT = "251458b89a5eb2f5fe0d20ecd1140ba08f141a9c"
 MAX_BYTES = 8 * 1024 * 1024
 MAX_OBJECTS = 5000
 MAX_RESULT_BYTES = 64 * 1024 * 1024
-ORDER = ("sites", "racks", "devices", "interfaces", "ip_addresses")
+ORDER = ("sites", "route_targets", "vrfs", "vlans", "prefixes", "racks", "devices", "interfaces", "ip_addresses", "cables")
 FIELDS = {
     "sites": {"name": "text", "slug": "text", "status": "text", "description": "text"},
     "racks": {"name": "text", "status": "text", "u_height": "int", "width": "int",
@@ -32,16 +32,36 @@ FIELDS = {
                    "description": "text", "mtu": "int", "speed": "int", "duplex": "text"},
     "ip_addresses": {"address": "ip", "status": "text", "role": "text",
                      "dns_name": "text", "description": "text"},
+    "route_targets": {"name": "text", "description": "text"},
+    "vrfs": {"name": "text", "rd": "text", "enforce_unique": "bool", "description": "text"},
+    "vlans": {"name": "text", "vid": "int", "status": "text", "description": "text"},
+    "prefixes": {"prefix": "prefix", "status": "text", "is_pool": "bool",
+                 "mark_utilized": "bool", "description": "text"},
+    "cables": {"label": "text", "type": "text", "status": "text", "color": "text",
+               "length": "decimal", "length_unit": "text", "description": "text"},
 }
+FIELDS["interfaces"]["mode"] = "text"
 LINKS = {"sites": {}, "racks": {"site": "sites"},
          "devices": {"site": "sites", "rack": "racks"},
-         "interfaces": {"device": "devices"},
-         "ip_addresses": {"interface": "interfaces"}}
+         "interfaces": {"device": "devices", "vrf": "vrfs", "untagged_vlan": "vlans"},
+         "ip_addresses": {"interface": "interfaces", "vrf": "vrfs"},
+         "route_targets": {}, "vrfs": {}, "vlans": {"site": "sites"},
+         "prefixes": {"vrf": "vrfs", "vlan": "vlans", "scope_site": "sites"},
+         "cables": {"a_interface": "interfaces", "b_interface": "interfaces"}}
+MANY = {kind: {} for kind in ORDER}
+MANY["interfaces"] = {"tagged_vlans": "vlans"}
+MANY["vrfs"] = {"import_targets": "route_targets", "export_targets": "route_targets"}
+NULLABLE_LINKS = {("devices", "rack"), ("interfaces", "vrf"), ("interfaces", "untagged_vlan"),
+                  ("ip_addresses", "vrf"), ("vlans", "site"), ("prefixes", "vrf"),
+                  ("prefixes", "vlan"), ("prefixes", "scope_site")}
 CATALOG = {"sites": (), "racks": ("location",), "devices": ("device_type", "role", "platform", "location"),
-           "interfaces": (), "ip_addresses": ("vrf",)}
+           "interfaces": (), "ip_addresses": ("vrf",), "route_targets": (), "vrfs": (),
+           "vlans": ("group", "ipam_role"), "prefixes": ("ipam_role",), "cables": ("bundle",)}
+NULLABLE_CATALOG = ("platform", "vrf", "location", "group", "ipam_role", "bundle")
 REQUIRED_NEW = {"sites": ("name", "slug"), "racks": ("name",),
                 "devices": ("name",), "interfaces": ("name", "type"),
-                "ip_addresses": ("address",)}
+                "ip_addresses": ("address",), "route_targets": ("name",), "vrfs": ("name",),
+                "vlans": ("name", "vid"), "prefixes": ("prefix",), "cables": ()}
 PRIMARY_MANAGER_NAMES = (
     "consoleporttemplates", "consoleserverporttemplates", "powerporttemplates",
     "poweroutlettemplates", "coolingintaketemplates", "coolingoutflowtemplates",
@@ -118,6 +138,13 @@ def clean_scalar(value, kind):
         if not isinstance(value, str) or not re.fullmatch(r"-?[0-9]+(?:\.[0-9]+)?", value):
             raise InventoryError("Expected an exact decimal string.")
         return format(decimal.Decimal(value).normalize(), "f")
+    if kind == "prefix":
+        if not isinstance(value, str) or "/" not in value:
+            raise InventoryError("A network prefix must include its actual prefix length.")
+        try:
+            return str(ipaddress.ip_network(value, strict=False))
+        except ValueError as exc:
+            raise InventoryError(str(exc)) from exc
     if kind == "ip":
         if not isinstance(value, str) or "/" not in value:
             raise InventoryError("An IP address must include its actual prefix length.")
@@ -163,7 +190,7 @@ def validate_packet(packet):
         raise InventoryError("The inventory must contain one to 5,000 selected objects.")
     seen = {}
     for row in rows:
-        keys(row, ("kind", "key", "match_id", "fields", "links", "catalog", "primary", "source"), "Object")
+        keys(row, ("kind", "key", "match_id", "fields", "links", "many", "catalog", "primary", "source"), "Object")
         kind, key = row.get("kind"), row.get("key")
         if kind not in ORDER or not isinstance(key, str) or not key or len(key) > 200 or "\x00" in key:
             raise InventoryError("Every row needs a supported kind and stable source key.")
@@ -182,8 +209,8 @@ def validate_packet(packet):
         keys(links, LINKS[kind], kind + "/" + key + " links")
         for field, target in links.items():
             if target is None:
-                if field != "rack":
-                    raise InventoryError("Only the optional rack link may be explicitly cleared.")
+                if (kind, field) not in NULLABLE_LINKS:
+                    raise InventoryError("The required " + field + " link cannot be explicitly cleared.")
                 continue
             keys(target, ("key", "id"), field + " link")
             if set(target) == {"id"} and positive_id(target["id"]):
@@ -191,10 +218,27 @@ def validate_packet(packet):
             if set(target) == {"key"} and isinstance(target["key"], str) and target["key"]:
                 continue
             raise InventoryError(field + " must name one source key or one original NetBox ID.")
+        many = row.get("many", {})
+        keys(many, MANY[kind], kind + "/" + key + " memberships")
+        for field, targets in many.items():
+            if not isinstance(targets, list) or len(targets) > MAX_OBJECTS:
+                raise InventoryError(field + " must be a complete list of at most 5,000 selected relationships.")
+            identities = set()
+            for target in targets:
+                keys(target, ("key", "id"), field + " membership")
+                if not ((set(target) == {"id"} and positive_id(target["id"]))
+                        or (set(target) == {"key"} and isinstance(target["key"], str) and target["key"])):
+                    raise InventoryError(field + " must contain source keys or original NetBox IDs.")
+                identity = canonical(target)
+                if identity in identities:
+                    raise InventoryError(field + " repeats the same selected relationship.")
+                identities.add(identity)
         catalogue = row.get("catalog", {})
+        if set(links) & set(catalogue):
+            raise InventoryError("Choose one relationship mapping for " + ", ".join(sorted(set(links) & set(catalogue))) + ".")
         keys(catalogue, CATALOG[kind], kind + "/" + key + " catalogue")
         for field, value in catalogue.items():
-            if not positive_id(value) and not (value is None and field in ("platform", "vrf", "location")):
+            if not positive_id(value) and not (value is None and field in NULLABLE_CATALOG):
                 raise InventoryError(field + " must be an existing NetBox ID.")
         if "primary" in row and (kind != "ip_addresses" or not isinstance(row["primary"], bool)):
             raise InventoryError("primary is a boolean option on an IP-address row.")
@@ -208,6 +252,10 @@ def validate_packet(packet):
         for field, target in row.get("links", {}).items():
             if target and "key" in target and (LINKS[row["kind"]][field], target["key"]) not in seen:
                 raise InventoryError(row["kind"] + "/" + row["key"] + ": missing " + field + " source key.")
+        for field, targets in row.get("many", {}).items():
+            for target in targets:
+                if "key" in target and (MANY[row["kind"]][field], target["key"]) not in seen:
+                    raise InventoryError(row["kind"] + "/" + row["key"] + ": missing " + field + " source key.")
     return packet
 
 
@@ -226,13 +274,15 @@ def scalar(value):
 
 
 def _bindings():
-    from dcim.models import Device, DeviceRole, DeviceType, Interface, Location, Platform, Rack, Site
+    from dcim.models import Cable, CableBundle, Device, DeviceRole, DeviceType, Interface, Location, Platform, Rack, Site
     from extras.models import JournalEntry
-    from ipam.models import IPAddress, VRF
+    from ipam.models import IPAddress, Prefix, Role, RouteTarget, VLAN, VLANGroup, VRF
     from tenancy.models import Tenant
     return ({"sites": Site, "racks": Rack, "devices": Device, "interfaces": Interface,
-             "ip_addresses": IPAddress},
-            {"device_type": DeviceType, "role": DeviceRole, "platform": Platform, "location": Location, "vrf": VRF},
+             "ip_addresses": IPAddress, "route_targets": RouteTarget, "vrfs": VRF,
+             "vlans": VLAN, "prefixes": Prefix, "cables": Cable},
+            {"device_type": DeviceType, "role": DeviceRole, "platform": Platform, "location": Location,
+             "vrf": VRF, "group": VLANGroup, "ipam_role": Role, "bundle": CableBundle},
             JournalEntry, Tenant)
 
 
@@ -272,6 +322,53 @@ def _reference(row, field, originals, models, alias, user, lock=False):
     return value
 
 
+def _vrf_reference(row, originals, models, alias, user, lock=False):
+    if "vrf" in row.get("links", {}):
+        value = _reference(row, "vrf", originals, models, alias, user, lock)
+        return value, row["links"]["vrf"] is not None and value is None
+    pk = row.get("catalog", {}).get("vrf")
+    if pk is None:
+        return None, False
+    value = _one(models["vrfs"], alias, {"pk": pk}, user, lock)
+    if value is None:
+        raise InventoryError("The selected original VRF no longer exists.")
+    return value, False
+
+
+def _cable_lookup(row, originals, models, alias, user, lock=False):
+    from django.contrib.contenttypes.models import ContentType
+    from dcim.models import CableTermination
+    if not all(field in row.get("links", {}) for field in ("a_interface", "b_interface")):
+        raise InventoryError("Select both cable endpoints or its explicit original match_id.")
+    endpoints = [_reference(row, field, originals, models, alias, user, lock)
+                 for field in ("a_interface", "b_interface")]
+    if any(obj is None for obj in endpoints):
+        return None
+    if endpoints[0].pk == endpoints[1].pk:
+        raise InventoryError("A cable must connect two different original interfaces.")
+    content_type = ContentType.objects.get_for_model(models["interfaces"])
+    candidates = []
+    for endpoint in endpoints:
+        terms = CableTermination.objects.using(alias).filter(
+            termination_type_id=content_type.pk, termination_id=endpoint.pk)
+        if lock:
+            terms = terms.select_for_update()
+        candidates.append(set(terms.values_list("cable_id", flat=True)))
+    common = candidates[0] & candidates[1]
+    if not common:
+        if candidates[0] or candidates[1]:
+            raise InventoryError("An endpoint already belongs to another native cable. Select the original cable match_id to review a retermination.")
+        return None
+    result = _one(models["cables"], alias, {"pk__in": sorted(common)}, user, lock)
+    if result is not None:
+        ends = (result.a_terminations, result.b_terminations)
+        if (any(len(end) != 1 for end in ends)
+                or any(end[0]._meta.label_lower != "dcim.interface" for end in ends)
+                or {end[0].pk for end in ends} != {obj.pk for obj in endpoints}):
+            raise InventoryError("The existing cable has additional or different terminations. Select its original match_id for explicit review.")
+    return result
+
+
 def _lookup(row, originals, models, alias, user, lock=False):
     kind = row["kind"]
     model = models[kind]
@@ -285,6 +382,28 @@ def _lookup(row, originals, models, alias, user, lock=False):
         if not fields.get("slug"):
             raise InventoryError("A site requires its slug or an explicit original match_id.")
         query = {"slug": fields["slug"]}
+    elif kind == "route_targets":
+        if not fields.get("name"):
+            raise InventoryError("A route target requires its exact name or original match_id.")
+        query = {"name": fields["name"]}
+    elif kind == "vrfs":
+        if fields.get("rd"):
+            query = {"rd": fields["rd"]}
+        elif fields.get("name"):
+            query = {"name": fields["name"], "tenant_id": row["_tenant_id"]}
+        else:
+            raise InventoryError("A VRF requires its route distinguisher, tenant/name or original match_id.")
+    elif kind == "vlans":
+        if not fields.get("vid"):
+            raise InventoryError("A VLAN requires its original VID or explicit match_id.")
+        group = row.get("catalog", {}).get("group")
+        if group is not None:
+            query = {"group_id": group, "vid": fields["vid"]}
+        else:
+            site = _reference(row, "site", originals, models, alias, user, lock)
+            if row.get("links", {}).get("site") is not None and site is None:
+                return None
+            query = {"group_id": None, "site": site, "tenant_id": row["_tenant_id"], "vid": fields["vid"]}
     elif kind in ("racks", "devices", "interfaces"):
         parent_field = "device" if kind == "interfaces" else "site"
         parent = _reference(row, parent_field, originals, models, alias, user, lock)
@@ -295,11 +414,46 @@ def _lookup(row, originals, models, alias, user, lock=False):
         query = {"name": fields["name"], parent_field: parent}
         if kind == "devices":
             query["tenant_id"] = row["_tenant_id"]
+    elif kind == "cables":
+        return _cable_lookup(row, originals, models, alias, user, lock)
     else:
-        if not fields.get("address"):
-            raise InventoryError("An IP address requires its actual address or original match_id.")
-        query = {"address": fields["address"], "vrf_id": row.get("catalog", {}).get("vrf")}
+        field = "prefix" if kind == "prefixes" else "address"
+        if not fields.get(field):
+            raise InventoryError("The selected " + kind + " requires its exact " + field + " or original match_id.")
+        vrf, unresolved = _vrf_reference(row, originals, models, alias, user, lock)
+        if unresolved:
+            return None
+        query = {field: fields[field], "vrf": vrf}
     return _one(model, alias, query, user, lock)
+
+
+def _native_field(field):
+    return {"ipam_role": "role", "scope_site": "scope"}.get(field, field)
+
+
+def _logical_native(value, inverse):
+    if value is not None and hasattr(value, "_meta"):
+        key = inverse.get((value._meta.label_lower, value.pk))
+        return {"key": key[1], "kind": key[0]} if key else {"id": value.pk, "model": value._meta.label_lower}
+    if isinstance(value, (list, tuple)):
+        return [_logical_native(item, inverse) for item in value]
+    return scalar(value)
+
+
+def _many_references(row, field, resolved, models, alias, user):
+    kind = MANY[row["kind"]][field]
+    selected, seen = [], set()
+    for target in row["many"][field]:
+        value = (resolved.get((kind, target["key"])) if "key" in target
+                 else _one(models[kind], alias, {"pk": target["id"]}, user, lock=True))
+        if value is None:
+            raise InventoryError("A selected " + field + " relationship has no original or prepared object.")
+        _allowed(user, models[kind], "view", value, alias)
+        if value.pk in seen:
+            raise InventoryError("Different " + field + " selectors resolve to the same native object.")
+        seen.add(value.pk)
+        selected.append(value)
+    return selected
 
 
 def _catalogue_context(model, obj):
@@ -329,20 +483,38 @@ def _catalogue_context(model, obj):
 def _native_value(obj, field, inverse):
     if field == "interface":
         value = obj.assigned_object
+    elif field in ("a_interface", "b_interface"):
+        value = getattr(obj, field[0] + "_terminations")
+    elif field in ("tagged_vlans", "import_targets", "export_targets"):
+        planned = getattr(obj, "_migration_many", {})
+        value = planned[field] if field in planned else (
+            list(getattr(obj, field).all().using(obj._state.db).select_for_update().order_by("pk"))
+            if obj.pk else [])
+        return sorted((_logical_native(item, inverse) for item in value), key=canonical)
     else:
-        value = getattr(obj, field)
-    if value is not None and hasattr(value, "_meta"):
-        key = inverse.get((value._meta.label_lower, value.pk))
-        return {"key": key[1], "kind": key[0]} if key else {"id": value.pk, "model": value._meta.label_lower}
-    return scalar(value)
+        value = getattr(obj, _native_field(field))
+    return _logical_native(value, inverse)
 
 
 def _managed_fields(row):
-    result = set(row.get("fields", {})) | set(row.get("links", {})) | set(row.get("catalog", {}))
+    result = set(row.get("fields", {})) | set(row.get("links", {})) | set(row.get("catalog", {})) | set(row.get("many", {}))
     if row["kind"] != "interfaces":
         result.add("tenant")
     if row["kind"] == "devices":
         result |= {"site", "rack", "location", "platform", "airflow", "cooling_method"}
+    if row["kind"] == "interfaces":
+        result |= {"device", "name", "type", "mode", "vrf", "untagged_vlan", "tagged_vlans",
+                   "cable", "cable_end", "cable_connector", "cable_positions", "mark_connected"}
+    if row["kind"] == "ip_addresses":
+        result |= {"address", "vrf", "interface", "status", "role", "dns_name"}
+    if row["kind"] == "vrfs":
+        result |= {"name", "rd", "enforce_unique", "import_targets", "export_targets"}
+    if row["kind"] == "vlans":
+        result |= {"name", "vid", "status", "site", "group", "ipam_role"}
+    if row["kind"] == "prefixes":
+        result |= {"prefix", "vrf", "vlan", "scope_site", "status", "is_pool", "mark_utilized", "ipam_role"}
+    if row["kind"] == "cables":
+        result |= {"a_interface", "b_interface", "label", "type", "status", "length", "length_unit", "bundle"}
     return sorted(result)
 
 
@@ -501,12 +673,12 @@ def _generated_projection(created_devices, alias, inverse):
             values = []
             for target in manager.all().using(alias).select_for_update().order_by("pk"):
                 values.append({
-                    "model": target._meta.label_lower, "id": target.pk,
+                    "identity": _logical_native(target, inverse),
                     "fields": {part.name: _native_value(target, part.name, inverse)
                                for part in target._meta.concrete_fields
-                               if part.name not in ("created", "last_updated") and not part.name.startswith("_")},
+                               if part.name not in ("id", "created", "last_updated") and not part.name.startswith("_")},
                 })
-            relations[field.name] = values
+            relations[field.name] = sorted(values, key=canonical)
         output.setdefault(device_key, []).append({
             "family": family, "model": obj._meta.label_lower, "key": key,
             "fields": fields, "many_to_many": relations,
@@ -566,6 +738,352 @@ def _decode_receipt(entry, packet_hash, operation_id):
     return {**receipt, "journal": {"id": entry.pk, "url": entry.get_absolute_url()}}
 
 
+# Native NetBox 4.7.2 cable-effect observation. Embed beside the existing
+# inventory helpers; these functions never save, delete, or rebuild a path.
+# Native source: 251458b89a5eb2f5fe0d20ecd1140ba08f141a9c.
+# Cable/signals blobs: 715465e487e183833bf3b9367a7a560a04e8b6d4 /
+# fbeb44bee8e0f161a0fe42baab23b283c99365c5.
+
+
+def _cable_effect_key(obj):
+    if obj is None or not hasattr(obj, "_meta") or obj.pk is None:
+        raise InventoryError("A native cable effect must identify a saved original object.")
+    return obj._meta.label_lower, obj.pk
+
+
+def _cable_effect_freeze(value):
+    """Keep private model identities until generated-component normalization."""
+    from copy import copy
+    if hasattr(value, "_meta"):
+        return copy(value)
+    if isinstance(value, dict):
+        return {name: _cable_effect_freeze(item) for name, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_cable_effect_freeze(item) for item in value]
+    return value
+
+
+def _cable_effect_value(value, inverse):
+    if isinstance(value, dict):
+        return {name: _cable_effect_value(item, inverse) for name, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_cable_effect_value(item, inverse) for item in value]
+    return _logical_native(value, inverse)
+
+
+def _cable_effect_lock(obj, alias, user, change=False):
+    model = obj._meta.model
+    result = _one(model, alias, {"pk": obj.pk}, user, lock=True)
+    if result is None:
+        raise InventoryError("A native cable endpoint or path object disappeared before review.")
+    if change:
+        _allowed(user, model, "change", result, alias)
+    return result
+
+
+def _cable_effect_rows(query, label):
+    rows = list(query.order_by("pk")[:MAX_OBJECTS + 1])
+    if len(rows) > MAX_OBJECTS:
+        raise InventoryError("The affected native cable " + label + " exceed 5,000 objects.")
+    return rows
+
+
+def _cable_effect_paths(nodes, alias):
+    """Use NetBox's original indexed path-node lookup, without retracing."""
+    from dcim.models import CablePath
+    from django.db.models import Q
+    unique = {_cable_effect_key(node): node for node in nodes if node.pk is not None}
+    result = {}
+    ordered = [unique[key] for key in sorted(unique)]
+    for start in range(0, len(ordered), 128):
+        condition = Q()
+        for node in ordered[start:start + 128]:
+            condition |= Q(_nodes__contains=node)
+        rows = _cable_effect_rows(
+            CablePath.objects.using(alias).select_for_update().filter(condition), "paths")
+        result.update((row.pk, row) for row in rows)
+        if len(result) > MAX_OBJECTS:
+            raise InventoryError("The affected native cable paths exceed 5,000 objects.")
+    return [result[pk] for pk in sorted(result)]
+
+
+def _cable_effect_path(path, alias, user):
+    """Decode the actual stored hops with NetBox's own ContentType encoding."""
+    from django.contrib.contenttypes.models import ContentType
+    from dcim.utils import decompile_path_node
+    if (not isinstance(path.path, list) or not path.path or
+            not isinstance(path.path[0], list) or not path.path[0]):
+        raise InventoryError("An affected native CablePath has no original origin hop.")
+    hops, resolved = [], {}
+    node_count = 0
+    for hop in path.path:
+        if not isinstance(hop, list):
+            raise InventoryError("An affected native CablePath contains an invalid hop.")
+        # Original profile tracing retains an empty far-end hop when no peer
+        # exists. Preserve it as an incomplete path instead of inventing one.
+        nodes = []
+        for encoded in hop:
+            type_id, object_id = decompile_path_node(encoded)
+            identity = (type_id, object_id)
+            if identity not in resolved:
+                object_type = ContentType.objects.db_manager(alias).get_for_id(type_id)
+                model = object_type.model_class()
+                if model is None:
+                    raise InventoryError("A native cable path refers to an unavailable original model.")
+                obj = _one(model, alias, {"pk": object_id}, user, lock=True)
+                if obj is None:
+                    raise InventoryError("A native cable path contains a missing original node.")
+                resolved[identity] = _cable_effect_freeze(obj)
+            nodes.append(resolved[identity])
+            node_count += 1
+            if node_count > MAX_OBJECTS:
+                raise InventoryError("An affected native cable path exceeds 5,000 node occurrences.")
+        hops.append(nodes)
+    if path.is_complete and not hops[-1]:
+        raise InventoryError("A complete native CablePath has no original destination.")
+    # Path PKs, ContentType IDs and _nodes are database cache storage; none is
+    # a review identity. The complete ordered native hops and flags are kept.
+    return {
+        "path": hops,
+        "origins": list(hops[0]),
+        "destinations": list(hops[-1]) if path.is_complete else [],
+        "is_active": bool(path.is_active),
+        "is_complete": bool(path.is_complete),
+        "is_split": bool(path.is_split),
+    }
+
+
+def _cable_effect_terminations(cable, alias, user):
+    from django.contrib.contenttypes.models import ContentType
+    from dcim.models import CableTermination
+    if cable.pk is None:
+        return []
+    rows = _cable_effect_rows(
+        CableTermination.objects.using(alias).select_for_update().filter(cable_id=cable.pk),
+        "terminations")
+    result = []
+    for termination in rows:
+        object_type = ContentType.objects.db_manager(alias).get_for_id(termination.termination_type_id)
+        model = object_type.model_class()
+        if model is None:
+            raise InventoryError("A native CableTermination refers to an unavailable original model.")
+        endpoint = _one(model, alias, {"pk": termination.termination_id}, user, lock=True)
+        if endpoint is None:
+            raise InventoryError("A native CableTermination has lost its original endpoint.")
+        _allowed(user, model, "change", endpoint, alias)
+        result.append({
+            "end": termination.cable_end,
+            "endpoint": _cable_effect_freeze(endpoint),
+            "connector": termination.connector,
+            "positions": _cable_effect_freeze(termination.positions),
+        })
+    return result
+
+
+def _cable_effect_endpoint(obj, alias, user):
+    from dcim.models import CablePath
+    state = {}
+    for name in ("cable", "cable_end", "cable_connector", "cable_positions"):
+        if not hasattr(obj, name):
+            raise InventoryError("The affected native endpoint lacks its original cable fields.")
+        value = getattr(obj, name)
+        if name == "cable" and value is not None:
+            value = _cable_effect_lock(value, alias, user)
+        state[name] = _cable_effect_freeze(value)
+    # A channel child is a separate affected Interface even though native
+    # propagation updates it in bulk and creates no CableTermination for it.
+    if obj._meta.label_lower == "dcim.interface":
+        state["parent"] = _cable_effect_freeze(obj.parent)
+        state["channel_id"] = obj.channel_id
+        state["channels"] = obj.channels
+    if hasattr(obj, "_path_id"):
+        path_id = obj._path_id
+        if path_id is None:
+            state["path"] = None
+        else:
+            path = CablePath.objects.using(alias).select_for_update().filter(pk=path_id).first()
+            if path is None:
+                raise InventoryError("An affected endpoint retains a missing native CablePath.")
+            state["path"] = _cable_effect_path(path, alias, user)
+    return state
+
+
+def _cable_effect_capture_endpoint(obj, alias, user, tracked):
+    obj = _cable_effect_lock(obj, alias, user, change=True)
+    key = _cable_effect_key(obj)
+    if key not in tracked["endpoints"]:
+        tracked["endpoints"][key] = {
+            "object": _cable_effect_freeze(obj),
+            "before": _cable_effect_endpoint(obj, alias, user),
+        }
+    if len(tracked["endpoints"]) > MAX_OBJECTS:
+        raise InventoryError("The affected native cable endpoints exceed 5,000 objects.")
+    return obj
+
+
+def _cable_effect_capture_origins(candidates, alias, user, tracked):
+    """Capture each original origin's complete path set only on its first touch.
+
+    A later source cable may retrace the same origin again. Its initial state
+    must not be replaced with the intermediate result from an earlier save.
+    """
+    pending = {_cable_effect_key(obj): obj for obj in candidates}
+    while pending:
+        key = min(pending)
+        obj = pending.pop(key)
+        if key in tracked["origins"]:
+            continue
+        obj = _cable_effect_capture_endpoint(obj, alias, user, tracked)
+        raw_paths = [_cable_effect_path(path, alias, user)
+                     for path in _cable_effect_paths([obj], alias)]
+        before = [path for path in raw_paths
+                  if any(_cable_effect_key(origin) == key for origin in path["origins"])]
+        tracked["origins"][key] = {
+            "object": _cable_effect_freeze(obj),
+            "before": before,
+        }
+        if len(tracked["origins"]) > MAX_OBJECTS:
+            raise InventoryError("The affected native cable origins exceed 5,000 objects.")
+        for path in raw_paths:
+            for endpoint in path["origins"] + path["destinations"]:
+                endpoint_key = _cable_effect_key(endpoint)
+                if (endpoint_key not in tracked["origins"] and
+                        all(hasattr(endpoint, field) for field in
+                            ("cable", "cable_end", "cable_connector", "cable_positions"))):
+                    # ProviderNetwork/site destinations are observed path nodes,
+                    # not cabled origins whose fields the native signal updates.
+                    pending.setdefault(endpoint_key, endpoint)
+
+
+def _track_cable_effects(cable, proposed_endpoints, models, alias, user, tracked, inverse):
+    """Observe and authorize the original scope immediately before Cable.save.
+
+    proposed_endpoints is a sequence of actual saved Interface objects, or
+    {"a_interface": object_or_none, "b_interface": object_or_none}.
+    Reuse one initially empty tracked dict for the entire migration.
+    """
+    from django.db import transaction
+    if not transaction.get_connection(alias).in_atomic_block:
+        raise InventoryError("Native cable effects must be captured in the migration transaction.")
+    if tracked.get("finalized"):
+        raise InventoryError("Native cable effects were already finalized.")
+    for name in ("cables", "endpoints", "origins"):
+        tracked.setdefault(name, {})
+    if isinstance(proposed_endpoints, dict):
+        if set(proposed_endpoints) - {"a_interface", "b_interface"}:
+            raise InventoryError("Cable effect capture requires the original a_interface/b_interface selection.")
+        proposed = list(proposed_endpoints.values())
+    elif isinstance(proposed_endpoints, (list, tuple)):
+        proposed = list(proposed_endpoints)
+    else:
+        raise InventoryError("Cable effect capture requires the selected native Interface objects.")
+    proposed = [obj for obj in proposed if obj is not None]
+    Interface = models["interfaces"]
+    for obj in proposed:
+        if not hasattr(obj, "_meta") or obj._meta.model is not Interface or obj.pk is None:
+            raise InventoryError("Select a saved original Interface before native cable review.")
+
+    # Keep a reference to a new Cable: its real PK is assigned by the caller's
+    # original save. Do not freeze/serialize an unsaved identity.
+    cable_key = next((key for key, value in tracked["cables"].items()
+                      if value["object"] is cable or
+                      (cable.pk is not None and value["object"].pk == cable.pk)), None)
+    if cable.pk is not None:
+        _cable_effect_lock(cable, alias, user, change=True)
+    current = _cable_effect_terminations(cable, alias, user)
+    if cable_key is None:
+        cable_key = len(tracked["cables"])
+        tracked["cables"][cable_key] = {"object": cable, "before": current}
+    if len(tracked["cables"]) > MAX_OBJECTS:
+        raise InventoryError("The affected native cables exceed 5,000 objects.")
+    endpoints = {_cable_effect_key(obj): obj
+                 for obj in proposed + [item["endpoint"] for item in current]}
+    parent_ids = [obj.pk for obj in endpoints.values()
+                  if obj._meta.label_lower == "dcim.interface"]
+    if parent_ids:
+        children = _cable_effect_rows(
+            Interface.objects.using(alias).select_for_update().filter(
+                parent_id__in=parent_ids, channel_id__isnull=False), "channel interfaces")
+        endpoints.update((_cable_effect_key(obj), obj) for obj in children)
+    locked = [_cable_effect_capture_endpoint(endpoints[key], alias, user, tracked)
+              for key in sorted(endpoints)]
+    anchors = locked + ([cable] if cable.pk is not None else [])
+    affected_paths = [_cable_effect_path(path, alias, user)
+                      for path in _cable_effect_paths(anchors, alias)]
+    candidates = list(locked)
+    for path in affected_paths:
+        candidates.extend(path["origins"])
+        candidates.extend(endpoint for endpoint in path["destinations"]
+                          if all(hasattr(endpoint, field) for field in
+                                 ("cable", "cable_end", "cable_connector", "cable_positions")))
+    _cable_effect_capture_origins(candidates, alias, user, tracked)
+
+
+def _finalize_cable_effects(tracked, inverse, alias, user):
+    """Read actual native effects once, after all saves and logical identities."""
+    if not tracked:
+        return []
+    if tracked.get("finalized"):
+        raise InventoryError("Native cable effects can be finalized only once.")
+    source = "Original NetBox Cable.save, CableTermination and channel/path signals"
+    effects = []
+    cables = []
+    for captured in tracked["cables"].values():
+        cable = _cable_effect_lock(captured["object"], alias, user, change=True)
+        cables.append(cable)
+        current = _cable_effect_terminations(cable, alias, user)
+        for termination in current:
+            if _cable_effect_key(termination["endpoint"]) not in tracked["endpoints"]:
+                raise InventoryError("Native cable save reached an endpoint outside the captured original scope.")
+        before = sorted((_cable_effect_value(item, inverse) for item in captured["before"]), key=canonical)
+        after = sorted((_cable_effect_value(item, inverse) for item in current), key=canonical)
+        identity = _logical_native(cable, inverse)
+        effects.append({
+            "kind": "cable_terminations", "key": canonical(identity),
+            "action": "UPDATE" if before != after else "KEEP",
+            "cable": identity, "before": before, "after": after, "source": source,
+        })
+
+    # Query the saved graph, not stale Cable._a/_b_terminations or a path
+    # recomputed by this importer. All actual new origins must have been
+    # authorized and captured before the first save that could change them.
+    anchors = cables + [item["object"] for item in tracked["endpoints"].values()]
+    paths = [_cable_effect_path(path, alias, user)
+             for path in _cable_effect_paths(anchors, alias)]
+    by_origin = {key: [] for key in tracked["origins"]}
+    for path in paths:
+        for origin in path["origins"]:
+            key = _cable_effect_key(origin)
+            if key not in by_origin:
+                raise InventoryError("Native cable tracing reached an origin outside the captured original scope.")
+            by_origin[key].append(path)
+    for key, captured in tracked["origins"].items():
+        origin = _cable_effect_lock(captured["object"], alias, user, change=True)
+        before = sorted((_cable_effect_value(path, inverse) for path in captured["before"]), key=canonical)
+        after = sorted((_cable_effect_value(path, inverse) for path in by_origin[key]), key=canonical)
+        identity = _logical_native(origin, inverse)
+        effects.append({
+            "kind": "cable_paths", "key": canonical(identity),
+            "action": "UPDATE" if before != after else "KEEP",
+            "origin": identity, "before": before, "after": after, "source": source,
+        })
+    for captured in tracked["endpoints"].values():
+        endpoint = _cable_effect_lock(captured["object"], alias, user, change=True)
+        before = _cable_effect_value(captured["before"], inverse)
+        after = _cable_effect_value(_cable_effect_endpoint(endpoint, alias, user), inverse)
+        identity = _logical_native(endpoint, inverse)
+        effects.append({
+            "kind": "cable_endpoints", "key": canonical(identity),
+            "action": "UPDATE" if before != after else "KEEP",
+            "endpoint": identity, "before": before, "after": after, "source": source,
+        })
+    effects.sort(key=lambda row: (row["kind"], row["key"]))
+    if len(canonical(effects).encode("utf-8")) > MAX_RESULT_BYTES:
+        raise InventoryError("The actual native cable effects exceed the 64 MiB retained result limit.")
+    tracked["finalized"] = True
+    return effects
+
+
 def migrate(script, packet, tenant, commit, review_digest):
     from django.conf import settings
     from django.contrib.contenttypes.models import ContentType
@@ -578,7 +1096,11 @@ def migrate(script, packet, tenant, commit, review_digest):
     if packet["tenant_id"] != tenant.pk:
         raise InventoryError("The selected native tenant and retained inventory tenant differ.")
     models, catalogue_models, JournalEntry, Tenant = _bindings()
-    aliases = {router.db_for_write(model) for model in (*models.values(), JournalEntry, Tenant)}
+    from dcim.models import CablePath, CableTermination
+    related_models = [models[kind]._meta.get_field(field).remote_field.through
+                      for kind in ORDER for field in MANY[kind]]
+    aliases = {router.db_for_write(model) for model in
+               (*models.values(), *related_models, CablePath, CableTermination, JournalEntry, Tenant)}
     if len(aliases) != 1:
         raise InventoryError("The selected inventory and native journal must share the same database transaction.")
     alias = aliases.pop()
@@ -662,7 +1184,7 @@ def migrate(script, packet, tenant, commit, review_digest):
     resolved = dict(originals)
     changes, results, primary_requests, generated = [], [], {}, []
     created_devices = []
-    child_devices, intended_fields = {}, {}
+    child_devices, intended_fields, cable_effects = {}, {}, {}
     for row in rows:
         kind, key = row["kind"], row["key"]
         label = (kind, key)
@@ -694,11 +1216,23 @@ def migrate(script, packet, tenant, commit, review_digest):
                     raise InventoryError("The selected " + field + " has no prepared original object.")
                 if field == "interface":
                     obj.assigned_object = linked
+                elif field in ("a_interface", "b_interface"):
+                    setattr(obj, field[0] + "_terminations", [linked])
                 else:
-                    setattr(obj, field, linked)
+                    setattr(obj, _native_field(field), linked)
             for field, pk in row.get("catalog", {}).items():
-                setattr(obj, field, None if pk is None else catalogues[
+                setattr(obj, _native_field(field), None if pk is None else catalogues[
                     (catalogue_models[field]._meta.label_lower, pk)][0])
+            memberships = {field: _many_references(row, field, resolved, models, alias, user)
+                           for field in row.get("many", {})}
+            if kind == "interfaces" and "tagged_vlans" in memberships:
+                tagged = memberships["tagged_vlans"]
+                if tagged and obj.mode != "tagged":
+                    raise InventoryError("Tagged VLAN memberships require the original tagged interface mode.")
+                for vlan in tagged:
+                    if vlan.site_id is not None and vlan.site_id != obj.device.site_id:
+                        raise InventoryError("A tagged VLAN must belong to this interface's device site or have no assigned site.")
+            obj._migration_many = memberships
             # Native Device.save derives location from a located rack. Derive
             # that same value BEFORE Device.clean checks location/site/rack.
             if kind == "devices" and obj.rack_id and obj.rack.location_id:
@@ -718,19 +1252,35 @@ def migrate(script, packet, tenant, commit, review_digest):
                     if not getattr(obj, name, None):
                         raise InventoryError("A new native object requires " + name + ".")
             obj.full_clean()
+            if kind == "cables":
+                proposed_endpoints = {field: getattr(obj, field[0] + "_terminations")[0]
+                                      for field in row.get("links", {})
+                                      if field in ("a_interface", "b_interface")}
+                _track_cable_effects(obj, proposed_endpoints, models, alias, user, cable_effects, inverse)
             provisional = _snapshot(row, obj, inverse)
             intended_fields[label] = {field: provisional[field] for field in (
-                set(row.get("fields", {})) | set(row.get("links", {})) | set(row.get("catalog", {})))}
+                set(row.get("fields", {})) | set(row.get("links", {})) | set(row.get("catalog", {})) | set(row.get("many", {})))}
             if original is None or before != provisional:
                 obj._changelog_message = "Inventory migration " + packet["operation_id"] + ": " + kind + "/" + key
                 if kind == "devices" and obj.pk:
                     _track_native_children(obj, models, alias, user, child_devices, inverse)
                 obj.save(using=alias)
                 _allowed(user, model, action, obj, alias)
+            for field, values in memberships.items():
+                getattr(obj, field).set(values)
+            del obj._migration_many
+            if memberships:
+                obj.full_clean()
+            if kind == "cables":
+                # Cable.save caches requested terminations on the instance.
+                # Read its actual CableTermination rows through a fresh object.
+                obj = _one(model, alias, {"pk": obj.pk}, user, lock=True)
+                if obj is None:
+                    raise InventoryError("The original cable disappeared after its native save.")
             resolved[label] = obj
             inverse[obj._meta.label_lower, obj.pk] = label
             after = _snapshot(row, obj, inverse)
-            explicit = set(row.get("fields", {})) | set(row.get("links", {})) | set(row.get("catalog", {}))
+            explicit = set(row.get("fields", {})) | set(row.get("links", {})) | set(row.get("catalog", {})) | set(row.get("many", {}))
             for field in explicit:
                 if after[field] != provisional[field]:
                     raise InventoryError("The native model resolved " + field
@@ -792,7 +1342,13 @@ def migrate(script, packet, tenant, commit, review_digest):
         if label not in by_label:
             continue
         obj = resolved[label]
-        obj.refresh_from_db(using=alias)
+        if change["kind"] == "cables":
+            obj = _one(models["cables"], alias, {"pk": obj.pk}, user, lock=True)
+            if obj is None:
+                raise InventoryError("An original cable disappeared before the final native review.")
+            resolved[label] = obj
+        else:
+            obj.refresh_from_db(using=alias)
         after = _snapshot(by_label[label], obj, inverse)
         for field, intended in intended_fields[label].items():
             if after[field] != intended:
@@ -802,6 +1358,7 @@ def migrate(script, packet, tenant, commit, review_digest):
         change["action"] = ("CREATE" if originals[label] is None else
                             ("UPDATE" if original_snapshots[label] != after else "KEEP"))
     changes.extend(_finalize_native_children(models, alias, user, child_devices, inverse))
+    changes.extend(_finalize_cable_effects(cable_effects, inverse, alias, user))
 
     catalogue_report = [{"model": model, "id": pk, "data": value[1]}
                         for (model, pk), value in sorted(catalogues.items())]
