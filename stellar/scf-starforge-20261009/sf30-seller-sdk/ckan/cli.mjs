@@ -22,6 +22,13 @@ const usage = [
   '  ckan receive-workspace --archive FILE.ckanw --project NEW_DIR --sha256 HASH',
   '  ckan edition --project DIR --id EDITION_ID',
   '  ckan compare --project DIR --before EDITION_ID --after EDITION_ID [--key _id]',
+  '  ckan refresh-prepare --project DIR --id SOURCE_ID --input refresh.json',
+  '  ckan refresh --project DIR --id REFRESH_ID',
+  '  ckan refresh-preview --project DIR --id REFRESH_ID --input projection.json',
+  '  ckan refresh-changes --project DIR --id REFRESH_ID --sha256 COMPARISON_HASH [--offset 0] [--limit 50]',
+  '  ckan refresh-file --project DIR --id REFRESH_ID --sha256 COMPARISON_HASH',
+  '  ckan refresh-review --project DIR --id REFRESH_ID --input decision.json',
+  '  ckan refresh-resume --project DIR --id REFRESH_ID',
   '  ckan select --project DIR --id EDITION_ID --input selection.json',
   '  ckan prepare --project DIR --id SOURCE_ID --input publication.json',
   '  ckan inspect --project DIR --id PUBLICATION_ID [--query "physical_branch=1"]',
@@ -71,6 +78,14 @@ export async function main(argv = process.argv.slice(2)) {
     else if (command === 'import') result = project.importCapture(resolve(required('capture')));
     else if (command === 'edition') result = await project.edition(required('id'));
     else if (command === 'compare') result = await project.compare(required('before'), required('after'), options.key ?? '_id');
+    else if (command === 'refresh-prepare') result = project.prepareRefresh(required('id'), await input());
+    else if (command === 'refresh') result = await project.refresh(required('id'));
+    else if (command === 'refresh-preview') result = await project.previewRefresh(required('id'), await input());
+    else if (command === 'refresh-changes') result = await project.refreshChanges(required('id'), {
+      expectedComparisonSha256: required('sha256'), offset: Number(options.offset ?? 0), limit: Number(options.limit ?? 50) });
+    else if (command === 'refresh-file') result = await project.refreshChangesFile(required('id'), required('sha256'));
+    else if (command === 'refresh-review') result = project.reviewRefresh(required('id'), await input());
+    else if (command === 'refresh-resume') result = project.resumeRefresh(required('id'));
     else if (command === 'select') result = project.saveSource(required('id'), await input());
     else if (command === 'prepare') result = project.createPublication(required('id'), await input('input', true));
     else if (command === 'inspect') result = await project.publication(required('id'), options.query ?? '');

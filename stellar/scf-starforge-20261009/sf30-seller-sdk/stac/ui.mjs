@@ -76,6 +76,7 @@ async function refresh({render=true,detail=true}={}){
   const result=await api('/api/state');state.workspace=result.workspace;state.jobs=result.jobs||[];state.eoapi=result.eoapi===true;
   state.processingCapabilities=result.capabilities?.processing?.enabled?result.capabilities.processing:null;
   state.prescientEnabled=result.capabilities?.prescient?.enabled===true;
+  state.catalogueEnabled=result.capabilities?.catalogue?.enabled===true;
   if(state.queryId&&!byId(state.workspace.queries,state.queryId)){state.queryId=null;state.editionId=null;state.draft=null;}
   if(!state.queryId&&array(state.workspace.queries).length&&!state.draft){state.queryId=array(state.workspace.queries)[0].id;}
   const editions=queryEditions();
@@ -166,7 +167,7 @@ function paginationControls(total){
 function rememberFocus(){
   const element=document.activeElement;
   if(!element||!root.contains(element))return null;
-  const retained=state.processingView?.root.contains(element)||eoapiElement?.contains(element)||state.prescientView?.root.contains(element);
+  const retained=state.processingView?.root.contains(element)||eoapiElement?.contains(element)||state.prescientView?.root.contains(element)||state.catalogueView?.root.contains(element);
   if(!element.id&&!retained)return null;
   return {id:element.id,element:retained?element:null,start:element.selectionStart,end:element.selectionEnd};
 }
@@ -259,12 +260,39 @@ function renderPrescient(){
 }
 window.addEventListener('pagehide',disposePrescientView);
 
+function disposeCatalogueView(){
+  const value=state.catalogueView;if(!value)return;state.catalogueView=null;value.disposed=true;
+  if(value.handle)Promise.resolve(value.handle.dispose()).catch(error=>toast(error.message,true));
+}
+function renderCatalogue(){
+  let value=state.catalogueView;
+  if(value&&value.workspaceId!==state.workspace.id){disposeCatalogueView();value=null;}
+  if(!value){
+    value={root:node('div',{class:'catalogue-host'},node('p',{},'Opening catalogue receiving…')),workspaceId:state.workspace.id,handle:null,disposed:false,context:null,pending:false};
+    state.catalogueView=value;
+    if(!document.querySelector('link[data-catalogue-style]'))document.head.append(node('link',{rel:'stylesheet',href:'/geonetwork/view.css','data-catalogue-style':'true'}));
+    void import('/geonetwork/view.mjs').then(async module=>{
+      if(value.disposed)return;
+      const handle=await module.mountCatalogueView({root:value.root,api,context:value.context});
+      if(value.disposed){await handle.dispose();return;}
+      value.handle=handle;
+      await handle.update(value.context);
+    }).catch(error=>{if(!value.disposed)value.root.replaceChildren(node('p',{role:'alert'},error.message));});
+  }
+  value.context={workspace:state.workspace,editionId:state.editionId,jobs:state.jobs};
+  if(value.handle&&!value.pending){value.pending=true;Promise.resolve(value.handle.update(value.context))
+    .catch(error=>toast(error.message,true)).finally(()=>{value.pending=false;});}
+  return value.root;
+}
+window.addEventListener('pagehide',disposeCatalogueView);
+
 function renderApp(){
   if(!state.workspace)return;
   if(state.tab==='eoapi'&&!state.eoapi)state.tab=state.editionId?'scenes':'search';
   if(!state.prescientEnabled){disposePrescientView();if(state.tab==='prescient')state.tab='search';}
   if(state.tab==='processing'&&!state.processingCapabilities)state.tab=state.editionId?'scenes':'search';
   if(state.tab!=='processing')disposeProcessingView();
+  if(!state.catalogueEnabled){disposeCatalogueView();if(state.tab==='catalogue')state.tab='search';}
   const savedFocus=rememberFocus(),workspace=state.workspace;
   const header=node('header',{class:'app-header'},node('div',{class:'brand'},node('span',{class:'eyebrow'},'Scene selection and delivery'),node('h1',{},state.prescientEnabled?'Prescient scene operations':'Earth Search operations')),node('div',{class:'header-actions'},button('Refresh saved state',()=>refresh(),{class:'small'}),button('Import handover',openImport,{class:'small'})));
   const bar=node('div',{class:'workspace-bar'},node('span',{},workspace.title||'Satellite imagery workspace'),node('span',{},'Revision '+workspace.revision+' · '+workspace.id));
@@ -278,7 +306,7 @@ function renderApp(){
   const sidebar=node('aside',{class:'sidebar','aria-label':'Saved searches'},node('div',{class:'sidebar-header'},node('h3',{},'Saved queries'),button('New',()=>{state.queryId=null;state.editionId=null;state.detail=null;state.draft=defaultDraft(null);state.tab='search';renderApp();},{class:'small'})),list,node('div',{class:'sidebar-footer'},state.prescientEnabled?node('span',{},'Prescient customer catalog'):externalLink('https://element84.com/earth-search/','Earth Search by Element 84'),node('p',{},'Collection rights and source metadata travel with the saved review.')));
   const title=node('div',{class:'workspace-title'},node('div',{},node('h2',{},query()?.name||'Prepare a scene query'),node('p',{class:'muted'},query()?array(query().collections).join(' · '):'Choose a collection, an area and an observation window.')),query()?badge(queryEditions().length+' editions'):null);
   const tabs=node('nav',{class:'tabs','aria-label':'Workspace views'});
-  for(const [key,label]of [['search','Catalog & query'],['scenes','Scenes & assets'],['compare','Compare editions'],['review','Selections & handover'],...(state.eoapi?[['eoapi','Customer operations']]:[]),...(state.processingCapabilities?[['processing','Processing history']]:[]),...(state.prescientEnabled?[['prescient','Prescient access']]:[])]){
+  for(const [key,label]of [['search','Catalog & query'],['scenes','Scenes & assets'],['compare','Compare editions'],['review','Selections & handover'],...(state.eoapi?[['eoapi','Customer operations']]:[]),...(state.processingCapabilities?[['processing','Processing history']]:[]),...(state.prescientEnabled?[['prescient','Prescient access']]:[]),...(state.catalogueEnabled?[['catalogue','Catalogue receiving']]:[])]){
     tabs.append(button(label,()=>{state.tab=key;renderApp();},{role:'tab','aria-selected':state.tab===key}));
   }
   if(!state.eoapi||eoapiWorkspaceId!==workspace.id)disposeEoapiView();
@@ -294,6 +322,7 @@ function renderApp(){
   if(state.tab==='review')main.append(renderSelections());
   if(state.tab==='processing')main.append(renderProcessing());
   if(state.tab==='prescient')main.append(renderPrescient());
+  if(state.tab==='catalogue')main.append(renderCatalogue());
   const jobs=renderJobs();if(jobs)main.append(jobs);
   main.append(node('p',{class:'footer-note'},'Scene footprints use the saved STAC geometry. Asset retrieval and selection decisions remain attached to their original catalog and scene edition.'));
   root.replaceChildren(header,bar,node('div',{class:'app-shell'},sidebar,main));
@@ -542,3 +571,4 @@ async function boot(){
   setInterval(()=>{if(document.visibilityState!=='visible')return;if(state.jobs.some(job=>job.status==='RUNNING')||state.pendingJobs.size)void refresh().catch(error=>toast(error.message,true));},1500);
 }
 void boot();
+

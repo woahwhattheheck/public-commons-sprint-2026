@@ -130,7 +130,7 @@ export async function readCkanWorkspaceConfiguration(path) {
 // "authorization". Preserve their full keys; redact only control metadata.
 const dataFields = new Set(['package', 'datasets', 'rows', 'changes', 'fields', 'suggestions',
   'sample', 'projection', 'preview', 'columns', 'parameters', 'filters', 'ranges', 'sorts',
-  'semantics', 'semanticChanges']);
+  'semantics', 'semanticChanges', 'comparison']);
 const privateFields = new Set(['directory', 'sourceFile', 'targetDirectory', 'publisherDirectory', 'manifestFile',
   'captureFile', 'oauthDirectory', 'authTokenEnv', 'accessTokenEnv', 'out', 'path', 'file', 'root',
   'packageDirectory', 'configText', 'handlers', 'upstreams', 'authorization', 'privateKey', 'seed', 'mnemonic']);
@@ -162,7 +162,7 @@ function safeError(issue) {
         : 'Read merchant_ckan_status and inspect the retained original operation before continuing.';
   return failure(code, 'Original CKAN operation: ' + code + '. ' + guidance);
 }
-const collectionNames = ['editions', 'sources', 'publications', 'exports', 'buyerRequests'];
+const collectionNames = ['editions', 'sources', 'publications', 'exports', 'buyerRequests', 'refreshes'];
 
 export class MerchantCkanWorkspaces {
   #config; #entries = new Map(); #opening = new Map(); #closing = false; #close;
@@ -415,6 +415,56 @@ export class MerchantCkanWorkspaces {
       }
       case 'merchant_ckan_edition': return { workspace, native: view(await original.edition(nativeId(input.editionId))) };
       case 'merchant_ckan_compare': return { workspace, native: view(await original.compare(nativeId(input.beforeId), nativeId(input.afterId), input.key ?? '_id')) };
+      case 'merchant_ckan_refresh_prepare': {
+        const { sourceId, ...selection } = input;
+        nativeId(sourceId); nativeId(selection.afterEditionId);
+        expectedDigest(selection.expectedSourceSha256); expectedDigest(selection.expectedAfterCaptureSha256);
+        if (selection.previousPublicationId !== undefined) nativeId(selection.previousPublicationId);
+        if (selection.supersedesRefreshId !== undefined) nativeId(selection.supersedesRefreshId);
+        return launch(() => original.prepareRefresh(sourceId, selection));
+      }
+      case 'merchant_ckan_refresh':
+        return { workspace, native: view(await original.refresh(nativeId(input.refreshId))) };
+      case 'merchant_ckan_refresh_resume':
+        nativeId(input.refreshId);
+        return launch(() => original.resumeRefresh(input.refreshId));
+      case 'merchant_ckan_refresh_preview': {
+        const { refreshId, ...selection } = input;
+        nativeId(refreshId); expectedDigest(selection.expectedComparisonSha256);
+        return { workspace, native: publicData(await original.previewRefresh(refreshId, selection)) };
+      }
+      case 'merchant_ckan_refresh_changes': {
+        const { refreshId, ...selection } = input;
+        nativeId(refreshId); expectedDigest(selection.expectedComparisonSha256);
+        return { workspace, native: publicData(await original.refreshChanges(refreshId, selection)) };
+      }
+      case 'merchant_ckan_refresh_read': {
+        nativeId(input.refreshId); expectedDigest(input.expectedComparisonSha256); expectedDigest(input.expectedSha256);
+        const selected = await original.refreshChangesFile(input.refreshId, input.expectedComparisonSha256);
+        if (selected.sha256 !== input.expectedSha256) throw failure('CKAN_REFRESH_FILE_CHANGED', 'Use the complete change-file SHA256 from the selected comparison.');
+        const chunk = await this.#reads.read({ scope: this.#scope(workspace),
+          key: 'refresh:' + input.refreshId + ':' + input.expectedComparisonSha256,
+          kind: 'ckan-refresh', directory: this.#definition(workspace).directory,
+          readId: input.readId, expectedSha256: selected.sha256, offset: input.offset, limit: input.limit,
+          load: async () => {
+            const current = await original.refreshChangesFile(input.refreshId, input.expectedComparisonSha256);
+            const handle = await open(current.file, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+            try {
+              const info = await handle.stat({ bigint: true });
+              if (!info.isFile() || info.nlink !== 1n || info.mode & 0o077n ||
+                  info.size !== BigInt(current.bytes) || current.sha256 !== selected.sha256)
+                throw failure('CKAN_REFRESH_FILE_CHANGED', 'The selected original change file changed before reading.');
+              return { readonlyFileHandle: handle, bytes: current.bytes, sha256: current.sha256,
+                name: 'ckan-refresh-' + input.refreshId + '-changes.jsonl', type: 'application/x-ndjson' };
+            } catch (error) { await handle.close(); throw error; }
+          } });
+        return { workspace, refreshId: input.refreshId, comparisonSha256: input.expectedComparisonSha256, ...chunk };
+      }
+      case 'merchant_ckan_refresh_review': {
+        const { refreshId, ...decision } = input;
+        nativeId(refreshId); expectedDigest(decision.expectedComparisonSha256);
+        return launch(() => original.reviewRefresh(refreshId, decision));
+      }
       case 'merchant_ckan_semantics_preview':
         return { workspace, native: publicData(await original.previewSemantics(nativeId(input.editionId), input.projection)) };
       case 'merchant_ckan_source_semantics':
