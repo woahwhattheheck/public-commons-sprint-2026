@@ -24,6 +24,8 @@ def options():
     p = argparse.ArgumentParser(description="Retain, review and publish RSS 2.0 / Atom 1.0 feeds through the original XML and SF30 dataset engine.")
     p.add_argument("--workspace", required=True, help="Private workspace directory; create with init")
     sub = p.add_subparsers(dest="command", required=True)
+    from subscriptions_cli import add_arguments
+    add_arguments(sub)
     sub.add_parser("init")
     s = sub.add_parser("serve"); s.add_argument("--port", type=int, default=0)
     sub.add_parser("state")
@@ -85,7 +87,10 @@ def main():
                 server.server_close()
                 server.join_worker()
             return
-        if c in ("init", "state"):
+        if c == "subscriptions":
+            from subscriptions_cli import run_command
+            result = run_command(ws, a, read_json, execute)
+        elif c in ("init", "state"):
             result = ws.feed_state()
         elif c == "register":
             result = ws.register(a.feed, read_json(a.config), a.revision, a.operation)
