@@ -31,8 +31,8 @@ OPERATION = "SCF-GRPC-SERVICE-HEALTH-20261012-9B23"
 PLACEMENT = "scf-grpc-service-health-private-20261012-9b23"
 CANDIDATE = "/dev/scf-grpc-service-health-9b23"
 HOST_SHA256 = "136c70426e445c3a4d03ed1ada7419383f11d4798f1c58f14a9f6aa2a96af737"
-SOURCE_COMMIT = "41f2254cd1ac3e9b8025bb41a63e7bbc866e762f"
-DRIVER_BLOB = "c86da173d75ca89085f1269c3d72c715cac9aa2e"
+SOURCE_COMMIT = "8eb016b93dbbc0becb0400b7e8df37dc23aad5d0"
+DRIVER_BLOB = "797d17ec5208164bc9d144fa06ddbc84e10e52bd"
 MEMORY_RESERVATIONS = Path("/workspace/shared/swarm/capacity/memory")
 DISK_RESERVATIONS = Path("/workspace/shared/swarm/capacity/disk")
 MIB = 1024 * 1024
@@ -128,7 +128,7 @@ def specification():
             "persistent_checkpoint_mib": 64,
             "notes": [
                 "One real native gRPC server, the original workspace and merchant MCP, then one desktop/narrow browser editor.",
-                "The complete 134,196,141-byte public source has a 192 MiB memory allowance including file/directory allocation.",
+                "The complete 134,247,028-byte public source has a 192 MiB memory allowance including file/directory allocation.",
                 "Private workspace, downloads and captures have a separate 128 MiB growth allowance.",
                 "All tmpfs source and growth charges are included in memory; placement separately adds measured source-copy disk/inodes.",
                 "The complete native checkpoint is synchronously retained outside the private invocation before exit."
