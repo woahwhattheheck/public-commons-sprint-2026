@@ -17,7 +17,7 @@
   <h2>Review history</h2>
   <div class="scroll"><table><thead><tr><th>Delivery</th><th>Selected</th><th>Operator</th><th>State</th><th></th></tr></thead><tbody>
     <% @reviews["items"].each do |item| %><tr>
-      <td><%= item["title"] %></td><td><%= item["selected_at"] %></td><td><%= item["actor"] %></td>
+      <td><%= item["title"] %></td><td><%= operator_data_time(item["selected_at"]) %></td><td><%= item["actor"] %></td>
       <td><%= item.dig("state","phase").tr("_"," ") %></td><td><%= link_to "Open", action: :show, id: item["id"] %></td>
     </tr><% end %>
   </tbody></table></div>
