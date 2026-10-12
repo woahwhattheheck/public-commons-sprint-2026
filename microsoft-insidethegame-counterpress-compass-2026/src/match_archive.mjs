@@ -67,6 +67,20 @@ function reviewData(raw, match) {
     feedTeam: choice(filters.feedTeam, ['both', 'focus', 'rival'], 'both', 'feed team'),
     feedType: choice(filters.feedType, ['all', 'loss', 'pressure', 'regain', 'pass', 'shot', 'clock'], 'all', 'event type'),
   };
+  const rawRecap = object(raw.recap ?? {}, 'Player recap');
+  const observedCount = Math.max(cursor, parseCount(rawRecap.observedCount ?? cursor, match.events.length));
+  const known = match.events.slice(0, observedCount);
+  const player = rawRecap.player ?? null;
+  if (player !== null && (typeof player !== 'string' || !known.some(event =>
+      event.team === view.team && event.type !== 'clock' && event.player === player)))
+    throw fail(400, 'Recap player must occur in the observed club events');
+  const selectedSequenceId = rawRecap.selectedSequenceId ?? null;
+  if (selectedSequenceId !== null && !known.some(event =>
+      event.id === selectedSequenceId && event.team === view.team && event.type === 'loss'))
+    throw fail(400, 'Recap sequence must identify an observed club loss');
+  const recap = {player, observedCount, selectedSequenceId,
+    period: choice(rawRecap.period, ['all', 'first', 'second'], 'all', 'recap half'),
+    outcome: choice(rawRecap.outcome, ['all', 'success', 'expired', 'interrupted', 'not_attempted', 'pending'], 'all', 'recap outcome')};
   const source = raw.bookmarks ?? [];
   if (!Array.isArray(source) || source.length > 64) throw fail(400, 'A review supports up to 64 saved moments');
   const seen = new Set();
@@ -79,7 +93,7 @@ function reviewData(raw, match) {
     return {eventId: item.eventId, count, label: text(item.label, 100, 'Moment title', item.eventId),
       note: text(item.note, 1000, 'Moment note')};
   }).sort((a, b) => a.count - b.count);
-  return {title, notes, cursor, view, selectedMomentId, filters: normalizedFilters, bookmarks,
+  return {title, notes, cursor, view, selectedMomentId, filters: normalizedFilters, recap, bookmarks,
     insights: normalizeRetainedInsights(raw.insights, match)};
 }
 function storedData(raw) {

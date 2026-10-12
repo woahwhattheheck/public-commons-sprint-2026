@@ -1,4 +1,5 @@
 import {ArchiveLink, createArchiveUI} from './archive.js';
+import {createPlayerRecapUI} from './player-recap.js';
 
 const el = id => document.getElementById(id);
 const L = {
@@ -47,8 +48,8 @@ const L = {
       rateLine: (s, r, p) => `Tasa de recuperación ${p}% (${s}/${r} ventanas resueltas).`, unclearLine: n => `${n} ventana(s) cortada(s) por otra pérdida: resultado desconocido, no cuenta como fallo.`,
       zoneLine: z => `Contrapresiones exitosas sobre todo en: ${z}.`, pressLine: x => `${x} acciones de presión por contrapresión.`, rivalLine: (t, p) => `${t}: tasa de recuperación ${p}.`}}
 };
-const S = {session: null, events: [], cursor: 0, selectedMomentId: null, es: null, conn: 0, req: 0, starting: 0, playing: false, frame: null, foundry: false, opus: false, agent: false, opusKey: null, agentKey: null, opusPending: null, agentPending: null, insightEditions: {}, insights: [], match: null, archiveId: null, linkTimer: null, transport: 'ready', recoverable: false, recoveryBusy: false};
-let archiveUI;
+const S = {session: null, events: [], cursor: 0, selectedMomentId: null, es: null, conn: 0, req: 0, starting: 0, playing: false, frame: null, foundry: false, opus: false, agent: false, opusKey: null, agentKey: null, opusPending: null, agentPending: null, insightEditions: {}, insights: [], match: null, archiveId: null, linkTimer: null, transport: 'ready', recoverable: false, recoveryBusy: false, playUntil: null};
+let archiveUI, recapUI;
 const t = () => L[el('locale').value] || L.en;
 const view = () => ({team: el('team').value, audience: el('audience').value, locale: el('locale').value});
 const fmt = s => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(Math.floor(s % 60)).padStart(2, '0');
@@ -301,6 +302,7 @@ function ui() {
   el('recover').textContent = T.recover;
   el('recover').hidden = !S.recoverable;
   el('recover').disabled = S.recoveryBusy || !s;
+  recapUI?.update();
   archiveUI?.changed();
 }
 function opusKey() { return S.session ? [S.session.id, S.cursor, el('team').value, el('audience').value, el('locale').value].join('|') : ''; }
@@ -397,17 +399,18 @@ function applyI18n() {
 function stopStream() {
   ++S.conn;
   if (S.es) { S.es.close(); S.es = null; }
-  S.playing = false;
+  S.playing = false; S.playUntil = null;
   S.transport = 'ready'; S.recoverable = false;
   syncMatchLink(true);
   ui();
 }
-function play() {
+function play({until = null} = {}) {
   const s = S.session;
   if (!s) return;
   stopStream();
   ++S.req;
   if (S.cursor >= s.total) { S.events = []; S.cursor = 0; }
+  S.playUntil = Number.isInteger(until) && until > S.cursor && until <= s.total ? until : null;
   const my = ++S.conn;
   const q = new URLSearchParams({from: String(S.cursor), speed: el('speed').value, ...view()});
   const es = new EventSource(`/api/sessions/${encodeURIComponent(s.id)}/stream?${q}`);
@@ -428,6 +431,7 @@ function play() {
     }
     S.events.push(f.event); S.cursor = f.count; S.transport = 'ready';
     S.recoverable = false; notice(''); apply(f);
+    if (S.playUntil !== null && S.cursor >= S.playUntil) stopStream();
   });
   es.addEventListener('end', () => { if (my === S.conn) stopStream(); });
   es.onerror = () => {
@@ -443,7 +447,8 @@ function play() {
 // Operator-driven repair: refresh the exact event prefix from the original
 // session. Only on an actual 404 do we re-create the same deterministic match.
 async function recoverStream() {
-  const s = S.session, match = S.match, count = S.cursor;
+  const s = S.session, match = S.match, count = S.cursor, until = S.playUntil;
+  const recapSelection = recapUI?.selection();
   if (!s || !match || S.recoveryBusy) return;
   stopStream();
   const token = ++S.req;
@@ -453,14 +458,14 @@ async function recoverStream() {
     if (token !== S.req || S.session !== s) return;
     if (frame.sessionId !== s.id || frame.count !== count || !Array.isArray(frame.events) || frame.events.length !== count) throw new Error('Invalid event prefix');
     S.events = frame.events; S.cursor = count; apply(frame);
-    S.recoveryBusy = false; notice(''); play();
+    S.recoveryBusy = false; notice(''); play({until});
   } catch (e) {
     if (token !== S.req || S.session !== s) return;
     if (e.status === 404 || e.status === 410) {
       if (S.archiveId) {
         const archiveId = S.archiveId;
         if (await openSavedMatch(archiveId, {count, settings: view()})) {
-          S.recoveryBusy = false; notice(''); play(); return;
+          S.recoveryBusy = false; notice(''); play({until}); return;
         }
         S.recoverable = true; notice(t().recoverFailed); return;
       }
@@ -468,10 +473,10 @@ async function recoverStream() {
       // Never continue a stale stream or silently replace the selected fixture.
       el('scenario').value = match.scenario; el('seed').value = String(match.seed);
       const nextStart = S.starting + 1;
-      await newMatch({count});
+      await newMatch({count, recapSelection});
       if (S.starting === nextStart && S.session !== s && S.frame?.sessionId === S.session?.id &&
           S.match?.scenario === match.scenario && S.match?.seed === match.seed) {
-        S.recoveryBusy = false; notice(''); play();
+        S.recoveryBusy = false; notice(''); play({until});
         return;
       }
     }
@@ -494,39 +499,64 @@ async function seek(count) {
     const f = await api(`/api/sessions/${encodeURIComponent(s.id)}/frame`, 'POST', {count, ...view()});
     if (token !== S.req || S.session !== s || f.sessionId !== s.id) return;
     S.events = f.events; S.cursor = f.count;
-    apply(f);
+    apply(f); return true;
   } catch (e) { if (token === S.req) notice(e.status === 404 ? t().expiredSession : e.message); }
+}
+async function playRecapSequence(sequence) {
+  const session = S.session;
+  if (!session || !Number.isInteger(sequence.startCount) || !Number.isInteger(sequence.endCount) ||
+      sequence.startCount < 0 || sequence.endCount <= sequence.startCount || sequence.endCount > session.total) return;
+  const request = S.req + 1;
+  if (!await seek(sequence.startCount) || S.session !== session || S.req !== request) return;
+  play({until: sequence.endCount});
+  el('broadcast').scrollIntoView({block: 'start'});
 }
 async function refreshView() {
   S.selectedMomentId = null;
   applyI18n();
-  const resume = S.playing;
+  const resume = S.playing, until = S.playUntil;
   await seek(S.cursor);
-  if (resume && !S.playing) play();
+  if (resume && !S.playing) play({until});
 }
-async function newMatch({count = 0} = {}) {
+async function newMatch({count = 0, recapSelection = null} = {}) {
   const seed = Number(el('seed').value), scenario = el('scenario').value;
   if (!Number.isInteger(seed) || seed < 1 || seed > 999999) { notice(t().badSeed); return; }
   stopStream();
   if (archiveUI && !await archiveUI.beforeSwitch()) return false;
-  const token = ++S.starting; ++S.req;
+  const token = ++S.starting, request = ++S.req;
   notice(t().loading);
   const old = S.session;
+  let opened = null;
   try {
     const s = await api('/api/sessions', 'POST', {scenario, seed});
-    if (token !== S.starting) { fetch('/api/sessions/' + encodeURIComponent(s.id), {method: 'DELETE'}).catch(() => {}); return; }
+    opened = s;
+    const replayCount = Math.min(count, s.total);
+    const observedCount = Math.min(Math.max(replayCount, recapSelection?.observedCount ?? replayCount), s.total);
+    const known = observedCount > replayCount
+      ? await api('/api/sessions/' + encodeURIComponent(s.id) + '/frame', 'POST', {count: observedCount, ...view()}) : null;
+    if (token !== S.starting || request !== S.req) {
+      fetch('/api/sessions/' + encodeURIComponent(s.id), {method: 'DELETE'}).catch(() => {}); return false;
+    }
+    if (known && (known.sessionId !== s.id || known.count !== observedCount ||
+        !Array.isArray(known.events) || known.events.length !== observedCount))
+      throw new Error('Restored match returned an incomplete event prefix');
     if (old) fetch('/api/sessions/' + encodeURIComponent(old.id), {method: 'DELETE'}).catch(() => {});
     S.session = s; S.match = {scenario, seed}; S.archiveId = null; S.events = []; S.cursor = 0; S.frame = null; S.selectedMomentId = null; S.insights = [];
+    recapUI?.reset(recapSelection || {});
+    if (known) recapUI?.retain(known.events);
     archiveUI?.reset();
     el('matchLink').hidden = true; el('shareStatus').textContent = '';
     el('scrub').max = String(s.total);
     el('blurb').textContent = s.blurb;
     el('foundryResult').textContent = '';
     notice('');
-    await seek(Math.min(count, s.total));
+    await seek(replayCount);
     if (count > s.total) notice(t().clampedLink);
     return S.frame?.sessionId === s.id;
-  } catch (e) { if (token === S.starting) notice(e.message); }
+  } catch (e) {
+    if (opened && S.session !== opened) fetch('/api/sessions/' + encodeURIComponent(opened.id), {method: 'DELETE'}).catch(() => {});
+    if (token === S.starting) notice(e.message);
+  }
   return false;
 }
 
@@ -534,28 +564,48 @@ async function openSavedMatch(id, {count, settings} = {}) {
   if (!archiveUI) return false;
   stopStream();
   if (!await archiveUI.beforeSwitch()) return false;
-  const token = ++S.starting; ++S.req;
+  const token = ++S.starting, request = ++S.req;
   const old = S.session;
+  let opened = null;
   notice(t().loading);
   try {
     const {archive, session} = await archiveUI.requestOpen(id);
-    if (token !== S.starting) { fetch('/api/sessions/' + encodeURIComponent(session.id), {method: 'DELETE'}).catch(() => {}); return false; }
+    opened = session;
+    const review = archive.review, restoredView = settings || review.view;
+    const replayCount = Math.min(count ?? review.cursor, session.total);
+    const observedCount = Math.max(replayCount, review.recap?.observedCount ?? review.cursor);
+    const frameRequest = observed => api('/api/sessions/' + encodeURIComponent(session.id) + '/frame',
+      'POST', {count: observed, ...restoredView});
+    const [frame, known] = await Promise.all([
+      frameRequest(replayCount),
+      observedCount > replayCount ? frameRequest(observedCount) : Promise.resolve(null),
+    ]);
+    if (token !== S.starting || request !== S.req) {
+      fetch('/api/sessions/' + encodeURIComponent(session.id), {method: 'DELETE'}).catch(() => {}); return false;
+    }
+    for (const [value, expected] of [[frame, replayCount], ...(known ? [[known, observedCount]] : [])]) {
+      if (value.sessionId !== session.id || value.count !== expected || !Array.isArray(value.events) || value.events.length !== expected)
+        throw new Error('Saved match returned an incomplete event prefix');
+    }
     if (old) fetch('/api/sessions/' + encodeURIComponent(old.id), {method: 'DELETE'}).catch(() => {});
-    const review = archive.review;
     S.insights = structuredClone(review.insights || []);
     S.session = session; S.match = {scenario: session.scenario, seed: session.seed, preserved: true}; S.archiveId = archive.id;
-    S.events = []; S.cursor = 0; S.frame = null; S.selectedMomentId = review.selectedMomentId;
+    S.events = frame.events; S.cursor = frame.count; S.frame = null; S.selectedMomentId = review.selectedMomentId;
+    for (const key of ['team', 'audience', 'locale']) el(key).value = restoredView[key];
     el('scenario').value = session.scenario; el('seed').value = String(session.seed);
-    for (const key of ['team', 'audience', 'locale']) el(key).value = (settings || review.view)[key];
     el('reviewFilter').value = review.filters.outcome; el('reviewPeriod').value = review.filters.period;
     el('feedTeam').value = review.filters.feedTeam; el('feedType').value = review.filters.feedType;
     el('scrub').max = String(session.total); el('blurb').textContent = session.blurb;
     el('matchLink').hidden = true; el('shareStatus').textContent = ''; el('foundryResult').textContent = '';
-    archiveUI.load(archive); applyI18n();
-    await seek(Math.min(count ?? review.cursor, session.total));
-    if (S.frame?.sessionId !== session.id) return false;
+    recapUI?.reset(review.recap);
+    recapUI?.retain((known || frame).events);
+    archiveUI.load(archive); applyI18n(); apply(frame);
     notice(''); return true;
-  } catch (error) { if (token === S.starting) notice(error.message); return false; }
+  } catch (error) {
+    if (opened && S.session !== opened) fetch('/api/sessions/' + encodeURIComponent(opened.id), {method: 'DELETE'}).catch(() => {});
+    if (token === S.starting) notice(error.message);
+    return false;
+  }
 }
 
 async function boot() {
@@ -586,7 +636,7 @@ async function boot() {
   for (const id of ['feedTeam', 'feedType']) el(id).addEventListener('change', () => { drawFeed(); archiveUI?.changed(); });
   el('step').addEventListener('click', () => { if (S.session) seek(Math.min(S.cursor + 1, S.session.total)); });
   el('restart').addEventListener('click', () => seek(0));
-  el('speed').addEventListener('change', () => { if (S.playing) play(); });
+  el('speed').addEventListener('change', () => { if (S.playing) play({until: S.playUntil}); });
   el('scrub').addEventListener('change', () => seek(Number(el('scrub').value)));
   for (const id of ['team', 'audience', 'locale']) el(id).addEventListener('change', refreshView);
   el('foundry').addEventListener('click', async () => {
@@ -612,19 +662,27 @@ async function boot() {
     if (!e.persisted || !S.match) return;
     if (S.archiveId) { void openSavedMatch(S.archiveId, {count: S.cursor, settings: view()}); return; }
     el('scenario').value = S.match.scenario; el('seed').value = String(S.match.seed);
-    void newMatch({count: S.cursor}); // pagehide deleted the old session; rebuild the saved view.
+    void newMatch({count: S.cursor, recapSelection: recapUI?.selection()}); // Restore the observed recap as well as the paused frame.
   });
   archiveUI = createArchiveUI({
     snapshot: () => ({sessionId: S.session?.id, match: S.match, label: S.session?.label,
       hasFrame: !!S.frame && S.frame.sessionId === S.session?.id && S.frame.count === S.cursor,
-      insights: S.insights, cursor: S.cursor, view: view(), event: S.frame?.event, eventLabel: S.frame?.event ? eventLine(S.frame.event) : '',
+      insights: S.insights, recap: recapUI?.selection(), cursor: S.cursor, view: view(), event: S.frame?.event, eventLabel: S.frame?.event ? eventLine(S.frame.event) : '',
       selectedMomentId: S.events.some(event => event.id === S.selectedMomentId && event.type === 'loss') ? S.selectedMomentId : null,
       filters: {outcome: el('reviewFilter').value, period: el('reviewPeriod').value, feedTeam: el('feedTeam').value, feedType: el('feedType').value}}),
     onSaved: id => { S.archiveId = id; syncMatchLink(true); },
     onDeleted: () => { S.archiveId = null; if (S.match) S.match.preserved = true; el('matchLink').hidden = true;
       history.replaceState(null, '', location.pathname + location.search); ui(); },
     onOpen: openSavedMatch, onJump: seek, onPause: stopStream,
-    onReviewChanged: () => { if (S.frame) drawMoments(S.frame); },
+    onReviewChanged: () => { if (S.frame) drawMoments(S.frame); recapUI?.refreshBookmarks(); },
+  });
+  recapUI = createPlayerRecapUI({
+    snapshot: () => ({sessionId: S.session?.id, events: S.events, cursor: S.cursor, total: S.session?.total,
+      hasFrame: !!S.frame && S.frame.sessionId === S.session?.id && S.frame.count === S.cursor,
+      view: view(), match: S.match, title: S.session?.label, playing: S.playing}),
+    onPlay: playRecapSequence, onJump: seek, onChanged: () => archiveUI?.changed(),
+    onSavePlaylist: items => archiveUI.addBookmarks(items),
+    momentButton: item => archiveUI.momentButton(item),
   });
   void archiveUI.refreshCollection();
   applyI18n();
