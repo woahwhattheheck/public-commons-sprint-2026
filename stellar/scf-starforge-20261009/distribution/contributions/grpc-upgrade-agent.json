@@ -1,0 +1,20 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "grpc-upgrade-agent",
+  "description": "Original gRPC upgrade agent, CLI and complete source/review receiving",
+  "commands": {
+    "grpc-upgrade": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/upgrade-cli.mjs"
+  },
+  "commandDescriptions": {
+    "grpc-upgrade": "Review, inspect, adopt and receive original gRPC contract and merchant-plan upgrades"
+  },
+  "supportFiles": [
+    "stellar-forge/mcp-merchant-operator/GRPC_UPGRADES.md"
+  ],
+  "exports": {
+    "./seller/grpc/upgrade-cli": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/upgrade-cli.mjs",
+    "./seller/grpc/upgrade-receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/upgrade-receiving.mjs",
+    "./merchant/mcp/grpc/upgrades": "./source/stellar-forge/mcp-merchant-operator/grpc-upgrades.mjs",
+    "./merchant/mcp/grpc/upgrade-receiving": "./source/stellar-forge/mcp-merchant-operator/grpc-upgrade-download.mjs"
+  }
+}
