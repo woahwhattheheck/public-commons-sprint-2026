@@ -6,6 +6,7 @@ import {ResearchWorkspaceClient} from '../research-dossiers/workspace-client.mjs
 import {need,object,parseJson} from '../node/store.mjs';
 import {isResearchCustomerCall,runResearchCustomerCall} from './research-customer-delivery.mjs';
 import {isResearchCommerceCall,runResearchCommerceCall} from './research-commerce-delivery.mjs';
+import {isResearchQuotesCall,runResearchQuotesCall} from './research-quotes-delivery.mjs';
 import {createResearchDocumentSource} from './research-document-source.mjs';
 import {citationReviewInput,citationDigest} from '../research-dossiers/citation-updates.mjs';
 import {exportCitationFile,receiveCitationFile} from './research-citation-delivery.mjs';
@@ -18,7 +19,7 @@ const safeCode=value=>typeof value==='string'&&/^[A-Z0-9_]{1,120}$/.test(value)?
 function errorRecord(error){
   const record={error:safeCode(error?.code)};
   for(const key of ['status','outcomeUnknown','method','route','recovery','requestId','operationId',
-    'destinationPublished','file','sourceCleanupFailed','clientWarnings','openAlexImport','researchCommerce','closeError'])
+    'destinationPublished','file','sourceCleanupFailed','clientWarnings','openAlexImport','researchCommerce','researchQuoteRun','researchQuoteRetentionError','requestState','metadata','closeError'])
     if(error?.[key]!==undefined)record[key]=error[key];
   return record;
 }
@@ -95,6 +96,8 @@ function originalResearchClient(request,{signal}={}){
 export async function runResearchCall(request,{signal}={}){
   need(object(request)&&request.schema===SCHEMA&&typeof request.action==='string'&&object(request.input),
     'RESEARCH_PYTHON_REQUEST_INVALID');
+  if(isResearchQuotesCall(request.action))return runResearchQuotesCall(request,{signal,
+    openClient:()=>originalResearchClient(request,{signal})});
   if(isResearchCommerceCall(request.action))return runResearchCommerceCall(request,{signal,
     openClient:()=>originalResearchClient(request,{signal})});
   if(isResearchCustomerCall(request.action))return runResearchCustomerCall(request,{signal,
