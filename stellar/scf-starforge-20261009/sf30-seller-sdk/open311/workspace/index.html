@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="referrer" content="no-referrer">
+  <title>Open311 · Service operations</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to workspace</a>
+  <header class="masthead">
+    <div class="wordmark"><span class="mark" aria-hidden="true">311</span><div><strong>Service operations</strong><span>Municipal intake and review</span></div></div>
+    <div class="workspace-id"><span id="workspace-name">Opening workspace…</span><span id="workspace-revision" class="muted"></span></div>
+    <button id="reload-state" type="button" class="secondary">Reload saved state</button>
+  </header>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Workspace navigation">
+      <label class="field"><span>Jurisdiction connection</span><select id="active-connection"><option value="">No saved connections</option></select></label>
+      <p id="connection-context" class="small muted">Add a connection to begin.</p>
+      <nav class="nav">
+        <button type="button" data-view="requests" aria-current="page"><span>Requests</span><span id="nav-request-count" class="count"></span></button>
+        <button type="button" data-view="reviews"><span>Review queue</span><span id="nav-review-count" class="count"></span></button>
+        <button type="button" data-view="catalog"><span>Service catalog</span></button>
+        <button type="button" data-view="changes"><span>Capture differences</span></button>
+        <button type="button" data-view="connections"><span>Connections</span></button>
+        <button type="button" data-view="handover"><span>Export and reopen</span></button>
+      </nav>
+      <div class="sidebar-note"><strong>Original records, saved locally.</strong><p>Capture a source, assign follow-up, and carry the complete work into the next review.</p></div>
+    </aside>
+    <main id="main" tabindex="-1">
+      <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+      <section id="pending-panel" class="pending-panel" aria-labelledby="pending-heading" hidden>
+        <div><h2 id="pending-heading">Retained operation</h2><p id="pending-description"></p><code id="pending-id"></code></div>
+        <div class="actions"><button type="button" id="pending-inspect">Inspect saved outcome</button><button type="button" id="pending-retry" class="secondary">Retry original command</button><button type="button" id="pending-download" class="secondary">Download command</button><button type="button" id="pending-dismiss" class="secondary" hidden>Close resolved command</button></div>
+        <details id="pending-details"><summary>Original command and outcome</summary><pre id="pending-json"></pre></details>
+      </section>
+
+      <section data-panel="requests" aria-labelledby="requests-title">
+        <div class="page-heading"><div><p class="eyebrow">Operations desk</p><h1 id="requests-title">Requests</h1><p>Capture the jurisdiction’s returned records and work from a saved selection.</p></div><button type="button" id="toggle-capture">Capture source</button></div>
+        <section class="panel" id="capture-panel" aria-labelledby="capture-heading" hidden>
+          <div class="section-heading"><h2 id="capture-heading">Capture source</h2><span id="capture-connection" class="muted small"></span></div>
+          <form id="capture-form">
+            <div class="form-grid four">
+              <label class="field"><span>Resource</span><select id="capture-kind"><option value="requests">Request collection</option><option value="request">One request</option><option value="token">Request token</option><option value="discovery">Endpoint discovery</option></select></label>
+              <label class="field" id="capture-resource-field" hidden><span>Original request or token ID</span><input id="capture-resource" autocomplete="off"></label>
+              <label class="field collection-field"><span>Service code</span><input id="capture-service" list="service-codes" placeholder="All services"></label>
+              <label class="field collection-field"><span>Source status</span><input id="capture-status" list="source-statuses" placeholder="Provider default"></label>
+              <label class="field collection-field"><span>Since · UTC</span><input id="capture-start" type="datetime-local" step="1"></label>
+              <label class="field collection-field"><span>Until · UTC</span><input id="capture-end" type="datetime-local" step="1"></label><label class="field collection-field" id="capture-page-field" hidden><span>Source page</span><input id="capture-page" type="number" min="1" value="1" required></label><label class="field collection-field" id="capture-page-size-field" hidden><span>Source page size</span><input id="capture-page-size" type="number" min="1" value="1000" required></label>
+            </div>
+            <div id="capture-extension-fields" class="form-grid four"></div>
+            <label class="check collection-field" id="capture-extended-field" hidden><input type="checkbox" id="capture-extended"><span>Include this provider’s extended attributes</span></label>
+            <p id="capture-scope-help" class="small muted">The saved capture keeps its original query, returned source, and request receipt.</p>
+            <div class="actions"><button type="submit" id="capture-submit">Capture and save</button><button type="button" id="capture-cancel" class="secondary">Close</button></div>
+          </form>
+        </section>
+        <section class="panel">
+          <div class="form-grid capture-selection">
+            <label class="field"><span>Saved capture</span><select id="request-capture"><option value="">Choose a capture</option></select></label>
+            <div class="actions align-end"><button type="button" id="inspect-capture" class="secondary">Inspect capture</button><button type="button" id="download-source" class="secondary">Original source</button></div>
+          </div>
+          <p id="capture-context" class="source-context">Select a connection and capture its requests.</p>
+          <form id="request-filters" class="filter-row">
+            <label class="field grow"><span>Search saved requests</span><input id="filter-q" type="search" placeholder="Description, address, or request ID"></label>
+            <label class="field"><span>Status</span><input id="filter-status" list="source-statuses" placeholder="All statuses"></label>
+            <label class="field"><span>Service code</span><input id="filter-service" list="service-codes" placeholder="All services"></label>
+            <label class="field small-field"><span>Rows</span><select id="filter-limit"><option>25</option><option selected>50</option><option>100</option><option>200</option></select></label>
+            <button type="submit" class="secondary align-end">Apply</button>
+            <button type="button" id="clear-filters" class="quiet align-end">Clear</button>
+          </form>
+          <div class="table-scroll"><table id="request-table"><caption class="sr-only">Captured service requests</caption><thead><tr><th>Request / service</th><th>Source status</th><th>Address / description</th><th>Updated · UTC</th><th>Review / owner</th></tr></thead><tbody id="request-rows"></tbody></table></div>
+          <div class="table-footer"><span id="request-range" role="status">No capture selected</span><div class="actions"><button id="request-prev" type="button" class="secondary" disabled>Previous</button><button id="request-next" type="button" class="secondary" disabled>Next</button></div></div>
+        </section>
+        <section class="panel request-detail" id="request-detail" aria-labelledby="detail-title" hidden>
+          <div class="section-heading"><div><p class="eyebrow">Request record</p><h2 id="detail-title"></h2></div><button id="close-detail" type="button" class="secondary">Close record</button></div>
+          <div class="detail-columns">
+            <div><p id="detail-description" class="description"></p><dl id="detail-facts" class="facts"></dl><div id="detail-links" class="actions"></div><details><summary>Complete original request object</summary><pre id="detail-source"></pre></details></div>
+            <div class="review-editor"><h3>Assigned review</h3><p id="review-draft-state" class="small muted"></p><form id="review-form">
+              <div class="form-grid two"><label class="field"><span>Review status</span><select id="review-status"><option value="new">New</option><option value="assigned">Assigned</option><option value="in_progress">In progress</option><option value="done">Done</option></select></label><label class="field"><span>Assigned to</span><input id="review-assignee" maxlength="200" autocomplete="off" placeholder="Responsible person or team"></label><label class="field"><span>Due date</span><input id="review-due" type="date"></label></div>
+              <label class="field"><span>Review note</span><textarea id="review-note" maxlength="8000" rows="6" placeholder="Finding, owner context, or concrete follow-up"></textarea></label>
+              <div class="actions"><button type="submit">Save review</button><button type="button" id="discard-review-draft" class="secondary">Reload saved review</button></div>
+            </form></div>
+          </div>
+          <div class="detail-columns"><div><h3>Source history</h3><div class="table-scroll"><table><thead><tr><th>Captured · UTC</th><th>Source status</th><th>Source identity</th><th></th></tr></thead><tbody id="detail-history"></tbody></table></div></div><div><h3>Review history</h3><div id="review-history"></div></div></div>
+        </section>
+        <details class="panel"><summary>Capture history for this connection</summary><div class="table-scroll"><table><thead><tr><th>Captured · UTC</th><th>Resource</th><th>Rows</th><th>Coverage</th><th>Saved query</th><th></th></tr></thead><tbody id="capture-history"></tbody></table></div></details>
+      </section>
+
+      <section data-panel="reviews" aria-labelledby="reviews-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">Follow-up</p><h1 id="reviews-title">Review queue</h1><p>Assigned work stays attached to its original jurisdiction and request.</p></div></div>
+        <section class="panel"><div class="filter-row"><label class="field"><span>Jurisdictions</span><select id="queue-connection"><option value="current">Current connection</option><option value="all">All saved connections</option></select></label><label class="field"><span>Review status</span><select id="queue-status"><option value="">All statuses</option><option value="active">Active work</option><option value="new">New</option><option value="assigned">Assigned</option><option value="in_progress">In progress</option><option value="done">Done</option><option value="overdue">Overdue</option></select></label><label class="field grow"><span>Owner, request, or note</span><input type="search" id="queue-search"></label></div>
+          <div class="table-scroll"><table><thead><tr><th>Request / connection</th><th>Review</th><th>Assigned to</th><th>Due</th><th>Latest note</th><th></th></tr></thead><tbody id="queue-rows"></tbody></table></div><div class="table-footer"><span id="queue-count"></span><button type="button" id="queue-export" class="secondary">Download queue CSV</button></div>
+        </section>
+      </section>
+
+      <section data-panel="catalog" aria-labelledby="catalog-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">Jurisdiction reference</p><h1 id="catalog-title">Service catalog</h1><p>Use the provider’s service codes and saved service definitions when capturing requests.</p></div><button id="catalog-refresh" type="button">Capture service catalog</button></div>
+        <section class="panel"><p id="catalog-context" class="source-context">Choose a connection to inspect its saved catalog.</p><label class="field catalog-search"><span>Find a service</span><input id="catalog-search" type="search" placeholder="Code, name, group, or description"></label><div class="table-scroll"><table><thead><tr><th>Code</th><th>Service</th><th>Group / type</th><th>Definition</th><th></th></tr></thead><tbody id="catalog-rows"></tbody></table></div><div class="table-footer"><span id="catalog-count"></span><button id="catalog-inspect" type="button" class="secondary">Inspect saved catalog</button></div></section>
+      </section>
+
+      <section data-panel="changes" aria-labelledby="changes-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">Source comparison</p><h1 id="changes-title">Capture differences</h1><p>Compare returned request records across two saved captures of this jurisdiction.</p></div></div>
+        <section class="panel"><form id="diff-form" class="filter-row"><label class="field grow"><span>Earlier capture</span><select id="diff-before"></select></label><label class="field grow"><span>Later capture</span><select id="diff-after"></select></label><button type="submit" class="align-end">Compare captures</button></form><p id="diff-context" class="source-context">Select two saved request captures.</p><div id="diff-summary" class="summary-grid" hidden></div><div id="diff-toolbar" class="filter-row" hidden><label class="field"><span>Show</span><select id="diff-kind"><option value="all">All differences</option><option value="changed">Changed</option><option value="added">Added</option><option value="missing">Absent in later capture</option><option value="unchanged">Unchanged</option></select></label><label class="field grow"><span>Search comparison</span><input type="search" id="diff-search"></label><button type="button" id="diff-json" class="secondary align-end">Comparison JSON</button><button type="button" id="diff-csv" class="secondary align-end">Comparison CSV</button></div><div class="table-scroll"><table><thead><tr><th>Change</th><th>Request / service</th><th>Earlier status</th><th>Later status</th><th>Changed fields</th><th></th></tr></thead><tbody id="diff-rows"></tbody></table></div><div class="table-footer"><span id="diff-range"></span><div class="actions"><button type="button" id="diff-prev" class="secondary" disabled>Previous</button><button type="button" id="diff-next" class="secondary" disabled>Next</button></div></div></section>
+      </section>
+
+      <section data-panel="connections" aria-labelledby="connections-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">Source configuration</p><h1 id="connections-title">Connections</h1><p>Save each jurisdiction’s actual GeoReport endpoint and its supported options.</p></div><button id="new-connection" type="button">Add connection</button></div>
+        <section class="panel"><div class="table-scroll"><table><thead><tr><th>Connection</th><th>GeoReport endpoint</th><th>Jurisdiction</th><th>Options</th><th></th></tr></thead><tbody id="connection-rows"></tbody></table></div></section>
+        <section class="panel" id="connection-editor" hidden><div class="section-heading"><h2 id="connection-editor-title">Add connection</h2><button type="button" id="connection-cancel" class="secondary">Close</button></div><form id="connection-form">
+          <div class="form-grid two"><label class="field"><span>Display name</span><input id="connection-name" required maxlength="160" placeholder="City service requests"></label><label class="field"><span>Connection ID</span><input id="connection-id" maxlength="160" placeholder="Generated if left empty"></label><label class="field wide"><span>GeoReport API base URL</span><input id="connection-url" type="url" required placeholder="https://provider.example/open311/v2/"><small>Use the API endpoint, including the provider’s path prefix.</small></label><label class="field"><span>Jurisdiction ID</span><input id="connection-jurisdiction" placeholder="Optional provider jurisdiction_id"></label><label class="field"><span>API key environment variable</span><input id="connection-key-env" pattern="[A-Za-z_][A-Za-z0-9_]*" placeholder="CITY_OPEN311_KEY"><small>Variable name in the running service’s environment.</small></label></div>
+          <p id="connection-identity-help" class="small muted" hidden>This connection has saved captures. Its endpoint and jurisdiction identify their source; use a new connection for a different endpoint or jurisdiction.</p><details><summary>Provider options</summary><div class="form-grid two"><label class="field wide"><span>Discovery URL</span><input id="connection-discovery-url" type="url" placeholder="Optional provider discovery endpoint"></label><label class="field"><span>API key query parameter</span><input id="connection-key-parameter" pattern="[A-Za-z_][A-Za-z0-9_]*" placeholder="api_key"></label><label class="check"><input id="connection-allow-http" type="checkbox"><span>This provider requires an HTTP endpoint</span></label><label class="field"><span>Response limit</span><input id="connection-response-limit" type="number" min="1" max="100000" value="1000" required></label><label class="field"><span>Provider statuses</span><input id="connection-statuses" placeholder="open, closed"><small>Comma-separated original status values.</small></label><label class="field wide"><span>Allowed vendor query fields</span><input id="connection-query-extensions" placeholder="Comma-separated documented field names"></label><label class="check"><input id="connection-pagination" type="checkbox"><span>Provider supports page / page_size pagination</span></label><label class="check"><input id="connection-extended" type="checkbox"><span>Provider supports extended attributes</span></label></div></details>
+          <details><summary>Source attribution for customer reports</summary><div class="form-grid two"><label class="field"><span>Publisher</span><input id="connection-attribution-publisher" maxlength="300"></label><label class="field"><span>Dataset title</span><input id="connection-attribution-title" maxlength="300"></label><label class="field"><span>License</span><input id="connection-attribution-license" maxlength="500"></label><label class="field"><span>License URL</span><input id="connection-attribution-licenseUrl" type="url"></label><label class="field wide"><span>Dataset source URL</span><input id="connection-attribution-sourceUrl" type="url"></label></div></details>
+          <div class="actions"><button type="submit">Save connection</button><button type="button" id="connection-reset" class="secondary">Reset form</button><button type="button" id="connection-clone" class="secondary" hidden>Use settings for a new connection</button></div>
+        </form></section>
+      </section>
+
+      <section data-panel="handover" aria-labelledby="handover-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">Delivery</p><h1 id="handover-title">Export and reopen</h1><p>Deliver a readable customer report or carry the complete saved workspace into another local session.</p></div></div>
+        <div class="detail-columns">
+          <section class="panel"><h2>Captured request delivery</h2><label class="field"><span>Saved request capture</span><select id="export-capture"></select></label><p class="small muted">The saved capture defines the exported selection. On-screen search and pagination do not reduce its source package.</p><div class="export-list"><button type="button" data-export="csv">Request worklist <span>CSV</span></button><button type="button" data-export="json">Capture, requests and reviews <span>JSON</span></button><button type="button" data-export="report">Customer report <span>HTML</span></button><button type="button" data-export="source">Exact original response <span>JSON</span></button></div></section>
+          <section class="panel"><h2>Complete workspace handover</h2><p>Export the saved connections, captures, source records, reviews, and operation history together.</p><button type="button" data-export="workspace">Download workspace handover</button><hr><h3>Reopen an original handover</h3><p id="receive-context" class="small"></p><label class="field"><span>Original workspace JSON</span><input id="receive-file" type="file" accept=".json,application/json"></label><pre id="receive-preview" class="compact-pre" hidden></pre><button type="button" id="receive-submit" disabled>Receive and reopen</button></section>
+        </div>
+        <section class="panel"><div class="section-heading"><h2>Recent saved operations</h2><span class="small muted">Use the original command to recover a lost response.</span></div><div class="table-scroll"><table><thead><tr><th>Request ID</th><th>Operation</th><th>State</th><th>Updated · UTC</th><th></th></tr></thead><tbody id="operation-rows"></tbody></table></div><label class="field"><span>Open an operation by its original request ID</span><div class="inline-input"><input id="operation-id" autocomplete="off"><button type="button" id="operation-inspect" class="secondary">Inspect</button></div></label><label class="field"><span>Restore a downloaded original command</span><input id="command-file" type="file" accept=".json,application/json"></label><p class="small muted">Restoring a command retains its original ID, input and revision. Inspect its saved outcome before choosing a retry.</p></section>
+      </section>
+      <datalist id="service-codes"></datalist><datalist id="source-statuses"><option value="open"></option><option value="closed"></option></datalist>
+      <noscript><div class="notice">This local workspace needs JavaScript. The installed command-line interface also opens the same saved data.</div></noscript>
+    </main>
+  </div>
+  <dialog id="inspector" aria-labelledby="inspector-title"><div class="section-heading"><h2 id="inspector-title">Saved record</h2><button id="inspector-close" type="button" class="secondary">Close</button></div><div id="inspector-description" class="small muted"></div><div id="inspector-actions" class="actions"></div><pre id="inspector-content"></pre></dialog>
+</body>
+</html>
