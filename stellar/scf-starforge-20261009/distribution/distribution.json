@@ -392,7 +392,9 @@
     "fred": "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/cli.mjs",
     "browser-wallet": "stellar/scf-starforge-20261009/sf103-native-buyer-signer/browser-wallet/cli.mjs",
     "frictionless": "stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/cli.mjs",
-    "mcp-analysis-archive": "stellar-forge/mcp-paid-agent/native-analysis-archive-download.mjs"
+    "mcp-analysis-archive": "stellar-forge/mcp-paid-agent/native-analysis-archive-download.mjs",
+    "odata": "stellar/scf-starforge-20261009/sf30-seller-sdk/odata/cli.mjs",
+    "odata-live": "stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live/cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -903,7 +905,35 @@
     "./seller/frictionless": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/source.mjs",
     "./seller/frictionless/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/model.mjs",
     "./seller/frictionless/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/release.mjs",
-    "./buyer/mcp/analysis-archives": "./source/stellar-forge/mcp-paid-agent/native-analysis-archive-download.mjs"
+    "./buyer/mcp/analysis-archives": "./source/stellar-forge/mcp-paid-agent/native-analysis-archive-download.mjs",
+    "./seller/odata": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/index.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/index.mjs"
+    },
+    "./seller/odata/source": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/source.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/source.mjs"
+    },
+    "./seller/odata/workspace": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/workspace.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/workspace.mjs"
+    },
+    "./seller/odata/server": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/server.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/server.mjs"
+    },
+    "./seller/odata/publisher": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/publisher.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/publisher.mjs"
+    },
+    "./seller/odata/live": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live-sdk.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live-sdk.mjs"
+    },
+    "./seller/odata/live-operations": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live-operations.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live-operations.mjs"
+    }
   },
   "nativePeers": {
     "@x402/core": {
