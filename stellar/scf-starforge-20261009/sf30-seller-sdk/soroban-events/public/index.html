@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Soroban event workspace</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <header>
+    <div><p class="eyebrow">Stellar merchant workspace</p><h1>Soroban events</h1></div>
+    <div class="identity"><span id="network">Opening workspace</span><span id="revision"></span><button id="refresh" type="button">Refresh</button></div>
+  </header>
+  <main>
+    <section id="session" class="panel" hidden>
+      <h2>Open private workspace</h2>
+      <p>Enter the session token printed by the installed operator command.</p>
+      <form id="session-form"><label>Session token<input id="session-token" type="password" autocomplete="off" required></label><button type="submit">Open</button></form>
+    </section>
+    <div id="notice" role="status" aria-live="polite"></div>
+    <section id="pending" class="panel" hidden><h2>Saved request</h2><p id="pending-description"></p><button id="recover" type="button">Recover original request</button></section>
+    <div id="workspace" class="layout" hidden>
+      <aside>
+        <section class="panel">
+          <div class="section-heading"><h2>Saved plans</h2><button id="new-plan" type="button">New</button></div>
+          <div id="plans" class="item-list"></div>
+        </section>
+        <section class="panel"><h2>Source connection</h2><p id="connection" class="wrap"></p><p class="muted">The installed host supplies the RPC connection. Every capture retains its observed network and original RPC pages.</p></section>
+      </aside>
+      <div class="work">
+        <nav aria-label="Workspace sections"><button data-view="plan" class="selected">Plan</button><button data-view="captures">Captures</button><button data-view="events">Events</button><button data-view="editions">Editions</button><button data-view="receive">Receive source</button></nav>
+        <section id="view-plan" class="panel">
+          <div class="section-heading"><h2 id="plan-heading">New event plan</h2><span id="plan-version" class="muted"></span></div>
+          <form id="plan-form">
+            <label>Plan name<input id="plan-name" required maxlength="200" placeholder="Contract transfers"></label>
+            <div class="fields">
+              <label>First ledger<input id="start-ledger" type="number" min="1" max="4294967295" step="1" placeholder="Latest observed ledger"></label>
+              <label>End ledger, exclusive<input id="end-ledger" type="number" min="2" max="4294967296" step="1" placeholder="Latest observed ledger + 1"></label>
+              <label>Events per RPC page<input id="page-size" type="number" min="1" max="10000" step="1" value="1000" required></label>
+            </div>
+            <p class="muted">Leave the range empty for the latest observed ledger. Historical ranges must remain within the RPC provider’s retained history.</p>
+            <div class="section-heading"><h3>Event filters</h3><button id="add-filter" type="button">Add filter</button></div>
+            <p class="muted">Filters are alternatives. Within one filter, contract and topic selections apply together. An empty filter set includes all events.</p>
+            <div id="filters"></div>
+            <div class="actions"><button type="submit" data-mutate>Save plan version</button><button id="start-capture" type="button" data-mutate disabled>Capture saved version</button></div>
+          </form>
+        </section>
+        <section id="view-captures" class="panel" hidden>
+          <h2>Original captures</h2><p class="muted">Resume an interrupted capture to keep its selected range and native cursor.</p><div id="captures" class="item-list"></div>
+          <details id="capture-detail" hidden><summary>Selected capture and original RPC pages</summary><pre id="capture-json"></pre></details>
+        </section>
+        <section id="view-events" class="panel" hidden>
+          <h2>Retained events</h2>
+          <form id="event-filter-form" class="fields"><label>Capture<select id="event-capture"></select></label><label>Contract ID<input id="event-contract" placeholder="All contracts"></label><label>Type<select id="event-type"><option value="">All types</option><option value="contract">Contract</option><option value="system">System</option></select></label><button type="submit">Read events</button></form>
+          <p id="event-count" class="muted"></p>
+          <div class="table-wrap"><table><thead><tr><th>Ledger</th><th>Closed at</th><th>Type / contract</th><th>Event</th></tr></thead><tbody id="event-rows"></tbody></table></div>
+          <div class="actions"><button id="events-first" type="button">First page</button><button id="events-next" type="button" disabled>Next page</button><button id="events-download" type="button">Download this page JSON</button></div>
+        </section>
+        <section id="view-editions" class="panel" hidden>
+          <h2>Saved source editions</h2><p class="muted">An edition freezes one completed capture. Its source files retain the original RPC responses and exact XDR fields.</p><div id="editions" class="item-list"></div>
+          <div id="export" hidden><h3>Complete source export</h3><p id="export-directory" class="wrap"></p><p id="export-manifest" class="wrap muted"></p><div class="actions"><button id="download-export" type="button">Download complete ZIP</button><button id="save-export-folder" type="button">Save source folder</button></div><p id="export-progress" class="muted"></p><div class="table-wrap"><table><thead><tr><th>Original file</th><th>Bytes</th><th>Download</th></tr></thead><tbody id="export-files"></tbody></table></div></div>
+        </section>
+        <section id="view-receive" class="panel" hidden>
+          <h2>Receive a source edition</h2><p>Place the complete exported folder on this operator host, then enter its absolute path. A ZIP export should first be extracted into a new folder. Receiving preserves the original capture, plan version, edition identifiers, and full source files.</p>
+          <form id="receive-form"><label>Original source folder<input id="source-directory" required placeholder="/absolute/path/to/received-source"></label><label>Original manifest SHA-256, optional<input id="source-manifest-sha256" pattern="[a-f0-9]{64}" maxlength="64" autocomplete="off" placeholder="Paste the manifest SHA-256 from the original export"></label><button type="submit" data-mutate>Receive and reopen</button></form>
+        </section>
+      </div>
+    </div>
+  </main>
+  <dialog id="event-dialog"><div class="section-heading"><h2>Original event</h2><button id="close-event" type="button">Close</button></div><pre id="event-json"></pre></dialog>
+  <footer><span id="workspace-id"></span><span>Native RPC source · Original event feed publication</span></footer>
+</body>
+</html>
