@@ -1,8 +1,8 @@
 # Run and receive the complete governed application
 
-This launcher prepares the original SCF application receiving operation on a Linux machine with Node24 and Python3. It fetches the exact 110 source files selected by the manifest, checks their immutable refs, lengths and SHA256 hashes, prepares MCP SDK 1.32.1, and invokes the existing `governed_receiving.mjs` once. The original runtime remains pinned at `0d58eaa67daef611146944ebc35613d78d206cb5`; three explicit source entries select the retained-schema receiving correction.
+This launcher prepares the original SCF application receiving operation on a Linux machine with Node24 and Python3. It fetches the exact 110 source files selected by the manifest, checks their immutable refs, lengths and SHA256 hashes, prepares MCP SDK 1.32.1, and invokes the existing `governed_receiving.mjs` once. The original runtime remains pinned at `0d58eaa67daef611146944ebc35613d78d206cb5`; four explicit source entries select the retained-schema receiving correction.
 
-The source closure includes the application and its browser, HTTP and MCP surfaces, SF36 spending state, encrypted project capture and receiving, and the native spending recovery operation. It also includes the original SF36 `expired_resume.py` module imported by the approval console, using the same pinned source revision. All 110 selected files total 1,355,011 bytes. The launcher preserves the original receiving workflow. Its provider and payment responses remain the local integration fixtures defined in that source.
+The source closure includes the application and its browser, HTTP and MCP surfaces, SF36 spending state, encrypted project capture and receiving, and the native spending recovery operation. It also includes the original SF36 `expired_resume.py` module imported by the approval console, using the same pinned source revision. All 110 selected files total 1,356,752 bytes. The launcher preserves the original receiving workflow. Its provider and payment responses remain the local integration fixtures defined in that source.
 
 ## Inputs and one command
 
@@ -62,7 +62,7 @@ The case can contain private native state and scoped keys. The launcher uses pri
 
 ## Retained tool schemas and a saved project continuation
 
-The source closure keeps the original 0d58eaa67daef611146944ebc35613d78d206cb5 application and native engines, with the three request-receiving postimages selected explicitly at 7f4fb651757cbcf8a061d27b62e9c967bc1879e5. Each changed entry carries its own immutable `ref`, byte length and SHA-256. The launcher fetches that exact ref and verifies every selected byte; a supplied local source root must match the same complete manifest.
+The source closure keeps the original 0d58eaa67daef611146944ebc35613d78d206cb5 application and native engines, with the four request-receiving postimages selected explicitly at 16cde986a90ad3f2923b1c737413fa9cc7e9a477. Each changed entry carries its own immutable `ref`, byte length and SHA-256. The launcher fetches that exact ref and verifies every selected byte; a supplied local source root must match the same complete manifest.
 
 An unpinned remote tool schema is learned during original discovery. The encrypted project verifier now checks that learned hash against the captured native request, quote UUID, original ticket digest, complete invocation and accepted payment terms. It then checks the full retained request and review. A configured schema hash remains an exact selection constraint.
 
@@ -77,3 +77,7 @@ node /ORIGINAL_SOURCE/stellar/scf-starforge-20261009/partners/cheesecake-stellar
 ```
 
 The same operation reads the retained quote and complete result, replays the same snapshot operation ID, receives the encrypted project, reads and exports all captured bytes, reattaches the original owner, and restores the canonical owner with its scoped original keys. Its continuation report carries the prior quote, archive and result identities; signing and signed-call counters describe this continuation and must remain zero. The existing original native-spending recovery case then completes the full handover. Keep the prior runtime entrypoint alongside its corrected postimage in the delivery record; changing the receiver does not rewrite the encrypted project’s source references.
+
+### Native SQLite lock files
+
+The original quote SQLite backup carries the durable quote database. Its live writer lease database, WAL/SHM and rollback journal are temporary ownership files that the native store recreates. New snapshots exclude the complete exact temporary-file set. When opening an older authenticated project that captured a writer journal, the receiver still verifies and retains those archived bytes, labels the path `NATIVE_TEMPORARY`, and leaves recreation to the original quote store during reattachment or restore. Financial ledgers and bound request/finality records remain in their original recovery component.
