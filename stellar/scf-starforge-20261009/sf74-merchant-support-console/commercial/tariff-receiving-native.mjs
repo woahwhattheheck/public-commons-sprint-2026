@@ -100,8 +100,9 @@ export async function runTariffCommercialReceiving({nativeRun,output,python=proc
   assert.equal(nativeResult.value.schema,'stellar-forge.merchant-tariff-native-result.v1');
   assert.equal(nativeResult.value.status,'COMPLETE');
   assert.equal(resolve(nativeResult.value.operationDirectory),nativeRun);
-  assert.equal(resolve(nativeResult.value.sourceRoot),PRICING_ROOT);
-  assert.equal(resolve(nativeOperation.value.sourceRoot),PRICING_ROOT);
+  const nativePricingRoot=path(nativeResult.value.sourceRoot,'original pricing source');
+  assert.equal(await realpath(nativePricingRoot),nativePricingRoot);
+  assert.equal(resolve(nativeOperation.value.sourceRoot),nativePricingRoot);
   assert.equal(selectionRequest.value.pricingRequestId,nativeOperation.value.pricingRequestId);
   assert.equal(selectionRequest.value.planRequestId,nativeOperation.value.scenarioRequestId);
   assert.equal(nativeResult.value.selected.quantity,'1250');
@@ -111,12 +112,15 @@ export async function runTariffCommercialReceiving({nativeRun,output,python=proc
     assert.equal(git(bytes),expected,'Keep the unchanged original '+name);
     fixtures.push({name,gitBlob:expected,bytes:bytes.length,sha256:sha(bytes)});
   }
+  assert.deepEqual(nativeResult.value.sourceFiles,nativeOperation.value.sourceFiles);
   for(const file of nativeResult.value.sourceFiles){
-    const bytes=await readFile(join(PRICING_ROOT,file.name));
-    assert.equal(git(bytes),file.gitBlob,'Use the same selected native tariff source: '+file.name);
+    const bytes=await readFile(join(nativePricingRoot,file.name));
+    assert.equal(git(bytes),file.gitBlob,'Retain the original native tariff source: '+file.name);
+    assert.equal(bytes.length,file.bytes);assert.equal(sha(bytes),file.sha256);
   }
   const binding={
     nativeRun,output,sourceCommit:SOURCE_COMMIT,pricingSourceRoot:PRICING_ROOT,
+    nativePricingSourceRoot:nativePricingRoot,
     nativeOperationSha256:sha(nativeOperation.bytes),nativeResultSha256:sha(nativeResult.bytes),
     selectionRequestSha256:sha(selectionRequest.bytes),selectionRequestId:nativeOperation.value.pricingRequestId,
     backupRequestId:nativeOperation.value.backupRequestId,fixtures,
@@ -408,7 +412,8 @@ export async function runTariffCommercialReceiving({nativeRun,output,python=proc
     const result={
       schema:RESULT_SCHEMA,state:'COMPLETE',completedAt:new Date().toISOString(),
       operationDirectory:output,sourceCommit:SOURCE_COMMIT,sourceLabel:'Original repository native tariff fixture',
-      original:{operationDirectory:nativeRun,operationSha256:binding.nativeOperationSha256,
+      customerSourceRoot:ROOT,pricingSourceRoot:PRICING_ROOT,
+      original:{operationDirectory:nativeRun,sourceRoot:nativePricingRoot,operationSha256:binding.nativeOperationSha256,
         resultSha256:binding.nativeResultSha256,selectionRequestId:binding.selectionRequestId,
         backupRequestId:binding.backupRequestId,archiveSha256:nativeResult.value.originalBackup.sha256},
       capture:{sourceSha256:captured.sourceSha256,tariffSourceId:captured.tariff.id,pricingSourceId:captured.pricing.sourceId},
