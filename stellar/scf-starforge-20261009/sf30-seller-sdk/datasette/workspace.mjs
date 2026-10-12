@@ -106,7 +106,7 @@ export async function openDatasetteWorkspace({
   directory = absolute(directory, 'Datasette workspace directory');
   await privateDirectory(directory, create);
   const releaseLock = await acquireWorkspace(directory);
-  let closed = false, active = null, publisher = null;
+  let closed = false, active = null, publisher = null, publisherTail = Promise.resolve(), closing = null;
   try {
     const settingsFile = join(directory, 'workspace.json');
     if (!await exists(settingsFile)) {
@@ -169,16 +169,25 @@ export async function openDatasetteWorkspace({
       return items.sort((a, b) => a.id.localeCompare(b.id));
     }
     async function withPublisher(action) {
-      if (!await selected()) throw fault('DATASETTE_EDITION_SELECTION_REQUIRED', 'Select a saved source edition first.', 409);
-      if (publisher) return action(publisher);
-      const { openDatasettePublisher } = await import('./model.mjs');
-      publisher = await openDatasettePublisher({
-        directory: publisherDirectory, create: !await exists(join(publisherDirectory, 'workspace.json')),
-        sourceFile: selectedSource, targetDirectory, environment,
-        ...(settings.buyer ?? {}),
-      });
-      try { return await action(publisher); }
-      finally { const current = publisher; publisher = null; await current.close(); }
+      ensureOpen();
+      const execute = async () => {
+        ensureOpen();
+        if (!await selected()) throw fault('DATASETTE_EDITION_SELECTION_REQUIRED', 'Select a saved source edition first.', 409);
+        const { openDatasettePublisher } = await import('./model.mjs');
+        const current = await openDatasettePublisher({
+          directory: publisherDirectory, create: !await exists(join(publisherDirectory, 'workspace.json')),
+          sourceFile: selectedSource, targetDirectory, environment,
+          ...(settings.buyer ?? {}),
+        });
+        publisher = current;
+        try { return await action(current); }
+        finally { if (publisher === current) publisher = null; await current.close(); }
+      };
+      // Status and dispatch can arrive together. Serialize native publisher opens
+      // and closes while allowing read-only status on the already open instance.
+      const result = publisherTail.then(execute, execute);
+      publisherTail = result.then(() => undefined, () => undefined);
+      return result;
     }
     async function status() {
       ensureOpen();
@@ -215,15 +224,20 @@ export async function openDatasetteWorkspace({
         const id = identifier(input.operationId, 'saved operation');
         const sourceDirectory = join(directory, 'captures', id);
         if (await exists(join(sourceDirectory, 'operation.json'))) return inspectDatasetteOperation(sourceDirectory);
-        if (UUID.test(id)) return withPublisher(value => ({ run: value.run(id) }));
+        if (UUID.test(id)) return publisher ? { run: publisher.run(id) } : withPublisher(value => ({ run: value.run(id) }));
         throw fault('DATASETTE_OPERATION_NOT_FOUND', 'Choose a saved source operation or extraction.', 404);
       }
       if (operation === 'source.capture' || operation === 'source.adopt') {
         const operationId = identifier(input.operationId, 'capture operation');
         const options = { directory: join(directory, 'captures', operationId), operationId,
           selection: input.selection, signal: controller.signal };
-        if (operation === 'source.adopt') return adoptDatasettePages({ ...options, pages: input.pages });
-        return captureDatasette({ ...options, ...(input.pageLimit === undefined ? {} : { pageLimit: input.pageLimit }) });
+        const result = operation === 'source.adopt' ?
+          await adoptDatasettePages({ ...options, pages: input.pages }) :
+          await captureDatasette({ ...options, ...(input.pageLimit === undefined ? {} : { pageLimit: input.pageLimit }) });
+        // A completed retry returns the same operation receipt. Read full rows
+        // through source.inspect so replay never sends the whole dataset over HTTP.
+        const { rows, pages, columns, hash, ...receipt } = result;
+        return receipt;
       }
       if (operation === 'source.inspect')
         return captureView(await readDatasetteCapture(capturePath(input.operationId)), input);
@@ -371,11 +385,14 @@ export async function openDatasetteWorkspace({
       finally { if (active === selectedOperation) active = null; }
     }
     async function close() {
-      if (closed) return;
+      if (closing) return closing;
       closed = true; active?.controller.abort();
-      if (active?.cancel) { try { await active.cancel(); } catch {} }
-      try { await active?.promise; } catch {}
-      try { await publisher?.close(); } finally { await releaseLock(); }
+      closing = (async () => {
+        if (active?.cancel) { try { await active.cancel(); } catch {} }
+        try { await active?.promise; } catch {}
+        try { await publisherTail; } finally { await releaseLock(); }
+      })();
+      return closing;
     }
     return Object.freeze({ directory, workspaceId: settings.workspaceId, status, operations, dispatch, close });
   } catch (issue) {
