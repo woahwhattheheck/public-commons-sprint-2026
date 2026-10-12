@@ -173,7 +173,7 @@ def render_issued(doc):
 """
 
 
-def accountant_packet(doc):
+def accountant_packet(doc, bookkeeping=None):
     entries = {"issued.html": render_issued(doc).encode(),
                "period.json": (json.dumps(doc, ensure_ascii=True, indent=2) + "\n").encode(),
                "allocations.csv": csv_text(doc["allocations"], FIELDS).encode(),
@@ -194,6 +194,26 @@ def accountant_packet(doc):
         entries[prefix + manifest_name] = base64.b64decode(native["manifest_base64"], validate=True)
         for member in native["files"]:
             entries[prefix + member["name"]] = base64.b64decode(member["base64"], validate=True)
+    if bookkeeping is not None:
+        current = [row for row in bookkeeping["returns"] if row["current"]]
+        flattened = [dict(line, accepted_return_id=row["id"], handoff_id=row["handoff_id"],
+                          source_close_id=row["close_id"], accepted_at=row["created_at"])
+                     for row in current for line in row["native"]["rows"]]
+        entries["bookkeeping/issued-buyer-source.json"] = bookkeeping["source"]
+        entries["bookkeeping/history.json"] = (json.dumps({k:v for k,v in bookkeeping.items() if k not in ("source", "originals")}, ensure_ascii=True, indent=2)+"\n").encode()
+        fields = ("accepted_return_id", "handoff_id", "source_close_id", "sourceLineId", "rowId", "kind",
+                  "sourceRowSha256", "externalStatus", "externalBookRef", "externalAccountCode", "externalNote", "updatedBy", "updatedAt", "accepted_at")
+        entries["bookkeeping/current-references.csv"] = csv_text(flattened, fields).encode()
+        for ident, raw in bookkeeping["originals"].items():
+            entries["bookkeeping/original-returns/"+ident+".json"] = raw
+        rows = table(["Kind / original line", "Native allocation", "Original coding", "External status", "Book / account", "Returned note"],
+            [[esc(row["kind"])+"<br><code>"+esc(row["sourceLineId"])+"</code>",
+              units(row["original"]["amount"], row["original"], doc.get("labels", [])),
+              esc(" · ".join(filter(None, [row["original"]["center_code"],row["original"]["project"],row["original"]["account_code"]]))),
+              esc(row["externalStatus"]),esc(row["externalBookRef"])+"<br>"+esc(row["externalAccountCode"]),esc(row["externalNote"])]
+             for row in flattened])
+        page = ("<!doctype html><html lang='en'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Returned buyer bookkeeping</title><style>"+CSS+"</style><main><header><h1>Returned buyer bookkeeping</h1><p>Current accountant references at native workspace revision "+esc(bookkeeping["revision"])+". The original financial period remains issued edition "+esc(doc["sequence"])+". Every earlier accountant return and original packet is retained separately.</p><dl><dt>Issued close</dt><dd>"+esc(doc["id"])+"</dd><dt>Original source SHA256</dt><dd>"+esc(hashlib.sha256(bookkeeping["source"]).hexdigest())+"</dd></dl></header><section><h2>Current returned references</h2>"+rows+"</section></main></html>")
+        entries["bookkeeping/review.html"] = page.encode()
     entries["manifest.json"] = (json.dumps({"schema": "stellar-forge.buyer-expense-export.v1", "close_id": doc["id"],
         "data_context": doc.get("data_context", "operational"),
         "files": [{"path": name, "bytes": len(value), "sha256": hashlib.sha256(value).hexdigest()} for name, value in sorted(entries.items())]}, indent=2) + "\n").encode()

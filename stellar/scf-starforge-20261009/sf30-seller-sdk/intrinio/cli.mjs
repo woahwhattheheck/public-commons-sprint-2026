@@ -31,7 +31,7 @@ const HELP = [
 ].join('\n');
 const OPTION_NAMES = new Set(['workspace', 'config', 'python', 'label', 'port', 'revision', 'manifest', 'actor', 'operation',
   'expected-head', 'edition', 'offset', 'limit', 'search', 'review-status', 'left', 'right', 'mode', 'changes-only',
-  'command', 'selection', 'format', 'out', 'id', 'bundle', 'binding', 'external-custody', 'help']);
+  'command', 'selection', 'format', 'out', 'id', 'bundle', 'binding', 'external-custody', 'managed-selection', 'help']);
 function argumentsFor(argv) {
   const [command = 'help', ...rest] = argv, options = {};
   for (let index = 0; index < rest.length; index++) {
@@ -65,15 +65,29 @@ function write(value) { process.stdout.write(JSON.stringify(value, null, 2) + '\
 export async function main(argv = process.argv.slice(2)) {
   const {command, options} = argumentsFor(argv);
   if (command === 'help' || command === '--help' || command === '-h' || options.help) { process.stdout.write(HELP); return; }
+  if (options['managed-selection'] !== undefined && command !== 'serve')
+    throw new Error('--managed-selection belongs to the original serve command.');
   const directory = resolve(required(options, 'workspace'));
   if (command === 'serve') {
-    const server = await startIntrinioWorkspace(directory, {port: integer(options.port, 0)});
-    write({operatorUrl: server.operatorUrl, nativeOperatorUrl: server.nativeOperatorUrl, workspace: directory});
+    let server;
+    if (options['managed-selection'] !== undefined) {
+      if (Buffer.byteLength(options['managed-selection']) > 65536)
+        throw new Error('Managed selection exceeds 64 KiB.');
+      const { startManagedIntrinioWorkspace } = await import('./managed.mjs');
+      server = await startManagedIntrinioWorkspace(directory, {
+        selection: JSON.parse(options['managed-selection']), port: integer(options.port, 0),
+      });
+      process.stdout.write(JSON.stringify(server.startup) + '\n');
+    } else {
+      server = await startIntrinioWorkspace(directory, {port: integer(options.port, 0)});
+      write({operatorUrl: server.operatorUrl, nativeOperatorUrl: server.nativeOperatorUrl, workspace: directory});
+    }
     let closing;
     const close = () => { closing ??= server.close(); return closing; };
-    process.once('SIGINT', close); process.once('SIGTERM', close);
+    const stop = () => { close().catch(() => {}); };
+    process.once('SIGINT', stop); process.once('SIGTERM', stop);
     try { await server.closed; }
-    finally { process.removeListener('SIGINT', close); process.removeListener('SIGTERM', close); }
+    finally { process.removeListener('SIGINT', stop); process.removeListener('SIGTERM', stop); }
     return;
   }
   let workspace;

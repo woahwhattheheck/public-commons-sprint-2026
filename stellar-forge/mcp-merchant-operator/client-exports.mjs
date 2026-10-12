@@ -141,7 +141,7 @@ export class MerchantClientExports {
       this.#closing = true;
       this.#close = (async () => {
         await Promise.allSettled([...this.#tasks]); await this.#reads.close();
-      })();
+      })().catch(error => { this.#close = null; throw error; });
     }
     return this.#close;
   }

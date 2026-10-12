@@ -1,3 +1,4 @@
+import { MerchantProviderOwners } from './provider-lifecycle.mjs';
 import { merchantToolCatalog, merchantToolFamilies, merchantToolFamily } from './catalog.mjs';
 export { MERCHANT_TOOLS } from './catalog.mjs';
 import { MERCHANT_PROVIDERS, merchantProviderConfigured } from './providers.mjs';
@@ -14,10 +15,6 @@ import { datasetReleaseView } from './catalog/dataset-lifecycle.mjs';
 
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
-
-
-// Research and API customers delegate mutations to their original workspaces and
-// revision/operation guards, keeping cancellation and request recovery reachable.
 
 
 // The original release return values contain local handler/store paths. The MCP
@@ -49,36 +46,16 @@ function expectedDigest(value) {
 }
 
 export class MerchantReleaseOperator {
+  #providerOwners; #activeDetails = new Map();
+  get activity() {
+    return [...this.#activeDetails.values()].map(({ started, ...entry }) => ({ ...entry,
+      elapsedMs: Math.round((performance.now() - started) * 1000) / 1000 }));
+  }
+  get providerShutdown() { return this.#providerOwners.shutdown; }
+
   #tools; #definitions; #mutations; #options;
   #providers = new Map(); #loaded = new Map(); #loadStates = new Map();
-  async #provider(key, dependency = false) {
-    if (!dependency && !merchantProviderConfigured(key, this.#config))
-      throw failure('TOOL_NOT_FOUND', 'Choose a tool advertised by this configured merchant.');
-    let loading = this.#providers.get(key);
-    if (!loading) {
-      const definition = MERCHANT_PROVIDERS[key], started = performance.now();
-      this.#loadStates.set(key, { state: 'LOADING', durationMs: null });
-      loading = (async () => {
-        try {
-          const [module, entries] = await Promise.all([
-            definition.load(),
-            Promise.all(definition.dependencies.map(async name => [name, await this.#provider(name, true)])),
-          ]);
-          const provider = await definition.create(module, this.#config, this.#options, Object.fromEntries(entries));
-          this.#loaded.set(key, provider);
-          this.#loadStates.set(key, { state: 'READY', durationMs: Math.round((performance.now() - started) * 1000) / 1000 });
-          return provider;
-        } catch (error) {
-          this.#providers.delete(key);
-          this.#loadStates.set(key, { state: 'ERROR', durationMs: Math.round((performance.now() - started) * 1000) / 1000,
-            error: { code: error.code ?? 'PROVIDER_LOAD_FAILED', message: error.message } });
-          throw error;
-        }
-      })();
-      this.#providers.set(key, loading);
-    }
-    return loading;
-  }
+  #provider(key, dependency = false) { return this.#providerOwners.resolve(key, dependency); }
 
   #config; #managed = null; #busy = false; #closing = false; #active = new Set(); #close; #lastFailure = null;                                  
        
@@ -86,12 +63,35 @@ export class MerchantReleaseOperator {
   constructor(config, { stellarExpert, woocommerce, mpp, opensearch, grpc, openapi, accounting, arcgis, opencage, opendatasoft } = {}) {
     this.#config = config;
     this.#options = { stellarExpert, woocommerce, mpp, opensearch, grpc, openapi, accounting, arcgis, opencage, opendatasoft };
+    this.#providerOwners = new MerchantProviderOwners({ definitions: MERCHANT_PROVIDERS, config: this.#config, options: this.#options,
+      loads: this.#providers, instances: this.#loaded, states: this.#loadStates, failure });
     this.#tools = structuredClone(merchantToolCatalog(config));
     this.#definitions = new Map(this.#tools.map(value => [value.name, value]));
-    this.#mutations = new Set(this.#tools.filter(value => !value.annotations.readOnlyHint &&
-      !['researchWorkspaces', 'apiPassWorkspaces'].includes(merchantToolFamily(value.name))).map(value => value.name));
+    this.#mutations = new Set(this.#tools.filter(value => !value.annotations.readOnlyHint).map(value => value.name));
   }
   get tools() { return structuredClone(this.#tools); }
+
+  #hostFingerprint;
+  inspectHost() {
+    if(!this.#hostFingerprint) {
+      const stable=value=>Array.isArray(value)?'['+value.map(stable).join(',')+']':
+        value&&typeof value==='object'?'{'+Object.keys(value).sort().filter(key=>value[key]!==undefined)
+          .map(key=>JSON.stringify(key)+':'+stable(value[key])).join(',')+'}':JSON.stringify(value);
+      this.#hostFingerprint=hash(stable(this.#config));
+    }
+    return {schema:'stellar-forge.merchant-host-profile.v1',merchant:this.#config.name,
+      configurationFingerprint:this.#hostFingerprint,maxRequestBytes:this.maxRequestBytes,
+      capabilities:{tools:this.#tools.length,families:merchantToolFamilies(this.#config)},
+      providers:Object.entries(MERCHANT_PROVIDERS)
+        .filter(([name])=>merchantProviderConfigured(name,this.#config)||this.#loadStates.has(name))
+        .map(([name,definition])=>({name,configured:merchantProviderConfigured(name,this.#config),
+          dependencies:[...definition.dependencies],...(this.#loadStates.get(name)??{state:'UNLOADED',durationMs:null})})),
+      sources:Object.entries(this.#config.sources??{}).map(([source,value])=>({source,label:value.label})),
+      activity:this.activity,providerShutdown:this.providerShutdown,
+      operator:{busy:this.#busy,closing:this.#closing,activeCalls:this.#active.size,lastFailure:this.#lastFailure,
+        managesRunningSeller:Boolean(this.#managed),instanceId:this.#managed?.observation.instanceId??null}};
+  }
+
   get maxRequestBytes() {
     const configuredMaximum = (() => {
       if (this.#config.grantWorkspaces) return 32 * 1024 * 1024;
@@ -101,18 +101,19 @@ export class MerchantReleaseOperator {
     return Math.max(configuredMaximum, this.#config.opendatasoftWorkspaces ? 4 * 1024 * 1024 : 0, this.#config.feedsWorkspaces ? 16 * 1024 * 1024 + 65536 : 0,
       this.#config.researchWorkspaces ? 2 * 1024 * 1024 : 0,
       this.#config.nocodbWorkspaces ? 1024 * 1024 : 0,
-      this.#config.n8nWorkspaces ? 2 * 1024 * 1024 : 0);
+      this.#config.n8nWorkspaces ? 2 * 1024 * 1024 : 0,
+      this.#config.paidJobWorkspaces ? 2 * 1024 * 1024 : 0);
   }
   async #status() {
     const result = await (await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs')).releaseStatus(this.#config.releaseStore);
     const summaries = Object.fromEntries(await Promise.all(Object.entries(MERCHANT_PROVIDERS)
       .filter(([key, value]) => value.summary && merchantProviderConfigured(key, this.#config))
-      .map(async ([key]) => [key, (await this.#provider(key)).summary])));
+      .map(async ([key]) => [key, (await this.#providerOwners.invoke(key, provider => provider.summary))])));
     return { schema: 'stellar-forge.merchant-mcp-status.v1', merchant: this.#config.name,
       state: result.state, releases: result.releases.map(releaseView), errors: result.errors,
       runtime: runtimeView(result.runtime), operator: { managesRunningSeller: Boolean(this.#managed),
         instanceId: this.#managed?.observation.instanceId ?? null, busy: this.#busy,
-        closing: this.#closing, lastFailure: this.#lastFailure, ...summaries,
+        closing: this.#closing, lastFailure: this.#lastFailure, activity: this.activity, shutdown: this.providerShutdown, ...summaries,
         capabilities: { tools: this.#tools.length, families: merchantToolFamilies(this.#config) },
         providers: [...this.#loadStates].map(([name, state]) => ({ name, ...state })) } };
   }
@@ -159,56 +160,20 @@ export class MerchantReleaseOperator {
     return inspectMerchantSource(candidate);
   }
   async #execute(name, args) {
-    if (name.startsWith('merchant_client_export_')) return (await this.#provider('clientExports')).call(name, args);
+    if (name.startsWith('merchant_client_export_')) return this.#providerOwners.invoke('clientExports', provider => provider.call(name, args));
     const family = merchantToolFamily(name);
-    if (family && !['cache', 'dataset', 'discovery', 'facilitators'].includes(family)) return (await this.#provider(family)).call(name, args);
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+    if (family && !['cache', 'dataset', 'discovery', 'facilitators'].includes(family)) return this.#providerOwners.invoke(family, provider => provider.call(name, args));
+
     const root = this.#config.releaseStore;
-    if (name.startsWith('merchant_dataset_')) return (await this.#provider('dataset')).merchantDatasetOperation(root, name, args);
+    if (name.startsWith('merchant_dataset_')) return this.#providerOwners.invoke('dataset', provider => provider.merchantDatasetOperation(root, name, args));
     
     switch (name) {
       case 'merchant_status': return this.#status();
       case 'merchant_sources': return this.#sources(args.source);
-      case 'merchant_facilitators': return (await this.#provider('facilitators')).status();
-      case 'merchant_facilitator_review': return (await this.#provider('facilitators')).review(args);
+      case 'merchant_facilitators': return this.#providerOwners.invoke('facilitators', provider => provider.status());
+      case 'merchant_facilitator_review': return this.#providerOwners.invoke('facilitators', provider => provider.review(args));
       case 'merchant_facilitator_stage': {
-        const result = await (await this.#provider('facilitators')).stage(args);
+        const result = await this.#providerOwners.invoke('facilitators', provider => provider.stage(args));
         return { ...result, release: releaseView(result.release) };
       }
       case 'merchant_operations': {
@@ -216,15 +181,15 @@ export class MerchantReleaseOperator {
         return { instanceId: session.observation.instanceId, releaseId: session.release.id,
           available: Boolean(session.operations), operations: session.operations ? { ...session.operations } : null };
       }
-      case 'merchant_discovery_status': return (await this.#provider('discovery')).status(args);
-      case 'merchant_discovery_review': return (await this.#provider('discovery')).review(args);
-      case 'merchant_discovery_apply': return (await this.#provider('discovery')).apply(args);
-      case 'merchant_cache_status': return (await this.#provider('cache')).merchantCacheStatus(root);
-      case 'merchant_cache_invalidate': this.#owned(args.instanceId); return (await this.#provider('cache')).merchantCacheInvalidate(root, args);
-      case 'merchant_cache_inspect': this.#owned(args.instanceId); return (await this.#provider('cache')).merchantCacheInspect(root, args);
-      case 'merchant_cache_configure': this.#owned(args.instanceId); return (await this.#provider('cache')).merchantCacheConfigure(root, args);
-      case 'merchant_cache_purge': this.#owned(args.instanceId); return (await this.#provider('cache')).merchantCachePurge(root, args);
-      case 'merchant_cache_operation': this.#owned(args.instanceId); return (await this.#provider('cache')).merchantCacheOperation(root, args);
+      case 'merchant_discovery_status': return this.#providerOwners.invoke('discovery', provider => provider.status(args));
+      case 'merchant_discovery_review': return this.#providerOwners.invoke('discovery', provider => provider.review(args));
+      case 'merchant_discovery_apply': return this.#providerOwners.invoke('discovery', provider => provider.apply(args));
+      case 'merchant_cache_status': return this.#providerOwners.invoke('cache', provider => provider.merchantCacheStatus(root));
+      case 'merchant_cache_invalidate': this.#owned(args.instanceId); return this.#providerOwners.invoke('cache', provider => provider.merchantCacheInvalidate(root, args));
+      case 'merchant_cache_inspect': this.#owned(args.instanceId); return this.#providerOwners.invoke('cache', provider => provider.merchantCacheInspect(root, args));
+      case 'merchant_cache_configure': this.#owned(args.instanceId); return this.#providerOwners.invoke('cache', provider => provider.merchantCacheConfigure(root, args));
+      case 'merchant_cache_purge': this.#owned(args.instanceId); return this.#providerOwners.invoke('cache', provider => provider.merchantCachePurge(root, args));
+      case 'merchant_cache_operation': this.#owned(args.instanceId); return this.#providerOwners.invoke('cache', provider => provider.merchantCacheOperation(root, args));
       case 'merchant_inspect': return releaseView(await (await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs')).inspectRelease(root, identifier(args.id)));
       case 'merchant_stage': {
         const alias = identifier(args.source, 'Source alias'), source = this.#config.sources[alias];
@@ -266,7 +231,7 @@ export class MerchantReleaseOperator {
       case 'merchant_client_export': {
         const exportId = identifier(args.id, 'Export ID');
         const { session, openapi } = await this.#catalog(args.instanceId);
-        return (await this.#provider('clientExports')).generate({ exportId, session, openapi });
+        return this.#providerOwners.invoke('clientExports', provider => provider.generate({ exportId, session, openapi }));
       }
       default: throw failure('TOOL_NOT_FOUND', 'Unknown merchant operation.');
     }
@@ -276,45 +241,59 @@ export class MerchantReleaseOperator {
     const definition = this.#definitions.get(name);
     if (!definition) throw failure('TOOL_NOT_FOUND', 'Choose a tool advertised by this configured merchant.');
     exact(args, Object.keys(definition.inputSchema.properties), definition.inputSchema.required);
-    // Cancellation must reach its exact active RPC while the initiating call owns the mutation guard.
-    const changing = this.#mutations.has(name) && name !== 'merchant_grpc_cancel_call';
-    if (changing && this.#busy) throw failure('OPERATOR_BUSY', 'Another merchant change is running. Read merchant_status before continuing.');
-    if (changing) { this.#busy = true; this.#lastFailure = null; }
+    const family = merchantToolFamily(name), owner = MERCHANT_PROVIDERS[family];
+    const changing = this.#mutations.has(name);
+    const serialized = changing && owner?.concurrency !== 'provider' && !owner?.concurrentTools?.includes(name);
+    if (serialized && this.#busy) throw failure('OPERATOR_BUSY', 'Another merchant change is running. Read merchant_status before continuing.');
+    if (serialized) this.#busy = true;
+    if (changing) this.#lastFailure = null;
     let done;
     const active = new Promise(resolve => { done = resolve; });
     this.#active.add(active);
+    this.#activeDetails.set(active, { tool: name, provider: family ?? 'core', changing, serialized,
+      startedAt: new Date().toISOString(), started: performance.now() });
     try {
       const result = await this.#execute(name, args);
-      if (changing) {
+      if (serialized) {
         this.#busy = false;
         if (result?.operator) result.operator.busy = false;
         if (result?.status?.operator) result.status.operator.busy = false;
       }
       return result;
     } catch (error) {
-      if (changing) this.#lastFailure = { code: error.code ?? 'OPERATOR_ERROR', message: error.message };
+      if (changing) this.#lastFailure = { code: error.code ?? 'OPERATOR_ERROR', message: error.message, tool: name, provider: family ?? 'core' };
       throw error;
     } finally {
-      if (changing) this.#busy = false;
+      if (serialized) this.#busy = false;
       this.#active.delete(active);
+      this.#activeDetails.delete(active);
       done();
     }
   }
   close() {
     if (this.#close) return this.#close;
     this.#closing = true;
-    this.#loaded.get('fleet')?.cancelStaging();
+    this.#providerOwners.beginClose();
     this.#close = (async () => {
-      // Reads can own files and native model handles too. Drain every accepted call,
-      // including an in-flight provider import, before closing the loaded owners.
+      // Declared native owners can cancel and drain their accepted work now.
+      // All other owners close after every accepted host call has settled.
       await Promise.allSettled([...this.#active]);
       const outcomes = await Promise.allSettled([
-        ...[...this.#loaded.values()].map(provider => Promise.resolve().then(() => provider.close?.())),
+        this.#providerOwners.finishClose(),
         this.#managed ? this.#stop(this.#managed.observation.instanceId) : Promise.resolve(),
       ]);
-      if (outcomes.some(result => result.status === 'rejected'))
-        throw failure('OPERATOR_SHUTDOWN_INCOMPLETE', 'One or more original owned runtimes reported an incomplete shutdown.');
-    })();
+      const errors = outcomes.filter(result => result.status === 'rejected').map(result => result.reason);
+      if (errors.length) {
+        const error = failure('OPERATOR_SHUTDOWN_INCOMPLETE', 'Original owned runtimes have not finished closing; retry close on this operator.');
+        error.providers = errors.flatMap(cause => cause.providers ?? []);
+        if (this.#managed) error.sellerInstanceId = this.#managed.observation.instanceId;
+        throw error;
+      }
+    })().catch(error => {
+      this.#close = null;
+      this.#lastFailure = { code: error.code ?? 'OPERATOR_SHUTDOWN_INCOMPLETE', message: error.message };
+      throw error;
+    });
     return this.#close;
   }
 }

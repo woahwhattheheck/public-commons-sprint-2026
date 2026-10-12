@@ -1,0 +1,187 @@
+{
+  "schema": "fiscal-briefing-existing-worker-inputs.v1",
+  "operationId": "fiscal-treasury-briefing-7108-20261012",
+  "originalBusinessOperation": "SCF-DURABLE-PAID-JOBS-0B8D-20261011",
+  "publicFiles": [
+    {
+      "name": "native-controller.tar.gz",
+      "bytes": 196139,
+      "sha256": "9ab83b543b260efc13ebabb7e0a6c1474373e3af79ef00a194d6da84d41a55cb",
+      "source": {
+        "github_blob": {
+          "repository": "woahwhattheheck/commons",
+          "sha": "cfb52f3944389d63452caab2384accc75bf5a6c7"
+        }
+      }
+    },
+    {
+      "name": "worker-setup.py",
+      "bytes": 15971,
+      "sha256": "fc68c5076e610c376b70d937e406a597acd301cdedfed0e2b0ffcc69c839c42b",
+      "source": {
+        "github_blob": {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "sha": "86383b77c7348675f3e2d85966ba77da72362e73"
+        }
+      }
+    },
+    {
+      "name": "worker-native-launch.py",
+      "bytes": 3617,
+      "sha256": "5ad9460c56b1f856d3813ca03e650c3813a994d189366f5a9878ef0dd480ce9c",
+      "source": {
+        "github_blob": {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "sha": "5d16ff103d4f37c7c2e418794367741052868124"
+        }
+      }
+    },
+    {
+      "name": "worker-receive.mjs",
+      "bytes": 13003,
+      "sha256": "1abd427637fef60982989a7bbc9daa54dd8722a54a4dd92867d2d1a6dc184b5f",
+      "source": {
+        "github_blob": {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "sha": "eb7e1fa34c0c69b85b980a6135a91928c3e4e107"
+        }
+      }
+    },
+    {
+      "name": "worker-config.json",
+      "bytes": 718,
+      "sha256": "1fd37a1a85ab22a15570f3b4e7cf2c2e1ad61e2795e0c628bda0cb6e055cd2fb",
+      "source": {
+        "github_blob": {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "sha": "d52222f609dc544d86ffac599241a61b3df992a7"
+        }
+      }
+    },
+    {
+      "name": "receive-briefing.original.mjs",
+      "bytes": 14089,
+      "sha256": "bd43b52210fd4920389412812b00f25da20802cf74df80399435aebcba8b8b7a",
+      "source": {
+        "github_blob": {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "sha": "3b034f8e953e4ad9af0d5e285fd9b4667beab908"
+        }
+      }
+    },
+    {
+      "name": "briefing.mjs",
+      "bytes": 22621,
+      "sha256": "eeabeecc58860eba15da711d1131c92ecd715f726212e8fc0c756f7f368c33e2",
+      "source": {
+        "github_blob": {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "sha": "40ed1a56c912261d4184d328489e811c6a8e231d"
+        }
+      }
+    },
+    {
+      "name": "briefing-render.mjs",
+      "bytes": 21724,
+      "sha256": "b95f3578d3bf5db013e2a6a0f562b2ab0655e0d7e601ac93c008b00aceacc699",
+      "source": {
+        "github_blob": {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "sha": "201452295199b14e25f7d41801e9dbefcc148a30"
+        }
+      }
+    },
+    {
+      "name": "briefing-cli.mjs",
+      "bytes": 4445,
+      "sha256": "dbfb1a6c7b28b2a4093749742428e202ebc29ea7ccf8250c8106624dabf6d8ba",
+      "source": {
+        "github_blob": {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "sha": "5936cc3c8b7aef87d2bcfc5109842f54102d4fd8"
+        }
+      }
+    },
+    {
+      "name": "BRIEFING.md",
+      "bytes": 14968,
+      "sha256": "1c5ca21dfd5e419c42e7f9964e5196f81bd0752c288a1b03892854274b567ae0",
+      "source": {
+        "github_blob": {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "sha": "6d33760f8b65ed075ffbfbd6da041dc68eef5fb3"
+        }
+      }
+    },
+    {
+      "name": "receive-public-source.mjs",
+      "sha256": "b7c4f63de57a74b28f1dfda6d2c6109a0a1572c1fcffaf56e0c7703cfefe0ac0",
+      "bytes": 96157,
+      "source": {
+        "github_blob": {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "sha": "dbb784b7e944b75fe08b725150c1756d5d871e7d"
+        }
+      }
+    },
+    {
+      "name": "portable.mjs",
+      "sha256": "b5991cab4c3c83c2c5f0d8801193abe47b47fa89bee9ce33c347eeb77147e505",
+      "bytes": 25218,
+      "source": {
+        "github_blob": {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "sha": "cf16aa02aa6100a502b03ac865a6dc6700148c8a"
+        }
+      }
+    }
+  ],
+  "retainedInput": {
+    "name": "workspace.fiscal.gz",
+    "bytes": 1763015,
+    "sha256": "f78d3a6bd72f529d14c4cd24d9f89f9e99ab83fc97579c4574e032f5a4318788",
+    "workspaceId": "dab0a492-74e0-4e10-8d99-861880b3153d",
+    "originalRevision": 60,
+    "files": 226
+  },
+  "handoff": {
+    "kind": "e2b.sdk",
+    "action": "native.handoff",
+    "sandbox_id": "i7uwmcqmeoxkb7g74x51o",
+    "worker_id": "SCF-DURABLE-PAID-JOBS-0B8D-20261011-e2b-01",
+    "native_operation_id": "fiscal-treasury-briefing-7108-20261012",
+    "directory": "/root/commons-fiscal-briefing-7108-20261012",
+    "native_record": "/root/commons-fiscal-briefing-7108-20261012/control/records/2312fe9b900346f0994003fa32863238faa9be835d6a4a8c4a0517ffcecb43f6",
+    "controller_host": "/root/commons-fiscal-briefing-7108-20261012/controller/host",
+    "resume_timeout": 1800,
+    "setup": {
+      "argv": [
+        "python3",
+        "-B",
+        "/root/commons-fiscal-briefing-7108-20261012/inbox/worker-setup.py"
+      ],
+      "cwd": "/root/commons-fiscal-briefing-7108-20261012",
+      "timeout": 40
+    },
+    "launch": {
+      "argv": [
+        "python3",
+        "-B",
+        "/root/commons-fiscal-briefing-7108-20261012/inbox/worker-native-launch.py"
+      ],
+      "cwd": "/root/commons-fiscal-briefing-7108-20261012"
+    }
+  },
+  "receiving": {
+    "kind": "e2b.sdk",
+    "action": "native.receive",
+    "sandbox_id": "i7uwmcqmeoxkb7g74x51o",
+    "worker_id": "SCF-DURABLE-PAID-JOBS-0B8D-20261011-e2b-01",
+    "native_operation_id": "fiscal-treasury-briefing-7108-20261012",
+    "directory": "/root/commons-fiscal-briefing-7108-20261012",
+    "native_record": "/root/commons-fiscal-briefing-7108-20261012/control/records/2312fe9b900346f0994003fa32863238faa9be835d6a4a8c4a0517ffcecb43f6",
+    "controller_host": "/root/commons-fiscal-briefing-7108-20261012/controller/host",
+    "maximum_download_bytes": 0,
+    "resume_timeout": 1800
+  }
+}

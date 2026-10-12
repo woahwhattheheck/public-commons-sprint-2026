@@ -23,7 +23,7 @@ export function datasetDeliveryNames(native){
   const names=Object.keys(baseDatasetFiles);
   if(native.semantics!==undefined){
     const value=native.semantics;
-    need(object(value)&&value.schema==='stellar-forge.ckan-semantics.v1'&&
+    need(object(value)&&['stellar-forge.ckan-semantics.v1','stellar-forge.odata-semantics.v1'].includes(value.schema)&&
       HASH.test(value.sha256??'')&&HASH.test(value.definitionSha256??'')&&
       HASH.test(value.captureManifestSha256??'')&&value.file==='semantics.json'&&
       value.scope==='PUBLISHED_DATASET'&&value.typedRowsFile==='dataset.jsonl'&&
@@ -70,8 +70,8 @@ async function originalDictionary(file,native,readSavedFile){
   let value;
   try{value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(blocks,file.bytes)));}
   catch{need(false,'MCP_DATASET_SEMANTICS_JSON_INVALID');}
-  // SF100 already validated CSVW, physical types and the canonical dictionary
-  // hashes. Rebind those exact retained bytes to its pinned manifest here.
+  // SF100 already validated the retained source bindings, CSVW, physical types
+  // and canonical dictionary hashes. Rebind those exact retained bytes to its pinned manifest here.
   need(object(value)&&value.schema===native.semantics.schema&&value.sha256===native.semantics.sha256&&
     value.definitionSha256===native.semantics.definitionSha256&&
     value.source?.captureManifestSha256===native.semantics.captureManifestSha256&&

@@ -25,5 +25,8 @@
       "server": "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/cocart/server.mjs",
       "manifest": "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/cocart/browser-assets.json"
     }
-  ]
+  ],
+  "applicationProviders": {
+    "cocart": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/cocart.mjs"
+  }
 }

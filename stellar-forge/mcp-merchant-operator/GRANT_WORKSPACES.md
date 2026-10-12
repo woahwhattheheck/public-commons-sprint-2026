@@ -67,10 +67,11 @@ The service's access token remains in the original private workspace. merchant_g
 | --- | --- |
 | merchant_grant_plans, merchant_grant_plan | Saved plan summaries; current or selected immutable revision with original scenario and reports. |
 | merchant_grant_plan_history | Original plan revision history. |
-| merchant_grant_cases, merchant_grant_case | Existing case summaries and the full pinned plan, record collections, sources, reviews and forecasts. |
+| merchant_grant_cases, merchant_grant_case | Existing case summaries and the full pinned plan, record collections, sources, reviews, forecasts and portfolios. |
 | merchant_grant_case_report | Original invoice allocations, native assets, delivery measures and grant-stage reporting. |
 | merchant_grant_case_history | One native event-history page, with the original cursor and page result. |
 | merchant_grant_forecasts, merchant_grant_forecast | Immutable forecast summaries or the entire saved forecast and current source-change comparison. |
+| merchant_grant_portfolios, merchant_grant_portfolio | Saved resource/date allocations, their original forecast, alternatives and current source comparison. |
 | merchant_grant_review | Complete original saved business review and its source snapshot. |
 
 Read the original planId and current revision, or the original caseId and program.version, before a mutation. An operating case remains pinned to its selected original planning revision.
@@ -139,6 +140,54 @@ The input contract remains [the original forecast guide](../../stellar/scf_2026/
 
 If another operator changes the case between preview and save, the original service returns OPERATIONS_CONFLICT or FORECAST_PREVIEW_CONFLICT. Read the current case, reconcile the input and preview again. An older saved forecast remains immutable and shows its original source comparison.
 
+## Allocate resources and carry selected dates into cash
+
+The six portfolio operations use the completed original [Portfolio allocation workflow](../../stellar/scf_2026/sf47_budget_model/workspace/PORTFOLIO.md). The original saved forecast supplies the full remaining task set, hours, prices and cash rules. The original allocation engine supplies resource availability, dependencies and working dates.
+
+| Tool | Original operation |
+| --- | --- |
+| merchant_grant_portfolios | All saved allocation summaries for the selected case. |
+| merchant_grant_portfolio | The complete immutable allocation, source forecast, alternatives, dated results and current source comparison. |
+| merchant_grant_portfolio_seed | An editable input from the selected current saved forecast, retaining every remaining source task. |
+| merchant_grant_portfolio_preview | The original entered allocation and alternative calculation against the current case version. |
+| merchant_grant_portfolio_save | Native portfolio.save with the reviewed preview identity, exact case version and stable request ID. |
+| merchant_grant_portfolio_selection | The selected ready alternative's original forecast input and retained date/source selection; it creates an editable cash forecast input. |
+
+1. Inspect the current case version and the selected saved forecast's ID and SHA. Call portfolio_seed with that case version and forecast ID.
+2. Read the seed's complete /inputs object. Enter explicit weekdays, daily availability, dated exceptions, resource effort, dependencies and alternatives. Every source task stays in that native input. An unentered capacity and an entered zero retain their different original meanings.
+3. Call portfolio_preview with the complete input. Inspect every alternative's status, available and allocated hours, chosen dates, late or unfinished tasks, collection-timing findings and original cash result. Use snapshot/rows for large arrays and file_read for the complete response.
+4. Call portfolio_save with the same input, current expectedVersion, expectedPreviewSha256, actor and original requestId. Reopen the returned portfolio ID with portfolio; the save's source and complete result stay immutable.
+5. Read the case's current version. Call portfolio_selection with that version, portfolioId and the exact alternativeId (base selects the base allocation).
+6. Feed the returned original /inputs object into forecast_preview, review the cash assumptions, then forecast_save with its original preview SHA, current version and a new deliberate request ID.
+7. Export kind portfolio with caseId and portfolioId for the full source/calculation/CSV handoff. Export kind case for native import and reopening of the entire case, including every retained portfolio and original forecast.
+
+Seed, preview and selection are read-only native operations. Save uses the original command journal. A stale case or changed forecast keeps the original validation response; an uncertain save retains the original request ID for exact replay. Saving an incomplete allocation preserves the native findings and entered work for later receiving. Only an original READY alternative is eligible for the date selection step.
+
+### Pass the exact original object between operations
+
+Forecast and portfolio preview/save accept one complete inline inputs object or one verified input reference. For a native response that wraps the input, set inputPointer explicitly. The SHA always identifies the entire retained file; projection happens after full-file verification.
+
+For example, portfolio_selection returns a retained snapshot whose native response contains inputs. Use its real snapshot ID and whole-response SHA:
+
+~~~json
+{
+  "workspace": "grant",
+  "caseId": "operation-<original 32 hex characters>",
+  "expectedVersion": 32,
+  "input": {
+    "snapshotId": "snapshot-<original UUID>"
+  },
+  "expectedInputSha256": "<complete selection-response SHA256>",
+  "inputPointer": "/inputs"
+}
+~~~
+
+Pass this selection to merchant_grant_forecast_preview. For forecast_save, retain those exact input-selection fields and add actor, requestId and the original forecast preview's expectedPreviewSha256. The same reference pattern can select /inputs from portfolio_seed or /inputs from portfolio_preview for portfolio_save. A declared host JSON file or completed transfer can use the same optional pointer.
+
+Pointers use the shared original JSON-pointer rules: / for object paths, ~0 for a tilde, ~1 for a slash. The selected value must be the native input object. Inline inputs exclude input, expectedInputSha256 and inputPointer. Complete native response files retain their own receiving bounds; the projected input fits the existing 8 MiB input bound and the service's complete request remains within 32 MiB.
+
+The selection changes the original work-date fields. Quoted collections and conditional grant receipts keep the original forecast engine's entered timing and completion-payment rule. Review its collection-timing findings before accepting the dated cash forecast.
+
 ## Planning, delivery and reviews
 
 Planning changes use merchant_grant_plan_estimate, plan_save, plan_restore and plan_clone. The original expectedRevision, request ID, note, scenario patch and planning inputs pass to the corresponding native operation. Native request IDs contain up to 100 letters, numbers, dots, underscores or hyphens, beginning with a letter or number. Keep their exact original spelling on replay.
@@ -158,9 +207,81 @@ The original service validates each record, source reference, lifecycle transiti
 
 Use merchant_grant_source_attach for exact source bytes. It calls the original source.add operation and retains filename, MIME, source URL, observation date and source hash. Individual sources have the native 8 MiB limit; the case retains its original aggregate source bound. merchant_grant_intake consumes the existing original source-intake packet through its maintained importer.
 
+## Receive merchant support into the original delivery case
+
+The two Support operations join the original [Merchant Support receiving workflow](../../stellar/scf_2026/sf47_budget_model/workspace/SUPPORT_DELIVERY.md). Export the intended saved case from Merchant Support with **Export portable handoff**. Use that complete original JSON file; the grant service invokes its installed SF74 reader and preserves the captured source, route and runtime identities.
+
+| Tool | Original result |
+| --- | --- |
+| merchant_grant_support_preview | Read-only native review of the exact handoff and current case version, including source/reader identities, full report, rendered HTML, existing source matches, deployment choices and previewSha256. |
+| merchant_grant_support_receive | Original support.receive transaction: retain the handoff and native rendered review, associate an existing or new deployment, and commit the case event and original request receipt together. |
+
+1. Read merchant_grant_case for the current case version and retained deployments.
+2. Inspect the declared original support input with merchant_grant_inputs, or finish its original receive_begin/chunk/commit transfer. Keep the exact whole-file SHA and original filename.
+3. Call support_preview with caseId, expectedVersion, input, expectedInputSha256 and filename.
+4. Read the complete original source, installed reader, captured comparison and follow-up work. Use snapshot/rows to inspect native objects and arrays; file_read returns the full preview JSON, including its original html string.
+5. Select the original deploymentId from that case. To record a new deployment, use null or omit deploymentId and provide the native deployment fields instead.
+6. Call support_receive with the same file selection, whole-file SHA, filename and case version, the reviewed expectedPreviewSha256, actor, note and one stable requestId.
+7. Read its original recordId, sourceIds, sourceSha256, version and unchanged result. Reopen the case, export each original source through kind source, or export and import the complete case.
+
+A declared host input is selected exactly like other native files:
+
+~~~json
+{
+  "workspace": "grant",
+  "caseId": "operation-<original 32 hex characters>",
+  "expectedVersion": 32,
+  "input": {"hostInput": "merchant-support"},
+  "expectedInputSha256": "<exact original support file SHA256>",
+  "filename": "merchant-support.json"
+}
+~~~
+
+Pass those fields to merchant_grant_support_preview. For support_receive retain every selection field and add the original preview hash, deployment selection and request fields. The host declares merchant-support in its connection inputs with the actual file path. A completed transfer or a retained source export can also supply the exact same original bytes. Support tools consume the whole file; they do not accept inputPointer or reconstructed review JSON.
+
+### Existing and newly recorded deployments
+
+An existing deploymentId preserves its original accountable operator, business fields and source associations, then adds this original handoff/report relationship. Omit deployment, or pass null/an empty object. A nonempty competing replacement object is rejected.
+
+A new deployment uses the original fields below. Read pinned work-package IDs from the original case plan; a HANDED_OVER state needs its named receiver and actual receiving date.
+
+~~~json
+{
+  "name": "Merchant runtime",
+  "operator": "Accountable operator",
+  "operatorId": "retained-operator-identity",
+  "role": "MERCHANT",
+  "participantClass": "TEAM_OPERATED",
+  "environment": "TESTNET",
+  "state": "OPERATING",
+  "costIds": [],
+  "tranche": null,
+  "endpoint": "https://merchant.example/data",
+  "releaseRef": "Original installed source",
+  "caseRef": "Original merchant case or work order",
+  "acceptedBy": "",
+  "acceptedAt": null,
+  "sourceNote": ""
+}
+~~~
+
+For a new record use deploymentId: null and put those fields in deployment. Native generated IDs, version, recordedBy and sourceIds belong to the original service. Role, environment, participant class, lifecycle state and pinned work references retain the original deployment rules.
+
+### Exact source, recovery and complete handoff
+
+The native preview binds the current case version, original filename and bytes, installed reader and factual review. The receive operation recalculates that review in the original case transaction and checks its preview hash. It retains the raw handoff, rendered report, source association, deployment change, event and request receipt atomically.
+
+A repeated identical original request returns its accepted result. A file/report already associated with the selected deployment can return unchanged without incrementing the case version. Reused original bytes keep any existing source name and metadata; the support-to-report association remains part of the original case and history.
+
+If the native version or preview has changed, read the current case and preview the same intended file again before submitting a deliberate updated request. If the receive response is interrupted, recover the identical original requestId and payload. The client issues no automatic write replay. SUPPORT_REVIEW_BUSY means another original review is running; retain the selection and retry when that review completes.
+
+The original handoff and retained rendered report each fit 8 MiB. The case retains its original 24 MiB aggregate and 200-file limit. Preview can contain a complete native reader report up to its 16 MiB output bound; large snapshots remain available through byte paging. For an oversized handoff choose a shorter original capture period in Merchant Support and export that source.
+
+The maintained grant launcher passes its running Node executable to the original Python support reader. Borrowed Applications and MCP-started instances use that same lifecycle. Download sourceIds through merchant_grant_export with kind source; the original handoff reopens in Merchant Support, and the saved HTML opens as the receiving-time report. Complete case export/import preserves both files, their deployment association and original event history.
+
 ## Export, transfer and receive the complete work
 
-merchant_grant_export supports original plan ZIP, operating-case ZIP, forecast ZIP, source file, scenario JSON and original daily/cost CSVs. It preserves the complete native response. A case ZIP includes all original source attachments, reviews and forecasts.
+merchant_grant_export supports original plan ZIP, operating-case ZIP, forecast ZIP, portfolio ZIP, source file, scenario JSON and original daily/cost CSVs. It preserves the complete native response. A case ZIP includes all original source attachments, reviews, forecasts and portfolios.
 
 For exact bytes, call merchant_grant_file_read with the snapshot ID and expectedSha256. Repeat the returned readId, same SHA and nextOffset; keep each base64 chunk's decoded bytes in order. Each chunk is at most 65,536 bytes. The shared original reader keeps a verified snapshot, returns an exact total size and hash, and releases its temporary descriptor at EOF. merchant_grant_file_release closes a reader early; the retained original file stays available.
 
@@ -208,6 +329,8 @@ The original planning database stores the request fingerprint and result in the 
 | REQUEST_CONFLICT | The request ID belongs to a different payload. Recover that original operation; a deliberate new action needs a new request ID. |
 | OPERATIONS_CONFLICT or plan revision conflict | Read current source and reconcile the concurrent operator's saved work. |
 | FORECAST_PREVIEW_CONFLICT | Preview the exact revised inputs against current original records before saving. |
+| SUPPORT_PREVIEW_CONFLICT | Re-preview the exact support file and filename against current case and installed reader before a deliberate receiving request. |
+| SUPPORT_REVIEW_BUSY | Keep the same source selection and retry after the original active review completes. |
 | GRANT_RESULT_UNCERTAIN | The HTTP response was lost or failed after dispatch. Read the original case/plan, then repeat the identical original request ID and payload to recover its retained result. |
 | retention.state FAILED | The original response was received successfully, but its complete local snapshot was not retained. Restore storage and repeat the identical native operation or original read. |
 | GRANT_SELECTION_CHANGED | Reconcile the selected workspace, scenario, Python and installed source edition in the host connection. |

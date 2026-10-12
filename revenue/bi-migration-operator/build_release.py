@@ -11,7 +11,7 @@ DIRECTORIES = ("bi_operator", "web", "vendor", "schemas", "examples", "tools")
 TOP_LEVEL = (
     "BI_OPERATOR.py", "prepare_project.py", "OPEN_POWER_BI.ps1",
     "build_release.py", "requirements.txt", "README.md", "OPERATOR_GUIDE.md",
-    "THIRD_PARTY_LICENSES.txt", "VENDOR_SOURCE.json", "DEMONSTRATION.md", "BILLING_GUIDE.md",
+    "THIRD_PARTY_LICENSES.txt", "VENDOR_SOURCE.json", "DEMONSTRATION.md", "BILLING_GUIDE.md", "AZURE_EXPORTS_GUIDE.md", "requirements-azure.txt",
 )
 
 

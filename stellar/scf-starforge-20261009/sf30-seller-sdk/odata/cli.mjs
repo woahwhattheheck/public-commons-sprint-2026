@@ -21,7 +21,8 @@ node cli.mjs --workspace DIRECTORY COMMAND [options]
   rows --id EDITION [--out FILE]
   review --id EDITION --decision accept|needs-work --note TEXT
   compare --before EDITION --after EDITION [--out FILE]
-  export --id EDITION [--name NAME] [--fields A,B] [--payment FILE --origin URL --path /data]
+  semantics --id EDITION [--fields A,B] [--out FILE]
+  export --id EDITION [--expected-semantics SHA256] [--name NAME] [--fields A,B] [--payment FILE --origin URL --path /data]
   query --export ID [--query 'limit=20&sort=ID']
   backup --out FILE
   restore --input FILE
@@ -85,8 +86,9 @@ export async function main(args=process.argv.slice(2)){
       case 'rows':result=await workspace.rows(o.id);break;
       case 'review':result=await workspace.reviewEdition({id:o.id,decision:o.decision,note:o.note});break;
       case 'compare':result=await workspace.compare(o.before,o.after);break;
+      case 'semantics':result=await workspace.semantics({id:o.id,fields:o.fields?.split(',')});break;
       case 'export':result=await workspace.exportEdition({id:o.id,name:o.name,fields:o.fields?.split(','),
-        payment:o.payment?await jsonFile(o.payment):undefined,origin:o.origin,path:o.path||'/data'});break;
+        payment:o.payment?await jsonFile(o.payment):undefined,origin:o.origin,path:o.path||'/data',expectedSemanticSha256:o['expected-semantics']});break;
       case 'query':result=await workspace.queryExport({id:o.export,query:o.query||''});break;
       case 'backup':result=await workspace.backup();if(!o.out)throw new Error('backup requires --out.');break;
       case 'restore':result=await workspace.restore(await jsonFile(o.input));break;

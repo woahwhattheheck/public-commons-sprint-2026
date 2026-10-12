@@ -149,9 +149,19 @@ function explanation(row) {
   if (row.completeChunks) return 'Continue from the next unattempted part. ' + integer(row.completeChunks) + ' completed parts remain in the original session.';
   return 'The reviewed byte plan is saved. Start the download when you are ready to approve its original requests.';
 }
+let researchLink=null;
+function renderResearch() {
+  const row=state?.selected;
+  const current=researchLink&&row?.id===researchLink.session&&row.revision===researchLink.expectedRevision;
+  $('research-workspace-link').hidden=!current;
+  if(current)$('research-workspace-link').href=researchLink.url;
+  else {$('research-workspace-link').removeAttribute('href');researchLink=null;}
+  $('research-connection-note').hidden=!current;
+  $('research-connection-note').textContent=current?'Continue in the existing Research Pipelines tab to review the original delivered file.':'';
+}
 function render() {
   renderSessions(); const row = state.selected;
-  renderAnalysis();
+  renderAnalysis();renderResearch();
   $('empty').hidden = Boolean(row) || !$('setup').hidden || !$('recovery-panel').hidden || !$('analysis-panel').hidden || !$('operator-panel').hidden;
   $('session').hidden = !row || !$('setup').hidden || !$('recovery-panel').hidden || !$('analysis-panel').hidden || !$('operator-panel').hidden;
   if (!row) { controls(); return; }
@@ -299,6 +309,8 @@ function controls() {
   $('open-analysis').disabled = pending; $('close-analysis').disabled = pending;
   const usableObject = row?.section === 'delivery' && row.status === 'COMPLETE' && row.assembly;
   $('analyze-file').disabled = receivingBusy || !usableObject;
+  $('research-file').disabled = receivingBusy || !usableObject || !state?.research?.configured;
+  $('research-file').title=state?.research?.configured?'':'Connect the original Research workspace in this buyer launch.';
   $('analysis-review').disabled = receivingBusy || !usableObject;
   $('analysis-name').disabled = receivingBusy || !usableObject; $('analysis-format').disabled = receivingBusy || !usableObject;
   $('analysis-register').disabled = receivingBusy || !analysisReview;
@@ -344,6 +356,13 @@ function openAnalysis() {
   }
   render(); schedulePoll();
 }
+$('research-file').onclick=()=>action(async()=>{
+  const row=state?.selected;if(!row)return;
+  const result=await request('/api/research/open',{session:row.id,expectedRevision:row.revision});
+  if(state?.selected?.id!==row.id||state.selected.revision!==row.revision)return;
+  researchLink={...result,expectedRevision:row.revision};renderResearch();
+  notice('The original Research workspace is ready. Open the link to review this completed file.');
+});
 $('open-analysis').onclick = openAnalysis; $('analyze-file').onclick = openAnalysis;
 $('close-analysis').onclick = () => { $('analysis-panel').hidden = true; render(); schedulePoll(); };
 for (const id of ['analysis-name','analysis-format']) $(id).addEventListener('input', () => {

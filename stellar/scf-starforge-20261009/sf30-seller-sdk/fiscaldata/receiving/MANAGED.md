@@ -36,6 +36,11 @@ Save one private JSON input file and keep its bytes unchanged for retries:
     "label": "Original receiving operator"
   },
   "query": "limit=2",
+  "briefing": {
+    "title": "Reviewed Treasury comparison",
+    "audience": "Internal analyst review",
+    "notes": "Compare the two retained source intervals. Values remain exact source decimals."
+  },
   "browser": {
     "chromium": "/absolute/existing/chromium",
     "playwright": "/absolute/existing/node_modules"
@@ -50,6 +55,18 @@ The values marked `REPLACE` are placeholders, not accepted identifiers. Obtain t
 `outputDirectory` must be private, owned by the operating account, canonical, and outside the received source workspace. The command retains a private connection file, its own Applications controller, operation histories, the analyst delivery, and a structured result there. The connection identifies the named operator and one workspace alias; credentials and payer configuration are unnecessary for this analyst receiving.
 
 `managedHomeDirectory` and `browser` are optional. Omit the home only when the original controller should create its normal managed home. Omit `browser` for a headless native API receiving; the result then records the native analyst and delivery stages without a browser stage. Include it for the complete desktop/mobile product receiving.
+
+## Optional complete customer briefing
+
+Set `briefing` to include the existing customer-report workflow in this same receiving. Its supported fields are authored `title` (required, up to 240 characters), `audience` (up to 400), and `notes` (up to 64,000). The selected READY runtime must contain the managed briefing action, form, helper and renderer from PR1801 or a compatible current descendant. Keep the existing comparison/export identifiers and hashes in the receiving input; the report uses those original retained objects.
+
+With a browser, the command fills the actual Customer briefing form, selects the original comparison delivery, and clicks its normal create action. It records the browser's own original request ID and complete payload before allowing that POST to reach the model. A process interruption therefore retains the same report intent. A retry uses that saved payload through the original action and then continues the download. The command does not replace the request, inject another renderer, or calculate financial values.
+
+Without a browser, it saves a stable request derived from this receiving's original identity before calling the same `briefings.create` action. Omitting `briefing` preserves the earlier input and workflow: it creates no report and does not require the newer report source. Existing completed results and frozen receiving operations remain on their original input.
+
+The full report archive contains its offline HTML entry, every row page, exact dated-measure CSV/JSON, original comparison rows and unchanged original source delivery. The receiving verifies the downloaded file hashes, authored context, original comparison summary, source archive hash, and declared report members. It saves the complete `briefing.tar.gz`, its original manifest, `briefing.json`, `briefing.md`, and `dated-measures.csv` beneath `outputDirectory/downloads/briefing/`. These are the original producer's files.
+
+After the managed application stops and reopens, the receiving repeats the same original report request, requires the same report/export identity with no new export, and downloads the complete archive again to compare its original bytes. This is part of the same Applications operation. The standalone report receiver remains a separate original consumer under its existing owner.
 
 ## Launch the original operation
 
@@ -75,15 +92,19 @@ For admission, account for the complete Applications controller, original manage
 
 5. When a browser is supplied, review the actual source notes as the named operator, query the original rows, inspect capture, edition, and comparison views at 1360 and 390 pixels, and download the complete retained archive. The source review text is saved as an original model revision; the receiving records the intended text before submitting it so a retry can reuse it. The visible operator footer and capture status layout are checked. Browser errors and page dimensions are retained.
 
-6. Verify every downloaded archive byte against the original export's size and SHA-256. Stop the original application, wait for its listener to close, close the Applications controller, and reopen that same controller.
+6. If the optional briefing is selected, create or resume its original report, download the complete archive and companion files, and retain the actual source/comparison and authored context. The normal browser pass includes its visible Customer briefing form and full archive link.
 
-7. Start a new original application operation for the same saved application. Its listener instance must be new; its source, captures, reviewed editions, complete exports, operator, and workspace remain the original retained identities. Query the same edition again, then stop and drain that original listener.
+7. Verify every downloaded archive byte against the original export's size and SHA-256. Stop the original application, wait for its listener to close, close the Applications controller, and reopen that same controller.
+
+8. Start a new original application operation for the same saved application. Its listener instance must be new; its source, captures, reviewed editions, complete exports, operator, and workspace remain the original retained identities. Query the same edition again. When a briefing was selected, reuse its original request and confirm the same export and whole archive after reopening. Then stop and drain that original listener.
 
 ## Results and continuation
 
 The final structured result is `outputDirectory/result.json`, with schema `stellar-forge.fiscaldata-application-receiving.v1`. A completed result has `status: "COMPLETED"`, the selected runtime and application, every stage, and the original native run identifiers. Standard output prints a compact final identity summary.
 
 Native `/api/action` replies preserve the original `{result, state}` envelope. The receiving adapter checks that envelope and consumes `result` for the edition, query, comparison, and reopen observations.
+
+The optional customer report adds `complete-customer-briefing` and `customer-briefing-reopened` stages, including the retained browser/native request, original export and archive hashes, all selected file identities, and the unchanged source archive. Its source-derived dated measures remain exact values from the original producer.
 
 The complete analyst download is `outputDirectory/downloads/comparison-delivery.tar.gz`. The receiving compares the full file's size and hash to the original model's sealed export. It does not produce a new financial dataset or replace that delivery.
 
