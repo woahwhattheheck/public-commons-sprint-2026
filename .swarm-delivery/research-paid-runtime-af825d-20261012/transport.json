@@ -1,0 +1,32 @@
+{
+  "schema": "commons.research-runtime-source-delivery.v1",
+  "operation": "DBC61-SCF-STUDY-EXTRACTION-20261012",
+  "firstProgramme": "research-nct03529110-dbc61-20261012-01",
+  "sourceRef": "c17faa14faa346061842505c520e194f13e20b20",
+  "packet": {
+    "repository": "woahwhattheheck/public-commons-sprint-2026",
+    "gitBlob": "44b9e4429eeb5038edb3226f32cb8d5c22cfa88f",
+    "bytes": 3029602,
+    "sha256": "e279d0b5dff10165d72481c505b08f0e7a47a78d21cad86fc4870db1f86b3d6f",
+    "files": 159,
+    "sourceBytes": 2887635,
+    "gzip": {
+      "gitBlob": "c9f223bf07370955d2e6da9be7ff33ccd7f09823",
+      "bytes": 755924,
+      "sha256": "a046555306ad5dff193a3faf011599f8655517af2727bedcf6680cf1469790c6"
+    }
+  },
+  "selection": {
+    "bytes": 843951,
+    "sha256": "9bdf5e5c2739d4367b6ede6666414174995e2dda04f290b2568e7cd1c9bca5ff",
+    "counts": {
+      "selectedPaths": 1277,
+      "originalBodiesVerified": 1115,
+      "verifiedOriginalBytes": 17141665,
+      "parentCurrentBoundaries": 162,
+      "pendingOriginalBodies": 0,
+      "pendingOriginalBytes": 0
+    }
+  },
+  "originalSelectionSha256": "aa1222d2c9e4999bfa34685835413a854a49f686b0cd427e25a22e3ddda7d06c"
+}
