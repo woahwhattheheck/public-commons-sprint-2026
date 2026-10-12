@@ -304,7 +304,7 @@ try{
   check(job.result.appendedPages===0,'The original delivery appended new pages');
   const preview=await api('/api/preview?session=retained_inventory&offset=0&limit=100');
   check(preview.rows.length===6&&preview.originalSha256===input.deliveryFiles['dataset.jsonl'].sha256,'The retained inventory changed');
-  await page.locator('#close-operator').click();
+  if(await page.locator('#close-operator').isVisible()) await page.locator('#close-operator').click();
   await page.getByRole('button').filter({hasText:'Original retained inventory'}).click();
   await page.getByRole('button',{name:'Data & analysis',exact:true}).click();
   const ticket=await api('/api/download-ticket',{session:'retained_inventory',name:'dataset.csv'});
