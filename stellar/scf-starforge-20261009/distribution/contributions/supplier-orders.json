@@ -51,7 +51,13 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/profiles.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/public/profile.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/PROFILES.md",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/examples/customer-profile.json"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/examples/customer-profile.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/public/presentation.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/public/guide.html",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/public/guide.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/GUIDE.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/receiving/supplier-order-buyer-review.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/receiving/supplier-order-buyer-native.mjs"
   ],
   "exports": {
     "./supplier-orders": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/index.mjs",
@@ -68,7 +74,9 @@
     "./supplier-orders/https-intake": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/https-intake.mjs",
     "./supplier-orders/https-receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/receiving/supplier-order-https-native.mjs",
     "./supplier-orders/profiles": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/profiles.mjs",
-    "./supplier-orders/profile-receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/receiving/supplier-order-profile-native.mjs"
+    "./supplier-orders/profile-receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/receiving/supplier-order-profile-native.mjs",
+    "./supplier-orders/buyer-review": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/receiving/supplier-order-buyer-review.mjs",
+    "./supplier-orders/buyer-receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/receiving/supplier-order-buyer-native.mjs"
   },
   "browserAssets": [
     {

@@ -226,6 +226,41 @@ applicationEditions returns editions, total and nextOffset. applicationEdition r
 
 The current data source is resolved from the database's committed edition and original operation/review. Historical receipts remain bound to their own original edition rows. Removed source keys are retained separately from currently active rows. The application export carries the complete current database, source packets and reviews.
 
+## Browse and carry the saved working dataset
+
+The Rails operator's **Working records** screen saves the complete committed stream with its original source, imported values, current application values and original attachment links. Staff can search all original and working values, combine typed filters, sort the full result, open every page, compare one record and download the complete selected CSV or JSON. Saved pages and exports continue to use the same capture when the live application changes.
+
+A complete saved dataset also provides its export selection:
+
+~~~js
+const workingCapture = {
+  reviewId: originalReviewId,
+  captureId: originalCaptureId,
+  expectedCaptureSha256: originalCaptureSha256
+};
+~~~
+
+Both IDs are the lowercase version-4 UUIDs returned by the operator. Copy the complete SHA-256 from that capture. The **Use this saved dataset for an application export** section provides the exact three-field selection together.
+
+Stop the original application listener, then retain a new original verify or export request with this selection:
+
+~~~js
+const exported = await client.start({
+  id: originalEnvironmentId,
+  applicationId: originalApplicationId,
+  action: 'export',
+  operationId: originalExportOperationId,
+  workingCapture
+});
+const completed = await client.waitOperation({ operationId: exported.id });
+~~~
+
+Verification uses the same input with action set to verify. The selected capture must match every current managed record, its source linkage and the original edition receipts. Later working edits require another complete capture. The export retains the complete application, original dataset editions, review and capture files, exact client source, dependency lock and local bundle. It reopens the copied application before publishing the archive. The receiving operation compares its complete native working-state observation with that saved export and retains the same capture selection for future verification.
+
+An export without an explicit workingCapture uses the application's existing verification profile. A received application that already carries a captured working-state profile keeps that original profile. Older installed source packages remain readable; the runtime checks support before selecting a new record operation.
+
+The existing runtime run method also exposes dataset-records for the saved-record CLI and dataset-records-lifecycle for the complete native customer journey. Both use the original environment and literal argv array. The complete guide is in developer/ruby-client/examples/rails_dataset/operator/records.md; its native journey opens the existing managed application, follows the actual signed capture form, reads every selected page and download, then receives and reopens a complete independent application.
+
 ## Download a complete original file
 
 Retain the transfer UUID before the first call and give each selected file its own private receiving directory.

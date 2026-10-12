@@ -8,9 +8,9 @@ This package supplies the complete original application and both producing comma
 | --- | --- |
 | Repository | woahwhattheheck/public-commons-sprint-2026 |
 | Complete application | 986bc2379e892ee721de30a0b88701461a0dffd6 |
-| Source index | 03bc157721328bf44c37568fe0a2aec948a7cb45 |
-| Index SHA-256 | 84834fec49e5f40f1bea1b5770745263a81e528a0e4153f49efef8c2721b706c |
-| Complete source | 1,682 files, 24,906,687 UTF-8 bytes in 31 disjoint parts |
+| Source index | babfe5b88df02b9d1c36da3004305cc9140dbe2b |
+| Index SHA-256 | 2e8b1db7664eb8064dca547c7e091decee7f985794c4538fa76317c343783010 |
+| Complete source | 1,685 files, 24,937,462 UTF-8 bytes in 32 disjoint parts |
 | Standalone recovery journey | 76e306e88e1654c66afb2ec225853badeb64c3cf |
 | Journey SHA-256 | b4e019eaf76f914d88591940f12ba63c4955c485c76ba761bc8f422d4bb4a4e2 |
 | Operator receiver | stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/receiving/fleet-operator.mjs |
@@ -20,9 +20,11 @@ The index records each full repository-relative path, Git blob, byte length, SHA
 
 The broader source set includes the original SDK, recovery, deploy, delivery and pilot components and their actual catalog/provider imports. The index records HTTP aliases and files produced by the original exporters.
 
+The receiving index includes the developer portal's computed static asset set. Part 032 adds `stellar/scf-starforge-20261009/sf30-seller-sdk/developer/browser.mjs`, `stellar/scf-starforge-20261009/sf30-seller-sdk/developer/index.html`, `stellar/scf-starforge-20261009/sf30-seller-sdk/developer/style.css` from the same application commit. The earlier 31 parts, original engine/operator pins and standalone journey retain their original identities. These three files are required by the portal's module-level asset loader and browser entrypoint.
+
 ## Receive the full source
 
-The full package is published at [commit 0feebd2b36f7b0a157e24c7cceab7da4a52616a3](https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/0feebd2b36f7b0a157e24c7cceab7da4a52616a3/artifacts/scf-original-recovery-07476-20261012) on `artifact/scf-original-recovery-07476-20261012`. Its 39 files include all 31 source parts, the index, the standalone journey and the operating programs. Check out that published artifact branch, then select its complete package directory. Choose a new source directory beside that checkout and a separate journey file:
+The full package is published at [the complete artifact branch](https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/artifact/scf-original-recovery-07476-20261012/artifacts/scf-original-recovery-07476-20261012) on `artifact/scf-original-recovery-07476-20261012`. The package includes all 32 source parts, the index, the standalone journey and the operating programs. Check out that published artifact branch, then select its complete package directory. Choose a new source directory beside that checkout and a separate journey file:
 
 ~~~sh
 python3 materialize-original-source.py \
@@ -31,7 +33,7 @@ python3 materialize-original-source.py \
   --journey /ABSOLUTE/recovery-journey.mjs
 ~~~
 
-The materializer reads all 31 local parts, checks their exact bodies and membership, verifies every original source file, preserves executable bits and atomically publishes the full source. It can finish its own interrupted materialization when the retained marker and published bodies still match. The original journey allocates its native case after its source and service requirements are met.
+The materializer reads all 32 local parts, checks their exact bodies and membership, verifies every original source file, preserves executable bits and atomically publishes the full source. It can finish its own interrupted materialization when the retained marker and published bodies still match. The original journey allocates its native case after its source and service requirements are met.
 
 ## Select the actual service host
 

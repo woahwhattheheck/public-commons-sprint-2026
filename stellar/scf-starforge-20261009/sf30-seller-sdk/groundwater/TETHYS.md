@@ -234,3 +234,8 @@ Record the actual installed source edition, portal/core/Python versions, selecte
 A complete native portal handover should demonstrate an authenticated existing account, one original source and scenario, actual native result readback, a reviewed report, exact receiving and a new-slot restore/reopen with original operation identities. The administrator can inspect its exact paths with `check` and `paths`; the recipient can inspect the original frozen package with the maintained CLI.
 
 Source publication and syntax validation establish the delivered adapter, not an installed customer portal, available tenant, native solver result or external acceptance. Attach actual host and runtime results to the original workshare when they exist. The authored adapter/core are MIT; unchanged upstream inputs and their licenses retain their own identities.
+
+
+### Current inspection of a retained native package
+
+The shared Sources page includes **Inspect retained native references** under the existing edit_workspace permission. It uses the authenticated portal actor, CSRF and the same UUID-bound API URL as source intake. The action reads the retained original ZIP and members; it accepts no new path, upload, executable or changed model selection. It appends an attributed inspection inside the original workspace and does not start the native worker. New reviews and native queues bind its exact current basis, while older imports, editions, requests and runs remain unchanged. Full private backups and the original receiving continuation preserve these inspection records.

@@ -1,8 +1,10 @@
 // MIT. Carry accepted customer sections into the maintained SCF reviewer edition.
+const FEDERAL = '## Federal awards: complete funding research, workshares and receiving';
 const WEBHOOK = '## Webhook customer adoption: complete event tasks and operator handover';
 const OPENFN = '## OpenFn: paid workflow commissioning and complete receiving';
 const REFERRAL = '## Referral implementation: source changes, returned outcomes and complete receiving';
 const RISINGWAVE = '## Recurring subscription delivery and streaming-data commissioning';
+const OPENLINEAGE = '## OpenLineage service operations and complete customer receiving';
 const JOURNEY = '# 9A. Current demonstration and operator journey';
 const BILLING = '## Merchant settlement, customer billing and accountant receiving';
 const DEDICATED = new Set(['## Recurring economic-report installation', '## Coastal model-input installation', '## Datasette editions and customer analysis']);
@@ -132,6 +134,17 @@ export function receiveGrantCustomerSources(index, companion) {
     if (previous.url && previous.url !== url) delete source.git_blob;
     if (at < 0) index.sources.push(source); else index.sources[at] = source;
   };
+  const federal = section(companion, FEDERAL)?.text || '';
+  receive('federal-awards-readme', 'Federal awards complete product guide',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(products\/federal-awards\/README\.md)/, federal);
+  receive('federal-awards-operating', 'Federal awards installed operating guide',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(products\/federal-awards\/OPERATING\.md)/, federal);
+  receive('federal-awards-receiving', 'Federal awards complete workspace receiving',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(products\/federal-awards\/RECEIVING\.md)/, federal);
+  receive('federal-awards-report-guide', 'Complete funding report, merchant and buyer receiving',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(products\/federal-awards\/FUNDING_REPORTS\.md)/, federal);
+  receive('federal-awards-federal-awards', 'Federal awards complete product selection',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(stellar\/scf-starforge-\d{8}\/distribution\/selections\/federal-awards\.json)/, federal);
   const webhook = section(companion, WEBHOOK)?.text || '';
   const openfn = section(companion, OPENFN)?.text || '';
   receive('webhook-customer-commissioning', 'Complete webhook customer commissioning',
@@ -159,6 +172,19 @@ export function receiveGrantCustomerSources(index, companion) {
     /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(products\/merchant-payment-plans\/README\.md)/, billing);
   receive('merchant-xero-customer-receiving', 'Accountant document receiving and complete customer handover',
     /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(stellar\/scf-starforge-\d{8}\/merchant-settlement-accounting\/receivables\/xero\/README\.md)/, billing);
+  const lineage = section(companion, OPENLINEAGE)?.text || '';
+  receive('openlineage-installed-operations', 'OpenLineage operations — installed product',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(products\/openlineage\/OPERATING\.md)/, lineage);
+  receive('openlineage-source-contract', 'OpenLineage original source contracts',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(stellar\/scf-starforge-\d{8}\/sf30-seller-sdk\/openlineage-workspace\/SOURCE_CONTRACT\.md)/, lineage);
+  receive('openlineage-service-levels', 'OpenLineage service policies, assessments and incidents',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(stellar\/scf-starforge-\d{8}\/sf30-seller-sdk\/openlineage-workspace\/SERVICE_LEVELS\.md)/, lineage);
+  receive('openlineage-service-levels-operator', 'OpenLineage service-level operator desk and receiving',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(stellar\/scf-starforge-\d{8}\/sf30-seller-sdk\/openlineage-workspace\/SERVICE_LEVELS_OPERATOR\.md)/, lineage);
+  receive('openlineage-service-levels-native-receiving', 'OpenLineage original service-level receiving programme',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(\.swarm-delivery\/openlineage-service-levels-bbbd-\d{8}\/SERVICE_LEVELS_RECEIVING\.mjs)/, lineage);
+  receive('openlineage-quality-operator', 'OpenLineage dataset quality operations',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(stellar\/scf-starforge-\d{8}\/sf30-seller-sdk\/openlineage-workspace\/QUALITY_OPERATOR\.md)/, lineage);
   index.narrative_source = { ...index.narrative_source, composition: {
     ...index.narrative_source?.composition,
     retained_product_sections: headings(clean(companion)).filter(item => item.level === 2).map(item => item.text.slice(3)),

@@ -18,7 +18,12 @@ const PLUGIN = ['starforge-sf98-woo.php','checkout-gateway.php','checkout-admiss
   'merchant-operator.php','NATIVE_REVIEW.md', 'merchant-refunds.php','merchant-refunds.js',
   'merchant-refunds.css','refund-networks.json','REFUNDS.md','checkout-basket.php','BASKET.md',
   'merchant-erp.php','merchant-erp-mapping.php','merchant-erp-acumatica.php','merchant-erp-store.php',
-  'merchant-erp-console.php','merchant-erp.js','merchant-erp.css','ERP.md','erp-map.example.json'];
+  'merchant-erp-console.php','merchant-erp.js','merchant-erp.css','ERP.md','erp-map.example.json',
+  'merchant-kcf.php','merchant-kcf-mapping.php','merchant-kcf-project.php','merchant-kcf-source.php',
+  'merchant-kcf-store.php','merchant-kcf-console.php','merchant-kcf.js','merchant-kcf.css','KCF.md',
+  'kcf-receipt.example.json','kcf-recipe.example.json','kcf-source.example.json',
+  'merchant-catalog.php','merchant-catalog.js','merchant-catalog.css','CATALOG.md',
+  'README.md','GATEWAY.md','CATALOG_VERSIONS.md'];
 const ENTRIES = {seller:WOO + '/seller.mjs', buyer:WOO + '/buyer.mjs',
   refund:WOO + '/refund-operator-cli.mjs',
   operator:'sf88-operator-buyer-cli/cli.mjs', queue:'sf88-operator-buyer-cli/queue-cli.mjs',

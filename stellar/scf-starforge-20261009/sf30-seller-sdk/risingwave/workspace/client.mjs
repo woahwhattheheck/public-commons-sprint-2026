@@ -55,6 +55,8 @@ export async function createRisingWaveWorkbenchClient({url,connectionFile,enviro
   const publicationPath=id=>'/api/publications/'+item(id),capturePath=id=>'/api/captures/'+item(id);
   const client={
     state:()=>request('/api/state'),revision:number=>request('/api/revisions/'+number),save:input=>request('/api/save',input),
+    browserWorkspaces:()=>request('/api/browser-workspaces'),browserWorkspace:id=>request('/api/browser-workspaces/'+item(id)),
+    saveBrowserWorkspace:input=>request('/api/browser-workspace',input),
     compileReport:report=>request('/api/report/compile',{report}),discover:input=>request('/api/catalogue',input),
     preview:input=>request('/api/sample',input),capture:input=>request('/api/capture',input),
     subscriptionInspect:input=>request('/api/subscription/inspect',input),
@@ -69,7 +71,7 @@ export async function createRisingWaveWorkbenchClient({url,connectionFile,enviro
     comparisonChunk:(id,file,input={},options={})=>request('/api/comparison/read',{id:item(id),file,...input},options),
     recoverCapture:id=>request('/api/capture/recover',{id:item(id)}),captureChunk:(id,file,input={},options={})=>request('/api/capture/read',{id:item(id),file,...input},options),
     compareCaptures:input=>request('/api/captures/compare',input),createPublication:input=>request('/api/publications',input),
-    publication:id=>request(publicationPath(id)),
+    publication:(id,input={})=>request(publicationPath(id)+(Object.keys(input).length?'?'+new URLSearchParams(input):'')),
     publicationCommand:(id,action,input={})=>{if(!/^[a-z]+(?:\/[a-z]+)?$/.test(action))throw fault('PUBLICATION_ACTION_INVALID');return request(publicationPath(id)+'/command/'+action,input);},
     seller:(id,running)=>request(publicationPath(id)+'/seller/'+(running?'start':'stop'),{}),
     run:(id,runId)=>request(publicationPath(id)+'/run?'+new URLSearchParams({runId})),

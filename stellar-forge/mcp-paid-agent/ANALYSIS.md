@@ -557,3 +557,7 @@ the registered original source documents, exact mapping and imported data,
 capture history, selected original query/workbook outputs and their
 manifests. The restored Analysis service can reopen those local documents
 under a newly registered native workspace alias.
+
+## Reviewed lineage and portable handover
+
+Use the [Analysis lineage agent workflow](ANALYSIS_LINEAGE.md) to discover operator-selected collector connections, review dependencies from completed native jobs, save an exact publication plan, publish or reopen its original job, and receive the complete hash-bound handover. The same original Analysis workspace owns its browser, Python and MCP history. The installed `mcp-analysis-lineage-download` command uses the maintained retained-file transfer and supports same-directory continuation and offline complete reopen. It does not execute the original query or acquire data again.

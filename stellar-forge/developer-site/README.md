@@ -381,3 +381,13 @@ application edition before the four reader identities are emitted.
 ### Maintain the financial application source
 
 The [merchant financial application chapter](GRANT_FINANCIAL_OPERATIONS.md) connects the current manuscript to settlement accounting, invoices, payment plans and Xero handover. The same composer accepts **--finance-commit** to select the actual merged product and preserves it through later manuscript refreshes. The concise nine answers and complete companion remain the original reader's source, and its current application identity also flows into **Prepare submission**.
+
+## Complete submission review and handover
+
+The existing SCF reader now opens **Review prepared draft** alongside **Prepare submission**. The original submission editor retains its native planning panel and adds the complete **Handover** view. These workspaces use the same saved-draft store and preserve full original source, plan, answer, field and version identities.
+
+An author can receive the complete application, prepare the actual issuer fields, send a full draft for named colleague review, receive a revised version with explicit decision carry, and retain that complete review as handover evidence. The original editor then freezes the selected output against its exact source bundle, records actual issuer observations or correction links, and compares subsequent working edits while keeping the prepared edition intact. Full draft, original source/evidence, readable review and prepared-output downloads support normal reopening and continued work.
+
+Use the [review-round guide](GRANT_REVIEW_ROUNDS.md), [handover guide](GRANT_HANDOVER.md) and [complete composition/receiving guide](GRANT_COMPOSITION.md). The original grant-reviewer installation contains both complete modules, their existing-page callbacks and original source-model examples. Source Tables remains available through its existing product navigation and `source-tables` selection.
+
+The cumulative manuscript owner supplies the current nine answers and detailed companion. The existing publisher retains the selected Site, and the original receiving owner supplies the actual source-bound browser and exported-work outcomes.

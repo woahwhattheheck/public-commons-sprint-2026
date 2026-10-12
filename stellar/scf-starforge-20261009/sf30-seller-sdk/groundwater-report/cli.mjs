@@ -15,7 +15,7 @@ export async function privateAccess(file){
   const raw=(await read(file,16384)).toString('utf8').trim();
   return raw.startsWith('{')?JSON.parse(raw).url:raw;
 }
-export async function originalFactory(url,allowLocal=false){
+export export async function originalFactory(url,allowLocal=false){
   if(!url)return null;
   const u=new URL(url);
   need(!u.username&&!u.password&&!u.hash&&!u.search&&(u.protocol==='https:'||

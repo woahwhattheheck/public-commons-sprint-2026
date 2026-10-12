@@ -9,6 +9,7 @@ import {pipeline} from 'node:stream/promises';
 import {Transform} from 'node:stream';
 import {TextDecoder} from 'node:util';
 import {publicTables,publicActions} from './operator.mjs';
+import {createGridFabricFileReader,GRIDFABRIC_FILE_RANGE} from './native-file-reader.mjs';
 import {privateDirectory} from './sqlite-store.mjs';
 import {exportWorkspace,listExports,exportMetadata,restoreWorkspace,restorationStatus,artifactIdentity} from './delivery.mjs';
 
@@ -75,7 +76,7 @@ function publishedConnection(path,url){
   };
 }
 export function sourceIdentity(){
-  const names=['core.cjs','model.cjs','sqlite-store.mjs','files.mjs','operator.mjs','server.mjs','delivery.mjs','cli.mjs',
+  const names=['core.cjs','model.cjs','sqlite-store.mjs','files.mjs','native-file-reader.mjs','operator.mjs','server.mjs','delivery.mjs','cli.mjs',
     'public/index.html','public/style.css','public/app.mjs','contracts/plaid-public-contract.json','contracts/management-examples.json'];
   const modules=names.map(path=>{const bytes=readFileSync(join(ROOT,path));return {path,bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')};});
   const leasePath=new URL('../../merchant-fleet-gateway/state-lease.mjs',import.meta.url),lease=readFileSync(leasePath);
@@ -91,7 +92,38 @@ export async function startGridFabricServer({workspace,port=0,host='127.0.0.1',c
     throw fail('GRIDFABRIC_HTTP_LIMIT','Select positive complete request and portable byte allowances.');
   const token=randomBytes(32).toString('base64url'),callbacks=new Set(),requests=new Set(),jobs=new Set(),exportsInFlight=new Map(),restoresInFlight=new Set();
   const callbackRoutes=new Map(workspace.publicContract.callbacks.map(item=>[item.endpoint,item]));
-  const source=sourceIdentity();let origin=null,closing=false,closePromise=null,removeConnection=()=>{};
+  const source=sourceIdentity(),transferFiles=createGridFabricFileReader();let origin=null,closing=false,closePromise=null,removeConnection=()=>{};
+  async function transferFile(kind,id) {
+    let path,metadata;
+    if(kind==='file') {
+      path=workspace.files.filePath(id);
+      const saved=workspace.fileMetadata(id);
+      metadata={file_id:id,kind,name:saved?.name||id+'.txt',mime_type:saved?.mime_type||'text/plain',
+        sha256:id,...(saved?{bytes:saved.bytes}:{})};
+    } else {
+      const saved=exportMetadata(workspace,id);
+      if(saved.status!=='READY')throw fail('GRIDFABRIC_EXPORT_PENDING','The original portable export has not finished.',409);
+      path=join(workspace.directory,'exports',saved.name);
+      metadata={file_id:id,kind,name:saved.name,mime_type:'application/gzip',sha256:saved.sha256,bytes:saved.bytes};
+    }
+    const info=await transferFiles.info(path,metadata);
+    return {path,file:{schema:'stellar-forge.gridfabric-native-file.v1',workspace_id:workspace.workspace_id,...metadata,...info}};
+  }
+  async function transferRange(response,url,kind,id) {
+    const selected=await transferFile(kind,id);
+    if(url.searchParams.get('expected_sha256')!==selected.file.sha256||
+       !url.searchParams.has('offset')||!url.searchParams.has('limit'))
+      throw fail('GRIDFABRIC_TRANSFER_IDENTITY','Repeat the original SHA256, offset and byte limit.',409);
+    const offset=unsigned(url.searchParams.get('offset'),'offset'),limit=unsigned(url.searchParams.get('limit'),'limit');
+    const part=await transferFiles.range(selected.path,selected.file,{offset,limit});
+    const headers={'Content-Type':selected.file.mime_type,'Content-Length':part.bytes.length,
+      'X-Content-SHA256':part.sha256,'X-Chunk-SHA256':part.chunk_sha256,
+      'X-GridFabric-File-Bytes':part.total,'X-GridFabric-File-Offset':part.offset,
+      'Content-Disposition':contentName(selected.file.name),'ETag':'"'+part.sha256+'"'};
+    if(part.bytes.length)headers['Content-Range']='bytes '+part.offset+'-'+(part.offset+part.bytes.length-1)+'/'+part.total;
+    response.writeHead(part.bytes.length?206:200,headers);response.end(part.bytes);
+  }
+
   const server=createServer((request,response)=>{
     response.setHeader('X-Content-Type-Options','nosniff');response.setHeader('Referrer-Policy','no-referrer');
     response.setHeader('Cross-Origin-Resource-Policy','same-origin');response.setHeader('Cache-Control','no-store');
@@ -127,6 +159,7 @@ export async function startGridFabricServer({workspace,port=0,host='127.0.0.1',c
         response.writeHead(200,{'Content-Type':type,'Content-Length':body.length});response.end(body);return;
       }
       if(!safeEqual(request.headers.authorization||'','Bearer '+token))throw fail('GRIDFABRIC_OPERATOR_AUTH','Use the private original operator connection.',401);
+      response.setHeader('X-GridFabric-Workspace-ID',workspace.workspace_id);
       if(request.method==='POST'&&browserOrigin!==origin)throw fail('GRIDFABRIC_ORIGIN','Native operator writes require the exact Origin header.',403);
       if(request.method==='GET'){
         if(url.pathname==='/api/state'){json(response,200,workspace.state());return;}
@@ -146,8 +179,14 @@ export async function startGridFabricServer({workspace,port=0,host='127.0.0.1',c
           if(!original&&!host)throw fail('GRIDFABRIC_OPERATION_NOT_FOUND','The original request was not accepted.',404);
           json(response,200,{request_id:id,operation:original,host_dispatch:host,workspace_id:workspace.workspace_id,revision:workspace.state().revision});return;
         }
+        if(url.pathname==='/api/file-info'||url.pathname==='/api/export-info'){
+          const selected=await transferFile(url.pathname==='/api/file-info'?'file':'export',url.searchParams.get('id'));
+          json(response,200,selected.file);return;
+        }
         if(url.pathname==='/api/file'){
-          const id=url.searchParams.get('id'),body=workspace.files.readBytes(id),metadata=workspace.fileMetadata(id)||{name:id+'.txt',mime_type:'text/plain'};
+          const id=url.searchParams.get('id');
+          if(url.searchParams.has('offset')||url.searchParams.has('limit')){await transferRange(response,url,'file',id);return;}
+          const body=workspace.files.readBytes(id),metadata=workspace.fileMetadata(id)||{name:id+'.txt',mime_type:'text/plain'};
           response.writeHead(200,{'Content-Type':metadata.mime_type,'Content-Length':body.length,'Content-Disposition':contentName(metadata.name),
             'ETag':'"'+id+'"','X-Content-SHA256':id});response.end(body);return;
         }
@@ -159,6 +198,7 @@ export async function startGridFabricServer({workspace,port=0,host='127.0.0.1',c
         }
         if(url.pathname==='/api/exports'){json(response,200,{items:listExports(workspace)});return;}
         if(url.pathname==='/api/export'){
+          if(url.searchParams.has('offset')||url.searchParams.has('limit')){await transferRange(response,url,'export',url.searchParams.get('id'));return;}
           const item=exportMetadata(workspace,url.searchParams.get('id'));
           if(item.status!=='READY')throw fail('GRIDFABRIC_EXPORT_PENDING','The original portable export has not finished.',409);
           const path=join(workspace.directory,'exports',item.name),actual=await artifactIdentity(path);
@@ -175,6 +215,20 @@ export async function startGridFabricServer({workspace,port=0,host='127.0.0.1',c
         json(response,200,workspace.execute(body.action,body.input,options));return;
       }
       if(url.pathname==='/api/upload'){
+        const declared=request.headers['content-length'],expected=request.headers['x-gridfabric-sha256'];
+        if(expected!==undefined&&declared!==undefined) {
+          if(!/^[0-9a-f]{64}$/.test(expected)||!/^\d+$/.test(declared)||!Number.isSafeInteger(Number(declared))||
+             Number(declared)>maximumRequestBytes)
+            throw fail('GRIDFABRIC_UPLOAD_IDENTITY','Select the complete source byte count and SHA256 within the native allowance.',413);
+          const receiver=workspace.beginUpload({sha256:expected,bytes:Number(declared),
+            name:decodeURIComponent(request.headers['x-gridfabric-name']||'Original_Source.json'),
+            mime_type:request.headers['content-type']||'application/octet-stream'});
+          let complete=false;
+          try {
+            for await(const chunk of request)receiver.write(chunk);
+            const result=receiver.finish();complete=true;json(response,200,result);return;
+          }finally{if(!complete)receiver.abort();}
+        }
         const bytes=await bodyBytes(request,maximumRequestBytes),sha=createHash('sha256').update(bytes).digest('hex');
         if(request.headers['x-gridfabric-sha256']&&request.headers['x-gridfabric-sha256']!==sha)
           throw fail('GRIDFABRIC_UPLOAD_SHA','The original uploaded source bytes differ.');
@@ -277,7 +331,7 @@ export async function startGridFabricServer({workspace,port=0,host='127.0.0.1',c
       if(closePromise)return closePromise;closing=true;
       closePromise=(async()=>{
         const stopped=new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));server.closeIdleConnections();
-        await stopped;await Promise.allSettled([...requests,...jobs,...[...exportsInFlight.values()].map(item=>item.promise)]);removeConnection();
+        await stopped;await Promise.allSettled([...requests,...jobs,...[...exportsInFlight.values()].map(item=>item.promise)]);removeConnection();transferFiles.close();
       })();return closePromise;
     }};
 }

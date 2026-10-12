@@ -45,3 +45,35 @@
 .dataset-operator .empty{color:#59636e;padding:18px;border:1px dashed #aeb6bf}
 @media(max-width:650px){.dataset-operator header{padding:15px}.dataset-operator main{padding:15px}.dataset-operator .candidate{display:block}.dataset-operator .candidate form{margin-top:14px}.dataset-operator .metrics{grid-template-columns:repeat(2,1fr)}.dataset-operator .heading{align-items:flex-start}.dataset-operator section{padding:14px}.dataset-operator th,.dataset-operator td{padding:8px}.dataset-operator .metrics strong{font-size:24px}}
 @media print{.dataset-operator header,.dataset-operator .actions,.dataset-operator form{display:none}.dataset-operator{background:#fff}.dataset-operator main{padding:0}.dataset-operator section{border:0;padding:0}.dataset-operator .scroll{overflow:visible}}
+
+/* Complete working-record browser. */
+.dataset-operator select,.dataset-operator textarea{font:inherit;color:#25292e;background:#fff;border:1px solid #979fa8;border-radius:3px;padding:8px 10px;max-width:100%;min-height:39px}
+.dataset-operator fieldset{min-width:0;border:1px solid #cbd0d6;border-radius:3px;padding:14px 16px;margin:16px 0}
+.dataset-operator legend{font-weight:600;padding:0 6px}
+.dataset-operator .record-search{display:grid;gap:6px}
+.dataset-operator .record-search input{width:100%;max-width:850px}
+.dataset-operator .record-filter-groups{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.dataset-operator .check-label{display:flex;align-items:center;gap:9px;margin:9px 0}
+.dataset-operator .check-label input{margin:0;width:18px;height:18px;accent-color:#454b52}
+.dataset-operator .query-rule{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,2fr);gap:12px;margin:13px 0}
+.dataset-operator .query-rule label{display:block;font-size:12px;font-weight:500;margin-bottom:5px}
+.dataset-operator .query-rule input,.dataset-operator .query-rule select{width:100%;min-width:0}
+.dataset-operator .record-metrics{grid-template-columns:repeat(6,minmax(0,1fr))}
+.dataset-operator .record-metrics>div{padding:12px}
+.dataset-operator .record-metrics strong{font-size:25px}
+.dataset-operator .pending-capture,.dataset-operator .record-file{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;border-top:1px solid #d5d9de;padding:15px 0}
+.dataset-operator .pending-capture>div:first-child,.dataset-operator .record-file>div{min-width:0;flex:1}
+.dataset-operator .record-file h4{font-size:14px;margin:0 0 6px;overflow-wrap:anywhere}
+.dataset-operator .record-file>a{white-space:nowrap}
+.dataset-operator .record-details{display:grid;grid-template-columns:minmax(140px,210px) minmax(0,1fr);gap:9px 20px;margin:14px 0}
+.dataset-operator .record-details dt{font-weight:500;color:#454d56}
+.dataset-operator .record-details dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.dataset-operator .record-cell{min-width:150px;max-width:420px;white-space:pre-wrap;overflow-wrap:anywhere}
+.dataset-operator .working-records .record-cell{min-width:150px;max-width:340px}
+.dataset-operator .changed-row>th{border-left:3px solid #6b737c}
+.dataset-operator .changed-row>td{background:#f4f5f6}
+.dataset-operator .visually-hidden{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+@media(max-width:1000px){.dataset-operator .record-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.dataset-operator .query-rule{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1.3fr)}}
+@media(max-width:650px){.dataset-operator header{align-items:flex-start}.dataset-operator .heading{flex-wrap:wrap}.dataset-operator .heading>div{min-width:0}.dataset-operator .record-filter-groups,.dataset-operator .query-rule{grid-template-columns:minmax(0,1fr)}.dataset-operator .record-filter-groups{gap:0}.dataset-operator .record-filter-groups fieldset{margin:8px 0}.dataset-operator .record-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.dataset-operator .pending-capture,.dataset-operator .record-file{display:block}.dataset-operator .record-details{grid-template-columns:minmax(0,1fr);gap:4px}.dataset-operator .record-details dd{margin-bottom:10px}.dataset-operator .actions select{width:100%}.dataset-operator .query-rules{padding:12px}.dataset-operator .query-rule{border-bottom:1px solid #d5d9de;padding-bottom:14px}.dataset-operator .query-rule:last-child{border-bottom:0}.dataset-operator input[type=submit]{white-space:normal}}
+
+.dataset-operator .export-selection{display:block;width:100%;font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;resize:vertical;margin:8px 0}

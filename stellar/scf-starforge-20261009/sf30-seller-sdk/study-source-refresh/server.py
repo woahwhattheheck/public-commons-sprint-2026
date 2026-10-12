@@ -225,6 +225,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def serve(directory, port=0, open_browser=False, source_directory=None, expected_selection_sha256=None):
+    directory = Path(directory)
     with operator_lease(directory, source_directory, expected_selection_sha256) as identity:
         return _serve(directory, port, open_browser, identity)
 

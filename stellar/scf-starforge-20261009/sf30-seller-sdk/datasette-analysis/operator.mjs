@@ -1,4 +1,5 @@
 // MIT. Datasette customer views on the original Analysis workspace and domain API.
+import {mountNld} from './nld_operator.mjs';
 const $ = id => document.getElementById(id);
 const token = location.hash.slice(1);
 const nativeSchema = 'stellar-forge.datasette-operator.v1';
@@ -266,6 +267,8 @@ function allFiles() {
   };
   append(nativeState().files);
   for (const edition of editions()) append(edition.files, editionId(edition));
+  for (const project of nativeState().nld?.projects || [])
+    for (const report of project.reports || []) append(report.files, report.edition_id);
   for (const exported of nativeState().exports || [])
     if (exported.availability?.can_download === true) append(exported.files);
   return result;
@@ -454,7 +457,7 @@ async function refresh() {
     value.requests = [...state.receipts.values()].sort((a, b) =>
       String(b.updated_at).localeCompare(String(a.updated_at)) || a.id.localeCompare(b.id));
     $('analysis-link').href = (value.analysis_path || '/') + '#' + token;
-    renderRequests(); renderEditions(); renderSummary(); renderFiles();
+    renderRequests(); renderEditions(); renderSummary(); renderFiles(); nld.render(value);
     clearTimeout(state.poll);
     state.poll = setTimeout(() => refresh().catch(error => notice(error.message, true)), state.busy ? 1500 : 10000);
     return value;
@@ -541,6 +544,8 @@ function samePrepareSelection(original) {
   return current.revision === original.revision
     && ['path', 'text', 'file', 'prefix', 'resume'].every(key => current[key] === original[key]);
 }
+const nld = mountNld({api, startAction, el, definition, jsonDetails, table, display, bytes,
+  notice, download, workspaceScope});
 for (const id of ['handover-path', 'handover-json', 'handover-file', 'prefix', 'prepare-resume']) {
   $(id).addEventListener('input', () => {state.prepareRevision++;});
   $(id).addEventListener('change', () => {state.prepareRevision++;});

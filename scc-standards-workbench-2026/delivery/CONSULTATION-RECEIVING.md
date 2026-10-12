@@ -63,3 +63,6 @@ standards-workbench --workspace ./review-workspace --review-demo
 ~~~
 
 Open **Consultation receiving**, download the ready packet, and follow the receiving guide bundled with the application. Subsequent use can start from an operator's own scoped standard and actual selected procedure. The demonstration does not populate committee membership, ballot results, approval, funding or actual customer response.
+
+
+The same source-specific final view phase reopens the retained corrected response, verifies its visible reviewer details and complete re-exported content, and saves Reopened_Reviewer_Readable_Copy.html. It also generates Current_Reviewed_Edition.zip through the original selected-edition exporter. The complete edition, source, case, language and consultation JSON remain byte-identical while the English and French document openings display the captured UTC instant naturally.

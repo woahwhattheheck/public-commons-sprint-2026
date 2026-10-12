@@ -318,7 +318,9 @@ $("#open-file").addEventListener("change",async e=>{
  try{
   if(file.size>8*1024*1024)throw Error(t("fileLimit"));
   const value=JSON.parse(await file.text());if(changed&&!confirm(t("overwrite")))return;
-  opened(value);changed=false;persist(false);render();if(pendingEditor)editComment();$("#saved").textContent=t("opened");
+  opened(value);
+  if($("#comment-dialog").open)$("#comment-dialog").close();editing=null;
+  changed=false;render();if(pendingEditor)editComment();persist(false);$("#saved").textContent=t("opened");
  }catch(x){error(x.message);}finally{e.target.value="";}
 });
 $("#export-response").addEventListener("click",exportResponse);

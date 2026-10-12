@@ -291,6 +291,8 @@ def main(argv=None):
     parser.add_argument("--customer-country", help="Save a country selection, export current work and receive it again")
     parser.add_argument("--resume", action="store_true",
                         help="Resume original failed/interrupted HTTP requests")
+    parser.add_argument("--accept-source-update", action="store_true",
+                        help="With --resume, retain the prior failed source identity and use corrected code")
     parser.add_argument("--wait-seconds", type=float, default=3600)
     args = parser.parse_args(argv)
     os.umask(0o077)
@@ -298,6 +300,8 @@ def main(argv=None):
     require(ID.fullmatch(operation_id), "DATASETTE_RECEIVING_OPERATION_ID_INVALID")
     require(REF.fullmatch(args.source_ref), "DATASETTE_RECEIVING_SOURCE_REF_REQUIRED")
     require(args.wait_seconds > 0, "DATASETTE_RECEIVING_WAIT_INVALID")
+    require(not args.accept_source_update or args.resume,
+            "DATASETTE_RECEIVING_SOURCE_UPDATE_REQUIRES_RESUME")
     checkout = args.checkout.expanduser().resolve(strict=True)
     handover = args.handover.expanduser().absolute()
     workspace_path = args.workspace.expanduser().absolute()
@@ -327,8 +331,24 @@ def main(argv=None):
               "customer_country": args.customer_country}
     if receipt_path.exists():
         receipt = load_record(receipt_path)
-        require(receipt.get("schema") == SCHEMA and receipt.get("intent") == intent,
+        require(receipt.get("schema") == SCHEMA and isinstance(receipt.get("intent"), dict),
                 "DATASETTE_RECEIVING_ORIGINAL_INTENT_CHANGED")
+        previous_intent = receipt["intent"]
+        if previous_intent != intent:
+            source_fields = {"source_ref", "source_files"}
+            previous_business = {key: value for key, value in previous_intent.items()
+                                 if key not in source_fields}
+            current_business = {key: value for key, value in intent.items()
+                                if key not in source_fields}
+            require(args.resume and args.accept_source_update
+                    and receipt.get("phase") in {"FAILED", "INTERRUPTED"}
+                    and previous_business == current_business,
+                    "DATASETTE_RECEIVING_ORIGINAL_INTENT_CHANGED")
+            receipt.setdefault("source_history", []).append({
+                "source": receipt["source"], "phase": receipt["phase"],
+                "error": receipt.get("error"), "replaced_at": now()})
+            receipt["intent"] = intent
+            receipt["source"] = sources
     else:
         receipt = {"schema": SCHEMA, "intent": intent, "source": sources,
                    "created_at": now(), "phase": "PREPARED"}
