@@ -142,7 +142,7 @@ export async function runInstalledDatasetteBrowser({
     return {state:'COMPLETE',reused:true,report:stateFile,checks:state.checks,artifacts:state.artifacts};
   }
   const fromRepo=path=>import(pathToFileURL(join(repository,path)).href);
-  let apps,context,activeApp=null,stopActive=null,failed=false;
+  let apps,context,browserAttempt,activeApp=null,stopActive=null,failed=false;
   try{
     await save('ORIGINAL_PROGRAMME_RETAINED');
     const {buildDistribution}=await fromRepo(DIST+'build.mjs');
@@ -333,6 +333,9 @@ export async function runInstalledDatasetteBrowser({
     const moduleName=isAbsolute(playwrightModule)?pathToFileURL(playwrightModule).href:playwrightModule;
     const browser=await import(moduleName);
     need(browser.chromium?.launchPersistentContext,'DATASETTE_INSTALLED_BROWSER_RUNTIME');
+    browserAttempt={id:randomUUID(),startedAt:stamp(),errorOffset:state.browserErrors.length};
+    state.browserAttempts??=[];state.browserAttempts.push(browserAttempt);
+    await save('BROWSER_ATTEMPT_RETAINED');
     const openBrowser=async(url,width=1440,height=1000)=>{
       context=await browser.chromium.launchPersistentContext(join(outputDirectory,'browser-profile'),{
         headless:true,viewport:{width,height},acceptDownloads:true,
@@ -491,14 +494,20 @@ export async function runInstalledDatasetteBrowser({
       const file=join(outputDirectory,name),raw=await readFile(file);
       if(!state.artifacts.some(item=>item.file===file))state.artifacts.push({file,bytes:raw.length,sha256:sha(raw)});
     }
-    need(state.browserErrors.length===0,'DATASETTE_BROWSER_RUNTIME_ERRORS',JSON.stringify(state.browserErrors));
+    const currentBrowserErrors=state.browserErrors.slice(browserAttempt.errorOffset);
+    browserAttempt.endedAt=stamp();browserAttempt.errorCount=currentBrowserErrors.length;
+    need(currentBrowserErrors.length===0,'DATASETTE_BROWSER_RUNTIME_ERRORS',JSON.stringify(currentBrowserErrors));
     state.checks={...state.checks,managedReviewSaveStart:true,managedStopReopen:true,stableBrowserOrigin:true,
       completeSourceBrowserDownload:true,completeWorkspaceBrowserDownload:true,completeWorkspaceBrowserReceiving:true,
       receivedApplicationReopened:true,installedCommandReopened:true,mobileOperatorLayout:true};
     state.completedAt=stamp();await save('COMPLETE');
     return {state:'COMPLETE',report:stateFile,sourceCommit:sourceRef,workspaceId:input.workspaceId,
       checks:state.checks,installedRuntime:runtimeDirectory,receivedWorkspace:browserReceivedDirectory,artifacts:state.artifacts};
-  }catch(error){failed=true;state.error=issue(error);state.phase='INTERRUPTED';state.updatedAt=stamp();await retain(stateFile,state);throw error;}
+  }catch(error){
+    failed=true;
+    if(browserAttempt){browserAttempt.endedAt=stamp();browserAttempt.errorCount=state.browserErrors.length-browserAttempt.errorOffset;}
+    state.error=issue(error);state.phase='INTERRUPTED';state.updatedAt=stamp();await retain(stateFile,state);throw error;
+  }
   finally{
     if(context)await context.close().catch(error=>process.stderr.write(JSON.stringify(issue(error))+'\n'));
     if(activeApp&&apps)await (stopActive?stopActive():apps.applicationsStop(activeApp)).catch(error=>process.stderr.write(JSON.stringify(issue(error))+'\n'));
