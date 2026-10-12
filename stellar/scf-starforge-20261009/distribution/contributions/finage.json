@@ -1,0 +1,23 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "finage",
+  "description": "Finage market source review and customer delivery",
+  "commands": {
+    "finage-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/finage/workbench.mjs",
+    "finage-acquire": "stellar/scf-starforge-20261009/sf30-seller-sdk/finage/acquire.mjs"
+  },
+  "commandDescriptions": {
+    "finage-workspace": "Inspect complete market captures, review exact values and deliver saved customer selections",
+    "finage-acquire": "Capture or import original REST/stream inputs and prepare the retained workspace"
+  },
+  "exports": {
+    "./seller/finage/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/finage/workbench.mjs",
+    "./seller/finage/acquire": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/finage/acquire.mjs"
+  },
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/finage/workbench.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/finage/browser-assets.json"
+    }
+  ]
+}
