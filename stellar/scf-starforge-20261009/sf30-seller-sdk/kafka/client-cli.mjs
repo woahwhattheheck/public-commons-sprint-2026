@@ -195,7 +195,9 @@ export async function runKafkaClientCli(argv=process.argv.slice(2),{stdout=proce
     else if(command==='export-changes'||command==='download-message'||command==='download-projection') {
       const method={'export-changes':'exportChanges','download-message':'downloadMessage','download-projection':'downloadProjection'}[command];
       result=await client[method](need('id'),need('out'),requestOptions);
-    } else if(command==='download-state')result=await client.downloadState(need('out'),requestOptions);
+    } else if(command==='download-record')result=await client.downloadRecord(need('kind'),need('id'),need('out'),requestOptions);
+    else if(command==='download-query')result=await client.downloadQuery(await requestFile(need('request')),need('out'),requestOptions);
+    else if(command==='download-state')result=await client.downloadState(need('out'),requestOptions);
     else if(command==='export-merchant')result=await client.exportMerchant(await requestFile(need('request')),need('out'),requestOptions);
     await emit(stdout,(v['tagged-numbers']?JSON.stringify(result,null,2):stringifyKafkaJson(result,2))+'\n');
     return signalExit || ((command==='capture-wait'||v.wait)&&result.status!=='COMPLETE'?2:0);
