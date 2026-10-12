@@ -117,7 +117,7 @@ async function originalFactory(kind) {
 }
 
 export class MerchantPublisher {
-  #config; #entries = new Map(); #opening = new Map(); #closing = false; #close;
+  #config; #entries = new Map(); #opening = new Map(); #closing = false; #close; #borrowed = new Set();
   constructor(config) { this.#config = config; }
   get summary() {
     return { configured: Boolean(this.#config.publishers),
@@ -336,6 +336,22 @@ export class MerchantPublisher {
       default: throw failure('TOOL_NOT_FOUND', 'Unknown publisher operation.');
     }
   }
+  async callBorrowed({ alias, publisher, schedule, instanceId } = {}, name, args = {}) {
+    if (this.#closing) throw failure('PUBLISHER_CLOSING', 'The merchant publisher adapter is closing.');
+    identifier(alias, 'Publisher alias'); nativeId(instanceId);
+    const allowed = publisherTools(toolName => toolName);
+    if (!allowed.includes(name) ||
+        ['merchant_publishers', 'merchant_publisher_open', 'merchant_publisher_close'].includes(name) ||
+        args.publisher !== alias || !publisher || typeof publisher.status !== 'function' ||
+        typeof publisher.startExtraction !== 'function' || !schedule || typeof schedule.status !== 'function')
+      throw failure('PUBLISHER_BORROW_INVALID', 'Use a host-owned original publisher/scheduler and its declared alias.');
+    const entry = { alias, publisher, schedule, instanceId };
+    const operation = Promise.resolve().then(() => this.#execute(entry, name, args));
+    this.#borrowed.add(operation);
+    try { return await operation; }
+    catch (error) { throw operationFailure(error); }
+    finally { this.#borrowed.delete(operation); }
+  }
   async call(name, args) {
     if (this.#closing) throw failure('PUBLISHER_CLOSING', 'The merchant publisher adapter is closing.');
     try {
@@ -356,7 +372,7 @@ export class MerchantPublisher {
     this.#closing = true;
     this.#close = (async () => {
       await Promise.allSettled([...this.#opening.values()]);
-      const outcomes = await Promise.allSettled([...this.#entries.values()].map(entry => this.#stop(entry)));
+      const outcomes = await Promise.allSettled([...this.#borrowed, ...[...this.#entries.values()].map(entry => this.#stop(entry))]);
       if (outcomes.some(result => result.status === 'rejected'))
         throw failure('PUBLISHER_SHUTDOWN_INCOMPLETE', 'An original publisher reported incomplete shutdown; inspect its retained workspace.');
     })();
