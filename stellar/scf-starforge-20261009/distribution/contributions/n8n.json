@@ -16,6 +16,16 @@
     "./merchant/n8n/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/n8n/config.mjs",
     "./merchant/n8n/prepare": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/n8n/prepare.mjs",
     "./merchant/n8n/runtime": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/n8n/runtime.mjs",
-    "./merchant/n8n/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/n8n/workspace/server.mjs"
+    "./merchant/n8n/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/n8n/workspace/server.mjs",
+    "./merchant/mcp/n8n": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/n8n-workspace.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/n8n-workspace.mjs"
+    },
+    "./merchant/mcp/n8n/client": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/n8n-workspace-client.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/n8n-workspace-client.mjs"
+    },
+    "./merchant/n8n/agent-operations": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/n8n/agent-operations.mjs",
+    "./merchant/n8n/transfer-format": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/n8n/transfer-format.mjs"
   }
 }

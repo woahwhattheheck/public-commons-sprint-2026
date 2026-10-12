@@ -40,6 +40,7 @@ import { grpcWorkspaceTools } from './catalog/grpc-workspace.mjs';
 import { datasetLifecycleTools } from './catalog/dataset-lifecycle.mjs';
 import { openapiWorkspaceTools } from './catalog/openapi-workspace.mjs';
 import { harWorkspaceTools } from './catalog/har-workspace.mjs';
+import { n8nWorkspaceTools } from './catalog/n8n-workspace.mjs';
 import { publisherTools } from './catalog/publisher.mjs';
 import { arcgisWorkspaceTools } from './catalog/arcgis-workspace.mjs';
 import { pricingTools } from './catalog/pricing.mjs';
@@ -103,6 +104,7 @@ const familyTools = {
   dataset: datasetLifecycleTools(tool),
   openapiWorkspaces: openapiWorkspaceTools(tool),
   harWorkspaces: harWorkspaceTools(tool),
+  n8nWorkspaces: n8nWorkspaceTools(tool),
   publishers: publisherTools(tool),
   arcgisWorkspaces: arcgisWorkspaceTools(tool),
   pricing: pricingTools(tool),
@@ -195,6 +197,7 @@ const MERCHANT_TOOLS = [
   ...familyTools.dataset,
   ...familyTools.openapiWorkspaces,
   ...familyTools.harWorkspaces,
+  ...familyTools.n8nWorkspaces,
   ...familyTools.publishers,
   ...familyTools.arcgisWorkspaces,
   ...familyTools.pricing,
