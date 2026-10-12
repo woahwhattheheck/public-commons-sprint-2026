@@ -7,6 +7,7 @@ import { openOpendatasoftWorkbench } from './engine.mjs';
 import { captureOpendatasoftDataset, readOpendatasoftCapture,
   importOpendatasoftResponses, searchOpendatasoft, parseOpendatasoftJson } from './capture.mjs';
 import { startOpendatasoftServer } from './workspace/server.mjs';
+import { writeOpendatasoftFacilitatorFile } from './publisher/facilitators.mjs';
 
 export const usage = [
   'Huwise / Opendatasoft data workspace',
@@ -48,6 +49,15 @@ export const usage = [
   '  opendatasoft offer --project DIR --id EXPORT_ID --input offer.json',
   '  opendatasoft buyer --project DIR --id EXPORT_ID --input buyer.json',
   '',
+  'Retained seller facilitator changes',
+  '  opendatasoft serve --project DIR --facilitators private-providers.json',
+  '  opendatasoft facilitators --project DIR [--facilitators private-providers.json]',
+  '  opendatasoft facilitator-history --project DIR [--after REVIEW_SHA256] [--limit 25]',
+  '  opendatasoft facilitator-review --project DIR --facilitators private-providers.json --input review.json',
+  '  opendatasoft facilitator-inspect --project DIR --review-id REVIEW_SHA256',
+  '  opendatasoft facilitator-stage --project DIR --facilitators private-providers.json --review-id REVIEW_SHA256',
+  '  opendatasoft facilitator-file --project DIR --review-id REVIEW_SHA256 --format review|source|guide --out FILE',
+  '',
   'Reviewed tenant ingestion',
   '  opendatasoft serve --project DIR --automation-connection private-tenants.json',
   '  opendatasoft tenant-targets --project DIR --automation-connection private-tenants.json',
@@ -71,7 +81,13 @@ export const usage = [
 
 const commandOptions = {
   init: ['project', 'origin', 'auth-token-env'],
-  serve: ['project', 'port', 'automation-connection'],
+  serve: ['project', 'port', 'automation-connection', 'facilitators'],
+  facilitators: ['project','facilitators'],
+  'facilitator-history': ['project','after','limit'],
+  'facilitator-review': ['project','facilitators','input'],
+  'facilitator-inspect': ['project','review-id'],
+  'facilitator-stage': ['project','facilitators','review-id'],
+  'facilitator-file': ['project','review-id','format','out'],
   status: ['project'],
   search: ['project', 'origin', 'auth-token-env', 'input'],
   dataset: ['project', 'dataset'],
@@ -175,6 +191,7 @@ export async function main(argv = process.argv.slice(2)) {
     directory: resolve(required('project')),
     create: command === 'init',
     ...(options['automation-connection'] ? { automationConnection:resolve(options['automation-connection']) }: {}),
+    ...(options.facilitators ? { facilitatorConnection:resolve(options.facilitators) }: {}),
     ...(command === 'init' ? { origin: required('origin'), authTokenEnv: options['auth-token-env'] } : {}),
   });
   let served = false;
@@ -231,6 +248,21 @@ export async function main(argv = process.argv.slice(2)) {
     else if (command === 'stage') result = await project.stageMerchant(required('id'), await input());
     else if (command === 'offer') result = await project.buyerOffer(required('id'), await input());
     else if (command === 'buyer') result = await project.prepareBuyer(required('id'), await input());
+    else if (command === 'facilitators') result = await project.facilitators();
+    else if (command === 'facilitator-history') result = await project.facilitatorHistory({
+      limit:integer('limit',25,1),...(options.after ? {after:options.after}:{})});
+    else if (command === 'facilitator-review') result = await project.reviewFacilitator(await input());
+    else if (command === 'facilitator-inspect') result = await project.facilitatorReview(required('review-id'));
+    else if (command === 'facilitator-stage') result = await project.stageFacilitator(required('review-id'));
+    else if (command === 'facilitator-file') {
+      const formats = {review:'facilitator-review.json',source:'facilitator-source.json',guide:'FACILITATORS.md'};
+      const format = required('format');
+      if (!Object.hasOwn(formats,format)) throw new Error('Choose review, source or guide for --format');
+      const selected = await project.facilitatorFiles(required('review-id'));
+      const file = selected.files.find(value => value.name === formats[format]);
+      result = {...await writeOpendatasoftFacilitatorFile(resolve(required('out')),file.content),
+        filename:file.name,contentType:file.contentType,reviewId:selected.review.id};
+    }
     else if (command === 'tenant-targets') result = await project.tenantTargets();
     else if (command === 'tenant-prepare') result = await project.prepareTenantPlan(await input());
     else if (command === 'tenant-plan') result = await project.tenantPlan(required('id'));

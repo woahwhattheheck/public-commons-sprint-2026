@@ -17,6 +17,9 @@ const assets = new Map([
   ['/tenant', ['tenant.html', 'text/html; charset=utf-8']],
   ['/tenant.js', ['tenant.js', 'text/javascript; charset=utf-8']],
   ['/tenant.css', ['tenant.css', 'text/css; charset=utf-8']],
+  ['/facilitators', ['facilitators.html', 'text/html; charset=utf-8']],
+  ['/facilitators.js', ['facilitators.js', 'text/javascript; charset=utf-8']],
+  ['/facilitators.css', ['facilitators.css', 'text/css; charset=utf-8']],
 ]);
 const formats = new Set(['json', 'csv', 'geojson', 'html']);
 function json(response, value, status = 200) {
@@ -151,6 +154,17 @@ export async function startOpendatasoftServer({
       const p = url.searchParams;
       if (request.method === 'GET') {
         if (parts[0] === 'status' && parts.length === 1) return json(response, workbench.status());
+        if (parts[0] === 'facilitators' && parts.length === 1) return json(response,await workbench.facilitators());
+        if (parts[0] === 'facilitator-reviews' && parts.length === 1)
+          return json(response,await workbench.facilitatorHistory({limit:integer(p,'limit',25),...(scalar(p,'after') ? {after:scalar(p,'after')}:{})}));
+        if (parts[0] === 'facilitator-reviews' && parts.length === 2)
+          return json(response,await workbench.facilitatorReview(parts[1]));
+        if (parts[0] === 'facilitator-reviews' && parts.length === 3 && ['download','source','guide'].includes(parts[2])) {
+          const selected = await workbench.facilitatorFiles(parts[1]);
+          const names = {download:'facilitator-review.json',source:'facilitator-source.json',guide:'FACILITATORS.md'};
+          const file = selected.files.find(item => item.name === names[parts[2]]);
+          return download(response,file.content,file.contentType,file.name);
+        }
         if (parts[0] === 'tenant-targets' && parts.length === 1) return json(response, await workbench.tenantTargets());
         if (parts[0] === 'tenant-datasets' && parts.length === 1) return json(response, await workbench.tenantDatasets(scalar(p,'target'),{
           ...(scalar(p,'datasetId') ? { dataset_id:scalar(p,'datasetId') }: {}),offset:integer(p,'offset',0),limit:integer(p,'limit',20),
@@ -241,6 +255,11 @@ export async function startOpendatasoftServer({
           };
           if (!Object.hasOwn(actions,parts[2])) throw fault('ODS_ROUTE_NOT_FOUND','Choose an available tenant action.',404);
           started = await actions[parts[2]]();
+        }
+        else if (parts[0] === 'facilitator-reviews' && parts.length === 1) started = await workbench.reviewFacilitator(input);
+        else if (parts[0] === 'facilitator-reviews' && parts.length === 3 && parts[2] === 'stage') {
+          if (Object.keys(input).length) throw fault('ODS_FACILITATOR_INPUT','Stage the exact saved review without replacement fields.');
+          started = await workbench.stageFacilitator(parts[1]);
         }
         else if (parts[0] === 'capture' && parts.length === 1) started = await workbench.startCapture(input);
         else if (parts[0] === 'import' && parts.length === 1) {
