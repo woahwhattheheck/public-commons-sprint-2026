@@ -1,0 +1,803 @@
+{
+  "schema": "dpsa.diso.module.v1",
+  "id": "M07",
+  "title": "Information security risk management",
+  "rfpSection": "Terms of Reference §8, Module 7",
+  "summary": "Assess service consequences and choose proportionate treatments with accountable owners.",
+  "outcomes": [
+    "Write a complete service-risk statement.",
+    "Assess inherent, residual and target risk without false precision.",
+    "Maintain a treatment and acceptance cycle that informs decisions."
+  ],
+  "realExample": {
+    "title": "SARS uses automated risk selection",
+    "sourceIds": [
+      "CASE-SARS-AR"
+    ],
+    "documentedOutcome": "SARS's 2024/25 annual report describes automated risk selection for all verification cases and 88.41% of complex audits.",
+    "discussion": "Discuss how a risk-based selection process focuses attention, and why the selection method, coverage and resulting decisions need review.",
+    "scope": "A tax-compliance risk-management example. It is not presented as a measured cybersecurity control result."
+  },
+  "units": [
+    {
+      "id": "M07-U01",
+      "title": "Describe and assess the service risk",
+      "estimatedMinutes": 150,
+      "objectives": [
+        "Connect a cause, event and consequence.",
+        "Use current controls and evidence in an assessment.",
+        "Explain uncertainty and prioritisation."
+      ],
+      "chapters": [
+        {
+          "id": "M07-U01-C01",
+          "title": "Write a risk that can be acted on",
+          "bodyHtml": "<p>A useful risk statement connects a condition or cause, an uncertain event and a service consequence. 'Cyber risk is high' does not identify a decision. 'Because supplier support uses a shared privileged account, an unauthorised change could divert approved relief payments and delay assistance' gives an owner something to assess.</p>\n<p>Separate the asset, threat and weakness. The payment record is the asset; a malicious actor or mistaken authorised user can be a source of harmful action; a shared privileged account is a weakness. The service consequence explains why the department should act.</p>\n<p>Use the actual operating context. Identify exposed interfaces, users, dependencies and existing controls. A threat list copied from another department may omit the manual approval or supplier link that matters most in your service.</p>",
+          "sourceIds": []
+        },
+        {
+          "id": "M07-U01-C02",
+          "title": "Assess before and after controls",
+          "bodyHtml": "<p>Inherent risk describes the assessed exposure before the controls considered in the assessment. Residual risk reflects the controls actually operating. Target residual risk describes the intended position after a planned treatment. Do not credit a proposed control as though it already works.</p>\n<p>Use the department's approved assessment method and explain its scales. A likelihood-impact matrix is a prioritisation aid, not an exact financial prediction. Multiplying ordinal labels does not convert them into a loss probability or a rand amount.</p>\n<p>Assess impact across relevant dimensions: affected people, service disruption, legal obligations, financial loss, safety and trust. State the time horizon and evidence supporting likelihood. If information is weak, explain the uncertainty and identify a useful observation rather than inventing precision.</p>",
+          "sourceIds": []
+        },
+        {
+          "id": "M07-U01-C03",
+          "title": "Prioritise by consequence and decision need",
+          "bodyHtml": "<p>Two risks with the same matrix score can need different responses. One may threaten a critical payment tomorrow with no fallback; another may affect an internal service with a tested workaround. Explain urgency, exposure, dependencies and available temporary protection alongside the score.</p>\n<p>The SARS example shows a public institution using a risk-based selection process to focus work. The educational lesson is to examine the method and coverage, not to import a tax-risk percentage as a cyber-risk threshold.</p>\n<p>Keep the assessment reviewable. Record its date, service owner, evidence, control assumptions and reason for priority. A later reviewer should be able to explain why the department chose an action, including what was unknown at the time.</p>",
+          "sourceIds": [
+            "CASE-SARS-AR"
+          ]
+        }
+      ],
+      "application": {
+        "title": "Assess three relief-service risks",
+        "instructionsHtml": "<p>Fictional case: the payment platform has a shared supplier administrator account; district connectivity is unreliable but an approved offline intake process exists; a new analytics export is planned but not yet enabled.</p>\n<p>Use a stated four-level likelihood and impact scale. Spend about 60 minutes writing three risk statements, identifying current controls, residual-risk reasoning and the next decision.</p>",
+        "deliverable": "A three-row risk register with assumptions and priorities.",
+        "suggestedAnswerHtml": "<p>For privileged access, connect the weakness to unauthorised payment change and citizen harm. For connectivity, consider the demonstrated coverage and limits of offline intake. For the planned export, distinguish current exposure from the change that would create it.</p>\n<p>Do not count proposed named access or a future second connection as an existing control. State the evidence and review trigger.</p>\n<p>Different rankings can be defensible if the scale, assumptions, consequences and urgency are clear. Unsupported numbers without reasons are not a sufficient assessment.</p>",
+        "rubric": [
+          {
+            "criterion": "Complete risk statements",
+            "points": 3
+          },
+          {
+            "criterion": "Current versus planned controls",
+            "points": 3
+          },
+          {
+            "criterion": "Reasoned assessment and uncertainty",
+            "points": 4
+          }
+        ]
+      },
+      "reflection": {
+        "prompt": "Which risk score in your register would be hardest to explain to its service owner?",
+        "guidanceHtml": "<p>Rewrite the statement and identify the evidence behind its current rating.</p>"
+      },
+      "quiz": {
+        "id": "M07-U01-QUIZ",
+        "title": "Describe and assess the service risk — knowledge check",
+        "passPercent": 75,
+        "attempts": 0,
+        "questions": [
+          {
+            "id": "M07-U01-Q01",
+            "type": "multichoice",
+            "name": "M07-U01-Q01",
+            "promptHtml": "<p>Which is the strongest risk statement?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "A shared privileged account could enable unauthorised payment changes, delaying relief",
+                "fraction": 100,
+                "feedbackHtml": "Connect condition, event and service consequence."
+              },
+              {
+                "textHtml": "The department has computers",
+                "fraction": 0,
+                "feedbackHtml": "That is an asset fact without an uncertain event or consequence."
+              },
+              {
+                "textHtml": "Cyber risk is unacceptable",
+                "fraction": 0,
+                "feedbackHtml": "That is a judgement without the risk's cause and effect."
+              },
+              {
+                "textHtml": "The supplier must install a new tool",
+                "fraction": 0,
+                "feedbackHtml": "That is a proposed treatment, not the risk statement."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Connect condition, event and service consequence.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M07-U01-Q02",
+            "type": "multichoice",
+            "name": "M07-U01-Q02",
+            "promptHtml": "<p>A named-access control is approved but not implemented. How should it affect residual risk?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "It belongs in target residual risk, not as an operating current control",
+                "fraction": 100,
+                "feedbackHtml": "Distinguish present controls from planned treatment."
+              },
+              {
+                "textHtml": "Count it immediately because funding is approved",
+                "fraction": 0,
+                "feedbackHtml": "Approval does not establish operation."
+              },
+              {
+                "textHtml": "Remove the risk because a plan exists",
+                "fraction": 0,
+                "feedbackHtml": "The current exposure remains."
+              },
+              {
+                "textHtml": "Ignore the plan entirely",
+                "fraction": 0,
+                "feedbackHtml": "It is relevant to treatment and target risk."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Distinguish present controls from planned treatment.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M07-U01-Q03",
+            "type": "multichoice",
+            "name": "M07-U01-Q03",
+            "promptHtml": "<p>What does a four-by-four likelihood-impact score directly provide?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "A prioritisation result within the defined assessment method",
+                "fraction": 100,
+                "feedbackHtml": "Use the matrix within its defined meaning."
+              },
+              {
+                "textHtml": "An exact probability of loss",
+                "fraction": 0,
+                "feedbackHtml": "Ordinal scales do not establish that."
+              },
+              {
+                "textHtml": "A rand loss amount",
+                "fraction": 0,
+                "feedbackHtml": "No monetary model is supplied."
+              },
+              {
+                "textHtml": "Proof that equal scores have equal urgency",
+                "fraction": 0,
+                "feedbackHtml": "Service context and timing can differ."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Use the matrix within its defined meaning.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M07-U01-Q04",
+            "type": "multichoice",
+            "name": "M07-U01-Q04",
+            "promptHtml": "<p>Two risks have the same score, but only one threatens tomorrow's essential payment. What should the decision include?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Urgency, service consequence and available fallback",
+                "fraction": 100,
+                "feedbackHtml": "Scores support, rather than replace, judgement."
+              },
+              {
+                "textHtml": "Treat them identically because the numbers match",
+                "fraction": 0,
+                "feedbackHtml": "The score omits relevant context."
+              },
+              {
+                "textHtml": "Always prioritise the larger technical system",
+                "fraction": 0,
+                "feedbackHtml": "System size is not the same as consequence."
+              },
+              {
+                "textHtml": "Delete the lower-urgency risk",
+                "fraction": 0,
+                "feedbackHtml": "It may still need treatment."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Scores support, rather than replace, judgement.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M07-U01-Q05",
+            "type": "multichoice",
+            "name": "M07-U01-Q05",
+            "promptHtml": "<p>Which evidence most strengthens an availability-risk assessment?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Observed outages and the tested coverage of the fallback process",
+                "fraction": 100,
+                "feedbackHtml": "Use actual service and control evidence."
+              },
+              {
+                "textHtml": "A generic sector headline alone",
+                "fraction": 0,
+                "feedbackHtml": "It may not describe the local service."
+              },
+              {
+                "textHtml": "The supplier's unqualified assurance",
+                "fraction": 0,
+                "feedbackHtml": "Its scope and evidence need assessment."
+              },
+              {
+                "textHtml": "A planned recovery exercise next year",
+                "fraction": 0,
+                "feedbackHtml": "That is not current recovery evidence."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Use actual service and control evidence.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M07-U01-Q06",
+            "type": "multichoice",
+            "name": "M07-U01-Q06",
+            "promptHtml": "<p>How should the SARS risk-selection case be used here?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "As an example of risk-based prioritisation with a defined scope",
+                "fraction": 100,
+                "feedbackHtml": "Keep the case within its actual domain."
+              },
+              {
+                "textHtml": "As a mandatory departmental cyber-risk threshold",
+                "fraction": 0,
+                "feedbackHtml": "Tax-selection coverage does not set that threshold."
+              },
+              {
+                "textHtml": "As proof that automation removes judgement",
+                "fraction": 0,
+                "feedbackHtml": "Methods and results still need oversight."
+              },
+              {
+                "textHtml": "As proof that every unselected case is safe",
+                "fraction": 0,
+                "feedbackHtml": "Selection is not universal assurance."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Keep the case within its actual domain.</p>",
+            "sourceIds": [
+              "CASE-SARS-AR"
+            ]
+          },
+          {
+            "id": "M07-U01-Q07",
+            "type": "multichoice",
+            "name": "M07-U01-Q07",
+            "promptHtml": "<p>Which are consequences rather than control descriptions? Select all correct answers.</p>",
+            "single": false,
+            "answers": [
+              {
+                "textHtml": "Eligible residents receive late relief",
+                "fraction": 50,
+                "feedbackHtml": "This is a service effect."
+              },
+              {
+                "textHtml": "An unauthorised payment causes financial loss",
+                "fraction": 50,
+                "feedbackHtml": "This is an impact."
+              },
+              {
+                "textHtml": "Privileged access is reviewed monthly",
+                "fraction": -50,
+                "feedbackHtml": "This describes a control."
+              },
+              {
+                "textHtml": "Backups run nightly",
+                "fraction": -50,
+                "feedbackHtml": "This describes an operating measure."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Risk consequences explain harm or lost service value.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M07-U01-Q08",
+            "type": "multichoice",
+            "name": "M07-U01-Q08",
+            "promptHtml": "<p>Which assessment records support later review? Select all correct answers.</p>",
+            "single": false,
+            "answers": [
+              {
+                "textHtml": "Evidence and control assumptions",
+                "fraction": 50,
+                "feedbackHtml": "They explain the rating."
+              },
+              {
+                "textHtml": "Date, owner and time horizon",
+                "fraction": 50,
+                "feedbackHtml": "They place it in context."
+              },
+              {
+                "textHtml": "A score with no scale definition",
+                "fraction": -50,
+                "feedbackHtml": "Its meaning cannot be assessed."
+              },
+              {
+                "textHtml": "A future control represented as already operating",
+                "fraction": -50,
+                "feedbackHtml": "That overstates current protection."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Retain the basis of the assessment.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M07-U01-Q09",
+            "type": "truefalse",
+            "name": "M07-U01-Q09",
+            "promptHtml": "<p>Weak evidence should be made explicit rather than converted into an invented precise probability.</p>",
+            "correct": true,
+            "trueFeedbackHtml": "Uncertainty is part of a useful decision record.",
+            "falseFeedbackHtml": "This is incorrect. Uncertainty is part of a useful decision record.",
+            "generalFeedbackHtml": "<p>Uncertainty is part of a useful decision record.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M07-U01-Q10",
+            "type": "truefalse",
+            "name": "M07-U01-Q10",
+            "promptHtml": "<p>A threat, a vulnerability and a service consequence are interchangeable terms.</p>",
+            "correct": false,
+            "trueFeedbackHtml": "This is incorrect. They describe different parts of the risk.",
+            "falseFeedbackHtml": "They describe different parts of the risk.",
+            "generalFeedbackHtml": "<p>They describe different parts of the risk.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M07-U01-Q11",
+            "type": "matching",
+            "name": "M07-U01-Q11",
+            "promptHtml": "<p>Match the term to its meaning.</p>",
+            "pairs": [
+              {
+                "promptHtml": "Asset",
+                "answer": "Information or capability supporting the service"
+              },
+              {
+                "promptHtml": "Weakness",
+                "answer": "Condition that can enable harm"
+              },
+              {
+                "promptHtml": "Residual risk",
+                "answer": "Risk after the controls currently considered"
+              },
+              {
+                "promptHtml": "Target risk",
+                "answer": "Intended position after planned treatment"
+              }
+            ],
+            "generalFeedbackHtml": "<p>Clear terms help keep the assessment coherent.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M07-U01-Q12",
+            "type": "gapselect",
+            "name": "M07-U01-Q12",
+            "promptHtml": "<p>A complete risk links a cause, an uncertain [[1]] and a service [[2]].</p>",
+            "choices": [
+              {
+                "text": "event",
+                "group": 1
+              },
+              {
+                "text": "consequence",
+                "group": 1
+              },
+              {
+                "text": "budget",
+                "group": 1
+              },
+              {
+                "text": "inventory",
+                "group": 1
+              }
+            ],
+            "correctChoices": [
+              1,
+              2
+            ],
+            "generalFeedbackHtml": "<p>The statement explains what could happen and why it matters.</p>",
+            "sourceIds": []
+          }
+        ]
+      }
+    },
+    {
+      "id": "M07-U02",
+      "title": "Treat, accept and monitor risk",
+      "estimatedMinutes": 150,
+      "objectives": [
+        "Compare treatment options and residual effects.",
+        "Assign accountable acceptance and review conditions.",
+        "Monitor whether treatment changes the service exposure."
+      ],
+      "chapters": [
+        {
+          "id": "M07-U02-C01",
+          "title": "Choose a treatment that addresses the cause",
+          "bodyHtml": "<p>Treatment options include reducing exposure or impact, avoiding a discretionary activity, sharing defined financial or service responsibilities, and retaining risk within authority. These options have limits. Insurance does not restore a missed public service, and outsourcing does not erase departmental accountability.</p>\n<p>Compare the control with the actual risk statement. If unauthorised payment changes are the concern, a general awareness poster alone will not replace restricted access and independent change approval. Training may support the process, but the treatment must reach the cause and consequence.</p>\n<p>State cost, implementation time, dependencies and new risks. A control that blocks all district access may reduce one exposure while preventing legitimate decisions. Consider a service-preserving temporary measure while the durable treatment is delivered.</p>",
+          "sourceIds": []
+        },
+        {
+          "id": "M07-U02-C02",
+          "title": "Acceptance is a decision with conditions",
+          "bodyHtml": "<p>Risk acceptance should identify the risk, current controls, residual exposure, reason, authorised decision maker, scope, expiry or review trigger and monitoring. It is not a synonym for ignoring the risk or declaring it eliminated.</p>\n<p>Use the department's appetite and tolerance arrangements to decide where acceptance is permitted and when escalation is required. A local manager cannot use an acceptance form to create authority beyond their delegation or waive a mandatory legal duty.</p>\n<p>Review when assumptions change. A service that adds sensitive information, a control that fails or a supplier that changes its support model can invalidate the basis of an earlier decision. Preserve the original acceptance and record the subsequent decision rather than overwriting history.</p>",
+          "sourceIds": []
+        },
+        {
+          "id": "M07-U02-C03",
+          "title": "Close treatment through an observed outcome",
+          "bodyHtml": "<p>A treatment plan needs an owner, milestones, resources and an outcome measure. Track whether the control was delivered and whether it addresses the intended exposure. A purchased licence is not the same as configured, adopted and effective access control.</p>\n<p>Use indicators that help the owner act: unreviewed privileged accounts, overdue revocations, failed recovery steps or repeated exceptions. Define the threshold, review frequency and response. A metric without an action route becomes reporting overhead.</p>\n<p>After implementation, reassess using the same risk definition and method. Explain what changed and what remains. If the result is weaker than expected, revise the treatment or escalate the residual decision. Retain the link from risk to decision to delivered control.</p>",
+          "sourceIds": []
+        }
+      ],
+      "application": {
+        "title": "Choose a treatment for supplier payment access",
+        "instructionsHtml": "<p>A fictional department can buy named-access support forR120000per year, redesign approvals forR40000and two months' work, or keep shared access temporarily with daily review and independent payment approval. The critical service cannot simply stop.</p>\n<p>Spend about 60 minutes comparing options, proposing an interim arrangement and drafting the residual-risk decision.</p>",
+        "deliverable": "An options table, treatment plan and acceptance record.",
+        "suggestedAnswerHtml": "<p>Assess which controls prevent or detect unauthorised change and which support attribution. Compare recurring cost, implementation time and operational burden.</p>\n<p>A temporary arrangement can be proposed with explicit authority, scope, expiry and review, while a durable named-access/approval solution is delivered. Do not call the temporary risk eliminated.</p>\n<p>Define closure through observed permissions and payment-change operation, then reassess residual risk. Keep legal and delegated-authority constraints explicit.</p>",
+        "rubric": [
+          {
+            "criterion": "Cause-focused option comparison",
+            "points": 4
+          },
+          {
+            "criterion": "Accountable interim decision",
+            "points": 3
+          },
+          {
+            "criterion": "Outcome and reassessment plan",
+            "points": 3
+          }
+        ]
+      },
+      "reflection": {
+        "prompt": "Which accepted risk has no clear review trigger?",
+        "guidanceHtml": "<p>Specify the change or threshold that should bring it back to the decision maker.</p>"
+      },
+      "quiz": {
+        "id": "M07-U02-QUIZ",
+        "title": "Treat, accept and monitor risk — knowledge check",
+        "passPercent": 75,
+        "attempts": 0,
+        "questions": [
+          {
+            "id": "M07-U02-Q01",
+            "type": "multichoice",
+            "name": "M07-U02-Q01",
+            "promptHtml": "<p>What is the main limitation of insurance as a treatment for service interruption?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Financial recovery does not itself restore the public service",
+                "fraction": 100,
+                "feedbackHtml": "Risk-sharing arrangements have a defined scope."
+              },
+              {
+                "textHtml": "Insurance necessarily removes the department's service-delivery accountability",
+                "fraction": 0,
+                "feedbackHtml": "A financial transfer does not transfer all public-service responsibilities."
+              },
+              {
+                "textHtml": "An insurance policy proves that the current recovery process meets its objective",
+                "fraction": 0,
+                "feedbackHtml": "Coverage is not evidence of operating recoverability."
+              },
+              {
+                "textHtml": "Insurance automatically prevents the interruption from occurring",
+                "fraction": 0,
+                "feedbackHtml": "Compensation arrangements do not themselves prevent the underlying event."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Risk-sharing arrangements have a defined scope.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M07-U02-Q02",
+            "type": "multichoice",
+            "name": "M07-U02-Q02",
+            "promptHtml": "<p>A risk concerns unauthorised payment edits. Which treatment best addresses its cause?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Restrict editing and require independent authorised change approval",
+                "fraction": 100,
+                "feedbackHtml": "The control should reach the described event and weakness."
+              },
+              {
+                "textHtml": "Only distribute a general awareness poster",
+                "fraction": 0,
+                "feedbackHtml": "Awareness alone does not constrain the edit."
+              },
+              {
+                "textHtml": "Increase website availability only",
+                "fraction": 0,
+                "feedbackHtml": "That addresses a different objective."
+              },
+              {
+                "textHtml": "Rename the risk to low",
+                "fraction": 0,
+                "feedbackHtml": "A label does not change exposure."
+              }
+            ],
+            "generalFeedbackHtml": "<p>The control should reach the described event and weakness.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M07-U02-Q03",
+            "type": "multichoice",
+            "name": "M07-U02-Q03",
+            "promptHtml": "<p>What does a valid risk acceptance state?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "The residual exposure, authority, reason and review conditions",
+                "fraction": 100,
+                "feedbackHtml": "Acceptance is an accountable decision."
+              },
+              {
+                "textHtml": "That the risk no longer exists",
+                "fraction": 0,
+                "feedbackHtml": "Acceptance does not eliminate it."
+              },
+              {
+                "textHtml": "That no evidence need be retained",
+                "fraction": 0,
+                "feedbackHtml": "The decision needs a basis."
+              },
+              {
+                "textHtml": "That every related legal duty is waived",
+                "fraction": 0,
+                "feedbackHtml": "The decision cannot create that authority."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Acceptance is an accountable decision.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M07-U02-Q04",
+            "type": "multichoice",
+            "name": "M07-U02-Q04",
+            "promptHtml": "<p>A supplier changes its access model after a risk was accepted. What is needed?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Review whether the original assumptions still hold",
+                "fraction": 100,
+                "feedbackHtml": "Changed conditions can require a new decision."
+              },
+              {
+                "textHtml": "Keep the decision unchanged solely because it is signed",
+                "fraction": 0,
+                "feedbackHtml": "Its basis may have changed."
+              },
+              {
+                "textHtml": "Overwrite the old record with a new date",
+                "fraction": 0,
+                "feedbackHtml": "That loses history."
+              },
+              {
+                "textHtml": "Assume every change is automatically unacceptable",
+                "fraction": 0,
+                "feedbackHtml": "Assess the actual consequence."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Changed conditions can require a new decision.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M07-U02-Q05",
+            "type": "multichoice",
+            "name": "M07-U02-Q05",
+            "promptHtml": "<p>What best supports treatment closure?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Evidence that the implemented control changes the intended exposure",
+                "fraction": 100,
+                "feedbackHtml": "Close against the agreed operating outcome."
+              },
+              {
+                "textHtml": "A purchase order alone",
+                "fraction": 0,
+                "feedbackHtml": "Purchase is not operation."
+              },
+              {
+                "textHtml": "A project meeting attendance list",
+                "fraction": 0,
+                "feedbackHtml": "Attendance does not demonstrate the result."
+              },
+              {
+                "textHtml": "A supplier's future roadmap",
+                "fraction": 0,
+                "feedbackHtml": "That is a plan, not current delivery."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Close against the agreed operating outcome.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M07-U02-Q06",
+            "type": "multichoice",
+            "name": "M07-U02-Q06",
+            "promptHtml": "<p>A department is legally required to deliver a service. How should 'avoid risk by stopping it' be assessed?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Against the legal mandate and feasible service alternatives",
+                "fraction": 100,
+                "feedbackHtml": "Treatment options must respect the service's authority."
+              },
+              {
+                "textHtml": "Treat avoidance as automatically available",
+                "fraction": 0,
+                "feedbackHtml": "A mandatory service cannot simply be abandoned."
+              },
+              {
+                "textHtml": "Assume only one technical design is permitted",
+                "fraction": 0,
+                "feedbackHtml": "Alternative lawful designs may exist."
+              },
+              {
+                "textHtml": "Remove the service from reporting",
+                "fraction": 0,
+                "feedbackHtml": "That does not discharge the mandate."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Treatment options must respect the service's authority.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M07-U02-Q07",
+            "type": "multichoice",
+            "name": "M07-U02-Q07",
+            "promptHtml": "<p>Which inputs belong in an option comparison? Select all correct answers.</p>",
+            "single": false,
+            "answers": [
+              {
+                "textHtml": "Cost, delivery time and dependencies",
+                "fraction": 50,
+                "feedbackHtml": "These affect feasibility."
+              },
+              {
+                "textHtml": "Residual impact and new service risks",
+                "fraction": 50,
+                "feedbackHtml": "Controls can create trade-offs."
+              },
+              {
+                "textHtml": "Only the lowest purchase price",
+                "fraction": -50,
+                "feedbackHtml": "That omits the full effect."
+              },
+              {
+                "textHtml": "An assumed perfect result with no evidence",
+                "fraction": -50,
+                "feedbackHtml": "That overstates value."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Compare options on a common service basis.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M07-U02-Q08",
+            "type": "multichoice",
+            "name": "M07-U02-Q08",
+            "promptHtml": "<p>Which features make a risk indicator actionable? Select all correct answers.</p>",
+            "single": false,
+            "answers": [
+              {
+                "textHtml": "A defined threshold and response owner",
+                "fraction": 50,
+                "feedbackHtml": "They connect measurement to action."
+              },
+              {
+                "textHtml": "A review frequency and reliable source",
+                "fraction": 50,
+                "feedbackHtml": "They support timely interpretation."
+              },
+              {
+                "textHtml": "A number without a population or period",
+                "fraction": -50,
+                "feedbackHtml": "Its meaning is unclear."
+              },
+              {
+                "textHtml": "A rule that adverse trends must be hidden",
+                "fraction": -50,
+                "feedbackHtml": "That prevents useful governance."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Indicators should trigger an appropriate decision.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M07-U02-Q09",
+            "type": "truefalse",
+            "name": "M07-U02-Q09",
+            "promptHtml": "<p>Outsourcing a control removes the department's need to understand its residual service risk.</p>",
+            "correct": false,
+            "trueFeedbackHtml": "This is incorrect. The department still needs an accountable view of the service and supplier dependence.",
+            "falseFeedbackHtml": "The department still needs an accountable view of the service and supplier dependence.",
+            "generalFeedbackHtml": "<p>The department still needs an accountable view of the service and supplier dependence.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M07-U02-Q10",
+            "type": "truefalse",
+            "name": "M07-U02-Q10",
+            "promptHtml": "<p>A treatment should be reassessed against the original risk definition after implementation.</p>",
+            "correct": true,
+            "trueFeedbackHtml": "This shows what actually changed and what remains.",
+            "falseFeedbackHtml": "This is incorrect. This shows what actually changed and what remains.",
+            "generalFeedbackHtml": "<p>This shows what actually changed and what remains.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M07-U02-Q11",
+            "type": "matching",
+            "name": "M07-U02-Q11",
+            "promptHtml": "<p>Match the treatment concept to its example.</p>",
+            "pairs": [
+              {
+                "promptHtml": "Reduce",
+                "answer": "Restrict unauthorised editing"
+              },
+              {
+                "promptHtml": "Avoid",
+                "answer": "Do not launch a discretionary unsafe feature"
+              },
+              {
+                "promptHtml": "Share defined exposure",
+                "answer": "Contract for a specified recoverable financial responsibility"
+              },
+              {
+                "promptHtml": "Retain within authority",
+                "answer": "Accept documented residual risk with review"
+              }
+            ],
+            "generalFeedbackHtml": "<p>Each option has a scope and does not erase all other obligations.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M07-U02-Q12",
+            "type": "ddwtos",
+            "name": "M07-U02-Q12",
+            "promptHtml": "<p>Risk acceptance records residual [[1]] and a future [[2]] trigger.</p>",
+            "choices": [
+              {
+                "text": "exposure",
+                "group": 1
+              },
+              {
+                "text": "review",
+                "group": 1
+              },
+              {
+                "text": "certainty",
+                "group": 1
+              },
+              {
+                "text": "procurement",
+                "group": 1
+              }
+            ],
+            "correctChoices": [
+              1,
+              2
+            ],
+            "generalFeedbackHtml": "<p>Acceptance retains an ongoing governance responsibility.</p>",
+            "sourceIds": []
+          }
+        ]
+      }
+    }
+  ]
+}

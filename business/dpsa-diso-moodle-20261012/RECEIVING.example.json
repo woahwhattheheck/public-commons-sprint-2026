@@ -1,0 +1,31 @@
+{
+  "operationId": "f47a-dpsa-diso-native-20261012",
+  "directory": "/absolute/private/dpsa-diso-native-20261012",
+  "origin": "http://127.0.0.1:34355",
+  "phpExecutable": "/absolute/existing/native-prefix/bin/php8.3",
+  "phpArguments": [
+    "-c",
+    "/absolute/private/php-runtime/php.ini",
+    "-d",
+    "max_input_vars=5000",
+    "-d",
+    "memory_limit=256M",
+    "-d",
+    "date.timezone=UTC"
+  ],
+  "database": {
+    "prefix": "/absolute/existing/native-prefix",
+    "port": 34356
+  },
+  "nodeExecutable": "/absolute/existing/node",
+  "playwrightModule": "/absolute/existing/playwright/index.mjs",
+  "browserExecutable": "/absolute/existing/chrome-headless-shell",
+  "ffmpegExecutable": "/absolute/existing/ffmpeg",
+  "speechMode": "require",
+  "speechExecutable": "/absolute/existing/espeak-ng",
+  "voice": "en-gb",
+  "environment": {
+    "PHP_INI_SCAN_DIR": "",
+    "LD_LIBRARY_PATH": "/absolute/existing/native-prefix/lib/x86_64-linux-gnu"
+  }
+}
