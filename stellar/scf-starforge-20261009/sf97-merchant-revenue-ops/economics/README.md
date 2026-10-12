@@ -4,6 +4,10 @@ Use this workspace to retain the supplier's original bill, credit note or quotat
 
 The source documents, their classified line editions, allocations and saved pricing reviews have separate identities. This lets an operator correct a supplier document or change an allocation without rewriting the earlier decision.
 
+## Receive a complete review from another merchant
+
+[Receive a complete supplier-cost review](RECEIVING.md) covers the full selected `COST_EDITION` workflow: retain the original TAR and source documents, review every original-to-local route mapping, open a native cost draft, save and apply its costs, and carry the original lineage through export and recovery. The browser, existing merchant MCP, CLI and HTTP paths use the same native source and cost stores. For a complete private workspace move, continue through the existing Applications backup receiving workflow described below.
+
 ## Open the existing merchant
 
 Start the original pricing workspace with its existing seller configuration and either its operations listener or retained operations export. Open `/economics` on its printed loopback URL. The page follows Saved pricing source, Original cost and usage files, Map charge columns, Charges and allocations, Cost scope and coverage, Review and save, Saved editions and comparison, Apply costs to pricing, and Exports and recovery. Existing host captures can be supplied with `--supplier-usage FILE` and `--accounting-report FILE`; retain their original files and use the selected captures as source context. The existing startup, private-state and source-selection instructions are in [Merchant pricing workspace](../WORKSPACE.md).

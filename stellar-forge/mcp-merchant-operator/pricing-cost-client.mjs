@@ -8,8 +8,8 @@ const fail=(code,message)=>Object.assign(new Error(message),{code:'PRICING_COST_
 const plain=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
 export const pricingCostClientOperations=Object.freeze(Object.fromEntries([
   'state','list','inputs','input','upload','capture','source','mapping','weights','preview','save','request','edition',
-  'compare','proposal','apply','export','manifest'
-].map(name=>['cost-'+name,'merchant_pricing_cost_'+name])));
+  'compare','proposal','apply','export','manifest','receive','received','receiving-review','receiving-draft'
+].map(name=>['cost-'+name,'merchant_pricing_cost_'+name.replaceAll('-','_')])));
 
 function parseManifest(bytes,id,kind){
   let value;try{value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}
@@ -26,14 +26,14 @@ function parseManifest(bytes,id,kind){
     throw fail('MANIFEST_INVALID','Select the complete native file set within the 512 MiB original package limit.');
   if(kind==='source'&&(files.length!==1||files[0].name!=='original'||value.source?.sourceId!==id||
       files[0].sha256!==value.source.sha256||files[0].bytes!==value.source.bytes)||
-     kind==='export'&&(files.length!==1||files[0].name!==id+'.tar'||value.requestId!==id)||
+     ['export','received'].includes(kind)&&(files.length!==1||files[0].name!==id+'.tar'||value.requestId!==id)||
      kind==='edition'&&(!Object.hasOwn(value.files,'edition-manifest.json')||!UUID.test(value.pricingVersion??'')||
       !HASH.test(value.nativeManifestSha256??'')||value.revision!==value.nativeManifestSha256||value.files['edition-manifest.json'].sha256!==value.nativeManifestSha256))
     throw fail('MANIFEST_INVALID','The cost file set does not match its original source, native edition or archive identity.');
   return {...value,exportId:id,files};
 }
 function downloader(workspace,kind){
-  if(!ALIAS.test(workspace??'')||!['source','edition','export'].includes(kind))
+  if(!ALIAS.test(workspace??'')||!['source','edition','export','received'].includes(kind))
     throw fail('ARGUMENTS','Select the original pricing workspace alias and source, edition or export kind.');
   return createRetainedDownload({
     manifestName:'manifest.json',parseManifest:(bytes,id)=>parseManifest(bytes,id,kind),maximumBytes:MAX_BYTES,
