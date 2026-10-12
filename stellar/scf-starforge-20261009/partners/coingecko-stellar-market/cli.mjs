@@ -8,10 +8,13 @@ import {MarketJobs} from './workspace/jobs.mjs';
 import {startMarketWorkspace,acquireWorkspaceLease} from './workspace/server.mjs';
 import {prepareCoinGeckoProduct,startCoinGeckoService} from './provider.mjs';
 import {readProjectArchive} from './workspace/recovery.mjs';
+import {startManagedMarketWorkspace} from './workspace/managed.mjs';
 import {need,jsonBytes,uuid,LIMITS,text} from './common.mjs';
 
 const HELP=String.raw`CoinGecko provider and market operator — Node24+
   serve --state PRIVATE_DIR [--port 8417] [--config OPERATOR_CONFIG.json]
+        [--startup-format json --managed-selection REVIEWED_JSON]
+        [--project ORIGINAL_PROJECT_ID] [--allow-local-merchant]
   status --state PRIVATE_DIR [--project ID]
   project --state PRIVATE_DIR --name NAME --actor NAME
   config --state PRIVATE_DIR --project ID --file PROJECT_CONFIG.json --actor NAME
@@ -47,7 +50,7 @@ Use one worker per state directory. The running browser supports multiple operat
 through retained project revisions. Stop it before starting a separate native CLI.
 `;
 function parse(args){
-  const position=[],flags=new Map(),boolean=new Set(['--execute','--allow-local-facilitator']);
+  const position=[],flags=new Map(),boolean=new Set(['--execute','--allow-local-facilitator','--allow-local-merchant']);
   for(let i=0;i<args.length;i++){
     const value=args[i];if(!value.startsWith('--')){position.push(value);continue}
     need(!flags.has(value),'DUPLICATE_OPTION',value+' was provided twice');
@@ -111,9 +114,21 @@ export async function main(args=process.argv.slice(2)){
     }
     output({directory,files:archive.runtime.files.length,entry:archive.runtime.entry});return;
   }
-  const directory=resolve(required('state')),configuration=get('config')?await jsonFile(get('config')):{};
+  const directory=resolve(required('state'));
+  if(command==='serve'&&get('managed-selection')){
+    need(get('startup-format')==='json','MANAGED_STARTUP_FORMAT_REQUIRED');
+    const runtime=await startManagedMarketWorkspace({directory,port:Number(get('port')??0),
+      selection:get('managed-selection'),configurationFile:get('config')?resolve(get('config')):null,
+      projectId:get('project')??null,allowLocalMerchant:get('allow-local-merchant')===true});
+    process.stdout.write(JSON.stringify(runtime.startup)+'\n');
+    for(const signal of ['SIGINT','SIGTERM'])process.once(signal,()=>runtime.close().catch(error=>{
+      output({error:error.code??error.message});process.exitCode=1}));
+    return runtime;
+  }
+  need(get('startup-format')===undefined,'MANAGED_SELECTION_REQUIRED','Use the original Applications review for managed startup.');
+  const configuration=get('config')?await jsonFile(get('config')):{};
   if(command==='serve'){
-    const runtime=await startMarketWorkspace({directory,port:Number(get('port')??8417),buyerProfiles:configuration.buyerProfiles??[]});
+    const runtime=await startMarketWorkspace({directory,port:Number(get('port')??8417),buyerProfiles:configuration.buyerProfiles??[],allowLocal:get('allow-local-merchant')===true});
     output({url:runtime.url,stateDirectory:directory,node:process.version});
     for(const signal of ['SIGINT','SIGTERM'])process.once(signal,()=>runtime.close().catch(error=>{output({error:error.code??error.message});process.exitCode=1}));
     return runtime;

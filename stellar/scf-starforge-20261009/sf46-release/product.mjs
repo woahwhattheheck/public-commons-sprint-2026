@@ -5,7 +5,7 @@ import { mkdir, readdir, lstat, rm, rename, mkdtemp, unlink } from 'node:fs/prom
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { constants as osConstants } from 'node:os';
-import { HOME_SCHEMA, MANIFEST, UPDATE_CLAIMS, sha256, verifyRelease, plainDirectory, boundedFile, putFile,
+import { HOME_SCHEMA, MANIFEST, UPDATE_CLAIMS, sha256, verifyRelease, plainDirectory, boundedFile, putFile, copyVerifiedFile,
   atomicFile, atomicJson, jsonFile, validateId, withHomeLock } from './release-core.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -141,7 +141,7 @@ export async function install(bundleInput, homeInput, { expected, activate = fal
       const stage = await mkdtemp(join(lockedHome, 'releases', '.install-'));
       try {
         for (const file of bundle.files)
-          await putFile(join(stage, file.path), await boundedFile(bundle.root, file.path, file.bytes), file.mode);
+          await copyVerifiedFile(bundle.root, file.path, join(stage, file.path), file);
         await putFile(join(stage, MANIFEST), bundle.manifestBytes);
         // A changed input cannot be promoted after the initial source read.
         await verifyRelease(stage, bundle.manifest.digest);
