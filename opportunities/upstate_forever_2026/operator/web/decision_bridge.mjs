@@ -203,11 +203,14 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
       (catalog.scenarios || []).some(scenario =>
         scenario.id===run.selection?.scenario_id && scenario.kind==='baseline'));
     const baseline=comparison?.baseline_run_id || base?.id || '';
+    const baseRun=(catalog.runs||[]).find(run=>run.id===baseline);
+    const metricIds=METRICS.filter(metric=>baseRun?!!baseRun.artifacts?.[metric.id]:
+      (catalog.runs||[]).some(run=>!!run.artifacts?.[metric.id])).map(metric=>metric.id);
     const other=(catalog.runs || []).filter(run => run.id!==baseline &&
       (!baseline || run.selection?.grid_id===(catalog.runs || []).find(x=>x.id===baseline)?.selection?.grid_id));
     return {
       baseline_id:baseline, alternative_ids:other.map(run=>run.id),
-      metric_ids:METRICS.map(metric=>metric.id), catchment_ids:[...new Set(other.concat((catalog.runs||[]).filter(run=>run.id===baseline)).map(run=>'reporting-mask:' + run.selection.grid_id))],
+      metric_ids:metricIds, catchment_ids:[...new Set(other.concat((catalog.runs||[]).filter(run=>run.id===baseline)).map(run=>'reporting-mask:' + run.selection.grid_id))],
       objective_id:'',
       directions:{}, priority:{enabled:false,weights:{}},
       query:'',status_filter:'all',pinned_ids:[],only_pinned:false,
@@ -436,7 +439,8 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
       if(event.target.name==='native-comparison'){
         const compare=snapshot?.comparisons?.find(row=>row.id===event.target.value);
         if(compare){selection={...(selection||{}),baseline_id:compare.baseline_run_id,
-          alternative_ids:compare.alternatives.map(row=>row.run_id),catchment_ids:['reporting-mask:' + snapshot.runs.find(run=>run.id===compare.baseline_run_id).selection.grid_id]};loadedView=null;mountValues();remember();}
+          alternative_ids:compare.alternatives.map(row=>row.run_id),
+          metric_ids:METRICS.filter(metric=>snapshot.runs.find(run=>run.id===compare.baseline_run_id)?.artifacts?.[metric.id]).map(metric=>metric.id),catchment_ids:['reporting-mask:' + snapshot.runs.find(run=>run.id===compare.baseline_run_id).selection.grid_id]};loadedView=null;mountValues();remember();}
       }
       if(event.target.name==='decision-objective'&&controller){
         objectiveId=event.target.value;
@@ -450,6 +454,7 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
           const ids=(saved.report.runs||[]).map(row=>row.id).filter(id=>snapshot.runs.some(run=>run.id===id));
           selection={...(selection||{}),baseline_id:saved.baseline_run_id,
             alternative_ids:ids.filter(id=>id!==saved.baseline_run_id),
+            metric_ids:METRICS.filter(metric=>saved.report.outputs?.[POLLUTANTS[metric.id]]).map(metric=>metric.id),
             catchment_ids:saved.report.zones.map(zone=>'watershed-report:'+saved.id+':'+zone.id)};
           loadedView=null;mountValues();remember();
           node('[name="watershed-report"]').value=saved.id;
