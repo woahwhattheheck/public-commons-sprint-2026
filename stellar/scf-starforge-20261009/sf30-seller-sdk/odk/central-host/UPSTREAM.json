@@ -22,7 +22,11 @@
       "lib/task/account.js": "35989a4f49ba17edb769738f61609bc74f1f2149",
       "lib/resources/backup.js": "64b66e00f4d49277e0b2beba722067ad5f61c2db",
       "lib/util/backup.js": "39022dd4004501b234cfd3e54f0e4f74bd6ed73a",
-      "lib/bin/restore.js": "f795fa84956c243a847ab2b723b2c5b10cf8cf52"
+      "lib/bin/restore.js": "f795fa84956c243a847ab2b723b2c5b10cf8cf52",
+      "lib/resources/config.js": "4e0f4db3e046ab93e84c312b0ae8e34ffc27020e",
+      "lib/resources/users.js": "a463204f152f2b5d18165bd3c7edde24ba7b3d6c",
+      "lib/http/preprocessors.js": "d05becca1bab97f2d7f8c370179d214ba6f77e6c",
+      "lib/model/query/auth.js": "f29bdcb37b72a70e5f9cefbf50656bddcd687af8"
     }
   },
   "documentation": [
@@ -73,7 +77,8 @@
       "enketo_redis_cache"
     ],
     "database_backup": "POST /v1/backup, native .pgdump.enc.bin, verified with the selected service image's OpenSSL and pg_restore",
-    "full_restore": "Original stopped Compose volumes in a different new project, using captured native image IDs.",
-    "remote_attachments": "The automatic full-host profile uses the original local attachment store."
+    "full_restore": "Original stopped Compose volumes and captured image IDs in a different unused project; retained private environment and same-origin TLS by default; explicit reconfiguration option.",
+    "remote_attachments": "The automatic full-host profile uses the original local attachment store.",
+    "readiness": "Exact root/backend version plus original GET /v1/config/public, which reads PostgreSQL; authenticated current user with X-Extended-Metadata and original project population."
   }
 }
