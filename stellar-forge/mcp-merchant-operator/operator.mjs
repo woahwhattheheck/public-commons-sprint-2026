@@ -70,6 +70,28 @@ export class MerchantReleaseOperator {
     this.#mutations = new Set(this.#tools.filter(value => !value.annotations.readOnlyHint).map(value => value.name));
   }
   get tools() { return structuredClone(this.#tools); }
+
+  #hostFingerprint;
+  inspectHost() {
+    if(!this.#hostFingerprint) {
+      const stable=value=>Array.isArray(value)?'['+value.map(stable).join(',')+']':
+        value&&typeof value==='object'?'{'+Object.keys(value).sort().filter(key=>value[key]!==undefined)
+          .map(key=>JSON.stringify(key)+':'+stable(value[key])).join(',')+'}':JSON.stringify(value);
+      this.#hostFingerprint=hash(stable(this.#config));
+    }
+    return {schema:'stellar-forge.merchant-host-profile.v1',merchant:this.#config.name,
+      configurationFingerprint:this.#hostFingerprint,maxRequestBytes:this.maxRequestBytes,
+      capabilities:{tools:this.#tools.length,families:merchantToolFamilies(this.#config)},
+      providers:Object.entries(MERCHANT_PROVIDERS)
+        .filter(([name])=>merchantProviderConfigured(name,this.#config)||this.#loadStates.has(name))
+        .map(([name,definition])=>({name,configured:merchantProviderConfigured(name,this.#config),
+          dependencies:[...definition.dependencies],...(this.#loadStates.get(name)??{state:'UNLOADED',durationMs:null})})),
+      sources:Object.entries(this.#config.sources??{}).map(([source,value])=>({source,label:value.label})),
+      activity:this.activity,providerShutdown:this.providerShutdown,
+      operator:{busy:this.#busy,closing:this.#closing,activeCalls:this.#active.size,lastFailure:this.#lastFailure,
+        managesRunningSeller:Boolean(this.#managed),instanceId:this.#managed?.observation.instanceId??null}};
+  }
+
   get maxRequestBytes() {
     const configuredMaximum = (() => {
       if (this.#config.grantWorkspaces) return 32 * 1024 * 1024;

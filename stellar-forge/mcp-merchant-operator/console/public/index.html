@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Merchant operator · Starforge</title>
+  <link rel="stylesheet" href="/operator/style.css">
+  <script type="module" src="/operator/app.mjs"></script>
+</head>
+<body>
+  <header class="app-header">
+    <div><p class="eyebrow">Starforge / Operations</p><h1>Merchant operator</h1></div>
+    <div class="header-state"><span id="connection-state" class="tag">Disconnected</span><button id="disconnect" hidden>Disconnect</button></div>
+  </header>
+  <main>
+    <section id="connect-panel" class="panel narrow" aria-labelledby="connect-title">
+      <p class="eyebrow">Existing merchant host</p><h2 id="connect-title">Open your operator workspace</h2>
+      <p>Use the access token for this merchant. Your named requests, returned results and customer downloads stay with the operator workspace.</p>
+      <form id="connect-form"><label for="access-token">Merchant access token</label><input id="access-token" type="password" autocomplete="off" required>
+        <div class="actions"><button class="primary" type="submit">Connect</button></div></form>
+      <p class="hint">The access token stays in this page’s memory.</p>
+    </section>
+    <div id="notice" role="status" aria-live="polite" hidden></div>
+    <div id="connected" hidden>
+      <section class="profile-bar" aria-label="Operator profile">
+        <div class="profile-picker"><label for="profiles">Saved profile</label><select id="profiles"><option value="">Choose a profile</option></select></div>
+        <div class="actions"><button id="new-profile">New profile</button><button id="rename-profile">Rename</button><button id="export-profile">Export profile</button><button id="import-profile">Import profile</button></div>
+        <input id="profile-file" type="file" accept="application/json,.json" hidden>
+      </section>
+      <form id="profile-form" class="panel compact" hidden>
+        <label for="profile-name">Profile name</label><div class="inline-input"><input id="profile-name" maxlength="160" required><button class="primary" type="submit">Save profile</button><button id="cancel-profile" type="button">Cancel</button></div>
+      </form>
+      <section id="binding-panel" class="panel compact" hidden><h2>Review this host binding</h2><p>The selected profile was saved against another host configuration. Compare its original binding with the current host before using its requests here.</p>
+        <dl id="binding-details" class="properties"></dl><button id="bind-profile">Bind this revision to the current host</button></section>
+      <nav class="tabs" aria-label="Operator pages">
+        <button data-page="host" aria-current="page">Host</button>
+        <button data-page="tools">Tools</button>
+        <button data-page="requests">Requests <span id="request-count" class="count">0</span></button>
+        <button data-page="customers">Customers <span id="customer-count" class="count">0</span></button>
+      </nav>
+
+      <section id="page-host" class="page">
+        <div class="section-heading"><div><p class="eyebrow">Current configuration</p><h2 id="host-name">Merchant host</h2></div><div class="actions"><button id="refresh-host">Refresh host</button><button id="native-status">Inspect native status</button></div></div>
+        <div id="host-metrics" class="metrics"></div>
+        <div class="columns">
+          <section class="panel"><h3>Configured providers</h3><p class="hint">A provider opens when its original operation needs it.</p><div class="table-wrap"><table><thead><tr><th>Provider</th><th>State</th><th>Load time</th><th>Dependencies</th></tr></thead><tbody id="providers"></tbody></table></div></section>
+          <section class="panel"><h3>Accepted native work</h3><div id="host-activity"></div><details><summary>Provider shutdown state</summary><pre id="host-shutdown"></pre></details><h3>Host identity</h3><dl id="host-details" class="properties"></dl><h3>Configured release sources</h3><div id="host-sources"></div><details><summary>Complete host snapshot</summary><pre id="host-json"></pre></details></section>
+        </div>
+      </section>
+
+      <section id="page-tools" class="page" hidden>
+        <div class="section-heading"><div><p class="eyebrow">Configured native operations</p><h2>Tools and saved drafts</h2></div><span id="tools-total" class="hint"></span></div>
+        <div class="tool-layout">
+          <section class="panel tool-catalog">
+            <form id="tool-filter"><label for="tool-search">Find a tool</label><input id="tool-search" type="search" placeholder="Name or description"><label for="tool-family">Provider</label><select id="tool-family"><option value="">All configured providers</option></select><label class="checkbox"><input id="favorites-only" type="checkbox">Favorites</label><button type="submit">Apply filters</button></form>
+            <div id="tool-list" class="select-list"></div>
+            <div class="pager"><button id="previous-tools">Previous</button><span id="tools-page" class="hint"></span><button id="next-tools">Next</button></div>
+            <h3>Saved drafts</h3><div id="draft-list" class="select-list"></div>
+          </section>
+          <section class="panel tool-editor">
+            <div id="tool-empty" class="empty"><h3>Choose a native tool</h3><p>Review its actual inputs, save a named revision and run it from this profile.</p></div>
+            <div id="tool-detail" hidden>
+              <div class="section-heading"><h3 id="tool-title" class="break"></h3><button id="favorite-tool">Favorite</button></div>
+              <p id="tool-description"></p><div id="tool-tags" class="tags"></div>
+              <form id="draft-form">
+                <label for="draft-name">Saved request name</label><input id="draft-name" maxlength="160" required>
+                <label for="native-arguments">Native arguments (JSON)</label><textarea id="native-arguments" class="code-input" spellcheck="false" rows="14" required></textarea>
+                <div class="editor-meta"><span id="draft-revision" class="hint">New draft</span><span id="argument-bytes" class="hint"></span></div>
+                <div class="actions"><button class="primary" type="submit">Save revision</button><button id="save-copy" type="button">Save as new draft</button><button id="run-draft" type="button" disabled>Run saved revision</button></div>
+              </form>
+              <p id="tool-run-hint" class="hint"></p>
+              <details><summary>Native input schema</summary><pre id="tool-schema"></pre></details>
+              <details><summary>Complete tool definition</summary><pre id="tool-definition"></pre></details>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section id="page-requests" class="page" hidden>
+        <div class="section-heading"><div><p class="eyebrow">Retained native calls</p><h2>Requests and recovery</h2></div><button id="refresh-requests">Refresh requests</button></div>
+        <div class="request-layout">
+          <section class="panel"><div id="call-list" class="select-list"></div></section>
+          <section class="panel"><div id="call-empty" class="empty"><h3>Open a saved request</h3><p>Each record keeps its exact native arguments, original request identifiers and returned result.</p></div>
+            <div id="call-detail" hidden>
+              <div class="section-heading"><h3 id="call-title" class="break"></h3><span id="call-state" class="tag"></span></div>
+              <dl id="call-details" class="properties"></dl>
+              <div class="actions"><button id="reopen-draft">Open original draft</button><button id="download-result">Download returned JSON</button><button id="use-customer">Receive this customer</button></div>
+              <p id="call-message" class="hint"></p>
+              <section id="recovery-panel" class="subsection" hidden><h4>Original operation actions</h4><p class="hint">Choose a native read or control with the original identifiers. Review its saved draft before running it.</p><label for="recovery-tools">Available native operations</label><select id="recovery-tools"></select><button id="prepare-recovery">Prepare linked draft</button></section>
+              <details open><summary>Returned native result</summary><pre id="call-result"></pre></details>
+              <details><summary>Exact native arguments</summary><pre id="call-arguments"></pre></details>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section id="page-customers" class="page" hidden>
+        <div class="section-heading"><div><p class="eyebrow">Original seller-generated clients</p><h2>Customer receiving</h2></div><button id="refresh-customers">Refresh receiving</button></div>
+        <div class="columns">
+          <section class="panel"><h3>Receive or resume a customer</h3><p>Use the export identity returned by the merchant. Receiving keeps the original manifest, verified files and resumable transfer.</p>
+            <form id="customer-form">
+              <label for="customer-family">Original customer authority</label><select id="customer-family"><option value="core">Merchant release store</option><option value="opensearch">OpenSearch workspace deployment</option></select>
+              <div id="customer-workspace-field" hidden><label for="customer-workspace">Configured workspace alias</label><input id="customer-workspace" pattern="[a-z0-9][a-z0-9_-]{0,63}" autocomplete="off"></div>
+              <label for="customer-export">Original export ID</label><input id="customer-export" pattern="[a-z0-9][a-z0-9_-]{0,63}" required autocomplete="off">
+              <label for="customer-sha">Manifest SHA-256</label><input id="customer-sha" pattern="[a-f0-9]{64}" class="mono" required autocomplete="off">
+              <div class="actions"><button class="primary" type="submit">Receive original customer</button></div>
+            </form>
+          </section>
+          <section class="panel"><h3>Saved receiving</h3><div id="customer-list" class="select-list"></div></section>
+        </div>
+        <section id="customer-detail" class="panel" hidden><div class="section-heading"><div><p class="eyebrow">Retained customer export</p><h3 id="customer-title" class="break"></h3></div><span id="customer-state" class="tag"></span></div>
+          <dl id="customer-details" class="properties"></dl><p id="customer-progress" class="hint"></p>
+          <div class="actions"><button id="resume-customer">Resume same export</button><button id="pause-customer">Pause receiving</button><button id="download-customer">Download original customer archive</button></div>
+          <div class="table-wrap"><table><thead><tr><th>Original file</th><th>Bytes</th><th>SHA-256</th><th>Download</th></tr></thead><tbody id="customer-files"></tbody></table></div>
+          <details><summary>Complete receiving record</summary><pre id="customer-json"></pre></details>
+        </section>
+      </section>
+    </div>
+  </main>
+  <footer><span>Starforge merchant operations</span><span id="footer-identity"></span></footer>
+</body>
+</html>
