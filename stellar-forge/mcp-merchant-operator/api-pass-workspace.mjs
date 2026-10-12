@@ -171,6 +171,6 @@ export class MerchantApiPassWorkspaces{
  }
  close(){
   if(this.#close)return this.#close;this.#closing=true;
-  return this.#close=(async()=>{await Promise.allSettled([...this.#pending]);const results=await Promise.allSettled([...this.#exports.values(),...this.#operations.values()].map(value=>value.close()));if(results.some(row=>row.status==='rejected'))throw apiPassFailure('API_PASS_CLOSE_INCOMPLETE','One retained file reader did not finish closing.');})();
+  return this.#close=(async()=>{await Promise.allSettled([...this.#pending]);const results=await Promise.allSettled([...this.#exports.values(),...this.#operations.values()].map(value=>value.close()));if(results.some(row=>row.status==='rejected'))throw apiPassFailure('API_PASS_CLOSE_INCOMPLETE','One retained file reader did not finish closing.');})().catch(error=>{this.#close=null;throw error;});
  }
 }
