@@ -10,6 +10,9 @@ import { RPC_NETWORKS, validStrKey } from '../sf86-rpc-transfer-reconcile/terms.
 
 export const SCHEMA = 'stellar-forge.merchant-reconciliation.v1';
 const RECOVERED = 'RECOVERED_ORIGINAL_SF31_OUTCOME';
+const LOST_OUTPUT_PROOF = 'stellar-forge.sf88.lost-output-verified-transfer.v1';
+const LOST_OUTPUT_ORIGIN = 'ORIGINAL_SF43_VERIFIED_TRANSFER_RECOVERY';
+const LOST_OUTPUT_AUTHORITY = 'ORIGINAL_SF36_HMAC_JOURNAL_AND_SEALED_LOST_OUTPUT_RECOVERY';
 const sha = x => createHash('sha256').update(x).digest('hex');
 const hex64 = x => typeof x === 'string' && /^[a-f0-9]{64}$/.test(x);
 const paymentDecimal = x => typeof x === 'string' && /^[1-9][0-9]{0,38}$/.test(x)&&BigInt(x)<(1n<<127n);
@@ -133,6 +136,35 @@ function resolveTerms(event,terms,{routes,byObservedTerms}) {
     candidateCount:candidates.length,reason:candidates.length?REASON.ambiguousTerms:REASON.mappingMismatch};
 }
 
+// This is the original SF88 export after SF36 verifies its sealed recovery and
+// authenticated ledger. Its source is distinct from an SF86 RPC export; the
+// merchant event remains the original native SF98 settlement capture.
+function lostOutputProofCheck(p,fileDigest) {
+  const originalSourceKeys=['request','sourceConfig','configuration','attempt','workspaceConfig','workspaceManifest'];
+  const identifiers=value=>typeof value==='string'&&/^[A-Za-z0-9._:-]{1,160}$/.test(value);
+  const instant=value=>typeof value==='string'&&Number.isFinite(Date.parse(value));
+  const sources=p?.sourceHashes,evidence=p?.evidenceState;
+  if(!strictObject(p)||p.schema!==LOST_OUTPUT_PROOF||p.origin!==LOST_OUTPUT_ORIGIN||
+    p.proof!=='RPC_TX_AND_SEP41_TRANSFER_EVENT_MATCH'||p.reservation!=='ORIGINAL_SF36_FINALIZED'||
+    p.sellerReport!=='LOCAL_OUTPUT_LOST_AFTER_PAYMENT'||p.recordAuthority!==LOST_OUTPUT_AUTHORITY||
+    !hex64(fileDigest)||!identifiers(p.intentId)||!identifiers(p.attemptId)||
+    !hex64(p.configSha256)||!hex64(p.requestSha256)||!hex64(p.transaction)||!knownNetwork(p.network)||
+    !validStrKey(p.asset,'C')||!(validStrKey(p.payer,'G')||validStrKey(p.payer,'C'))||
+    !(validStrKey(p.recipient,'G')||validStrKey(p.recipient,'C'))||
+    !paymentDecimal(p.atomicAmount)||
+    !Number.isSafeInteger(p.ledger)||p.ledger<=0||typeof p.matchingEventId!=='string'||
+    p.matchingEventId.length<1||p.matchingEventId.length>1024||/[\u0000-\u001f\u007f]/.test(p.matchingEventId)||
+    !instant(p.observedAt)||!instant(p.completedAt)||Date.parse(p.completedAt)<Date.parse(p.observedAt)||
+    !hex64(p.sealedRecoverySha256)||!strictObject(sources)||
+    !originalSourceKeys.every(key=>hex64(sources[key]))||sources.configuration!==p.configSha256||
+    !(sources.body===null||hex64(sources.body))||!(sources.evidence===null||hex64(sources.evidence))||
+    !strictObject(evidence)||evidence.sha256!==sources.evidence||
+    !Number.isSafeInteger(evidence.bytes)||evidence.bytes<0||evidence.bytes>4_000_000)return false;
+  if(evidence.condition==='ABSENT')return evidence.bytes===0&&evidence.sha256===null;
+  if(evidence.condition==='EMPTY')return evidence.bytes===0&&evidence.sha256===sha(Buffer.alloc(0));
+  return evidence.condition==='INVALID_JSON'&&evidence.bytes>0&&hex64(evidence.sha256);
+}
+
 // Network and provider authority travel together; a transaction fingerprint on
 // another ledger cannot consume or invalidate this ledger's verification.
 export function indexOriginalVerifications(documents) {
@@ -141,6 +173,13 @@ export function indexOriginalVerifications(documents) {
   const ignored=[];
   for (const doc of documents) {
     const p=doc.data;
+    if(p?.schema===LOST_OUTPUT_PROOF) {
+      if(!lostOutputProofCheck(p,doc.fileDigest)) {
+        ignored.push({fileDigest:doc.fileDigest,reason:'INVALID_ORIGINAL_SF43_LOST_OUTPUT_PROOF'});continue;
+      }
+      const fingerprint=p.network+'\n'+sha(p.transaction),prior=index.get(fingerprint)||[];
+      prior.push({data:p,fileDigest:doc.fileDigest});index.set(fingerprint,prior);continue;
+    }
     if (!strictObject(p) || p.schema!=='stellar-forge.sf86.rpc-reconciliation.v1') {
       ignored.push({fileDigest:doc.fileDigest,reason:'NOT_AN_ORIGINAL_SF86_RESULT'}); continue;
     }
@@ -193,6 +232,14 @@ const publicRow = (e,proof,resolution,delivery,classification,reason) => {
   receiptFingerprint:e.receiptFingerprint,transactionFingerprint:e.transactionFingerprint ?? null,
   orderReferenceDigest:e.orderReference?sha(e.orderReference):null,
   transferEvidenceDigest:proof?.fileDigest ?? null,
+  ...(proof?.data.schema===LOST_OUTPUT_PROOF?{
+    verificationOrigin:LOST_OUTPUT_ORIGIN,verificationMatchBasis:'ORIGINAL_SF43_SELECTED_TRANSFER_EVENT',
+    buyerRecovery:{intentId:proof.data.intentId,attemptId:proof.data.attemptId,
+      configSha256:proof.data.configSha256,requestSha256:proof.data.requestSha256,
+      observedAt:proof.data.observedAt,completedAt:proof.data.completedAt,
+      sealedRecoverySha256:proof.data.sealedRecoverySha256,recordAuthority:proof.data.recordAuthority,
+      sourceHashes:{...proof.data.sourceHashes},evidenceState:{...proof.data.evidenceState}}
+  }:{}),
   ledger:classification==='OFFICIAL_TRANSFER_MATCHED'?proof.data.ledger:null,
   matchingEventDigest:classification==='OFFICIAL_TRANSFER_MATCHED'?sha(proof.data.matchingEventId):null,
   transfer:classification,delivery,exception:reason,
