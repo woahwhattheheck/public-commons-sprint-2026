@@ -3,6 +3,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { openRecoveryWorkspace } from './model.mjs';
+import { publishRecoveryWorkspaceLaunch, retireRecoveryWorkspaceLaunch, recoveryLaunchView, RECOVERY_LAUNCH_FILE } from './connection.mjs';
 import { readBrowserAssets } from '../../distribution/browser-assets.mjs';
 
 const MAX_BODY = 65536;
@@ -14,7 +15,7 @@ function fail(code, message, status = 400) {
 function responseError(error) {
   const value = { code: String(error.code ?? 'RECOVERY_WORKSPACE_FAILED').slice(0, 100),
     message: String(error.message ?? 'The recovery workspace request failed').slice(0, 500) };
-  for (const key of ['providerCode', 'requestId', 'putRequestId', 'retryAfter', 'retryable', 'mayHaveCommitted'])
+  for (const key of ['status', 'providerCode', 'originalCode', 'requestId', 'putRequestId', 'retryAfter', 'retryable', 'mayHaveCommitted', 'reconciliationCode', 'reconciliationStatus'])
     if (['string', 'number', 'boolean'].includes(typeof error[key])) value[key] = error[key];
   return value;
 }
@@ -88,7 +89,7 @@ function page(input) {
 
 // An embedding host can mount this exact handler after providing its owned
 // workspace and exact loopback origin. Sensitive API responses require the token.
-export function createRecoveryHandler({ workspace, token, origin }) {
+export function createRecoveryHandler({ workspace, token, origin, connection = null, isDraining = () => false }) {
   const expected = new URL(origin);
   if (expected.protocol !== 'http:' || expected.hostname !== '127.0.0.1' ||
       expected.pathname !== '/' || expected.search || expected.hash || expected.username || expected.password)
@@ -97,6 +98,7 @@ export function createRecoveryHandler({ workspace, token, origin }) {
   const assets = new Map();
   return async function recoveryHandler(req, res) {
     try {
+      if (isDraining()) fail('WORKSPACE_DRAINING', 'The original recovery listener is draining; read its next launch before continuing', 503);
       if (!['127.0.0.1', '::ffff:127.0.0.1', '::1'].includes(req.socket.remoteAddress))
         fail('WORKSPACE_LOOPBACK_REQUIRED', 'Recovery workspace accepts local connections only', 403);
       if (req.headers.host !== expected.host) fail('WORKSPACE_HOST_REJECTED', 'Open the printed recovery workspace address', 403);
@@ -122,6 +124,11 @@ export function createRecoveryHandler({ workspace, token, origin }) {
         let value;
         switch (url.pathname) {
           case '/api/state': query(url, []); value = await workspace.state(); break;
+          case '/api/connection':
+            query(url, []);
+            if (!connection) fail('WORKSPACE_CONNECTION_NOT_AVAILABLE', 'This embedding host did not publish an original listener connection', 409);
+            value = { ...connection, identity: await workspace.identity() }; break;
+          case '/api/request': { const q = query(url, ['profile', 'id']); value = await workspace.request(q.profile, q.id); break; }
           case '/api/requests': { const q = query(url, ['cursor', 'limit']); value = await workspace.requests(page(q)); break; }
           case '/api/bundles': { const q = query(url, ['profile']); value = await workspace.localBundles(q.profile); break; }
           case '/api/operations': { const q = query(url, ['profile', 'cursor', 'limit']); value = await workspace.operations(q.profile, page(q)); break; }
@@ -134,6 +141,7 @@ export function createRecoveryHandler({ workspace, token, origin }) {
       if (req.method === 'POST') {
         query(url, []);
         const value = await body(req);
+        if (isDraining()) fail('WORKSPACE_DRAINING', 'The original recovery listener is draining; read the retained request before continuing', 503);
         let result;
         switch (url.pathname) {
           case '/api/review': result = await workspace.review(value); break;
@@ -158,7 +166,8 @@ export async function serveRecoveryWorkspace({ configFile, directory, port = 848
     fail('WORKSPACE_PORT_INVALID', 'Choose a TCP port from 0 through 65535');
   const workspace = await openRecoveryWorkspace({ configFile, directory });
   const token = randomBytes(32).toString('hex');
-  let handler, closePromise;
+  let handler, closePromise, launch;
+  let draining = false;
   const server = createServer((req, res) => handler ? handler(req, res) : send(res, 503, { error: { code: 'WORKSPACE_STARTING', message: 'Recovery workspace is starting' } }));
   server.requestTimeout = 120000;
   server.headersTimeout = 15000;
@@ -173,19 +182,28 @@ export async function serveRecoveryWorkspace({ configFile, directory, port = 848
       server.listen(port, '127.0.0.1');
     });
     const origin = 'http://127.0.0.1:' + server.address().port;
-    handler = createRecoveryHandler({ workspace, token, origin });
+    launch = await publishRecoveryWorkspaceLaunch({ directory, identity: await workspace.identity(), origin, token });
+    handler = createRecoveryHandler({ workspace, token, origin, connection: recoveryLaunchView(launch), isDraining: () => draining });
     const close = ({ cancelActive = true } = {}) => {
+      draining = true;
       if (!closePromise) closePromise = (async () => {
         const stopped = new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
         server.closeIdleConnections();
-        try { await workspace.close({ cancelActive }); await stopped; }
+        let retirementError;
+        // Retire the session while this server still holds the original writer lease.
+        // A later server can then publish its own launch without an unlink race.
+        try { await retireRecoveryWorkspaceLaunch({ directory, instanceId: launch.instanceId }); }
+        catch (error) { retirementError = error; }
+        try { await workspace.close({ cancelActive }); await stopped; if (retirementError) throw retirementError; }
         finally { finish(); }
       })();
       return closePromise;
     };
-    return { server, workspace, origin, url: origin + '/#token=' + token, close, closed };
+    return { server, workspace, origin, url: origin + '/#token=' + token,
+      connection: recoveryLaunchView(launch), connectionFile: directory + '/' + RECOVERY_LAUNCH_FILE, close, closed };
   } catch (error) {
     server.close();
+    if (launch) await retireRecoveryWorkspaceLaunch({ directory, instanceId: launch.instanceId }).catch(() => {});
     await workspace.close({ cancelActive: true }); finish(); throw error;
   }
 }
