@@ -56,7 +56,6 @@ export async function researchSection(store,id,{section,revision,offset=0,limit=
     next:page.nextOffset===null?null:{revision:metadata.revision,offset:page.nextOffset,limit}};
 }
 
-  'findings-added','findings-removed','findings-changed']);
 export function researchComparison(value,{section='overview',offset=0,limit=30}={}){
   const sections={added:value.added,removed:value.removed,changed:value.changed,questions:value.questions,
     editions:value.editions,availability:value.availability,'findings-added':value.findings.added,

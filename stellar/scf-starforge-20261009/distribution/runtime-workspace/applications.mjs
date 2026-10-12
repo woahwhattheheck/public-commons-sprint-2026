@@ -16,6 +16,7 @@ import { pathToFileURL } from 'node:url';
 import { blockscoutApplication, prepareBlockscoutApplication } from './application-blockscout.mjs';
 import { mppApplication, prepareMppApplication } from './application-mpp.mjs';
 import { ndjsonApplication, prepareNdjsonApplication } from './application-ndjson.mjs';
+import { kafkaApplication, prepareKafkaApplication } from './application-kafka.mjs';
 import { cheesecakeApplication, prepareCheesecakeApplication } from './application-cheesecake.mjs';
 import { odataApplication, prepareODataApplication } from '../../sf30-seller-sdk/odata/live/applications.mjs';
 import { secEdgarApplication, prepareSecEdgarApplication } from './application-sec-edgar.mjs';
@@ -90,6 +91,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   blockscoutApplication(common),
   mppApplication(common),
   ndjsonApplication(common),
+  kafkaApplication(common),
   cheesecakeApplication(common),
   odataApplication(common),
   secEdgarApplication(common),
@@ -176,7 +178,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   { id: 'merchant-recovery', command: 'merchant-recovery-remote',
     requiredSource: 'stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/cli.mjs',
     title: 'Merchant recovery', terminal: false,
-    description: 'Review retained snapshots, off-host inventory, original transfers and cold restore in the original recovery workspace. Select a runtime with its S3 feature.',
+    description: 'Capture and verify local snapshots, prepare original restored publishers, and use a configured S3 store for off-host transfer and cold restore.',
     fields: [field('hostConfig', 'Original private recovery host configuration', 'path', true),
       field('workspaceDirectory', 'Private recovery workspace directory', 'path', true,
         'An existing directory or one new directory in an existing private parent. Original transfer journals remain at the host-selected paths.'), ...common] },
@@ -420,6 +422,11 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
       inputPath, selectedExecutable, runtimeDirectory, applicationEnvironment,
     });
     args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'kafka') {
+    const prepared = await prepareKafkaApplication(settings, {
+      inputPath, selectedExecutable, runtimeDirectory, applicationEnvironment,
+    });
+    args.push(...prepared.args); inputs.push(...prepared.inputs);
   } else if (type.id === 'ndjson') {
     const prepared = await prepareNdjsonApplication(settings, {
       inputPath, selectedExecutable, runtimeDirectory, applicationEnvironment,
@@ -538,10 +545,14 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
       }
     };
     for (const profile of original.host.profiles) {
-      await retain(profile.storeConfig, 'file');
+      if (profile.storeConfig != null) await retain(profile.storeConfig, 'file');
       await retain(profile.operations, 'directory', true);
       for (const root of profile.bundleRoots) await retain(root.directory);
       for (const plan of profile.capturePlans ?? []) await retain(plan.planFile, 'file', true);
+      for (const restored of profile.publisherRestores ?? []) {
+        await retain(restored.bundleDirectory, 'directory', true);
+        await retain(restored.restoreDirectory, 'directory', true);
+      }
       await retain(profile.downloadRoot);
       await retain(profile.restoreRoot);
     }
@@ -579,8 +590,9 @@ function resourceKey(type, settings) {
   if (type.id === 'duckdb-agent') return hash({ family: 'native-mcp', directory: settings.nativeDirectory });
   const value = settings.outputParent ?? settings.workspaceDirectory ?? settings.directory ??
     settings.outputDirectory ?? settings.stateDirectory ?? settings.datasetFile;
-  // Feeds, repository metadata and XML retain the same original SQLite workspace and writer.
-  const family = ['rss-atom', 'oai-repository'].includes(type.id) ? 'xml' : type.id.endsWith('-publisher') ? 'publisher' : type.id;
+  // Source applications share the original SQLite workspace and its sole writer.
+  const family = ['rss-atom', 'oai-repository'].includes(type.id) ? 'xml' : type.id === 'kafka' ? 'ndjson' :
+    type.id.endsWith('-publisher') ? 'publisher' : type.id;
   return hash({ family, directory: value });
 }
 async function application(root, id) {
