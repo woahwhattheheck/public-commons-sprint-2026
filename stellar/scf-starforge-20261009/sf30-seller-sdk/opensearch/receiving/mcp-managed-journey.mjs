@@ -78,8 +78,8 @@ export async function receiveManagedOpenSearchMcp({connection,workspace,director
   }
   try {
     const names = openSearchWorkspaceTools((name)=>name);
-    assert.equal(names.filter(name=>name.startsWith('merchant_opensearch_deployment_')).length,17);
-    assert.equal(names.length,43);
+    assert.equal(names.filter(name=>name.startsWith('merchant_opensearch_deployment_')).length,18);
+    assert.equal(names.length,44);
     await call('open');
     const initial = await call('deployment_status');
     assert.equal(initial.deployment.consoleOpen,false,'Use retained receiving after the original owner has handed over its journal.');
@@ -121,6 +121,9 @@ export async function receiveManagedOpenSearchMcp({connection,workspace,director
     const selected=exports.find(value=>value.state==='COMPLETION_RETAINED');
     assert.ok(selected,'The original owned seller retained a customer export.');
     const exportId=selected.exportId, inspected=await call('deployment_client',{exportId});
+    const recovered=await call('deployment_adopt_client',{exportId,expectedFilesSha256:inspected.filesSha256});
+    assert.equal(recovered.state,'COMPLETE'); assert.equal(recovered.reused,true);
+    report.stages.push('ORIGINAL_CUSTOMER_COMPLETION_RECOVERY');
     const manifest=await call('deployment_manifest',{exportId});
     assert.equal(inspected.exportId,exportId); report.exportId=exportId;
     report.manifestSha256=manifest.manifestFile.sha256;
