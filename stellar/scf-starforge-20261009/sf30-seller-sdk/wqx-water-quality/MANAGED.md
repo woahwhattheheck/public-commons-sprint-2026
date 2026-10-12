@@ -15,9 +15,10 @@ merchant and customer job workspaces.
 Select a Stellar Forge runtime whose source contains this complete directory,
 the original Applications manager and the source-owned
 distribution/contributions/wqx-water-quality.json registration. The distribution
-includes both water-quality and water-quality-managed commands, the water
-project and analysis SDK exports, the scientific job export, and all five
-original browser assets, including the bulk receiving table.
+includes the water-quality, water-quality-managed and water-quality-decisions
+commands, the water project and analysis SDK exports, scientific jobs, the
+complete decision workflow/model/table SDK exports, and all five original
+browser assets, including the bulk receiving table.
 
 In Applications, choose **Water quality and Open Waters**. Give it an operator
 label and a private project directory. An existing project reopens its original
