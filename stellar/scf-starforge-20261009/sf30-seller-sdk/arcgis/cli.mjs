@@ -1,5 +1,5 @@
 // MIT. ArcGIS capture + original retained source publisher commands.
-import { resolve, dirname } from 'node:path';
+import { resolve, dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createArcgisCapture, importArcgisCapture, continueArcgisCapture, captureStatus } from './capture.mjs';
 import { openArcgisPublisher, createArcgisSource } from './publisher.mjs';
@@ -9,6 +9,8 @@ import { bytes, readJson, createFile, fault } from '../postgres/publisher/files.
 
 const HELP = `ArcGIS retained dataset publisher (Linux, Node 22.16+, util-linux flock)
 
+  workbench --workspace DIR [--create --state DATASET_DIR] [--source SOURCE.json]
+            [--releases RELEASE_STORE] [--port 8457] [--seller LOCAL_ORIGIN --resource HTTPS_RESOURCE]
   capture --capture NEW_DIR --input CONNECTION.json [--prepare-only]
   capture-import --capture NEW_DIR --input RETAINED_FILES.json [--prepare-only]
   capture-continue --capture DIR [--max-pages NUMBER]
@@ -39,13 +41,13 @@ exact representation and cover the supplied files. Use the local publisher UI fo
 typed field selection, candidate review, original publication and buyer preparation.
 Source configuration pins the complete capture digest; refreshes create a new source
 capture and reviewed source plan. See README.md for the complete receiving workflow.`;
-const CUSTOM = new Set(['capture', 'capture-import', 'capture-continue', 'capture-status', 'source-create', 'template', 'receiving-plan', 'receive', 'deployment-export', 'deployment-status', 'deployment-stage', 'deployment-receiving']);
+const CUSTOM = new Set(['workbench', 'capture', 'capture-import', 'capture-continue', 'capture-status', 'source-create', 'template', 'receiving-plan', 'receive', 'deployment-export', 'deployment-status', 'deployment-stage', 'deployment-receiving']);
 function parse(args) {
-  const options = {}, allowed = new Set(['--capture', '--input', '--prepare-only', '--max-pages', '--out', '--query', '--columns', '--workspace', '--run', '--delivery', '--plan', '--seller', '--package', '--releases', '--id', '--label', '--runtime']);
+  const options = {}, allowed = new Set(['--capture', '--input', '--prepare-only', '--max-pages', '--out', '--query', '--columns', '--workspace', '--run', '--delivery', '--plan', '--seller', '--package', '--releases', '--id', '--label', '--runtime', '--state', '--source', '--port', '--create', '--resource']);
   for (let i = 0; i < args.length; i++) {
     const key = args[i];
     if (!allowed.has(key) || Object.hasOwn(options, key)) throw fault('INVALID_OPTION', key);
-    if (key === '--prepare-only') { options[key] = true; continue; }
+    if (key === '--prepare-only' || key === '--create') { options[key] = true; continue; }
     if (!args[i + 1] || args[i + 1].startsWith('--')) throw fault('OPTION_VALUE_REQUIRED', key);
     options[key] = args[++i];
   }
@@ -73,6 +75,25 @@ export async function main(argv = process.argv.slice(2)) {
   if (!CUSTOM.has(command)) return publisherMain(argv, { openPublisher: openArcgisPublisher, sourceName: 'ArcGIS', defaultPort: 8457 });
   const options = parse(args);
   let result;
+  if (command === 'workbench') {
+    const directory = resolve(required(options, '--workspace')), create = options['--create'] === true;
+    const port = options['--port'] === undefined ? 8457 : Number(options['--port']);
+    if (!Number.isInteger(port) || port < 0 || port > 65535 ||
+        options['--port'] !== undefined && !/^(0|[1-9][0-9]*)$/.test(options['--port'])) throw fault('INTEGER_OPTION_REQUIRED');
+    const publisher = await openArcgisPublisher({ directory, create,
+      sourceFile: options['--source'] ? resolve(options['--source']) : create ? join(directory,'arcgis','initial-source.json') : undefined,
+      targetDirectory: create ? resolve(required(options,'--state')) : options['--state'] ? resolve(options['--state']) : undefined,
+      seller: options['--seller'] ?? null, resource: options['--resource'] ?? null });
+    try {
+      const { startArcgisWorkbenchServer } = await import('./workbench/server.mjs');
+      const service = await startArcgisWorkbenchServer({ publisher, port,
+        releaseDirectory: options['--releases'] ? resolve(options['--releases']) : undefined });
+      print({ url:service.url, workbenchId:service.workbench.workbenchId, workspace:directory,
+        target:publisher.settings.targetDirectory });
+      for (const signal of ['SIGINT','SIGTERM']) process.once(signal,() => service.close().catch(() => { process.exitCode=1; }));
+      return service;
+    } catch(issue) { await publisher.close(); throw issue; }
+  }
   if (command === 'template') result = await template(options);
   else if (command === 'receiving-plan') {
     const publisher = await openArcgisPublisher({ directory: resolve(required(options, '--workspace')) });

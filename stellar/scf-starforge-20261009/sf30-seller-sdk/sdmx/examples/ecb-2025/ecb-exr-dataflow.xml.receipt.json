@@ -1,0 +1,30 @@
+{
+  "url": "https://data-api.ecb.europa.eu/service/dataflow/ECB/EXR/latest?references=all",
+  "final_url": "https://data-api.ecb.europa.eu/service/dataflow/ECB/EXR/latest?references=all",
+  "request_headers": {
+    "Accept": "application/vnd.sdmx.structure+xml;version=2.1",
+    "User-Agent": "Commons-SDMX-source-capture/1.0",
+    "Accept-Encoding": "identity"
+  },
+  "status": 200,
+  "response_headers": {
+    "Server": "myracloud",
+    "Date": "Sun, 11 Oct 2026 23:55:59 GMT",
+    "Content-Type": "application/vnd.sdmx.structure+xml;version=2.1",
+    "Transfer-Encoding": "chunked",
+    "Connection": "close",
+    "Cache-Control": "no-cache, no-store, max-age=0, must-revalidate",
+    "Content-Disposition": "attachment;filename=data.xml",
+    "Expires": "0",
+    "Pragma": "no-cache",
+    "Strict-Transport-Security": "max-age=31536000 ; includeSubDomains",
+    "Vary": "origin, access-control-request-method, access-control-request-headers",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "X-Xss-Protection": "0"
+  },
+  "retrieved_at": "2026-10-11T23:56:00.078733+00:00",
+  "path": "/dev/shm/f1cb-sdmx-source/ecb-exr-dataflow.xml",
+  "bytes": 497308,
+  "sha256": "7cae04f568dcacb9abb8ee900aa9226129dceccd675691a8ad77baf43fb5f6ab"
+}

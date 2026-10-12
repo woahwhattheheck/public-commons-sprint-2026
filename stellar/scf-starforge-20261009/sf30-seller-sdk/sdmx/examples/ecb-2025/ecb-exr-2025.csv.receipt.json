@@ -1,0 +1,30 @@
+{
+  "url": "https://data-api.ecb.europa.eu/service/data/ECB,EXR,1.0/A+D+M+Q.GBP+USD.EUR.SP00.A?startPeriod=2025-01-01&endPeriod=2025-12-31&detail=full",
+  "final_url": "https://data-api.ecb.europa.eu/service/data/ECB,EXR,1.0/A+D+M+Q.GBP+USD.EUR.SP00.A?startPeriod=2025-01-01&endPeriod=2025-12-31&detail=full",
+  "request_headers": {
+    "Accept": "text/csv",
+    "Accept-Encoding": "identity",
+    "User-Agent": "Commons-SDMX-source-capture/1.0"
+  },
+  "status": 200,
+  "response_headers": {
+    "Server": "myracloud",
+    "Date": "Mon, 12 Oct 2026 00:06:38 GMT",
+    "Content-Type": "text/csv",
+    "Transfer-Encoding": "chunked",
+    "Connection": "close",
+    "Cache-Control": "max-age=30",
+    "Content-Disposition": "attachment;filename=data.csv",
+    "Last-Modified": "Fri, 09 Oct 2026 13:57:17 GMT",
+    "Strict-Transport-Security": "max-age=31536000 ; includeSubDomains",
+    "Vary": "accept",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "X-Xss-Protection": "0",
+    "Expires": "Mon, 12 Oct 2026 00:07:08 GMT"
+  },
+  "retrieved_at": "2026-10-12T00:06:39.138761+00:00",
+  "path": "ecb-exr-2025.csv",
+  "bytes": 116432,
+  "sha256": "66a17e843673c01c32f05ede29e2f8bec6dcfb55c3fa6a26897011ed161adc97"
+}
