@@ -31,10 +31,10 @@ function native(operation, fields, required, readOnly = false) {
 native('status', [], [], true);
 native('catalog', ['source_ids','search','offset','limit'], [], true);
 native('source.rows', ['source_id','geography','measure','offset','limit'], ['source_id'], true);
-native('source.import', ['provider','source','node'], ['provider','source']);
+native('source.import', ['provider','source','node','expected_input_sha256'], ['provider','source']);
 native('source.receive_files', ['provider','checkout','session','node','timeout','expected_capture_id'], ['provider','checkout','session']);
 native('source.receive_rows', ['source_id','projection','checkout','session','node','timeout'], ['source_id','projection','checkout','session']);
-native('source.receive_scan', ['scan_file','provider','source_id','projection','node','expected_capture_id'], ['scan_file']);
+native('source.receive_scan', ['scan_file','provider','source_id','projection','node','expected_capture_id','expected_input_sha256'], ['scan_file']);
 native('mapping.template', ['name'], [], true);
 native('mapping.fields', [], [], true);
 native('portfolio.freeze', ['value'], ['value']);
@@ -50,9 +50,9 @@ native('export.create', ['comparison_id','expected_version','operator','label'],
 native('export.verify', ['directory'], ['directory'], true);
 native('export.archive', ['export_id'], ['export_id']);
 native('property.status', [], [], true);
-native('property.document.import', ['path','metadata'], ['path','metadata']);
+native('property.document.import', ['path','metadata','expected_input_sha256'], ['path','metadata']);
 native('property.document.read', ['document_id'], ['document_id'], true);
-native('property.intake', ['document_ids','operator','label','packet','path','previous_id','note'], ['document_ids','operator','label']);
+native('property.intake', ['document_ids','operator','label','packet','path','previous_id','note','expected_input_sha256'], ['document_ids','operator','label']);
 native('property.study.freeze', ['value','document_ids'], ['value','document_ids']);
 native('property.edition.read', ['edition_id','search','offset','limit'], ['edition_id'], true);
 native('property.edition.packet', ['edition_id'], ['edition_id'], true);

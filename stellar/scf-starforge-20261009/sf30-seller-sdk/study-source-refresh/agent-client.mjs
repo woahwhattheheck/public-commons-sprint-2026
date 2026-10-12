@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { STUDY_AGENT_SCHEMA, STUDY_NATIVE_OPERATIONS } from './agent-contracts.mjs';
 import { STUDY_HERE, STUDY_INSTANCE_SCHEMA, STUDY_MAX_PACKET_BYTES, STUDY_MAX_JSON_BYTES, STUDY_REQUEST_BYTES,
-  STUDY_CHUNK_BYTES, canonical, decode, hash, failure, need, exact, sha, integer, absolute, privateDirectory,
+  STUDY_CHUNK_BYTES, canonical, decode, hash, failure, need, exact, sha, integer, absolute, privateDirectory, plain,
   readFile, fileHandle, verifyHandle, sourceSelection, inspectStudyBinding } from './agent-local.mjs';
 export { inspectStudyBinding } from './agent-local.mjs';
 export { STUDY_AGENT_SCHEMA, STUDY_NATIVE_OPERATIONS } from './agent-contracts.mjs';
@@ -130,9 +130,15 @@ async function transport(connection, route, {body, inputFile, outputFile, conten
 }
 
 export class StudyWorkspaceClient {
-  #binding; #connection = null; #owned = null; #opening = null; #detaching = false; #closing = false; #close = null;
+  #binding; #environment; #connection = null; #owned = null; #opening = null; #detaching = false; #closing = false; #close = null;
   #pending = new Set();
-  constructor(binding) { this.#binding = binding; }
+  constructor(binding, options = {}) {
+    exact(options, ['environment']);
+    const environment = options.environment ?? process.env;
+    need(plain(environment) && Object.values(environment).every(value => typeof value === 'string'),
+      'STUDY_ENVIRONMENT_INVALID', 'Use the original host-selected process environment.');
+    this.#binding = binding; this.#environment = Object.freeze({...environment});
+  }
   get summary() {
     return {schema:STUDY_AGENT_SCHEMA, label:this.#binding.label, selectionSha256:this.#binding.selectionSha256,
       allowStart:this.#binding.allowStart, state:this.#connection ? this.#owned ? 'OWNED_ORIGINAL_OPERATOR' : 'BORROWED_ORIGINAL_OPERATOR' : 'CLOSED',
@@ -202,7 +208,7 @@ export class StudyWorkspaceClient {
         'The reviewed original source selection changed before startup.');
       const child = spawn(this.#binding.pythonExecutable, ['-B',join(STUDY_HERE,'cli.py'),
         '--workspace',this.#binding.directory,'serve','--port','0'],
-        {stdio:['ignore','pipe','pipe'],windowsHide:true,env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'}});
+        {stdio:['ignore','pipe','pipe'],windowsHide:true,env:{...this.#environment,PYTHONDONTWRITEBYTECODE:'1'}});
       const owned = {child,done:null}; this.#owned = owned;
       owned.done = new Promise(resolveDone => {
         child.once('error', error => resolveDone({code:null,signal:null,error:error.code}));
