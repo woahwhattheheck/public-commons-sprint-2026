@@ -1,7 +1,7 @@
 // MIT — Private application state. Financial authority stays in the original SF36 ledger.
 import { constants } from 'node:fs';
 import { inspect } from 'node:util';
-import { open, mkdir, lstat, rename, link, unlink } from 'node:fs/promises';
+import { open, mkdir, lstat, readdir, rename, link, unlink } from 'node:fs/promises';
 import { resolve, dirname, join, isAbsolute } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 
@@ -90,6 +90,52 @@ export async function exists(path) {
   try { await lstat(path); return true; }
   catch (error) { if (error.code === 'ENOENT') return false; throw error; }
 }
+
+/**
+ * Recognize complete leftovers from writeBytes without removing or adopting them.
+ * Callers still validate every published output and its original binding marker.
+ */
+export async function matchingWriteTemporaries(directory, expectedBytes) {
+  need(Array.isArray(expectedBytes) && expectedBytes.every(value => value instanceof Uint8Array),
+    'WRITE_TEMPORARY_BYTES_REQUIRED');
+  const expected = expectedBytes.map(value => Buffer.from(value.buffer, value.byteOffset, value.byteLength));
+  directory = await privateDirectory(directory, { create: false });
+  const matches = new Set();
+  for (const name of await readdir(directory)) {
+    if (!/^\.write-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(name)) continue;
+    const path = join(directory, name);
+    let handle;
+    try {
+      const named = await lstat(path);
+      if (!named.isFile() || !expected.some(value => value.length === named.size)) continue;
+      handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
+      const before = await handle.stat();
+      if (!before.isFile() || before.dev !== named.dev || before.ino !== named.ino ||
+          before.size !== named.size || process.platform !== 'win32' &&
+          ((before.mode & 0o077) !== 0 || process.getuid && before.uid !== process.getuid())) continue;
+      let candidates = expected.filter(value => value.length === before.size), offset = 0;
+      const chunk = Buffer.allocUnsafe(Math.min(65536, before.size + 1));
+      while (candidates.length && offset < before.size) {
+        const { bytesRead } = await handle.read(chunk, 0, Math.min(chunk.length, before.size - offset), offset);
+        if (bytesRead === 0) { candidates = []; break; }
+        candidates = candidates.filter(value => chunk.subarray(0, bytesRead).equals(value.subarray(offset, offset + bytesRead)));
+        offset += bytesRead;
+      }
+      if (!candidates.length) continue;
+      const tail = await handle.read(chunk, 0, 1, offset);
+      const after = await handle.stat(), current = await lstat(path);
+      if (tail.bytesRead === 0 && current.isFile() && current.dev === before.dev && current.ino === before.ino &&
+          after.size === before.size && after.mtimeMs === before.mtimeMs && after.ctimeMs === before.ctimeMs)
+        matches.add(name);
+    } catch (error) {
+      if (!['ENOENT', 'ELOOP'].includes(error.code)) throw error;
+    } finally {
+      if (handle) await handle.close();
+    }
+  }
+  return matches;
+}
+
 export async function writeBytes(path, data, { exclusive = false } = {}) {
   path = absolute(path);
   const temporary = join(dirname(path), `.write-${randomUUID()}`);
