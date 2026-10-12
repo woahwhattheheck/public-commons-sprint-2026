@@ -16,6 +16,7 @@ import {createSessionStore, parseView, parseSpeed, parseCount, resumeCursor, del
 import {createMatchArchiveStore, createMatchPackage, MAX_PACKAGE_BYTES, MAX_REVIEW_BYTES} from './match_archive.mjs';
 import {createCoachComparison} from './coach_review.mjs';
 import {createBroadcastReport, broadcastCandidates, broadcastHtml, broadcastVtt} from './broadcast_handover.mjs';
+import {createBroadcastRundown} from './broadcast_rundown.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -23,10 +24,10 @@ const FIXTURE = JSON.parse(await readFile(join(ROOT, 'data', 'events.json'), 'ut
 validateFixture(FIXTURE);
 const TYPES = {'/':'text/html; charset=utf-8', '/app.js':'text/javascript; charset=utf-8', '/archive.js':'text/javascript; charset=utf-8', '/player-recap.js':'text/javascript; charset=utf-8', '/player_recap.mjs':'text/javascript; charset=utf-8', '/engine.mjs':'text/javascript; charset=utf-8', '/style.css':'text/css; charset=utf-8',
   '/coach-review':'text/html; charset=utf-8', '/coach-review.js':'text/javascript; charset=utf-8', '/coach-review.css':'text/css; charset=utf-8',
-  '/broadcast-handover':'text/html; charset=utf-8', '/broadcast-handover.js':'text/javascript; charset=utf-8', '/broadcast-handover.css':'text/css; charset=utf-8'};
+  '/broadcast-handover':'text/html; charset=utf-8', '/broadcast-handover.js':'text/javascript; charset=utf-8', '/broadcast-handover.css':'text/css; charset=utf-8', '/rundown-builder.js':'text/javascript; charset=utf-8'};
 const ROUTES = {'/': 'index.html', '/app.js': 'app.js', '/archive.js': 'archive.js', '/player-recap.js': 'player-recap.js', '/player_recap.mjs': '../src/player_recap.mjs', '/engine.mjs': '../src/engine.mjs', '/style.css': 'style.css',
   '/coach-review':'coach-review.html', '/coach-review.js':'coach-review.js', '/coach-review.css':'coach-review.css',
-  '/broadcast-handover':'broadcast-handover.html', '/broadcast-handover.js':'broadcast-handover.js', '/broadcast-handover.css':'broadcast-handover.css'};
+  '/broadcast-handover':'broadcast-handover.html', '/broadcast-handover.js':'broadcast-handover.js', '/broadcast-handover.css':'broadcast-handover.css', '/rundown-builder.js':'rundown-builder.js'};
 const DEFAULT_PORT = 3167;
 // Existing local replay remains free; admitted paid attempts count even on failure.
 const foundryAdmission = createFoundryAdmission();
@@ -193,6 +194,16 @@ export const server = createServer(async (req, res) => {
     if (req.method === 'POST' && path === '/api/coach-review') {
       return send(res, 200, await createCoachComparison(await archives(),
         objectBody(await getJSON(req, 16384)), req.headers['x-counterpress-library']));
+    }
+    if (req.method === 'POST' && path === '/api/broadcast-rundown') {
+      const body = objectBody(await getJSON(req, MAX_REVIEW_BYTES));
+      const {archive, match} = await (await archives()).open(body.id, req.headers['x-counterpress-library']);
+      const review = Object.hasOwn(body, 'broadcast') ? {...archive.review, broadcast: body.broadcast} : archive.review;
+      const packet = createMatchPackage(match, review);
+      const broadcast = packet.review.broadcast ?? {
+        title: packet.review.title, count: packet.review.cursor, view: packet.review.view, cues: [],
+      };
+      return send(res, 200, createBroadcastRundown(packet.match, broadcast, body.selection));
     }
     if (req.method === 'POST' && path === '/api/broadcast-handover') {
       const body = objectBody(await getJSON(req, MAX_REVIEW_BYTES));

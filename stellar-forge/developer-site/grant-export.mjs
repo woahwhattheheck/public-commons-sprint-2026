@@ -3,7 +3,9 @@ import {resolve, dirname, join} from 'node:path';
 import {createHash, randomUUID} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 import {parseArgs} from 'node:util';
-import {ANSWERS, ENVELOPE, MAX_BYTES, validateDraft, makeSource, createDraft, importFormMap, exportFormMap, fieldStatus, measureText, outputText, applicationOutput} from './dist/grant-submission-core.mjs';
+import {ENVELOPE, MAX_BYTES, validateDraft, makeSource, createDraft, importFormMap, exportFormMap, measureText, applicationOutput} from './dist/grant-submission-core.mjs';
+import {emptyHandover} from './dist/grant-handover-core.mjs';
+import {openDraftEnvelope, createDraftEnvelope, verifyHandover, createSourceBundle, retainSourceBundle, prepareSubmission} from './dist/grant-handover-source.mjs';
 
 // MIT. Command-line receiving for the original SCF submission model.
 const EXPORT_SCHEMA = 'stellar-forge.grant-cli-export.v1';
@@ -49,42 +51,46 @@ export function renderExportReview(prepared) {
     cards + '<footer>Each text file contains exactly its displayed value. Printing includes complete answers across as many pages as needed. Use the original submission workspace to edit the draft or its issuer field map.</footer></main><script>' + script + '</script></body></html>\n';
 }
 
-export function prepareGrantExport(input, {selection='auto', format='plain', generatedAt=new Date().toISOString()} = {}) {
-  const draft = copy(validateDraft(input));
+export async function prepareGrantExport(input, {selection='auto', format='plain', generatedAt=new Date().toISOString()} = {}) {
+  let draft = copy(validateDraft(input));
   requireValue(['auto','answers','fields'].includes(selection), 'Select auto, answers or fields.');
   requireValue(['plain','markdown'].includes(format), 'Select plain or markdown output.');
   requireValue(Number.isFinite(Date.parse(generatedAt)), 'Use a valid export date.');
   const selected = selection === 'auto' ? (draft.fields.length ? 'fields' : 'answers') : selection;
   requireValue(selected !== 'fields' || draft.fields.length > 0, 'This draft has no mapped issuer fields.');
-  const original = selected === 'fields' ? draft.fields : draft.answers.map(answer => ({
-    id: answer.id, label: ANSWERS.find(item => item[0] === answer.id)[1], text: answer.text, answerIds:[answer.id],
-    wordLimit:null, characterLimit:null, characterMethod:'unspecified'
-  }));
-  const fields = original.map((field, index) => {
-    const value = outputText(field.text, format);
-    const status = selected === 'fields' ? fieldStatus(field, draft.form, format) : {counts:measureText(value), issues:[]};
-    return {id:field.id, label:field.label || 'Unlabeled form field', answerIds:[...field.answerIds], filename:fieldFilename(index,field.id), value,
-      counts:status.counts, wordLimit:field.wordLimit, characterLimit:field.characterLimit, characterMethod:field.characterMethod,
-      issues:[...status.issues], overLimit:exceeded(field,status.counts)};
+  draft.handover ||= emptyHandover();
+  Object.assign(draft.handover.selection,{outputKind:selected,format});
+  const received = await prepareSubmission(draft,{at:generatedAt});
+  draft = received.draft;
+  const edition = received.edition;
+  const fields = edition.body.output.items.map((item,index) => {
+    const original = selected === 'fields' ? draft.fields.find(row=>row.id===item.id) : {
+      wordLimit:null, characterLimit:null, characterMethod:'unspecified'
+    };
+    const status = selected === 'fields' ? edition.body.fieldIssues.find(row=>row.id===item.id) : {counts:measureText(item.text),issues:[]};
+    return {id:item.id,label:item.label,prompt:item.prompt,answerIds:[...item.answerIds],filename:fieldFilename(index,item.id),value:item.text,
+      counts:status.counts,wordLimit:original.wordLimit,characterLimit:original.characterLimit,characterMethod:original.characterMethod,
+      issues:[...status.issues],overLimit:exceeded(original,status.counts)};
   });
-  const prepared = {schema:EXPORT_SCHEMA, generatedAt, draftId:draft.id, title:draft.title, currentSource:draft.currentSource, selection:selected, format,
-    form:copy(draft.form), fields, overLimit:fields.some(field=>field.overLimit), needsFieldReview:fields.some(field=>field.issues.length>0)};
+  const prepared = {schema:EXPORT_SCHEMA,generatedAt,draftId:draft.id,title:draft.title,currentSource:draft.currentSource,
+    editionId:edition.id,selection:selected,format,form:copy(draft.form),fields,
+    overLimit:fields.some(field=>field.overLimit),needsFieldReview:fields.some(field=>field.issues.length>0)};
   const files = new Map();
-  files.set('draft.json', JSON.stringify({schema:ENVELOPE, exportedAt:generatedAt, draft}, null, 2) + '\n');
-  files.set('form-map.json', JSON.stringify(exportFormMap(draft), null, 2) + '\n');
-  files.set('application.md', applicationOutput(draft,{format:'markdown',useFields:false}));
-  files.set('prepared.txt', applicationOutput(draft,{format,useFields:selected==='fields'}));
-  files.set('prepared.json', JSON.stringify(prepared,null,2) + '\n');
-  files.set('review.html', renderExportReview(prepared));
-  for (const field of fields) files.set('fields/' + field.filename, field.value);
-  return {prepared, files};
+  files.set('draft.json',await createDraftEnvelope(draft,{exportedAt:generatedAt}));
+  files.set('form-map.json',JSON.stringify(exportFormMap(draft),null,2)+'\n');
+  files.set('application.md',applicationOutput(draft,{format:'markdown',useFields:false}));
+  files.set('prepared.txt',edition.body.output.text);
+  files.set('prepared.json',JSON.stringify(prepared,null,2)+'\n');
+  files.set('review.html',renderExportReview(prepared));
+  for (const field of fields) files.set('fields/'+field.filename,field.value);
+  return {draft,edition,prepared,files};
 }
 
-async function readBounded(path, label) {
+async function readBounded(path, label, maxBytes=MAX_BYTES) {
   const size = (await stat(path)).size;
-  requireValue(size <= MAX_BYTES, label + ' exceeds the original 16 MiB draft limit.');
+  requireValue(size <= maxBytes, label + ' exceeds the supported complete-file size.');
   const bytes = await readFile(path);
-  requireValue(bytes.length <= MAX_BYTES, label + ' exceeds the original 16 MiB draft limit.');
+  requireValue(bytes.length <= maxBytes, label + ' exceeds the supported complete-file size.');
   let text;
   try { text = new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes); }
   catch { throw new Error(label + ' must be complete UTF-8 text.'); }
@@ -92,42 +98,45 @@ async function readBounded(path, label) {
 }
 async function readJson(path, label) {
   const read = await readBounded(path,label);
-  try { return JSON.parse(read.text); }
+  try { return JSON.parse(read.text.replace(/^\uFEFF/,'')); }
   catch { throw new Error(label + ' must be complete JSON.'); }
 }
-function verifySourceBytes(source) {
-  const bytes = Buffer.from(source.markdown,'utf8');
-  requireValue(bytes.toString('utf8') === source.markdown, 'The retained source contains invalid Unicode text.');
-  requireValue(bytes.length === source.bytes && sha256(bytes) === source.sha256 && gitBlob(bytes) === source.gitBlob,
-    'The retained application bytes do not match their original source identity.');
-}
-
 export async function writeGrantExport(options) {
   const fromDraft = Boolean(options.draft);
   requireValue(fromDraft !== Boolean(options.source), 'Choose a saved draft or an application source.');
   requireValue(options.out, 'Choose a new output directory with --out.');
-  if (fromDraft) requireValue(!options['source-index'] && !options['source-url'] && !options.id && !options.title, 'A saved draft retains its own source, identity and title.');
+  if (fromDraft) requireValue(!options['source-index'] && !options['source-url'] && !options.budget && !options.companion && !options.id && !options.title, 'A saved draft retains its own source, identity and title.');
   let draft;
   if (fromDraft) {
-    const document = await readJson(resolve(options.draft),'Saved submission');
-    draft = validateDraft(document.schema === ENVELOPE ? document.draft : document);
+    const saved = await readBounded(resolve(options.draft),'Saved submission',MAX_BYTES*2+65536);
+    const document = JSON.parse(saved.text.replace(/^\uFEFF/,''));
+    draft = document.schema === ENVELOPE ? await openDraftEnvelope(saved.text) : await verifyHandover(document);
   } else {
     requireValue(options['source-index'] && options['source-url'], 'A new draft needs --source-index and --source-url from the same application edition.');
     const {bytes,text} = await readBounded(resolve(options.source),'Application');
-    const index = await readJson(resolve(options['source-index']),'Application source index');
+    const originalIndex = await readBounded(resolve(options['source-index']),'Application source index');
+    const index = JSON.parse(originalIndex.text.replace(/^\uFEFF/,''));
     const source = makeSource({markdown:text,index,url:options['source-url']});
     requireValue(sha256(bytes) === source.sha256 && gitBlob(bytes) === source.gitBlob, 'The application file does not match its supplied source index.');
     draft = createDraft(source,{id:options.id || 'scf-export-' + randomUUID(), ...(options.title ? {title:options.title} : {})});
+    requireValue(Boolean(options.budget) === Boolean(options.companion),'Supply both --budget and --companion to retain the complete reviewer bundle.');
+    if (options.budget) {
+      const budget = await readBounded(resolve(options.budget),'Original budget');
+      const companion = await readBounded(resolve(options.companion),'Product and finance companion');
+      const bundle = await createSourceBundle(source,{indexBytes:originalIndex.bytes,budgetBytes:budget.bytes,companionBytes:companion.bytes});
+      draft = retainSourceBundle(draft,bundle);
+    }
   }
-  for (const source of draft.sources) verifySourceBytes(source);
   if (options['form-map']) draft = importFormMap(draft,await readJson(resolve(options['form-map']),'Issuer form map'));
-  const {prepared,files} = prepareGrantExport(draft,{selection:options.select || 'auto',format:options.format || 'plain'});
+  const exported = await prepareGrantExport(draft,{selection:options.select || 'auto',format:options.format || 'plain'});
+  draft = exported.draft;
+  const {prepared,files} = exported;
   for (const field of prepared.fields) requireValue(Buffer.from(field.value,'utf8').toString('utf8') === field.value, 'Correct invalid Unicode text in field ' + field.id + '.');
   const directory = resolve(options.out);
   await mkdir(dirname(directory),{recursive:true,mode:0o700});
   await mkdir(directory,{mode:0o700});
   await mkdir(join(directory,'fields'),{mode:0o700});
-  const manifest = {schema:EXPORT_SCHEMA,generatedAt:prepared.generatedAt,draftId:draft.id,currentSource:draft.currentSource,
+  const manifest = {schema:EXPORT_SCHEMA,generatedAt:prepared.generatedAt,draftId:draft.id,currentSource:draft.currentSource,editionId:prepared.editionId,
     selection:prepared.selection,format:prepared.format,fields:prepared.fields.length,overLimit:prepared.overLimit,needsFieldReview:prepared.needsFieldReview,
     sources:draft.sources.map(source=>({sha256:source.sha256,gitBlob:source.gitBlob,bytes:source.bytes,url:source.url,receivedAt:source.receivedAt})),files:[]};
   for (const [name,text] of files) {
@@ -136,19 +145,19 @@ export async function writeGrantExport(options) {
     manifest.files.push({path:name,bytes:bytes.length,sha256:sha256(bytes)});
   }
   await writeFile(join(directory,'manifest.json'),JSON.stringify(manifest,null,2)+'\n',{flag:'wx',mode:0o600});
-  return {directory,draftId:draft.id,selection:prepared.selection,fields:prepared.fields.length,files:files.size+1,overLimit:prepared.overLimit,needsFieldReview:prepared.needsFieldReview};
+  return {directory,draftId:draft.id,editionId:prepared.editionId,selection:prepared.selection,fields:prepared.fields.length,files:files.size+1,overLimit:prepared.overLimit,needsFieldReview:prepared.needsFieldReview};
 }
 
 export async function runCLI(args=process.argv.slice(2)) {
   const {values} = parseArgs({args,options:{
-    help:{type:'boolean'},draft:{type:'string'},source:{type:'string'},'source-index':{type:'string'},'source-url':{type:'string'},
+    help:{type:'boolean'},draft:{type:'string'},source:{type:'string'},'source-index':{type:'string'},'source-url':{type:'string'},budget:{type:'string'},companion:{type:'string'},
     'form-map':{type:'string'},out:{type:'string'},select:{type:'string'},format:{type:'string'},id:{type:'string'},title:{type:'string'}
   },allowPositionals:false});
   if (values.help) {
     process.stdout.write('Export the existing SCF submission model.\n\n' +
       '  node grant-export.mjs --draft saved-submission.json --out /private/new-export\n' +
       '  node grant-export.mjs --source application.md --source-index source-index.json --source-url https://original/source --out /private/new-export\n\n' +
-      'Options: --form-map native-map.json; --select auto|answers|fields; --format plain|markdown.\n' +
+      'Options: --budget budget.csv --companion product-and-finance.md; --form-map native-map.json; --select auto|answers|fields; --format plain|markdown.\n' +
       'New source drafts may use --id and --title. Saved draft identities and all history are retained.\n');
     return 0;
   }
@@ -162,3 +171,4 @@ if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.m
     process.stderr.write('Grant export: ' + error.message + '\n');process.exitCode=1;
   });
 }
+

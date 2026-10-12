@@ -7,6 +7,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { performance } from 'node:perf_hooks';
 import { inspectCaptureCoverage } from './capture_coverage.mjs';
+import { compareRankingSources } from './ranking-comparison.mjs';
 import { BazaarCatalog, createDiscoveryServer, validateCatalogEntry } from '../../../scf46-stellar-bazaar/src/catalog.mjs';
 
 // Checked at this source commit; pin overrides require an explicit exact Git blob SHA-1.
@@ -66,13 +67,17 @@ function topDiagnostic(rawLimit, entries) {
 }
 async function execute() {
   if (args.includes('--help')) {
-    process.stdout.write('node run.mjs --manifest sources.json --queries queries.json --out ./run [--repeat 5] [--candidate ./candidate.mjs] [--catalog-blob 40hex-git-blob]\n');
+    process.stdout.write('node run.mjs --manifest sources.json --queries queries.json --out ./run [--repeat 5] [--candidate ./candidate.mjs] [--catalog-blob 40hex-git-blob] [--ranking-baseline ABS_RANKING] [--ranking-candidate ABS_RANKING] [--ranking-repeat 60]\n');
     return;
   }
   const manifestPath=resolve(required('--manifest')),queryPath=resolve(required('--queries'));
   const outputDir=resolve(required('--out'));
   const repeat = Number(option('--repeat') || '1');
   if (!Number.isSafeInteger(repeat) || repeat <= 0) throw Error('--repeat must be positive safe integer');
+  const rankingBaseline=option('--ranking-baseline'),rankingCandidate=option('--ranking-candidate');
+  if (!!rankingBaseline !== !!rankingCandidate) throw Error('Select both original ranking source modules');
+  const rankingRepeat=Number(option('--ranking-repeat') || '60');
+  if (!Number.isSafeInteger(rankingRepeat) || rankingRepeat <= 0) throw Error('--ranking-repeat must be positive safe integer');
   const expectedBlob = args.includes('--catalog-blob') ? required('--catalog-blob') : EXPECTED_BLOB;
   if (!/^[0-9a-f]{40}$/.test(expectedBlob)) throw Error('--catalog-blob must be one exact lowercase 40-character Git blob SHA-1');
   const sourceText=await readFile(catalogPath);
@@ -227,6 +232,17 @@ async function execute() {
     comparisons:!!candidate,
     note:'No on-chain payment, paid origin request, settlement, or provider health probe performed by this code.'
   };
+  if (rankingBaseline) {
+    const comparison=await compareRankingSources({catalog,keyOf:row=>validateCatalogEntry(row).id,
+      cases:tests,baselinePath:rankingBaseline,candidatePath:rankingCandidate,
+      repeat:rankingRepeat});
+    await writeFile(resolve(outputDir,'ranking-comparison.json'),stringify(comparison));
+    report.ranking_comparison={file:'ranking-comparison.json',
+      baseline:comparison.sources.baseline,candidate:comparison.sources.candidate,
+      query_count:comparison.queryCount,corpus_rows:comparison.corpusRows,
+      changed_queries:comparison.comparisons.filter(value=>!value.identical).length,
+      same_source_one_shot_index_parity:comparison.sameSourceOneShotIndexParity};
+  }
   await Promise.all([
     writeFile(resolve(outputDir,'run.json'),stringify(report)),
     writeFile(resolve(outputDir,'cases.json'),stringify(runs)),
