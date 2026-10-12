@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -21,6 +22,14 @@ def dispatch(workspace, operation, arguments):
         return runtime_info()
     if operation == "logs":
         return workflow.captured_logs(workspace, args["operation_id"], args.get("capture"), args.get("offset", 0), args.get("limit", 100))
+    if operation == "state" and ("offset" in args or "limit" in args):
+        with workspace.read_snapshot():
+            pages = {kind: workspace.records_page(kind, args.get("offset", 0), args.get("limit", 20))
+                     for kind in ("workflow", "operation", "edition")}
+        return {"workspace_id": workspace.workspace_id, "title": workspace.title,
+                **{kind + "s": page["items"] for kind, page in pages.items()},
+                "pages": {kind + "s": {key: value for key, value in page.items() if key != "items"}
+                          for kind, page in pages.items()}}
     if operation == "state":
         return {"workspace_id": workspace.workspace_id, "title": workspace.title,
                 "workflows": workspace.records("workflow"), "operations": workspace.records("operation"),
@@ -28,18 +37,26 @@ def dispatch(workspace, operation, arguments):
     if operation == "get":
         return workspace.get_record(args["kind"], args["id"])
     if operation == "list":
+        if "offset" in args or "limit" in args:
+            return workspace.records_page(args["kind"], args.get("offset", 0), args.get("limit", 20))
         return workspace.records(args["kind"])
     if operation == "events":
         return workspace.events(args["kind"], args["id"], args.get("after", 0), args.get("limit", 100))
     if operation == "import_source":
         path = Path(args["path"])
-        if args.get("script", False):
-            return workflow.import_script(workspace, args.get("filename", path.name), path)
-        return {"filename": path.name, **workspace.put_object(path)}
+        result = (workflow.import_script(workspace, args.get("filename", path.name), path)
+                  if args.get("script", False) else {"filename": args.get("filename", path.name), **workspace.put_object(path)})
+        if args.get("expected_sha256") is not None and result["sha256"] != args["expected_sha256"] or (
+                args.get("expected_bytes") is not None and result["bytes"] != args["expected_bytes"]):
+            raise OperationError("SOURCE_FILE_CHANGED", "The received original input differs from its selected identity.", status=409)
+        return result
     if operation == "save_workflow":
         return workflow.save_workflow(workspace, args["definition"], args.get("expected_revision"), args.get("actor", "operator"))
     if operation == "adopt":
-        return workflow.adopt_customer_input(workspace, Path(args["input"]),
+        raw = Path(args["input"]).read_bytes()
+        if args.get("input_sha256") is not None and hashlib.sha256(raw).hexdigest() != args["input_sha256"]:
+            raise OperationError("INTAKE_FILE_CHANGED", "The original customer document differs from the selected input.", status=409)
+        return workflow.adopt_customer_input(workspace, raw,
             {key: Path(value) if isinstance(value, str) else value for key, value in args["files"].items()},
             args["account"], args.get("expected_revision"), args.get("actor", "operator"))
     if operation == "review":
@@ -61,15 +78,20 @@ def dispatch(workspace, operation, arguments):
     if operation == "rows":
         from .editions import edition_rows
         return edition_rows(workspace, args["edition_id"], args["dataset_id"], args.get("offset", 0), args.get("limit", 100))
-    if operation == "export":
-        from .portable import export_handover
-        return export_handover(workspace, args["workflow_id"], Path(args["destination"]))
-    if operation == "export_dataset":
-        from .portable import export_dataset_handover
-        return export_dataset_handover(workspace, args["edition_id"], args["dataset_id"], Path(args["destination"]))
+    if operation in {"export", "export_dataset"}:
+        from .exports import export_selected
+        return export_selected(workspace, operation, args)
+    if operation == "inspect_export":
+        from .exports import inspect_export
+        return inspect_export(args["export_kind"], Path(args["source"]))
     if operation == "import":
         from .portable import import_handover
-        return import_handover(workspace, Path(args["source"]))
+        source = Path(args["source"])
+        if args.get("expected_sha256") is not None:
+            from .storage import hash_file
+            if hash_file(source)[0] != args["expected_sha256"]:
+                raise OperationError("HANDOVER_CHANGED", "The original handover differs from the selected complete file.", status=409)
+        return import_handover(workspace, source)
     raise OperationError("OPERATION", "Choose a documented workspace operation.")
 
 
@@ -116,8 +138,10 @@ def main(argv=None):
                 if len(raw) > 2 * 1024 * 1024:
                     raise OperationError("REQUEST_SIZE", "Use a JSON operation within 2 MiB.")
                 request = json.loads(raw)
-                if not isinstance(request, dict) or set(request) != {"operation", "arguments"} or not isinstance(request["arguments"], dict):
+                if not isinstance(request, dict) or set(request) - {"operation", "arguments", "workspace_id"} or not {"operation", "arguments"} <= set(request) or not isinstance(request["arguments"], dict):
                     raise OperationError("REQUEST_OBJECT", "Supply operation and arguments in one JSON object.")
+                if "workspace_id" in request and request["workspace_id"] != workspace.workspace_id:
+                    raise OperationError("WORKSPACE_CHANGED", "The selected path belongs to a different original workspace.", status=409)
                 result = dispatch(workspace, request["operation"], request["arguments"])
             else:
                 if command == "show":
