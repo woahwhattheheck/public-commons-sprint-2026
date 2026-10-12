@@ -1,3 +1,5 @@
+import { mppFileTools, MPP_EXPORT_MANIFEST, fileNames } from './catalog/mpp-files.mjs';
+export { MPP_EXPORT_MANIFEST, mppFileTools } from './catalog/mpp-files.mjs';
 // MIT. Original native MPP bytes through the maintained retained-file receiver.
 import { mkdir, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -5,10 +7,10 @@ import { regular, privateDirectory, digest, saveJSON, json, plain } from '../../
 import { RetainedFileReads, MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
 import { stable, need, fail, exact, sha } from './mpp-config.mjs';
 
-export const MPP_EXPORT_MANIFEST='mpp-export.json';
+
 export const MPP_EXPORT_SCHEMA='stellar-forge.mpp-file-export.v1';
 export const MAX_MPP_EXPORT_BYTES=4*1024*1024;
-const fileNames={response:'response.bin',contract:'mpp-contract.json',openapi:'mpp-openapi.json',package:'mpp-package.json'};
+
 export function exportId(value) {
   need(typeof value==='string' && /^[a-z0-9][a-z0-9_-]{0,63}$/.test(value),'INVALID_PARAMS',
     'Use a stable export ID with one to sixty-four lowercase letters, digits, underscores or hyphens.');
@@ -33,23 +35,7 @@ export function parseMppExportManifest(input,expectedExportId) {
   need(file.sha256===value.source.sha256,'MPP_EXPORT_MANIFEST_INVALID');
   return value;
 }
-export function mppFileTools(tool) {
-  const id={type:'string',pattern:'^[a-z0-9][a-z0-9_-]{0,63}$'},digestSchema={type:'string',pattern:'^[a-f0-9]{64}$'};
-  const read={readOnly:true,idempotent:true};
-  return [
-    tool('merchant_mpp_export_list','List retained native MPP response and customer handoff exports after operator restart.',
-      {after:id,limit:{type:'integer',minimum:1,maximum:50}},[],read),
-    tool('merchant_mpp_export_manifest','Inspect the saved original MPP file and its completion manifest before a native retained download.',
-      {exportId:id},['exportId'],read),
-    tool('merchant_mpp_export_file','Read the exact saved MPP payload or manifest through the existing retained-file transport. Preserve manifest SHA256, file SHA256, readId and byte offset.',
-      {exportId:id,file:{type:'string',enum:[MPP_EXPORT_MANIFEST,...Object.values(fileNames)]},
-        expectedManifestSha256:digestSchema,expectedSha256:digestSchema,readId:{type:'string'},
-        offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:MAX_RETAINED_CHUNK_BYTES}},
-      ['exportId','file','expectedManifestSha256'],read),
-    tool('merchant_mpp_export_file_release','Release a temporary native MPP file-read snapshot while retaining its original completed export.',
-      {exportId:id,readId:{type:'string'}},['exportId','readId'],read)
-  ];
-}
+
 export class MppFileExports {
   #directory;#reads=new RetainedFileReads({errorPrefix:'MPP'});
   constructor(directory) {this.#directory=join(directory,'mpp-file-exports');}

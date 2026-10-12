@@ -5,6 +5,9 @@ import { coingeckoApplication, prepareCoingeckoApplication } from './application
 import { oaiApplication, prepareOaiApplication } from './application-oai.mjs';
 import { fiscalDataApplication, prepareFiscalDataApplication } from './application-fiscaldata.mjs';
 import { databentoApplication, prepareDatabentoApplication } from './application-databento.mjs';
+import { opencageApplication, prepareOpenCageApplication } from './application-opencage.mjs';
+import { webdavApplication, prepareWebDavApplication } from './application-webdav.mjs';
+import { merchantSupportApplication, prepareMerchantSupportApplication } from './application-merchant-support.mjs';
 import { readdir, lstat, realpath, access } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
@@ -24,6 +27,7 @@ import { n8nApplication, prepareN8nApplication } from './application-n8n.mjs';
 import { redisApplication, prepareRedisApplication } from './application-redis.mjs';
 import { openApiApplication, prepareOpenApiApplication } from './application-openapi.mjs';
 import { arcgisAgentApplication, prepareArcgisAgentApplication } from './application-arcgis.mjs';
+import { duckdbAgentApplication, prepareDuckDBAgentApplication } from './application-duckdb-agent.mjs';
 import { s3MerchantApplication, prepareS3MerchantApplication } from './application-s3-merchant.mjs';
 import { jobCheckoutApplication, validateJobCheckoutSelection, prepareJobCheckoutApplication } from './application-job-checkout.mjs';
 import { datasetBuyerApplication, prepareDatasetBuyerApplication } from './application-dataset-buyer.mjs';
@@ -70,6 +74,9 @@ export const APPLICATION_CATALOG = Object.freeze([
   oaiApplication(common),
   fiscalDataApplication(common),
   databentoApplication(common),
+  opencageApplication(common),
+  webdavApplication(common),
+  merchantSupportApplication(common),
   grpcApplication(common),
   atlasApplication(common),
   n8nApplication(common),
@@ -88,6 +95,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   stellarExpertApplication(common),
   redisApplication(common),
   arcgisAgentApplication(common),
+  duckdbAgentApplication(common),
   s3MerchantApplication(common),
   jobCheckoutApplication(common),
   datasetBuyerApplication(common),
@@ -261,7 +269,19 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     const value = await inputPath(settings[name], kind, missing, privateOnly); inputs.push(value); return value;
   };
   const option = (name, value) => { if (value !== undefined && value !== '') args.push(name, String(value)); };
-  if (type.id === 'coingecko') {
+  if (type.id === 'webdav') {
+    const original = await prepareWebDavApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'merchant-support') {
+    const original = await prepareMerchantSupportApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'opencage-workspace') {
+    const original = await prepareOpenCageApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'coingecko') {
     const original = await prepareCoingeckoApplication(settings, { inputPath, runtimeDirectory });
     args.push(...original.args); inputs.push(...original.inputs);
     createDirectories.push(...original.createDirectories);
@@ -331,6 +351,9 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     createDirectories.push(...original.createDirectories);
   } else if (type.id === 'arcgis-agent') {
     const original = await prepareArcgisAgentApplication(settings, inputPath, runtimeDirectory);
+    args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'duckdb-agent') {
+    const original = await prepareDuckDBAgentApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
   } else if (type.id === 'job-checkout') {
     const original = await prepareJobCheckoutApplication(settings, runtimeDirectory, inputPath);
@@ -534,6 +557,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
 function resourceKey(type, settings) {
   if (type.python) return pythonApplicationResource(type, settings);
   if (['arcgis-agent', 'worldbank-agent'].includes(type.id)) return hash({ family: 'merchant-mcp', directory: settings.configurationFile });
+  if (type.id === 'duckdb-agent') return hash({ family: 'native-mcp', directory: settings.nativeDirectory });
   const value = settings.outputParent ?? settings.workspaceDirectory ?? settings.directory ??
     settings.outputDirectory ?? settings.stateDirectory ?? settings.datasetFile;
   // Feeds, repository metadata and XML retain the same original SQLite workspace and writer.
