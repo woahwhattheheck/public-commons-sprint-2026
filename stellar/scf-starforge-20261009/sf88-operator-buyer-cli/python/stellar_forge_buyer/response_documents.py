@@ -175,11 +175,51 @@ def _signature(info):
     return info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns
 
 
+
+def _settle_publication(path, stream, prefix):
+    """Finish an interrupted no-replace publication in its owned directory."""
+    info = os.fstat(stream.fileno())
+    directory_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        current = os.stat(path.name, dir_fd=directory_fd, follow_symlinks=False)
+        _need(stat.S_ISREG(current.st_mode) and
+              (current.st_dev, current.st_ino) == (info.st_dev, info.st_ino),
+              "PUBLISHED_FILE_CHANGED")
+        # Only the writer's temporary hard links to this verified final inode
+        # are removable. Other files, symlinks and unrelated temporary writes
+        # stay untouched, including another registration's unfinished copy.
+        for name in os.listdir(directory_fd):
+            if not name.startswith(prefix):
+                continue
+            try:
+                alias = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
+            except FileNotFoundError:
+                continue
+            if (stat.S_ISREG(alias.st_mode) and
+                    (alias.st_dev, alias.st_ino) == (info.st_dev, info.st_ino)):
+                try:
+                    os.unlink(name, dir_fd=directory_fd)
+                except FileNotFoundError:
+                    pass
+        current = os.stat(path.name, dir_fd=directory_fd, follow_symlinks=False)
+        settled = os.fstat(stream.fileno())
+        _need(stat.S_ISREG(current.st_mode) and
+              (current.st_dev, current.st_ino) == (info.st_dev, info.st_ino) and
+              (settled.st_size, settled.st_mtime_ns) == (info.st_size, info.st_mtime_ns),
+              "PUBLISHED_FILE_CHANGED")
+        _need(settled.st_nlink == 1, "PUBLICATION_LINKS_UNSETTLED")
+        os.fsync(stream.fileno())
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
+
+
 def _publish_file(origin, target, record):
     destination = _payload(target, record)
     if destination.exists() or destination.is_symlink():
-        with _delivery(target, record).open():
-            return
+        with _delivery(target, record).open() as retained:
+            _settle_publication(destination, retained, ".document-")
+        return
     fd, temporary = tempfile.mkstemp(prefix=".document-", dir=destination.parent)
     try:
         with os.fdopen(fd, "wb") as output, _delivery(origin, record).open() as source:
@@ -208,6 +248,9 @@ def _publish_file(origin, target, record):
             os.unlink(temporary)
         except FileNotFoundError:
             pass
+
+    with _delivery(target, record).open() as retained:
+        _settle_publication(destination, retained, ".document-")
 
 
 def document_path(directory, document_id):
@@ -247,6 +290,17 @@ def retain_document(manifest_file, directory):
         write(destination, raw, exclusive=True)
     except FileExistsError:
         _need(read(destination, MAX_MANIFEST_BYTES) == raw, "MANIFEST_IDENTITY_CHANGED")
+    manifest_delivery = FileDelivery({"returncode": 0, "native": {
+        "status": "RETAINED_SOURCE_DOCUMENT",
+        "file": {"path": str(destination), "bytes": len(raw), "sha256": document_id,
+                 "contentType": "application/json"},
+    }}, destination, MAX_MANIFEST_BYTES)
+    with manifest_delivery.open() as retained:
+        _settle_publication(destination, retained, ".write-")
+    # Make both complete publication and newly created ancestry durable before
+    # the caller can register this source in the original SQLite database.
+    for completed_directory in (target / "files", target, collection, root):
+        sync_directory(completed_directory)
     return {"document_id": document_id, "manifest": str(destination), "bytes": len(raw),
             "title": manifest["title"], "format": manifest["format"]}
 
