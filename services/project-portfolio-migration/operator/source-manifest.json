@@ -23,8 +23,8 @@
     },
     {
       "path": "native/browser.mjs",
-      "bytes": 27302,
-      "sha256": "3a70da58286a283dd1a94dc2546b10819b293e0ee15eccca7aee8e5d697fc32f"
+      "bytes": 27436,
+      "sha256": "023afb3606cb27c3351224acb6dc10788dbd8febc30bcf0ec6beb8941c4b7cf9"
     },
     {
       "path": "native/README.md",
@@ -78,8 +78,8 @@
     },
     {
       "path": "portfolio_target/web/app.js",
-      "bytes": 42171,
-      "sha256": "cddc239066208e5d128159c92ad0d28a84c3e30a62981763a1e517ff95a04fec"
+      "bytes": 42560,
+      "sha256": "fb7788f4d92926af0a02fe761041b1a2f2aebd871b4f89cb3e47a0ca592e139b"
     },
     {
       "path": "portfolio_target/web/index.html",

@@ -76,9 +76,17 @@ async function download(path, filename) {
   const blob = await response.blob(), url = URL.createObjectURL(blob), a = el("a");
   a.href = url; a.download = filename; a.click(); setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
+function mergeArtifacts(...groups) {
+  const seen=new Set(), result=[];
+  for (const items of groups) for (const item of items || []) {
+    const identity=stable(item);
+    if (!seen.has(identity)) {seen.add(identity);result.push(item);}
+  }
+  return result;
+}
 function artifacts(node, items) {
   node.replaceChildren();
-  for (const item of items || []) {
+  for (const item of mergeArtifacts(items)) {
     const b = el("button", item.filename + " · " + (item.bytes ?? "saved") + " bytes");
     b.dataset.read = ""; b.title = item.sha256 || "";
     b.addEventListener("click", () => safe(() => download(item.kind === "workspace_archive" ?
@@ -392,7 +400,7 @@ async function applyResult(request,context={}) {
   if (request.kind==="intake" && sourceCurrent) {S.sourceId=result.id;S.offset=0;S.sourceReview=null;S.corrections=[];$("source-decisions").value="{}";}
   if (request.kind==="source_review" && sourceCurrent) {S.sourceReview=result;renderCorrections();}
   if (request.kind==="source_apply" && sourceCurrent) {S.sourceId=result.edition_id;S.offset=0;S.sourceReview=null;S.corrections=[];$("source-decisions").value="{}";renderCorrections();}
-  if (request.kind==="mspdi_export" && result.download) {S.sourceArtifacts.push(result.download);artifacts($("source-artifacts"),S.sourceArtifacts);}
+  if (request.kind==="mspdi_export" && result.download) {S.sourceArtifacts=mergeArtifacts(S.sourceArtifacts,[result.download]);artifacts($("source-artifacts"),S.sourceArtifacts);}
   if (request.kind==="probe") {
     const profile=request.arguments.profile_id,p=result.probe;
     S.probes[profile]=p ? {object_sha256:result.object_sha256,probe:{
@@ -403,8 +411,8 @@ async function applyResult(request,context={}) {
   if (["prepare","prepare_adjustment","review","continue","adopt_detail","capture_target","receive_target_file","accept","abandon_set"].includes(request.kind) && deploymentCurrent) {
     S.deployId=result.id;await loadDeployment();if (request.kind==="prepare" || request.kind==="prepare_adjustment") showTab("migration");
   }
-  if (request.kind==="handover") {S.handoverArtifacts.push(result.html,result.json);artifacts($("handover-artifacts"),S.handoverArtifacts);}
-  if (request.kind==="archive") {S.handoverArtifacts.push({...result.archive,filename:result.filename});artifacts($("handover-artifacts"),S.handoverArtifacts);}
+  if (request.kind==="handover") {S.handoverArtifacts=mergeArtifacts(S.handoverArtifacts,[result.html,result.json]);artifacts($("handover-artifacts"),S.handoverArtifacts);}
+  if (request.kind==="archive") {S.handoverArtifacts=mergeArtifacts(S.handoverArtifacts,[{...result.archive,filename:result.filename}]);artifacts($("handover-artifacts"),S.handoverArtifacts);}
   await refreshState();if (S.sourceId && sourceCurrent) await loadSource();saveDraft();lock();
 }
 async function uploadArchive(file) {
@@ -485,7 +493,7 @@ async function boot() {
   archivePanel.restore(draft.archive||{});companionPanel.restore(draft.companions||{});
   S.sourceId=draft.sourceId||"";S.deployId=draft.deployId||"";S.profile=draft.profile||"mspdi";
   S.corrections=draft.corrections||[];S.sourceReview=draft.sourceReview||null;S.probes=draft.probes||{};
-  S.sourceArtifacts=draft.sourceArtifacts||[];S.handoverArtifacts=draft.handoverArtifacts||[];
+  S.sourceArtifacts=mergeArtifacts(draft.sourceArtifacts);S.handoverArtifacts=mergeArtifacts(draft.handoverArtifacts);
   if (S.sourceReview?.id) S.sourceReview=await api("/api/source-reviews/"+S.sourceReview.id);
   renderMappingRows(draft.mappings||defaults);renderCorrections();
   artifacts($("source-artifacts"),S.sourceArtifacts);artifacts($("handover-artifacts"),S.handoverArtifacts);
