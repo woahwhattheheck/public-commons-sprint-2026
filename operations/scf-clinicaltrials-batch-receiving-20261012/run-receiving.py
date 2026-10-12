@@ -60,8 +60,12 @@ def close_workspace():
 def archive_workspace(directory,target):
     with zipfile.ZipFile(target,"w",zipfile.ZIP_DEFLATED,compresslevel=6) as z:
         for p in sorted(directory.rglob("*")):
-            if p.is_file() and not p.is_symlink() and not p.name.endswith(("-wal","-shm")) and "tmp" not in p.relative_to(directory).parts:
-                z.write(p,p.relative_to(directory).as_posix())
+            relative=p.relative_to(directory)
+            if p.is_symlink():continue
+            if p.is_dir() and ("tmp" not in relative.parts or relative.parts==("tmp",)):
+                z.write(p,relative.as_posix()+"/")
+            elif p.is_file() and not p.name.endswith(("-wal","-shm")) and "tmp" not in relative.parts:
+                z.write(p,relative.as_posix())
     target.chmod(0o600)
 try:
     for item in manifest["files"]:

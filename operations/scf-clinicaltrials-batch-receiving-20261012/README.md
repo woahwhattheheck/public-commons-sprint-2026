@@ -53,3 +53,5 @@ Return the completed package, report and images to the existing ClaritiDox batch
 ## Continue an interrupted pre-intake browser step
 
 If the original CLI initialized the workspace but the browser stopped before retaining any XML, keep the same `--out` and `--work` paths and pass `--resume-empty`. The receiver reads the original status, requires empty PRS and batch inventories, and preserves the previous operation report by its exact SHA256 before resuming. It never initializes that directory again. A populated batch is continued through its existing retained actions instead of this pre-intake entrypoint. The browser opens the client-manifest section before filling it, and every completion or failure refreshes the closed original workspace backup.
+
+The closed original workspace backup retains its directory entries, including the empty source directories needed by the ordinary native CLI. When restoring an earlier pre-intake backup that omitted them, restore the original private `sources`, `plans`, `builds`, `comparisons` and `tmp` directories beside the unchanged workspace marker and database before `--resume-empty`.
