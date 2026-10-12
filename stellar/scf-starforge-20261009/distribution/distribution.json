@@ -906,7 +906,9 @@
     "./seller/frictionless": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/source.mjs",
     "./seller/frictionless/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/model.mjs",
     "./seller/frictionless/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/release.mjs",
-    "./buyer/mcp/analysis-archives": "./source/stellar-forge/mcp-paid-agent/native-analysis-archive-download.mjs"
+    "./buyer/mcp/analysis-archives": "./source/stellar-forge/mcp-paid-agent/native-analysis-archive-download.mjs",
+    "./merchant/mcp/worldbank-workspaces": "./source/stellar-forge/mcp-merchant-operator/worldbank-workspace.mjs",
+    "./merchant/mcp/worldbank-download": "./source/stellar-forge/mcp-merchant-operator/worldbank-workspace-download.mjs"
   },
   "nativePeers": {
     "@x402/core": {

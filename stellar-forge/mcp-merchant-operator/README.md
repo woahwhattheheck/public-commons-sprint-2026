@@ -571,3 +571,20 @@ or attach `--source-workspaces` during ordinary merchant initialization. The
 startup, source-file handles, mapping, merchant preparation, resumable delivery
 and reconstruction. `starforge dataset ndjson` opens the source application;
 its browser remains the same workspace used by the agent.
+
+
+## World Bank indicator workspaces
+
+The original World Bank model is available through this same authenticated HTTP
+and stdio host. Agents and the industrial browser share source selections,
+retained capture jobs, exact observation values, reviewed native editions,
+publisher drafts, SF82 releases and SF88 customer sessions.
+
+Use `init-worldbank-workspaces --dir NEW_DIRECTORY --connection CONNECTION_JSON`,
+or add `worldbankWorkspaceConnection` to an existing merchant configuration.
+The `merchant_worldbank_*` tools use host-declared imports, merchant terms and
+buyer workspace aliases. `download-worldbank` resumes complete original handovers
+and dataset files through the host's existing durable file receiver.
+
+[World Bank setup, source operation, release and customer receiving](WORLDBANK-WORKSPACES.md)
+documents the complete workflow and its original IDs, revisions and file hashes.

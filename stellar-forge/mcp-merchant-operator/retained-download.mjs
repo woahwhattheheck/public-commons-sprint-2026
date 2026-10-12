@@ -63,7 +63,8 @@ export async function openMerchantFileClient({ url, tokenEnv = 'MCP_ACCESS_TOKEN
 
 /** Owner adapters supply the original manifest parser, names and identity schema. */
 export function createRetainedDownload({ manifestName, parseManifest, maximumBytes, stateSchema,
-  resultSchema, toolPrefix, errorPrefix, clientName, describe = () => ({}), connect = openMerchantFileClient }) {
+  resultSchema, toolPrefix, errorPrefix, clientName, describe = () => ({}), connect = openMerchantFileClient,
+  validateExportId = value => identifier(value, 'Export ID') }) {
   async function regular(path, flags = constants.O_RDONLY, maximum = maximumBytes) {
     const handle = await open(path, flags | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0), 0o600);
     try {
@@ -248,7 +249,7 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
   /** Saves the exact original files; a second invocation resumes the same directory. */
   async function download({ url, exportId, directory, tokenEnv, environment, signal,
     chunkSize = MAX_RETAINED_CHUNK_BYTES, onProgress, expectedManifestSha256 } = {}) {
-    identifier(exportId, 'Export ID');
+    validateExportId(exportId);
     if (!Number.isSafeInteger(chunkSize) || chunkSize < 1 || chunkSize > MAX_RETAINED_CHUNK_BYTES)
       throw failure(errorPrefix + '_DOWNLOAD_CONFIGURATION', 'Chunk size must be 1–196608 bytes.');
     const client = await connect({ url, tokenEnv, environment, signal, errorPrefix, clientName });
@@ -268,7 +269,7 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
   }
 
   async function inspect({ url, exportId, tokenEnv, environment, signal } = {}) {
-    identifier(exportId, 'Export ID');
+    validateExportId(exportId);
     const client = await connect({ url, tokenEnv, environment, signal, errorPrefix, clientName });
     const bytes = await retainedManifest(client, exportId);
     return { manifest: parseManifest(bytes, exportId), manifestSha256: sha(bytes) };
