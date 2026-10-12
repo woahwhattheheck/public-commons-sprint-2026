@@ -6,6 +6,8 @@ and atomic exact-byte writes. This command only installs the selected source and
 original inputs; the existing native controller owns programme execution.
 """
 import argparse
+import base64
+import binascii
 import hashlib
 import importlib.util
 import json
@@ -16,6 +18,7 @@ from pathlib import Path
 
 HELPER_SHA256 = "90d60e55d1838215c7252cc2a79db5ad8509bf01b44bbbbe79af1dc98fa3635f"
 SCHEMA = "sf88.research-study-extraction.native-source.v1"
+SUPPLEMENT_SCHEMA = "sf88.research-study-extraction.source-supplement.v1"
 OPERATION = "DBC61-SCF-STUDY-EXTRACTION-20261012"
 
 
@@ -34,12 +37,66 @@ def helper_module():
     return module
 
 
+def read_supplement(args, receiver, base_raw):
+    values = (args.source_supplement, args.supplement_bytes, args.supplement_sha256)
+    if all(value is None for value in values):
+        return None, None
+    need = receiver.need
+    need(all(value is not None for value in values),
+         "Supply the complete supplement path, byte length and SHA256 together.")
+    need(args.source_supplement.is_absolute() and args.supplement_bytes > 0
+         and len(args.supplement_sha256) == 64
+         and all(char in "0123456789abcdef" for char in args.supplement_sha256),
+         "Use the published supplement identity and an absolute source path.")
+    raw = receiver.ordinary(args.source_supplement)
+    need(len(raw) == args.supplement_bytes
+         and receiver.digest(raw) == args.supplement_sha256,
+         "The complete original source supplement differs.")
+    value = json.loads(raw)
+    need(value.get("schema") == SUPPLEMENT_SCHEMA
+         and value.get("operation") == OPERATION
+         and value.get("repository") == "woahwhattheheck/public-commons-sprint-2026",
+         "The original supplemental source identity differs.")
+    need(value.get("baseEnvelope") == {
+        "bytes": len(base_raw), "sha256": receiver.digest(base_raw)
+    }, "The supplemental source selects another base envelope.")
+    rows = value.get("files")
+    need(isinstance(rows, list) and len(rows) > 0
+         and len(rows) == value.get("sourceFiles")
+         and type(value.get("sourceBytes")) is int and value["sourceBytes"] >= 0
+         and isinstance(value.get("sourceSelection"), dict),
+         "The full supplemental source inventory is required.")
+    return value, {"bytes": len(raw), "sha256": receiver.digest(raw),
+                   "sourceFiles": len(rows), "sourceBytes": value["sourceBytes"],
+                   "sourceSelection": value["sourceSelection"]}
+
+
+def member_bytes(row, need, encoded=False):
+    content = row.get("content")
+    need(isinstance(content, str), "Complete selected member content is required.")
+    encoding = row.get("encoding", "utf-8")
+    need(encoding == "utf-8" or encoded and encoding == "base64",
+         "Unsupported selected member encoding.")
+    if encoding == "utf-8":
+        return content.encode("utf-8")
+    try:
+        body = base64.b64decode(content.encode("ascii"), validate=True)
+    except (UnicodeEncodeError, binascii.Error) as error:
+        raise ValueError("Complete canonical Base64 source is required.") from error
+    need(base64.b64encode(body).decode("ascii") == content,
+         "Complete canonical Base64 source is required.")
+    return body
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-envelope", type=Path, required=True)
     parser.add_argument("--directory", type=Path, required=True)
     parser.add_argument("--expected-bytes", type=int, required=True)
     parser.add_argument("--expected-sha256", required=True)
+    parser.add_argument("--source-supplement", type=Path)
+    parser.add_argument("--supplement-bytes", type=int)
+    parser.add_argument("--supplement-sha256")
     args = parser.parse_args()
     receiver = helper_module()
     need, ordinary, digest = receiver.need, receiver.ordinary, receiver.digest
@@ -60,14 +117,27 @@ def main():
     need(isinstance(files, list) and isinstance(inputs, list) and len(inputs) == 3,
          "The complete source and three original input documents are required.")
     need(len(files) == envelope.get("sourceFiles"), "The source member count differs.")
+    supplement, supplement_identity = read_supplement(args, receiver, raw)
+    supplement_paths = set()
+    expected_source_bytes = envelope.get("sourceBytes")
+    source_selection = envelope["sourceSelection"]
+    if supplement is not None:
+        supplement_paths = {row["path"] for row in supplement["files"]}
+        need(len(supplement_paths) == len(supplement["files"]),
+             "Duplicate original supplemental member.")
+        need(not supplement_paths.intersection(row["path"] for row in files),
+             "Supplemental source must preserve every original base member.")
+        files = [*files, *supplement["files"]]
+        expected_source_bytes += supplement["sourceBytes"]
+        source_selection = {**source_selection,
+                            "nativeOriginalDependencies": supplement_identity}
     selected, seen, source_total, input_total = [], set(), 0, 0
     for category, rows in (("source", files), ("input", inputs)):
         for row in rows:
             name = str(receiver.relative(row["path"]))
             need(name not in seen, "Duplicate selected member: " + name)
             seen.add(name)
-            need(isinstance(row.get("content"), str), "Complete UTF-8 member content is required.")
-            body = row["content"].encode("utf-8")
+            body = member_bytes(row, need, encoded=name in supplement_paths)
             need(len(body) == row["bytes"] and digest(body) == row["sha256"],
                  "Selected member length or SHA256 differs: " + name)
             git_blob = row.get("gitBlobSha")
@@ -82,7 +152,7 @@ def main():
                 source_total += len(body)
             else:
                 input_total += len(body)
-    need(source_total == envelope.get("sourceBytes") and input_total == envelope.get("inputBytes"),
+    need(source_total == expected_source_bytes and input_total == envelope.get("inputBytes"),
          "The complete source or input byte total differs.")
     entry = str(receiver.relative(envelope["entry"]))
     need(entry in {row["path"] for row in files}, "The original native entry is absent.")
@@ -109,12 +179,13 @@ def main():
         "schema": "sf88.research-study-extraction.source-materialization.v1",
         "operation": OPERATION,
         "sourceEnvelope": {"bytes": len(raw), "sha256": digest(raw)},
+        **({"sourceSupplement": supplement_identity} if supplement_identity else {}),
         "repository": envelope["repository"],
         "sourceFiles": len(files), "sourceBytes": source_total,
         "inputFiles": len(inputs), "inputBytes": input_total,
         "directory": str(root), "entry": str(root / entry),
         "inputs": {role: str(root / row["path"]) for role, row in roles.items()},
-        "sourceSelection": envelope["sourceSelection"],
+        "sourceSelection": source_selection,
         "runtimeRequirements": envelope["runtimeRequirements"],
         "members": [{key: row[key] for key in ("path", "mode", "bytes", "sha256")}
                     for row, _ in selected],
@@ -129,7 +200,9 @@ def main():
         "schema": manifest["schema"], "state": "COMPLETE", "operation": OPERATION,
         **counts, "sourceFiles": len(files), "sourceBytes": source_total,
         "inputFiles": len(inputs), "inputBytes": input_total,
-        "sourceEnvelopeSha256": digest(raw), "directory": str(root),
+        "sourceEnvelopeSha256": digest(raw),
+        **({"sourceSupplementSha256": supplement_identity["sha256"]} if supplement_identity else {}),
+        "directory": str(root),
         "entry": manifest["entry"], "inputs": manifest["inputs"],
         "manifest": str(manifest_path), "manifestSha256": digest(manifest_body),
     }, sort_keys=True))
