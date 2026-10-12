@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Supplier orders</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div><h1>Supplier orders</h1><p id="workspace-label">Opening workspace</p></div>
+  <nav aria-label="Workspace"><button id="refresh" type="button">Refresh</button><button id="open-source" type="button">Receive document</button><button id="open-transfer" type="button">Customer handover</button></nav>
+</header>
+<div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+<main class="workspace">
+  <aside class="orders-pane" aria-label="Orders">
+    <form id="order-search" class="stack">
+      <label>Find order<input name="query" id="order-query" type="search" placeholder="Order ID, supplier or article" autocomplete="off"></label>
+      <div class="inline"><label class="grow">Status<select id="order-status" name="status"><option value="">All statuses</option></select></label><button type="submit">Find</button></div>
+    </form>
+    <div class="section-heading"><h2>Orders</h2><span id="order-count" class="muted"></span></div>
+    <div id="order-list" class="order-list" aria-live="polite"><p class="empty">Orders will appear here after the workspace opens.</p></div>
+    <div class="pager"><button id="orders-previous" type="button" disabled>Previous</button><span id="orders-page"></span><button id="orders-next" type="button" disabled>Next</button></div>
+  </aside>
+  <section class="desk">
+    <div id="no-order" class="empty large">Select an order to review its quantities, source documents and delivery history.</div>
+    <section id="selected-order" hidden>
+      <header class="order-heading">
+        <div><p class="eyebrow">Original order</p><h2 id="order-title"></h2><p id="order-subtitle" class="muted"></p></div>
+        <div class="actions"><span id="order-state" class="badge"></span><button id="new-confirmation" type="button">Confirmation</button><button id="new-dispatch" type="button">Dispatch</button><button id="new-invoice" type="button">Invoice</button></div>
+      </header>
+      <div id="order-metrics" class="metrics"></div>
+      <nav class="tabs" aria-label="Order detail">
+        <button data-tab="lines" class="active" type="button" aria-selected="true">Lines and reconciliation</button>
+        <button data-tab="documents" type="button" aria-selected="false">Documents and history</button>
+        <button data-tab="drafts" type="button" aria-selected="false">Working drafts</button>
+        <button data-tab="parties" type="button" aria-selected="false">Parties and references</button>
+      </nav>
+      <section id="tab-lines" class="tab-panel">
+        <div class="section-heading"><h3>Current documented quantities</h3><label class="check"><input id="differences-only" type="checkbox"> Show differences</label></div>
+        <p class="hint">Quantities retain their original units. Confirmations, dispatches and invoices each contribute their selected document revisions.</p>
+        <div class="table-wrap"><table id="line-table"><thead><tr><th>Line / article</th><th class="number">Ordered</th><th class="number">Confirmed</th><th class="number">Cancelled</th><th class="number">Dispatched</th><th class="number">Invoiced</th><th>Unit</th><th>Review</th></tr></thead><tbody></tbody></table></div>
+        <section id="line-detail" class="detail" hidden><div class="section-heading"><h3 id="line-title"></h3><button id="close-line" type="button">Close line</button></div><div id="line-values"></div><div id="line-contributions"></div></section>
+        <section id="order-findings" class="findings" hidden><h3>Review findings</h3><div></div></section>
+      </section>
+      <section id="tab-documents" class="tab-panel" hidden>
+        <div class="section-heading"><h3>Original and prepared documents</h3><select id="document-kind" aria-label="Document kind"><option value="">All kinds</option><option>ORDER</option><option>ORDERRESPONSE</option><option>DISPATCHNOTIFICATION</option><option>INVOICE</option></select></div>
+        <div class="table-wrap"><table id="document-table"><thead><tr><th>Document</th><th>Kind</th><th>Revision</th><th>Selection</th><th>Source / date</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+        <div class="pager"><button id="documents-previous" type="button" disabled>Previous</button><span id="documents-page"></span><button id="documents-next" type="button" disabled>Next</button></div>
+        <section id="document-detail" class="detail" hidden>
+          <div class="section-heading"><h3 id="document-title"></h3><button id="close-document" type="button">Close document</button></div>
+          <div id="document-metadata"></div><div id="document-findings"></div>
+          <details><summary>Complete normalized document</summary><pre id="document-json"></pre></details>
+          <form id="document-selection" class="inline align-end"><label class="grow">Reason for current revision selection<input id="selection-reason" required maxlength="2000" placeholder="Why this received revision is current"></label><button type="submit">Use this revision</button></form>
+          <div class="actions"><button id="document-download" type="button">Download original XML</button><button id="document-copy-draft" type="button">Create working copy</button></div>
+        </section>
+      </section>
+      <section id="tab-drafts" class="tab-panel" hidden>
+        <div class="section-heading"><h3>Working drafts</h3><button id="drafts-refresh" type="button">Refresh drafts</button></div>
+        <div id="draft-list" class="draft-list"></div>
+      </section>
+      <section id="tab-parties" class="tab-panel" hidden><div id="order-parties"></div><div id="order-history"></div></section>
+    </section>
+
+    <section id="draft-editor" class="editor" hidden aria-label="Complete document editor">
+      <header class="section-heading"><div><p class="eyebrow">Working document</p><h2 id="draft-title"></h2><p id="draft-revision" class="muted"></p></div><button id="close-draft" type="button">Close editor</button></header>
+      <div id="draft-source-selection" class="hint"></div>
+      <details id="draft-conflict" class="detail" hidden><summary>Earlier attempted edits retained for review</summary><p class="hint">The current saved revision is open. Compare the earlier complete request before applying any of its fields.</p><pre id="draft-conflict-json"></pre><button id="draft-conflict-restore" type="button">Load earlier edits for review</button></details>
+      <form id="draft-form">
+        <div class="form-grid">
+          <label>Document business ID<input id="draft-document-id" autocomplete="off" maxlength="512"></label>
+          <label>Document date<input id="draft-date" type="text" placeholder="Original date or timestamp"></label>
+          <label>Currency<input id="draft-currency" maxlength="16" placeholder="Original currency"></label>
+          <label>Supplier order reference<input id="draft-supplier-order" maxlength="512"></label>
+          <label>Original supplier account<input id="draft-supplier-account" readonly></label>
+          <label>Rounding<select id="draft-rounding-mode"><option value="">Exact original values</option><option value="half-up">Half up</option><option value="half-even">Half even</option><option value="toward-zero">Toward zero</option></select></label>
+          <label>Decimal places<input id="draft-rounding-scale" type="number" min="0" max="100" value="2"></label>
+          <label>Tax rounding basis<select id="draft-tax-basis"><option value="line">Each line</option><option value="document">Complete document</option></select></label>
+          <label>Delivery date meaning<select id="draft-date-type"><option value="">Source default: supplier dispatch</option><option value="optional">Supplier dispatch</option><option value="fixed">Customer receipt</option></select></label>
+          <label>Delivery from<input id="draft-date-start" type="text"></label>
+          <label>Delivery to<input id="draft-date-end" type="text"></label>
+        </div>
+        <details class="detail"><summary>Full party, package and document remarks</summary>
+          <div class="form-grid two">
+            <label>Original party structure<textarea id="draft-parties" rows="10" spellcheck="false"></textarea></label>
+            <label>Header package associations<textarea id="draft-packages" rows="6" spellcheck="false"></textarea></label>
+            <label class="span-all">Header remarks<textarea id="draft-remarks" rows="6" spellcheck="false"></textarea></label>
+            <label class="span-all">Complete document summary<textarea id="draft-summary" rows="6" spellcheck="false"></textarea></label>
+          </div>
+        </details>
+        <div class="section-heading"><h3>Document lines</h3><div class="actions"><button id="calculate-draft" type="button">Calculate amounts and totals</button><button id="add-draft-line" type="button">Add line</button><button id="restore-order-lines" type="button">Restore source lines</button></div></div>
+        <p class="hint" id="draft-kind-hint"></p>
+        <div class="table-wrap"><table id="draft-lines"><thead><tr><th>Line</th><th>Original order / line</th><th>Supplier article</th><th class="number">Quantity</th><th>Unit</th><th class="number">Price</th><th>Details</th></tr></thead><tbody></tbody></table></div>
+        <section id="draft-line-editor" class="detail" hidden>
+          <div class="section-heading"><h3 id="draft-line-heading"></h3><button id="remove-draft-line" type="button">Remove line from draft</button></div>
+          <div class="form-grid">
+            <label>Original line ID<input id="edit-line-id" maxlength="512"></label>
+            <label>Referenced order ID<input id="edit-order-id" maxlength="512"></label>
+            <label>Referenced order line<input id="edit-order-line" maxlength="512"></label>
+            <label>Order reference date<input id="edit-order-date"></label>
+            <label>Supplier article ID<input id="edit-article" maxlength="512"></label>
+            <label class="span-two">Short description<input id="edit-description" maxlength="4000"></label>
+            <label>Quantity<input id="edit-quantity" inputmode="decimal" autocomplete="off"></label>
+            <label>Unit<input id="edit-unit" maxlength="128"></label>
+            <label>Original price type<input id="edit-price-type" maxlength="128"></label>
+            <label>Price amount<input id="edit-price-amount" inputmode="decimal" autocomplete="off"></label>
+            <label>Price quantity<input id="edit-price-quantity" inputmode="decimal" placeholder="Omitted uses 1"></label>
+            <label>Line amount<input id="edit-line-amount" inputmode="decimal"></label>
+            <label>Tax rate<input id="edit-tax" inputmode="decimal" placeholder="For example 0.19"></label>
+            <label>Price currency<input id="edit-price-currency" maxlength="16"></label>
+            <label>Tax amount<input id="edit-tax-amount" inputmode="decimal"></label>
+            <label>Delivery date meaning<select id="edit-date-type"><option value="">Source default</option><option value="optional">Supplier dispatch</option><option value="fixed">Customer receipt</option></select></label>
+            <label>Delivery from<input id="edit-date-start"></label>
+            <label>Delivery to<input id="edit-date-end"></label>
+          </div>
+          <div class="form-grid two">
+            <label>Buyer article IDs<textarea id="edit-buyer-ids" rows="4" spellcheck="false"></textarea></label>
+            <label>Delivery document references<textarea id="edit-delivery-references" rows="4" spellcheck="false"></textarea></label>
+            <label>Package associations<textarea id="edit-packages" rows="5" spellcheck="false"></textarea></label>
+            <label>Original remarks and serial information<textarea id="edit-remarks" rows="5" spellcheck="false"></textarea></label>
+            <label>Derived serial values<textarea id="edit-serials" rows="4" spellcheck="false" readonly></textarea><span class="hint">Edit the original typed remarks. Serial values are derived again when the complete XML is prepared.</span></label>
+            <label>Long description<textarea id="edit-description-long" rows="4"></textarea></label>
+          </div>
+          <button id="apply-line-edit" type="button">Apply line edits</button>
+        </section>
+        <details class="detail"><summary>Complete original document and extension values</summary><p class="hint">The complete source tree travels with this document. Use this view for original extension fields and associations beyond the form.</p><textarea id="draft-complete-json" rows="16" spellcheck="false"></textarea><button id="apply-complete-json" type="button">Use complete document edits</button></details>
+        <label>Reason for this document revision<textarea id="draft-reason" rows="3" required maxlength="4000" placeholder="Describe the confirmation, dispatch, invoice or source correction"></textarea></label>
+        <div id="draft-findings" class="findings" hidden></div>
+        <div class="editor-actions"><span id="draft-save-state" class="muted">Unsaved working document</span><div class="actions"><button id="save-draft" type="submit">Save revision</button><button id="prepare-draft" type="button" disabled>Prepare complete XML</button></div></div>
+      </form>
+      <section id="prepared-result" class="detail" hidden><h3>Prepared document</h3><div id="prepared-metadata"></div><div class="actions"><button id="prepared-download" type="button">Download complete XML</button><button id="prepared-select" type="button">Review for current reconciliation</button></div></section>
+    </section>
+  </section>
+</main>
+
+<dialog id="new-draft-dialog">
+  <form id="new-draft-form"><div class="section-heading"><h2>Create complete working document</h2><button data-close="new-draft-dialog" type="button">Close</button></div>
+    <label>Document kind<select id="new-draft-kind"><option value="ORDERRESPONSE">Order confirmation</option><option value="DISPATCHNOTIFICATION">Dispatch notification</option><option value="INVOICE">Invoice</option></select></label>
+    <label>Original order IDs<textarea id="new-draft-orders" rows="5" spellcheck="false" required></textarea></label><p class="hint">Use a JSON array of exact original order IDs. A confirmation refers to one order. Dispatches and invoices may combine compatible orders with the same parties and currency.</p>
+    <button type="submit">Create working document</button>
+  </form>
+</dialog>
+
+<dialog id="source-dialog">
+  <form id="source-form">
+    <div class="section-heading"><h2>Receive original document</h2><button data-close="source-dialog" type="button" aria-label="Close source form">Close</button></div>
+    <p class="hint">Receive complete openTRANS 1.0 XML. Original identifiers, values and source bytes remain available with every revision.</p>
+    <label>Original XML file<input id="source-file" type="file" accept=".xml,application/xml,text/xml" required></label>
+    <div class="form-grid two">
+      <label>Source publisher<input id="source-publisher" maxlength="1000"></label>
+      <label>Source revision<input id="source-revision" maxlength="1000"></label>
+      <label class="span-all">Original source URL<input id="source-url" type="url" placeholder="https://"></label>
+      <label class="span-all">Source note<textarea id="source-note" rows="3" maxlength="4000"></textarea></label>
+      <label>Current revision choice<select id="source-selection"><option value="current">Receive for current reconciliation</option><option value="history">Retain in document history</option></select></label>
+    </div>
+    <label>Reviewed current order revisions<textarea id="source-order-revisions" rows="6" spellcheck="false"></textarea><span class="hint">Known order IDs and their current revision numbers are frozen with this receive request.</span></label>
+    <div id="source-progress" class="hint" role="status"></div>
+    <div class="actions"><button id="source-submit" type="submit">Receive complete document</button></div>
+  </form>
+</dialog>
+
+<dialog id="transfer-dialog">
+  <div class="section-heading"><h2>Customer handover</h2><button data-close="transfer-dialog" type="button">Close</button></div>
+  <section class="detail"><h3>Export complete workspace</h3><p>Package original XML, document revisions, drafts, selection history and retained transport results for another customer workspace.</p><button id="export-workspace" type="button">Prepare customer ZIP</button><div id="package-result"></div></section>
+  <form id="import-workspace-form" class="detail">
+    <h3>Receive customer workspace</h3>
+    <label>Original customer ZIP<input id="package-file" type="file" accept=".zip,application/zip" required></label>
+    <p class="hint">Receive the complete original package. Existing newer customer work remains available when the original package is replayed.</p>
+    <div id="package-progress" class="hint" role="status"></div>
+    <button id="import-workspace" type="submit">Receive complete ZIP</button>
+  </form>
+</dialog>
+
+<dialog id="request-dialog">
+  <div class="section-heading"><h2>Continue original request</h2><button data-close="request-dialog" type="button">Close</button></div>
+  <p id="request-description"></p><dl id="request-identity"></dl><div id="request-details"></div>
+  <div class="actions"><button id="request-retry" type="button">Reopen original request</button><button id="request-revise" type="button">Review current revisions</button></div>
+</dialog>
+<script type="module" src="/app.mjs"></script>
+</body>
+</html>
