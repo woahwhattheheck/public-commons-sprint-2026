@@ -275,6 +275,8 @@ offer, timeout, payment flow and fee sponsorship. This wallet composes with
 that adapter and with the existing terminal approval or its separately
 maintained structured approval interface.
 
+When the original operator host selects its browser approval channel, wallet execution passes that same validated channel beside the operator workspace's original accounting keys and checks it before native execution. The original approval bridge owns the channel and the buyer owns its spending decision. Direct execution from an operator terminal keeps the existing terminal approval path.
+
 Package exports, with adjacent TypeScript declarations:
 
 - **@tokenjunkielabs/starforge-merchant/buyer/browser-wallet**: preparation, inspection, provider and

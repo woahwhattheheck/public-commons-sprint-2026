@@ -22,8 +22,21 @@ async function run() {
   process.on('SIGINT',interrupt); process.on('SIGTERM',terminate);
   const unbind=bindWalletExecution(controller.signal);
   try {
+    let environment=original.operatorEnvironment;
+    if (process.env.SF81_APPROVAL_SOCKET!==undefined || process.env.SF81_APPROVAL_TOKEN!==undefined) {
+      // The existing host owns the broker; the original bridge validates and
+      // copies its two ephemeral values beside this workspace's three keys.
+      const {operatorApprovalEnvironment,checkOperatorChannel}=
+        await import('../../sf81-buyer-operator-bridge/bridge.mjs');
+      requireValue(typeof operatorApprovalEnvironment==='function' &&
+        typeof checkOperatorChannel==='function','WALLET_BROWSER_APPROVAL_RUNTIME_REQUIRED');
+      environment={...original.operatorEnvironment,...operatorApprovalEnvironment(process.env)};
+      requireValue(!controller.signal.aborted,'WALLET_BUYER_CANCELLED');
+      await checkOperatorChannel(derived.operation.intentId,{environment});
+    }
+    requireValue(!controller.signal.aborted,'WALLET_BUYER_CANCELLED');
     await execute(derived,{
-      signal:controller.signal,environment:original.operatorEnvironment,evidenceRpcEndpoint:rpcUrl,
+      signal:controller.signal,environment,evidenceRpcEndpoint:rpcUrl,
     });
   } finally {
     unbind();
