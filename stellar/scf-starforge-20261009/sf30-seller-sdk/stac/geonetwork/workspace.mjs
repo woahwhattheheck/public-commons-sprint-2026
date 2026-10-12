@@ -162,12 +162,8 @@ async function cleanOwnDownloadTemporaries(directory, files, { signal } = {}) {
   for (const record of files) {
     const path = join(directory, relative(record.path)), parent = dirname(path);
     published.add(path);
-    const named = await lstat(path, { bigint: true });
-    await fingerprint(path, record, { signal });
-    const verified = await lstat(path, { bigint: true });
-    requireValue(sameFile(named, verified), 'CATALOGUE_FILE_CHANGED_DURING_READ');
     const targets = parents.get(parent) ?? [];
-    targets.push({ path, stat: verified, record }); parents.set(parent, targets);
+    targets.push({ path, record }); parents.set(parent, targets);
   }
   const options = constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0);
   const left = Buffer.allocUnsafe(65536), right = Buffer.allocUnsafe(65536);
@@ -186,8 +182,21 @@ async function cleanOwnDownloadTemporaries(directory, files, { signal } = {}) {
     const parentStat = await lstat(parent, { bigint: true });
     requireValue(parentStat.isDirectory() && !parentStat.isSymbolicLink(),
       'CATALOGUE_FILE_PARENT_CHANGED');
+    const candidates = (await readdir(parent, { withFileTypes: true })).filter(entry =>
+      /^\.download-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(entry.name) &&
+      entry.isFile() && !published.has(join(parent, entry.name)));
+    if (!candidates.length) continue;
+    // Normal handovers do not hash their rasters again just to discover no
+    // leftovers. Verify and cache only targets in a parent needing recovery.
+    for (const target of targets) {
+      const named = await lstat(target.path, { bigint: true });
+      await fingerprint(target.path, target.record, { signal });
+      const verified = await lstat(target.path, { bigint: true });
+      requireValue(sameFile(named, verified), 'CATALOGUE_FILE_CHANGED_DURING_READ');
+      target.stat = verified;
+    }
     let removed = false;
-    for (const entry of await readdir(parent, { withFileTypes: true })) {
+    for (const entry of candidates) {
       if (!/^\.download-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(entry.name))
         continue;
       const path = join(parent, entry.name);
