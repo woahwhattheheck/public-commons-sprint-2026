@@ -8,11 +8,13 @@ import { startRedisAuthoringServer } from './server.mjs';
 import { inspectRelease } from '../../../sf82-seller-pilot/releases.mjs';
 
 const hash=value=>createHash('sha256').update(value).digest('hex');
-export async function runRedisWorkspaceJourney({sourceFile,planFile,root,runtime}){
+export async function runRedisWorkspaceJourney({sourceFile,planFile,root,runtime,collectionJourney}){
   const environment={...process.env},connection=JSON.parse(await readFile(sourceFile,'utf8')).connection;
   const credential=connection.passwordEnv??connection.tokenEnv,hadCredential=credential&&Object.hasOwn(process.env,credential);
   let workspace,server,browser,page;
   const stages=[],downloads=[],issues=[];
+  let commissioning;
+  const commissioningEnabled=process.env.SF30_REDIS_WORKSPACE_COMMISSIONING==='1';
   try{
     // Preview and the retained seller must use the workspace's explicit environment.
     if(credential)delete process.env[credential];
@@ -26,7 +28,7 @@ export async function runRedisWorkspaceJourney({sourceFile,planFile,root,runtime
       const value=await response.json();assert.equal(response.status,200,JSON.stringify(value));return value;
     };
     assert.equal((await fetch(server.url+'/api/state')).status,403);
-    for(const [name,input]of [['availability',{}],['catalog',{region:'north'}],['leaderboard',{offset:'0'}],['events',{after:'-'}]]){
+    for(const [name,input]of [['availability',{}],['catalog',{region:'north'}],['leaderboard',{offset:'0'}],['events',{after:'-'}],...(collectionJourney?.previews??[])]){
       const operation=await call('/api/preview',{requestId:'initial-'+name,revisionId:initialRevision,query:name,input});
       assert.equal(operation.status,'COMPLETED');
       if(name==='catalog')assert.equal(operation.result.data.rows[0].priceAtomic,'9007199254740993');
@@ -42,6 +44,7 @@ export async function runRedisWorkspaceJourney({sourceFile,planFile,root,runtime
       page=await browser.newPage({viewport:{width:1440,height:1000}});
       page.on('pageerror',error=>issues.push(error.message));
       await page.goto(server.operatorUrl);await page.locator('#status').filter({hasText:'Workspace ready.'}).waitFor();
+      if(collectionJourney)stages.push({kind:'collection-browser',...await collectionJourney.browser({page,workspace})});
       await page.locator('#query-list button').filter({hasText:'leaderboard'}).click();
       const originalColumns=await page.locator('#query-columns').inputValue();
       await page.locator('#query-columns').fill('[]');await page.locator('#save').click();
@@ -95,7 +98,7 @@ export async function runRedisWorkspaceJourney({sourceFile,planFile,root,runtime
       await page.locator('[data-tab=activity]').click();assert.ok(await page.locator('#activity-list tbody tr').count()>=8);
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
       if(process.env.SF30_REDIS_WORKSPACE_SCREENSHOT)await page.screenshot({path:process.env.SF30_REDIS_WORKSPACE_SCREENSHOT,fullPage:true});
-      assert.deepEqual(issues,[]);await browser.close();browser=null;
+      assert.deepEqual(issues,[]);if(!commissioningEnabled){await browser.close();browser=null;}
       stages.push({kind:'browser',viewport:{width:1440,height:1000},flow:'rejected-edit-recovery,product,price,preview,continuation,customer-download,stage,release-controls,paged-historical-preview,activity'});
     }else{
       const queries=structuredClone(initial.current.source.queries),plan=structuredClone(initial.current.plan);
@@ -120,12 +123,22 @@ export async function runRedisWorkspaceJourney({sourceFile,planFile,root,runtime
     assert.equal(restored.status,'COMPLETED');assert.equal(workspace.state().current.plan.payment.amount,'10000');
     const firstPage=await call('/api/operations?limit=2');assert.equal(firstPage.items.length,2);assert.ok(firstPage.nextCursor);
     const secondPage=await call('/api/operations?limit=2&after='+firstPage.nextCursor);assert.notEqual(secondPage.items[0].id,firstPage.items[0].id);
+    if(commissioningEnabled){
+      const {runRedisCommissioningJourney}=await import('./commission-journey.mjs');
+      commissioning=await runRedisCommissioningJourney({workspace,server,runtime,page:browser?page:undefined});
+      if(browser){await browser.close();browser=null;}
+    }
     await server.close();server=null;
     workspace=await openRedisAuthoringWorkspace(root,{environment});
     assert.equal(workspace.metadata().id,workspaceId);assert.equal(workspace.operation(prepared.id).status,'COMPLETED');
     assert.equal(workspace.state().current.plan.payment.amount,'10000');
     const reopened=await workspace.preview({requestId:'reopened-catalog',revisionId:workspace.metadata().head,query:'catalog',input:{region:'north'}});
     assert.equal(reopened.result.data.rows[0].priceAtomic,'9007199254740993');
+    const collectionReopen=collectionJourney?await collectionJourney.reopen(workspace):undefined;
+    if(commissioning){
+      const {verifyRedisCommissioningReopen}=await import('./commission-journey.mjs');
+      commissioning.reopen=await verifyRedisCommissioningReopen(workspace,commissioning);
+    }
     // The original retained release runs after both revision materializations and private prepared files are removed.
     await rm(join(root,'materialized'),{recursive:true});await rm(join(root,'packages'),{recursive:true});
     const releaseRoot=join(root,'releases'),release=await inspectRelease(releaseRoot,'terminal-v2');
@@ -143,7 +156,7 @@ export async function runRedisWorkspaceJourney({sourceFile,planFile,root,runtime
     await control('stop',{instanceId:running.console.instanceId});
     stages.push({kind:'retained-release',releaseId:release.id,digest:release.digest,challengeStatus:challenge.status,environment:'explicit-workspace'});
     return {result:'PASS',workspaceId,initialRevision,changedRevision,retainedRevision:workspace.metadata().head,
-      publicFiles:names.length,stages,downloads};
+      publicFiles:names.length,stages,downloads,...(collectionReopen?{collections:collectionReopen}:{}),...(commissioning?{commissioning}:{})};
   }catch(error){
     const diagnostic={error:error.message,browserErrors:issues,stages};
     if(page&&!page.isClosed())diagnostic.status=await page.locator('#status').innerText().catch(()=>null);

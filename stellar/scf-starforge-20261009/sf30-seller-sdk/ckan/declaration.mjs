@@ -1,7 +1,7 @@
 // MIT. Explicit CKAN field aliases and original dataset scalar contracts.
-import { dirname, resolve } from 'node:path';
 import { object, digest, readPrivate, fault } from '../postgres/publisher/files.mjs';
 import { catalogOrigin, parseCkanJson } from './capture.mjs';
+import { resolveCkanSourceCapture } from './source-locations.mjs';
 
 export const HASH = /^[a-f0-9]{64}$/;
 const NAME = /^[A-Za-z][A-Za-z0-9_]{0,47}$/;
@@ -53,6 +53,6 @@ export async function readCkanSourceFile(filename) {
   if (config.connection.kind !== 'capture' || typeof config.connection.file !== 'string' ||
       !config.connection.file || !HASH.test(config.connection.sha256 ?? '')) throw fault('CKAN_CAPTURE_CONNECTION_REQUIRED');
   return { config, original, hash: digest(original), queries: compileQueries(config.queries),
-    captureFile: resolve(dirname(filename), config.connection.file) };
+    captureFile: await resolveCkanSourceCapture(filename, config, digest(original)) };
 }
 

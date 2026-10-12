@@ -1,0 +1,657 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--NSI Web Service v10.11.8.0-->
+<message:Structure xmlns:message="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message" xmlns:structure="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/structure" xmlns:common="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/common">
+  <message:Header>
+    <message:ID>IDREF10238</message:ID>
+    <message:Test>false</message:Test>
+    <message:Prepared>2026-10-12T13:47:43.1093316+02:00</message:Prepared>
+    <message:Sender id="Unknown" />
+    <message:Receiver id="Unknown" />
+  </message:Header>
+  <message:Structures>
+    <structure:Codelists>
+      <structure:Codelist id="CL_TRANSFORMATION" agencyID="OECD" version="1.0" isFinal="true">
+        <common:Name xml:lang="en">Codelist for Transformation</common:Name>
+        <common:Name xml:lang="fr">Codelist pour la transformation</common:Name>
+        <structure:Code id="A1">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">10</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">10</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Average, period on period</common:Name>
+          <common:Name xml:lang="fr">Moyenne, période sur période</common:Name>
+        </structure:Code>
+        <structure:Code id="A12">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">20</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">20</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">12-period moving average</common:Name>
+          <common:Name xml:lang="fr">Moyenne mobile sur 12 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="A3">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">30</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">30</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">3-period moving average</common:Name>
+          <common:Name xml:lang="fr">Moyenne mobile sur 3 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="A4">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">40</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">40</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">4-period moving average</common:Name>
+          <common:Name xml:lang="fr">Moyenne mobile sur 4 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="A6">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">50</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">50</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">6-period moving average</common:Name>
+          <common:Name xml:lang="fr">Moyenne mobile sur 6 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="ACR">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">60</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">60</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Annual rate of change corrected for the effect of methodological changes where applicable</common:Name>
+          <common:Name xml:lang="fr">Taux de variation annuel corrigé de l'effet des changements méthodologiques dans le cas où c'est applicable</common:Name>
+        </structure:Code>
+        <structure:Code id="AS1999">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">70</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">70</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Average since 1999</common:Name>
+          <common:Name xml:lang="fr">Moyenne depuis 1999</common:Name>
+        </structure:Code>
+        <structure:Code id="AW12">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">80</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">80</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Weighted average, over 12 periods</common:Name>
+          <common:Name xml:lang="fr">Moyenne pondérée, sur 12 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="C12">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">90</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">90</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">12-period cumulated sum</common:Name>
+          <common:Name xml:lang="fr">Somme cumulée sur 12 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="C16">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">100</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">100</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">16 period cumulated sum</common:Name>
+          <common:Name xml:lang="fr">Somme cumulée sur 16 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="C3">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">110</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">110</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">3-period cumulated sum</common:Name>
+          <common:Name xml:lang="fr">Somme cumulée sur 3 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="C4">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">120</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">120</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">4-period cumulated sum</common:Name>
+          <common:Name xml:lang="fr">Somme cumulée sur 4 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="C4G">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">130</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">130</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Growth rate, period on period, over 4-period cumulated sum</common:Name>
+          <common:Name xml:lang="fr">Taux de croissance, période sur période, sur la somme cumulée de 4 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="C6">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">140</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">140</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">6-period cumulated sum</common:Name>
+          <common:Name xml:lang="fr">Somme cumulée sur 6 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="CY">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">150</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">150</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Cumulated sum, over 1 year</common:Name>
+          <common:Name xml:lang="fr">Somme cumulée, sur 1 an</common:Name>
+        </structure:Code>
+        <structure:Code id="D1">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">160</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">160</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Differences, period on period, first order</common:Name>
+          <common:Name xml:lang="fr">Différences, période sur période, premier ordre</common:Name>
+        </structure:Code>
+        <structure:Code id="D1D1">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">170</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">170</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Differences, period on period, second order</common:Name>
+          <common:Name xml:lang="fr">Différences, période sur période, deuxième ordre</common:Name>
+        </structure:Code>
+        <structure:Code id="D4">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">180</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">180</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Difference period on 4 periods, first order</common:Name>
+          <common:Name xml:lang="fr">Période de différence sur 4 périodes, premier ordre</common:Name>
+        </structure:Code>
+        <structure:Code id="DY">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">190</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">190</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Difference, over 1 year</common:Name>
+          <common:Name xml:lang="fr">Différence, sur 1 an</common:Name>
+        </structure:Code>
+        <structure:Code id="ECX">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">200</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">200</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Monthly index, backdated, ECU (to 1989) and fixed euro conversion rate (from 1990) used for weights</common:Name>
+          <common:Name xml:lang="fr">Indice mensuel, antidaté, ECU (jusqu'à 1989) et taux de conversion fixe de l'euro (à partir de 1990) utilisés pour les pondérations</common:Name>
+        </structure:Code>
+        <structure:Code id="EPX">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">210</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">210</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Monthly index, backdated, PPP exchange rates used for weights</common:Name>
+          <common:Name xml:lang="fr">Indice mensuel, antidaté, taux de change PPA utilisés pour les pondérations</common:Name>
+        </structure:Code>
+        <structure:Code id="ERX">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">220</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">220</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Monthly index, backdated, fixed euro conversion rate used for weights</common:Name>
+          <common:Name xml:lang="fr">Indice mensuel, antidaté, taux de conversion fixe de l'euro utilisé pour les pondérations</common:Name>
+        </structure:Code>
+        <structure:Code id="F1">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">230</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">230</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Growth rate, flow over stock, period on period</common:Name>
+          <common:Name xml:lang="fr">Taux de croissance, flux sur stock, période sur période</common:Name>
+        </structure:Code>
+        <structure:Code id="F12">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">240</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">240</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Growth rate, flow over stock, over 12 periods</common:Name>
+          <common:Name xml:lang="fr">Taux de croissance, flux sur stock, sur 12 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="F3">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">250</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">250</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Growth rate, flow over stock, over 3 periods</common:Name>
+          <common:Name xml:lang="fr">Taux de croissance, flux sur stock, sur 3 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="F4">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">260</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">260</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Growth rate, flow over stock, over 4 periods</common:Name>
+          <common:Name xml:lang="fr">Taux de croissance, flux sur stock, sur 4 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="F6">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">270</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">270</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Growth rate, flow over stock, over 6 periods</common:Name>
+          <common:Name xml:lang="fr">Taux de croissance, flux sur stock, sur 6 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="FO1">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">280</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">280</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Contribution to growth rate, flow over stock, period on period</common:Name>
+          <common:Name xml:lang="fr">Contribution au taux de croissance, flux sur stock, période sur période</common:Name>
+        </structure:Code>
+        <structure:Code id="FO12">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">290</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">290</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Contribution to growth rate, flow over stock, over 12  periods</common:Name>
+          <common:Name xml:lang="fr">Contribution au taux de croissance, flux sur stock, sur 12 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="FO16">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">300</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">300</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Contribution to growth rate, flow over stock, over 16 periods</common:Name>
+          <common:Name xml:lang="fr">Contribution au taux de croissance, flux sur stock, sur 16 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="FO3">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">310</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">310</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Contribution to growth rate, flow over stock, over 3 periods</common:Name>
+          <common:Name xml:lang="fr">Contribution au taux de croissance, flux sur stock, sur 3 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="FO4">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">320</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">320</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Contribution to growth rate, flow over stock, over 4 periods</common:Name>
+          <common:Name xml:lang="fr">Contribution au taux de croissance, flux sur stock, sur 4 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="FO6">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">330</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">330</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Contribution to growth rate, flow over stock, over 6 periods</common:Name>
+          <common:Name xml:lang="fr">Contribution au taux de croissance, flux sur stock, sur 6 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="FY">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">340</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">340</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Growth rate, flow over stock, over 1 year</common:Name>
+          <common:Name xml:lang="fr">Taux de croissance, flux sur stock, sur 1 an</common:Name>
+        </structure:Code>
+        <structure:Code id="G1">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">350</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">350</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Growth rate, period on period</common:Name>
+          <common:Name xml:lang="fr">Taux de croissance, période sur période</common:Name>
+        </structure:Code>
+        <structure:Code id="G10">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">360</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">360</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Growth rate, over 10 periods</common:Name>
+          <common:Name xml:lang="fr">Taux de croissance, sur 10 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="G3">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">370</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">370</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Growth rate, over 3 periods</common:Name>
+          <common:Name xml:lang="fr">Taux de croissance, sur 3 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="G3Y">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">380</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">380</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Growth rate, over 3 years</common:Name>
+          <common:Name xml:lang="fr">Taux de croissance, sur 3 ans</common:Name>
+        </structure:Code>
+        <structure:Code id="G4Y">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">390</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">390</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Growth rate, over 4 years</common:Name>
+          <common:Name xml:lang="fr">Taux de croissance, sur 4 ans</common:Name>
+        </structure:Code>
+        <structure:Code id="G6">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">400</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">400</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Growth rate, over 6 periods</common:Name>
+          <common:Name xml:lang="fr">Taux de croissance, sur 6 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="GC10Y">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">410</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">410</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Compound growth rate, over 10 years</common:Name>
+          <common:Name xml:lang="fr">Taux de croissance composé, sur 10 ans</common:Name>
+        </structure:Code>
+        <structure:Code id="GC5Y">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">420</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">420</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Compound growth rate, over 5 years</common:Name>
+          <common:Name xml:lang="fr">Taux de croissance composé, sur 5 ans</common:Name>
+        </structure:Code>
+        <structure:Code id="GO1">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">430</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">430</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Contribution to growth rate, period on period</common:Name>
+          <common:Name xml:lang="fr">Contribution au taux de croissance, période sur période</common:Name>
+        </structure:Code>
+        <structure:Code id="GO3">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">440</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">440</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Contribution to growth rate, over 3 periods</common:Name>
+          <common:Name xml:lang="fr">Contribution au taux de croissance, sur 3 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="GO6">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">450</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">450</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Contribution to growth rate, over 6 periods</common:Name>
+          <common:Name xml:lang="fr">Contribution au taux de croissance, sur 6 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="GOY">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">460</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">460</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Contribution to growth rate, over 1 year</common:Name>
+          <common:Name xml:lang="fr">Contribution au taux de croissance, sur 1 an</common:Name>
+        </structure:Code>
+        <structure:Code id="GR">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">470</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">470</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Growth rate, over reference year</common:Name>
+          <common:Name xml:lang="fr">Taux de croissance, par rapport à l'année de référence</common:Name>
+        </structure:Code>
+        <structure:Code id="GY">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">480</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">480</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Growth rate, over 1 year</common:Name>
+          <common:Name xml:lang="fr">Taux de croissance, sur 1 an</common:Name>
+        </structure:Code>
+        <structure:Code id="LA">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">490</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">490</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Annual levels</common:Name>
+          <common:Name xml:lang="fr">Niveaux annuels</common:Name>
+        </structure:Code>
+        <structure:Code id="N">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">500</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">500</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Non transformed data</common:Name>
+          <common:Name xml:lang="fr">Données non transformées</common:Name>
+        </structure:Code>
+        <structure:Code id="R1">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">510</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">510</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Revisions, difference to last transmission period</common:Name>
+          <common:Name xml:lang="fr">Révisions, différence avec la dernière période de transmission</common:Name>
+        </structure:Code>
+        <structure:Code id="GYA3">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">520</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">520</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Growth rate, over 1 year, based on 3-period average</common:Name>
+          <common:Name xml:lang="fr">Taux de croissance, sur 1 an, basé sur une moyenne sur 3 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="GYA12">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">530</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">530</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Growth rate, over 1 year, based on 12-period average</common:Name>
+          <common:Name xml:lang="fr">Taux de croissance, sur 1 an, basé sur une moyenne sur 12 périodes</common:Name>
+        </structure:Code>
+        <structure:Code id="IX">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">540</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">540</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Index</common:Name>
+          <common:Name xml:lang="fr">Indice</common:Name>
+        </structure:Code>
+        <structure:Code id="MIX">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">550</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">550</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Multilateral index</common:Name>
+          <common:Name xml:lang="fr">Indice multilatéral</common:Name>
+        </structure:Code>
+        <structure:Code id="MIX_1">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">560</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">560</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Multilateral index rebased to 1</common:Name>
+          <common:Name xml:lang="fr">Indice multilatéral rebasé à 1</common:Name>
+        </structure:Code>
+        <structure:Code id="MIX_100">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">570</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">570</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Multilateral index rebased to 100</common:Name>
+          <common:Name xml:lang="fr">Indice multilatéral rebasé à 100</common:Name>
+        </structure:Code>
+        <structure:Code id="_Z">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">580</common:AnnotationText>
+              <common:AnnotationText xml:lang="fr">580</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Not applicable</common:Name>
+          <common:Name xml:lang="fr">N'est pas applicable</common:Name>
+        </structure:Code>
+      </structure:Codelist>
+    </structure:Codelists>
+  </message:Structures>
+</message:Structure>

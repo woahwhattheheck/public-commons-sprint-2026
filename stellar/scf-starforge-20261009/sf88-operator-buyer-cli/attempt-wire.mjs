@@ -1,13 +1,17 @@
 // MIT. Private original SF88 HTTP/signing checkpoints; SF31/SF81 retain payment authority.
-import { lstat, open } from 'node:fs/promises';
+import { lstat, open, readdir, rename } from './dataset-location.mjs';
 import { constants } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
+import { readNativeSigningDiagnostic } from '../sf103-native-buyer-signer/diagnostics.mjs';
 import {
-  BuyerError, digest, now, privateDirectory, readBytes, parseJson, writeBytes,
-  jsonBytes, exists, need,
+  BuyerError, digest, now, parseJson, jsonBytes, need, absolute,
 } from './node/store.mjs';
+import {datasetPrivateStateDirectory as privateDirectory,datasetReadStateBytes as readBytes,
+  datasetWriteStateBytes as writeBytes,datasetStateExists as exists,
+  datasetPrepareWriteReservations as prepareWriteReservations,
+  datasetSyncStateDirectory as syncDirectory} from './dataset-location.mjs';
 
 const SCHEMA = 'stellar-forge.sf88.attempt-wire.v1';
 const SOURCE_LIMIT = 2_000_000;
@@ -28,8 +32,8 @@ const EVENTS = [
 // Same private descriptor/flock ownership used by the original Node workspace.
 // Readers take this lock without creating it, so an active writer cannot be
 // mistaken for a stopped attempt between two checkpoint publications.
-async function ownership(directory, create) {
-  const path=join(directory,'active.lock');
+async function ownership(directory, create, name = 'active.lock') {
+  const path=join(directory,name);
   const handle=await open(path,constants.O_RDWR | (create ? constants.O_CREAT : 0) |
     (constants.O_NOFOLLOW ?? 0),0o600);
   try {
@@ -91,12 +95,14 @@ function stateOf(events) {
   return 'SOURCE_RETAINED';
 }
 function view(directory, source, events, writerActive = false) {
+  const nativeSigning=readNativeSigningDiagnostic(events['signing-error']?.value.nativeSigning);
   return {
     schema:SCHEMA, intentId:source.value.binding.intentId, directory, writerActive,
     sourceSha256:source.sha256, configValueSha256:source.value.binding.configValueSha256,
     state:stateOf(events), signingEntered:!!events['signing-input'],
     signedDispatchRecorded:!!events['signed-dispatch'],
     signedResponseRecorded:!!events['signed-response'],
+    ...(nativeSigning ? {nativeSigning} : {}),
     records:Object.fromEntries(Object.entries(events).map(([name, item]) =>
       [name, {path:join(directory, name + '.json'),sha256:item.sha256,bytes:item.bytes,
         recordedAt:item.value.recordedAt}])),
@@ -110,7 +116,7 @@ function view(directory, source, events, writerActive = false) {
 /** Called once by original execute before the buyer/approval/signer can run.
  * All wire payloads remain in the caller's existing private evidence directory.
  * No socket, signer, approval or ledger capability is provided by this module. */
-export async function createAttemptWireRecorder({cfg, body, fetchImpl}) {
+export async function createAttemptWireRecorder({cfg, body, fetchImpl, reserveFile, signal}) {
   need(typeof fetchImpl === 'function', 'WIRE_ORIGINAL_TRANSPORT_REQUIRED');
   const frozen = JSON.parse(JSON.stringify(cfg));
   const originalBody = requestBody(body);
@@ -125,9 +131,17 @@ export async function createAttemptWireRecorder({cfg, body, fetchImpl}) {
   need(sourceRaw.length <= SOURCE_LIMIT, 'WIRE_SOURCE_TOO_LARGE');
   const held = await ownership(directory,true);
   need(held,'WIRE_ATTEMPT_ACTIVE');
-  try { await writeBytes(join(directory, 'source.json'), sourceRaw, {exclusive:true}); }
-  catch (error) {
-    await held.close();
+  let reservations;
+  try {
+    // These are the actual future checkpoint inodes, held before approval or signing.
+    reservations = await prepareWriteReservations([
+      {path:join(directory,'source.json'),bytes:sourceRaw.length,exclusive:true},
+      ...EVENTS.map(name=>({path:join(directory,name+'.json'),bytes:RECORD_LIMIT,exclusive:true})),
+    ], {reserveFile,signal});
+    if (reservations) await reservations.writeBytes(join(directory,'source.json'),sourceRaw,{exclusive:true});
+    else await writeBytes(join(directory,'source.json'),sourceRaw,{exclusive:true});
+  } catch (error) {
+    try { await reservations?.close(); } finally { await held.close(); }
     if (error.code === 'EEXIST') throw new BuyerError('WIRE_ATTEMPT_ALREADY_RECORDED_USE_RECOVERY');
     throw error;
   }
@@ -140,7 +154,8 @@ export async function createAttemptWireRecorder({cfg, body, fetchImpl}) {
       phase:name, recordedAt:now(), ...fields});
     const value = parseJson(raw);
     need(raw.length <= RECORD_LIMIT, 'WIRE_RECORD_TOO_LARGE');
-    await writeBytes(join(directory, name + '.json'), raw, {exclusive:true});
+    if (reservations) await reservations.writeBytes(join(directory,name+'.json'),raw,{exclusive:true});
+    else await writeBytes(join(directory,name+'.json'),raw,{exclusive:true});
     events[name] = {raw,value,sha256:digest(raw),bytes:raw.length};
     return events[name];
   }
@@ -161,8 +176,10 @@ export async function createAttemptWireRecorder({cfg, body, fetchImpl}) {
   }
   async function signingError(error) {
     if (!events['signing-input'] || events['signing-result'] || events['signing-error']) return;
+    let nativeSigning;
+    try { nativeSigning=readNativeSigningDiagnostic(error?.nativeSigning); } catch {}
     await publish('signing-error', {inputSha256:events['signing-input'].sha256,
-      code:code(error, 'ORIGINAL_SIGNER_ERROR')});
+      code:code(error, 'ORIGINAL_SIGNER_ERROR'), ...(nativeSigning ? {nativeSigning} : {})});
   }
   async function fetch(url, options = {}) {
     const href = new URL(url).href, method = options.method ?? 'GET';
@@ -212,23 +229,15 @@ export async function createAttemptWireRecorder({cfg, body, fetchImpl}) {
     return response;
   }
   return Object.freeze({fetch,signingInput,signingResult,signingError,
-    async close(){if(!closed){await held.close();closed=true;}},
+    async close(){if(!closed){closed=true;try{await reservations?.close();}finally{await held.close();}}},
     snapshot:() => view(directory,source,events,!closed)});
 }
 
 /** Read-only source validation. includeWire is for the original private recovery
  * consumer: it exposes signed authorization bytes and must never be logged,
  * exported to a public artifact, or sent to a different merchant. */
-export async function readAttemptWireCheckpoint({cfg, body, includeWire = false}) {
+async function checkpointWithLock({cfg, body, includeWire = false}, directory) {
   need(typeof includeWire === 'boolean', 'WIRE_INCLUDE_OPTION_INVALID');
-  const directory = wirePath(cfg);
-  if (!await exists(directory)) return null;
-  await privateDirectory(cfg.evidenceDir, {create:false});
-  await privateDirectory(directory, {create:false});
-  const held=await ownership(directory,false);
-  if(!held) return {schema:SCHEMA,intentId:cfg.operation.intentId,directory,
-    state:'WRITER_ACTIVE',writerActive:true};
-  try {
   const source = await originalFile(join(directory,'source.json'),SOURCE_LIMIT);
   const binding = bindingFor(cfg,requestBody(body));
   need(source.value.schema === SCHEMA && same(source.value.binding,binding) &&
@@ -273,8 +282,13 @@ export async function readAttemptWireCheckpoint({cfg, body, includeWire = false}
   if (signed) need(input && signed.value.inputSha256 === input.sha256 &&
     digest(Buffer.from(JSON.stringify(signed.value.payload))) === signed.value.payloadSha256,
     'WIRE_SIGNATURE_RECORD_MISMATCH');
-  if (events['signing-error']) need(input && !signed &&
-    events['signing-error'].value.inputSha256 === input.sha256, 'WIRE_SIGNING_RECORD_MISMATCH');
+  if (events['signing-error']) {
+    const errorRecord=events['signing-error'].value;
+    need(input && !signed && errorRecord.inputSha256 === input.sha256, 'WIRE_SIGNING_RECORD_MISMATCH');
+    if (Object.hasOwn(errorRecord,'nativeSigning')) need(
+      readNativeSigningDiagnostic(errorRecord.nativeSigning) !== undefined,
+      'WIRE_SIGNING_DIAGNOSTIC_INVALID');
+  }
   if (signedRequest) need(signed && signedRequest.value.signingResultSha256 === signed.sha256 &&
     signedRequest.value.headers.find(([name]) => name === 'payment-signature')?.[1] ===
       Buffer.from(JSON.stringify(signed.value.payload)).toString('base64') &&
@@ -288,5 +302,322 @@ export async function readAttemptWireCheckpoint({cfg, body, includeWire = false}
     source:{value:source.value},
     events:{value:Object.fromEntries(Object.entries(events).map(([name,item]) => [name,item.value]))},
   });
+}
+
+export async function readAttemptWireCheckpoint({cfg, body, includeWire = false}) {
+  need(typeof includeWire === 'boolean', 'WIRE_INCLUDE_OPTION_INVALID');
+  const directory = wirePath(cfg);
+  if (!await exists(directory)) return null;
+  await privateDirectory(cfg.evidenceDir, {create:false});
+  await privateDirectory(directory, {create:false});
+  const held=await ownership(directory,false);
+  if(!held) return {schema:SCHEMA,intentId:cfg.operation.intentId,directory,
+    state:'WRITER_ACTIVE',writerActive:true};
+  try { return await checkpointWithLock({cfg,body,includeWire},directory); }
+  finally { await held.close(); }
+}
+
+
+const PREAPPROVAL_WIRE = 'stellar-forge.sf88.preapproval-wire.v1';
+const HASH = /^[a-f0-9]{64}$/;
+const HISTORY_LIMIT = 262144;
+const wireCheck = signal => {
+  need(signal === undefined || signal instanceof AbortSignal,'INVALID_ABORT_SIGNAL');
+  need(!signal?.aborted,'OPERATION_ABORTED_BEFORE_START');
+};
+function checkpointHash(value) {
+  const {sha256,...body}=value;
+  return valueHash(body);
+}
+function missingWire(cfg,body) {
+  const value={schema:PREAPPROVAL_WIRE+'.checkpoint',directory:wirePath(cfg),
+    binding:bindingFor(cfg,body),exists:false,state:'WIRE_DIRECTORY_ABSENT',files:[]};
+  return {...value,sha256:checkpointHash(value)};
+}
+async function inventoryFile(directory,name) {
+  need(name==='active.lock' || name==='source.json' || EVENTS.some(event=>name===event+'.json') ||
+    /^\.write-[a-f0-9-]+$/.test(name),'PREAPPROVAL_WIRE_UNKNOWN_MEMBER');
+  const path=join(directory,name),fd=await open(path,constants.O_RDONLY|(constants.O_NOFOLLOW??0));
+  try {
+    const before=await fd.stat();
+    need(before.isFile() && before.size<=SOURCE_LIMIT && !(before.mode&0o077) &&
+      (!process.getuid || before.uid===process.getuid()),'WIRE_PRIVATE_FILE_REQUIRED');
+    const raw=await fd.readFile(),after=await fd.stat(),named=await lstat(path);
+    need(raw.length===before.size && before.dev===after.dev && before.ino===after.ino &&
+      before.size===after.size && before.mtimeMs===after.mtimeMs && before.ctimeMs===after.ctimeMs &&
+      named.dev===after.dev && named.ino===after.ino && !named.isSymbolicLink(),
+      'PREAPPROVAL_WIRE_SOURCE_CHANGED');
+    return {name,bytes:raw.length,sha256:digest(raw),device:before.dev,inode:before.ino};
+  } finally {await fd.close();}
+}
+async function releaseUnpublishedWireCapacity(directory,checkpoint) {
+  for(const expected of checkpoint.files) {
+    if(!/^\.write-[a-f0-9-]+$/.test(expected.name))continue;
+    // A killed original Store writer cannot close its preallocated future
+    // checkpoint slots. Retain each exact inode and all logical bytes while
+    // releasing only its abandoned KEEP_SIZE allocation beyond logical EOF.
+    need(same(await inventoryFile(directory,expected.name),expected),
+      'PREAPPROVAL_WIRE_SOURCE_CHANGED');
+    const path=join(directory,expected.name);
+    const fd=await open(path,constants.O_RDWR|(constants.O_NOFOLLOW??0));
+    try {
+      const before=await fd.stat(),named=await lstat(path);
+      need(before.isFile() && !named.isSymbolicLink() && !(before.mode&0o077) &&
+        (!process.getuid || before.uid===process.getuid()) &&
+        before.dev===expected.device && before.ino===expected.inode &&
+        before.size===expected.bytes && named.dev===before.dev && named.ino===before.ino,
+        'PREAPPROVAL_WIRE_SOURCE_CHANGED');
+      await fd.truncate(expected.bytes);
+      await fd.sync();
+      const raw=await fd.readFile(),after=await fd.stat(),finalName=await lstat(path);
+      need(raw.length===expected.bytes && digest(raw)===expected.sha256 &&
+        after.dev===before.dev && after.ino===before.ino && after.size===before.size &&
+        finalName.dev===after.dev && finalName.ino===after.ino && !finalName.isSymbolicLink(),
+        'PREAPPROVAL_WIRE_SOURCE_CHANGED');
+    } finally {await fd.close();}
+  }
+}
+async function captureWire(cfg,body,directory,held) {
+  const before=await lstat(directory);
+  need(before.isDirectory() && !before.isSymbolicLink(),'WIRE_PRIVATE_DIRECTORY_REQUIRED');
+  const names=(await readdir(directory)).sort();
+  need(names.length<=64,'PREAPPROVAL_WIRE_INVENTORY_LIMIT');
+  if(!held) {
+    need(names.length===0,'PREAPPROVAL_WIRE_LOCK_REQUIRED');
+    const value={schema:PREAPPROVAL_WIRE+'.checkpoint',directory:wirePath(cfg),
+      binding:bindingFor(cfg,body),exists:true,directoryIdentity:{device:before.dev,inode:before.ino},
+      lockIdentity:null,state:'EMPTY_BEFORE_LOCK',files:[]};
+    return {...value,sha256:checkpointHash(value)};
+  }
+  const lock=await held.stat(),namedLock=await lstat(join(directory,'active.lock'));
+  need(lock.dev===namedLock.dev && lock.ino===namedLock.ino,'WIRE_LOCK_CHANGED');
+  const files=[];
+  for(const name of names)files.push(await inventoryFile(directory,name));
+  need(files.reduce((sum,file)=>sum+file.bytes,0)<=16*1024*1024,'PREAPPROVAL_WIRE_INVENTORY_LIMIT');
+  need(!names.some(name=>name.startsWith('signing-')||name.startsWith('signed-')),
+    'PREAPPROVAL_WIRE_SIGNING_OR_DISPATCH_RECORDED');
+  let state='SOURCE_NOT_RETAINED',sourceSha256=null;
+  if(names.includes('source.json')) {
+    const checkpoint=await checkpointWithLock({cfg,body:body.present?body.bytes:undefined},directory);
+    need(!checkpoint.signingEntered && !checkpoint.signedDispatchRecorded &&
+      !checkpoint.signedResponseRecorded,'PREAPPROVAL_WIRE_SIGNING_OR_DISPATCH_RECORDED');
+    state=checkpoint.state;sourceSha256=checkpoint.sourceSha256;
+  } else need(!names.some(name=>EVENTS.some(event=>name===event+'.json')),
+    'PREAPPROVAL_WIRE_SOURCE_MISSING');
+  const after=await lstat(directory),afterNames=(await readdir(directory)).sort();
+  need(before.dev===after.dev && before.ino===after.ino && same(names,afterNames),
+    'PREAPPROVAL_WIRE_SOURCE_CHANGED');
+  const value={schema:PREAPPROVAL_WIRE+'.checkpoint',directory:wirePath(cfg),
+    binding:bindingFor(cfg,body),exists:true,directoryIdentity:{device:before.dev,inode:before.ino},
+    lockIdentity:{device:lock.dev,inode:lock.ino},state,sourceSha256,files};
+  return {...value,sha256:checkpointHash(value)};
+}
+function matchingCheckpoint(expected,actual,{allowCreatedLock=false}={}) {
+  if(same(expected,actual))return true;
+  return allowCreatedLock && expected?.state==='EMPTY_BEFORE_LOCK' && actual?.state==='SOURCE_NOT_RETAINED' &&
+    same(expected.binding,actual.binding) && same(expected.directoryIdentity,actual.directoryIdentity) &&
+    expected.directory===actual.directory && actual.files.length===1 &&
+    actual.files[0].name==='active.lock' && actual.files[0].bytes===0;
+}
+async function acquireWire(cfg,body,{createMissingLock=false}={}) {
+  const directory=wirePath(cfg);
+  if(!await exists(directory))return {held:null,checkpoint:missingWire(cfg,body)};
+  await privateDirectory(directory,{create:false});
+  const hasLock=await exists(join(directory,'active.lock'));
+  if(!hasLock) {
+    const empty=await captureWire(cfg,body,directory,null);
+    if(!createMissingLock)return {held:null,checkpoint:empty};
+  }
+  const held=await ownership(directory,createMissingLock);
+  need(held,'PREAPPROVAL_WIRE_WRITER_ACTIVE');
+  try{return {held,checkpoint:await captureWire(cfg,body,directory,held)};}
+  catch(error){await held.close();throw error;}
+}
+/** Read only: select the complete inactive original wire, including unpublished
+ * atomic-write inodes. Unsigned requests are retained; every signer/signed phase
+ * and every active original writer makes this same-intent path ineligible. */
+export async function inspectPreapprovalWireCheckpoint({cfg,body}) {
+  const frozen=JSON.parse(JSON.stringify(cfg)),originalBody=requestBody(body);
+  const selected=await acquireWire(frozen,originalBody);
+  try{return selected.checkpoint;}finally{await selected.held?.close();}
+}
+function historyOptions({cfg,body,historyDirectory,planSha256,sourceAttemptSha256,expectedCheckpoint}) {
+  const frozen=JSON.parse(JSON.stringify(cfg)),originalBody=requestBody(body);
+  const directory=absolute(historyDirectory);
+  need(HASH.test(planSha256??'') && HASH.test(sourceAttemptSha256??'') &&
+    directory.endsWith('/preapproval-history/'+sourceAttemptSha256),
+    'PREAPPROVAL_WIRE_PLAN_REQUIRED');
+  const expected=expectedCheckpoint===undefined?undefined:JSON.parse(jsonBytes(expectedCheckpoint));
+  if(expected)need(expected.schema===PREAPPROVAL_WIRE+'.checkpoint' &&
+    expected.sha256===checkpointHash(expected) && same(expected.binding,bindingFor(frozen,originalBody)) &&
+    expected.directory===wirePath(frozen),'PREAPPROVAL_WIRE_SELECTION_CHANGED');
+  return {cfg:frozen,body:originalBody,directory,planSha256,sourceAttemptSha256,expected,
+    selectionPath:join(directory,'wire-selection.json'),receiptPath:join(directory,'wire-retirement.json'),
+    archiveDirectory:join(directory,'original-wire')};
+}
+function validateSelection(value,options) {
+  need(value?.schema===PREAPPROVAL_WIRE+'.selection' &&
+    value.intentId===options.cfg.operation.intentId && value.planSha256===options.planSha256 &&
+    value.sourceAttemptSha256===options.sourceAttemptSha256 &&
+    value.directory===options.directory && value.archiveDirectory===options.archiveDirectory &&
+    value.checkpoint?.sha256===checkpointHash(value.checkpoint) &&
+    value.checkpoint.directory===wirePath(options.cfg) &&
+    same(value.checkpoint.binding,bindingFor(options.cfg,options.body)) &&
+    (!options.expected || matchingCheckpoint(options.expected,value.checkpoint,{allowCreatedLock:true})),
+    'PREAPPROVAL_WIRE_SELECTION_CHANGED');
+  const check=value.originalVerification;
+  need(check?.schema==='stellar-forge.node-preapproval-recovery.v1' &&
+    check.intentId===value.intentId && check.planSha256===value.planSha256 &&
+    check.processProof?.schema==='stellar-forge.node-preapproval-process-proof.v1' &&
+    check.processProof.outcome==='ORIGINAL_ATTEMPT_PROCESS_ABSENT' &&
+    check.processProof.intentId===value.intentId &&
+    check.processProof.attemptSha256===value.sourceAttemptSha256 &&
+    check.originalLedgerCheck?.outcome==='ABSENT_FROM_AUTHENTICATED_ORIGINAL_LEDGER' &&
+    check.originalLedgerCheck.intentId===value.intentId &&
+    check.originalLedgerCheck.ledger===options.cfg.operator.ledger &&
+    check.originalLedgerCheck.reservationsForIntent===0,
+    'PREAPPROVAL_WIRE_ORIGINAL_AUDIT_REQUIRED');
+  return value;
+}
+async function readSelection(options) {
+  if(!await exists(options.selectionPath))return null;
+  const read=await originalFile(options.selectionPath,HISTORY_LIMIT);
+  return {...read,value:validateSelection(read.value,options)};
+}
+async function archivedCheckpoint(options,selected,{releaseOrphans=false}={}) {
+  if(!selected.value.checkpoint.exists) {
+    need(!await exists(options.archiveDirectory),'PREAPPROVAL_WIRE_ARCHIVE_CHANGED');
+    return selected.value.checkpoint;
+  }
+  await privateDirectory(options.archiveDirectory,{create:false});
+  const held=await ownership(options.archiveDirectory,false);
+  need(held,'PREAPPROVAL_WIRE_ARCHIVE_ACTIVE');
+  try {
+    const actual=await captureWire(options.cfg,options.body,options.archiveDirectory,held);
+    need(same(actual,selected.value.checkpoint),'PREAPPROVAL_WIRE_ARCHIVE_CHANGED');
+    if(releaseOrphans) {
+      await releaseUnpublishedWireCapacity(options.archiveDirectory,actual);
+      need(same(await captureWire(options.cfg,options.body,options.archiveDirectory,held),actual),
+        'PREAPPROVAL_WIRE_ARCHIVE_CHANGED');
+    }
+    return actual;
   } finally {await held.close();}
+}
+function retirementReceipt(options,selected) {
+  return {schema:PREAPPROVAL_WIRE+'.retirement',intentId:options.cfg.operation.intentId,
+    planSha256:options.planSha256,sourceAttemptSha256:options.sourceAttemptSha256,
+    selectionSha256:selected.sha256,checkpointSha256:selected.value.checkpoint.sha256,
+    archiveDirectory:selected.value.checkpoint.exists?options.archiveDirectory:null,
+    outcome:'ORIGINAL_INACTIVE_WIRE_RETAINED'};
+}
+/** Reopen only the selected archive. A later wire at the canonical evidence
+ * pathname is a different attempt and is never moved or altered by this read. */
+export async function readPreapprovalWireHistory(options) {
+  const selectedOptions=historyOptions(options),selected=await readSelection(selectedOptions);
+  if(!selected)return null;
+  if(!await exists(selectedOptions.receiptPath)) {
+    if(await exists(selectedOptions.archiveDirectory))await archivedCheckpoint(selectedOptions,selected);
+    return {schema:PREAPPROVAL_WIRE,intentId:selectedOptions.cfg.operation.intentId,status:'PREPARING',
+      planSha256:selectedOptions.planSha256,selectionSha256:selected.sha256,
+      checkpointSha256:selected.value.checkpoint.sha256,
+      archiveDirectory:await exists(selectedOptions.archiveDirectory)?selectedOptions.archiveDirectory:null};
+  }
+  const receipt=await originalFile(selectedOptions.receiptPath,HISTORY_LIMIT);
+  need(same(receipt.value,retirementReceipt(selectedOptions,selected)),
+    'PREAPPROVAL_WIRE_RETIREMENT_CHANGED');
+  await archivedCheckpoint(selectedOptions,selected);
+  return {schema:PREAPPROVAL_WIRE,intentId:selectedOptions.cfg.operation.intentId,status:'RETAINED',
+    planSha256:selectedOptions.planSha256,selectionSha256:selected.sha256,
+    retirementSha256:receipt.sha256,checkpointSha256:selected.value.checkpoint.sha256,
+    sourceSha256:selected.value.checkpoint.sourceSha256??null,
+    archiveDirectory:receipt.value.archiveDirectory,state:selected.value.checkpoint.state,
+    files:selected.value.checkpoint.files.length};
+}
+/** The original caller provides its process/ledger audit under this per-plan
+ * flock. No payment, reservation or signing authority is implemented here.
+ * Both immutable transition records are allocated before the original wire
+ * directory is retired. The selected plan remains locked through attempt
+ * admission, so repeated callers cannot retire the new attempt's wire. */
+export async function withPreapprovalWireHistory(options,work) {
+  const selectedOptions=historyOptions(options);
+  const {cfg,body,directory,selectionPath,receiptPath,archiveDirectory}=selectedOptions;
+  const {verifyOriginal,reserveFile,signal}=options;
+  need(typeof verifyOriginal==='function' && typeof work==='function',
+    'PREAPPROVAL_WIRE_ORIGINAL_CALLER_REQUIRED');
+  wireCheck(signal);
+  await privateDirectory(directory,{create:false});
+  const planLock=await ownership(directory,true,'wire-transition.lock');
+  need(planLock,'PREAPPROVAL_RECOVERY_ACTIVE');
+  let held=null,reservations;
+  try {
+    // Caller reopens the selected pending plan, checks the exact source process,
+    // and invokes the authenticated original zero-reservation ledger reader.
+    const originalVerification=JSON.parse(jsonBytes(await verifyOriginal()));
+    let selected=await readSelection(selectedOptions);
+    const alreadyArchived=selected && await exists(archiveDirectory);
+    if(!alreadyArchived) {
+      const actual=await acquireWire(cfg,body,{createMissingLock:true});
+      held=actual.held;
+      if(selected)need(same(selected.value.checkpoint,actual.checkpoint),
+        'PREAPPROVAL_NEW_WIRE_EXISTS');
+      else {
+        if(selectedOptions.expected)need(matchingCheckpoint(selectedOptions.expected,actual.checkpoint,
+          {allowCreatedLock:true}),'PREAPPROVAL_WIRE_SOURCE_CHANGED');
+        const value=validateSelection({schema:PREAPPROVAL_WIRE+'.selection',
+          intentId:cfg.operation.intentId,planSha256:selectedOptions.planSha256,
+          sourceAttemptSha256:selectedOptions.sourceAttemptSha256,directory,archiveDirectory,
+          checkpoint:actual.checkpoint,originalVerification},selectedOptions);
+        const raw=jsonBytes(value);
+        need(raw.length<=HISTORY_LIMIT,'PREAPPROVAL_WIRE_HISTORY_LIMIT');
+        selected={value,raw,sha256:digest(raw),bytes:raw.length};
+      }
+    } else await archivedCheckpoint(selectedOptions,selected);
+    validateSelection({...selected.value,originalVerification},selectedOptions);
+    // A completed or partially published archive belongs to the selected old
+    // attempt. Its replacement canonical wire is never a retirement candidate.
+    if(alreadyArchived)need(!await exists(wirePath(cfg)),'PREAPPROVAL_NEW_WIRE_EXISTS');
+    // This capacity-only cleanup follows the fresh original process/ledger
+    // audit under both locks. It runs before reserving transition metadata, so
+    // dead future slots can supply the space needed to preserve their history.
+    if(alreadyArchived)await archivedCheckpoint(selectedOptions,selected,{releaseOrphans:true});
+    else if(selected.value.checkpoint.exists) {
+      await releaseUnpublishedWireCapacity(wirePath(cfg),selected.value.checkpoint);
+      need(same(await captureWire(cfg,body,wirePath(cfg),held),selected.value.checkpoint),
+        'PREAPPROVAL_WIRE_SOURCE_CHANGED');
+    }
+    const receipt=retirementReceipt(selectedOptions,selected),receiptRaw=jsonBytes(receipt);
+    const entries=[];
+    if(!await exists(selectionPath))entries.push({path:selectionPath,bytes:selected.raw.length,exclusive:true});
+    if(!await exists(receiptPath))entries.push({path:receiptPath,bytes:receiptRaw.length,exclusive:true});
+    if(entries.length)reservations=await prepareWriteReservations(entries,{reserveFile,signal});
+    const publish=async(path,raw)=>{
+      if(reservations)await reservations.writeBytes(path,raw,{exclusive:true});
+      else await writeBytes(path,raw,{exclusive:true});
+    };
+    wireCheck(signal);
+    if(!await exists(selectionPath))await publish(selectionPath,selected.raw);
+    const retained=await readSelection(selectedOptions);
+    need(retained.sha256===selected.sha256,'PREAPPROVAL_WIRE_SELECTION_CHANGED');
+    if(selected.value.checkpoint.exists && !alreadyArchived) {
+      const actual=await captureWire(cfg,body,wirePath(cfg),held);
+      need(same(actual,selected.value.checkpoint),'PREAPPROVAL_WIRE_SOURCE_CHANGED');
+      need((await lstat(directory)).dev===actual.directoryIdentity.device,
+        'PREAPPROVAL_WIRE_SAME_FILESYSTEM_REQUIRED');
+      await rename(wirePath(cfg),archiveDirectory);
+      await syncDirectory(dirname(wirePath(cfg)));await syncDirectory(directory);
+    }
+    if(held){await held.close();held=null;}
+    await archivedCheckpoint(selectedOptions,selected);
+    if(!await exists(receiptPath))await publish(receiptPath,receiptRaw);
+    const committed=await originalFile(receiptPath,HISTORY_LIMIT);
+    need(same(committed.value,receipt),'PREAPPROVAL_WIRE_RETIREMENT_CHANGED');
+    // Transition publication is completed even if cancellation follows rename.
+    // Cancellation still prevents entry into the new original buyer below.
+    wireCheck(signal);
+    const history=await readPreapprovalWireHistory({...options,cfg,body:body.present?body.bytes:undefined});
+    return await work({history,originalVerification});
+  } finally {
+    try{await reservations?.close();}
+    finally{try{await held?.close();}finally{await planLock.close();}}
+  }
 }

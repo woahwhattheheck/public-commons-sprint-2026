@@ -160,7 +160,7 @@ export function catalogQuantity(material, quantity, requestedUnit) {
     baseQuantity: { numerator: numerator.toString(), denominator: denominator.toString(), decimal } };
 }
 
-export async function compileCatalogMapping(value, resolveSource) {
+export async function compileCatalogMapping(value, resolveSource, context = {}) {
   const mapping = normalizeCatalogMapping(value), lookups = new Map(), dependencies = new Map();
   async function prepare(expression) {
     if (!expression || typeof expression === 'string' || Object.hasOwn(expression, 'constant')) return;
@@ -168,7 +168,8 @@ export async function compileCatalogMapping(value, resolveSource) {
     const selected = expression.lookup, key = digest(selected);
     if (lookups.has(key)) return;
     const source = await resolveSource(selected.sourceId), values = new Map();
-    for await (const { record } of readCatalogRows(source.path, source.format)) {
+    for await (const { record } of readCatalogRows(source.path, source.format,
+      { ...context, expectedBytes: source.bytes, expectedSha256: source.sha256 })) {
       if (!Object.entries(selected.where).every(([field, expected]) => catalogField(record, field) === expected)) continue;
       const tuple = selected.key.map(field => scalar(catalogField(record, field), 'Lookup key', false, 1024));
       const identity = canonical(tuple);

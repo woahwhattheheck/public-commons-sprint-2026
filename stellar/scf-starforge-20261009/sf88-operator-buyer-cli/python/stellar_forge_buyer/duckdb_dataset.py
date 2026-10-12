@@ -344,22 +344,31 @@ class DuckDBWorkspace:
             yield
 
     @contextmanager
-    def _connection(self, *, writeable=False, allowed_paths=()):
+    def _connection(self, *, writeable=False, allowed_paths=(), spatial_extension=None):
         if self.path.exists():
             info = self.path.lstat()
             if not stat.S_ISREG(info.st_mode) or info.st_mode & 0o077 or info.st_nlink != 1:
                 raise StateError("DUCKDB_PRIVATE_DATABASE_REQUIRED")
         # DuckDB requires the exact file allowance before external access is
         # disabled. The connection is not yielded until both settings are locked.
-        config = {"enable_external_access": "true" if allowed_paths else "false",
+        config = {"enable_external_access": "true" if allowed_paths or spatial_extension else "false",
                   "autoinstall_known_extensions": "false",
                   "autoload_known_extensions": "false", "allow_unsigned_extensions": "false",
                   "threads": str(self.threads), "memory_limit": self.memory_limit}
         db = self.duckdb.connect(str(self.path), read_only=not writeable, config=config)
         try:
+            if spatial_extension:
+                if spatial_extension != "spatial":
+                    extension = Path(spatial_extension)
+                    info = extension.lstat()
+                    if not stat.S_ISREG(info.st_mode) or extension.is_symlink():
+                        raise StateError("DUCKDB_SPATIAL_EXTENSION_FILE_INVALID")
+                db.execute("LOAD '" + str(spatial_extension).replace("'", "''") + "'")
+                db.execute("SET geometry_always_xy=true")
             if allowed_paths:
                 literal = "[" + ",".join("'" + str(path).replace("'", "''") + "'" for path in allowed_paths) + "]"
                 db.execute("SET allowed_paths=" + literal)
+            if allowed_paths or spatial_extension:
                 db.execute("SET enable_external_access=false")
             db.execute("SET lock_configuration=true")
             yield db
@@ -698,21 +707,22 @@ class DuckDBWorkspace:
                     prior = parse(current[1].encode())
                     if prior["sql"] == sql and prior["parameters"] == parameters:
                         db.commit()
-                        return prior
+                        return {**prior, "parameters_text": _json(prior["parameters"])}
                     name = prior["name"]
                 record = {"query_id": query_id, "name": name, "revision": revision + 1, "sql": sql,
                           "parameters": parameters, "saved_at": _now()}
                 db.execute("INSERT INTO sf_queries VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET revision=excluded.revision,record=excluded.record", [query_id, name, revision + 1, _json(record)])
                 db.execute("INSERT INTO sf_query_history VALUES(?,?,?)", [query_id, revision + 1, _json(record)])
                 db.commit()
-                return record
+                return {**record, "parameters_text": _json(record["parameters"])}
             except BaseException:
                 db.rollback()
                 raise
 
     def queries(self):
         with self._guard(), self._connection() as db:
-            return {"queries": [parse(row[0].encode()) for row in db.execute("SELECT record FROM sf_queries ORDER BY name").fetchall()]}
+            records = [parse(row[0].encode()) for row in db.execute("SELECT record FROM sf_queries ORDER BY name").fetchall()]
+            return {"queries": [{**record, "parameters_text": _json(record["parameters"])} for record in records]}
 
     def exports(self):
         with self._guard(), self._connection() as db:

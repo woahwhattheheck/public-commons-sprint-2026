@@ -1,7 +1,7 @@
 # Native gRPC merchant and operator workspace
 
-Turn selected unary methods from a private protobuf service into the original
-Stellar Forge seller's paid JSON routes. Capture the actual protobuf import
+Turn selected native methods from a private protobuf service into the original
+Stellar Forge seller's paid JSON or NDJSON routes. Capture the actual protobuf import
 closure, review exact request and response types, retain a plan with complete
 payment terms, and operate the merchant through the original SF30 and SF82
 lifecycles.
@@ -99,10 +99,11 @@ external account.
    credentials. Set the merchant-host protobuf directory and one or more entry
    files, then capture. Imported local files and required standard descriptors
    are retained with their source identities.
-2. On **Methods & terms**, choose a captured unary or server-streaming method.
-   For server streams, first enable explicit byte, record and deadline limits on
-   Source. Client-streaming and bidirectional application methods remain visible
-   for inspection. [Streaming](STREAMING.md) covers exact NDJSON capture, payment,
+2. On **Methods & terms**, choose an enabled captured method.
+   For streamed responses, save explicit byte, record and deadline limits on
+   Source. For client-streaming requests, save the request-message and aggregate
+   byte limits. Bidirectional methods use both policies. The complete request
+   sequence editor and native workflow are in [Request streams](REQUEST_STREAMS.md). [Streaming](STREAMING.md) covers exact NDJSON capture, payment,
    customer delivery and retained release/recovery.
 3. Edit the exact request JSON or the generated fields. Inclusion checkboxes
    distinguish absent fields from explicit false, zero and empty values. Nested
@@ -127,6 +128,28 @@ The server serializes writes under the original merchant state lease.
 
 A captured contract is immutable for that revision. Editing the former .proto
 files does not change a saved merchant. Capture again to propose a new revision.
+
+## Review a contract upgrade
+
+Open **Contract upgrades** to compare the current saved merchant with a retained
+candidate revision or a saved reflection capture. The original compiler supplies
+both contracts. The review shows exact field numbers and names, presence, oneofs,
+enum changes and separate request/response reachability for every method.
+
+Edit the candidate plan in that same review. Each route retains its original and
+proposed public path, complete ordered payment options, original example against
+both contracts, corrected candidate example and public schema identities. Native
+example validation serializes locally; it sends no application RPC.
+
+**Save reviewed upgrade** uses the original workspace revision and selection
+generation. A retained adoption intent recovers the exact saved revision after a
+lost response. An intervening edit or checkout produces a conflict. Reopening a
+completed review reads its result without changing the current selection.
+
+Continue through the existing **Review → Prepare → customer downloads → SF82**
+workflow. The comparison describes observed changes; it does not authorize a
+payment or make a universal compatibility claim. The full operating, recovery
+and installed API instructions are in [Contract upgrades](UPGRADES.md).
 
 ## Native value contract
 
@@ -413,3 +436,11 @@ with different inputs returns `GRPC_REFLECTION_OPERATION_REUSED`. Original revis
 and customer exports carry the complete descriptor source through import and
 release reopen. [reflection/PROTOCOLS.md](reflection/PROTOCOLS.md) records the
 official wire definitions and upstream identities.
+
+## Finite request streams
+
+Client-streaming and bidirectional methods use the original operator, merchant,
+CLI, agent and customer lifecycle with a reviewed `messages` sequence.
+[Request streams](REQUEST_STREAMS.md) includes the source policies, message editor,
+pre-dispatch native validation, runnable endpoint, retained outcomes, customer
+receiving and contract-upgrade workflow.

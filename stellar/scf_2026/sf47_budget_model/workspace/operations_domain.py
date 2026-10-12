@@ -333,11 +333,13 @@ def prepare(kind, data, context, previous=None):
         return result
 
     if kind == "outcomes":
+        from operations_completion import normalize_outcome_link
         return {"tranche": integer(data.get("tranche"), "Outcome tranche", 1, 3),
                 "state": enum(data.get("state"), ("IN_PROGRESS", "SUBMITTED", "ACCEPTED", "CHANGES_REQUESTED", "WITHDRAWN"), "External tranche outcome"),
                 "description": text(data.get("description"), "Recorded outcome", 12000, True),
                 "deploymentIds": reference_list(data.get("deploymentIds", []), maps["deployments"], "Outcome deployments"),
-                "date": calendar(data.get("date"), "Outcome source date"), **source}
+                "date": calendar(data.get("date"), "Outcome source date"), **source,
+                **normalize_outcome_link(context, data, previous)}
     fail("Unknown operations record type.")
 
 
@@ -358,7 +360,7 @@ def allocated_lines(invoice, amount):
     return [(invoice["lines"][index]["costId"], Decimal(value * sign) / 100) for index, value, _ in parts]
 
 
-def report(program, plan, records, sources):
+def report(program, plan, records, sources, completionPlans=None, installationRefs=None):
     package = {row["id"]: {"id": row["id"], "tranche": row["tranche"],
                 "plannedUsd": usd(row["amount_usd"]), "plannedHours": str(row.get("estimated_hours", "")),
                 "recordedHours": ZERO, "acceptedHours": ZERO, "preawardHours": ZERO,

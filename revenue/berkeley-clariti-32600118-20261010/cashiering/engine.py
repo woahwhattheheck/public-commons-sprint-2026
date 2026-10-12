@@ -16,6 +16,7 @@ import zlib
 
 from . import model as m
 from .reporting import render_report, build_packet
+from .receiving import Receiving, SOURCE_FILES as RECEIVING_SOURCE_FILES
 
 ROOT = Path(__file__).resolve().parent
 MAX_FILE = 25 * 1024 * 1024
@@ -55,6 +56,7 @@ class Cashiering:
     def __init__(self, workspace, conflict):
         self.workspace = workspace
         self.conflict = conflict
+        self.receiving = Receiving(self)
         self.source_files = {}
         # Retain the complete existing application and additive operator, including
         # both browser surfaces and the original native comparator bridge.
@@ -68,7 +70,7 @@ class Cashiering:
             "workspace/API.md", "workspace/audit-bridge.mjs",
             "workspace/public/index.html", "workspace/public/app.mjs",
             "workspace/public/style.css", "audit.mjs",
-        )
+        ) + RECEIVING_SOURCE_FILES
         for relative_path in component_paths:
             path = ROOT.parent / relative_path
             if path.is_file():
@@ -104,6 +106,7 @@ class Cashiering:
                   id TEXT PRIMARY KEY,request_sha TEXT NOT NULL,response BLOB NOT NULL,created_at TEXT NOT NULL);
             """)
             conn.execute("INSERT OR IGNORE INTO cash_meta VALUES('settings',?)", (m.canonical(m.DEFAULT_SETTINGS),))
+            self.receiving.initialize(conn)
 
     def _settings(self, conn):
         return json.loads(conn.execute("SELECT value FROM cash_meta WHERE key='settings'").fetchone()[0])
@@ -315,6 +318,8 @@ class Cashiering:
         raise ValueError("Retained document/artifact not found.")
 
     def _dispatch(self, conn, action, p):
+        if action.startswith("receiving-"):
+            return self.receiving.dispatch(conn, action, p)
         actor = self._actor(p)
         if action == "settings":
             settings = m.validate_settings(p.get("settings"))
@@ -616,6 +621,7 @@ class Cashiering:
                 document_ids.update(x["document_id"] for x in export["receipts"])
             documents = [self._document(conn, ident) for ident in sorted(document_ids) if ident not in {x["id"] for x in originals}]
             frozen = copy.deepcopy(detail)
+            self.receiving.attach_packet(conn, run_id, frozen, documents)
             frozen["packet_preparation"] = {"label": label, "owner": actor, "note": note, "prepared_at": now()}
             raw, manifest = build_packet(frozen, originals, documents, source_files=self.source_files)
             ident = uid("packet")
@@ -666,6 +672,8 @@ class Cashiering:
             return None
         rest = parts[2:]
         with self.workspace.lock, self.workspace.db() as conn:
+            if rest and rest[0] == "receiving":
+                return self.receiving.read(conn, rest[1:], query)
             if rest == ["state"]:
                 return self._state(conn), "application/json; charset=utf-8", None
             if len(rest) == 2 and rest[0] == "requests":
@@ -694,7 +702,7 @@ class Cashiering:
                 row = conn.execute("SELECT * FROM cash_artifacts WHERE id=?", (rest[1],)).fetchone()
                 if row is None:
                     raise ValueError("Retained artifact not found.")
-                mime = "application/zip" if row["kind"] == "financial-packet" else "text/csv; charset=utf-8" if row["kind"] == "prepared-interface" else "application/octet-stream"
+                mime = "application/zip" if row["kind"] in ("financial-packet", "receiving-packet") else "text/csv; charset=utf-8" if row["kind"] == "prepared-interface" else "application/octet-stream"
                 return bytes(row["raw"]), mime, row["filename"]
             if len(rest) == 2 and rest[0] == "packets":
                 for row in conn.execute("SELECT body FROM cash_runs"):

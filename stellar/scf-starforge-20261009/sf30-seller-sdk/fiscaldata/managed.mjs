@@ -16,8 +16,10 @@ const HASH=/^[a-f0-9]{64}$/;
 const UUID=/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 export const FISCAL_MANAGED_SOURCE_FILES=Object.freeze([
  ...['managed.mjs','cli.mjs','workspace-model.mjs','capture.mjs','decimal.mjs','publishing.mjs','portable.mjs',
- 'workspace-server.mjs','workspace-ui/index.html','workspace-ui/app.js','workspace-ui/style.css'].map(name=>FISCAL+name),
+ 'briefing.mjs','briefing-render.mjs','refresh.mjs','workspace-ui/refresh.js','workspace-server.mjs','workspace-ui/index.html','workspace-ui/app.js','workspace-ui/style.css'].map(name=>FISCAL+name),
  'stellar-forge/mcp-merchant-operator/fiscaldata-workspace.mjs',
+ 'stellar-forge/mcp-merchant-operator/catalog/fiscaldata-workspace.mjs',
+ 'stellar-forge/mcp-merchant-operator/retained-file-contracts.mjs',
  'stellar-forge/mcp-merchant-operator/host-files.mjs',
  'stellar-forge/mcp-merchant-operator/retained-file-reads.mjs',
  'stellar-forge/mcp-paid-agent/http-tools.mjs',

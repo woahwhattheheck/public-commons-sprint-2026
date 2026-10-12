@@ -20,7 +20,9 @@ const MAX_BUNDLE = 128 * 1024 * 1024;
 const SOURCE_FILES = [
   'managed.mjs', 'project.mjs', 'workspace.mjs', 'provider.mjs', 'samples.mjs',
   'analysis.mjs', 'openwaters.mjs', 'openwaters-contract.mjs', 'merchant.mjs',
-  'ui/index.html', 'ui/app.mjs', 'ui/openwaters.mjs', 'ui/style.css',
+  'ui/index.html', 'ui/app.mjs', 'ui/openwaters.mjs', 'ui/style.css', 'ui/review-sheet.mjs',
+  'review-sheet/model.mjs', 'review-sheet/csv.mjs', 'review-sheet/workflow.mjs',
+  'concentration-units.mjs', 'review-sheet/concentrations.mjs', 'ui/concentrations.mjs',
 ];
 const hash = value => createHash('sha256').update(typeof value === 'string' || Buffer.isBuffer(value)
   ? value : JSON.stringify(value)).digest('hex');

@@ -22,6 +22,7 @@ function providerError(message, status, retryAfter) {
   let code = 'QUERY_UNAVAILABLE';
   if (status === 401 || status === 403 || /NOPERM|NOAUTH|WRONGPASS/i.test(message)) code = 'SOURCE_ACCESS_DENIED';
   else if (/SF30_RESULT_TOO_LARGE/.test(message)) code = 'QUERY_RESULT_TOO_LARGE';
+  else if (/SF30_SCAN_PAGE_TOO_MANY_ROWS/.test(message)) code = 'QUERY_SCAN_PAGE_TOO_LARGE';
   else if (/WRONGTYPE/.test(message)) code = 'QUERY_SOURCE_TYPE_CHANGED';
   else if (/unknown command.*EVAL_RO|EVAL_RO.*not supported/i.test(message)) code = 'SOURCE_REQUIRES_READONLY_SCRIPTING';
   else if (/max (?:daily )?requests limit exceeded|quota exceeded|command limit exceeded/i.test(message)) code = 'SOURCE_QUOTA_EXCEEDED';

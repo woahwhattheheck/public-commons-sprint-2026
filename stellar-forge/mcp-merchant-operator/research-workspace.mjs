@@ -5,6 +5,10 @@ import {dirname,resolve,join} from 'node:path';
 import {exact,identifier,line,plain,failure} from './host-files.mjs';
 import {RetainedFileReads} from './retained-file-reads.mjs';
 import {researchWorkspaceTools,RESEARCH_EXPORTS} from './catalog/research-workspace.mjs';
+import {callResearchClinicalTrials,exportResearchClinicalTrials,RESEARCH_CLINICALTRIALS_PREFIX} from './research-clinicaltrials.mjs';
+import {callResearchDocuments,exportResearchDocuments,RESEARCH_DOCUMENT_PREFIXES} from './research-documents.mjs';
+import {callResearchCitationUpdates,RESEARCH_CITATION_REVIEW_PREFIX} from './research-citation-updates.mjs';
+import {callResearchEuropePmc,exportResearchEuropePmc,RESEARCH_EUROPE_PMC_PREFIX} from './research-europe-pmc.mjs';
 export {researchWorkspaceTools} from './catalog/research-workspace.mjs';
 import {ResearchWorkspaceClient} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-client.mjs';
 import {readResearchHostFile,openResearchSource} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-files.mjs';
@@ -36,13 +40,18 @@ export async function readResearchWorkspaceConfiguration(file){
     if(value.sources!==undefined&&(!plain(value.sources)||Object.keys(value.sources).length>128))
       throw failure('CONFIGURATION_ERROR','Declare original source handles.');
     for(const[name,source]of Object.entries(value.sources??{})){
-      identifier(name);exact(source,['file','kind','sha256','provider','sourceReference'],['file','kind','sha256']);
-      if(!['research','reference','portable'].includes(source.kind)||source.kind!=='portable'&&
+      identifier(name);exact(source,['file','kind','sha256','provider','sourceReference','filename','contentType'],['file','kind','sha256']);
+      if(!['research','reference','portable','clinicaltrials-packet','source-bundle','pipeline-input','europe-pmc-packet','europe-pmc-portable'].includes(source.kind)||!['portable','clinicaltrials-packet','source-bundle','pipeline-input','europe-pmc-packet','europe-pmc-portable'].includes(source.kind)&&
         (typeof source.provider!=='string'||!/^[a-z][a-z0-9_-]{0,79}$/.test(source.provider)))
         throw failure('CONFIGURATION_ERROR','Each source declares its original kind and provider.');
       if(source.sourceReference!==undefined&&(typeof source.sourceReference!=='string'||source.sourceReference.length>4000)||
         source.kind==='reference'&&!/^[a-z0-9-]+$/.test(source.provider))
         throw failure('CONFIGURATION_ERROR','Use the original reference provider and source reference.');
+      if(source.filename!==undefined&&(source.kind!=='pipeline-input'||typeof source.filename!=='string'||
+        !source.filename.trim()||Buffer.byteLength(source.filename)>1024||/[\\/\u0000-\u001f\u007f]/.test(source.filename))||
+        source.contentType!==undefined&&(source.kind!=='pipeline-input'||typeof source.contentType!=='string'||
+          !source.contentType.trim()||Buffer.byteLength(source.contentType)>256||/[\u0000-\u001f\u007f]/.test(source.contentType)))
+        throw failure('CONFIGURATION_ERROR','Declare the original pipeline input filename and content type.');
       sources[name]={...source,file:hostPath(source.file,base),sha256:checkedDigest(source.sha256)};
     }
     workspaces[alias]={label:line(value.label??alias),consoleUrlFile:hostPath(value.consoleUrlFile,base),
@@ -62,6 +71,15 @@ function checkValue(value,schema){
       schema.maximum!==undefined&&value>schema.maximum)||schema.type==='boolean'&&typeof value!=='boolean'||
     schema.enum&&!schema.enum.includes(value))
     throw failure('INVALID_PARAMS','Use the declared native field values and reviewed identifiers.');
+  if(schema.type==='object'){
+    const properties=schema.properties??{},required=schema.required??[];
+    if(schema.additionalProperties===true){
+      if(!plain(value)||required.some(key=>!Object.hasOwn(value,key)))
+        throw failure('INVALID_PARAMS','Supply the complete declared native object and required fields.');
+    }else exact(value,Object.keys(properties),required);
+    for(const[key,item]of Object.entries(value))
+      if(Object.hasOwn(properties,key))checkValue(item,properties[key]);
+  }
   if(schema.type==='array'){
     if(!Array.isArray(value)||schema.maxItems!==undefined&&value.length>schema.maxItems||
       schema.uniqueItems&&new Set(value).size!==value.length)
@@ -100,7 +118,8 @@ export class MerchantResearchWorkspaces{
         return {workspace,label:value.label,state:entry?(entry.detaching?'DETACHING':'ATTACHED'):'DETACHED',
           attachmentId:entry?.id??null,workspaceId:entry?.client.workspaceId??null,
           sources:Object.entries(value.sources??{}).map(([source,item])=>({source,kind:item.kind,
-            provider:item.provider??null,sha256:item.sha256})),
+            provider:item.provider??null,sha256:item.sha256,
+            ...(item.kind==='pipeline-input'?{filename:item.filename??null,contentType:item.contentType??'application/octet-stream'}:{})})),
           reads:entry?this.#reads.status(entry.id):null};
       }),exports:this.#reads.summary};
   }
@@ -167,7 +186,11 @@ export class MerchantResearchWorkspaces{
         this.#detached.set(alias,id);
         return {workspace:alias,attachmentId:id,state:'DETACHED',workspaceId:entry.client.workspaceId,
           listenerOwnership:'ORIGINAL_APPLICATIONS_WORKSPACE'};
-      })();
+      })().catch(error=>{
+        // RetainedFileReads preserves failed handles for the SAME owner to
+        // retry. Keep detaching and the entry, but release the failed promise.
+        entry.close=null;throw error;
+      });
     }
     return entry.close;
   }
@@ -193,23 +216,57 @@ export class MerchantResearchWorkspaces{
   }
   async #retain(entry,args){
     const spec=kind(args.kind),temporary=join(entry.directory,'.export-'+randomUUID()+'.'+spec.extension);
-    let result,selection;
+    let result,selection,verification;
+    const download=async work=>{
+      try{return await work();}
+      catch(error){
+        if(error.code!=='RESEARCH_EXPORTED_FILE_CHANGED'||error.destinationPublished!==true||
+          error.file?.file!==temporary)throw error;
+        // The original receiver completed this file. Verify and retain those
+        // actual bytes before reporting the reviewed-digest mismatch.
+        const original=await openResearchSource(temporary,256*1024*1024,{sha256:checkedDigest(error.file.sha256)});
+        try{if(original.bytes!==error.file.bytes)throw failure('RESEARCH_EXPORT_CHANGED','The completed download length differs.');}
+        finally{await original.close();}
+        verification={state:'DIGEST_MISMATCH',expectedSha256:error.expectedSha256??args.expectedSha256,actualSha256:error.file.sha256,
+          ...(error.expectedBytes!==undefined?{expectedBytes:error.expectedBytes,actualBytes:error.file.bytes}:{})};
+        return error.file;
+      }
+    };
     try{
-      if(spec.format){
-        exact(args,['workspace','dossierId','kind'],['workspace','dossierId','kind']);
-        result=await entry.client.exportDossier(args.dossierId,{format:spec.format,file:temporary});
+      if(args.kind.startsWith('document-')||args.kind.startsWith('pipeline-')){
+        ({result,selection}=await exportResearchDocuments(entry.client,args,{file:temporary,download}));
+      }else if(args.kind.startsWith('clinicaltrials-')){
+        ({result,selection}=await exportResearchClinicalTrials(entry.client,args,{file:temporary,download}));
+      }else if(args.kind.startsWith('europe-pmc-')){
+        ({result,selection}=await exportResearchEuropePmc(entry.client,args,{file:temporary,download}));
+      }else if(spec.format){
+        exact(args,['workspace','dossierId','kind','revision','expectedSha256'],['workspace','dossierId','kind']);
+        result=await download(()=>entry.client.exportDossier(args.dossierId,{format:spec.format,file:temporary,revision:args.revision,expectedSha256:args.expectedSha256}));
         selection={dossierId:args.dossierId,revision:result.revision??null};
       }else if(args.kind==='crossref-edition'){
-        exact(args,['workspace','dossierId','kind','operationId'],['workspace','dossierId','kind','operationId']);
-        result=await entry.client.exportCrossrefEdition(args.dossierId,args.operationId,{file:temporary});
+        exact(args,['workspace','dossierId','kind','operationId','expectedSha256'],['workspace','dossierId','kind','operationId']);
+        result=await download(()=>entry.client.exportCrossrefEdition(args.dossierId,args.operationId,{file:temporary,expectedSha256:args.expectedSha256}));
         selection={dossierId:args.dossierId,operationId:args.operationId};
       }else if(args.kind==='retained-edition'){
-        exact(args,['workspace','dossierId','kind','editionId'],['workspace','dossierId','kind','editionId']);
-        result=await entry.client.exportRetainedEdition(args.dossierId,args.editionId,{file:temporary});
-        selection={dossierId:args.dossierId,editionId:args.editionId};
+        exact(args,['workspace','dossierId','kind','editionId','revision','expectedSha256'],['workspace','dossierId','kind','editionId']);
+        result=await download(()=>entry.client.exportRetainedEdition(args.dossierId,args.editionId,{file:temporary,
+          revision:args.revision,expectedSha256:args.expectedSha256}));
+        selection={dossierId:args.dossierId,editionId:args.editionId,revision:result.revision??null};
+      }else if(['source-content','source-record','source-file'].includes(args.kind)){
+        const fields=['workspace','dossierId','kind','editionId','key','revision','expectedSha256'];
+        const required=['workspace','dossierId','kind','editionId','key'];
+        if(args.kind==='source-file'){fields.push('fileName');required.push('fileName','expectedSha256');}
+        exact(args,fields,required);
+        const options={editionId:args.editionId,key:args.key,revision:args.revision,file:temporary,
+          expectedSha256:args.expectedSha256};
+        result=await download(()=>args.kind==='source-file'?entry.client.exportSourceFile(args.dossierId,{...options,name:args.fileName}):
+          entry.client.exportSource(args.dossierId,{...options,part:args.kind==='source-record'?'record':'content'}));
+        selection={dossierId:args.dossierId,editionId:args.editionId,key:args.key,
+          revision:result.revision,occurrenceId:result.occurrenceId,
+          ...(args.kind==='source-file'?{fileName:args.fileName}:{})};
       }else{
-        exact(args,['workspace','dossierId','kind','before','after'],['workspace','dossierId','kind','before','after']);
-        result=await entry.client.exportComparison(args.dossierId,{before:args.before,after:args.after,file:temporary});
+        exact(args,['workspace','dossierId','kind','before','after','expectedSha256'],['workspace','dossierId','kind','before','after']);
+        result=await download(()=>entry.client.exportComparison(args.dossierId,{before:args.before,after:args.after,file:temporary,expectedSha256:args.expectedSha256}));
         selection={dossierId:args.dossierId,before:args.before,after:args.after};
       }
       const retained=this.#file(entry,args.kind,result.sha256);
@@ -231,9 +288,10 @@ export class MerchantResearchWorkspaces{
       }
       const receipt={schema:'stellar-forge.research-export-receipt.v1',receiptId:randomUUID(),
         workspaceId:entry.client.workspaceId,kind:args.kind,exportId:result.sha256,bytes:result.bytes,
-        sourceFilename:result.filename,contentType:result.contentType,retainedAt:new Date().toISOString(),selection};
+        sourceFilename:result.filename,contentType:result.contentType,retainedAt:new Date().toISOString(),selection,
+        ...(verification?{verification}:{})};
       await writeJson(join(entry.directory,'receipt-'+receipt.receiptId+'.json'),receipt,{exclusive:true});
-      return {workspace:entry.alias,...receipt,state:'RETAINED'};
+      return {workspace:entry.alias,...receipt,state:verification?'RETAINED_DIGEST_MISMATCH':'RETAINED'};
     }finally{await unlink(temporary).catch(error=>{if(error.code!=='ENOENT')throw error;});}
   }
   async #exportsPage(entry,{dossierId,offset=0,limit=30,snapshot}={}){
@@ -277,11 +335,23 @@ export class MerchantResearchWorkspaces{
     if(name==='merchant_research_detach')return this.#detach(args.workspace,args.attachmentId);
     return this.#with(args.workspace,async entry=>{
       const c=entry.client,id=args.dossierId,input=nativeFields(args,['workspace','dossierId']);
+      if(name.startsWith(RESEARCH_CITATION_REVIEW_PREFIX))return callResearchCitationUpdates(c,name,args);
+      if(name.startsWith(RESEARCH_EUROPE_PMC_PREFIX))return callResearchEuropePmc(c,name,args,{
+        source:(name,accepted)=>this.#source(entry,name,accepted)});
+      if(RESEARCH_DOCUMENT_PREFIXES.some(prefix=>name.startsWith(prefix))){
+        const result=await callResearchDocuments(c,name,args,{source:(name,accepted)=>this.#source(entry,name,accepted)});
+        return name.endsWith('_receive')?compactDossier(result):result;
+      }
+      if(name.startsWith(RESEARCH_CLINICALTRIALS_PREFIX)){
+        const result=await callResearchClinicalTrials(c,name,args,{source:(name,accepted)=>this.#source(entry,name,accepted)});
+        return name==='merchant_research_clinicaltrials_receive'?compactDossier(result):result;
+      }
       switch(name){
         case 'merchant_research_status':return this.#describe(entry,await c.status());
         case 'merchant_research_list':return c.list(input);
         case 'merchant_research_dossier':return c.metadata(id,input);
         case 'merchant_research_section':return c.section(id,input);
+        case 'merchant_research_source':return c.source(id,input);
         case 'merchant_research_create':return researchSummary(await c.createDossier(input));
         case 'merchant_research_update':return researchSummary(await c.updateDossier(id,input));
         case 'merchant_research_question':{
@@ -320,6 +390,19 @@ export class MerchantResearchWorkspaces{
           }
           return compactDossier(await c.receiveResearchFile(id,{...request,file:source.file,sha256:source.sha256}));
         }
+        case 'merchant_research_source_bundle_preview':{
+          const source=this.#source(entry,args.source,['source-bundle']);
+          return c.previewSourceBundleFile(id,{questionId:args.questionId,file:source.file,sha256:source.sha256});
+        }
+        case 'merchant_research_source_bundle_receive':{
+          const source=this.#source(entry,args.source,['source-bundle']);
+          if(args.expectedBundleSha256!==undefined&&args.expectedBundleSha256!==source.sha256)
+            throw failure('RESEARCH_SOURCE_BUNDLE_CHANGED','The reviewed bundle hash differs from the selected original source.');
+          return compactDossier(await c.receiveSourceBundleFile(id,{
+            questionId:args.questionId,expectedRevision:args.expectedRevision,
+            expectedBundleSha256:args.expectedBundleSha256??source.sha256,
+            file:source.file,sha256:source.sha256}));
+        }
         case 'merchant_research_openalex_editions':return c.openAlexEditions();
         case 'merchant_research_receive_openalex':return compactDossier(await c.receiveOpenAlex(id,input));
         case 'merchant_research_crossref_prepare':return compactCrossref(await c.prepareCrossref(id,input));
@@ -348,8 +431,12 @@ export class MerchantResearchWorkspaces{
       try{return await this.#execute(name,args);}
       catch(error){
         if(error.outcomeUnknown)throw Object.assign(failure(error.code??'RESEARCH_CONNECTION_INTERRUPTED',
-          'The original write response was interrupted. Read the saved dossier revision or the same Crossref operation before another write.'),
-          {outcomeUnknown:true,dossierId:args.dossierId,operationId:args.operationId});
+          error.recovery??'The original write response was interrupted. Read the saved dossier revision and the same source receiving operation or retained input before another write.'),
+          {outcomeUnknown:true,dossierId:args.dossierId??args.input?.dossierId,
+            operationId:error.operationId??args.operationId??args.input?.operationId,
+            requestId:error.requestId??args.requestId??args.input?.requestId,sourceId:args.sourceId,
+            ...(name.startsWith(RESEARCH_EUROPE_PMC_PREFIX)?{library:args.library}:{}),
+            ...(error.recovery?{recovery:error.recovery}:{})});
         throw error;
       }
     });
@@ -362,7 +449,10 @@ export class MerchantResearchWorkspaces{
         await Promise.all([...this.#entries.values()].map(entry=>this.#detach(entry.alias,entry.id)));
         await this.#reads.close();
         return {state:'DETACHED',listenerOwnership:'ORIGINAL_APPLICATIONS_WORKSPACE'};
-      })();
+      })().catch(error=>{
+        // Closing remains admission-closed while its original readers retry.
+        this.#closing=null;throw error;
+      });
     }
     return this.#closing;
   }

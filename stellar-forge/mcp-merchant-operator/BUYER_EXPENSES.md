@@ -272,3 +272,9 @@ Use `refund_packet` to inspect nullable `purchase`, plural `credits`, original `
 The existing `credit`, `credit_coding_save`, period review/close/reopen and export operations complete the workflow. The report, review and issued tools add the paged `merchant_adjustment_outcomes` view. Pending returns, cancellations, withdrawn requests and unavailable original-payment proofs remain visible as source decisions without entering returned-unit totals. Optional Woo/store fields are null when not supplied; no exchange rate, currency amount or Woo order is manufactured.
 
 Stable request IDs recover the exact completed intake or period mutation. Stable export IDs recover the same source receipt, accountant edition or complete included-source project. `refund-packet` export retains the original JSON and explicitly named `buyer-selection.json` for generic intake. All other financial, source-context, lifecycle and resumable transfer semantics are unchanged.
+
+## Governed native MCP source continuation
+
+A workspace may also declare `governedQuoteSources` aliases with the same `path`, `name`, `provenance` and `dataContext` fields as original quote aliases. Each path selects a private `stellar-forge.governed-mcp-expense-input.v1` descriptor joining the actual original quote directory and original native spending host configuration. `merchant_buyer_expense_governed_mcp_register` accepts `workspace`, `requestId`, `expectedRevision` and `governedSource`.
+
+The original capture/review/allocation/period/export tools continue the workflow. `source_rebind` accepts exactly one `ledger`, `quoteSource` or `governedSource` alias. `SPENDING_SOURCE_REVIEW` exposes a retained native binding or finality disagreement while its original reserved capacity remains visible. Read the complete [governed source and receiving guide](../../stellar/scf-starforge-20261009/sf36-spend-governor/expense-workspace/GOVERNED_MCP.md).

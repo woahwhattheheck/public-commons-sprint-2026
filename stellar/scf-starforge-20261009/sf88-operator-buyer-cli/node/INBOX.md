@@ -271,3 +271,94 @@ Pass `{signal}` to commands and response consumers when an application supplies
 a Stop action. Keep the native queue, Node state and original operator workspace
 together through the maintained [workspace recovery workflow](RECOVERY.md).
 The queue remains the execution authority for transferred operations.
+
+
+## Send selected original jobs to delivery Operations
+
+The customer API captures 1–100 explicitly selected original Inbox intent IDs
+into one new private handoff file. It reads the original queue, request, attempt,
+terminal, recovery and saved finalization records. It exhausts the original
+verified-response reader for the selected saved output, within the caller's
+byte limit. It does not enqueue a request, invoke an operator approval, execute
+a buyer, finalize a reservation, or make a merchant/RPC request.
+
+Create the output parent with mode 0700, then select the exact retained intents:
+
+~~~js
+const exported = await inbox.exportOperations(
+  '/srv/private/exports/operations-source.json',
+  {
+    intentIds: ['monthly-report-001'],
+    maxVerifyBytes: 268435456, // Per saved file, 256 MiB by default.
+  },
+);
+console.log(exported.native.path, exported.native.sha256);
+console.log(exported.native.counts, exported.native.canReceive);
+~~~
+
+The compact native return is
+`{path, bytes, sha256, counts, intentIds, canReceive, noExecution:true}`.
+`process` still describes only this export command. The file contains the exact
+selected original source records and the output verification observation.
+Product response bytes are verified at capture but are not embedded as another
+copy of the delivered product.
+
+Keep the same destination after an interrupted response. Inspect its actual
+saved edition before considering any new capture:
+
+~~~js
+const saved = await inbox.inspectOperations(
+  '/srv/private/exports/operations-source.json',
+);
+console.log(saved.native.sha256, saved.native.intentIds);
+for (const row of saved.native.report.rows) {
+  console.log(row.intentId, row.purchase.settlementStatus,
+              row.output.state, row.canReceive, row.issues);
+}
+~~~
+
+`inspectOperations` reads that explicit file through the original handoff
+validator; it does not compare with or recapture today's Inbox. The original
+Inbox can be offline. Match the returned digest and selection to the intended
+handoff. A pre-existing destination is preserved and a new export returns
+`BUYER_HANDOFF_ALREADY_EXISTS_USE_INSPECT`; choose a different new filename
+only when an operator intends another source edition. A failed or uncertain
+command retains the usual `InboxError.result` and private command directory.
+If no published file exists, the source capture made no economic attempt; after
+resolving the reported read/storage issue, the operator can capture the same
+selected intents into that original still-unused destination.
+
+The capture is at most 8 MiB, selects at most 100 unique intents and verifies at
+most 1 GiB of product bytes in total. `maxVerifyBytes` is an integer from
+0 through 1 GiB per saved file. A file over that cap is retained as `OVER_LIMIT`,
+not silently called verified; select a higher explicit cap within the total
+bound when a fresh edition is needed. Missing outputs, original errors, unknown
+settlement, source conflicts and per-row receivability remain visible. A valid
+export can contain rows requiring review. The aggregate `canReceive` is true
+only when every row is receivable; Operations can explicitly select the
+receivable subset while retaining all unselected source rows.
+
+The original queue CLI exposes the same reader:
+
+~~~sh
+node queue-cli.mjs operations export \
+  --inbox /srv/private/customer-inbox \
+  --intent monthly-report-001 \
+  --output /srv/private/exports/operations-source.json
+
+node queue-cli.mjs operations inspect \
+  --file /srv/private/exports/operations-source.json
+~~~
+
+Repeat `--intent ID` for another explicitly selected original job. The direct
+CLI prints the full original report; keep that output private. In **Delivery
+operations → Native buyer handoff**, inspect the saved source, associate it with
+the existing operating case and deployment, review the selected intents, and
+receive through the original case transaction. A successful local export,
+settled transfer and verified response remain separate from that operator's
+receiving decision and commercial customer acceptance.
+
+Install this Node package with its matching complete SF88 runtime, including
+`operations-handoff/{contract,capture,customer}.mjs`. The wrapper does not
+embed or substitute an older native reader. Python applications use the
+[read-only Inbox customer guide](../python/INBOX.md) over the same source.

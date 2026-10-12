@@ -8,6 +8,52 @@ export interface OperatorProfile {
   requestTimeoutMs?: number;
   buyerTransport?: { mode: 'explicit-connect'; origin: string; proxyUrl?: string; proxyEnv?: string };
 }
+/** Allocates the exact caller-owned inode without changing its logical EOF. */
+export interface FileReservationInput {
+  fileHandle: import('node:fs/promises').FileHandle;
+  path: string;
+  kind: string;
+  bytes: number;
+  signal?: AbortSignal;
+}
+/** The helper must settle all I/O before resolving; the caller keeps the descriptor. */
+export type FileReservation = (input: Readonly<FileReservationInput>) => Promise<unknown>;
+export interface NativeFileReservationDescriptor {
+  schema: 'stellar-forge.sf88.file-reservation.v1';
+  executable: string;
+  executableSha256: string;
+  timeoutMs: number;
+}
+export interface NativeRuntimeSourceDescriptor {
+  directory: string;
+  sourceManifestFile: string;
+  sourceManifestSha256: string;
+}
+export interface NativeRuntimeSourceManifest {
+  schema: 'stellar-forge.node-successor-runtime-source.v1';
+  sourceDirectory: string;
+  runtimeDirectory: string;
+  files: Array<{path: string; bytes: number; sha256: string}>;
+}
+export interface NativeRuntimeSourceBinding {
+  schema: 'stellar-forge.node-successor-runtime-binding.v1';
+  directory: string;
+  sourceDirectory: string;
+  sourceManifestFile: string;
+  sourceManifestSha256: string;
+  sourceManifestBytes: number;
+  filesSha256: string;
+  fileCount: number;
+  sourceBytes: number;
+  sha256: string;
+}
+export const FILE_RESERVATION_SCHEMA: 'stellar-forge.sf88.file-reservation.v1';
+export function normalizeNativeFileReservation(value: NativeFileReservationDescriptor | undefined): Readonly<NativeFileReservationDescriptor> | undefined;
+export function inspectNativeFileReservation(options: {executable: string; timeoutMs?: number}): Promise<Readonly<NativeFileReservationDescriptor>>;
+export function createNativeFileReservation(value: NativeFileReservationDescriptor): Promise<FileReservation>;
+export function readSuccessorRuntimeSource(value: NativeRuntimeSourceDescriptor, options?: {signal?: AbortSignal}): Promise<NativeRuntimeSourceBinding>;
+export function verifySuccessorRuntimeSource(value: NativeRuntimeSourceBinding, options?: {signal?: AbortSignal}): Promise<NativeRuntimeSourceBinding>;
+
 export interface BuyerOptions {
   /** Absolute path to the original sf88-operator-buyer-cli directory. */
   runtimeDirectory: string;
@@ -19,6 +65,12 @@ export interface BuyerOptions {
   timeoutMs?: number;
   cleanupGraceMs?: number;
   outputLimit?: number;
+  /** Same-process actual-FD allocator; the native child needs the serializable descriptor below. */
+  reserveFile?: FileReservation;
+  /** Explicit hashed Linux allocation executable used by parent and native bootstrap. */
+  nativeFileReservation?: NativeFileReservationDescriptor;
+  /** Exact complete source binding rechecked before each native invocation. */
+  nativeRuntimeSource?: NativeRuntimeSourceBinding;
   /** Separate original dataset report budget; 32 MiB default, 1–256 MiB allowed. */
   datasetReportLimit?: number;
   /** Separate inbox snapshot/report result budget; 32 MiB default, 1–256 MiB allowed. */
@@ -144,11 +196,30 @@ export interface PreapprovalLedgerCheck extends JsonObject {
   outcome: 'ABSENT_FROM_AUTHENTICATED_ORIGINAL_LEDGER';
   intentId: string; reservationsForIntent: 0;
 }
+/** Exact private unsigned journal selected before one same-intent continuation. */
+export interface PreapprovalWireCheckpoint {
+  schema: 'stellar-forge.sf88.preapproval-wire.v1.checkpoint';
+  directory: string; exists: boolean; sha256: string; state: string;
+  binding: { intentId: string; url: string; method: string; configValueSha256: string;
+    bodyPresent: boolean; bodyBytes: number; bodySha256: string };
+  directoryIdentity?: { device: number; inode: number };
+  lockIdentity?: { device: number; inode: number } | null;
+  sourceSha256?: string | null;
+  files: Array<{ name: string; bytes: number; sha256: string; device: number; inode: number }>;
+}
+/** Reopened selected history remains separate from the next canonical wire. */
+export interface PreapprovalWireHistory {
+  schema: 'stellar-forge.sf88.preapproval-wire.v1'; intentId: string;
+  status: 'PREPARING' | 'RETAINED'; planSha256: string; selectionSha256: string;
+  checkpointSha256: string; retirementSha256?: string; sourceSha256?: string | null;
+  archiveDirectory: string | null; state?: string; files?: number;
+}
 export interface PreapprovalRecoveryPrepared {
   schema: 'stellar-forge.node-preapproval-recovery.v1'; intentId: string;
   status: 'PREPARED'; directory: string; attemptSha256: string;
   planSha256: string; review: Review;
   originalLedgerCheck: PreapprovalLedgerCheck; processProof: PreapprovalProcessProof;
+  originalWire?: PreapprovalWireCheckpoint; wireHistory?: PreapprovalWireHistory;
 }
 export interface PreapprovalRecoveryAvailable {
   schema: 'stellar-forge.node-preapproval-recovery.v1'; intentId: string;
@@ -156,12 +227,13 @@ export interface PreapprovalRecoveryAvailable {
   sources: Array<{ name: string; path: string; exists: boolean;
     bytes?: number; sha256?: string; device?: number; inode?: number }>;
   originalLedgerCheck: PreapprovalLedgerCheck; processProof: PreapprovalProcessProof;
+  originalWire: PreapprovalWireCheckpoint;
 }
 export interface PreapprovalRecoveryHistory {
   schema: 'stellar-forge.node-preapproval-recovery.v1'; intentId: string;
   state: string; directory: string;
   history: Array<{ directory: string; planSha256: string; attemptSha256: string;
-    reason: string; createdAt: string }>;
+    reason: string; createdAt: string; wireHistory?: PreapprovalWireHistory }>;
   pending: PreapprovalRecoveryPrepared | null;
 }
 
@@ -226,6 +298,8 @@ export class Buyer {
   createInbox(options: { directory: string; signal?: AbortSignal }): Promise<Inbox>;
   inspectOperationHandoff(file: string, options?: { accept?: number; signal?: AbortSignal }): Promise<OperationHandoffView>;
   operation(intentId: string): Operation;
+  /** Reopen this exact ID in its explicitly selected runtime; does not prepare or follow later children. */
+  openOperation(intentId: string, options?: {signal?: AbortSignal}): Promise<Operation>;
   fromConfig(input: string | JsonObject, options?: ImportOptions): Promise<Operation>;
   /** Adopt original operator configuration; keys are loaded only by its native child. */
   fromWorkspace(directory: string, options?: WorkspaceImportOptions): Promise<Operation>;
@@ -254,7 +328,84 @@ export class Buyer {
   attachObject(options: { id: string; directory: string; accountingOnly?: boolean }): Promise<ObjectAcquisition>;
   listObjects(): AsyncIterable<ObjectAcquisition>;
 }
+
+export interface OperationAccountingIdentity {
+  intentId: string;
+  stateDirectory: string;
+  operationDirectory: string;
+  producerRuntimeDirectory: string;
+  operationSha256: string;
+  configurationSha256: string;
+  bodyPresent: boolean;
+  bodyBytes: number;
+  bodySha256: string;
+  ticketSha256: string | null;
+  attemptDirectory: string;
+  attemptCreatedAt: string;
+  producingCommandSha256: string | null;
+  nativeWorkspace: string | null;
+  preapprovalHistorySha256: string | null;
+}
+export interface OperationFinalizationOptions {
+  /** Derived for fromWorkspace. Required for paid fromConfig attempts. */
+  workspaceDirectory?: string;
+  /** Supply together with merchantRoute for the actual original merchant. */
+  outboxDirectory?: string;
+  merchantRoute?: string;
+  signal?: AbortSignal;
+}
+export interface OperationAccountingNative extends JsonObject {
+  schema: 'stellar-forge.node-operation-accounting-native.v1';
+  kind: 'PAID_FINALIZATION' | 'UNPAID_RESPONSE';
+  contextSha256: string;
+  identity: OperationAccountingIdentity;
+  workspace: string | null;
+  accountingRuntimeDirectory: string;
+  evidencePath: string;
+  evidenceSha256: string;
+  attemptSnapshotSha256: string;
+  observedAttemptSha256: string;
+  approvedRequestSha256: string | null;
+  completedAt: string;
+  recordAuthority: 'ORIGINAL_SF36_LEDGER_RESULT' | 'ORIGINAL_UNSIGNED_RESPONSE';
+  result: JsonObject & {outcome:
+    'FINALIZED' | 'IDEMPOTENT_FINALIZED' | 'NOT_FINALIZED' | 'WORKER_ERROR' | 'NO_PAYMENT_REQUIRED'};
+}
+export interface OperationAccountingCommand {
+  native: OperationAccountingNative;
+  commandId: string;
+  commandDirectory: string;
+  startedAt: string;
+  process: {exitCode: number | null; exitSignal: string | null; errorCode: string | null};
+  viewStatus: 'SAVED' | 'SAVE_FAILED' | 'RECOVERED_NATIVE_OUTPUT';
+  recovered: boolean;
+}
+export interface OperationAccountingView {
+  schema: 'stellar-forge.node-operation-accounting-view.v1';
+  intentId: string;
+  latest: {
+    commandId: string; commandDirectory: string; startedAt: string;
+    status: 'NO_COMPLETE_OUTPUT' | 'RECORDED' | 'OUTPUT_RECOVERED';
+    process: OperationAccountingCommand['process'];
+    result: OperationAccountingCommand | null;
+  };
+  lastComplete: OperationAccountingCommand | null;
+  lastFinalized: OperationAccountingCommand | null;
+}
+export interface OperationAccountingExport {
+  path: string; bytes: number; sha256: string; format: 'json';
+  intentId: string; commandId: string; outcome: string;
+}
+
 export class Operation {
+  readonly lastAccounting?: OperationAccountingCommand;
+  /** Finalize the retained attempt through the original SF36 worker; never executes a buyer. */
+  finalize(options?: OperationFinalizationOptions): Promise<OperationAccountingCommand>;
+  /** Local saved accounting view; no key loader, ledger write or provider request. */
+  accounting(options?: {commandId?: string}): Promise<OperationAccountingView | null>;
+  /** Recover complete native accounting stdout after an interrupted local save. */
+  recoverAccounting(options?: {commandId?: string}): Promise<OperationAccountingView | null>;
+  exportAccounting(destination: string, options?: {commandId?: string; signal?: AbortSignal}): Promise<OperationAccountingExport>;
   readonly intentId: string;
   readonly directory: string;
   readonly configPath: string;
@@ -397,6 +548,33 @@ export class InboxError extends BuyerError {
   constructor(code: string, result: InboxResult<JsonObject | null>, details?: Record<string, unknown>);
 }
 
+/** Original capture counts; they do not count independent customer acceptance. */
+export interface InboxOperationsCounts {
+  jobs: number;
+  knownSignedAttempts: number;
+  settled: number;
+  verifiedRetainedOutputs: number;
+  pendingOrUnknown: number;
+}
+export interface InboxOperationsExport {
+  path: string;
+  bytes: number;
+  sha256: string;
+  counts: InboxOperationsCounts;
+  intentIds: string[];
+  /** Every original row is receivable; a recipient can still select a subset. */
+  canReceive: boolean;
+  noExecution: true;
+}
+export interface InboxOperationsInspection extends InboxOperationsExport {
+  report: JsonObject & {
+    schema: 'stellar-forge.sf88.operations-handoff.v1';
+    source: JsonObject & {sha256: string; bytes: number; inboxSha256: string};
+    counts: InboxOperationsCounts;
+    rows: Array<JsonObject & {intentId: string; canReceive: boolean; issues: string[]}>;
+  };
+}
+
 export interface InboxLostOutputSelection {
   workspaceDirectory: string;
   approvedRequestFile?: string;
@@ -440,6 +618,14 @@ export class Inbox {
   exportReport(destination: string, options?: {
     workspaceDirectory?: string; signal?: AbortSignal;
   }): Promise<InboxResult<{path: string; bytes: number; sha256: string}>>;
+  /** Capture 1–100 exact original intents to a new private file. No execution/accounting call. */
+  exportOperations(destination: string, options: {
+    intentIds: string[];
+    /** Per-file verification cap; 256 MiB default, 0–1 GiB. Aggregate verification stays ≤1 GiB. */
+    maxVerifyBytes?: number; signal?: AbortSignal;
+  }): Promise<InboxResult<InboxOperationsExport>>;
+  /** Reopen the exact saved edition without recapturing current Inbox state. */
+  inspectOperations(file: string, options?: {signal?: AbortSignal}): Promise<InboxResult<InboxOperationsInspection>>;
   /** Original terminal summary + configured saved response; null if no response record exists. */
   response(intentId: string, options?: {signal?: AbortSignal}): Promise<InboxResponse | null>;
 }
@@ -1458,14 +1644,28 @@ export interface ExpiredContinuationStatus {
 }
 
 /** Exact original authorization has no durable signed-dispatch record. */
-export interface UndispatchedContinuationOptions extends Omit<ExpiredContinuationOptions,'expiryEvidence'> {}
+export interface UndispatchedContinuationOptions extends Omit<ExpiredContinuationOptions,'expiryEvidence'> {
+  /** Explicit complete replacement source; keeps the original parent and state at their canonical paths. */
+  successorRuntime?: NativeRuntimeSourceDescriptor;
+}
 export interface UndispatchedAuthorizationEvidence {
   schema: 'stellar-forge.sf88.undispatched-authorization-evidence.v1';
   kind: 'ORIGINAL_AUTHORIZATION_NOT_DISPATCHED';
   binding: Record<string, unknown> & {intentId: string; requestSha256: string; attemptId: string; configSha256: string};
   wire: Record<string, unknown> & {writerActive: false; signedDispatchRecorded: false};
   signerSources: Record<string, {path: string; bytes: number; sha256: string}>;
-  scope: Record<string, unknown>;
+  scope: Record<string, unknown> & {
+    /** Present only for the reviewed native source profile with actual-FD reservation support. */
+    reviewedNativeSourceProfile?: 'ORIGINAL_AUTHORIZATION_WITH_HELD_FILE_RESERVATIONS_V1';
+    allocationEntry?:
+      | {kind: 'REVIEWED_DIRECT_NATIVE_ENTRY'}
+      | {
+          requestSha256: string;
+          entrySha256: string;
+          nativeFileReservation: NativeFileReservationDescriptor;
+          runtimeSource: NativeRuntimeSourceBinding | null;
+        };
+  };
   sha256: string;
 }
 export interface UndispatchedContinuationStatus {
@@ -1476,5 +1676,6 @@ export interface UndispatchedContinuationStatus {
     authorization: UndispatchedAuthorizationEvidence;
     reservation: Record<string, unknown> & {request_id: string; request_digest: string; state: 'reserved'; actual: '0'; amount: string; sourceSha256: string; recordAuthority: string};
     accounting: 'ORIGINAL_RESERVATION_RETAINED; SUCCESSOR_REQUIRES_ORIGINAL_APPROVAL';
+    successorRuntime?: NativeRuntimeSourceBinding;
   };
 }

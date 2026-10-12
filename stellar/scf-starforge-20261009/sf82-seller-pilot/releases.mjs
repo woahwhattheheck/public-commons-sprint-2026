@@ -1,5 +1,5 @@
 // MIT. Version original SF61 exports and SF30 native merchant sources through SF82.
-import { open, readFile, lstat, mkdir, readdir, rename, rm, rmdir, unlink, copyFile } from 'node:fs/promises';
+import { open, readFile, lstat, mkdir, readdir, rename, rm, rmdir, unlink, copyFile, realpath, link } from 'node:fs/promises';
 import { constants as fsConstants } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import { join, resolve, dirname, relative, isAbsolute, sep } from 'node:path';
@@ -22,8 +22,10 @@ import {
   CLICKHOUSE_SOURCE_SCHEMA,
   GRPC_SOURCE_SCHEMA,
 } from './release-source-contracts.mjs';
+import { prepareReleaseDelivery, verifyReleaseDeliveryStartup } from './release-delivery.mjs';
 import { acquireReleaseLease, releaseProcessOwner, releaseOwnerLiveness, recordedSellerAlive,
   validProcessIdentity, validReleaseLease, sameReleaseLease } from './release-process.mjs';
+import { resolveReleaseInstallation, writeReleaseInstallation } from './release-installation.mjs';
 import { NATIVE_SDK_VERSION } from '../sf30-seller-sdk/native-version.mjs';
 
 // Resolve only the selected original native release implementation. Every stage
@@ -207,8 +209,63 @@ async function mutate(root, action) {
   const release = await lock(root, 'state.lock');
   try { return await action(); } finally { await release(); }
 }
-export async function initReleaseStore(root) {
+export async function initReleaseStore(root, { resume = false } = {}) {
+  if (typeof resume !== 'boolean') throw new TypeError('Release initialization resume must be boolean.');
   root = resolve(root);
+  if (resume) {
+    // The original state lease serializes this recovery with ordinary mutations.
+    // A complete state is returned unchanged; no active selection is recreated.
+    if (process.platform !== 'linux') throw new TypeError('Resuming release initialization requires the original Linux state lease.');
+    try { await mkdir(root, { mode: 0o700 }); }
+    catch (error) { if (error.code !== 'EEXIST') throw error; }
+    const requirePrivate = async path => {
+      const info = await lstat(path);
+      if (!info.isDirectory() || info.isSymbolicLink() || info.mode & 0o077 || await realpath(path) !== path)
+        throw new TypeError('Resume only the original canonical private release directory.');
+    };
+    await requirePrivate(root);
+    const lifetime = await acquireReleaseLease(root, 'state.lock');
+    try {
+      // lstat distinguishes an absent initial state from invalid retained bytes.
+      let exists = true;
+      try { await lstat(join(root, 'state.json')); }
+      catch (error) { if (error.code !== 'ENOENT') throw error; exists = false; }
+      if (exists) return { root, ...await readReleaseState(root) };
+      const allowed = new Set(['releases', '.sf82-state.lock.lifetime']);
+      const pendingState = /^state\.json\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.tmp$/;
+      if ((await readdir(root)).some(name => !allowed.has(name) && !pendingState.test(name)))
+        throw new TypeError('Preserve the uninitialized release store: it contains other retained entries.');
+      const releases = join(root, 'releases');
+      try { await mkdir(releases, { mode: 0o700 }); }
+      catch (error) { if (error.code !== 'EEXIST') throw error; }
+      await requirePrivate(releases);
+      if ((await readdir(releases)).length)
+        throw new TypeError('Preserve releases whose original state is missing.');
+      const state = { schema: STORE, createdAt: new Date().toISOString(), generation: 0,
+        active: null, previous: null, history: [] };
+      const temporary = join(root, 'state.json.' + randomUUID() + '.tmp');
+      let ownedTemporary = false;
+      try {
+        const handle = await open(temporary, 'wx', 0o600);
+        ownedTemporary = true;
+        try { await handle.writeFile(JSON.stringify(state, null, 2) + '\n'); await handle.sync(); }
+        finally { await handle.close(); }
+        await lifetime.assert();
+        let published = true;
+        try { await link(temporary, join(root, 'state.json')); }
+        catch (error) { if (error.code !== 'EEXIST') throw error; published = false; }
+        // Exclusive publication also preserves a concurrent legacy initializer,
+        // whose default path predates the original kernel state lease.
+        await syncDirectory(root);
+        return { root, ...(published ? state : await readReleaseState(root)) };
+      } finally {
+        if (ownedTemporary) {
+          await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; });
+          await syncDirectory(root);
+        }
+      }
+    } finally { await lifetime.close(); }
+  }
   await mkdir(root, { mode: 0o700 });
   await mkdir(join(root, 'releases'), { mode: 0o700 });
   const state = { schema: STORE, createdAt: new Date().toISOString(), generation: 0,
@@ -452,7 +509,9 @@ async function releaseRecord(root, releaseId, verify = false) {
   if (record.schema !== RELEASE || record.id !== releaseId || hash(stable(content)) !== digest)
     throw new Error('Release metadata changed or belongs to a different release.');
   checkFacilitatorReview(record);
+  let installation = null;
   if (verify) {
+    installation = await resolveReleaseInstallation(resolve(root), record);
     const snapshot = await sourceSnapshot(path, record.runtime.upstreams, record.runtime.allowLoopbackUpstream === true);
     if (stable(snapshot.files) !== stable(record.files) || stable(snapshot.routes) !== stable(record.routes) ||
         stable(snapshot.python ?? null) !== stable(record.python ?? null) ||
@@ -469,11 +528,28 @@ async function releaseRecord(root, releaseId, verify = false) {
         stable(snapshot.clickhouse ?? null) !== stable(record.clickhouse ?? null) ||
         stable(snapshot.grpc ?? null) !== stable(record.grpc ?? null))
       throw new Error('Release files changed after staging. Restore the selected immutable release.');
-    if (record.handlerEntry && hash(await regular(record.handlerEntry.path)) !== record.handlerEntry.sha256)
+    if (record.handlerEntry && hash(await regular(installation?.runtime.handlers ?? record.handlerEntry.path)) !== record.handlerEntry.sha256)
       throw new Error('Trusted handler entry changed after staging. Restore it or stage a new release.');
     runtimeOptions(record.runtime);
   }
-  return { path, record };
+  return { path, record, installation: installation?.installation ?? null,
+    effectiveRuntime: installation?.runtime ?? record.runtime };
+}
+/** Bind a moved, source-verified handler without changing the saved release. */
+export async function installReleaseHandler(root, releaseId, input) {
+  root = resolve(root); await readReleaseState(root);
+  return mutate(root, async () => {
+    const { record } = await releaseRecord(root, id(releaseId));
+    const installed = await writeReleaseInstallation(root, record, input);
+    await releaseRecord(root, releaseId, true);
+    return { release: publicRelease(record), installation: installed.installation,
+      effectiveRuntime: installed.runtime };
+  });
+}
+export async function inspectReleaseInstallation(root, releaseId) {
+  const selected = await releaseRecord(resolve(root), id(releaseId), true);
+  return { release: publicRelease(selected.record), installation: selected.installation,
+    effectiveRuntime: selected.effectiveRuntime };
 }
 /** Compile with the original importer. No handler imports, listener or payment at staging. */
 export async function stageRelease(root, options) {
@@ -688,7 +764,7 @@ export async function stageRetainedRelease(root, options) {
     throw new TypeError('Supply the exact reviewed source digest.');
   if (!Number.isSafeInteger(options.expectedGeneration) || options.expectedGeneration < 0)
     throw new TypeError('Supply the reviewed selection generation.');
-  const { record: original, path: sourcePath } = await releaseRecord(root, from, true);
+  const { record: original, path: sourcePath, installation: sourceInstallation } = await releaseRecord(root, from, true);
   if (original.digest !== options.expectedDigest)
     throw Object.assign(new Error('The retained source differs from the reviewed digest.'), { code: 'RELEASE_CONFLICT' });
   const retainedRuntime = { ...original.runtime };
@@ -754,6 +830,8 @@ export async function stageRetainedRelease(root, options) {
     if (Buffer.byteLength(JSON.stringify(record, null, 2) + '\n') > LIMIT)
       throw new RangeError('The retained release reached its original metadata size limit.');
     await writeNew(join(temp, 'release.json'), record);
+    if (sourceInstallation) await writeReleaseInstallation(root, record, { expectedDigest: record.digest,
+      handler: sourceInstallation.installedHandler.file, source: sourceInstallation.source }, { directory: temp });
     const snapshot = await sourceSnapshot(temp, runtime.upstreams, runtime.allowLoopbackUpstream === true);
     if (stable(snapshot.files) !== stable(original.files) || stable(snapshot.routes) !== stable(original.routes))
       throw new Error('Copied source differs from the inspected retained release.');
@@ -1037,7 +1115,7 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
         (previous.host === undefined || previous.host === hostname()) &&
         await recordedSellerAlive(root, previous, releaseLock.owner, releaseLock.lifetime))
       throw Object.assign(new Error('The previously recorded seller process is still present. This manager cannot start a duplicate or stop a process it does not own.'), { code: 'RELEASE_BUSY' });
-    const { record, path } = await releaseRecord(root, state.active, true);
+    const { record, path, effectiveRuntime } = await releaseRecord(root, state.active, true);
     const selection = state.history.at(-1);
     const retainedReview = receivingReview ?? (selection?.generation === state.generation &&
       selection.to === record.id && selection.receivingReview
@@ -1048,13 +1126,15 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
       effectiveShutdownGraceMs = Math.max(70000, 60000 + record.python.shutdownTimeoutMs + 5000);
     // Replace only original mutable runtime settings, never compiled source. This
     // prevents a previous manual resume override from leaking into the release.
-    const originalOptions = { ...record.runtime, port: String(record.runtime.port),
+    const originalOptions = { ...effectiveRuntime, port: String(effectiveRuntime.port),
       ...((record.jsonrpc || record.postgres || record.clickhouse || record.opensearch || record.grpc) && operationsNavigationOrigin ? { operationsNavigationOrigin } : {}) };
     await atomic(join(path, 'pilot-runtime.json'), { schema: 'stellar-forge.seller-pilot-runtime.v1',
       source: { offersSha256: record.source.offersSha256, serviceConfigSha256: record.source.serviceConfigSha256,
         ...(record.opensearch ? { executionSha256: record.opensearch.executionSha256 } : {}) },
       options: originalOptions });
     const instanceId = randomUUID(), mode = record.runtime.facilitator ? 'NATIVE_X402' : 'CHALLENGE_ONLY';
+    const settlementDelivery = { ...await prepareReleaseDelivery(root), instanceId,
+      releaseId: record.id, releaseDigest: record.digest };
     const cacheRoutes = record.routes.filter(route => route.upstream?.cache).map(route => ({
       id: route.id, binding: route.application.handler, policy: route.upstream.cache }));
     await releaseLock.update({ instanceId, releaseId: record.id, releaseDigest: record.digest, selectionGeneration: state.generation });
@@ -1108,13 +1188,16 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
     await atomic(join(root, 'runtime.json'), observation);
     if (exitSettled || shutdownRequested) throw new Error(failure ?? 'Original seller stopped before launch.');
     await new Promise((done, fail) => child.send({ type: 'sf82-start', instanceId, cacheRoutes,
-      facilitatorReview: record.facilitatorReview ?? null }, error => error ? fail(error) : done()));
+      facilitatorReview: record.facilitatorReview ?? null, settlementDelivery }, error => error ? fail(error) : done()));
     let report;
     try { report = await ready; } finally { clearTimeout(startupTimer); }
     if (report.originalOffersSha256 !== record.source.offersSha256 ||
         report.originalServiceConfigSha256 !== record.source.serviceConfigSha256 ||
         report.cacheControlAvailable !== Boolean(cacheRoutes.length))
       throw new Error('Original pilot reported a different release source.');
+    if (report.mode !== mode) throw new Error('Original seller reported a different payment mode.');
+    const delivery = await verifyReleaseDeliveryStartup(root, report.settlementDelivery,
+      { instanceId, releaseId: record.id, releaseDigest: record.digest, mode });
     const operations = report.operations ?? null;
     if (Boolean(record.jsonrpc || record.postgres || record.clickhouse || record.opensearch || record.grpc) !== Boolean(operations) || operations && (!/^http:\/\/127\.0\.0\.1:\d+$/.test(operations.url) ||
         operations.availability !== operations.url + '/availability' ||
@@ -1123,7 +1206,8 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
     await originalReadback(report.listener, record, mode);
     if (exitSettled || shutdownRequested) throw new Error('Original seller stopped during startup.');
     Object.assign(observation, { listener: report.listener, phase: 'RUNNING', readyAt: new Date().toISOString(),
-      cacheControlAvailable: report.cacheControlAvailable, ...(operations ? { operations: operations.url } : {}) });
+      cacheControlAvailable: report.cacheControlAvailable, settlementDelivery: delivery,
+      ...(operations ? { operations: operations.url } : {}) });
     await atomic(join(root, 'runtime.json'), observation);
     completion = exited.then(finish);
     void completion.catch(() => {});
@@ -1134,7 +1218,8 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
       })();
       return closing;
     };
-    return { release: publicRelease(record), url: report.listener, mode, child, observation, operations, close, completion };
+    return { release: publicRelease(record), url: report.listener, mode, child, observation, operations,
+      settlementDelivery: delivery, close, completion };
   } catch (error) {
     failure ??= error.message;
     await stopChild();

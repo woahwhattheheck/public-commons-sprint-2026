@@ -411,6 +411,92 @@ arbitrary file reads are rejected. Static interface assets are served locally,
 and original HTML reports retain a script-free policy. No browser local storage,
 telemetry, external fonts or libraries are used.
 
+## Prepare atomic prices from saved USD quotes
+
+After applying a commercial scenario, calculate and save its new merchant
+review. In **Prepare seller price change**, load that saved review and select
+**Use saved USD quotes with entered valuations**.
+
+Select the original payment choices to prepare. For each choice, enter a
+positive number of its atomic units, the positive USD value you assign to
+those units, and the valuation source or assumption. The choice's network,
+asset, recipient and original amount appear beside these fields. Every selected
+choice has its own valuation, including choices that use the same asset.
+Unselected choices retain their original amounts.
+
+For example, a saved service quote of USD 0.0025 and an illustrative valuation
+of USD 1 for 10,000,000 atomic units produce a price of 25,000 atomic units.
+The calculation is exact integer arithmetic:
+
+    proposed atomic amount = ceil(saved USD quote × valued atomic units / valuation USD)
+
+USD inputs support six decimal places. Multiplication and division use integer
+micro-USD, so binary floating-point arithmetic cannot reduce the resulting
+payment. The calculation rounds upward to the smallest whole atomic amount
+that satisfies the quote at the entered valuation. A zero saved quote cannot
+produce a paid price decision through this mode. The original seller compiler
+validates the proposed positive atomic amounts and its authoritative limits.
+
+Choose **Review price change** to inspect the full original before/after
+payment terms, saved quote basis, entered valuation basis and rounding. The
+review retains the proposed USD value, excess over the quote and value of one
+atomic unit as reduced exact fractions. Its displayed USD bounds use at most
+twelve decimal places; the fractions are the saved calculation.
+
+**Save configuration** uses the existing price-decision history. The selected
+saved review, current seller hash, exact option order and source package are
+checked by that original workflow. Its review hash also binds the entered
+valuations and calculated conversion. The complete conversion is included in
+the saved `decision.json`; the saved source terms retain the original USD
+quote and basis. Exact request retries recover the same saved decision even
+after a later source or revision change. Downloads and staged releases use
+that complete retained decision.
+
+The default **Enter exact atomic amounts** mode remains available. A request
+contains either `edits` or `quoteValuations`. Switching entry mode retains the
+other mode's unsaved inputs in the current page and requires a new review.
+Reset clears the entered valuations and restores the loaded atomic amounts.
+
+### Native preview and save input
+
+The existing `/api/repricing/preview` and `/api/repricing/save` routes accept
+`quoteValuations` in place of `edits`:
+
+~~~json
+{
+  "version": "SAVED_REVIEW_UUID",
+  "sellerSha256": "INSPECTED_SELLER_SHA256",
+  "quoteValuations": [{
+    "routeId": "dataset",
+    "paymentIndex": 0,
+    "expectedAmount": "20000",
+    "atomicUnits": "10000000",
+    "usd": "1",
+    "basis": "Illustrative operator valuation for this saved pricing decision"
+  }]
+}
+~~~
+
+`paymentIndex` is zero based. `expectedAmount` must equal that option in the
+saved seller. `atomicUnits` and all atomic amounts are canonical positive
+integer strings of at most 39 digits; the compiler supplies the final amount
+bound. Valuation USD is a positive decimal string with at most six places and
+64 characters. The valuation basis contains 4-300 characters. Repeated options,
+unknown routes, changed amounts and incomplete valuations are rejected.
+
+The saved review supplies the commercial quote, so the request cannot replace
+it with a separate quote. To use different quotes, save the chosen commercial
+assumptions in Merchant pricing first. The native pure helper is
+`createQuotePriceEdits({seller,commercial,quoteValuations})` in
+`workspace/quote-prices.mjs`. It returns the exact ordered edits and
+`stellar-forge.merchant-quote-prices.v1` conversion; the original repricing
+compiler and source owner then prepare the full decision.
+
+For Save, preserve these same inputs and add the original `requestId`, `label`,
+`expectedRevision` and reviewed `reviewSha256`. The `expectedRevision` is the
+price-decision revision returned by the repricing source. The existing
+manifest/download and stage endpoints apply to quote-derived decisions.
+
 ## Integration interface
 
 ### Managed application launch

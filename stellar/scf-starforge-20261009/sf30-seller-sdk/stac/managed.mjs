@@ -1,7 +1,7 @@
 // MIT. Managed startup for the original STAC, eoAPI and Prescient hosts.
 import {constants} from 'node:fs';
 import {open,lstat,realpath} from 'node:fs/promises';
-import {resolve,join,dirname} from 'node:path';
+import {resolve,join,dirname,basename} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {createHash,randomUUID} from 'node:crypto';
 
@@ -18,9 +18,9 @@ const canonical=v=>Array.isArray(v)?v.map(canonical):plain(v)?
   Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])])):v;
 export const stacSelectionDigest=v=>digest(JSON.stringify(canonical(v)));
 const sourceFiles=['managed.mjs','cli.mjs','server.mjs','workspace.mjs','provider.mjs','ui.mjs','ui.html','ui.css'];
-const optionFiles=Object.freeze({transport:false,'source-config':true,deployment:true,'processing-config':false});
+const optionFiles=Object.freeze({transport:false,'source-config':true,deployment:true,'processing-config':false,'catalogue-config':true});
 const knownFlags=new Set(['workspace','port','transport','source-config','deployment','profile-sha256',
-  'processing-workspace','processing-config','max-request-bytes','startup-json','managed-selection']);
+  'processing-workspace','processing-config','policy-workspace','output-directory','catalogue-workspace','catalogue-config','max-request-bytes','startup-json','managed-selection']);
 
 function absolute(v){
   need(typeof v==='string'&&v===resolve(v)&&!v.includes('\0'),'STAC_MANAGED_ABSOLUTE_PATH_REQUIRED');
@@ -34,11 +34,17 @@ async function privateIdentity(path){
     'STAC_MANAGED_PRIVATE_DIRECTORY_REQUIRED','Select the original private workspace directory.');
   return {directory:path,device:info.dev.toString(),inode:info.ino.toString()};
 }
-async function fileRecord(path,{privateOnly=false,json=false}={}){
+async function outputIdentity(path){
+  absolute(path);
+  try{return {exists:true,...await privateIdentity(path)};}
+  catch(error){if(error.code!=='ENOENT')throw error;}
+  return {exists:false,directory:path,parent:await privateIdentity(dirname(path))};
+}
+async function fileRecord(path,{privateOnly=false,json=false,includeValue=false,maxBytes}={}){
   absolute(path);need(await realpath(dirname(path))===dirname(path),'STAC_MANAGED_REAL_PARENT_REQUIRED');
   const handle=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW|(constants.O_NONBLOCK??0));
   try{
-    const before=await handle.stat({bigint:true}),maximum=json?1024*1024:4*1024*1024;
+    const before=await handle.stat({bigint:true}),maximum=maxBytes??(json?1024*1024:4*1024*1024);
     need(before.isFile()&&before.size<=BigInt(maximum)&&(!privateOnly||process.platform==='win32'||
       (!(Number(before.mode)&0o077)&&(!process.getuid||Number(before.uid)===process.getuid()))),
       'STAC_MANAGED_FILE_REQUIRED','Select a complete original configuration or installed source file.');
@@ -46,21 +52,24 @@ async function fileRecord(path,{privateOnly=false,json=false}={}){
     need(before.size===after.size&&before.mtimeNs===after.mtimeNs&&before.ctimeNs===after.ctimeNs&&
       BigInt(bytes.length)===before.size,'STAC_MANAGED_FILE_CHANGED',
       'The selected file changed while it was being reviewed.');
+    let value;
     if(json){
-      let value;try{value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}
+      try{value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}
       catch{fail('STAC_MANAGED_CONFIGURATION_JSON_REQUIRED');}
       need(plain(value),'STAC_MANAGED_CONFIGURATION_OBJECT_REQUIRED');
     }
-    return {path,bytes:bytes.length,sha256:digest(bytes),device:before.dev.toString(),inode:before.ino.toString()};
+    return {path,bytes:bytes.length,sha256:digest(bytes),device:before.dev.toString(),inode:before.ino.toString(),...(includeValue?{value}:{})};
   }finally{await handle.close();}
 }
 function portValue(v){
   const port=v===undefined?0:Number(v);
   need(Number.isInteger(port)&&port>=0&&port<=65535,'STAC_MANAGED_PORT_INVALID');return port;
 }
-export async function readStacLaunchSource({sourceDirectory=ROOT,command,processing=false}={}){
+export async function readStacLaunchSource({sourceDirectory=ROOT,command,processing=false,catalogue=false}={}){
   sourceDirectory=resolve(sourceDirectory);need(STAC_MANAGED_COMMANDS.includes(command),'STAC_MANAGED_COMMAND_INVALID');
   const names=[...sourceFiles];
+  if(catalogue)names.push('browser-assets.json','geonetwork/native.mjs','geonetwork/model.mjs',
+    'geonetwork/workspace.mjs','geonetwork/mef.mjs','geonetwork/operations.mjs','geonetwork/view.mjs','geonetwork/view.css');
   if(processing)names.push('processing/workspace.mjs','processing/provider.mjs','processing/cirrus.mjs',
     'processing/associations.mjs','processing/portable.mjs','processing/view.mjs');
   if(command==='eoapi-serve')names.push('eoapi/cli.mjs','eoapi/runtime.mjs','eoapi/controller.mjs');
@@ -84,10 +93,33 @@ export async function inspectStacManagedSelection({command,flags,sourceDirectory
   need(state.schema==='scf-stac-workspace/v1'&&ID.test(state.id??'')&&typeof state.endpoint==='string',
     'STAC_MANAGED_WORKSPACE_INVALID');
   need(!flags['processing-config']||flags['processing-workspace'],'STAC_MANAGED_PROCESSING_WORKSPACE_REQUIRED');
-  need(command==='eoapi-serve'||!flags['source-config'],'STAC_MANAGED_SOURCE_CONFIGURATION_MODE');
+  need(!flags['catalogue-config']||flags['catalogue-workspace'],'STAC_MANAGED_CATALOGUE_WORKSPACE_REQUIRED');
+  need(command==='serve'||(!flags['catalogue-workspace']&&!flags['catalogue-config']),'STAC_MANAGED_CATALOGUE_MODE_REQUIRED');
+  need(command==='eoapi-serve'||(!flags['source-config']&&!flags['policy-workspace']&&!flags['output-directory']),
+    'STAC_MANAGED_SOURCE_CONFIGURATION_MODE');
   need(command==='prescient-serve'||(!flags.deployment&&!flags['profile-sha256']),'STAC_MANAGED_PRESCIENT_CONFIGURATION_MODE');
   need(command!=='prescient-serve'||(flags.deployment&&!flags['processing-workspace']&&
     !flags['processing-config']&&!flags.transport),'STAC_MANAGED_PRESCIENT_DEPLOYMENT_REQUIRED');
+  const eoapi=command==='eoapi-serve'?{
+    policy:await privateIdentity(absolute(flags['policy-workspace']??join(directory,'eoapi','policy'))),
+    output:await outputIdentity(absolute(flags['output-directory']??join(dirname(directory),basename(directory)+'-eoapi-deliveries')))
+  }:null;
+  if(eoapi)need(eoapi.output.directory!==directory&&!eoapi.output.directory.startsWith(directory+'/'),
+    'EOAPI_SEPARATE_DELIVERY_DIRECTORY_REQUIRED');
+  let catalogue=null;
+  if(flags['catalogue-workspace']){
+    const location=await outputIdentity(absolute(flags['catalogue-workspace']));
+    need(location.directory!==workspaceDirectory,'STAC_MANAGED_CATALOGUE_SEPARATE_DIRECTORY_REQUIRED');
+    catalogue={location,workspaceId:null};
+    try{
+      const record=await fileRecord(join(location.directory,'state.json'),{privateOnly:true,json:true,includeValue:true,maxBytes:32*1024*1024});
+      const saved=record.value;
+      need(saved.schema==='starforge.stac-geonetwork.v1'&&/^catalogue-[a-f0-9]{24}$/.test(saved.id??'')&&
+        (saved.stacWorkspaceId===null||saved.stacWorkspaceId===state.id),
+        'STAC_MANAGED_CATALOGUE_WORKSPACE_CHANGED','Select the catalogue workspace belonging to this original imagery workspace.');
+      catalogue.workspaceId=saved.id;
+    }catch(error){if(error.code!=='ENOENT')throw error;}
+  }
   const configurations=[];
   for(const [name,privateOnly]of Object.entries(optionFiles)){
     if(flags[name])configurations.push({option:name,...await fileRecord(absolute(flags[name]),{privateOnly,json:true})});
@@ -108,7 +140,7 @@ export async function inspectStacManagedSelection({command,flags,sourceDirectory
   }
   return {schema:STAC_MANAGED_SELECTION,command,directory,identity,
     workspace:{directory:workspaceDirectory,identity:workspaceIdentity,id:state.id,endpoint:state.endpoint},
-    processing,configurations,options,source:await readStacLaunchSource({sourceDirectory,command,processing:Boolean(processing)})};
+    processing,eoapi,catalogue,configurations,options,source:await readStacLaunchSource({sourceDirectory,command,processing:Boolean(processing),catalogue:Boolean(catalogue)})};
 }
 export function parseStacManagedSelection(value){
   need(typeof value==='string'&&Buffer.byteLength(value)<=32768,'STAC_MANAGED_SELECTION_INVALID');
@@ -146,7 +178,9 @@ async function responseJSON(response,maximum){
   }finally{await reader.cancel().catch(()=>{});}
 }
 async function sameDirectories(selection){
-  for(const expected of [selection.identity,selection.workspace.identity,selection.processing].filter(Boolean))
+  for(const expected of [selection.identity,selection.workspace.identity,selection.processing,selection.eoapi?.policy,
+    selection.eoapi?.output?.exists?(({exists,...identity})=>identity)(selection.eoapi.output):selection.eoapi?.output?.parent,
+    selection.catalogue?.location?.exists?(({exists,...identity})=>identity)(selection.catalogue.location):selection.catalogue?.location?.parent].filter(Boolean))
     need(stacSelectionDigest(await privateIdentity(expected.directory))===stacSelectionDigest(expected),
       'STAC_MANAGED_WORKSPACE_CHANGED','The reviewed workspace directory was replaced.');
 }
@@ -167,8 +201,19 @@ export async function verifyStacManagedHost({url:value,selection}={}){
     if(selection.processing)need(state.capabilities?.processing?.enabled===true,'STAC_MANAGED_PROCESSING_NOT_READY');
     if(selection.command==='eoapi-serve')need(state.eoapi===true,'STAC_MANAGED_EOAPI_NOT_READY');
     if(selection.command==='prescient-serve')need(state.capabilities?.prescient?.enabled===true,'STAC_MANAGED_PRESCIENT_NOT_READY');
+    let catalogueWorkspaceId=null;
+    if(selection.catalogue){
+      need(state.capabilities?.catalogue?.enabled===true,'STAC_MANAGED_CATALOGUE_NOT_READY');
+      const catalogueState=await responseJSON(await fetch(new URL('/api/catalogue/state',url.origin),{
+        redirect:'error',signal:controller.signal,headers:{cookie,accept:'application/json'}}),32*1024*1024);
+      need(catalogueState.schema==='starforge.stac-geonetwork.v1'&&/^catalogue-[a-f0-9]{24}$/.test(catalogueState.id??'')&&
+        (catalogueState.stacWorkspaceId===null||catalogueState.stacWorkspaceId===selection.workspace.id)&&
+        (!selection.catalogue.workspaceId||catalogueState.id===selection.catalogue.workspaceId),
+        'STAC_MANAGED_CATALOGUE_WORKSPACE_CHANGED');
+      catalogueWorkspaceId=catalogueState.id;
+    }
     await sameDirectories(selection);
-    return {url:url.href,workspaceId:state.workspace.id,revision:state.workspace.revision};
+    return {url:url.href,workspaceId:state.workspace.id,revision:state.workspace.revision,catalogueWorkspaceId};
   }finally{clearTimeout(timer);controller.abort();}
 }
 export async function createStacManagedStartup({selection,result}={}){
@@ -183,5 +228,8 @@ export async function createStacManagedStartup({selection,result}={}){
     directory:selection.directory,workspaceDirectory:selection.workspace.directory,workspaceId:live.workspaceId,
     workspaceRevision:live.revision,selectionSha256:stacSelectionDigest(selection),sourceSha256:selection.source.sha256,
     processingDirectory:selection.processing?.directory??null,profileSha256:selection.options.profileSha256??null,
+    policyDirectory:selection.eoapi?.policy.directory??null,outputDirectory:selection.eoapi?.output.directory??null,
+    catalogueDirectory:selection.catalogue?.location.directory??null,catalogueWorkspaceId:live.catalogueWorkspaceId,
     instanceId:randomUUID(),pid:process.pid,createdAt:new Date().toISOString()};
 }
+

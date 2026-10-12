@@ -327,3 +327,15 @@ Keep the private input and original source files outside the public source tree.
 The native journey starts the original local challenge seller and prepares its
 advertised buyer request; the workspace's existing paid runtime remains the path
 for authorized execution of that prepared request.
+
+## Managed Applications and typed customer receiving
+
+Open **SAM.gov opportunities** in the maintained Applications workspace, or use
+`starforge samgov-workspace`. The browser and the 30 typed merchant tools share
+the same original SAM server, source writer, reviewed selections and handoffs.
+
+[Managed Applications and customer receiving](MANAGED_APPLICATIONS.md) covers the
+complete saved application lifecycle, private host connection, exact original
+source intake, opportunity preparation, export downloads and receiving after a
+restart. Inspect the installed source with `starforge registrations --source samgov`
+and `starforge merchant-providers inspect samgov-workspaces`.

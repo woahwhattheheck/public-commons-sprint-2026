@@ -43,13 +43,28 @@ export async function exportEdgarMerchant(compiled,destination,{storeDirectory}=
     for(const record of editions.values()){
       await receiving.importCapture({id:record.id,kind:record.kind,cik:record.cik,sourceUrl:record.sourceUrl,
         capturedAt:record.capturedAt,bytes:await source.readRaw(record.id)});
+      for(const name of ['source-store/editions/'+record.id+'.json','source-store/blobs/'+record.sourceSha256+'.json']){
+        const bytes=await readBytes(join(out,name),33554432);
+        files[name]={bytes:bytes.length,sha256:sha256(bytes)};
+      }
     }
     const manifest={schema:'stellar-forge.sec-edgar-merchant-export.v1',inputSha256:compiled.inputSha256,files,
       editions:[...editions.values()].map(r=>({id:r.id,kind:r.kind,cik:r.cik,sourceSha256:r.sourceSha256,
         sourceBytes:r.sourceBytes,capturedAt:r.capturedAt,sourceUrl:r.sourceUrl})),
       sourceStore:'source-store',client:'client/seller-client.mjs'};
     // The manifest describes the complete preceding files, not its own digest.
-    const manifestBytes=json(manifest);await exact('manifest.json',manifestBytes);
+    let manifestBytes=json(manifest);
+    if(await exists(join(out,'manifest.json'))){
+      // Existing complete customer exports keep their original manifest identity.
+      // Older v1 exports already contain these sources; their MCP inventory
+      // carries all source pins. New exports include them in the native manifest.
+      const retained=await readBytes(join(out,'manifest.json'),33554432);
+      const originalFiles=Object.fromEntries(Object.entries(files).filter(([name])=>!name.startsWith('source-store/')));
+      const legacy=json({...manifest,files:originalFiles});
+      if(!retained.equals(Buffer.from(manifestBytes))&&!retained.equals(Buffer.from(legacy)))
+        fail('This export already contains another revision.',409,'EDGAR_EXPORT_CONFLICT');
+      manifestBytes=retained;
+    }else await exact('manifest.json',manifestBytes);
     return {directory:out,merchant:join(out,'merchant.json'),sourceStore:join(out,'source-store'),
       clientDirectory:join(out,'client'),manifestSha256:sha256(manifestBytes),editions:manifest.editions};
   }finally{await receiving?.close();await source.close();}

@@ -104,7 +104,7 @@ stellar/scf-starforge-20261009/sf30-seller-sdk/redis/cli.mjs`.
 ## Declare the product
 
 The source schema is `stellar-forge.redis-source.v1`. Each named product uses one
-of four native read shapes:
+of six native read shapes:
 
 | Kind | Selection and public result |
 | --- | --- |
@@ -112,6 +112,8 @@ of four native read shapes:
 | `hash` | One key and an explicit public-column to Redis-field mapping |
 | `sorted-set` | One key, ordered member and score columns, and optional rank-offset input |
 | `stream` | One key, stream ID plus explicitly projected fields, and optional exclusive-ID input |
+| `list` | One key, zero-based index and value columns, and optional bounded offset input |
+| `set` | One key, one member column, a native cursor input and a complete SSCAN batch |
 
 Keys are either fixed literal strings or `{ "prefix": "merchant:catalog:",
 "parameter": "region" }`. A key parameter must be a declared string with an
@@ -126,18 +128,25 @@ JSON numbers must be safe integers; decimal integer strings retain the full
 supported range. Every declared input has a purpose in key selection or paging.
 Defaults, enums and declared bounds are applied before native execution.
 
-For a sorted set, `offset` names an integer parameter with an inclusive minimum
+For a sorted set or list, `offset` names an integer parameter with an inclusive minimum
 of at least zero and maximum at most 10,000,000. For a stream, `after` names a
 string parameter with `maxLength` at most 41. Its value is `-` for the first page
 or a canonical `milliseconds-sequence` ID with two unsigned 64-bit components.
 The stream selection begins strictly after that ID.
 
+For a set, `cursor` names a string parameter with `maxLength` at most 20. Start
+with the exact string `"0"`; later inputs are the native unsigned 64-bit cursor
+as canonical decimal text. `scanCount` is a declared work hint from 1 to
+`maxRows`. See [List and Set products](COLLECTIONS.md) for complete examples,
+iteration behavior, native ACL permissions and customer continuation.
+
 The plan schema is `stellar-forge.redis-merchant-plan.v1`. Every public route
 selects a configured query and supplies method, path, service name, description,
 parameter descriptions, example and payment terms. The shared public compiler
 checks both the original example and its actual HTTP representation using the
-Redis binder. The example plan contains four ready-to-edit routes matching the
-four product kinds.
+Redis binder. The original example plan contains four ready-to-edit routes. The complete
+`example-collections-source.json` and `example-collections-plan.json` pair adds
+List and Set products through the same compiler, editor and customer client.
 
 ## Read pages and preserve values
 
@@ -160,10 +169,10 @@ selected byte limit. A result that exceeds either byte check returns
 `QUERY_RESULT_TOO_LARGE`; the HTTP route uses status 413. Adjust the reviewed
 projection or page size, or the declared byte limit, before requesting it again.
 
-Declare `offset` or `after` to expose continuation for a paged product. Use the
+Declare `offset`, `after` or the set's required `cursor` to expose continuation for a paged product. Use the
 returned `nextInput` as the next request's input. It retains the current
 key-selection values and advances the declared
-rank or stream cursor. A continuation is emitted only when it passes the same
+rank, list index, stream ID or native set cursor. A continuation is emitted only when it passes the same
 input contract as a new request. If the next rank exceeds the declared offset
 maximum, the response reports `continuationUnavailable: "OFFSET_LIMIT"`. A
 cursor excluded by an enum or another declared input constraint reports
@@ -171,10 +180,16 @@ cursor excluded by an enum or another declared input constraint reports
 be true because more source rows exist. The merchant can revise the reviewed
 declaration to expose a wider range.
 
-Each page is an individual live read. Changes to a sorted
-set between requests can change rank positions; the stream cursor follows
-native stream IDs. Release retention pins the reader configuration, while the
-Redis dataset continues under its own operational lifecycle.
+Each page is an individual live read. Changes to a sorted set or list between
+requests can change positions; the stream cursor follows native stream IDs.
+Set results expose `scanCursor`, `scanComplete`, `scanCount` and
+`duplicatesPossible`. Follow `nextInput` even for an empty set page; native
+ordering is unspecified and repeated members may occur across pages.
+An oversized complete native scan batch returns HTTP 413 with
+`QUERY_SCAN_PAGE_TOO_LARGE`. The reader preserves the native batch boundary;
+use the selected source and cursor again after adjusting the declaration.
+Release retention pins the reader configuration, while the Redis dataset
+continues under its own operational lifecycle.
 
 ## Configure the native connection
 
@@ -289,7 +304,15 @@ For a local development deployment, explicitly choose `local-plaintext`.
 If either the data or Sentinel connection uses this mode, every seed, mapped
 endpoint and discovered destination must be `127.0.0.1`, `::1` or
 `localhost`. The source checks discovered destinations as well as the initial
-profile. Use the verified TLS profiles for a remote deployment.
+profile. Use verified TLS for a directly reachable remote deployment. A complete
+SSH deployment instead owns explicit loopback forwards on the application host,
+as described below.
+
+An optional `nodeAddressPolicy: "mapped-only"` requires every discovered address
+to appear in `nodeAddressMap`. The SSH compiler enables this policy and retains
+both announced endpoints and the corresponding local forwards. Unreviewed
+addresses fail with `REDIS_NODE_ADDRESS_UNMAPPED`, including unknown loopback
+addresses. Profiles that omit the policy keep their existing discovery behavior.
 
 ### Connection lifetime
 
@@ -309,6 +332,38 @@ A client deadline ends the reader's request; a script already executing on
 Redis continues according to the server's script lifecycle. Stopping a seller
 uses the existing HTTP drain before closing its source.
 
+## Operate an application through SSH
+
+The installed `redis-ssh` command owns the complete database access inventory and
+the application using it. It supports standalone, Cluster and Sentinel hosts
+that provide SSH access to the database's own loopback interface. Each data node
+and Sentinel monitor has an explicit host identity, credential reference, local
+port and announced-address mapping. The customer application runs on its own
+application host.
+
+Start with the appropriate `deployment/example-*.json` and the full
+[SSH deployment guide](deployment/SSH_DEPLOYMENT.md). Review its semantic digest,
+prepare the original commissioning input, and run that same customer workflow:
+
+~~~sh
+starforge redis-ssh profile --deployment /srv/customer/ssh-deployment.json
+starforge redis-ssh prepare --deployment /srv/customer/ssh-deployment.json --input /srv/customer/commissioning-input.json --output /srv/customer/commissioning-via-ssh.json
+starforge redis-ssh run --deployment /srv/customer/ssh-deployment.json --sha256 REVIEWED_DEPLOYMENT_SHA256 -- starforge redis-commission receive --input /srv/customer/commissioning-via-ssh.json --workspace /srv/customer/commission
+~~~
+
+The original commissioning input retains its selected products, operation IDs,
+prices, customer expectations and release controls. The SSH preparation changes
+only its connection to the reviewed forwards. Set the required environment
+references on the application host before receiving. The complete guide covers
+the original CLI arguments, saved workspace, customer export, managed runtime,
+host-key files, restart behavior and the full native operating journey.
+
+All forwards authenticate before the application starts. A lost connection ends
+that application and its child process group, then closes the remaining
+forwards. The next start opens a fresh group from the same reviewed input. The
+manager pins the exact known-host bytes it uses, retains private-key references
+and uses OpenSSH's existing public-key and host-verification implementation.
+
 ## Grant the command and key permissions
 
 The merchant identity needs `+eval_ro` and `+ping`, plus the commands used by its
@@ -322,6 +377,11 @@ the example source uses this ACL permission fragment:
 ```text
 ACL SETUSER merchant on resetkeys -@all ~merchant:availability:catalog ~merchant:catalog:north ~merchant:catalog:south ~merchant:rankings:daily ~merchant:events +eval_ro +ping +get +strlen +hmget +hstrlen +zrange +xrange
 ```
+
+List products additionally require `+lrange` and `+llen`; Set products require
+`+sscan`. Add the declared collection keys to the same merchant key rules. The
+[collection guide](COLLECTIONS.md#native-access) gives the complete permission
+fragment for its example source.
 
 For Cluster, add `+cluster|slots` for native discovery and `+asking` for a
 read redirected during a slot migration. Apply the merchant identity and its
@@ -405,6 +465,15 @@ selection, binary values, exact decimal text, missing projected fields, stream
 duplicate fields, pagination boundaries, and both native and encoded result
 size limits.
 
+Set `SF30_REDIS_JOURNEY_COLLECTIONS=1` to append the two collection products
+to that same native operation. The collection continuation reads complete lists
+and sets, preserves binary and large decimal values, follows an actual
+nonterminal empty SSCAN batch, exercises whole-batch limits, edits and reopens
+saved previews, and downloads every page through the original generated client.
+Use `SF30_REDIS_JOURNEY_SETUP=1` for the [connection setup](SETUP.md) browser
+operation before the original source CA copies are removed.
+
 ## Saved authoring workspace
 
-The [Redis merchant workspace](workspace/README.md) combines named-product editing, complete saved revisions, live source previews, original customer packages and retained release controls. Use `starforge-merchant redis workspace create --directory NEW --source SOURCE --plan PLAN`, then `starforge-merchant redis workspace open --directory WORKSPACE`. The browser and CLI share the same private workspace; the host-selected connection and environment credential references carry through to the original merchant.
+The [connection setup](SETUP.md) imports or configures the original source and
+creates the saved workspace. The [Redis merchant workspace](workspace/README.md) combines named-product editing, complete saved revisions, live source previews, original customer packages and retained release controls. Use `starforge-merchant redis workspace create --directory NEW --source SOURCE --plan PLAN`, then `starforge-merchant redis workspace open --directory WORKSPACE`. The browser and CLI share the same private workspace; the host-selected connection and environment credential references carry through to the original merchant.

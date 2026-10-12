@@ -1,0 +1,42 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "directus",
+  "description": "Directus 12.5 native collections, content versions, reviewed data products and customer receiving",
+  "commands": {
+    "directus": "stellar/scf-starforge-20261009/sf30-seller-sdk/directus/cli.mjs",
+    "directus-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/directus/server.mjs"
+  },
+  "exports": {
+    "./seller/directus": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/directus/merchant.mjs",
+    "./seller/directus/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/directus/source.mjs",
+    "./seller/directus/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/directus/workspace.mjs",
+    "./seller/directus/native": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/directus/native.mjs",
+    "./seller/directus/operations": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/directus/operations.mjs",
+    "./seller/directus/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/directus/server.mjs",
+    "./seller/directus/launch": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/directus/launch.mjs",
+    "./buyer/directus": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/directus/customer.mjs",
+    "./seller/directus/project": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/directus/project.mjs",
+    "./seller/directus/sessions": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/directus/sessions.mjs"
+  },
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/directus/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/directus/browser-assets.json"
+    }
+  ],
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/directus/browser-assets.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/directus/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/directus/native-customer.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/directus/native-browser.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/directus/native-setup.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/directus/NATIVE_SETUP.md"
+  ],
+  "commandDescriptions": {
+    "directus": "Capture native collections, edit content versions, publish reviewed editions and receive customer data",
+    "directus-workspace": "Review Directus collections, promote native drafts and manage dataset customer deliveries in the browser"
+  },
+  "applicationProviders": {
+    "directus": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/directus.mjs"
+  }
+}

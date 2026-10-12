@@ -1,0 +1,30 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "gtfs",
+  "description": "Complete GTFS feed authoring, schedule editions and original merchant publication",
+  "commands": {
+    "gtfs": "stellar/scf-starforge-20261009/sf30-seller-sdk/gtfs/cli.mjs"
+  },
+  "commandDescriptions": {
+    "gtfs": "Retain complete GTFS feeds, review dated schedules, publish data and receive whole workspaces"
+  },
+  "exports": {
+    "./seller/gtfs": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/gtfs/source.mjs",
+    "./seller/gtfs/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/gtfs/workspace.mjs",
+    "./seller/gtfs/browser": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/gtfs/server.mjs",
+    "./seller/gtfs/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/gtfs/merchant.mjs",
+    "./seller/gtfs/catalog": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/gtfs/catalog.mjs"
+  },
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/gtfs/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/gtfs/browser-assets.json"
+    }
+  ],
+  "applicationProviders": {
+    "gtfs": "stellar/scf-starforge-20261009/sf30-seller-sdk/gtfs/application-provider.mjs"
+  },
+  "merchantProviders": {
+    "gtfs-workspaces": "stellar/scf-starforge-20261009/sf30-seller-sdk/gtfs/merchant-provider.mjs"
+  }
+}

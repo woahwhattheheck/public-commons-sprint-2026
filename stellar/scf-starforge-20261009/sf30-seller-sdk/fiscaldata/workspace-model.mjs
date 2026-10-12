@@ -1,5 +1,5 @@
 // MIT. Complete retained Treasury capture/review/delivery; original merchant engines.
-import { mkdir, readdir, lstat, rename, rm, open, realpath } from 'node:fs/promises';
+import { mkdir, readdir, lstat, rename, rm, open, realpath, readFile } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import { join, resolve, relative, isAbsolute } from 'node:path';
@@ -11,6 +11,7 @@ import { API_BASE, CATALOG_URL, FIELD, endpointPath, sourceQuery, fetchFiscal, j
   normalizeCatalog, textValue } from './capture.mjs';
 import { decimalParts, addDecimals, subtractDecimals, equalDecimals, positiveDecimal } from './decimal.mjs';
 import { openFiscalPublisher } from './publishing.mjs';
+import { createFiscalRefreshEngine } from './refresh.mjs';
 
 const SCHEMA = 'stellar-forge.fiscaldata-workspace.v1';
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
@@ -18,9 +19,9 @@ const HASH = /^[a-f0-9]{64}$/;
 const MiB = 1024 ** 2;
 const now = () => new Date().toISOString();
 const clone = value => structuredClone(value);
-const GROUPS = ['catalogs','sources','captures','editions','comparisons','exports'];
+const GROUPS = ['catalogs','sources','captures','editions','comparisons','exports','refresh-plans','refresh-runs'];
 const defaults = { maxResponseBytes: 8 * MiB, maxCatalogBytes: 16 * MiB, maxCaptureBytes: 64 * MiB,
-  maxPages: 2000, maxRows: 250000, maxCaptures: 128, maxEditions: 128, maxComparisons: 128, maxExports: 256,
+  maxPages: 2000, maxRows: 250000, maxCaptures: 128, maxEditions: 128, maxComparisons: 128, maxExports: 256, maxRefreshPlans: 128, maxRefreshRuns: 256,
   requestTimeoutMs: 30000 };
 const absent = async path => { try { await lstat(path); return false; } catch (error) { if (error.code === 'ENOENT') return true; throw error; } };
 const safeName = name => typeof name === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]{0,179}$/.test(name);
@@ -126,7 +127,7 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
   const roots = Object.fromEntries([...GROUPS, 'downloads', 'staging'].map(key => [key, join(directory, key)]));
   const records = Object.fromEntries(GROUPS.map(group => [group, new Map()]));
   let header, tail = Promise.resolve(), workerPromise = null, workerEnabled = false, activeCaptureId = null;
-  let controller = null, closing = false, closed = false, publisher, closePromise;
+  let controller = null, closing = false, closed = false, publisher, refreshPlans, activeRefreshRunId = null, closePromise;
   const warnings = [], datasets = new Map();
   const pathFor = (group,id) => join(roots[group], assertId(id));
   function get(group,id) {
@@ -149,7 +150,19 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
   async function save(group, record) {
     const root = pathFor(group, record.id);
     await privateDirectory(root, true);
-    await atomicJson(root, 'record.json', record);
+    try { await atomicJson(root, 'record.json', record); }
+    catch (error) {
+      // The native rename can complete before its directory acknowledgement.
+      // Reconcile that exact already-fsynced record before updating in-memory
+      // request indexes, so retry never duplicates a retained native creation.
+      let retained;
+      try { retained=await readPrivate(join(root,'record.json'),32*MiB); } catch {}
+      if(!retained?.equals(bytes(record)))throw error;
+      warnings.push({code:'ITEM_PUBLICATION_READBACK',group,id:record.id,at:now(),detail:error.code,
+        message:'The complete selected record was read back after its publication acknowledgement failed.'});
+      if(warnings.length>128)warnings.splice(0,warnings.length-128);
+      await syncDirectory(root).catch(()=>{});
+    }
     records[group].set(record.id, clone(record));
     await headerSave();
     return clone(record);
@@ -271,7 +284,13 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
       },
       retainAcquisition:result=>retainAcquisition(result)
     });
-  } catch(error) { await unlock();throw error; }
+    refreshPlans=createFiscalRefreshEngine({
+      list:group=>[...records[group].values()].map(clone),get,save,sourceVersion,
+      native:dispatchAction,findNative:(group,action,input)=>requestExisting(group,action,input).record,
+      deliver:makeRefreshDelivery,limits,notify:kick,now
+    });
+    await refreshPlans.recover();
+  } catch(error) { await publisher?.close().catch(()=>{});await unlock();throw error; }
 
   async function snapshot() {
     if(closed)throw fault('WORKSPACE_CLOSED','Reopen this Fiscal Data workspace.',409);
@@ -280,9 +299,9 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
       catalog:catalogView(records.catalogs.get(header.catalogId)),sources:sort('sources').map(clone),
       captures:sort('captures').map(captureView),editions:sort('editions').map(editionView),
       comparisons:sort('comparisons').map(value=>{const {rowDetails,...summary}=value;return clone(summary);}),
-      exports:sort('exports').map(exportView),
+      exports:sort('exports').map(exportView),...refreshPlans.snapshot(),
       buyerWorkspaces:buyerWorkspaces.map(({id,label})=>({id,label})),publisher:await publisher.state(),
-      worker:{running:workerEnabled,captureId:activeCaptureId},limits:clone(limits),recoveryWarnings:clone(warnings)};
+      worker:{running:workerEnabled,captureId:activeCaptureId,refreshRunId:activeRefreshRunId},limits:clone(limits),recoveryWarnings:clone(warnings)};
   }
   async function refreshCatalog() {
     const response=await fetchFiscal(CATALOG_URL,{maxBytes:limits.maxCatalogBytes,timeoutMs:limits.requestTimeoutMs});
@@ -296,12 +315,15 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
     return catalogView(record);
   }
   async function saveSource(input) {
-    only(input,['id','expectedRevision','name','endpoint','filter','sort','pageSize','notes']);
+    only(input,['id','expectedRevision','name','endpoint','filter','sort','pageSize','notes','requestId']);
+    if(input.id&&input.requestId!==undefined)throw fault('SOURCE_CREATE_REQUEST_ONLY','A source creation requestId belongs to a new immutable query; existing source edits use expectedRevision.');
+    const found=!input.id&&input.requestId!==undefined?requestExisting('sources','sources.save',input):null;
+    if(found?.record)return sourceVersion(found.record.id,1);
     const old=input.id?get('sources',input.id):null;
     if(old)expected(old,input.expectedRevision);
     const endpoint=endpointPath(input.endpoint),catalog=records.catalogs.get(header.catalogId);
     const entry=catalog?.endpoints.find(item=>item.endpoint===endpoint)??null;
-    const record={id:old?.id??randomUUID(),kind:'sources',revision:(old?.revision??0)+1,
+    const record={id:old?.id??randomUUID(),kind:'sources',revision:(old?.revision??0)+1,...(old?.requestKey?{requestKey:old.requestKey,inputSha256:old.inputSha256}:found?.pin??{}),
       name:label(input.name),endpoint,filter:label(input.filter??'',8192,false),sort:label(input.sort??'',2048,false),
       pageSize:integer(input.pageSize??1000,1,10000,'Page size'),notes:label(input.notes??'',8000,false),
       createdAt:old?.createdAt??now(),updatedAt:now(),previousSha256:old?.sha256??null,
@@ -527,9 +549,18 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
     if(!workerEnabled||closing||workerPromise)return;
     workerPromise=(async()=>{
       while(workerEnabled&&!closing) {
+        // One serial workflow step composes original APIs; only the existing
+        // capture loop performs background network reads and owns their abort.
+        let advanced=false;
+        if(refreshPlans?.hasWork()){
+          activeRefreshRunId=refreshPlans.nextId();
+          try{advanced=await serial(()=>refreshPlans.advance());}
+          finally{activeRefreshRunId=null;}
+        }
+        if(!workerEnabled||closing)break;
         const candidate=[...records.captures.values()].filter(value=>value.desiredState==='RUNNING'&&['QUEUED','RUNNING'].includes(value.status))
           .sort((a,b)=>a.createdAt.localeCompare(b.createdAt))[0];
-        if(!candidate)break;
+        if(!candidate){if(advanced)continue;break;}
         activeCaptureId=candidate.id;controller=new AbortController();
         await mutateCapture(candidate.id,value=>{value.status='RUNNING';value.error=null;});
         try {await runCapture(candidate.id,controller.signal);}
@@ -540,10 +571,12 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
           });
         } finally {activeCaptureId=null;controller=null;}
       }
-    })().catch(error=>warnings.push(errorView(error))).finally(()=>{workerPromise=null;if(workerEnabled&&!closing&&
-      [...records.captures.values()].some(value=>value.desiredState==='RUNNING'&&value.status==='QUEUED'))queueMicrotask(kick);});
+    })().catch(error=>warnings.push(errorView(error))).finally(()=>{
+      workerPromise=null;
+      if(workerEnabled&&!closing&&(refreshPlans?.hasWork()||
+        [...records.captures.values()].some(value=>value.desiredState==='RUNNING'&&value.status==='QUEUED')))queueMicrotask(kick);
+    });
   }
-
 
   async function requireCapture(id,sha256) {
     const record=get('captures',id);
@@ -1095,6 +1128,112 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
       'Complete '+input.kind+' '+source.id+'. '+(group==='captures'&&source.status!=='COMPLETE'?
         'This is the retained partial interval with status '+source.status+'.':'The original source selection and complete immutable interpretation are included.'));
   }
+  async function makeBriefing(input) {
+    only(input,['comparisonId','expectedComparisonSha256','exportId','title','audience','notes','rowsPerPage','requestId']);
+    const comparison=get('comparisons',input.comparisonId),sourceExport=get('exports',input.exportId);
+    if(comparison.status!=='READY'||!HASH.test(input.expectedComparisonSha256??'')||
+      comparison.sha256!==input.expectedComparisonSha256)
+      throw fault('BRIEFING_COMPARISON_CHANGED','Choose the exact READY comparison and its retained SHA-256.',409);
+    if(sourceExport.status!=='READY'||sourceExport.exportKind!=='comparison'||
+      sourceExport.sourceId!==comparison.id||sourceExport.sourceSha256!==comparison.sha256)
+      throw fault('BRIEFING_EXPORT_SELECTION_CHANGED','Choose a complete delivery for this exact comparison.',409);
+    const title=label(input.title,240),audience=label(input.audience??'',400,false),notes=input.notes??'',
+      rowsPerPage=integer(input.rowsPerPage??200,1,500,'Rows per report page');
+    if(!textValue(notes,64000))throw fault('BRIEFING_TEXT_INVALID','Keep authored briefing notes within 64,000 characters.');
+    const found=requestExisting('exports','briefings.create',input);
+    if(found.record?.status==='READY')return exportView(found.record);
+    if(found.record&&!await absent(join(pathFor('exports',found.record.id),'sealed.json')))
+      return finishExport(found.record,[],'');
+    if(!found.record&&records.exports.size>=limits.maxExports)
+      throw fault('EXPORT_CAPACITY','Open another workspace for more retained exports.',409);
+    // The helper's exact source is part of the managed runtime selection.
+    const helperSource=await readFile(new URL('./briefing.mjs',import.meta.url)),
+      rendererSource=await readFile(new URL('./briefing-render.mjs',import.meta.url));
+    const producer={module:digest(helperSource),renderer:digest(rendererSource)};
+    let record=found.record??{id:randomUUID(),kind:'exports',exportKind:'briefing',revision:1,...found.pin,
+      sourceId:comparison.id,sourceSha256:comparison.sha256,
+      creation:{action:'briefings.create',payload:clone(input)},createdAt:now(),updatedAt:now(),
+      status:'BUILDING',sha256:null,files:[],
+      briefing:{title,audience,notes,rowsPerPage,sourceExportId:sourceExport.id,
+        sourceExportSha256:sourceExport.sha256,producer}};
+    if(record.sourceSha256!==comparison.sha256||record.briefing?.sourceExportSha256!==sourceExport.sha256)
+      throw fault('BRIEFING_SOURCE_CHANGED','The retained briefing must keep its exact original comparison delivery.',409);
+    if(identity(record.briefing.producer)!==identity(producer))
+      throw fault('BRIEFING_PRODUCER_CHANGED','Continue this briefing with its original source version, or create a new request for the current renderer.',409);
+    if(!found.record)await save('exports',record);
+    const {createFiscalBriefing}=await import('./briefing.mjs');
+    // This action already owns the serial writer. Lend the SAME original read functions;
+    // a nested public dispatch would otherwise wait behind its own accepted action.
+    const borrowed={
+      snapshot,
+      file,
+      async dispatch(action,payload) {
+        if(action!=='comparisons.get')throw fault('BRIEFING_READ_ACTION','The briefing borrows the original comparison reader.',409);
+        return {result:await comparisonPage(payload)};
+      }
+    };
+    const result=await createFiscalBriefing({directory,model:borrowed,
+      comparisonId:comparison.id,expectedComparisonSha256:comparison.sha256,exportId:sourceExport.id,
+      outputDirectory:directory+'-briefings',operationId:'workspace-'+record.id,
+      createdAt:record.createdAt,title,audience,notes,rowsPerPage});
+    if(result.state!=='COMPLETE'||!result.archive||result.comparisonSha256!==comparison.sha256)
+      throw fault('BRIEFING_NOT_COMPLETE','Continue the original briefing until its complete archive is sealed.',409);
+    const manifestBytes=await readPrivate(join(result.directory,'manifest.json'),32*MiB);
+    if(digest(manifestBytes)!==result.manifestSha256)
+      throw fault('BRIEFING_MANIFEST_CHANGED','The original briefing manifest changed before delivery.',409);
+    const manifest=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(manifestBytes));
+    const sources=[{source:{...result.archive,name:'briefing.tar.gz',mime:'application/gzip'},target:'briefing.tar.gz'},
+      {source:{path:join(result.directory,'manifest.json'),size:manifestBytes.length,
+        sha256:result.manifestSha256,mime:'application/json'},target:'briefing-manifest.json'}];
+    for(const name of ['briefing.json','briefing.md','dated-measures.csv']) {
+      const item=manifest.files.find(value=>value.path===name);
+      if(!item)throw fault('BRIEFING_FILE_MISSING','The completed briefing must include '+name+'.',409);
+      sources.push({source:{...item,path:join(result.directory,name)},target:name});
+    }
+    record={...record,briefing:{...record.briefing,operationId:result.operationId,
+      manifestSha256:result.manifestSha256,archiveSha256:result.archive.sha256,files:result.files,bytes:result.bytes}};
+    return finishExport(record,sources,'Complete original Fiscal comparison briefing: '+title+
+      '. Extract briefing.tar.gz and open index.html for the offline report, dated-measure CSV, every original row page and complete source delivery. '+
+      'The authored audience and notes accompany the exact reviewed comparison; decimal values and source-unit interpretations are preserved.');
+  }
+  async function makeRefreshDelivery(run,input) {
+    const payload={id:run.id,sha256:run.sha256,requestId:input.requestId};
+    const found=requestExisting('exports','refresh.delivery',payload);
+    if(found.record?.status==='READY')return exportView(found.record);
+    if(!run.completion||identity(run.completion)!==run.sha256)
+      throw fault('REFRESH_HANDOVER_CHANGED','Complete and retain the selected refresh before its handover.',409);
+    if(!found.record&&records.exports.size>=limits.maxExports)
+      throw fault('EXPORT_CAPACITY','Keep the full original refresh within this workspace’s export capacity.',409);
+    const sourceExport=get('exports',run.sourceExport.id),briefing=get('exports',run.briefing.id);
+    if(sourceExport.status!=='READY'||sourceExport.sha256!==run.sourceExport.sha256||
+       sourceExport.exportKind!=='comparison'||sourceExport.sourceId!==run.comparison.id||
+       sourceExport.sourceSha256!==run.comparison.sha256||
+       briefing.status!=='READY'||briefing.sha256!==run.briefing.sha256||
+       briefing.exportKind!=='briefing'||briefing.sourceId!==run.comparison.id)
+      throw fault('REFRESH_DELIVERY_SELECTION','Keep this run’s exact comparison delivery and completed briefing.',409);
+    const record=found.record??{id:randomUUID(),kind:'exports',exportKind:'refresh',revision:1,...found.pin,
+      sourceId:run.id,sourceSha256:run.sha256,creation:{action:'refresh.delivery',payload},
+      createdAt:run.completion.completedAt,updatedAt:now(),status:'BUILDING',sha256:null,files:[]};
+    if(!found.record)await save('exports',record);
+    const sources=[
+      {target:'refresh-plan.json',data:bytes({schema:'stellar-forge.fiscaldata-refresh-plan.v1',id:run.planId,
+        revision:run.planRevision,sha256:run.planSha256,definition:run.definition}),mime:'application/json'},
+      {target:'refresh-run.json',data:bytes(run.completion),mime:'application/json'},
+      {target:'FIELD_RULES.md',data:Buffer.from('# '+run.definition.name+'\n\n'+
+        'This delivery retains the exact source revision, selected fields, original units, scale annotations, null markers, row keys and query rules in refresh-plan.json. '+
+        'refresh-run.json binds the dated query, actual capture, reviewed edition, comparison and briefing. '+
+        'The previous baseline remains selected until the operator explicitly promotes a complete run in the saved plan.\n\n'+
+        'Extract briefing.tar.gz and open index.html for the complete offline report. comparison-source.tar.gz contains every original retained comparison source. '+
+        'Dated stock observations describe values on their stated dates; adding daily balances is not a period total.\n'),
+        mime:'text/markdown; charset=utf-8'},
+      {source:await file('export',sourceExport.id,'delivery.tar.gz'),target:'comparison-source.tar.gz'}
+    ];
+    for(const name of ['briefing.tar.gz','briefing.json','briefing.md','briefing-manifest.json','dated-measures.csv'])
+      sources.push({source:await file('export',briefing.id,name),target:name});
+    return finishExport(record,sources,'Complete saved refresh '+run.id+' for '+run.definition.name+
+      '. The frozen plan, actual dated source query, exact reviewed comparison, offline briefing and complete original source archive are included.');
+  }
+
   async function merchantSources(edition,sourceClosureVersion) {
     const sources=await exportSources('editions',edition.id);
     if(sourceClosureVersion!==1)return sources; // Resume an original pre-closure export unchanged.
@@ -1183,6 +1322,14 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
     return verified(pathFor(group,id),descriptor);
   }
   async function dispatchAction(action,input) {
+    if(typeof action==='string'&&action.startsWith('refresh.')){
+      if(action==='refresh.delivery'){
+        only(input,['id','sha256','requestId']);const run=get('refresh-runs',input.id);
+        if(run.sha256!==input.sha256)throw fault('REFRESH_HANDOVER_CHANGED','Choose the exact retained refresh handover.',409);
+        return makeRefreshDelivery(run,input);
+      }
+      return refreshPlans.dispatch(action,input);
+    }
     switch(action){
       case 'catalog.refresh':only(input,[]);return refreshCatalog();
       case 'sources.save':return saveSource(input);
@@ -1207,6 +1354,7 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
       case 'comparisons.create':return createComparison(input);
       case 'comparisons.get':return comparisonPage(input);
       case 'exports.create':return makeExport(input);
+      case 'briefings.create':return makeBriefing(input);
       case 'merchant.configure':return configureMerchant(input);
       default:
         if(typeof action==='string'&&action.startsWith('publisher.'))return publisher.act(action,input);
@@ -1219,7 +1367,7 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
     const result=await serial(async()=>{
       try{return await dispatchAction(action,clone(payload));}
       catch(error){
-        const group=action==='comparisons.create'?'comparisons':['exports.create','merchant.configure','publisher.buyer.export'].includes(action)?'exports':null;
+        const group=action==='comparisons.create'?'comparisons':['exports.create','briefings.create','merchant.configure','publisher.buyer.export'].includes(action)?'exports':null;
         if(group){
           const failed=[...records[group].values()].find(value=>value.creation?.action===action&&identity(value.creation.payload)===identity(payload)&&value.status!=='READY');
           if(failed){failed.status='FAILED';failed.error=errorView(error);failed.revision++;failed.updatedAt=now();await save(group,failed).catch(()=>{});}

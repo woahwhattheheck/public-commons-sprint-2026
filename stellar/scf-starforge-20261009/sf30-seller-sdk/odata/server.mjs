@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { fault } from './state.mjs';
 
 const assets=fileURLToPath(new URL('./public/',import.meta.url));
-const files=new Map([['/',['index.html','text/html; charset=utf-8']],['/app.mjs',['app.mjs','text/javascript; charset=utf-8']],['/style.css',['style.css','text/css; charset=utf-8']]]);
+const files=new Map([['/',['index.html','text/html; charset=utf-8']],['/app.mjs',['app.mjs','text/javascript; charset=utf-8']],['/collection-view.mjs',['collection-view.mjs','text/javascript; charset=utf-8']],['/style.css',['style.css','text/css; charset=utf-8']]]);
 export async function startODataServer({workspace,port=8797,liveServiceId,liveOperations,closeWorkspace=true}={}){
   if(!Number.isInteger(port)||port<0||port>65535)throw new TypeError('Choose a local TCP port.');
   if(typeof closeWorkspace!=='boolean')throw new TypeError('closeWorkspace must be a Boolean.');
@@ -39,6 +39,9 @@ export async function startODataServer({workspace,port=8797,liveServiceId,liveOp
         const [name,type]=files.get(url.pathname);return send(res,200,await readFile(join(assets,name)),{'Content-Type':type,
           'Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'"});}
       if(req.method==='GET'&&url.pathname==='/api/state')return send(res,200,await workspace.state());
+      if(req.method==='GET'&&url.pathname==='/api/transfer-options')return send(res,200,{
+        browserMaxBytes:64*1024*1024,workspaceDirectory:workspace.directory,
+        nativeCommand:[process.execPath,fileURLToPath(new URL('./cli.mjs',import.meta.url))]});
       if(req.method==='GET'&&url.pathname==='/api/application'){
         const {odataWorkspaceProbe}=await import('./live/startup.mjs');return send(res,200,await odataWorkspaceProbe(workspace));}
       if(req.method==='GET'&&url.pathname==='/api/rows')return send(res,200,{rows:await workspace.rows(url.searchParams.get('id'))});
@@ -54,9 +57,14 @@ export async function startODataServer({workspace,port=8797,liveServiceId,liveOp
       if(req.method==='GET'&&url.pathname==='/api/merchant')return send(res,200,await(await getPublisher()).status());
       if(req.method==='GET'&&url.pathname==='/api/live')return send(res,200,await(await getLive()).status());
       if(req.method==='GET'&&url.pathname==='/api/live/detail')return send(res,200,await(await getLive()).detail(url.searchParams.get('id')));
+      if(req.method==='GET'&&url.pathname==='/api/live/collections')return send(res,200,await(await getLive()).collections({id:url.searchParams.get('id')}));
+      if(req.method==='GET'&&url.pathname==='/api/live/collection')return send(res,200,await(await getLive()).collection(Object.fromEntries(url.searchParams)));
+      if(req.method==='GET'&&url.pathname==='/api/live/collection/rows'){
+        const input=Object.fromEntries(url.searchParams);input.offset=Number(input.offset??0);input.limit=Number(input.limit??100);
+        return send(res,200,await(await getLive()).collectionRows(input));}
       if(req.method==='GET'&&url.pathname==='/api/live/file'){
         const file=await(await getLive()).file(Object.fromEntries(url.searchParams));
-        return send(res,200,file.bytes,{'Content-Type':file.name.endsWith('.jsonl')?'application/x-ndjson':'application/json; charset=utf-8',
+        return send(res,200,file.bytes,{'Content-Type':file.name.endsWith('.csv')?'text/csv; charset=utf-8':file.name.endsWith('.jsonl')?'application/x-ndjson':file.name.endsWith('.json')?'application/json; charset=utf-8':'application/octet-stream',
           'Content-Disposition':'attachment; filename="'+file.name+'"'});}
       if(req.method!=='POST')throw fault('ODATA_ROUTE','Workspace operation not found.',404);
       if(!String(req.headers['content-type']||'').startsWith('application/json'))throw fault('ODATA_CONTENT_TYPE','Send JSON for workspace operations.',415);
@@ -76,6 +84,7 @@ export async function startODataServer({workspace,port=8797,liveServiceId,liveOp
           void workspace.capture(input.id,{pageBudget:input.pageBudget||10000}).catch(()=>{});return send(res,202,{id:input.id,status:'IMPORTING'});}
         case '/api/pause':result=await workspace.pause(input.id);break;
         case '/api/review':result=await workspace.reviewEdition(input);break;
+        case '/api/semantics':result=await workspace.semantics(input);break;
         case '/api/export':result=await workspace.exportEdition(input);break;
         case '/api/query':result=await workspace.queryExport(input);break;
         case '/api/restore':result=await workspace.restore(input);break;
@@ -87,6 +96,7 @@ export async function startODataServer({workspace,port=8797,liveServiceId,liveOp
         case '/api/live/stop':result=await(await getLive()).stop(input);break;
         case '/api/live/buyer':result=await(await getLive()).buyer(input);break;
         case '/api/live/receive':result=await(await getLive()).receive(input);break;
+        case '/api/live/collection':result=await(await getLive()).collect(input);break;
         default:throw fault('ODATA_ROUTE','Workspace operation not found.',404);
       }
       return send(res,200,result);

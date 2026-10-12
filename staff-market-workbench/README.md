@@ -1,6 +1,6 @@
 # Staff market workbench
 
-A complete local operating workspace for compensation data: retain source editions, review job and survey matches, calculate reproducible market comparisons, develop editable classification and employee placement plans, compare implementation costs, review receiving results, track survey cycles, and save or restore the entire workspace. Publisher intake, classification and receiving join the same database and operation history.
+A complete local operating workspace for compensation data: retain source editions, review job and survey matches, calculate reproducible market comparisons, develop editable classification and employee placement plans, compare implementation costs, review receiving results, track survey cycles, and save or restore the entire workspace. Publisher intake, proposed pay structures, classification and receiving join the same database and operation history.
 
 The application uses original source records and explicitly recorded decisions. Published survey percentiles stay labeled as their original measures. Combining several survey medians produces a weighted consensus of those published medians; it does not establish the median of a pooled employee population.
 
@@ -27,7 +27,8 @@ Every native mutation has a stable operation ID and the revision the operator re
 | Sources | Retain original job, survey and peer files; reopen saved mappings and inspect every originating row | Use the reviewed current job and survey editions in matching |
 | Publisher intake | Map a publisher file, review exact included rows, and select an original peer cohort | **Use full reviewed edition** or **Use this peer cohort** opens that exact group in matching |
 | Jobs and matches | Review the job's benchmark disposition, compare its content with original survey rows, and save professional match and factor decisions | Select the retained decisions in Market analysis |
-| Market analysis | Calculate the stated source/date basis and review the exact frozen result | Accepted results become available in receiving |
+| Market analysis | Calculate the stated source/date basis and review the exact frozen result | Accepted results become available in receiving and proposed pay structures |
+| Proposed pay structures | Select accepted analyses, record explicit grade/reference/range choices and map original jobs | Review the proposed edition, derive native method/roles, and continue to classification and placement |
 | Survey cycles | Track selected peers, actual participation, received source editions and close decisions | Retain each cycle with its original source references |
 | Classification and placement | Retain pay structures, job-content decisions and workforce editions; compare placement and phased implementation costs | Review and deliver accepted scenarios with every original input edition |
 | Receiving and annual review | Configure a handback, reconcile a returned file, and compare saved editions | Open a pricing-action decision against its original analysis |
@@ -37,6 +38,14 @@ Every native mutation has a stable operation ID and the revision the operator re
 Reviewing a publisher edition or retaining a cohort keeps the Publisher view open so the operator can continue selecting peers. The explicit pricing buttons carry its immutable reviewed group into the complete, paginated matching view. Browsing all current survey rows is a separate explicit action. A decision made within a saved group retains that group's original identity; the native engine checks that the chosen survey row belongs to it.
 
 Publisher and receiving editors remain mounted when the operator navigates to another view. Original base-view drafts and receiving correction context also reopen through the browser's local draft storage. Save a source review, receiving record or cycle before closing the browser to make it part of the portable native workspace.
+
+## Develop a pay structure from an accepted market comparison
+
+Open **Proposed pay structures**, or use **Propose pay structure** on an accepted result in **Decisions and exports**. Select the exact original analyses, choose the reference and range rule for each grade, and record the original jobs' grade assignments. The receiving workflow keeps source dates, currencies, permitted-use notes, complete match/calculation inputs and accepted review identities with those decisions.
+
+Review and save the complete preview, accept the proposed edition, then derive its original native classification method and role edition. Open those exact results in **Classification and placement** for their existing reviews and workforce/cost continuation. Editable original imports, paginated source/decision history, draft recovery, original-operation resumption and complete receiving exports use the same workspace.
+
+The [pay-structure operator guide](market_structure/README.md) covers the full browser workflow, native API, supported limits and an existing-source restart/export/restore example.
 
 ## Turn a returned correction into a reviewed pricing result
 

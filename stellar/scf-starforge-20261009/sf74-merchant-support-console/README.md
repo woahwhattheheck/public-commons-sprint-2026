@@ -2,6 +2,8 @@
 
 Keep a merchant case queue, diagnose each route, inspect its runtime and delivery outcomes, review repairs, and prepare internal workorders in one local workspace. The same original captures move through each stage. The optional case desk retains multiple merchant drafts, follow-up ownership and dates, original runtime support files or usage periods, search, work status and saved versions across restarts.
 
+The [Implementation and receiving desk](IMPLEMENTATION.md) continues the same workorder through assigned tasks, original deliverables, technical and customer receiving, measured effort, source updates and complete case handover. The browser, installed `merchant-implementation` CLI and original merchant MCP share the same retained case.
+
 ## Open the workspace
 
 From the repository root, with Node 22 or newer:
@@ -24,7 +26,7 @@ The existing workorder stage accepts either the selected diagnostic captures or 
 2. **Check browser access when needed.** A POST capture offers a separate **Check browser access** action. Review the displayed seller, origin and credential mode, then authorize its OPTIONS-only check. The original eligibility gate may decline an unsuitable capture without making a request. It never sends a POST.
 3. **Keep the before capture.** Choose **Use as before**. Its exact diagnosis bytes and any displayed browser check remain selected in the tab. After the separately agreed repair, run the same diagnosis and optional browser check, then choose **Use as after**. Selected captures survive the next diagnosis. **Save before**, **Save after** and **Save browser check** preserve these original files whenever you need them.
 4. **Review changes.** Choose **Compare changes**. The result explains remaining, new and no-longer-observed findings, including incomplete coverage and unconfirmed credential policy. Original CLI captures can instead be opened in the same file slots. Optional POST browser checks must be supplied as a pair, each bound to its unchanged diagnosis.
-5. **Prepare workorder.** The selected captures are already available here. Enter the actual workorder reference, seller and relationship owner. Record existing seller permission and owner-approved economics only when you have their records. Safe defaults leave permission unrecorded and price withheld. A before capture alone is sufficient; select **Use only the before diagnosis** to deliberately omit an available repair comparison.
+5. **Prepare workorder.** The selected captures are already available here. Enter the actual workorder reference, seller and relationship owner. Record existing seller permission and the owner-approved proposal price only when you have their records. Delivery cost is optional: leave it blank when unknown, and enter zero only for a recorded zero. The form and packet display a known adverse margin without changing the approved fee. Safe defaults leave permission unrecorded and price withheld. A before capture alone is sufficient; select **Use only the before diagnosis** to deliberately omit an available repair comparison.
 6. **Create and save.** Choose **Create workorder**, then download the readable HTML workorder, Markdown handoff checklist and JSON. Open the HTML locally for review. Nothing is sent. Use **Reuse saved owner terms** to import or save the form as JSON for another session.
 
 The three stages also work with existing files: you can open a before capture and prepare a workorder without running a diagnosis or comparison first. A workorder with an after capture computes its review through the original comparator automatically.
@@ -83,3 +85,9 @@ node --test stellar/scf-starforge-20261009/sf74-merchant-support-console/test/wo
 It exercises the actual local HTTP API and original source modules with explicitly illustrative HTTPS observations: baseline export, GET repair review, paired POST preflight binding, legacy uncertainty, escaped HTML, original renderers, missing approvals and prohibited path input. It makes no merchant request and is not evidence of a live seller repair.
 
 Existing `comparison.test.mjs`, `credentialed.test.mjs` and `post-preflight.test.mjs` cover the earlier native loopback diagnostic integrations. They are separate from this offline export check. Rendered browser click/download QA was not run in the delivery environment because its browser executable was unavailable.
+
+## Complete implementation sources and receiving
+
+The existing implementation screen now includes [Source delivery and receiving](SOURCE_BUNDLES.md). Prepare a native source edition from the saved case, stream its original attachments, review and attach the original workorder, and download exact retained members from any edition. The same case includes [service commitments and reports](SERVICE_OPERATIONS.md) and the [commercial quotation application](COMMERCIAL.md).
+
+Use the installed [complete case source package](CASE_SOURCE_PACKAGE.md) workflow to transfer the selected case, its captured immutable history and all referenced native source archives. Native source files stay outside the 64 MiB implementation record, including files that have never been linked to an implementation task. The receiver uses the existing Support Handoffs and SF49 native archive operations, then opens the full case in its original saved-case store.

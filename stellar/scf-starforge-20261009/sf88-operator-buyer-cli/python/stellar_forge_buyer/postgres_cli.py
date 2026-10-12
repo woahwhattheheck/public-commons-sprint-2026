@@ -96,10 +96,77 @@ def _parser():
     compare.add_argument("current")
     compare.add_argument("--offset", type=int, default=0)
     compare.add_argument("--limit", type=int, default=100)
+    meanings = commands.add_parser("semantics", help="read original column meanings and reviewed SQL aliases")
+    meanings.add_argument("version_id")
+    dictionary = commands.add_parser("semantics-file", help="save the exact retained original semantics.json")
+    dictionary.add_argument("version_id")
+    dictionary.add_argument("--destination", required=True)
+    meaning_comparison = commands.add_parser("compare-semantics", help="compare source meanings independently of row keys")
+    meaning_comparison.add_argument("previous")
+    meaning_comparison.add_argument("current")
     manifest = commands.add_parser("manifest", help="save a retained edition's exact original SF100 manifest")
     manifest.add_argument("version_id")
     manifest.add_argument("--destination", required=True)
+    for name in ("central-inspect", "central-review", "central-import", "period-report", "review-record", "operation", "resume"):
+        command = commands.add_parser(name, help={
+            "central-inspect": "inspect an accepted original Central export in the existing warehouse",
+            "central-review": "retain the complete approved projection and reviewed PostgreSQL mapping",
+            "central-import": "receive an original saved Central mapping review",
+            "period-report": "export both complete periods and every changed row",
+            "review-record": "read the original immutable mapping review",
+            "operation": "read an original retained operator request",
+            "resume": "resume the same original operator request",
+        }[name])
+        command.add_argument("--workspace", required=True)
+        if name in {"central-inspect", "central-review"}:
+            command.add_argument("--approval", required=True)
+            command.add_argument("--expected-approval-sha256", required=True)
+            command.add_argument("--source-workspace", required=True)
+        if name == "central-review":
+            command.add_argument("--mapping", required=True)
+            command.add_argument("--reviewer", required=True)
+            command.add_argument("--note", default="")
+            command.add_argument("--review-id", help="caller-retained immutable review ID for exact replay")
+        if name in {"central-import", "review-record"}:
+            command.add_argument("--review-id", required=True)
+        if name in {"central-import", "period-report", "operation", "resume"}:
+            command.add_argument("--request-id", required=True)
+        if name == "period-report":
+            command.add_argument("--selection", required=True)
     return parser
+
+
+def _operator_command(warehouse, args):
+    from .postgres_operator import PostgresOperator
+    operator = PostgresOperator(warehouse, args.workspace)
+    try:
+        if args.command in {"central-inspect", "central-review"}:
+            report = operator.central_source(args.approval, args.expected_approval_sha256,
+                                             args.source_workspace)
+            inspected = operator.inspect_delivery(str(report))
+            if args.command == "central-inspect":
+                return inspected
+            mapping = parse(read(Path(args.mapping), 1024 * 1024))
+            body = {"report_path": str(report), "mapping": mapping,
+                    "reviewer": args.reviewer, "note": args.note,
+                    "expected_report_sha256": inspected["source_sha256"]}
+            if args.review_id is not None:
+                body["review_id"] = args.review_id
+            return operator.review(body)
+        if args.command == "central-import":
+            return operator.perform("/api/import", {"review_id": args.review_id,
+                                                    "request_id": args.request_id})
+        if args.command == "period-report":
+            selected = parse(read(Path(args.selection), 65536))
+            return operator.perform("/api/period-reports",
+                                    {"selection": selected, "request_id": args.request_id})
+        if args.command == "review-record":
+            return operator.review_record(args.review_id)
+        if args.command == "resume":
+            return operator.resume(args.request_id)
+        return operator.request_record(args.request_id)
+    finally:
+        operator.close()
 
 
 def main(argv=None):
@@ -146,7 +213,10 @@ def main(argv=None):
                 args.connection_env, schema=args.schema, create=args.command == "init",
                 expected_warehouse=args.expect_warehouse,
                 statement_timeout_ms=args.statement_timeout_ms, lock_timeout_ms=args.lock_timeout_ms)
-            if args.command in {"init", "status"}:
+            if args.command in {"central-inspect", "central-review", "central-import",
+                                "period-report", "review-record", "operation", "resume"}:
+                output = _operator_command(warehouse, args)
+            elif args.command in {"init", "status"}:
                 output = warehouse.status()
             elif args.command == "import":
                 output = warehouse.import_delivery(delivery, mapping, expected_version=args.expect_version)
@@ -164,6 +234,16 @@ def main(argv=None):
                 output = warehouse.rows(args.version_id, after=args.after, limit=args.limit, include_original=args.include_original)
             elif args.command == "compare":
                 output = warehouse.compare(args.previous, args.current, offset=args.offset, limit=args.limit)
+            elif args.command == "semantics":
+                output = warehouse.semantics(args.version_id)
+            elif args.command == "compare-semantics":
+                output = warehouse.compare_semantics(args.previous, args.current)
+            elif args.command == "semantics-file":
+                raw = warehouse.semantics_bytes(args.version_id)
+                if raw is None:
+                    raise WarehouseError("DATASET_PG_LEGACY_EDITION_HAS_NO_DICTIONARY")
+                output = {"status": "DICTIONARY_SAVED", "version_id": args.version_id,
+                          **_save(args.destination, raw)}
             else:
                 saved = _save(args.destination, warehouse.manifest_bytes(args.version_id))
                 output = {"status": "MANIFEST_SAVED", "version_id": args.version_id, **saved}

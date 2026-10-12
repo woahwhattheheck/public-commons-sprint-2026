@@ -509,6 +509,12 @@ def serve(workspace, port):
             parts = url.path.strip("/").split("/")
             query = {k: values[-1] for k, values in parse_qs(url.query).items()}
             try:
+                if url.path in ("/cashiering/receiving", "/cashiering/receiving/", "/cashiering/receiving/receiving.html",
+                                "/cashiering/receiving/receiving.mjs", "/cashiering/receiving/receiving.css"):
+                    name = "receiving.html" if url.path in ("/cashiering/receiving", "/cashiering/receiving/") else url.path.rsplit("/", 1)[-1]
+                    body = (ROOT.parent / "cashiering" / "public" / name).read_text().replace("__SESSION_TOKEN__", token)
+                    mime = "text/html" if name.endswith(".html") else "text/css" if name.endswith(".css") else "text/javascript"
+                    return self.respond(200, body, mime + "; charset=utf-8")
                 if url.path in ("/cashiering", "/cashiering/", "/cashiering/index.html", "/cashiering/app.mjs", "/cashiering/style.css"):
                     name = "index.html" if url.path in ("/cashiering", "/cashiering/") else url.path.rsplit("/", 1)[-1]
                     body = (ROOT.parent / "cashiering" / "public" / name).read_text().replace("__SESSION_TOKEN__", token)

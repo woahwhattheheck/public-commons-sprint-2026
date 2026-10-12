@@ -1,0 +1,25 @@
+syntax = "proto3";
+package forge.requeststreams;
+
+// Complete ordered inputs are reviewed before one original application call.
+service RecordBatch {
+  rpc Upload(stream Record) returns (Batch);
+  rpc Exchange(stream Record) returns (stream Record);
+}
+message Record {
+  uint64 sequence = 1;
+  bytes payload = 2;
+  map<string, sint64> balances = 3;
+  optional string note = 4;
+  oneof reference {
+    string account_id = 5;
+    int64 customer_id = 6;
+  }
+  uint32 delay_ms = 7;
+  bool reject = 8;
+}
+message Batch {
+  uint64 messages = 1;
+  uint64 payload_bytes = 2;
+  repeated Record records = 3;
+}

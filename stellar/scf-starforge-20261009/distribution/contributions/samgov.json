@@ -3,10 +3,12 @@
   "id": "samgov",
   "description": "Original SAM searches and notice documents, source review, merchant preparation and complete receiving",
   "commands": {
-    "samgov": "stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/cli.mjs"
+    "samgov": "stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/cli.mjs",
+    "samgov-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/managed.mjs"
   },
   "commandDescriptions": {
-    "samgov": "Operate original SAM notices, issued source files, reviews, merchants and opportunity handoffs"
+    "samgov": "Operate original SAM notices, issued source files, reviews, merchants and opportunity handoffs",
+    "samgov-workspace": "Run the original SAM.gov workspace through managed Applications and typed customer receiving"
   },
   "exports": {
     "./seller/samgov": {
@@ -44,6 +46,24 @@
     "./seller/samgov/notice-document": {
       "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/notice-document.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/notice-document.mjs"
+    },
+    "./seller/samgov/managed": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/managed.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/managed.mjs"
+    },
+    "./seller/samgov/connection": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/connection.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/connection.mjs"
+    },
+    "./seller/samgov/mcp": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/mcp.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/mcp.mjs"
     }
+  },
+  "applicationProviders": {
+    "samgov": "stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/application-provider.mjs"
+  },
+  "merchantProviders": {
+    "samgov-workspaces": "stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/merchant-provider.mjs"
   }
 }

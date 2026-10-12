@@ -1,8 +1,8 @@
 # Run and receive the complete governed application
 
-This launcher prepares the original SCF application receiving operation on a Linux machine with Node24 and Python3. It fetches the exact 109 source files at `0d58eaa67daef611146944ebc35613d78d206cb5`, checks their lengths and SHA256 hashes, prepares MCP SDK 1.32.1, and invokes the existing `governed_receiving.mjs` once.
+This launcher prepares the original SCF application receiving operation on a Linux machine with Node24 and Python3. It fetches the exact 110 source files at `0d58eaa67daef611146944ebc35613d78d206cb5`, checks their lengths and SHA256 hashes, prepares MCP SDK 1.32.1, and invokes the existing `governed_receiving.mjs` once.
 
-The source closure includes the application and its browser, HTTP and MCP surfaces, SF36 spending state, encrypted project capture and receiving, and the native spending recovery operation. The launcher preserves the original receiving workflow. Its provider and payment responses remain the local integration fixtures defined in that source.
+The source closure includes the application and its browser, HTTP and MCP surfaces, SF36 spending state, encrypted project capture and receiving, and the native spending recovery operation. It also includes the original SF36 `expired_resume.py` module imported by the approval console, using the same pinned source revision. All 110 selected files total 1,346,963 bytes. The launcher preserves the original receiving workflow. Its provider and payment responses remain the local integration fixtures defined in that source.
 
 ## Inputs and one command
 
@@ -45,7 +45,7 @@ The new directory contains:
 
 | Location | Contents |
 | --- | --- |
-| `source/` | All 109 reviewed source files; installed SDK or original dependency link |
+| `source/` | All 110 reviewed source files; installed SDK or original dependency link |
 | `original-input/` | Complete copied original buyer handoff, plus the original kit when supplied |
 | `case/` | Original application state, SQLite stores, project capture, receiving and native recovery work |
 | `delivery/native-receiving.log` | Actual native stdout and stderr, flushed to disk as the process runs |

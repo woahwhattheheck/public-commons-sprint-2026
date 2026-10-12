@@ -1,0 +1,39 @@
+{
+  "schema": "dpsa.diso.original-source-pins.v1",
+  "operationId": "f47a-dpsa-diso-native-20261012",
+  "moodle": {
+    "repository": "moodle/moodle",
+    "commit": "215f44380bdc3ccf852a3a22e34f8423ff64033a",
+    "branch": "MOODLE_405_STABLE"
+  },
+  "rfp": {
+    "url": "https://www.dpsa.gov.za/dpsa2g/documents/tenders/DPSA003_2026.pdf",
+    "retrievedAt": "2026-10-12"
+  },
+  "curriculumRepository": "woahwhattheheck/public-commons-sprint-2026",
+  "curriculumBlobs": {
+    "curriculum/course.json": "ca7795f53c6df120c623ea0de3669c61bbae51e5",
+    "curriculum/sources.json": "55f08690ca6a0d8a93e4da4828410fa486576b2a",
+    "curriculum/modules/M01.json": "f9468cae0eacb0c1b0332d9a7e87fab6d0656414",
+    "curriculum/render_diagrams.py": "cd608ff8c3a898088a41c12fe55315a9aa62c891",
+    "curriculum/media/scripts.json": "60e99d10b0549538875929feda6c89822ce94a82",
+    "curriculum/glossary.json": "43524c9c2d16e921152bda36fb5b82d63cf3ad83",
+    "curriculum/modules/M02.json": "17c5368873c9c3b05d52339a45fe5259d2a773be",
+    "curriculum/modules/M03.json": "245c6dacf9dec96ad2da2755aa1a197f669b0ad5",
+    "curriculum/modules/M04.json": "db0c21353e730ddf6a3935b95a2bd40ff34314aa",
+    "curriculum/modules/M05.json": "e55d5f3a26387c544ac0d3bb5650b00c6e9aa195",
+    "curriculum/modules/M06.json": "d2a24f49d3f8e1257d8bc33d18985e2308a334da",
+    "curriculum/modules/M07.json": "aa0ada319c2bb37b7cf96551a502b2764511276a",
+    "curriculum/modules/M08.json": "317cf1675a4cf29c7cef3a3471c0a345bf66139d",
+    "curriculum/modules/M09.json": "581b72e31d08d079ff7bc3d67f6725f227197771",
+    "curriculum/modules/M10.json": "e0de441accf926a86a875aa99fd49e572689ce7b",
+    "curriculum/modules/M11.json": "2eeea5d8dca59679b05eabb4c43826f274ff2091",
+    "curriculum/modules/M12.json": "3b685f87812488d68f57ceb320b60bae9db91999",
+    "curriculum/modules/M13.json": "2bb430fd98cc6ab2716569d287b0f87fa2d329e4",
+    "curriculum/images/diagrams.json": "73b25aa8f0bdd03028bdbf6bbb35064f4bb3c74c",
+    "curriculum/images/M01-U02-Q06.svg": "203d16248ac864996ba9316145b6627338ebcc28",
+    "curriculum/images/M08-U02-Q12.svg": "cfa5d64bf5d2a3a46ecc21931c5ce75ba52fb500",
+    "curriculum/EDITING.md": "2488717dc9ade407607034f84bd8d76a73049858",
+    "curriculum/workbooks.json": "1538c4b74448c6f0f94b468af6fc0f0f143cfc6f"
+  }
+}

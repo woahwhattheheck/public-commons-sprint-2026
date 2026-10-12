@@ -19,6 +19,7 @@ Analyst workspace:
   init       --title TEXT --endpoint URL [--transport JSON_FILE]
   serve      [--port 0] [--max-request-bytes NUMBER] [--startup-json]
              [--processing-workspace DIR [--processing-config JSON_FILE]]
+             [--catalogue-workspace DIR [--catalogue-config PRIVATE_JSON_FILE]]
   state
   discover   [--operation-id ID] [--expected-revision NUMBER]
   query-save --input JSON_FILE
@@ -44,6 +45,22 @@ Analyst workspace:
   export     --out FILE [--editions IDS] [--include-assets false] [--overwrite]
   import     --input HANDOVER_JSON_FILE
 
+Native GeoNetwork catalogue (the same initialized STAC workspace):
+  catalogue-state --catalogue-workspace DIR
+  catalogue-delivery --catalogue-workspace DIR --delivery RECEIVED_STAC_DIR
+  catalogue-source --catalogue-workspace DIR --source SHA256
+  catalogue-document --catalogue-workspace DIR --document SHA256 --out FILE
+  catalogue-file --catalogue-workspace DIR --path SAVED_RELATIVE_PATH --out FILE
+  catalogue-action --catalogue-workspace DIR --action ACTION --input JSON_FILE
+                   --operation-id ORIGINAL_ID [--catalogue-config PRIVATE_JSON_FILE]
+    ACTION: configure, connect, receive, review, publish-source, harvest,
+            inspect-records, record-action, export-handover, receive-handover.
+    The input is the reviewed controller argument object without operationId.
+    Keep the same input file and operation ID to reconcile an interrupted action.
+    Native results may remain RUNNING, PARTIAL or RECONCILE; read catalogue-state.
+    Catalogue configuration names local credential environment variables only.
+    Receive-handover creates the selected new directory; it keeps the active host unchanged.
+
 Original merchant/customer controller:
   merchant-stage  --edition DIR --directory DIR --origin URL
                   --payment JSON_FILE [--path PATH]
@@ -58,6 +75,21 @@ Original merchant/customer controller:
                   --directory DIR --buyer-config JSON_FILE
   customer-deliver --directory DIR --buyer-config JSON_FILE --out DIR
   customer-open    --directory DIR
+
+Native vector delivery from retained source:
+  vector-help
+  vector-capabilities --python EXISTING_FIONA_PYTHON
+  vector-serve --root OWNED_DATA_ROOT --python EXISTING_FIONA_PYTHON
+  vector-capture|vector-export|vector-open|vector-receive|vector-compare
+  vector-bundle|vector-receive-bundle
+  vector-help lists the complete original source, profile and receiving flags.
+  The same complete workflow is installed as starforge stac-vector COMMAND.
+
+Native QGIS project receiving:
+  qgis-export --directory RECEIVED_DIR --out QGIS_SOURCE_DIR
+  qgis-open   --directory QGIS_SOURCE_DIR [--expected-manifest-sha256 SHA256]
+  qgis-plugin --out PLUGIN_ZIP [--python EXISTING_PYTHON]
+  qgis-help
 
 Offline GIS from the original customer delivery:
   portable-export --directory RECEIVED_DIR --out PORTABLE_DIR
@@ -120,6 +152,23 @@ async function saveAssetFile(workspace,assetId,path,{overwrite=false}={}){
   }catch(error){await unlink(temporary).catch(()=>{});if(error.code==='EEXIST')throw new Error('Output already exists: '+destination+'. Use --overwrite to replace it.');throw error;}
 }
 
+async function saveCatalogueFile(source,path,{overwrite=false}={}){
+  if(!source?.stream||!Number.isSafeInteger(source.bytes)||source.bytes<0)
+    throw new Error('The native catalogue file is not available.');
+  const destination=resolve(path),temporary=resolve(dirname(destination),'.'+basename(destination)+'.'+randomUUID()+'.partial');
+  const hash=createHash('sha256');let bytes=0;
+  const digest=new Transform({transform(chunk,encoding,done){bytes+=chunk.length;hash.update(chunk);done(null,chunk);}});
+  try{
+    await mkdir(dirname(destination),{recursive:true});
+    await pipeline(source.stream,digest,createWriteStream(temporary,{flags:'wx',mode:0o600}));
+    if(bytes!==source.bytes)throw new Error('The catalogue file changed while being received.');
+    const handle=await open(temporary,'r');try{await handle.sync();}finally{await handle.close();}
+    if(overwrite)await rename(temporary,destination);else{await link(temporary,destination);await unlink(temporary);}
+    return {path:destination,bytes,sha256:hash.digest('hex')};
+  }catch(error){await unlink(temporary).catch(()=>{});throw error;}
+  finally{source.stream.destroy();}
+}
+
 async function keepOpen(close){
   await new Promise((resolve,reject)=>{
     let stopped=false;
@@ -129,7 +178,7 @@ async function keepOpen(close){
 }
 export async function runStacCLI(argv=process.argv.slice(2)){
   const {flags,positionals}=parseArgs(argv),command=positionals[0]||'help';
-  if(command==='help'||flags.help){process.stdout.write(STAC_HELP);return;}
+  if(command==='help'||flags.help&&!command.startsWith('vector-')){process.stdout.write(STAC_HELP);return;}
   if(flags['managed-selection']&&!flags['startup-json'])throw Object.assign(new Error('--managed-selection requires --startup-json.'),{code:'STAC_MANAGED_STARTUP_FLAG_REQUIRED'});
   let managed,managedSelection;
   if(flags['startup-json']){
@@ -143,6 +192,24 @@ export async function runStacCLI(argv=process.argv.slice(2)){
     }catch(error){if(close)await close().catch(()=>{});throw error;}
     if(close)await keepOpen(close);
   };
+  if(command.startsWith('vector-')) {
+    const {runVectorCommandCLI}=await import('./vector/cli.mjs');
+    const answer=await runVectorCommandCLI({command,flags});
+    try{
+      if(answer.text)process.stdout.write(answer.text);
+      else{
+        if(typeof answer.outputJson!=='string')throw new TypeError('The native vector command did not return its original JSON output.');
+        process.stdout.write(answer.outputJson+'\n');
+      }
+    }catch(error){if(answer.close)await answer.close().catch(()=>{});throw error;}
+    if(answer.close)await keepOpen(answer.close);
+    return;
+  }
+  if(command.startsWith('qgis-')) {
+    const {runQgisCommand}=await import('./qgis/cli.mjs');
+    const answer=await runQgisCommand({command,flags});
+    if(answer.text)process.stdout.write(answer.text);else stdout(answer.result);return;
+  }
   if(command.startsWith('prescient-')) {
     const {runPrescientCommand}=await import('./prescient/cli.mjs');
     const {result,close}=await runPrescientCommand({command,flags});await present(result,close);return;
@@ -174,11 +241,38 @@ export async function runStacCLI(argv=process.argv.slice(2)){
   if(!flags.workspace&&!flags.directory)throw new Error('--workspace is required for analyst workspace commands.');
   const transport=flags.transport?await readJSON(required(flags,'transport')):undefined;
   const workspace=await openStacWorkspace({directory,...(flags.title?{title:String(flags.title)}:{}),...(flags.endpoint?{endpoint:String(flags.endpoint)}:{}),...(transport?{transport}:{}),create:command==='init'});
-  let processingController;
+  let processingController,catalogueController;
   try{
     const expectedRevision=number(flags,'expected-revision',undefined);
     const operationId=String(flags['operation-id']||randomUUID());
     if(command==='init'||command==='state'){stdout(await workspace.getState());return;}
+    if(command.startsWith('catalogue-')||command==='serve'&&(flags['catalogue-workspace']||flags['catalogue-config'])){
+      const {createCatalogueController}=await import('./geonetwork/operations.mjs');
+      catalogueController=await createCatalogueController({directory:resolve(required(flags,'catalogue-workspace')),stacWorkspace:workspace,
+        ...(flags['catalogue-config']?{config:await readJSON(required(flags,'catalogue-config'))}:{})});
+    }
+    if(command.startsWith('catalogue-')){
+      if(command==='catalogue-state'){stdout(await catalogueController.getState());return;}
+      if(command==='catalogue-delivery'){stdout(await catalogueController.inspectDelivery({deliveryDirectory:resolve(required(flags,'delivery'))}));return;}
+      if(command==='catalogue-source'){stdout(await catalogueController.getSource(required(flags,'source')));return;}
+      if(command==='catalogue-document'){
+        const document=await catalogueController.sourceDocument(required(flags,'document'));
+        stdout(await saveFile(required(flags,'out'),document.bytes,{overwrite:bool(flags.overwrite)}));return;
+      }
+      if(command==='catalogue-file'){
+        stdout(await saveCatalogueFile(await catalogueController.getSavedFile(required(flags,'path')),required(flags,'out'),{overwrite:bool(flags.overwrite)}));return;
+      }
+      if(command==='catalogue-action'){
+        const methods={configure:'configure',connect:'connect',receive:'receive',review:'review','publish-source':'publishSource',harvest:'harvest',
+          'inspect-records':'inspectRecords','record-action':'recordAction','export-handover':'exportHandover','receive-handover':'receiveHandover'};
+        const action=required(flags,'action'),input=await readJSON(required(flags,'input')),originalId=required(flags,'operation-id');
+        if(!Object.hasOwn(methods,action))throw new Error('Select a catalogue action listed in --help.');
+        if(!input||typeof input!=='object'||Array.isArray(input)||Object.hasOwn(input,'operationId'))throw new Error('Use a reviewed input object without operationId; select the original ID with --operation-id.');
+        try{stdout({operationId:originalId,result:await catalogueController[methods[action]]({...input,operationId:originalId})});}
+        catch(error){error.operationId=originalId;throw error;}return;
+      }
+      throw new Error('Unknown catalogue command. Use --help for the complete workflow.');
+    }
     if(command==='serve'){
       if(flags['processing-workspace']||flags['processing-config']){
         const processingDirectory=resolve(required(flags,'processing-workspace'));
@@ -187,7 +281,7 @@ export async function runStacCLI(argv=process.argv.slice(2)){
         processingController=await createProcessingController({stacWorkspace:workspace,directory:processingDirectory,
           ...(flags['processing-config']?{config:await readJSON(required(flags,'processing-config'))}:{})});
       }
-      const running=await startStacServer({workspace,...(processingController?{processing:processingController}:{}),port:number(flags,'port',0),...(flags['max-request-bytes']?{maxRequestBytes:number(flags,'max-request-bytes')}:{} )});
+      const running=await startStacServer({workspace,...(processingController?{processing:processingController}:{}),...(catalogueController?{catalogue:catalogueController}:{}),port:number(flags,'port',0),...(flags['max-request-bytes']?{maxRequestBytes:number(flags,'max-request-bytes')}:{} )});
       await present({url:running.url,workspaceId:(await workspace.getState()).id,directory},running.close);return;
     }
     if(command==='discover'){stdout(await workspace.discover({operationId,expectedRevision}));return;}
@@ -229,7 +323,8 @@ export async function runStacCLI(argv=process.argv.slice(2)){
     }
     if(command==='import'){stdout(await workspace.importHandover(await readJSON(required(flags,'input'))));return;}
     throw new Error('Unknown STAC command: '+command+'. Use --help for the complete workflow.');
-  }finally{try{await processingController?.close?.();}finally{await workspace.close?.();}}
+  }finally{try{await catalogueController?.close?.();}finally{try{await processingController?.close?.();}finally{await workspace.close?.();}}}
 }
 const invoked=process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href;
-if(invoked)runStacCLI().catch(error=>{process.stderr.write(JSON.stringify({error:{code:error.code||'STAC_COMMAND_FAILED',message:error.message||String(error)}})+'\n');process.exitCode=1;});
+if(invoked)runStacCLI().catch(error=>{process.stderr.write(JSON.stringify({error:{code:error.code||'STAC_COMMAND_FAILED',message:error.message||String(error),...(error.operationId?{operationId:error.operationId}:{}),...(typeof error.uncertain==='boolean'?{uncertain:error.uncertain}:{})}})+'\n');process.exitCode=1;});
+

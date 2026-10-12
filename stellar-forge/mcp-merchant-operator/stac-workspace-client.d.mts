@@ -6,6 +6,47 @@ export type NativeObject = Record<string, unknown>;
 export interface RequestOptions { signal?: AbortSignal }
 export interface StacHostInput { path: string; kind: 'imagery-handover' | 'processing-handover' | 'processing-source' | 'processing-page'; label?: string; sha256?: string }
 export interface StacProcessingProfile { label?: string; deployment: NativeObject; sourceInput: string; sourceMetadata?: NativeObject }
+export interface StacPrescientDelivery { directory: string; label?: string; manifestSha256?: string }
+export interface PrescientProfile {
+  schema?: 'starforge.prescient-profile/v1'; name: string; endpoint: string;
+  authMode: 'api-key' | 'oauth'; identityProvider?: 'microsoft' | 'google' | null;
+  bindingId: string; allowedOrigins: string[]; collections: string[];
+  allowedS3: { bucket: string; prefix: string; region: string; expectedBucketOwner?: string; requesterPays: boolean }[];
+  maxAssetBytes: number; refreshSkewSeconds?: number;
+  rights: { basis: 'customer-licensed' | 'public-data'; reference: string; purpose: string; allowPortableAssets: boolean };
+}
+export interface PortablePrescientProfile {
+  schema: 'starforge.prescient-portable-profile/v1';
+  configuration: Omit<PrescientProfile, 'bindingId'>;
+  sdk: { package: string; version: string; repository: string; commit: string }; sha256: string;
+}
+export interface PrescientOperatorState extends NativeObject {
+  schema: 'starforge.prescient-operator-view/v1'; workspaceId: string;
+  configuration: NativeObject & {
+    revision: number; profiles: NativeObject[]; reviews: NativeObject[]; approvals: NativeObject[];
+    deliveryReviews: NativeObject[]; deliveries: NativeObject[]; operations: Record<string, NativeObject>;
+    approvedProfileSha256: string | null;
+  };
+  selectedProfileSha256: string; selectedProfile: PrescientProfile;
+  bindingChoices: { id: string; label: string }[];
+  connection: { active: boolean; approved: boolean; restartRequired: boolean; metadata: NativeObject | null; session: NativeObject | null };
+  receivingProgress: NativeObject[]; sdk: PortablePrescientProfile['sdk'];
+}
+export interface PrescientActionFields {
+  'profile-save': { profile: PrescientProfile };
+  'profile-import': { profile: PortablePrescientProfile; bindingId: string };
+  'profile-review': { profileSha256: string };
+  'profile-approve': { reviewId: string; reviewSha256: string };
+  connect: { refresh?: boolean };
+  session: { refresh?: boolean };
+  'delivery-review': { directory: string };
+  'delivery-export': { reviewId: string; reviewSha256: string };
+  'delivery-open': { directory: string; manifestSha256: string };
+}
+export type PrescientActionName = keyof PrescientActionFields;
+export type PrescientActionBody<K extends PrescientActionName> = PrescientActionFields[K] & {
+  actor: string; operationId: string; expectedRevision: number;
+};
 export interface StacHostDefinition {
   /** Exactly one of url, consoleUrlFile or consoleUrlEnv. URL files contain the original serve JSON or URL. */
   url?: string | { url: string; workspaceId: string };
@@ -18,6 +59,8 @@ export interface StacHostDefinition {
   maxResponseBytes?: number;
   inputs?: Record<string, StacHostInput>;
   processingProfiles?: Record<string, StacProcessingProfile>;
+  /** Local operator config only; MCP calls select aliases rather than supplying directories. */
+  prescientDeliveries?: Record<string, StacPrescientDelivery>;
 }
 export interface StacWorkspaceConfiguration {
   schema: typeof STAC_WORKSPACE_CONNECTION_SCHEMA;
@@ -64,7 +107,7 @@ export interface StacJob extends NativeObject {
 }
 export interface StacState {
   workspace: StacWorkspaceState; jobs: StacJob[];
-  capabilities: { processing: { enabled: boolean; reads?: string[]; actions?: string[] }; [key: string]: unknown };
+  capabilities: { processing: { enabled: boolean; reads?: string[]; actions?: string[] }; prescient?: { enabled: boolean }; [key: string]: unknown };
 }
 export interface StacComparison extends NativeObject {
   leftEditionId: string; rightEditionId: string; leftCoverage: NativeObject; rightCoverage: NativeObject;
@@ -77,7 +120,8 @@ export type StacFileSelection =
   | { kind: 'handover'; editionIds?: string[]; includeAssets?: boolean }
   | { kind: 'processing-source'; deploymentKey: string }
   | { kind: 'processing-handover'; exportId: string }
-  | { kind: 'state' | 'processing-state' }
+  | { kind: 'state' | 'processing-state' | 'prescient-state' }
+  | { kind: 'prescient-profile'; profileSha256: string }
   | { kind: 'edition'; editionId: string }
   | { kind: 'comparison'; leftEditionId: string; rightEditionId: string }
   | { kind: 'processing-read'; name: string; query?: ProcessingQuery };
@@ -123,6 +167,10 @@ export declare class StacWorkspaceClient {
   processingState(options?: RequestOptions): Promise<NativeObject>;
   processingRead(name: string, query?: ProcessingQuery, options?: RequestOptions): Promise<NativeObject>;
   processingAction(name: string, input: { input?: NativeObject; operationId: string }, options?: RequestOptions): Promise<StacJob>;
+  prescientState(options?: RequestOptions): Promise<PrescientOperatorState>;
+  prescientProfile(profileSha256: string, options?: RequestOptions): Promise<PortablePrescientProfile>;
+  /** Uses the original host's saved actor/revision/operation contract; dispatches once. */
+  prescientAction<K extends PrescientActionName>(name: K, body: PrescientActionBody<K>, options?: RequestOptions): Promise<NativeObject>;
   streamAsset(assetId: string, options?: RequestOptions & { expectedSha256?: string }): Promise<StacAssetStream>;
   assetRange(assetId: string, options?: RequestOptions & { expectedSha256?: string; offset?: number; limit?: number }): Promise<StacAssetRange>;
   wait(operationId: string, options?: RequestOptions & { timeoutMs?: number; intervalMs?: number }): Promise<StacJob>;

@@ -28,7 +28,7 @@ FIELDS = {
 }
 NUMBERS = {"reference_amount", "amount_scale", "annual_hours", "periods_per_year", "p25", "p50", "p75", "organizations", "respondents"}
 ALIASES = {"id": ["id", "job_id", "record_id", "institution_id", "code"], "title": ["title", "job_title", "position"], "job_title": ["job_title", "survey_title", "title"], "name": ["name", "institution", "organization"], "p25": ["p25", "25th", "25th_percentile"], "p50": ["p50", "50th", "50th_percentile", "median"], "p75": ["p75", "75th", "75th_percentile"]}
-EXTENSIONS = {"publisher": "publisher_intake.host", "receiving": "receiving.host", "classification": "classification.host"}
+EXTENSIONS = {"publisher": "publisher_intake.host", "receiving": "receiving.host", "classification": "classification.host", "market_structure": "market_structure.host"}
 
 
 class JsonNumber(str):

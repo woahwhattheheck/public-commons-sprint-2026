@@ -1,56 +1,114 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="dark">
-  <title>RenewalGuard · Subscription desk</title>
-  <link rel="stylesheet" href="/style.css">
-  <script src="/app.js" type="module"></script>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RenewalGuard · Renewal operations</title>
+<link rel="stylesheet" href="/style.css">
+<script defer src="/app.js"></script>
 </head>
 <body>
-  <a class="skip-link" href="#workspace">Skip to subscriptions</a>
-  <header class="topbar">
-    <a class="brand" href="/" aria-label="RenewalGuard home"><span class="brand-mark" aria-hidden="true">r<span>g</span></span><span>RenewalGuard<small>SUBSCRIPTION DESK</small></span></a>
-    <span class="read-only"><span aria-hidden="true">●</span> Read-only workspace</span>
-  </header>
-  <main>
-    <section class="intro" aria-labelledby="page-title">
-      <div><p class="eyebrow">REVIEW WITH CONTEXT</p><h1 id="page-title">Subscription facts.<br><span>A more thoughtful follow-up.</span></h1><p class="lede">Inspect the current record, understand its status, and prepare an unsent support note.</p></div>
-      <div class="intro-note"><span class="note-number" aria-hidden="true">01 → 02 → 03</span><p>Load a source.<br>Review the facts.<br>Prepare a note.</p></div>
-    </section>
-    <section class="source-bar" aria-label="Load a subscription source">
-      <div class="source-control"><label for="mode">Data source</label><select id="mode"><option value="demo">Synthetic demonstration</option><option value="sandbox">PayPal sandbox account</option></select></div>
-      <button id="load" class="button button-primary" type="button">Load subscriptions</button>
-      <p id="label" class="load-status" role="status" aria-live="polite"></p>
-    </section>
-    <p id="coverage" class="coverage">Choose a source to begin. Demonstration records are invented; sandbox records come from the configured PayPal sandbox account.</p>
-    <p id="error" class="error" role="alert"></p>
-    <div id="workspace" class="workspace" tabindex="-1">
-      <aside class="queue" aria-labelledby="queue-title">
-        <div class="queue-heading"><p class="eyebrow">01 / FIND A RECORD</p><h2 id="queue-title">Subscriptions</h2><p id="list-count" role="status" aria-live="polite">No records loaded</p></div>
-        <div class="filters">
-          <label for="search">Search loaded records</label><input id="search" type="search" placeholder="Subscription or plan ID" autocomplete="off" disabled>
-          <div class="filter-row"><div><label for="status-filter">Status</label><select id="status-filter" disabled><option value="ALL">All statuses</option></select></div><button id="clear-filters" class="text-button" type="button" disabled>Clear filters</button></div>
-          <p class="queue-hint">Queue statuses reflect the last load. Opening a record reads its current facts; load again to refresh the list.</p>
-        </div>
-        <ul id="list" class="subscription-list"><li class="empty-list">Load subscriptions to see the records available for review.</li></ul>
-      </aside>
-      <div class="review-column">
-        <section class="record-panel" aria-labelledby="selection-title">
-          <div class="panel-heading"><div><p class="eyebrow">02 / CURRENT FACTS</p><h2 id="selection-title" tabindex="-1">Choose a subscription</h2></div><button id="refresh-detail" class="button button-secondary" type="button" disabled>Refresh facts <span aria-hidden="true">↻</span></button></div>
-          <div id="facts" class="facts" data-state="empty">Select a record from the list. Its current status and review rationale will appear here.</div>
-        </section>
-        <section class="proposal-panel" aria-labelledby="proposal-title">
-          <div class="panel-heading"><div><p class="eyebrow">03 / HUMAN REVIEW</p><h2 id="proposal-title">Prepare a support note.</h2></div><span class="unsent-tag">UNSENT</span></div>
-          <p class="proposal-intro">Use a draft as a starting point for your review. Generating one refreshes the selected record first; a changed record must be reviewed again.</p>
-          <div id="proposal" class="proposal" data-state="empty" aria-live="polite">No draft requested.</div>
-          <div class="draft-actions"><button id="draft" class="button button-primary" type="button" disabled>Prepare review note</button><button id="download" class="button button-secondary" type="button" disabled>Download unsent note <span aria-hidden="true">↓</span></button></div>
-          <p class="boundary-note">Preparing or downloading a note never sends a message, changes a subscription, or moves money.</p>
-        </section>
-      </div>
+<a class="skip" href="#main">Skip to workspace</a>
+<header class="app-header">
+  <div><strong class="brand">RenewalGuard</strong><span class="subtitle">Renewal operations</span></div>
+  <div class="header-controls">
+    <label for="mode">Source</label>
+    <select id="mode"><option value="demo">Demonstration portfolio</option><option value="sandbox">PayPal sandbox account</option></select>
+    <button id="reload-workspace">Reopen saved workspace</button>
+  </div>
+</header>
+<div id="notice" role="status" aria-live="polite" class="notice" hidden></div>
+<section id="pending-panel" class="pending-panel" hidden aria-label="Retained operation">
+  <div><strong id="pending-title">Operation retained</strong><p id="pending-status"></p><code id="pending-id"></code></div>
+  <button id="recover-request">Recover original request</button>
+</section>
+<div class="shell">
+<aside class="sidebar" aria-label="Saved renewal cases">
+  <nav class="workspace-nav"><button id="show-portfolio">Subscription intake</button></nav>
+  <div class="sidebar-heading"><h2>Saved cases</h2><span id="saved-count" class="count">0</span></div>
+  <label for="case-search">Find a case</label><input id="case-search" type="search" placeholder="Subscription, title, owner">
+  <label for="case-filter">Work queue</label>
+  <select id="case-filter"><option value="open">Open cases</option><option value="overdue">Overdue</option><option value="ready">Ready for review</option><option value="resolved">Resolved</option><option value="all">All saved cases</option></select>
+  <div id="case-list" class="case-list"></div>
+  <p id="case-empty" class="muted">Import subscriptions to begin.</p>
+  <footer class="sidebar-footer"><p id="source-description"></p><p id="connection-description"></p></footer>
+</aside>
+<main id="main">
+  <div id="queue-counts" class="queue-counts" aria-label="Saved work totals"></div>
+  <details id="operations-panel" class="operations-panel"><summary>Recent retained operations</summary><div id="recent-operations"></div></details>
+  <section id="portfolio-view">
+    <div class="section-heading"><div><h1>Subscription intake</h1><p>Bring a portfolio into a retained renewal work queue.</p></div><button id="refresh-portfolio" class="primary">Read current portfolio</button></div>
+    <p id="portfolio-coverage" class="callout">Read a portfolio to choose subscriptions, or open a subscription by its exact ID.</p>
+    <div class="toolbar">
+      <label for="portfolio-search">Filter loaded subscriptions</label><input id="portfolio-search" type="search" placeholder="ID, plan or status">
+      <button id="intake-selected" disabled>Open selected cases</button>
     </div>
-    <footer><span>RenewalGuard <span class="separator">/</span> A deliberate support workflow.</span><span>PayPal sandbox + optional AI assistance. Human review required.</span></footer>
-  </main>
-</body>
-</html>
+    <div class="table-scroll"><table id="portfolio-table"><caption class="sr-only">Retained subscription portfolio</caption>
+      <thead><tr><th><input id="select-visible" type="checkbox" aria-label="Select all visible subscriptions"></th><th>Subscription</th><th>Status</th><th>Plan</th><th>Case</th></tr></thead>
+      <tbody id="portfolio-rows"></tbody>
+    </table></div>
+    <div class="intake-tools">
+      <form id="capture-form" class="panel"><h2>Open by subscription ID</h2><label for="subscription-id">PayPal subscription ID</label><input id="subscription-id" required pattern="I-[A-Z0-9]{6,40}" placeholder="I-…"><button type="submit">Read and retain subscription</button></form>
+      <form id="restore-form" class="panel"><h2>Restore a complete handover</h2><p class="muted">Restore its original source scope, case and document editions.</p><label for="handover-file">RenewalGuard handover JSON</label><input id="handover-file" type="file" accept=".json,application/json" required><button type="submit">Restore retained case</button></form>
+    </div>
+  </section>
+  <section id="case-view" hidden>
+    <div class="section-heading">
+      <div><p id="case-stage" class="eyebrow"></p><h1 id="case-title"></h1><p id="case-subscription"></p></div>
+      <div class="button-row"><button id="refresh-case">Refresh PayPal facts</button><button id="export-case">Download complete handover</button></div>
+    </div>
+    <section class="panel source-panel" aria-labelledby="source-heading">
+      <div class="panel-heading"><h2 id="source-heading">Current retained facts</h2><span id="source-observed" class="muted"></span></div>
+      <dl id="facts-grid" class="facts-grid"></dl><p id="source-rationale"></p>
+      <details><summary>Source identity</summary><dl id="source-identity" class="identity-grid"></dl></details>
+    </section>
+    <section id="conflict-panel" class="callout" hidden>
+      <h2>Compare the newer saved case</h2><p id="conflict-description"></p>
+      <pre id="conflict-current"></pre>
+      <div class="button-row"><button id="rebase-draft">Keep these edits on the latest case</button><button id="use-saved-plan">Use the latest saved plan</button></div>
+    </section>
+    <div class="case-columns">
+    <section class="panel" aria-labelledby="work-heading">
+      <div class="panel-heading"><h2 id="work-heading">Work plan</h2><span id="plan-edition" class="muted"></span></div>
+      <form id="plan-form"><fieldset id="plan-fields">
+        <label for="work-title">Case title</label><input id="work-title" name="title" maxlength="160" required>
+        <div class="form-grid"><div><label for="work-owner">Owner</label><input id="work-owner" name="owner" maxlength="120" autocomplete="name"></div><div><label for="work-due">Due date</label><input id="work-due" name="due_date" type="date"></div></div>
+        <div class="form-grid"><div><label for="work-priority">Priority</label><select id="work-priority" name="priority"><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></div><div><label for="work-status">Work status</label><select id="work-status" name="work_status"><option value="todo">To do</option><option value="in_progress">In progress</option><option value="waiting">Waiting</option><option value="ready">Ready for review</option></select></div></div>
+        <label for="work-next">Next action</label><textarea id="work-next" name="next_action" maxlength="1000" rows="3" required></textarea>
+        <label for="work-notes">Work notes</label><textarea id="work-notes" name="notes" maxlength="8000" rows="5"></textarea>
+        <label for="work-customer-note">Customer support note</label><textarea id="work-customer-note" name="customer_note" maxlength="4000" rows="5"></textarea>
+        <h3>Resolution to review</h3>
+        <label for="work-outcome">Outcome</label><select id="work-outcome" name="outcome"><option value="">Choose when work is ready</option><option value="support_completed">Support completed</option><option value="monitoring">Monitoring arranged</option><option value="subscription_ended">Subscription ended</option><option value="no_follow_up">No follow-up needed</option></select>
+        <label for="work-resolution">Resolution summary</label><textarea id="work-resolution" name="resolution_summary" maxlength="2000" rows="3"></textarea>
+      </fieldset>
+      <div class="form-actions"><button id="save-plan" class="primary" type="submit">Save work plan</button><span id="draft-state" role="status"></span><button id="download-work" type="button">Download work sheet</button><button id="download-calendar" type="button">Download due task</button></div>
+      </form>
+    </section>
+    <div class="review-column">
+      <section class="panel" aria-labelledby="note-heading"><div class="panel-heading"><h2 id="note-heading">Support note assistant</h2><button id="prepare-note">Prepare note</button></div>
+        <p id="note-kind" class="muted">Uses the subscription's current status, renewal date and disclosed failure date.</p>
+        <pre id="note-text" class="note-text">Prepare a note to review here.</pre>
+        <p id="note-source" class="muted"></p><button id="use-note" disabled>Use text in work plan</button><button id="download-note" disabled>Download original note</button>
+      </section>
+      <section class="panel" aria-labelledby="review-heading">
+        <h2 id="review-heading">Review and resolve</h2><p class="muted">Review the saved work plan against a fresh subscription snapshot.</p>
+        <form id="review-form"><label for="reviewer">Reviewer</label><input id="reviewer" maxlength="120" required>
+        <label for="review-summary">Review summary</label><textarea id="review-summary" maxlength="2000" rows="3" required></textarea>
+        <button id="save-review" type="submit">Save resolution review</button></form>
+        <div id="saved-review" hidden><h3>Saved review</h3><p id="review-details"></p><p id="review-text"></p><button id="download-review">Download original review</button><button id="resolve-case" class="primary">Resolve support case</button></div>
+        <p id="review-guidance" class="muted"></p>
+      </section>
+      <section id="resolution-panel" class="panel" hidden><h2>Resolution history</h2><p id="resolution-details"></p><pre id="resolution-summary"></pre>
+        <form id="reopen-form"><label for="reopen-reason">Reason for reopening</label><textarea id="reopen-reason" rows="3" maxlength="2000" required></textarea><button type="submit">Reopen support case</button></form>
+      </section>
+    </div>
+    </div>
+    <div class="history-columns">
+      <section class="panel"><h2>Case timeline</h2><ol id="case-timeline" class="timeline"></ol></section>
+      <section class="panel"><h2>Original documents</h2><p class="muted">Open any saved source, plan, note, review or resolution edition.</p><div id="case-documents" class="document-list"></div></section>
+    </div>
+    <section id="document-viewer" class="panel" hidden><div class="panel-heading"><h2 id="document-title">Original document</h2><button id="download-document">Download complete JSON</button><button id="close-document">Close document</button></div><p id="document-hash" class="mono"></p><pre id="document-content"></pre></section>
+  </section>
+</main>
+</div>
+<footer class="app-footer">Local renewal case workspace · PayPal sandbox snapshots · Complete source and work history retained</footer>
+</body></html>

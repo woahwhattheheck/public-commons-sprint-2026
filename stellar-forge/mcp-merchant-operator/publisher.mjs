@@ -3,7 +3,7 @@ export { publisherTools } from './catalog/publisher.mjs';
 // MIT. Agent authoring and maintenance through the original retained publisher.
 import { createHash, randomUUID } from 'node:crypto';
 import { basename, join } from 'node:path';
-import { failure, identifier, fileBytes } from './config.mjs';
+import { failure, identifier, fileBytes } from './host-files.mjs';
 
 
 
@@ -102,8 +102,10 @@ function operationFailure(error) {
 /** Only constant original driver imports are selected by a host-declared kind.
  * No module, path, connection URL, source JSON or executable is an MCP argument. */
 async function originalFactory(kind) {
+  if (kind === 'frictionless') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/model.mjs')).openFrictionlessPublisher;
   if (kind === 'bls-labor') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/bls-labor/publisher/model.mjs')).openBlsPublisher;
   if (kind === 'census-acs') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/publisher/model.mjs')).openCensusPublisher;
+  if (kind === 'timescale') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/model.mjs')).openTimescaleWorkspace;
   if (kind === 'postgres') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/model.mjs')).openPostgresPublisher;
   if (kind === 'sqlite') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/publisher/model.mjs')).openSqlitePublisher;
   if (kind === 'mysql') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/publisher/model.mjs')).openMysqlPublisher;
@@ -161,19 +163,24 @@ export class MerchantPublisher {
   async #openOriginal(alias) {
     const configured = this.#declared(alias);
     const factory = await originalFactory(configured.kind);
-    const publisher = await factory({ directory: configured.directory,
+    const original = await factory({ directory: configured.directory,
       ...(configured.seller ? { seller: configured.seller, resource: configured.resource } : {}) });
+    const workspace = configured.kind === 'timescale' ? original : null;
+    const publisher = workspace ? workspace.publisher : original;
+    const closeOriginal = () => original.close();
     let schedule;
     try {
+      if (workspace && workspace.settings.id !== configured.workspaceId)
+        throw failure('TIMESCALE_WORKSPACE_BINDING_CHANGED', 'The original Timescale workspace no longer matches its host declaration.');
       const { openPostgresSchedule } = await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/schedule.mjs');
       schedule = await openPostgresSchedule({ publisher });
-      const entry = { alias, publisher, schedule, instanceId: randomUUID(), pending: new Set(), children: new Map(), closing: null };
+      const entry = { alias, publisher, schedule, workspace, closeOriginal, instanceId: randomUUID(), pending: new Set(), children: new Map(), closing: null };
       this.#entries.set(alias, entry);
       if (!this.#closing) schedule.start();
       return this.#view(entry);
     } catch (error) {
       this.#entries.delete(alias);
-      try { await schedule?.close(); } finally { await publisher.close(); }
+      try { await schedule?.close(); } finally { await closeOriginal(); }
       throw error;
     }
   }
@@ -190,7 +197,7 @@ export class MerchantPublisher {
       child = { key, pending: new Set(), closing: null, resource: null, ready: null, lease: null };
       entry.children.set(key, child);
       child.ready = Promise.resolve().then(() => open({ publisher: entry.publisher, schedule: entry.schedule,
-        instanceId: entry.instanceId })).then(resource => {
+        workspace: entry.workspace, instanceId: entry.instanceId })).then(resource => {
         if (!resource || typeof resource.close !== 'function')
           throw failure('PUBLISHER_BORROW_INVALID', 'The owned child must provide its native close operation.');
         child.resource = resource; return resource;
@@ -238,7 +245,7 @@ export class MerchantPublisher {
           const results = await Promise.allSettled([scheduling, ...children, ...entry.pending]);
           failed = results.find(result => result.status === 'rejected');
         } finally {
-          await entry.publisher.close();
+          await entry.closeOriginal();
           if (this.#entries.get(entry.alias) === entry) this.#entries.delete(entry.alias);
         }
         if (failed) throw failed.reason;

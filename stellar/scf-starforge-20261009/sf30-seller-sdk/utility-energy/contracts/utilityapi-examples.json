@@ -1,0 +1,223 @@
+{
+  "schema": "commons.utilityapi-original-doc-examples.v1",
+  "provenance": "Original UtilityAPI public documentation code examples retrieved2026-10-12. Source line positions refer to the rendered official pages; the raw code strings preserve numeric lexemes and all source values.",
+  "extraction": "Remove rendered four-space code indentation; retain original_rendered_text including original labels. For content, remove only leading // label lines and exterior whitespace. JSON.parse checks complete syntax without rewriting content.",
+  "examples": [
+    {
+      "source_url": "https://utilityapi.com/docs/api/intervals/blocks",
+      "source_lines": [
+        102,
+        114
+      ],
+      "original_rendered_text": "// Interval Reading Block example\n{\n    \"start\": \"2015-01-19T08:30:00.000000-08:00\",\n    \"end\": \"2015-01-19T08:45:00.000000-08:00\",\n    \"kwh\": 18.2,\n    \"datapoints\": [\n        {\n            \"type\": \"net\",\n            \"unit\": \"kwh\",\n            \"value\": 18.2\n        }\n    ]\n}",
+      "content": "{\n    \"start\": \"2015-01-19T08:30:00.000000-08:00\",\n    \"end\": \"2015-01-19T08:45:00.000000-08:00\",\n    \"kwh\": 18.2,\n    \"datapoints\": [\n        {\n            \"type\": \"net\",\n            \"unit\": \"kwh\",\n            \"value\": 18.2\n        }\n    ]\n}",
+      "root_type": "object",
+      "resource_kind": "reading-block",
+      "id": "utilityapi-doc-01"
+    },
+    {
+      "source_url": "https://utilityapi.com/docs/api/intervals/blocks",
+      "source_lines": [
+        117,
+        138
+      ],
+      "original_rendered_text": "{\n    \"start\": \"2021-07-09T13:20:00.000000-07:00\",\n    \"end\": \"2021-07-09T13:25:00.000000-07:00\",\n    \"kwh\": 3.1,\n    \"datapoints\": [\n        {\n            \"type\": \"fwd\",\n            \"unit\": \"kwh\",\n            \"value\": 24.8\n        },\n        {\n            \"type\": \"net\",\n            \"unit\": \"kwh\",\n            \"value\": 3.1\n        },\n        {\n            \"type\": \"rev\",\n            \"unit\": \"kwh\",\n            \"value\": 21.7\n        }\n    ]\n}",
+      "content": "{\n    \"start\": \"2021-07-09T13:20:00.000000-07:00\",\n    \"end\": \"2021-07-09T13:25:00.000000-07:00\",\n    \"kwh\": 3.1,\n    \"datapoints\": [\n        {\n            \"type\": \"fwd\",\n            \"unit\": \"kwh\",\n            \"value\": 24.8\n        },\n        {\n            \"type\": \"net\",\n            \"unit\": \"kwh\",\n            \"value\": 3.1\n        },\n        {\n            \"type\": \"rev\",\n            \"unit\": \"kwh\",\n            \"value\": 21.7\n        }\n    ]\n}",
+      "root_type": "object",
+      "resource_kind": "reading-block",
+      "id": "utilityapi-doc-02"
+    },
+    {
+      "source_url": "https://utilityapi.com/docs/api/intervals/blocks",
+      "source_lines": [
+        141,
+        157
+      ],
+      "original_rendered_text": "{\n    \"start\": \"2019-04-24T11:00:00.000000-06:00\",\n    \"end\": \"2019-04-24T11:15:00.000000-06:00\",\n    \"kwh\": 4.1,\n    \"datapoints\": [\n        {\n            \"type\": \"net\",\n            \"unit\": \"kwh\",\n            \"value\": 4.1\n        },\n        {\n            \"type\": \"max\",\n            \"unit\": \"kw\",\n            \"value\": 18.4\n        }\n    ]\n}",
+      "content": "{\n    \"start\": \"2019-04-24T11:00:00.000000-06:00\",\n    \"end\": \"2019-04-24T11:15:00.000000-06:00\",\n    \"kwh\": 4.1,\n    \"datapoints\": [\n        {\n            \"type\": \"net\",\n            \"unit\": \"kwh\",\n            \"value\": 4.1\n        },\n        {\n            \"type\": \"max\",\n            \"unit\": \"kw\",\n            \"value\": 18.4\n        }\n    ]\n}",
+      "root_type": "object",
+      "resource_kind": "reading-block",
+      "id": "utilityapi-doc-03"
+    },
+    {
+      "source_url": "https://utilityapi.com/docs/api/intervals/blocks",
+      "source_lines": [
+        160,
+        171
+      ],
+      "original_rendered_text": "{\n    \"start\": \"2020-08-12T18:00:00.000000-04:00\",\n    \"end\": \"2020-08-12T19:00:00.000000-04:00\",\n    \"kwh\": null,\n    \"datapoints\": [\n        {\n            \"type\": \"net\",\n            \"unit\": \"therms\",\n            \"value\": 9.5\n        }\n    ]\n}",
+      "content": "{\n    \"start\": \"2020-08-12T18:00:00.000000-04:00\",\n    \"end\": \"2020-08-12T19:00:00.000000-04:00\",\n    \"kwh\": null,\n    \"datapoints\": [\n        {\n            \"type\": \"net\",\n            \"unit\": \"therms\",\n            \"value\": 9.5\n        }\n    ]\n}",
+      "root_type": "object",
+      "resource_kind": "reading-block",
+      "id": "utilityapi-doc-04"
+    },
+    {
+      "source_url": "https://utilityapi.com/docs/api/intervals/blocks",
+      "source_lines": [
+        174,
+        197
+      ],
+      "original_rendered_text": "{\n    \"start\": \"2015-04-24T16:20:00.000000-05:00\",\n    \"end\": \"2015-04-24T16:25:00.000000-05:00\",\n    \"kwh\": 12.01,\n    \"datapoints\": [\n        {\n            \"meter_number\": \"1000005\",\n            \"type\": \"fwd\",\n            \"unit\": \"kwh\",\n            \"value\": 3.46\n        },\n        {\n            \"meter_number\": \"1000006\",\n            \"type\": \"fwd\",\n            \"unit\": \"kwh\",\n            \"value\": 8.54\n        },\n        {\n            \"type\": \"net\",\n            \"unit\": \"kwh\",\n            \"value\": 12.01\n        }\n    ]\n}",
+      "content": "{\n    \"start\": \"2015-04-24T16:20:00.000000-05:00\",\n    \"end\": \"2015-04-24T16:25:00.000000-05:00\",\n    \"kwh\": 12.01,\n    \"datapoints\": [\n        {\n            \"meter_number\": \"1000005\",\n            \"type\": \"fwd\",\n            \"unit\": \"kwh\",\n            \"value\": 3.46\n        },\n        {\n            \"meter_number\": \"1000006\",\n            \"type\": \"fwd\",\n            \"unit\": \"kwh\",\n            \"value\": 8.54\n        },\n        {\n            \"type\": \"net\",\n            \"unit\": \"kwh\",\n            \"value\": 12.01\n        }\n    ]\n}",
+      "root_type": "object",
+      "resource_kind": "reading-block",
+      "id": "utilityapi-doc-05"
+    },
+    {
+      "source_url": "https://utilityapi.com/docs/api/meters/blocks",
+      "source_lines": [
+        55,
+        66
+      ],
+      "original_rendered_text": "// Base Meter Block example\n{\n    \"is_expanded\": true,\n    \"service_identifier\": \"1234222222-9\",\n    \"service_tariff\": \"A6X\",\n    \"service_class\": \"comm-electric\",\n    \"service_address\": \"222 Broadway St, Suite 100\",\n    \"meter_numbers\": [\"111.00222.333.002\"],\n    \"billing_contact\": \"Acme Inc.\",\n    \"billing_address\": \"222 Broadway St, Suite 100\",\n    \"billing_account\": \"3456222222-9\"\n}",
+      "content": "{\n    \"is_expanded\": true,\n    \"service_identifier\": \"1234222222-9\",\n    \"service_tariff\": \"A6X\",\n    \"service_class\": \"comm-electric\",\n    \"service_address\": \"222 Broadway St, Suite 100\",\n    \"meter_numbers\": [\"111.00222.333.002\"],\n    \"billing_contact\": \"Acme Inc.\",\n    \"billing_address\": \"222 Broadway St, Suite 100\",\n    \"billing_account\": \"3456222222-9\"\n}",
+      "root_type": "object",
+      "resource_kind": "meter-base-block",
+      "id": "utilityapi-doc-06"
+    },
+    {
+      "source_url": "https://utilityapi.com/docs/api/meters/blocks",
+      "source_lines": [
+        96,
+        99
+      ],
+      "original_rendered_text": "// Electric Details Block example\n{\n    \"voltage\": 480.0\n}",
+      "content": "{\n    \"voltage\": 480.0\n}",
+      "root_type": "object",
+      "resource_kind": "meters-blocks",
+      "id": "utilityapi-doc-07"
+    },
+    {
+      "source_url": "https://utilityapi.com/docs/api/meters/blocks",
+      "source_lines": [
+        109,
+        117
+      ],
+      "original_rendered_text": "// Suppliers Block example\n[\n    {\n        \"supplier_name\": \"Anytown Community Energy\",\n        \"supplier_service_id\": \"9812251211\",\n        \"supplier_tariff\": \"Sunshine A1\",\n        \"supplier_type\": \"cca\"\n    }\n]",
+      "content": "[\n    {\n        \"supplier_name\": \"Anytown Community Energy\",\n        \"supplier_service_id\": \"9812251211\",\n        \"supplier_tariff\": \"Sunshine A1\",\n        \"supplier_type\": \"cca\"\n    }\n]",
+      "root_type": "array",
+      "resource_kind": "meters-blocks",
+      "id": "utilityapi-doc-08"
+    },
+    {
+      "source_url": "https://utilityapi.com/docs/api/bills/blocks",
+      "source_lines": [
+        66,
+        82
+      ],
+      "original_rendered_text": "// Base Bill Block example\n{\n    \"service_identifier\": \"1234222222-9\",\n    \"service_tariff\": \"A6X\",\n    \"service_class\": \"comm-electric\",\n    \"service_address\": \"222 Broadway St, Suite 100\",\n    \"meter_numbers\": [\"111.00222.333.002\"],\n    \"billing_contact\": \"Acme Inc.\",\n    \"billing_address\": \"222 Broadway St, Suite 100\",\n    \"billing_account\": \"3456222222-9\",\n    \"bill_start_date\": \"2015-01-07T00:00:00.000000-08:00\",\n    \"bill_end_date\": \"2015-02-05T00:00:00.000000-08:00\",\n    \"bill_total_cost\": 194.78,\n    \"bill_total_volume\": 837.0,\n    \"bill_total_unit\": \"kwh\",\n    \"bill_total_kwh\": 837.0\n}",
+      "content": "{\n    \"service_identifier\": \"1234222222-9\",\n    \"service_tariff\": \"A6X\",\n    \"service_class\": \"comm-electric\",\n    \"service_address\": \"222 Broadway St, Suite 100\",\n    \"meter_numbers\": [\"111.00222.333.002\"],\n    \"billing_contact\": \"Acme Inc.\",\n    \"billing_address\": \"222 Broadway St, Suite 100\",\n    \"billing_account\": \"3456222222-9\",\n    \"bill_start_date\": \"2015-01-07T00:00:00.000000-08:00\",\n    \"bill_end_date\": \"2015-02-05T00:00:00.000000-08:00\",\n    \"bill_total_cost\": 194.78,\n    \"bill_total_volume\": 837.0,\n    \"bill_total_unit\": \"kwh\",\n    \"bill_total_kwh\": 837.0\n}",
+      "root_type": "object",
+      "resource_kind": "bill-base-block",
+      "id": "utilityapi-doc-09"
+    },
+    {
+      "source_url": "https://utilityapi.com/docs/api/bills/blocks",
+      "source_lines": [
+        102,
+        111
+      ],
+      "original_rendered_text": "{\n    \"name\": \"Tier 1 Usage\",\n    \"start\": \"2015-01-07T08:00:00.000000+00:00\",\n    \"end\": \"2015-02-05T08:00:00.000000+00:00\",\n    \"cost\": 52.88,\n    \"volume\": 327.0,\n    \"rate\": 0.1617,\n    \"unit\": \"kwh\",\n    \"kind\": \"supply\"\n}",
+      "content": "{\n    \"name\": \"Tier 1 Usage\",\n    \"start\": \"2015-01-07T08:00:00.000000+00:00\",\n    \"end\": \"2015-02-05T08:00:00.000000+00:00\",\n    \"cost\": 52.88,\n    \"volume\": 327.0,\n    \"rate\": 0.1617,\n    \"unit\": \"kwh\",\n    \"kind\": \"supply\"\n}",
+      "root_type": "object",
+      "resource_kind": "bill-line-item",
+      "id": "utilityapi-doc-10"
+    },
+    {
+      "source_url": "https://utilityapi.com/docs/api/bills/blocks",
+      "source_lines": [
+        144,
+        164
+      ],
+      "original_rendered_text": "// Suppliers Block example for third party supplier\n{\n    \"supplier_line_items\": [\n        {\n            \"cost\": 87.41,\n            \"end\": \"2015-01-01T04:00:00.000000+00:00\",\n            \"start\": \"2015-02-01T04:00:00.000000+00:00\",\n            \"name\": \"SUPPLY CHARGE\",\n            \"rate\": 0.0791,\n            \"unit\": \"kwh\",\n            \"volume\": 1105.0\n        }\n    ],\n    \"supplier_name\": \"ACME ELECTRIC SUPPLY, INC\",\n    \"supplier_service_id\": null,\n    \"supplier_tariff\": null,\n    \"supplier_total_cost\": 87.41,\n    \"supplier_total_unit\": \"kwh\",\n    \"supplier_total_volume\": 1105.0,\n    \"supplier_type\": \"third_party\"\n}",
+      "content": "{\n    \"supplier_line_items\": [\n        {\n            \"cost\": 87.41,\n            \"end\": \"2015-01-01T04:00:00.000000+00:00\",\n            \"start\": \"2015-02-01T04:00:00.000000+00:00\",\n            \"name\": \"SUPPLY CHARGE\",\n            \"rate\": 0.0791,\n            \"unit\": \"kwh\",\n            \"volume\": 1105.0\n        }\n    ],\n    \"supplier_name\": \"ACME ELECTRIC SUPPLY, INC\",\n    \"supplier_service_id\": null,\n    \"supplier_tariff\": null,\n    \"supplier_total_cost\": 87.41,\n    \"supplier_total_unit\": \"kwh\",\n    \"supplier_total_volume\": 1105.0,\n    \"supplier_type\": \"third_party\"\n}",
+      "root_type": "object",
+      "resource_kind": "bill-supplier-block",
+      "id": "utilityapi-doc-11"
+    },
+    {
+      "source_url": "https://utilityapi.com/docs/api/bills/blocks",
+      "source_lines": [
+        170,
+        208
+      ],
+      "original_rendered_text": "// Suppliers Block CCA example\n{\n    \"supplier_line_items\": [\n        {\n            \"cost\": 20.88,\n            \"end\": \"2020-08-30T07:00:00.000000+00:00\",\n            \"start\": \"2020-09-29T07:00:00.000000+00:00\",\n            \"name\": \"GENERATION-TOTAL\",\n            \"rate\": 0.06935,\n            \"unit\": \"kwh\",\n            \"volume\": 301.15\n        },\n        {\n            \"cost\": 1.01,\n            \"end\": \"2020-08-30T07:00:00.000000+00:00\",\n            \"start\": \"2020-09-29T07:00:00.000000+00:00\",\n            \"name\": \"Local Utility Users Tax\",\n            \"rate\": null,\n            \"unit\": null,\n            \"volume\": null\n        },\n        {\n            \"cost\": 0.07,\n            \"end\": \"2020-08-30T07:00:00.000000+00:00\",\n            \"start\": \"2020-09-29T07:00:00.000000+00:00\",\n            \"name\": \"Energy Surcharge\",\n            \"rate\": null,\n            \"unit\": null,\n            \"volume\": null\n        }\n    ],\n    \"supplier_name\": \"Sonoma Clean Power\",\n    \"supplier_service_id\": \"0123456789\",\n    \"supplier_tariff\": \"NEM E-1\",\n    \"supplier_total_cost\": 21.96,\n    \"supplier_total_unit\": \"kwh\",\n    \"supplier_total_volume\": 301.15,\n    \"supplier_type\": \"cca\"\n}",
+      "content": "{\n    \"supplier_line_items\": [\n        {\n            \"cost\": 20.88,\n            \"end\": \"2020-08-30T07:00:00.000000+00:00\",\n            \"start\": \"2020-09-29T07:00:00.000000+00:00\",\n            \"name\": \"GENERATION-TOTAL\",\n            \"rate\": 0.06935,\n            \"unit\": \"kwh\",\n            \"volume\": 301.15\n        },\n        {\n            \"cost\": 1.01,\n            \"end\": \"2020-08-30T07:00:00.000000+00:00\",\n            \"start\": \"2020-09-29T07:00:00.000000+00:00\",\n            \"name\": \"Local Utility Users Tax\",\n            \"rate\": null,\n            \"unit\": null,\n            \"volume\": null\n        },\n        {\n            \"cost\": 0.07,\n            \"end\": \"2020-08-30T07:00:00.000000+00:00\",\n            \"start\": \"2020-09-29T07:00:00.000000+00:00\",\n            \"name\": \"Energy Surcharge\",\n            \"rate\": null,\n            \"unit\": null,\n            \"volume\": null\n        }\n    ],\n    \"supplier_name\": \"Sonoma Clean Power\",\n    \"supplier_service_id\": \"0123456789\",\n    \"supplier_tariff\": \"NEM E-1\",\n    \"supplier_total_cost\": 21.96,\n    \"supplier_total_unit\": \"kwh\",\n    \"supplier_total_volume\": 301.15,\n    \"supplier_type\": \"cca\"\n}",
+      "root_type": "object",
+      "resource_kind": "bill-supplier-block",
+      "id": "utilityapi-doc-12"
+    },
+    {
+      "source_url": "https://utilityapi.com/docs/api/bills/blocks",
+      "source_lines": [
+        222,
+        229
+      ],
+      "original_rendered_text": "// Tier Bill Block example\n{\n    \"name\": \"Tier 1 Usage\",\n    \"level\": 1,\n    \"cost\": 52.88,\n    \"volume\": 327.0,\n    \"unit\": \"kwh\"\n}",
+      "content": "{\n    \"name\": \"Tier 1 Usage\",\n    \"level\": 1,\n    \"cost\": 52.88,\n    \"volume\": 327.0,\n    \"unit\": \"kwh\"\n}",
+      "root_type": "object",
+      "resource_kind": "bill-tier-block",
+      "id": "utilityapi-doc-13"
+    },
+    {
+      "source_url": "https://utilityapi.com/docs/api/bills/blocks",
+      "source_lines": [
+        245,
+        252
+      ],
+      "original_rendered_text": "// Time-of-Use Bill Block example\n{\n    \"name\": \"On-Peak Usage\",\n    \"bucket\": \"peak\",\n    \"cost\": 52.88,\n    \"volume\": 327.0,\n    \"unit\": \"kwh\"\n}",
+      "content": "{\n    \"name\": \"On-Peak Usage\",\n    \"bucket\": \"peak\",\n    \"cost\": 52.88,\n    \"volume\": 327.0,\n    \"unit\": \"kwh\"\n}",
+      "root_type": "object",
+      "resource_kind": "bill-tou-block",
+      "id": "utilityapi-doc-14"
+    },
+    {
+      "source_url": "https://utilityapi.com/docs/api/bills/blocks",
+      "source_lines": [
+        273,
+        278
+      ],
+      "original_rendered_text": "// Demand Bill Block example\n{\n    \"name\": \"Peak Demand Charge\",\n    \"cost\": 52.88,\n    \"demand\": 327.0\n}",
+      "content": "{\n    \"name\": \"Peak Demand Charge\",\n    \"cost\": 52.88,\n    \"demand\": 327.0\n}",
+      "root_type": "object",
+      "resource_kind": "bill-demand-block",
+      "id": "utilityapi-doc-15"
+    },
+    {
+      "source_url": "https://utilityapi.com/docs/api/bills/blocks",
+      "source_lines": [
+        293,
+        313
+      ],
+      "original_rendered_text": "// Power Bill Block example\n[\n    {\n        \"name\": \"Reactive Demand\",\n        \"type\": \"reactive_demand\",\n        \"unit\": \"kvar\",\n        \"volume\": 291.3\n    },\n    {\n        \"name\": \"Real Demand\",\n        \"type\": \"real_demand\",\n        \"unit\": \"kw\",\n        \"volume\": 1501.4\n    },\n    {\n        \"name\": \"Power Factor\",\n        \"type\": \"power_factor\",\n        \"unit\": null,\n        \"volume\": 0.98\n    }\n]",
+      "content": "[\n    {\n        \"name\": \"Reactive Demand\",\n        \"type\": \"reactive_demand\",\n        \"unit\": \"kvar\",\n        \"volume\": 291.3\n    },\n    {\n        \"name\": \"Real Demand\",\n        \"type\": \"real_demand\",\n        \"unit\": \"kw\",\n        \"volume\": 1501.4\n    },\n    {\n        \"name\": \"Power Factor\",\n        \"type\": \"power_factor\",\n        \"unit\": null,\n        \"volume\": 0.98\n    }\n]",
+      "root_type": "array",
+      "resource_kind": "bill-power-block",
+      "id": "utilityapi-doc-16"
+    },
+    {
+      "id": "utilityapi-doc-17",
+      "source_url": "https://utilityapi.com/docs/api/meters",
+      "source_lines": [
+        131,
+        178
+      ],
+      "original_rendered_text": "// Meter that is currently collecting data\n{\n    \"uid\": \"45678\",\n    \"authorization_uid\": \"12345\",\n    \"created\": \"2014-02-17T16:04:34.023534+00:00\",\n    \"user_email\": \"sales@acmesolar.com\",\n    \"user_uid\": \"3938\",\n    \"is_archived\": false,\n    \"is_activated\": true,\n    \"is_expanded\": true,\n    \"notes\": [],\n    \"status\": \"pending\",\n    \"status_message\": \"Parsing bill 8 of 14...\",\n    \"status_ts\": \"2014-06-17T16:06:34.473724+00:00\",\n    \"ongoing_monitoring\": {\n        \"frequency\": \"off\",\n        \"prepay\": null,\n        \"next_prepay\": null,\n        \"next_refresh\": null,\n        \"fixed_refresh_day\": null\n    },\n    \"utility\": \"PG&E\",\n    \"bill_count\": 7,\n    \"bill_coverage\": [\n        [\"2012-01-05T07:00:00.000000+00:00\", \"2013-01-10T07:00:00.000000+00:00\"]\n    ],\n    \"bill_sources\": [\"pdf\"],\n    \"interval_count\": 71808,\n    \"interval_coverage\": [\n        [\"2012-01-05T07:00:00.000000+00:00\", \"2013-01-22T07:00:00.000000+00:00\"]\n    ],\n    \"interval_sources\": [\"greenbutton_dmd\"],\n    \"exports\": {\n        \"bills_csv\": \"https://utilityapi.com/api/v2/files/1238333328334323.csv\",\n        \"intervals_csv\": \"https://utilityapi.com/api/v2/files/1238333328334323i.csv\"\n    },\n    \"blocks\": [\"base\"],\n    \"base\": {\n        \"service_identifier\": \"1234222222-9\",\n        \"service_tariff\": \"A6X\",\n        \"service_class\": \"comm-electric\",\n        \"service_address\": \"222 Broadway St, Suite 100\",\n        \"meter_numbers\": [],\n        \"billing_contact\": null,\n        \"billing_address\": null,\n        \"billing_account\": null\n    }\n}",
+      "content": "{\n    \"uid\": \"45678\",\n    \"authorization_uid\": \"12345\",\n    \"created\": \"2014-02-17T16:04:34.023534+00:00\",\n    \"user_email\": \"sales@acmesolar.com\",\n    \"user_uid\": \"3938\",\n    \"is_archived\": false,\n    \"is_activated\": true,\n    \"is_expanded\": true,\n    \"notes\": [],\n    \"status\": \"pending\",\n    \"status_message\": \"Parsing bill 8 of 14...\",\n    \"status_ts\": \"2014-06-17T16:06:34.473724+00:00\",\n    \"ongoing_monitoring\": {\n        \"frequency\": \"off\",\n        \"prepay\": null,\n        \"next_prepay\": null,\n        \"next_refresh\": null,\n        \"fixed_refresh_day\": null\n    },\n    \"utility\": \"PG&E\",\n    \"bill_count\": 7,\n    \"bill_coverage\": [\n        [\"2012-01-05T07:00:00.000000+00:00\", \"2013-01-10T07:00:00.000000+00:00\"]\n    ],\n    \"bill_sources\": [\"pdf\"],\n    \"interval_count\": 71808,\n    \"interval_coverage\": [\n        [\"2012-01-05T07:00:00.000000+00:00\", \"2013-01-22T07:00:00.000000+00:00\"]\n    ],\n    \"interval_sources\": [\"greenbutton_dmd\"],\n    \"exports\": {\n        \"bills_csv\": \"https://utilityapi.com/api/v2/files/1238333328334323.csv\",\n        \"intervals_csv\": \"https://utilityapi.com/api/v2/files/1238333328334323i.csv\"\n    },\n    \"blocks\": [\"base\"],\n    \"base\": {\n        \"service_identifier\": \"1234222222-9\",\n        \"service_tariff\": \"A6X\",\n        \"service_class\": \"comm-electric\",\n        \"service_address\": \"222 Broadway St, Suite 100\",\n        \"meter_numbers\": [],\n        \"billing_contact\": null,\n        \"billing_address\": null,\n        \"billing_account\": null\n    }\n}",
+      "root_type": "object",
+      "resource_kind": "meter-object"
+    },
+    {
+      "id": "utilityapi-doc-18",
+      "source_url": "https://utilityapi.com/docs/api/meters",
+      "source_lines": [
+        179,
+        225
+      ],
+      "original_rendered_text": "// Meter that couldn't collect data because the login credentials were changed.\n{\n    \"uid\": \"45678\",\n    \"authorization_uid\": \"12345\",\n    \"created\": \"2014-02-17T16:04:34.023534+00:00\",\n    \"user_email\": \"sales@acmesolar.com\",\n    \"user_uid\": \"3938\",\n    \"is_archived\": false,\n    \"is_activated\": true,\n    \"is_expanded\": true,\n    \"notes\": [\n        {\n            \"type\": \"access_invalid\",\n            \"msg\": \"Unable to login to collect data.\",\n            \"ts\": \"2016-01-01T12:31:42.347321+00:00\"\n        }\n    ],\n    \"status\": \"errored\",\n    \"status_message\": \"Login issue, see notes.\",\n    \"status_ts\": \"2016-01-01T12:31:42.347321+00:00\",\n    \"ongoing_monitoring\": {\n        \"frequency\": \"off\",\n        \"prepay\": null,\n        \"next_prepay\": null,\n        \"next_refresh\": null,\n        \"fixed_refresh_day\": null\n    },\n    \"utility\": \"PG&E\",\n    \"bill_count\": 0,\n    \"bill_coverage\": [],\n    \"bill_sources\": [],\n    \"interval_count\": 0,\n    \"interval_coverage\": [],\n    \"interval_sources\": [],\n    \"exports\": {},\n    \"blocks\": [\"base\"],\n    \"base\": {\n        \"service_identifier\": null,\n        \"service_tariff\": null,\n        \"service_class\": null,\n        \"service_address\": null,\n        \"meter_numbers\": [],\n        \"billing_contact\": null,\n        \"billing_address\": null,\n        \"billing_account\": null\n    }\n}",
+      "content": "{\n    \"uid\": \"45678\",\n    \"authorization_uid\": \"12345\",\n    \"created\": \"2014-02-17T16:04:34.023534+00:00\",\n    \"user_email\": \"sales@acmesolar.com\",\n    \"user_uid\": \"3938\",\n    \"is_archived\": false,\n    \"is_activated\": true,\n    \"is_expanded\": true,\n    \"notes\": [\n        {\n            \"type\": \"access_invalid\",\n            \"msg\": \"Unable to login to collect data.\",\n            \"ts\": \"2016-01-01T12:31:42.347321+00:00\"\n        }\n    ],\n    \"status\": \"errored\",\n    \"status_message\": \"Login issue, see notes.\",\n    \"status_ts\": \"2016-01-01T12:31:42.347321+00:00\",\n    \"ongoing_monitoring\": {\n        \"frequency\": \"off\",\n        \"prepay\": null,\n        \"next_prepay\": null,\n        \"next_refresh\": null,\n        \"fixed_refresh_day\": null\n    },\n    \"utility\": \"PG&E\",\n    \"bill_count\": 0,\n    \"bill_coverage\": [],\n    \"bill_sources\": [],\n    \"interval_count\": 0,\n    \"interval_coverage\": [],\n    \"interval_sources\": [],\n    \"exports\": {},\n    \"blocks\": [\"base\"],\n    \"base\": {\n        \"service_identifier\": null,\n        \"service_tariff\": null,\n        \"service_class\": null,\n        \"service_address\": null,\n        \"meter_numbers\": [],\n        \"billing_contact\": null,\n        \"billing_address\": null,\n        \"billing_account\": null\n    }\n}",
+      "root_type": "object",
+      "resource_kind": "meter-object"
+    }
+  ]
+}

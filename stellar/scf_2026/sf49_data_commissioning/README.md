@@ -1,8 +1,8 @@
 # Data-service commissioning designs for SCF SF49
 
-These two designs turn the maintained merchant product into a defined installation that an API or data operator can commission. Use them with the [original SF49 adoption process](../SF49_ADOPTION_PILOT_PLAYBOOK_20261009.md) and its existing private workorder. The deliverable is one agreed useful operation on the merchant's host, its complete output in the buyer's application, and a receiving operator able to change and maintain it.
+These commissioning designs turn the maintained merchant product into a defined installation that an API or data operator can commission. Use them with the [original SF49 adoption process](../SF49_ADOPTION_PILOT_PLAYBOOK_20261009.md) and its existing private workorder. The deliverable is one agreed useful operation on the merchant's host, its complete output in the buyer's application, and a receiving operator able to change and maintain it.
 
-The reference products are **SEC company-data editions** and **OData collections**. They exercise different customer requirements: a filing-derived record whose publication history matters, and a typed operational collection whose pages, keys and source access must stay intact. Both already have source authoring, merchant configuration, original buyer handoffs and managed Applications integration. The selected release remains the shared Starforge installation.
+The reference products include **SEC company-data editions**, **OData collections**, and [**approved imagery deliveries**](IMAGERY.md). They exercise different customer requirements: a filing-derived record whose publication history matters, a typed operational collection whose pages, keys and source access must stay intact, and a geographic selection whose approved source, rights and exact image files reach the buyer together. SEC and OData already have source authoring, merchant configuration, original buyer handoffs and managed Applications integration. The selected release remains the shared Starforge installation.
 
 ## Choose the customer job
 
@@ -10,8 +10,9 @@ The reference products are **SEC company-data editions** and **OData collections
 | --- | --- | --- | --- |
 | SEC company-data editions | An analysis application obtains the reported facts for a selected company, concept, unit and filing/period window, retaining the observations needed for a source-aware financial review. A filing-index consumer can instead locate the selected company's original filing documents. | A versioned GET resource with explicit offered concepts or forms, immutable acquisition identity, complete selected rows and a source-bound continuation. | Select the actual company, offered product, filing and period policy, complete receiving consumer and refresh cadence. |
 | OData collection receiving | An operational application obtains the approved order or other entity collection and can reconcile a later edition by declared keys. A customer requiring current provider pages can use the live service. | Either an accepted captured collection published through the original dataset seller, or a live paid page from one reviewed query and source binding. | Select snapshot or live behavior, exact entity/projection/filter, row and byte ceilings, buyer spending cap and receiving application. |
+| Approved imagery receiving | A GIS user opens the agreed area, acquisition window, scene selection and image assets with their source metadata and rights. | A reviewed STAC edition and exact files carried through the existing merchant/buyer into a portable GIS handover and independently reopenable commissioning record. | Select the real catalog/identity, licensed collections, useful scene/asset pairs, payment unit, complete buyer cap, receiving application and refresh/maintenance owner. |
 
-For either design, the implementation price buys the agreed integration, source handling, deployment and operator handover. The merchant selects the commercial value and price of its own service. Its data receipts, implementation invoices and ongoing care remain the original distinct commercial events.
+For each design, the implementation price buys the agreed integration, source handling, deployment and operator handover. The merchant selects the commercial value and price of its own service. Its data receipts, implementation invoices and ongoing care remain the original distinct commercial events.
 
 ### SEC: an edition the receiving analyst can use
 
@@ -91,11 +92,25 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live/managed-receiving
 
 Both source-owned runners retain complete outputs and original operation identities in their selected output directory. The merchant and buyer operation remain with their existing owners while receiving proceeds.
 
+## Commission approved imagery and receiving
+
+The [imagery commissioning guide](IMAGERY.md) carries the customer's selected geographic job through actual catalog access, eoAPI policy review, explicit file selection, the original merchant/buyer and the receiving GIS application. It includes native-schema examples for the [scene query](imagery-query.example.json), [private source references](imagery-source-runtime.example.json), [original Buyer](imagery-buyer-config.example.json) and [deployment access plan](imagery-commissioning-plan.example.json). The maintained STAC and Prescient owners perform source/SDK acquisition, receiving and recovery.
+
+The guide maps source/terms change, actual purchase continuation, receiving-host restoration and production operation onto the same six existing grant packages. Its [application insertion](IMAGERY_APPLICATION_TEXT.md) and complete five-scene demonstration join the current manuscript and customer demonstration.
+
 ## Continue into the buyer's recurring analysis
 
 The [Python analysis and workbook commissioning guide](PYTHON_ANALYSIS.md) carries the selected SEC observations or complete OData collection into the customer's saved query, exact-value spreadsheet mapping, reviewed source refresh and receiving handover. It includes original client recipes for [SEC observations](sec-workbook.recipe.example.json), [OData Orders](odata-workbook.recipe.example.json) and [a reviewed recurring edition](sec-workbook-refresh.recipe.example.json).
 
 This is the downstream use of the source and purchase selected above. The customer chooses the decision, precision policy and reason to return; the original AnalysisWorkspace, workbook client, native agent tools and managed runtime retain its work. The [self-contained application insertion](PYTHON_APPLICATION_TEXT.md) gives the current manuscript editors the customer outcome and remaining host-integration work.
+
+## Commission source editions and complete report receiving
+
+The [source-edition commissioning guide](SOURCE_EDITION_COMMISSIONING.md) carries Matomo report hierarchy and Coin Metrics Cloud/API source meaning into the original merchant, buyer application and second-operator handover. The completed foundations are the original 89-row hierarchical Matomo source/customer delivery and 168 actual hourly Community reference-rate observations with a lossless API/CSV comparison. Their original remaining browser/release stages keep their recorded status.
+
+Use the native [Matomo comparison request](matomo-edition-comparison.example.json), [reference-rate comparison request](reference-rate-comparison.example.json) and [existing SF77 delivery fields](source-edition-delivery-fields.example.json) with the customer's actual source/edition IDs and original terms. The guide preserves whole-population coverage, exact values and time units, daily catalog versions, deliberate omissions, source/terms change and complete receiving. It maps actual customer-host adaptations to the same six packages and retains the original Talos $9,800 / 15-business-day workshare as a separate commissioning route. Its [application contribution](SOURCE_EDITION_APPLICATION_TEXT.md) joins the same canonical manuscript.
+
+The original support case and owner terms can travel with those source files through [SF49's native workorder carrier](source-edition-workorder.mjs). `prepare`, `receive` and `replay` call the maintained SF74/SF77 APIs, preserve complete original input bytes and coverage, and verify the same packet after transfer. Use the [attachment inventory](source-edition-attachments.example.json) for separately retained provider handovers and receiving records. Approved price remains independent of an unrecorded cost; the original model and terms editor preserve null cost and display a known adverse margin without repricing.
 
 ## The remaining engineering in the grant cohort
 
@@ -133,3 +148,11 @@ This design reads the following original source at revision `434ccfd8b34e056f29d
 The complete original workflow remains in [SEC Applications](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/434ccfd8b34e056f29d9e265575ff1a63cda73af/stellar/scf-starforge-20261009/distribution/runtime-workspace/SEC_EDGAR_APPLICATIONS.md), [OData Applications](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/434ccfd8b34e056f29d9e265575ff1a63cda73af/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live/APPLICATIONS.md) and [the live source contract](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/434ccfd8b34e056f29d9e265575ff1a63cda73af/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live/README.md). Customer-specific inputs and correspondence stay in the original private case.
 
 SCF's [submission criteria](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/submission-criteria) call for a self-contained technical and market case. Its [budget guidance](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/budget-and-deliverable-guidelines) ties future development to defined outcomes and requires architecture before submission. This commissioning design supplies the selected resource and receiving contract before that funded customer-host work begins.
+
+## Streamed source bundles in the commissioning desk
+
+The [source delivery guide](SOURCE_DELIVERY.md) carries an exact saved workorder and its source attachments through archive export, receiving and reopen. The original case remains the review and commissioning authority. File uploads, archive downloads and received source files use streams outside the case JSON; the desk retains a compact descriptor with the original bundle, manifest and command identities.
+
+The [host API](SOURCE_DELIVERY_API.md) supplies the transfer service, authenticated HTTP routes and panel for the existing commissioning desk. It supports attachments up to 8 GiB each within the 16 GiB source limit, keeps interrupted commands under their original IDs, and replays the original SF49/SF77 workorder before an attachment or receiving result is accepted. The original inline-material limit is unchanged.
+
+The installed `starforge source-edition-workorder` command now also exposes `inspect`, `export`, `inspect-archive` and `receive-archive`. Ordinary `prepare`, `replay` and directory `receive` retain their existing inputs and outputs. Archive operations use the supplied Python interpreter and the same maintained streaming archive engine as Cloud delivery, with a distinct source-edition schema and limits.

@@ -176,6 +176,27 @@
         "route-sheet-browser.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/operation-contract.mjs",
+      [
+        "operation-contract.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/operation-policy-model.mjs",
+      [
+        "operation-policy-model.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/operation-policy-browser.mjs",
+      [
+        "operation-policy-browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

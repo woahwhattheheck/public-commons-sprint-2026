@@ -1,0 +1,25 @@
+{
+  "schema": "stellar-forge.wordpress-native-source.v1",
+  "sourceRef": "d9306fe503008182bb549e1cb6971500a203faee",
+  "files": {
+    "__init__.py": "8033cd0f92a898d7db31c2d55fc2bc8049445d84",
+    "config.mjs": "2d129fd3f65c766e3cd06eed3664348f7868f7a6",
+    "files.mjs": "5744c28a5c652e5f275a4da9540b0511d690e5f6",
+    "transport.mjs": "a8e125502e47dc561991c90c2a702d8d73de8ca6",
+    "capture.mjs": "d80e13ddf2cc1f4988f7d258d5f35d886d957795",
+    "edition.mjs": "14c7dbac02c556bf6ce388d0b370c3e53f5fd3ed",
+    "packet.py": "5653c026ef30192519d7ef7acd2da89023d1d0e3",
+    "packet.mjs": "839680847b55e4d132e546dd1b6a679a2a474762",
+    "source_files.py": "87960366cf17c06d99e82d5b4988df9ead0a1b5d",
+    "workspace.mjs": "cdf9fe99c17edfad2092aee8d43ca3a79e9f191e",
+    "server.mjs": "8f10fddee926c53aaad5c2f2d365de3153c8d2d0",
+    "cli.mjs": "7de5d7282ac9519a781aa07e965621e2fe0cc25f",
+    "managed.mjs": "97df73a7ef50edd7a975f361d0071990966d7f5a",
+    "application-provider.mjs": "df6056a0b3d1ead087e1ac8eb94981c9a33a6b1f",
+    "public/index.html": "555c4758bc9dd786565d9c9949fb1d7577c51862",
+    "public/app.mjs": "19127e4e7b5b7d7d04a90ea93633e6595a33560f",
+    "public/style.css": "0d32f445f7a5dcf78bb0cfc0355a7496c82fc323",
+    "README.md": "321ba6b7a094642b735c7927f44ee25c2af23391",
+    "../../distribution/contributions/wordpress.json": "d78b4e1753d9baabc1994c38c43997ebb00c945c"
+  }
+}

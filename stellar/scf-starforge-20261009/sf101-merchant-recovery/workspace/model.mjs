@@ -8,6 +8,7 @@ import { openS3Store } from '../remote-s3.mjs';
 import { inspectLocalCapture, readCapturedBundle, runLocalCapture, runLocalVerification,
   inspectLocalPublisherRestore, runLocalPublisherPreparation, RETIRED_CAPTURE_PREFIX } from './local.mjs';
 import { acquireDeliveryLease } from '../../sf98-merchant-delivery/delivery-lock.mjs';
+import { inspectLocalFleetRestore, runLocalFleetPreparation } from './fleet.mjs';
 
 export const HOST_SCHEMA = 'stellar-forge.recovery-workspace.v1';
 const STATE_SCHEMA = 'stellar-forge.recovery-workspace-state.v1';
@@ -22,7 +23,7 @@ const stamp = () => new Date().toISOString();
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const clone = value => JSON.parse(JSON.stringify(value));
-const localCommand = command => ['snapshot', 'local-verify', 'publisher-prepare'].includes(command);
+const localCommand = command => ['snapshot', 'local-verify', 'publisher-prepare', 'fleet-prepare'].includes(command);
 const inside = (parent, child) => parent === child || child.startsWith(parent + sep);
 
 function need(ok, code, message = code, status = 400) {
@@ -102,7 +103,7 @@ function compileHost(value) {
     value.profiles.length > 0 && value.profiles.length <= 32, 'WORKSPACE_HOST_CONFIG_INVALID');
   const seen = new Set();
   const profiles = value.profiles.map(input => {
-    exact(input, ['id', 'label', 'storeConfig', 'operations', 'passEnv', 'bundleRoots', 'downloadRoot', 'restoreRoot', 'capturePlans', 'publisherRestores'], 'profile');
+    exact(input, ['id', 'label', 'storeConfig', 'operations', 'passEnv', 'bundleRoots', 'downloadRoot', 'restoreRoot', 'capturePlans', 'publisherRestores', 'fleetRestores', 'fleetTargets'], 'profile');
     const id = identifier(input.id, 'profile ID');
     need(!seen.has(id), 'WORKSPACE_DUPLICATE_PROFILE'); seen.add(id);
     need(PASS_ENV.test(input.passEnv ?? ''), 'WORKSPACE_PASSPHRASE_NAME_INVALID');
@@ -148,17 +149,47 @@ function compileHost(value) {
       return { id: restoredId, label: label(restored.label, restoredId), bundleDirectory, restoreDirectory };
     });
     need(publisherRestores.length <= 32, 'WORKSPACE_PUBLISHER_RESTORES_INVALID');
+    const fleetRestoreIds = new Set();
+    need(input.fleetRestores === undefined || Array.isArray(input.fleetRestores),
+      'WORKSPACE_FLEET_RESTORES_INVALID');
+    const fleetRestores = (input.fleetRestores ?? []).map(restored => {
+      exact(restored, ['id', 'label', 'bundleDirectory', 'restoreDirectory'], 'restored fleet');
+      const restoredId = identifier(restored.id, 'restored-fleet ID');
+      need(!fleetRestoreIds.has(restoredId), 'WORKSPACE_DUPLICATE_FLEET_RESTORE'); fleetRestoreIds.add(restoredId);
+      const bundleDirectory = absolute(restored.bundleDirectory, 'Original encrypted fleet bundle');
+      const restoreDirectory = absolute(restored.restoreDirectory, 'Original restored fleet');
+      need(bundleRoots.some(root => bundleDirectory !== root.directory && inside(root.directory, bundleDirectory)) ||
+        bundleDirectory !== downloadRoot && inside(downloadRoot, bundleDirectory),
+        'WORKSPACE_FLEET_BUNDLE_OUTSIDE_HOST_ROOTS');
+      need(restoreDirectory !== restoreRoot && inside(restoreRoot, restoreDirectory),
+        'WORKSPACE_FLEET_RESTORE_OUTSIDE_HOST_ROOTS');
+      need(!inside(bundleDirectory, restoreDirectory) && !inside(restoreDirectory, bundleDirectory),
+        'WORKSPACE_FLEET_RESTORE_OVERLAP');
+      return { id: restoredId, label: label(restored.label, restoredId), bundleDirectory, restoreDirectory };
+    });
+    need(fleetRestores.length <= 32, 'WORKSPACE_FLEET_RESTORES_INVALID');
+    const fleetTargetIds = new Set();
+    need(input.fleetTargets === undefined || Array.isArray(input.fleetTargets), 'WORKSPACE_FLEET_TARGETS_INVALID');
+    const fleetTargets = (input.fleetTargets ?? []).map(target => {
+      exact(target, ['id', 'label', 'targetFile', 'operationDirectory'], 'receiving fleet target');
+      const targetId = identifier(target.id, 'fleet-target ID');
+      need(!fleetTargetIds.has(targetId), 'WORKSPACE_DUPLICATE_FLEET_TARGET'); fleetTargetIds.add(targetId);
+      return { id: targetId, label: label(target.label, targetId),
+        targetFile: absolute(target.targetFile, 'Original private fleet target declaration'),
+        operationDirectory: absolute(target.operationDirectory, 'Original fleet receiving operation') };
+    });
+    need(fleetTargets.length <= 32, 'WORKSPACE_FLEET_TARGETS_INVALID');
     return { id, label: label(input.label, id),
       storeConfig: input.storeConfig == null ? null : absolute(input.storeConfig, 'S3 configuration'),
       operations: absolute(input.operations, 'Original operations directory'), passEnv: input.passEnv, bundleRoots,
-      capturePlans, publisherRestores, downloadRoot, restoreRoot };
+      capturePlans, publisherRestores, fleetRestores, fleetTargets, downloadRoot, restoreRoot };
   });
   return { schema: HOST_SCHEMA, title: label(value.title, 'Merchant recovery'), profiles };
 }
 function publicError(error) {
   const result = { code: String(error.code ?? 'RECOVERY_WORKSPACE_FAILED').slice(0, 100),
     message: String(error.message ?? 'Recovery operation failed').slice(0, 500) };
-  for (const key of ['status', 'providerCode', 'requestId', 'putRequestId', 'retryAfter', 'retryable', 'mayHaveCommitted'])
+  for (const key of ['status', 'providerCode', 'originalCode', 'requestId', 'putRequestId', 'retryAfter', 'retryable', 'mayHaveCommitted', 'reconciliationCode', 'reconciliationStatus'])
     if (['string', 'number', 'boolean'].includes(typeof error[key])) result[key] = error[key];
   return result;
 }
@@ -175,6 +206,18 @@ export async function readRecoveryConfiguration(configFile) {
   absolute(configFile, 'Host configuration');
   const bytes = await privateBytes(configFile);
   return { configFile, sha256: hash(bytes), host: compileHost(JSON.parse(bytes.toString('utf8'))) };
+}
+
+// Native attachment identity: read the existing state without acquiring its writer.
+export async function readRecoveryWorkspaceIdentity({ configFile, directory } = {}) {
+  await privateDirectory(directory);
+  const { sha256 } = await readRecoveryConfiguration(configFile);
+  const state = await privateJSON(join(directory, 'workspace.json'));
+  need(state.schema === STATE_SCHEMA && state.configFile === configFile &&
+    /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(state.id ?? ''),
+    'WORKSPACE_IDENTITY_CHANGED', 'Select this existing workspace and its original host configuration');
+  return { schema: 'stellar-forge.recovery-workspace-identity.v1', workspaceId: state.id,
+    directory, configFile, configurationSha256: sha256 };
 }
 
 export async function openRecoveryWorkspace({ configFile, directory, readOnly = false } = {}) {
@@ -354,6 +397,71 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
       'WORKSPACE_PUBLISHER_RESTORE_SELECTION_CHANGED');
     return original;
   }
+  async function fleetRestoreSource(profile, restoreId) {
+    identifier(restoreId, 'completed restore operation ID');
+    const original = await operation(profile.id, restoreId);
+    need(original.command === 'restore' && original.status === 'COMPLETE' &&
+      HEX.test(original.snapshotId ?? ''), 'WORKSPACE_FLEET_COMPLETE_RESTORE_REQUIRED',
+      'Select a completed original cold restore of the typed dataset fleet');
+    absolute(original.bundle, 'Original encrypted bundle');
+    absolute(original.destination, 'Completed cold restore');
+    need(allowedBundle(profile, original.bundle) && original.destination !== profile.restoreRoot &&
+      inside(profile.restoreRoot, original.destination), 'WORKSPACE_FLEET_RESTORE_OUTSIDE_HOST_ROOTS');
+    need(!inside(original.bundle, original.destination) && !inside(original.destination, original.bundle),
+      'WORKSPACE_FLEET_RESTORE_OVERLAP');
+    for (const path of [original.bundle, original.destination]) {
+      for (const control of [directory, ...host.profiles.map(item => item.operations)])
+        need(!inside(control, path) && !inside(path, control), 'WORKSPACE_OPERATION_PATH_OVERLAP');
+      await privateDirectory(path);
+    }
+    need(hash(await privateBytes(join(original.bundle, 'manifest.json'), MAX_MANIFEST)) === original.snapshotId,
+      'WORKSPACE_ORIGINAL_SNAPSHOT_CHANGED');
+    return original;
+  }
+  function declaredFleetRestore(profile, restoredId) {
+    identifier(restoredId, 'host-declared restored-fleet ID');
+    const selected = profile.fleetRestores.find(item => item.id === restoredId);
+    need(selected, 'WORKSPACE_FLEET_RESTORE_NOT_DECLARED',
+      'Select an original restored fleet declared by this host profile', 404);
+    return selected;
+  }
+  async function declaredFleetSource(profile, restoredId) {
+    const selected = declaredFleetRestore(profile, restoredId);
+    for (const path of [selected.bundleDirectory, selected.restoreDirectory]) {
+      for (const control of [directory, ...host.profiles.map(item => item.operations)])
+        need(!inside(control, path) && !inside(path, control), 'WORKSPACE_OPERATION_PATH_OVERLAP');
+      await privateDirectory(path);
+    }
+    const raw = await privateBytes(join(selected.bundleDirectory, 'manifest.json'), MAX_MANIFEST);
+    const manifest = JSON.parse(raw.toString('utf8'));
+    need(object(manifest) && manifest.schema === BUNDLE_SCHEMA &&
+      Number.isSafeInteger(manifest.fileCount) && manifest.fileCount >= 0 &&
+      Number.isSafeInteger(manifest.totalPlainBytes) && manifest.totalPlainBytes >= 0,
+      'WORKSPACE_ORIGINAL_BUNDLE_REQUIRED');
+    return { fleetRestore: clone(selected), bundle: selected.bundleDirectory,
+      destination: selected.restoreDirectory, snapshotId: hash(raw),
+      files: manifest.fileCount, plainBytes: manifest.totalPlainBytes };
+  }
+  function declaredFleetTarget(profile, targetId) {
+    identifier(targetId, 'host-declared fleet-target ID');
+    const target = profile.fleetTargets.find(item => item.id === targetId);
+    need(target, 'WORKSPACE_FLEET_TARGET_NOT_DECLARED',
+      'Select the original fleet target declaration and operation directory from this host profile', 404);
+    return target;
+  }
+  async function fleetRestoreBinding(profile, review) {
+    const options = review.options;
+    const original = options.sourceFleetRestoreId !== undefined ?
+      await declaredFleetSource(profile, options.sourceFleetRestoreId) : await fleetRestoreSource(profile, options.sourceRestoreId);
+    const target = declaredFleetTarget(profile, options.fleetTargetId);
+    need(original.snapshotId === options.snapshotId && original.bundle === options.bundle &&
+      original.destination === options.out && target.targetFile === options.targetFile &&
+      target.operationDirectory === options.operationDirectory &&
+      JSON.stringify(target) === JSON.stringify(review.fleetTarget), 'WORKSPACE_FLEET_RESTORE_SELECTION_CHANGED');
+    if (original.fleetRestore) need(JSON.stringify(original.fleetRestore) === JSON.stringify(review.fleetRestore),
+      'WORKSPACE_FLEET_RESTORE_SELECTION_CHANGED');
+    return original;
+  }
   function captureIdentity(profileId, id) {
     return hash(STATE_SCHEMA + '\n' + workspaceState.id + '\n' + directory + '\n' + profileId + '\n' + id);
   }
@@ -368,6 +476,36 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
         options.plan === plan.planFile && dirname(options.out) === root.directory &&
         options.captureId === captureIdentity(profile.id, review.operationId) &&
         HEX.test(options.expectedPlanSha256 ?? ''), 'WORKSPACE_CAPTURE_SELECTION_CHANGED');
+    } else if (review.command === 'fleet-prepare') {
+      need((options.sourceRestoreId !== undefined) !== (options.sourceFleetRestoreId !== undefined),
+        'WORKSPACE_FLEET_RESTORE_SELECTION_INVALID');
+      if (options.sourceFleetRestoreId !== undefined) {
+        const selected = declaredFleetRestore(profile, options.sourceFleetRestoreId);
+        need(review.sourceType === 'host-fleet-restore' &&
+          JSON.stringify(selected) === JSON.stringify(review.fleetRestore) &&
+          selected.bundleDirectory === options.bundle && selected.restoreDirectory === options.out,
+          'WORKSPACE_FLEET_RESTORE_SELECTION_CHANGED');
+      } else {
+        identifier(options.sourceRestoreId, 'completed restore operation ID');
+        need(review.sourceType === 'remote-restore' && review.fleetRestore === undefined,
+          'WORKSPACE_FLEET_RESTORE_SELECTION_CHANGED');
+      }
+      const target = declaredFleetTarget(profile, options.fleetTargetId), native = review.restoredFleet?.review;
+      need(JSON.stringify(target) === JSON.stringify(review.fleetTarget) &&
+        target.targetFile === options.targetFile && target.operationDirectory === options.operationDirectory &&
+        allowedBundle(profile, options.bundle) && options.out !== profile.restoreRoot && inside(profile.restoreRoot, options.out) &&
+        HEX.test(options.snapshotId ?? '') && options.snapshotId === review.snapshotId &&
+        HEX.test(options.expectedReviewSha256 ?? '') && HEX.test(options.fleetOperationId ?? '') &&
+        options.expectedReviewSha256 === review.restoredFleet?.reviewSha256 &&
+        options.fleetOperationId === review.restoredFleet?.operationId && options.quiesced === true &&
+        native?.snapshotId === options.snapshotId && native.bundleDirectory === options.bundle &&
+        native.restoreDirectory === options.out && native.targetFile === options.targetFile &&
+        native.operationDirectory === options.operationDirectory, 'WORKSPACE_FLEET_RESTORE_SELECTION_CHANGED');
+      for (const path of [options.operationDirectory, native.deploymentBundle, ...native.roots.map(root => root.destination)]) {
+        absolute(path, 'Original fleet receiving path');
+        for (const control of [directory, ...host.profiles.map(item => item.operations)])
+          need(!inside(control, path) && !inside(path, control), 'WORKSPACE_OPERATION_PATH_OVERLAP');
+      }
     } else if (review.command === 'publisher-prepare') {
       need((options.sourceRestoreId !== undefined) !== (options.sourcePublisherRestoreId !== undefined),
         'WORKSPACE_PUBLISHER_RESTORE_SELECTION_INVALID');
@@ -436,6 +574,31 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
         options: { command: 'snapshot', id: input.id, plan: capturePlan.planFile, out,
           passEnv: profile.passEnv, captureId, expectedPlanSha256: plan.planSha256,
           captureKind: plan.captureKind } };
+    } else if (input.action === 'fleet-prepare') {
+      need(input.capturePlanId === undefined && input.publisherRestoreId === undefined &&
+        input.snapshotId === undefined && input.destinationName === undefined && input.bundleId === undefined,
+        'WORKSPACE_FLEET_RESTORE_SELECTION_INVALID');
+      need(input.quiesced === true, 'WORKSPACE_FLEET_QUIESCENCE_REQUIRED',
+        'Keep the receiving fleet and original selected writers stopped through their native preparation');
+      need((input.restoreId !== undefined) !== (input.fleetRestoreId !== undefined),
+        'WORKSPACE_FLEET_RESTORE_SELECTION_INVALID',
+        'Select either the original completed remote restore or one host-declared restored fleet');
+      const original = input.fleetRestoreId !== undefined ?
+        await declaredFleetSource(profile, input.fleetRestoreId) : await fleetRestoreSource(profile, input.restoreId);
+      const fleetTarget = declaredFleetTarget(profile, input.fleetTargetId);
+      const selected = { command: 'fleet-prepare', id: input.id,
+        ...(input.fleetRestoreId !== undefined ? { sourceFleetRestoreId: input.fleetRestoreId } : { sourceRestoreId: input.restoreId }),
+        fleetTargetId: input.fleetTargetId, bundle: original.bundle, out: original.destination,
+        passEnv: profile.passEnv, snapshotId: original.snapshotId, quiesced: true,
+        targetFile: fleetTarget.targetFile, operationDirectory: fleetTarget.operationDirectory };
+      const restoredFleet = await inspectLocalFleetRestore(selected);
+      review = { profileId: profile.id, command: 'fleet-prepare', operationId: input.id,
+        ...(original.fleetRestore ? { sourceType: 'host-fleet-restore', fleetRestore: original.fleetRestore } : { sourceType: 'remote-restore' }),
+        fleetTarget: clone(fleetTarget), store: null, snapshotId: original.snapshotId,
+        source: original.bundle, destination: original.destination,
+        originalStatus: restoredFleet.status === 'FLEET_RECEIVING_COMPLETE' ? 'COMPLETE' : restoredFleet.status,
+        files: original.files ?? null, plainBytes: original.plainBytes ?? null, restoredFleet,
+        options: { ...selected, expectedReviewSha256: restoredFleet.reviewSha256, fleetOperationId: restoredFleet.operationId } };
     } else if (input.action === 'publisher-prepare') {
       need(input.capturePlanId === undefined && input.quiesced === undefined &&
         input.snapshotId === undefined && input.destinationName === undefined && input.bundleId === undefined,
@@ -476,13 +639,15 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
   }
   async function selection(input) {
     exact(input, ['profileId', 'action', 'id', 'bundleId', 'snapshotId', 'destinationName',
-      'capturePlanId', 'quiesced', 'restoreId', 'publisherRestoreId'], 'recovery selection');
+      'capturePlanId', 'quiesced', 'restoreId', 'publisherRestoreId', 'fleetRestoreId', 'fleetTargetId'], 'recovery selection');
+    if (input.action !== 'fleet-prepare') need(input.fleetRestoreId === undefined && input.fleetTargetId === undefined,
+      'WORKSPACE_FLEET_SELECTION_NOT_APPLICABLE', 'Fleet selectors belong to the fleet preparation action');
     const profile = selectedProfile(input.profileId);
     identifier(input.id, 'original operation ID');
-    need(['snapshot', 'verify', 'publisher-prepare', 'push', 'pull', 'restore', 'resume'].includes(input.action),
+    need(['snapshot', 'verify', 'publisher-prepare', 'fleet-prepare', 'push', 'pull', 'restore', 'resume'].includes(input.action),
       'WORKSPACE_ACTION_INVALID');
     await currentHost();
-    if (['snapshot', 'verify', 'publisher-prepare'].includes(input.action)) return localSelection(profile, input);
+    if (['snapshot', 'verify', 'publisher-prepare', 'fleet-prepare'].includes(input.action)) return localSelection(profile, input);
     requireRemoteStore(profile);
     need(input.capturePlanId === undefined && input.quiesced === undefined && input.restoreId === undefined &&
       input.publisherRestoreId === undefined,
@@ -566,7 +731,7 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
     }
     const running = active?.key === requestPath(request.review.profileId, request.review.operationId);
     const local = request.local ? clone(request.local) : null;
-    for (const key of ['paidJobsPlan', 'datasetPublisherPlan']) if (local?.[key]) {
+    for (const key of ['paidJobsPlan', 'datasetPublisherPlan', 'merchantFleetPlan']) if (local?.[key]) {
       const { schema, planSha256, bytes } = local[key];
       local[key] = { schema, planSha256, bytes };
     }
@@ -577,6 +742,12 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
       running, cancelRequested: running && active.cancelRequested, attempts: request.attempts,
       operation: original, ...(local ? { local } : {}),
       error: error ?? request.error ?? null };
+  }
+  async function request(profileId, id) {
+    selectedProfile(profileId); identifier(id, 'operation ID');
+    const retained = await readRequest(profileId, id);
+    need(retained, 'WORKSPACE_REQUEST_NOT_FOUND', 'No workspace request exists for this profile and operation ID', 404);
+    return requestView(retained);
   }
   async function requests({ cursor, limit = 50 } = {}) {
     if (!await exists(requestRoot)) return { requests: [], nextCursor: null };
@@ -607,6 +778,7 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
       if (local) {
         localPathBindings(profile, request.review);
         if (request.review.command === 'publisher-prepare') await publisherRestoreBinding(profile, request.review);
+        if (request.review.command === 'fleet-prepare') await fleetRestoreBinding(profile, request.review);
         request.local ??= {};
         const localOptions = { options: request.review.options, state: request.local,
           save: async () => { request.updatedAt = stamp(); await atomicJSON(job.key, request); },
@@ -614,6 +786,7 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
         result = request.review.command === 'snapshot' ?
           await runLocalCapture({ ...localOptions, allowCapture: job.allowCapture === true }) :
           request.review.command === 'publisher-prepare' ? await runLocalPublisherPreparation(localOptions) :
+          request.review.command === 'fleet-prepare' ? await runLocalFleetPreparation(localOptions) :
           await runLocalVerification(localOptions);
       } else {
         if (request.review.command === 'push') need(
@@ -681,6 +854,7 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
       localPathBindings(profile, request.review);
       if (request.result?.status === 'COMPLETE') return requestView(request);
       if (request.review.command === 'publisher-prepare') await publisherRestoreBinding(profile, request.review);
+      if (request.review.command === 'fleet-prepare') await fleetRestoreBinding(profile, request.review);
       if (request.review.command === 'snapshot') need(!request.local?.pendingRetirement &&
         await readCapturedBundle(request.review.options), 'WORKSPACE_CAPTURE_REVIEW_REQUIRED',
         'Review the same capture and confirm that its original source producers are quiesced', 409);
@@ -713,7 +887,8 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
     for (const profile of host.profiles) profiles.push({ id: profile.id, label: profile.label,
       store: await storeHint(profile), remoteConfigured: profile.storeConfig !== null, operations: profile.operations,
       bundleRoots: clone(profile.bundleRoots), capturePlans: clone(profile.capturePlans),
-      publisherRestores: clone(profile.publisherRestores),
+      publisherRestores: clone(profile.publisherRestores), fleetRestores: clone(profile.fleetRestores),
+      fleetTargets: clone(profile.fleetTargets),
       downloadRoot: profile.downloadRoot, restoreRoot: profile.restoreRoot,
       passEnv: profile.passEnv, passphraseAvailable: typeof process.env[profile.passEnv] === 'string' && process.env[profile.passEnv].length > 0 });
     const page = await requests();
@@ -734,7 +909,13 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
     await active?.promise;
     closed = true; await lease?.release();
   }
-  return { state, localBundles, operations, operation, inventory, requests, review: selection,
+  async function identity() {
+    need(!closed, 'WORKSPACE_CLOSED', 'The recovery workspace is closed', 409);
+    await currentHost();
+    return { schema: 'stellar-forge.recovery-workspace-identity.v1', workspaceId: workspaceState.id,
+      directory, configFile, configurationSha256: configHash };
+  }
+  return { state, identity, localBundles, operations, operation, inventory, requests, request, review: selection,
     start: input => transition(() => start(input)),
     resume: (profileId, id) => transition(() => resume(profileId, id)),
     cancel: (profileId, id) => transition(() => cancel(profileId, id)), close };

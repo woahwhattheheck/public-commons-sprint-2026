@@ -14,7 +14,7 @@ import { createRedisQuerySource } from './source.mjs';
 
 const HOST = '127.0.0.1';
 const NAME = 'sf30-merchant';
-const READ_COMMANDS = ['+ping', '+eval_ro', '+strlen', '+get', '+hstrlen', '+hmget', '+zrange', '+xrange', '+select'];
+const READ_COMMANDS = ['+ping', '+eval_ro', '+strlen', '+get', '+hstrlen', '+hmget', '+zrange', '+xrange', '+lrange', '+llen', '+sscan', '+select'];
 const commandTimeout = 5000;
 const pairs = values => Object.fromEntries(Array.from({ length: values.length / 2 }, (_, i) => [String(values[i * 2]), values[i * 2 + 1]]));
 async function until(check, message, timeout = 20000) {

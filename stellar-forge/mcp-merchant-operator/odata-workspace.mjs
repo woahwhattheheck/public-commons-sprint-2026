@@ -1,5 +1,6 @@
 import { odataWorkspaceTools, alias, hash, uuid, paging, read, recordId, text, object } from './catalog/odata-workspace.mjs';
 export { odataWorkspaceTools } from './catalog/odata-workspace.mjs';
+import { isODataCollectionOperation, callODataCollection } from './odata-collections.mjs';
 // MIT. Agents and people continue the same original OData source and customer workspace.
 import { constants } from 'node:fs';
 import { open, realpath, lstat, mkdir, readFile, readdir, rename, rm } from 'node:fs/promises';
@@ -75,12 +76,13 @@ export async function readODataWorkspaceConfiguration(path) {
   const base = dirname(path), workspaces = Object.create(null), seen = new Set();
   for (const [name, input] of Object.entries(raw.workspaces)) {
     identifier(name, 'OData workspace alias');
-    exact(input, ['label', 'directory', 'services', 'imports', 'responses', 'merchants', 'runtime'], ['directory']);
+    exact(input, ['label', 'directory', 'services', 'imports', 'responses', 'collectionSelections', 'collectionSources', 'merchants', 'runtime'], ['directory']);
     const directory = await realpath(hostPath(input.directory, base));
     await privateSupportDirectory(directory);
     if (seen.has(directory)) throw failure('CONFIGURATION_ERROR', 'Give each original OData directory one workspace alias.');
     seen.add(directory);
-    const services = Object.create(null), imports = Object.create(null), responses = Object.create(null), merchants = Object.create(null);
+    const services = Object.create(null), imports = Object.create(null), responses = Object.create(null),
+      collectionSelections = Object.create(null), collectionSources = Object.create(null), merchants = Object.create(null);
     for (const [key, item] of entries(input.services, 'provider services')) {
       exact(item, ['label', 'url', 'authEnv', 'allowLoopback'], ['url']);
       if (item.allowLoopback !== undefined && typeof item.allowLoopback !== 'boolean')
@@ -90,9 +92,10 @@ export async function readODataWorkspaceConfiguration(path) {
       services[key] = { label: line(item.label ?? key), url: normalizeSourceUrl(item.url, { allowLoopback: item.allowLoopback === true }),
         authEnv: item.authEnv ?? null, allowLoopback: item.allowLoopback === true };
     }
-    for (const [kind, target] of [['imports', imports], ['responses', responses]]) {
+    for (const [kind, target] of [['imports', imports], ['responses', responses],
+      ['collectionSelections', collectionSelections], ['collectionSources', collectionSources]]) {
       for (const [key, item] of entries(input[kind], kind)) {
-        exact(item, ['label', 'file', 'sha256'], ['file']);
+        exact(item, ['label', 'file', 'sha256'], ['file', ...(kind.startsWith('collection') ? ['sha256'] : [])]);
         const file = await realpath(hostPath(item.file, base));
         if (!(await lstat(file)).isFile()) throw failure('CONFIGURATION_ERROR', 'Declare a regular original input file.');
         if (item.sha256 !== undefined && !/^[a-f0-9]{64}$/.test(item.sha256))
@@ -125,7 +128,7 @@ export async function readODataWorkspaceConfiguration(path) {
       }
       merchants[key] = selected;
     }
-    workspaces[name] = { label: line(input.label ?? name), directory, services, imports, responses, merchants, runtime: runtime(input.runtime) };
+    workspaces[name] = { label: line(input.label ?? name), directory, services, imports, responses, collectionSelections, collectionSources, merchants, runtime: runtime(input.runtime) };
   }
   return { workspaces };
 }
@@ -239,6 +242,8 @@ export class MerchantODataWorkspaces {
           authentication: item.authEnv ? 'HOST_ENVIRONMENT' : 'PUBLIC' })),
         imports: Object.entries(entry.imports).map(([sourceImport, item]) => ({ sourceImport, label: item.label, sha256: item.sha256 })),
         responses: Object.entries(entry.responses).map(([response, item]) => ({ response, label: item.label, sha256: item.sha256 })),
+        collectionSelections: Object.entries(entry.collectionSelections ?? {}).map(([selection, item]) => ({ selection, label: item.label, sha256: item.sha256 })),
+        collectionSources: Object.entries(entry.collectionSources ?? {}).map(([sourceDocument, item]) => ({ sourceDocument, label: item.label, sha256: item.sha256 })),
         merchants: Object.entries(entry.merchants).map(([profile, item]) => ({ profile, ...item }))
       })) };
     const configuration = this.#declared(name), opening = this.#handles.get(name);
@@ -355,10 +360,11 @@ export class MerchantODataWorkspaces {
           return { bytes: await ownedBytes(join(handle.workspace.directory, 'exports', record.id, args.filename), 256_000_000),
             name: args.filename, type: args.filename.endsWith('.csv') ? 'text/csv; charset=utf-8' : 'application/json; charset=utf-8' };
         }
-        if (['live-package', 'buyer', 'receiving'].includes(args.kind)) {
+        if (['live-package', 'buyer', 'receiving', 'collection'].includes(args.kind)) {
           const file = await (await this.#live(handle)).file({ id: args.id, kind: args.kind === 'live-package' ? 'package' : args.kind,
             recordId: args.recordId, name: args.filename });
-          return { bytes: file.bytes, name: file.name, type: file.name.endsWith('.jsonl') ? 'application/x-ndjson' : 'application/json; charset=utf-8' };
+          return { bytes: file.bytes, name: file.name, type: file.name.endsWith('.jsonl') ? 'application/x-ndjson' :
+            file.name.endsWith('.csv') ? 'text/csv; charset=utf-8' : file.name.endsWith('.bin') ? 'application/octet-stream' : 'application/json; charset=utf-8' };
         }
         const file = await this.#artifact(name, args.kind, args.id, true);
         return { bytes: file.bytes, name: file.record.name, type: file.record.contentType };
@@ -384,6 +390,9 @@ export class MerchantODataWorkspaces {
 
   async #execute(name, handle, args) {
     const entry = handle.configuration, original = handle.workspace;
+    if (isODataCollectionOperation(name)) return callODataCollection({ name, args, entry,
+      live: await this.#live(handle), declared: workspace => this.#declared(workspace),
+      readInput: (kind, alias, maximum) => this.#declaredInput(entry[kind] ?? {}, alias, maximum) });
     switch (name) {
       case 'merchant_odata_source': {
         if (args.action === 'connect') {
@@ -492,9 +501,12 @@ export class MerchantODataWorkspaces {
         }
         return result;
       }
+      case 'merchant_odata_semantics':
+        return original.semantics({ id: nativeId(args.editionId), fields: args.fields });
       case 'merchant_odata_export': {
         const terms = args.profile === undefined ? null : this.#profile(entry, args.profile);
         const result = await original.exportEdition({ id: nativeId(args.editionId), name: args.name, fields: args.fields,
+          expectedSemanticSha256: args.expectedSemanticSha256,
           ...(terms ? { origin: terms.origin, path: terms.path, payment: { scheme: 'exact', ...terms.payment, amount: terms.amount } } : {}),
           ...(args.defaultLimit === undefined ? {} : { defaultLimit: count(args.defaultLimit, 'Default dataset rows', 1, 10000) }),
           ...(args.maxLimit === undefined ? {} : { maxLimit: count(args.maxLimit, 'Maximum dataset rows', 1, 10000) }) });

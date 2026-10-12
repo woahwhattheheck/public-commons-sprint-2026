@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 import sys
 
-from model import SDK, dump, encoded, fail, identity, now, parse, private_directory, read, write
+from model import SDK, digest, dump, encoded, fail, hash_id, identity, now, parse, private_directory, read, write
 from workspace import file_identity, unpack
 from stellar_forge_buyer.datasets import DatasetAcquisition, DatasetDelivery
 
@@ -157,7 +157,7 @@ def receive_observations(workspace, source_id, projection, *, checkout, session,
 
 
 def receive_scan(workspace, scan_file, *, provider=None, source_id=None, projection=None,
-                 node=None, expected_capture_id=None):
+                 node=None, expected_capture_id=None, expected_input_sha256=None):
     """Consume the existing original SF100 scan without a new buyer session."""
     if bool(provider) == bool(source_id):
         fail("ONE_NATIVE_SCAN_RECEIVING_TARGET_REQUIRED")
@@ -167,6 +167,8 @@ def receive_scan(workspace, scan_file, *, provider=None, source_id=None, project
         fail("NATIVE_SCAN_SOURCE_FILES_TARGET_REQUIRED")
     path = Path(scan_file).expanduser().resolve(strict=True)
     raw = read(path, 16 * 1024 * 1024)
+    if expected_input_sha256 is not None and digest(raw) != hash_id(expected_input_sha256):
+        fail("SCAN_INPUT_CHANGED", expected_sha256=expected_input_sha256, actual_sha256=digest(raw))
     scan = parse(raw)
     delivery = DatasetDelivery.from_finalized_scan(scan)
     status = delivery.native["nativeStatus"]

@@ -1,0 +1,328 @@
+{
+  "schema": "stellar-forge.browser-assets.v1",
+  "root": "./public/",
+  "routes": [
+    [
+      "/connections.html",
+      [
+        "connections.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/connections.mjs",
+      [
+        "connections.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/connections.css",
+      [
+        "connections.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/",
+      [
+        "index.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/app.mjs",
+      [
+        "app.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/style.css",
+      [
+        "style.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/collection.mjs",
+      [
+        "collection.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/collection.html",
+      [
+        "collection.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/collection.css",
+      [
+        "collection.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/pricing.mjs",
+      [
+        "pricing.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/pricing.html",
+      [
+        "pricing.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/pricing.css",
+      [
+        "pricing.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/periods.mjs",
+      [
+        "periods.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/periods.html",
+      [
+        "periods.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/periods.css",
+      [
+        "periods.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/accountant.mjs",
+      [
+        "accountant.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/accountant.html",
+      [
+        "accountant.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/accountant.css",
+      [
+        "accountant.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/runbooks.mjs",
+      [
+        "runbooks.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/runbooks.html",
+      [
+        "runbooks.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/runbooks.css",
+      [
+        "runbooks.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/cryptoworth.mjs",
+      [
+        "cryptoworth.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/cryptoworth.html",
+      [
+        "cryptoworth.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/cryptoworth.css",
+      [
+        "cryptoworth.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/qbo.mjs",
+      [
+        "qbo.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/qbo.html",
+      [
+        "qbo.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/qbo.css",
+      [
+        "qbo.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/xero.mjs",
+      [
+        "xero.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/xero.html",
+      [
+        "xero.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/xero.css",
+      [
+        "xero.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/bitwave.mjs",
+      [
+        "bitwave.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/bitwave.html",
+      [
+        "bitwave.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/bitwave.css",
+      [
+        "bitwave.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/recovery.mjs",
+      [
+        "recovery.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/recovery.html",
+      [
+        "recovery.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/recovery.css",
+      [
+        "recovery.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/adjustments.mjs",
+      [
+        "adjustments.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/adjustments.html",
+      [
+        "adjustments.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/adjustments.css",
+      [
+        "adjustments.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/oauth-browser.mjs",
+      [
+        "../../../sf61-openapi-seller-import/workspace/oauth-browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/source-changes.html",
+      [
+        "source-changes.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/source-changes.mjs",
+      [
+        "source-changes.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/source-changes.css",
+      [
+        "source-changes.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/portfolio.html",
+      [
+        "portfolio.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/portfolio.mjs",
+      [
+        "portfolio.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/portfolio.css",
+      [
+        "portfolio.css",
+        "text/css; charset=utf-8"
+      ]
+    ]
+  ]
+}

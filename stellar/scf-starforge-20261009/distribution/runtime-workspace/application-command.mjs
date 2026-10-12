@@ -1,45 +1,133 @@
 // MIT. Optional private terminal and original CLI URL capture inside the managed runner.
 import { constants } from 'node:fs';
-import { open, readdir, lstat, access } from 'node:fs/promises';
-import { join, dirname } from 'node:path';
+import { readdir, lstat, access } from 'node:fs/promises';
+import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { absolute, privateDirectory, makePrivate, regular, readJSON, saveJSON, operationId,
-  recordId, operationLease, operationRunning, tailFile, plain, need, digest, now } from './storage.mjs';
-import { defaultApplicationProviders } from './application-providers.mjs';
+  recordId, operationLease, operationRunning, tailFile, plain, need, digest, json, canonical, now } from './storage.mjs';
+import { applicationEnvironment } from './application-environment.mjs';
+export { applicationEnvironment };
+import { defaultApplicationProviders, readApplicationProvider, applicationProviderForKind,
+  validateApplicationProviderBinding } from './application-providers.mjs';
 import { observeApplicationStartup } from './application-provider.mjs';
 
-const providers = await defaultApplicationProviders();
+const preparedProviders = new WeakMap();
+const selectionHash = value => digest(json(canonical(value)));
+const sameSelection = (left, right) => selectionHash(left) === selectionHash(right);
+const receivedProviderPath = directory => join(directory, 'application-provider.json');
+function checkedReceiving(value, request, directory) {
+  const { integrity, ...body } = value ?? {};
+  need(value?.schema === 'stellar-forge.application-provider-receiving.v1' &&
+    value.requestHash === request.requestHash && value.applicationId === request.applicationId &&
+    value.applicationRunId === operationId(basename(directory)) &&
+    /^[a-f0-9]{64}$/.test(value.applicationRevision ?? '') &&
+    integrity?.sha256 === selectionHash(body),
+  'APPLICATION_PROVIDER_RECEIVING_CHANGED', 'The retained provider selection differs from this original request.');
+  validateApplicationProviderBinding(value.applicationProvider);
+  return value;
+}
+function acceptedSelection(selected, request) {
+  need(selected.binding.command === request.command &&
+    selected.provider.matchRequest(request) === true,
+  'APPLICATION_PROVIDER_REQUEST_CHANGED', 'The selected provider does not accept this original managed command.');
+  return selected.provider;
+}
+async function loadRequestProvider(request, directory) {
+  need(plain(request), 'APPLICATION_PROVIDER_REQUEST_INVALID');
+  if (!request.applicationId) {
+    need(request.applicationProvider === undefined, 'APPLICATION_PROVIDER_APPLICATION_REQUIRED');
+    return null;
+  }
+  if (request.applicationProvider !== undefined) {
+    const expected = validateApplicationProviderBinding(request.applicationProvider);
+    return acceptedSelection(await readApplicationProvider({
+      id: expected.id, kind: expected.kind, expected,
+    }), request);
+  }
+  // Preserve older request bytes. The immutable application revision supplies its
+  // kind, while the same operation retains its selected source in one sidecar.
+  const scoped = request.operation === 'managed-run' && /^[a-f0-9]{64}$/.test(request.requestHash ?? '') &&
+    basename(dirname(directory)) === 'operations' && /^[a-f0-9-]{36}$/.test(basename(directory));
+  if (scoped) {
+    const received = await readJSON(receivedProviderPath(directory), true);
+    if (received) {
+      const expected = checkedReceiving(received, request, directory).applicationProvider;
+      return acceptedSelection(await readApplicationProvider({
+        id: expected.id, kind: expected.kind, expected,
+      }), request);
+    }
+    const root = dirname(dirname(directory)), id = operationId(basename(directory));
+    const applicationId = recordId(request.applicationId);
+    const run = await readJSON(join(root, 'applications', applicationId, 'runs', id + '.json'), true);
+    if (run) {
+      need(run.schema === 'stellar-forge.application-run.v1' && run.id === id &&
+        run.applicationId === applicationId && run.request?.requestId === id &&
+        /^[a-f0-9]{64}$/.test(run.revision ?? '') &&
+        run.requestHash === selectionHash({ applicationId, requestId: id, reviewId: run.reviewId }),
+      'APPLICATION_PROVIDER_RUN_CHANGED');
+      if (request.clientRequestHash) need(selectionHash(run.request) === request.clientRequestHash,
+        'APPLICATION_PROVIDER_RUN_CHANGED', 'The application run differs from the original client request.');
+      else for (const key of ['operation', 'homeId', 'releaseId', 'applicationId', 'command', 'args',
+        'terminal', 'terminalPython', 'environmentFile', 'environmentSha256', 'pythonCommand',
+        'buyerRunbook', 'jobResultReceiver', 'stellarApplication']) {
+        if (Object.hasOwn(run.request, key))
+          need(sameSelection(run.request[key], request[key]), 'APPLICATION_PROVIDER_RUN_CHANGED');
+      }
+      const application = await readJSON(join(root, 'applications', applicationId, 'revisions', run.revision + '.json'));
+      need(application.schema === 'stellar-forge.runtime-application.v1' &&
+        application.id === applicationId && application.revision === run.revision,
+      'APPLICATION_PROVIDER_REVISION_CHANGED', 'Open the original saved application revision for this run.');
+      const applicationBody = { kind: application.kind, label: application.label,
+        runtimeId: application.runtimeId, runtime: application.runtime,
+        ...(application.providerId === undefined ? {} : { providerId: application.providerId }),
+        settings: application.settings, homeId: application.homeId, homeDirectory: application.homeDirectory,
+        adoption: application.adoption, resourceKey: application.resourceKey };
+      need(selectionHash(applicationBody) === application.revision, 'APPLICATION_PROVIDER_REVISION_CHANGED',
+        'The saved application revision content differs from the original run.');
+      const selected = await applicationProviderForKind(application.kind, { id: application.providerId ?? null });
+      acceptedSelection(selected, request);
+      const body = { schema: 'stellar-forge.application-provider-receiving.v1',
+        applicationId, applicationRevision: run.revision, applicationRunId: id,
+        requestHash: request.requestHash, applicationProvider: selected.binding, createdAt: now() };
+      const value = { ...body, integrity: { sha256: selectionHash(body) } };
+      try { await saveJSON(receivedProviderPath(directory), value); }
+      catch (error) {
+        if (error.code !== 'EEXIST') throw error;
+        const existing = checkedReceiving(await readJSON(receivedProviderPath(directory)), request, directory);
+        need(existing.applicationRevision === run.revision &&
+          sameSelection(existing.applicationProvider, selected.binding), 'APPLICATION_PROVIDER_RECEIVING_CHANGED');
+      }
+      return selected.provider;
+    }
+  }
+  // Older direct managed callers without an Applications run retain their exact
+  // command-match contract, including the original global ambiguity check.
+  return (await defaultApplicationProviders()).forRequest(request);
+}
+function requestProvider(request, directory) {
+  const cached = preparedProviders.get(request);
+  if (cached?.directory === directory) return cached;
+  const entry = { directory, resolved: false, provider: null, promise: null };
+  entry.promise = loadRequestProvider(request, directory).then(provider => {
+    entry.provider = provider; entry.resolved = true; return provider;
+  }).catch(error => {
+    if (preparedProviders.get(request) === entry) preparedProviders.delete(request);
+    throw error;
+  });
+  entry.promise.catch(() => {});
+  preparedProviders.set(request, entry);
+  return entry;
+}
+const selectedObserver = (provider, request, directory, context) => provider
+  ? provider.createObserver(request, directory, context)
+  : observeApplicationStartup(request, directory, () => null);
+
 
 const TERMINAL = fileURLToPath(new URL('./application-terminal.py', import.meta.url));
 const MAX_INPUT = 4096;
-export async function applicationEnvironment(path, expectedSha256) {
-  if (!path) return { environment: process.env, sha256: null };
-  absolute(path);
-  const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
-  let bytes;
-  try {
-    const first = await handle.stat();
-    need(first.isFile() && first.nlink === 1 && !(first.mode & 0o077) && first.size <= 65536 &&
-      (process.getuid === undefined || first.uid === process.getuid()), 'APPLICATION_PRIVATE_ENVIRONMENT_REQUIRED');
-    bytes = await handle.readFile();
-    const after = await handle.stat();
-    need(first.size === after.size && first.mtimeMs === after.mtimeMs && first.ctimeMs === after.ctimeMs &&
-      bytes.length === first.size, 'APPLICATION_ENVIRONMENT_CHANGED');
-  } finally { await handle.close(); }
-  const sha256 = digest(bytes);
-  need(expectedSha256 === undefined || expectedSha256 === sha256, 'APPLICATION_ENVIRONMENT_CHANGED',
-    'Review the current private environment file before starting this application', 409);
-  let value;
-  try { value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); }
-  catch { need(false, 'APPLICATION_ENVIRONMENT_JSON_REQUIRED'); }
-  need(plain(value) && Object.keys(value).length <= 128 && Object.entries(value).every(([name, value]) =>
-    /^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(name) && typeof value === 'string' && !value.includes('\0') &&
-    Buffer.byteLength(value) <= 8192), 'APPLICATION_ENVIRONMENT_VALUES_INVALID');
-  need(!['HOME', 'CODEX_HOME'].some(name => Object.hasOwn(value, name)), 'APPLICATION_ENVIRONMENT_HOME_RESERVED');
-  return { environment: { ...process.env, ...value }, sha256 };
-}
 export async function prepareApplicationCommand(request, directory, originalArgs) {
-  const provider = providers.forRequest(request);
+  preparedProviders.delete(request);
+  const provider = await requestProvider(request, directory).promise;
   await provider?.verifyLaunch?.(request, directory);
   const { environment } = await applicationEnvironment(request.environmentFile, request.environmentSha256);
   if (provider?.prepareChild) return provider.prepareChild(request, directory, originalArgs, environment);
@@ -58,9 +146,25 @@ export async function prepareApplicationCommand(request, directory, originalArgs
       stdio: ['ignore', request.applicationId ? 'pipe' : 'inherit', request.applicationId ? 'pipe' : 'inherit', 3] } };
 }
 export function observeApplicationOutput(request, directory, context = {}) {
-  const provider = providers.forRequest(request);
-  return provider ? provider.createObserver(request, directory, context) :
-    observeApplicationStartup(request, directory, () => null);
+  const selected = requestProvider(request, directory);
+  if (selected.resolved) return selectedObserver(selected.provider, request, directory, context);
+  // Direct observer callers keep the synchronous write/close object. The actual
+  // managed runner has already awaited preparation, so its observer is immediate.
+  let closed = false, completion = null;
+  let pending = selected.promise.then(provider => selectedObserver(provider, request, directory, context));
+  pending.catch(() => {});
+  return {
+    write(bytes) {
+      if (closed) return;
+      const retained = Buffer.from(bytes);
+      pending = pending.then(observer => { observer.write(retained); return observer; });
+      pending.catch(() => {});
+    },
+    close() {
+      if (!completion) { closed = true; completion = pending.then(observer => observer.close()); }
+      return completion;
+    },
+  };
 }
 async function terminalRequest(root, id) {
   const directory = join(root, 'operations', operationId(id));

@@ -1,6 +1,7 @@
 // MIT. Recover a paid Dataset attempt through the original SF36 finality worker.
 import {constants} from 'node:fs';
-import {open,lstat,mkdir,realpath,link,unlink,readdir} from 'node:fs/promises';
+import {open,lstat,mkdir,realpath,link,unlink,readdir} from './dataset-location.mjs';
+import {datasetStoragePath,withDatasetSessionLocation,datasetLocatedResult} from './dataset-location.mjs';
 import {dirname,join,isAbsolute,resolve} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {need,execution} from './config.mjs';
@@ -32,7 +33,7 @@ function approved(value) {
 async function privateDirectory(path) {
  need(typeof path==='string'&&isAbsolute(path)&&resolve(path)===path,'DATASET_LOST_OUTPUT_ABSOLUTE_PATH_REQUIRED');
  const info=await lstat(path);
- need(info.isDirectory()&&!info.isSymbolicLink()&&ownPrivate(info)&&await realpath(path)===path,
+ need(info.isDirectory()&&!info.isSymbolicLink()&&ownPrivate(info)&&await realpath(path) === datasetStoragePath(path),
   'DATASET_LOST_OUTPUT_PRIVATE_DIRECTORY_REQUIRED');
 }
 async function file(path,{limit=4_000_000,optional=false,parse=true}={}) {
@@ -144,7 +145,7 @@ async function context({directory,index,workspace,approvedRequestFile,approvedRe
    payTo:op.expect.payTo,payer:cfg.trustedPayer}};
  return {retained,active,cfg,owner,transport,preimage,snapshot,body,previous};
 }
-export async function inspectDatasetLostOutput(options={}) {
+async function inspectDatasetLostOutputAt(options={}) {
  return (await context(options)).snapshot;
 }
 function recoveryView(result,snapshot) {
@@ -223,7 +224,7 @@ async function completed(options) {
  return {ctx,view,directory};
 }
 /** Read authenticates the same completed recovery and ledger, without provider IO. */
-export async function readDatasetLostOutputRecovery(options={}) {
+async function readDatasetLostOutputRecoveryAt(options={}) {
  return (await completed(options))?.view??null;
 }
 async function makeProof(view) {
@@ -254,7 +255,7 @@ async function exportProof(view,output) {
 }
 /** Finalize the existing reservation, then retain a separate public transfer proof.
  * Original absent/empty/invalid SF82 bytes and the existing page remain intact. */
-export async function recoverDatasetLostOutput(options={}) {
+async function recoverDatasetLostOutputAt(options={}) {
  need(HASH.test(options.transaction??'')&&HASH.test(options.expectedRequestSha256??''),
   'LOST_OUTPUT_TRANSACTION_AND_DIGEST_REQUIRED');
  const ctx=await context(options),s=ctx.snapshot;
@@ -271,14 +272,14 @@ export async function recoverDatasetLostOutput(options={}) {
  const transfer=await exportProof(view,join(directory,'transfer.json'));
  return {...view,transfer};
 }
-export async function exportDatasetLostOutputProof({output,...options}={}) {
+async function exportDatasetLostOutputProofAt({output,...options}={}) {
  const done=await completed(options);
  need(done,'DATASET_LOST_OUTPUT_RECOVERY_NOT_COMPLETED');
  return exportProof(done.view,output??join(done.directory,'transfer.json'));
 }
 /** Admission uses the original page parser and authenticates the source-bound
  * completion. Missing HTTP headers are represented by the separate recovery kind. */
-export async function recoveredDatasetPage({directory,index,cfg,previous,expectedSnapshot,maxRows}={}) {
+async function recoveredDatasetPageAt({directory,index,cfg,previous,expectedSnapshot,maxRows}={}) {
  const done=await completed({directory,index});
  if(!done)return null;
  const {ctx,view}=done;
@@ -302,4 +303,29 @@ export async function recoveredDatasetPage({directory,index,cfg,previous,expecte
    requestSha256:view.requestSha256,network:view.result.verifiedFacts.network,
    actualAtomicUnits:view.result.verifiedFacts.atomicAmount},
   lostOutputFinalization:view,recoveredFromOriginalFiles:true};
+}
+
+export async function inspectDatasetLostOutput(options={}) {
+ return withDatasetSessionLocation(options.directory,async directory=>
+  datasetLocatedResult(await inspectDatasetLostOutputAt({...options,directory})));
+}
+
+export async function readDatasetLostOutputRecovery(options={}) {
+ return withDatasetSessionLocation(options.directory,async directory=>
+  datasetLocatedResult(await readDatasetLostOutputRecoveryAt({...options,directory})));
+}
+
+export async function recoverDatasetLostOutput(options={}) {
+ return withDatasetSessionLocation(options.directory,async directory=>
+  datasetLocatedResult(await recoverDatasetLostOutputAt({...options,directory})));
+}
+
+export async function exportDatasetLostOutputProof(options={}) {
+ return withDatasetSessionLocation(options.directory,async directory=>
+  datasetLocatedResult(await exportDatasetLostOutputProofAt({...options,directory})));
+}
+
+export async function recoveredDatasetPage(options={}) {
+ return withDatasetSessionLocation(options.directory,async directory=>
+  datasetLocatedResult(await recoveredDatasetPageAt({...options,directory})));
 }

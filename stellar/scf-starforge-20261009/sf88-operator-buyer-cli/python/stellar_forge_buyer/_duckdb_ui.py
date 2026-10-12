@@ -1,4 +1,5 @@
 """Neutral local operator assets for acquired DuckDB datasets."""
+from . import _spatial_ui
 
 HTML = r"""<!doctype html>
 <html lang="en">
@@ -63,7 +64,7 @@ function reconcilePending() {
   (state.data.operations||[]).forEach(function(operation){if(operation.state==='COMPLETE') delete state.pending[operation.request_id];});
   storePending();
 }
-function operationName(route) { return route==='/api/exports'?'Query export':route==='/api/source-handoffs'?'Edition source files':'Workspace handoff'; }
+function operationName(route) { return route==='/api/spatial/exports'?'GIS query export':route==='/api/exports'?'Query export':route==='/api/source-handoffs'?'Edition source files':'Workspace handoff'; }
 function pendingOperations() {
   const values=new Map();
   (state.data.operations||[]).filter(function(operation){return operation.state!=='COMPLETE';}).forEach(function(operation){values.set(operation.request_id,operation);});
@@ -71,6 +72,7 @@ function pendingOperations() {
   return Array.from(values.values());
 }
 function requestMeaning(route,body) {
+  if(route==='/api/spatial/exports') return JSON.stringify([route,body.query_id,body.expected_revision,body.geometry_column||'geometry',body.target_crs||null,body.expected_bindings||null]);
   return route==='/api/exports'?route+':'+body.query_id+':'+body.expected_revision:route==='/api/source-handoffs'?route+':'+body.edition_id:route;
 }
 async function retainedAction(route,body) {
@@ -177,6 +179,7 @@ function render() {
   $('export-list').replaceChildren();$('exports-empty').hidden=exports.length>0;
   exports.forEach(function(record){item($('export-list'),record.kind==='source-handoff'?'Portable workspace handoff':record.kind==='edition-source'?'Original edition source files':(record.query&&record.query.name)||'Query export',timestamp(record.created_at)+' · '+short(record.export_id),function(){run('Opening saved export',async function(){await selectExport(record.export_id);notice('Saved export opened.');});},state.export&&state.export.export_id===record.export_id);});
   updateActivation();
+  if(window.stellarDuckDBSpatialRender) window.stellarDuckDBSpatialRender();
 }
 async function refresh() { state.data=await api('/api/state');reconcilePending();render(); }
 function useTable(name) { $('sql').value='SELECT * FROM '+sqlName(name);state.lastPreview=null;show('query');$('sql').focus();notice('Table selected in the SQL editor.'); }
@@ -353,6 +356,7 @@ async function selectExport(id) {
   $('export-detail').hidden=false;$('export-title').textContent=record.kind==='source-handoff'?'Portable workspace handoff':record.kind==='edition-source'?'Original edition source files':'Saved query export';$('export-facts').replaceChildren();
   fact($('export-facts'),'Export',record.export_id);fact($('export-facts'),'Edition',record.edition_id);fact($('export-facts'),'Rows',count(record.rows));fact($('export-facts'),'Saved',timestamp(record.created_at));fact($('export-facts'),'Directory',record.directory);fact($('export-facts'),'Query',record.query&&record.query.name);
   renderExportSchema(record);
+  if(window.stellarDuckDBSpatialExportSchema) window.stellarDuckDBSpatialExportSchema(record);
   $('export-files').replaceChildren();
   exportFiles(record).forEach(function(file){const name=fileName(file);item($('export-files'),name,count(file.bytes===undefined?file.size:file.bytes)+' bytes',function(){run('Opening saved file',async function(){await download(record,file);notice('Download prepared: '+name);});});});
   queryMeanings($('export-meanings'),record.source_meanings);$('export-record').textContent=pretty(record);$('export-reopen-query').hidden=!(record.query&&record.query.sql);show('exports');render();
@@ -435,12 +439,17 @@ bind('export-query','Exporting query to Parquet and CSV',async function(){
 bind('export-source','Preparing portable source handoff',async function(){
   const record=await retainedAction('/api/handoffs',{});await refresh();await selectExport(record.export_id);notice('Portable workspace handoff prepared.');
 });
-$('export-reopen-query').addEventListener('click',function(){if(state.export&&state.export.query) loadQuery(state.export.query);});
+$('export-reopen-query').addEventListener('click',function(){if(state.export&&state.export.query) {if(state.export.kind==='gis-query'&&window.stellarDuckDBSpatialLoadQuery) window.stellarDuckDBSpatialLoadQuery(state.export.query);else loadQuery(state.export.query);}});
 const types=element('datalist');types.id='duckdb-types';['VARCHAR','BOOLEAN','BIGINT','HUGEINT','DOUBLE','DECIMAL(38,10)','DATE','TIMESTAMP','TIMESTAMPTZ','JSON'].forEach(function(type){const option=element('option');option.value=type;types.append(option);});document.body.append(types);
 run('Opening workspace',async function(){
   if(!capability) throw new Error('Open this workspace using its private launch link.');
   await refresh();
   let screen='sources';try{screen=sessionStorage.getItem('stellar_duckdb_screen')||screen;}catch(error){}
-  show(['sources','editions','query','exports'].includes(screen)?screen:'sources');notice('');
+  show(['sources','editions','query','spatial','exports'].includes(screen)?screen:'sources');notice('');
 });
 """
+
+HTML = HTML.replace('<button class="nav" data-screen="exports">', '<button class="nav" data-screen="spatial">GIS workspace</button><button class="nav" data-screen="exports">')
+HTML = HTML.replace("<footer>", _spatial_ui.HTML + "<footer>")
+HTML = HTML.replace('<script src="/app.js"></script>', '<script src="/app.js"></script><script src="/spatial.js"></script>')
+CSS += _spatial_ui.CSS + "@media(max-width:760px){.sidebar nav{grid-template-columns:repeat(5,1fr)}}"

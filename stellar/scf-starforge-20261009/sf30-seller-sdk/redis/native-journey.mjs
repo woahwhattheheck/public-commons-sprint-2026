@@ -3,6 +3,11 @@
 // SF30_REDIS_JOURNEY_TOPOLOGY=cluster|sentinel adds native topology/failover fixtures
 // while preserving the same authoring workspace, generated buyer and release flow.
 // Add SF30_REDIS_JOURNEY_TLS=1 to the Sentinel mode for independent data/monitor CAs.
+// SF30_REDIS_JOURNEY_ACCESS=ssh joins owned OpenSSH forwarding and application shutdown.
+// SF30_REDIS_JOURNEY_COLLECTIONS=1 joins complete List/Set native and customer pages.
+// SF30_REDIS_JOURNEY_SETUP=1 joins the original browser connection setup before CA removal.
+// SF30_REDIS_JOURNEY_APPLICATIONS_CONFIG selects an existing READY runtime/home for
+// managed receiving of that same six-product workspace; its native work is retained.
 // Both modes use the existing local x402 facilitator fixture.
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
@@ -26,6 +31,9 @@ import { startReleaseConsole } from '../../sf82-seller-pilot/release-console.mjs
 
 const http = process.env.SF30_REDIS_JOURNEY_PROVIDER === 'upstash-rest';
 const topology = process.env.SF30_REDIS_JOURNEY_TOPOLOGY ?? 'standalone';
+const access = process.env.SF30_REDIS_JOURNEY_ACCESS ?? 'direct';
+if (!['direct', 'ssh'].includes(access) || access === 'ssh' && (http || topology === 'standalone'))
+  throw new Error('REDIS_JOURNEY_ACCESS_INVALID');
 if (!['standalone', 'cluster', 'sentinel'].includes(topology) || http && topology !== 'standalone')
   throw new Error('REDIS_JOURNEY_TOPOLOGY_INVALID');
 if (process.env.SF30_REDIS_JOURNEY_PROVIDER && !http) throw new Error('REDIS_JOURNEY_PROVIDER_INVALID');
@@ -47,7 +55,11 @@ async function createRestSeed() {
       signal: AbortSignal.timeout(15000), body: binary ?? JSON.stringify(command) });
     const value = await response.json();
     if (response.status !== 200 || value.error) throw new Error('UPSTASH_SEED:' + String(value.error ?? response.status).slice(0,512));
-    if (['SET','HSET','ZADD','XADD'].includes(command[0])) seeded.add(command[1]);
+    if (['SET','HSET','ZADD','XADD','RPUSH','SADD'].includes(command[0])) seeded.add(command[1]);
+    if (command[0] === 'EVAL') {
+      const count = Number(command[2]);
+      for (const name of command.slice(3, 3 + count)) seeded.add(name);
+    }
     return value.result;
   }
   return {
@@ -62,6 +74,10 @@ async function createRestSeed() {
 
 const work = await mkdtemp(join(tmpdir(), 'sf30-redis-journey-'));
 const output = process.env.SF30_REDIS_JOURNEY_OUTPUT;
+const applicationsConfiguration = process.env.SF30_REDIS_JOURNEY_APPLICATIONS_CONFIG;
+if (applicationsConfiguration && (process.env.SF30_REDIS_JOURNEY_SETUP !== '1' ||
+    process.env.SF30_REDIS_JOURNEY_COLLECTIONS !== '1'))
+  throw new Error('REDIS_APPLICATIONS_JOURNEY_REQUIRES_SETUP_AND_COLLECTIONS');
 const write = (path, value) => writeFile(path, JSON.stringify(value, null, 2) + '\n', { mode: 0o600 });
 const listen = server => new Promise(done => server.listen(0, '127.0.0.1', done));
 const shutdown = async server => { server.closeAllConnections?.(); await new Promise(done => server.close(done)); };
@@ -86,7 +102,10 @@ const facilitator = createServer(async (req, res) => {
 });
 try {
   if (!http && topology !== 'standalone') {
-    fixture = await (await import('./native-topology.mjs')).startNativeRedisTopology({
+    const startTopology = access === 'ssh'
+      ? (await import('./deployment/native-ssh.mjs')).startNativeRedisSshTopology
+      : (await import('./native-topology.mjs')).startNativeRedisTopology;
+    fixture = await startTopology({
       topology, directory: join(work, 'native-topology'), password, passwordEnv: envName, binary });
     database = fixture.database;
   } else if (!http) {
@@ -105,7 +124,7 @@ try {
   const version = typeof serverInfo === 'string' ? serverInfo.match(/^redis_version:(.+)$/m)?.[1]?.trim() : undefined;
   if (!version) throw new Error('REDIS_SERVER_VERSION_UNAVAILABLE');
   if (!http && !fixture) await database.sendCommand(['ACL', 'SETUSER', 'merchant', 'reset', 'on', '>' + password,
-    '~merchant:*', '+ping', '+eval_ro', '+strlen', '+get', '+hstrlen', '+hmget', '+zrange', '+xrange', '+select']);
+    '~merchant:*', '+ping', '+eval_ro', '+strlen', '+get', '+hstrlen', '+hmget', '+zrange', '+xrange', '+lrange', '+llen', '+sscan', '+select']);
   const binaryValue = Buffer.from([255, 0, 239, 187, 191]);
   await database.set(key('merchant:availability:catalog'), binaryValue);
   await database.hSet(key('merchant:catalog:north'), { product_id: 'SKU-001', name: 'Bearing', price_atomic: '9007199254740993' });
@@ -123,7 +142,10 @@ try {
   declaration.queries.catalog.fields.missing = 'missing_field';
   declaration.queries.leaderboard.maxRows = 2; declaration.queries.leaderboard.parameters.offset.maximum = '2';
   declaration.queries.events.maxRows = 2;
-  const queries = { ...declaration.queries,
+  const collectionJourney = process.env.SF30_REDIS_JOURNEY_COLLECTIONS === '1'
+    ? await (await import('./native-collections.mjs')).createRedisCollectionJourney({ database, key, http }) : undefined;
+  if (collectionJourney) Object.assign(declaration.queries, collectionJourney.queries);
+  const queries = { ...declaration.queries, ...(collectionJourney?.extraQueries ?? {}),
     oversized: { kind: 'get', key: key('merchant:large'), maxBytes: 1024 },
     encodedOversized: { kind: 'get', key: key('merchant:binary-large'), maxBytes: 1024 },
     offsetBoundary: { ...declaration.queries.leaderboard, maxRows: 1,
@@ -151,6 +173,7 @@ try {
   assert.throws(() => compileRedisQueries({ bad: { kind: 'get', key: '\ud800' } }));
   assert.throws(() => compileRedisQueries({ bad: { ...declaration.queries.events,
     parameters: { after: { type: 'string', maxLength: 41, enum: ['bad'] } } } }));
+  const collectionSource = collectionJourney ? await collectionJourney.source(source) : undefined;
   const topologyJourney = fixture ? await fixture.exercise({ source, queries, connectTimeoutMs: nativeConnectTimeoutMs }) : undefined;
   const nativeStatus = source.status(); await source.close(); source = null;
   // The merchant ACL independently rejects mutation and undeclared key access.
@@ -167,11 +190,23 @@ try {
   const sourceFile = join(authoring, 'source.json'), planFile = join(authoring, 'plan.json');
   const plan = JSON.parse(await readFile(new URL('./example-merchant-plan.json', import.meta.url)));
   plan.routes[1].parameterDescriptions = { region: 'Reviewed region' };
+  if (collectionJourney) plan.routes.push(...collectionJourney.routes);
   await write(sourceFile, declaration); await write(planFile, plan);
+  const runtime = { port: 0, allowLocalFacilitator: true, facilitator: 'http://127.0.0.1:' + facilitator.address().port };
+  const setupJourney = process.env.SF30_REDIS_JOURNEY_SETUP === '1'
+    ? await (await import('./workspace/setup-journey.mjs')).runRedisSetupJourney({
+      sourceFile, planFile, root: join(work, 'connection-setup'), runtime, applicationsConfiguration,
+    }) : undefined;
+  const applicationsJourney = applicationsConfiguration
+    ? await (await import('./workspace/managed-journey.mjs')).runRedisApplicationsJourney({
+      configurationFile: applicationsConfiguration, redisDirectory: join(work, 'connection-setup', 'workspace'),
+      expectedQueryKinds: Object.values(declaration.queries).map(query => query.kind),
+      customerPackageId: 'setup-customer-package', managedSetup: setupJourney?.managedSetup,
+    }) : undefined;
   const workspaceJourney = process.env.SF30_REDIS_JOURNEY_WORKSPACE === '1'
     ? await (await import('./workspace/native-journey.mjs')).runRedisWorkspaceJourney({
       sourceFile, planFile, root: join(work, 'authoring-workspace'),
-      runtime: { port: 0, allowLocalFacilitator: true, facilitator: 'http://127.0.0.1:' + facilitator.address().port },
+      runtime, collectionJourney,
     }) : undefined;
   const firstPackage = await prepareRedisSeller({ sourceFile, planFile, directory: join(authoring, 'first') });
   const verifiedFirst = await verifyPreparedRedisSeller(firstPackage.directory);
@@ -183,13 +218,12 @@ try {
     assert.equal(verifiedFirst.files[name]?.sha256, sha256);
   }
   const root = join(work, 'releases'); await initReleaseStore(root);
-  const runtime = { port: 0, allowLocalFacilitator: true, facilitator: `http://127.0.0.1:${facilitator.address().port}` };
   await stageRelease(root, { id: 'first', redisPackage: firstPackage.directory, runtime });
   declaration.queries.leaderboard.maxRows = 1; plan.payment.amount = '20000';
   await write(sourceFile, declaration); await write(planFile, plan);
   const secondPackage = await prepareRedisSeller({ sourceFile, planFile, directory: join(authoring, 'second') });
   await stageRelease(root, { id: 'second', redisPackage: secondPackage.directory, runtime });
-  const comparison = await compareReleases(root, 'first', 'second'); assert.equal(comparison.summary.paymentChanged, 4);
+  const comparison = await compareReleases(root, 'first', 'second'); assert.equal(comparison.summary.paymentChanged, plan.routes.length);
   assert.ok(comparison.runtimeChanges.some(change => change.field === 'redis'));
   await rm(authoring, { recursive: true });
   if (fixture) topologyJourney.retainedAuthorities = await fixture.removeOriginalAuthorities();
@@ -198,7 +232,7 @@ try {
   const clientDirectory = join(root, 'releases', 'first', 'redis', 'package', 'client');
   assert.equal((await inspectSellerClientExport({ directory: clientDirectory })).state, 'COMPLETE');
   const generated = await import(pathToFileURL(join(clientDirectory, 'seller-client.mjs')));
-  assert.equal(generated.operations.length, 4);
+  assert.equal(generated.operations.length, plan.routes.length);
   operator = await startReleaseConsole(root, { port: 0 });
   const call = async (path, value) => {
     const response = await fetch(operator.url + path, { method: 'POST', headers: {
@@ -229,6 +263,7 @@ try {
   assert.equal((await buy('catalog', { region: 'north' }, '10000', 'catalog')).rows[0].priceAtomic, '9007199254740993');
   assert.equal((await buy('leaderboard', { offset: '0' }, '10000', 'rank-first')).rowCount, 2);
   assert.equal((await buy('events', { after: '-' }, '10000', 'events')).rows[0].eventType, 'updated');
+  const collectionCustomer = collectionJourney ? await collectionJourney.customer(buy, '10000') : undefined;
   const firstInstance = state.console.instanceId;
   await call('/api/activate', { id: 'second', expectedGeneration: 1, reason: 'Updated ranking page and price' });
   state = await call('/api/restart', { expectedGeneration: 2, instanceId: firstInstance });
@@ -237,15 +272,20 @@ try {
   state = await call('/api/restart', { expectedGeneration: 3, instanceId: state.console.instanceId });
   assert.equal((await buy('leaderboard', { offset: '0' }, '10000', 'rank-restored')).rowCount, 2);
   await call('/api/stop', { instanceId: state.console.instanceId });
+  const accessJourney = await fixture?.accessExercise?.();
   const removedSeedKeys = http ? await database.cleanup() : undefined;
   const result = { result: 'PASS', redisVersion: version, nativeClient: http ? 'Upstash REST (HTTPS RESP2)' : '@redis/client@6.2.1', database: fixture?.databaseIndex ?? (http ? 0 : 2),
     ...(topologyJourney ? { topology: topologyJourney } : {}),
+    ...(accessJourney ? { access: accessJourney } : {}),
     ...(http ? { provider: 'upstash-rest', removedSeedKeys, credentialMode: process.env.UPSTASH_REDIS_REST_READ_TOKEN ? 'DEDICATED_READ_TOKEN' : 'OWNED_EPHEMERAL_DATABASE' } : {}),
     nativeStatus, nativeVerifies: verified, nativeSettlements: settled, facilitator: 'LOCAL_PROTOCOL_FIXTURE',
     journeys: [fixture ? 'native ' + topology + ', authentication, topology transition and terminal cleanup'
       : http ? 'native Upstash HTTPS, authentication and read-only Lua' : 'ACL and authenticated database selection', 'binary and exact scalar preservation', 'native rank and stream pagination',
       'original generated client and buyer response files', 'retained source after authoring removal', 'native child upgrade and rollback'],
-    deliveries, ...(workspaceJourney ? { workspace: workspaceJourney } : {}) };
+    deliveries, ...(workspaceJourney ? { workspace: workspaceJourney } : {}),
+    ...(setupJourney ? { setup: setupJourney } : {}),
+    ...(applicationsJourney ? { applications: applicationsJourney, retainedWorkDirectory: work } : {}),
+    ...(collectionJourney ? { collections: { source: collectionSource, customer: collectionCustomer } } : {}) };
   if (output) await write(output, result); console.log(JSON.stringify(result));
 } finally {
   await operator?.close(); await source?.close();
@@ -253,5 +293,5 @@ try {
   if (facilitator.listening) await shutdown(facilitator);
   if (engine?.exitCode === null) { const exited = once(engine, 'exit'); engine.kill('SIGTERM'); await exited; }
   if (priorEnv === undefined) delete process.env[envName]; else process.env[envName] = priorEnv;
-  await rm(work, { recursive: true, force: true });
+  if (!applicationsConfiguration) await rm(work, { recursive: true, force: true });
 }

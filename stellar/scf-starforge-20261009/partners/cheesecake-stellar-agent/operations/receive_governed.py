@@ -15,7 +15,7 @@ import time
 import urllib.request
 import zipfile
 
-MANIFEST_SHA256 = "dd3ac64742b0de6ebf8ebd01b8ffa6a641e5116da0cc5ab1dc3b8ed172d16d59"
+MANIFEST_SHA256 = "f8bbc9c3acf7e321800579f4c1c6423e065b31cefd815f610a63e89a1deffa4b"
 KIT_SHA256 = "dd547ddde2bcab285a8b44990bdd184d69665702aae287d7c8289e9df89ff8de"
 KIT_BYTES = 4653289
 KIT_PREFIX = "reference/buyer-handoff/"
@@ -71,7 +71,7 @@ def load_manifest(path):
             raise ValueError("Invalid source file hash")
         names.add(item["path"])
         total += item["bytes"]
-    if len(names) != 109 or total != value["source_bytes"] or ENTRYPOINT not in names:
+    if len(names) != 110 or total != value["source_bytes"] or ENTRYPOINT not in names:
         raise ValueError("Incomplete original source closure")
     return value
 

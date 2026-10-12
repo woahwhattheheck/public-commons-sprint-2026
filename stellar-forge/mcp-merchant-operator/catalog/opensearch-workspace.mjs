@@ -1,6 +1,7 @@
 // MIT. Original tool metadata; provider runtimes load only when selected.
 import { MAX_RETAINED_CHUNK_BYTES } from '../retained-file-contracts.mjs';
 import { openSearchDeploymentTools } from './opensearch-deployment.mjs';
+import { openSearchMaterialTools } from './opensearch-materials.mjs';
 
 const aliasSchema = { type:'string', pattern:'^[a-z0-9][a-z0-9_-]{0,63}$' };
 
@@ -50,6 +51,7 @@ function openSearchWorkspaceTools(tool) {
     tool('merchant_opensearch_relevance_promote','Promote one evaluated variant and case into the original merchant draft with exact query/input/plan and evaluation provenance. Continue with the original prepare tool.',fields({requestId:idSchema,editionId:idSchema,variantId:caseSchema,caseId:caseSchema,title:{type:'string',minLength:1,maxLength:120}}),['workspace','requestId','editionId','variantId','caseId'],write),
     tool('merchant_opensearch_read','Read exact original draft, operation, query/relevance result, customer report or package-file bytes through a retained SHA-256-pinned snapshot. Mutable definitions require explicit revision. Continue nextOffset with readId and expectedSha256; chunks are base64.',fields({kind:{type:'string',enum:['draft','operation','query-edition','query-result','query-csv','relevance-set','relevance-edition','relevance-native','relevance-report-json','relevance-report-html','relevance-csv','package-file']},id:idSchema,revision:revisionSchema,file:{type:'string',minLength:1,maxLength:512},readId:{type:'string',minLength:1,maxLength:160},expectedSha256:digestSchema,offset:offsetSchema,limit:{type:'integer',minimum:1,maximum:MAX_RETAINED_CHUNK_BYTES}}),['workspace','kind','id'],read),
     ...openSearchDeploymentTools(tool),
+    ...openSearchMaterialTools(tool),
     tool('merchant_opensearch_read_release','Release an unfinished original retained file read before its idle expiry.',fields({readId:{type:'string',minLength:1,maxLength:160}}),['workspace','readId'],write),
   ];
 }

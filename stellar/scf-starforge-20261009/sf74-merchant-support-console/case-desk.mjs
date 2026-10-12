@@ -19,11 +19,13 @@ const defaults = () => ({merchant:'',owner:'',status:'new',followUpOn:'',nextAct
 const emptyState = () => ({name:'Merchant case',inputs:{resource:'',catalog:'',origin:'',network:'stellar:testnet',payTo:'',method:'GET',credentialed:false},sources:{},termsText:'',baselineOnly:false});
 
 export function mountCaseDesk({root,readState,applyState,onNameChange = ()=>{},
-  readSupport=()=>null,prepareSupport=async()=>null,applySupport=()=>{},onDraftChange=()=>{}}) {
+  readSupport=()=>null,prepareSupport=async()=>null,applySupport=()=>{},onDraftChange=()=>{},
+  applySavedCommissioning=async()=>true,applySavedService=async()=>true,onCurrentCaseChange=()=>{}}) {
   const abort = new AbortController();
   let enabled=false, busy=false, dirty=false, active=null, candidateId=crypto.randomUUID();
   let generation=0, identity=0, applying=false, listSequence=0, offset=0, nextOffset=null;
   let pendingTransition=null, lastAttempt=null, historyBefore=null, destroyed=false;
+  let notifiedCase=null,notificationQueued=false;
   root.replaceChildren(); root.id='cases';
   const panel = add(root,'section',undefined,'card case-desk');
   const top = add(panel,'div',undefined,'section-heading');
@@ -108,10 +110,20 @@ export function mountCaseDesk({root,readState,applyState,onNameChange = ()=>{},
     title.textContent=active?'Current case · '+active.name:'Current draft';
     editor.dataset.dirty=String(dirty);
     for(const node of rows.querySelectorAll('button')) node.disabled=busy;
+    const selection=active?active.id+':'+active.revision:null;
+    if(selection!==notifiedCase&&!notificationQueued){
+      notificationQueued=true;
+      queueMicrotask(()=>{
+        notificationQueued=false;if(destroyed)return;
+        const current=active?active.id+':'+active.revision:null;
+        if(current===notifiedCase)return;notifiedCase=current;
+        onCurrentCaseChange(active?{id:active.id,revision:active.revision}:null);
+      });
+    }
   }
-  function changed({user=false} = {}) {
+  function changed({user=false,source=true} = {}) {
     if((applying&&!user)||destroyed)return;
-    generation++;dirty=true;controls();onDraftChange();
+    generation++;dirty=true;controls();if(source)onDraftChange();
   }
   function metadata() {return {merchant:merchant.value,owner:owner.value,status:workStatus.value,
     followUpOn:followUpOn.value,nextAction:nextAction.value,notes:notes.value};}
@@ -226,6 +238,15 @@ export function mountCaseDesk({root,readState,applyState,onNameChange = ()=>{},
       if(destroyed||identity!==token)return false;
       active=result.case;candidateId=active.id;lastAttempt=null;conflict.hidden=true;
       dirty=generation!==stamp;
+      if(!dirty&&Object.hasOwn(result,'commissioning')) {
+        await applySavedCommissioning(result.commissioning,{canReplace:()=>identity===token&&generation===stamp});
+        dirty=generation!==stamp;
+      }
+      if(!dirty&&Object.hasOwn(result,'service')) {
+        await applySavedService(result.service,{canReplace:()=>!destroyed&&identity===token&&generation===stamp});
+        if(destroyed||identity!==token)return false;
+        dirty=generation!==stamp;
+      }
       say(dirty?'Saved the captured draft. Newer edits are still unsaved.':'Case saved. '+STATUS[active.metadata.status]+(active.metadata.followUpOn?' · follow-up '+active.metadata.followUpOn:''));
       await reload();return !dirty;
     }catch(error){
@@ -283,7 +304,10 @@ export function mountCaseDesk({root,readState,applyState,onNameChange = ()=>{},
   reload();
   return {
     changed,
+    currentCase(){return active?{id:active.id,revision:active.revision}:null;},
+    deliveryContext(){return active?{id:active.id,revision:active.revision,dirty,busy,actor:owner.value.trim()}:null;},
     importWorkspace,
+    saveForDelivery(){return save();},
     openSavedCase(id){return transition(()=>openCase(id),'open the received case');},
     async exportSnapshot(){
       if(busy)throw new Error('Finish the current case operation before preparing a handoff.');

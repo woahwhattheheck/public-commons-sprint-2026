@@ -11,7 +11,7 @@ DIRECTORIES = ("bi_operator", "web", "vendor", "schemas", "examples", "tools")
 TOP_LEVEL = (
     "BI_OPERATOR.py", "prepare_project.py", "OPEN_POWER_BI.ps1",
     "build_release.py", "requirements.txt", "README.md", "OPERATOR_GUIDE.md",
-    "THIRD_PARTY_LICENSES.txt", "VENDOR_SOURCE.json", "DEMONSTRATION.md", "BILLING_GUIDE.md",
+    "THIRD_PARTY_LICENSES.txt", "VENDOR_SOURCE.json", "DEMONSTRATION.md", "BILLING_GUIDE.md", "AZURE_EXPORTS_GUIDE.md", "TOURISM_GUIDE.md", "requirements-azure.txt",
 )
 
 
@@ -38,6 +38,7 @@ def main():
     files = included_files()
     required = [ROOT / p for p in TOP_LEVEL] + [ROOT / "examples/sandag/data.zip"]
     required += [ROOT / "examples/billing" / name for name in ("agencies.json", "policy.json", "costs.csv", "usage.csv")]
+    required += [ROOT / "examples/overland-park" / name for name in ("public-source.json", "operating-input.json")]
     missing = [str(p.relative_to(ROOT)) for p in required if not p.is_file()]
     if missing:
         raise SystemExit("Missing source files: " + ", ".join(missing))

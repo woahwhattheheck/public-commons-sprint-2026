@@ -5,6 +5,7 @@
   <header><div><p class="eyebrow">STARFORGE / MERCHANT WORKSPACE</p><h1>SQL Server merchant</h1><p id="profile" class="muted">Connecting to the private source profile…</p></div><span id="mode" class="badge"></span></header>
   <div id="status" class="status" role="status" aria-live="polite">Open this workspace using the full URL printed by its launcher.</div>
   <main id="main">
+    <section id="pending-panel" class="panel" hidden aria-labelledby="pending-title"><h2 id="pending-title">Saved operation</h2><p id="pending-summary"></p><details><summary>Original request</summary><pre id="pending-request"></pre></details><button id="retry-operation">Retry saved operation</button></section>
     <section class="panel runtime" aria-labelledby="runtime-title"><div><h2 id="runtime-title">Merchant runtime</h2><p id="runtime-summary" class="muted">No merchant running.</p><div id="runtime-links" class="links"></div></div><button id="stop-merchant" disabled>Stop merchant</button></section>
     <nav class="tabs" aria-label="Workspace sections"><button id="build-tab" class="selected" aria-selected="true">Build release</button><button id="saved-tab" aria-selected="false">Saved releases</button></nav>
     <div id="build-view">
@@ -27,8 +28,17 @@
     </div>
     <div id="saved-view" hidden>
       <div class="saved-grid"><section class="panel" aria-labelledby="saved-title"><div class="section-heading"><h2 id="saved-title">Prepared releases</h2><button id="refresh-releases" class="small">Refresh</button></div><div id="release-list"></div><div class="actions"><button id="release-previous" class="small">Previous</button><span id="release-page" class="muted"></span><button id="release-next" class="small">Next</button></div></section>
-      <section class="panel" aria-labelledby="selected-title"><h2 id="selected-title">Open a release</h2><div id="selected-details"><p class="muted">Choose an existing private package to inspect its original verified files, run its merchant, or export its customer client.</p></div><div id="selected-actions" class="actions" hidden><button id="run-release" class="primary">Start merchant</button><button id="export-client">Download customer client</button><button id="load-draft">Use as a new draft</button></div></section></div>
+      <section class="panel" aria-labelledby="selected-title"><h2 id="selected-title">Open a release</h2><div id="selected-details"><p class="muted">Choose an existing private package to inspect its original verified files, run its merchant, or export its customer client.</p></div><div id="selected-actions" class="actions" hidden><button id="run-release" class="primary">Start merchant</button><button id="export-client">Download customer client</button><button id="load-draft">Use as a new draft</button><button id="retain-merchant">Retain complete merchant</button><button id="retain-customer">Retain customer files</button></div><div id="stage-controls" hidden><label>Seller store release ID<input id="stage-id" pattern="[a-z0-9][a-z0-9_-]{0,63}" maxlength="64" required></label><button id="stage-release">Stage in seller store</button></div></section></div>
     </div>
+    <section class="panel" aria-labelledby="history-title"><h2 id="history-title">Saved workspace</h2><p class="hint">Reopen original choices, exact query results and complete transfers after a browser or managed process restart.</p>
+      <div class="grid-3">
+        <section><div class="section-heading"><h3>Reviews</h3><button id="reviews-refresh" class="small">Refresh</button></div><div id="reviews-list"></div><button id="reviews-more" class="small">More reviews</button></section>
+        <section><div class="section-heading"><h3>Operations</h3><button id="operations-refresh" class="small">Refresh</button></div><div id="operations-list"></div><button id="operations-more" class="small">More operations</button></section>
+        <section><div class="section-heading"><h3>Transfers</h3><button id="exports-refresh" class="small">Refresh</button></div><div id="exports-list"></div><button id="exports-more" class="small">More transfers</button></section>
+      </div>
+      <details id="operation-details" hidden open><summary>Original operation and retained outcome</summary><pre id="operation-result"></pre></details>
+      <section id="transfer-details" hidden><h3>Complete transfer</h3><p id="transfer-guide"></p><pre id="transfer-result"></pre></section>
+    </section>
   </main>
   <footer>Original SQL Server source · native SF30 seller, operations and customer client</footer>
   <script type="module" src="/app.mjs"></script>
