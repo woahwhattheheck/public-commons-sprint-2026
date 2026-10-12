@@ -17,7 +17,7 @@ execution, full result collection and durable handoff preparation stay together.
 | Original native source | `/dev/shm/b710-cirrus-native-20261012/runtime` |
 | Original processing input | `/dev/shm/b710-cirrus-native-20261012/operation/cirrus-native.processing.json.gz` |
 | Processing input | 148607 bytes, SHA256 `453026898def5ff1ef7de0fbb0546ecb4c95af6b3b040f5f16c5c08cac0eeed0` |
-| Customer executable | Git blob `695a0634e16cf945c3d02449f1973274a541a3da` |
+| Customer executable | Git blob `95a6d6d3a9b6e0ddc15bcb0370f4104ccf7ecf19` |
 | Exact merged imagery module | PR1807, Git blob `9667097fbc4053676100dfc52fa059e0d6790a74` |
 | Original client release | PR1749, merge `cfd773e8636464df57b42d0d25ceb8d7618fafb8` |
 
@@ -41,22 +41,59 @@ owner in the original STAC thread. Invoke the complete saved file in that sessio
 python3 -B operations/scf-stac-client-native-receiving-20261012/continue-native.py
 ```
 
-No new runtime installation is required. The executable first reads the original
-native predecessor and the shared placement journal. It requires the original
-request to be undispatched with its original process identities ended. A retained
-linked native request is reported for its own maintained continuation; the script
-does not dispatch another copy beside it.
+No new runtime installation is required. With no completed-result argument, the
+executable first reads the original native predecessor and shared placement
+journal. It requires the initial request to be undispatched with its original
+process identities ended. A retained linked native request is reported for its
+own maintained continuation.
+
+### Continue the actual first dispatched outcome
+
+The original linked receiver dispatched on October 12 and ended at
+11:22:10 UTC with exit 1 before any of its ten receiving stages.
+The original host rejected the driver's function-valued `buyerTransports`
+argument with `INVALID_BUYER_TRANSPORT`. The host contract expects transport
+configuration objects. The corrected driver omits that invalid override and uses
+the original default host configuration; the provider and native engines are unchanged.
+
+The complete original native record with exit 1 and its request, result, resource
+history and placement journal are retained in this 211,926-byte archive:
+
+```text
+/dev/shm/c79f-stac-receiving-preserved-20261012/SCF_STAC_Node_Receiving_f1c869dd266c.zip
+SHA256 f1c869dd266cb76701ffea2c288242f924041ac73d94dd147ffd51937f210c27
+```
+
+Use the same original operation and full command:
+
+```sh
+python3 -B operations/scf-stac-client-native-receiving-20261012/continue-native.py \
+  --completed-result-archive /dev/shm/c79f-stac-receiving-preserved-20261012/SCF_STAC_Node_Receiving_f1c869dd266c.zip \
+  --completed-result-sha256 f1c869dd266cb76701ffea2c288242f924041ac73d94dd147ffd51937f210c27
+```
+
+The wrapper checks the exact archive and every declared member, the original
+source/operation identities, and the actual empty-stage `INVALID_BUYER_TRANSPORT` outcome. It
+restores the unmodified completed native record under the original task's retained
+records directory when the private originating namespace has ended.
+The maintained `terminal-result` placement contract then checks the exact request
+and result digests, original ended process identities, and released resources.
+It retains that complete original record in the next placement and creates the
+distinct native continuation ending `-transport-95a6d6d3` under the same business
+operation. It does not reset the ended record or use an undispatched cancellation
+against a command that already ran. An active original identity or another outcome
+continues through that record's own maintained interface.
 
 The four local client files were actually read and compared with their released
-Git bodies. Their only differences were one additional final LF each. The
-continuation accepts either the exact released body or that one exact known
-preimage. It verifies all four files before truncating only the additional LF,
-requires a single-link source preimage for that truncation, fsyncs and checks the resulting blob.
-Any other content change remains an explicit source-selection error.
+Git bodies. Their only observed differences were final LF bytes. The continuation
+accepts exact released bytes, or normalizes only terminal LF bytes when the full
+result matches the exact released Git blob. Replacement is atomic, checks the
+original preimage immediately before publication and preserves the original mode.
+Any other content change remains an explicit source-selection mismatch.
 
 The original receiving executable and exact PR1807 imagery module are embedded
 as complete immutable source bytes. They are staged into this task's private
-`/dev/c79f-stac-receiving-source-1807` and verified against their published Git
+`/dev/c79f-stac-receiving-source-transport-95a6d6d3` and verified against their published Git
 blobs. The unchanged dependency links point to the original B710 native closure;
 the borrowed runtime is not edited. This keeps the existing engine and its
 forwarded-edition correction together without a second source download.
@@ -73,8 +110,9 @@ The declaration remains 192 MiB for the complete process with 256 MiB reserve,
 clean-cache accounting and included storage. The existing output declaration
 remains 16 MiB with 64 MiB disk reserve and the retained inode declaration.
 The original placement/native APIs select the actual filesystem, preserve the
-predecessor journal, release the undispatched predecessor through its own stop
-implementation, and own admission and the sole foreground child. The wrapper
+predecessor journal, either release the undispatched predecessor through its own
+stop implementation or retain the exact already-terminal predecessor, and own
+admission and the sole foreground child. The wrapper
 does not edit requests, capacity indexes, leases or controller identities.
 
 A capacity wait returns the actual placement observations. A changed filesystem,
@@ -88,15 +126,18 @@ The same original customer command then performs all ten stages documented in
 complete imports, all retained scene pages and processing views, verified asset
 stream/ranges, analyst query and revision-guarded decision, reports, full handovers,
 independent receiving, original cancellation, host restart and operation recovery.
-It rejects fresh provider capture. Publication of this executable is not a claim
-that those native stages have run.
+Its command sequence consumes the original retained handover rather than invoking
+a fresh capture. The original source identities stay bound throughout. The first
+actual attempt ended before those stages; subsequent results retain their actual
+completed stage list.
 
 ## Preserve the complete result
 
 The wrapper reads the original output log, native terminal record and receiving
 `progress.json`. It packages the actual result, selected complete customer
 exports/reports, original input, thumbnail and native/placement/predecessor
-journals with a SHA256 manifest. Private host connection files are excluded from
+journals with a SHA256 manifest. The corrected continuation also includes the
+complete prior native-result archive without changing its bytes. Private host connection files are excluded from
 the shared output.
 
 A successful preservation emits `artifact-preserved` with the exact path, byte
