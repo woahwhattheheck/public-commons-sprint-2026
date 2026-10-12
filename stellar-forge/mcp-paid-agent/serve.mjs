@@ -6,7 +6,7 @@ import { McpPaidToolBroker, createMcpHttpHandler } from './agent-server.mjs';
 import { createOperatorConsoleHandler } from './operator-console.mjs';
 import { loadOAuthResourceHost } from './oauth-host.mjs';
 
-export async function startMcpWorkspace({ environment = process.env, oauthFetchImpl } = {}) {
+export async function startMcpWorkspace({ environment = process.env, oauthFetchImpl, operatorAdapter } = {}) {
   const discoveryUrl = environment.BAZAAR_DISCOVERY_URL;
   const bearerToken = environment.MCP_ACCESS_TOKEN;
   const oauthConfigPath = environment.MCP_OAUTH_CONFIG;
@@ -16,6 +16,8 @@ export async function startMcpWorkspace({ environment = process.env, oauthFetchI
   const directory = environment.MCP_STATE_DIR;
   if (modulePath && (!isAbsolute(modulePath) || !directory))
     throw new TypeError('An operator module requires an absolute MCP_OPERATOR_MODULE and durable MCP_STATE_DIR.');
+  if (operatorAdapter !== undefined && (modulePath || !directory || !operatorAdapter || typeof operatorAdapter !== 'object'))
+    throw new TypeError('A trusted in-process operator requires durable MCP_STATE_DIR and no MCP_OPERATOR_MODULE.');
   const allowedResourceOrigins = (environment.PAID_RESOURCE_ORIGINS ?? '').split(',').map(value => value.trim()).filter(Boolean);
   const allowedClientOrigins = (environment.MCP_CLIENT_ORIGINS ?? '').split(',').map(value => value.trim()).filter(Boolean);
   const port = Number(environment.MCP_PORT ?? 3210);
@@ -23,7 +25,7 @@ export async function startMcpWorkspace({ environment = process.env, oauthFetchI
   const timeoutMs = Number(environment.MCP_PROVIDER_TIMEOUT_MS ?? 8000);
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 300000)
     throw new RangeError('MCP_PROVIDER_TIMEOUT_MS must be 1..300000');
-  let quoteStore, resultStore, broker, server, operator, address, access;
+  let quoteStore, resultStore, broker, server, operator = operatorAdapter, address, access;
   try {
     access = await loadOAuthResourceHost({configPath:oauthConfigPath,bearerToken,fetchImpl:oauthFetchImpl});
     if (directory) {
@@ -35,13 +37,18 @@ export async function startMcpWorkspace({ environment = process.env, oauthFetchI
     if (modulePath) {
       // Executable trusted host configuration, never a path from MCP or discovery.
       operator = await import(pathToFileURL(modulePath).href);
+    }
+    if (operator) {
+      // A native launcher may supply its already-open trusted operator. Never
+      // accept this host-only callback object from an MCP request or environment.
       const pays = typeof operator.approve === 'function' && typeof operator.signPayment === 'function';
       const readsOnly = operator.approve === undefined && operator.signPayment === undefined &&
         (typeof operator.reconcilePayment === 'function' || typeof operator.spendingStatus === 'function');
       if ((!pays && !readsOnly) ||
           (operator.reconcilePayment !== undefined && typeof operator.reconcilePayment !== 'function') ||
           (operator.spendingStatus !== undefined && typeof operator.spendingStatus !== 'function') ||
-          (operator.close !== undefined && typeof operator.close !== 'function'))
+          (operator.close !== undefined && typeof operator.close !== 'function') ||
+          (operator.agentCommerce !== undefined && typeof operator.agentCommerce !== 'function'))
         throw new TypeError('Export paired approve/signPayment functions, reconciliation or spending inspection functions, or both.');
     }
     broker = new McpPaidToolBroker({ discoveryUrl, allowedResourceOrigins, quoteStore, resultStore, timeoutMs,

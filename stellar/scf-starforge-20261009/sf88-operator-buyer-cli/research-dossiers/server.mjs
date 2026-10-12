@@ -2,13 +2,20 @@
 import { createServer } from 'node:http';
 import { pipeline } from 'node:stream/promises';
 import { readFile } from 'node:fs/promises';
-import { isAbsolute, join, resolve } from 'node:path';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
+import {privateDirectory,writeJson,digest,jsonBytes as canonicalBytes} from '../node/store.mjs';
+import {RESEARCH_WORKSPACE_API,RESEARCH_WORKSPACE_CONNECTION,researchWorkspaceId,researchSummary,researchPage,researchSection,researchComparison,researchCrossrefReview} from './workspace-protocol.mjs';
 import { openDossierStore } from './dossier.mjs';
+import { openClinicalTrialsWorkspace } from './clinical-trials-workspace.mjs';
+import { handleClinicalTrialsRoute } from './clinical-trials-routes.mjs';
 import { receiveOpenAlexEdition } from './openalex.mjs';
 import { openSavedOpenAlexWorkspace } from './openalex-workspace.mjs';
 import { openUnstructuredWorkspace, openSavedDocumentBuyerSource } from './unstructured-workspace.mjs';
+import { openUnstructuredPipelineWorkspace, openSavedPipelineSource, PIPELINE_UPLOAD_BODY_BYTES } from './unstructured-pipelines-workspace.mjs';
+
+import {openResearchObjectSource} from './object-inputs.mjs';
 
 const PUBLIC = fileURLToPath(new URL('./public/', import.meta.url));
 const TYPES = Object.freeze({
@@ -18,6 +25,11 @@ const TYPES = Object.freeze({
   'crossref.js': 'text/javascript; charset=utf-8',
   'unstructured.js': 'text/javascript; charset=utf-8',
   'unstructured.css': 'text/css; charset=utf-8',
+  'object-inputs.js': 'text/javascript; charset=utf-8',
+  'unstructured-pipelines.js': 'text/javascript; charset=utf-8',
+  'unstructured-pipelines.css': 'text/css; charset=utf-8',
+  'clinical-trials.js': 'text/javascript; charset=utf-8',
+  'clinical-trials.css': 'text/css; charset=utf-8',
 });
 const MAX_RESEARCH_BODY = 96 * 1024 * 1024 + 65536; // 16 MiB raw UTF-8, worst-case JSON escaping plus envelope.
 const MAX_PORTABLE_BODY = 256 * 1024 * 1024 + 65536; // Engine caps the serialized portable record at 256 MiB.
@@ -94,7 +106,7 @@ export async function loadEditionAdapters(modulePath) {
 
 /** Reuses the existing SF88 loopback / fragment-token operator convention. */
 export async function startDossierWorkspace({directory, port = 0, providers = {}, openalexWorkspace = null,
-  crossrefSource = null, crossrefIdentity = null, documentSource = null} = {}) {
+  crossrefSource = null, crossrefIdentity = null, documentSource = null, pipelineSource = null, objectStateDirectory = null, clinicalTrialsInputs = null, clinicalTrialsPython = 'python3'} = {}) {
   requireValue(typeof directory === 'string' && isAbsolute(directory) && resolve(directory) === directory,
     'WORKSPACE_ABSOLUTE_PATH_REQUIRED');
   requireValue(Number.isInteger(port) && port >= 0 && port <= 65535, 'WORKSPACE_PORT_INVALID');
@@ -104,6 +116,9 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
   requireValue(openalexWorkspace === null || typeof openalexWorkspace?.listEditions === 'function' &&
     typeof openalexWorkspace?.exportFiles === 'function', 'OPENALEX_WORKSPACE_API_REQUIRED');
   const store = await openDossierStore(directory, {providers});
+  const workspaceId = researchWorkspaceId(store.directory), instanceId = randomUUID();
+  const api = {schema:RESEARCH_WORKSPACE_API,metadata:true,revisionPages:true,streamedPortable:true,
+    savedCrossrefOperations:crossrefSource!==null,originalObjectInputs:objectStateDirectory!==null};
   await store.list();
   const unstructured = await openUnstructuredWorkspace({dossiers:store,...(documentSource ?? {})});
   if (unstructured.provider) {
@@ -116,6 +131,17 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
     crossref = await openCrossrefWorkspace({directory:join(directory,'crossref'),dossiers:store,
       source:crossrefSource,identity:crossrefIdentity});
   }
+  let objectInputs=null,pipelines;
+  try {
+    if(objectStateDirectory!==null)objectInputs=await openResearchObjectSource({
+      directory,objectWorkspaceDirectory:objectStateDirectory});
+    pipelines=await openUnstructuredPipelineWorkspace({dossiers:store,source:pipelineSource,objectSource:objectInputs});
+  } catch(error) {await objectInputs?.close();await crossref?.close();throw error;}
+  let clinicalTrials;
+  try {
+    clinicalTrials = await openClinicalTrialsWorkspace({directory:join(directory,'clinical-trials'),
+      dossiers:store,inputs:clinicalTrialsInputs,python:clinicalTrialsPython});
+  } catch (error) {unstructured.clear(); await objectInputs?.close(); await pipelines.close(); await crossref?.close(); throw error;}
   const token = randomBytes(32).toString('hex');
   const expectedAuthorization = Buffer.from('Bearer ' + token);
   let origin;
@@ -137,6 +163,8 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       requireValue(!req.headers.origin || req.headers.origin === origin, 'ORIGIN_REFUSED');
       const url = new URL(req.url, origin);
       const path = url.pathname;
+      const projection = url.searchParams.get('projection') ?? 'full';
+      requireValue(['full','metadata'].includes(projection),'RESEARCH_PROJECTION_INVALID');
       if ((req.method === 'GET' || req.method === 'HEAD') && (path === '/' || Object.hasOwn(TYPES, path.slice(1)))) {
         const name = path === '/' ? 'index.html' : path.slice(1);
         const content = await readFile(join(PUBLIC, name));
@@ -148,11 +176,35 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       const auth = Buffer.from(req.headers.authorization || '');
       requireValue(auth.length === expectedAuthorization.length && timingSafeEqual(auth, expectedAuthorization),
         'AUTH_REQUIRED');
+      requireValue(!req.headers['x-research-workspace-id']||req.headers['x-research-workspace-id']===workspaceId,
+        'RESEARCH_WORKSPACE_CHANGED');
+      requireValue(!req.headers['x-research-instance-id']||req.headers['x-research-instance-id']===instanceId,
+        'RESEARCH_INSTANCE_CHANGED');
+      if (req.method === 'GET' && path === '/api/status') {
+        send(200, {mode:'RESEARCH_DOSSIER_WORKSPACE',api,workspaceId,instanceId,
+          dossierCount:(await store.list()).length,providers:Object.keys(providers),
+          openalex:{configured:openalexWorkspace!==null},
+          crossref:{configured:crossref!==null,identity:crossrefIdentity},
+          unstructured:{configured:unstructured.configured,workspaceId:unstructured.workspaceId},
+          pipelines:await pipelines.configured(),objects:objectInputs?.source()??{configured:false},
+          clinicalTrials:{configured:true,inputFormat:'stellar-forge.clinicaltrials-packet.v1'}});return;
+      }
+      if (req.method === 'GET' && path === '/api/dossiers') {
+        const dossiers=await store.list(),snapshot=digest(canonicalBytes(dossiers));
+        const offset=url.searchParams.has('offset')?revisionQuery(url.searchParams.get('offset')):0;
+        const limit=url.searchParams.has('limit')?revisionQuery(url.searchParams.get('limit')):30;
+        requireValue(offset===0||url.searchParams.get('snapshot')===snapshot,'RESEARCH_INVENTORY_CHANGED');
+        const page=researchPage(dossiers,{offset,limit});
+        send(200,{workspaceId,snapshot,...page,
+          next:page.nextOffset===null?null:{offset:page.nextOffset,limit,snapshot}});return;
+      }
       if (req.method === 'GET' && path === '/api/state') {
-        send(200, {dossiers: await store.list(), providers: Object.keys(providers),
+        send(200, {api,workspaceId,instanceId,dossiers: await store.list(), providers: Object.keys(providers),
           openalex: {configured:openalexWorkspace !== null},
           crossref: {configured:crossref !== null,identity:crossrefIdentity},
-          unstructured: {configured:unstructured.configured,workspaceId:unstructured.workspaceId}}); return;
+          unstructured: {configured:unstructured.configured,workspaceId:unstructured.workspaceId},
+          pipelines: await pipelines.configured(),objects:objectInputs?.source()??{configured:false},
+          clinicalTrials: {configured:true,inputFormat:'stellar-forge.clinicaltrials-packet.v1'}}); return;
       }
       if (req.method === 'GET' && path === '/api/openalex/editions') {
         requireValue(openalexWorkspace !== null, 'OPENALEX_WORKSPACE_NOT_CONFIGURED');
@@ -162,7 +214,7 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       }
       if (req.method === 'POST' && path === '/api/dossiers') {
         const data = await readJson(req, MAX_CONTROL_BODY);
-        send(201, await store.create(selectedFields(data, ['title', 'description']))); return;
+        send(201, await store.create({...selectedFields(data, ['title', 'description']),projection})); return;
       }
       if (req.method === 'POST' && path === '/api/reopen-stream') {
         const type = (req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
@@ -173,7 +225,7 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
           requireValue(/^[0-9]+$/.test(declared), 'CONTENT_LENGTH_INVALID');
           requireValue(Number(declared) <= 256 * 1024 * 1024, 'UPLOAD_SIZE_LIMIT');
         }
-        send(200, await store.reopenStream(req)); return;
+        send(200, await store.reopenStream(req,{projection})); return;
       }
       if (req.method === 'POST' && path === '/api/reopen') {
         const data = await readJson(req, MAX_PORTABLE_BODY);
@@ -185,13 +237,58 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       const id = pathId(match[1]), action = match[2] || '';
       if (req.method === 'GET' && action === '') {
         const options = url.searchParams.has('revision') ? {revision: revisionQuery(url.searchParams.get('revision'))} : {};
-        send(200, await store.get(id, options)); return;
+        send(200, await (projection==='metadata'?store.getMetadata(id,options):store.get(id, options))); return;
       }
+      if (req.method === 'GET' && action === 'metadata') {
+        const options=url.searchParams.has('revision')?{revision:revisionQuery(url.searchParams.get('revision'))}:{};
+        send(200,researchSummary(await store.getMetadata(id,options)));return;
+      }
+      const sectionMatch=action.match(/^sections\/([a-z]+)$/);
+      if(req.method==='GET'&&sectionMatch){
+        const selected=url.searchParams.get('selected');
+        requireValue(selected===null||['true','false'].includes(selected),'RESEARCH_SELECTION_INVALID');
+        const options={section:sectionMatch[1],
+          offset:url.searchParams.has('offset')?revisionQuery(url.searchParams.get('offset')):0,
+          limit:url.searchParams.has('limit')?revisionQuery(url.searchParams.get('limit')):30,
+          query:url.searchParams.get('query')??''};
+        if(url.searchParams.has('revision'))options.revision=revisionQuery(url.searchParams.get('revision'));
+        if(url.searchParams.has('questionId'))options.questionId=url.searchParams.get('questionId');
+        if(selected!==null)options.selected=selected==='true';
+        send(200,await researchSection(store,id,options));return;
+      }
+      const retainedMatch=action.match(/^retained-editions\/(e_[a-f0-9]{64})$/);
+      if(req.method==='GET'&&retainedMatch){
+        const retained=await store.readRetainedEdition(id,retainedMatch[1]);
+        send(200,retained.bytes,'application/json; charset=utf-8',retainedMatch[1]+'.research-source.json');return;
+      }
+      if (await handleClinicalTrialsRoute({workspace:clinicalTrials,dossierId:id,action,req,url,
+        readBody:()=>readJson(req,MAX_CONTROL_BODY),send,projection})) return;
       if (req.method === 'GET' && action === 'unstructured') {
         send(200, await unstructured.list(id, {
           after:url.searchParams.get('after') ?? '',
           limit:url.searchParams.has('limit') ? revisionQuery(url.searchParams.get('limit')) : 20,
         })); return;
+      }
+      if (req.method === 'GET' && action === 'pipelines') {
+        send(200, await pipelines.list(id, {after:url.searchParams.get('after')??'',
+          limit:url.searchParams.has('limit')?revisionQuery(url.searchParams.get('limit')):30})); return;
+      }
+      if(req.method==='GET'&&action==='pipelines/objects') {
+        send(200,await pipelines.objects(id,{after:url.searchParams.get('after')??'',
+          snapshot:url.searchParams.get('snapshot'),
+          limit:url.searchParams.has('limit')?revisionQuery(url.searchParams.get('limit')):25}));return;
+      }
+      if(req.method==='GET'&&action==='pipelines/object-reviews') {
+        send(200,await pipelines.objectReviews(id,{after:url.searchParams.get('after')??'',
+          limit:url.searchParams.has('limit')?revisionQuery(url.searchParams.get('limit')):25}));return;
+      }
+      const pipelineMatch = action.match(/^pipelines\/operations\/(up_[a-f0-9]{64})(?:\/(submit|refresh|cancel|reconcile|retain|provider-jobs|inputs|outputs)(?:\/((?:in_|out_)[a-f0-9]{64}))?)?$/);
+      if (pipelineMatch && req.method === 'GET') {
+        if (!pipelineMatch[2]) {send(200, await pipelines.inspect(id,pipelineMatch[1])); return;}
+        if (['inputs','outputs'].includes(pipelineMatch[2]) && pipelineMatch[3]) {
+          const original = await pipelines[pipelineMatch[2] === 'inputs' ? 'inputFile' : 'outputFile'](id,pipelineMatch[1],pipelineMatch[3]);
+          send(200,original.bytes,original.contentType,original.filename); return;
+        }
       }
       if (req.method === 'GET' && action === 'crossref/operations') {
         requireValue(crossref !== null, 'CROSSREF_WORKSPACE_NOT_CONFIGURED');
@@ -203,15 +300,25 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
         requireValue(crossref !== null, 'CROSSREF_WORKSPACE_NOT_CONFIGURED');
         const selected = await crossref.inspect(crossrefMatch[1], {probe:false});
         requireValue(selected.plan.request.dossierId === id, 'CROSSREF_OPERATION_DOSSIER_MISMATCH');
-        if (req.method === 'GET' && !crossrefMatch[2]) {send(200, await crossref.review(crossrefMatch[1])); return;}
+        if (req.method === 'GET' && !crossrefMatch[2]) {
+          const reviewed=await crossref.review(crossrefMatch[1]);
+          send(200,url.searchParams.has('section')?researchCrossrefReview(reviewed,{
+            section:url.searchParams.get('section'),
+            offset:url.searchParams.has('offset')?revisionQuery(url.searchParams.get('offset')):0,
+            limit:url.searchParams.has('limit')?revisionQuery(url.searchParams.get('limit')):30}):reviewed);return;
+        }
         if (req.method === 'GET' && crossrefMatch[2] === 'edition') {
           const retained = await crossref.edition(crossrefMatch[1]);
           send(200, retained.bytes, 'application/json; charset=utf-8', crossrefMatch[1]+'.crossref.json'); return;
         }
       }
       if (req.method === 'GET' && action === 'compare') {
-        send(200, await store.compare(id, {before: revisionQuery(url.searchParams.get('before')),
-          after: revisionQuery(url.searchParams.get('after'))})); return;
+        const compared=await store.compare(id,{before:revisionQuery(url.searchParams.get('before')),
+          after:revisionQuery(url.searchParams.get('after'))});
+        send(200,url.searchParams.has('section')?researchComparison(compared,{
+          section:url.searchParams.get('section'),
+          offset:url.searchParams.has('offset')?revisionQuery(url.searchParams.get('offset')):0,
+          limit:url.searchParams.has('limit')?revisionQuery(url.searchParams.get('limit')):30}):compared);return;
       }
       if (req.method === 'GET' && action === 'export') {
         const format = url.searchParams.get('format');
@@ -219,6 +326,7 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
         if (format === 'json' || format === 'json.gz') {
           const result = await store.exportStream(id, {compression: format === 'json.gz' ? 'gzip' : 'none'});
           res.writeHead(200, {...headers, 'Content-Type': result.contentType,
+            'X-Research-Dossier-Revision':String(result.revision),
             'Content-Disposition': 'attachment; filename="' + safeFilename(result.filename) + '"'});
           await pipeline(result.body, res); return;
         }
@@ -226,10 +334,51 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
         requireValue(typeof result.body === 'string' || result.body instanceof Uint8Array, 'EXPORT_BODY_INVALID');
         const type = {'json': 'application/json; charset=utf-8', md: 'text/markdown; charset=utf-8',
           html: 'text/html; charset=utf-8'}[format];
+        res.setHeader('X-Research-Dossier-Revision',String(result.revision));
         send(200, Buffer.from(result.body), type, result.filename); return;
       }
       if (req.method !== 'POST') {send(405, {error: 'METHOD_NOT_ALLOWED'}); return;}
-      const data = await readJson(req, ['receive', 'reference'].includes(action) ? MAX_RESEARCH_BODY : MAX_CONTROL_BODY);
+      const data = await readJson(req, action === 'pipelines/prepare' ? PIPELINE_UPLOAD_BODY_BYTES :
+        ['receive', 'reference'].includes(action) ? MAX_RESEARCH_BODY : MAX_CONTROL_BODY);
+      if(action==='pipelines/objects/review'||action==='pipelines/objects/prepare') {
+        const controller=new AbortController(),abort=()=>controller.abort();
+        // Only a prematurely closed response cancels owned file verification.
+        const ended=()=>{if(!res.writableFinished)abort();};
+        res.once('close',ended);req.once('aborted',abort);
+        if(req.aborted||res.destroyed)abort();
+        try {
+          const result=await pipelines[action.endsWith('/review')?'reviewObject':'prepareObject'](
+            id,data,{signal:controller.signal});
+          if(!res.destroyed)send(201,result);
+        } finally {res.off('close',ended);req.off('aborted',abort);}
+        return;
+      }
+      if (action === 'pipelines/prepare') {
+        send(201,await pipelines.prepare(id,data)); return;
+      }
+      if (pipelineMatch && !pipelineMatch[3]) {
+        if (pipelineMatch[2] === 'provider-jobs') {
+          send(200,await pipelines.providerJobs(id,pipelineMatch[1],data)); return;
+        }
+        if (['submit','refresh','cancel','reconcile','retain'].includes(pipelineMatch[2])) {
+          send(200,await pipelines.act(id,pipelineMatch[1],pipelineMatch[2],data)); return;
+        }
+      }
+      if (action === 'pipelines/review') {
+        send(200,await pipelines.review(id,data.selection)); return;
+      }
+      if (action === 'pipelines/elements') {
+        send(200,await pipelines.elements(id,selectedFields(data,
+          ['selection','expectedEditionSha256','offset','limit','page','type','query']))); return;
+      }
+      if (action === 'pipelines/download') {
+        const original=await pipelines.download(id,selectedFields(data,
+          ['selection','expectedEditionSha256','file']));
+        send(200,original.bytes,original.contentType,original.filename); return;
+      }
+      if (action === 'pipelines/receive') {
+        send(200,await pipelines.receive(id,data)); return;
+      }
       if (action === 'unstructured/review') {
         send(200, await unstructured.review(id, data.selection)); return;
       }
@@ -254,25 +403,25 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
         const operationId = crossrefMatch[1], operation = crossrefMatch[2];
         if (operation === 'start') {send(202, await crossref.start(operationId, selectedFields(data, ['expectedPlanSha256']))); return;}
         if (operation === 'stop') {send(200, await crossref.stop(operationId)); return;}
-        send(200, await crossref.receive(operationId, selectedFields(data,
-          ['expectedRevision','expectedPlanSha256','expectedEditionSha256']))); return;
+        send(200, await crossref.receive(operationId, {...selectedFields(data,
+          ['expectedRevision','expectedPlanSha256','expectedEditionSha256']),projection})); return;
       }
       const expectedRevision = revision(data.expectedRevision);
       if (action === '') {
-        send(200, await store.update(id, {...selectedFields(data, ['title', 'description']), expectedRevision})); return;
+        send(200, await store.update(id, {...selectedFields(data, ['title', 'description']), expectedRevision,projection})); return;
       }
       if (action === 'questions') {
-        send(201, await store.addQuestion(id, {...selectedFields(data, ['text']), expectedRevision})); return;
+        send(201, await store.addQuestion(id, {...selectedFields(data, ['text']), expectedRevision,projection})); return;
       }
       const questionMatch = action.match(/^questions\/([^/]+)$/);
       if (questionMatch) {
         send(200, await store.updateQuestion(id, pathId(questionMatch[1]),
-          {...selectedFields(data, ['text', 'notes', 'status']), expectedRevision})); return;
+          {...selectedFields(data, ['text', 'notes', 'status']), expectedRevision,projection})); return;
       }
       if (action === 'receive') {
         requireValue(typeof data.rawText === 'string' && data.rawText.length > 0, 'ORIGINAL_RESEARCH_TEXT_REQUIRED');
         send(201, await store.receive(id, {...selectedFields(data,
-          ['questionId', 'label', 'provider', 'rawText', 'sourceReference']), expectedRevision})); return;
+          ['questionId', 'label', 'provider', 'rawText', 'sourceReference']), expectedRevision,projection})); return;
       }
       if (action === 'openalex') {
         requireValue(openalexWorkspace !== null, 'OPENALEX_WORKSPACE_NOT_CONFIGURED');
@@ -283,7 +432,8 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
           const imported = await receiveOpenAlexEdition(store, id, {workspace:openalexWorkspace,
             ...selectedFields(data, ['questionId', 'editionId', 'label']), expectedRevision,
             signal:controller.signal});
-          send(201, imported); return;
+          send(201, projection === 'metadata' ? {...imported,
+            dossier:await store.getMetadata(id, {revision:imported.dossier.revision})} : imported); return;
         } finally {res.removeListener('close', disconnected);}
       }
       if (action === 'reference') {
@@ -291,32 +441,36 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
           'PROVIDER_INVALID');
         requireValue(plain(data.reference), 'PROVIDER_EDITION_REFERENCE_REQUIRED');
         send(201, await store.receiveReference(id, {...selectedFields(data,
-          ['questionId', 'label', 'provider', 'reference']), expectedRevision})); return;
+          ['questionId', 'label', 'provider', 'reference']), expectedRevision,projection})); return;
       }
       if (action === 'evidence') {
         send(200, await store.selectEvidence(id, {...selectedFields(data,
-          ['sourceId', 'selected', 'note', 'classification']), expectedRevision})); return;
+          ['sourceId', 'selected', 'note', 'classification']), expectedRevision,projection})); return;
       }
       if (action === 'selections') {
         send(200, await store.updateSelection(id, {...selectedFields(data,
-          ['occurrenceId', 'selected', 'note', 'classification']), expectedRevision})); return;
+          ['occurrenceId', 'selected', 'note', 'classification']), expectedRevision,projection})); return;
       }
       const findingMatch = action.match(/^findings\/([^/]+)$/);
       if (findingMatch) {
         send(200, await store.updateFinding(id, pathId(findingMatch[1]), {...selectedFields(data,
-          ['title', 'text', 'sourceIds']), expectedRevision})); return;
+          ['title', 'text', 'sourceIds']), expectedRevision,projection})); return;
       }
       if (action === 'findings') {
         send(201, await store.addFinding(id, {...selectedFields(data,
-          ['questionId', 'title', 'text', 'sourceIds']), expectedRevision})); return;
+          ['questionId', 'title', 'text', 'sourceIds']), expectedRevision,projection})); return;
       }
       send(404, {error: 'ROUTE_NOT_FOUND'});
     } catch (error) {
       if (res.headersSent) {res.destroy(); return;}
       const code = safeCode(error);
       const status = code === 'AUTH_REQUIRED' ? 401 : ['HOST_REFUSED', 'ORIGIN_REFUSED'].includes(code) ? 403 :
-        ['REVISION_CONFLICT','PORTABLE_HISTORY_CONFLICT','ROUTESCAN_RECORD_BUSY','CROSSREF_OPERATION_RUNNING_ELSEWHERE','UNSTRUCTURED_REVIEWED_EDITION_CHANGED','UNSTRUCTURED_RECEIVING_LABEL_CONFLICT'].includes(code) ? 409 : code === 'ENOENT' || code === 'DOSSIER_NOT_FOUND' ? 404 :
-          ['UPLOAD_SIZE_LIMIT','PORTABLE_SIZE_LIMIT','PORTABLE_RECORD_SIZE_LIMIT'].includes(code) ? 413 : 400;
+        ['REVISION_CONFLICT','PORTABLE_HISTORY_CONFLICT','ROUTESCAN_RECORD_BUSY','CROSSREF_OPERATION_RUNNING_ELSEWHERE','UNSTRUCTURED_REVIEWED_EDITION_CHANGED','UNSTRUCTURED_RECEIVING_LABEL_CONFLICT','CLINICALTRIALS_REVIEW_CHANGED','CLINICALTRIALS_PLAN_CHANGED','CLINICALTRIALS_QUESTION_CHANGED','CLINICALTRIALS_SOURCE_CONFIGURATION_CHANGED','PIPELINE_REVISION_CHANGED','PIPELINE_REVIEWED_EDITION_CHANGED',
+          'PIPELINE_PREPARATION_REQUEST_CHANGED','PIPELINE_RECEIVING_REQUEST_CHANGED','PIPELINE_REVIEWED_PLAN_CHANGED',
+          'PIPELINE_ACTION_REQUEST_REUSED','PIPELINE_OPERATION_RUNNING_ELSEWHERE',
+          'RESEARCH_OBJECT_SESSION_CHANGED','RESEARCH_OBJECT_REVIEW_CHANGED','RESEARCH_OBJECT_REVIEW_SOURCE_CHANGED',
+          'RESEARCH_OBJECT_INVENTORY_CHANGED','RESEARCH_OBJECT_CURSOR_CHANGED','RESEARCH_OBJECT_REVIEW_REQUEST_CHANGED'].includes(code) ? 409 : code === 'ENOENT' || code === 'DOSSIER_NOT_FOUND' ? 404 :
+          ['UPLOAD_SIZE_LIMIT','PORTABLE_SIZE_LIMIT','PORTABLE_RECORD_SIZE_LIMIT','PIPELINE_UPLOAD_TOO_LARGE'].includes(code) ? 413 : 400;
       send(status, {error: code, ...(error.openAlexImport ? {openAlexImport:error.openAlexImport} : {})});
     }
   });
@@ -328,12 +482,15 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       server.once('error', reject);
       server.listen(port, '127.0.0.1', accept);
     });
-  } catch (error) {unstructured.clear(); await crossref?.close(); throw error;}
+  } catch (error) {unstructured.clear(); await clinicalTrials.close(); await objectInputs?.close(); await pipelines.close(); await crossref?.close(); throw error;}
   origin = 'http://127.0.0.1:' + server.address().port;
   let closing;
-  return {server, origin, url: origin + '/#token=' + token, token, crossref, unstructured,
+  return {server, origin, url: origin + '/#token=' + token, token, workspaceId, instanceId, api, crossref, unstructured, pipelines, objectInputs, clinicalTrials,
     close: () => closing ??= (async () => {
       unstructured.clear();
+      await objectInputs?.close();
+      await pipelines.close();
+      await clinicalTrials.close();
       await crossref?.close();
       await new Promise((accept, reject) => {
         server.close(error => error ? reject(error) : accept()); server.closeIdleConnections();
@@ -346,7 +503,7 @@ function parseOptions(args) {
   const options = {};
   for (let index = 0; index < args.length; index += 2) {
     const key = args[index];
-    requireValue(['--dir', '--port', '--edition-adapter', '--openalex-workspace', '--openalex-module', '--crossref-config', '--crossref-state', '--document-source'].includes(key) && !Object.hasOwn(options, key) &&
+    requireValue(['--dir', '--port', '--edition-adapter', '--openalex-workspace', '--openalex-module', '--crossref-config', '--crossref-state', '--document-source', '--pipeline-source', '--connection-file', '--object-state', '--clinical-trials-python'].includes(key) && !Object.hasOwn(options, key) &&
       typeof args[index + 1] === 'string' && args[index + 1].length > 0, 'ARGUMENT_INVALID_OR_REPEATED');
     options[key] = args[index + 1];
   }
@@ -357,11 +514,11 @@ function parseOptions(args) {
   return {directory: options['--dir'], port: Number(rawPort), adapter: options['--edition-adapter'],
     openalexDirectory:options['--openalex-workspace'], openalexModule:options['--openalex-module'],
     crossrefConfig:options['--crossref-config'],crossrefDirectory:options['--crossref-state'],
-    documentSourceConfig:options['--document-source']};
+    documentSourceConfig:options['--document-source'],pipelineSourceConfig:options['--pipeline-source'],connectionFile:options['--connection-file'],objectStateDirectory:options['--object-state']??null,clinicalTrialsPython:options['--clinical-trials-python']??'python3'};
 }
 async function main(args) {
   if (args.length === 0 || args.length === 1 && ['--help', '-h'].includes(args[0])) {
-    process.stdout.write('Usage: node server.mjs --dir /absolute/private/workspace [--port 8846] [--edition-adapter /absolute/provider-adapters.mjs] [--openalex-workspace /absolute/original/workspace] [--openalex-module /absolute/original/research/workspace.mjs] [--crossref-state /absolute/private/crossref-source] [--crossref-config /absolute/crossref-merchant.json] [--document-source /absolute/private/document-source.json]\n');
+    process.stdout.write('Usage: node server.mjs --dir /absolute/private/workspace [--port 8846] [--edition-adapter /absolute/provider-adapters.mjs] [--openalex-workspace /absolute/original/workspace] [--openalex-module /absolute/original/research/workspace.mjs] [--crossref-state /absolute/private/crossref-source] [--crossref-config /absolute/crossref-merchant.json] [--document-source /absolute/private/document-source.json] [--connection-file /absolute/private/research-connection.json] [--pipeline-source /absolute/private/pipeline-source.json] [--object-state /absolute/private/object-buyer] [--clinical-trials-python /absolute/python3]\n');
     return;
   }
   const options = parseOptions(args);
@@ -369,7 +526,7 @@ async function main(args) {
   const openalexWorkspace = options.openalexDirectory ? await openSavedOpenAlexWorkspace({
     directory:options.openalexDirectory, modulePath:options.openalexModule,
   }) : null;
-  let app, crossrefSource = null, crossrefIdentity = null, documentSource = null;
+  let app, crossrefSource = null, crossrefIdentity = null, documentSource = null, pipelineSource = null;
   try {
     if (options.crossrefDirectory) {
       requireValue(isAbsolute(options.crossrefDirectory) && (!options.crossrefConfig || isAbsolute(options.crossrefConfig)), 'CROSSREF_ABSOLUTE_PATHS_REQUIRED');
@@ -391,12 +548,29 @@ async function main(args) {
       crossrefIdentity = {configSha256,account:snapshot.account,mode:snapshot.mode};
     }
     if (options.documentSourceConfig) documentSource = await openSavedDocumentBuyerSource(options.documentSourceConfig);
-    app = await startDossierWorkspace({...options, providers, openalexWorkspace,crossrefSource,crossrefIdentity,documentSource});
-  } catch (error) {await crossrefSource?.close();await openalexWorkspace?.close();throw error;}
-  process.stdout.write(JSON.stringify({mode: 'RESEARCH_DOSSIER_WORKSPACE', directory: options.directory,
+    if (options.pipelineSourceConfig) pipelineSource = await openSavedPipelineSource(options.pipelineSourceConfig);
+    app = await startDossierWorkspace({...options, providers, openalexWorkspace,crossrefSource,crossrefIdentity,documentSource,pipelineSource});
+  } catch (error) {await pipelineSource?.operations.close();await crossrefSource?.close();await openalexWorkspace?.close();throw error;}
+  const startup={schema:RESEARCH_WORKSPACE_CONNECTION,mode:'RESEARCH_DOSSIER_WORKSPACE',
+    directory:options.directory,url:app.url,workspaceId:app.workspaceId,instanceId:app.instanceId};
+  try {
+    if(options.connectionFile){
+      requireValue(isAbsolute(options.connectionFile)&&resolve(options.connectionFile)===options.connectionFile,
+        'RESEARCH_CONNECTION_ABSOLUTE_PATH_REQUIRED');
+      await privateDirectory(dirname(options.connectionFile));
+      await writeJson(options.connectionFile,startup);
+    }
+  } catch(error) {
+    await app.close().catch(()=>{});
+    await crossrefSource?.close();await openalexWorkspace?.close();
+    throw error;
+  }
+  process.stdout.write(JSON.stringify({...startup,mode: 'RESEARCH_DOSSIER_WORKSPACE', directory: options.directory,
     url: app.url, providers: Object.keys(providers), openalexConfigured:openalexWorkspace !== null,
     crossrefConfigured:crossrefSource !== null, documentSourceConfigured:documentSource !== null,
-    documentWorkspaceId:documentSource?.workspaceId ?? null}) + '\n');
+    documentWorkspaceId:documentSource?.workspaceId ?? null,clinicalTrialsConfigured:true,
+    pipelineSourceConfigured:pipelineSource !== null,pipelineWorkspaceId:pipelineSource?.workspaceId ?? null,
+    objectSourceConfigured:options.objectStateDirectory!==null,objectWorkspaceId:app.objectInputs?.source().workspaceId??null}) + '\n');
   let closing;
   const stop = () => closing ??= (async () => {
     try {await app.close();} finally {

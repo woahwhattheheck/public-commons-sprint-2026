@@ -69,6 +69,16 @@ def register(subparsers, common):
     target.add_argument("--file", required=True)
     target.add_argument("--name", required=True)
     mutation(target)
+    target = command("support-preview", "Review an original merchant support handoff for this delivery case", case=True, output=True)
+    target.add_argument("--file", required=True, help="Original SF74 portable support handoff")
+    target.add_argument("--expected-version", type=int, required=True)
+    target = command("support-receive", "Attach reviewed support source and native report to a deployment", case=True, output=True)
+    mutation(target, version=True)
+    target.add_argument("--file", required=True, help="Same original support file used for preview")
+    target.add_argument("--expected-preview-sha256", required=True)
+    deployment = target.add_mutually_exclusive_group(required=True)
+    deployment.add_argument("--deployment", help="Original deployment ID from this operations case")
+    deployment.add_argument("--deployment-file", help="JSON fields for a new original deployment")
     target = command("forecast-preview", "Calculate a dated forecast from current original records", case=True, output=True)
     target.add_argument("--inputs", required=True, help="Forecast input JSON file")
     target.add_argument("--expected-version", type=int, required=True)
@@ -155,6 +165,21 @@ def operate(workspace, args):
         result = ops.forecast(args.case, args.forecast)
     elif action == "forecast-export":
         return {"forecastId": args.forecast, "output": publish(args.output, ops.export_forecast(args.case, args.forecast))}
+    elif action in ("support-preview", "support-receive"):
+        original = {"filename": Path(args.file).name,
+                    "contentBase64": base64.b64encode(read_bytes(args.file, MAX_SOURCE)).decode("ascii")}
+        if action == "support-preview":
+            result = ops.preview_support(args.case, {"expectedVersion": args.expected_version, **original})
+        else:
+            data = {**original, "expectedPreviewSha256": args.expected_preview_sha256,
+                    "deploymentId": args.deployment}
+            if args.deployment_file:
+                try:
+                    data["deployment"] = json.loads(read_bytes(args.deployment_file, MAX_SOURCE))
+                except (UnicodeError, ValueError) as exc:
+                    raise Problem("New deployment fields must be a UTF-8 JSON object.", 422, "INVALID_JSON") from exc
+            result = ops.command(args.case, {"expectedVersion": args.expected_version, "actor": args.actor,
+                "requestId": args.request_id, "note": args.note, "action": "support.receive", "data": data})
     elif action in ("forecast-preview", "forecast-save"):
         try:
             inputs = json.loads(read_bytes(args.inputs, MAX_SOURCE))

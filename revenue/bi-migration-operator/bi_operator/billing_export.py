@@ -201,6 +201,8 @@ def export_period(billing, record):
         safe_name = re.sub(r"[^A-Za-z0-9_.-]", "_", source["file"]["name"])[:150] or "source"
         files["sources/"+ref["id"]+"/"+safe_name] = billing.store.bytes(source["file"]["digest"])
         files["sources/"+ref["id"]+"/normalized.json"] = billing.store.bytes(source["records"]["digest"])
+        if source.get("azure_origin"):
+            files.update(billing.service.azure.origin_files(source["azure_origin"]))
     files["imports.json"] = (encoded(imports)+"\n").encode()
     agency_headers = ["Agency ID", "Agency name", "Finance code", "Agency revision", "Period", "Currency", "Amount", "Cost records"]
     agency_rows = [[a["id"], a["label"], a["code"], a["revision"], p["period"], p["currency"],
@@ -256,7 +258,8 @@ def export_period(billing, record):
         "are then divided by its retained agency weights with agency ID breaking ties. This preserves refunds "
         "and reconciles the full monthly total. Source high-precision amounts and row adjustments are retained.\n\n"
         "sources/ retains every selected original CSV/ZIP and normalized input. imports.json identifies exact "
-        "input editions and mappings; policy.json and agencies.json retain the selected policy and agency revisions. "
+        "input editions and mappings; Azure-acquired inputs also carry the pinned native manifest, compressed "
+        "partitions and receiving mapping under sources/azure/. policy.json and agencies.json retain the selected policy and agency revisions. "
         "calculation.json contains the complete allocation and any excluded provider internal allocation rows. "
         "Duplicate-looking records in a source remain distinct by source and record ordinal.\n\n"
         "The workbook stores values exceeding Excel's 15-digit numeric precision as text. "

@@ -1,0 +1,30 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "snowflake",
+  "description": "Snowflake retained editions and merchant releases",
+  "commands": {
+    "snowflake": "stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/cli.mjs",
+    "snowflake-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/server.mjs"
+  },
+  "commandDescriptions": {
+    "snowflake": "Capture, receive, review and resume original Snowflake editions and publications",
+    "snowflake-workspace": "Open the Snowflake source, edition and merchant workspace"
+  },
+  "exports": {
+    "./seller/snowflake": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/source.mjs",
+    "./seller/snowflake/declaration": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/declaration.mjs",
+    "./seller/snowflake/store": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/store.mjs",
+    "./seller/snowflake/edition": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/edition.mjs",
+    "./seller/snowflake/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/workspace.mjs",
+    "./seller/snowflake/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/server.mjs",
+    "./seller/snowflake/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/publisher.mjs",
+    "./seller/snowflake/transfer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/transfer.mjs",
+    "./seller/snowflake/cloud-delivery": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/cloud-delivery.mjs"
+  },
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/browser-assets.json"
+    }
+  ]
+}

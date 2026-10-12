@@ -1,3 +1,5 @@
+import { SF61_SHA, SF61_ALIAS } from './sf61-connection-contracts.mjs';
+export { SF61_ALIAS, SF61_SHA } from './sf61-connection-contracts.mjs';
 // MIT. Shared host connection to the original SF61 OpenAPI and HAR console.
 import { constants } from 'node:fs';
 import { open } from 'node:fs/promises';
@@ -6,8 +8,8 @@ import { dirname, resolve } from 'node:path';
 export const SF61_WORKSPACE_CONNECTION_SCHEMA = 'stellar-forge.sf61-workspace-connection.v1';
 export const SF61_MAX_SOURCE_BYTES = 4 * 1024 * 1024;
 export const SF61_MAX_JSON_BYTES = 10 * 1024 * 1024;
-export const SF61_ALIAS = /^[a-z0-9][a-z0-9_-]{0,63}$/;
-export const SF61_SHA = /^[a-f0-9]{64}$/;
+
+
 export const sf61Hash = bytes => createHash('sha256').update(bytes).digest('hex');
 export const sf61Failure = (code, message) => Object.assign(new Error(message), { code });
 export const sf61Plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
