@@ -1,3 +1,4 @@
+import { mountDss } from './dss.mjs';
 const $ = id => document.getElementById(id);
 const make = (tag, text, attrs = {}) => {
   const el = document.createElement(tag);
@@ -8,6 +9,7 @@ const make = (tag, text, attrs = {}) => {
 let state = null, selectedCapture = null, analysisResult = null, selectedReview = null, rowPage = 0, pollTimer = null, busy = 0, projectDirty = false;
 const shownFailures = new Set(), customerEditions = new Map();
 let customerEditionKey = null, customerEdition = null, customerPrepared = null, customerDelivery = null;
+const dss = mountDss({ api, notice, make, getState: () => state, refresh });
 const PAGE = 40;
 const sourceRanges = new Map(), sourceFilterValues = new Map(), sourceStatisticValues = new Map();
 const SOURCE_FILTERS = {
@@ -76,7 +78,7 @@ function notice(message, error = false) { $('notice').hidden = !message; $('noti
 async function api(path, payload) {
   const options = payload === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json', 'x-workspace-token': state?.token ?? '' }, body: JSON.stringify(payload) };
   const response = await fetch(path, options), value = await response.json();
-  if (!response.ok || value.error) throw new Error(value.error?.message ?? 'The workspace request could not complete.');
+  if (!response.ok || value.error) throw Object.assign(new Error(value.error?.message ?? 'The workspace request could not complete.'), value.error ?? {});
   return value;
 }
 function action(fn) { return async event => { event?.preventDefault(); busy += 1; try { await fn(event); } catch (error) { notice(error.message, true); } finally { busy -= 1; } }; }
@@ -279,12 +281,12 @@ function sourceBounds() {
 async function refresh(reset = false) {
   state = await api('/api/workspace');
   if (reset) applyProjectForm(state.project);
-  renderCaptures(); renderReviews(); renderEditions();
+  renderCaptures(); renderReviews(); renderEditions(); dss.refresh(state);
   if (state.jobs?.some(job => job.status === 'RUNNING')) schedulePoll();
 }
 async function refreshStatus() {
   const status = await api('/api/status');
-  Object.assign(state, status); renderCaptures(); renderRuntime();
+  Object.assign(state, status); renderCaptures(); renderRuntime(); dss.refresh(state);
   const failure = status.jobs?.find(row => row.status === 'FAILED' && !shownFailures.has(row.id));
   if (failure) { shownFailures.add(failure.id); notice(failure.error?.message ?? ('Capture ' + failure.id + ' could not complete.'), true); }
   if (status.jobs?.some(row => row.status === 'RUNNING')) schedulePoll();

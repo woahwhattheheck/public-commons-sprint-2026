@@ -393,7 +393,8 @@
     "fred": "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/cli.mjs",
     "browser-wallet": "stellar/scf-starforge-20261009/sf103-native-buyer-signer/browser-wallet/cli.mjs",
     "frictionless": "stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/cli.mjs",
-    "mcp-analysis-archive": "stellar-forge/mcp-paid-agent/native-analysis-archive-download.mjs"
+    "mcp-analysis-archive": "stellar-forge/mcp-paid-agent/native-analysis-archive-download.mjs",
+    "geocodio": "stellar/scf-starforge-20261009/sf30-seller-sdk/geocodio/cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -859,6 +860,7 @@
     "./seller/crossref/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/crossref/source.mjs",
     "./seller/crossref/metadata": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/crossref/metadata.mjs",
     "./buyer/research-dossiers/crossref": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/crossref.mjs",
+    "./buyer/research-dossiers/crossref-workspace": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/crossref-workspace.mjs",
     "./seller/fiscaldata": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/workspace-model.mjs",
     "./seller/fiscaldata/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/workspace-server.mjs",
     "./seller/fiscaldata/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/capture.mjs",
@@ -907,6 +909,10 @@
     "./seller/frictionless/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/model.mjs",
     "./seller/frictionless/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/release.mjs",
     "./buyer/mcp/analysis-archives": "./source/stellar-forge/mcp-paid-agent/native-analysis-archive-download.mjs",
+    "./seller/geocodio/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/geocodio/source.mjs",
+    "./seller/geocodio/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/geocodio/workspace.mjs",
+    "./seller/geocodio/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/geocodio/server.mjs",
+    "./merchant/mcp/opensearch": "./source/stellar-forge/mcp-merchant-operator/opensearch-workspace.mjs",
     "./seller/openapi/cache-policy-revisions": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/cache-policy-revisions.mjs"
   },
   "nativePeers": {
