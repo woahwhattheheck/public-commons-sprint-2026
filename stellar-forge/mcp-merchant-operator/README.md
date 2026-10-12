@@ -631,3 +631,26 @@ merchant plan carry/preview/save, whole receiving copy/adoption and resumable
 original files. Browser and agent share the original source library and merchant
 compiler. `inspect-har` and `download-har` use the maintained checkpointed
 file transport. See the [complete HAR operating guide](HAR_WORKSPACE.md).
+
+
+## Saved GraphQL authoring, native releases and customer handover
+
+The same merchant MCP now connects the original SF105 GraphQL workspaces with
+`init-graphql-workspaces --dir NEW_DIRECTORY --connection CONNECTION_JSON`, or
+`graphqlWorkspaceConnection` in an existing merchant configuration. Host aliases
+select the original private workspace, source endpoint and launch settings.
+
+`merchant_graphql_*` tools capture and save the actual schema, author bounded
+field/argument/variable operations, preserve raw drafts and revision conflicts,
+run and recover stable-ID native previews, prepare merchant/schema-evolution
+packets, and operate the original deployment/SF82 release console. The person
+using the returned native browser and the agent share the same store and IDs.
+
+`merchant_graphql_export_prepare` retains a selected original file set.
+`inspect-graphql` and `download-graphql` deliver its exact source, preview,
+merchant/buyer, revision, deployment or host files through the shared resumable
+downloader, including nested paths and process-reopen continuation. It does not
+create another workspace or transfer engine.
+
+See [GRAPHQL_WORKSPACES.md](GRAPHQL_WORKSPACES.md) for host configuration, the
+complete authoring-to-release flow, exact tool arguments and customer receiving.

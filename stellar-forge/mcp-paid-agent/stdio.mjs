@@ -62,7 +62,7 @@ function forward(endpoint, token, rpc, signal) {
  * A trusted embedding can supply its existing workspace factory. It receives the
  * same environment as startMcpWorkspace, with an ephemeral loopback port and a
  * transport-only bearer generated here. It must return {address, close} and may
- * declare maxRequestBytes (up to 2 MiB) for its original HTTP handler.
+ * declare maxRequestBytes (up to 8 MiB) for its original HTTP handler.
  * The default factory owns the original broker, approval adapter and quote store.
  */
 export async function startMcpStdio({
@@ -82,7 +82,7 @@ export async function startMcpStdio({
   let endpoint, maxFrameBytes;
   try {
     maxFrameBytes = workspace.maxRequestBytes ?? MAX_FRAME_BYTES;
-    if (!Number.isSafeInteger(maxFrameBytes) || maxFrameBytes < 1 || maxFrameBytes > 2 * 1024 * 1024)
+    if (!Number.isSafeInteger(maxFrameBytes) || maxFrameBytes < 1 || maxFrameBytes > 8 * 1024 * 1024)
       throw failure('MCP_WORKSPACE_REQUEST_LIMIT_INVALID');
     endpoint = new URL(workspace.address);
     if (endpoint.protocol !== 'http:' || endpoint.hostname !== '127.0.0.1' ||
