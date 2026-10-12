@@ -86,13 +86,38 @@ Public mode requires `routing.defaultPublic: true`, no private route rules, both
 
 The compiler exports `EOAPI_IDENTITY_MODE=public` and disables authentication annotation. Its replacement list removes discovery/audience settings, ambient OpenAPI and Swagger identity configuration, stale record filters and the unreviewed proxy options. The included factory uses the original native request/path/link/CORS/reverse-proxy components, performs upstream-only startup checks, and strips incoming Authorization, Cookie and Proxy-Authorization before forwarding. Its typed settings reject private routes, record filters, identity settings and credentialed CORS.
 
-Load the reviewed environment after applying its unset list, then launch the included file with the selected existing Python runtime:
+The package includes `eoapi_public_proxy.py`. Use an existing environment installed from the exact selected source, or create a receiving environment and install it:
 
 ```sh
-python -m uvicorn eoapi_public_proxy:create_app --factory --app-dir PACKAGE_DIRECTORY
+python3 -m venv .venv
+.venv/bin/python -m pip install 'stac-auth-proxy @ git+https://github.com/developmentseed/stac-auth-proxy.git@dd0c10f27999b0cb0874f5330a938e2ed5349dcd'
 ```
 
-The public package contains the complete Python source, so receiving verifies and carries the runnable factory with the approved configuration. The selected native dependency remains the receiving runtime's normal installed package. Its constructor source is checked against the recorded revision before startup.
+The factory checks the selected native construction source before startup. From the directory containing `.venv`, replace `PACKAGE_DIRECTORY` below with the received package directory. This launcher removes every listed stale variable and passes the complete reviewed environment directly to the same Python interpreter:
+
+```sh
+.venv/bin/python - PACKAGE_DIRECTORY <<'PY'
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+package = Path(sys.argv[1]).resolve(strict=True)
+environment = dict(os.environ)
+for name in json.loads((package / 'unset-environment.json').read_text(encoding='utf-8')):
+    environment.pop(name, None)
+environment.update(json.loads((package / 'environment.json').read_text(encoding='utf-8')))
+subprocess.run([
+    sys.executable, '-m', 'uvicorn', 'eoapi_public_proxy:create_app',
+    '--factory', '--app-dir', str(package), '--host', '127.0.0.1', '--port', '8080',
+], env=environment, check=True)
+PY
+```
+
+The local listener uses port 8080. The receiving deployment can bind its selected reverse proxy to that listener. Keep the approved upstream, path, route and CORS configuration together when deploying.
+
+The original Auth Proxy application always initializes OIDC. Public mode uses this included factory with upstream-only startup checks and removes caller Authorization, Cookie and Proxy-Authorization before forwarding. Its typed settings require public routes, empty record filters and identity settings, and CORS credentials disabled. The native dependency and factory travel as the reviewed source selection and complete included Python file.
 
 An absent identity mode preserves the existing OIDC policy and package bytes. New authenticated intake may use `mode: "oidc"`; this explicit form removes a previous `EOAPI_IDENTITY_MODE` when applying a replacement and launches the original `stac_auth_proxy.app:create_app` factory. The editor preserves absent mode on an existing untouched OIDC policy and records explicit OIDC when switching from a public edition. Complete compilations set native default access, private routes, authentication annotation and CORS credentials, so those values follow the newly approved edition.
 
