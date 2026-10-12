@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """One admitted GeoCat source/package/install/receiving lifetime."""
 from __future__ import annotations
-import argparse, copy, errno, fcntl, hashlib, importlib.util, json, os, shutil, stat
+import argparse, base64, copy, errno, fcntl, hashlib, importlib.util, json, os, shutil, stat
 import subprocess, sys, tarfile, time, zipfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -299,14 +299,146 @@ class Run:
         save_json(self.output / (label + ".json"), body)
         return body
 
+
+    def receive_source_carriers(self, missing, expected, source_paths):
+        """Read pinned original Git carriers once through the maintained adapter."""
+        cfg = self.config
+        carriers = cfg.get("source_carriers", [])
+        if not carriers or not missing: return {"incoming": [], "received": {}}
+        need(isinstance(carriers, list) and 1 <= len(carriers) <= 16,
+             "ORIGINAL_SOURCE_CARRIER_SELECTION_INVALID")
+        selected = cfg["source_carrier_adapter"]
+        adapter_path = Path(selected["path"])
+        need(selected["actor"] == "woahwhattheheck" and
+             file_digest(adapter_path) == {"bytes": selected["bytes"], "sha256": selected["sha256"]},
+             "ORIGINAL_SOURCE_CARRIER_ADAPTER_CHANGED")
+        spec = importlib.util.spec_from_file_location("geocat_original_github_adapter", adapter_path)
+        need(spec is not None and spec.loader is not None, "ORIGINAL_SOURCE_CARRIER_ADAPTER_UNAVAILABLE")
+        adapter = importlib.util.module_from_spec(spec)
+        need(spec.name not in sys.modules, "ORIGINAL_SOURCE_CARRIER_ADAPTER_ALREADY_LOADED")
+        sys.modules[spec.name] = adapter
+        try: spec.loader.exec_module(adapter)
+        except BaseException:
+            del sys.modules[spec.name]
+            raise
+        need(file_digest(adapter_path) == {"bytes": selected["bytes"], "sha256": selected["sha256"]},
+             "ORIGINAL_SOURCE_CARRIER_ADAPTER_CHANGED_DURING_IMPORT")
+        records = self.output / "source-carriers"
+        incoming = self.work / "received-source-carriers" / "incoming"
+        received, outcomes = {}, []
+        def hex_value(value, length):
+            return isinstance(value, str) and len(value) == length and all(c in "0123456789abcdef" for c in value)
+        def unique_object(pairs):
+            value = {}
+            for key, item in pairs:
+                need(key not in value, "SOURCE_CARRIER_DUPLICATE_JSON_KEY")
+                value[key] = item
+            return value
+        for index, pin in enumerate(carriers):
+            if set(missing) <= set(received): break
+            need(isinstance(pin, dict) and pin["repository"] == cfg["repository"] and
+                 hex_value(pin["gitBlob"], 40) and hex_value(pin["sha256"], 64) and
+                 type(pin["bytes"]) is int and 0 < pin["bytes"] <= 8 * 1024 * 1024 and
+                 type(pin["files"]) is int and 0 < pin["files"] <= 2048 and
+                 type(pin["totalSourceBytes"]) is int and pin["totalSourceBytes"] >= 0,
+                 "ORIGINAL_SOURCE_CARRIER_PIN_INVALID")
+            request_path = "/repos/" + pin["repository"] + "/git/blobs/" + pin["gitBlob"]
+            prefix = str(index).zfill(2)
+            save_json(records / (prefix + "-request.json"),
+                {"operationId": cfg["operation_id"], "configSha256": self.config_sha,
+                 "status": "DISPATCHING", "method": "GET", "path": request_path,
+                 "actor": selected["actor"], "carrier": pin, "at": now()})
+            try:
+                response = adapter.api_response(request_path, actor=selected["actor"])
+            except Exception as error:
+                save_json(records / (prefix + "-response.private.json"),
+                    {"status": "READ_FAILED", "errorType": type(error).__name__,
+                     "receipt": getattr(error, "receipt", None), "at": now()})
+                raise RuntimeError("ORIGINAL_SOURCE_CARRIER_READ_FAILED") from None
+            need(isinstance(response, dict) and isinstance(response.get("receipt"), dict),
+                 "ORIGINAL_SOURCE_CARRIER_RECEIPT_REQUIRED")
+            save_json(records / (prefix + "-response.private.json"),
+                {"status": "RECEIVED", "receipt": response["receipt"], "at": now()})
+            data = response.get("data")
+            need(isinstance(data, dict) and data.get("sha") == pin["gitBlob"] and
+                 data.get("encoding") == "base64" and type(data.get("size")) is int and
+                 data["size"] == pin["bytes"] and isinstance(data.get("content"), str),
+                 "ORIGINAL_SOURCE_CARRIER_RESPONSE_CHANGED")
+            encoded = "".join(data["content"].split())
+            need(len(encoded) == ((pin["bytes"] + 2) // 3) * 4,
+                 "ORIGINAL_SOURCE_CARRIER_ENCODING_SIZE_CHANGED")
+            raw = base64.b64decode(encoded, validate=True)
+            need(len(raw) == pin["bytes"] and git_blob(raw) == pin["gitBlob"] and
+                 digest_bytes(raw) == pin["sha256"], "ORIGINAL_SOURCE_CARRIER_BYTES_CHANGED")
+            value = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_object)
+            selection = value.get("selection_manifest")
+            need(value.get("schema") == "commons.complete-original-source-carrier/v1" and
+                 value.get("source_repository") == cfg["repository"] and value.get("source_commit") == cfg["commit"] and
+                 isinstance(selection, dict) and
+                 selection.get("repository") == "woahwhattheheck/public-commons-sprint-2026" and
+                 selection.get("path") == "operations/geocat-catalogue-package-20261012/source-input-selection.json" and
+                 selection.get("git_blob_sha") == cfg["source_selection_git_blob"] and
+                 hex_value(selection.get("commit"), 40) and isinstance(value.get("files"), list) and
+                 len(value["files"]) == pin["files"],
+                 "ORIGINAL_SOURCE_CARRIER_SELECTION_CHANGED")
+            seen, wanted, total = set(), [], 0
+            for row in value["files"]:
+                need(isinstance(row, dict) and isinstance(row.get("content"), str),
+                     "ORIGINAL_SOURCE_CARRIER_FILE_INVALID")
+                oid = row.get("git_blob_sha")
+                need(hex_value(oid, 40) and oid in expected and oid not in seen and
+                     row.get("path") == oid + ".blob" and row.get("source_path") in source_paths[oid] and
+                     type(row.get("bytes")) is int and row["bytes"] == expected[oid] and
+                     hex_value(row.get("sha256"), 64), "ORIGINAL_SOURCE_CARRIER_FILE_SELECTION_CHANGED")
+                body = row["content"].encode("utf-8")
+                need(len(body) == row["bytes"] and git_blob(body) == oid and
+                     digest_bytes(body) == row["sha256"], "ORIGINAL_SOURCE_CARRIER_FILE_BYTES_CHANGED")
+                seen.add(oid); total += len(body)
+                if oid in missing and oid not in received: wanted.append((oid, body))
+            need(type(value.get("total_source_bytes")) is int and
+                 total == value["total_source_bytes"] == pin["totalSourceBytes"],
+                 "ORIGINAL_SOURCE_CARRIER_TOTAL_CHANGED")
+            # Complete verification precedes publication of any source member.
+            save(self.work / "source-carriers" / (pin["gitBlob"] + ".json"), raw)
+            for oid, body in wanted:
+                path = incoming / (oid + ".blob")
+                save(path, body)
+                need(file_digest(path) == {"bytes": len(body), "sha256": digest_bytes(body)},
+                     "ORIGINAL_SOURCE_CARRIER_MEMBER_READBACK_CHANGED")
+                received[oid] = str(path)
+            outcome = {"carrier": pin, "selectionManifest": selection, "verifiedFiles": len(seen),
+                       "verifiedSourceBytes": total, "receivedFiles": len(wanted),
+                       "receivedSourceBytes": sum(len(body) for _, body in wanted),
+                       "receiptFile": str((records / (prefix + "-response.private.json")).relative_to(self.project))}
+            save_json(records / (prefix + "-verified.json"), outcome)
+            outcomes.append(outcome)
+        extra = []
+        manifest_identity = None
+        if received:
+            manifest = {"repository": cfg["repository"], "commit": cfg["commit"], "merged": cfg["commit"],
+                        "files": {oid + ".blob": {"gitBlob": oid} for oid in sorted(received)}}
+            manifest_path = incoming / "git-source-inputs.json"
+            save_json(manifest_path, manifest)
+            manifest_identity = file_digest(manifest_path); extra.append(str(incoming))
+        save_json(self.output / "source-carrier-result.json",
+            {"operationId": cfg["operation_id"], "sourceCommit": cfg["commit"],
+             "status": "RECEIVED", "carriers": outcomes, "receivedFiles": len(received),
+             "receivedBytes": sum(expected[oid] for oid in received), "incoming": extra,
+             "manifest": manifest_identity, "remaining": sorted(set(missing) - set(received))})
+        return {"incoming": extra, "received": received}
+
     def receive_remaining_sources(self, inputs):
         """Feed only still-missing immutable source into this admitted context."""
         cfg = self.config; selected = cfg.get("source_feed")
-        if not selected: return []
+        if not selected and not cfg.get("source_carriers"): return []
         metadata = json.loads((inputs / "metadata.json").read_text())
         required = set(metadata["requiredPaths"])
         expected = {row["sha"]: row["size"] for row in metadata["tree"]["tree"]
                     if row["path"] in required and row["type"] == "blob"}
+        source_paths = {}
+        for row in metadata["tree"]["tree"]:
+            if row["path"] in required and row["type"] == "blob":
+                source_paths.setdefault(row["sha"], set()).add(row["path"])
         available = {}
         for directory in cfg["incoming"]:
             root = Path(directory)
@@ -334,10 +466,19 @@ class Run:
                   "configSha256": self.config_sha, "expectedBlobs": len(expected),
                   "persistentBlobs": len(available), "persistentBytes": sum(expected[x] for x in available),
                   "missing": missing, "missingBytes": sum(missing.values())}
+        save_json(self.output / "source-inputs-inspected.json", review)
+        carriers = self.receive_source_carriers(missing, expected, source_paths)
+        extra_incoming = carriers["incoming"]
+        missing = {oid: size for oid, size in missing.items() if oid not in carriers["received"]}
+        review = {**review, "carrierReceivedBlobs": len(carriers["received"]),
+                  "carrierReceivedBytes": sum(expected[oid] for oid in carriers["received"]),
+                  "missing": missing, "missingBytes": sum(missing.values())}
         save_json(self.output / "source-feed-selection.json", review)
         if not missing:
-            save_json(self.output / "source-feed-result.json", {**review, "status": "ALREADY_RECEIVED"})
-            return []
+            status = "RECEIVED_CARRIERS" if carriers["received"] else "ALREADY_RECEIVED"
+            save_json(self.output / "source-feed-result.json", {**review, "status": status, "incoming": extra_incoming})
+            return extra_incoming
+        need(selected is not None, "ORIGINAL_REMAINING_SOURCE_FEED_REQUIRED")
         program = Path(selected["program"])
         need(git_blob(program.read_bytes()) == selected["gitBlob"], "ORIGINAL_SOURCE_FEED_CHANGED")
         incoming = self.work / "received-current-source" / "incoming"
@@ -383,7 +524,7 @@ class Run:
              {oid + ".blob": oid for oid in missing}, "SOURCE_FEED_MANIFEST_CHANGED")
         save_json(self.output / "source-feed-result.json", {**review, "status": "RECEIVED",
                   "incoming": str(incoming), "manifest": file_digest(manifest_path)})
-        return [str(incoming)]
+        return [*extra_incoming, str(incoming)]
 
     def run(self):
         cfg = self.config
