@@ -124,7 +124,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   opensearch-workspace                       Save drafts, capture and compare search editions, and prepare merchants
   cube-workspace / cube-onboard              Author, review and export paid Cube reports
   openapi-workspace                          Import an API contract or Postman collection and operate its merchant
-  oauth-connection                           Authorize, review, renew and disconnect an existing provider grant
+  oauth-connection                           Authorize, renew and select a QuickBooks company or API grant
   openapi postman                            Review collections, retain source and create merchant packages
   openapi weather                            Operate the original OpenWeather customer application
   duckdb / duckdb-inspect                     Run or inspect an approved DuckDB/Parquet source
