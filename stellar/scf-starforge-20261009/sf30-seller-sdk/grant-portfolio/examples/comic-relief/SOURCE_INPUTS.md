@@ -49,6 +49,7 @@ Run `materialize-originals.py` once inside this same complete operation, passing
 {
   "operationId": "scf-grant-portfolio-comic-relief-9b23-20261012",
   "outputDirectory": "/absolute/operation/comicrelief-inputs",
+  "captureCurrent2015": true,
   "sources": [
     {"name": "comic-relief-cprojects-grants-original.xml", "bytes": 2478357, "url": "https://fresh-authorized-download.example/original", "reference": "notion-file-block://the-original-file-reference"}
   ]
@@ -58,6 +59,14 @@ Run `materialize-originals.py` once inside this same complete operation, passing
 Supply all five named originals with the exact retained sizes: XML 2,478,357; 2015–2022 XLSX 210,128; 2022–2026 XLSX 39,278; registry JSON 758,668; publisher metadata JSON 4,479 bytes. The example's one source illustrates the fields; it is not a complete request. Replace `url` with an absolute `sourcePath` when the original native receiver already has that complete file. An available original SHA256 can also be supplied as `sha256`.
 
 The private carrier contains current signed download URLs. They are excluded from the saved manifest and all normal output. The permanent operation guard coalesces one receiver; complete source identities are saved before final-file publication, so an interrupted receive checks the same preserved bytes. Each XLSX is read through its original ZIP CRC; the XML inventory comes from the full file; selected registry records remain complete and keyed to their original positions. A completed repeat verifies those original bytes and returns the same manifest.
+
+### Capture the current publisher edition in this operation
+
+With `captureCurrent2015: true`, the same guarded receiver follows the official 2015–2022 publisher HTTPS download and records the actual UTC start/completion time, HTTP status, safe response headers, final host and full original XLSX bytes. It first publishes one complete `current-publisher-2015-capture.zip` containing that exact workbook and its capture record. Derived files and resumed operations read that same capsule, so an interruption cannot pair earlier bytes with a later response timestamp. The original five preserved files remain unchanged.
+
+Preparation converts this current capture with the same original converter and schema closure, then compares the full current JSON against the retained Drive export. `2015-current-publisher-semantic-comparison.json` records every added/removed grant and changed field, exact numeric values, ordering, package metadata, both original byte identities, the current response time and the conversion identity. The current download is its own observation; the dated DataGetter metadata remains a separate retained record.
+
+The original three native source packets remain IATI plus the two retained international funds. The complete operating return also includes the current capture capsule, converted package/source maps and semantic comparison bound in `prepared-inputs.json`. A comparison result can inform a separately selected later native edition; it does not silently replace the original 2015–2022 source.
 
 ## Use the official converter
 

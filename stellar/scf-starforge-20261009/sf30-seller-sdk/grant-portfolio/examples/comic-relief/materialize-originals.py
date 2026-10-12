@@ -5,7 +5,9 @@ Read a private JSON document from stdin. Download URLs are invocation inputs, ne
 source constants or output fields. This command does not invoke a converter or app.
 """
 from __future__ import annotations
+import datetime as dt
 import fcntl
+import io
 import hashlib
 import json
 import os
@@ -30,6 +32,9 @@ FILES = {
 }
 REGISTRY_IDS = ("a002400000WUhUuAAL", "a00P400000OMLeUIAX")
 MAX_EXPANDED_XLSX = 100 * 1024 * 1024
+MAX_CURRENT_XLSX = 32 * 1024 * 1024
+CURRENT_2015_URL = "https://docs.google.com/spreadsheets/d/1D9mrF9RZ-CzL09PKAnLFcv8vbaZmfO_LKcLwlNQaWN8/export?format=xlsx"
+CURRENT_CAPTURE_SCHEMA = "comic-relief.current-publisher-capture/v1"
 
 
 class InputError(RuntimeError):
@@ -98,6 +103,10 @@ def retained_identity(item):
 def validate_request(value):
     if not isinstance(value, dict) or value.get("operationId") != OPERATION:
         raise InputError("ORIGINAL_OPERATION_MISMATCH")
+    if set(value) - {"operationId", "outputDirectory", "sources", "captureCurrent2015"}:
+        raise InputError("ORIGINAL_REQUEST_FIELDS_INVALID")
+    if type(value.get("captureCurrent2015", False)) is not bool:
+        raise InputError("CURRENT_PUBLISHER_CAPTURE_SELECTION_INVALID")
     output = value.get("outputDirectory")
     if not isinstance(output, str) or not Path(output).is_absolute():
         raise InputError("ORIGINAL_OUTPUT_DIRECTORY_MUST_BE_ABSOLUTE")
@@ -208,6 +217,119 @@ def receive_file(root, item):
         temporary.unlink(missing_ok=True)
 
 
+
+def inspect_xlsx(data, name):
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            entries = archive.infolist()
+            names = [item.filename for item in entries]
+            if len(set(names)) != len(names):
+                raise InputError("ORIGINAL_XLSX_DUPLICATE_MEMBER:" + name)
+            if sum(item.file_size for item in entries) > MAX_EXPANDED_XLSX:
+                raise InputError("ORIGINAL_XLSX_EXPANSION_LIMIT:" + name)
+            if "[Content_Types].xml" not in names or "xl/workbook.xml" not in names:
+                raise InputError("ORIGINAL_XLSX_STRUCTURE_INVALID:" + name)
+            if archive.testzip() is not None:
+                raise InputError("ORIGINAL_XLSX_CRC_INVALID:" + name)
+    except zipfile.BadZipFile:
+        raise InputError("ORIGINAL_XLSX_ARCHIVE_INVALID:" + name) from None
+
+
+class HttpsRedirects(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, request, response, code, message, headers, newurl):
+        parsed = urllib.parse.urlsplit(newurl)
+        if parsed.scheme != "https" or not parsed.netloc or parsed.username or parsed.password:
+            raise InputError("CURRENT_PUBLISHER_REDIRECT_NOT_HTTPS")
+        return super().redirect_request(request, response, code, message, headers, newurl)
+
+
+def current_publisher_2015(root):
+    """Freeze one actual HTTP observation before publishing any derived member."""
+    capsule_path = root / "current-publisher-2015-capture.zip"
+    if capsule_path.exists() or capsule_path.is_symlink():
+        if not plain_file(capsule_path) or capsule_path.stat().st_size > MAX_CURRENT_XLSX + 65536:
+            raise InputError("CURRENT_PUBLISHER_CAPSULE_INVALID")
+    else:
+        started = dt.datetime.now(dt.timezone.utc).isoformat()
+        request = urllib.request.Request(CURRENT_2015_URL, headers={
+            "User-Agent": "Commons-Comic-Relief-Source-Receiving/1",
+            "Accept": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        })
+        try:
+            with urllib.request.build_opener(HttpsRedirects()).open(request, timeout=90) as response:
+                if response.status != 200:
+                    raise InputError("CURRENT_PUBLISHER_HTTP_" + str(response.status))
+                payload = response.read(MAX_CURRENT_XLSX + 1)
+                if len(payload) > MAX_CURRENT_XLSX:
+                    raise InputError("CURRENT_PUBLISHER_SOURCE_SIZE_LIMIT")
+                final = urllib.parse.urlsplit(response.geturl())
+                if final.scheme != "https" or not final.hostname:
+                    raise InputError("CURRENT_PUBLISHER_FINAL_URL_NOT_HTTPS")
+                headers = {name: response.headers.get(name) for name in
+                           ("Content-Type", "Content-Length", "Last-Modified", "ETag")
+                           if response.headers.get(name) is not None}
+                if any(len(value) > 8192 for value in headers.values()):
+                    raise InputError("CURRENT_PUBLISHER_HEADER_SIZE_LIMIT")
+                observed = {
+                    "schema": CURRENT_CAPTURE_SCHEMA, "operationId": OPERATION,
+                    "sourceUrl": CURRENT_2015_URL, "registryId": REGISTRY_IDS[0],
+                    "acquisition": "current-publisher-http",
+                    "startedAt": started,
+                    "completedAt": dt.datetime.now(dt.timezone.utc).isoformat(),
+                    "response": {"status": response.status, "finalHost": final.hostname, "headers": headers},
+                    "original": {"name": "publisher-original.xlsx", "bytes": len(payload),
+                                 "sha256": hashlib.sha256(payload).hexdigest()},
+                    "meaning": "A current HTTP capture at the recorded time; this is distinct from the retained Drive export and from the dated DataGetter metadata.",
+                }
+        except urllib.error.HTTPError as error:
+            raise InputError("CURRENT_PUBLISHER_HTTP_" + str(error.code)) from None
+        except (urllib.error.URLError, TimeoutError):
+            raise InputError("CURRENT_PUBLISHER_DOWNLOAD_FAILED") from None
+        inspect_xlsx(payload, "current-publisher-2015")
+        capsule = io.BytesIO()
+        with zipfile.ZipFile(capsule, "w", compression=zipfile.ZIP_STORED) as archive:
+            archive.writestr("publisher-original.xlsx", payload)
+            archive.writestr("capture.json", canonical(observed))
+        # One immutable publication binds the first complete source to its actual
+        # response/time. A kill while deriving members resumes from this capsule.
+        publish(capsule_path, capsule.getvalue())
+    try:
+        with zipfile.ZipFile(capsule_path) as archive:
+            if sorted(archive.namelist()) != ["capture.json", "publisher-original.xlsx"]:
+                raise InputError("CURRENT_PUBLISHER_CAPSULE_MEMBERS_INVALID")
+            if sum(item.file_size for item in archive.infolist()) > MAX_CURRENT_XLSX + 65536:
+                raise InputError("CURRENT_PUBLISHER_CAPSULE_SIZE_LIMIT")
+            if archive.testzip() is not None:
+                raise InputError("CURRENT_PUBLISHER_CAPSULE_CRC_INVALID")
+            payload = archive.read("publisher-original.xlsx")
+            capture_bytes = archive.read("capture.json")
+    except zipfile.BadZipFile:
+        raise InputError("CURRENT_PUBLISHER_CAPSULE_ARCHIVE_INVALID") from None
+    observed = json.loads(capture_bytes)
+    if (observed.get("schema") != CURRENT_CAPTURE_SCHEMA or observed.get("operationId") != OPERATION
+            or observed.get("sourceUrl") != CURRENT_2015_URL or observed.get("registryId") != REGISTRY_IDS[0]
+            or observed.get("acquisition") != "current-publisher-http"):
+        raise InputError("CURRENT_PUBLISHER_CAPTURE_IDENTITY_CONFLICT")
+    expected = {"name": "publisher-original.xlsx", "bytes": len(payload),
+                "sha256": hashlib.sha256(payload).hexdigest()}
+    if observed.get("original") != expected or not payload or len(payload) > MAX_CURRENT_XLSX:
+        raise InputError("CURRENT_PUBLISHER_CAPTURE_SOURCE_CONFLICT")
+    for key in ("startedAt", "completedAt"):
+        value = observed.get(key)
+        if not isinstance(value, str) or dt.datetime.fromisoformat(value).utcoffset() is None:
+            raise InputError("CURRENT_PUBLISHER_CAPTURE_TIME_INVALID")
+    inspect_xlsx(payload, "current-publisher-2015")
+    source_path = root / "current-publisher-2015-original.xlsx"
+    capture_path = root / "current-publisher-2015-capture.json"
+    publish(source_path, payload)
+    publish(capture_path, capture_bytes)
+    def identity(path):
+        return {"name": path.name, "path": str(path), "bytes": path.stat().st_size, "sha256": digest(path)}
+    return {"schema": CURRENT_CAPTURE_SCHEMA, "sourceUrl": CURRENT_2015_URL,
+            "registryId": REGISTRY_IDS[0], "capturedAt": observed["completedAt"],
+            "capsule": identity(capsule_path), "source": identity(source_path), "capture": identity(capture_path)}
+
+
 def selected_registry(value):
     found = {identifier: [] for identifier in REGISTRY_IDS}
 
@@ -301,6 +423,8 @@ def receive(value):
             prior = json.loads(manifest_path.read_text(encoding="utf-8"))
             if prior.get("schema") != SCHEMA or prior.get("operationId") != OPERATION:
                 raise InputError("ORIGINAL_MANIFEST_IDENTITY_CONFLICT")
+            if ("currentPublisher2015" in prior) != value.get("captureCurrent2015", False):
+                raise InputError("CURRENT_PUBLISHER_CAPTURE_SELECTION_CONFLICT")
             retained = {item["name"]: item for item in prior["files"]}
             if set(retained) != set(FILES):
                 raise InputError("ORIGINAL_MANIFEST_SOURCE_SET_CONFLICT")
@@ -313,10 +437,13 @@ def receive(value):
                 selected[name] = item
         received = [receive_file(root, selected[name]) for name in FILES]
         manifest = inspect_originals(root, received)
+        if value.get("captureCurrent2015", False):
+            manifest["currentPublisher2015"] = current_publisher_2015(root)
         publish(manifest_path, canonical(manifest))
         return {"operationId": OPERATION, "manifest": str(manifest_path), "manifestSha256": digest(manifest_path),
                 "files": [{key: value for key, value in item.items() if key != "reference"} for item in received],
-                "iati": manifest["iati"], "registry": manifest["registry"]}
+                "iati": manifest["iati"], "registry": manifest["registry"],
+                **({"currentPublisher2015": manifest["currentPublisher2015"]} if "currentPublisher2015" in manifest else {})}
     finally:
         os.close(descriptor)
 

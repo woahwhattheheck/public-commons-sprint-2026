@@ -113,10 +113,15 @@ const {downloadGrantPortfolioExport,receiveGrantPortfolioExport,inspectGrantPort
   await nativeImport(join(sdk,'grant-portfolio/merchant-receiving.mjs'));
 async function stopConsole(role){
   const current=consoles.get(role);if(!current)return;
-  await current.client.dispose();
-  if(current.child.exitCode===null&&current.child.signalCode===null)current.child.kill('SIGTERM');
-  const code=await current.exit;consoles.delete(role);children.delete(current.child);
-  assert(code===0||code===null,'The original console did not close cleanly.');
+  const issues=[];
+  try{await current.client.dispose();}catch(error){issues.push(error);}
+  try{
+    if(current.child.exitCode===null&&current.child.signalCode===null)current.child.kill('SIGTERM');
+    const code=await current.exit;
+    consoles.delete(role);children.delete(current.child);
+    assert(code===0||code===null,'The original console did not close cleanly.');
+  }catch(error){issues.push(error);}
+  if(issues.length)throw new AggregateError(issues,'Original '+role+' console close: '+issues.map(safeMessage).join('; '));
 }
 async function startConsole(role){
   if(consoles.has(role))return consoles.get(role).client;
@@ -376,10 +381,20 @@ async function browserReceiving(client,portfolio){
     mobile:await info(join(folder,'portfolio-mobile.png')),filteredRecords:filtered.total,pageErrors:errors};
 }
 async function cleanup(){
-  if(browser){await browser.close();browser=null;}
-  if(merchant){await merchant.close();merchant=null;mcp=null;}
-  for(const role of [...consoles.keys()].reverse())await stopConsole(role);
-  for(const child of children)if(child.exitCode===null&&child.signalCode===null)child.kill('SIGTERM');
+  const issues=[];
+  const attempt=async action=>{try{await action();}catch(error){issues.push(error);}};
+  if(browser)await attempt(async()=>{await browser.close();browser=null;});
+  if(merchant)await attempt(async()=>{await merchant.close();merchant=null;mcp=null;});
+  for(const role of [...consoles.keys()].reverse())await attempt(()=>stopConsole(role));
+  // A failed owner close still leaves every other original child eligible for its own drain.
+  for(const child of [...children])await attempt(async()=>{
+    if(child.exitCode===null&&child.signalCode===null){
+      const closed=new Promise((accept,reject)=>{child.once('error',reject);child.once('close',accept);});
+      child.kill('SIGTERM');await closed;
+    }
+    children.delete(child);
+  });
+  if(issues.length)throw new AggregateError(issues,'Owned resource closure: '+issues.map(safeMessage).join('; '));
 }
 try{
   if(journal.state==='COMPLETED'){
@@ -394,7 +409,15 @@ try{
       const selected={schema:'stellar-forge.grant-portfolio-executed-source.v1',
         selectedSourceCommit:originalBinding.selectedSourceCommit,node:process.version,python,sdk,files};
       await save(join(folder,'executed-source.json'),selected,true);
-      return {files:files.length,sourceSha256:sha(encoded(files)),packets:inputs.sources.map(x=>x.handoff)};
+      const currentPublisherComparison=prepared.currentPublisherComparison||null;
+      if(currentPublisherComparison){
+        for(const key of ['comparison','capture','capsule','transport','converted','conversion']){
+          const expected=currentPublisherComparison[key],actual=await info(expected.path);
+          assert.equal(actual.bytes,expected.bytes,'Complete current publisher '+key+' bytes');
+          assert.equal(actual.sha256,expected.sha256,'Complete current publisher '+key+' identity');
+        }
+      }
+      return {files:files.length,sourceSha256:sha(encoded(files)),packets:inputs.sources.map(x=>x.handoff),currentPublisherComparison};
     });
     const client=await startConsole('source');
     await startConsole('receiver');await startMerchant();
@@ -434,8 +457,8 @@ try{
         decisions:[
           {type:'link',left:ref(a),right:ref(b),relation:'same-organization',disposition:'confirmed',
             rationale:'Both original publisher records identify Comic Relief as '+prepared.coverage.organisationId+'.'},
-          {type:'record',record:ref(coverage),disposition:'coverage-only',
-            rationale:'Retain this grant under its declared International 2015–2022 cohort for cross-standard reconciliation. '+prepared.coverage.comparison},
+          {type:'record',record:ref(coverage),disposition:'unmatched',
+            rationale:'This original grant has no confirmed IATI activity link in the current saved portfolio. Retain its International 2015–2022 cohort while reviewing possible counterparts. '+prepared.coverage.comparison},
         ],
       }),{send:async input=>(await tool('action',{workspace:'portfolio',...input})).native});
       assert.equal(decision.result.counts.links,1);
