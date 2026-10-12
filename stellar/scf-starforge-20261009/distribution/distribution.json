@@ -406,7 +406,9 @@
     "mssql": "stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/cli.mjs",
     "mssql-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/workspace/server.mjs",
     "sec-edgar": "stellar/scf-starforge-20261009/sf30-seller-sdk/sec-edgar/cli.mjs",
-    "bls-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/bls-labor/publisher/cli.mjs"
+    "bls-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/bls-labor/publisher/cli.mjs",
+    "odata": "stellar/scf-starforge-20261009/sf30-seller-sdk/odata/cli.mjs",
+    "odata-live": "stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live/cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -771,6 +773,7 @@
       "import": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/postman/collection.mjs"
     },
     "./seller/openapi/merchant": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/model.mjs",
+    "./seller/openapi/cache-policy-revisions": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/cache-policy-revisions.mjs",
     "./seller/openapi/source": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/source-document.mjs",
     "./seller/linkup-search": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/linkup-search.mjs",
     "./seller/valyu": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/adapter.mjs",
@@ -941,7 +944,35 @@
     "./seller/bls-labor": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/bls-labor/source.mjs",
     "./seller/bls-labor/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/bls-labor/publisher/model.mjs",
     "./seller/bls-labor/publisher/plan": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/bls-labor/publisher/plan.mjs",
-    "./seller/bls-labor/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/bls-labor/release.mjs"
+    "./seller/bls-labor/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/bls-labor/release.mjs",
+    "./seller/odata": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/index.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/index.mjs"
+    },
+    "./seller/odata/source": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/source.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/source.mjs"
+    },
+    "./seller/odata/workspace": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/workspace.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/workspace.mjs"
+    },
+    "./seller/odata/server": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/server.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/server.mjs"
+    },
+    "./seller/odata/publisher": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/publisher.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/publisher.mjs"
+    },
+    "./seller/odata/live": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live-sdk.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live-sdk.mjs"
+    },
+    "./seller/odata/live-operations": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live-operations.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live-operations.mjs"
+    }
   },
   "nativePeers": {
     "@x402/core": {

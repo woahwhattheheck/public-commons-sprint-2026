@@ -23,6 +23,8 @@ const help = `Starforge merchant toolkit
   starforge runtime-transfer --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  odata                                     Operate OData source editions, merchants and customer receiving
+  odata-live                                Prepare, run and receive the original live OData paid-page merchant
   frictionless                              Capture table packages, review fields and publish original merchant editions
   sdmx                                      Retain SDMX sources, publish exact editions and receive original buyer pages
   buyer-collections                         Review, retain and operate original paid request collections
