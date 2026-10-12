@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import { fieldValue } from '../odata/workspace.mjs';
 import { underlyingType } from '../odata/schema.mjs';
 import { odataCaptureManifest, projectODataSemantics } from '../odata/semantics.mjs';
-import { digest, fault, formatted, now, stable, writeNew } from '../odata/state.mjs';
+import { digest, fault, formatted, identifier, now, stable, writeNew } from '../odata/state.mjs';
 import { verifyFile } from './store.mjs';
 
 const numericTypes=new Set(['Edm.Byte','Edm.SByte','Edm.Int16','Edm.Int32','Edm.Int64','Edm.Decimal','Edm.Single','Edm.Double']);
@@ -273,9 +273,9 @@ export async function exportCentralDataset(store,input) {
     copies.set('capture/rows/'+page.rowsSha256+'.json',page.rowsSha256);}
   source.sourceFiles=[...bodyFiles].map(([path,body])=>({path,bytes:body.length,sha256:digest(body)}));
   for(const [path,hash]of copies){const file=await store.sourceFile(hash);source.sourceFiles.push({path,bytes:file.bytes,sha256:hash});}
-  const exportId=digest(stable({config,source,payment:input.payment??null,origin:input.origin??null,path:input.path??'/data'})),
-    existing=store.get('export',exportId,false);
-  if(existing)return existing;
+  const fingerprint=digest(stable({config,source,payment:input.payment??null,origin:input.origin??null,path:input.path??'/data'})),
+    exportId=input.exportId?identifier(input.exportId,'dataset export ID'):fingerprint,existing=store.get('export',exportId,false);
+  if(existing){if(existing.fingerprint!==fingerprint)throw fault('CENTRAL_EXPORT_EXISTS','This export ID already identifies another immutable dataset.',409);return existing;}
   const output=join(store.directory,'exports',exportId),receipts={};
   const retainOutput=async(name,body)=>{receipts[name]=await save(join(output,name),body);};
   await retainOutput('dataset.json',formatted(config));await retainOutput('source.json',formatted(source));
@@ -305,7 +305,7 @@ export async function exportCentralDataset(store,input) {
     const seller=await buildDatasetSellerConfig(dataset,{payment:input.payment,origin:input.origin,path:input.path??'/data'});
     await retainOutput('seller.json',formatted(seller));merchant=true;
   }
-  return store.put('export',exportId,{id:exportId,kind:'dataset',captureId:capture.id,editionId:edition.id,tableId:table.id,
+  return store.put('export',exportId,{id:exportId,fingerprint,kind:'dataset',captureId:capture.id,editionId:edition.id,tableId:table.id,
     directory:output,createdAt:now(),dataset:dataset.describe(),mapping,merchant,semantics:source.semantics,
     files:Object.keys(receipts),receipts},0);
 }
@@ -313,11 +313,15 @@ const reportStyle='body{font:15px/1.55 system-ui,sans-serif;color:#222;backgroun
 const markdownCell=value=>String(value??'').replaceAll('|','\\|').replace(/\r?\n/g,' ');
 function tableHtml(headers,rows){return '<table><thead><tr>'+headers.map(value=>'<th>'+escape(value)+'</th>').join('')+'</tr></thead><tbody>'+
   rows.map(row=>'<tr>'+row.map(value=>'<td>'+escape(value)+'</td>').join('')+'</tr>').join('')+'</tbody></table>';}
-export async function createCentralReport(store,{id,baselineId=null,title,narrative='',indicators}) {
+export async function createCentralReport(store,{id,baselineId=null,title,narrative='',indicators,reportId:suppliedReportId}) {
   const capture=complete(store,id),quality=analyzeCapture(store,id),review=capture.decisions.at(-1)??null;
   const definitions=indicators??review?.indicators??capture.tables.map(table=>({tableId:table.id,operation:'rows',name:table.name+' rows'}));
   if(!Array.isArray(definitions))throw fault('CENTRAL_REPORT_INDICATORS','Choose an indicators array.');
   const baseline=baselineId?complete(store,baselineId):null,results=[];
+  const fingerprint=digest(stable({captureId:id,contentHash:capture.contentHash,baselineId,baselineHash:baseline?.contentHash??null,
+    reviewId:review?.id??null,title:String(title||capture.label),narrative:String(narrative),indicators:definitions,reporterVersion:1})),
+    reportId=suppliedReportId?identifier(suppliedReportId,'report ID'):fingerprint,existing=store.get('report',reportId,false);
+  if(existing){if(existing.fingerprint!==fingerprint)throw fault('CENTRAL_REPORT_EXISTS','This report ID already identifies another immutable analysis.',409);return existing;}
   for(const definition of definitions){
     const current=measureIndicator(store,capture,definition);let previous=null;
     if(baseline){
@@ -327,7 +331,7 @@ export async function createCentralReport(store,{id,baselineId=null,title,narrat
     }
     results.push({...current,baseline:previous});
   }
-  const report={schema:'stellar-forge.odk-field-report.v1',captureId:id,baselineId,title:String(title||capture.label).slice(0,240),
+  const report={schema:'stellar-forge.odk-field-report.v1',id:reportId,fingerprint,captureId:id,baselineId,title:String(title||capture.label).slice(0,240),
     narrative:String(narrative),createdAt:now(),review,scope:capture.scope,startedAt:capture.startedAt,completedAt:capture.completedAt,
     indicators:results,quality,findings:review?.findings??[],source: capture.source,
     methods:[
@@ -337,7 +341,6 @@ export async function createCentralReport(store,{id,baselineId=null,title,narrat
       'Version attachment endpoints return the bytes uploaded when read. The provider does not keep overwritten attachment history.',
       'Decimal and Int64 sums remain exact. Means retain exact sum and count and display a rounded value to twelve decimal places.',
     ]};
-  const reportId=digest(stable({...report,createdAt:null})),existing=store.get('report',reportId,false);if(existing)return existing;
   const output=join(store.directory,'reports',reportId),receipts={},comparisons=[];
   const put=async(name,body)=>{receipts[name]=await save(join(output,name),body);};
   for(let index=0;index<definitions.length;index++){
@@ -413,6 +416,6 @@ export async function createCentralReport(store,{id,baselineId=null,title,narrat
   if(comparisons.length)markdown+='\n## Changes between periods\n\n'+mdTable(['Table','Added IDs','Removed IDs','Changed IDs','File'],
     comparisons.map(value=>[value.table,value.counts.added,value.counts.removed,value.counts.changed,value.file]));
   await put('report.html',Buffer.from(html));await put('report.md',Buffer.from(markdown));
-  return store.put('report',reportId,{id:reportId,kind:'report',captureId:id,baselineId,title:report.title,createdAt:report.createdAt,
+  return store.put('report',reportId,{id:reportId,fingerprint,kind:'report',captureId:id,baselineId,title:report.title,createdAt:report.createdAt,
     directory:output,files:Object.keys(receipts),receipts,indicators:results,comparisons},0);
 }
