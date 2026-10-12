@@ -64,7 +64,7 @@ const actions=[
  ['buyer.receive','Receive those original completed buyer intents through the existing native customer engine.',{intentIds},['intentIds']],
  ['export.create','Freeze complete portfolio JSON, table CSV or the native HTML report for exact-file receiving.',{versionId:digest,table,format:choice(['json','csv','html'])},['versionId']],
  ['source.export','Freeze the complete source bundle with every original metadata/field/page response.',{editionId:digest},['editionId']],
- ['workspace.export','Freeze the complete native portable workspace after any running capture is paused.',{},[]]
+ ['workspace.export','Request the original complete-workspace download descriptor after any running capture is paused. Preserve the actual received archive through native workspace receiving.',{},[]]
 ];
 export const openFemaActionNames=new Map(actions.map(row=>['merchant_openfema_'+row[0].replaceAll('.','_'),row]));
 const scope={workspace:matching(ALIAS)}, readOnly={readOnly:true,idempotent:true};
