@@ -9,6 +9,7 @@ import { identity as nativeWebDavIdentity } from '../../stellar/scf-starforge-20
 import { exact, failure, identifier, line, plain, privateSupportDirectory } from './config.mjs';
 import { RetainedFileReads, MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
 import { RetainedSourceFileReads as SourceFileReads } from './retained-source-files.mjs';
+import { retainedWebDavPublisherReview } from './webdav-publisher-downloads.mjs';
 
 export const WEBDAV_CONNECTION_SCHEMA = 'stellar-forge.webdav-workspace-connection.v1';
 
@@ -254,7 +255,12 @@ export class MerchantWebDavWorkspaces {
         if (args.kind === 'publisher') {
           originalId(args.productId);
           if (!PUBLISHER_KINDS.includes(args.publisherKind)) throw failure('INVALID_PARAMS', 'Choose an original publisher download kind.');
-          const value = await handle.server.workspace.publisherDownload(args.productId, args.publisherKind, args.id);
+          const original = () => handle.server.workspace.publisherDownload(args.productId, args.publisherKind, args.id);
+          const value = args.publisherKind === 'draft-review'
+            ? await retainedWebDavPublisherReview({ directory: this.#config.exportsDirectory,
+                workspaceId: (await handle.server.workspace.inspect()).id, productId: args.productId,
+                draftId: args.id, expectedSha256: args.expectedSha256, load: original })
+            : await original();
           return { bytes: value.bytes, name: value.filename, type: value.contentType };
         }
         let retained = handle.results.get(args.id);
