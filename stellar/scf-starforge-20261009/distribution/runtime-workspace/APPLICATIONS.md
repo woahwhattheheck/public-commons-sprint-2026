@@ -4,10 +4,23 @@ Applications opens the original merchant and buyer tools from a selected READY r
 
 Buyer receiving: [complete setup, acquisition, Stop and reopen guide](BUYER_RECEIVING_APPLICATIONS.md).
 
+## Source-owned application inventory
+
+The catalog and original startup adapters are discovered from the same maintained
+source contributions as merchant commands. Each product owns its registration;
+Review, Save, Start, Open, Stop and recovery remain the original shared lifecycle.
+The [Applications provider guide](APPLICATION_PROVIDERS.md) explains source
+selection, the provider inventory, exact original adapters and installed receiving.
+
+Imagery receiving: [STAC, eoAPI and Prescient setup, agent connection, Stop and reopen](STAC_APPLICATIONS.md).
+
 ## Available original tools
 
 | Application | Maintained command | Original workflow |
 | --- | --- | --- |
+| Satellite imagery and processing | stac serve | Original scene editions, selected files, source comparisons, native processing history and complete receiving |
+| Imagery customer operations | stac eoapi-serve | Original source authorization, deployment policy, commissioning, customer files and complete receiving |
+| Prescient imagery operations | stac prescient-serve | Original selected profile, SDK source and file operations, managed stop/reopen and complete receiving |
 | CoinGecko market research | coingecko serve | Original market sources, request collections, comparisons, notes, provider plans, native buyer recovery and complete handover |
 | Repository metadata editions | oai serve | Original OAI-PMH capture, retained metadata editions, mapping, publisher and complete customer handover |
 | Fiscal Data operations | fiscaldata managed | Named Treasury operator, exact source and decimal editions, comparisons, original merchant and buyer, complete package receiving |

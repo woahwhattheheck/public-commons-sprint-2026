@@ -72,7 +72,7 @@ async function output(path,descriptor,operationId) {
   catch(error){if(error.code!=='ENOENT')throw error;}
   if(receipt)return retained(receipt);
   const temporaryName='supplier-export-'+randomUUID()+'.part',temporary=join(dirname(path),temporaryName);
-  const file=await open(temporary,'wx',0o600);let committed=false;
+  const file=await open(temporary,'wx',0o600);let receiptAttempted=false;
   try{
     const values=typeof descriptor.body==='string'||Buffer.isBuffer(descriptor.body)?[descriptor.body]:descriptor.body;
     for await(const value of values)await file.writeFile(value);
@@ -87,11 +87,11 @@ async function output(path,descriptor,operationId) {
     receipt={schema:'stellar-forge.supplier-export-receipt.v1',operationId,name,
       bytes:actual.bytes,sha256:actual.sha256,type:descriptor.type,temporary:temporaryName};
     // Commit identity before installing the final name or advancing to another workspace phase.
-    await originalFile(receiptPath,JSON.stringify(receipt)+'\n');committed=true;
+    receiptAttempted=true;await originalFile(receiptPath,JSON.stringify(receipt)+'\n');
     const result=await retained(receipt);return{...result,retained:false};
   }finally{
     await file.close().catch(()=>{});
-    if(!committed)await unlink(temporary).catch(()=>{});
+    if(!receiptAttempted)await unlink(temporary).catch(()=>{});
   }
 }
 const XML_CHECK=String.raw`

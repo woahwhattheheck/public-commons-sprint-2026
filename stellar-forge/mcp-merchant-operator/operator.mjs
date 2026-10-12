@@ -65,6 +65,7 @@ export class MerchantReleaseOperator {
             Promise.all(definition.dependencies.map(async name => [name, await this.#provider(name, true)])),
           ]);
           const provider = await definition.create(module, this.#config, this.#options, Object.fromEntries(entries));
+          if (this.#closing && key === 'paidJobWorkspaces') provider.cancel();
           this.#loaded.set(key, provider);
           this.#loadStates.set(key, { state: 'READY', durationMs: Math.round((performance.now() - started) * 1000) / 1000 });
           return provider;
@@ -89,7 +90,7 @@ export class MerchantReleaseOperator {
     this.#tools = structuredClone(merchantToolCatalog(config));
     this.#definitions = new Map(this.#tools.map(value => [value.name, value]));
     this.#mutations = new Set(this.#tools.filter(value => !value.annotations.readOnlyHint &&
-      !['researchWorkspaces', 'apiPassWorkspaces'].includes(merchantToolFamily(value.name))).map(value => value.name));
+      !['researchWorkspaces', 'apiPassWorkspaces', 'paidJobWorkspaces'].includes(merchantToolFamily(value.name))).map(value => value.name));
   }
   get tools() { return structuredClone(this.#tools); }
   get maxRequestBytes() {
@@ -101,7 +102,8 @@ export class MerchantReleaseOperator {
     return Math.max(configuredMaximum, this.#config.feedsWorkspaces ? 16 * 1024 * 1024 + 65536 : 0,
       this.#config.researchWorkspaces ? 2 * 1024 * 1024 : 0,
       this.#config.nocodbWorkspaces ? 1024 * 1024 : 0,
-      this.#config.n8nWorkspaces ? 2 * 1024 * 1024 : 0);
+      this.#config.n8nWorkspaces ? 2 * 1024 * 1024 : 0,
+      this.#config.paidJobWorkspaces ? 2 * 1024 * 1024 : 0);
   }
   async #status() {
     const result = await (await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs')).releaseStatus(this.#config.releaseStore);
@@ -304,6 +306,7 @@ export class MerchantReleaseOperator {
     if (this.#close) return this.#close;
     this.#closing = true;
     this.#loaded.get('fleet')?.cancelStaging();
+    this.#loaded.get('paidJobWorkspaces')?.cancel();
     this.#close = (async () => {
       // Reads can own files and native model handles too. Drain every accepted call,
       // including an in-flight provider import, before closing the loaded owners.
