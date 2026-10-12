@@ -1,5 +1,6 @@
 // MIT. Optional private terminal and original CLI URL capture inside the managed runner.
 import { blockscoutStartup } from './application-blockscout.mjs';
+import { tenderlyStartup } from './application-tenderly.mjs';
 import { constants } from 'node:fs';
 import { StringDecoder } from 'node:string_decoder';
 import { open, readdir, lstat, access } from 'node:fs/promises';
@@ -56,7 +57,8 @@ function privateUrl(text) {
   try {
     const url = new URL(text);
     if (url.protocol !== 'http:' || !['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) ||
-        !url.port || url.username || url.password || text.length > 4096) return null;
+        Number(url.port || 80) < 1 || Number(url.port || 80) > 65535 ||
+        url.username || url.password || text.length > 4096) return null;
     return url.href;
   } catch { return null; }
 }
@@ -68,11 +70,13 @@ export function observeApplicationOutput(request, directory) {
     // Read only the maintained CLI's startup announcement. Later user-entered
     // terminal text and provider payloads cannot select a different application.
     text = text.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '').trim();
-    if (request.command === 'blockscout') {
-      if (!text.startsWith('{"schema":"stellar-forge.blockscout-startup.v1",')) return;
+    if (request.command === 'blockscout' || request.command === 'tenderly-workspace') {
+      const tenderly = request.command === 'tenderly-workspace';
+      if (!text.startsWith(tenderly ? '{"schema":"stellar-forge.tenderly-workspace-startup.v1",' :
+        '{"schema":"stellar-forge.blockscout-startup.v1",')) return;
       saving = saving.then(async () => {
         if (seen) return;
-        const startup = await blockscoutStartup(request, text);
+        const startup = await (tenderly ? tenderlyStartup : blockscoutStartup)(request, text);
         const url = startup && privateUrl(startup.url);
         if (!url) return;
         seen = true;
