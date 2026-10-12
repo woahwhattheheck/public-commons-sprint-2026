@@ -222,7 +222,8 @@ export async function openRubyRuntime({ directory: root, create = false } = {}) 
       current.phase === 'SUCCEEDED' || current.phase === 'CANCELLED' ? 'STOPPED' : current.phase;
     return { id: value, title: input.title, environmentId: input.environmentId, directory: input.directory,
       source: input.source, selectionSha256: input.sha256, phase, registration: registration ?? registered,
-      current: current ? { ...current, operationId: current.id } : null, runs: launches };
+      current: current ? { ...current, operationId: current.id } : null, runs: launches,
+      ...(input.workingCapture ? { workingCapture: { ...input.workingCapture } } : {}) };
   }
   async function inspect() {
     const environments = [], applications = [];
