@@ -10,6 +10,7 @@ import {Transform} from 'node:stream';
 import {openDspaceWorkspace,receiveDspaceWorkspace} from './workspace.mjs';
 import {acquireDatasetLease} from '../dataset-refresh/writer-lease.mjs';
 import {hash,fault,MAX_SOURCE_BYTES} from './source.mjs';
+import {DSPACE_OPERATOR_LAUNCH_SCHEMA,verifyDspaceOperatorSourceSelection} from './launch.mjs';
 
 const HERE=path.dirname(fileURLToPath(import.meta.url));
 const ID=/^[A-Za-z0-9_.:-]{8,128}$/;
@@ -32,24 +33,39 @@ function send(res,status,value){
   res.writeHead(status,{'content-type':'application/json; charset=utf-8','content-length':bytes.length});res.end(bytes);
 }
 const brief=item=>({uuid:item.uuid,objectSha256:item.object_sha256,name:item.name,entity_type:item.entity_type,fields:item.fields,metadata_count:item.metadata_count,in_scope:item.in_scope,origins:item.origins});
-export async function startDspaceOperator({directory,workspaceDirectory,host='127.0.0.1',port=0,token=randomBytes(32).toString('base64url')}={}){
+export async function startDspaceOperator({directory,workspaceDirectory,sourceDirectory,expectedSelectionSha256,host='127.0.0.1',port=0,token=randomBytes(32).toString('base64url')}={}){
   if(!['127.0.0.1','::1','localhost'].includes(host))throw fault('OPERATOR_HOST','Use a loopback host for this private operator.');
-  const root=path.resolve(directory??'.dspace-operator');await fsp.mkdir(root,{recursive:true,mode:0o700});
-  const lease=acquireDatasetLease(root),registryFile=path.join(root,'operator.json');
+  if(!Number.isSafeInteger(port)||port<0||port>65535)throw fault('OPERATOR_PORT','Choose a port from 0 to 65535.');
+  if(typeof token!=='string'||!/^[A-Za-z0-9_-]{32,256}$/.test(token))throw fault('OPERATOR_TOKEN','Use a private URL-safe operator credential.');
+  const requested=path.resolve(directory??'.dspace-operator');await fsp.mkdir(requested,{recursive:true,mode:0o700});
+  const selectedSource=await verifyDspaceOperatorSourceSelection({directory:requested,workspaceDirectory,sourceDirectory,expectedSelectionSha256});
+  const root=selectedSource.selection.directory,instanceId='dspace-instance-'+randomUUID();
+  const lease=acquireDatasetLease(root),registryFile=path.join(root,'operator.json'),launchFile=path.join(root,'operator-launch.json');
+  let launch;
   let registry,workspace,server,tail=Promise.resolve(),closing=false;
-  const serial=job=>{const result=tail.then(()=>{if(closing)throw fault('OPERATOR_CLOSING','The operator is closing.',409);return job();});tail=result.catch(()=>{});return result;};
+  const serial=job=>{const result=tail.then(()=>{if(closing)throw fault('OPERATOR_CLOSING','The operator is closing.',409);lease.assertHeld();return job();});tail=result.catch(()=>{});return result;};
   try{
     try{registry=JSON.parse(await fsp.readFile(registryFile,'utf8'));}
     catch(error){
       if(error.code!=='ENOENT')throw error;
-      registry={schema:'stellar-forge.dspace-operator.v1',selected:'original',projects:[{key:'original',name:'Original workspace',directory:path.resolve(workspaceDirectory??path.join(root,'workspaces','original'))}],receiving:{}};
+      registry={schema:'stellar-forge.dspace-operator.v1',id:'dspace-operator-'+randomUUID(),selected:'original',projects:[{key:'original',name:'Original workspace',directory:path.resolve(workspaceDirectory??path.join(root,'workspaces','original'))}],receiving:{}};
       await saveJson(registryFile,registry);
     }
-    if(registry.schema!=='stellar-forge.dspace-operator.v1'||!registry.projects.some(p=>p.key===registry.selected))
+    if(registry.schema!=='stellar-forge.dspace-operator.v1'||!Array.isArray(registry.projects)||!registry.projects.some(p=>p.key===registry.selected))
       throw fault('OPERATOR_PROJECTS','The original operator project registry is invalid.');
+    if(registry.id===undefined){registry={...registry,id:'dspace-operator-'+randomUUID()};await saveJson(registryFile,registry);}
+    if(!ID.test(registry.id))throw fault('OPERATOR_ID','The original operator identity is invalid.');
     workspace=await openDspaceWorkspace({directory:registry.projects.find(p=>p.key===registry.selected).directory});
     let origin;
-    const state=()=>({...workspace.state(),operator:{selected:registry.selected,projects:registry.projects.map(({key,name})=>({key,name}))}});
+    const state=()=>({...workspace.state(),operator:{id:registry.id,instanceId,selected:registry.selected,projects:registry.projects.map(({key,name})=>({key,name}))}});
+    const publicLaunch=()=>({...launch,projectKey:registry.selected,workspaceId:workspace.state().id});
+    const scoped=(req,job)=>serial(()=>{
+      const expected=[['x-dspace-operator',registry.id,'OPERATOR'],['x-dspace-instance',instanceId,'INSTANCE'],
+        ['x-dspace-project',registry.selected,'PROJECT'],['x-dspace-workspace',workspace.state().id,'WORKSPACE']];
+      for(const [header,actual,kind] of expected)if(req.headers[header]!==undefined&&req.headers[header]!==actual)
+        throw fault('DSCOPE_'+kind,'The selected '+kind.toLowerCase()+' changed. Bind the current original workspace before continuing.',409);
+      return job();
+    });
     const select=async key=>{
       const selected=registry.projects.find(p=>p.key===key);if(!selected)throw fault('OPERATOR_PROJECT','Choose an available original workspace.',404);
       if(key===registry.selected)return state();
@@ -79,12 +95,13 @@ export async function startDspaceOperator({directory,workspaceDirectory,host='12
         const cookie=(req.headers.cookie??'').split(';').map(s=>s.trim()).find(s=>s.startsWith('dspace_operator='))?.slice(16);
         if(!sameToken(req.headers.authorization?.replace(/^Bearer /,''))&&!sameToken(cookie))
           throw fault('OPERATOR_AUTH','Open the local operator or supply its bearer credential.',401);
-        if(req.method==='GET'&&u.pathname==='/api/state'){send(res,200,await serial(state));return;}
+        if(req.method==='GET'&&u.pathname==='/api/launch'){send(res,200,await scoped(req,publicLaunch));return;}
+        if(req.method==='GET'&&u.pathname==='/api/state'){send(res,200,await scoped(req,state));return;}
         if(req.method==='GET'&&u.pathname==='/api/record'){
-          send(res,200,await serial(()=>workspace.read(u.searchParams.get('kind'),u.searchParams.get('id'),{offset:Number(u.searchParams.get('offset')??0),limit:Number(u.searchParams.get('limit')??20)})));return;
+          send(res,200,await scoped(req,()=>workspace.read(u.searchParams.get('kind'),u.searchParams.get('id'),{offset:Number(u.searchParams.get('offset')??0),limit:Number(u.searchParams.get('limit')??20)})));return;
         }
         if(req.method==='GET'&&u.pathname==='/api/items'){
-          const source=await serial(()=>workspace.get('sources',u.searchParams.get('id'))),offset=Number(u.searchParams.get('offset')??0),limit=Number(u.searchParams.get('limit')??20);
+          const source=await scoped(req,()=>workspace.get('sources',u.searchParams.get('id'))),offset=Number(u.searchParams.get('offset')??0),limit=Number(u.searchParams.get('limit')??20);
           if(!Number.isSafeInteger(offset)||offset<0||!Number.isSafeInteger(limit)||limit<1||limit>100)throw fault('OPERATOR_PAGE','Choose a valid source page.');
           let items=source.items;
           if(u.searchParams.get('scope')==='collection')items=items.filter(i=>i.in_scope);
@@ -92,31 +109,31 @@ export async function startDspaceOperator({directory,workspaceDirectory,host='12
           send(res,200,{sourceId:source.id,items:items.slice(offset,offset+limit).map(brief),total:items.length,offset,limit});return;
         }
         if(req.method==='GET'&&u.pathname==='/api/item'){
-          const source=await serial(()=>workspace.get('sources',u.searchParams.get('source'))),item=source.items.find(i=>i.uuid===u.searchParams.get('uuid')&&i.object_sha256===u.searchParams.get('variant'));
+          const source=await scoped(req,()=>workspace.get('sources',u.searchParams.get('source'))),item=source.items.find(i=>i.uuid===u.searchParams.get('uuid')&&i.object_sha256===u.searchParams.get('variant'));
           if(!item)throw fault('OPERATOR_ITEM','Choose an original source variant.',404);send(res,200,item);return;
         }
-        if(req.method==='GET'&&u.pathname==='/api/operation'){send(res,200,await serial(()=>workspace.operation(u.searchParams.get('id'))));return;}
+        if(req.method==='GET'&&u.pathname==='/api/operation'){send(res,200,await scoped(req,()=>workspace.operation(u.searchParams.get('id'))));return;}
         if(req.method==='GET'&&u.pathname==='/api/download'){
-          const file=await serial(()=>workspace.exportFile(u.searchParams.get('kind'),u.searchParams.get('id')));
+          const file=await scoped(req,()=>workspace.exportFile(u.searchParams.get('kind'),u.searchParams.get('id')));
           res.writeHead(200,{'content-type':file.contentType,'content-length':file.bytes,'content-disposition':'attachment; filename="'+file.filename+'"','x-file-sha256':file.sha256});
           await pipeline(fs.createReadStream(file.path),res);return;
         }
         if(req.method==='POST'&&u.pathname==='/api/action'){
           const input=await body(req,MAX_SOURCE_BYTES*1.4),{action,...args}=input;
-          send(res,200,await serial(()=>workspace.dispatch(action,args)));return;
+          send(res,200,await scoped(req,()=>workspace.dispatch(action,args)));return;
         }
         if(req.method==='POST'&&u.pathname==='/api/query'){
           const input=await body(req);
-          const response=await serial(()=>workspace.query(input.editionId,input.query??{}));
+          const response=await scoped(req,()=>workspace.query(input.editionId,input.query??{}));
           send(res,response.status,response.body);return;
         }
         if(req.method==='POST'&&u.pathname==='/api/select-project'){
-          const input=await body(req);send(res,200,await serial(()=>select(input.key)));return;
+          const input=await body(req);send(res,200,await scoped(req,()=>select(input.key)));return;
         }
         if(req.method==='POST'&&u.pathname==='/api/receive'){
           const operationId=req.headers['x-operation-id'];
           if(typeof operationId!=='string'||!ID.test(operationId))throw fault('OPERATOR_REQUEST','Retain a stable receiving request ID.');
-          const result=await serial(async()=>{
+          const result=await scoped(req,async()=>{
             const uploads=path.join(root,'uploads');await fsp.mkdir(uploads,{recursive:true,mode:0o700});
             const temporary=path.join(uploads,operationId+'.partial-'+randomUUID()),digest=createHash('sha256');let bytes=0;
             const meter=new Transform({transform(chunk,encoding,callback){bytes+=chunk.length;if(bytes>MAX_SOURCE_BYTES)return callback(fault('OPERATOR_PROJECT_SIZE','Select a complete project up to 256 MiB.',413));digest.update(chunk);callback(null,chunk);}});
@@ -149,19 +166,34 @@ export async function startDspaceOperator({directory,workspaceDirectory,host='12
     });
     await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,host,resolve);});
     const address=server.address();origin='http://'+(address.address.includes(':')?'['+address.address+']':address.address)+':'+address.port;
+    launch={schema:DSPACE_OPERATOR_LAUNCH_SCHEMA,state:'running',operatorId:registry.id,instanceId,pid:process.pid,
+      directory:root,workspaceDirectory:selectedSource.selection.workspaceDirectory,url:origin,
+      serverFile:path.join(selectedSource.executionSourceDirectory,'server.mjs'),serverSha256:selectedSource.serverSha256,
+      sourceDirectory:selectedSource.selection.sourceDirectory,executionSourceDirectory:selectedSource.executionSourceDirectory,
+      sourceSha256:selectedSource.selection.sourceSha256,selectionSha256:selectedSource.selectionSha256,startedAt:new Date().toISOString()};
+    await saveJson(launchFile,{...launch,token});
     let closePromise;
-    return {url:origin,token,state,close(){
+    return {url:origin,token,state,launch:publicLaunch(),close(){
       if(closePromise)return closePromise;
-      closing=true;closePromise=(async()=>{await new Promise(resolve=>server.close(resolve));await tail;await workspace.close();await lease.close();})();return closePromise;
+      closing=true;closePromise=(async()=>{
+        try{await new Promise(resolve=>server.close(resolve));await tail;await workspace.close();
+          lease.assertHeld();await saveJson(launchFile,{...launch,state:'stopped',stoppedAt:new Date().toISOString()});}
+        finally{await lease.close();}
+      })();return closePromise;
     }};
-  }catch(error){await workspace?.close();await lease.close();throw error;}
+  }catch(error){
+    try{if(server?.listening)await new Promise(resolve=>server.close(resolve));await tail;await workspace?.close();}
+    finally{await lease.close();}
+    throw error;
+  }
 }
 if(process.argv[1]&&pathToFileURL(process.argv[1]).href===import.meta.url){
   const args=process.argv.slice(2),options={};
   for(let i=0;i<args.length;i+=2){
-    if(!['--directory','--workspace','--port','--host'].includes(args[i])||!args[i+1])throw new TypeError('Use --directory PRIVATE_OPERATOR --workspace EXISTING_WORKSPACE --port PORT.');
-    options[{'--directory':'directory','--workspace':'workspaceDirectory','--port':'port','--host':'host'}[args[i]]]=args[i]==='--port'?Number(args[i+1]):args[i+1];
+    if(!['--directory','--workspace','--port','--host','--source-directory','--expected-selection-sha256','--startup-format'].includes(args[i])||!args[i+1])throw new TypeError('Use --directory PRIVATE_OPERATOR --workspace EXISTING_WORKSPACE --port PORT.');
+    options[{'--directory':'directory','--workspace':'workspaceDirectory','--port':'port','--host':'host','--source-directory':'sourceDirectory','--expected-selection-sha256':'expectedSelectionSha256','--startup-format':'startupFormat'}[args[i]]]=args[i]==='--port'?Number(args[i+1]):args[i+1];
   }
-  const service=await startDspaceOperator(options);process.stdout.write(JSON.stringify({url:service.url,directory:path.resolve(options.directory??'.dspace-operator')})+'\n');
+  if(options.startupFormat!==undefined&&options.startupFormat!=='managed')throw new TypeError('Use --startup-format managed.');
+  const service=await startDspaceOperator(options);process.stdout.write(JSON.stringify(service.launch)+'\n');
   const stop=()=>service.close().then(()=>process.exit(0));process.once('SIGINT',stop);process.once('SIGTERM',stop);
 }
