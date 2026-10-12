@@ -3,10 +3,12 @@ import { blockscoutStartup } from './application-blockscout.mjs';
 import { constants } from 'node:fs';
 import { StringDecoder } from 'node:string_decoder';
 import { open, readdir, lstat, access } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { absolute, privateDirectory, makePrivate, regular, readJSON, saveJSON, operationId,
   recordId, operationLease, operationRunning, tailFile, plain, need, digest, now } from './storage.mjs';
+
+import { preparePythonManagedChild, observePythonApplicationOutput } from '../python-runtime/application-lifecycle.mjs';
 
 const TERMINAL = fileURLToPath(new URL('./application-terminal.py', import.meta.url));
 const MAX_INPUT = 4096;
@@ -38,6 +40,7 @@ export async function applicationEnvironment(path, expectedSha256) {
 }
 export async function prepareApplicationCommand(request, directory, originalArgs) {
   const { environment } = await applicationEnvironment(request.environmentFile, request.environmentSha256);
+  if (request.pythonCommand) return preparePythonManagedChild(dirname(dirname(directory)), request, environment);
   if (request.terminal) {
     for (const name of ['terminal-inputs', 'terminal-pending']) {
       try { await makePrivate(join(directory, name)); }
@@ -60,7 +63,8 @@ function privateUrl(text) {
     return url.href;
   } catch { return null; }
 }
-export function observeApplicationOutput(request, directory) {
+export function observeApplicationOutput(request, directory, context = {}) {
+  if (request.pythonCommand) return observePythonApplicationOutput(request, directory, context);
   let buffer = '', seen = false, datasetMarker = false, saveError = null, closed = false, saving = Promise.resolve();
   const decoder = new StringDecoder('utf8');
   function line(text) {
