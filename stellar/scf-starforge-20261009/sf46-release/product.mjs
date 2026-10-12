@@ -123,10 +123,14 @@ async function selectUnlocked(home, id) {
   await atomicJson(join(home, 'active.json'), state);
   return { ...state, changed: true };
 }
-export async function install(bundleInput, homeInput, { expected, activate = false, prepareInstalledRelease } = {}) {
+export async function install(bundleInput, homeInput, { expected, activate = false, prepareInstalledRelease,
+  consumePrepared = false } = {}) {
   if (prepareInstalledRelease !== undefined && typeof prepareInstalledRelease !== 'function')
     throw new TypeError('prepareInstalledRelease must be a function');
+  if (typeof consumePrepared !== 'boolean') throw new TypeError('consumePrepared must be a boolean');
   const bundle = await verifyRelease(bundleInput, expected), home = resolve(homeInput);
+  if (consumePrepared && (!Object.hasOwn(bundle.manifest.origin ?? {}, 'runtimeInstallation') || !prepareInstalledRelease))
+    throw new Error('Consuming an owned prepared release requires its runtime attachment');
   if (Object.hasOwn(bundle.manifest.origin ?? {}, 'runtimeInstallation') && !prepareInstalledRelease)
     throw new Error('Use starforge installation adopt-runtime to attach this release to its retained runtime');
   if (home === bundle.root || home.startsWith(bundle.root + '/')) throw new Error('Installation must be outside its release bundle');
@@ -140,9 +144,18 @@ export async function install(bundleInput, homeInput, { expected, activate = fal
     } else {
       const stage = await mkdtemp(join(lockedHome, 'releases', '.install-'));
       try {
-        for (const file of bundle.files)
-          await copyVerifiedFile(bundle.root, file.path, join(stage, file.path), file);
-        await putFile(join(stage, MANIFEST), bundle.manifestBytes);
+        let consumed = false;
+        if (consumePrepared) {
+          // The runtime adopter explicitly hands over its own private prepared
+          // directory. External bundle callers keep the normal copy behavior.
+          try { await rename(bundle.root, stage); consumed = true; }
+          catch (error) { if (error.code !== 'EXDEV') throw error; }
+        }
+        if (!consumed) {
+          for (const file of bundle.files)
+            await copyVerifiedFile(bundle.root, file.path, join(stage, file.path), file);
+          await putFile(join(stage, MANIFEST), bundle.manifestBytes);
+        }
         // A changed input cannot be promoted after the initial source read.
         await verifyRelease(stage, bundle.manifest.digest);
         await rename(stage, target);
