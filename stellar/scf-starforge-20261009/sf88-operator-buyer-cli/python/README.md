@@ -1,5 +1,10 @@
 # Python applications for the Stellar Forge buyer
 
+The [read-only Inbox workflow](INBOX.md) exposes `Inbox` and `buyer.inbox(...)` for
+original job selection, private Operations source export and same-file inspection
+after interruption. It reuses the existing native queue/readers and Runtime without
+creating another journal or performing a purchase or accounting action.
+
 The complete [acquisition workflow](ACQUISITIONS.md) joins private request intake,
 receiver-owned preparation, immutable runbooks, original execution/accounting,
 verified downloads and multi-operator recovery through `AcquisitionWorkspace`
@@ -16,6 +21,30 @@ Installable Python 3.11+ package for Linux and macOS. A Python application can d
 This package adds durable application operations and result recovery around those existing components. It has no Python dependencies and does not embed a second Stellar/payment implementation. Supply a complete current repository checkout and its existing Node runtime/dependencies. SF46 distribution should include this directory with the original runtime closure; the Python wheel alone does not contain the Node source.
 
 ## Choose the customer's product workflow
+
+The complete [citation analyst workflow](RESEARCH_CITATIONS.md) adds revision-pinned
+notice review, full editable atomic requests, same-request recovery and a complete
+before/reviewed/current handover through `ResearchWorkspace.citations(...)`.
+It cold receives both original portable formats and joins the existing Analysis
+table, full exports, workbook and editable workspace archive. The included
+`examples/research_citation_analyst.mjs` continues an already completed original
+Research customer operation without creating another review.
+
+The complete [Research document and workbook workflow](RESEARCH_DOCUMENTS.md) joins
+original Documents/Pipelines operation control, verified source editions, native
+Analysis mapping and full typed query exports, customer workbooks and portable
+workspace receiving. `ResearchWorkspace` and `ResearchDocumentSource` retain the
+original request/output identities through the existing Node client and Analysis
+engines; `examples/research_document_workbook.py` carries the complete receiving
+operation.
+
+The [Research intake in the original Analysis browser](RESEARCH_INTAKE.md) lets
+an operator choose a named Research connection, review an actual saved document
+or retained managed output, capture its complete source, and continue through
+those same mapping and workbook controls. Capture history reopens the exact
+original job after a lost reply, and portable receiving keeps the source usable
+without its Research connection. `examples/research_intake_workbook.py` carries
+the browser, native import, full workbook and cold-receiving continuation.
 
 [Uploads, typed stream records and resumable file delivery](CUSTOMER_WORKFLOWS.md)
 joins the original native 16 MiB multipart authoring, SSE/NDJSON reader and paid-file
@@ -63,6 +92,25 @@ response, compares all keyed records and restores a historical edition against
 the current view revision. The [PostgreSQL receiving guide](POSTGRESQL.md)
 covers installation, the private environment file, full customer operation and
 restoring the original operator directory with its database schema.
+
+## Import the selected customer interface
+
+The public Python names load their original modules when first requested.
+A process that imports local storage or a saved-data reader does not import
+the database, research and other product interfaces through the package entry
+module. The complete installed package still contains those original products.
+
+```python
+from stellar_forge_buyer import DatasetAcquisition, DatasetError
+from stellar_forge_buyer.storage import read
+```
+
+Public imports and direct submodule imports return the same original classes,
+functions and exceptions. Existing class module names, pickled object references,
+`__all__` order and type-checking declarations are preserved. `dir()` lists the
+public interfaces without loading each one; an explicit `import *` requests and
+loads the complete public interface. Product initialization and runtime checks
+remain inside the selected original component.
 
 ## Acquire a dataset for a Python data application
 

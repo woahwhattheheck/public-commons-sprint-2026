@@ -6,8 +6,11 @@ const stored=(key,fallback)=>{try{return JSON.parse(sessionStorage.getItem(key))
 const remember=(key,value)=>{try{sessionStorage.setItem(key,JSON.stringify(value));}catch{}};
 const chosenFields=value=>({oauthAlias:value.oauthAlias,oauthProfile:copy(value.oauthProfile),oauthConnection:copy(value.oauthConnection)});
 
-export function createOAuthConnections({container,make,field,selectField,api,act,notice,onChanged}) {
-  const prefix='stellar.api-merchant.oauth.public.v1';
+export function createOAuthConnections({container,make,field,selectField,api,act,notice,onChanged,
+  storagePrefix='stellar.api-merchant.oauth.public.v1',
+  description='Authorize a configured API provider, review its returned scopes, and keep the grant on this host. Route controls select the exact reviewed grant for a compiled package.',
+  grantAcceptedMessage='Authorization grant reviewed and kept privately. Select it in the route controls before saving a new package.'}) {
+  const prefix=storagePrefix;
   const flows=stored(prefix+'.flows',{}),authorizationUrls=new Map();
   let pending=stored(prefix+'.pending',null),values=[],current=null,callbackOrigin=location.origin;
   let hostBusy=false,loading=0,readVersion=0,refreshVersion=0,currentReadError='';
@@ -18,7 +21,7 @@ export function createOAuthConnections({container,make,field,selectField,api,act
   const toolbar=make('div',undefined,'inline'),detail=make('div'),recovery=make('div');
   toolbar.append(selection.container,refreshButton);
   container.append(make('h2','Provider authorization connections'),
-    make('p','Authorize a configured API provider, review its returned scopes, and keep the grant on this host. Route controls select the exact reviewed grant for a compiled package.','hint'),toolbar,recovery,detail);
+    make('p',description,'hint'),toolbar,recovery,detail);
   const button=(label,action,disabled=false)=>{
     const value=make('button',label);value.type='button';intrinsicDisabled.set(value,disabled);value.disabled=disabled||hostBusy||loading>0;
     value.addEventListener('click',()=>act(action));return value;
@@ -72,7 +75,7 @@ export function createOAuthConnections({container,make,field,selectField,api,act
       rememberFlow(body.alias,result);
       setPending(null);
       await refresh();
-      notice(body.action==='approve'?'Authorization grant reviewed and kept privately. Select it in the route controls before saving a new package.':
+      notice(body.action==='approve'?grantAcceptedMessage:
         body.action==='begin'?'Authorization prepared. Continue at the provider in a separate tab, then return here to review the result.':
         body.action==='disconnect'?'Local authorization disconnected. Inspect the remote revocation status shown here.':
         'Connection operation completed. Its actual status is shown below.');

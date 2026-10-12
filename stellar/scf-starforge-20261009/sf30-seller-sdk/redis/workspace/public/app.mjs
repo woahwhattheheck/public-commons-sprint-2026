@@ -1,14 +1,15 @@
 // MIT. Redis product editing and retained native operations.
 import { createDraftStore } from '/local-draft-store.mjs';
 const $=id=>document.getElementById(id),copy=value=>structuredClone(value),pretty=value=>JSON.stringify(value,null,2);
-const names={get:'Value',hash:'Hash fields','sorted-set':'Sorted set',stream:'Stream'};
+const names={get:'Value',hash:'Hash fields','sorted-set':'Sorted set',stream:'Stream',list:'List entries',set:'Set members'};
+const columnDefaults={get:['value'],'sorted-set':['member','score'],list:['index','value'],set:['member']};
 const tokenKey='redis-workspace-token:'+location.origin;
 let token=location.hash.slice(1);
 if(/^[a-f0-9]{64}$/.test(token)){
   try{sessionStorage.setItem(tokenKey,token);history.replaceState(null,'',location.pathname);}catch{}
 }else{try{token=sessionStorage.getItem(tokenKey)??'';}catch{token='';}}
 let state,draft,storage,pending=null,selectedQuery='',selectedRoute=-1,tab='products',busy=false,preview=null,previewRevision=null;
-let revisionRows=[],operationRows=[],revisionCursor=null,operationCursor=null,dirtyForm=false,planDirty=false;
+let revisionRows=[],operationRows=[],revisionCursor=null,operationCursor=null,dirtyForm=false,planDirty=false,formKind='';
 function status(message,error=false){$('status').textContent=message;$('status').dataset.error=String(error);}
 function errorOf(value){return Object.assign(new Error(value?.message??value?.error?.message??value?.error??'Workspace operation failed.'),{code:value?.code??value?.error?.code,status:value?.status});}
 async function request(path,input){
@@ -41,21 +42,46 @@ function selectedItem(list,label,detail,selected,action){
 }
 function queryForm(){
   const query=draft.queries[selectedQuery];if(!query)return;
-  $('query-name').value=selectedQuery;$('query-kind').value=query.kind;
+  $('query-name').value=selectedQuery;$('query-kind').value=query.kind;formKind=query.kind;
   $('key-mode').value=typeof query.key==='string'?'fixed':'parameter';$('query-key').value=typeof query.key==='string'?query.key:'';
   $('key-prefix').value=typeof query.key==='object'?query.key.prefix:'';$('key-parameter').value=typeof query.key==='object'?query.key.parameter:'';
   $('query-parameters').value=pretty(query.parameters??{});$('query-fields').value=pretty(query.fields??{});
-  $('query-columns').value=pretty(query.columns??(query.kind==='get'?['value']:['member','score']));
-  $('query-rows').value=query.maxRows??(['get','hash'].includes(query.kind)?1:100);
+  $('query-columns').value=pretty(query.columns??columnDefaults[query.kind]??[]);
+  $('query-rows').value=query.maxRows??(['get','hash'].includes(query.kind)?1:query.kind==='set'?1000:100);
   $('query-bytes').value=query.maxBytes??524288;$('query-timeout').value=query.timeoutMs??1500;
-  $('query-offset').value=query.offset??'';$('query-after').value=query.after??'';queryVisibility();
+  $('query-offset').value=query.offset??'';$('query-after').value=query.after??'';
+  $('query-cursor').value=query.cursor??'';$('query-scan-count').value=query.scanCount??Math.min(100,Number($('query-rows').value));queryVisibility();
 }
 function queryVisibility(){
   const kind=$('query-kind').value,parameter=$('key-mode').value==='parameter',fields=['hash','stream'].includes(kind);
   $('fixed-key-label').hidden=parameter;$('key-prefix-label').hidden=!parameter;$('key-parameter-label').hidden=!parameter;
-  $('fields-label').hidden=!fields;$('columns-label').hidden=fields;$('offset-label').hidden=kind!=='sorted-set';$('after-label').hidden=kind!=='stream';
+  $('fields-label').hidden=!fields;$('columns-label').hidden=fields;$('offset-label').hidden=!['sorted-set','list'].includes(kind);$('after-label').hidden=kind!=='stream';
+  $('cursor-label').hidden=kind!=='set';$('scan-count-label').hidden=kind!=='set';
+  $('set-note').hidden=kind!=='set';$('list-note').hidden=kind!=='list';
   if(['get','hash'].includes(kind))$('query-rows').value='1';
   $('query-rows').readOnly=['get','hash'].includes(kind);
+}
+function switchQueryKind(){
+  const kind=$('query-kind').value,previous=formKind;
+  const controls={'sorted-set':'query-offset',list:'query-offset',stream:'query-after',set:'query-cursor'};
+  const defaults={offset:{type:'integer',minimum:'0',maximum:'10000000',default:'0'},
+    after:{type:'string',maxLength:41,default:'-'},cursor:{type:'string',maxLength:20,default:'0'}};
+  if(columnDefaults[kind])$('query-columns').value=pretty(columnDefaults[kind]);
+  try{
+    const parameters=parse('query-parameters','parameters'),oldName=controls[previous]?$(controls[previous]).value:'';
+    const keyName=$('key-mode').value==='parameter'?$('key-parameter').value:'';
+    let controlName='';
+    if(controls[kind]){
+      const control=$(controls[kind]),defaultName=kind==='set'?'cursor':kind==='stream'?'after':'offset';
+      controlName=control.value.trim()||defaultName;control.value=controlName;
+      if(!Object.hasOwn(parameters,controlName))parameters[controlName]=copy(defaults[defaultName]);
+    }
+    if(oldName&&oldName!==controlName&&oldName!==keyName)delete parameters[oldName];
+    $('query-parameters').value=pretty(parameters);
+  }catch(error){status(error.message,true);}
+  if(kind==='set'){$('query-rows').value='1000';$('query-scan-count').value='100';}
+  else if(!['get','hash'].includes(kind)&&['get','hash'].includes(previous))$('query-rows').value='100';
+  formKind=kind;queryVisibility();dirtyForm=true;
 }
 function applyQuery(){
   if(!selectedQuery||!dirtyForm)return;
@@ -66,8 +92,9 @@ function applyQuery(){
     parameters:parse('query-parameters','parameters'),maxRows:Number($('query-rows').value),maxBytes:Number($('query-bytes').value),timeoutMs:Number($('query-timeout').value)};
   if(['hash','stream'].includes(kind))query.fields=parse('query-fields','projected fields');
   else query.columns=parse('query-columns','output columns','array');
-  if(kind==='sorted-set'&&$('query-offset').value)query.offset=$('query-offset').value;
+  if(['sorted-set','list'].includes(kind)&&$('query-offset').value)query.offset=$('query-offset').value;
   if(kind==='stream'&&$('query-after').value)query.after=$('query-after').value;
+  if(kind==='set'){query.cursor=$('query-cursor').value;query.scanCount=Number($('query-scan-count').value);}
   if(name!==selectedQuery){
     draft.queries=Object.fromEntries(Object.entries(draft.queries).map(([key,value])=>[key===selectedQuery?name:key,key===selectedQuery?query:value]));
     for(const route of draft.plan.routes)if(route.query===selectedQuery)route.query=name;
@@ -129,9 +156,15 @@ async function loadState({resetDraft=false}={}){
   if(draft.workspaceId!==state.workspace.id)throw new Error('The local draft belongs to another workspace.');
   $('workspace-title').textContent=state.workspace.label;
   const connection=state.connection,rest=connection.transport==='upstash-rest';
-  $('transport').textContent=rest?'Upstash HTTPS':'Redis / Valkey';
-  $('connection').textContent=rest?connection.endpoint:connection.host+':'+(connection.port??6379)+' · database '+(connection.database??0)+' · '+(connection.tls??'verify-full');
-  $('credential').textContent=connection.tokenEnv||connection.passwordEnv?'Credential: '+(connection.tokenEnv??connection.passwordEnv):'Host connection';
+  const topology=connection.topology??'standalone';
+  const address=node=>(node.host.includes(':')?'['+node.host+']':node.host)+':'+node.port;
+  $('transport').textContent=rest?'Upstash HTTPS':topology==='cluster'?'Redis Cluster':topology==='sentinel'?'Redis Sentinel':'Redis / Valkey';
+  $('connection').textContent=rest?connection.endpoint:topology==='cluster'
+    ?connection.rootNodes.map(address).join(', ')+' · '+(connection.tls??'verify-full')
+    :topology==='sentinel'?connection.name+' · '+connection.sentinelRootNodes.map(address).join(', ')+' · database '+(connection.database??0)+' · data '+(connection.tls??'verify-full')+' / monitors '+(connection.sentinelTls??'verify-full')
+    :address({host:connection.host,port:connection.port??6379})+' · database '+(connection.database??0)+' · '+(connection.tls??'verify-full');
+  const credentials=[...new Set([connection.tokenEnv,connection.passwordEnv,connection.sentinelPasswordEnv].filter(Boolean))];
+  $('credential').textContent=credentials.length?'Credentials: '+credentials.join(' · '):'Host connection';
   $('revision-note').value=draft.note??'';
   productList();queryForm();termsForm();renderVersions();renderOperations();await previewVersions();
   $('workspace').hidden=false;updatePending();await retain();
@@ -215,7 +248,9 @@ async function showPreview(operation){
   $('preview-version').value=result.revisionId;
   if(previewRevision?.id!==result.revisionId)await selectPreviewRevision();
   preview=operation;$('preview-query').value=result.query;$('preview-input').value=pretty(result.input);
-  $('preview-summary').textContent=data.rowCount+' rows · '+result.query+' · '+result.observedAt+(data.truncated?' · more data available':'');
+  $('preview-summary').textContent=data.rowCount+' rows · '+result.query+' · '+result.observedAt+
+    (data.kind==='set'?(data.scanComplete?' · scan complete':' · next cursor '+data.scanCursor)+(data.duplicatesPossible?' · native unordered iteration':'')
+      :data.truncated?' · more data available':'');
   const table=el('table'),head=el('thead'),row=el('tr');for(const name of data.columns)row.append(el('th',name));head.append(row);table.append(head);
   const body=el('tbody');for(const item of data.rows){const line=el('tr');for(const name of data.columns){const value=item[name];line.append(el('td',value===null?'null':typeof value==='object'?JSON.stringify(value):String(value)));}body.append(line);}table.append(body);
   $('preview-table').replaceChildren(table);$('preview-json').textContent=pretty(result);$('preview-result').hidden=false;$('next-preview').hidden=!data.nextInput;
@@ -285,7 +320,7 @@ document.querySelectorAll('[data-tab]').forEach(node=>node.addEventListener('cli
   document.querySelectorAll('.tab').forEach(panel=>{panel.hidden=panel.id!=='panel-'+tab;});productList();queryForm();termsForm();
 })));
 $('query-form').addEventListener('submit',event=>{event.preventDefault();guard(async()=>{applyQuery();dirtyForm=false;await retain();productList();termsForm();status('Product applied to draft. Review and save the complete revision.');});});
-$('query-kind').addEventListener('change',()=>{const kind=$('query-kind').value;if(kind==='get')$('query-columns').value=pretty(['value']);if(kind==='sorted-set')$('query-columns').value=pretty(['member','score']);queryVisibility();dirtyForm=true;});
+$('query-kind').addEventListener('change',switchQueryKind);
 $('key-mode').addEventListener('change',()=>{queryVisibility();dirtyForm=true;});
 $('plan-editor').addEventListener('input',()=>{planDirty=true;dirtyForm=true;$('draft-status').textContent='Draft changes';});
 document.querySelectorAll('#query-form input,#query-form textarea,#panel-terms input,#route-editor').forEach(node=>node.addEventListener('input',()=>{dirtyForm=true;$('draft-status').textContent='Draft changes';}));

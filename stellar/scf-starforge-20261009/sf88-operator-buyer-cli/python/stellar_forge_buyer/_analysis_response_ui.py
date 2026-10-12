@@ -139,6 +139,18 @@ $('response-preview').addEventListener('click',()=>act(async()=>{const spec=requ
 $('response-import').addEventListener('click',()=>act(()=>start('response-import',{preview_id:r.preview.id,preview_sha256:r.preview.result.preview_sha256,allow_incomplete:$('response-allow-incomplete').checked})));
 $('response-allow-incomplete').addEventListener('change',controls);
 $('response-data').addEventListener('click',()=>tab('data'));
-window.responseTables={controls,refresh,open};
+async function openSource({name,revision,mapping:provided}){
+ await refresh();$('response-source').value=name;
+ if(!selection()||selection().revision!==revision)throw Error('The captured source registration has a different current revision. Its original capture and imported versions remain retained.');
+ await inspect();
+ if(!selection()||selection().name!==name||selection().revision!==revision)throw Error('The selected source changed while opening its mapping.');
+ sourceInfo();
+ if(!provided||!Array.isArray(provided.columns)||!provided.columns.length)throw Error('The original source mapping is missing.');
+ r.columns=provided.columns.map(value=>({...value}));$('response-collection').value=provided.collection??'';
+ $('response-sse').value=provided.sse_data??'text';r.preview=null;
+ $('response-preview-panel').hidden=true;$('response-allow-incomplete').checked=false;
+ renderColumns();label();remember();controls();tab('responses');
+}
+window.responseTables={controls,refresh,open,openSource};
 })();
 '''

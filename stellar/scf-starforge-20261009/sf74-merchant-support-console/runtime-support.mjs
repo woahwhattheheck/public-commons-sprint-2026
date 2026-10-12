@@ -4,12 +4,12 @@ import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {reconcile} from '../sf97-merchant-revenue-ops/native-reconcile.mjs';
 import {normalizeTrafficHistoryReport} from '../sf30-seller-sdk/operations/history.mjs';
-import {parseWorkspace} from './workspace-file.mjs';
+import {parseWorkspace,MAX_WORKSPACE_BYTES} from './workspace-file.mjs';
 
 export const RUNTIME_SCHEMA = 'stellar-forge.merchant-runtime-case.v1';
 export const HANDOFF_SCHEMA = 'stellar-forge.merchant-support-handoff.v1';
 export const MAX_RUNTIME_BYTES = 192 * 1024 * 1024;
-export const MAX_HANDOFF_BYTES = 224 * 1024 * 1024;
+export const MAX_HANDOFF_BYTES = 2 * (MAX_RUNTIME_BYTES + MAX_WORKSPACE_BYTES) + 1024 * 1024;
 export const MAX_PERIOD_SOURCE_BYTES = 64 * 1024 * 1024;
 const MAX_FILE = 2_000_000;
 const PACKET_FILES = ['bundle.json','operator-brief.md','metrics.prom','manifest.json'];
@@ -453,8 +453,9 @@ export function runtimeHtml(report,{name='Merchant case',metadata={}}={}) {
   const interval=report.comparison.interval;
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>${escape(name)} · Runtime support</title><style>body{margin:0;background:#f3f3f3;color:#222;font:14px/1.6 system-ui,sans-serif}main{max-width:1100px;margin:auto;padding:32px 20px}h1{font-size:26px}h2{font-size:19px}h3{font-size:16px}header{border-bottom:2px solid #444}section{background:white;border:1px solid #ccc;padding:20px;margin:18px 0}p,li,td{overflow-wrap:anywhere}.scroll{overflow:auto}table{width:100%;border-collapse:collapse;margin:14px 0}th,td{text-align:left;padding:9px;border-bottom:1px solid #ddd;vertical-align:top}code{font-size:11px;overflow-wrap:anywhere}summary{cursor:pointer}small{color:#555}pre{white-space:pre-wrap}@media(max-width:620px){th,td{padding:5px;font-size:11px}main{padding:16px 10px}section{padding:12px}}@media print{body{background:white}section{break-inside:avoid}main{padding:0}}</style></head><body><main><header><small>Merchant operations · Private support handoff</small><h1>${escape(name)}</h1><p>${escape(metadata.merchant)} · Owner ${escape(metadata.owner||'Unassigned')} · ${escape(metadata.status||'new')}</p><p>Next action: ${escape(metadata.nextAction||'Not recorded')} · Follow-up ${escape(metadata.followUpOn||'Not recorded')}</p></header><section><h2>Runtime review</h2><p>${escape(report.comparison.detail)}</p>${periodComparisonHtml(report.comparison)}${interval?`<p>Interval: ${interval.started} starts · ${interval.completed} completions · ${interval.success} 2xx · ${interval.challenge} 402 · ${interval.serverError} 5xx · ${interval.disconnected} disconnects.</p>`:''}<ul>${report.queue.map(q=>`<li><b>${escape(q.source)} · ${escape(q.routeId)}</b>: ${escape(q.action)}</li>`).join('')||'<li>No additional repair action identified from these attached sources.</li>'}</ul></section>${sections}<section><h2>Case notes</h2><pre>${escape(metadata.notes||'No notes recorded.')}</pre><h2>Interpretation</h2><p>${escape(report.interpretation)}</p><p>Capture sources and unfinished commercial terms remain in the portable support handoff. This document does not send a message or record an agreement.</p></section><small>Generated ${escape(report.generatedAt)}</small></main></body></html>`;
 }
-export async function exportRuntimeHandoff({workspaceText,supportText,metadata}) {
+export async function exportRuntimeHandoff({workspaceText,supportText,metadata,generatedAt}) {
   const workspace=await parseWorkspace(workspaceText),report=reviewRuntime(supportText,workspace.inputs);
+  if(generatedAt!==undefined){if(!instant(generatedAt))fail('Use the original export generation time');report.generatedAt=generatedAt;}
   const file=JSON.stringify({schema:HANDOFF_SCHEMA,generatedAt:report.generatedAt,workspaceText,supportText,metadata,
     sha256:{workspace:sha(workspaceText),support:sha(supportText)}},null,2)+'\n';
   if(Buffer.byteLength(file)>MAX_HANDOFF_BYTES)fail('Support handoff exceeds the portable file limit');

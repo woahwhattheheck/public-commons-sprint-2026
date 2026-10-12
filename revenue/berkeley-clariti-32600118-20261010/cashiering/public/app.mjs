@@ -186,7 +186,7 @@ function shell(content){
  const tabs=[['overview','Daily position'],['intake','Original exports'],['reconciliation','Transactions & allocation'],['findings','Exceptions'],['close','Cashier close'],['interfaces','ERP interface'],['handoff','Packets & history'],['settings','Setup']];
  return '<header class="topbar"><div class="brand"><a href="/">Permit workspace</a><span>Daily cashiering</span></div><div class="topmeta"><span>Saved revision <strong>'+h(S.state?.revision??'—')+'</strong></span>'+button('Refresh','refresh','','small')+'</div></header>'+
   '<div class="contextbar"><div id="run-selector"></div><div class="context-note">Source observations, staff decisions and receiving records stay separate.</div></div>'+
-  '<nav class="tabs" aria-label="Cashiering workspace">'+tabs.map(([id,title])=>'<button type="button" data-action="tab" data-tab="'+h(id)+'"'+(S.tab===id?' aria-current="page"':'')+'>'+h(title)+'</button>').join('')+'</nav>'+
+  '<nav class="tabs" aria-label="Cashiering workspace">'+tabs.map(([id,title])=>'<button type="button" data-action="tab" data-tab="'+h(id)+'"'+(S.tab===id?' aria-current="page"':'')+'>'+h(title)+'</button>').join('')+'<a href="/cashiering/receiving/" style="align-self:center;padding:10px 14px;color:inherit">Accounting returns</a></nav>'+
   '<div id="busy-status" class="busy-strip" role="status" hidden></div>'+
   '<main id="main" class="workspace" tabindex="-1">'+(S.pending?pendingNotice():'')+content+'</main>';
 }

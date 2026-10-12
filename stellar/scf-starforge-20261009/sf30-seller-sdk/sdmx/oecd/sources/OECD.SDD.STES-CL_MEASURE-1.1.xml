@@ -1,0 +1,981 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--NSI Web Service v10.11.8.0-->
+<message:Structure xmlns:message="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message" xmlns:structure="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/structure" xmlns:common="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/common">
+  <message:Header>
+    <message:ID>IDREF10086</message:ID>
+    <message:Test>false</message:Test>
+    <message:Prepared>2026-10-12T13:43:39.5498889+02:00</message:Prepared>
+    <message:Sender id="Unknown" />
+    <message:Receiver id="Unknown" />
+  </message:Header>
+  <message:Structures>
+    <structure:Codelists>
+      <structure:Codelist id="CL_MEASURE" agencyID="OECD.SDD.STES" version="1.1" isFinal="true">
+        <common:Name xml:lang="en">Measure</common:Name>
+        <structure:Code id="BU">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">1</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Business situation</common:Name>
+          <common:Name xml:lang="fr">Situation de l'entreprise</common:Name>
+        </structure:Code>
+        <structure:Code id="BCICP">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">2</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Composite business confidence</common:Name>
+          <common:Name xml:lang="fr">Indicateurs de confiance de l'entreprise</common:Name>
+        </structure:Code>
+        <structure:Code id="CURT">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">3</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Rate of capacity utilisation</common:Name>
+          <common:Name xml:lang="fr">Capacité d'utilisation</common:Name>
+        </structure:Code>
+        <structure:Code id="EM">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">4</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Employment</common:Name>
+          <common:Name xml:lang="fr">Emploi</common:Name>
+        </structure:Code>
+        <structure:Code id="FG">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">5</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Finished goods stocks</common:Name>
+          <common:Name xml:lang="fr">Stock de produits finis</common:Name>
+        </structure:Code>
+        <structure:Code id="OB">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">6</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Order books</common:Name>
+          <common:Name xml:lang="fr">Carnets de commande</common:Name>
+        </structure:Code>
+        <structure:Code id="OD">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">7</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Order intentions or demand</common:Name>
+          <common:Name xml:lang="fr">Intentions de commandes ou de demande</common:Name>
+        </structure:Code>
+        <structure:Code id="OI">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">8</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Orders inflow</common:Name>
+          <common:Name xml:lang="fr">Flux des commandes</common:Name>
+        </structure:Code>
+        <structure:Code id="PR">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">9</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Production</common:Name>
+          <common:Name xml:lang="fr">Production</common:Name>
+        </structure:Code>
+        <structure:Code id="RM">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">10</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Raw material stocks</common:Name>
+          <common:Name xml:lang="fr">Stocks de matières premières</common:Name>
+        </structure:Code>
+        <structure:Code id="SP">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">11</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Selling prices</common:Name>
+          <common:Name xml:lang="fr">Prix de vente</common:Name>
+        </structure:Code>
+        <structure:Code id="VS">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">12</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Volume of stocks</common:Name>
+          <common:Name xml:lang="fr">Volume des stocks</common:Name>
+        </structure:Code>
+        <structure:Code id="XR">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">13</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Export order books or demand</common:Name>
+          <common:Name xml:lang="fr">Carnets de commandes à l'export</common:Name>
+        </structure:Code>
+        <structure:Code id="DE">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">14</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Demand evolution</common:Name>
+          <common:Name xml:lang="fr">Evolution des demandes</common:Name>
+        </structure:Code>
+        <structure:Code id="CCICP">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">15</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Composite consumer confidence</common:Name>
+          <common:Name xml:lang="fr">Indicateurs de confiance des ménages</common:Name>
+        </structure:Code>
+        <structure:Code id="ES">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">16</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Economic situation</common:Name>
+          <common:Name xml:lang="fr">Situation économique</common:Name>
+        </structure:Code>
+        <structure:Code id="IN">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">17</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Consumer prices</common:Name>
+          <common:Name xml:lang="fr">Prix à la consommation</common:Name>
+        </structure:Code>
+        <structure:Code id="LI">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">18</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Composite leading indicator (CLI)</common:Name>
+          <common:Name xml:lang="fr">Indicateur composite avancé (ICA)</common:Name>
+        </structure:Code>
+        <structure:Code id="RS">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">19</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Reference series (GDP)</common:Name>
+          <common:Name xml:lang="fr">Série de référence (PIB)</common:Name>
+        </structure:Code>
+        <structure:Code id="PRVM">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">20</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Production volume</common:Name>
+          <common:Name xml:lang="fr">Production volume</common:Name>
+        </structure:Code>
+        <structure:Code id="TOVM">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">21</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Retail trade volume</common:Name>
+          <common:Name xml:lang="fr">Ensemble du commerce de détail volume</common:Name>
+        </structure:Code>
+        <structure:Code id="TOCAPA">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">22</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Passenger car registrations</common:Name>
+          <common:Name xml:lang="fr">Immatriculation des voitures particulières</common:Name>
+        </structure:Code>
+        <structure:Code id="WSDW">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">23</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Construction work started on dwellings</common:Name>
+          <common:Name xml:lang="fr">Mise en chantier des logements</common:Name>
+        </structure:Code>
+        <structure:Code id="NODW">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">24</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Permits issued for dwellings</common:Name>
+          <common:Name xml:lang="fr">Permis de construire pour les logements</common:Name>
+        </structure:Code>
+        <structure:Code id="CC">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">25</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Nominal exchange rates</common:Name>
+          <common:Name xml:lang="fr">Taux de change nominal</common:Name>
+        </structure:Code>
+        <structure:Code id="CCRE">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">26</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Real effective exchange rates - CPI based</common:Name>
+          <common:Name xml:lang="fr">Taux de change effectif réel - basé sur les IPC</common:Name>
+        </structure:Code>
+        <structure:Code id="CCULC">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">27</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Real effective exchange rates - unit labour costs based</common:Name>
+          <common:Name xml:lang="fr">Taux de change effectif réel - basé sur les coûts de la main d’oeuvre</common:Name>
+        </structure:Code>
+        <structure:Code id="IRLT">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">28</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Long-term interest rates</common:Name>
+          <common:Name xml:lang="fr">Taux d'intérèt à long terme</common:Name>
+        </structure:Code>
+        <structure:Code id="IR3TIB">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">29</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Short-term interest rates</common:Name>
+          <common:Name xml:lang="fr">Taux d'intérèt à long court</common:Name>
+        </structure:Code>
+        <structure:Code id="IRSTCI">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">30</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Immediate interest rates, call money, interbank rate</common:Name>
+          <common:Name xml:lang="fr">Taux d'intérèt immédiats, taux de l'argent, taux interbancaire</common:Name>
+        </structure:Code>
+        <structure:Code id="SHARE">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">31</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Share prices</common:Name>
+          <common:Name xml:lang="fr">Cours des actions</common:Name>
+        </structure:Code>
+        <structure:Code id="MANM">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">32</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">M1</common:Name>
+          <common:Name xml:lang="fr">M1</common:Name>
+        </structure:Code>
+        <structure:Code id="MABM">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">33</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">M3</common:Name>
+          <common:Name xml:lang="fr">M3</common:Name>
+        </structure:Code>
+        <structure:Code id="CP">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">34</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Consumer prices</common:Name>
+          <common:Name xml:lang="fr">Prix à la consommation</common:Name>
+        </structure:Code>
+        <structure:Code id="PP">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">35</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Producer prices</common:Name>
+          <common:Name xml:lang="fr">Prix à la production</common:Name>
+        </structure:Code>
+        <structure:Code id="UNEMP">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">36</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Unemployment</common:Name>
+          <common:Name xml:lang="fr">Taux de chômage</common:Name>
+        </structure:Code>
+        <structure:Code id="EMP">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">37</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Employment</common:Name>
+          <common:Name xml:lang="fr">Emploi</common:Name>
+        </structure:Code>
+        <structure:Code id="H_EARN">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">38</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Hourly earnings</common:Name>
+          <common:Name xml:lang="fr">Gains horaires</common:Name>
+        </structure:Code>
+        <structure:Code id="ULC">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">39</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Unit labour cost</common:Name>
+          <common:Name xml:lang="fr">Coût unitaire de la main d'oeuvre</common:Name>
+        </structure:Code>
+        <structure:Code id="B1GQ_Q">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">40</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Gross domestic product, volume</common:Name>
+          <common:Name xml:lang="fr">Produit intérieur brut, volume</common:Name>
+        </structure:Code>
+        <structure:Code id="P3_S1M_Q">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">41</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Final consumption expenditure of households and non profit institutions serving households, volume</common:Name>
+          <common:Name xml:lang="fr">Dépense de consommation finale des ménages et ISBLSM, volume</common:Name>
+        </structure:Code>
+        <structure:Code id="P3_S13_Q">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">42</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Final consumption expenditure of general government, volume</common:Name>
+          <common:Name xml:lang="fr">Dépense de consommation finale des administrations publiques, volume</common:Name>
+        </structure:Code>
+        <structure:Code id="P51G_Q">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">43</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Gross fixed capital formation, volume</common:Name>
+          <common:Name xml:lang="fr">Formation brute de capital fixe, volume</common:Name>
+        </structure:Code>
+        <structure:Code id="P6_Q">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">44</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Exports of goods and services, volume</common:Name>
+          <common:Name xml:lang="fr">Exportations de biens et services, volume</common:Name>
+        </structure:Code>
+        <structure:Code id="P7_Q">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">45</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Imports of goods and services, volume</common:Name>
+          <common:Name xml:lang="fr">Importations de biens et services, volume</common:Name>
+        </structure:Code>
+        <structure:Code id="B1GQ_V">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">46</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Gross domestic product, current prices</common:Name>
+          <common:Name xml:lang="fr">Produit intérieur brut, prix courants</common:Name>
+        </structure:Code>
+        <structure:Code id="B1GQ_D">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">47</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Gross domestic product, deflator</common:Name>
+          <common:Name xml:lang="fr">Produit intérieur brut, déflateur</common:Name>
+        </structure:Code>
+        <structure:Code id="CA">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">48</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Current account balance</common:Name>
+          <common:Name xml:lang="fr">Balance des transactions courantes</common:Name>
+        </structure:Code>
+        <structure:Code id="CA_GDP">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">49</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Current account balance as percentage of GDP</common:Name>
+          <common:Name xml:lang="fr">Balance des transactions courantes en pourcentage du PIB</common:Name>
+        </structure:Code>
+        <structure:Code id="IM">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">50</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Merchandise imports</common:Name>
+          <common:Name xml:lang="fr">Importations de marchandises</common:Name>
+        </structure:Code>
+        <structure:Code id="EX">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">51</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Merchandise exports</common:Name>
+          <common:Name xml:lang="fr">Exportations de marchandises</common:Name>
+        </structure:Code>
+        <structure:Code id="LOCO">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">52</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">CLI components</common:Name>
+        </structure:Code>
+        <structure:Code id="LOCOAB">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">53</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Bank activity</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOBC">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">54</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Sales expectations</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOBD">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">55</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Demand or orders inflow tendency</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOBE">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">56</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Employment tendency</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOBF">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">57</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Finished goods stocks tendency</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOBI">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">58</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Prices expectations</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOBO">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">59</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Order books tendency</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOBP">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">60</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Production tendency</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOBS">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">61</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Business situation</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOBU">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">62</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Capacity utilization tendency</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOBX">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">63</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Export orders tendency</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOCI">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">64</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Consumer confidence</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCODW">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">65</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Construction</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOEM">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">66</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Labour</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOEX">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">67</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Exchange rate</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOHS">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">68</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Hours</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOIS">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">69</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Inventories to shipments</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOLT">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">70</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Long-term interest rate</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOMA">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">71</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Monetary aggregates</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOMG">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">72</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Imports of goods</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCONT">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">73</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Net trade</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOOD">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">74</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Orders</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOPC">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">76</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Consumer prices</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOPE">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">77</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Production of electricity</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOPG">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">79</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Production of goods</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOPM">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">80</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Production of non-metallic products</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOPP">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">81</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Producer prices</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOS3">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">83</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Servies demand expectations</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOSI">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">84</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Interest rate spread</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOSK">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">85</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Stocks</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOSP">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">86</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Share prices</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOST">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">87</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Short-term interest rate</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOTA">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">88</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Tourism activity</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOTM">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">89</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Imports</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOTT">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">90</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Terms of trade</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOTX">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">91</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Exports</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+        <structure:Code id="LOCOVR">
+          <common:Annotations>
+            <common:Annotation id="@SDMX">
+              <common:AnnotationType>ORDER</common:AnnotationType>
+              <common:AnnotationText xml:lang="en">92</common:AnnotationText>
+            </common:Annotation>
+          </common:Annotations>
+          <common:Name xml:lang="en">Cars registrations or sales</common:Name>
+          <structure:Parent>
+            <Ref id="LOCO" />
+          </structure:Parent>
+        </structure:Code>
+      </structure:Codelist>
+    </structure:Codelists>
+  </message:Structures>
+</message:Structure>

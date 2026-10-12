@@ -9,6 +9,7 @@ import { CENSUS_API, MAX_INPUT_BYTES, MAX_RESPONSE_BYTES, COLUMNS, COORDINATE_ME
   only, inputAddresses, metadata, parseBatchResponse, censusRequest } from './source.mjs';
 import { reviewSelection, createEdition, reopenEdition, copyEdition, writeExact } from './edition.mjs';
 import { readGeocoderRecording } from './recording.mjs';
+import { initializeCustomerState, createCustomerWorkflow } from './customer-workflow.mjs';
 
 const SCHEMA = 'stellar-forge.census-geocoder-workspace.v1';
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
@@ -27,7 +28,7 @@ export async function openGeocoderWorkspace({ directory, create = false, fetch: 
   const index = join(directory, 'workspace.json');
   if (create && !await absent(index)) throw fault('GEOCODER_WORKSPACE_EXISTS', 'Reopen this existing workspace.');
   await privateDirectory(directory, create); const release = await acquireWorkspace(directory);
-  let state, active = null, closing = null, closed = false, publisher = null, publisherOpening = null;
+  let state, active = null, closing = null, closeRequested = false, closed = false, publisher = null, publisherOpening = null;
   const pending = new Set();
   const save = async () => { state.updatedAt = stamp(); await atomicJson(directory, 'workspace.json', state); };
   const selected = (list, id, label) => {
@@ -111,6 +112,7 @@ export async function openGeocoderWorkspace({ directory, create = false, fetch: 
     } else state = await readJson(index, 16 * 1024 * 1024);
     if (state.schema !== SCHEMA || !UUID.test(state.id) || ['metadata', 'batches', 'reviews', 'editions'].some(name => !Array.isArray(state[name])))
       throw fault('GEOCODER_WORKSPACE_INVALID');
+    initializeCustomerState(state);
     state.imports ??= [];
     if (!Array.isArray(state.imports)) throw fault('GEOCODER_WORKSPACE_INVALID');
     let recovered = false;
@@ -129,7 +131,10 @@ export async function openGeocoderWorkspace({ directory, create = false, fetch: 
     if (recovered) await save();
   } catch (error) { await release(); throw error; }
 
-  function ensureOpen() { if (closed || closing) throw fault('GEOCODER_WORKSPACE_CLOSED'); }
+  const customer = createCustomerWorkflow({ directory, state, save, key,
+    selectBatch: id => selected('batches', id, 'batch'), batchInputs, createBatch });
+
+  function ensureOpen() { if (closed || closeRequested) throw fault('GEOCODER_WORKSPACE_CLOSED'); }
   async function getPublisher() {
     if (publisher) return publisher;
     publisherOpening ??= (async () => {
@@ -189,7 +194,7 @@ export async function openGeocoderWorkspace({ directory, create = false, fetch: 
       await save(); return clone(item);
     } catch (error) { item.state = active.controller.signal.aborted ? 'INTERRUPTED' : 'FAILED'; item.error = publicError(error); await save(); throw error; }
   }
-  async function createBatch(input) {
+  async function createBatch(input, retained = null) {
     only(input, ['label', 'inputText', 'header', 'discoveryId', 'vintagesId', 'benchmark', 'vintage', 'returnType']);
     const label = text(input.label, 'a batch label');
     if (typeof input.inputText !== 'string') throw fault('GEOCODER_INPUT_CSV', 'Select the original address CSV.');
@@ -205,8 +210,8 @@ export async function openGeocoderWorkspace({ directory, create = false, fetch: 
       vintage = vintages.parsed.options.find(item => item.id === String(input.vintage));
       if (!vintage) throw fault('GEOCODER_VINTAGE_SELECTION', 'Choose a vintage belonging to the selected benchmark.');
     } else if (input.vintage !== undefined && input.vintage !== null && input.vintage !== '') throw fault('GEOCODER_LOCATIONS_VINTAGE');
-    const id = randomUUID(), folder = batchPath(id);
-    const batch = { id, label, createdAt: stamp(), header: input.header ?? false,
+    const id = retained ? key(retained.id) : randomUUID(), folder = batchPath(id);
+    const batch = { id, label, createdAt: retained?.createdAt ?? stamp(), header: input.header ?? false,
       selection: { returnType, benchmark: clone(benchmark), vintage: vintage ? clone(vintage) : null,
         discoveryId: discovered.item.id, discoverySha256: discovered.item.exchange.sha256,
         vintagesId: vintages?.item.id ?? null, vintagesSha256: vintages?.item.exchange.sha256 ?? null,
@@ -214,10 +219,16 @@ export async function openGeocoderWorkspace({ directory, create = false, fetch: 
       input: { count: parsed.count, originalSha256: parsed.originalSha256, submittedSha256: parsed.submittedSha256,
         originalBytes: parsed.originalBytes, submittedBytes: parsed.submittedBytes },
       attempts: [], currentAttempt: null };
-    await privateDirectory(folder, true); await privateDirectory(join(folder, 'attempts'), true);
-    await createFile(join(folder, 'input.csv'), original); await createFile(join(folder, 'submitted.csv'), parsed.submitted);
     const { attempts, currentAttempt, ...declaration } = batch;
-    await createFile(join(folder, 'batch.json'), bytes(declaration)); await syncDirectory(folder);
+    const existing = retained && state.batches.find(value => value.id === id);
+    if (existing) {
+      const { attempts: savedAttempts, currentAttempt: savedAttempt, ...saved } = existing;
+      if (identity(saved) !== identity(declaration)) throw fault('GEOCODER_CUSTOMER_BATCH_CHANGED');
+      await batchInputs(existing); return clone(existing);
+    }
+    await privateDirectory(folder, true); await privateDirectory(join(folder, 'attempts'), true);
+    await writeExact(join(folder, 'input.csv'), original); await writeExact(join(folder, 'submitted.csv'), parsed.submitted);
+    await writeExact(join(folder, 'batch.json'), bytes(declaration)); await syncDirectory(folder);
     state.batches.push(batch); await save(); return clone(batch);
   }
   async function capture(input) {
@@ -336,11 +347,13 @@ export async function openGeocoderWorkspace({ directory, create = false, fetch: 
     state.reviews.push(saved); await save(); return clone(saved);
   }
   async function build(input) {
-    only(input, ['reviewId', 'payment', 'origin', 'path']);
+    only(input, ['reviewId', 'payment', 'origin', 'path', 'mappingId']);
     const saved = selected('reviews', input.reviewId, 'review'), exact = await readJson(join(directory, 'reviews', saved.id + '.json'));
     if (identity(saved) !== identity(exact)) throw fault('GEOCODER_REVIEW_CHANGED');
     const batch = selected('batches', saved.batchId, 'batch'), captured = await retainedBatch(batch, saved.attemptId);
-    const binding = identity({ reviewId: saved.id, payment: input.payment ?? null, origin: input.origin ?? null, path: input.path ?? '/geocodes' });
+    const customerBundle = input.mappingId === undefined ? null : await customer.forEdition(input.mappingId, batch);
+    const binding = identity({ reviewId: saved.id, payment: input.payment ?? null, origin: input.origin ?? null, path: input.path ?? '/geocodes',
+      ...(customerBundle ? { customerMappingSha256: digest(bytes(customerBundle.mapping)), customerBindingSha256: digest(bytes(customerBundle.binding)) } : {}) });
     let previous = state.editions.find(item => item.binding === binding);
     if (previous?.state === 'COMPLETE') return { id: previous.id, ...await reopenEdition(join(directory, 'editions', previous.id)) };
     if (!previous) {
@@ -361,13 +374,14 @@ export async function openGeocoderWorkspace({ directory, create = false, fetch: 
     }
     try {
       const result = await createEdition({ directory: join(directory, 'editions', id), batch, attempt: captured.attempt,
-        review: saved, captured: captured.parsed, originals, payment: input.payment, origin: input.origin, path: input.path });
+        review: saved, captured: captured.parsed, originals, payment: input.payment, origin: input.origin, path: input.path, customer: customerBundle });
       Object.assign(previous, { state: 'COMPLETE', dataset: result.dataset, operationId: result.operationId,
-        hasSeller: Boolean(result.sellerPath), error: null }); await save();
+        hasSeller: Boolean(result.sellerPath), ...(result.customer ? { customer: result.customer } : {}), error: null }); await save();
       return { id, ...result };
     } catch (error) { previous.state = 'INCOMPLETE'; previous.error = publicError(error); await save(); throw error; }
   }
   async function dispatch(action, input) {
+    if (action.startsWith('customer.')) return customer.act(action.slice(9), input);
     if (action === 'discovery.benchmarks') return discover(input, 'benchmarks');
     if (action === 'discovery.vintages') return discover(input, 'vintages');
     if (action === 'batch.create') return createBatch(input);
@@ -412,6 +426,7 @@ export async function openGeocoderWorkspace({ directory, create = false, fetch: 
     return operation.promise;
   }
   async function download(kind, id) {
+    if (['customer-input', 'customer-mapping', 'customer-submitted'].includes(kind)) return customer.download(kind, id);
     if (kind.startsWith('publisher:')) return (await getPublisher()).readExport(kind.slice(10), id);
     if (['input', 'response'].includes(kind)) {
       const batch = selected('batches', id, 'batch');
@@ -423,7 +438,9 @@ export async function openGeocoderWorkspace({ directory, create = false, fetch: 
     const edition = selected('editions', id, 'edition'), root = join(directory, 'editions', edition.id);
     await reopenEdition(root);
     const names = { dataset: ['dataset.csv', 'text/csv; charset=utf-8'], provenance: ['source.json', 'application/json'],
-      seller: ['seller.json', 'application/json'], manifest: ['edition.json', 'application/json'] };
+      seller: ['seller.json', 'application/json'], manifest: ['edition.json', 'application/json'],
+      'customer-results': ['customer-results.csv', 'text/csv; charset=utf-8'],
+      'customer-results-json': ['customer-results.json', 'application/json'] };
     if (!names[kind]) throw fault('GEOCODER_DOWNLOAD_KIND');
     const [name, contentType] = names[kind];
     return { bytes: await readPrivate(join(root, name), 64 * 1024 * 1024), filename: name, contentType };
@@ -434,16 +451,21 @@ export async function openGeocoderWorkspace({ directory, create = false, fetch: 
   };
   return { directory, status: track(status), inspectBatch: track(inspectBatch), act: track(act), download: track(download),
     close() {
-      closing ??= (async () => {
+      if (closing) return closing;
+      closeRequested = true;
+      const disposing = (async () => {
         const current = active;
         if (current && ['discovery.benchmarks', 'discovery.vintages', 'batch.capture'].includes(current.action)) current.controller.abort();
-        try { await Promise.allSettled([...pending, ...(current?.promise ? [current.promise] : [])]);
-          if (publisherOpening) publisher = await publisherOpening; }
-        finally {
-          try { await publisher?.close(); } finally { closed = true; await release(); }
-        }
+        await Promise.allSettled([...pending, ...(current?.promise ? [current.promise] : [])]);
+        if (publisherOpening) publisher = await publisherOpening;
+        // Keep this writer lease while an original publisher or child still owns state.
+        await publisher?.close();
+        await release();
+        closed = true;
       })();
-      return closing;
+      closing = disposing;
+      void disposing.catch(() => { if (closing === disposing) closing = null; });
+      return disposing;
     }
   };
 }

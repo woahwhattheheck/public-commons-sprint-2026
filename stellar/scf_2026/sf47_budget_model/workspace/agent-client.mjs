@@ -54,6 +54,50 @@ const sha = value => {
   need(typeof value === 'string' && HASH.test(value), 'GRANT_INVALID_INPUT', 'Use the exact SHA256.'); return value;
 };
 
+const completionDate = value => {
+  need(typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value),
+    'GRANT_INVALID_INPUT', 'Use the native calendar date in YYYY-MM-DD form.');
+  return value;
+};
+const cohortReviewIds = value => {
+  need(Array.isArray(value) && value.length <= 20 && new Set(value).size === value.length,
+    'GRANT_INVALID_INPUT', 'Select at most 20 distinct original frozen cohort reviews.');
+  for (const selected of value) id(selected, 'review');
+  return value;
+};
+const COMPLETION_FIELDS = Object.freeze({
+  save:{allowed:['inputs'], required:['inputs']},
+  prepare:{allowed:['receiptId','asOfDate','summary','expectedPreviewSha256','cohortReviewIds'],
+    required:['receiptId','asOfDate','summary','expectedPreviewSha256']},
+  extension:{allowed:['receiptId','confirmedOn','deadlineOn','reference','sourceIds','confirmationNote'],
+    required:['receiptId','confirmedOn','deadlineOn','reference']},
+  submit:{allowed:['reviewId','expectedReviewSha256','submittedOn','formReference','sourceIds','sourceNote'],
+    required:['reviewId','expectedReviewSha256','submittedOn','formReference']},
+  decision:{allowed:['outcomeId','state','date','sourceIds','sourceNote'],
+    required:['outcomeId','state','date','sourceNote']},
+});
+function completionCommandBody(action, body) {
+  const selected=COMPLETION_FIELDS[action];
+  need(selected, 'GRANT_INVALID_ACTION', 'Choose an original completion lifecycle action.');
+  const common=['expectedVersion','requestId','actor','note'];
+  exact(body, [...common,...selected.allowed], ['expectedVersion','requestId','actor',...selected.required]);
+  const original=Object.fromEntries(Object.entries(body).filter(([key])=>common.includes(key)));
+  const data=Object.fromEntries(Object.entries(body).filter(([key])=>selected.allowed.includes(key)));
+  if (data.receiptId !== undefined) id(data.receiptId,'cash');
+  if (data.reviewId !== undefined) id(data.reviewId,'review');
+  if (data.outcomeId !== undefined) id(data.outcomeId,'outcome');
+  if (data.inputs !== undefined) object(data.inputs,'Completion assignments');
+  if (data.cohortReviewIds !== undefined) cohortReviewIds(data.cohortReviewIds);
+  for (const key of ['asOfDate','confirmedOn','deadlineOn','submittedOn','date'])
+    if (data[key] !== undefined) completionDate(data[key]);
+  for (const key of ['expectedPreviewSha256','expectedReviewSha256'])
+    if (data[key] !== undefined) sha(data[key]);
+  if (action === 'decision') need(['ACCEPTED','CHANGES_REQUESTED','WITHDRAWN'].includes(data.state),
+    'GRANT_INVALID_INPUT', 'Use the original recorded issuer outcome.');
+  if (Object.hasOwn(data,'confirmationNote')) { data.note=data.confirmationNote; delete data.confirmationNote; }
+  return {...original,action:'completion.'+action,data};
+}
+
 const SUPPORT_DEPLOYMENT_FIELDS = [
   'name', 'operator', 'operatorId', 'role', 'participantClass', 'environment', 'state',
   'costIds', 'tranche', 'endpoint', 'releaseRef', 'caseRef', 'acceptedBy', 'acceptedAt', 'sourceNote',
@@ -69,6 +113,33 @@ const supportHandoff = (bytes, filename) => {
 
 
 
+
+const buyerHandoff = (bytes, filename) => {
+  need(Buffer.isBuffer(bytes) && bytes.length > 0 && bytes.length <= GRANT_MAX_SOURCE_BYTES,
+    'GRANT_INPUT_TOO_LARGE', 'Use the complete nonempty original buyer handoff up to 8 MiB.');
+  need(typeof filename === 'string' && filename.trim() && [...filename].length <= 240 &&
+    !/[\x00-\x1f\\/]/.test(filename) && !['.', '..'].includes(filename.trim()),
+    'GRANT_INVALID_INPUT', 'Use the plain original buyer filename without directory components.');
+  return {filename, contentBase64:bytes.toString('base64')};
+};
+const buyerSelections = value => {
+  need(Array.isArray(value) && value.length >= 1 && value.length <= 100,
+    'GRANT_INVALID_INPUT', 'Select from one through 100 original buyer jobs.');
+  const jobs = new Set(), purchases = new Set();
+  for (const row of value) {
+    exact(row, ['jobId', 'purchaseId'], ['jobId', 'purchaseId']);
+    sha(row.jobId);
+    need(!jobs.has(row.jobId), 'GRANT_INVALID_INPUT', 'Select each original buyer job once.');
+    jobs.add(row.jobId);
+    if (row.purchaseId !== null) {
+      id(row.purchaseId, 'purchase');
+      need(!purchases.has(row.purchaseId), 'GRANT_INVALID_INPUT',
+        'Each selected source job retains its own original purchase.');
+      purchases.add(row.purchaseId);
+    }
+  }
+  return value;
+};
 
 /** Exact regular-file input. Private launch records additionally keep original ownership. */
 export async function readGrantAgentFile(filename, maximum = GRANT_MAX_BUNDLE_BYTES, privateOnly = false) {
@@ -296,6 +367,14 @@ export class GrantWorkspaceClient {
       portfolios:() => '/api/operations/' + cid() + '/portfolios',
       portfolio:() => '/api/operations/' + cid() + '/portfolios/' + id(args.portfolioId, 'portfolio'),
       review:() => '/api/operations/' + cid() + '/reviews/' + id(args.reviewId, 'review'),
+      installations:() => '/api/operations/' + cid() + '/installations',
+      installation:() => '/api/operations/' + cid() + '/installations/' + id(args.installationId,'installation') +
+        (args.revision === undefined ? '' : '?revision=' + integer(args.revision,'Installation edition',1,500)),
+      'installation-history':() => '/api/operations/' + cid() + '/installations/' + id(args.installationId,'installation') +
+        '/history?limit=' + integer(args.limit ?? 25,'Installation history page',1,100) +
+        (args.before === undefined ? '' : '&before=' + integer(args.before,'Earlier installation edition',1,500)),
+      completion:() => '/api/operations/' + cid() + '/completion' +
+        (args.asOfDate === undefined ? '' : '?asOfDate=' + encodeURIComponent(completionDate(args.asOfDate))),
     };
     need(Object.hasOwn(routes, view), 'GRANT_INVALID_VIEW', 'Choose a declared native grant view.');
     return this.#request(routes[view](), {});
@@ -367,6 +446,75 @@ export class GrantWorkspaceClient {
     return this.#request('/api/operations/' + caseId + '/portfolio-selection',
       {body:{expectedVersion, portfolioId, alternativeId}, mutation:false});
   }
+  installationSeed(caseId, expectedVersion) {
+    id(caseId,'operation'); integer(expectedVersion,'Current case version');
+    return this.#request('/api/operations/'+caseId+'/installation-seed',
+      {body:{expectedVersion},mutation:false});
+  }
+  installationPreview(caseId, body) {
+    id(caseId,'operation');
+    exact(body,['expectedVersion','installationId','expectedRevision','document'],
+      ['expectedVersion','installationId','expectedRevision','document']);
+    integer(body.expectedVersion,'Current case version'); integer(body.expectedRevision,'Current installation edition',0,500);
+    if(body.installationId!==null)id(body.installationId,'installation');
+    need(body.installationId===null?body.expectedRevision===0:body.expectedRevision>=1,
+      'GRANT_INVALID_INPUT','Select edition zero for a new installation or the original current installation edition.');
+    object(body.document,'Complete installation document');
+    return this.#request('/api/operations/'+caseId+'/installation-preview',{body,mutation:false});
+  }
+  installationSave(caseId, body) {
+    id(caseId,'operation');
+    exact(body,['expectedVersion','requestId','actor','note','installationId','expectedRevision','document','expectedPreviewSha256'],
+      ['expectedVersion','requestId','actor','note','installationId','expectedRevision','document','expectedPreviewSha256']);
+    integer(body.expectedVersion,'Current case version'); integer(body.expectedRevision,'Current installation edition',0,500);
+    requestId(body.requestId); sha(body.expectedPreviewSha256);
+    text(body.actor,'Actual installation operator',300); text(body.note,'Installation edition reason',12000);
+    if(body.installationId!==null)id(body.installationId,'installation');
+    need(body.installationId===null?body.expectedRevision===0:body.expectedRevision>=1,
+      'GRANT_INVALID_INPUT','Select edition zero for a new installation or the original current installation edition.');
+    object(body.document,'Complete installation document');
+    const {installationId,expectedRevision,document,expectedPreviewSha256,...original}=body;
+    return this.#request('/api/operations/'+caseId+'/command',{originalRequestId:body.requestId,
+      body:{...original,action:'installation.save',data:{installationId,expectedRevision,document,expectedPreviewSha256}}});
+  }
+  cohortSeed(caseId, expectedVersion, tranche) {
+    id(caseId,'operation'); integer(expectedVersion,'Current case version'); integer(tranche,'Cohort tranche',2,3);
+    return this.#request('/api/operations/'+caseId+'/cohort-seed',
+      {body:{expectedVersion,tranche},mutation:false});
+  }
+  cohortPreview(caseId, expectedVersion, inputs) {
+    id(caseId,'operation'); integer(expectedVersion,'Current case version'); object(inputs,'Original cohort review inputs');
+    return this.#request('/api/operations/'+caseId+'/cohort-preview',
+      {body:{expectedVersion,inputs},mutation:false});
+  }
+  cohortPrepare(caseId, body) {
+    id(caseId,'operation');
+    exact(body,['expectedVersion','requestId','actor','note','inputs','expectedPreviewSha256'],
+      ['expectedVersion','requestId','actor','inputs','expectedPreviewSha256']);
+    const {inputs,expectedPreviewSha256,...original}=body;
+    object(inputs,'Original cohort review inputs'); sha(expectedPreviewSha256);
+    return this.command(caseId,{...original,action:'cohort.prepare',data:{inputs,expectedPreviewSha256}});
+  }
+  completionSeed(caseId, expectedVersion, tranche) {
+    id(caseId,'operation'); integer(expectedVersion,'Current case version'); integer(tranche,'Completion tranche',1,3);
+    return this.#request('/api/operations/'+caseId+'/completion-seed',
+      {body:{expectedVersion,tranche},mutation:false});
+  }
+  completionPreview(caseId, expectedVersion, inputs) {
+    id(caseId,'operation'); integer(expectedVersion,'Current case version');
+    exact(inputs,['receiptId','asOfDate','summary','cohortReviewIds'],['receiptId','summary']);
+    if (inputs.cohortReviewIds !== undefined) cohortReviewIds(inputs.cohortReviewIds);
+    id(inputs.receiptId,'cash');
+    if (inputs.asOfDate !== undefined) completionDate(inputs.asOfDate);
+    text(inputs.summary,'Completed tranche result',20000,true);
+    return this.#request('/api/operations/'+caseId+'/completion-preview',
+      {body:{expectedVersion,...inputs},mutation:false});
+  }
+  completionSave(caseId, body) { return this.command(caseId,completionCommandBody('save',body)); }
+  completionPrepare(caseId, body) { return this.command(caseId,completionCommandBody('prepare',body)); }
+  completionExtension(caseId, body) { return this.command(caseId,completionCommandBody('extension',body)); }
+  completionSubmit(caseId, body) { return this.command(caseId,completionCommandBody('submit',body)); }
+  completionDecision(caseId, body) { return this.command(caseId,completionCommandBody('decision',body)); }
   supportPreview(caseId, expectedVersion, bytes, filename) {
     id(caseId, 'operation'); integer(expectedVersion, 'Current case version');
     return this.#request('/api/operations/' + caseId + '/support-preview',
@@ -391,6 +539,35 @@ export class GrantWorkspaceClient {
       body:{...original, action:'support.receive', data:{...supportHandoff(bytes, filename),
         expectedPreviewSha256, deploymentId, ...(deployment === undefined ? {} : {deployment})}}});
   }
+  buyerPreview(caseId, expectedVersion, bytes, filename) {
+    id(caseId, 'operation'); integer(expectedVersion, 'Current case version');
+    return this.#request('/api/operations/' + caseId + '/buyer-preview',
+      {body:{expectedVersion, ...buyerHandoff(bytes, filename)}, mutation:false});
+  }
+  buyerReceive(caseId, bytes, body) {
+    id(caseId, 'operation');
+    exact(body, ['expectedVersion', 'requestId', 'actor', 'note', 'filename',
+      'expectedPreviewSha256', 'deploymentId', 'deployment', 'selections'],
+    ['expectedVersion', 'requestId', 'actor', 'filename', 'expectedPreviewSha256', 'selections']);
+    integer(body.expectedVersion, 'Current case version'); requestId(body.requestId);
+    sha(body.expectedPreviewSha256); text(body.actor, 'Receiving operator', 300);
+    if (body.note !== undefined) text(body.note, 'Receiving note', 12000, true);
+    const {filename, expectedPreviewSha256, deploymentId = null, deployment, selections, ...original} = body;
+    buyerSelections(selections);
+    if (deploymentId !== null) {
+      id(deploymentId, 'deployment');
+      need(deployment === undefined || deployment === null ||
+        (plain(deployment) && Object.keys(deployment).length === 0), 'GRANT_INVALID_INPUT',
+      'Choose the existing deployment without competing replacement fields.');
+    } else {
+      exact(deployment, SUPPORT_DEPLOYMENT_FIELDS, ['name', 'operator', 'role']);
+      need(['BUYER', 'BOTH'].includes(deployment.role), 'GRANT_INVALID_INPUT',
+        'Select the original buyer or combined merchant/buyer deployment role.');
+    }
+    return this.#request('/api/operations/' + caseId + '/command', {originalRequestId:body.requestId,
+      body:{...original, action:'buyer.receive', data:{...buyerHandoff(bytes, filename),
+        expectedPreviewSha256, deploymentId, ...(deployment === undefined ? {} : {deployment}), selections}}});
+  }
   download(kind, args) {
     object(args);
     const routes = {
@@ -401,7 +578,11 @@ export class GrantWorkspaceClient {
       case:() => '/api/operations/' + id(args.caseId, 'operation') + '/export.zip',
       forecast:() => '/api/operations/' + id(args.caseId, 'operation') + '/forecasts/' + id(args.forecastId, 'forecast') + '/export.zip',
       portfolio:() => '/api/operations/' + id(args.caseId, 'operation') + '/portfolios/' + id(args.portfolioId, 'portfolio') + '/export.zip',
+      installation:() => '/api/operations/' + id(args.caseId,'operation') + '/installations/' + id(args.installationId,'installation') +
+        '/export.zip?revision=' + integer(args.revision,'Selected installation edition',1,500),
       source:() => '/api/operations/' + id(args.caseId, 'operation') + '/sources/' + id(args.sourceId, 'source'),
+      completion:() => '/api/operations/' + id(args.caseId,'operation') + '/completion-reviews/' + id(args.reviewId,'review') + '/export.zip',
+      cohort:() => '/api/operations/' + id(args.caseId,'operation') + '/cohort-reviews/' + id(args.reviewId,'review') + '/export.zip',
     };
     need(Object.hasOwn(routes, kind), 'GRANT_INVALID_DOWNLOAD', 'Choose a complete original grant export or source.');
     return this.#request(routes[kind](), {});

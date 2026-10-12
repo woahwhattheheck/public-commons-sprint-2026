@@ -10,7 +10,8 @@ const clean = issue => typeof issue?.code === 'string' && /^GRPC_[A-Z0-9_]+$/.te
  * holds that slot until the native status, pending read and actual close settle.
  * Raw metadata/status details never cross into the public response or snapshots.
  */
-export function grpcServerStream({ nativeCall, normalize, limits, signal, mapError, onClose = () => {} }) {
+export function grpcServerStream({ nativeCall, normalize, limits, signal, mapError,
+  beforeComplete, onClose = () => {} }) {
   const policy = limits.stream;
   if (!policy) throw failure('GRPC_STREAM_LIMITS_REQUIRED');
   const iterator = nativeCall[Symbol.asyncIterator]();
@@ -51,7 +52,7 @@ export function grpcServerStream({ nativeCall, normalize, limits, signal, mapErr
       await terminal;
       finishedAt ??= new Date().toISOString();
       nativeCall.off('error', nativeError);
-      onClose(snapshot());
+      await onClose(snapshot());
     })();
     return closePromise;
   }
@@ -68,6 +69,7 @@ export function grpcServerStream({ nativeCall, normalize, limits, signal, mapErr
       if (part.done) {
         await terminal;
         if (rawFailure || nativeStatus.code !== 0) throw mapError(rawFailure ?? { code: nativeStatus.code });
+        if (beforeComplete) await beforeComplete();
         complete = true; finishedAt = new Date().toISOString();
         return { done: true, value: undefined };
       }

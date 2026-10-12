@@ -4,7 +4,7 @@ if (!defined('ABSPATH')) { exit; }
 require_once __DIR__ . '/merchant-erp-store.php';
 
 final class Starforge_SF104_ERP {
-    const VERSION = '1.0.0';
+    const VERSION = '1.1.0';
     const API = '/merchant-erp';
     const MAX_BODY = 16777216;
     const STATES = ['WAITING_WOO','NEEDS_MAPPING','READY','APPROVED','RECEIVED','SOURCE_CHANGED','CONFLICT','UNCERTAIN','REJECTED','IMPORTED','NEEDS_RECONCILIATION'];
@@ -405,6 +405,10 @@ final class Starforge_SF104_ERP {
                 'sourceVersion'=>self::VERSION,'siteUrl'=>untrailingslashit(home_url('/')),
                 'operation'=>$record,'mappings'=>array_values($maps),
                 'reopen'=>'Install the same plugin and original Woo database, configure the named environment credentials, import this ERP project, select its map, bind the original source, then reconcile the target before delivery. This export contains private order/customer data and no credential values.'];
+            if (class_exists('Starforge_SF104_KCF_Project')) {
+                $companions = Starforge_SF104_KCF_Project::companion(array_keys($maps));
+                if ($companions) { $project['connectorSources'] = $companions; $project['reopen'] .= ' The companion includes exact private source exports; those files may contain sensitive configuration values. Configure live credentials separately.'; }
+            }
             $project['sha256'] = Starforge_SF104_ERP_Map::digest($project);
             if (strlen(Starforge_SF104_ERP_Map::json($project)) > self::MAX_BODY - 1024) throw new RuntimeException('The complete project exceeds the portable import limit. Retain the original Woo database and ERP tables together for the operating engineer.', 422);
             return $project;
@@ -477,6 +481,8 @@ final class Starforge_SF104_ERP {
     }
     static function import_project($request) {
         $body = self::body($request, ['project']); $validated = self::validate_project($body['project'] ?? null);
+        if (class_exists('Starforge_SF104_KCF_Project')) Starforge_SF104_KCF_Project::import_companions($body['project']);
+        elseif (!empty($body['project']['connectorSources'])) throw new RuntimeException('Install the connector source workspace shipped with this complete ERP project before importing it.',422);
         $record = $validated['record'];
         return Starforge_SF104_Checkout::with_order_lock('erp-mapping', static function () use ($validated, $record) {
             return Starforge_SF104_Checkout::with_order_lock($record['orderId'], static function () use ($validated, $record) {

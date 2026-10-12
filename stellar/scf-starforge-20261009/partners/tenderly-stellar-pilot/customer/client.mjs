@@ -4,7 +4,7 @@ import { dirname, join, relative } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { Buyer } from '../../../sf88-operator-buyer-cli/node/index.mjs';
 import { absolute, digest, readBytes, readJson, parseJson, writeBytes, writeJson,
-  privateDirectory, syncDirectory, exists, jsonBytes } from '../../../sf88-operator-buyer-cli/node/store.mjs';
+  privateDirectory, syncDirectory, exists, jsonBytes, matchingWriteTemporaries } from '../../../sf88-operator-buyer-cli/node/store.mjs';
 import { REQUEST_SCHEMA, EXPORT_SCHEMA, MAX_RESULT_BYTES, plain, requireValue,
   expectedFromRequest, equalExpected, describeResult, analysisRequest } from './contract.mjs';
 import { normalizeSelection } from './selection.mjs';
@@ -194,9 +194,13 @@ export class TenderlyResult {
     const marker = { schema: 'stellar-forge.tenderly-customer-export-intent.v1', intentId: binding.intentId,
       configSha256: binding.configSha256, bodySha256: binding.bodySha256,
       responseSha256: this.delivery.sha256, nativeSha256: digest(jsonBytes(this.native)) };
-    if (!await exists(join(directory, EXPORT_INTENT)))
-      requireValue((await readdir(directory)).length === 0, 'TENDERLY_EXPORT_DESTINATION_CONFLICT');
-    await exactFile(join(directory, EXPORT_INTENT), jsonBytes(marker));
+    const markerBytes = jsonBytes(marker);
+    if (!await exists(join(directory, EXPORT_INTENT))) {
+      const names = await readdir(directory);
+      const temporaries = await matchingWriteTemporaries(directory, [markerBytes]);
+      requireValue(names.every(name => temporaries.has(name)), 'TENDERLY_EXPORT_DESTINATION_CONFLICT');
+    }
+    await exactFile(join(directory, EXPORT_INTENT), markerBytes);
     const responsePath = join(directory, 'response.json');
     if (!await exists(responsePath)) {
       try { await this.original.saveAs(responsePath, { signal }); }

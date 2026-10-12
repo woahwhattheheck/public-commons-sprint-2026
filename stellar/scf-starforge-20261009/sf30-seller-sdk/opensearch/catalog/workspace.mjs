@@ -9,6 +9,7 @@ import { normalizeCatalogMapping, compileCatalogMapping, catalogText, catalogIde
   catalogMaterialFields, catalogQuantity } from './mapping.mjs';
 import { exportCatalog, createCatalogQueryDraft } from './exports.mjs';
 import { exportCatalogBundle, importCatalogBundle } from './transfer.mjs';
+import { SupplierWorkspace } from './supplier/workspace.mjs';
 
 export const CATALOG_SCHEMA = 'stellar-forge.material-catalog.v1';
 export const SOURCE_SCHEMA = 'stellar-forge.material-catalog-source.v1';
@@ -102,6 +103,7 @@ export class OpenSearchCatalogWorkspace {
       'CREATE TABLE IF NOT EXISTS catalog_refs(edition_id TEXT NOT NULL,value TEXT NOT NULL,material_key TEXT NOT NULL,kind TEXT NOT NULL,PRIMARY KEY(edition_id,value,material_key,kind));' +
       "CREATE VIRTUAL TABLE IF NOT EXISTS catalog_terms USING fts5(edition_id UNINDEXED,material_key UNINDEXED,terms,tokenize='unicode61 remove_diacritics 2');"
     );
+    this.supplier = new SupplierWorkspace(this);
   }
   open() { if (this.workspace.closed) fail('WORKSPACE_CLOSING', 'Workspace is closing.', 503); }
   async directories() {
@@ -224,7 +226,8 @@ export class OpenSearchCatalogWorkspace {
       await this.retainBytes(selected, bytes, this.sourcePath(source.id));
       const sample = []; let sampleBytes = 0, sampled = 0;
       source.columns = source.format.columns ?? [];
-      for await (const row of readCatalogRows(this.sourcePath(source.id), source.format)) {
+      for await (const row of readCatalogRows(this.sourcePath(source.id), source.format,
+        { db: this.db, expectedBytes: source.bytes, expectedSha256: source.sha256 })) {
         if (!sampled) source.columns = Object.keys(row.record);
         sampled++; const size = Buffer.byteLength(json(row.record));
         if (size + sampleBytes <= 32768) { sample.push(row.record); sampleBytes += size; }
@@ -253,7 +256,7 @@ export class OpenSearchCatalogWorkspace {
       if (base && base.catalogId !== catalog.id) fail('CATALOG_BASE_FOREIGN', 'The comparison base belongs to another catalog.');
       if (mode === 'delta' && !base) fail('CATALOG_DELTA_BASE_REQUIRED', 'Select an existing full catalog edition before applying a delta.');
       const source = await this.retainedSource(request.sourceId);
-      const compiled = await compileCatalogMapping(catalog.mapping, id => this.retainedSource(id));
+      const compiled = await compileCatalogMapping(catalog.mapping, id => this.retainedSource(id), { db: this.db });
       const editionId = digest('catalog-edition:' + request.requestId).slice(0, 32), at = now();
       const insert = this.db.prepare('INSERT INTO catalog_materials VALUES(?,?,?,?,?) ON CONFLICT(edition_id,material_key) DO UPDATE SET material_id=excluded.material_id,sha256=excluded.sha256,record_json=excluded.record_json');
       const seen = this.db.prepare('INSERT INTO catalog_intake VALUES(?,?,?,?)');
@@ -280,7 +283,8 @@ export class OpenSearchCatalogWorkspace {
         });
         batch = []; batchBytes = 0;
       };
-      for await (const row of readCatalogRows(source.path, source.format)) {
+      for await (const row of readCatalogRows(source.path, source.format,
+        { db: this.db, expectedBytes: source.bytes, expectedSha256: source.sha256 })) {
         inputRows++; batch.push(row); batchBytes += Buffer.byteLength(json(row.record));
         if (batch.length >= 250 || batchBytes >= 2 * 1024 * 1024) flush();
       }
@@ -468,4 +472,7 @@ export class OpenSearchCatalogWorkspace {
   }
   importBundle(meta, bytes) { return importCatalogBundle(this, meta, bytes); }
   createDraft(request) { this.open(); return createCatalogQueryDraft(this, request); }
+  supplierSave(request) { return this.supplier.save(request); }
+  supplierCorrection(request) { return this.supplier.saveCorrection(request); }
+  supplierReview(request) { return this.supplier.runReview(request); }
 }

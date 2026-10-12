@@ -15,9 +15,10 @@ merchant and customer job workspaces.
 Select a Stellar Forge runtime whose source contains this complete directory,
 the original Applications manager and the source-owned
 distribution/contributions/wqx-water-quality.json registration. The distribution
-includes both water-quality and water-quality-managed commands, the water
-project and analysis SDK exports, the scientific job export, and all four
-original browser assets.
+includes the water-quality, water-quality-managed and water-quality-decisions
+commands, the water project and analysis SDK exports, scientific jobs, the
+complete decision workflow/model/table SDK exports, and all five original
+browser assets, including the bulk receiving table.
 
 In Applications, choose **Water quality and Open Waters**. Give it an operator
 label and a private project directory. An existing project reopens its original
@@ -205,6 +206,62 @@ private scratch directory in the original worker's environment. The temporary
 source project is confined to that directory and the job returns its full
 operating result through the original output lifecycle.
 
+## Complete bulk receiving review
+
+The **Bulk decisions** section works from one saved immutable Open Waters plan.
+It exposes exact receiving targets for project settings, locations, activities,
+results, value translations, detection-limit choices and receiving reference
+lists. Each target retains its original record and native field. The complete
+source plan identifies which saved choice and current value the analyst is
+reviewing.
+
+1. Choose the saved source plan and **Open source plan**. The initial table shows
+   targets needing attention. Clear that filter to inspect all receiving targets,
+   or narrow the table by record kind, native field and exact source/value text.
+2. Select individual targets, the visible page, or **every matching target**.
+   Selection persists across pages and filters; the selection count shows its
+   full size. A common exact value applies to one selected kind and receiving
+   field. Each row also has its own decision, value and reason controls.
+3. Choose **Keep current choice**, **Set exact value**, or **Remove saved choice**.
+   Keep retains the source plan's current mapping. Set supplies the exact
+   receiving string, including an explicit empty string. Remove drops the
+   saved override so the original mapper or default supplies the value.
+   Reference lists take a JSON array of exact strings. A blank limit target
+   keeps the reported limit in its original source/comment representation.
+   Changed choices retain an analyst reason.
+4. Download the current source-bound decision JSON or the **complete editable
+   CSV/TSV table**. The table includes every target in the source plan and the
+   current draft choices. Edit its action, value and reason columns and retain
+   its source and target identity columns. Importing the completed file opens
+   that exact source plan and replaces the current draft. The parser retains
+   quoted tabs, line breaks, spaces and literal strings.
+5. Name the new receiving plan and decision review, then **Preview complete
+   native plan**. The original Open Waters normalizer and planner apply all
+   decisions. The preview reports before/after receiving counts, each changed
+   choice and remaining native issues. **Inspect full receiving preview**
+   opens the original detailed locations, activities, results, limits,
+   references and issue views.
+6. **Save decision review and plan** retains the complete decision document,
+   reasons, source identities and preview identity beside the newly saved
+   native plan. The same review and plan names resume an interrupted save.
+   The original source plan remains the basis of that review.
+7. Reopen the saved decision review to inspect its choices and complete outputs.
+   **Revise these decisions in a new plan** starts a fresh review and plan name
+   with the prior decisions. The saved review includes editable CSV/TSV, decision
+   JSON, an operator report, all six native receiving exports and a portable
+   review bundle.
+
+The portable bundle contains the complete resulting native project and the
+original receiving options and decisions needed to reproduce the source and
+resulting plans. Receive it into an empty private workspace, then reopen the
+decision review and all original exports. The standalone CLI and source
+contract are documented in [the receiving review guide](review-sheet/README.md).
+
+Opening workspace sections uses one application lifetime for each interface.
+Refresh updates their saved-project lists while retaining the current drafts.
+Managed source review includes the bulk model, table parser, workflow and
+browser module along with the original native engines.
+
 ## Receive the complete installed application
 
 The maintained `receive-managed.mjs` command operates through the actual installed
@@ -236,10 +293,11 @@ controller. Use the same configuration and directory after a reconnect. Save,
 adoption and managed Start use their retained native operation IDs; an incomplete
 reading attempt that was already stopped keeps its original record before a
 following managed attempt starts. A completed run includes both original launch
-identities, the stable project binding, all 32 application/download reads and
-22 complete report/source transfers. The original full data and result archives
+identities, the stable project binding, all browser, workspace and download reads selected by the installed asset manifest,
+and 22 complete report/source transfers. This source has five browser assets,
+so both launches produce 34 complete HTTP reads. The original full data and result archives
 remain in the selected project and original scientific receiving operation.
 
 The command uses the existing source/runtime profile and native dependencies.
-It does not install another runtime. The controller and original workspace retain
-the normal Applications Open, Stop and recovery controls.
+The controller and original workspace retain the normal Applications Open,
+Stop and recovery controls.

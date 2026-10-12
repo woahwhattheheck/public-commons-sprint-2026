@@ -1,4 +1,6 @@
 // MIT — Reports contain retained source material and the analyst's own work.
+import {eligibilityMarkdown,eligibilityHtml} from './eligibility-review.mjs';
+import {hasOriginalFiles,reportSourceRecord,originalFilesMarkdown,originalFilesHtml} from './source-file-reports.mjs';
 const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const md = value => String(value ?? '').replace(/[\\\x60*_{}\[\]<>#+!|]/g, '\\$&');
 const rendered = value => typeof value === 'string' ? value : JSON.stringify(value, null, 2);
@@ -6,7 +8,8 @@ const url = value => { try { const parsed = new URL(value); return ['http:', 'ht
 const link = (label, target) => { const href = url(target); return href ? '<a href="' + escape(href) + '" rel="noreferrer">' + escape(label) + '</a>' : escape(label); };
 const occurrenceRecords = source => source.citations.map(citation => ({
   occurrenceId: citation.occurrenceId, editionId: citation.editionId,
-  questionId: citation.questionId, key: citation.key, original: citation.original,
+  questionId: citation.questionId, key: citation.key,
+  original: reportSourceRecord(citation.original,source.variants.find(variant=>variant.contentDigest===citation.contentDigest)?.content),
 }));
 function includedSources(view) {
   const references = new Set(view.findings.flatMap(finding => finding.sourceIds));
@@ -23,9 +26,65 @@ function analystNotes(view) {
 }
 function fence(value) {
   const content = rendered(value);
-  const runs = content.match(/\x60+/g) ?? [];
-  const marker = '\x60'.repeat(Math.max(3, ...runs.map(run => run.length + 1)));
+  let width = 3;
+  for (const run of content.matchAll(/\x60+/g)) width = Math.max(width, run[0].length + 1);
+  const marker = '\x60'.repeat(width);
   return marker + (typeof value === 'string' ? 'text' : 'json') + '\n' + content + '\n' + marker;
+}
+
+
+function citationReviewMarkdown(view){
+  if(!(view.citationUpdates?.length||view.citationReviews?.length))return [];
+  const lines=['## Citation update review','',
+    'These notices are linked to the DOI records retained in this dossier. Each disposition records the reviewer and the exact report revisions.','',
+    '| Notice | Updated work | Type | Review |','| --- | --- | --- | --- |'];
+  for(const notice of view.citationUpdates??[])
+    lines.push('| '+[notice.noticeDoi,notice.targetDoi,notice.type,notice.status].map(md).join(' | ')+' |');
+  for(const review of view.citationReviews??[]){
+    lines.push('','### '+md(review.notice.title),'',md(review.notice.noticeDoi)+' updates '+md(review.notice.targetDoi)+'.','',
+      'Reviewer: '+md(review.actor)+' · '+md(review.createdAt)+' · Decision: '+md(review.decision),'',
+      'Original report revision '+review.originalRevision+' → reviewed report revision '+review.revision+'.','',
+      review.reason,'','Source edition: '+md(review.notice.latestSource.editionId)+
+        ' · Retained edition SHA-256: '+md(review.notice.latestSource.sourceSha256),'',
+      '#### Original notice and capture bindings','',fence(review.notice),'');
+    for(const disposition of review.findingDispositions)
+      lines.push('- Finding '+md(disposition.findingId)+': '+md(disposition.disposition)+'. '+md(disposition.reason),'');
+    for(const change of review.changes.evidence)
+      lines.push('Evidence '+md(change.occurrenceId)+':','',fence({before:change.before,after:change.after}),'');
+    for(const change of review.changes.findings)
+      lines.push('Finding '+md(change.findingId)+':','',
+        '**Previous finding: '+md(change.before.title)+'**','',change.before.text,'','Citations: '+change.before.occurrenceIds.map(md).join(', '),'',
+        '**Reviewed finding: '+md(change.after.title)+'**','',change.after.text,'','Citations: '+change.after.occurrenceIds.map(md).join(', '),'');
+  }
+  lines.push('','### Retained update acquisition coverage','');
+  for(const item of view.citationCoverage??[])lines.push('- '+md(item.label)+': '+md(item.coverage)+
+    '; updates '+md(item.updatesLookup)+(item.issues.length?'; '+item.issues.map(md).join(', '):'')+'.','');
+  return lines;
+}
+function citationReviewHtml(view){
+  if(!(view.citationUpdates?.length||view.citationReviews?.length))return '';
+  const notices=(view.citationUpdates??[]).map(value=>'<tr><td>'+link(value.noticeDoi,'https://doi.org/'+encodeURIComponent(value.noticeDoi))+
+    '</td><td>'+link(value.targetDoi,'https://doi.org/'+encodeURIComponent(value.targetDoi))+'</td><td>'+escape(value.type)+
+    '</td><td>'+escape(value.status)+'</td></tr>').join('');
+  const reviews=(view.citationReviews??[]).map(review=>'<article><h3>'+escape(review.notice.title)+'</h3>'+
+    '<p>'+escape(review.notice.noticeDoi)+' updates '+escape(review.notice.targetDoi)+'</p>'+
+    '<p class="muted">Reviewer: '+escape(review.actor)+' · '+escape(review.createdAt)+' · '+escape(review.decision)+'</p>'+
+    '<p>Original report revision '+review.originalRevision+' → reviewed report revision '+review.revision+'</p>'+
+    '<div class="prose">'+escape(review.reason)+'</div>'+
+    '<p class="file-identity">Source edition: '+escape(review.notice.latestSource.editionId)+
+    ' · Retained edition SHA-256: '+escape(review.notice.latestSource.sourceSha256)+'</p>'+
+    review.findingDispositions.map(value=>'<p><strong>'+escape(value.findingId)+': '+escape(value.disposition)+
+      '</strong></p><div class="prose">'+escape(value.reason)+'</div>').join('')+
+    review.changes.findings.map(change=>'<details open><summary>Finding '+escape(change.findingId)+'</summary>'+
+      '<h4>Previous finding: '+escape(change.before.title)+'</h4><div class="prose">'+escape(change.before.text)+'</div><p class="file-identity">'+escape(change.before.occurrenceIds.join(', '))+'</p>'+
+      '<h4>Reviewed finding: '+escape(change.after.title)+'</h4><div class="prose">'+escape(change.after.text)+'</div><p class="file-identity">'+escape(change.after.occurrenceIds.join(', '))+'</p></details>').join('')+
+    (review.changes.evidence.length?'<details><summary>Evidence changes</summary><pre>'+escape(JSON.stringify(review.changes.evidence,null,2))+'</pre></details>':'')+
+    '<details><summary>Original notice and response bindings</summary><pre>'+escape(JSON.stringify(review.notice,null,2))+'</pre></details></article>').join('');
+  const coverage=(view.citationCoverage??[]).map(value=>'<li>'+escape(value.label)+': '+escape(value.coverage)+
+    '; updates '+escape(value.updatesLookup)+(value.issues.length?'; '+escape(value.issues.join(', ')):'')+'</li>').join('');
+  return '<section><h2>Citation update review</h2><p>These notices are linked to the DOI records retained in this dossier. Each disposition keeps its reviewer and original report revisions.</p>'+
+    '<div class="table"><table><thead><tr><th>Notice</th><th>Updated work</th><th>Type</th><th>Review</th></tr></thead><tbody>'+notices+
+    '</tbody></table></div>'+reviews+'<details><summary>Retained update acquisition coverage</summary><ul>'+coverage+'</ul></details></section>';
 }
 
 export function markdownReport(view) {
@@ -51,10 +110,10 @@ export function markdownReport(view) {
     lines.push('Assessment: ' + source.classification, '');
     if (source.note) lines.push(source.note, '');
     for (const variant of source.variants) {
-      lines.push('Edition ' + variant.editionId, '', fence(variant.content), '');
+      lines.push('Edition ' + variant.editionId, '', originalFilesMarkdown(variant.content) ?? fence(variant.content), '');
     }
     lines.push('Original occurrences: ' + source.citations.map(citation => citation.editionId + '/' + citation.key).join(', '), '');
-    lines.push('Original source records:', '', fence(occurrenceRecords(source)), '');
+    lines.push(source.variants.some(variant=>hasOriginalFiles(variant.content)) ? 'Source records and original-file references:' : 'Original source records:', '', fence(occurrenceRecords(source)), '');
   }
   const notes = analystNotes(view);
   if (notes.length) {
@@ -62,6 +121,8 @@ export function markdownReport(view) {
     for (const note of notes) lines.push('- ' + md(note.editionId + '/' + note.key) + ' · ' + note.classification +
       (note.note ? '\n\n' + note.note : ''), '');
   }
+  lines.push(...citationReviewMarkdown(view));
+  lines.push(...eligibilityMarkdown(view.eligibility));
   lines.push('## Editions and source usage', '',
     '| Edition | Provider | Storage | Status | Source observations |',
     '| --- | --- | --- | --- | --- |');
@@ -94,8 +155,8 @@ export function htmlReport(view) {
     '</p><p>Assessment: ' + escape(source.classification) + '</p>' +
     (source.note ? '<div class="prose">' + escape(source.note) + '</div>' : '') +
     source.variants.map(variant => '<details open><summary>Edition ' + escape(variant.editionId) +
-      '</summary><pre>' + escape(rendered(variant.content)) + '</pre></details>').join('') +
-    '<details><summary>Original source records</summary><pre>' +
+      '</summary>' + (originalFilesHtml(variant.content) ?? '<pre>' + escape(rendered(variant.content)) + '</pre>') + '</details>').join('') +
+    '<details><summary>' + (source.variants.some(variant=>hasOriginalFiles(variant.content)) ? 'Source records and original-file references' : 'Original source records') + '</summary><pre>' +
     escape(JSON.stringify(occurrenceRecords(source), null, 2)) + '</pre></details></article>').join('');
   const notes = analystNotes(view).map(note => '<article><h3>' + escape(note.editionId + '/' + note.key) +
     '</h3><p>' + escape(note.classification) + '</p><div class="prose">' + escape(note.note) + '</div></article>').join('');
@@ -107,7 +168,7 @@ export function htmlReport(view) {
     (edition.sourceReference ? '<p>' + link(edition.sourceReference, edition.sourceReference) + '</p>' : '') +
     '<pre>' + escape(JSON.stringify(edition.reference ?? edition.origin ?? {}, null, 2)) + '</pre></details>').join('');
   return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
-    '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src \'none\'; base-uri \'none\'; form-action \'none\'">' +
+    '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src data:; base-uri \'none\'; form-action \'none\'">' +
     '<title>' + escape(view.title) + '</title><style>' +
     '*{box-sizing:border-box}body{margin:0;background:#f5f5f4;color:#202020;font:15px/1.6 system-ui,sans-serif}' +
     'main{max-width:1060px;margin:0 auto;padding:48px 32px 80px;background:#fff}h1{font-size:32px;line-height:1.2}h2{font-size:22px;margin-top:40px}' +
@@ -115,6 +176,8 @@ export function htmlReport(view) {
     '.prose{white-space:pre-wrap;overflow-wrap:anywhere;margin:12px 0}a{color:#202020;text-underline-offset:3px}' +
     'pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.6 ui-monospace,monospace;background:#f3f3f0;padding:12px;border:1px solid #deded8}' +
     'table{border-collapse:collapse;width:100%}th,td{text-align:left;border:1px solid #d5d5d2;padding:8px;vertical-align:top}td pre{margin:0;padding:0;border:0;background:none}' +
+    '.source-file{padding:10px 12px;border:1px solid #ddd}.source-file summary{overflow-wrap:anywhere}.file-identity{font-size:12px;overflow-wrap:anywhere}' +
+    'figure{margin:16px 0}figure img{display:block;max-width:100%;height:auto}figcaption{font-size:12px;color:#62625e}.file-text pre{max-height:36rem;overflow:auto}' +
     'details{margin:10px 0}summary{cursor:pointer}.table{overflow-x:auto}footer{margin-top:40px;border-top:1px solid #ddd;padding-top:16px;font-size:12px}' +
     '@media(max-width:600px){main{padding:24px 16px}h1{font-size:26px}}@media print{body{background:#fff}main{max-width:none;padding:0}a{text-decoration:none}details{break-inside:avoid}}' +
     '</style></head><body><main><header><p class="muted">RESEARCH DOSSIER</p><h1>' + escape(view.title) +
@@ -122,6 +185,7 @@ export function htmlReport(view) {
     ' · ' + escape(view.updatedAt) + '</p></header>' + questions + '<section><h2>Selected sources</h2>' +
     (sourceHtml || '<p>No retained sources selected for this report.</p>') + '</section>' +
     (notes ? '<section><h2>Notes attached to original edition references</h2>' + notes + '</section>' : '') +
+    citationReviewHtml(view) + eligibilityHtml(view.eligibility) +
     '<section><h2>Editions and source usage</h2><div class="table"><table><thead><tr><th>Edition</th><th>Provider</th><th>Storage</th><th>Status</th><th>Source observations</th></tr></thead><tbody>' +
     editions + '</tbody></table></div></section><section><h2>Source terms and original operations</h2>' + origins +
     '</section><footer>' + escape(view.id) + ' · Revision ' + view.revision +

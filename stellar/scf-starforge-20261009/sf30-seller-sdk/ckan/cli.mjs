@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { openCkanWorkbench } from './model.mjs';
 import { captureCkanResource, readCkanCapture, searchCkan } from './capture.mjs';
+import { inspectCkanWorkspaceArchive, receiveCkanWorkspaceArchive } from './archive.mjs';
 import { startCkanServer } from './server.mjs';
 
 const usage = [
@@ -16,8 +17,18 @@ const usage = [
   '  ckan inspect-capture --capture DIR/capture.json',
   '  ckan import --project DIR --capture DIR/capture.json',
   '  ckan status --project DIR',
+  '  ckan archive-workspace --project DIR [--out FILE.ckanw]',
+  '  ckan inspect-workspace --archive FILE.ckanw [--sha256 HASH]',
+  '  ckan receive-workspace --archive FILE.ckanw --project NEW_DIR --sha256 HASH',
   '  ckan edition --project DIR --id EDITION_ID',
   '  ckan compare --project DIR --before EDITION_ID --after EDITION_ID [--key _id]',
+  '  ckan refresh-prepare --project DIR --id SOURCE_ID --input refresh.json',
+  '  ckan refresh --project DIR --id REFRESH_ID',
+  '  ckan refresh-preview --project DIR --id REFRESH_ID --input projection.json',
+  '  ckan refresh-changes --project DIR --id REFRESH_ID --sha256 COMPARISON_HASH [--offset 0] [--limit 50]',
+  '  ckan refresh-file --project DIR --id REFRESH_ID --sha256 COMPARISON_HASH',
+  '  ckan refresh-review --project DIR --id REFRESH_ID --input decision.json',
+  '  ckan refresh-resume --project DIR --id REFRESH_ID',
   '  ckan select --project DIR --id EDITION_ID --input selection.json',
   '  ckan prepare --project DIR --id SOURCE_ID --input publication.json',
   '  ckan inspect --project DIR --id PUBLICATION_ID [--query "physical_branch=1"]',
@@ -47,6 +58,8 @@ export async function main(argv = process.argv.slice(2)) {
   if (command === 'search') { output(await searchCkan(required('origin'), { q: options.query ?? '', start: Number(options.start ?? 0), rows: Number(options.rows ?? 20), authTokenEnv: options['auth-token-env'] })); return; }
   if (command === 'capture') { const result = await captureCkanResource(await input('selection'), resolve(required('out'))); output(result.manifest); return; }
   if (command === 'inspect-capture') { const result = await readCkanCapture(resolve(required('capture'))); output({ manifest: result.manifest, sha256: result.manifestSha256, fields: result.fields, sample: result.rows.slice(0, 20) }); return; }
+  if (command === 'inspect-workspace') { output(await inspectCkanWorkspaceArchive({ file: resolve(required('archive')), expectedSha256: options.sha256 })); return; }
+  if (command === 'receive-workspace') { output(await receiveCkanWorkspaceArchive({ file: resolve(required('archive')), directory: resolve(required('project')), expectedSha256: required('sha256') })); return; }
   const project = await openCkanWorkbench({ directory: resolve(required('project')), create: command === 'init',
     ...(command === 'init' ? { origin: required('origin'), authTokenEnv: options['auth-token-env'] } : {}) });
   let served = false;
@@ -61,9 +74,18 @@ export async function main(argv = process.argv.slice(2)) {
     }
     let result;
     if (command === 'init' || command === 'status') result = project.status();
+    else if (command === 'archive-workspace') result = project.archiveWorkspace({ out: options.out });
     else if (command === 'import') result = project.importCapture(resolve(required('capture')));
     else if (command === 'edition') result = await project.edition(required('id'));
     else if (command === 'compare') result = await project.compare(required('before'), required('after'), options.key ?? '_id');
+    else if (command === 'refresh-prepare') result = project.prepareRefresh(required('id'), await input());
+    else if (command === 'refresh') result = await project.refresh(required('id'));
+    else if (command === 'refresh-preview') result = await project.previewRefresh(required('id'), await input());
+    else if (command === 'refresh-changes') result = await project.refreshChanges(required('id'), {
+      expectedComparisonSha256: required('sha256'), offset: Number(options.offset ?? 0), limit: Number(options.limit ?? 50) });
+    else if (command === 'refresh-file') result = await project.refreshChangesFile(required('id'), required('sha256'));
+    else if (command === 'refresh-review') result = project.reviewRefresh(required('id'), await input());
+    else if (command === 'refresh-resume') result = project.resumeRefresh(required('id'));
     else if (command === 'select') result = project.saveSource(required('id'), await input());
     else if (command === 'prepare') result = project.createPublication(required('id'), await input('input', true));
     else if (command === 'inspect') result = await project.publication(required('id'), options.query ?? '');

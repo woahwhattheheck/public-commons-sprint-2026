@@ -1,0 +1,68 @@
+{
+  "schema": "dpsa.diso.course.v1",
+  "id": "DPSA-DISO-2026",
+  "title": "Departmental Information Security Officer: Public Service Governance and Practice",
+  "language": "en",
+  "version": "2026.10.12",
+  "passPercent": 75,
+  "attempts": 0,
+  "modules": [
+    {
+      "id": "M01",
+      "file": "modules/M01.json"
+    },
+    {
+      "id": "M02",
+      "file": "modules/M02.json"
+    },
+    {
+      "id": "M03",
+      "file": "modules/M03.json"
+    },
+    {
+      "id": "M04",
+      "file": "modules/M04.json"
+    },
+    {
+      "id": "M05",
+      "file": "modules/M05.json"
+    },
+    {
+      "id": "M06",
+      "file": "modules/M06.json"
+    },
+    {
+      "id": "M07",
+      "file": "modules/M07.json"
+    },
+    {
+      "id": "M08",
+      "file": "modules/M08.json"
+    },
+    {
+      "id": "M09",
+      "file": "modules/M09.json"
+    },
+    {
+      "id": "M10",
+      "file": "modules/M10.json"
+    },
+    {
+      "id": "M11",
+      "file": "modules/M11.json"
+    },
+    {
+      "id": "M12",
+      "file": "modules/M12.json"
+    },
+    {
+      "id": "M13",
+      "file": "modules/M13.json"
+    }
+  ],
+  "sourcesFile": "sources.json",
+  "glossaryFile": "glossary.json",
+  "mediaFile": "media/scripts.json",
+  "diagramsFile": "images/diagrams.json",
+  "workbooksFile": "workbooks.json"
+}

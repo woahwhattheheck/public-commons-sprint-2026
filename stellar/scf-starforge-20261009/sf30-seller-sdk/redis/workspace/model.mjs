@@ -7,7 +7,8 @@ import { acquirePrivateDirectoryWriter } from '../../operations/history.mjs';
 import { validateRedisSourceConfig, readRedisSourceFile, openRedisSourceFile } from '../config.mjs';
 import { compileRedisMerchantPlan, prepareRedisSeller, verifyPreparedRedisSeller } from '../prepare.mjs';
 import { compileRedisQueries, describeRedisQueries } from '../declaration.mjs';
-import { REDIS_CERTIFICATE_FILES, requiredRedisEnvironment } from '../connection-profile.mjs';
+import { REDIS_CERTIFICATE_FILES, requiredRedisEnvironment, validateRedisConnectionProfile } from '../connection-profile.mjs';
+import { validateUpstashEndpoint } from '../upstash-rest.mjs';
 
 export const REDIS_WORKSPACE_SCHEMA = 'stellar-forge.redis-authoring-workspace.v1';
 const TABLES = new Set(['revisions', 'operations']);
@@ -81,7 +82,23 @@ function safeError(error) {
     message: String(error?.message || 'The operation failed.').toWellFormed().replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g,' ').slice(0,600) };
 }
 
-export async function createRedisAuthoringWorkspace({ directory, sourceFile, planFile, label = 'Redis merchant', environment = process.env } = {}) {
+export function validateRedisSetupOrigin(value) {
+  const fields = ['schema', 'setupId', 'operationId', 'requestId', 'digest', 'inputSha256'];
+  if (!plain(value) || Object.keys(value).length !== fields.length ||
+      Object.keys(value).some(name => !fields.includes(name)) ||
+      value.schema !== 'stellar-forge.redis-setup-origin.v1' ||
+      !/^redis-setup-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(value.setupId ?? '') ||
+      ![value.operationId, value.requestId].every(item => typeof item === 'string' &&
+        /^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(item)) ||
+      !/^[a-f0-9]{64}$/.test(value.digest ?? '') ||
+      !(value.inputSha256 === null || typeof value.inputSha256 === 'string' &&
+        /^[a-f0-9]{64}$/.test(value.inputSha256)))
+    throw problem('REDIS_SETUP_ORIGIN_INVALID', 'Use the original connection setup operation and creation record.');
+  return clone(value);
+}
+
+export async function createRedisAuthoringWorkspace({ directory, sourceFile, planFile, label = 'Redis merchant', environment = process.env, setupOrigin } = {}) {
+  const origin = setupOrigin === undefined ? undefined : validateRedisSetupOrigin(setupOrigin);
   if (![directory, sourceFile, planFile].every(value => typeof value === 'string' && value))
     throw problem('REDIS_WORKSPACE_INPUT_FILES_REQUIRED', 'Choose a new directory and the original source and merchant-plan files.');
   const original = await readRedisSourceFile(sourceFile), plan = decode(await bytes(resolve(planFile),262144));
@@ -102,6 +119,7 @@ export async function createRedisAuthoringWorkspace({ directory, sourceFile, pla
     lease = await acquirePrivateDirectoryWriter(root); db = database(join(root,'workspace.sqlite3'),true);
     const meta = { schema:REDIS_WORKSPACE_SCHEMA,id:'redis-workspace-'+randomUUID(),label:text(label,200),
       createdAt:now(),head:null,profile,
+      ...(origin === undefined ? {} : {setupOrigin:origin}),
       ...Object.fromEntries([...certificates].map(([name, value]) => [name, hash(value)])) };
     db.prepare('INSERT INTO metadata(id,value) VALUES(1,?)').run(JSON.stringify(meta));
     for (const value of certificates.values())
@@ -117,7 +135,8 @@ export async function createRedisAuthoringWorkspace({ directory, sourceFile, pla
   }
 }
 
-export async function openRedisAuthoringWorkspace(directory,{environment=process.env,expectedWorkspaceId,expectedProfileSha256}={}) {
+export async function openRedisAuthoringWorkspace(directory,{environment=process.env,expectedWorkspaceId,expectedProfileSha256,expectedSetupOrigin}={}) {
+  const setupOrigin = expectedSetupOrigin === undefined ? undefined : validateRedisSetupOrigin(expectedSetupOrigin);
   await privateDirectory(resolve(directory)); const root=await realpath(resolve(directory));
   for (const name of ['materialized','packages','interrupted']) await privateDirectory(join(root,name));
   const path=join(root,'workspace.sqlite3'),st=await lstat(path);
@@ -136,6 +155,8 @@ export async function openRedisAuthoringWorkspace(directory,{environment=process
       if(expectedProfileSha256!==undefined&&expectedProfileSha256!==binding.profileSha256)
         throw problem('REDIS_WORKSPACE_PROFILE_CHANGED','The selected Redis source profile changed. Review its original connection binding.',409);
     }
+    if(setupOrigin!==undefined && stable(validateRedisSetupOrigin(workspace.metadata().setupOrigin))!==stable(setupOrigin))
+      throw problem('REDIS_SETUP_ORIGIN_CHANGED','The workspace belongs to a different original connection setup operation.',409);
     workspace.recover();
     return workspace;
   } catch(error) { try{db?.close();}finally{await lease.release();} throw error; }
@@ -162,7 +183,29 @@ export function redisWorkspaceBinding(meta) {
     head: meta.head, label: text(meta.label, 200), environmentNames,
   };
 }
-export async function inspectRedisWorkspaceBinding(directory) {
+function redisWorkspaceConnectionDescriptor(meta) {
+  const profile = clone(meta.profile.connection);
+  const transport = profile.transport === 'upstash-rest' ? 'upstash-rest' : 'resp';
+  if (transport === 'upstash-rest') {
+    if (Object.keys(profile).some(name => !['transport', 'endpoint', 'tokenEnv'].includes(name)) ||
+        !/^[A-Z_][A-Z0-9_]{0,127}$/.test(profile.tokenEnv ?? ''))
+      throw problem('REDIS_WORKSPACE_BINDING_INVALID', 'Use the original source connection references.');
+    validateUpstashEndpoint(profile.endpoint);
+  } else validateRedisConnectionProfile(profile);
+  const certificates = {};
+  for (const certificate of REDIS_CERTIFICATE_FILES) {
+    if (profile[certificate.profile] === undefined) continue;
+    if (profile[certificate.profile] !== certificate.file ||
+        !/^[a-f0-9]{64}$/.test(meta[certificate.fingerprint] ?? ''))
+      throw problem('REDIS_WORKSPACE_BINDING_INVALID', 'Use the retained source certificate and its original fingerprint.');
+    certificates[certificate.profile] = {file:certificate.file, sha256:meta[certificate.fingerprint]};
+  }
+  return {schema:'stellar-forge.redis-workspace-connection.v1', transport,
+    topology:profile.topology ?? 'standalone', profile, certificates};
+}
+export async function inspectRedisWorkspaceBinding(directory, {includeConnection=false, includeSetupOrigin=false}={}) {
+  if (typeof includeConnection !== 'boolean' || typeof includeSetupOrigin !== 'boolean')
+    throw new TypeError('Redis workspace inspection options must be booleans.');
   await privateDirectory(resolve(directory));
   const root = await realpath(resolve(directory));
   for (const name of ['materialized', 'packages', 'interrupted']) await privateDirectory(join(root, name));
@@ -178,13 +221,16 @@ export async function inspectRedisWorkspaceBinding(directory) {
     const row = db.prepare('SELECT value FROM metadata WHERE id=1').get();
     if (!row || typeof row.value !== 'string')
       throw problem('REDIS_WORKSPACE_BINDING_INVALID', 'The original workspace metadata is unavailable.');
-    const binding = redisWorkspaceBinding(JSON.parse(row.value));
+    const metadata = JSON.parse(row.value), binding = redisWorkspaceBinding(metadata);
+    const connection = includeConnection ? redisWorkspaceConnectionDescriptor(metadata) : undefined;
+    const setupOrigin = includeSetupOrigin ? metadata.setupOrigin === undefined ? null : validateRedisSetupOrigin(metadata.setupOrigin) : undefined;
     const after = await lstat(path);
     if (!after.isFile() || after.isSymbolicLink() || after.dev !== before.dev || after.ino !== before.ino ||
         after.nlink !== 1 || process.platform !== 'win32' && ((after.mode & 0o077) ||
           typeof process.getuid === 'function' && after.uid !== process.getuid()))
       throw problem('REDIS_WORKSPACE_DATABASE_CHANGED', 'The selected workspace database changed during inspection.', 409);
-    return { ...binding, directory: root };
+    return { ...binding, directory: root,
+      ...(includeConnection ? {connection} : {}), ...(includeSetupOrigin ? {setupOrigin} : {}) };
   } finally { db?.close(); }
 }
 
@@ -245,6 +291,8 @@ export class RedisAuthoringWorkspace {
       createdAt:value.createdAt,finishedAt:value.finishedAt,attempts:value.attempts,error:value.error,
       ...(value.kind==='prepare'&&value.result?{package:value.result}:{}),
       ...(value.kind==='stage'&&value.result?{release:value.result}:{}),
+      ...(value.kind.startsWith('commission-')?{commissioning:{contractId:value.input.contractId??null,
+        runId:value.input.runId??null,outcome:value.result?.status??null,progress:value.progress??null}}:{}),
       resumable:value.status==='INTERRUPTED'};
   }
   validate(queries,plan) {
@@ -295,6 +343,69 @@ export class RedisAuthoringWorkspace {
     }
     return this.execute('stage',input);
   }
+  async commissioningTemplate(input={}) {
+    fields(input,['revisionId']);
+    const {commissioningTemplate}=await import('./commission-workspace.mjs');
+    return commissioningTemplate(this,input);
+  }
+  async commissioningReview(input) {
+    const {reviewCommissioningContract}=await import('./commission-workspace.mjs');
+    return reviewCommissioningContract(this,input);
+  }
+  async commissioningSave(input) {
+    fields(input,['requestId','revisionId','input','customerPlan','digest','note']);
+    text(input.note,2000);
+    const review=await this.commissioningReview({revisionId:input.revisionId,input:input.input,customerPlan:input.customerPlan??null});
+    if(review.digest!==input.digest)throw problem('REDIS_COMMISSIONING_REVIEW_CHANGED','Review the complete current commissioning draft before saving.',409);
+    return this.execute('commission-contract',input);
+  }
+  commissioningReceive(input) {
+    fields(input,['requestId','contractId']);
+    const contract=this.operation(input.contractId);
+    if(contract.kind!=='commission-contract'||contract.status!=='COMPLETED')
+      throw problem('REDIS_COMMISSIONING_CONTRACT_REQUIRED','Select a completed saved commissioning contract.',409);
+    return this.#admitCommissioning('commission-receive',input);
+  }
+  commissioningContinue(requestId) {
+    const prior=this.operation(requestId);
+    if(!['commission-receive','commission-handover'].includes(prior.kind))
+      throw problem('REDIS_COMMISSIONING_RECORD_INVALID','Choose the original commissioning receiving or handover request.',409);
+    return this.#admitCommissioning(prior.kind,prior.input,true);
+  }
+  async commissioningHandover(input) {
+    this.writable();
+    const {captureCommissioningHandover}=await import('./commission-workspace.mjs');
+    return this.#admitCommissioning('commission-handover',await captureCommissioningHandover(this,input));
+  }
+  #admitCommissioning(kind,input,resume=false) {
+    this.writable();id(input.requestId);
+    const captured=clone(input),digest=hash(stable({kind,input:captured}));
+    let record=this.record('operations',captured.requestId,false);
+    if(record){
+      if(record.kind!==kind||record.digest!==digest)
+        throw problem('REDIS_WORKSPACE_REQUEST_CHANGED','This request ID already belongs to different input.',409);
+      if(!resume||record.status!=='INTERRUPTED')return clone(record);
+      record={...record,status:'QUEUED',resumedAt:now()};
+      delete record.error;delete record.finishedAt;
+    }else record={id:captured.requestId,kind,input:captured,digest,status:'QUEUED',attempts:0,createdAt:now()};
+    this.putOperation(record);
+    // Admission is retained before responding. This uses the same writer queue,
+    // including shutdown and original-process recovery, as every workspace action.
+    this.execute(kind,captured).catch(()=>{});
+    return clone(record);
+  }
+  async commissioningHistory(input={}) {
+    const {commissioningHistory}=await import('./commission-workspace.mjs');
+    return commissioningHistory(this,input);
+  }
+  async commissioningRows(input) {
+    const {commissioningRows}=await import('./commission-workspace.mjs');
+    return commissioningRows(this,input);
+  }
+  async commissioningFile(requestId) {
+    const {commissioningHandoverFile}=await import('./commission-workspace.mjs');
+    return commissioningHandoverFile(this,requestId);
+  }
   resume(requestId) {
     const previous=this.operation(requestId);
     if(previous.status!=='INTERRUPTED')return Promise.resolve(previous);
@@ -304,7 +415,7 @@ export class RedisAuthoringWorkspace {
     this.transaction(()=>{
       for(const row of this.db.prepare('SELECT value FROM operations').all()){
         const record=JSON.parse(row.value);
-        if(record.status==='RUNNING'){
+        if(record.status==='RUNNING'||record.status==='QUEUED'){
           record.status='INTERRUPTED';record.interruptedAt=now();
           record.error={code:'REDIS_WORKSPACE_OPERATION_INTERRUPTED',message:'The previous workspace process ended. Resume this exact request or inspect its retained outcome.'};
           this.putOperation(record);
@@ -314,26 +425,67 @@ export class RedisAuthoringWorkspace {
   }
   execute(kind,input,resume=false) {
     this.writable();id(input.requestId);
-    if(Buffer.byteLength(JSON.stringify(input))>524288)throw problem('REDIS_WORKSPACE_INPUT_TOO_LARGE','Use a request below 512 KiB.');
-    const captured=clone(input),digest=hash(stable({kind,input:captured}));
-    const action=this.queue.catch(()=>{}).then(async()=>{
-      this.writable();
-      let record=this.record('operations',captured.requestId,false);
-      if(record){
-        if(record.digest!==digest||record.kind!==kind)throw problem('REDIS_WORKSPACE_REQUEST_CHANGED','This request ID already belongs to different input.',409);
-        if(!resume||record.status!=='INTERRUPTED')return record;
-        record={...record,status:'RUNNING',attempts:record.attempts+1,resumedAt:now()};
-        delete record.error;delete record.finishedAt;
-      }else record={id:captured.requestId,kind,input:captured,digest,status:'RUNNING',attempts:1,createdAt:now()};
-      this.putOperation(record);
-      try {record.result=await this.perform(record);record.status='COMPLETED';}
-      catch(error){record.status='FAILED';record.error=safeError(error);}
-      record.finishedAt=now();this.putOperation(record);return clone(record);
-    });
+    const maximum=kind==='commission-contract'?5242880:524288;
+    if(Buffer.byteLength(JSON.stringify(input))>maximum)
+      throw problem('REDIS_WORKSPACE_INPUT_TOO_LARGE','Keep the complete operation input within '+Math.floor(maximum/1024)+' KiB.');
+    const captured=clone(input);
+    const action=this.queue.catch(()=>{}).then(()=>this.#executeRetained(kind,captured,resume));
     this.queue=action;return action;
+  }
+  async #executeRetained(kind,captured,resume=false,commissionChild=false) {
+    this.writable();id(captured.requestId);
+    const digest=hash(stable({kind,input:captured}));
+    let record=this.record('operations',captured.requestId,false);
+    if(record){
+      if(record.digest!==digest||record.kind!==kind)
+        throw problem('REDIS_WORKSPACE_REQUEST_CHANGED','This request ID already belongs to different input.',409);
+      const admitted=record.status==='QUEUED'&&['commission-receive','commission-handover'].includes(kind);
+      if(!admitted&&(!resume||record.status!=='INTERRUPTED'))return record;
+      record={...record,status:'RUNNING',attempts:record.attempts+1,
+        ...(record.attempts>0?{resumedAt:now()}:{startedAt:now()})};
+      delete record.error;delete record.finishedAt;
+    }else record={id:captured.requestId,kind,input:captured,digest,status:'RUNNING',attempts:1,createdAt:now()};
+    this.putOperation(record);
+    try {record.result=await this.perform(record);record.status='COMPLETED';}
+    catch(error){
+      record.status=this.closing&&(commissionChild||kind==='commission-receive'||kind==='commission-handover')?'INTERRUPTED':'FAILED';
+      record.error=safeError(error);
+      if(error.details?.requestId&&typeof error.details.requestId==='string')
+        record.error.operationId=error.details.requestId;
+    }
+    record.finishedAt=now();this.putOperation(record);return clone(record);
   }
   async perform(record) {
     const input=record.input;
+    if(record.kind==='commission-contract'){
+      const review=await this.commissioningReview({revisionId:input.revisionId,input:input.input,customerPlan:input.customerPlan??null});
+      if(review.digest!==input.digest)throw problem('REDIS_COMMISSIONING_REVIEW_CHANGED','The original commissioning review changed.',409);
+      return review;
+    }
+    if(record.kind==='commission-receive'){
+      const contract=this.operation(input.contractId);
+      if(contract.kind!=='commission-contract'||contract.status!=='COMPLETED')
+        throw problem('REDIS_COMMISSIONING_CONTRACT_REQUIRED','Choose a completed saved commissioning contract.',409);
+      const {receiveRedisCommissioning}=await import('./commission.mjs');
+      const {reviewCommissioningContract}=await import('./commission-workspace.mjs');
+      const reviewed=reviewCommissioningContract(this,{revisionId:contract.input.revisionId,
+        input:contract.input.input,customerPlan:contract.input.customerPlan??null});
+      if(reviewed.digest!==contract.result.digest)
+        throw problem('REDIS_COMMISSIONING_CONTRACT_CHANGED','The original saved commissioning contract changed.',409);
+      record.progressChecks=[];
+      return receiveRedisCommissioning({workspace:this,input:contract.input.input,inputSha256:contract.result.inputSha256,
+        revisionId:contract.input.revisionId,requestNamespace:record.id,
+        execute:(kind,operation,resume)=>this.#executeRetained(kind,clone(operation),resume,true),
+        onProgress:progress=>{
+          record.progress={...progress,updatedAt:now()};
+          if(progress.phase==='check-completed')record.progressChecks[progress.checkIndex]=clone(progress);
+          this.putOperation(record);
+        }});
+    }
+    if(record.kind==='commission-handover'){
+      const {createCommissioningHandover}=await import('./commission-workspace.mjs');
+      return createCommissioningHandover(this,record);
+    }
     if(record.kind==='save'){
       const prior=this.db.prepare('SELECT value FROM revisions WHERE request_id=?').get(record.id);
       if(prior)return {revisionId:JSON.parse(prior.value).id,recovered:true};

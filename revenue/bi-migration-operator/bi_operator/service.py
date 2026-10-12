@@ -17,9 +17,11 @@ from .providers import Rollouts, capture_results
 from .report_server import ReportServer
 from .sql_server import SqlServer, SQL_KINDS
 from .billback import Billing, KINDS as BILLING_KINDS
+from .azure_exports import AzureExports, KINDS as AZURE_KINDS
+from .tourism import Tourism, KINDS as TOURISM_KINDS
 from .store import Store, Conflict, digest, encoded, identifier, now
 
-KINDS = ("source", "dataset", "plan", "artifact", "capture", "comparison", "rollout", "support", "usage", "delivery", "backup", "server_report", "server_bundle", "server_job", "server_result") + BILLING_KINDS
+KINDS = ("source", "dataset", "plan", "artifact", "capture", "comparison", "rollout", "support", "usage", "delivery", "backup", "server_report", "server_bundle", "server_job", "server_result") + BILLING_KINDS + AZURE_KINDS + TOURISM_KINDS
 
 
 def decoded_file(request):
@@ -57,6 +59,8 @@ class Service:
         self.rollouts = Rollouts(self)
         self.report_server = ReportServer(self)
         self.billing = Billing(self)
+        self.azure = AzureExports(self)
+        self.tourism = Tourism(self)
         self.actions = {
             "source.import": self.source_import, "source.assign": self.source_assign,
             "dataset.import": self.dataset_import, "dataset.correct": self.dataset_correct,
@@ -77,6 +81,8 @@ class Service:
         self.sql = SqlServer(self)
         self.actions.update(self.sql.actions())
         self.actions.update(self.billing.actions)
+        self.actions.update(self.azure.actions)
+        self.actions.update(self.tourism.actions)
 
     def close(self):
         self.sql.close()
@@ -123,6 +129,24 @@ class Service:
                 payload = record["payload"]
                 for bulky in ("project", "source_project", "mapping", "unmatched", "details"):
                     payload.pop(bulky, None)
+                if kind == "azure_discovery":
+                    payload["item_count"] = len(payload.get("items", []))
+                    for field in ("items", "pages", "seen"):
+                        payload.pop(field, None)
+                if kind == "azure_run":
+                    for field in ("candidates", "history_pages", "definition"):
+                        payload.pop(field, None)
+                if kind == "azure_source":
+                    for part in payload.get("parts", []):
+                        part.pop("chunks", None)
+                    payload.pop("received_review", None)
+                if kind == "azure_review":
+                    for field in ("parts", "batches"):
+                        payload.pop(field, None)
+                if kind == "azure_delivery":
+                    payload["volume_count"] = len(payload.get("groups", []))
+                    for field in ("groups", "segments"):
+                        payload.pop(field, None)
                 if kind == "comparison":
                     payload["result"].pop("differences", None)
                 if kind == "artifact":

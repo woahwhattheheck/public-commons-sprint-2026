@@ -6,11 +6,13 @@ import { normalizeBook, costReport, allocateByWeights, compareCostReports } from
 import { openChain, privateDir, writeOnce, readPrivate, encode, digest, canonical, fault, string, id, page,
   MAX_SOURCE, MAX_DOCUMENT, csv } from './common.mjs';
 import { writeBundle } from './archive.mjs';
+import { openCostReceiving } from './receiving.mjs';
 
 export async function openEconomics({directory,pricingSource,listPricing,savePricing,previewPricing,pricingBackup,supplierUsage,accountingReport}) {
   const root=join(directory,'economics');await privateDir(root,true);
   const sources=await openSources(join(root,'sources'));
   const chain=await openChain(join(root,'books'),'stellar-forge.merchant-cost-edition.v1');
+  const receiving=await openCostReceiving({root:join(root,'received'),sources,pricingSource});
   for(const name of ['pricing-links','exports'])await privateDir(join(root,name),true);
   const configured=new Map([['USAGE',supplierUsage],['ACCOUNTING',accountingReport]].filter(([,v])=>v).map(([k,v])=>[k,resolve(v)]));
   const summary=entry=>({edition:entry.value.edition,revision:entry.revision,label:entry.value.label,savedAt:entry.value.savedAt,
@@ -28,13 +30,14 @@ export async function openEconomics({directory,pricingSource,listPricing,savePri
     return rows.sort((a,b)=>b.createdAt.localeCompare(a.createdAt)||a.requestId.localeCompare(b.requestId));
   }
   async function state(){
-    const [entries,receipts,pricing,exports]=await Promise.all([chain.history(),sources.all(),listPricing(),exportRecords()]);
+    const [entries,receipts,pricing,exports,received]=await Promise.all([chain.history(),sources.all(),listPricing(),exportRecords(),receiving.list()]);
     return {schema:'stellar-forge.merchant-cost-workspace.v1',revision:entries.at(-1)?.revision??null,
       editions:entries.slice(-100).reverse().map(summary),editionCount:entries.length,sources:receipts.slice(0,100),
       sourceCount:receipts.length,pricingReviews:pricing.slice(0,100),pricingReviewCount:pricing.length,
       exports:exports.slice(0,100),exportCount:exports.length,
+      receivedPackages:received.slice(0,100),receivedPackageCount:received.length,
       configuredCaptures:[...configured.keys()],limits:{sourceBytes:MAX_SOURCE,inputBytes:MAX_DOCUMENT,chargeLines:MAX_LINES},
-      sourceKinds:SOURCE_KINDS,chargeFields:CHARGE_FIELDS};
+      sourceKinds:SOURCE_KINDS,chargeFields:CHARGE_FIELDS,receivedPackageLimit:512*1024*1024};
   }
   async function pricing(version){
     const original=await pricingSource(version);
@@ -63,20 +66,26 @@ export async function openEconomics({directory,pricingSource,listPricing,savePri
       normalizedImports.push({sourceId:spec.sourceId,sourceSha256:mapped.sourceSha256,delimiter:mapped.delimiter,mapping:mapped.mapping,
         rowCount:mapped.rowCount,excludedRows:[...ignored].map(([row,reason])=>({row,reason}))});
     }book.imports=normalizedImports;
+    let receivedOrigin=null;
+    if(input.receivedFrom!==undefined){
+      receivedOrigin=await receiving.origin(input.receivedFrom,book.pricingVersion);
+      book.receivedFrom={packageId:input.receivedFrom.packageId,draftId:input.receivedFrom.draftId};
+    }
     const ids=new Set([...book.lines.map(x=>x.sourceId),...book.contextSourceIds,...book.imports.map(x=>x.sourceId)]),originals=[];
     for(const sourceId of ids)originals.push(await sources.get(sourceId,{verify:true}));
     const context=[];for(const sourceId of book.contextSourceIds)context.push(await sources.inspect(sourceId));
-    return {book,original,originals,context,report:costReport(book,original.report,sourceMap)};
+    return {book,original,originals,context,receivedOrigin,report:costReport(book,original.report,sourceMap)};
   }
   async function preview({book}){const result=await prepare(book);
-    return {input:result.book,report:result.report,context:result.context,
+    return {input:result.book,report:result.report,context:result.context,receivedOrigin:result.receivedOrigin,
       sourceSummary:result.originals.map(x=>({sourceId:x.sourceId,metadata:x.metadata,sha256:x.sha256,bytes:x.bytes}))};}
   async function save(input){
     const entry=await chain.publish(input,async()=>{
-      const {book,report,original,originals,context}=await prepare(input.book);
+      const {book,report,original,originals,context,receivedOrigin}=await prepare(input.book);
       const binding={schema:'stellar-forge.merchant-cost-binding.v1',pricingVersion:original.version,pricingRevision:original.revision,
         sellerSha256:original.sellerSha256,pricingReportSha256:digest(original.reportBytes),
-        sources:originals.map(x=>({sourceId:x.sourceId,sha256:x.sha256,receiptSha256:x.receiptSha256,bytes:x.bytes})),reason:book.reason};
+        sources:originals.map(x=>({sourceId:x.sourceId,sha256:x.sha256,receiptSha256:x.receiptSha256,bytes:x.bytes})),reason:book.reason,
+        ...(receivedOrigin?{receivedFrom:receivedOrigin}:{})};
       const allocationRows=report.lines.flatMap(line=>line.allocations.map(allocation=>({
         lineId:line.id,sourceId:line.sourceId,sourceRow:line.sourceRow,supplier:line.supplier,reference:line.reference,
         kind:line.kind,currency:line.currency,unit:line.unit,...allocation})));
@@ -84,6 +93,7 @@ export async function openEconomics({directory,pricingSource,listPricing,savePri
         sourceCount:originals.length,groups:report.groups,issueCount:report.issues.length},files:{
         'input.json':encode(book),'report.json':encode(report),'binding.json':encode(binding),'context.json':encode(context),
         'source-index.json':encode(originals),'original-pricing-report.json':original.reportBytes,
+        ...(receivedOrigin?{'received-origin.json':encode(receivedOrigin)}:{}),
         'allocations.csv':csv(allocationRows,[['Line ID','lineId'],['Source ID','sourceId'],['Source row','sourceRow'],['Supplier','supplier'],
           ['Reference','reference'],['Kind','kind'],['Currency','currency'],['Route','routeId'],['Amount','amount'],['Quantity','quantity'],
           ['Unit','unit'],['Allocation basis','basis'],['Reason','reason']]),
@@ -128,7 +138,8 @@ export async function openEconomics({directory,pricingSource,listPricing,savePri
     const saved=await edition(input.edition),binding={schema:'stellar-forge.merchant-cost-pricing-origin.v1',
       edition:saved.edition,editionRevision:saved.revision,sourcePricingVersion:saved.pricingVersion,
       proposalSha256:proposed.proposalSha256,basis:proposed.basis,routeIds:proposed.routeIds,
-      originalSourceBindings:saved.binding.sources,semantics:saved.report.semantics};
+      originalSourceBindings:saved.binding.sources,semantics:saved.report.semantics,
+      ...(saved.binding.receivedFrom?{receivedFrom:saved.binding.receivedFrom}:{})};
     const result=await savePricing({sourceVersion:saved.pricingVersion,commercial:proposed.commercial,requestId:input.requestId,
       expectedRevision:input.expectedPricingRevision,label:string(input.label,'Pricing review name',100),costBinding:binding,
       costFiles:{'supplier-cost-provenance.json':encode(binding),'supplier-cost-input.json':encode(saved.input),
@@ -186,6 +197,11 @@ export async function openEconomics({directory,pricingSource,listPricing,savePri
       const original=await pricingSource(saved.pricingVersion);
       for(const name of Object.keys(original.files))add('pricing/'+name,()=>original.readFile(name));
       add('cost/pricing-links.json',encode(saved.pricingLinks));
+      if(saved.input.receivedFrom){
+        const link=saved.input.receivedFrom;
+        for(const item of await receiving.items(link.packageId,{draftId:link.draftId}))
+          add('lineage/'+link.packageId+'/'+item.name,item.read);
+      }
       descriptor={schema:'stellar-forge.merchant-cost-export.v1',kind:input.kind,edition:saved.edition,revision:saved.revision,pricingVersion:saved.pricingVersion};
     }else if(input.kind==='WORKSPACE_BACKUP'){
       // Capture a closed immutable graph. A cost edition can create a later pricing
@@ -217,6 +233,8 @@ export async function openEconomics({directory,pricingSource,listPricing,savePri
         const bytes=await readPrivate(join(root,'pricing-links',name)),value=JSON.parse(bytes.toString('utf8'));
         if(editionIds.has(value.edition)&&pricingVersions.has(value.pricingVersion))add('economics/pricing-links/'+name,bytes);
       }
+      for(const received of await receiving.list())for(const item of await receiving.items(received.packageId))
+        add('economics/received/records/'+received.packageId+'/'+item.name,item.read);
       descriptor={schema:'stellar-forge.merchant-cost-backup.v1',kind:input.kind,
         snapshot:{pricingRevision:pricingSnapshot.pricingRevision,decisionRevision:pricingSnapshot.decisionRevision,
           scenarioPlans:pricingSnapshot.scenarioPlans,
@@ -239,9 +257,10 @@ export async function openEconomics({directory,pricingSource,listPricing,savePri
     if(input.kind==='SOURCES')return page(await sources.all(),input);
     if(input.kind==='PRICING')return page(await listPricing(),input);
     if(input.kind==='EXPORTS')return page(await exportRecords(),input);
+    if(input.kind==='RECEIVED')return page(await receiving.list(),input);
     return page((await chain.history()).reverse().map(summary),input);
   }
-  return {root,state,pricing,preview,save,edition,proposal,applyPricing,capture,weights,download,compare,bundle,exportFile,list,
+  return {root,state,pricing,preview,save,edition,proposal,applyPricing,capture,weights,download,compare,bundle,exportFile,list,receiving,
     upload:sources.upload,inspectSource:sources.inspect,mapCharges:sources.mapCharges,
     sourceDownload:async sourceId=>({source:await sources.get(sourceId),bytes:await sources.bytes(sourceId)})};
 }

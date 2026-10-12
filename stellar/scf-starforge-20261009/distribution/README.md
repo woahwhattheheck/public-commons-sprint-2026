@@ -26,6 +26,10 @@ in their original HTTP servers and the source collector. The same guide is inclu
 at `source/stellar/scf-starforge-20261009/distribution/BROWSER_ASSETS.md` inside the
 installed package.
 
+## Product source selections
+
+Build `--selection water-operations` or `--selection woo-merchant` for a complete product with its original runtime, Applications and customer receiving. The default build retains the full toolkit. [Product source selections](SOURCE_SELECTIONS.md) explains committed recipes, installation, exact-source resume and measured package comparisons.
+
 ## Add and inspect source registrations
 
 Independent source capabilities register their commands, exports, runtime features
@@ -3257,7 +3261,11 @@ Embedded applications can use `./merchant/scenario-planning` for
 ### Turn a saved pricing review into a merchant price change
 
 In **Saved reviews**, choose **Prepare price change**, enter the explicit atomic
-amounts for the selected payment choices, and review every before-and-after term.
+amounts for the selected payment choices, or select **Use saved USD quotes with
+entered valuations**. For each selected choice, enter the USD value of an explicit
+number of its atomic units and record the valuation source or assumption. The
+review shows the smallest sufficient atomic amount, exact valued USD fraction
+and rounding excess before saving every before-and-after term.
 Save a named decision to retain the new seller configuration, a local launch
 configuration with original file paths resolved, rebound merchant terms and the
 complete original pricing inputs. USD quotes and cost assumptions keep their
@@ -3274,6 +3282,30 @@ release ID. The [pricing guide](../sf97-merchant-revenue-ops/WORKSPACE.md) cover
 the full source, export, staging and recovery workflow. Applications use
 `./merchant/revenue-model`, `./merchant/repricing` and
 `./merchant/repricing-source` for these same implementations.
+
+Embedded applications can use the same converter through the public SDK:
+
+```js
+import { createQuotePriceEdits } from '@tokenjunkielabs/starforge-merchant/merchant/quote-prices';
+
+const conversion = createQuotePriceEdits({
+  seller, commercial: savedCommercial,
+  quoteValuations: [{
+    routeId, paymentIndex, expectedAmount,
+    atomicUnits: '10000000', usd: '1',
+    basis: 'Operator-entered valuation for this payment option'
+  }]
+});
+```
+
+`seller`, `savedCommercial`, and each selected route/payment index and expected
+amount come from the original saved review. The example valuation is an explicit
+input to replace for the selected asset. `conversion.edits` contains the original
+repricing compiler's input format; `conversion.rows` retains exact rational USD
+values and rounding. For a retained price decision, pass the same
+`quoteValuations` to the original workspace or MCP preview/save operation so its
+source checks, review hash and complete decision preserve the conversion.
+
 
 The original merchant MCP operator exposes this same workflow through its
 `merchant_pricing_*` tools. A host-declared pricing connection selects saved

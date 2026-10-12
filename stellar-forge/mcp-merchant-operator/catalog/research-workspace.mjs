@@ -1,5 +1,9 @@
 // MIT. Research tool metadata; the selected provider loads its runtime on demand.
 import {MAX_RETAINED_CHUNK_BYTES} from '../retained-file-contracts.mjs';
+import {researchCitationReviewTools} from './research-citation-updates.mjs';
+import {researchEuropePmcTools,RESEARCH_EUROPE_PMC_EXPORTS,RESEARCH_EUROPE_PMC_EXPORT_FIELDS} from './research-europe-pmc.mjs';
+import {researchDocumentTools,RESEARCH_DOCUMENT_EXPORTS,RESEARCH_DOCUMENT_EXPORT_FIELDS} from './research-documents.mjs';
+import {researchClinicalTrialsTools,RESEARCH_CLINICALTRIALS_EXPORTS,RESEARCH_CLINICALTRIALS_CRITERIA} from './research-clinicaltrials.mjs';
 import {RESEARCH_SECTIONS,RESEARCH_COMPARISON_SECTIONS} from '../../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-contracts.mjs';
 
 const alias={type:'string',pattern:'^[a-z0-9][a-z0-9_-]{0,63}$'};
@@ -18,6 +22,10 @@ export const RESEARCH_EXPORTS=Object.freeze({
   'portable-gzip':{format:'json.gz',extension:'json.gz'},
   markdown:{format:'md',extension:'md'},html:{format:'html',extension:'html'},
   'crossref-edition':{extension:'json'},'retained-edition':{extension:'json'},comparison:{extension:'json'},
+  'source-content':{extension:'bin'},'source-record':{extension:'json'},'source-file':{extension:'bin'},
+  ...RESEARCH_CLINICALTRIALS_EXPORTS,
+  ...RESEARCH_DOCUMENT_EXPORTS,
+  ...RESEARCH_EUROPE_PMC_EXPORTS,
 });
 const exportKind={type:'string',enum:Object.keys(RESEARCH_EXPORTS)};
 export function researchWorkspaceTools(tool){
@@ -31,9 +39,12 @@ export function researchWorkspaceTools(tool){
       ...workspace,offset,limit,snapshot:digest},['workspace'],read),
     tool('merchant_research_dossier','Read original dossier metadata and counts, optionally at a retained revision. Use sections for complete question, source, finding and history records.',{
       ...dossier,revision},['workspace','dossierId'],read),
-    tool('merchant_research_section','Read a page from the exact original dossier revision. Continue with returned revision and offset. Sources project retained original responses; reference handles remain in editions.',{
+    tool('merchant_research_section','Read a page from the exact original dossier revision. Continue with returned revision and offset. Sources carry compact previews, complete descriptive metadata and exact occurrence selectors. Original content and files are downloaded explicitly; reference handles remain in editions.',{
       ...dossier,section:{type:'string',enum:RESEARCH_SECTIONS},revision,offset,limit,questionId:nativeId,
       query:{type:'string',maxLength:1000},selected:{type:'boolean'}},['workspace','dossierId','section'],read),
+    tool('merchant_research_source','Inspect one retained source occurrence at the selected saved revision. Use the original citation editionId and key; returns content/file sizes and SHA256 selectors with its descriptive metadata and saved review.',{
+      ...dossier,editionId:nativeId,key:{type:'string',pattern:'^(0|[1-9][0-9]{0,8})$'},revision},
+      ['workspace','dossierId','editionId','key'],read),
     tool('merchant_research_create','Create a research dossier through the original server and return its saved identity.',{
       ...workspace,title:label,description:{type:'string',maxLength:20000}},['workspace','title'],{}),
     tool('merchant_research_update','Update the original dossier title or description using the reviewed current revision.',{
@@ -56,6 +67,11 @@ export function researchWorkspaceTools(tool){
     tool('merchant_research_receive_source','Receive a host-declared complete original research response or provider-edition reference under the selected question. Reads the declared source hash before the original receive operation.',{
       ...dossier,source:alias,questionId:nativeId,label,expectedRevision:revision},
       ['workspace','dossierId','source','questionId','label','expectedRevision'],{idempotent:true}),
+    tool('merchant_research_source_bundle_preview','Preview a host-declared original source bundle under one saved question. Returns its exact byte hash, source terms, files, selected source decisions, authored findings and current dossier revision without changing the dossier.',{
+      ...dossier,source:alias,questionId:nativeId},['workspace','dossierId','source','questionId'],read),
+    tool('merchant_research_source_bundle_receive','Receive that same SHA-pinned source bundle, source decisions and findings under its original question in one atomic dossier revision. Use the preview revision and bundle hash; exact-byte retry returns the saved current result after a lost response.',{
+      ...dossier,source:alias,questionId:nativeId,expectedRevision:revision,expectedBundleSha256:digest},
+      ['workspace','dossierId','source','questionId','expectedRevision'],{idempotent:true}),
     tool('merchant_research_openalex_editions','List complete saved OpenAlex work editions from the source already configured on this original Research listener.',workspace,['workspace'],read),
     tool('merchant_research_receive_openalex','Receive a complete existing OpenAlex edition under the original research question through the maintained bridge.',{
       ...dossier,editionId:nativeId,questionId:nativeId,label,expectedRevision:revision},
@@ -77,9 +93,12 @@ export function researchWorkspaceTools(tool){
     tool('merchant_research_crossref_receive','Receive the exact reviewed Crossref edition into the original question using its plan hash, edition hash and current dossier revision. The native receiver reconciles a lost committed reply.',{
       ...operation,expectedRevision:revision,expectedPlanSha256:digest,expectedEditionSha256:digest},
       ['workspace','dossierId','operationId','expectedRevision','expectedPlanSha256','expectedEditionSha256'],{idempotent:true}),
-    tool('merchant_research_export','Stream and retain a complete portable dossier, analyst report, original source edition or revision comparison. Returns its content-addressed export ID for reads and restart recovery.',{
-      ...dossier,kind:exportKind,operationId:nativeId,editionId:nativeId,before:revision,after:revision},
-      ['workspace','dossierId','kind'],{}),
+    tool('merchant_research_export','Stream and retain a complete portable dossier, report, edition, comparison, original occurrence content/record or selected bundle file. Select revision for exact previous/reviewed/current HTML, Markdown or portable history. Source kinds bind editionId/key; source-file also requires original fileName and expectedSha256. Europe PMC exports require library and their native operationId or workspace requestId; omit dossierId for those library-wide exports. Returns the same content-addressed export ID for reads and restart recovery.',{
+      ...dossier,kind:exportKind,operationId:nativeId,editionId:nativeId,before:revision,after:revision,
+      ...RESEARCH_DOCUMENT_EXPORT_FIELDS,...RESEARCH_EUROPE_PMC_EXPORT_FIELDS,revision,
+      key:{type:'string',pattern:'^(0|[1-9][0-9]{0,8})$'},fileName:{type:'string',minLength:1,maxLength:1024},
+      sourceId:{type:'string',pattern:'^ctsrc_[a-f0-9]{64}$'},criteria:RESEARCH_CLINICALTRIALS_CRITERIA,expectedSha256:digest},
+      ['workspace','kind'],{}),
     tool('merchant_research_exports','Page complete exports already retained by this attachment. Recover a lost export reply by its original dossier ID, content hash and saved export receipt.',{
       ...workspace,dossierId:nativeId,offset,limit,snapshot:digest},['workspace'],read),
     tool('merchant_research_file_read','Read a retained complete export as SHA-pinned base64 chunks. Continue with the same kind/exportId/readId and nextOffset; after expiry or restart omit readId and retain exportId plus offset.',{
@@ -91,5 +110,9 @@ export function researchWorkspaceTools(tool){
     tool('merchant_research_reopen','Reopen one complete host-declared portable source or retained portable export through the original streamed reader. Preserves the package dossier ID, verified history, notes, selections and findings.',{
       ...workspace,source:alias,kind:{type:'string',enum:['portable-json','portable-gzip']},exportId:digest},
       ['workspace'],{idempotent:true}),
+    ...researchClinicalTrialsTools(tool),
+    ...researchDocumentTools(tool),
+    ...researchCitationReviewTools(tool),
+    ...researchEuropePmcTools(tool)
   ];
 }

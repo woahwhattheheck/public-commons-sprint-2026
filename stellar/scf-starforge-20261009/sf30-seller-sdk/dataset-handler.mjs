@@ -11,6 +11,199 @@ const NAME = /^[A-Za-z][A-Za-z0-9_]{0,47}$/;
 const RESERVED = new Set(['constructor', 'prototype', '__proto__']);
 const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 const object = x => x !== null && typeof x === 'object' && !Array.isArray(x);
+
+// MIT. One semantic identity contract for original typed dataset pages.
+// The CSV/query/version engines retain their existing value and cursor behavior.
+export const DATASET_SEMANTIC_SCHEMAS = Object.freeze([
+  'stellar-forge.ckan-semantics.v1', 'stellar-forge.odata-semantics.v1',
+  'stellar-forge.superset-semantics.v1', 'stellar-forge.directus-semantics.v1',
+]);
+const HASH = /^[a-f0-9]{64}$/;
+function need(condition, message) {
+  if (!condition) throw Object.assign(new TypeError(message), { code: 'DATASET_SEMANTICS_INVALID' });
+}
+function canonical(value, depth = 0) {
+  need(depth <= 128, 'Dataset semantic structure exceeds the supported nesting depth.');
+  if (Array.isArray(value)) return value.map(item => canonical(item, depth + 1));
+  if (object(value)) return Object.fromEntries(Object.keys(value).sort()
+    .map(key => [key, canonical(value[key], depth + 1)]));
+  need(value === null || typeof value === 'string' || typeof value === 'boolean' ||
+    typeof value === 'number' && Number.isFinite(value), 'Dataset semantics require finite JSON values.');
+  return value;
+}
+export function datasetSemanticIdentity(value) {
+  return createHash('sha256').update(JSON.stringify(canonical(value))).digest('hex');
+}
+export function datasetSemanticHeader(binding) {
+  return binding.schema === 'stellar-forge.ckan-semantics.v1'
+    ? 'x-ckan-semantics-sha256' : 'x-dataset-semantics-sha256';
+}
+/** Validate the original physical declaration and both retained meaning identities. */
+export function validateDatasetSemantics(value, columns) {
+  if (value === undefined) return null;
+  need(object(value) && DATASET_SEMANTIC_SCHEMAS.includes(value.schema) &&
+    HASH.test(value.sha256 ?? '') && HASH.test(value.definitionSha256 ?? '') &&
+    object(value.source) && HASH.test(value.source.captureManifestSha256 ?? '') &&
+    (value.source.schemaSha256 === null || HASH.test(value.source.schemaSha256 ?? '')) &&
+    Array.isArray(columns) && Array.isArray(value.columns) && value.columns.length === columns.length &&
+    value.columns.length > 0 && value.columns.length <= 64 &&
+    object(value.primaryKey) && Array.isArray(value.primaryKey.source) &&
+    Array.isArray(value.primaryKey.projected) && typeof value.primaryKey.complete === 'boolean' &&
+    object(value.aboutUrl) && Array.isArray(value.virtualColumns) && Array.isArray(value.issues) &&
+    object(value.csvw) && object(value.csvw.tableSchema) && Array.isArray(value.csvw.tableSchema.columns),
+    'Invalid retained dataset semantic document.');
+  need(Buffer.byteLength(JSON.stringify(value)) <= 2 * 1024 * 1024,
+    'Dataset semantic document exceeds 2 MiB.');
+  const { sha256, definitionSha256, ...payload } = value;
+  need(datasetSemanticIdentity({ ...payload, definitionSha256 }) === sha256,
+    'Retained dataset semantic document digest changed.');
+  const { captureManifestSha256, schemaSha256, ...sourceMeaning } = payload.source;
+  need(datasetSemanticIdentity({ ...payload, source: sourceMeaning }) === definitionSha256,
+    'Retained dataset semantic definition digest changed.');
+  const names = new Set();
+  for (let index = 0; index < columns.length; index++) {
+    const meaning = value.columns[index], physical = columns[index];
+    need(object(meaning) && object(physical) && meaning.name === physical.name &&
+      !names.has(meaning.name) && meaning.type === physical.type &&
+      meaning.nullable === physical.nullable && typeof meaning.sourceField === 'string' &&
+      meaning.sourceField.length > 0 && ['native', 'text', 'json'].includes(meaning.encoding) &&
+      object(meaning.projectedDefinition) && meaning.projectedDefinition.name === physical.name &&
+      Array.isArray(meaning.issues), 'Retained semantic columns differ from the original dataset.');
+    names.add(meaning.name);
+  }
+  const key = value.primaryKey;
+  need([key.source, key.projected].every(list => list.every(name => typeof name === 'string' && name) &&
+    new Set(list).size === list.length) && key.projected.every(name => names.has(name)) &&
+    (!key.complete || key.source.length > 0 && key.source.length === key.projected.length),
+    'Retained dataset semantic key is incomplete or changed.');
+  if (value.schema === 'stellar-forge.odata-semantics.v1') {
+    const source = value.source, csdl = value.csdl;
+    need(source.provider === 'odata4' && ['4.0', '4.01'].includes(source.protocolVersion) &&
+      ['serviceUrl', 'schemaUrl', 'entityContainer', 'entitySet', 'entityType'].every(name =>
+        typeof source[name] === 'string' && source[name].length > 0) &&
+      HASH.test(source.schemaSha256 ?? '') && object(csdl) &&
+      csdl.entityType === source.entityType && Array.isArray(csdl.inheritance) &&
+      csdl.inheritance.every(name => typeof name === 'string' && name) &&
+      object(csdl.structuredTypes) && object(csdl.structuredTypes[source.entityType]) &&
+      object(csdl.typeDefinitions) && object(csdl.enumTypes) && value.columns.length % 2 === 0,
+      'Retained OData meaning requires its original source identifiers and CSDL types.');
+    const valueColumns = new Map();
+    for (let index = 0; index < value.columns.length; index += 2) {
+      const column = value.columns[index], state = value.columns[index + 1], definition = column.sourceDefinition;
+      need(column.role === 'value' && state.role === 'state' && column.stateColumn === state.name &&
+        state.valueColumn === column.name && column.sourceField === state.sourceField &&
+        state.type === 'string' && state.nullable === false && state.encoding === 'native' &&
+        object(definition) && definition.sourcePath === column.sourceField &&
+        definition.sourceEntityType === source.entityType && typeof definition.type === 'string' &&
+        typeof definition.collection === 'boolean' && typeof definition.nullable === 'boolean' &&
+        object(state.sourceDefinition) && state.sourceDefinition.sourcePath === column.sourceField &&
+        state.sourceDefinition.role === 'source-presence' &&
+        state.sourceDefinition.sourceNullable === definition.nullable &&
+        datasetSemanticIdentity(state.sourceDefinition.values) === datasetSemanticIdentity(['value', 'null', 'missing']),
+        'Retained OData value/state columns differ from their original source definition.');
+      valueColumns.set(column.name, column);
+    }
+    need(key.projected.every(name => valueColumns.has(name)) &&
+      (!key.complete || key.projected.every((name, index) =>
+        valueColumns.get(name).sourceField === key.source[index])),
+      'Retained OData entity keys must identify the corresponding value columns.');
+  }
+  if (value.schema === 'stellar-forge.superset-semantics.v1') {
+    const source = value.source;
+    let base;
+    try { base = new URL(source.baseUrl); } catch { need(false, 'Retained Superset source URL is invalid.'); }
+    need(source.provider === 'apache-superset' && source.protocolVersion === '6.1' &&
+      ['http:', 'https:'].includes(base.protocol) && !base.username && !base.password &&
+      !base.search && !base.hash && base.pathname.endsWith('/') && base.href === source.baseUrl &&
+      Number.isSafeInteger(source.chartId) && source.chartId > 0 &&
+      (source.chartUuid === null || typeof source.chartUuid === 'string' && source.chartUuid.length > 0) &&
+      Number.isSafeInteger(source.queryOrdinal) && source.queryOrdinal >= 0 &&
+      HASH.test(source.queryContextSha256 ?? '') && HASH.test(source.principalSha256 ?? '') &&
+      HASH.test(source.schemaSha256 ?? '') && object(value.query) &&
+      value.query.savedContextSha256 === source.queryContextSha256 &&
+      (value.query.rowLimit === null || Number.isSafeInteger(value.query.rowLimit) && value.query.rowLimit >= 0) &&
+      Number.isSafeInteger(value.query.rowOffset) && value.query.rowOffset >= 0 &&
+      value.columns.length % 2 === 0,
+      'Retained Superset meaning requires its original chart, user, saved query and native result scope.');
+    const nativeNames = new Set(), nativeOrdinals = new Set(), projected = new Map();
+    for (let index = 0; index < value.columns.length; index += 2) {
+      const column = value.columns[index], state = value.columns[index + 1], definition = column.sourceDefinition;
+      need(column.role === 'value' && state.role === 'state' && column.stateColumn === state.name &&
+        state.valueColumn === column.name && column.sourceField === state.sourceField &&
+        state.type === 'string' && state.nullable === false && state.encoding === 'native' &&
+        object(definition) && definition.sourceName === column.sourceField &&
+        Number.isSafeInteger(definition.sourceOrdinal) && definition.sourceOrdinal >= 0 &&
+        Number.isSafeInteger(definition.nativeType) && !nativeNames.has(definition.sourceName) &&
+        !nativeOrdinals.has(definition.sourceOrdinal) && object(state.sourceDefinition) &&
+        state.sourceDefinition.sourceName === definition.sourceName &&
+        state.sourceDefinition.sourceOrdinal === definition.sourceOrdinal &&
+        state.sourceDefinition.nativeType === definition.nativeType &&
+        state.sourceDefinition.role === 'source-presence' &&
+        datasetSemanticIdentity(state.sourceDefinition.values) === datasetSemanticIdentity(['value', 'null', 'missing']),
+        'Retained Superset value/state columns differ from their native column identities.');
+      nativeNames.add(definition.sourceName); nativeOrdinals.add(definition.sourceOrdinal); projected.set(column.name, column);
+    }
+    need(key.projected.every(name => projected.has(name)) &&
+      (!key.complete || key.projected.every((name, index) => projected.get(name).sourceField === key.source[index])),
+      'Retained Superset row keys must identify their corresponding projected value columns.');
+  }
+  if (value.schema === 'stellar-forge.directus-semantics.v1') {
+    const source = value.source, native = value.directus;
+    need(source.provider === 'directus' && source.protocolVersion === '12.5' &&
+      ['baseUrl', 'collection', 'primaryField'].every(k => typeof source[k] === 'string' && source[k]) &&
+      HASH.test(source.schemaSha256 ?? '') && source.definitionNumericEncoding === 'original-json-number-lexemes' &&
+      object(source.query) && Array.isArray(source.query.fields) && Array.isArray(source.query.sort) &&
+      object(source.principal) && typeof source.principal.id === 'string' && source.principal.id &&
+      object(native) && object(native.collection) && native.collection.collection === source.collection &&
+      Array.isArray(native.fields) && Array.isArray(native.relations) && native.relations.every(object) && value.columns.length % 2 === 0,
+      'Retained Directus meaning requires its original query, authenticated principal and native schema.');
+    const fields = new Map();
+    for (const field of native.fields) {
+      need(object(field) && field.collection === source.collection && typeof field.field === 'string' && field.field &&
+        !fields.has(field.field), 'Retained Directus fields must be unique original collection definitions.');
+      fields.set(field.field, field);
+    }
+    const primary = native.fields.filter(field => field.schema?.is_primary_key === true);
+    need(primary.length === 1 && primary[0].field === source.primaryField,
+      'Retained Directus primary-key meaning differs from the original field schema.');
+    const values = new Map(), selected = new Set();
+    for (let index = 0; index < value.columns.length; index += 2) {
+      const column = value.columns[index], state = value.columns[index + 1], field = fields.get(column.sourceField);
+      need(field && !selected.has(column.sourceField) && column.role === 'value' && state.role === 'state' &&
+        column.type === 'string' && column.nullable === false && column.encoding === 'json' &&
+        column.stateColumn === state.name && state.valueColumn === column.name && state.sourceField === column.sourceField &&
+        state.type === 'string' && state.nullable === false && state.encoding === 'native',
+        'Retained Directus value/state columns differ from the original exact JSON projection.');
+      selected.add(column.sourceField);
+      const definition = {collection:source.collection, field:field.field, sourcePath:field.field,
+        type:field.type ?? 'unknown', nullable:typeof field.schema?.is_nullable === 'boolean' ? field.schema.is_nullable : null,
+        schema:field.schema ?? null, meta:field.meta ?? null,
+        relations:native.relations.filter(r => r.collection === source.collection && r.field === field.field ||
+          r.related_collection === source.collection && r.meta?.one_field === field.field)};
+      const stateDefinition = {sourcePath:field.field, role:'source-presence',
+        sourceNullable:definition.nullable, values:['value', 'null', 'missing']};
+      need(datasetSemanticIdentity(column.sourceDefinition) === datasetSemanticIdentity(definition) &&
+        datasetSemanticIdentity(state.sourceDefinition) === datasetSemanticIdentity(stateDefinition),
+        'Retained Directus source definitions no longer match their collection, relation or presence meaning.');
+      values.set(column.name, column);
+    }
+    need(datasetSemanticIdentity(key.source) === datasetSemanticIdentity([source.primaryField]) &&
+      key.projected.every(name => values.get(name)?.sourceField === source.primaryField) &&
+      key.complete === (key.projected.length === 1),
+      'Retained Directus primary-key projection differs from its value column.');
+  }
+  const expected = [...value.columns.map(column => column.projectedDefinition),
+    ...value.virtualColumns.map(column => {
+      need(object(column) && (column.projectedDefinition === null || object(column.projectedDefinition)),
+        'Invalid retained virtual column.');
+      return column.projectedDefinition;
+    }).filter(Boolean)];
+  need(datasetSemanticIdentity(expected) === datasetSemanticIdentity(value.csvw.tableSchema.columns),
+    'Retained CSVW definitions differ from the reviewed columns.');
+  return { schema: value.schema, sha256, definitionSha256,
+    captureManifestSha256: value.source.captureManifestSha256 };
+}
+
 const hash = text => createHash('sha256').update(text).digest('hex');
 const fail = (code, message, status = 400) => Object.assign(new Error(message), { code, status });
 const bad = message => { throw fail('INVALID_DATASET_QUERY', message); };
@@ -19,8 +212,8 @@ function integer(value, name, min, max) {
     throw new TypeError(`${name} must be an integer from ${min} to ${max}`);
   return value;
 }
-function coerce(value, spec, label) {
-  if (value === '' && spec.nullable) return null;
+function coerce(value, spec, label, quotedEmptyText = false) {
+  if (value === '' && spec.nullable && !quotedEmptyText) return null;
   if (spec.type === 'string') return value;
   if (spec.type === 'boolean' && (value === 'true' || value === 'false')) return value === 'true';
   if (spec.type === 'integer' && /^-?(0|[1-9][0-9]*)$/.test(value) && Number.isSafeInteger(Number(value)))
@@ -33,7 +226,7 @@ function coerce(value, spec, label) {
 // Incremental CSV parser: quoted delimiters/newlines, escaped quotes, CRLF/LF/CR,
 // and a final record without a newline. No eval, regex query engine, or dependencies.
 function csvParser(onRecord, maxCellChars) {
-  let row = [], cell = [], chunks = [], cellChars = 0, mode = 0, started = false, skipLF = false, first = true;
+  let row = [], quoteStates = [], quoted = false, cell = [], chunks = [], cellChars = 0, mode = 0, started = false, skipLF = false, first = true;
   const append = c => {
     cellChars += c.length; started = true;
     if (cellChars > maxCellChars) throw new RangeError('CSV cell exceeds maxCellChars');
@@ -43,10 +236,11 @@ function csvParser(onRecord, maxCellChars) {
   };
   const field = () => {
     if (cell.length) chunks.push(cell.join(''));
-    row.push(chunks.join('')); cell = []; chunks = []; cellChars = 0; mode = 0; started = false;
+    row.push(chunks.join('')); quoteStates.push(quoted); quoted = false;
+    cell = []; chunks = []; cellChars = 0; mode = 0; started = false;
     if (row.length > 256) throw new RangeError('CSV exceeds 256 columns');
   };
-  const record = () => { field(); onRecord(row); row = []; };
+  const record = () => { field(); onRecord(row, quoteStates); row = []; quoteStates = []; };
   return {
     feed(text) {
       for (const c of text) {
@@ -62,7 +256,7 @@ function csvParser(onRecord, maxCellChars) {
         if (mode === 2) throw new TypeError('CSV contains text after a closing quote');
         if (c === '"') {
           if (started) throw new TypeError('CSV quote must begin a field');
-          mode = 1; started = true;
+          mode = 1; started = true; quoted = true;
         } else append(c);
       }
     },
@@ -79,7 +273,8 @@ export { csvParser as createCsvRecordParser };
 /** Load one immutable snapshot. Only declared columns are retained and exposed. */
 export async function loadCsvDataset({ file, name, columns, filters = [], ranges = [], sorts = [],
   maxBytes = 64 * 1024 * 1024, maxRows = 250000, maxCellChars = 65536,
-  defaultLimit = 50, maxLimit = 250, maxPageBytes = 900 * 1024 } = {}) {
+  defaultLimit = 50, maxLimit = 250, maxPageBytes = 900 * 1024, semantics, nullEncoding = 'empty' } = {}) {
+  if (!['empty', 'unquoted-empty'].includes(nullEncoding)) throw new TypeError('Choose empty or unquoted-empty CSV null encoding');
   if (typeof name !== 'string' || !name.trim() || name.length > 128 || /[\x00-\x1f\x7f]/.test(name))
     throw new TypeError('Dataset name must be printable text, 1–128 characters');
   if (typeof file !== 'string' && !(file instanceof URL)) throw new TypeError('An operator-owned CSV file is required');
@@ -93,6 +288,8 @@ export async function loadCsvDataset({ file, name, columns, filters = [], ranges
       throw new TypeError(`Invalid column declaration: ${key}`);
     return Object.freeze({ name: key, type: spec.type, nullable: spec.nullable ?? false });
   });
+  const semanticDocument = semantics === undefined ? undefined : structuredClone(semantics);
+  const semanticBinding = validateDatasetSemantics(semanticDocument, schema);
   const names = schema.map(s => s.name), byName = new Map(schema.map(s => [s.name, s]));
   if (!Array.isArray(filters) || filters.length > 8 || new Set(filters).size !== filters.length ||
       filters.some(key => !byName.has(key))) throw new TypeError('Choose up to eight unique exposed filter columns');
@@ -106,7 +303,7 @@ export async function loadCsvDataset({ file, name, columns, filters = [], ranges
     throw new TypeError('Range filters require string, integer or number columns');
   ranges = [...ranges].sort(); sorts = [...sorts].sort();
   // Original SF30 Bazaar offers permit at most 32 advertised query parameters.
-  if (3 + filters.length + 4 * ranges.length + (sorts.length ? 1 : 0) > 32)
+  if (3 + filters.length + 4 * ranges.length + (sorts.length ? 1 : 0) + (semanticBinding ? 1 : 0) > 32)
     throw new TypeError('Dataset capabilities exceed the native 32-query-parameter budget');
   integer(maxBytes, 'maxBytes', 1, 256 * 1024 * 1024);
   integer(maxRows, 'maxRows', 1, 1000000);
@@ -118,11 +315,13 @@ export async function loadCsvDataset({ file, name, columns, filters = [], ranges
   if (!info.isFile() || info.size > maxBytes) throw new TypeError('CSV must be a regular file within maxBytes');
   const rows = [], indexes = new Map(filters.map(key => [key, new Map()]));
   // Keep old snapshots/cursors byte-compatible when no new capability is enabled.
-  const policy = { name, schema, filters, ...(ranges.length || sorts.length ? { ranges, sorts } : {}) };
+  const policy = { name, schema, filters, ...(ranges.length || sorts.length ? { ranges, sorts } : {}),
+    ...(nullEncoding === 'unquoted-empty' ? { nullEncoding } : {}),
+    ...(semanticBinding ? { semantics: semanticBinding.sha256 } : {}) };
   const digest = createHash('sha256').update(JSON.stringify(policy)).update('\0');
   const decoder = new TextDecoder('utf-8', { fatal: true });
   let headers, positions, recordNumber = 0, byteCount = 0;
-  const parser = csvParser(cells => {
+  const parser = csvParser((cells, quoted) => {
     recordNumber++;
     if (!headers) {
       if (cells.some(h => h === '') || new Set(cells).size !== cells.length)
@@ -138,7 +337,13 @@ export async function loadCsvDataset({ file, name, columns, filters = [], ranges
     if (cells.length !== headers.length) throw new TypeError(`CSV record ${recordNumber} has a different column count`);
     if (rows.length >= maxRows) throw new RangeError('CSV exceeds maxRows');
     const row = Object.create(null);
-    schema.forEach((spec, i) => { row[spec.name] = coerce(cells[positions[i]], spec, `CSV record ${recordNumber}, ${spec.name}`); });
+    schema.forEach((spec, i) => {
+      const value = cells[positions[i]], label = `CSV record ${recordNumber}, ${spec.name}`;
+      if (nullEncoding === 'unquoted-empty' && value === '' && !quoted[positions[i]]) {
+        if (!spec.nullable) throw new TypeError(`${label} requires a non-NULL value`);
+        row[spec.name] = null;
+      } else row[spec.name] = coerce(value, spec, label, nullEncoding === 'unquoted-empty' && quoted[positions[i]]);
+    });
     for (const key of filters) {
       const index = indexes.get(key), value = row[key];
       if (!index.has(value)) index.set(value, []);
@@ -192,10 +397,12 @@ export async function loadCsvDataset({ file, name, columns, filters = [], ranges
     columns: Object.freeze(schema.map(s => Object.freeze({ ...s, filterable: filters.includes(s.name),
       ...(ranges.length || sorts.length ? { rangeFilterable: ranges.includes(s.name), sortable: sorts.includes(s.name) } : {}),
     }))),
-    defaultLimit, maxLimit, order: 'csv-record-order' });
+    defaultLimit, maxLimit, order: 'csv-record-order',
+    ...(nullEncoding === 'unquoted-empty' ? { nullEncoding } : {}),
+    ...(semanticBinding ? { semanticSchema: semanticBinding.schema } : {}) });
   const describe = () => structuredClone(description);
   const rangeOps = ['gt', 'gte', 'lt', 'lte'];
-  const permitted = new Set(['fields', 'limit', 'cursor', ...filters.map(key => `where_${key}`),
+  const permitted = new Set(['fields', 'limit', 'cursor', ...(semanticBinding ? ['semantics'] : []), ...filters.map(key => `where_${key}`),
     ...ranges.flatMap(key => rangeOps.map(op => `${op}_${key}`)), ...(sorts.length ? ['sort'] : [])]);
   const cached = new WeakMap();
 
@@ -208,6 +415,8 @@ export async function loadCsvDataset({ file, name, columns, filters = [], ranges
       if (typeof value !== 'string') bad('Each query parameter must occur once');
       params[key] = value;
     }
+    if (own(params, 'semantics') && params.semantics !== semanticBinding?.sha256)
+      throw fail('DATASET_SEMANTICS_CHANGED', 'Select the reviewed meaning of this retained dataset snapshot', 409);
     const fields = own(params, 'fields') ? params.fields.split(',') : names;
     if (!fields.length || new Set(fields).size !== fields.length || fields.some(key => !byName.has(key)))
       bad('fields must be a comma-separated selection of declared column names');
@@ -328,11 +537,13 @@ export async function loadCsvDataset({ file, name, columns, filters = [], ranges
       filters: Object.fromEntries(selectedFilters),
       ...(selectedRanges.length ? { ranges: selectedRanges.map(([column, operator, value]) => ({ column, operator, value })) } : {}),
       ...(sort ? { order: sort } : {}), rows: page,
-      page: { limit, total, returned: page.length, nextCursor } };
+      page: { limit, total, returned: page.length, nextCursor },
+      ...(semanticBinding ? { semantics: structuredClone(semanticDocument) } : {}) };
     if (Buffer.byteLength(JSON.stringify(body)) > maxPageBytes)
       throw fail('DATASET_PAGE_TOO_LARGE', 'Use a smaller limit or select fewer fields', 413);
     return { status: 200, headers: { 'content-type': 'application/json; charset=utf-8',
-      'x-dataset-snapshot': snapshot }, body };
+      'x-dataset-snapshot': snapshot,
+      ...(semanticBinding ? { [datasetSemanticHeader(semanticBinding)]: semanticBinding.sha256 } : {}) }, body };
   }
   function errorResponse(error) {
     if (!error.code || ![400, 409, 413].includes(error.status)) throw error;
@@ -360,7 +571,7 @@ export async function loadDatasetConfig(configPath) {
   const bytes = await readFile(path);
   if (bytes.length > 65536) throw new RangeError('Dataset config exceeds 64 KiB');
   const config = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
-  const keys = new Set(['schema', 'file', 'name', 'columns', 'filters', 'ranges', 'sorts', 'maxBytes', 'maxRows', 'maxCellChars', 'defaultLimit', 'maxLimit', 'maxPageBytes']);
+  const keys = new Set(['schema', 'file', 'name', 'columns', 'filters', 'ranges', 'sorts', 'maxBytes', 'maxRows', 'maxCellChars', 'defaultLimit', 'maxLimit', 'maxPageBytes', 'semantics', 'nullEncoding']);
   if (!object(config) || config.schema !== 'stellar-forge.csv-dataset.v1' || typeof config.file !== 'string' ||
       !config.file || Object.keys(config).some(key => !keys.has(key))) throw new TypeError('Invalid csv-dataset.v1 configuration');
   return loadCsvDataset({ ...config, file: resolve(dirname(path), config.file) });

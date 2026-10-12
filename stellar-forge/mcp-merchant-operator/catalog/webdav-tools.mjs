@@ -17,7 +17,7 @@ const shortText = { type: 'string', minLength: 1, maxLength: 200 };
 
 const readOnly = { readOnly: true, idempotent: true };
 
-const mutation = { operationId: uuid, expectedRevision: { type: 'integer', minimum: 0 } };
+const mutation = { operationId: uuid, expectedRevision: { type: 'integer', minimum: 0 }, expectedProfileSha256: hash };
 
 const SOURCE_KINDS = ['source', 'listing', 'capture', 'edition', 'export', 'packet'];
 
@@ -84,3 +84,13 @@ function webDavWorkspaceTools(tool) {
 }
 
 export { webDavWorkspaceTools, alias, mutation, hash, uuid, readOnly, object, shortText, PUBLISHER_ACTIONS, SOURCE_KINDS, PUBLISHER_KINDS, SHA256, UUID };
+
+export function webDavBindingSelection(tool, args) {
+  if (tool === 'merchant_webdav_source') return { kind: 'source', profile: args.profile };
+  if (tool === 'merchant_webdav_merchant') return { kind: 'merchant', profile: args.profile };
+  if (tool === 'merchant_webdav_publisher' && args.action === 'publisher.release.stage')
+    return { kind: 'runtime', profile: null };
+  if (tool === 'merchant_webdav_publisher' && args.action === 'publisher.buyer.session')
+    return { kind: 'buyer', profile: args.payload?.buyerWorkspace };
+  return null;
+}

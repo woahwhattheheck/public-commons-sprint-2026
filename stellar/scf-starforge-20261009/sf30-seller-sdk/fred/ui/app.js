@@ -1,3 +1,4 @@
+import { mountFredBriefing } from './briefing.js';
 // MIT. Original economic project controls; source text is rendered as text.
 const $ = id => document.getElementById(id);
 let token = location.hash.slice(1);
@@ -57,6 +58,10 @@ function select(id, choices, wanted) {
   for (const [value, label] of choices) { const option = document.createElement('option'); option.value = value; option.textContent = label; control.append(option); }
   if (choices.some(([value]) => value === selected)) control.value = selected;
 }
+const briefing = mountFredBriefing({ api, download, event, table, select, getState: () => state,
+  getCaptureId: () => $('capture-select').value, chooseCapture: async captureId => {
+    $('capture-select').value = captureId; rowOffset = 0; select('row-series', [['','All original series']]); await showRows();
+  }, message });
 const labelCapture = item => (item.sourceMode === 'PUBLIC_TABLE' ? item.retrievalWindow ? 'Collected through ' : 'Captured ' : 'Vintage ') + item.selection.asOf + ' · ' + item.selection.series.join(', ') + ' · ' + item.rowCount + ' rows · ' + item.id.slice(0, 10);
 function renderState(value) {
   state = value.project; $('project-title').textContent = state.title + ' · revision ' + state.revision;
@@ -82,7 +87,7 @@ function renderState(value) {
   }
 
   select('compare-before', captures); select('compare-after', captures, $('compare-after').value || state.selectedCapture);
-  select('review-select', state.reviews.map(item => [item.id, item.id.slice(0,12) + ' · ' + item.captureId.slice(0,12) + ' · ' + item.reviewedAt]));
+  select('review-select', state.reviews.map(item => [item.id, (item.briefing?.title ? item.briefing.title + ' · ' : '') + item.id.slice(0,12) + ' · ' + item.captureId.slice(0,12) + ' · ' + item.reviewedAt]));
   const publications = state.publications.map(item => [item.id, item.id.slice(0,12) + ' · ' + item.resource]);
   select('publication-select', publications); select('customer-publication', publications);
   $('acquisition-state').textContent = JSON.stringify(state.acquisition ?? { state: state.pending?.kind === 'capture' ? 'CAPTURING' : 'IDLE' }, null, 2);
@@ -91,6 +96,7 @@ function renderState(value) {
   $('buyer-status').textContent = value.buyerConfigured ? 'The original buyer is configured on this host. Approval appears in its terminal.' : 'Customer preparation is available. Start the workspace with --buyer-config to operate the existing native buyer.';
   $('buy').disabled = !value.buyerConfigured; $('recover').disabled = !value.buyerConfigured; $('download-customer').disabled = !value.buyerConfigured;
   table('history', [...state.operations].reverse(), ['id','kind','completedAt','result']);
+  briefing.onState();
 }
 async function refresh() { renderState(await api('/api/state')); }
 async function action(actionName, payload = {}) {
@@ -104,6 +110,7 @@ async function showRows() {
   if (!capture) return;
   const query = new URLSearchParams({ capture, series: $('row-series').value, offset: String(rowOffset) });
   currentPage = await api('/api/observations?' + query);
+  briefing.onCapture(capture, currentPage.series);
   select('row-series', [['','All original series'], ...currentPage.series.map(item => [item.id,item.id + ' · ' + item.title])]);
   table('observations', currentPage.rows);
   table('series-detail', currentPage.series, ['id','title','publisher','asOf','timeBasis','frequency','units','seasonalAdjustment','count','missing','lastUpdated','notes','notesCoverage','sourceUrl']);
@@ -130,7 +137,7 @@ async function showPublication(customer = false) {
   } else {
     publication = value;
     table('publication-detail', [{ edition: value.edition.editionId, sourceMode: value.edition.sourceMode, asOf: value.edition.selection.asOf, timeBasis: value.edition.timeBasis, retrievalWindow: value.edition.retrievalWindow ?? null,
-      rows: value.edition.rowCount, snapshot: value.edition.snapshot, resource: value.plan.resource, payment: value.plan.payment }]);
+      rows: value.edition.rowCount, snapshot: value.edition.snapshot, briefing: value.edition.briefing ?? null, resource: value.plan.resource, payment: value.plan.payment }]);
   }
   return value;
 }
@@ -177,7 +184,13 @@ event('rows-previous', async () => { rowOffset = Math.max(0,rowOffset - 100); aw
 event('rows-next', async () => { if (rowOffset + 100 < currentPage.total) rowOffset += 100; await showRows(); });
 event('select-capture', async () => { await action('select', { captureId: $('capture-select').value }); message('Original capture selected.'); });
 event('download-source', () => download('/api/source?' + new URLSearchParams({ capture: $('capture-select').value }), 'fred-original-capture.json'));
-event('save-review', async () => { const result = await action('review', { captureId: $('capture-select').value, policy: JSON.parse($('policy').value), note: $('review-note').value }); $('review-select').value = result.reviewId; message('Source review and customer projection saved.'); });
+event('save-review', async () => {
+  const selectedBriefing = briefing.selection();
+  const result = await action('review', { captureId: $('capture-select').value, policy: JSON.parse($('policy').value),
+    note: $('review-note').value, ...(selectedBriefing ? { briefing: selectedBriefing } : {}) });
+  $('review-select').value = result.reviewId; await briefing.afterSave(result);
+  message(result.briefing ? 'Source review, exact analyst measures and complete report files saved.' : 'Source review and customer projection saved.');
+});
 event('compare', async () => { comparisonOffset = 0; await compare(); });
 event('compare-previous', async () => { comparisonOffset = Math.max(0,comparisonOffset - 100); await compare(); });
 event('compare-next', async () => { if (comparisonOffset + 100 < comparisonPage.total) comparisonOffset += 100; await compare(); });

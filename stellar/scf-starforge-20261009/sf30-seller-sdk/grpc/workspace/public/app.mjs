@@ -1,4 +1,9 @@
 // MIT. Browser controls for the original retained gRPC workspace.
+import { mountGrpcUpgrades } from './upgrade.mjs';
+import { mountGrpcHealth } from './health.mjs';
+import { renderGrpcFields } from './fields.mjs';
+import { renderGrpcRequestSeries } from './request-series.mjs';
+let fieldTicket = 0;
 const $ = id => document.getElementById(id);
 const storageKey = 'stellar-forge.grpc-workspace:' + location.origin;
 let token = location.hash.slice(1);
@@ -74,6 +79,7 @@ async function work(action, message) {
   }
 }
 function buttons() {
+  healthPanel.update(inventory, !dirty && !routeDirty && !planDirty);
   $('save').disabled = !protoSource || planDirty || routeDirty;
   $('checkout').disabled = !adopted || adopted.id === inventory?.currentRevision || dirty || routeDirty || planDirty;
   for (const name of ['review', 'prepare']) $(name).disabled = !adopted || dirty || routeDirty || planDirty ||
@@ -84,6 +90,7 @@ function buttons() {
   $('reflection-save').disabled = !reflectionPreview || routeDirty || planDirty ||
     reflectionPreview.comparisonBaseRevision !== editorBase;
   $('apply-route').disabled = !methodPath;
+  $('validate-input').disabled = !adopted || !methodPath || dirty || planDirty || routeDirty;
   $('remove-route').disabled = !selectedRoute;
   $('workspace-title').textContent = $('title').value || 'gRPC merchant';
   $('revision-label').textContent = adopted ? 'Editor ' + short(adopted.id) + ' · current ' +
@@ -110,6 +117,7 @@ function requestValue() {
   return object(parse('request', 'Request'), 'Request');
 }
 function clearMethod() {
+  ++fieldTicket;
   methodPath = null; selectedRoute = null; methodSchema = null; ++methodTicket;
   $('method-heading').textContent = 'Select a method'; $('method-types').textContent = '';
   $('field-form').replaceChildren(); $('field-form').inert = false;
@@ -126,7 +134,8 @@ function readSource() {
   const metadata = parse('metadata', 'Metadata references');
   if (!Array.isArray(metadata)) throw new Error('Metadata references must be a JSON array.');
   const limits = object(parse('limits', 'Call limits'), 'Call limits');
-  if (Object.hasOwn(limits, 'stream')) throw new Error('Use the dedicated server-stream limits below; remove stream from the call-limits JSON.');
+  if (Object.hasOwn(limits, 'stream') || Object.hasOwn(limits, 'requestStream'))
+    throw new Error('Use the dedicated request and response stream limits below; remove those fields from the call-limits JSON.');
   if ($('stream-enabled').checked) {
     const stream = {};
     for (const [id, key] of [['stream-bytes', 'maxBytes'], ['stream-records', 'maxRecords'], ['stream-idle', 'idleTimeoutMs']]) {
@@ -137,6 +146,16 @@ function readSource() {
     }
     limits.stream = stream;
   }
+  if ($('request-stream-enabled').checked) {
+    const requestStream = {};
+    for (const [id, key] of [['request-stream-messages', 'maxMessages'], ['request-stream-bytes', 'maxBytes']]) {
+      const control = $(id);
+      if (!control.checkValidity()) { control.reportValidity(); throw new Error('Correct the request-stream limits.'); }
+      requestStream[key] = Number(control.value);
+      if (!Number.isSafeInteger(requestStream[key])) throw new Error('Request limits must be whole numbers.');
+    }
+    limits.requestStream = requestStream;
+  }
   return { schema: 'stellar-forge.grpc-source.v1', target: $('target').value.trim(), transport, metadata, limits };
 }
 function fillSource(value) {
@@ -146,19 +165,32 @@ function fillSource(value) {
     ['certificate-env', 'certificateEnv'], ['private-key-env', 'privateKeyEnv']])
     $(id).value = value.transport?.[key] ?? '';
   $('metadata').value = pretty(value.metadata ?? []);
-  const limits = structuredClone(value.limits ?? {}), stream = limits.stream;
-  delete limits.stream; $('limits').value = pretty(limits);
+  const limits = structuredClone(value.limits ?? {}), stream = limits.stream, requestStream = limits.requestStream;
+  delete limits.stream; delete limits.requestStream; $('limits').value = pretty(limits);
   $('stream-enabled').checked = Boolean(stream);
   $('stream-bytes').value = stream?.maxBytes ?? 67108864;
   $('stream-records').value = stream?.maxRecords ?? 100000;
   $('stream-idle').value = stream?.idleTimeoutMs ?? 10000;
-  streamControls();
+  $('request-stream-enabled').checked = Boolean(requestStream);
+  $('request-stream-messages').value = requestStream?.maxMessages ?? 10000;
+  $('request-stream-bytes').value = requestStream?.maxBytes ?? 16777216;
+  streamControls(); requestStreamControls();
   $('tls-fields').hidden = $('transport').value !== 'tls';
 }
 function streamControls() {
   const enabled = $('stream-enabled').checked;
   $('stream-limits').hidden = !enabled;
   for (const id of ['stream-bytes', 'stream-records', 'stream-idle']) $(id).disabled = !enabled;
+}
+function requestStreamControls() {
+  const enabled = $('request-stream-enabled').checked;
+  $('request-stream-limits').hidden = !enabled;
+  for (const id of ['request-stream-messages', 'request-stream-bytes']) $(id).disabled = !enabled;
+}
+function methodKind(method) {
+  if (method.requestStream) return (method.responseStream ? ' · bidirectional / NDJSON' : ' · client stream / JSON') +
+    (method.selectable ? '' : ' · save request-stream limits to select');
+  return method.responseStream ? ' · server stream / NDJSON' : ' · unary / JSON';
 }
 function renderSource() {
   const files = protoSource?.files ?? [], builtins = protoSource?.builtins ?? [];
@@ -233,7 +265,7 @@ function renderReflectionPreview() {
   }
   const methods = $('reflection-methods'); methods.replaceChildren();
   for (const method of value.methods) methods.append(node('li', method.path + ' · ' +
-    method.requestType + ' → ' + method.responseType + (method.selectable ? (method.responseStream ? ' · server stream' : '') : ' · streamed request; visible only')));
+    method.requestType + ' → ' + method.responseType + methodKind(method)));
   const differences = $('reflection-comparison'); differences.replaceChildren();
   for (const name of ['files', 'services', 'methods', 'messages', 'enums']) {
     const change = value.comparison[name], details = document.createElement('details');
@@ -265,7 +297,7 @@ function renderMethods() {
   $('method-list').replaceChildren();
   for (const method of adopted?.methods ?? []) {
     const item = card(method.path, method.requestType + ' → ' + method.responseType +
-      (method.requestStream ? ' · client-streaming input; visible only' : method.responseStream ? ' · server stream / NDJSON' : ' · unary / JSON'));
+      methodKind(method));
     item.classList.toggle('selected', method.path === methodPath);
     const choose = button('Open method', () => work(() => chooseMethod(method.path), 'Opening captured method…'), true);
     choose.disabled = !method.selectable; item.append(choose); $('method-list').append(item);
@@ -283,73 +315,24 @@ function renderRoutes() {
   }
   if (!planDirty) $('plan').value = pretty(plan);
 }
-function resolved(schema, root) {
-  if (!schema || typeof schema !== 'object') return {};
-  const seen = new Set(); let value = schema;
-  while (typeof value.$ref === 'string' && value.$ref.startsWith('#/') && !seen.has(value.$ref)) {
-    seen.add(value.$ref); let target = root;
-    for (const part of value.$ref.slice(2).split('/')) target = target?.[part.replaceAll('~1', '/').replaceAll('~0', '~')];
-    if (!target || typeof target !== 'object') break;
-    value = { ...target, ...Object.fromEntries(Object.entries(value).filter(([name]) => name !== '$ref')) };
-  }
-  return value;
-}
 function renderFields(value) {
-  object(value, 'Request'); $('field-form').replaceChildren();
-  const root = methodSchema?.request, schema = resolved(root, root);
-  const properties = schema.properties ?? {}, required = new Set(schema.required ?? []);
-  for (const [name, original] of Object.entries(properties)) {
-    const field = resolved(original, root), row = node('div', undefined, 'field-row'), label = node('label');
-    const included = document.createElement('input'); included.type = 'checkbox';
-    included.checked = Object.hasOwn(value, name); included.disabled = required.has(name);
-    if (required.has(name)) included.checked = true;
-    const title = node('span', name + (required.has(name) ? ' · required' : ''));
-    label.append(included, title); row.append(label);
-    const hints = [field.description, field.type, field.format, field.pattern ? 'pattern: ' + field.pattern : ''].filter(Boolean);
-    row.append(node('small', hints.join(' · ')));
-    let control, mode;
-    if (field.type === 'boolean') {
-      control = document.createElement('select'); mode = 'boolean';
-      for (const boolean of [false, true]) { const option = node('option', String(boolean)); option.value = String(boolean); control.append(option); }
-    } else if (field.type === 'object' || field.type === 'array' || field.properties || field.additionalProperties ||
-        field.anyOf || field.oneOf || field.allOf || !['string', 'integer', 'number'].includes(field.type)) {
-      control = document.createElement('textarea'); mode = 'json'; control.rows = 3; control.spellcheck = false;
-    } else {
-      control = document.createElement('input'); mode = field.type;
-      control.type = 'text'; control.autocomplete = 'off';
-      if (mode === 'number' || mode === 'integer') control.inputMode = 'decimal';
-    }
-    control.className = 'field-value'; control.setAttribute('aria-label', name);
-    const present = Object.hasOwn(value, name);
-    control.value = present ? mode === 'json' ? pretty(value[name]) : String(value[name]) : '';
-    control.disabled = !included.checked; row.dataset.included = String(included.checked);
-    const update = () => {
-      requestDirty = true;
-      try {
-        const request = object(parse('request', 'Request'), 'Request');
-        if (!included.checked) delete request[name];
-        else {
-          let next = control.value;
-          if (mode === 'json') next = JSON.parse(next);
-          else if (mode === 'boolean') next = next === 'true';
-          else if (mode === 'integer' || mode === 'number') {
-            if (!next.trim() || !Number.isFinite(Number(next))) throw new Error(name + ' needs a finite JSON number.');
-            next = Number(next);
-            if (mode === 'integer' && !Number.isSafeInteger(next)) throw new Error(name + ' needs an exact safe JSON integer.');
-          }
-          Object.defineProperty(request, name, { value: next, enumerable: true, writable: true, configurable: true });
-        }
-        $('request').value = pretty(request); $('request').setCustomValidity(''); control.setCustomValidity('');
-      } catch (issue) { control.setCustomValidity(issue.message); notice(issue.message, 'error'); }
-      buttons();
-    };
-    included.addEventListener('change', () => {
-      control.disabled = !included.checked; row.dataset.included = String(included.checked);
-      if (included.checked && !control.value && mode === 'boolean') control.value = 'false'; update();
+  object(value, 'Request');
+  const root = $('field-form'), ticket = ++fieldTicket, schema = methodSchema;
+  $('request-preview').textContent = '';
+  root.classList.remove('request-series');
+  const error = issue => { requestDirty = true; notice(issue.message, 'error'); buttons(); };
+  const change = next => {
+    $('request').value = pretty(next); $('request').setCustomValidity(''); $('request-preview').textContent = '';
+    requestDirty = true; buttons();
+  };
+  if (schema?.requestSeries) {
+    renderGrpcRequestSeries(root, schema, value, { change, error, validate: requestValue,
+      isCurrent: () => ticket === fieldTicket && methodSchema === schema && !busy });
+  } else {
+    renderGrpcFields(root, schema?.request, {
+      value: () => object(parse('request', 'Request'), 'Request'), change, error,
     });
-    control.addEventListener('input', update); control.addEventListener('change', update); row.append(control); $('field-form').append(row);
   }
-  if (!Object.keys(properties).length) $('field-form').append(node('p', 'Use the exact JSON editor for this message.'));
 }
 function fillRoute(route) {
   selectedRoute = route?.id ?? null;
@@ -372,14 +355,15 @@ async function chooseMethod(path, routeId = null) {
   $('method-heading').textContent = path; $('method-types').textContent =
     result.method?.requestType && result.method?.responseType ? result.method.requestType + ' → ' + result.method.responseType :
       adopted.methods.find(row => row.path === path)?.requestType + ' → ' + adopted.methods.find(row => row.path === path)?.responseType;
-  $('method-types').textContent += adopted.methods.find(row => row.path === path)?.responseStream ? ' · NDJSON records' : ' · one JSON response';
+  $('method-types').textContent += methodKind(adopted.methods.find(row => row.path === path) ?? {});
   $('method-schema').textContent = pretty(result);
-  $('request').value = pretty(route?.example ?? {}); $('request').setCustomValidity('');
+  const example = route?.example ?? (result.requestSeries ? { messages: [] } : {});
+  $('request').value = pretty(example); $('request').setCustomValidity('');
   $('field-form').inert = false; planDirty = false; requestDirty = false;
-  fillRoute(route); renderFields(route?.example ?? {}); renderMethods(); buttons();
+  fillRoute(route); renderFields(example); renderMethods(); buttons();
 }
 function applyRoute() {
-  if (!methodPath) throw new Error('Select a unary or server-streaming method.');
+  if (!methodPath) throw new Error('Select an enabled native method.');
   if (planDirty) throw new Error('Apply or discard the complete plan JSON before changing one route.');
   const input = requestValue();
   const id = $('route-id').value.trim(), terms = parse('payments', 'Payment options');
@@ -404,7 +388,7 @@ function savedCurrent() {
   return adopted.id;
 }
 async function refresh() {
-  inventory = await json('state'); renderInventory(); buttons();
+  inventory = await json('state'); renderInventory(); upgradePanel.update(inventory); buttons();
 }
 async function adopt(revision) {
   // The editor base belongs to this exact response, never to a later inventory refresh.
@@ -507,6 +491,13 @@ function showAttempt(value) {
   if (!value) { $('call-status').textContent = 'No operation with that ID is retained.'; return; }
   $('call-status').append(node('strong', value.phase + ' · ' + value.id));
   if (value.nextAction) $('call-status').append(node('p', value.nextAction));
+  const requestStream = value.requestStream ?? value.output?.requestStream;
+  if (value.requestSeries || requestStream) {
+    $('call-status').append(node('p', (requestStream?.halfClosed ? 'Request input half-closed' : 'Request input not confirmed half-closed') +
+      ' · ' + (requestStream?.writtenMessages ?? 0) + ' of ' + (value.requestSeries?.messages ?? requestStream.messages) +
+      ' messages written' + (value.requestSeries ? ' · ' + value.requestSeries.requestBytes.toLocaleString() + ' protobuf bytes' : '') +
+      (requestStream?.grpcStatus ? ' · native ' + requestStream.grpcStatus : '')));
+  }
   const capture = value.stream ?? (value.output?.type === 'grpc-ndjson' ? value.output : null);
   if (capture) {
     $('call-status').append(node('p', (capture.complete ? 'Complete native stream' : 'Partial or unconfirmed stream') +
@@ -523,7 +514,8 @@ function showAttempt(value) {
     }, 'Checking the retained file and opening its exact byte download…'), true));
   }
   const output = pretty({ method: value.method, input: value.input, ...(value.outputRetained ? { output: value.output } : {}),
-    ...(value.stream ? { stream: value.stream } : {}), ...(value.error ? { error: value.error } : {}) });
+    ...(value.stream ? { stream: value.stream } : {}), ...(requestStream ? { requestStream } : {}),
+    ...(value.error ? { error: value.error } : {}) });
   $('call-output').textContent = output.length > 131072 ? output.slice(0, 131072) + '\n… Use Download exact outcome for the complete retained JSON.' : output;
   $('call-status').append(button('Download exact outcome', () => saveBlob(new Blob([pretty(latestAttempt) + '\n'],
     { type: 'application/json' }), 'grpc-operation-' + value.id + '.json'), true));
@@ -538,13 +530,19 @@ async function download(action, value) {
   const blob = await response.blob(); saveBlob(blob, filename);
   notice('Downloaded ' + filename + ' · SHA256 ' + response.headers.get('x-content-sha256'));
 }
+const healthPanel = mountGrpcHealth({ root: $('view-health'), json, work, notice, storageKey,
+  savedCurrent, getRevision: () => adopted });
+const upgradePanel = mountGrpcUpgrades({ root: $('view-upgrades'), json, work, notice, storageKey,
+  mayAdopt: () => confirmReplacement('Opening the reviewed upgrade', { whole: true }),
+  onAdopt: async revision => { await adopt(revision); view('methods'); } });
 for (const item of document.querySelectorAll('nav button')) item.addEventListener('click', () => view(item.dataset.view));
 $('source-file').addEventListener('change', showSourceFile);
 for (const id of ['title', 'target', 'transport', 'server-name', 'ca-env', 'certificate-env', 'private-key-env', 'metadata', 'limits',
-  'stream-bytes', 'stream-records', 'stream-idle'])
+  'stream-bytes', 'stream-records', 'stream-idle', 'request-stream-messages', 'request-stream-bytes'])
   $(id).addEventListener('input', () => { if (id === 'transport') $('tls-fields').hidden = $('transport').value !== 'tls';
     if (id !== 'title') invalidateReflection(); changed(); });
 $('stream-enabled').addEventListener('change', () => { streamControls(); invalidateReflection(); changed(); });
+$('request-stream-enabled').addEventListener('change', () => { requestStreamControls(); invalidateReflection(); changed(); });
 for (const id of ['route-id', 'route-path', 'service-name', 'public-origin', 'description', 'payments'])
   $(id).addEventListener('input', () => { routeDirty = true; buttons(); });
 $('plan').addEventListener('input', () => { planDirty = true; buttons(); });
@@ -562,6 +560,13 @@ $('request').addEventListener('input', () => {
   }
   buttons();
 });
+$('validate-input').addEventListener('click', () => work(async () => {
+  const value = await json('validate-input', { revision: adopted.id, method: methodPath, input: requestValue() });
+  $('request-preview').textContent = pretty({ messages: value.messages, requestBytes: value.requestBytes,
+    requestJsonBytes: value.requestJsonBytes, protoSha256: value.protoSha256, revision: value.revision });
+  notice('Validated ' + value.messages + ' native message' + (value.messages === 1 ? '' : 's') + ' · ' +
+    value.requestBytes.toLocaleString() + ' protobuf bytes · ' + value.requestJsonBytes.toLocaleString() + ' JSON bytes.');
+}, 'Validating the captured protobuf values and saved request limits…'));
 $('apply-route').addEventListener('click', () => work(async () => applyRoute()));
 $('remove-route').addEventListener('click', () => work(async () => {
   if (!confirmReplacement('Removing this route', { route: true, completePlan: true, request: true })) return;
@@ -731,7 +736,7 @@ $('release-close').addEventListener('click', () => work(async () => {
 $('refresh').addEventListener('click', () => work(async () => {
   await refresh(); notice('Inventory refreshed. The editor still uses its exact opened revision as the save base.');
 }));
-window.addEventListener('beforeunload', event => { if (dirty || routeDirty || planDirty || requestDirty || activeCallId) { event.preventDefault(); event.returnValue = ''; } });
+window.addEventListener('beforeunload', event => { if (dirty || routeDirty || planDirty || requestDirty || activeCallId || upgradePanel.hasDraft()) { event.preventDefault(); event.returnValue = ''; } });
 await work(async () => {
   if (!/^[a-f0-9]{64}$/.test(token)) throw new Error('Open the complete private workspace URL printed by its original server.');
   await refresh();
@@ -747,6 +752,7 @@ await work(async () => {
     if (retained) { reflectionPreview = retained; renderReflectionPreview(); }
   }
   notice('Private workspace ready. Source and credential values stay on this merchant host.');
+  await upgradePanel.resume();
 }, 'Opening saved merchant work…');
 setInterval(() => {
   if (busy || document.hidden || !token) return;

@@ -1,5 +1,6 @@
 import { exampleOffer, parseOffer, shown } from './offer.mjs';
 import { ROLES as roles } from './recipes.mjs';
+import { FRED_EXAMPLE, downloadFredExample } from './example-download.mjs';
 
 const $ = id => document.getElementById(id);
 const root = 'https://github.com/woahwhattheheck/public-commons-sprint-2026';
@@ -59,7 +60,21 @@ document.querySelectorAll('[role=tab]').forEach(button => {
 document.querySelectorAll('[data-open-inspector]').forEach(link => link.addEventListener('click', () => activateTab($('tab-inspector'))));
 
 let currentRole = 'seller';
+let exampleDownload = null;
+let pageClosed = false;
+const exampleUrls = new Map();
+function cancelExample() { exampleDownload?.abort(); }
+function exampleReady() {
+  $('example-download').disabled = false;
+  $('example-cancel').hidden = true;
+  $('example-status').textContent = 'Complete offline HTML, CSV and JSON, original source, saved review and reopening instructions.';
+}
+
 function renderRole(name) {
+  if (!Object.hasOwn(roles, name)) return;
+  cancelExample();
+  exampleDownload = null;
+  exampleReady();
   currentRole = name;
   const role = roles[name];
   $('workflow-select').value = name;
@@ -71,8 +86,51 @@ function renderRole(name) {
   $('command-label').textContent = role.label;
   $('setup-command').textContent = role.command;
   $('command-result').textContent = role.result;
+  $('example-actions').hidden = name !== 'fred';
+  $('example-open').href = FRED_EXAMPLE.reportHref;
 }
 $('workflow-select').addEventListener('change', event => renderRole(event.target.value));
+$('example-cancel').addEventListener('click', cancelExample);
+$('example-download').addEventListener('click', async () => {
+  if (pageClosed || currentRole !== 'fred' || exampleDownload) return;
+  const controller = new AbortController();
+  exampleDownload = controller;
+  $('example-download').disabled = true;
+  $('example-cancel').hidden = false;
+  $('example-status').textContent = 'Reading the complete saved example…';
+  try {
+    const result = await downloadFredExample({
+      signal: controller.signal,
+      onProgress({ completedFiles, totalFiles }) {
+        if (exampleDownload === controller && !pageClosed && currentRole === 'fred')
+          $('example-status').textContent = 'Verified ' + completedFiles + ' of ' + totalFiles + ' complete files…';
+      }
+    });
+    if (controller.signal.aborted || pageClosed || exampleDownload !== controller || currentRole !== 'fred') return;
+    const url = URL.createObjectURL(new Blob([result.bytes], { type: 'application/zip' }));
+    const timer = setTimeout(() => { URL.revokeObjectURL(url); exampleUrls.delete(url); }, 15000);
+    exampleUrls.set(url, timer);
+    const a = document.createElement('a'); a.href = url; a.download = result.filename;
+    try { document.body.append(a); a.click(); } finally { a.remove(); }
+    $('example-status').textContent = 'Downloaded ' + result.files + ' complete files. Extract the ZIP, open START_HERE.md, then open briefing.html.';
+  } catch (error) {
+    if (exampleDownload === controller && !pageClosed && currentRole === 'fred')
+      $('example-status').textContent = controller.signal.aborted ? 'Download cancelled. Your saved example is unchanged.' : error.message;
+  } finally {
+    if (exampleDownload === controller) {
+      exampleDownload = null;
+      $('example-download').disabled = false;
+      $('example-cancel').hidden = true;
+    }
+  }
+});
+window.addEventListener('pagehide', () => {
+  pageClosed = true; cancelExample();
+  for (const [url, timer] of exampleUrls) { clearTimeout(timer); URL.revokeObjectURL(url); }
+  exampleUrls.clear();
+});
+window.addEventListener('pageshow', () => { pageClosed = false; });
+
 let toastTimer;
 function toast(message) {
   clearTimeout(toastTimer);
@@ -250,6 +308,14 @@ const components = [
     "kind": "operations",
     "description": "Retain five families of market requests and original responses, compare observations, recover native purchases and transfer complete research projects.",
     "path": "partners/coingecko-stellar-market/README.md"
+  },
+  {
+    "id": "16",
+    "title": "CoCart customer receiving",
+    "code": "CART / CHECKOUT / HANDOVER",
+    "kind": "buyer",
+    "description": "Prepare a native customer workspace from its original profile or receiving file; keep cart, checkout, handoff, complete export and managed reopening together.",
+    "url": "/cocart.html"
   }
 ];
 let filter='all';

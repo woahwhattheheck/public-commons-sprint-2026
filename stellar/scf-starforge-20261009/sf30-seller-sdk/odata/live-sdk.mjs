@@ -5,3 +5,7 @@ export { createODataApplication } from './live/application.mjs';
 export { startODataMerchant } from './live/merchant.mjs';
 export { prepareDraft, prepareFromWorkspace, templateFromWorkspace, writePackage,
   readPackage, prepareBuyerHandoff, receivePage } from './live/client.mjs';
+export { COLLECTION_SCHEMA, COLLECTION_INPUT_SCHEMA, ANALYSIS_DOCUMENT_SCHEMA, receiveCollection,
+  openCollection, restoreCollection, readCollectionRows, collectionAnalysisMapping } from './live/collection.mjs';
+export { openServiceCollections, serviceCollectionFiles, parseCollectionTransferPath,
+  validateServiceCollectionTransfer, verifyServiceCollections } from './live/collection-store.mjs';

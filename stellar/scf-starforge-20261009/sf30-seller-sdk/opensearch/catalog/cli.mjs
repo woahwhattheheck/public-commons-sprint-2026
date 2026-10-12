@@ -31,6 +31,31 @@ Read the original retained workspace:
   catalog-decisions  --catalog ID [--offset N] [--limit N]
   catalog-operation  --request-id ORIGINAL_ID
 
+Supplier delivery:
+  catalog-supplier-profile [--target xchange-2.0|2ba-xchange-2.0]
+  catalog-supplier-state   --catalog ID
+  catalog-supplier-plan    --submission ID
+  catalog-supplier-history --submission ID
+  catalog-supplier-product --submission ID --material-key KEY
+  catalog-supplier-rows    --review ID [--status all|errors|warnings|ready]
+                          [--search IDENTIFIER] [--offset N] [--limit N]
+  catalog-supplier-recipient-rows --review ID [--kind all|product|tradeItem]
+                          [--change all|added|changed|unchanged|expired|deleted|skipped]
+                          [--search IDENTIFIER] [--offset N] [--limit N]
+  catalog-supplier-row     --review ID --material-key KEY
+  catalog-supplier-save       --request REQUEST.json
+  catalog-supplier-correction --request REQUEST.json
+  catalog-supplier-review     --request REQUEST.json
+  catalog-supplier-export --review ID --review-sha256 SHA256
+                          --format FORMAT --output FILE_OR_-
+
+Supplier formats: review.json, issues.csv, products.jsonl, bmecat.xml,
+                  xchange.json, recipient.jsonl, impact.csv, parameters.xml, 2ba.zip.
+                  2ba.zip pairs the reviewed native JSON with parameters.xml.
+Use format.kind=xchange-json for an original ETIM xChange document.
+A complete catalog bundle also carries supplier plan/correction histories
+and every immutable supplier review; original v1 bundles remain readable.
+
 Retain and review original work:
   catalog-upload       --file ORIGINAL_FILE --request REQUEST.json
   catalog-save         --request REQUEST.json
@@ -83,6 +108,18 @@ const OPTIONS = {
   'catalog-quantity': ['--catalog', '--material-key', '--material-sha256', '--quantity', '--unit'],
   'catalog-decisions': ['--catalog', ...PAGING],
   'catalog-operation': ['--request-id'],
+  'catalog-supplier-profile': ['--target'],
+  'catalog-supplier-state': ['--catalog'],
+  'catalog-supplier-plan': ['--submission'],
+  'catalog-supplier-history': ['--submission'],
+  'catalog-supplier-product': ['--submission','--material-key'],
+  'catalog-supplier-rows': ['--review','--status','--search',...PAGING],
+  'catalog-supplier-row': ['--review','--material-key'],
+  'catalog-supplier-recipient-rows': ['--review','--kind','--change','--search',...PAGING],
+  'catalog-supplier-save': ['--request'],
+  'catalog-supplier-correction': ['--request'],
+  'catalog-supplier-review': ['--request'],
+  'catalog-supplier-export': ['--review','--review-sha256','--format','--output'],
   'catalog-upload': ['--file', '--request'],
   'catalog-import': ['--file', '--request'],
   'catalog-save': ['--request'],
@@ -97,7 +134,10 @@ const MUTATIONS = {
   'catalog-preview': 'preview',
   'catalog-select': 'select',
   'catalog-decision': 'saveDecision',
-  'catalog-create-draft': 'createDraft'
+  'catalog-create-draft': 'createDraft',
+  'catalog-supplier-save': 'supplierSave',
+  'catalog-supplier-correction': 'supplierCorrection',
+  'catalog-supplier-review': 'supplierReview'
 };
 const CHUNK = 262144;
 const MAX_INPUT = 8 * 1024 * 1024 * 1024;
@@ -274,6 +314,24 @@ async function perform(workspace, command, options, context) {
   const catalog = workspace.catalog;
   if (Object.hasOwn(MUTATIONS, command))
     return catalog[MUTATIONS[command]](await requestInput(options, context.stdin));
+  if (command === 'catalog-supplier-profile') return catalog.supplier.templates(options['--target']?{target:options['--target']}:{});
+  if (command === 'catalog-supplier-state') return catalog.supplier.state({catalogId:required(options,'--catalog')});
+  if (command === 'catalog-supplier-plan') return catalog.supplier.plan(required(options,'--submission'));
+  if (command === 'catalog-supplier-history') return {revisions:catalog.supplier.planHistory(required(options,'--submission'))};
+  if (command === 'catalog-supplier-product') return catalog.supplier.currentProduct({
+    planId:required(options,'--submission'),materialKey:required(options,'--material-key')});
+  if (command === 'catalog-supplier-rows') return catalog.supplier.rows({
+    reviewId:required(options,'--review'),status:options['--status']??'all',search:options['--search']??'',...paging(options)});
+  if (command === 'catalog-supplier-recipient-rows') return catalog.supplier.recipientRows({
+    reviewId:required(options,'--review'),kind:options['--kind']??'all',change:options['--change']??'all',search:options['--search']??'',...paging(options)});
+  if (command === 'catalog-supplier-row') return catalog.supplier.reviewRow({
+    reviewId:required(options,'--review'),materialKey:required(options,'--material-key')});
+  if (command === 'catalog-supplier-export') {
+    const reviewId=required(options,'--review'),format=required(options,'--format'),output=required(options,'--output');
+    const value=catalog.supplier.export({reviewId,format,expectedReviewSha256:required(options,'--review-sha256')});
+    return {schema:'stellar-forge.supplier-export-receipt.v1',workspaceId:workspace.store.id,reviewId,format,
+      ...await exportFile(value,output,context.stdout)};
+  }
   if (command === 'catalog-upload' || command === 'catalog-import')
     return transferFile(workspace, command, options, await requestInput(options, context.stdin));
   if (command === 'catalog-state')
@@ -348,7 +406,7 @@ export async function main(args = process.argv.slice(2), {
   }
   if (failure) throw failure;
   if (print) await print(result);
-  else await emitJson(command === 'catalog-export' && options['--output'] === '-' ? stderr : stdout, result);
+  else await emitJson(['catalog-export','catalog-supplier-export'].includes(command) && options['--output'] === '-' ? stderr : stdout, result);
   if ((Object.hasOwn(MUTATIONS, command) || ['catalog-upload', 'catalog-import'].includes(command)) &&
       result?.state !== 'COMPLETE') {
     const error = new CatalogCommandError(result?.error?.code ?? 'CATALOG_OPERATION_PENDING',

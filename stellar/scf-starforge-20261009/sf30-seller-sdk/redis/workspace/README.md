@@ -2,6 +2,9 @@
 
 Create and operate named Redis or Valkey data products from one saved workspace. The editor supports native standalone, Cluster and Sentinel deployments and Upstash HTTPS source profiles. It uses the original Redis query compiler and live source, original merchant preparer and generated client, and the original retained seller release store.
 
+The [connection setup](../SETUP.md) configures or imports the original source,
+reviews live products and creates this same retained workspace.
+
 ## Open an existing source as a workspace
 
 Use Node 22.16 or later. The host selects the source connection and its environment references. For native TCP, install the Redis feature through the merchant runtime; the Upstash transport uses Node's HTTPS implementation. Importing and editing a workspace is offline. Live previews require the configured database and credentials.
@@ -23,9 +26,11 @@ The source's topology, seed endpoints, address mappings, pool settings, credenti
 
 ## Build the product catalog
 
-The Products tab edits fixed-key values, projected hash fields, sorted sets and stream entries. A parameterized key consists of a fixed prefix and a declared string enum. The original scalar binder validates all inputs. Integer values and bounds may be exact decimal strings; output preserves large integers, binary values and Redis nulls through the original result format.
+The Products tab edits fixed-key values, projected hash fields, sorted sets, stream entries, ordered lists and set members. A parameterized key consists of a fixed prefix and a declared string enum. The original scalar binder validates all inputs. Integer values and bounds may be exact decimal strings; output preserves large integers, binary values and Redis nulls through the original result format.
 
-Set the query's maximum rows, response bytes and timeout. Sorted-set rank and stream-entry continuation use declared offset/after parameters. The preview's **Read next page** button sends the actual `nextInput` returned by the original read script.
+Set the query's maximum rows, response bytes and timeout. Sorted-set rank and list-index continuation use the declared offset parameter; streams use after. Lists preserve the original zero-based index and value, including repeated values.
+
+For a Set product, select its declared cursor parameter and scan work hint. A cursor is canonical unsigned 64-bit decimal text: the first value is `"0"`. The work hint controls Redis's scan effort; the complete returned batch still must fit the query's row and byte bounds. The preview displays the actual next cursor or scan completion. **Read next page** sends the exact returned `nextInput`, including after an empty page. Native iteration can repeat members and does not specify their order. [List and Set products](../COLLECTIONS.md) supplies complete source and plan examples and the customer continuation contract.
 
 The Merchant terms tab edits the public origin, default payment, routes, public input examples and parameter descriptions. Its full-plan editor supports the original per-route and multiple-option payment features. **Review draft** compiles the whole source and merchant plan without opening Redis. **Save revision** retains the complete configuration and note.
 
@@ -99,4 +104,8 @@ The browser offers the same request retrieval and continuation. A lost response 
 
 The existing `redis/native-journey.mjs` owns the real Redis/Valkey server, source fixtures, original merchant, generated client, buyer files and retained upgrade/rollback. Set `SF30_REDIS_JOURNEY_WORKSPACE=1` to include the authoring workspace's create/edit/save/preview/package/stage/reopen sequence on that same database.
 
-Set `SF30_REDIS_JOURNEY_TOPOLOGY=cluster` or `sentinel` to run that same workspace on the native topology fixture, including routing or primary promotion. Set `SF30_REDIS_WORKSPACE_BROWSER=1` for its actual Chromium editor flow using an already installed Playwright module. `SF30_PLAYWRIGHT_MODULE` can select the existing module path; `SF30_CHROMIUM_EXECUTABLE` can select an existing Chromium executable. `SF30_REDIS_WORKSPACE_SCREENSHOT` optionally retains the actual browser screen. The workspace continuation is additive to the original merchant and payment journey.
+Set `SF30_REDIS_JOURNEY_TOPOLOGY=cluster` or `sentinel` to run that same workspace on the native topology fixture, including routing or primary promotion. Set `SF30_REDIS_WORKSPACE_BROWSER=1` for its actual Chromium editor flow using an already installed Playwright module. `SF30_PLAYWRIGHT_MODULE` can select the existing module path; `SF30_CHROMIUM_EXECUTABLE` can select an existing Chromium executable. `SF30_REDIS_WORKSPACE_SCREENSHOT` optionally retains the actual browser screen. Add `SF30_REDIS_JOURNEY_COLLECTIONS=1` for actual List/Set editing, native cursor previews, same-request cold recovery and complete customer-page delivery. The workspace continuation is additive to the original merchant and payment journey.
+
+## Customer commissioning operator
+
+The original saved workspace now includes a complete customer commissioning view, expected-result matrix, durable receiving operations and customer handover. See [COMMISSIONING_OPERATOR.md](COMMISSIONING_OPERATOR.md) for the browser, original CLI, HTTP and same-workspace native receiving flow.

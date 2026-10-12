@@ -1,0 +1,24 @@
+/* Source-bundle controls share the operator's neutral industrial palette. */
+#source-bundle-dialog{width:min(880px,calc(100vw - 36px));max-height:92vh}
+#source-bundle-form{display:grid;gap:14px}
+.source-bundle-modes{display:flex;gap:18px;flex-wrap:wrap}
+.source-bundle-modes label{display:flex;align-items:center;gap:7px}
+#source-bundle-original-fields,#source-bundle-folder-fields{display:grid;gap:14px}
+#source-bundle-original-fields[hidden],#source-bundle-folder-fields[hidden]{display:none}
+#source-bundle-review{display:grid;gap:12px}
+#source-bundle-review:empty{display:none}
+#source-bundle-review details{border-top:1px solid #d5d5d5;padding-top:10px}
+#source-bundle-review details p{white-space:pre-wrap}
+.source-bundle-review-source{border:1px solid #d5d5d5;padding:12px;background:#fafafa}
+.source-bundle-review-source p{margin:6px 0 0;overflow-wrap:anywhere}
+.source-bundle-counts{font-variant-numeric:tabular-nums;color:#454545}
+.source-bundle-summary{white-space:pre-wrap}
+.source-bundle-file{border-top:1px solid #d5d5d5;padding:12px 0}
+.source-bundle-file-heading{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+.source-bundle-file-heading>div{display:grid;gap:4px;min-width:0}
+.source-bundle-file-heading strong{overflow-wrap:anywhere}
+.source-bundle-file-heading button{flex-shrink:0}
+.source-bundle-file details{margin-top:10px}
+.source-bundle-file summary{cursor:pointer}
+.source-bundle-file-text{max-height:440px;overflow:auto;white-space:pre;font:12px/1.5 ui-monospace,monospace;
+  padding:12px;background:#f4f4f4;border:1px solid #d5d5d5}

@@ -120,7 +120,7 @@ final class Starforge_SF104_ERP_Map {
     static function digest($x) { return hash('sha256', self::json($x)); }
     static function compile($raw) {
         self::keys($raw, ['schema','name','storeNamespace','target','currency','currencyDecimals','unitPriceDecimals',
-            'admittedStatuses','customerBindings','productBindings','feeBindings','shippingBinding','addressMode','reviewOwner'], 'The map');
+            'admittedStatuses','customerBindings','productBindings','feeBindings','shippingBinding','addressMode','reviewOwner','addressSubstitutions'], 'The map');
         self::need(($raw['schema'] ?? '') === self::SCHEMA, 'Select a supported ERP map.');
         $map = $raw;
         $map['name'] = self::text($raw['name'] ?? '', 120, 'map name');
@@ -182,7 +182,35 @@ final class Starforge_SF104_ERP_Map {
         }
         $map['shippingBinding'] = $raw['shippingBinding'] ?? null;
         if ($map['shippingBinding'] !== null) { self::keys($map['shippingBinding'], ['inventoryId','uom','taxCategory','warehouseId'], 'The shipping binding'); $map['shippingBinding'] = self::binding($map['shippingBinding']); }
+        if (array_key_exists('addressSubstitutions', $raw)) {
+            self::need($map['addressMode'] === 'order_override', 'Address substitutions apply only to explicit order address overrides.');
+            $map['addressSubstitutions'] = self::substitutions($raw['addressSubstitutions']);
+        }
         return self::canonical($map);
+    }
+    /** Exact connector-to-Acumatica direction; country-scoped state identities stay separate. */
+    static function substitutions($raw) {
+        self::keys($raw, ['sourceEditionId','unmappedCountries','unmappedStates','countries','states'], 'The address substitutions');
+        self::need(is_string($raw['sourceEditionId'] ?? null) && preg_match('/^[a-f0-9]{64}$/D', $raw['sourceEditionId']), 'Select the retained source edition for these reviewed substitutions.');
+        foreach (['unmappedCountries','unmappedStates'] as $k) self::need(in_array($raw[$k] ?? '', ['preserve','error'], true), 'Select how unmatched original address values are handled.');
+        $out = ['sourceEditionId'=>$raw['sourceEditionId'],'unmappedCountries'=>$raw['unmappedCountries'],'unmappedStates'=>$raw['unmappedStates'],'countries'=>[],'states'=>[]];
+        $countries = []; $states = [];
+        foreach (['countries','states'] as $k) self::need(is_array($raw[$k] ?? null) && (!$raw[$k] || array_keys($raw[$k]) === range(0, count($raw[$k])-1)) && count($raw[$k]) <= 5000, 'Select at most 5,000 address substitution rows per table.');
+        foreach ($raw['countries'] as $row) {
+            self::keys($row, ['connectorCountry','acumaticaCountry'], 'The country substitution');
+            $c = self::text($row['connectorCountry'] ?? '', 50, 'connector country'); $a = self::text($row['acumaticaCountry'] ?? '', 50, 'Acumatica country');
+            $key = self::json([$c]); self::need(!isset($countries[$key]), 'A connector country has more than one incoming substitution.'); $countries[$key] = $a;
+            $out['countries'][] = ['connectorCountry'=>$c,'acumaticaCountry'=>$a];
+        }
+        foreach ($raw['states'] as $row) {
+            self::keys($row, ['connectorCountry','acumaticaCountry','connectorState','acumaticaState'], 'The state substitution');
+            $v = []; foreach (['connectorCountry','acumaticaCountry','connectorState','acumaticaState'] as $k) $v[$k] = self::text($row[$k] ?? '', 50, $k);
+            $expectedCountry = $countries[self::json([$v['connectorCountry']])] ?? $v['connectorCountry'];
+            self::need($v['acumaticaCountry'] === $expectedCountry, 'The state row must preserve the selected connector country and its actual Acumatica country. Add the explicit country substitution when those identities differ.');
+            $key = self::json([$v['connectorCountry'],$v['connectorState']]);
+            self::need(!isset($states[$key]), 'A connector state has more than one incoming substitution within its country.'); $states[$key] = true; $out['states'][] = $v;
+        }
+        return self::canonical($out);
     }
     static function binding($row) {
         return ['inventoryId'=>self::text($row['inventoryId'] ?? '', 30, 'existing ERP inventory ID'),
@@ -194,11 +222,21 @@ final class Starforge_SF104_ERP_Map {
         foreach ($keys as $key) foreach ($rows as $row) if ($row['sourceKey'] === $key) return $row;
         return null;
     }
-    static function address($raw) {
+    static function address($raw, $substitutions = null) {
         $result = [];
         foreach (['address_1'=>'AddressLine1','address_2'=>'AddressLine2','city'=>'City','country'=>'Country','postcode'=>'PostalCode','state'=>'State'] as $key=>$field) {
             $value = self::text((string) ($raw[$key] ?? ''), in_array($key, ['country','state'], true) ? 50 : 100, 'order address', true);
             $result[$field] = ['value'=>$value];
+        }
+        if ($substitutions !== null) {
+            $country = $result['Country']['value']; $state = $result['State']['value']; $countryFound = false; $stateFound = false;
+            foreach ($substitutions['countries'] as $r) if ($r['connectorCountry'] === $country) { $result['Country']['value'] = $r['acumaticaCountry']; $countryFound = true; break; }
+            self::need($countryFound || $substitutions['unmappedCountries'] === 'preserve' || $country === '', 'The original order country has no approved connector-to-Acumatica substitution.');
+            foreach ($substitutions['states'] as $r) if ($r['connectorCountry'] === $country && $r['connectorState'] === $state) {
+                self::need($r['acumaticaCountry'] === $result['Country']['value'], 'The reviewed state substitution belongs to a different Acumatica country.');
+                $result['State']['value'] = $r['acumaticaState']; $stateFound = true; break;
+            }
+            self::need($stateFound || $substitutions['unmappedStates'] === 'preserve' || $state === '', 'The original order state has no approved substitution within its connector country.');
         }
         self::need($result['AddressLine1']['value'] !== '' && $result['Country']['value'] !== '', 'The selected address override requires a street and country.');
         return $result;
@@ -247,10 +285,10 @@ final class Starforge_SF104_ERP_Map {
         if (($customer['locationId'] ?? '') !== '') $payload['LocationID'] = ['value'=>$customer['locationId']];
         if ($map['target']['branch'] !== '') $payload['Branch'] = ['value'=>$map['target']['branch']];
         if ($map['addressMode'] === 'order_override') {
-            $payload['BillToAddressOverride'] = ['value'=>true]; $payload['BillToAddress'] = self::address($source['billing']);
+            $payload['BillToAddressOverride'] = ['value'=>true]; $payload['BillToAddress'] = self::address($source['billing'], $map['addressSubstitutions'] ?? null);
             $payload['ShipToAddressOverride'] = ['value'=>true];
             $shipping = ($source['shipping']['address_1'] ?? '') !== '' ? $source['shipping'] : $source['billing'];
-            $payload['ShipToAddress'] = self::address($shipping);
+            $payload['ShipToAddress'] = self::address($shipping, $map['addressSubstitutions'] ?? null);
         }
         $identity = $source; unset($identity['status'], $identity['observedAt'], $identity['siteUrl']);
         $plan = ['schema'=>self::PLAN_SCHEMA, 'mapId'=>self::digest($map), 'source'=>$source,

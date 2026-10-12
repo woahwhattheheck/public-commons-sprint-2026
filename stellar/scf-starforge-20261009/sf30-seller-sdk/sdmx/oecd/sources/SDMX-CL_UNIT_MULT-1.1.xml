@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--NSI Web Service v10.11.8.0-->
+<message:Structure xmlns:message="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message" xmlns:structure="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/structure" xmlns:common="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/common">
+  <message:Header>
+    <message:ID>IDREF10348</message:ID>
+    <message:Test>false</message:Test>
+    <message:Prepared>2026-10-12T13:54:45.0249281+02:00</message:Prepared>
+    <message:Sender id="Unknown" />
+    <message:Receiver id="Unknown" />
+  </message:Header>
+  <message:Structures>
+    <structure:Codelists>
+      <structure:Codelist id="CL_UNIT_MULT" agencyID="SDMX" version="1.1" isFinal="true">
+        <common:Name xml:lang="en">Code list for the Unit Multiplier</common:Name>
+        <common:Description xml:lang="en">This code list provides code values for indicating the magnitude in the units of measurement. More information about this code list and SDMX code lists in general (e.g. list of generic codes for expressing general concepts like "Total", "Unknown", etc.;
+					syntaxes for the creation of further codes; general guidelines for the creation of SDMX code lists) can be found at this address: https://sdmx.org/?page_id=4345.</common:Description>
+        <structure:Code id="0">
+          <common:Name xml:lang="en">Units</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of zero (100)</common:Description>
+        </structure:Code>
+        <structure:Code id="1">
+          <common:Name xml:lang="en">Tens</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of one (101)</common:Description>
+        </structure:Code>
+        <structure:Code id="2">
+          <common:Name xml:lang="en">Hundreds</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of two (102)</common:Description>
+        </structure:Code>
+        <structure:Code id="3">
+          <common:Name xml:lang="en">Thousands</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of three (103)</common:Description>
+        </structure:Code>
+        <structure:Code id="4">
+          <common:Name xml:lang="en">Tens of thousands</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of four (104)</common:Description>
+        </structure:Code>
+        <structure:Code id="5">
+          <common:Name xml:lang="en">Hundreds of thousands</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of five(105)</common:Description>
+        </structure:Code>
+        <structure:Code id="6">
+          <common:Name xml:lang="en">Millions</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of six (106)</common:Description>
+        </structure:Code>
+        <structure:Code id="7">
+          <common:Name xml:lang="en">Tens of millions</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of seven (107)</common:Description>
+        </structure:Code>
+        <structure:Code id="8">
+          <common:Name xml:lang="en">Hundreds of millions</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of eight (108)</common:Description>
+        </structure:Code>
+        <structure:Code id="9">
+          <common:Name xml:lang="en">Billions</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of nine (109)</common:Description>
+        </structure:Code>
+        <structure:Code id="10">
+          <common:Name xml:lang="en">Tens of billions</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of ten (1010)</common:Description>
+        </structure:Code>
+        <structure:Code id="11">
+          <common:Name xml:lang="en">Hundreds of billions</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of eleven (1011)</common:Description>
+        </structure:Code>
+        <structure:Code id="12">
+          <common:Name xml:lang="en">Trillions</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of twelve (1012)</common:Description>
+        </structure:Code>
+        <structure:Code id="13">
+          <common:Name xml:lang="en">Tens of trillions</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of thirteen (1013)</common:Description>
+        </structure:Code>
+        <structure:Code id="14">
+          <common:Name xml:lang="en">Hundreds of trillions</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of fourteen (1014)</common:Description>
+        </structure:Code>
+        <structure:Code id="15">
+          <common:Name xml:lang="en">Quadrillions</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of fifteen (1015)</common:Description>
+        </structure:Code>
+        <structure:Code id="-1">
+          <common:Name xml:lang="en">Tenths</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of minus one (10-1)</common:Description>
+        </structure:Code>
+        <structure:Code id="-2">
+          <common:Name xml:lang="en">Hundredths</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of minus two (10-2)</common:Description>
+        </structure:Code>
+        <structure:Code id="-3">
+          <common:Name xml:lang="en">Thousandths</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of minus three (10-3)</common:Description>
+        </structure:Code>
+        <structure:Code id="-4">
+          <common:Name xml:lang="en">Ten-thousandths</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of minus four (10-4)</common:Description>
+        </structure:Code>
+        <structure:Code id="-5">
+          <common:Name xml:lang="en">Hundred-thousandths</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of minus five (10-5)</common:Description>
+        </structure:Code>
+        <structure:Code id="-6">
+          <common:Name xml:lang="en">Millionths</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of minus six (10-6)</common:Description>
+        </structure:Code>
+        <structure:Code id="-7">
+          <common:Name xml:lang="en">Ten-millionths</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of minus seven (10-7)</common:Description>
+        </structure:Code>
+        <structure:Code id="-8">
+          <common:Name xml:lang="en">Hundred-millionths</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of minus eight (10-8)</common:Description>
+        </structure:Code>
+        <structure:Code id="-9">
+          <common:Name xml:lang="en">Billionths</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of minus nine (10-9)</common:Description>
+        </structure:Code>
+        <structure:Code id="-10">
+          <common:Name xml:lang="en">Ten-billionths</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of minus ten (10-10)</common:Description>
+        </structure:Code>
+        <structure:Code id="-11">
+          <common:Name xml:lang="en">Hundred-billionths</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of minus eleven (10-11)</common:Description>
+        </structure:Code>
+        <structure:Code id="-12">
+          <common:Name xml:lang="en">Trillionths</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of minus twelve (10-12)</common:Description>
+        </structure:Code>
+        <structure:Code id="-13">
+          <common:Name xml:lang="en">Ten-trillionths</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of minus thirteen (10-13)</common:Description>
+        </structure:Code>
+        <structure:Code id="-14">
+          <common:Name xml:lang="en">Hundred-trillionths</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of minus fourteen (10-14)</common:Description>
+        </structure:Code>
+        <structure:Code id="-15">
+          <common:Name xml:lang="en">Quadrillionths</common:Name>
+          <common:Description xml:lang="en">In scientific notation, expressed as ten raised to the power of minus fifteen (10-15)</common:Description>
+        </structure:Code>
+      </structure:Codelist>
+    </structure:Codelists>
+  </message:Structures>
+</message:Structure>

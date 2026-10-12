@@ -33,7 +33,7 @@
 <section class="panel"><h2>Saved reviews</h2><div id="reviews" class="record-list"></div></section>
 </aside>
 <div class="content">
-<nav class="tabs" aria-label="Workspace sections"><button type="button" data-tab="analysis" aria-current="page">Results &amp; review</button><button type="button" data-tab="source" aria-current="false">Original source</button><button type="button" data-tab="merchant" aria-current="false">Merchant &amp; customer</button><button type="button" data-tab="open-waters" aria-current="false">Open Waters</button></nav>
+<nav class="tabs" aria-label="Workspace sections"><button type="button" data-tab="analysis" aria-current="page">Results &amp; review</button><button type="button" data-tab="source" aria-current="false">Original source</button><button type="button" data-tab="merchant" aria-current="false">Merchant &amp; customer</button><button type="button" data-tab="open-waters" aria-current="false">Open Waters</button><button type="button" data-tab="review-sheets" aria-current="false">Bulk decisions</button></nav>
 <section id="tab-analysis" class="tab-panel">
 <div class="panel">
 <div class="section-head"><h2>Comparable sample results</h2><span id="analysis-status" class="tag">Choose a capture</span></div>
@@ -69,6 +69,81 @@
 </div>
 </section>
 <section id="tab-source" class="tab-panel" hidden><div class="panel"><div class="section-head"><h2>Original source files</h2><span id="source-state" class="tag">Choose a capture</span></div><div id="source-details"></div><p class="caption">Station and Activity records join to each result through original provider, organization, location, and activity identifiers. Every returned detection-limit record keeps its origin and source row.</p><div id="source-profiles"></div><h3>Retained files and native responses</h3><div id="source-files"></div></div></section>
+
+<section id="tab-review-sheets" class="tab-panel" hidden>
+<fieldset id="rs-controls" class="ow-controls">
+<div class="panel">
+<div class="section-head"><div><h2>Bulk receiving decisions</h2><p class="caption">Review receiving choices across the complete source plan. Apply a common decision to selected rows, import an edited table, and save the resulting native plan with every reason.</p></div><span id="rs-state" class="tag" role="status" aria-live="polite">Choose a source plan</span></div>
+<form id="rs-load-form"><div class="two"><label>Immutable source plan<select id="rs-source-plan" required><option value="">Select an immutable receiving plan</option></select></label><div class="ow-button-field"><button id="rs-load" type="submit" disabled>Open source plan</button></div></div></form>
+<p class="caption">Opening a selected plan starts a new draft. Download current decisions first if you want to keep an unfinished draft.</p>
+<h3 id="rs-source-heading">Choose an immutable source plan</h3>
+<details><summary>Original plan, review and capture</summary><dl id="rs-source-details" class="ow-identities"></dl></details>
+</div>
+
+<div class="panel">
+<div class="section-head"><h2>Receiving targets</h2><span id="rs-selection-count" class="count">0 selected across pages</span></div>
+<fieldset id="rs-target-controls" class="ow-controls" disabled>
+<div class="three rs-filters"><label>Target kind<select id="rs-kind"><option value="">All kinds</option></select></label><label>Native receiving field<input id="rs-field" list="rs-field-values" autocomplete="off" placeholder="All fields"><datalist id="rs-field-values"></datalist></label><label>Find an original identity or value<input id="rs-search" type="search"></label></div>
+<label class="check rs-attention"><input id="rs-attention" type="checkbox" checked>Only targets needing attention</label>
+<div class="actions rs-selection"><button id="rs-select-page" type="button" disabled>Select this page</button><button id="rs-select-filtered" type="button" disabled>Select every matching target</button><button id="rs-clear-selection" type="button" disabled>Clear selection</button></div>
+<p class="caption">Selection continues across pages and filters. A common exact value applies to one selected kind and native field. Keep preserves the current choice. Remove saved choice restores the original planner's value; setting an empty value is an explicit empty receiving value.</p>
+<div class="table-wrap rs-target-wrap"><table class="ow-table rs-target-table"><thead><tr><th scope="col">Select</th><th scope="col">Original record</th><th scope="col">Receiving field</th><th scope="col">Current plan value</th><th scope="col">Decision, value and reason</th><th scope="col">Receiving issues</th></tr></thead><tbody id="rs-targets"><tr><td colspan="6">Open a source plan to read its exact receiving targets.</td></tr></tbody></table></div>
+<div class="pagination"><button id="rs-previous" type="button" disabled>Previous</button><span id="rs-page" role="status" aria-live="polite">0 targets</span><button id="rs-next" type="button" disabled>Next</button></div>
+</fieldset>
+
+<fieldset id="rs-edit-controls" class="ow-controls" disabled>
+<h3>Apply one decision to the selection</h3>
+<form id="rs-bulk-form">
+<div class="two"><label>Decision<select id="rs-bulk-action"><option value="set">Set exact value</option><option value="clear">Remove saved choice</option><option value="keep">Keep current choice</option></select></label><label>Reason for this group<input id="rs-bulk-reason" required autocomplete="off"></label></div>
+<label>Exact receiving value<textarea id="rs-bulk-value" rows="3" spellcheck="false" placeholder="An empty value is explicit. For a reference list, enter a JSON array of exact strings."></textarea></label>
+<button id="rs-apply-bulk" type="submit" disabled>Apply to selected targets</button>
+</form>
+</fieldset>
+</div>
+
+
+<div class="panel">
+<div class="section-head"><div><h2>Concentration units and reported limits</h2><p class="caption">Convert explicit mass-per-volume units with exact decimal factors. Review each result, all reported limits and the selected native limit fields together. Qualified, estimated and censored values keep their original source meaning.</p></div><span id="cu-state" class="tag" role="status" aria-live="polite">Prepare a unit change</span></div>
+<p id="cu-context" class="caption"></p>
+<fieldset id="cu-controls" class="ow-controls" disabled><form id="cu-form">
+<div class="two"><label>Result selection<select id="cu-scope"><option value="selected">Selected result targets from the table</option><option value="unit">Every result with one exact source unit</option><option value="limits">Mass/volume limits with an unspecified result unit</option></select></label><label>Source-unit group<select id="cu-source-unit" disabled><option value="">Open a source plan</option></select></label></div>
+<div class="two"><label>Target concentration unit<select id="cu-target-unit" required></select></label><label>Reason for the complete unit change<input id="cu-reason" required maxlength="600" autocomplete="off"></label></div>
+<p id="cu-selected" class="caption" role="status" aria-live="polite">0 result records selected for a unit change</p>
+        <p id="cu-limit-context"></p><div id="cu-preserved"></div>
+<p class="caption">The source-unit group uses the saved plan's exact unit labels. Conversion uses the current reviewed draft and keeps every selected original limit. Density, chemical-basis and logarithmic changes need separate explicit receiving choices.</p>
+<button id="cu-prepare" type="submit" disabled>Prepare result and limit conversions</button>
+</form></fieldset>
+<div id="cu-output" hidden>
+<h3>Complete conversion review</h3><p id="cu-summary" class="caption"></p><p id="cu-guidance" class="caption"></p>
+<div class="table-wrap"><table class="ow-table"><thead><tr><th>Original result</th><th>Current value and unit</th><th>Converted value and unit</th><th>Every reported limit</th><th>Native limit quantities</th><th>Review</th></tr></thead><tbody id="cu-rows"></tbody></table></div>
+<div class="pagination"><button id="cu-prev" type="button" disabled>Previous results</button><span id="cu-page" role="status" aria-live="polite">0 converted results</span><button id="cu-next" type="button" disabled>Next results</button></div>
+<div class="actions"><button id="cu-apply" type="button" disabled>Add paired choices to current draft</button><button id="cu-undo" type="button" disabled>Restore preceding draft</button><button id="cu-json" type="button" disabled>Download complete conversion JSON</button><button id="cu-csv" type="button" disabled>Download complete conversion CSV</button></div>
+</div>
+</div>
+
+<div class="panel">
+<div class="section-head"><h2>Decision draft</h2><span id="rs-draft-count" class="count">0 recorded decisions</span></div>
+<details><summary>Review recorded choices</summary><p id="rs-decisions-summary" class="caption"></p><div class="table-wrap"><table class="ow-table"><thead><tr><th>Source record</th><th>Native field</th><th>Decision</th><th>Reason</th><th>Choice</th></tr></thead><tbody id="rs-decisions"></tbody></table></div></details>
+<div class="rs-file-actions"><button id="rs-export-json" type="button" disabled>Download current decision JSON</button><label>Editable table format<select id="rs-table-format"><option value="tsv">TSV — tab-separated text</option><option value="csv">CSV — comma-separated text</option></select></label><button id="rs-export-table" type="button" disabled>Download complete editable table</button></div>
+<p class="caption">The editable table covers the complete source plan. Change the action, exact value and reason columns; retain the source and target identity columns. Quoted values, tabs and line breaks remain part of the original strings.</p>
+<details><summary>Import edited decisions</summary><form id="rs-import-form"><label>Complete decision JSON, CSV or TSV<input id="rs-import-file" type="file" accept=".json,.csv,.tsv,application/json,text/csv,text/tab-separated-values" required></label><p class="caption">Import replaces the current draft and opens its exact original source plan. Maximum editable file size: 64 MiB.</p><button type="submit">Import complete decisions</button></form></details>
+</div>
+
+<div class="panel">
+<div class="section-head"><h2>Preview and save the native plan</h2></div>
+<form id="rs-preview-form"><div class="two"><label>New receiving plan name<input id="rs-new-plan" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,95}" maxlength="96" required autocomplete="off"></label><label>Decision review name<input id="rs-review-id" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,95}" maxlength="96" required autocomplete="off"></label></div><div class="actions"><button id="rs-preview" type="submit" disabled>Preview complete native plan</button><button id="rs-save" type="button" disabled>Save decision review and plan</button><button id="rs-show-preview" type="button" disabled>Inspect full receiving preview</button></div></form>
+<p id="rs-preview-state" class="caption" role="status" aria-live="polite">Preview the full native receiving plan before saving.</p>
+<div id="rs-preview-output" hidden><div id="rs-impact" class="table-wrap"></div><h3>Applied choices</h3><p id="rs-change-summary" class="caption"></p><ol id="rs-changes" class="rs-change-list"></ol><h3>Remaining receiving issues</h3><p id="rs-remaining-issues" class="rs-issues"></p></div>
+</div>
+
+<div class="panel">
+<div class="section-head"><h2>Saved decision reviews</h2></div>
+<div class="two"><label>Decision review<select id="rs-saved-review"><option value="">Select a saved decision review</option></select></label><div class="ow-button-field"><button id="rs-open-saved" type="button" disabled>Reopen decisions and outputs</button></div></div>
+<div id="rs-exports" hidden><h3 id="rs-saved-heading">Complete saved review</h3><div id="rs-downloads" class="actions rs-downloads"></div><div class="actions"><button id="rs-revise" type="button">Revise these decisions in a new plan</button></div></div>
+<details><summary>Receive a portable review and complete project</summary><form id="rs-receive-form"><label>Complete decision-review bundle<input id="rs-receive-file" type="file" accept=".json,application/json" required></label><p class="caption">Receive into an empty private project. The full bundle restores the source capture and review, original receiving choices, saved decisions and resulting plan. Maximum file size: 128 MiB.</p><button type="submit">Receive and reopen complete review</button></form></details>
+</div>
+</fieldset>
+</section>
 
 <section id="tab-open-waters" class="tab-panel" hidden>
 <fieldset id="ow-controls" class="ow-controls">

@@ -40,7 +40,7 @@ starforge research-client section \
   --id DOSSIER_ID --section questions --limit 25
 ```
 
-Page zero returns the exact dossier revision or inventory snapshot to use for the next page. Continue with those returned values. Source pages contain complete projected records for the selected page, and raw edition exports retain the complete original response bytes. A changing current inventory requires a new page zero; an explicitly selected historical dossier revision remains readable.
+Page zero returns the exact dossier revision or inventory snapshot to use for the next page. Continue with those returned values. Source pages contain compact inspected records with complete descriptive metadata and exact content/file selectors; raw edition exports retain the complete original response bytes. A changing current inventory requires a new page zero; an explicitly selected historical dossier revision remains readable.
 
 Commands use the original research identifiers and revision controls:
 
@@ -249,3 +249,124 @@ The implementation joins the existing merchant registry and distribution contrib
 ## Complete original-case operation
 
 The [original client operation](examples/README.md) uses this client, the actual CLI and the merchant attachment against one existing saved case. It preserves current notes and findings, resumes the same completed Crossref plan, writes the selected analyst note with fresh revision control, and delivers complete retained reports and portable receiving. Its private input keeps the original case, source configuration and operation identifiers.
+
+## Inspect and download large original sources
+
+Source lists and revision-comparison pages use compact inspection. They retain
+titles, DOI/URL identity, authors, publication metadata, citations, references,
+review notes and classifications. Typed content up to 16 KiB is included; large
+content carries an explicit preview and download descriptor. A source bundle
+keeps its summary and file metadata in the response while the original file
+bodies stay in the retained edition. Live reference-provider content and records
+continue through their original entitled view, including reference variants in
+a DOI group that also contains retained editions.
+
+Use a citation's **editionId and key** to select an occurrence. A DOI group can
+contain several retained editions, including different versions of a file with
+the same name. The selected saved revision validates that edition's membership.
+
+~~~sh
+starforge research-client section \
+  --connection-file /private/application-url.json --directory /private/research \
+  --id DOSSIER_ID --section sources --limit 20
+
+starforge research-client source \
+  --connection-file /private/application-url.json --directory /private/research \
+  --id DOSSIER_ID --edition EDITION_ID --key ORIGINAL_KEY --revision REVIEWED_REVISION
+
+starforge research-client export-source-file \
+  --connection-file /private/application-url.json --directory /private/research \
+  --id DOSSIER_ID --edition EDITION_ID --key ORIGINAL_KEY --revision REVIEWED_REVISION \
+  --name "studies/original-study.pdf" --sha256 ORIGINAL_FILE_SHA256 \
+  --out /private/original-study.pdf
+~~~
+
+Source-page filtering and search use the complete original records before the
+selected page is compacted. Descriptive fields and source snippets retain their
+original values. Comparison pages compact only the requested source rows.
+
+The source inspection returns **source.inspection.files**. Each file keeps its
+original relative name, encoding, byte length, SHA-256 and media type. Use that
+name and digest together. The server reads the original retained edition through
+its verified blob reader, checks that this file belongs to the selected
+occurrence, and decodes it with the original bundle reader. Binary bytes and a
+UTF-8 byte-order mark survive the complete download.
+
+~~~js
+const page = await client.section(dossierId, {section: 'sources', query: 'source-bundle', limit: 20});
+const citation = page.items.flatMap(source => source.citations)
+  .find(row => row.retained && row.provider === 'source-bundle');
+if (!citation) throw new Error('Select a retained source-bundle occurrence from the saved source pages');
+const inspected = await client.source(dossierId, {
+  editionId: citation.editionId, key: citation.key, revision: page.revision,
+});
+const original = inspected.source.inspection.files[0];
+if (!original) throw new Error('Select an occurrence containing the original file to download');
+const received = await client.exportSourceFile(dossierId, {
+  editionId: inspected.editionId, key: inspected.key, revision: inspected.revision,
+  name: original.name, expectedSha256: original.sha256,
+  file: '/private/selected-original-file',
+});
+~~~
+
+The same descriptor also supports complete content and original-record export:
+
+| Selection | Download | Identity |
+| --- | --- | --- |
+| Original bundle member | exportSourceFile / export-source-file | Original member name, bytes and SHA-256 |
+| Complete normalized content | exportSource with part content / export-source | inspection.bytes and inspection.sha256; UTF-8 text for a string, JSON for structured content |
+| Original parsed result record | exportSource with part record | The citation's originalRecord.bytes and originalRecord.sha256; JSON serialization |
+| Entire original response | exportRetainedEdition / export-edition | Original edition raw-byte digest, including original JSON formatting and any BOM |
+
+**contentDigest** identifies the normalized JSON value used by the original
+source comparison. **sha256** identifies the bytes of the selected download.
+For string content, the content download is the original UTF-8 string, so these
+two hashes have different meanings.
+
+All these downloads use the existing complete-stream writer and publish a new
+destination exclusively. Supply **expectedSha256** or CLI **--sha256** when
+comparing to a reviewed export. The source-file route requires the original file
+digest and rejects a changed selection before sending bytes. The receipt
+includes the actual saved revision and occurrence identity.
+
+### Browser and merchant operation
+
+The original browser requests **sourceProjection=inspection**. Source details
+show typed previews, the retained variants and each original file. **Read text**
+and **Download** retrieve that selected occurrence on demand. Each citation also
+offers its complete original result record. Saving evidence, notes and findings
+uses the same original revision controls.
+
+Merchant operation follows the existing attachment and retained-export lifecycle:
+
+1. Use merchant_research_section to choose the source and returned revision.
+2. Use merchant_research_source with the citation's editionId and key.
+3. Use merchant_research_export with kind "source-file", the same edition/key,
+   optional saved revision, fileName and expectedSha256.
+4. Read the returned export using merchant_research_file_read. Continue with
+   the same export ID and read offset; the existing receipt inventory supports
+   recovery after a lost response, detach or restart.
+
+The additional export kinds **source-content** and **source-record** select the
+declared content/record representations. They use the same editionId and key
+and accept the reviewed digest. Complete dossier, comparison, Crossref and
+retained-edition exports also accept the advertised expectedSha256.
+
+### Original HTTP and local-store seams
+
+The authenticated Research API exposes:
+
+- GET /api/dossiers/:id/retained-editions/:editionId/occurrences/:key
+- The same path followed by /content, /record, or /file
+- revision=N selects saved membership; /file requires name and sha256
+- Content and record downloads accept sha256 for a reviewed byte identity
+
+The local SDK exports **inspectRetainedSource(store, id, selection)** and
+**readRetainedSourceFile(store, id, selection)** from the original dossier index.
+**readRetainedEdition(id, editionId, {revision})** remains the original verified
+reader, now with optional historical membership selection.
+
+The full local store.get, original byte exports, source-bundle importer and
+portable history retain their original content. Compact inspection changes the
+interactive representation, and portable reopen restores the original files,
+editions, selections and authored findings.

@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Redis merchant workspace</title><link rel="stylesheet" href="/style.css"><script type="module" src="/app.mjs"></script></head>
 <body>
-<header><div><p class="eyebrow">Starforge merchant</p><h1 id="workspace-title">Redis workspace</h1></div><div class="header-actions"><button id="refresh">Refresh saved work</button><button id="open-releases">Release controls ↗</button></div></header>
+<header><div><p class="eyebrow">Starforge merchant</p><h1 id="workspace-title">Redis workspace</h1></div><div class="header-actions"><a class="button" href="/commissioning">Customer commissioning</a><button id="refresh">Refresh saved work</button><button id="open-releases">Release controls ↗</button></div></header>
 <div id="status" role="status" aria-live="polite">Opening workspace…</div>
 <section class="connection-bar" aria-label="Selected database"><strong id="transport">Database</strong><span id="connection"></span><span id="credential"></span></section>
 <main id="workspace" hidden>
@@ -17,7 +17,7 @@
 <div><h2>Product definition</h2><p class="muted">Choose a fixed key or a key selected from declared parameter values. The source uses the same native read command for previews and paid requests.</p>
 <form id="query-form"><div class="grid">
 <label>Product name<input id="query-name" required maxlength="64" pattern="[A-Za-z_][A-Za-z0-9_]*"></label>
-<label>Read type<select id="query-kind"><option value="get">Value — GET</option><option value="hash">Hash fields</option><option value="sorted-set">Sorted set</option><option value="stream">Stream entries</option></select></label>
+<label>Read type<select id="query-kind"><option value="get">Value — GET</option><option value="hash">Hash fields</option><option value="sorted-set">Sorted set</option><option value="stream">Stream entries</option><option value="list">List entries</option><option value="set">Set members</option></select></label>
 <label>Key selection<select id="key-mode"><option value="fixed">Fixed key</option><option value="parameter">Prefix and enum parameter</option></select></label>
 <label id="fixed-key-label">Key<input id="query-key" maxlength="1024"></label>
 <label id="key-prefix-label" hidden>Key prefix<input id="key-prefix" maxlength="1024"></label>
@@ -25,11 +25,15 @@
 <label>Maximum rows<input id="query-rows" type="number" min="1" max="1000" required></label>
 <label>Maximum response bytes<input id="query-bytes" type="number" min="1024" max="917504" required></label>
 <label>Query timeout (ms)<input id="query-timeout" type="number" min="50" max="30000" required></label>
-<label id="offset-label" hidden>Rank offset parameter<input id="query-offset" maxlength="64" placeholder="offset"></label>
+<label id="offset-label" hidden>Rank or list index parameter<input id="query-offset" maxlength="64" placeholder="offset"></label>
 <label id="after-label" hidden>Stream continuation parameter<input id="query-after" maxlength="64" placeholder="after"></label>
+<label id="cursor-label" hidden>Set cursor parameter<input id="query-cursor" maxlength="64" placeholder="cursor"></label>
+<label id="scan-count-label" hidden>Set scan work hint<input id="query-scan-count" type="number" min="1" max="1000" value="100"></label>
 </div>
 <label>Parameter definitions<textarea id="query-parameters" class="code" rows="8" spellcheck="false"></textarea></label>
 <p class="hint">Use the source parameter map. Integer values and bounds can be exact decimal strings; key parameters require a declared string enum.</p>
+<p id="list-note" class="hint" hidden>List pages retain the original zero-based index and value, including duplicate entries. Continue with the returned nextInput. Each request reads the current list; insertions or removals between pages can move indexes.</p>
+<p id="set-note" class="hint" hidden>Set cursors are decimal text: start at "0" and continue with nextInput until scanComplete is true. The scan work hint can return fewer or more members, including an empty page. Maximum rows and bytes apply to the complete native batch; an oversized batch is rejected without advancing. Set ordering is unspecified and a full iteration may repeat members.</p>
 <label id="fields-label">Projected fields<textarea id="query-fields" class="code" rows="5" spellcheck="false"></textarea></label>
 <label id="columns-label">Output columns<textarea id="query-columns" class="code" rows="3" spellcheck="false"></textarea></label>
 <div class="actions"><button type="submit">Apply product</button><button type="button" id="remove-query">Remove product and its routes</button></div>

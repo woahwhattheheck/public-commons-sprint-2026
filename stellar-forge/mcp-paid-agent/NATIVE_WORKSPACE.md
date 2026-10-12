@@ -269,3 +269,14 @@ They may ignore the additive lifecycle fields and optional shutdown context.
 The native adapter implements this lifecycle. Remote discovered MCP-server
 tool execution remains outside this HTTP merchant connection.
 
+
+## Retained Inbox handoff to Operations
+
+The additive **operations-handoff** action reads this native workspace's original
+Inbox or an existing host-registered read-only SF88 Inbox. It retains one exact
+selected-job export, recovers the same saved capture after a lost reply, and
+pages original outcome rows or unchanged bytes for the existing SF47 receiver.
+It makes no buyer execution, recovery, finalization, provider or ledger call.
+Follow [Retained buyer handoffs through the native MCP workspace](OPERATIONS_HANDOFF.md)
+for the complete source selection, request recovery, private file delivery and
+same-case receiving workflow. Existing buyer lifecycle commands remain above.

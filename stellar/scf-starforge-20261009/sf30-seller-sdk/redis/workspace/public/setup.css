@@ -1,0 +1,12 @@
+/* MIT. Connection setup extends the original neutral operator interface. */
+main{max-width:1120px}header,.connection-bar,#status,footer{max-width:1120px}
+#setup nav{margin-top:0}.tab{min-height:0}#directory{font-family:ui-monospace,monospace;overflow-wrap:anywhere}
+.seed-row{display:grid;grid-template-columns:minmax(0,1fr) 130px auto;gap:12px;align-items:end}
+.seed-row button{margin-bottom:16px;min-height:38px}.seed-row label{min-width:0}
+input[type=file]{max-width:650px;margin-bottom:12px}
+dl{display:grid;grid-template-columns:160px minmax(0,1fr);gap:8px 18px;margin:18px 0 24px}
+dt{font-weight:600}dd{margin:0;overflow-wrap:anywhere}
+#environment{margin:12px 0 22px}#environment p{padding:8px 12px;border:1px solid var(--border);margin:5px 0}
+#preview-summary{margin:14px 0 8px}.table-scroll td{max-width:500px;white-space:pre-wrap}
+#created-panel{margin-top:24px}#review-routes code{overflow-wrap:anywhere}
+@media(max-width:620px){.seed-row{grid-template-columns:minmax(0,1fr) 100px}.seed-row button{grid-column:1/-1;justify-self:start;margin-top:-8px}dl{grid-template-columns:1fr;gap:4px}dd{margin-bottom:10px}}

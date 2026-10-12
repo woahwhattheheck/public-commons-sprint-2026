@@ -20,7 +20,8 @@
         <a href="#capture" data-view="capture" aria-current="page"><span class="nav-number">01</span>Sources &amp; captures<span id="nav-captures" class="nav-count">0</span></a>
         <a href="#editions" data-view="editions"><span class="nav-number">02</span>Review editions<span id="nav-editions" class="nav-count">0</span></a>
         <a href="#compare" data-view="compare"><span class="nav-number">03</span>Compare &amp; export<span id="nav-comparisons" class="nav-count">0</span></a>
-        <a href="#publish" data-view="publish"><span class="nav-number">04</span>Publish &amp; deliver</a>
+        <a href="#refresh" data-view="refresh"><span class="nav-number">04</span>Saved refresh plans</a>
+        <a href="#publish" data-view="publish"><span class="nav-number">05</span>Publish &amp; deliver</a>
       </nav>
       <div class="sidebar-note"><p class="eyebrow">Source authority</p><p>U.S. Department of the Treasury</p><a href="https://fiscaldata.treasury.gov/" target="_blank" rel="noopener noreferrer">Fiscal Data website ↗</a><a href="https://fiscaldata.treasury.gov/api-documentation/" target="_blank" rel="noopener noreferrer">API documentation ↗</a></div>
       <div class="worker-card"><p class="eyebrow">Capture worker</p><p id="worker-status">Opening…</p><p id="worker-detail" class="muted small">Progress is retained after each source page.</p></div>
@@ -125,10 +126,23 @@
           <div id="comparison-rows" class="table-wrap"></div>
           <div id="comparison-pagination" class="pagination"></div>
           <div id="comparison-files" class="downloads inset"></div>
+          <details class="details section-gap">
+            <summary>Customer briefing</summary>
+            <p class="muted small">Create an offline report from this reviewed comparison. Its archive includes the exact dated measures, every row change, both editions' source context, and the complete original comparison delivery.</p>
+            <form id="briefing-form" class="form-grid">
+              <label class="span-2">Complete comparison delivery<select id="briefing-source" required><option value="">Create a complete comparison delivery first</option></select></label>
+              <div class="form-actions span-2"><button id="briefing-source-create" type="button" class="secondary">Create comparison delivery</button></div>
+              <label class="span-2">Report title<input id="briefing-title" required maxlength="240"></label>
+              <label class="span-2">Audience<input id="briefing-audience" maxlength="400" placeholder="Who will read this report?"></label>
+              <label class="span-2">Analyst notes<textarea id="briefing-notes" rows="4" maxlength="64000" placeholder="Add the interpretation and context you want to share."></textarea></label>
+              <div class="form-actions span-2"><button id="briefing-create" type="submit">Create complete briefing</button></div>
+            </form>
+            <div id="briefing-results" class="inset"></div>
+          </details>
         </section>
         <section class="panel section-gap">
           <div class="panel-heading"><div><h3>Complete exports</h3><p class="muted small">Delivery archives include their original data, review context, and file manifest.</p></div></div>
-          <div id="exports-list"><p class="empty">Capture, edition, comparison, and merchant exports appear here.</p></div>
+          <div id="exports-list"><p class="empty">Capture, edition, comparison, briefing, and merchant exports appear here.</p></div>
         </section>
       </section>
       <section id="view-publish" class="view" hidden aria-labelledby="publish-heading">
@@ -163,6 +177,10 @@
           <div id="buyer-controls" class="inset"></div>
           <div id="buyer-result" class="inset" hidden></div>
         </section>
+      </section>
+      <section id="view-refresh" class="view" aria-labelledby="refresh-heading" hidden>
+        <div class="page-heading"><div><p class="eyebrow">04 / Repeatable source review</p><h2 id="refresh-heading">Saved refresh plans</h2><p>Retain a reviewed baseline and source policy, capture the next real period, and deliver its exact comparison and briefing.</p></div></div>
+        <div id="refresh-root"></div>
       </section>
       <footer class="workspace-footer"><span>Exact source values · Retained editions · Original seller and buyer</span><span id="workspace-operator" hidden></span><span id="workspace-revision"></span></footer>
     </main>

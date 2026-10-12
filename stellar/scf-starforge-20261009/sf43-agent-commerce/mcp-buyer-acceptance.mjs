@@ -6,7 +6,9 @@ import {bindDiscoveryQuote, reviewPaymentRequired} from '../../../stellar-forge/
 import {decodeX402Header,checkStellarTestnetTransaction,createOfficialEventDecoder} from './verify.mjs';
 import {nativeAnalysisActions,nativeAnalysisSchema} from '../../../stellar-forge/mcp-paid-agent/native-analysis-schema.mjs';
 import {nativeCollectionActions,nativeCollectionsSchema} from '../../../stellar-forge/mcp-paid-agent/native-collections-schema.mjs';
+import {nativeCollectionRecoveryActions,nativeCollectionRecoverySchema} from '../../../stellar-forge/mcp-paid-agent/native-collections-recovery-schema.mjs';
 import {nativeDuckDBActions,nativeDuckDBSchema} from '../../../stellar-forge/mcp-paid-agent/native-duckdb-schema.mjs';
+import {nativeOperationsHandoffActions,nativeOperationsHandoffSchema} from '../../../stellar-forge/mcp-paid-agent/native-operations-handoff-schema.mjs';
 
 const REPORT=(reason,other={})=>({decision:'NOT_AUTHORIZED',reason,...other});
 /**
@@ -91,7 +93,7 @@ export async function executeDiscoveredHttpPayment({
 // owns streamable HTTP initialize/tools/list/tools/call JSON-RPC and consent state.
 export const mcpAgentCommerceTool = Object.freeze({
   name:'sf43_discover_review_and_pay',
-  description:'Use an independently approved native Stellar buyer for a discovered HTTP API. Native SF88 supports ordinary requests, complete object-* acquisition from an operator-registered S3 description, and dataset-* acquisition from an original SF30 dataset description. Dataset customers select an exact snapshot/query and whole-query limits, run/recover original per-page purchases, deliver through SF100, read typed rows, original semantic dictionaries or exact files, and inspect/finalize original accounting. Host-received finalized rooms remain read-only, with their original SF100 or SF88 format. The analysis action uses a host-registered original analytical workspace to import completed data, review editions, run SQL, publish reports and reopen verified exports. The duckdb action uses the original separately owned DuckDB customer service for exact source mapping, immutable editions, saved SQL, complete Parquet/CSV exports and portable warehouse handoffs. The collections action operates an existing host-registered collection browser: exact source review, original queue/run/pause/recovery, retained approvals, complete exports and saved customer files. All purchase types share the original operator approval gate and ledger. Legacy callbacks retain their original interface; a tool call cannot replace approval.',
+  description:'Use an independently approved native Stellar buyer for a discovered HTTP API. Native SF88 supports ordinary requests, complete object-* acquisition from an operator-registered S3 description, and dataset-* acquisition from an original SF30 dataset description. Dataset customers select an exact snapshot/query and whole-query limits, run/recover original per-page purchases, deliver through SF100, read typed rows, original semantic dictionaries or exact files, and inspect/finalize original accounting. Host-received finalized rooms remain read-only, with their original SF100 or SF88 format. The analysis action uses a host-registered original analytical workspace to import completed data, review editions, run SQL, publish reports and reopen verified exports. The duckdb action uses the original separately owned DuckDB customer service for exact source mapping, immutable editions, saved SQL, complete Parquet/CSV exports and portable warehouse handoffs. The collections action operates an existing host-registered collection browser: exact source review, original queue/run/pause/recovery, retained approvals, complete exports and saved customer files. The collection-recovery action uses host-registered original recovery profiles for capture, verification, same-operation restoration, restored collection registration and complete encrypted receiving. The operations-handoff action selects the original native Inbox or an existing host-registered read-only Inbox, retains one exact SF88 export, reopens it after a lost reply, and pages original outcome rows or unchanged bytes for explicit Operations receiving without executing a purchase. All purchase types share the original operator approval gate and ledger. Legacy callbacks retain their original interface; a tool call cannot replace approval.',
   inputSchema:{type:'object',additionalProperties:false,
     properties:{
       action:{type:'string',enum:['prepare','execute','status','history','cancel','recover','read',
@@ -99,7 +101,7 @@ export const mcpAgentCommerceTool = Object.freeze({
         'object-cancel','object-recover','object-assemble','object-read','object-accounting','object-finalize',
         'dataset-sources','dataset-describe','dataset-prepare','dataset-history','dataset-status','dataset-run',
         'dataset-cancel','dataset-recover','dataset-deliver','dataset-rows','dataset-read','dataset-semantics','dataset-accounting','dataset-finalize',
-        ...nativeAnalysisActions,...nativeCollectionActions,...nativeDuckDBActions],
+        ...nativeAnalysisActions,...nativeCollectionActions,...nativeCollectionRecoveryActions,...nativeDuckDBActions,...nativeOperationsHandoffActions],
         description:'Native workspace action; omitted means execute. object-* and dataset-* use operator-registered original descriptions and native acquisition sessions. Non-native callbacks may support only the original execute arguments.'},
       intentId:{type:'string',pattern:'^[A-Za-z0-9._:-]{1,128}$',description:'Required by the native workspace. Keep this same ID to inspect or recover an existing operation.'},
       search:{type:'string',minLength:1,maxLength:256},targetResourceURL:{type:'string'},
@@ -126,7 +128,9 @@ export const mcpAgentCommerceTool = Object.freeze({
         description:'Exact original SF100 delivered file for dataset-read; return its bytes without reformatting.'},
       ...nativeAnalysisSchema.properties,
       ...nativeCollectionsSchema.properties,
-      ...nativeDuckDBSchema.properties
+      ...nativeCollectionRecoverySchema.properties,
+      ...nativeDuckDBSchema.properties,
+      ...nativeOperationsHandoffSchema.properties
     },
     anyOf:[
       {required:['search','targetResourceURL','maxAtomic'],properties:{action:{enum:['prepare','execute']}}},
@@ -144,7 +148,9 @@ export const mcpAgentCommerceTool = Object.freeze({
       {required:['action','acquisitionId','filename'],properties:{action:{const:'dataset-read'}}},
       ...nativeAnalysisSchema.anyOf,
       ...nativeCollectionsSchema.anyOf,
-      ...nativeDuckDBSchema.anyOf
+      ...nativeCollectionRecoverySchema.anyOf,
+      ...nativeDuckDBSchema.anyOf,
+      ...nativeOperationsHandoffSchema.anyOf
     ]}
 });
 

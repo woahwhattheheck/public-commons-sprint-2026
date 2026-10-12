@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Geocoding workbench · Starforge</title><link rel="stylesheet" href="/style.css"><script type="module" src="/app.js"></script></head>
 <body><header><div><span class="brand">STARFORGE</span><strong>Geocoding workbench</strong></div><div id="connection">Opening retained workspace…</div></header>
-<div class="shell"><nav aria-label="Workspace sections"><button class="active" data-view="requests">Requests and review</button><button data-view="merchant">Merchant release</button><button data-view="deliveries">Customer deliveries</button><button data-view="contract">Source contract</button><div class="nav-note">OpenCage · native JSON<br>WGS84 / EPSG:4326</div></nav>
+<div class="shell"><nav aria-label="Workspace sections"><button class="active" data-view="requests">Requests and review</button><button data-view="batches">Batch geocoding</button><button data-view="merchant">Merchant release</button><button data-view="deliveries">Customer deliveries</button><button data-view="contract">Source contract</button><div class="nav-note">OpenCage · native JSON<br>WGS84 / EPSG:4326</div></nav>
 <main><div id="notice" role="status" hidden></div>
 <section id="view-requests" class="view">
 <div class="heading"><div><p class="eyebrow">SOURCE AND OPERATOR REVIEW</p><h1 id="workspace-title">Location workshare</h1><p id="workspace-subtitle">Retain the source result, review candidates and prepare the customer delivery.</p></div><button id="refresh">Refresh</button></div>
@@ -15,7 +15,7 @@
 </form><details class="import"><summary>Import a retained HTTP result</summary><p class="hint">Choose its original observation and response files. The request and response hash must match.</p>
 <label>Observation JSON<input type="file" id="observation-file" accept=".json,application/json"></label><label>Response JSON<input type="file" id="response-file" accept=".json,application/json"></label>
 <button id="import-result">Import exact result</button></details></aside>
-<div class="records"><section class="panel"><div class="section-bar"><h2>Retained requests</h2><span id="request-count" class="hint"></span></div><div class="table-scroll"><table><thead><tr><th>Request / query</th><th>Outcome</th><th>Candidates</th><th>Decision</th></tr></thead><tbody id="request-list"></tbody></table></div></section>
+<div class="records"><section class="panel"><div class="section-bar"><h2>Retained requests</h2><span id="request-count" class="hint"></span></div><div class="table-scroll"><table><thead><tr><th>Request / query</th><th>Outcome</th><th>Candidates</th><th>Decision</th></tr></thead><tbody id="request-list"></tbody></table></div><div id="request-pagination" class="actions" hidden><button id="request-prev">Previous requests</button><button id="request-next">Next requests</button><span id="request-page-count" class="hint"></span></div></section>
 <section class="panel" id="review"><div id="review-empty" class="empty">Select a retained request to review its original response.</div><div id="review-content" hidden>
 <div class="section-bar"><div><p class="eyebrow" id="review-id"></p><h2 id="review-query"></h2></div><span class="badge" id="review-state"></span></div>
 <p id="outcome-explanation"></p><dl class="facts" id="review-facts"></dl><p class="hint">Candidates retain provider relevance order. Confidence describes spatial precision, not correctness.</p>
@@ -25,6 +25,72 @@
 <div class="actions"><button id="download-response">Download original response</button><button id="download-capture">Download capture record</button></div>
 <details><summary>Native fields, licenses and decision history</summary><pre id="review-native"></pre></details></div></section></div></div>
 </section>
+
+<section id="view-batches" class="view" hidden>
+<div class="heading"><div><p class="eyebrow">CSV INTAKE AND JOINED DELIVERY</p><h1 id="batch-title">Batch geocoding</h1><p id="batch-subtitle">Keep every source row, review its candidate and deliver the joined result.</p></div><button id="batch-refresh">Refresh</button></div>
+<div class="batch-layout">
+<aside class="panel" id="batch-intake">
+<h2>1. Source CSV</h2><p class="hint">UTF-8 CSV with a header row. Up to 2 MiB and 10,000 data rows. Source row numbers remain stable when IDs repeat.</p>
+<label>CSV file<input id="batch-file" type="file" accept=".csv,text/csv"></label><button id="batch-load-source">Read source columns</button>
+<p id="batch-source-summary" class="hint">Choose a file to map its original columns.</p>
+<details id="batch-source-details" hidden><summary>Original source preview</summary><div class="table-scroll"><table><thead id="batch-source-head"></thead><tbody id="batch-source-preview"></tbody></table></div></details>
+<h2 class="batch-step">2. Map the request</h2>
+<label>Batch label<input id="batch-label" value="Geocoding CSV" maxlength="120"></label>
+<label>Product<select id="batch-product"></select></label>
+<label>Source ID<select id="batch-id-column"></select></label>
+<label>Query input<select id="batch-query-mode"><option value="query">One query column</option><option value="address">Join address columns</option><option value="coordinates">Latitude and longitude columns</option></select></label>
+<div id="batch-query-fields"><label>Query column<select id="batch-query-column"></select></label></div>
+<div id="batch-address-fields" hidden><p class="hint">Choose address columns in the order they should be joined.</p><div id="batch-address-columns"></div><button id="batch-add-address" type="button">Add address column</button><label>Separator<input id="batch-separator" value=", " maxlength="20"></label></div>
+<div id="batch-coordinate-fields" hidden><label>Latitude column<select id="batch-latitude"></select></label><label>Longitude column<select id="batch-longitude"></select></label><p class="hint">Reverse geocoding uses latitude,longitude.</p></div>
+<details><summary>Provider options and retained results</summary><p id="batch-option-help" class="hint"></p>
+<label>Fixed options <span class="hint">JSON object</span><textarea id="batch-options" rows="4" spellcheck="false">{}</textarea></label>
+<div id="batch-option-columns"></div><p class="hint">Use either a fixed value or a source column for each option.</p>
+<label>Reuse completed request IDs <span class="hint">optional; one per line, up to 100</span><textarea id="batch-reuse" rows="3" spellcheck="false"></textarea></label>
+<label>Earlier batch <span class="hint">optional source revision</span><select id="batch-supersedes"><option value="">New source selection</option></select></label>
+</details>
+<button id="batch-review" class="primary full">Review mapping</button>
+<div id="batch-review-panel" hidden><h2 class="batch-step">3. Prepare reviewed batch</h2><dl id="batch-review-facts" class="facts"></dl>
+<div class="table-scroll"><table><thead><tr><th>Row / ID</th><th>Prepared query</th><th>Review</th></tr></thead><tbody id="batch-review-preview"></tbody></table></div>
+<p class="hint">Invalid rows stay in the batch and joined output. Preparing retains the mapping; Start runs the provider requests.</p>
+<details><summary>Exact mapping and source identity</summary><pre id="batch-review-native"></pre></details>
+<button id="batch-prepare" class="primary full">Prepare this reviewed batch</button></div>
+</aside>
+<div class="records">
+<section class="panel"><div class="section-bar"><h2 id="batch-records-heading">Retained batches</h2><span id="batch-readonly" class="badge" hidden>Saved customer delivery</span></div>
+<div id="batch-live-selection"><label>Batch<select id="batch-select"><option value="">Choose a retained batch</option></select></label></div>
+<div id="batch-empty" class="empty">Prepare a source mapping or choose an existing batch.</div>
+<div id="batch-records" hidden>
+<div class="section-bar"><div><h3 id="batch-record-label"></h3><p id="batch-record-id" class="mono wrap"></p></div><span id="batch-state" class="badge"></span></div>
+<p id="batch-run-note" class="hint"></p><dl id="batch-counts" class="batch-counts"></dl>
+<div id="batch-progress-wrap"><progress id="batch-progress" max="1" value="0"></progress><p id="batch-progress-text" class="hint"></p></div>
+<div id="batch-live-actions"><div class="actions"><button id="batch-start" class="primary">Start or resume batch</button><button id="batch-stop">Stop after current request</button><button id="batch-reconcile">Reconcile retained results</button></div>
+<div class="actions"><button id="batch-source-download">Download source CSV</button><button id="batch-copy-source">Use this source again</button></div></div>
+<button id="batch-return-live" hidden>Return to live batch</button>
+<div class="batch-toolbar"><label id="batch-filter-label">Rows<select id="batch-filter"><option value="">All rows</option><option value="READY">Ready</option><option value="INVALID">Invalid source</option><option value="CANDIDATES">Candidates</option><option value="SELECTED">Selected</option><option value="NO_RESULTS">No results</option><option value="EXCEPTION">Provider exception</option><option value="NEEDS_RECONCILIATION">Needs reconciliation</option></select></label><span id="batch-page-count" class="hint"></span></div>
+<div class="table-scroll batch-row-table"><table><thead><tr><th>Row / source ID</th><th>Query</th><th>Outcome</th><th>Candidates</th><th>Decision</th></tr></thead><tbody id="batch-rows"></tbody></table></div>
+<div class="actions batch-pager"><button id="batch-prev">Previous rows</button><button id="batch-next">Next rows</button></div>
+<details><summary>Retained batch mapping and run</summary><pre id="batch-native"></pre></details>
+</div></section>
+<section class="panel" id="batch-row-panel"><div id="batch-row-empty" class="empty">Choose a row to review its original source and candidates.</div><div id="batch-row-content" hidden>
+<div class="section-bar"><div><p class="eyebrow" id="batch-row-id"></p><h2 id="batch-row-query"></h2></div><span id="batch-row-state" class="badge"></span></div>
+<p id="batch-row-explanation"></p><dl id="batch-row-facts" class="facts"></dl>
+<details><summary>Original source values</summary><dl id="batch-row-source" class="facts"></dl></details>
+<p class="hint">Candidates keep provider relevance order. Confidence describes spatial precision, not correctness.</p>
+<div id="batch-candidates-wrap" class="table-scroll"><table><thead><tr><th>Choose</th><th>Location</th><th>Latitude / longitude</th><th>Precision</th></tr></thead><tbody id="batch-candidates"></tbody></table></div>
+<div id="batch-decision-controls"><label>Decision note<textarea id="batch-decision-note" rows="2" maxlength="2000"></textarea></label><div class="actions"><button id="batch-save-choice" class="primary">Save candidate decision</button><button id="batch-clear-choice">Clear selection</button></div></div>
+<div id="batch-retry-controls" hidden><h3>Review a new attempt</h3><label>Reason<textarea id="batch-retry-reason" rows="2" maxlength="500" placeholder="What has changed since this attempt?"></textarea></label><label id="batch-uncertain-label" class="check-label" hidden><input id="batch-retry-uncertain" type="checkbox">I reviewed the incomplete attempt. A new provider request may use quota again.</label><button id="batch-retry">Prepare new attempt</button><p class="hint">The previous attempt stays attached. Start the batch to run the new request.</p></div>
+<div class="actions"><button id="batch-response-download">Download original response</button><button id="batch-capture-download">Download capture record</button><button id="batch-open-request">Open in Requests and review</button></div>
+<details><summary>Candidate fields, decisions and attempts</summary><pre id="batch-row-native"></pre></details>
+</div></section>
+<section class="panel"><div class="section-bar"><h2>Joined customer delivery</h2><button id="batch-refresh-deliveries">Refresh deliveries</button></div>
+<div id="batch-export-controls"><p class="hint">The joined CSV retains every source row, including invalid, empty, unselected and unrun outcomes. GeoJSON contains the explicitly selected locations.</p><label>Delivery size limit (MiB)<input id="batch-export-limit" type="number" min="1" max="512" step="1" value="64"></label><button id="batch-export" class="primary">Prepare joined delivery</button></div>
+<label id="batch-delivery-select-label">Saved delivery<select id="batch-delivery-select"><option value="">Choose a saved delivery</option></select></label>
+<div id="batch-delivery-empty" class="empty">Choose a completed export to inspect and download the retained files.</div>
+<div id="batch-delivery-content" hidden><dl id="batch-delivery-facts" class="facts"></dl><div class="actions"><button id="batch-open-delivery">Open saved delivery rows</button><button id="batch-download-manifest">Download manifest</button></div>
+<div class="table-scroll"><table><thead><tr><th>File</th><th>Bytes</th><th>Download</th></tr></thead><tbody id="batch-delivery-files"></tbody></table></div><details><summary>Complete delivery manifest</summary><pre id="batch-delivery-native"></pre></details></div>
+</section>
+</div></div></section>
+
 <section id="view-merchant" class="view" hidden><div class="heading"><div><p class="eyebrow">ORIGINAL SF61 / SF30 / SF82</p><h1>Merchant release</h1><p>Prepare the contract, review its exact terms, then operate the original release.</p></div><button id="refresh-merchant">Refresh status</button></div>
 <div class="two-columns"><section class="panel"><h2>Payment terms</h2><p class="hint">Amounts remain atomic strings. Every offered payment alternative is preserved by the original compiler.</p>
 <label>Terms JSON<textarea id="terms" rows="16" spellcheck="false"></textarea></label><button id="prepare-package" class="primary">Prepare merchant package</button>

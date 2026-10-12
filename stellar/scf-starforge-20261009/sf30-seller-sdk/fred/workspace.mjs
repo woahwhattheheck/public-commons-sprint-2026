@@ -7,11 +7,12 @@ import { loadDatasetConfig } from '../dataset-handler.mjs';
 import { readPrivateJson } from '../routescan/quota.mjs';
 import { Buyer } from '../../sf88-operator-buyer-cli/node/index.mjs';
 import { need, inspectCapture, MAX_CAPTURE_BYTES, operationId } from './model.mjs';
-import { jsonBytes } from './source.mjs';
+import { jsonBytes, hash } from './source.mjs';
+import { pageFredBriefing } from './briefing/model.mjs';
 import { readFredWorkspaceLaunch, FRED_WORKSPACE_STARTUP } from './launch.mjs';
 import { readFredProject, fredProjectView, getFredCapture, configureFredProject, importFredCapture, acquireFredCapture,
   selectFredCapture, combineFredTables, reviewFredCapture, compareFredCaptures, publishFredReview, exportFredProject,
-  selectFredPublication, abandonFredOperation } from './project.mjs';
+  selectFredPublication, abandonFredOperation, previewFredBriefing, getFredBriefing, downloadFredBriefing } from './project.mjs';
 import { startFredMerchant, readFredMerchant, prepareFredPurchase, executeFredPurchase,
   recoverFredPurchase, exportFredPurchase } from './merchant.mjs';
 
@@ -49,7 +50,7 @@ export async function startFredWorkspace({ directory, port = 0, buyerConfig, env
   need(Number.isInteger(port) && port >= 0 && port <= 65535, 'Use an available local port.');
   const token = randomBytes(32).toString('hex'), abort = new AbortController(), assetMap = new Map([
     ['/', ['index.html', 'text/html; charset=utf-8']], ['/app.js', ['app.js', 'text/javascript; charset=utf-8']],
-    ['/style.css', ['style.css', 'text/css; charset=utf-8']] ]);
+    ['/style.css', ['style.css', 'text/css; charset=utf-8']], ['/briefing.js', ['briefing.js', 'text/javascript; charset=utf-8']] ]);
   const assets = new Map();
   for (const [route, [file, type]] of assetMap) assets.set(route, [await readFile(new URL('./ui/' + file, import.meta.url)), type]);
   const buyer = launch.buyerSettings ? await new Buyer(launch.buyerSettings).ready() : null;
@@ -67,7 +68,7 @@ export async function startFredWorkspace({ directory, port = 0, buyerConfig, env
       case 'import': return importFredCapture({ ...common, capture: request.capture });
       case 'combine': return combineFredTables({ ...common, captureIds: request.captureIds });
       case 'select': return selectFredCapture({ ...common, captureId: request.captureId });
-      case 'review': return reviewFredCapture({ ...common, captureId: request.captureId, policy: request.policy, note: request.note });
+      case 'review': return reviewFredCapture({ ...common, captureId: request.captureId, policy: request.policy, note: request.note, briefing: request.briefing ?? null });
       case 'publish': return publishFredReview({ ...common, reviewId: request.reviewId, origin: request.origin, path: request.path, payment: request.payment });
       case 'abandon': return abandonFredOperation({ ...common, pendingId: request.pendingId });
       case 'merchant-start': {
@@ -134,6 +135,23 @@ export async function startFredWorkspace({ directory, port = 0, buyerConfig, env
         if (url.searchParams.get('download') === '1') return send(res, 200, report, 'application/json', 'fred-vintage-comparison.json');
         const offset = pageNumber(url.searchParams.get('offset')), { changes, ...summary } = report;
         return send(res, 200, { ...summary, total: changes.length, offset, limit: 100, changes: changes.slice(offset, offset + 100) });
+      }
+      if (req.method === 'POST' && url.pathname === '/api/briefing-preview') {
+        const request = await body(req, 65536);
+        return send(res, 200, await previewFredBriefing({ directory, captureId: request.captureId,
+          briefing: request.briefing, offset: request.offset ?? 0, limit: 100 }));
+      }
+      if (req.method === 'GET' && url.pathname === '/api/briefing') {
+        const reviewId = url.searchParams.get('review'), format = url.searchParams.get('format');
+        if (format !== null) {
+          const file = await downloadFredBriefing({ directory, reviewId, format });
+          return send(res, 200, file.body, file.contentType, file.path);
+        }
+        const value = await getFredBriefing(directory, reviewId);
+        const bytes = jsonBytes(value.manifest);
+        return send(res, 200, { ...pageFredBriefing(value.report, { offset: pageNumber(url.searchParams.get('offset')), limit: 100 }),
+          manifest: value.manifest, files: [...value.manifest.files, { path: 'briefing-manifest.json', bytes: bytes.length,
+            sha256: hash(bytes), contentType: 'application/json', role: 'BRIEFING_MANIFEST' }] });
       }
       if (req.method === 'GET' && url.pathname === '/api/bundle')
         return send(res, 200, await exportFredProject({ directory }), 'application/json', 'fred-economic-project.json');

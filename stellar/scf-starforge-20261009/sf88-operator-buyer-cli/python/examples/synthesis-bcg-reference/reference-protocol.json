@@ -1,0 +1,102 @@
+{
+  "schema": "commons-research-reference-protocol/v1",
+  "operationId": "SCF-RESEARCH-EVIDENCE-SYNTHESIS-20261012",
+  "title": "BCG published reference cohort",
+  "state": "AUTHORED_FOR_NATIVE_REVIEW",
+  "dataset": "metadat-bcg-13",
+  "analysisQuestion": {
+    "population": "Participants in the thirteen studies represented by the original metadat BCG table",
+    "intervention": "BCG vaccination",
+    "comparator": "Control",
+    "outcome": "TB events as reported in the source event/non-event table",
+    "timepoint": {
+      "selection": "SOURCE_TRIAL_DEFINED_FOLLOWUP",
+      "duration": null,
+      "reason": "Individual duration is not reported in the retained reference table"
+    },
+    "direction": "vaccinated versus control; RR below 1 means fewer vaccinated-group TB events"
+  },
+  "selection": {
+    "referenceStudyIds": [
+      "metadat-bcg-trial-1",
+      "metadat-bcg-trial-2",
+      "metadat-bcg-trial-3",
+      "metadat-bcg-trial-4",
+      "metadat-bcg-trial-5",
+      "metadat-bcg-trial-6",
+      "metadat-bcg-trial-7",
+      "metadat-bcg-trial-8",
+      "metadat-bcg-trial-9",
+      "metadat-bcg-trial-10",
+      "metadat-bcg-trial-11",
+      "metadat-bcg-trial-12",
+      "metadat-bcg-trial-13"
+    ],
+    "independentEstimatePolicy": "one selected compatible estimate per original study",
+    "aliasDeduplication": "dat.bcg and dat.colditz1994 are one identical original dataset",
+    "acceptedExtractionBindings": "filled by the original revision-bound Research receiving operation"
+  },
+  "transformations": {
+    "effect": "log risk ratio",
+    "events1": "reported.tpos",
+    "events2": "reported.cpos",
+    "nobs1": "reviewed exact integer tpos+tneg",
+    "nobs2": "reviewed exact integer cpos+cneg",
+    "zeroCorrection": null,
+    "presentationTransform": "exp for ratios and interval limits"
+  },
+  "primary": {
+    "model": "random effects",
+    "engine": "statsmodels.stats.meta_analysis.combine_effects",
+    "method_re": "pm",
+    "inference": {
+      "scale": "estimated/HKSJ",
+      "distribution": "t",
+      "confidenceLevel": "0.95"
+    },
+    "engineVersion": "record actual selected installed version in original native result"
+  },
+  "comparisons": [
+    {
+      "name": "common-effect comparison",
+      "model": "fixed/common effect",
+      "scale": "fixed",
+      "distribution": "normal",
+      "confidenceLevel": "0.95"
+    },
+    {
+      "name": "random-allocation subgroup",
+      "referenceStudyIds": [
+        "metadat-bcg-trial-1",
+        "metadat-bcg-trial-2",
+        "metadat-bcg-trial-3",
+        "metadat-bcg-trial-4",
+        "metadat-bcg-trial-7",
+        "metadat-bcg-trial-8",
+        "metadat-bcg-trial-9"
+      ],
+      "inheritPrimaryMethod": true
+    },
+    {
+      "name": "leave-one-study-out influence",
+      "operation": "omit each selected original study once",
+      "inheritPrimaryMethod": true
+    }
+  ],
+  "report": {
+    "sourceRows": "complete",
+    "sourceAndResultBindings": "complete",
+    "studyEffects": "complete",
+    "weights": "complete",
+    "heterogeneity": "engine returned quantities with method labels",
+    "forest": "complete data and original generated output",
+    "funnel": "descriptive display with count/method conditions",
+    "priorEditions": "retain unchanged",
+    "receiving": "original Analysis archive and cold reopen"
+  },
+  "limitations": [
+    "Study follow-up duration is unreported in this table.",
+    "Allocation labels do not replace independent design-specific risk-of-bias appraisal.",
+    "Published REML or smoothed-variance/EB reference values require those same methods before numerical comparison."
+  ]
+}

@@ -57,3 +57,6 @@
 .cat-quantity-fields>button{min-height:37px}
 @media(max-width:1100px){.cat-table-controls,.cat-quantity-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.cat-table-controls>button,.cat-quantity-fields>button{justify-self:start}.cat-counts{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.cat-selector,.cat-field-grid,.cat-table-controls,.cat-quantity-fields{grid-template-columns:minmax(0,1fr)}.cat-selector>button,.cat-table-controls>button,.cat-quantity-fields>button{justify-self:stretch}.cat-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.cat-tabs>button{padding:8px}.cat-counts{gap:8px}.cat-counts>div{padding:10px}.cat-counts strong{font-size:20px}}
+
+/* Supplier delivery retains the catalog's neutral industrial controls. */
+#cat-panel-supplier fieldset{border:1px solid #bdbdbd;padding:12px;margin:0}#cat-panel-supplier legend{font-weight:600;padding:0 6px}#sup-bindings table{min-width:640px}#sup-bindings td:first-child{width:32%}#sup-bindings td:nth-child(2){width:56%}.sup-finding{padding:12px 0;border-bottom:1px solid #d0d0d0}.sup-finding p{margin:5px 0}.sup-finding a{margin-left:12px}#sup-patches td{max-width:420px;overflow-wrap:anywhere}#sup-product{border-top:1px solid #bdbdbd;margin-top:20px;padding-top:12px}#sup-product pre{max-height:360px;overflow:auto}

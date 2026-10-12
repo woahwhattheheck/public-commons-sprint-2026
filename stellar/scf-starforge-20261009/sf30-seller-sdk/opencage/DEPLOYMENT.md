@@ -151,6 +151,76 @@ Changes follow their original source or release identity:
 | Customer candidate decision | Save against the original response hash and expected decision revision, then export a new retained delivery. |
 | Earlier release needed | Use the original `rollback --generation` operation, inspect the selected/running state, and start the intended saved generation. |
 
+## Generate the selected package's Linux host bundle
+
+The source CLI includes a package-to-host workflow over the original [SF99 host generator](../../sf99-merchant-deploy/README.md). It keeps the prepared package, its exact generated handler, the host settings and the generated service configuration together. The reviewed public origin and every payment option come from the selected package.
+
+Use this workflow on the intended host with one complete, immutable Starforge installation. Prepare it as the operator/service account that owns the selected private files; the original generated runbook explains the host installation and service-account permissions. Keep the source release, package, merchant state, private environment file and deployment-preparation directory in separate locations.
+
+Create a host-settings file using the original host schema. The example paths and facilitator below are inputs to replace with the actual host selection:
+
+```json
+{
+  "schema": "stellar-forge.merchant-host.v1",
+  "merchant": "opencage",
+  "serviceUser": "starforge",
+  "serviceGroup": "starforge",
+  "kind": "api",
+  "mode": "native",
+  "privateRoot": "/var/lib/starforge-opencage",
+  "environmentFile": "/etc/starforge/opencage.env",
+  "facilitator": "https://facilitator.example/",
+  "ports": {"seller": 8423, "operations": 8424},
+  "runtime": {"node": "/opt/node/bin/node", "python": "/usr/bin/python3"},
+  "maxInFlight": 16,
+  "drainGraceMs": 60000,
+  "historyDays": 90
+}
+```
+
+The adapter fills the original host plan's `config` and `handlers` fields from the selected package and installation. Omit those fields from host settings. Native mode requires the merchant's actual asset/recipient and the original HTTPS facilitator profile. Challenge mode remains available through the original host engine for reviewing its unpaid route contract.
+
+Keep the API key in the plan's named private environment variable. If the plan selects `environment-proxy`, put its named proxy variable in that same host environment. The review reports the variable names and selected transport; it retains no variable values. The existing source's Node-version and TLS requirements apply to the selected service executable.
+
+Prepare and read the review:
+
+```sh
+node sf30-seller-sdk/opencage/cli.mjs host-review \
+  --package /srv/starforge-packages/opencage/v1 \
+  --host-plan /srv/starforge-inputs/opencage-host.json \
+  --out /srv/starforge-deployments/opencage-v1
+```
+
+The returned `reviewSha256` selects this complete preparation. Inspect the hostname, native/challenge mode, products, exact atomic prices, asset and recipient, service arguments, environment references and source limits before generating the bundle.
+
+```sh
+node sf30-seller-sdk/opencage/cli.mjs host-bundle \
+  --deployment /srv/starforge-deployments/opencage-v1 \
+  --review-sha256 THE_REVIEWED_SHA256
+
+node sf30-seller-sdk/opencage/cli.mjs host-check \
+  --deployment /srv/starforge-deployments/opencage-v1
+```
+
+Generation uses the original SF99 `generate()` with its Linux continuation option and reopens the actual `deployment.json` through `checkBundle()`. The adapter compares that manifest's complete prepared host against the saved review. Repeated generation of an existing complete bundle reopens the same bundle. The original host check verifies its selected source/configuration bytes, generated artifacts and private environment-file permissions.
+
+| Retained item | Purpose |
+| --- | --- |
+| `selection.json` | Original package directory, package/terms/plan identities, exact settings bytes and installed source root. |
+| `host-settings.json` | Complete original host-settings input, preserved byte for byte. |
+| `applications/` | The same generated handler entry used by the original merchant-release staging path, bound to the package and installed source location. |
+| `host-plan.json` | Original SF99 plan with the selected seller configuration and exact handler entry. |
+| `review.json` | Source/terms/host projection and exact generator and Linux lease source bindings. |
+| `host/` | Original SF99 Caddy fragment, systemd target/services, recovery plan, runbook and deployment manifest. |
+
+Follow `host/RUNBOOK.md` for installation into the existing host, listener start, HTTPS route checks, original operations endpoint and merchant recovery. The selected API host uses the original durable merchant outbox and usage history. The returned `BUNDLE_CHECKED` state describes this prepared host bundle; service state and payment outcome come from the running original host and buyer.
+
+Preparation publishes the immutable selection before its dependent files and uses the original atomic, exclusive file writer. An interrupted `host-review` can rejoin the same directory with the same package and exact settings input. Changed package bytes, settings, source, terms or generated review require a new preparation directory. A terminated original host generator can leave an incomplete `host/` directory. `host-check` returns `HOST_BUNDLE_INCOMPLETE` when its original deployment manifest is missing or incomplete. Its `recovery` selects `host-bundle` with the same deployment directory and exact existing review SHA-256. Run that original command again: generation reuses complete files, appends matching partial files and completes the manifest last. The original package, settings, review, handler and service paths remain attached to that directory. A Linux file lease releases when its producing process exits; generation continues after that owner has finished. Changed retained bytes or a different selection return a conflict at the original path. A preparation with no bundle yet returns `HOST_BUNDLE_NOT_GENERATED` from `host-check`, with its exact generation arguments. Each bundle's service paths stay attached to its own review.
+
+The selected Linux host supplies its existing `flock` executable. Its absolute runtime path is included by the maintained native receiving launcher. Keep an unfinished preparation private at 0700/0600. A completed bundle continues to reopen after the installation runbook hands its files to the service group. The original package-to-host receiving command exercises a retained Caddyfile prefix and a complete recovery plan, rejoins their original inodes, checks the same review and then reopens that recovered bundle.
+
+Host preparation never reads an operator workspace's mutable selected release. To deploy or roll back an already-operated SF82 release, use the original [retained release host plan](../../sf99-merchant-deploy/README.md), selecting that store's actual release and generation. Its original source-bound handler placement rules remain in force.
+
 ## Continue the original customer result
 
 The buyer uses the original SF88 initialization, policy, ledger, signer and review. Its accepted operation binds the complete merchant URL and exact terms. When a host needs the original explicit CONNECT buyer profile, configure that through the buyer's own interface; its `explicit-connect` schema differs from the provider's `environment-proxy` schema.

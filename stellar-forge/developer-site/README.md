@@ -106,6 +106,40 @@ inbox read also passed from that package. These checks made no new store
 request, order, signature or payment. Native Site publication remains with the
 original authenticated publisher and unchanged owner-private project.
 
+## SCF application and reviewer downloads
+
+Open **SCF application** from the home navigation or footer to read the complete
+[reviewer page](dist/grant.html). It presents the maintained application answer,
+the original published presentation film, the retained economic briefing and
+direct downloads in the same static Site.
+
+The page's source and downloads travel together:
+
+- [Primary application answer](dist/grant-data/application.md): the current
+  manuscript author's complete project, customer, product, Stellar contribution,
+  independent-use targets, delivery and applicant-disclosure narrative.
+- [Product and financing companion](dist/grant-data/product-and-finance.md):
+  the detailed implementation, six funded packages, capacity and conditional
+  cash explanation that supports the primary answer.
+- [Six-package budget](dist/grant-data/budget.csv): the exact package hours,
+  USD 95 planning rate and USD 38,000 / 400-hour request.
+- [Source and measure index](dist/grant-data/source-index.json): original source
+  locations, artifact identities, financial assumptions and the distinction
+  between completed work and proposed outcomes.
+
+The ten- and thirty-purchase adoption targets are totals across the two
+independent buyers. The companion's 608 hours / USD 57,760 is modeled labor cost,
+not fee revenue. The award date and conditional cash schedule remain assumptions;
+the original invitation and submission retain their existing owner.
+
+The page links the actual published film and editable companion from the
+`scf-presentation-20261011` release. Its economic-report opening uses the complete
+existing `dist/examples/fred-briefing-20261012/` directory described below.
+Preserve that directory and every current Site route when receiving this source.
+The reviewer page, its CSS and four data files need no build, numerical run,
+merchant operation or payment to open. Hosted publication continues through the
+same existing Sites project and audience in the deployment section below.
+
 ## Source layout
 
 - dist/onboarding.mjs: pure original-config generator, supported imports, validation and deterministic ZIP writer.
@@ -248,3 +282,57 @@ the retained releases. SQLite kept its staged data while MySQL read live updates
 After all prepared package directories moved, setup resume and MCP reopened the
 same fleet at revision four. Both browser views stayed within 390px with zero
 page errors, and all owned processes closed.
+
+
+## Read and reuse the economic briefing
+
+Choose **Read and reuse an economic briefing** in the existing workflow selector. **Open economic report** opens the exact original FRED offline HTML from PR1913. The completed Summary, Measures and Sources & method views contain 75 selected observations, all 150 comparisons and the original source notes. It is the retained October 2026 public-table edition; individual series keep their actual source update/retrieval dates and missing-value states.
+
+**Download report + source** uses the unchanged `zipWorkspace` writer. Its 15-file ZIP includes the complete original HTML/CSV/JSON/manifest, all 2,219 source observations and three publisher table texts, saved review/note, both native input selections, original operator guides, `START_HERE.md` and a complete package manifest. All 13 original files are byte-identical to source `8f1d879cb1ba2947a05af770091568720ce31f65`. The directory layout preserves their repository-relative paths. The new opening guide leads through the original native import, saved review, file generation, configured merchant/customer and full-project receive commands.
+
+`dist/example-download.mjs` pins the complete manifest's length and SHA-256 and checks every selected file before ZIP publication. Reads are same-origin, sequential and capped by the exact member lengths and a 1 MiB package ceiling. A one-minute download deadline, explicit Cancel, workflow change and page exit cancel its original request. An interrupted or changed example produces no partial ZIP. The served report retains its original offline CSP and downloads. No merchant input is sent by this static reader, and opening/downloading the example creates no purchase or payment.
+
+The static copy lives under `dist/examples/fred-briefing-20261012/`. Preserve its complete files when publishing the existing Site or packaging its browser assets; no toolkit runtime is embedded in the example. Use the maintained installed FRED runtime to run the included commands. The original native FRED receiving operation and funded buyer intents retain their own owner/results. This example is a completed report and customer starting point, not a claim that those later operations ran.
+
+The same ready 15-file [economic briefing ZIP](dist/examples/fred-briefing-20261012/stellar-forge-economic-briefing-20261012.zip) is retained for direct receiving: 328,163 bytes, SHA-256 `105e6fa6e6b83d05df7f8c21b1f5c0c46c2bec53ce3f3f0fc9b0823fb2298301`. It was produced by the unchanged original `zipWorkspace`; every member was compared with its selected source bytes. The browser produces that same complete member selection from the verified static files.
+
+
+## CoCart customer setup and complete receiving
+
+Open **/cocart.html** from Other sources, the workflow selector, the searchable
+component index or the existing Woo page. Import the original saved merchant
+profile or full CoCart receiving JSON. Review exact shop, checkout, product,
+currency and native terms; choose the actual private host directory and
+original SDK entry. Optional named handoffs and receiving inputs enter the
+same existing merchant connection.
+
+The editor keeps original file bytes, provides saved browser drafts with
+optimistic revisions, and downloads the complete editable draft, setup ZIP,
+operating guide and profile-plugin preparation runner. The ZIP contains every
+selected original JSON file, setup.json, cocart.mjs and INSTALL.md. Source
+amounts remain strings. The page sends no imported data to a remote service.
+
+Run **Inspect** and **Prepare** from that extracted folder against the maintained
+source checkout or installed package. The portable runner verifies the input
+hashes and delegates profile, receiving and handoff admission to the original
+CoCart modules. Prepare uses the existing setupCocartWorkspace; it preserves
+complete receiving identities and objects, selects the real SDK, and can
+initialize the existing merchant connection and agent directory. Open, Status
+and Export use the same native application and CartWorkspace.
+
+The generated handover covers first Woo installation, the original profile
+export companion, native cart and checkout, buyer handoff, seller and delivery
+operations, complete customer export, and the existing Applications
+Review/Save/Start/Open/Stop/reopen sequence. It records the exact existing
+workspaceDirectory, sdkModule, connectionFile and workspaceAlias fields.
+The source does not add a cart engine, payment implementation or managed
+application registry.
+
+Complete source, interfaces and host instructions are in [COCART.md](COCART.md).
+The addition consists of dist/cocart.html, dist/cocart.css,
+dist/cocart-onboarding.mjs, dist/cocart-setup.mjs and dist/cocart-runner.mjs.
+It reuses the original onboarding ZIP writer, draft store and shared styles.
+Original CoCart product and managed operating results remain attached to
+PR1618 and PR1708; a following front-door receiving operation retains its own
+actual result. Publish this cumulative subtree through the same existing
+Site project and its current audience.

@@ -5,12 +5,16 @@ import { resolve } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { readBytes, parseJson, writeBytes, need } from '../node/store.mjs';
 import { openDossierStore } from './dossier.mjs';
+import {createSourceBundleFromDirectory,inspectSourceBundle,SOURCE_BUNDLE_LIMIT} from './source-bundles.mjs';
 import { openPortableFile, writePortableFile } from './portable.mjs';
 import { receiveOpenAlexEdition } from './openalex.mjs';
 import { openSavedOpenAlexWorkspace } from './openalex-workspace.mjs';
 
 const usage = 'Research dossiers\n\n' +
   '  remote COMMAND --connection-file FILE --directory ORIGINAL_STORE [OPTIONS]\n' +
+  '  bundle-create --manifest FILE --source-directory DIR --out FILE\n' +
+  '  bundle-preview --file SOURCE_BUNDLE_JSON\n' +
+  '  import-bundle --store DIR --id ID --question ID --file SOURCE_BUNDLE_JSON --revision N [--sha256 HASH] [--projection full|metadata]\n' +
   '  create --store DIR --title TEXT [--description TEXT]\n' +
   '  list|get --store DIR [--id ID] [--revision N]\n' +
   '  question --store DIR --id ID --text TEXT --revision N\n' +
@@ -20,6 +24,8 @@ const usage = 'Research dossiers\n\n' +
   '  import-openalex --store DIR --id ID --question ID --openalex-workspace DIR --edition ID --revision N [--openalex-module MODULE] [--label TEXT]\n' +
   '  note --store DIR --id ID --source ID --selected true|false --note TEXT --classification supports|contradicts|background|unreviewed --revision N\n' +
   '  finding --store DIR --id ID --file FINDING_JSON --revision N\n' +
+  '  citation-updates --store DIR --id ID [--revision N] [--notice ID] [--offset N] [--limit N]\n' +
+  '  citation-review --store DIR --id ID --file REVIEW_REQUEST_JSON\n' +
   '  compare --store DIR --id ID --before N --after N\n' +
   '  export --store DIR --id ID --format json|json.gz|md|html --out FILE\n' +
   '  reopen --store DIR --file PORTABLE_JSON_OR_GZIP [--projection full|metadata]\n';
@@ -31,8 +37,21 @@ export async function main(argv = process.argv.slice(2)) {
   const keys = ['store', 'id', 'title', 'description', 'text', 'revision', 'question', 'file',
     'provider', 'label', 'source-reference', 'source', 'selected', 'note', 'classification',
     'before', 'after', 'format', 'out', 'edition-adapter', 'buyer-state', 'runtime', 'intent',
-    'openalex-workspace', 'openalex-module', 'edition', 'projection'];
+    'openalex-workspace', 'openalex-module', 'edition', 'projection', 'manifest', 'source-directory', 'sha256',
+    'notice','offset','limit','status'];
   const { values } = parseArgs({ args: argv.slice(1), options: Object.fromEntries(keys.map(key => [key, { type: 'string' }])), strict: true });
+  if(command==='bundle-create'){
+    need(values.manifest&&values['source-directory']&&values.out,'SOURCE_BUNDLE_INPUTS_REQUIRED');
+    const prepared=await createSourceBundleFromDirectory({manifestFile:resolve(values.manifest),
+      directory:resolve(values['source-directory'])});
+    await writeBytes(resolve(values.out),prepared.bytes,{exclusive:true});
+    process.stdout.write(JSON.stringify({file:resolve(values.out),...prepared.preview},null,2)+'\n');return;
+  }
+  if(command==='bundle-preview'){
+    need(values.file,'SOURCE_BUNDLE_FILE_REQUIRED');
+    const prepared=inspectSourceBundle(await readBytes(resolve(values.file),SOURCE_BUNDLE_LIMIT));
+    process.stdout.write(JSON.stringify(prepared.preview,null,2)+'\n');return;
+  }
   need(values.store, 'STORE_REQUIRED');
   let providers = {};
   if (values['edition-adapter']) {
@@ -42,7 +61,7 @@ export async function main(argv = process.argv.slice(2)) {
   }
   const store = await openDossierStore(resolve(values.store), { providers });
   const revision = values.revision === undefined ? undefined : Number(values.revision);
-  const input = async () => parseJson(await readBytes(resolve(values.file), 256 * 1024 * 1024));
+  const input = async () => parseJson(await readBytes(resolve(values.file), command==='citation-review'?16*1024*1024:256*1024*1024));
   let result;
   switch (command) {
     case 'create': result = await store.create({ title: values.title, description: values.description ?? '' }); break;
@@ -53,6 +72,11 @@ export async function main(argv = process.argv.slice(2)) {
       result = await store.receive(values.id, { questionId: values.question, label: values.label,
         provider: values.provider ?? 'research', rawBytes: await readBytes(resolve(values.file), 64 * 1024 * 1024),
         sourceReference: values['source-reference'] ?? '', expectedRevision: revision }); break;
+    case 'import-bundle':
+      need(values.file,'SOURCE_BUNDLE_FILE_REQUIRED');
+      result=await store.receiveSourceBundle(values.id,{questionId:values.question,
+        rawBytes:await readBytes(resolve(values.file),SOURCE_BUNDLE_LIMIT),
+        expectedBundleSha256:values.sha256,expectedRevision:revision,projection:values.projection??'metadata'});break;
     case 'attach':
       result = await store.receiveReference(values.id, { questionId: values.question, label: values.label,
         provider: values.provider, reference: await input(), expectedRevision: revision }); break;
@@ -84,14 +108,17 @@ export async function main(argv = process.argv.slice(2)) {
       result = await store.selectEvidence(values.id, { sourceId: values.source, selected: values.selected === 'true',
         note: values.note ?? '', classification: values.classification ?? 'unreviewed', expectedRevision: revision }); break;
     case 'finding': result = await store.addFinding(values.id, { ...await input(), expectedRevision: revision }); break;
+    case 'citation-updates':result=await store.citationUpdates(values.id,{revision,noticeId:values.notice,
+      offset:values.offset===undefined?0:Number(values.offset),limit:values.limit===undefined?30:Number(values.limit),status:values.status??'all'});break;
+    case 'citation-review':result=await store.reviewCitationUpdate(values.id,await input());break;
     case 'compare': result = await store.compare(values.id, { before: Number(values.before), after: Number(values.after) }); break;
     case 'export': {
       const format = values.format ?? 'json', destination = resolve(values.out);
       if (format === 'json' || format === 'json.gz') {
         result = await writePortableFile(destination, await store.exportStream(values.id,
-          {compression: format === 'json.gz' ? 'gzip' : 'none'}));
+          {compression: format === 'json.gz' ? 'gzip' : 'none',revision}));
       } else {
-        const exported = await store.exportDossier(values.id, {format});
+        const exported = await store.exportDossier(values.id, {format,revision});
         await writeBytes(destination, Buffer.from(exported.body), {exclusive: true});
         result = {file: destination, contentType: exported.contentType, bytes: Buffer.byteLength(exported.body)};
       }

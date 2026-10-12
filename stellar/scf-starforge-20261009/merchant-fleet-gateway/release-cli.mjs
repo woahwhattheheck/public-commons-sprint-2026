@@ -28,6 +28,12 @@ client-generate TENANT SLOT INSTANCE_ID EXPORT_ID
 client-adopt TENANT SLOT EXPORT_ID FILES_SHA256
 client-manifest TENANT SLOT EXPORT_ID
 client-download TENANT SLOT EXPORT_ID MANIFEST_SHA256 DESTINATION
+delivery-status TENANT SLOT
+delivery-control TENANT SLOT ACTION JSON_INPUT
+delivery-events TENANT SLOT DESTINATION [JSON_PAGE_OPTIONS]
+delivery-transfers TENANT SLOT [AFTER [LIMIT]]
+delivery-transfer TENANT SLOT TRANSFER_ID SOURCE_FINGERPRINT
+delivery-manifest TENANT SLOT TRANSFER_ID [TRANSFER_FINGERPRINT]
 stage TENANT SLOT PACKAGE RELEASE
 review TENANT SLOT RELEASE
 prepare REVIEW_ID
@@ -48,6 +54,8 @@ plan. Repeating setup resumes its retained progress. See BOOTSTRAP.md.
 The plan declares stores, ports and package aliases. See RELEASE_OPERATOR.md.
 Tenant enrollment, reviewed signing and native buyer discovery use that same
 foreground owner. See DISCOVERY.md for original-source and withdrawal commands.
+Original settlement delivery keeps each store’s native journal and destination
+cursors through upgrades. See DELIVERY.md for its worker and receiving workflow.
 
 Session commands:
 ${COMMANDS}`;
@@ -70,10 +78,16 @@ export async function dispatchFleetCommand(operator, line) {
   if (history) args = [history[1], history[2].startsWith('"') ? JSON.parse(history[2]) : history[2]];
   const consume = /^discovery-consume\s+(\S+)(?:\s+(.+))?$/.exec(line.trim());
   if (consume) args = [consume[1], ...(consume[2] ? [consume[2]] : [])];
+  const deliveryControl = /^delivery-control\s+(\S+)\s+(\S+)\s+(\S+)\s+(.+)$/.exec(line.trim());
+  if (deliveryControl) args = [...deliveryControl.slice(1, 4), deliveryControl[4]];
+  const deliveryEvents = /^delivery-events\s+(\S+)\s+(\S+)\s+(\S+)(?:\s+(.+))?$/.exec(line.trim());
+  if (deliveryEvents) args = [...deliveryEvents.slice(1, 4), ...(deliveryEvents[4] ? [deliveryEvents[4]] : [])];
   const required = { status: 0, catalog: 2, operations: 3, stage: 4, review: 3, prepare: 1,
     activate: 2, 'review-rollback': 1, rollback: 1, retire: 4, help: 0,
     'client-list': [2, 3, 4], 'client-inspect': 3, 'client-generate': 4, 'client-adopt': 4,
     'client-manifest': 3, 'client-download': 5,
+    'delivery-status': 2, 'delivery-control': 4, 'delivery-events': [3, 4],
+    'delivery-transfers': [2, 3, 4], 'delivery-transfer': 4, 'delivery-manifest': [3, 4],
     discovery: 1, 'discovery-enrollment': 1, 'discovery-review-enrollment': [4, 5],
     'discovery-review-recovery': [5, 6],
     'discovery-enroll': 2, 'discovery-start': 1, 'discovery-stop': 2,
@@ -111,6 +125,20 @@ export async function dispatchFleetCommand(operator, line) {
     return operator.discoveryConsume({ tenant: args[0], ...options });
   }
   const scope = { tenant: args[0], slot: args[1] };
+  if (action === 'delivery-status') return operator.deliveryStatus(scope);
+  if (action === 'delivery-control') return operator.deliveryControl({ ...scope, action: args[2], input: JSON.parse(args[3]) });
+  if (action === 'delivery-events') {
+    const options = args[3] === undefined ? {} : JSON.parse(args[3]);
+    if (!options || typeof options !== 'object' || Array.isArray(options) ||
+        Object.keys(options).some(key => !['state', 'offset', 'limit'].includes(key)))
+      throw new TypeError('Supply a JSON object containing state, offset and limit.');
+    return operator.deliveryEvents({ ...scope, id: args[2], ...options });
+  }
+  if (action === 'delivery-transfers') return operator.deliveryTransfers({ ...scope,
+    ...(args[2] ? { after: args[2] } : {}), ...(args[3] ? { limit: revision(args[3]) } : {}) });
+  if (action === 'delivery-transfer') return operator.deliveryTransfer({ ...scope, id: args[2], expectedSourceFingerprint: args[3] });
+  if (action === 'delivery-manifest') return operator.deliveryTransferManifest({ ...scope, id: args[2],
+    ...(args[3] ? { expectedFingerprint: args[3] } : {}) });
   if (action === 'client-list') return operator.clientList({ ...scope,
     ...(args[2] ? { after: args[2] } : {}), ...(args[3] ? { limit: revision(args[3]) } : {}) });
   if (action === 'client-inspect') return operator.clientInspect({ ...scope, exportId: args[2] });

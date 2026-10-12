@@ -1,6 +1,6 @@
-// Run the original builder, installer and complete Applications receiving on one pinned source.
+// Receive through an original READY runtime or the selected original builder and installer.
 import { mkdir, readFile, writeFile, rename, lstat, realpath } from 'node:fs/promises';
-import { resolve, join } from 'node:path';
+import { resolve, join, isAbsolute } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -9,17 +9,40 @@ import { createHash, randomUUID } from 'node:crypto';
 const exec = promisify(execFile), hash = x => createHash('sha256').update(x).digest('hex');
 const args = process.argv.slice(2), selected = {};
 for(let i=0;i<args.length;i+=2) {
- if(!['--selection','--work','--output'].includes(args[i]) || !args[i+1] ||
-    Object.hasOwn(selected,args[i].slice(2))) throw new Error('Use --selection FILE --work DIRECTORY --output DIRECTORY');
+ if(!['--selection','--work','--output','--retained-runtime'].includes(args[i]) || !args[i+1] ||
+    Object.hasOwn(selected,args[i].slice(2))) throw new Error('Use --selection FILE --work DIRECTORY --output DIRECTORY [--retained-runtime FILE]');
  selected[args[i].slice(2)] = args[i+1];
 }
 if(!selected.selection || !selected.work || !selected.output)
- throw new Error('Use --selection FILE --work DIRECTORY --output DIRECTORY');
+ throw new Error('Use --selection FILE --work DIRECTORY --output DIRECTORY [--retained-runtime FILE]');
 const inputPath=resolve(selected.selection), work=resolve(selected.work), output=resolve(selected.output);
 const inputBytes=await readFile(inputPath), input=JSON.parse(inputBytes);
 const B='stellar/scf-starforge-20261009/';
 const need=(value,code)=>{if(!value)throw Object.assign(new Error(code),{code})};
 need(/^[a-f0-9]{40}$/.test(input.sourceCommit),'SOURCE_COMMIT_REQUIRED');
+const retainedPath=selected['retained-runtime']?resolve(selected['retained-runtime']):null;
+const retainedBytes=retainedPath?await readFile(retainedPath):null;
+need(!retainedBytes||retainedBytes.length<=4*1024*1024,'RETAINED_RUNTIME_DESCRIPTOR_TOO_LARGE');
+const retained=retainedBytes?JSON.parse(retainedBytes):null;
+const runtimeFields=['schema','directory','installationId','profileId','profileSha256',
+ 'lockSha256','sourceCommit','sourceManifestSha256','dependencyCount','sourceRoot',
+ 'dependencyRoot','entrypoint'];
+if(retainedPath){
+ need(retained&&typeof retained==='object'&&!Array.isArray(retained)&&
+  retained.schema==='stellar-forge.managed-runtime.v1'&&retained.state==='READY'&&
+  typeof retained.directory==='string'&&isAbsolute(retained.directory)&&
+  resolve(retained.directory)===retained.directory&&
+  retained.sourceRoot===join(retained.directory,'package','source')&&
+  retained.dependencyRoot===retained.directory&&
+  retained.entrypoint===join(retained.sourceRoot,B+'distribution/cli.mjs')&&
+  /^[a-f0-9]{40}$/.test(retained.sourceCommit??'')&&
+  Number.isSafeInteger(retained.dependencyCount)&&retained.dependencyCount>=0&&
+  ['installationId','profileId','profileSha256','lockSha256','sourceManifestSha256']
+   .every(key=>/^[a-f0-9]{64}$/.test(retained[key]??'')),
+ 'ORIGINAL_READY_RUNTIME_DESCRIPTOR_REQUIRED');
+}
+const runtimeSelection=retained?{kind:'retained',path:retainedPath,sha256:hash(retainedBytes)}:
+ {kind:'build',sourceCommit:input.sourceCommit};
 await mkdir(work,{recursive:true,mode:0o700});await mkdir(output,{recursive:true,mode:0o700});
 const savedPath=join(work,'installed-receiving-checkpoint.json');
 const exists=async p=>lstat(p).catch(e=>{if(e.code==='ENOENT')return null;throw e});
@@ -28,8 +51,30 @@ let state=await exists(savedPath)?JSON.parse(await readFile(savedPath,'utf8')):{
  schema:'stellar-forge.coingecko-installed-receiving.v1',inputSha256:hash(inputBytes),stages:{}
 };
 need(state.inputSha256===hash(inputBytes),'ORIGINAL_INSTALLED_SELECTION_CHANGED');
+need(state.schema==='stellar-forge.coingecko-installed-receiving.v1'&&
+ state.stages&&typeof state.stages==='object'&&!Array.isArray(state.stages),
+ 'ORIGINAL_INSTALLED_CHECKPOINT_INVALID');
+const runtimeStarted=async()=>Boolean(state.preparation||state.runtime||state.result||
+ await exists(join(work,'runtime','preparation.json'))||
+ await exists(join(work,'runtime','runtime-install.json'))||
+ await exists(join(work,'applications-receiving.json')));
+if(Object.hasOwn(state,'runtimeSelection')){
+ if(JSON.stringify(state.runtimeSelection)!==JSON.stringify(runtimeSelection)){
+  // An explicit retained selection can replace an unstarted build request.
+  // Preserve its selected source and any completed Git/build prefixes.
+  need(state.runtimeSelection?.kind==='build'&&retained&&!await runtimeStarted(),
+   'ORIGINAL_RECEIVING_RUNTIME_SELECTION_CHANGED');
+  state.priorRuntimeSelections=[...(state.priorRuntimeSelections??[]),
+   {selection:state.runtimeSelection,continuedAt:new Date().toISOString()}];
+  state.runtimeSelection=runtimeSelection;
+ }
+}else{
+ if(retained)need(!await runtimeStarted(),'ORIGINAL_RECEIVING_RUNTIME_ALREADY_SELECTED');
+ state.runtimeSelection=runtimeSelection;
+}
 const persist=()=>save(savedPath,state),say=v=>process.stdout.write(JSON.stringify({at:new Date().toISOString(),...v})+'\n');
 await persist();
+async function buildSelectedRuntime(){
 const gitRoot=join(work,'source.git'), tooling=join(work,'tooling');
 const git=async argv=>exec('git',['--git-dir',gitRoot,...argv],{
  maxBuffer:32*1024*1024,timeout:300000,env:{...process.env,GIT_TERMINAL_PROMPT:'0'}
@@ -106,15 +151,50 @@ state.runtime=await installer.installRuntime({directory:runtimeDirectory,offline
  ...(input.npmCache?{cache:input.npmCache}:{})});
 need(state.runtime.status==='READY','ORIGINAL_RUNTIME_NOT_READY');await persist();
 say({stage:'original-runtime-ready',directory:runtimeDirectory,sourceCommit:state.runtime.sourceCommit??input.sourceCommit});
+return runtimeDirectory;
+}
+async function useRetainedRuntime(){
+ need(await realpath(retained.directory)===retained.directory&&
+  await realpath(retained.sourceRoot)===retained.sourceRoot,
+  'ORIGINAL_RETAINED_RUNTIME_PATH_CHANGED');
+ const moduleFile=join(retained.sourceRoot,B+'sf46-release/runtime-package.mjs');
+ const {inspectMerchantRuntime}=await import(pathToFileURL(moduleFile).href);
+ need(typeof inspectMerchantRuntime==='function','ORIGINAL_RUNTIME_INSPECTOR_REQUIRED');
+ // The original inspector verifies the complete package source, profile,
+ // recorded lock and actual dependency loads. This path never invokes npm.
+ const observed=await inspectMerchantRuntime(retained.directory,{
+  load:true,expectedManifest:retained.sourceManifestSha256
+ });
+ need(observed.state==='READY','ORIGINAL_RUNTIME_NOT_READY');
+ for(const field of runtimeFields)need(observed[field]===retained[field],
+  'RETAINED_RUNTIME_IDENTITY_CHANGED: '+field);
+ const first=state.stages.retainedRuntime?.firstObservedAt??new Date().toISOString();
+ state.runtime={status:'READY',...observed};
+ state.stages.retainedRuntime={
+  firstObservedAt:first,lastObservedAt:new Date().toISOString(),
+  descriptorPath:retainedPath,descriptorSha256:hash(retainedBytes),
+  requestedSourceCommit:input.sourceCommit,selectedSourceCommit:observed.sourceCommit,
+  installationId:observed.installationId,profileId:observed.profileId,
+  lockSha256:observed.lockSha256,sourceManifestSha256:observed.sourceManifestSha256
+ };
+ await persist();
+ say({stage:'original-retained-runtime-ready',directory:retained.directory,
+  requestedSourceCommit:input.sourceCommit,selectedSourceCommit:observed.sourceCommit,
+  installationId:observed.installationId,profileId:observed.profileId});
+ return retained.directory;
+}
+const runtimeDirectory=retained?await useRetainedRuntime():await buildSelectedRuntime();
 const runtimeHome=join(work,'runtime-store');await mkdir(runtimeHome,{recursive:true,mode:0o700});
 const receiving={
  schema:'stellar-forge.coingecko-applications-receiving.v1',
  sourceRoot:state.runtime.sourceRoot,runtimeDirectory,
+ ...(retained?{sourceManifestSha256:retained.sourceManifestSha256}:{}),
  consoleDirectory:join(work,'console'),runtimeHome,
  workspaceDirectory:input.workspaceDirectory,projectId:input.projectId,
  receivingDirectory:join(work,'received-market'),operationPrefix:input.operationPrefix,
  originalSources:input.originalSources,actor:input.actor,
  playwrightModule:input.playwrightModule,browserExecutable:input.browserExecutable,
+ ...(input.browserArgs!==undefined?{browserArgs:input.browserArgs}:{}),
  ...(input.configurationFile?{configurationFile:input.configurationFile}:{})
 };
 const manifest=join(work,'applications-receiving.json');
@@ -122,5 +202,6 @@ if(await exists(manifest))need(JSON.stringify(JSON.parse(await readFile(manifest
 else await save(manifest,receiving);
 const driver=await import(pathToFileURL(input.driver).href);
 const result=await driver.receiveCoinGeckoApplication({manifest,output});
-state.result={applicationId:result.applicationId,projectId:result.projectId,completedAt:result.completedAt};
+state.result={applicationId:result.applicationId,projectId:result.projectId,completedAt:result.completedAt,
+ requestedSourceCommit:input.sourceCommit,selectedSourceCommit:result.sourceCommit,runtimeSelection:state.runtimeSelection};
 await persist();say({complete:true,...state.result});

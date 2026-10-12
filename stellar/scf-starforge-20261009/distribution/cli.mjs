@@ -80,7 +80,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   buyer-node  Review, execute and recover generated-client purchases in a Node application
   buyer-expenses                            Allocate native buyer expenses and issue accountant periods
   buyer-n8n-workflows Generate six original customer workflows for the selected n8n credential
-  buyer-agent Operate the original buyer through LangGraph checkpoints and LangChain tools
+  buyer-agent-example                       Operate the original buyer through LangGraph checkpoints and LangChain tools
   stac                                      Discover imagery, compare scenes and deliver selected assets to customers
   coingecko                                 Operate CoinGecko sources, market research and original purchases
   tenderly / tenderly-workspace              Prepare and operate the Tenderly simulation merchant
@@ -170,7 +170,28 @@ Optional feature groups: ${[...new Set([
 Use starforge COMMAND --help for the original command's usage.
 Default workspace launch uses challenge-only mode. Add the original facilitator
 and operator configuration when you want the native payment runtime.`;
-const help = maintainedHelp + contributedCommandHelp(distribution) + '\n';
+const selectedHelp = () => [
+  'Starforge — ' + distribution.selection.title,
+  '',
+  ...(Object.hasOwn(specification.commands, 'operations') ? [
+    '  starforge init --dir DIRECTORY [--template dataset|application|upstream]',
+    '  starforge run --workspace DIRECTORY [--operations-port PORT] [-- NATIVE_SELLER_OPTIONS]',
+  ] : []),
+  '  starforge doctor [--native] [--feature NAME]',
+  '  starforge source',
+  '  starforge registrations [--source ID | --command NAME]',
+  '',
+  'Included original commands:',
+  ...Object.keys(specification.commands).sort().map(name => '  ' + name.padEnd(42) +
+    (specification.commandDescriptions?.[name] ?? 'Run the original ' + name + ' command')),
+  '',
+  'Optional feature groups: ' + [...new Set([
+    ...Object.keys(specification.featurePeers ?? {}), ...Object.keys(specification.runtimePackageManifests ?? {}),
+  ])].sort().join(', ') + '.',
+  'Use starforge COMMAND --help for the original command’s usage.',
+  '',
+].join('\n');
+const help = distribution.selection ? selectedHelp() : maintainedHelp + contributedCommandHelp(distribution) + '\n';
 
 async function release() { return distribution.manifest; }
 
@@ -218,6 +239,7 @@ export async function doctor({ requireNative = false, requiredFeatures = [] } = 
   const [nodeMajor, nodeMinor] = process.versions.node.split('.').map(Number);
   const result = { package: specification.name, packageVersion: original?.packageVersion ?? 'source-checkout',
     sourceCommit: original?.sourceCommit ?? null, node: process.version,
+    ...(distribution.selection ? { sourceSelection: distribution.selection.id } : {}),
     localSellerReady: nodeMajor > 22 || nodeMajor === 22 && nodeMinor >= 16,
     nativeDependenciesPresent, nativeDependencies: peers,
     optionalFeatures: features,

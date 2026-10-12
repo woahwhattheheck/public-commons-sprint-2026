@@ -1,0 +1,87 @@
+// MIT. The complete original GDELT customer workspace in installed Applications.
+import { join,resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { inspectMerchantRuntime } from '../../sf46-release/runtime-package.mjs';
+import { APPLICATION_PROVIDER_SCHEMA, applicationField as field, applicationPreparation,
+  observeApplicationStartup } from '../../distribution/runtime-workspace/application-provider.mjs';
+import { need,plain } from './model.mjs';
+import { gdeltLoopbackJson,gdeltLoopbackUrl } from './loopback.mjs';
+
+const ROOT='stellar/scf-starforge-20261009/sf30-seller-sdk/gdelt/';
+const STARTUP='stellar-forge.gdelt-workspace-startup.v1';
+export function gdeltApplication(common=[]) {
+  return {id:'gdelt-events',command:'gdelt',title:'GDELT article and event desk',terminal:true,
+    requiredSource:ROOT+'launch.mjs',
+    description:'Acquire official Events/Mentions or GKG article updates, review entities and source coverage, publish paid datasets and reopen complete customer source files.',
+    fields:[
+      field('workspaceDirectory','Original GDELT project','path',true,'Select an initialized GDELT project or a received customer project.'),
+      field('buyerConfig','Original buyer configuration','path',false,'Existing private SF88 runtime, payer and intent journal for approval, paid acquisition and recovery.'),
+      field('facilitator','Configured facilitator URL','text',false,'Original HTTPS facilitator; leave empty for challenge-only merchant serving.'),
+      field('allowLocalFacilitator','Allow configured local facilitator','boolean',false,'Explicitly allow the original http://127.0.0.1 service.'),
+      field('merchantPort','Routed merchant port','port',false,'Use the loopback port routed by the publication HTTPS origin. Zero chooses an available port.'),
+      field('sourcePython','Source Python executable','path',false,'Python 3.11+ with the installed buyer package; defaults to the selected terminal Python.'),
+      field('terminalPython','Terminal Python executable','path',false,'Defaults to /usr/bin/python3; carries the original native buyer approval.'),
+      ...common]};
+}
+export async function prepareGdeltApplication(settings,{inputPath,runtimeDirectory}={}) {
+  const workspace=await inputPath(settings.workspaceDirectory,'directory',false,true);
+  const runtime=await inspectMerchantRuntime(resolve(runtimeDirectory),{load:false,source:false});
+  const launch=join(runtime.sourceRoot,ROOT+'launch.mjs');
+  const inputs=[workspace,await inputPath(launch,'file'),await inputPath(join(runtime.sourceRoot,ROOT+'workspace.mjs'),'file'),
+    await inputPath(join(runtime.sourceRoot,ROOT+'cli.mjs'),'file')];
+  if(settings.buyerConfig)inputs.push(await inputPath(settings.buyerConfig,'file',false,true));
+  const python=await inputPath(settings.sourcePython??settings.terminalPython??'/usr/bin/python3','file');
+  inputs.push(python);
+  const original=await import(pathToFileURL(launch).href);
+  const binding=await original.inspectGdeltWorkspaceBinding({directory:workspace.path,buyerConfig:settings.buyerConfig,
+    facilitator:settings.facilitator,allowLocalFacilitator:settings.allowLocalFacilitator===true,merchantPort:settings.merchantPort??0});
+  need(plain(binding)&&binding.schema==='stellar-forge.gdelt-workspace-binding.v1'&&binding.directory===workspace.path&&
+    /^[a-f0-9-]{36}$/.test(binding.projectId??'')&&/^[a-f0-9]{64}$/.test(binding.sha256??''),'The original GDELT project binding changed.');
+  const args=['serve','--project',binding.directory,'--expected-binding-sha256',binding.sha256,
+    '--merchant-port',String(binding.merchantPort),'--python',python.path];
+  if(binding.buyerConfig)args.push('--buyer-config',binding.buyerConfig.path);
+  if(binding.facilitator)args.push('--facilitator',binding.facilitator);
+  if(binding.allowLocalFacilitator)args.push('--allow-local-facilitator');
+  return {args,inputs};
+}
+function argument(request,name,required=true) {
+  const indices=request.args.flatMap((value,index)=>value===name?[index]:[]);
+  if(!indices.length&&!required)return undefined;
+  need(indices.length===1&&typeof request.args[indices[0]+1]==='string','The original application arguments changed.');
+  return request.args[indices[0]+1];
+}
+export async function gdeltStartup(request,text) {
+  if(request.command!=='gdelt'||!Array.isArray(request.args)||request.args[0]!=='serve'||typeof text!=='string'||text.length>16384||!text.startsWith('{'))return null;
+  let ready;try{ready=JSON.parse(text);}catch{return null;}
+  if(!plain(ready)||ready.schema!==STARTUP||ready.state!=='LISTENING')return null;
+  const directory=resolve(argument(request,'--project')),expected=argument(request,'--expected-binding-sha256'),
+    port=argument(request,'--port',false)??'0',merchantPort=argument(request,'--merchant-port');
+  need(/^[a-f0-9]{64}$/.test(expected)&&/^(0|[1-9]\d*)$/.test(port)&&Number(port)<=65535&&
+    /^(0|[1-9]\d*)$/.test(merchantPort)&&Number(merchantPort)<=65535&&ready.binding?.directory===directory&&
+    ready.binding?.sha256===expected&&ready.binding?.merchantPort===Number(merchantPort)&&
+    /^[a-f0-9-]{36}$/.test(ready.binding?.projectId??'')&&/^[a-f0-9-]{36}$/.test(ready.instanceId??''),
+    'The original GDELT startup binding changed.');
+  const url=gdeltLoopbackUrl(ready.url);
+  need(port==='0'||Number(port)===(url.port===''?80:Number(url.port)),'The original selected browser port changed.');
+  const live=await gdeltLoopbackJson({url:ready.url,path:'/api/launch',maxBytes:16384,timeout:5000});
+  need(live?.schema===STARTUP&&live.state==='LISTENING'&&live.instanceId===ready.instanceId&&
+    live.binding?.sha256===expected&&live.binding?.directory===directory&&live.binding?.projectId===ready.binding.projectId&&
+    live.binding?.merchantPort===Number(merchantPort)&&live.buyerConfigured===Boolean(ready.binding.buyerConfig),
+    'The live application differs from the original selected project.');
+  return {url:url.href,original:{schema:STARTUP,directory,projectId:live.binding.projectId,bindingSha256:expected,
+    instanceId:live.instanceId,buyerConfigured:live.buyerConfigured,merchantPort:live.binding.merchantPort,startedAt:live.startedAt}};
+}
+export default {
+  schema:APPLICATION_PROVIDER_SCHEMA,id:'gdelt-events',order:365,
+  catalog({common}){return[gdeltApplication(common)];},
+  async prepare(type,settings,context){
+    const prepared=applicationPreparation(settings,context.inputPath),original=await prepareGdeltApplication(settings,context);
+    prepared.args.push(...original.args);prepared.inputs.push(...original.inputs);
+    return {args:prepared.args,inputs:prepared.inputs,createDirectories:prepared.createDirectories};
+  },
+  matchRequest(request){return !request.pythonCommand&&request.command==='gdelt';},
+  createObserver(request,directory){return observeApplicationStartup(request,directory,text=>{
+    if(!text.startsWith('{')||!text.includes('"schema":"'+STARTUP+'"'))return null;
+    return ()=>gdeltStartup(request,text);
+  });}
+};

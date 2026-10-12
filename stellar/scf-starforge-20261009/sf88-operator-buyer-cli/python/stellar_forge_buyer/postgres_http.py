@@ -54,6 +54,23 @@ def serve(warehouse, directory, *, port=0):
             if self.command != "HEAD":
                 self.wfile.write(payload)
 
+        def _report(self, request_id):
+            with operator.report_stream(request_id) as opened:
+                stream, artifact = opened
+                self.send_response(200)
+                self.send_header("Content-Type", "application/zip")
+                self.send_header("Content-Length", str(artifact["bytes"]))
+                self.send_header("Content-Disposition", 'attachment; filename="' + artifact["filename"] + '"')
+                self.send_header("X-Content-SHA256", artifact["sha256"])
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.send_header("Referrer-Policy", "no-referrer")
+                self.send_header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
+                self.end_headers()
+                if self.command != "HEAD":
+                    while chunk := stream.read(1024 * 1024):
+                        self.wfile.write(chunk)
+
         def _dispatch(self):
             origin = "http://127.0.0.1:" + str(self.server.server_port)
             if (self.headers.get_all("Host") != [origin[7:]]
@@ -96,6 +113,8 @@ def serve(warehouse, directory, *, port=0):
                         return self._reply(200, operator.review_record(parts[2]))
                     if len(parts) == 3 and parts[:2] == ["api", "requests"] and not values:
                         return self._reply(200, operator.request_record(parts[2]))
+                    if len(parts) == 4 and parts[:2] == ["api", "period-reports"] and parts[3] == "archive" and not values:
+                        return self._report(parts[2])
                     if url.path == "/api/current":
                         fields(values, ("name",))
                         return self._reply(200, warehouse.current(values["name"]))
@@ -117,6 +136,20 @@ def serve(warehouse, directory, *, port=0):
                         return self._reply(200, warehouse.compare(values["previous"], values["current"],
                             offset=integer(int(values.get("offset", "0")), maximum=2000000),
                             limit=integer(int(values.get("limit", "50")), minimum=1)))
+                    if url.path in {"/api/semantics", "/api/semantics-file"}:
+                        fields(values, ("version_id",))
+                        version_id = values["version_id"]
+                        if url.path == "/api/semantics":
+                            return self._reply(200, warehouse.semantics(version_id))
+                        raw = warehouse.semantics_bytes(version_id)
+                        if raw is None:
+                            return self._reply(404, {"error": "DATASET_PG_LEGACY_EDITION_HAS_NO_DICTIONARY"})
+                        return self._reply(200, raw, "application/json",
+                                           "semantics-" + version_id + ".json")
+                    if url.path == "/api/semantic-compare":
+                        fields(values, ("previous", "current"))
+                        comparison = warehouse.compare_semantics(values["previous"], values["current"])
+                        return self._reply(200, comparison)
                     if url.path == "/api/manifest":
                         fields(values, ("version_id",))
                         return self._reply(200, warehouse.manifest_bytes(values["version_id"]),

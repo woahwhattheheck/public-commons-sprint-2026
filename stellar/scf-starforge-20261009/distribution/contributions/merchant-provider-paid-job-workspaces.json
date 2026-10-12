@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-paid-job-workspaces",
+  "description": "Original paid-job merchant MCP provider",
+  "merchantProviders": {
+    "paid-job-workspaces": "stellar-forge/mcp-merchant-operator/providers/paid-job-workspaces.mjs"
+  }
+}

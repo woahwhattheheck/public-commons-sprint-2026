@@ -47,6 +47,14 @@ A financial handoff contains the printable report, complete exact JSON/CSVs, sel
 
 The local worked example is clearly labeled and uses supplied example exports to exercise the complete financial workflow. Actual native and browser results are recorded with their source revision and retained database. These examples are not City records or evidence of external acceptance.
 
+## Per-row accounting and deposit returns
+
+Open **/cashiering/receiving/** on that same local application. The complete [accounting return workflow](cashiering/RECEIVING.md) adds original returned files, explicit versioned identity/status/amount interpretation, exact prepared-row comparison, staff assignments and finding reviews, source-bound decisions, paged inspection and a complete handoff. It reuses the original prepared export, financial edition and SQLite workspace.
+
+Returned observations remain separate by original source family and currency. Repeated native events, conflicting statuses and values, missing return populations, corrections and earlier snapshots remain available for review. All complete source bytes, original row identities and saved editions travel in the receiving packet or the existing editable workspace backup.
+
+The mounted browser retains full original requests and files through interrupted responses, and the installed CLI can continue that same request. Original financial packet preparation includes the selected row-receiving comparisons and actual returned documents.
+
 ## Original comparison contract
 
 The canonical same-cohort JSON input remains available to existing consumers:

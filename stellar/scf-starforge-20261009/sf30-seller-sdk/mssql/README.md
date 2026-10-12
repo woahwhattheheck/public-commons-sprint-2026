@@ -194,3 +194,268 @@ merchant host; the generated `client` subdirectory is the customer deliverable.
 
 This operation runs the merchant in its original `CHALLENGE_ONLY` mode. Existing
 facilitator and buyer flows remain available through normal seller startup.
+
+
+## Managed Applications and the same merchant workspace
+
+The SQL Server entry in Applications starts this original workspace. It binds the
+saved application to the workspace UUID, source-profile bytes, source-relative CA,
+selected environment and original runtime package. Its startup reader verifies
+the private connection record against the live authenticated listener. Source
+and workspace changes remain visible at Review and Start.
+
+Initialize the private workspace once before selecting it in Applications:
+
+~~~sh
+starforge mssql-workspace init \
+  --source /private/sqlserver-merchant/source.json \
+  --state /private/sqlserver-workspace
+starforge mssql-workspace inspect \
+  --source /private/sqlserver-merchant/source.json \
+  --state /private/sqlserver-workspace
+~~~
+
+The result contains its workspaceId. Existing authoring workspaces acquire that
+identity on their first normal launch with this source; their prepared releases
+remain in place. The identity file is operator/workspace.json. The currently
+running original listener writes operator/connection.json with mode 0600 and
+removes its own connection record when it closes.
+
+In Applications choose **SQL Server data products**, select the initialized
+state directory and original source JSON, and supply the private environment
+file containing the source's named password variable. Select the existing SF82
+store when the merchant host will stage releases. Review, Save, Connect, Review
+Start, Start and Open use the maintained Applications workflow. A fixed local port
+keeps the same browser origin across restarts; the host connection file also
+tracks a newly allocated port automatically.
+
+This authoring owner uses Linux and util-linux flock, matching its original
+release-preparation lock. A Linux client can connect to the existing Windows SQL
+Server host. The earlier native mssql receive command retains its original
+cross-platform SF82 contract.
+
+The browser's **Saved workspace** section reopens complete reviews, original
+operation results and transfers after restart. Review, preview, preparation and
+export save an operation UUID before sending. A lost reply leaves the exact
+request in browser storage; **Retry saved operation** returns its original
+retained outcome. Another browser tab cannot replace that pending request.
+Reviews retain their original expiry, source profile, schema and choices.
+Preparing an already committed matching package reopens that original package.
+
+## Reopen the same operator after interruption
+
+Start the saved Application again, or restart `mssql-workspace` with the same
+`--source` and `--state` paths. The owner acquires the existing workspace lease
+before reopening its retained identity and work records. If the process stopped
+between publishing a record and removing that record's staging link, the owner
+completes that publication with the original bytes.
+
+Workspace identity, review IDs, operation UUIDs and completed export records stay
+the same. The browser and merchant tools can replay the original operation ID
+and exact request body; an existing completed result reopens through the same
+owner. Private input-file validation continues to apply to source files and
+incoming packages.
+
+## Attach merchant tools to the original owner
+
+The source contribution registers both the SQL Server Application and the
+mssql-workspaces merchant provider. Its setup, metadata and runtime remain here
+in the SQL Server component. Inspect the installed registration with:
+
+~~~sh
+starforge registrations --source mssql
+starforge merchant-providers inspect mssql-workspaces
+~~~
+
+Create a private connection JSON using the actual workspaceId returned above:
+
+~~~json
+{
+  "schema": "stellar-forge.mssql-workspace-connection.v1",
+  "workspaces": {
+    "author": {
+      "label": "SQL Server merchant",
+      "workspaceId": "<workspaceId from the author workspace>",
+      "consoleUrlFile": "/private/sqlserver-workspace/operator/connection.json"
+    },
+    "receiver": {
+      "label": "SQL Server receiving workspace",
+      "workspaceId": "<workspaceId from the receiving workspace>",
+      "consoleUrlFile": "/private/sqlserver-receiver/operator/connection.json",
+      "deliveries": {
+        "incoming": {
+          "directory": "/private/sqlserver-managed-receiving/merchant"
+        }
+      }
+    }
+  }
+}
+~~~
+
+Use the original receiving workspace's own init result for its UUID. Every alias
+pins one actual owner. consoleUrlFile may also select the original
+Applications application-url.json; the reader validates its command, native
+identity and live listener. Delivery aliases select existing host-owned private
+receiving paths. An optional manifestSha256 fixes a delivery to one exact export.
+
+Save the connection with mode 0600 under a private directory. The setup file is:
+
+~~~json
+{
+  "directory": "/private/sqlserver-merchant-host",
+  "connection": "/private/sqlserver-workspaces.json",
+  "name": "SQL Server merchant"
+}
+~~~
+
+~~~sh
+starforge mssql-agent init --options /private/sqlserver-setup.json
+starforge mssql-agent serve \
+  --config /private/sqlserver-merchant-host/merchant-mcp.json \
+  --port 3211 --token-env MCP_ACCESS_TOKEN
+~~~
+
+The existing merchant host reads its bearer token from the selected environment
+variable and keeps its normal OAuth and operator-console options. Setup creates
+an original SF82 store at the returned releaseStore path unless an existing store
+was supplied in the setup JSON. Select that same store in the author Application
+or its --release-store launch option. Repeating unchanged setup reopens its
+original configuration.
+
+The MCP attachment reads the same private URL file on each operation and checks
+the live workspace, instance and profile before forwarding. The existing SQL
+Server browser owns database queries and merchant processes. The merchant host
+closes its attachment by draining accepted calls; Applications controls the
+original workspace's process lifecycle.
+
+| Operation | Original receiving behavior |
+| --- | --- |
+| merchant_mssql_workspaces / status | Select a host-declared alias and its exact workspace UUID. |
+| merchant_mssql_catalog | Read the actual native catalog or selected schema-qualified table/view. |
+| merchant_mssql_review / reviews / review_load | Compile actual columns, filters, ordering and prices; reopen the original choices. |
+| merchant_mssql_preview | Execute the approved native query once and retain its exact result under the supplied operation UUID. |
+| merchant_mssql_operations / operation | Page original requests and reopen their committed results, including native query output. |
+| merchant_mssql_prepare / releases / release | Prepare and verify the complete original source and customer client. |
+| merchant_mssql_stage | Stage into the same configured SF82 store; its existing tools handle compare, activate, run and settlement. |
+| merchant_mssql_start / stop | Start the selected original seller or drain its exact current run ID. |
+| merchant_mssql_export / exports | Retain and reopen a complete merchant or customer transfer. |
+| merchant_mssql_export_manifest / export_file / export_file_release | Read original manifest-bound files through the maintained retained-file reader. |
+| merchant_mssql_receive | Adopt the complete merchant from one host-declared receiving alias under the original release lease. |
+
+Every scoped call carries workspace and workspaceId. Review, preview, prepare,
+export and receive also carry a version-4 operationId. Repeat the same UUID and
+unchanged input after a lost reply. The owner checks the retained request before
+performing work and returns a committed result before opening another query.
+A UUID used for different choices reports a conflict.
+
+A direct host operator can use the same source-owned client without opening
+another merchant host:
+
+~~~sh
+starforge mssql-agent call \
+  --connection /private/sqlserver-workspaces.json \
+  --tool merchant_mssql_reviews --input /private/selected-workspace.json
+~~~
+
+Here selected-workspace.json contains the same workspace alias and actual UUID.
+The original tool catalog supplies each operation's complete input schema.
+
+## Complete merchant and customer receiving
+
+**Retain complete merchant** in the browser, or merchant_mssql_export with
+kind merchant, captures the original workspace choices, complete prepared
+package, optional CA and all generated client files. The immutable
+Mssql_Transfer_Manifest.json records every path, byte count and SHA256.
+
+**Retain customer files**, or kind customer, captures the original public
+OpenAPI and the five generated client files. The customer can install and use
+those original files directly. The existing browser client archive remains
+available for an immediate single-file download.
+
+Use the retained export ID and manifest SHA256 from the browser or merchant tool:
+
+~~~sh
+starforge mssql-download inspect \
+  --url http://127.0.0.1:3211 \
+  --workspace author --workspace-id ACTUAL_WORKSPACE_UUID \
+  --export-id ACTUAL_EXPORT_UUID --token-env MCP_ACCESS_TOKEN
+
+starforge mssql-download receive \
+  --url http://127.0.0.1:3211 \
+  --workspace author --workspace-id ACTUAL_WORKSPACE_UUID \
+  --export-id ACTUAL_EXPORT_UUID \
+  --expected-manifest-sha256 ACTUAL_MANIFEST_SHA256 \
+  --directory /private/sqlserver-managed-receiving/merchant \
+  --token-env MCP_ACCESS_TOKEN
+~~~
+
+Repeat the same selection and directory to resume. The original downloader
+retains its private checkpoint and completed files, validates each byte and
+digest, and reopens the original file at the saved offset when a read handle
+expires or the workspace restarts. A transfer's file handles are scoped to that
+exact export. The transfer stays available after the reader closes.
+
+Select the corresponding receiving alias with merchant_mssql_receive and the
+same expected manifest SHA256. The receiver verifies every transfer file,
+the native package manifest and the original workspace choices before adopting
+the release. It takes the original per-release lock and atomically publishes
+the prepared directory. A matching existing release reopens; a different
+original package under that release ID is rejected. Approved source connection
+references and original public terms travel with the prepared package.
+
+## One complete managed receiving operation
+
+The installed mssql-managed-receive command attaches to the two already running
+SQL Server workspaces and their existing merchant host. Supply the actual
+approved choices from merchant_mssql_review_load's choices object in a private
+JSON file. Preserve the source fingerprint and exact native payment terms.
+
+The following receiving options use the aliases configured above:
+
+~~~json
+{
+  "schema": "stellar-forge.mssql-managed-receiving.v1",
+  "directory": "/private/sqlserver-managed-receiving",
+  "connection": "/private/sqlserver-workspaces.json",
+  "workspace": "author",
+  "receiver": {
+    "workspace": "receiver",
+    "delivery": "incoming"
+  },
+  "choices": "/private/sqlserver-approved-choices.json",
+  "mcpUrl": "http://127.0.0.1:3211",
+  "tokenEnv": "MCP_ACCESS_TOKEN",
+  "storeReleaseId": "catalog-managed-v1"
+}
+~~~
+
+~~~sh
+starforge mssql-managed-receive \
+  --options /private/sqlserver-managed-receiving.json
+~~~
+
+The one original operation:
+
+1. Verifies both actual browser owners and the merchant tool's selected listener.
+2. Reads the native SQL Server catalog and reviews the approved source choices.
+3. Executes the actual typed query through MCP. Its temporary loopback transport
+   discards one completed preview reply; the original UUID then reopens the
+   identical retained query result.
+4. Prepares and reopens the original package, then stages it in the configured
+   SF82 store.
+5. Downloads every original merchant file and every customer file through the
+   maintained resumable downloader.
+6. Receives the complete merchant into the second original workspace and verifies
+   its unchanged package, plan and choices.
+7. Imports the downloaded original client, checks its bound OpenAPI and payment
+   terms, starts the selected original merchant, and reads its actual unpaid 402
+   contract. A merchant started by this operation is drained through its original
+   run ID; an existing matching owner continues serving.
+
+The private receiving directory contains the stable intent and operation UUIDs,
+native catalog/version, reviewed choices, exact query result, response-loss
+record, complete merchant and customer files, SF82 stage, received release,
+customer response and receiving.json. Repeating unchanged options continues that
+same operation and its original files. A failed stage records its exact source
+error and preserves completed work. The source's original native query limits
+and original review lifetime apply.

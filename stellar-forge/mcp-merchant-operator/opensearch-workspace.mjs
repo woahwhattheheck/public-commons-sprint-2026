@@ -10,6 +10,9 @@ import { RetainedFileReads, MAX_RETAINED_CHUNK_BYTES } from './retained-file-rea
 import { MerchantOpenSearchDeployments, openSearchDeploymentTools, openSearchRuntimeOptions,
   projectOpenSearchDeploymentOperation } from './opensearch-deployment.mjs';
 
+import { MerchantOpenSearchMaterials, readOpenSearchMaterialInputs,
+  projectOpenSearchMaterialOperation } from './opensearch-materials.mjs';
+
 export const OPENSEARCH_WORKSPACE_CONNECTION_SCHEMA = 'stellar-forge.opensearch-workspace-connection.v1';
 
 
@@ -85,7 +88,7 @@ export async function readOpenSearchWorkspaceConfiguration(path) {
   const base = dirname(path), workspaces = Object.create(null), directories = new Set();
   for (const [alias,item] of Object.entries(raw.workspaces)) {
     identifier(alias,'OpenSearch workspace alias');
-    exact(item,['label','directory','sourceFile','planFile','runtime'],['directory','sourceFile']);
+    exact(item,['label','directory','sourceFile','planFile','runtime','materialInputs'],['directory','sourceFile']);
     const directory = await realpath(hostPath(item.directory,base));
     await privateSupportDirectory(directory);
     const stat = await lstat(directory);
@@ -96,6 +99,7 @@ export async function readOpenSearchWorkspaceConfiguration(path) {
     workspaces[alias] = { label:line(item.label ?? alias,'OpenSearch workspace label'),directory,
       sourceFile:await declarationPath(item.sourceFile,base),
       runtime:openSearchRuntimeOptions(item.runtime ?? {}),
+      materialInputs:readOpenSearchMaterialInputs(item.materialInputs,base),
       ...(item.planFile === undefined ? {} : {planFile:await declarationPath(item.planFile,base)}) };
   }
   return { workspaces };
@@ -122,7 +126,7 @@ function setView(value) {
       judgmentCount:item.documents?.filter(document => document.rating !== null).length ?? item.judgmentCount ?? 0}))};
 }
 function operationView(value, includeRequest=false) {
-  value = projectOpenSearchDeploymentOperation(value);
+  value = projectOpenSearchMaterialOperation(projectOpenSearchDeploymentOperation(value),includeRequest);
   const result = {...pick(value,['id','kind','state','createdAt','updatedAt','requestSha256','error']),
     ...(includeRequest ? {request:value.request,...pick(value,['draft','relevanceSet','evaluation'])} : {})};
   if (value.result) {
@@ -333,7 +337,7 @@ async function retainedOriginal(model,args) {
 
 export class MerchantOpenSearchWorkspaces {
   #config; #environment; #handles = new Map(); #pending = new Map(); #closingAliases = new Map();
-  #files = new RetainedFileReads({errorPrefix:'OPENSEARCH'}); #deployment = new MerchantOpenSearchDeployments(); #closing = false; #close;
+  #files = new RetainedFileReads({errorPrefix:'OPENSEARCH'}); #deployment = new MerchantOpenSearchDeployments(); #materials = new MerchantOpenSearchMaterials(); #closing = false; #close;
   constructor(config, {environment = process.env} = {}) {
     if (!plain(environment)) throw failure('CONFIGURATION_ERROR','The original source environment must be a host-selected object.');
     this.#config = config; this.#environment = environment;
@@ -342,7 +346,7 @@ export class MerchantOpenSearchWorkspaces {
     const aliases = this.#config.opensearchWorkspaces?.workspaces ?? {};
     return {configured:Object.keys(aliases).length > 0,count:Object.keys(aliases).length,
       opened:[...this.#handles.keys()],pending:this.#pending.size,closing:this.#closing,...this.#files.summary,
-      deployment:this.#deployment.summary};
+      deployment:this.#deployment.summary,materials:this.#materials.summary};
   }
   #entry(alias) {
     identifier(alias,'OpenSearch workspace alias');
@@ -380,14 +384,14 @@ export class MerchantOpenSearchWorkspaces {
     const accepted = [...this.#pending].filter(([,selected]) => selected === alias).map(([pending]) => pending);
     const pending = (async () => {
       await Promise.allSettled(accepted);
-      const readers = await Promise.allSettled([this.#files.closeScope(alias),this.#deployment.closeWorkspace(alias)]);
-      const handle = this.#handles.get(alias);
-      if (handle) {
-        try { await (await handle).close(); }
-        finally { if (this.#handles.get(alias) === handle) this.#handles.delete(alias); }
-      }
+      const readers = await Promise.allSettled([this.#files.closeScope(alias),this.#deployment.closeWorkspace(alias),this.#materials.closeWorkspace(alias)]);
       const failed = readers.find(result => result.status === 'rejected');
       if (failed) throw failed.reason;
+      const handle = this.#handles.get(alias);
+      if (handle) {
+        await (await handle).close();
+        if (this.#handles.get(alias) === handle) this.#handles.delete(alias);
+      }
       return {workspace:alias,state:'CLOSED'};
     })().finally(() => this.#closingAliases.delete(alias));
     this.#closingAliases.set(alias,pending);
@@ -403,6 +407,10 @@ export class MerchantOpenSearchWorkspaces {
       if (name.startsWith('merchant_opensearch_deployment_')) {
         const value = await this.#deployment.call(name,args,{model,entry});
         return value?.kind?.startsWith('deployment-') ? operationView(value) : value;
+      }
+      if (name.startsWith('merchant_opensearch_material_') || name.startsWith('merchant_opensearch_supplier_')) {
+        const value = await this.#materials.call(name,args,{model,entry,files:this.#files});
+        return value?.kind && value?.requestSha256 && value?.state ? operationView(value) : value;
       }
       switch (name) {
         case 'merchant_opensearch_catalog': {
@@ -500,12 +508,16 @@ export class MerchantOpenSearchWorkspaces {
     this.#closing = true;
     this.#close = (async () => {
       await Promise.allSettled([...this.#pending.keys()]);
-      const readers = await Promise.allSettled([this.#files.close(),this.#deployment.close()]);
-      const results = await Promise.allSettled([...this.#handles.values()].map(async handle => (await handle).close()));
-      this.#handles.clear();
-      const rejected = [...readers,...results].find(item => item.status === 'rejected');
+      const readers = await Promise.allSettled([this.#files.close(), this.#deployment.close(), this.#materials.close()]);
+      const readerFailure = readers.find(item => item.status === 'rejected');
+      if (readerFailure) throw readerFailure.reason;
+      const results = await Promise.allSettled([...this.#handles].map(async ([name, pending]) => {
+        await (await pending).close();
+        if (this.#handles.get(name) === pending) this.#handles.delete(name);
+      }));
+      const rejected = results.find(item => item.status === 'rejected');
       if (rejected) throw rejected.reason;
-    })();
+    })().catch(error => { this.#close = null; throw error; });
     return this.#close;
   }
 }

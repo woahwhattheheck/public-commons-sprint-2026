@@ -60,6 +60,17 @@ export async function prepareProviderApplication(provider, type, settings, conte
       { environmentFile: settings.environmentFile, environmentSha256: environment.sha256 } : {}) };
 }
 
+/** Bind run-specific arguments only when the reviewed original operation is retained. */
+export function retainedApplicationArguments(provider, command, requestId) {
+  const args = provider.runArguments
+    ? provider.runArguments({command:command.command, args:[...command.args], requestId})
+    : [...command.args];
+  need(Array.isArray(args) && args.every(value => typeof value === 'string'),
+    'APPLICATION_PROVIDER_RUN_ARGUMENTS_INVALID',
+    'The ' + provider.id + ' provider must return the original managed argument list.');
+  return args;
+}
+
 export function applicationPrivateUrl(text) {
   try {
     const url = new URL(text);
@@ -72,7 +83,7 @@ export function applicationPrivateUrl(text) {
 
 /**
  * A provider synchronously reads original normalized startup lines. It returns a URL,
- * {url, original?, links?}, a deferred resolver function, an array of those values, or null.
+ * {url, original?, links?, workspaceId?, connectionFile?}, a deferred resolver function, an array of those values, or null.
  * Defer asynchronous source checks so ignored later announcements never run them. Stateful original
  * multi-line readers live in that provider. This one writer retains the first
  * accepted announcement, its original identity and the shared operation ID.
@@ -104,6 +115,8 @@ export function observeApplicationStartup(request, directory, readLine, { lineLi
           source: 'original-command-stdout', observedAt: now(), url,
           ...(Object.hasOwn(startup, 'links') ? { links: startup.links } : {}),
           ...(Object.hasOwn(startup, 'original') ? { original: startup.original } : {}),
+          ...(Object.hasOwn(startup, 'workspaceId') ? { workspaceId: startup.workspaceId } : {}),
+          ...(Object.hasOwn(startup, 'connectionFile') ? { connectionFile: startup.connectionFile } : {}),
         });
       }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
     }

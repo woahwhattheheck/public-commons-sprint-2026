@@ -99,6 +99,8 @@ It prints every exact schema. The call command accepts a short action such as st
 | prs | Original/candidate XML record and original validation/comparison |
 | prs_plan | Frozen original modernization decisions |
 | prs_reconciliation | Original typed comparison and study/field reconciliation |
+| batch | Complete client receiving batch, findings, row history and declared deliveries |
+| batch_entry | One retained entry with original/current documents and full selected PRS reports |
 | operation | Original request journal after completed or interrupted action |
 | action | Reviewed native action with original integer revision and UUID |
 | files | Actual declared input byte counts and hashes |
@@ -171,6 +173,7 @@ The native acquisition preserves complete fields, requests the count on the firs
 | Query retained edition | dataset.query |
 | Prepare merchant/package | merchant.configure, package.export |
 | PRS operations | prs.candidate, prs.plan, prs.apply, prs.reconcile, prs.preview |
+| Disclosure batch | batch.create, batch.links, batch.plan, batch.apply, batch.preview, batch.select, batch.reconcile, batch.review, batch.export |
 | Publisher | Installed original publisher.* actions |
 | Dossier | Installed original dossier.* actions, validated by the controller's joined leaf |
 
@@ -200,7 +203,7 @@ Prs.reconcile accepts documentId, captureId and the original plan:
 {
   "studyLinks": [
     {
-      "studyIndex": 0,
+      "studyIndex": 1,
       "nctId": "ORIGINAL_NCT_ID",
       "reason": "Reviewed original study match"
     }
@@ -211,6 +214,31 @@ Prs.reconcile accepts documentId, captureId and the original plan:
 ~~~
 
 The leaf also accepts its fieldIds and field decisions. Read the retained report with prs_reconciliation. Original XML, candidate XML, plans and reconciliation reports remain in the native package/source closure.
+
+## Disclosure batches and exact XML handover
+
+The batch-enabled contribution exposes 43 tools: 25 Clinical tools and the same 18 original source tools. Use `inventory` with `kind: "batches"` or `"batchExports"` for snapshot-paged history, `batch` for the selected batch, and `batch_entry` for a row's original/current documents, composition, modernization and source reconciliation.
+
+Retain each host-declared XML through `prs_upload`, then call the normal `action` tool with `batch.create`. Supply the name, reviewer and entries containing distinct client keys, retained `documentId` values and explicitly reviewed `sourceLinks`. The original controller preserves duplicate client references to identical XML as separate entries.
+
+Every row action carries `batchId`, `entryId` and `expectedDocumentId` in addition to the same workspace revision and request UUID. `batch.review` also carries the exact `expectedContextSha256` returned by `batch_entry`, its decision `ready`, `follow-up` or `exclude`, reviewer and note. Prepare/apply, preview/select and source reconciliation delegate to the original PRS engine. The full payload contract is [Disclosure batch receiving](../../stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/BATCH_RECEIVING.md).
+
+Selecting the same composed document retains its composition findings. A prepared composition is selected with its original `previewId`; the controller keeps unresolved source units visible. Native unlinked XML study indices and typed differences remain in the same entry review.
+
+After `batch.export`, inspect its declared `files`. Prepare any member with:
+
+~~~json
+{
+  "workspace": "portfolio",
+  "kind": "batch",
+  "exportId": "export-ORIGINAL_ACTION_UUID",
+  "file": "disclosure-batch.zip",
+  "expectedSha256": "ORIGINAL_DECLARED_FILE_SHA256",
+  "expectedRevision": 12
+}
+~~~
+
+This uses the same verified file reader, completion manifest, chunked client download and local reopening as other Clinical deliveries. The archive includes all client references, exceptions, exact original/candidate XML and their transitive plan/composition inputs, linked study sources, contracts and a complete v2 portable workspace. Restore that portable ZIP in an empty receiver; an existing XML-only batch workspace remains populated. The attachment closes its own requests and readers while the original console continues to own the batch.
 
 ## Native publication and customer work
 
@@ -241,6 +269,7 @@ File_prepare accepts the original declared selection:
 | Kind | Required selector |
 | --- | --- |
 | export | exportId and file from that original export's declared members |
+| batch | exportId and file from the original batch delivery's declared members |
 | source | captureId and file from the original capture's declared members |
 | contract | Installed original contract name |
 | prs | documentId and prsKind xml/report |
@@ -329,3 +358,9 @@ Named helpers and client.call use the same exact tool definitions. Source helper
 Limits are 32 configured consoles, 128 declared input handles per console, 128 KiB native JSON requests, 16 MiB native JSON responses, and 256 MB original file/verified snapshot budgets. Use paginated source views and complete-file transfer for large captures. Listing configuration or tools performs no provider acquisition or buyer mutation.
 
 The local console transport consumes the original HTTP response stream directly with a total request deadline. It preserves the native bearer/Origin gate and validates complete retained file length and SHA256 before publishing a delivery manifest. An interrupted write still requires inspection of its original request UUID before continuation.
+
+### Complete batch context in the programmatic client
+
+The Clinical client receives each original batch entry, PRS candidate and preview as one complete native JSON value. Its source-owned response allowance is 50,397,184 bytes: three times the existing 16 MiB native JSON limit plus 64 KiB for the MCP envelope. The original MCP response carries both structured content and its JSON-escaped text representation, so the allowance covers those representations without shortening the clinical source.
+
+The shared `openMerchantFileClient` retains its 2 MiB default. Its existing `maximumResponseBytes` option selects an explicit limit from 1,024 bytes to 64 MiB; the Clinical client supplies its native-context budget. Ordinary retained file downloads still use their original chunk, manifest, complete-file SHA256, byte-count, timeout and receiving-lock checks. After a response-size failure, reopen the same saved batch entry and continue the original immutable exports; source review and batch mutations remain attached to their existing IDs.

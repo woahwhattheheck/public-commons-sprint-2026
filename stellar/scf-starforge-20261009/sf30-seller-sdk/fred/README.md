@@ -273,3 +273,10 @@ The existing Applications interface opens the original economic project with its
 ## Original native host
 
 `starforge fred receiver-host --project ABS --config PRIVATE_HOST_JSON` connects the complete receiver to the existing operator, original native facilitator, HTTPS/CONNECT route and real approval terminal. It finalizes each original customer intent through SF88/SF36 and drains the shared native services before browser receiving. See [Native host receiving](NATIVE_HOST.md) for the original host selection, existing receiver adoption and same-operation continuation.
+
+
+## Analyst briefing authoring and delivery
+
+The same economic project now authors complete source-bound analyst briefings: exact prior-period, year-earlier and previous-observation comparisons, explicit relative percentages, source missing values, full offline HTML/CSV/JSON/manifest, native paid file delivery and complete report export/reopen. The original source-only review and edition formats retain their identities.
+
+Start with [the full briefing workflow](BRIEFINGS.md), [the actual finished three-series report](examples/briefing-20261012/briefing.html), and [the complete source capture](examples/briefing-20261012/macro-source.capture.json). The retained 2,219-observation UNRATE/CPIAUCSL/GDP source produces a ready 75-observation reporting window with 150 exact comparisons. The private UI, native `fred` CLI, installed typed `fred-workspace` client and 30-tool merchant agent expose the same saved reports and original customer recovery.
