@@ -1,5 +1,6 @@
 // MIT. Original control state is authoritative; review never silently rebases.
 import { bindFleetClientControls } from './clients.mjs';
+import { bindFleetDiscoveryControls } from './discovery.mjs';
 const $ = id => document.getElementById(id);
 let session, manifests = [], status = null, capturedAt = null, reviewed = null;
 let working = false, loading = false, connected = false, confirmAction = null, timer, outcomeUnknown = false;
@@ -250,7 +251,7 @@ const selectedSlot = () => selectedTenant()?.slots.find(row => row.name === $('r
 const sourceName = kind => ({ OPENAPI_WORKSPACE: 'API workspace', OPENAPI_SELLER: 'API seller',
   PYTHON_APPLICATION: 'Python application', DUCKDB_PACKAGE: 'DuckDB data product', S3_OBJECT_PACKAGE: 'S3 objects',
   JSONRPC_MERCHANT_PACKAGE: 'Stellar RPC', SQLITE_MERCHANT_PACKAGE: 'SQLite snapshot', MYSQL_MERCHANT_PACKAGE: 'MySQL / MariaDB',
-  POSTGRES_MERCHANT_PACKAGE: 'PostgreSQL' }[kind] ?? 'Seller source');
+  POSTGRES_MERCHANT_PACKAGE: 'PostgreSQL', CLICKHOUSE_MERCHANT_PACKAGE: 'ClickHouse' }[kind] ?? 'Seller source');
 function releaseReviewValid() {
   return Boolean(releaseReview && releaseReview.baseRevision === status?.revision && Date.parse(releaseReview.expiresAt) > Date.now());
 }
@@ -307,6 +308,7 @@ function operationsCell(tenant, slot) {
 function renderReleases() {
   if (!releases?.tenants) return;
   clientDesk.update();
+  discoveryDesk.update();
   const liveDesks = new Set(releases.tenants.flatMap(tenant => tenant.slots
     .filter(slot => currentDeskSlot(tenant.id, slot.name, slot.instanceId)).map(slot => deskKey(tenant.id, slot))));
   for (const key of operationDesks.keys()) if (!liveDesks.has(key)) operationDesks.delete(key);
@@ -482,11 +484,14 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) refr
 function schedule() { timer = setTimeout(async () => { if (!document.hidden) await refresh(); schedule(); }, 4000); }
 window.addEventListener('pagehide', () => {
   void clientDesk.close();
+  void discoveryDesk.close();
   clearTimeout(timer); operationDesks.clear(); loadingDesks.clear();
   $('release-processes').querySelectorAll('.release-tool-link').forEach(link => link.remove());
 });
 const clientDesk = bindFleetClientControls({ request: api, getReleases: () => releases,
   isBusy: () => !ready(), setBusy(value) { working = value; render(); } });
+const discoveryDesk = bindFleetDiscoveryControls({ request: api, getReleases: () => releases,
+  isBusy: () => !ready(), setBusy(value) { working = value; render(); }, confirmChange });
 try {
   const initial = await api('session'); session = initial.session; manifests = initial.manifests; managed = initial.managed === true;
   $('managed-releases').hidden = !managed; $('managed-processes').hidden = !managed;
@@ -494,5 +499,5 @@ try {
   $('manifest').replaceChildren(...manifests.map(name => { const option = node('option', name); option.value = name; return option; }));
   $('manifest-note').textContent = manifests.length ? 'Manifest paths and the gateway capability stay in the local operator process.' :
     'No manifests are registered. Status, existing candidate review and rollback remain available. Start this workspace with --manifest NAME=FILE to prepare a new configuration.';
-  await refresh(); if (managed && connected) { await loadCatalog(); await clientDesk.refresh(); } schedule();
+  await refresh(); if (managed && connected) { await loadCatalog(); await clientDesk.refresh(); await discoveryDesk.refresh(); } schedule();
 } catch { connected = false; notify('The local workspace could not start. Reload after its original process is available.', true); render(); }

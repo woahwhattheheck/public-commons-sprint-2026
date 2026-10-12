@@ -8,3 +8,44 @@
 .release-tool-link:focus-visible{outline:2px solid currentColor;outline-offset:3px}
 
 #fleet-clients{scroll-margin-top:24px;min-width:0}#fleet-clients .release-form{margin-top:16px}#client-scope{max-width:100%;white-space:normal;overflow-wrap:anywhere}#client-notice.error{border-left:3px solid currentColor;padding:10px 14px;background:var(--ground)}.client-review{margin-top:24px;padding-top:20px;border-top:1px solid var(--line);min-width:0}.client-review h3{font-size:17px;margin:0 0 12px}.client-review dl{display:grid;grid-template-columns:minmax(140px,190px) minmax(0,1fr);gap:8px 18px;margin:20px 0}.client-review dt{color:var(--muted);font-size:12px}.client-review dd{margin:0;overflow-wrap:anywhere;font:12px monospace}.client-operation{margin:22px 0;min-width:0}.client-operation h4{font-size:13px}.client-operation .table-scroll{overflow-x:auto;min-width:0}.client-operation pre{white-space:pre-wrap;overflow-wrap:anywhere;font:11px monospace;background:var(--ground);padding:12px;max-height:300px;overflow:auto}#client-files code{display:block;max-width:260px;overflow-wrap:anywhere}#client-download-progress{overflow-wrap:anywhere}.client-review .button-row{margin-top:16px}@media(max-width:560px){.client-review dl{grid-template-columns:minmax(0,1fr);gap:4px}.client-review dd{margin-bottom:9px}.client-review .button-row{align-items:stretch;flex-direction:column}}
+
+/* Tenant discovery uses the original fleet's neutral operator styles. */
+#fleet-discovery{scroll-margin-top:24px;min-width:0}
+#fleet-discovery h3{font-size:16px;font-weight:600;margin:0 0 12px}
+#fleet-discovery h4{font-size:13px;margin:0 0 10px}
+#fleet-discovery .release-form{margin-top:14px}
+#discovery-state{max-width:100%;white-space:normal;overflow-wrap:anywhere}
+#discovery-notice{padding:12px 14px;border-left:3px solid var(--ink);background:var(--ground);overflow-wrap:anywhere}
+#discovery-notice[data-error=true]{border-left-width:6px}
+.discovery-subsection{margin-top:24px;padding-top:22px;border-top:1px solid var(--line);min-width:0}
+.discovery-identity{display:grid;grid-template-columns:minmax(140px,190px) minmax(0,1fr);gap:8px 18px;margin:18px 0}
+.discovery-identity dt{font-size:12px;color:var(--muted)}
+.discovery-identity dd{margin:0;font:12px monospace;overflow-wrap:anywhere}
+.discovery-recovery{border:1px solid var(--line);background:var(--ground);padding:16px;margin-top:16px}
+.discovery-recovery ul{padding-left:20px}
+.discovery-actions{margin-top:16px}
+.discovery-publication{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:20px}
+.discovery-publication p{flex:1;min-width:220px;margin:0}
+.discovery-review{border:1px solid #8c9399;padding:18px;background:#fafafa}
+.discovery-review .button-row{margin-top:16px}
+#fleet-discovery details{margin:10px 0}
+#fleet-discovery details pre{max-height:320px;overflow:auto;background:var(--ground);border:1px solid var(--line);padding:12px;font:11px monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+.discovery-offer{min-width:180px;max-width:360px}
+.discovery-offer strong,.discovery-offer code{display:block;margin-bottom:5px;overflow-wrap:anywhere}
+.discovery-payment{min-width:240px;max-width:440px}
+.discovery-payment .discovery-payment-row{padding:8px 0;border-top:1px solid var(--line);font:11px monospace;line-height:1.5;overflow-wrap:anywhere}
+.discovery-payment .discovery-payment-row:first-child{border-top:0;padding-top:0}
+.discovery-payment-row span{display:block}
+#fleet-discovery .discovery-table{min-width:700px}
+#fleet-discovery .discovery-table td{overflow-wrap:anywhere}
+#fleet-discovery .discovery-table th{white-space:normal}
+.discovery-filter-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 16px;margin-top:16px}
+.discovery-filter-grid label{margin:0}
+.discovery-filter-grid input,.discovery-filter-grid select{display:block;width:100%;margin-top:6px;min-width:0}
+#discovery-query{min-width:0}
+#discovery-buyer-link{max-width:none}
+#discovery-history-key{font:12px monospace}
+#discovery-page-note,#discovery-source-note,#discovery-review-note{overflow-wrap:anywhere}
+.discovery-permission-note{margin:12px 0}
+@media(max-width:780px){.discovery-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.discovery-identity{grid-template-columns:minmax(0,1fr);gap:4px}.discovery-identity dd{margin-bottom:9px}.discovery-filter-grid{grid-template-columns:minmax(0,1fr)}.discovery-review{padding:14px}.discovery-publication{align-items:stretch;flex-direction:column}.discovery-publication p{min-width:0}.discovery-actions{align-items:stretch;flex-direction:column}#fleet-discovery .button-row{gap:8px}#fleet-discovery .button-row>span{flex-basis:100%;order:-1}}
