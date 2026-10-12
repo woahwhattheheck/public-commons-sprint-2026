@@ -256,7 +256,7 @@ class Packet:
                 need(line.endswith(b"\n") and len(line) <= 16 * 1024 * 1024,
                      "CLINICALTRIALS_ORIGINAL_RECORD_INVALID")
                 study = document(line, exact=True)
-                need(study == original, "CLINICALTRIALS_PAGE_STUDY_CONTENT_CHANGED")
+                need(typed(study) == typed(original), "CLINICALTRIALS_PAGE_STUDY_CONTENT_CHANGED")
                 nct = selected(study, "protocolSection", "identificationModule", "nctId")
                 need(isinstance(nct, str) and NCT.fullmatch(nct) and nct not in ids,
                      "CLINICALTRIALS_ORIGINAL_STUDY_ID_CHANGED")

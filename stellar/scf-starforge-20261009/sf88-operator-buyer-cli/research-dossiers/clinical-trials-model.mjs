@@ -116,7 +116,7 @@ export function compareEditions(before,after){
    sourceTextChanged:true,sectionValuesChanged:changedSections.length>0});
  }
  for(const[id]of left)if(!right.has(id))absent.push({nctId:id,occurrences:1});
- return {beforeSha256:sha(json(before)),afterSha256:sha(json(after)),sameScope:same(before.usage.scope,after.usage.scope),
+ return {beforeNormalizedSha256:sha(json(before)),afterNormalizedSha256:sha(json(after)),sameScope:same(before.usage.scope,after.usage.scope),
   beforeCoverage:before.usage.coverage,afterCoverage:after.usage.coverage,
   beforeCaptureId:before.usage.captureId,afterCaptureId:after.usage.captureId,
   added,absentFromSelectedCapture:absent,changed,unchanged,
