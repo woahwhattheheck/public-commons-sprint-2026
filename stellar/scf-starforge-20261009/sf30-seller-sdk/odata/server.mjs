@@ -7,10 +7,16 @@ import { fault } from './state.mjs';
 
 const assets=fileURLToPath(new URL('./public/',import.meta.url));
 const files=new Map([['/',['index.html','text/html; charset=utf-8']],['/app.mjs',['app.mjs','text/javascript; charset=utf-8']],['/style.css',['style.css','text/css; charset=utf-8']]]);
-export async function startODataServer({workspace,port=8797}={}){
+export async function startODataServer({workspace,port=8797,liveServiceId}={}){
   if(!Number.isInteger(port)||port<0||port>65535)throw new TypeError('Choose a local TCP port.');
-  let publisher;
+  let publisher,live,closing;
   const getPublisher=async()=>publisher||=(await import('./publisher.mjs')).openODataPublisher({workspace});
+  const getLive=async()=>{
+    if(!live)live=import('./live-operations.mjs').then(module=>module.openODataLiveOperations({
+      workspace,navigationOrigin:'http://127.0.0.1:'+server.address().port
+    })).catch(error=>{live=null;throw error;});
+    return live;
+  };
   const send=(res,status,value,headers={})=>{
     const body=Buffer.isBuffer(value)?value:Buffer.from(JSON.stringify(value));
     res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Content-Length':body.length,
@@ -29,6 +35,8 @@ export async function startODataServer({workspace,port=8797}={}){
         const [name,type]=files.get(url.pathname);return send(res,200,await readFile(join(assets,name)),{'Content-Type':type,
           'Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'"});}
       if(req.method==='GET'&&url.pathname==='/api/state')return send(res,200,await workspace.state());
+      if(req.method==='GET'&&url.pathname==='/api/application'){
+        const {odataWorkspaceProbe}=await import('./live/startup.mjs');return send(res,200,await odataWorkspaceProbe(workspace));}
       if(req.method==='GET'&&url.pathname==='/api/rows')return send(res,200,{rows:await workspace.rows(url.searchParams.get('id'))});
       if(req.method==='GET'&&url.pathname==='/api/edition')return send(res,200,await workspace.edition(url.searchParams.get('id')));
       if(req.method==='GET'&&url.pathname==='/api/source')return send(res,200,await workspace.raw(url.searchParams.get('hash')),
@@ -40,6 +48,12 @@ export async function startODataServer({workspace,port=8797}={}){
         if(!record||!record.files.includes(name))throw fault('ODATA_EXPORT_FILE','Export file not found.',404);
         return send(res,200,await readFile(join(workspace.directory,'exports',id,name)),{'Content-Type':name.endsWith('.csv')?'text/csv; charset=utf-8':'application/json; charset=utf-8','Content-Disposition':'attachment; filename="'+name+'"'});}
       if(req.method==='GET'&&url.pathname==='/api/merchant')return send(res,200,await(await getPublisher()).status());
+      if(req.method==='GET'&&url.pathname==='/api/live')return send(res,200,await(await getLive()).status());
+      if(req.method==='GET'&&url.pathname==='/api/live/detail')return send(res,200,await(await getLive()).detail(url.searchParams.get('id')));
+      if(req.method==='GET'&&url.pathname==='/api/live/file'){
+        const file=await(await getLive()).file(Object.fromEntries(url.searchParams));
+        return send(res,200,file.bytes,{'Content-Type':file.name.endsWith('.jsonl')?'application/x-ndjson':'application/json; charset=utf-8',
+          'Content-Disposition':'attachment; filename="'+file.name+'"'});}
       if(req.method!=='POST')throw fault('ODATA_ROUTE','Workspace operation not found.',404);
       if(!String(req.headers['content-type']||'').startsWith('application/json'))throw fault('ODATA_CONTENT_TYPE','Send JSON for workspace operations.',415);
       const input=await body(req);let result;
@@ -64,11 +78,22 @@ export async function startODataServer({workspace,port=8797}={}){
         case '/api/merchant/prepare':result=await(await getPublisher()).prepare(input);break;
         case '/api/merchant/activate':result=await(await getPublisher()).activate(input);break;
         case '/api/merchant/rollback':result=await(await getPublisher()).rollback(input);break;
+        case '/api/live/prepare':result=await(await getLive()).prepare(input);break;
+        case '/api/live/start':result=await(await getLive()).start(input);break;
+        case '/api/live/stop':result=await(await getLive()).stop(input);break;
+        case '/api/live/buyer':result=await(await getLive()).buyer(input);break;
+        case '/api/live/receive':result=await(await getLive()).receive(input);break;
         default:throw fault('ODATA_ROUTE','Workspace operation not found.',404);
       }
       return send(res,200,result);
-    }catch(error){if(!res.headersSent)send(res,error.status||500,{error:error.code||'ODATA_OPERATION_FAILED',message:error.message});else res.destroy();}
+    }catch(error){if(!res.headersSent)send(res,error.status||(error instanceof TypeError?400:500),{error:error.code||'ODATA_OPERATION_FAILED',message:error.message});else res.destroy();}
   });
   await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',resolve);});
-  return {url:'http://127.0.0.1:'+server.address().port,server,close:async()=>{await workspace.close();await new Promise(resolve=>server.close(resolve));}};
+  const service={url:'http://127.0.0.1:'+server.address().port,server,liveRuntime:null,
+    close:()=>closing??=(async()=>{
+      try{if(live)await(await live).close();}
+      finally{try{await workspace.close();}finally{await new Promise(resolve=>server.close(resolve));}}
+    })()};
+  try{if(liveServiceId)service.liveRuntime=await(await getLive()).start({id:liveServiceId});return service;}
+  catch(error){await service.close();throw error;}
 }

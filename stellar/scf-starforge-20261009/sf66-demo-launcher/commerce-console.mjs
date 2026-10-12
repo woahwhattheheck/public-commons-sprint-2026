@@ -9,6 +9,7 @@ import { pipeline } from 'node:stream/promises';
 import { openCommerce, completeCommerceShutdown, commerceErrorCode } from './commerce.mjs';
 import { readCommerceRecoveryConfig } from './commerce-recovery.mjs';
 import { createCommerceRecoveryController } from './commerce-recovery-controller.mjs';
+import { createBrowserApprovalBroker } from '../sf81-buyer-operator-bridge/bridge.mjs';
 
 const HOST = '127.0.0.1';
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
@@ -104,10 +105,14 @@ async function download(delivery, res) {
 
 /** Present the original commerce session; the original inbox owns durable state. */
 export async function startCommerceConsole(session, { port = 8426, recoveryProfile,
-  environment = process.env, reopen, finalityNode = process.execPath } = {}) {
+  environment = process.env, reopen, finalityNode = process.execPath,
+  approvalMode = 'BROWSER' } = {}) {
+  if (!['BROWSER', 'TERMINAL'].includes(approvalMode)) throw new TypeError('Approval mode must be BROWSER or TERMINAL.');
   function validateSession(value) {
     for (const method of ['status', 'review', 'execute', 'cancel', 'recover', 'close'])
       if (typeof value?.[method] !== 'function') throw new TypeError('Original commerce session must provide ' + method + '().');
+    if (approvalMode === 'BROWSER' && typeof value.setOperatorApprovalEnvironment !== 'function')
+      throw new TypeError('Browser approval requires the original host-configurable commerce session.');
   }
   if (session) validateSession(session);
   else if (!recoveryProfile) throw new TypeError('A retained recovery configuration is required without a session.');
@@ -128,6 +133,14 @@ export async function startCommerceConsole(session, { port = 8426, recoveryProfi
   ].map(async ([path, file, type]) => [path, {
     bytes: await readFile(new URL('./commerce-ui/' + file, import.meta.url)), type,
   }])));
+  for (const [file, type] of [['approval-panel.mjs', 'text/javascript; charset=utf-8'],
+    ['approval.css', 'text/css; charset=utf-8']]) {
+    assets.set('/approval-ui/' + file, { type,
+      bytes: await readFile(new URL('../sf81-buyer-operator-bridge/browser-ui/' + file, import.meta.url)) });
+  }
+  const approvalBroker = approvalMode === 'BROWSER' ? await createBrowserApprovalBroker() : null;
+  try { await session?.setOperatorApprovalEnvironment?.(approvalBroker?.environment ?? {}); }
+  catch (error) { await approvalBroker?.close(); throw error; }
   let hosts = new Set(), origins = new Set(), url;
   // These maps retain only this browser session's review/dispatch presentation.
   // Terminal results, replay prevention and files are always read from SF88.
@@ -142,6 +155,7 @@ export async function startCommerceConsole(session, { port = 8426, recoveryProfi
     review: null, attempt: null, delivery: { available: false }, stream: null,
     rpcRecovery: null, rpcAction: null, purchase: null, retrieval: null, activeIntent: null,
     controls: {}, recoveryEnabled: true, recoveryBusy: recoveryController?.busy ?? false,
+    approvalMode, approval: null,
     updatedAt: new Date().toISOString(),
   });
   const fingerprint = job => createHash('sha256').update(JSON.stringify([
@@ -204,6 +218,7 @@ export async function startCommerceConsole(session, { port = 8426, recoveryProfi
         operatorId: job.operator.actor, serviceId: job.operator.service,
         signerFilename: basename(job.dependencies.signer.path) } : null,
       review: review ? { id: review.id, at: review.at, original: review.original } : null,
+      approvalMode, approval: approvalBroker?.snapshot(id) ?? null,
       attempt, delivery: jobDelivery(job), stream: job?.stream ?? null, rpcRecovery: job?.rpcRecovery ?? null,
       rpcAction: rpcActions.has(id) ? { state: rpcActions.get(id).running ? 'RUNNING' : 'FINISHED',
         operation: rpcActions.get(id).operation, result: rpcActions.get(id).result ?? null,
@@ -238,6 +253,7 @@ export async function startCommerceConsole(session, { port = 8426, recoveryProfi
     if (!session) return shutdown ?? { state: 'STOPPED', drained: true };
     if (stopPromise) return stopPromise;
     stopping = true; reviews.clear();
+    if (work) approvalBroker?.revoke(work.intent);
     stopPromise = (async () => {
       try {
         const closing = session.close().then(result => { shutdown = result; return result; });
@@ -269,6 +285,7 @@ export async function startCommerceConsole(session, { port = 8426, recoveryProfi
         validateSession(opened);
         if ((await opened.status()).directory !== recoveryProfile.directory)
           throw problem('Reopening must retain the original commerce directory.', 409);
+        await opened.setOperatorApprovalEnvironment?.(approvalBroker?.environment ?? {});
       } catch (error) {
         await completeCommerceShutdown(opened, opened.close()).catch(() => {}); throw error;
       }
@@ -363,11 +380,12 @@ export async function startCommerceConsole(session, { port = 8426, recoveryProfi
         await download(delivery, res);
         return;
       }
-      if (target.search || req.method !== 'POST' || !['/api/review', '/api/execute', '/api/interrupt', '/api/cancel', '/api/recover', '/api/stop', '/api/retrieve', '/api/reset-transfer', '/api/facilitator', '/api/verify-rpc-payment', '/api/recover-rpc-response'].includes(target.pathname))
+      if (target.search || req.method !== 'POST' || !['/api/review', '/api/execute', '/api/approval', '/api/interrupt', '/api/cancel', '/api/recover', '/api/stop', '/api/retrieve', '/api/reset-transfer', '/api/facilitator', '/api/verify-rpc-payment', '/api/recover-rpc-response'].includes(target.pathname))
         throw problem('Unknown commerce workspace action.', 404);
       if (!origins.has(req.headers.origin)) throw problem('Same-origin operator action required.', 403);
       const value = await input(req);
       const allowed = target.pathname === '/api/execute' ? ['intent', 'reviewId'] :
+        target.pathname === '/api/approval' ? ['intent', 'approvalId', 'requestSha256', 'decision'] :
         ['/api/verify-rpc-payment', '/api/recover-rpc-response'].includes(target.pathname) ?
           ['intent', 'transaction', 'expectedRequestSha256', 'expectedAttemptId', 'expectedConfigSha256'] :
         ['/api/retrieve', '/api/reset-transfer'].includes(target.pathname) ? ['intent', 'configSha256', 'handoffSha256'] : ['intent'];
@@ -390,7 +408,11 @@ export async function startCommerceConsole(session, { port = 8426, recoveryProfi
       try {
         const { original, job } = await current(value.intent), intent = job.operation.intentId;
         if (original.state !== 'RUNNING') throw problem('The commerce session is not running.', 409);
-        if (['/api/verify-rpc-payment', '/api/recover-rpc-response'].includes(target.pathname)) {
+        if (target.pathname === '/api/approval') {
+          if (!approvalBroker || work?.intent !== intent)
+            throw problem('This selected buyer has no active browser approval.', 409);
+          approvalBroker.decide(value);
+        } else if (['/api/verify-rpc-payment', '/api/recover-rpc-response'].includes(target.pathname)) {
           const original = job.rpcRecovery?.original;
           if (work || rpcActions.get(intent)?.running) throw problem('Wait for the current buyer or recovery operation.', 409);
           if (!original || value.expectedAttemptId !== original.attemptId ||
@@ -434,6 +456,7 @@ export async function startCommerceConsole(session, { port = 8426, recoveryProfi
         } else if (target.pathname === '/api/interrupt') {
           if (work?.intent !== intent || typeof session.interrupt !== 'function')
             throw problem('This selected buyer is no longer active. Read its retained result.', 409);
+          approvalBroker?.revoke(intent);
           await session.interrupt(intent);
           if (work?.intent === intent) await work.promise;
         } else if (target.pathname === '/api/cancel') {
@@ -454,11 +477,12 @@ export async function startCommerceConsole(session, { port = 8426, recoveryProfi
           const local = { startedAt: new Date().toISOString() };
           dispatches.set(intent, local);
           const active = { intent, promise: null }; work = active;
-          // SF66 invokes the original inbox CLI and terminal approval. A browser
-          // reload never dispatches another attempt or supplies approval input.
+          // The original inbox's live native review uses the host-selected
+          // channel; the authenticated browser records one explicit decision.
           active.promise = Promise.resolve().then(() => session.execute(intent)).then(result => {
             local.exitCode = result.exitCode;
           }, error => { local.error = commerceErrorCode(error); }).finally(() => {
+            approvalBroker?.revoke(intent);
             local.endedAt = new Date().toISOString(); if (work === active) work = null;
           });
         }
@@ -470,34 +494,39 @@ export async function startCommerceConsole(session, { port = 8426, recoveryProfi
     }
   });
   server.requestTimeout = 150000; server.headersTimeout = 10000; server.keepAliveTimeout = 2000;
-  await new Promise((done, fail) => {
+  try { await new Promise((done, fail) => {
     const onError = error => { server.removeListener('listening', onListen); fail(error); };
     const onListen = () => { server.removeListener('error', onError); done(); };
     server.once('error', onError); server.once('listening', onListen); server.listen(port, HOST);
-  });
+  }); } catch (error) { await approvalBroker?.close(); throw error; }
   const assigned = server.address().port;
   hosts = new Set([HOST + ':' + assigned, 'localhost:' + assigned]);
   origins = new Set([...hosts].map(host => 'http://' + host)); url = 'http://' + HOST + ':' + assigned;
   const close = () => closing ??= (async () => {
     try { await recoveryController?.close(); return await stopSession(); }
     finally {
-      await new Promise((done, fail) => { server.close(error => error ? fail(error) : done()); server.closeIdleConnections?.(); });
+      try { await approvalBroker?.close(); }
+      finally {
+        await new Promise((done, fail) => { server.close(error => error ? fail(error) : done()); server.closeIdleConnections?.(); });
+      }
     }
   })();
   return { server, url, token, operatorUrl: url + '/#' + token, close,
-    recovery: recoveryController ?? null };
+    approvalMode, recovery: recoveryController ?? null };
 }
 
 const HELP = `StellarForge commerce browser workspace
 
   node commerce-console.mjs start --directory /private/merchant-session [--port 8426]
+                            [--approval-mode browser|terminal]
                             [--finality-node /absolute/trusted-node]
                             [--recovery-config /private/host/recovery.json]
   node commerce-console.mjs recover --recovery-config /private/host/recovery.json [--port 8426]
 
 Initialize the session with commerce-cli.mjs init first.
 Open the complete local operator URL printed here. Review and select requests
-in the browser; payment approval remains in this terminal.
+in the browser, then explicitly approve or reject the live native payment terms.
+Use --approval-mode terminal to keep the controlling-terminal review channel.
 Stop session drains this process's seller and buyer. Saved inbox results remain.
 Recovery pauses this original session, checkpoints its operators and encrypts
 its retained state. The recover command starts with the source state absent.
@@ -510,13 +539,15 @@ export async function main(args = process.argv.slice(2)) {
   const [command, ...rest] = args, opts = {};
   if (!['start', 'recover'].includes(command) || rest.length % 2) throw new Error(HELP);
   for (let i = 0; i < rest.length; i += 2) {
-    if (!['--directory', '--port', '--finality-node', '--recovery-config'].includes(rest[i]) || Object.hasOwn(opts, rest[i]) || !rest[i + 1]) throw new Error(HELP);
+    if (!['--directory', '--port', '--finality-node', '--recovery-config', '--approval-mode'].includes(rest[i]) || Object.hasOwn(opts, rest[i]) || !rest[i + 1]) throw new Error(HELP);
     opts[rest[i]] = rest[i + 1];
   }
   if (command === 'start' && !opts['--directory'] || command === 'recover' && !opts['--recovery-config'] ||
       opts['--port'] !== undefined && !/^[0-9]{1,5}$/.test(opts['--port'])) throw new Error(HELP);
   const port = opts['--port'] === undefined ? 8426 : Number(opts['--port']);
   if (port > 65535) throw new Error(HELP);
+  const approvalMode = (opts['--approval-mode'] ?? 'browser').toUpperCase();
+  if (!['BROWSER', 'TERMINAL'].includes(approvalMode)) throw new Error(HELP);
   const recoveryProfile = opts['--recovery-config'] ?
     await readCommerceRecoveryConfig(resolve(opts['--recovery-config'])) : undefined;
   if (opts['--directory'] && recoveryProfile && resolve(opts['--directory']) !== recoveryProfile.directory)
@@ -536,9 +567,10 @@ export async function main(args = process.argv.slice(2)) {
   process.on('SIGINT', interrupt); process.on('SIGTERM', interrupt);
   try {
     consoleSession = await startCommerceConsole(session, { port, recoveryProfile,
-      finalityNode: opts['--finality-node'] });
+      finalityNode: opts['--finality-node'], approvalMode });
     process.stdout.write('Commerce workspace: ' + consoleSession.operatorUrl + '\n' +
-      'Payment approval remains in this terminal. Keep it open.\n');
+      (approvalMode === 'BROWSER' ? 'Review and approve purchases in this browser workspace.\n' :
+        'Payment approval remains in this terminal. Keep it open.\n'));
     await signalled;
   } finally {
     try { await stop(); if (consoleSession) await consoleSession.close(); }
@@ -552,3 +584,4 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     process.exitCode = 1;
   });
 }
+

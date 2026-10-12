@@ -44,7 +44,7 @@ for the three MCP tools, console and CLI commands.
 
 Use the same operator to save query revisions, inspect the native source,
 capture result editions, maintain judgments, compare native rankings and prepare
-the selected search as a merchant. Its 43 OpenSearch tools continue through
+the selected search as a merchant. Its 44 OpenSearch tools continue through
 retained deployment, customer generation and complete file delivery. Browser and
 MCP share the original request IDs, revisions, results and prepared packages.
 
@@ -77,10 +77,12 @@ release tools separately. A host with several aliases keeps their deployment
 stores distinct.
 
 See [OPENSEARCH_WORKSPACE.md](OPENSEARCH_WORKSPACE.md) for the complete connection
-schema, 43 operations, query and relevance workflow, release lifecycle and
+schema, 44 operations, query and relevance workflow, release lifecycle and
 recovery. Original client files, complete customer archives, result JSON, CSV and
 reports use the shared SHA-pinned resumable readers. Retained customer files can
-be delivered after the original seller stops.
+be delivered after the original seller stops. Use
+`merchant_opensearch_deployment_adopt_client` with the original inspected
+`filesSha256` to recover an intact customer export's completion manifest.
 
 ## Operate a saved Redis merchant
 

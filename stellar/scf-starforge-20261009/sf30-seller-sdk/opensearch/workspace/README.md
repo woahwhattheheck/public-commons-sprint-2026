@@ -2,7 +2,7 @@
 
 Author a named query, inspect its native OpenSearch contract, capture a durable result edition, and prepare the original Stellar Forge merchant and generated customer client. The workspace uses the same source adapter and merchant compiler as the command-line product.
 
-MCP agents can operate the same retained workspace through [the merchant MCP workflow](../../../../../stellar-forge/mcp-merchant-operator/OPENSEARCH_WORKSPACE.md). Its 43 tools cover saved query revisions, native evaluations, judgment history, prepared packages, managed releases and complete customer delivery. Stage a saved package into this workspace's original deployment store, compare and select its release, run the seller, and generate a retained client from its actual public contract. Browser and MCP share the original operation IDs, release generations, owned instances and customer exports through upgrade, rollback and reopening.
+MCP agents can operate the same retained workspace through [the merchant MCP workflow](../../../../../stellar-forge/mcp-merchant-operator/OPENSEARCH_WORKSPACE.md). Its 44 tools cover saved query revisions, native evaluations, judgment history, prepared packages, managed releases and complete customer delivery. Stage a saved package into this workspace's original deployment store, compare and select its release, run the seller, and generate a retained client from its actual public contract. Browser and MCP share the original operation IDs, release generations, owned instances and customer exports through upgrade, rollback, customer completion recovery and reopening.
 
 ## Open an existing source
 
@@ -99,3 +99,11 @@ Saved evaluations run the original OpenSearch ranking-evaluation adapter. The re
 Use **Open merchant draft** on the selected evaluated variant and input case to continue through this workspace's existing **Prepare merchant** action. The original request records the chosen evaluation ID and result checksum.
 
 The complete operator workflow, metric controls, import format and service API are in [the relevance guide](../relevance/README.md).
+
+## Managed merchant deployment
+
+The **Deployment** view stages a saved merchant package into this workspace's original SF82 release store. Compare its named query, source limits and public terms; select a release; start the original seller; and generate the customer client from that running instance. A later selection keeps the current seller serving until **Restart selected** drains and replaces it. **Select previous release** and restart return to the retained source.
+
+The private deployment and deployment.clients directories stay beside workspace.sqlite3. Complete client archives, deployment handovers, selection history and saved requests reopen with the workspace. Copied packages resolve beneath the current workspace directory and retain their original file manifests; historical request and package records keep their source identities.
+
+See [OpenSearch managed deployments](../../../sf82-seller-pilot/OPENSEARCH_RELEASES.md) for the complete browser, CLI, MCP, upgrade, rollback and receiving workflow.
