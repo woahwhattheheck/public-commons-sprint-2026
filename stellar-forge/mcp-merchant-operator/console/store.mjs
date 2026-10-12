@@ -2,23 +2,13 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, lstatSync, chmodSync, realpathSync } from 'node:fs';
 import { resolve, join } from 'node:path';
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 
 export const CONSOLE_SCHEMA = 'stellar-forge.merchant-operator-console.v1';
 export const ARCHIVE_SCHEMA = 'stellar-forge.merchant-operator-profile.v1';
-export const digest = value => createHash('sha256').update(value).digest('hex');
-export function fail(code, message, status = 409) {
-  return Object.assign(new Error(message), { code, status });
-}
-export function canonical(value) {
-  if (Array.isArray(value)) return '[' + value.map(canonical).join(',') + ']';
-  if (value && typeof value === 'object')
-    return '{' + Object.keys(value).sort().filter(key => value[key] !== undefined)
-      .map(key => JSON.stringify(key) + ':' + canonical(value[key])).join(',') + '}';
-  const result = JSON.stringify(value);
-  if (result === undefined) throw fail('CONSOLE_JSON', 'Use JSON values.', 400);
-  return result;
-}
+import { canonical, digest, fail } from './records.mjs';
+export { canonical, digest, fail } from './records.mjs';
+import { installWorkflowTables, archiveWorkflowRows, validateWorkflowRows, importWorkflowRows, reserveWorkflowNative, settleWorkflowNative } from './workflow-records.mjs';
 const json = value => JSON.stringify(value);
 const parse = value => JSON.parse(value);
 const now = () => new Date().toISOString();
@@ -58,7 +48,7 @@ function objectText(text, label) {
 }
 export class MerchantConsoleStore {
   constructor(directory) {
-    this.directory = resolve(directory);
+    this.directory = resolve(directory);this.dispatcherId=randomUUID();
     mkdirSync(this.directory, { recursive: true, mode: 0o700 });
     const st = lstatSync(this.directory);
     if (!st.isDirectory() || st.isSymbolicLink() || realpathSync(this.directory) !== this.directory ||
@@ -79,6 +69,7 @@ export class MerchantConsoleStore {
       'CREATE TABLE IF NOT EXISTS deliveries (id TEXT PRIMARY KEY, profile_id TEXT NOT NULL REFERENCES profiles(id), value TEXT NOT NULL)',
       'CREATE TABLE IF NOT EXISTS imports (sha TEXT PRIMARY KEY, profile_id TEXT NOT NULL, imported_at TEXT NOT NULL)'
     ].join(';'));
+    installWorkflowTables(this.db);
     this.db.prepare('INSERT OR IGNORE INTO metadata(key,value) VALUES (?,?)').run('schema', CONSOLE_SCHEMA);
     this.db.prepare('INSERT OR IGNORE INTO metadata(key,value) VALUES (?,?)').run('id', randomUUID());
     if (this.db.prepare('SELECT value FROM metadata WHERE key=?').get('schema').value !== CONSOLE_SCHEMA)
@@ -86,9 +77,11 @@ export class MerchantConsoleStore {
     this.id = this.db.prepare('SELECT value FROM metadata WHERE key=?').get('id').value;
   }
   transaction(fn) {
-    this.db.exec('BEGIN IMMEDIATE');
-    try { const value = fn(); this.db.exec('COMMIT'); return value; }
-    catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    const depth=this.transactionDepth??0,savepoint='console_nested_'+depth;
+    this.db.exec(depth?'SAVEPOINT '+savepoint:'BEGIN IMMEDIATE');this.transactionDepth=depth+1;
+    try { const value=fn();this.db.exec(depth?'RELEASE SAVEPOINT '+savepoint:'COMMIT');return value; }
+    catch(error){this.db.exec(depth?'ROLLBACK TO SAVEPOINT '+savepoint:'ROLLBACK');if(depth)this.db.exec('RELEASE SAVEPOINT '+savepoint);throw error;}
+    finally{this.transactionDepth=depth;}
   }
   profiles() {
     return this.db.prepare('SELECT value FROM profiles ORDER BY id').all().map(row => parse(row.value));
@@ -176,7 +169,7 @@ export class MerchantConsoleStore {
     if (!row) throw fail('CONSOLE_CALL_NOT_FOUND', 'Select an original saved request.', 404);
     return parse(row.value);
   }
-  reserve(input, draft, host, definition) {
+  reserve(input, draft, host, definition, workflowGuard) {
     return this.transaction(() => {
       const callId = id(input.id), profile = this.profile(input.profileId);
       if (draft.profileId !== profile.id) throw fail('CONSOLE_DRAFT_PROFILE', 'Select a request from this profile.');
@@ -195,12 +188,14 @@ export class MerchantConsoleStore {
         throw fail('CONSOLE_HOST_CHANGED', 'Review and bind the profile to this host before running a saved request.');
       if (digest(canonical(definition)) !== draft.toolSchemaSha256)
         throw fail('CONSOLE_TOOL_CHANGED', 'Review the current native tool schema and save a new draft revision.');
+      reserveWorkflowNative(this.db,this.id,this.dispatcherId,request,workflowGuard);
       const value = { ...request, workspaceId: this.id, requestSha256, state: 'RUNNING', startedAt: now(), completedAt: null,
         resultJson: null, resultSha256: null, error: null, origin: 'THIS_WORKSPACE' };
       this.db.prepare('INSERT INTO calls(id,profile_id,value) VALUES (?,?,?)').run(callId, profile.id, json(value));
       return { existing: false, value };
     });
   }
+  noteWorkflowCallSettled(callId){return this.transaction(()=>settleWorkflowNative(this.db,this.id,callId));}
   finish(callId, result, error) {
     return this.transaction(() => {
       const old = this.call(callId);
@@ -232,13 +227,17 @@ export class MerchantConsoleStore {
     return value;
   }
   archive(profileId) {
+    return this.transaction(()=>{
     const profile = this.profile(profileId);
     const drafts = this.db.prepare('SELECT value FROM drafts WHERE profile_id=? ORDER BY id,revision').all(profileId).map(row => parse(row.value));
     const calls = this.calls(profileId);
     const deliveries=this.deliveries(profileId);
-    const packet = { schema: ARCHIVE_SCHEMA, sourceWorkspaceId: this.id, profile, drafts, calls, deliveries };
+    const workflowData=archiveWorkflowRows(this.db,profileId);
+    const packet = { schema: ARCHIVE_SCHEMA, sourceWorkspaceId: this.id, profile, drafts, calls, deliveries,
+      ...(workflowData===undefined?{}:{workflowData}) };
     const contentSha256 = digest(canonical(packet));
     return { ...packet, contentSha256 };
+    });
   }
   import(packet) {
     if (!plain(packet) || packet.schema !== ARCHIVE_SCHEMA || !plain(packet.profile) ||
@@ -302,6 +301,7 @@ export class MerchantConsoleStore {
         for(const file of value.files) if(!plain(file)||typeof file.name!=='string'||!Number.isSafeInteger(file.bytes)||file.bytes<0) throw fail('CONSOLE_ARCHIVE','Retain each original customer file identity.',400); else sha(file.sha256);
       }
     }
+    const workflowData=validateWorkflowRows(packet.workflowData,{profile,drafts:packet.drafts,calls:packet.calls});
     return this.transaction(() => {
       const imported = this.db.prepare('SELECT profile_id FROM imports WHERE sha=?').get(contentSha256);
       if (imported) return { profile: this.profile(imported.profile_id), reused: true, contentSha256 };
@@ -311,7 +311,41 @@ export class MerchantConsoleStore {
           this.db.prepare('INSERT INTO imports VALUES (?,?,?)').run(contentSha256, profile.id, now());
           return { profile: this.profile(profile.id), reused: true, contentSha256 };
         }
-        throw fail('CONSOLE_IMPORT_CONFLICT', 'Receive this different profile archive into a fresh operator workspace.');
+        const localProfile=parse(existing.value);
+        if(localProfile.createdAt!==profile.createdAt)throw fail('CONSOLE_IMPORT_CONFLICT','This profile identifier has a different original creation.');
+        for(const draft of packet.drafts){
+          const owner=this.db.prepare('SELECT profile_id FROM drafts WHERE id=? LIMIT 1').get(draft.id);
+          if(owner&&owner.profile_id!==profile.id)throw fail('CONSOLE_IMPORT_CONFLICT','This saved request belongs to a different profile.');
+          const row=this.db.prepare('SELECT value FROM drafts WHERE id=? AND revision=?').get(draft.id,draft.revision);
+          if(row){if(canonical(parse(row.value))!==canonical(draft))throw fail('CONSOLE_IMPORT_CONFLICT','An immutable saved request revision has conflicting contents.');}
+          else this.db.prepare('INSERT INTO drafts VALUES(?,?,?,?)').run(draft.id,draft.revision,profile.id,json(draft));
+        }
+        for(const incoming of packet.calls){
+          const row=this.db.prepare('SELECT value FROM calls WHERE id=?').get(incoming.id);
+          if(!row){this.db.prepare('INSERT INTO calls VALUES(?,?,?)').run(incoming.id,profile.id,json(incoming));continue;}
+          const old=parse(row.value);
+          const requestPart=value=>Object.fromEntries(Object.entries(value).filter(([key])=>!['state','completedAt','resultJson','resultSha256','error'].includes(key)));
+          if(canonical(requestPart(old))!==canonical(requestPart(incoming)))throw fail('CONSOLE_IMPORT_CONFLICT','This native call has a different original request.');
+          if(old.state!=='RUNNING'&&incoming.state!=='RUNNING'&&canonical(old)!==canonical(incoming))
+            throw fail('CONSOLE_IMPORT_CONFLICT','Keep both archives: this original native call has different final results.');
+          if(old.state==='RUNNING'&&incoming.state!=='RUNNING')this.db.prepare('UPDATE calls SET value=? WHERE id=?').run(json(incoming),incoming.id);
+        }
+        for(const incoming of packet.deliveries){
+          const row=this.db.prepare('SELECT value FROM deliveries WHERE id=?').get(incoming.id);
+          if(!row){this.db.prepare('INSERT INTO deliveries VALUES(?,?,?)').run(incoming.id,profile.id,json(incoming));continue;}
+          const old=parse(row.value);
+          if(old.profileId!==profile.id||old.identitySha256!==incoming.identitySha256||canonical(old.identity)!==canonical(incoming.identity))
+            throw fail('CONSOLE_IMPORT_CONFLICT','This customer receiving record has a different original selection.');
+          if(old.state==='COMPLETE'&&incoming.state==='COMPLETE'&&(canonical(old.files)!==canonical(incoming.files)||canonical(old.manifest)!==canonical(incoming.manifest)))
+            throw fail('CONSOLE_IMPORT_CONFLICT','Keep both original customer manifests: their completed file identities differ.');
+          if(old.state!=='COMPLETE'&&old.workspaceId!==this.id&&incoming.state==='COMPLETE')
+            this.db.prepare('UPDATE deliveries SET value=? WHERE id=?').run(json(incoming),incoming.id);
+        }
+        importWorkflowRows(this.db,workflowData);
+        const merged=this.archive(profile.id);
+        validateWorkflowRows(merged.workflowData,{profile:merged.profile,drafts:merged.drafts,calls:merged.calls});
+        this.db.prepare('INSERT INTO imports VALUES (?,?,?)').run(contentSha256,profile.id,now());
+        return{profile:localProfile,receivedProfile:profile,reused:false,merged:true,contentSha256};
       }
       for (const draft of packet.drafts)
         if (this.db.prepare('SELECT 1 FROM drafts WHERE id=? LIMIT 1').get(draft.id)) throw fail('CONSOLE_IMPORT_CONFLICT', 'A saved request ID already belongs to this workspace.');
@@ -321,6 +355,7 @@ export class MerchantConsoleStore {
       for (const draft of packet.drafts) this.db.prepare('INSERT INTO drafts VALUES (?,?,?,?)').run(draft.id, draft.revision, profile.id, json(draft));
       for (const call of packet.calls) this.db.prepare('INSERT INTO calls VALUES (?,?,?)').run(call.id, profile.id, json(call));
       for(const value of packet.deliveries)this.db.prepare('INSERT INTO deliveries VALUES (?,?,?)').run(value.id,profile.id,json(value));
+      importWorkflowRows(this.db,workflowData);
       this.db.prepare('INSERT INTO imports VALUES (?,?,?)').run(contentSha256, profile.id, now());
       return { profile, reused: false, contentSha256 };
     });
