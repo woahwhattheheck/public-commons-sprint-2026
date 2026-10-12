@@ -27,7 +27,11 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/schemas/ProtocolRecordSchema.xsd",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/schemas/RRSUploadSchema.xsd",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/schemas/clinicaltrials-openapi.yaml",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/schemas/source-contracts.json"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/schemas/source-contracts.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/managed.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/managed-application.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/application-provider.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/MANAGED_APPLICATION.md"
   ],
   "exports": {
     "./seller/clinicaltrials": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/cli.mjs",
@@ -35,5 +39,8 @@
     "./merchant/mcp/clinicaltrials-workspaces": "./source/stellar-forge/mcp-merchant-operator/clinicaltrials-workspace.mjs",
     "./merchant/mcp/clinicaltrials/client": "./source/stellar-forge/mcp-merchant-operator/clinicaltrials-client.mjs",
     "./merchant/mcp/clinicaltrials/cli": "./source/stellar-forge/mcp-merchant-operator/clinicaltrials-cli.mjs"
+  },
+  "applicationProviders": {
+    "clinicaltrials": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/application-provider.mjs"
   }
 }
