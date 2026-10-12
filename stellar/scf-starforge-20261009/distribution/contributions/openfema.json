@@ -1,0 +1,49 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "openfema",
+  "description": "Complete Public Assistance source portfolios, analyst decisions and native merchant/customer receiving",
+  "commands": {
+    "openfema-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/workspace.mjs",
+    "openfema": "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/cli.mjs",
+    "openfema-mcp": "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/mcp-client.mjs"
+  },
+  "commandDescriptions": {
+    "openfema-workspace": "Operate original Public Assistance source editions, portfolio review, publication and complete receiving",
+    "openfema": "Capture, resume, review, export and reopen the original Public Assistance portfolio",
+    "openfema-mcp": "Use the same Public Assistance workspace through typed merchant tools and complete retained-file receiving"
+  },
+  "exports": {
+    "./seller/openfema": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/core.mjs",
+    "./seller/openfema/capture": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/capture.mjs",
+    "./seller/openfema/domain": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/domain.mjs",
+    "./seller/openfema/schema": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/schema.mjs",
+    "./seller/openfema/dataset": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/dataset.mjs",
+    "./seller/openfema/exports": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/exports.mjs",
+    "./seller/openfema/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/workspace.mjs",
+    "./seller/openfema/cli": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/cli.mjs",
+    "./merchant-mcp/openfema": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/mcp.mjs",
+    "./merchant-mcp/openfema/protocol": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/mcp-protocol.mjs",
+    "./merchant-mcp/openfema/client": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/mcp-client.mjs",
+    "./merchant-mcp/openfema/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/merchant-provider.mjs",
+    "./merchant-mcp/openfema/setup": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/merchant-setup.mjs",
+    "./applications/openfema": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/application.mjs"
+  },
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/workspace.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/browser-assets.json"
+    }
+  ],
+  "applicationProviders": {
+    "openfema-public-assistance": "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/application-provider.mjs"
+  },
+  "merchantProviders": {
+    "openfema-workspaces": "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/merchant-provider.mjs"
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/MCP.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/MANAGED.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/mcp-client.d.mts"
+  ]
+}
