@@ -7,6 +7,7 @@ import { dirname, resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { MerchantReleaseOperator } from '../operator.mjs';
 import { MerchantProviderOwners } from '../provider-lifecycle.mjs';
+import { RetainedFileReads } from '../retained-file-reads.mjs';
 
 const output = resolve(process.argv[2] ?? 'provider-lifecycle-receiving.json');
 await mkdir(dirname(output), { recursive: true });
@@ -127,19 +128,29 @@ try {
     }
   });
 
-  await stage('late-borrower-file-ownership-and-retry', async () => {
+  await stage('native-file-ownership-and-close-retry', async () => {
     const parentHandle = await open(join(work, 'parent-owner.txt'), 'w+', 0o600);
-    const childHandle = await open(join(work, 'child-owner.txt'), 'w+', 0o600);
+    const childPath = join(work, 'child-owner.txt');
     await parentHandle.writeFile('retained parent owner\n');
-    await childHandle.writeFile('retained child owner\n');
+    await writeFile(childPath, 'retained child owner\n', { mode: 0o600 });
+    const childHandle = await open(childPath, 'r');
+    const originalChildClose = childHandle.close.bind(childHandle);
     const gate = deferred(), parentReady = deferred(), sequence = [];
-    let childAttempts = 0, parentAttempts = 0, owners;
-    const parent = { handle: parentHandle, async close() { parentAttempts++; sequence.push('parent:' + parentAttempts); await parentHandle.close(); } };
-    const child = { async read() { return (await childHandle.stat()).size; }, async close() {
+    let childAttempts = 0, parentAttempts = 0;
+    childHandle.close = async () => {
       childAttempts++; sequence.push('child:' + childAttempts);
-      if (childAttempts === 1) throw failure('EBUSY', 'Receiving injects the original close failure before releasing its file.');
-      await childHandle.close();
-    } };
+      if (childAttempts === 1) throw failure('EBUSY', 'Receiving injects a descriptor close failure before the original descriptor is released.');
+      return originalChildClose();
+    };
+    const reads = new RetainedFileReads({ errorPrefix: 'RECEIVING' });
+    const parent = { handle: parentHandle, async close() { parentAttempts++; sequence.push('parent:' + parentAttempts); await parentHandle.close(); } };
+    const child = {
+      read: () => reads.read({ scope: 'child', key: 'source-file', kind: 'receiving', directory: work,
+        offset: 0, limit: 4, expectedSha256: sha256(Buffer.from('retained child owner\n')),
+        load: async () => ({ readonlyFileHandle: childHandle, bytes: 21,
+          sha256: sha256(Buffer.from('retained child owner\n')), name: 'child-owner.txt' }) }),
+      close: () => reads.close(),
+    };
     const definitions = {
       parent: { configKey: null, dependencies: [], shutdown: 'provider',
         load: async () => ({}), create: () => { parentReady.resolve(); return parent; } },
@@ -147,8 +158,9 @@ try {
         load: async () => { await gate.promise; return {}; },
         create: (_module, _config, _options, dependencies) => { assert.equal(dependencies.parent, parent); return child; } },
     };
-    owners = new MerchantProviderOwners({ definitions, config: {}, options: {},
+    const owners = new MerchantProviderOwners({ definitions, config: {}, options: {},
       loads: new Map(), instances: new Map(), states: new Map(), failure });
+    let retained, readerRetained, final;
     try {
       const accepted = owners.invoke('child', provider => provider.read());
       await within(parentReady.promise, 'Original parent handle load');
@@ -156,29 +168,77 @@ try {
       assert.equal(parentAttempts, 0);
       assert.equal(owners.pendingStarts, 1);
       gate.resolve();
-      assert.equal(await within(accepted, 'Accepted late borrowing provider call'), 21);
+      const first = await within(accepted, 'Accepted original retained-file read');
+      assert.equal(Buffer.from(first.data, 'base64').toString(), 'reta');
+      assert.equal(first.nextOffset, 4);
       let originalFailure;
       try { await owners.finishClose(); } catch (error) { originalFailure = error; }
       assert.equal(originalFailure?.code, 'OPERATOR_SHUTDOWN_INCOMPLETE');
       assert.deepEqual(originalFailure.providers.map(value => ({ name: value.name, code: value.code })), [
-        { name: 'child', code: 'EBUSY' }, { name: 'parent', code: 'PROVIDER_DEPENDENCY_ACTIVE' },
+        { name: 'child', code: 'RECEIVING_CLOSE_INCOMPLETE' }, { name: 'parent', code: 'PROVIDER_DEPENDENCY_ACTIVE' },
       ]);
       assert.equal(parentAttempts, 0);
       assert.equal((await parentHandle.stat()).size, 22);
       assert.equal((await childHandle.stat()).size, 21);
-      const retained = owners.shutdown;
+      retained = owners.shutdown; readerRetained = reads.summary;
+      assert.equal(readerRetained.activeFileReads, 1);
+      assert.equal(readerRetained.pendingFileCloses, 1);
       owners.beginClose();
       await owners.finishClose();
       await owners.finishClose();
       assert.deepEqual(sequence, ['child:1', 'child:2', 'parent:1']);
+      assert.equal(reads.summary.activeFileReads, 0);
+      assert.equal(reads.summary.pendingFileCloses, 0);
       await assert.rejects(parentHandle.stat(), { code: 'EBADF' });
       await assert.rejects(childHandle.stat(), { code: 'EBADF' });
-      return { source: 'native fs FileHandle ownership with one injected EBUSY close failure',
-        pendingBorrowerPreventedEarlyOwnerClose: true, retained, closeSequence: sequence, final: owners.shutdown };
+      final = owners.shutdown;
     } finally {
       gate.resolve();
-      await childHandle.close().catch(() => {});
+      await originalChildClose().catch(() => {});
       await parentHandle.close().catch(() => {});
+    }
+
+    // A loader can return its original descriptor after closeScope was requested.
+    // It has not published a readId, but failed disposal must retain ownership.
+    const latePath = join(work, 'late-loader.txt'), bytes = Buffer.from('late descriptor\n');
+    await writeFile(latePath, bytes, { mode: 0o600 });
+    const lateHandle = await open(latePath, 'r'), actualLateClose = lateHandle.close.bind(lateHandle);
+    const lateReader = new RetainedFileReads({ errorPrefix: 'LATE' }), loading = deferred(), returned = deferred();
+    let refuseClose = true, failedAttempts = 0;
+    lateHandle.close = async () => {
+      if (refuseClose) { failedAttempts++; throw failure('EBUSY', 'Receiving retains an unpublished original descriptor.'); }
+      return actualLateClose();
+    };
+    try {
+      const opening = lateReader.read({ scope: 'late', key: 'source-file', kind: 'receiving', directory: work,
+        offset: 0, limit: 4, expectedSha256: sha256(bytes), load: async () => {
+          loading.resolve(); await returned.promise;
+          return { readonlyFileHandle: lateHandle, bytes: bytes.length, sha256: sha256(bytes), name: 'late-loader.txt' };
+        } }).then(value => ({ status: 'fulfilled', value }), error => ({ status: 'rejected', code: error.code }));
+      await loading.promise;
+      const closing = lateReader.closeScope('late').then(() => ({ status: 'fulfilled' }), error => ({ status: 'rejected', code: error.code }));
+      returned.resolve();
+      assert.deepEqual(await within(opening, 'Original late loader settlement'), { status: 'rejected', code: 'LATE_CLOSING' });
+      assert.deepEqual(await within(closing, 'Original late scope close'), { status: 'rejected', code: 'LATE_CLOSE_INCOMPLETE' });
+      assert.equal((await lateHandle.stat()).size, bytes.length);
+      assert.equal(lateReader.summary.pendingFileCloses, 1);
+      await assert.rejects(lateReader.read({ scope: 'late' }), { code: 'LATE_CLOSING' });
+      refuseClose = false;
+      await lateReader.closeScope('late');
+      await assert.rejects(lateHandle.stat(), { code: 'EBADF' });
+      assert.equal(lateReader.summary.pendingFileCloses, 0);
+      const reopened = await lateReader.read({ scope: 'late', key: 'reopened', kind: 'receiving', directory: work,
+        load: async () => ({ bytes: Buffer.from('reopened'), name: 'reopened.txt' }) });
+      assert.equal(Buffer.from(reopened.data, 'base64').toString(), 'reopened');
+      await lateReader.close();
+      return { source: 'original RetainedFileReads and native fs FileHandles with injected EBUSY close failures',
+        pendingBorrowerPreventedEarlyOwnerClose: true, retained, readerRetained,
+        closeSequence: sequence, final, unpublishedDescriptorRetained: true,
+        failedScopeBlocksNewReadsUntilSuccessfulRetry: true, failedAttempts };
+    } finally {
+      returned.resolve(); refuseClose = false;
+      await lateReader.close().catch(() => {});
+      await actualLateClose().catch(() => {});
     }
   });
   report.state = 'COMPLETE'; report.finishedAt = new Date().toISOString();
