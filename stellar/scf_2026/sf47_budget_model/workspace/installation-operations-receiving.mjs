@@ -312,4 +312,7 @@ async function main(){
     editions:delivery.editions,files:delivery.files},null,2)+'\n');
 }
 main().catch(error=>{process.stderr.write(JSON.stringify({operation:OPERATION,state:'INTERRUPTED',
-  message:error.message,code:error.code??null},null,2)+'\n');process.exitCode=1;});
+  message:error.message,code:error.code??null,
+  ...(error.exitCode!==undefined?{exitCode:error.exitCode}:{}),
+  ...(error.signal!==undefined?{signal:error.signal}:{}),
+  ...(typeof error.diagnostics==='string'?{diagnostics:error.diagnostics}:{})},null,2)+'\n');process.exitCode=1;});
