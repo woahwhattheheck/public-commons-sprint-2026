@@ -103,7 +103,9 @@ Send that to `merchant_ckan_workspace_archive`, substituting the actual
 operation baseline. The original archive engine acquires the existing
 publisher, dataset and release ownership before saving one complete archive. Optional
 `maxBytes` and `maxFiles` select a smaller workload budget; the MCP ceiling is
-8 GiB of retained payload and 100,000 files.
+8,522,825,728 bytes of retained payload (8 GiB minus 64 MiB) and 100,000
+files. The 64 MiB allowance covers the archive manifest and framing, keeping the
+complete archive within the original native file reader's 8 GiB ceiling.
 
 Read `merchant_ckan_workspace_archives` after completion. Its `items` provide
 the original `archiveId`, `sha256`, `manifestSha256`, byte and file counts,

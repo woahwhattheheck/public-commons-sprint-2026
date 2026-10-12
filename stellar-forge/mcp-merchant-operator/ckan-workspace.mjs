@@ -352,7 +352,7 @@ export class MerchantCkanWorkspaces {
         const maxBytes = input.maxBytes ?? CKAN_TRANSFER_MAX_BYTES, maxFiles = input.maxFiles ?? 100000;
         if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > CKAN_TRANSFER_MAX_BYTES ||
             !Number.isSafeInteger(maxFiles) || maxFiles < 1 || maxFiles > 100000)
-          throw failure('INVALID_PARAMS', 'Use a positive workspace budget up to 8 GiB and 100000 files.');
+          throw failure('INVALID_PARAMS', `Use a positive workspace payload budget up to ${CKAN_TRANSFER_MAX_BYTES} bytes and 100000 files.`);
         return launch(() => original.archiveWorkspace({ maxBytes, maxFiles }));
       }
       case 'merchant_ckan_workspace_inspect': {

@@ -16,7 +16,7 @@ const CKAN = 'stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/';
 const MCP = 'stellar-forge/mcp-merchant-operator/';
 const SOURCE_FILES = [
   ...['ckan-workspace-launcher.mjs', 'ckan-workspace.mjs', 'ckan-workspace-transfers.mjs',
-    'catalog/ckan-workspace.mjs', 'config.mjs', 'operator.mjs', 'serve.mjs'].map(name => MCP + name),
+    'catalog/ckan-workspace.mjs', 'retained-file-reads.mjs', 'config.mjs', 'operator.mjs', 'serve.mjs'].map(name => MCP + name),
   ...['model.mjs', 'server.mjs', 'source.mjs', 'capture.mjs', 'semantics.mjs', 'declaration.mjs',
     'archive.mjs', 'source-locations.mjs',
     'public/index.html', 'public/app.mjs', 'public/style.css'].map(name => CKAN + name),
