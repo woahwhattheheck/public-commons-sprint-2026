@@ -83,6 +83,20 @@ builds continue through the existing builder and installer recovery paths.
 See [Build complete products](SOURCE_BUILDS.md) for the browser, CLI, API and
 recovery workflow. The original archive import remains available below.
 
+## Save and receive product plans
+
+The **Product plans** shelf in **Build a product** keeps a name, purpose, full
+capability basket, immutable recipe, actual dependency inspection and original
+native review/build together. Reopen the same plan after a server restart,
+export its complete history, or receive it into another Runtime workspace with
+that workspace's own normal source review.
+
+The existing model, CLI and browser share the same saved-plan records. Local
+reopens reuse the stored source inspection and original request UUID. Complete
+receiving inputs remain available for continuation or corrected source settings.
+See [Saved product plans](PRODUCT_PLANS.md) for the complete browser, CLI,
+typed API and import/export workflow.
+
 ## Receive a release and choose its adapters
 
 In **Source & profile**, open **Import another original archive**. Either choose
