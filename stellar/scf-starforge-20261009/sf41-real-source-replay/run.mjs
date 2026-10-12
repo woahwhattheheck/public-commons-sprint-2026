@@ -11,7 +11,7 @@ import { compareRankingSources } from './ranking-comparison.mjs';
 import { BazaarCatalog, createDiscoveryServer, validateCatalogEntry } from '../../../scf46-stellar-bazaar/src/catalog.mjs';
 
 // Checked at this source commit; pin overrides require an explicit exact Git blob SHA-1.
-const EXPECTED_BLOB = '7b4390f9a119399bdb8e27db5796697f1314da8b';
+const EXPECTED_BLOB = '03582e141a414b9f5c239deb65a9614de2d9a340';
 const catalogPath = fileURLToPath(new URL('../../../scf46-stellar-bazaar/src/catalog.mjs', import.meta.url));
 const args = process.argv.slice(2);
 const option = (name) => { const p = args.indexOf(name); return p >= 0 ? args[p + 1] : null; };
