@@ -21,7 +21,7 @@ const pageMethods=Object.freeze({
   materialRows:['offset','nextOffset'],materialChanges:['offset','nextOffset'],
   materialFacets:['offset','nextOffset'],materialSuggest:['offset','nextOffset'],
   supplierList:['cursor','nextCursor'],supplierHistory:['beforeRevision','nextRevision'],
-  supplierRows:['offset','nextOffset']
+  supplierRows:['offset','nextOffset'],supplierRecipientRows:['offset','nextOffset']
 });
 export const OPENSEARCH_MATERIAL_CLIENT_METHODS=Object.freeze({
   status:'status',open:'open',close:'close',operation:'operation',
@@ -35,7 +35,7 @@ export const OPENSEARCH_MATERIAL_CLIENT_METHODS=Object.freeze({
   supplierTemplates:'supplier_templates',supplierList:'supplier_list',supplierPlan:'supplier_plan',
   supplierHistory:'supplier_history',supplierProduct:'supplier_product',
   supplierCorrectionGet:'supplier_correction_get',supplierReviewGet:'supplier_review_get',
-  supplierRows:'supplier_rows',supplierRow:'supplier_row',supplierSave:'supplier_save',
+  supplierRows:'supplier_rows',supplierRecipientRows:'supplier_recipient_rows',supplierRow:'supplier_row',supplierSave:'supplier_save',
   supplierCorrection:'supplier_correction',supplierReview:'supplier_review',supplierExport:'supplier_export',
   exportManifest:'material_export_manifest',exportFile:'material_export_file',
   exportFileRelease:'material_export_file_release'

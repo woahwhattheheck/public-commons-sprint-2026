@@ -1,0 +1,756 @@
+{
+  "SchemaVersion": "2.0",
+  "CatalogueId": "XYZ-002025-01",
+  "CatalogueName": [
+    {
+      "Language": "en-GB",
+      "CatalogueName": "Fall/Winter 2024/2025"
+    },
+    {
+      "Language": "nl-NL",
+      "CatalogueName": "Herfst/Winter 2024/2025"
+    }
+  ],
+  "CatalogueVersion": "2.0",
+  "ContractReferenceNumber": "629.09.02.RE",
+  "CatalogueType": "FULL",
+  "GenerationDate": "2025-10-12",
+  "NameDataCreator": "Mr. ETIM",
+  "EmailDataCreator": "info@etim-international.com",
+  "BuyerName": "Customer",
+  "BuyerIdGln": "8718699000189",
+  "BuyerIdDuns": "150483782",
+  "CatalogueValidityStart": "2026-01-01",
+  "CatalogueValidityEnd": "2026-12-31",
+  "Country": [
+    "NL",
+    "UK"
+  ],
+  "Language": [
+    "en-GB",
+    "nl-NL"
+  ],
+  "CurrencyCode": "GBP",
+  "Supplier": [
+    {
+      "SupplierName": "Test supplier",
+      "SupplierIdGln": "8718699000111",
+      "SupplierIdDuns": "150483287",
+      "SupplierVatNo": "GB123456789",
+      "SupplierAttachments": [
+        {
+          "AttachmentType": "ATX014",
+          "AttachmentTypeSpecification": "MDX018",
+          "AttachmentDetails": [
+            {
+              "AttachmentLanguage": [
+                "en-GB"
+              ],
+              "AttachmentFilename": "supplierlogo.jpg",
+              "AttachmentUri": "https://www.company.com/supplierlogo.jpg"
+            }
+          ]
+        }
+      ],
+      "Product": [
+        {
+          "ProductIdentification": {
+            "ManufacturerIdGln": "8718699000112",
+            "ManufacturerName": "Maker Company",
+            "ManufacturerShortname": "Maker",
+            "ManufacturerProductNumber": "04011969",
+            "ProductGtin": [
+              "04047621001104"
+            ],
+            "UnbrandedProduct": false,
+            "BrandName": "Mymake",
+            "BrandDetails": [
+              {
+                "BrandSeries": [
+                  {
+                    "Language": "en-GB",
+                    "BrandSeries": "Things"
+                  }
+                ],
+                "BrandSeriesVariation": [
+                  {
+                    "Language": "en-GB",
+                    "BrandSeriesVariation": "Smallthing"
+                  }
+                ]
+              }
+            ],
+            "ProductAnnouncementDate": "2025-10-01",
+            "ProductValidityDate": "2026-01-01",
+            "ProductObsolescenceDate": "2026-12-31",
+            "CustomsCommodityCode": "39174002",
+            "FactorCustomsCommodityCode": "3",
+            "CountryOfOrigin": [
+              "NL"
+            ]
+          },
+          "ProductDetails": {
+            "ProductStatus": "ACTIVE",
+            "ProductType": "PHYSICAL",
+            "CustomisableProduct": false,
+            "ProductDescriptions": [
+              {
+                "DescriptionLanguage": "en-GB",
+                "MinimalProductDescription": "Example product",
+                "UniqueMainProductDescription": "Example product for the xChange standard ",
+                "FullProductDescription": "Demo product to help with the implementation of the xChange standard ",
+                "ProductMarketingText": "A great product to have",
+                "ProductSpecificationText": "Any product that fits with the xChange specs",
+                "ProductApplicationInstructions": "Use with care",
+                "ProductKeyword": [
+                  "Demo",
+                  "Example",
+                  "e.g."
+                ],
+                "ProductPageUrl": "https://www.company.com/uk/productnumber"
+              },
+              {
+                "DescriptionLanguage": "nl-NL",
+                "MinimalProductDescription": "Voorbeeldproduct",
+                "UniqueMainProductDescription": "Voorbeeldproduct voor de xChange standaard",
+                "FullProductDescription": "Demo product om te helpen bij de implementatie van de xChange standaard ",
+                "ProductMarketingText": "Een geweldig product om te hebben",
+                "ProductSpecificationText": "Elk product dat past binnen de xChange specificaties",
+                "ProductApplicationInstructions": "Gebruik voorzichtig",
+                "ProductKeyword": [
+                  "Demo",
+                  "Voorbeeld",
+                  "b.v."
+                ],
+                "ProductPageUrl": "https://www.company.com/nl/productnumber"
+              }
+            ],
+            "HasSerialNumber": false,
+            "WarrantyConsumer": 24,
+            "WarrantyBusiness": 12
+          },
+          "ProductRelations": [
+            {
+              "RelationType": "MANDATORY",
+              "RelatedProducts": [
+                {
+                  "RelatedManufacturerProductNumber": "15031975",
+                  "RelatedProductGtin": [
+                    "04047621001104"
+                  ],
+                  "RelatedProductQuantity": 1
+                }
+              ]
+            }
+          ],
+          "Legislation": {
+            "ElectricComponentContained": false,
+            "BatteryContained": false,
+            "WeeeCategory": "2",
+            "RohsIndicator": "exempt",
+            "RohsExemptionNumber": "2a-III",
+            "CeMarking": true,
+            "SdsIndicator": true,
+            "ReachIndicator": "true",
+            "ReachDate": "2023-10-01",
+						"SvhcIdentification": [
+							{
+								"CasNumber": "7439-92-1",
+								"EcNumber": "231-100-4"
+							}
+						],
+            "ScipNumber": "e991v422-239c-4b49-8a42-3f4730aa51a0",
+            "UfiCode": "N1QV-R02N-J00M-WQD5",
+            "UnNumber": "2297",
+            "HazardClass": [
+              "4.3"
+            ],
+            "AdrCategory": "2",
+            "NetWeightHazardousSubstances": "0.0196",
+            "VolumeHazardousSubstances": "0.349",
+            "UnShippingName": [
+              {
+                "Language": "en-GB",
+                "UnShippingName": "UN 2902 PESTICIDE, LIQUID, TOXIC, N.O.S. (drazoxolon)"
+              }
+            ],
+            "PackingGroup": "II",
+            "LimitedQuantities": false,
+            "ExceptedQuantities": true,
+            "AggregationState": "G",
+            "SpecialProvisionId": [
+              "SP601"
+            ],
+            "ClassificationCode": "FT2",
+            "HazardLabel": [
+              "4.1"
+            ],
+            "EnvironmentalHazards": true,
+            "TunnelCode": "D",
+            "LabelCode": [
+              "GHS01",
+              "GHS09"
+            ],
+            "SignalWord": "W",
+            "HazardStatement": [
+              "AUH029",
+              "H241"
+            ],
+            "PrecautionaryStatement": [
+              "P234"
+            ],
+            "LiIonTested": true,
+            "LithiumAmount": "6.5",
+            "BatteryEnergy": "65",
+            "Nos274": false,
+            "HazardTrigger": [
+              "Nitrates"
+            ],
+            "EprelRegistrationNumber": "123456789"
+          },
+          "LcaEnvironmental": {
+            "EpdValidityStartDate": "2025-10-01",
+            "EpdValidityExpiryDate": "2030-10-01",
+            "ThirdPartyVerification": "externally",            
+            "EpdOperatorName": "PEP ecopassport",
+            "EpdOperatorUri": "https://www.pep-ecopassport.org",            
+            "OperatorEpdId": "EATO-00006-V01.01",            
+            "ManufacturerEpdId": "1VCD900083R0001",            
+            "ProductCategoryRulesDescription": "PCR-ed3-FR-2015 04 02",
+            "ProductCategoryRulesUri": "http://www.pep-ecopassport.org/fileadmin/user_upload/PEP-PCR-ed4-EN-2021_09_14.pdf",             
+            "ProductSpecificRulesDescription": "PSR-0007-ed1.1-FR-2015 10 16",
+            "ProductSpecificRulesUri": "http://www.pep-ecopassport.org/fileadmin/webmaster-fichiers/PSR0007-ed1.1-FR-2015_10_16-AppareilsElectriquesAutonomesdeSecurite.pdf ", 
+            "DeclaredUnitUnit": "MTQ",
+            "DeclaredUnitQuantity": "1.0",
+            "FunctionalUnitDescription": [
+              {
+                "Language": "en-GB",
+                "FunctionalUnitDescription": "To protect a power system against faults such as short circuit and overload, using an auxiliary voltage of 110 V DC, during a service life of 10 years and with a use rate of 100 % in Europe"
+              }
+            ],
+            "LcaReferenceLifetime": 10,
+            "LcaDeclaration": [
+              {
+                "LifeCycleStage": "A1-A3",
+                "LcaDeclarationIndicator": "AGG",
+                "DeclaredUnitGwpTotal": 455,
+                "DeclaredUnitGwpFossil": 135,
+                "DeclaredUnitGwpBiogenic": 120,
+                "DeclaredUnitGwpLuluc": 200,
+                "DeclaredUnitAp": 2.88,
+                "DeclaredUnitEpFreshwater": 0.459,
+                "DeclaredUnitEpMarine": 0.491,
+                "DeclaredUnitEpTerrestrial": 4.92,
+                "DeclaredUnitPocp": 1.25,
+                "DeclaredUnitOdp": 2.62e-05,
+                "DeclaredUnitAdpe": 0.0416,
+                "DeclaredUnitAdpf": 8380,
+                "DeclaredUnitWdp": 109,
+                "DeclaredUnitPert": 1420,
+                "DeclaredUnitPenrt": 8380,
+                "DeclaredUnitPm": 0.000000379,
+                "DeclaredUnitIrp": 0.224,
+                "DeclaredUnitEtpfw": 11.3,
+                "DeclaredUnitHtpc": 0.000000000677,
+                "DeclaredUnitHtpnc": 0.000000141,
+                "DeclaredUnitSqp": 4.24
+              },
+              {
+                "LifeCycleStage": "A4",
+                "LcaDeclarationIndicator": "MND"
+              }
+            ]
+          },
+          "ProductAttachments": [
+            {
+              "AttachmentType": "ATX004",
+              "AttachmentTypeSpecification": "MDX049",
+              "AttachmentDetails": [
+                {
+                  "AttachmentLanguage": [
+                    "en-GB",
+                    "nl-NL"
+                  ],
+                  "AttachmentFilename": "04011969-rohs.pdf",
+                  "AttachmentUri": "https://www.company.com/04011969-rohs.pdf",
+                  "AttachmentDescription": [
+                    {
+                      "Language": "en-GB",
+                      "AttachmentDescription": "RoHs declaration product 04011969"
+                    },
+                    {
+                      "Language": "nl-NL",
+                      "AttachmentDescription": "RoHs verklaring product 04011969"
+                    }
+                  ],
+                  "AttachmentIssueDate": "2023-05-01",
+                  "AttachmentExpiryDate": "2026-05-01"
+                }
+              ]
+            },
+            {
+              "AttachmentType": "ATX018",
+              "AttachmentTypeSpecification": "MDX026",
+              "AttachmentDetails": [
+                {
+                  "AttachmentFilename": "productpicture.jpg",
+                  "AttachmentUri": "https://www.company.com/productpicture.jpg"
+                }
+              ]
+            }
+          ],
+          "EtimClassification": [
+            {
+              "EtimReleaseVersion": "10.0",
+              "EtimClassCode": "EC011533",
+              "EtimClassVersion": 10,
+              "EtimFeatures": [
+                {
+                  "EtimFeatureCode": "EF002169",
+                  "EtimValueCode": "EV000138"
+                },
+                {
+                  "EtimFeatureCode": "EF023191",
+                  "EtimValueCode": "EV020209"
+                },
+                {
+                  "EtimFeatureCode": "EF006272",
+                  "EtimValueNumeric": "15"
+                },
+                {
+                  "EtimFeatureCode": "EFI06272",
+                  "EtimValueNumeric": "0.59"
+                },
+                {
+                  "EtimFeatureCode": "EF000229",
+                  "EtimValueNumeric": "1"
+                },
+                {
+                  "EtimFeatureCode": "EFI00229",
+                  "EtimValueNumeric": "0.039"
+                },
+                {
+                  "EtimFeatureCode": "EF020379",
+                  "EtimValueCode": "EV008254"
+                },
+                {
+                  "EtimFeatureCode": "EF020905",
+                  "EtimValueCode": "EV008254"
+                },
+                {
+                  "EtimFeatureCode": "EF025643",
+                  "EtimValueLogical": false
+                },
+                {
+                  "EtimFeatureCode": "EF000139",
+                  "EtimValueCode": "EV006034"
+                },
+                {
+                  "EtimFeatureCode": "EF024097",
+                  "EtimValueCode": "EV006034"
+                },
+                {
+                  "EtimFeatureCode": "EF011808",
+                  "ReasonNoValue": "UN"
+                },
+                {
+                  "EtimFeatureCode": "EF021857",
+                  "EtimValueLogical": false
+                },
+                {
+                  "EtimFeatureCode": "EF020904",
+                  "ReasonNoValue": "NA"
+                },
+                {
+                  "EtimFeatureCode": "EF020028",
+                  "EtimValueLogical": true
+                },
+                {
+                  "EtimFeatureCode": "EF020380",
+                  "EtimValueLogical": true
+                },
+                {
+                  "EtimFeatureCode": "EF021778",
+                  "EtimValueLogical": true
+                },
+                {
+                  "EtimFeatureCode": "EF022628",
+                  "EtimValueLogical": true
+                },
+                {
+                  "EtimFeatureCode": "EF020906",
+                  "EtimValueLogical": true
+                },
+                {
+                  "EtimFeatureCode": "EF017094",
+                  "EtimValueLogical": true
+                },
+                {
+                  "EtimFeatureCode": "EF020230",
+                  "EtimValueLogical": true
+                },
+                {
+                  "EtimFeatureCode": "EF023182",
+                  "EtimValueRangeLower": "10",
+                  "EtimValueRangeUpper": "60"
+                },
+                {
+                  "EtimFeatureCode": "EFI23182",
+                  "EtimValueRangeLower": "50",
+                  "EtimValueRangeUpper": "140"
+                },
+                {
+                  "EtimFeatureCode": "EF000634",
+                  "EtimValueNumeric": "10"
+                },
+                {
+                  "EtimFeatureCode": "EF020007",
+                  "EtimValueCode": "EV020104"
+                },
+                {
+                  "EtimFeatureCode": "EF022999",
+                  "ReasonNoValue": "NA"
+                },
+                {
+                  "EtimFeatureCode": "EF023821",
+                  "EtimValueLogical": true
+                },
+                {
+                  "EtimFeatureCode": "EF020759",
+                  "EtimValueNumeric": "23"
+                },
+                {
+                  "EtimFeatureCode": "EFI20759",
+                  "EtimValueNumeric": "0.91"
+                },
+                {
+                  "EtimFeatureCode": "EF011751",
+                  "EtimValueNumeric": "48"
+                },
+                {
+                  "EtimFeatureCode": "EFI11751",
+                  "EtimValueNumeric": "1.89"
+                },
+                {
+                  "EtimFeatureCode": "EF020760",
+                  "EtimValueCode": "EV000270"
+                },
+                {
+                  "EtimFeatureCode": "EFNL0001",
+                  "EtimValueLogical": true
+                },
+                {
+                  "EtimFeatureCode": "EFNL0002",
+                  "EtimValueLogical": true
+                },
+                {
+                  "EtimFeatureCode": "EFSE0002",
+                  "EtimValueLogical": true
+                },
+                {
+                  "EtimFeatureCode": "EFNL0016",
+                  "EtimValueLogical": true
+                }
+              ],
+              "EtimModellingClassCode": "MC000023",
+              "EtimModellingClassVersion": 5,
+              "EtimModellingPorts": [
+                {
+                  "EtimModellingPortcode": 1,
+                  "EtimModellingConnectionTypeCode": "CT000001",
+                  "EtimModellingConnectionTypeVersion": 4,
+                  "EtimModellingFeatures": [
+                    {
+                      "EtimFeatureCode": "EF023191",
+                      "EtimValueCode": "EV020209"
+                    },
+                    {
+                      "EtimFeatureCode": "EF000015",
+                      "EtimValueNumeric": "16"
+                    },
+                    {
+                      "EtimFeatureCode": "EFI00015",
+                      "EtimValueNumeric": "0.63"
+                    },
+                    {
+                      "EtimFeatureCode": "EF001438",
+                      "EtimValueNumeric": "2000"
+                    },
+                    {
+                      "EtimFeatureCode": "EFI01438",
+                      "EtimValueNumeric": "78.74"
+                    },
+                    {
+                      "EtimFeatureCode": "EF000229",
+                      "EtimValueNumeric": "3"
+                    },
+                    {
+                      "EtimFeatureCode": "EFI00229",
+                      "EtimValueNumeric": "0.12"
+                    }
+                  ]
+                },
+                {
+                  "EtimModellingPortcode": 2,
+                  "EtimModellingConnectionTypeCode": "CT000001",
+                  "EtimModellingConnectionTypeVersion": 4,
+                  "EtimModellingFeatures": [
+                    {
+                      "EtimFeatureCode": "EF023191",
+                      "EtimValueCode": "EV020209"
+                    },
+                    {
+                      "EtimFeatureCode": "EF000015",
+                      "EtimValueNumeric": "16"
+                    },
+                    {
+                      "EtimFeatureCode": "EFI00015",
+                      "EtimValueNumeric": "0.63"
+                    },
+                    {
+                      "EtimFeatureCode": "EF001438",
+                      "EtimValueNumeric": "2000"
+                    },
+                    {
+                      "EtimFeatureCode": "EFI01438",
+                      "EtimValueNumeric": "78.74"
+                    },
+                    {
+                      "EtimFeatureCode": "EF000229",
+                      "EtimValueNumeric": "3"
+                    },
+                    {
+                      "EtimFeatureCode": "EFI00229",
+                      "EtimValueNumeric": "0.12"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "OtherClassifications": [
+            {
+              "ClassificationName": "ECLASS",
+              "ClassificationClassCode": "27-14-22-01",
+              "ClassificationVersion": "13.0",
+              "ClassificationFeatures": [
+                {
+                  "ClassificationFeatureName": "Rated error current",
+                  "ClassificationFeatureValue1": "0.03",
+                  "ClassificationFeatureUnit": "ampere (A)"
+                }
+              ]
+            }
+          ],
+          "ProductCountrySpecificFields": [
+            {
+              "CSProductCharacteristicCode": "NL_002-1",
+              "CSProductCharacteristicName": [
+                {
+                  "Language": "nl-NL",
+                  "CSProductCharacteristicName": "DIN-number"
+                }
+              ],
+              "CSProductCharacteristicValueString": [
+                {
+                  "Language": "nl-NL",
+                  "CSProductCharacteristicValueString": "1"
+                }
+              ]
+            }
+          ],
+          "TradeItem": [
+            {
+              "ItemIdentification": {
+                "SupplierItemNumber": "221099",
+                "ManufacturerItemNumber": "20402",
+                "ItemGtin": [
+                  "08012542783404"
+                ],
+                "DiscountGroupId": "RG1",
+                "DiscountGroupDescription": [
+                  {
+                    "Language": "en-GB",
+                    "DiscountGroupDescription": "Discount group 1"
+                  },
+                  {
+                    "Language": "nl-NL",
+                    "DiscountGroupDescription": "Kortingsgroep 1"
+                  }
+                ],
+                "ItemValidityDate": "2024-01-01"
+              },
+              "ItemDetails": {
+                "ItemStatus": "ACTIVE",
+                "ItemCondition": "NEW",
+                "StockItem": true,
+                "ItemDescriptions": [
+                  {
+                    "DescriptionLanguage": "en-GB",
+                    "MinimalItemDescription": "Example trade item",
+                    "UniqueMainItemDescription": "Example trade item for testing xChange"
+                  }
+                ]
+              },
+              "ItemRelations": [
+                {
+                  "RelatedSupplierItemNumber": "251270",
+                  "RelatedItemGtin": [
+                    "04015081027125"
+                  ],
+                  "RelationType": "UPSELLING",
+                  "RelatedItemQuantity": 1
+                }
+              ],
+              "ItemLogisticDetails": [
+                {
+                  "BaseItemNetLength": "96",
+                  "BaseItemNetWidth": "5",
+                  "BaseItemNetHeight": "56",
+                  "NetDimensionUnit": "CMT",
+                  "BaseItemNetWeight": "0.26",
+                  "NetWeightUnit": "KGM",
+                  "BaseItemNetVolume": "68",
+                  "NetVolumeUnit": "MMQ"
+                }
+              ],
+              "Ordering": {
+                "OrderUnit": "C62",
+                "MinimumOrderQuantity": "1",
+                "OrderStepSize": "1",
+                "StandardOrderLeadTime": 1,
+                "UseUnit": "C62",
+                "UseUnitConversionFactor": "1",
+                "SingleUseUnitQuantity": "1"
+              },
+              "Pricing": [
+                {
+                  "PriceUnit": "C62",
+                  "PriceQuantity": "1",
+                  "PriceUnitFactor": "1",
+                  "PriceOnRequest": false,
+                  "GrossListPrice": "23",
+                  "RecommendedRetailPrice": "35",
+                  "Vat": "21",
+                  "PriceValidityDate": "2024-01-01",
+                  "PriceExpiryDate": "2024-12-31",
+                  "AllowanceSurcharge": [
+                    {
+                      "AllowanceSurchargeIndicator": "ALLOWANCE",
+                      "AllowanceSurchargeType": "TD",
+                      "AllowanceSurchargeValidityDate": "2024-01-01",
+                      "AllowanceSurchargePercentage": "6"
+                    }
+                  ]
+                }
+              ],
+              "PackagingUnit": [
+                {
+                  "PackagingIdentification": {
+                    "PackagingTypeCode": "BX",
+                    "PackagingQuantity": "1",
+                    "TradeItemPrimaryPackaging": true,
+                    "NumberOfPackagingParts": 1
+                  },
+                  "PackagingLogisticDetails": [
+                    {
+                      "PackagingTypeLength": "110",
+                      "PackagingTypeWidth": "60",
+                      "PackagingTypeHeight": "60",
+                      "PackagingTypeDimensionUnit": "MMT",
+                      "PackagingTypeWeight": "0.45",
+                      "PackagingTypeWeightUnit": "KGM",
+                      "SerialNumberOnPackaging": false,
+                      "StackingFactor": 2,
+                      "PackagingTippable": true,
+                      "PackagingMaterial": [
+                        {
+                          "RecyclabilityPerformanceGrade": "B",
+                          "PackagingMaterials":[
+                            {
+                              "PackagingMaterialType": "PLASTIC",
+                              "CompositePackagingMaterial": false,
+                              "PackagingMaterialSpecification":[
+                                {
+                                  "PackagingMaterialSpecification":"HDPE"
+                                }
+                              ],
+                              "PackagingMaterialWeight": "0.8",
+                              "PackagingMaterialWeightUnit": "KGM",
+                              "PackagingMaterialPercentageRecycled": "15",
+                              "PackagingMaterialColoured": false,
+                              "PackagingMaterialRecyclable": true,
+                              "PackagingMaterialCompostable": false,
+                              "PackagingMaterialBiodegradable": false,
+                              "PackagingMaterialReusable": false
+                            }
+                          ] 
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "PackagingIdentification": {
+                    "PackagingTypeCode": "PK",
+                    "PackagingQuantity": "6",
+                    "TradeItemPrimaryPackaging": false,
+                    "NumberOfPackagingParts": 1
+                  },
+                  "PackagingLogisticDetails": [
+                    {
+                      "PackagingTypeLength": "110",
+                      "PackagingTypeWidth": "360",
+                      "PackagingTypeHeight": "60",
+                      "PackagingTypeDimensionUnit": "MMT",
+                      "PackagingTypeWeight": "2.75",
+                      "PackagingTypeWeightUnit": "KGM",
+                      "SerialNumberOnPackaging": false,
+                      "StackingFactor": 3,
+                      "PackagingTippable": true,
+                      "PackagingMaterial": [
+                        {
+                          "RecyclabilityPerformanceGrade": "A",
+                          "PackagingMaterials":[
+                            {
+                              "PackagingMaterialType": "GLASS",
+                              "PackagingMaterialCategory": "1",
+                              "CompositePackagingMaterial": false,
+                              "PackagingMaterialSpecification":[
+                                {
+                                  "PackagingMaterialSpecification":"Brown glass"
+                                }
+                              ],
+                              "PackagingMaterialWeight": "0.6",
+                              "PackagingMaterialWeightUnit": "KGM",
+                              "PackagingMaterialPercentageRecycled": "30",
+                              "PackagingMaterialColoured": true,
+                              "PackagingMaterialRecyclable": true,
+                              "PackagingMaterialCompostable": false,
+                              "PackagingMaterialBiodegradable": false,
+                              "PackagingMaterialReusable": false
+                            }
+                          ] 
+                        }
+                      ]
+                    }
+                  ],
+                  "TradeItemEnclosed": [
+                    {
+                      "SupplierItemNumber": "221099",
+                      "ManufacturerItemNumber": "20402",
+                      "ItemGtin": [
+                        "08012542783404"
+                      ],
+                      "EnclosedItemQuantity": 6
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 // MIT. Explicit supplier projections and durable submission record shapes.
 import { WorkspaceError, clone, canonical, digest } from '../../workspace/store.mjs';
+import { reconcileXChangeCorrectionNumbers } from './xchange/corrections.mjs';
 
 export const PLAN_SCHEMA = 'stellar-forge.supplier-submission.v1';
 export const CORRECTION_SCHEMA = 'stellar-forge.supplier-correction.v1';
@@ -11,17 +12,19 @@ export const SUPPLIER_TABLES = {
   catalog_supplier_corrections: ['id','plan_id','material_key','revision','record_json'],
   catalog_supplier_correction_history: ['correction_id','revision','record_json'],
   catalog_supplier_reviews: ['id','plan_id','created_at','record_json'],
-  catalog_supplier_products: ['review_id','material_key','supplier_id','errors','warnings','record_json']
+  catalog_supplier_products: ['review_id','material_key','supplier_id','errors','warnings','record_json'],
+  catalog_supplier_recipient: ['review_id','kind','record_key','supplier_key','identifier','action','record_json']
 };
 export const SUPPLIER_KEYS = {
   catalog_supplier_plans: ['id'], catalog_supplier_plan_history: ['plan_id','revision'],
   catalog_supplier_corrections: ['id'], catalog_supplier_correction_history: ['correction_id','revision'],
-  catalog_supplier_reviews: ['id'], catalog_supplier_products: ['review_id','material_key']
+  catalog_supplier_reviews: ['id'], catalog_supplier_products: ['review_id','material_key'],
+  catalog_supplier_recipient: ['review_id','kind','record_key']
 };
 export const SUPPLIER_MUTABLE = new Set(['catalog_supplier_plans','catalog_supplier_corrections']);
 export const SUPPLIER_MERGE_ORDER = [
   'catalog_supplier_plan_history','catalog_supplier_correction_history',
-  'catalog_supplier_reviews','catalog_supplier_products','catalog_supplier_corrections','catalog_supplier_plans'
+  'catalog_supplier_reviews','catalog_supplier_products','catalog_supplier_recipient','catalog_supplier_corrections','catalog_supplier_plans'
 ];
 export const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 export function fail(code, message, status = 422) { throw new WorkspaceError(code, message, status); }
@@ -155,6 +158,7 @@ export function normalizePatches(value) {
 export function applyCorrections(base, patches) {
   const result = clone(base);
   for (const patch of patches) putPointer(result, patch.path, patch.value);
+  reconcileXChangeCorrectionNumbers(base,result,patches);
   data(result);
   return result;
 }
@@ -177,6 +181,7 @@ export function setupSupplierTables(db) {
     'CREATE UNIQUE INDEX IF NOT EXISTS catalog_supplier_correction_material ON catalog_supplier_corrections(plan_id,material_key);' +
     'CREATE INDEX IF NOT EXISTS catalog_supplier_review_plan ON catalog_supplier_reviews(plan_id,created_at,id);' +
     'CREATE INDEX IF NOT EXISTS catalog_supplier_product_identity ON catalog_supplier_products(review_id,supplier_id);' +
-    'CREATE INDEX IF NOT EXISTS catalog_supplier_product_errors ON catalog_supplier_products(review_id,errors,material_key);'
+    'CREATE INDEX IF NOT EXISTS catalog_supplier_product_errors ON catalog_supplier_products(review_id,errors,material_key);' +
+    'CREATE INDEX IF NOT EXISTS catalog_supplier_recipient_scope ON catalog_supplier_recipient(review_id,supplier_key,kind,action,identifier);'
   );
 }

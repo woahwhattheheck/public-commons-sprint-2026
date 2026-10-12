@@ -13,7 +13,7 @@
     "opensearch": "Preflight and run a native OpenSearch merchant",
     "opensearch-prepare": "Prepare named search routes and the original customer client",
     "opensearch-workspace": "Save drafts, capture and compare search editions, and prepare merchants",
-    "opensearch-catalog": "Retain material catalogs, correct supplier submissions, create BMEcat deliveries and reopen complete handovers",
+    "opensearch-catalog": "Retain material catalogs, correct BMEcat and native ETIM xChange deliveries, inspect recipient changes and reopen complete handovers",
     "opensearch-materials-client": "Operate original material and supplier MCP workflows and receive complete resumable deliveries"
   },
   "exports": {
@@ -39,6 +39,15 @@
     "./clients/opensearch-material": "./source/stellar-forge/mcp-merchant-operator/opensearch-material-client.mjs",
     "./clients/opensearch-material/contracts": "./source/stellar-forge/mcp-merchant-operator/opensearch-material-contracts.mjs",
     "./clients/opensearch-material/cli": "./source/stellar-forge/mcp-merchant-operator/opensearch-material-cli.mjs",
-    "./seller/opensearch/catalog/read-snapshot": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/read-snapshot.mjs"
+    "./seller/opensearch/catalog/read-snapshot": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/read-snapshot.mjs",
+    "./seller/opensearch/catalog/supplier/xchange/input": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/supplier/xchange/input.mjs",
+    "./seller/opensearch/catalog/supplier/xchange/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/supplier/xchange/source.mjs",
+    "./seller/opensearch/catalog/supplier/xchange/schema": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/supplier/xchange/schema.mjs",
+    "./seller/opensearch/catalog/supplier/xchange/profile": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/supplier/xchange/profile.mjs",
+    "./seller/opensearch/catalog/supplier/xchange/corrections": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/supplier/xchange/corrections.mjs",
+    "./seller/opensearch/catalog/supplier/xchange/recipient": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/supplier/xchange/recipient.mjs",
+    "./seller/opensearch/catalog/supplier/xchange/exports": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/supplier/xchange/exports.mjs",
+    "./seller/opensearch/receiving/xchange": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/receiving/xchange-delivery-journey.mjs",
+    "./clients/opensearch-material/receiving/xchange": "./source/stellar-forge/mcp-merchant-operator/receiving/xchange-materials-native.mjs"
   }
 }

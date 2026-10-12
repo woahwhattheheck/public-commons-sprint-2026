@@ -14,6 +14,7 @@ const ASSETS = new Map([['/', ['index.html', 'text/html; charset=utf-8']],
   ['/deployment.mjs', ['deployment.mjs', 'text/javascript; charset=utf-8']],
   ['/catalog.mjs', ['catalog.mjs', 'text/javascript; charset=utf-8']],
   ['/supplier.mjs', ['supplier.mjs', 'text/javascript; charset=utf-8']],
+  ['/xchange.mjs', ['xchange.mjs', 'text/javascript; charset=utf-8']],
   ['/file-sha256.mjs', ['file-sha256.mjs', 'text/javascript; charset=utf-8']],
   ['/relevance.mjs', ['../relevance/public.mjs', 'text/javascript; charset=utf-8']], ['/style.css', ['style.css', 'text/css; charset=utf-8']]]);
 function send(res, status, value) {
@@ -122,16 +123,17 @@ export async function startOpenSearchWorkspace({ workspace, port = 8447 } = {}) 
         }
         if (path.startsWith('/api/catalog/supplier/')) {
           const action = path.slice('/api/catalog/supplier/'.length), supplier = workspace.catalog.supplier;
-          const fields = { profile: [], state: ['catalogId'], plan: ['planId'], history: ['planId'],
+          const fields = { profile: ['target'], state: ['catalogId'], plan: ['planId'], history: ['planId'],
             product: ['planId','materialKey'], review: ['reviewId'], row: ['reviewId','materialKey'],
-            rows: ['reviewId','offset','limit','status','search'], export: ['reviewId','format','expectedReviewSha256'] }[action];
+            rows: ['reviewId','offset','limit','status','search'],
+            'recipient-rows': ['reviewId','offset','limit','kind','change','search'], export: ['reviewId','format','expectedReviewSha256'] }[action];
           if (!fields) throw new WorkspaceError('WORKSPACE_SUPPLIER_ROUTE_INVALID', 'Supplier route not found.', 404);
           const input = catalogQuery(url, fields);
           if (action === 'export') return catalogDownload(res, supplier.export(input));
-          const result = action === 'profile' ? supplier.templates() : action === 'state' ? supplier.state(input)
+          const result = action === 'profile' ? supplier.templates(input) : action === 'state' ? supplier.state(input)
             : action === 'plan' ? supplier.plan(input.planId) : action === 'history' ? { revisions: supplier.planHistory(input.planId) }
             : action === 'product' ? supplier.currentProduct(input) : action === 'review' ? supplier.review(input.reviewId)
-            : action === 'row' ? supplier.reviewRow(input) : supplier.rows(input);
+            : action === 'row' ? supplier.reviewRow(input) : action === 'recipient-rows' ? supplier.recipientRows(input) : supplier.rows(input);
           return send(res, 200, result);
         }
         if (path.startsWith('/api/catalog/')) {
