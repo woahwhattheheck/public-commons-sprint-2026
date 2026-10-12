@@ -11,9 +11,11 @@ The complete distribution contribution installs:
 | Entry | Purpose |
 |---|---|
 | `starforge geoserver` | Native operator, attached CLI and portable receiving commands |
+| `starforge geoserver-native-receiving HANDOFF.json` | Complete original customer publication, native service receiving, reopen and independent adoption |
 | `@tokenjunkielabs/starforge-merchant/seller/stac/postgis/geoserver` | Complete Node publication, console and handover API |
 | `…/geoserver/console-client` | Attach to an already running local operator |
 | `…/geoserver/cli` | The original CLI function |
+| `…/geoserver/native-receiving` | Typed complete original customer receiving function |
 
 In a source checkout the equivalent CLI is:
 
@@ -341,3 +343,7 @@ This implementation composes the original PostGIS receiving verifier, WFS source
 - [Layer security and workspace administration semantics](https://docs.geoserver.org/main/en/user/security/layer.html)
 - [Database primary-key metadata](https://docs.geoserver.org/main/en/user/data/database/primarykey.html)
 - [PostGIS datastore configuration](https://docs.geoserver.org/main/en/user/data/database/postgis.html)
+
+## Complete original native customer continuation
+
+[NATIVE_RECEIVING.md](./NATIVE_RECEIVING.md) documents the executable child for the original PostGIS customer journey. It consumes the current accepted receipt and existing private service/reader profiles, retains the reviewed publication, complete WFS/WMS data and ZIP, opens the actual industrial browser, reopens the original operator and independently adopts its full portable handover. An explicit same-receipt cycle exercises scoped native rollback and refresh. The original output/request and complete phase artifacts survive interruption and are verified on reopen.

@@ -178,3 +178,6 @@ export const RECEIVING_SCHEMA: 'starforge.geoserver-receiving.v1';
 export function runGeoServerCli(argv?: string[], options?: OperationOptions & {
   environment?: NodeJS.ProcessEnv; stdout?: NodeJS.WritableStream; stderr?: NodeJS.WritableStream; processSignals?: boolean;
 }): Promise<Record<string, unknown> & { exitCode?: number }>;
+export { runGeoServerNativeReceiving } from './native-receiving.mjs';
+export type { GeoServerNativeHandoff, GeoServerNativeResult, GeoServerNativeOptions, GeoServerNativeExport,
+  GeoServerNativeBrowser, GeoServerNativeReopen, GeoServerNativeAdoption } from './native-receiving.mjs';
