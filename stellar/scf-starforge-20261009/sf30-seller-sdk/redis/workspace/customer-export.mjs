@@ -273,18 +273,19 @@ export async function runCustomerExport({ generated, clientManifest, buyer, appr
           const result = await client.call(product.id, { query: pageInput }, { ...auth, approve, sign, signal });
           call.phase = 'RETURNED'; call.returnedAt = new Date().toISOString(); call.result = resultView(result);
           await saveManifest(directory, manifest);
-          if (result?.intentId !== auth.intentId) throw fail('IDENTITY', 'The buyer returned a different original intent.');
-          if (result?.requirement?.amount !== undefined) {
-            atomic(result.requirement.amount, 'Returned requirement');
-            manifest.budget.observedRequirementAtomic =
-              String(BigInt(manifest.budget.observedRequirementAtomic) + BigInt(result.requirement.amount));
-          }
           // Save the unread full response before decoding any rows or following a cursor.
           if (result?.response?.ok) {
             const file = await writer.save(result, { signal });
             call.file = { name, bytes: file.bytes, sha256: file.sha256, contentType: file.contentType,
               cleanupWarnings: file.cleanupWarnings };
             call.phase = 'RESPONSE_SAVED'; await saveManifest(directory, manifest);
+          }
+          // Interpret returned identity and payment metadata after retaining its complete response.
+          if (result?.intentId !== auth.intentId) throw fail('IDENTITY', 'The buyer returned a different original intent.');
+          if (result?.requirement?.amount !== undefined) {
+            atomic(result.requirement.amount, 'Returned requirement');
+            manifest.budget.observedRequirementAtomic =
+              String(BigInt(manifest.budget.observedRequirementAtomic) + BigInt(result.requirement.amount));
           }
           if (!SUCCESS.has(result?.status) || !call.file) {
             progress.status = 'BUYER_REVIEW'; manifest.status = 'BUYER_REVIEW';
