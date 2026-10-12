@@ -166,7 +166,9 @@
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/WORKSPACE.md",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/examples/lifecycle.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/browser-assets.json",
-    "stellar/scf-starforge-20261009/sf44-developer-onramp/onboard.mjs"
+    "stellar/scf-starforge-20261009/sf44-developer-onramp/onboard.mjs",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/checkout-basket.php",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/BASKET.md"
   ],
   "commands": {
     "openalex": "stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/cli.mjs",

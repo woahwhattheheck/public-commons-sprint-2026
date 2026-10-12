@@ -1,8 +1,8 @@
-import {DEFAULT_WOO_SETUP, WOO_GUIDE, readRoute, validateWooSetup, importWooDraft, createWooPacket, createWooPluginPacket} from './woo-onboarding.mjs';
+import {DEFAULT_WOO_SETUP, WOO_GUIDE, WOO_CATALOG_SCHEMA, readRoute, readBasketCatalog, verifyBasketCatalog, verifyWooCatalogs, validateWooSetup, importWooDraft, createWooPacket, createWooPluginPacket} from './woo-onboarding.mjs';
 import {zipWorkspace} from './onboarding.mjs';
 
 const $ = id => document.getElementById(id);
-const fields = ['folder','storeOrigin','admissionUrl','facilitatorUrl','privateDirectory'];
+const fields = ['folder','storeOrigin','admissionUrl','facilitatorUrl','privateDirectory','outboxDirectory'];
 const panes = ['products','connection','review','run'];
 let input = structuredClone(DEFAULT_WOO_SETUP), active = 0, revision = 0, runnerPromise;
 
@@ -18,7 +18,8 @@ function errors(items = []) {
   $('woo-errors').hidden = !items.length;
   $('woo-error-list').replaceChildren(...items.map(item => {
     const row = el('li'); row.append(button(item.message,() => {
-      step(fields.includes(item.field) ? 1 : 0); $('woo-' + item.field)?.focus();
+      step(fields.includes(item.field) ? 1 : 0);
+      (['routes','catalogs'].includes(item.field) ? $('woo-choose-routes') : $('woo-' + item.field))?.focus();
     },'text-button')); return row;
   }));
   fields.forEach(field => $('woo-' + field).setAttribute('aria-invalid',String(items.some(item => item.field === field))));
@@ -27,7 +28,7 @@ function fail(error) { errors(error.errors || [{field:'import',message:error.mes
 function changed() {
   revision++; status('Draft changed. Download a draft to keep it, or review the updated packet.');
   $('woo-title').textContent = input.folder || 'Untitled Woo setup';
-  $('woo-count').textContent = `${input.routes.length} PRODUCTS`;
+  $('woo-count').textContent = `${input.routes.length} ROUTES · ${(input.catalogs ?? []).length} CATALOGS`;
 }
 function download(content,name,type) {
   const url = URL.createObjectURL(new Blob([content],{type})), anchor = el('a');
@@ -38,7 +39,7 @@ function safeFolder() { return /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(input.fol
 async function fileText(file) { return new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(await file.arrayBuffer()); }
 function downloadDraft() {
   download(JSON.stringify(input,null,2) + '\n',safeFolder() + '-setup-input.json','application/json');
-  status('Editable setup draft downloaded. Open that file here to restore these routes and connection settings.');
+  status('Editable setup draft downloaded. Open that file here to restore these routes, catalogs and connection settings.');
 }
 function terms(route,removeIndex) {
   const box = el('article',undefined,'woo-route'), head = el('div',undefined,'woo-route-head'), title = el('div');
@@ -55,22 +56,75 @@ function terms(route,removeIndex) {
   }
   box.append(head,list); return box;
 }
+function catalogTerms(catalog,file,removeIndex) {
+  const box = el('article',undefined,'woo-route'),head = el('div',undefined,'woo-route-head'),title = el('div');
+  title.append(el('strong',file?.name || 'Basket catalog ' + catalog.catalogDigest.slice(0,12)),
+    el('code',catalog.method + ' ' + catalog.url));
+  head.append(title);
+  if (removeIndex !== undefined) head.append(button('Remove version',() => {
+    input.catalogs.splice(removeIndex,1);changed();errors();renderRoutes();
+  },'text-button'));
+  const list = el('dl',undefined,'woo-terms'),first = catalog.products[0];
+  for (const [label,value] of [['Shop',catalog.storeOrigin],['Catalog digest',catalog.catalogDigest],
+    ['Basket route',catalog.routeId],['Approved products',catalog.products.length],['Currency',first.storefront.currency],
+    ['Network',first.expect.network],['Asset contract',first.expect.asset],['Recipient',first.expect.payTo],
+    ['Per order',catalog.limits.maxLines + ' product lines / ' + catalog.limits.maxUnits + ' integer units']]) {
+    const row = el('div');row.append(el('dt',label),el('dd',value));list.append(row);
+  }
+  const detail = el('details'),summary = el('summary','Review ' + catalog.products.length + ' exact unit prices');
+  detail.append(summary);
+  let populated = false;
+  detail.addEventListener('toggle',() => {
+    if (!detail.open || populated) return;
+    populated = true;
+    const wrap = el('div',undefined,'woo-catalog-table-wrap'),table = el('table',undefined,'woo-catalog-table');
+    const caption = el('caption','Declared unit prices. The actual Woo order determines quantities and aggregate.');table.append(caption);
+    const head = el('thead'),row = el('tr');
+    for (const label of ['Product','Store unit','Native atomic unit','Timeout']) { const cell = el('th',label);cell.scope = 'col';row.append(cell); }
+    head.append(row);table.append(head);
+    const body = el('tbody');
+    for (const product of catalog.products) {
+      const row = el('tr');
+      for (const value of [product.productId + ' · ' + product.name,product.storefront.currency + ' ' + product.storefront.total,
+        product.expect.maxAtomic,product.expect.maxTimeoutSeconds + ' s']) row.append(el('td',value));
+      body.append(row);
+    }
+    table.append(body);wrap.append(table);detail.append(wrap);
+  });
+  box.append(head,list,detail);
+  if (file) box.append(button('Download original catalog',() => download(file.text,'basket-' + catalog.catalogDigest + '.json','application/json'),'text-button'));
+  return box;
+}
 function renderRoutes() {
-  const list = $('woo-route-list'); list.replaceChildren();
-  if (!input.routes.length) list.append(el('p','No products imported. Choose the route JSON from a saved Woo product.','woo-empty'));
+  const list = $('woo-route-list');list.replaceChildren();
+  if (!input.routes.length && !(input.catalogs ?? []).length)
+    list.append(el('p','Import saved product routes or exact basket catalogs from the original Woo settings.','woo-empty'));
   input.routes.forEach((file,index) => {
     try { list.append(terms(readRoute(file.text,file.name),index)); }
-    catch (error) { const box = el('div',undefined,'woo-route-head'); box.append(el('p',error.message),button('Remove',() => {input.routes.splice(index,1); changed(); renderRoutes();})); list.append(box); }
+    catch (error) { const box = el('div',undefined,'woo-route-head');box.append(el('p',error.message),button('Remove',() => {input.routes.splice(index,1);changed();renderRoutes();}));list.append(box); }
   });
-  $('woo-count').textContent = `${input.routes.length} PRODUCTS`;
+  (input.catalogs ?? []).forEach((file,index) => {
+    try { list.append(catalogTerms(readBasketCatalog(file.text,file.name),file,index)); }
+    catch(error) { const box = el('div',undefined,'woo-route-head');box.append(el('p',error.message),button('Remove version',() => {input.catalogs.splice(index,1);changed();renderRoutes();}));list.append(box); }
+  });
+  $('woo-count').textContent = input.routes.length + ' ROUTES · ' + (input.catalogs ?? []).length + ' CATALOGS';
 }
-function addRoutes(files) {
-  files.forEach(file => readRoute(file.text,file.name));
-  const candidate = {...input,routes:[...input.routes,...files]};
-  const routeErrors = validateWooSetup(candidate).errors.filter(item => item.field === 'routes');
-  if (routeErrors.length) { errors(routeErrors); return; }
-  input = candidate; changed(); errors(); renderRoutes();
-  status(`Imported ${files.length} saved product route${files.length === 1 ? '' : 's'}. Review the exact native terms below.`);
+async function addExports(files) {
+  const routes = [],catalogs = [];
+  for (const file of files) {
+    let value;try { value = JSON.parse(file.text.replace(/^\uFEFF/,'')); } catch { readRoute(file.text,file.name); }
+    if (value?.schema === WOO_CATALOG_SCHEMA) { await verifyBasketCatalog(file.text,file.name);catalogs.push(file); }
+    else { readRoute(file.text,file.name);routes.push(file); }
+  }
+  const candidate = {...input,routes:[...input.routes,...routes],catalogs:[...(input.catalogs ?? []),...catalogs]};
+  if (!candidate.storeOrigin && candidate.catalogs.length)
+    candidate.storeOrigin = readBasketCatalog(candidate.catalogs[0].text,candidate.catalogs[0].name).storeOrigin;
+  const issues = validateWooSetup(candidate).errors.filter(item => ['routes','catalogs'].includes(item.field));
+  if (issues.length) {errors(issues);return false;}
+  input = candidate;fields.forEach(field => {$('woo-' + field).value = input[field] ?? '';});
+  changed();errors();renderRoutes();
+  status('Imported ' + routes.length + ' saved routes and ' + catalogs.length + ' verified catalog versions. Review the exact unit terms.');
+  return true;
 }
 async function runner() {
   return runnerPromise ??= fetch(new URL('./woo-runner.mjs',import.meta.url),{credentials:'same-origin'}).then(async response => {
@@ -78,14 +132,15 @@ async function runner() {
   }).catch(error => {runnerPromise = null; throw error;});
 }
 async function packet() {
-  const current = revision, copy = structuredClone(input), source = await runner();
+  const current = revision, copy = structuredClone(input);
+  const [source] = await Promise.all([runner(),verifyWooCatalogs(copy)]);
   if (current !== revision) throw new Error('The draft changed during preparation. Review the updated packet again.');
   return createWooPacket(copy,source);
 }
 async function exportPacket() {
   try {
     const value = await packet(); download(zipWorkspace(value.files),value.summary.folder + '-setup.zip','application/zip');
-    errors(); status(`Downloaded ${value.summary.routeCount} original route exports, the native runner, editable setup and full merchant/buyer/agent instructions.`);
+    errors(); status(`Downloaded ${value.summary.routeCount} original routes and ${value.summary.catalogCount} catalog versions with the native runner, editable setup and complete operating instructions.`);
   } catch (error) { fail(error); }
 }
 function command(title,text) {
@@ -98,9 +153,10 @@ function command(title,text) {
 }
 function connectionSummary() {
   const result = validateWooSetup(input), box = $('woo-connection-summary'); box.replaceChildren();
-  if (result.sellerOrigin) box.append(el('p','Seller origin from saved routes: ' + result.sellerOrigin,'mono'));
+  if (result.sellerOrigin) box.append(el('p','Seller origin from saved exports: ' + result.sellerOrigin,'mono'));
   if (result.admissionUrl) box.append(el('p','Admission endpoint: ' + result.admissionUrl,'mono'));
   if (result.settlementUrl) box.append(el('p','Settlement receiver: ' + result.settlementUrl,'mono'));
+  if (input.outboxDirectory) box.append(el('p','Retain the original delivery outbox: ' + input.outboxDirectory,'mono'));
 }
 async function review() {
   const box = $('woo-review-content'); box.replaceChildren(el('p','Preparing the editable packet…','pane-intro'));
@@ -109,9 +165,11 @@ async function review() {
     const summary = el('dl',undefined,'woo-terms');
     for (const [label,value] of [['Shop',result.summary.storeOrigin],['Admission',result.summary.admissionUrl],
       ['Settlement receiver',result.summary.settlementUrl],['Facilitator',result.summary.facilitatorUrl],
-      ['Private directory',result.summary.privateDirectory]]) {const row=el('div');row.append(el('dt',label),el('dd',value));summary.append(row);}
+      ['Private directory',result.summary.privateDirectory],['Delivery outbox',result.summary.outboxDirectory]]) {const row=el('div');row.append(el('dt',label),el('dd',value));summary.append(row);}
     box.append(summary,el('h3','Exact saved product terms'));
     result.summary.routes.forEach(route => box.append(terms(route)));
+    if (result.summary.catalogs.length) box.append(el('h3','Retained basket catalog versions'));
+    result.summary.catalogs.forEach(catalog => box.append(catalogTerms(catalog)));
     const files = el('div',undefined,'woo-file-list');
     for (const file of result.files) {
       const item = el('details'), pre = el('pre',file.content); pre.tabIndex = 0;
@@ -132,7 +190,9 @@ function run() {
   box.append(command('3. Start seller and delivery worker','node merchant.mjs serve --toolkit "$TOOLKIT"\n# In a second terminal with the same private environment:\nnode merchant.mjs deliver --toolkit "$TOOLKIT"\n# Inspect the same original outbox:\nnode merchant.mjs status --toolkit "$TOOLKIT"'));
   const sequence=el('ol',undefined,'woo-run-sequence');
   for (const text of ['Point the existing seller HTTPS ingress at loopback port 8423. Keep operations on loopback 8424/private operator access; preserve exact methods, bodies, route paths and order queries.',
-    'Complete a real classic or Blocks checkout for one mapped digital product. The order remains unpaid and on hold. The buyer downloads its own private handoff and follows the included BUYER.md through the original review, workspace and inbox.',
+    result.catalogs.length
+      ? 'Enable the approved basket catalog in the original gateway and complete the real digital checkout. The on-hold order freezes each line, quantity and exact unit terms. Its buyer handoff follows BUYER.md through the original workspace and inbox; BASKETS.md covers retained catalog versions and the same outbox during upgrades.'
+      : 'Complete a real classic or Blocks checkout for one mapped digital product. The order remains unpaid and on hold. The buyer downloads its own private handoff and follows the included BUYER.md through the original review, workspace and inbox.',
     'After native settlement, the original worker delivers its signed notice to WooCommerce. Independently reconcile the actual payment and use the original merchant release action. Woo’s normal completion and download permissions then deliver the file.',
     'For an uncertain attempt, reconcile first. Only the original merchant-attested non-settlement reset advances the generation. The buyer imports the current handoff into the same workspace, ledger and inbox; previous reservations remain until independently reconciled.']) sequence.append(el('li',text));
   const agentDirectory = "'" + (input.privateDirectory + '/agents').replace(/'/g, "'\\''") + "'";
@@ -168,21 +228,23 @@ $('woo-plugin-download').addEventListener('click',async () => {
   try {
     const value=createWooPluginPacket(await runner());
     download(zipWorkspace(value.files),'woo-plugin-setup.zip','application/zip');
-    status('Plugin preparation tool downloaded. Follow INSTALL.md to copy the complete original plugin and operating guide from your toolkit, install them in WordPress, then export the saved product routes.');
+    status('Plugin preparation tool downloaded. Follow INSTALL.md to copy the complete original plugin and operating guide from your toolkit, install them in WordPress, then export the saved product routes or exact basket catalog.');
   }catch(error){fail(error);}
 });
 $('woo-route-input').addEventListener('change',async event => {
   try {
     const files = [...event.target.files];
-    if (files.length + input.routes.length > 64 || files.some(file => file.size > 262144)) throw new Error('Choose up to 64 saved product exports, at most 256 KiB each.');
-    addRoutes(await Promise.all(files.map(async file => ({name:file.name,text:await fileText(file)}))));
+    if (files.length + input.routes.length + (input.catalogs ?? []).length > 96 || files.some(file => file.size > 262144))
+      throw new Error('Choose up to 64 saved product routes and 32 catalog versions, at most 256 KiB each.');
+    await addExports(await Promise.all(files.map(async file => ({name:file.name,text:await fileText(file)}))));
   } catch(error) {fail(error);} finally {event.target.value='';}
 });
 $('woo-draft-input').addEventListener('change',async event => {
   try {
     const file=event.target.files[0];if(!file)return;
-    if(file.size>524288)throw new Error('Choose a setup draft smaller than 512 KiB.');
-    input=importWooDraft(await fileText(file));changed();errors();fields.forEach(field=>{$('woo-'+field).value=input[field];});renderRoutes();step(0,true);status('Setup draft restored. Review the saved routes and current connection settings.');
+    if(file.size>4194304)throw new Error('Choose a setup draft within 4 MiB.');
+    const selected=importWooDraft(await fileText(file));await verifyWooCatalogs(selected);
+    input=selected;changed();errors();fields.forEach(field=>{$('woo-'+field).value=input[field];});renderRoutes();step(0,true);status('Setup draft restored. Review the retained routes, catalog versions and original outbox.');
   } catch(error){fail(error);}finally{event.target.value='';}
 });
 $('woo-paste-toggle').addEventListener('click',() => {
@@ -190,7 +252,12 @@ $('woo-paste-toggle').addEventListener('click',() => {
   $('woo-paste-toggle').setAttribute('aria-expanded',String(!$('woo-paste-panel').hidden));
   if(!$('woo-paste-panel').hidden)$('woo-paste').focus();
 });
-$('woo-add-paste').addEventListener('click',() => {
-  try{const text=$('woo-paste').value,route=readRoute(text);const before=input.routes.length;addRoutes([{name:`product-${route.productId}.json`,text}]);if(input.routes.length>before){$('woo-paste').value='';$('woo-paste-panel').hidden=true;$('woo-paste-toggle').setAttribute('aria-expanded','false');}}catch(error){fail(error);}
+$('woo-add-paste').addEventListener('click',async () => {
+  try {
+    const text=$('woo-paste').value;
+    if(await addExports([{name:'pasted-export.json',text}])) {
+      $('woo-paste').value='';$('woo-paste-panel').hidden=true;$('woo-paste-toggle').setAttribute('aria-expanded','false');
+    }
+  }catch(error){fail(error);}
 });
 renderRoutes();
