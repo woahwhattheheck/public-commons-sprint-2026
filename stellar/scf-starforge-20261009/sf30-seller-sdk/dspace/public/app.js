@@ -229,6 +229,7 @@ on('retry','click',resume);
 on('discard','click',async()=>{
  if(!pending)return;
  if(pending.kind==='receive')throw new Error('Retry this complete project to recover its original receiving result.');
+ if(pending.project!==state.operator.selected){await post('/api/select-project',{key:pending.project});await refresh();loadDraft();}
  try{const saved=await request('/api/operation?id='+encodeURIComponent(pending.value.operationId));await setPending(null);await refresh();say('Recovered saved request '+saved.result.operationId+'.');}
  catch(error){if(error.status!==404)throw error;await setPending(null);say('Cleared the unsent request.');}
 });

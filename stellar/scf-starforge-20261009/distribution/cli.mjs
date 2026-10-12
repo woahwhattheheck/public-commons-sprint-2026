@@ -26,6 +26,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   odata                                     Operate OData source editions, merchants and customer receiving
   odata-live                                Prepare, run and receive the original live OData paid-page merchant
   frictionless                              Capture table packages, review fields and publish original merchant editions
+  dspace / dspace-workspace                  Review repository editions, publish merchant datasets and receive original buyer files
   sdmx                                      Retain SDMX sources, publish exact editions and receive original buyer pages
   buyer-collections                         Review, retain and operate original paid request collections
   buyer-collections-workspace               Review collections, original queue states and result exports in a private browser
@@ -47,6 +48,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   huwise                                    Alias for the same Opendatasoft data workspace
   arcgis                                    Capture ArcGIS layers and receive native Esri FeatureSets
   arcgis-publisher                          Publish reviewed ArcGIS data with original merchant and buyer handoff
+  arcgis-agent                              Open the original ArcGIS browser and MCP service over one saved publisher
   sftp                                      Inspect, capture and resume pinned private report files
   sftp-publisher                            Publish retained file datasets with original refresh and buyer handoff
   sftp-workspace                            Author SFTP reports, exact merchant terms and native publications
