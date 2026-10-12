@@ -73,3 +73,9 @@ A completed shell return alone is insufficient. Completion requires the original
 For an interruption of this **same corrected source**, the host supports `--resume-checkpoint FILE --checkpoint-sha256 SHA256`. The checkpoint must match the corrected manifest and the same work root. It contains its own full predecessor, so the original shared predecessor path is not required after restoration. Keep the original native record/command when using the maintained native continuation interface.
 
 **Current source status:** prepared correction following the actual source-stage failure. The linked native operation has not yet been claimed as executed or complete by this source publication.
+
+## Original receiver receipts
+
+The first corrected source invocation received all 156 files and then stopped before native admission because the predecessor inventory also contained the original receiver’s `SOURCE-DEPENDENCIES.json` and `SOURCE-RECEIVED.json`. The saved checkpoint was read directly: no selected source file was missing. The continuation now verifies those two additional original files by their exact 243/433-byte sizes and SHA256 identities, along with all 156 selected files and the source manifest. All 170 original checkpoint members still require exact inventory verification. No business stage or linked native request existed at this stop.
+
+The updated receiver uses the same linked native operation and business UUIDs. To retain a previous source-only preparation independently, use a fresh private companion/carrier directory for these corrected postimages; keep the operation’s original working-directory selection.
