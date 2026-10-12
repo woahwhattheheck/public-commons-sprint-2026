@@ -20,7 +20,7 @@ async function call(action,args={}) {
   const id=current(),token=selectionEpoch;
   const body=checked(args,id);
   const result=await request('/api/cases/'+id+'/commercial/'+action,{
-    ...body,...(['save-draft','publish','receive','receive-pricing','adopt-implementation','receiving-attach'].includes(action)&&
+    ...body,...(['save-draft','publish','receive','receive-pricing','adopt-implementation','receiving-attach','tariff-attach'].includes(action)&&
       !(action==='adopt-implementation'&&Object.hasOwn(body,'actor'))?{actor:'Local commercial operator'}:{})});
   if(token!==selectionEpoch)throw new Error('The selected original case changed while the request returned.');
   return result;
@@ -43,6 +43,20 @@ const desk=mountCommercialDesk({root:$('quotation-root'),services:{
   receivingStatus:args=>call('receiving-status',args),receivingCapture:args=>call('receiving-capture',args),
   receivingInspect:args=>call('receiving-inspect',args),receivingAttach:args=>call('receiving-attach',args),
   receivingCase:args=>call('receiving-case',args),receivingRestore:args=>call('receiving-restore',args),
+  tariffStatus:args=>call('tariff-status',args),tariffCatalog:args=>call('tariff-catalog',args),
+  tariffSelection:args=>call('tariff-selection',args),tariffCapture:args=>call('tariff-capture',args),
+  tariffInspect:args=>call('tariff-inspect',args),tariffAttach:args=>call('tariff-attach',args),
+  tariffCase:args=>call('tariff-case',args),tariffRestore:args=>call('tariff-restore',args),
+  async tariffDownload(args){
+    const id=current(),token=selectionEpoch,scope={...args.scope};
+    const result=await response('/api/cases/'+id+'/commercial/tariff-download',checked(args,id));
+    if(token!==selectionEpoch)throw new Error('The selected original case changed during its download.');
+    const encoded=result.headers.get('x-sf74-file-name'),bytes=result.headers.get('x-sf74-file-bytes');
+    if(!encoded||!/^(0|[1-9]\d*)$/.test(bytes??''))throw new Error('The original file descriptor is missing.');
+    const descriptor={filename:decodeURIComponent(encoded),bytes:Number(bytes),sha256:result.headers.get('x-content-sha256'),
+      mediaType:result.headers.get('content-type')};
+    return {scope,descriptor,response:result};
+  },
   async download(args) {
     const id=current(),token=selectionEpoch;
     const result=await response('/api/cases/'+id+'/commercial/download',checked(args,id));
