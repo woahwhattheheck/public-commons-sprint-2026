@@ -1,7 +1,7 @@
 "use strict";
 const payload=JSON.parse(document.getElementById("publisher-data").textContent);
 const report=payload.report;
-const key="stellar-forge-360giving-review:"+report.source.sha256;
+const key="stellar-forge-360giving-review:"+report.source.sha256+":"+(payload.template.reviewedAt||"unreviewed");
 const byId=id=>document.getElementById(id);
 const element=(tag,text,className)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n;};
 let decisions=JSON.parse(JSON.stringify(payload.template)), page=0;

@@ -261,6 +261,15 @@ def verify_workspace(directory):
     need(exact(expected) == exact(actual), "Receiving file inventory or bytes differ from the original manifest")
     return manifest
 
+def render_review(report, decisions, operator_root):
+    operator_root = Path(operator_root)
+    html = raw_file(operator_root / "review.html").decode("utf-8")
+    payload = exact({"report": report, "template": decisions}).replace("<", "\\u003c").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
+    html = html.replace("__PUBLISHER_DATA__", payload)
+    html = html.replace("__PUBLISHER_CSS__", raw_file(operator_root / "review.css").decode("utf-8"))
+    html = html.replace("__PUBLISHER_JS__", raw_file(operator_root / "review.js").decode("utf-8"))
+    return html.encode("utf-8")
+
 def prepare(args):
     source = raw_file(args.source)
     package = parse(source.decode("utf-8-sig"))
@@ -292,12 +301,7 @@ def prepare(args):
     for path in sorted(schema_root.iterdir()):
         if path.is_file():
             write_exact(directory / "operator/schemas" / path.name, raw_file(path))
-    html = raw_file(HERE / "review.html").decode("utf-8")
-    payload = exact({"report": report, "template": decisions}).replace("<", "\\u003c").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
-    html = html.replace("__PUBLISHER_DATA__", payload)
-    html = html.replace("__PUBLISHER_CSS__", raw_file(HERE / "review.css").decode("utf-8"))
-    html = html.replace("__PUBLISHER_JS__", raw_file(HERE / "review.js").decode("utf-8"))
-    write_exact(directory / "review.html", html.encode("utf-8"))
+    write_exact(directory / "review.html", render_review(report, decisions, HERE))
     manifest = {"schema": FORMAT, "sourceSha256": receipt["sha256"], "grantCount": len(package["grants"]),
                 "nativeInputReady": report["nativeInputReady"], "files": artifact_files(directory)}
     write_json(directory / "manifest.json", manifest)
@@ -388,17 +392,66 @@ def candidate(args):
 
 def export(args):
     directory = Path(args.workspace).resolve()
-    manifest = verify_workspace(directory)
+    original_manifest = verify_workspace(directory)
     destination = Path(args.out).resolve()
     need(not destination.exists(), "Choose a new complete receiving ZIP path")
     need(directory not in destination.parents, "Export outside the retained source edition")
+    content = {row["path"]: raw_file(directory / row["path"])
+               for row in original_manifest["files"]}
+    manifest = {key: value for key, value in original_manifest.items() if key != "files"}
+    decisions_path = getattr(args, "decisions", None)
+    candidate_path = getattr(args, "candidate", None)
+    need(not candidate_path or decisions_path, "Include the original decisions with the selected candidate")
+    if decisions_path:
+        decision_bytes = raw_file(decisions_path)
+        decisions = parse(decision_bytes.decode("utf-8-sig"))
+        need(decisions.get("schema") == DECISIONS and
+             decisions.get("sourceSha256") == manifest["sourceSha256"],
+             "Receiving decisions must select this original source edition")
+        need(isinstance(decisions.get("reviewer"), str) and decisions["reviewer"].strip(),
+             "Name the operator whose review is being handed over")
+        content["review/decisions.json"] = decision_bytes
+        content["review.html"] = render_review(json_file(directory / "report.json"),
+                                              decisions, directory / "operator")
+        manifest["review"] = {"decisions": "review/decisions.json",
+                              "reviewer": decisions["reviewer"],
+                              "sha256": digest(decision_bytes)}
+        if candidate_path:
+            selected = Path(candidate_path).resolve()
+            candidate_identity = json_file(selected / "candidate.json")
+            candidate_bytes = raw_file(selected / "candidate-package.json")
+            need(candidate_identity.get("schema") == FORMAT and
+                 candidate_identity.get("parentSourceSha256") == manifest["sourceSha256"] and
+                 candidate_identity.get("candidateSha256") == digest(candidate_bytes) and
+                 candidate_identity.get("candidateBytes") == len(candidate_bytes),
+                 "Receiving candidate differs from its original source and saved identity")
+            need(raw_file(selected / "decisions.json") == decision_bytes,
+                 "Receiving candidate and selected operator decisions differ")
+            need(raw_file(selected / "mapping.json") == content["mapping.json"],
+                 "Receiving candidate must retain the original native mapping")
+            candidate_package = parse(candidate_bytes.decode("utf-8-sig"))
+            need(len(candidate_package["grants"]) == candidate_identity["grantCount"],
+                 "Receiving candidate grant count differs")
+            expected_lines = ("\n".join(exact(g) for g in candidate_package["grants"]) + "\n").encode("utf-8")
+            need(raw_file(selected / "grants.ndjson") == expected_lines,
+                 "Receiving candidate JSON Lines differ from the complete package")
+            for row in artifact_files(selected):
+                content["candidate/" + row["path"]] = raw_file(selected / row["path"])
+            manifest["review"]["candidate"] = "candidate/candidate-package.json"
+            manifest["review"]["candidateSha256"] = digest(candidate_bytes)
+    manifest["files"] = [{"path": name, "bytes": len(data), "sha256": digest(data)}
+                         for name, data in sorted(content.items())]
+    manifest_bytes = (exact(manifest) + "\n").encode("utf-8")
+    need(sum(len(data) for data in content.values()) + len(manifest_bytes) <= MAX_BYTES,
+         "Complete receiving package exceeds the 256 MiB input limit")
     with zipfile.ZipFile(destination, "x", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
-        for row in manifest["files"]:
-            archive.writestr(row["path"], raw_file(directory / row["path"]))
-        archive.writestr("manifest.json", raw_file(directory / "manifest.json"))
+        for name, data in sorted(content.items()):
+            archive.writestr(name, data)
+        archive.writestr("manifest.json", manifest_bytes)
     data = raw_file(destination)
     print(exact({"file": str(destination), "bytes": len(data), "sha256": digest(data),
-                 "members": len(manifest["files"]) + 1, "sourceSha256": manifest["sourceSha256"]}))
+                 "members": len(manifest["files"]) + 1, "sourceSha256": manifest["sourceSha256"],
+                 "review": manifest.get("review")}))
     return 0
 
 def receive(args):
@@ -448,6 +501,8 @@ def main():
     p.add_argument("--out", required=True)
     p = sub.add_parser("export")
     p.add_argument("--workspace", required=True)
+    p.add_argument("--decisions")
+    p.add_argument("--candidate")
     p.add_argument("--out", required=True)
     p = sub.add_parser("receive")
     p.add_argument("--file", required=True)
