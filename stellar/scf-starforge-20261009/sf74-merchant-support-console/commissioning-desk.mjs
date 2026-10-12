@@ -74,8 +74,8 @@ export function mountCommissioningDesk({root,onChange=()=>{},sourceFileUrl=null}
   const card=el(root,'section',undefined,'card'),header=el(card,'div',undefined,'section-heading');
   const h=el(header,'div');el(h,'p','Merchant delivery','eyebrow');el(h,'h2','Implementation and receiving');
   el(h,'p','Assign the agreed work, deliver it to the receiving application and keep the original case together.');
-  const revision=el(header,'span','No workorder selected','stage-hint');
-  const notice=el(card,'p','Generate a workorder above, then use it here.','commissioning-notice');notice.setAttribute('role','status');
+  const revision=el(header,'span','Implementation not started','stage-hint');
+  const notice=el(card,'p','Continue an accepted quotation or use a workorder to plan and deliver the implementation.','commissioning-notice');notice.setAttribute('role','status');
   const controls=el(card,'div',undefined,'commissioning-toolbar');
   const actor=field(controls,'Recorded by',{value:'',required:true});
   actor.autocomplete='name';actor.placeholder='Actual operator name';
@@ -152,7 +152,7 @@ export function mountCommissioningDesk({root,onChange=()=>{},sourceFileUrl=null}
   }
   function renderSummary() {
     summary.replaceChildren();
-    if(!state){revision.textContent='No workorder selected';return;}
+    if(!state){revision.textContent='Implementation not started';return;}
     const s=commissioningSummary(state);revision.textContent='Implementation revision '+s.revision;
     for(const [value,label] of [[s.tasks,'active tasks'],[s.done,'done'],[s.technicalAccepted,'technical accepted'],
       [s.accepted,'customer accepted'],[s.changesRequired,'need correction'],[s.receivingNeedsUpdate,'receiving needs updating']]) {
@@ -188,7 +188,7 @@ export function mountCommissioningDesk({root,onChange=()=>{},sourceFileUrl=null}
   }
   function renderWork() {
     workRoot.replaceChildren();
-    if(!state?.editions.length){el(workRoot,'p','Use a generated workorder to create its implementation tasks.');return;}
+    if(!state){el(workRoot,'p','Apply an accepted quotation or use a workorder to start the implementation.');return;}
     const toolbar=el(workRoot,'div',undefined,'commissioning-toolbar');
     const search=field(toolbar,'Find tasks',{value:renderWork.search??''});
     const archived=field(toolbar,'Show retired tasks',{type:'checkbox'});archived.checked=renderWork.retired??false;
@@ -245,7 +245,7 @@ export function mountCommissioningDesk({root,onChange=()=>{},sourceFileUrl=null}
   function renderMaterials(reset=false) {
     const draft=reset?null:formDraft(materialsRoot);
     materialsRoot.replaceChildren();
-    if(!state?.editions.length){el(materialsRoot,'p','Choose the workorder before attaching its deliverables.');return;}
+    if(!state){el(materialsRoot,'p','Open the implementation before attaching its deliverables.');return;}
     const form=el(materialsRoot,'form',undefined,'commissioning-form');
     const grid=el(form,'div',undefined,'commissioning-grid');
     const file=field(grid,'Original deliverable files',{type:'file',required:true});file.multiple=true;
@@ -308,33 +308,43 @@ export function mountCommissioningDesk({root,onChange=()=>{},sourceFileUrl=null}
   function renderReceiving(reset=false) {
     const draft=reset?null:formDraft(receivingRoot);
     receivingRoot.replaceChildren();
-    if(!state?.editions.length){el(receivingRoot,'p','Choose the workorder before recording receiving.');return;}
+    if(!state?.tasks.length){el(receivingRoot,'p','Add implementation tasks before recording receiving.');return;}
     const form=el(receivingRoot,'form',undefined,'commissioning-form'),grid=el(form,'div',undefined,'commissioning-grid');
-    const editions=state.editions.map(row=>[row.id,commissioningWorkorder(state,row.id).packet.workOrderRef+' · '+row.recordedAt]);
-    const edition=field(grid,'Workorder edition',{value:state.activeEditionId,options:editions});
+    const operatorTaskIds=new Set(state.tasks.filter(row=>row.editionId===null&&row.sourceKey===null).map(row=>row.id));
+    const editions=[...(operatorTaskIds.size?[['','Implementation plan tasks']]:[]),
+      ...state.editions.map(row=>[row.id,commissioningWorkorder(state,row.id).packet.workOrderRef+' · '+row.recordedAt])];
+    const edition=field(grid,'Receiving scope',{value:state.activeEditionId??'',options:editions});
     const kind=field(grid,'Receiving kind',{value:'technical',options:[['technical','Technical receiving'],['customer','Customer receiving']]});
     const outcome=field(grid,'Observed result',{value:'not_run',options:RECEIVING_OUTCOMES.map(x=>[x,readable(x)])});
     const observed=field(grid,'Observed time (your local time)',{type:'datetime-local',required:true});
     const taskIds=selectMany(grid,'Received tasks',state.tasks),materialIds=selectMany(grid,'Original deliverables',state.materials);
+    function synchronizeReceivingScope() {
+      for(const option of taskIds.options) {
+        option.disabled=edition.value===''&&!operatorTaskIds.has(option.value);
+        if(option.disabled)option.selected=false;
+      }
+    }
+    edition.addEventListener('change',synchronizeReceivingScope);
     const reference=field(grid,'Receiving record / application / source reference');
     const notes=field(grid,'What the receiving operator observed',{type:'textarea',rows:4});notes.parentElement.classList.add('wide');
     const current=state.receiving.filter(row=>!state.receiving.some(other=>other.supersedesId===row.id));
     const correction=field(grid,'Correct an earlier observation',{value:'',options:[['','New observation'],...current.map(row=>[row.id,row.observedAt+' · '+row.kind+' · '+readable(row.outcome)])]});
     correction.addEventListener('change',()=>{
       const prior=state.receiving.find(row=>row.id===correction.value);if(!prior)return;
-      edition.value=prior.editionId;kind.value=prior.kind;outcome.value=prior.outcome;
+      edition.value=prior.editionId??'';kind.value=prior.kind;outcome.value=prior.outcome;
+      synchronizeReceivingScope();
       observed.value=localTime(prior.observedAt);reference.value=prior.reference;notes.value=prior.notes;
       setSelections(taskIds,prior.taskIds);setSelections(materialIds,prior.materialIds);
     });
     const submit=el(form,'button','Record receiving');submit.type='submit';
     form.addEventListener('submit',async event=>{
       event.preventDefault();let observedAt;try{observedAt=utcTime(observed.value);}catch(error){say(error.message,true);return;}
-      const result=await command('record_receiving',{id:'receiving-'+crypto.randomUUID(),editionId:edition.value,
+      const result=await command('record_receiving',{id:'receiving-'+crypto.randomUUID(),editionId:edition.value||null,
         kind:kind.value,outcome:outcome.value,observedAt,taskIds:selections(taskIds),materialIds:selections(materialIds),
         reference:reference.value,notes:notes.value,supersedesId:correction.value||null});
       if(result){renderReceiving(true);renderHistory();}
     });
-    restoreFormDraft(form,draft);
+    restoreFormDraft(form,draft);synchronizeReceivingScope();
     table(receivingRoot,['Observed','Kind / outcome','Operator','Tasks','Observation / reference','Correction'],
       state.receiving.slice().reverse().map(row=>[row.observedAt,row.kind+' / '+readable(row.outcome),row.actor,
         row.taskIds.map(id=>state.tasks.find(task=>task.id===id)?.title??id).join('\n'),
@@ -445,7 +455,7 @@ export function mountCommissioningDesk({root,onChange=()=>{},sourceFileUrl=null}
     async prepare(value){return validateCommissioning(value);},
     apply(value){epoch++;receivedEpoch++;state=copy(value);candidate=null;preview=null;page=0;renderWork.search='';renderWork.retired=false;
       if(!actor.value&&state?.plan.implementationOwner)actor.value=state.plan.implementationOwner;
-      renderAll(true);say(state?'Retained implementation and receiving reopened.':'Generate a workorder above, then use it here.');},
+      renderAll(true);say(state?'Retained implementation and receiving reopened.':'Continue an accepted quotation or use a workorder to plan and deliver the implementation.');},
     receiveWorkorder,
     configureSourceDelivery({fileUrl}={}){if(typeof fileUrl!=='function')throw Error('Supply the original source file reader');sourceFileUrl=fileUrl;},
     invalidateWorkorder(){receivedEpoch++;candidate=null;preview=null;renderPending();},
