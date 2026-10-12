@@ -186,8 +186,14 @@ function renderReview(){
     ['Review SHA-256',state.reviewSha256],['PostGIS manifest',request.manifestSha256],
     ['Expected publication',request.expectedPublication??'First publication'],
     ['Current work',state.receivingProgress?state.receivingProgress.readerId+' / '+state.receivingProgress.layerId:'—']]);
-  const key=state.id+'|'+state.reviewSha256+'|'+(state.reconciliation?.at??'')+'|'+state.error?.at;
-  if(key===app.reviewKey)return;app.reviewKey=key;$('review').replaceChildren();
+  const key=JSON.stringify([state.id,state.reviewSha256,state.state,state.history?.length,
+    state.history?.at(-1),state.databaseChecks?.length,state.steps?.map(step=>[
+      step.id,step.state,step.confirmedAt,step.reconciledAt,step.observed,step.attempts?.length,
+      step.attempts?.at(-1)?.state,step.attempts?.at(-1)?.response,step.attempts?.at(-1)?.readback]),
+    state.reconciliation,state.error,state.receivingError,state.receivingProgress,state.receivedAt,state.exports]);
+  if(key===app.reviewKey)return;app.reviewKey=key;
+  const expanded=new Set([...$('review').querySelectorAll(':scope > details[open]')].map(node=>node.querySelector('summary')?.textContent));
+  $('review').replaceChildren();
   if(state.error)$('review').append(element('p',state.error.code+': '+state.error.message,'review-note'));
   if(state.receivingError)$('review').append(element('p',state.receivingError.code+': '+state.receivingError.message,'review-note'));
   if(!review){$('review').append(element('p','The original request is retained. Resume preparation to complete its exact review.','muted'));return;}
@@ -203,6 +209,7 @@ function renderReview(){
   table.append(tbody);const wrapper=element('div',undefined,'review-wrap');wrapper.append(table);$('review').append(wrapper);
   if(state.reconciliation?.conflicts?.length)$('review').append(details('Current resource conflicts',state.reconciliation.conflicts));
   $('review').append(details('Complete retained native review',review),details('Operation history and observed effects',state));
+  for(const node of $('review').querySelectorAll(':scope > details'))if(expanded.has(node.querySelector('summary')?.textContent))node.open=true;
 }
 async function showMap(target,item,readerId){
   const blob=await api('/api/map?'+new URLSearchParams({operationId:app.selectedId,readerId,layerId:item.layerId}),{blob:true});
