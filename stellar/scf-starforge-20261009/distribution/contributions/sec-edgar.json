@@ -15,5 +15,8 @@
     "./seller/sec-edgar/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sec-edgar/merchant.mjs",
     "./seller/sec-edgar/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sec-edgar/workspace.mjs",
     "./seller/sec-edgar/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sec-edgar/server.mjs"
+  },
+  "applicationProviders": {
+    "sec-edgar": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/sec-edgar.mjs"
   }
 }

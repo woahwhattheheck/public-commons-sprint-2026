@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Customer-side receiving for the original complete Databento delivery.
+"""Customer receiving for complete original Databento and Finage deliveries.
 
 No acquisition, provider calls, migration inference, or producer state mutation.
 Values are retained as original JSON bytes and exact-text warehouse columns.
@@ -21,21 +21,56 @@ import sys
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+from types import MappingProxyType
+from typing import NamedTuple
 
-SCHEMA = "tj.databento-customer-warehouse.v1"
-DELIVERY = "tj.databento-migration-delivery.v1"
-APPLICATION_ID = 0x44425748
+class DeliveryProfile(NamedTuple):
+    """One fixed producer format; storage and row semantics are shared."""
+    key: str
+    label: str
+    delivery_schema: str
+    summary_file: str
+    summary_schema: str
+    columns_key: str
+    coverage_path: tuple[str, ...]
+    data_export_count_key: str | None
+    application_id: int
+    scope_note: str
+
+    @property
+    def warehouse_schema(self):
+        return "tj." + self.key + "-customer-warehouse.v1"
+
+    @property
+    def small(self):
+        return ("customer/" + self.summary_file + ".json",
+                "customer/" + self.summary_file + ".html",
+                "customer/source-index.json", "customer/output-columns.json", "customer/DELIVERY.md")
+
+    def document_schema(self, name):
+        return "tj." + self.key + "-" + name + ".v1"
+
+
+DATABENTO = DeliveryProfile(
+    "databento", "Databento", "tj.databento-migration-delivery.v1", "migration-summary",
+    "tj.databento-migration-report.v1", "outputColumns", ("coverage",), None, 0x44425748,
+    "Source roles and coverage are retained. A reference session remains a reference session. "
+    "Customer activation selects a local delivery; it does not establish a provider migration comparison or change the original assessment.")
+FINAGE = DeliveryProfile(
+    "finage", "Finage", "tj.finage-market-delivery.v1", "market-summary",
+    "tj.finage-market-report.v1", "columns", ("assessment", "sourceCoverage"), "completeRecords", 0x464e5748,
+    "Original source roles, coverage and time interpretations remain attached to the selected records. "
+    "Customer activation records the local choice and preserves the original source assessment.")
+PROFILES = MappingProxyType({"databento": DATABENTO, "finage": FINAGE})
+# Public compatibility names retain their original Databento meaning.
+SCHEMA = DATABENTO.warehouse_schema
+DELIVERY = DATABENTO.delivery_schema
+APPLICATION_ID = DATABENTO.application_id
 BATCH = 512
 MAX_ROW_BYTES = 16 * 1024 * 1024
 MAX_METADATA_BYTES = 32 * 1024 * 1024
 HASH = re.compile(r"^[0-9a-f]{64}$")
-SMALL = (
-    "customer/migration-summary.json",
-    "customer/migration-summary.html",
-    "customer/source-index.json",
-    "customer/output-columns.json",
-    "customer/DELIVERY.md",
-)
+SMALL = DATABENTO.small
 DATA_JSON = "customer/mapped-records.ndjson"
 DATA_CSV = "customer/mapped-records.csv"
 
@@ -49,6 +84,16 @@ class ReceivingError(ValueError):
 def require(value, code, message):
     if not value:
         raise ReceivingError(code, message)
+
+
+def resolve_profile(profile=None):
+    if profile is None:
+        return DATABENTO
+    if isinstance(profile, str) and profile in PROFILES:
+        return PROFILES[profile]
+    if any(profile is item for item in PROFILES.values()):
+        return profile
+    raise ReceivingError("DELIVERY_PROFILE", "Select the fixed databento or finage delivery profile.")
 
 
 def now():
@@ -174,12 +219,14 @@ def metadata_document(body, code):
     return value
 
 
-def read_delivery(directory):
+def read_delivery(directory, profile=None):
+    profile = resolve_profile(profile)
     root = Path(directory).resolve()
     require(root.is_dir(), "DELIVERY_DIRECTORY", "Select the original complete delivery directory.")
     original = read_metadata(regular_file(root, "manifest.json"))
     manifest = metadata_document(original, "DELIVERY_SCHEMA")
-    require(manifest.get("schema") == DELIVERY, "DELIVERY_SCHEMA", "Select the original migration delivery manifest.")
+    require(manifest.get("schema") == profile.delivery_schema, "DELIVERY_SCHEMA",
+            "Select the original " + profile.label + " delivery manifest.")
     require(manifest.get("audience") in ("customer", "operator"), "DELIVERY_AUDIENCE", "Unknown original audience.")
     require(manifest.get("allSelectedRecordsProcessed") is True, "INCOMPLETE_DELIVERY",
             "The original processor has not marked all selected records as processed.")
@@ -202,14 +249,14 @@ def read_delivery(directory):
                 and HASH.fullmatch(str(entry.get("sha256", ""))), "DELIVERY_FILES", "Invalid file size or digest.")
         regular_file(root, entry["path"])
         entries[entry["path"]] = entry
-    for name in (*SMALL, DATA_JSON, DATA_CSV):
+    for name in (*profile.small, DATA_JSON, DATA_CSV):
         require(name in entries, "CUSTOMER_FILES", "Missing original complete customer member: " + name)
     # Verify every listed file, including operator members that will not be retained.
     for entry in entries.values():
         verify_member(root, entry)
-    small = {name: read_metadata(regular_file(root, name), entries[name]) for name in SMALL}
+    small = {name: read_metadata(regular_file(root, name), entries[name]) for name in profile.small}
     column_document = metadata_document(small["customer/output-columns.json"], "COLUMNS_SCHEMA")
-    require(column_document.get("schema") == "tj.databento-output-columns.v1", "COLUMNS_SCHEMA", "Unexpected original columns document.")
+    require(column_document.get("schema") == profile.document_schema("output-columns"), "COLUMNS_SCHEMA", "Unexpected original columns document.")
     columns = column_document.get("columns")
     require(isinstance(columns, list) and columns, "COLUMNS", "A nonempty original column mapping is required.")
     names = []
@@ -218,18 +265,21 @@ def read_delivery(directory):
                 and column["name"].strip() and column["name"] not in names
                 and isinstance(column.get("path"), str), "COLUMNS", "Original names must be unique and pointer mappings must be explicit.")
         names.append(column["name"])
-    summary = metadata_document(small["customer/migration-summary.json"], "CUSTOMER_METADATA")
+    summary = metadata_document(small["customer/" + profile.summary_file + ".json"], "CUSTOMER_METADATA")
     source_index = metadata_document(small["customer/source-index.json"], "CUSTOMER_METADATA")
-    require(summary.get("schema") == "tj.databento-migration-report.v1"
-            and source_index.get("schema") == "tj.databento-source-index.v1"
+    require(summary.get("schema") == profile.summary_schema
+            and source_index.get("schema") == profile.document_schema("source-index")
             and source_index.get("editionId") == manifest["editionId"],
             "CUSTOMER_METADATA", "Customer metadata does not identify this original edition.")
+    summary_coverage = summary
+    for key in profile.coverage_path:
+        summary_coverage = summary_coverage.get(key) if isinstance(summary_coverage, dict) else None
     require(isinstance(summary.get("edition"), dict)
             and summary["edition"].get("id") == manifest["editionId"]
-            and summary.get("outputColumns") == columns
+            and summary.get(profile.columns_key) == columns
             and source_index.get("sources") == manifest["sources"]
             and source_index.get("coverage") == manifest["sourceCoverage"]
-            and summary.get("coverage") == manifest["sourceCoverage"],
+            and summary_coverage == manifest["sourceCoverage"],
             "CUSTOMER_METADATA_BINDING", "Customer source identities, coverage, edition or output columns disagree with the complete manifest.")
     counts = summary.get("summary")
     require(isinstance(counts, dict)
@@ -243,6 +293,10 @@ def read_delivery(directory):
             and type(manifest.get("assessmentReady")) is bool
             and summary.get("ready") is manifest["assessmentReady"],
             "CUSTOMER_METADATA_ASSESSMENT", "Retain the complete original data-export and assessment result without changing its meaning.")
+    if profile.data_export_count_key:
+        declared = summary["dataExport"].get(profile.data_export_count_key)
+        require(type(declared) is int and declared == manifest["customerRecords"],
+                "CUSTOMER_DATA_EXPORT_COUNT", "The original complete-export count disagrees with its manifest.")
     return {"root": root, "manifest": manifest, "original": original,
             "id": "delivery-" + sha(original), "entries": entries,
             "small": small, "columns": columns, "summary": summary}
@@ -314,11 +368,12 @@ def new_directory(path):
     return p
 
 
-def render_overview(inspection, page, receipt, decisions):
+def render_overview(inspection, page, receipt, decisions, profile=None):
     """Render a portable customer reading view from retained, escaped values."""
+    profile = resolve_profile(profile)
     esc = lambda value: html.escape("" if value is None else str(value), quote=True)
     manifest = inspection["originalManifest"]
-    title = "Databento customer receiving"
+    title = profile.label + " customer receiving"
     facts = [
         ("Received edition", manifest["editionId"]),
         ("Selection", receipt["selection"]),
@@ -375,8 +430,7 @@ def render_overview(inspection, page, receipt, decisions):
             "<a href=\"receiving-decisions.json\">Customer decisions</a>"
             "<a href=\"provenance/original-manifest.json\">Original manifest</a></nav>"
             "<section><h2>Received selection</h2><dl>" + facts_html + "</dl>"
-            "<p class=\"scope\">Source roles and coverage are retained. A reference session remains a reference session. "
-            "Customer activation selects a local delivery; it does not establish a provider migration comparison or change the original assessment.</p>"
+            "<p class=\"scope\">" + esc(profile.scope_note) + "</p>"
             "<p>Original manifest SHA256</p><code>" + esc(receipt["originalManifestSha256"]) +
             "</code><p>Original workspace SHA256</p><code>" + esc(receipt["originalWorkspaceSha256"]) +
             "</code><p>Exact filters</p><code>" + esc(dumps(receipt["filters"])) + "</code></section>"
@@ -392,23 +446,31 @@ def render_overview(inspection, page, receipt, decisions):
 
 
 class Warehouse:
-    def __init__(self, directory, readonly=False):
+    DEFAULT_PROFILE = DATABENTO
+
+    def __init__(self, directory, readonly=False, profile=None):
+        self.profile = resolve_profile(profile if profile is not None else self.DEFAULT_PROFILE)
         self.root = Path(directory).resolve()
         self.path = self.root / "warehouse.sqlite3"
         require(self.path.is_file() and not self.path.is_symlink(), "WAREHOUSE_MISSING", "Open an initialized receiving warehouse.")
         self.db = connect(self.path, readonly)
-        require(self.db.execute("PRAGMA application_id").fetchone()[0] == APPLICATION_ID,
-                "WAREHOUSE_SCHEMA", "This is not a Databento customer warehouse.")
-        row = self.db.execute("SELECT value FROM metadata WHERE key='schema'").fetchone()
-        require(row and row[0] == SCHEMA, "WAREHOUSE_SCHEMA", "Unsupported warehouse schema.")
+        try:
+            require(self.db.execute("PRAGMA application_id").fetchone()[0] == self.profile.application_id,
+                    "WAREHOUSE_SCHEMA", "Select a " + self.profile.label + " customer warehouse.")
+            row = self.db.execute("SELECT value FROM metadata WHERE key='schema'").fetchone()
+            require(row and row[0] == self.profile.warehouse_schema, "WAREHOUSE_SCHEMA", "Unsupported warehouse schema.")
+        except BaseException:
+            self.db.close()
+            raise
         self.readonly = readonly
 
     @classmethod
-    def create(cls, directory):
+    def create(cls, directory, profile=None):
+        profile = resolve_profile(profile if profile is not None else cls.DEFAULT_PROFILE)
         root = new_directory(directory)
         try:
             db = connect(root / "warehouse.sqlite3")
-            db.execute("PRAGMA application_id=" + str(APPLICATION_ID))
+            db.execute("PRAGMA application_id=" + str(profile.application_id))
             db.executescript("""
                 CREATE TABLE metadata(key TEXT PRIMARY KEY, value TEXT NOT NULL);
                 CREATE TABLE deliveries(
@@ -434,12 +496,12 @@ class Warehouse:
             """)
             with transaction(db):
                 db.executemany("INSERT INTO metadata VALUES(?,?)",
-                               [("schema", SCHEMA), ("created_at", now())])
+                               [("schema", profile.warehouse_schema), ("created_at", now())])
                 db.execute("INSERT INTO head VALUES(1,0,NULL)")
             db.close()
             os.chmod(root / "warehouse.sqlite3", 0o600)
             (root / "locks").mkdir(mode=0o700)
-            return cls(root)
+            return cls(root, profile=profile)
         except BaseException:
             shutil.rmtree(root)
             raise
@@ -462,14 +524,14 @@ class Warehouse:
         rows = self.db.execute(
             "SELECT id,edition_id,workspace_sha,state,imported_rows,received_at,completed_at,last_error FROM deliveries ORDER BY received_at,id"
         ).fetchall()
-        return {"schema": SCHEMA, "head": self.head(), "deliveries": [dict(x) for x in rows],
+        return {"schema": self.profile.warehouse_schema, "head": self.head(), "deliveries": [dict(x) for x in rows],
                 "decisions": [json.loads(x[0]) for x in self.db.execute("SELECT result_json FROM decisions ORDER BY sequence")]}
 
     def inspect(self, delivery_id=None):
         row = self._delivery(delivery_id, completed=False)
         manifest = json.loads(row["manifest"])
         columns = json.loads(row["columns_json"])
-        return {"schema": "tj.databento-warehouse-inspection.v1", "id": row["id"],
+        return {"schema": self.profile.document_schema("warehouse-inspection"), "id": row["id"],
                 "state": row["state"], "importedRows": row["imported_rows"], "head": self.head(),
                 "originalManifest": manifest, "originalManifestSha256": row["manifest_sha"],
                 "columns": [{**x, "sqlColumn": "c" + str(i), "sqlKindColumn": "k" + str(i)}
@@ -482,7 +544,7 @@ class Warehouse:
 
     def receive(self, directory):
         require(not self.readonly, "READ_ONLY", "Open the warehouse for receiving.")
-        delivery = read_delivery(directory)
+        delivery = read_delivery(directory, self.profile)
         did, columns = delivery["id"], delivery["columns"]
         lock_root = self.root / "locks"
         lock_root.mkdir(mode=0o700, exist_ok=True)
@@ -662,7 +724,7 @@ class Warehouse:
             result.append({"ordinal": record["_ordinal"], "exactJson": bytes(record["_raw"]).decode("utf-8").rstrip("\r\n"),
                            "cells": [{"name": c["name"], "path": c["path"], "text": record["c" + str(i)], "kind": record["k" + str(i)]}
                                      for i, c in enumerate(columns)]})
-        return {"schema": "tj.databento-warehouse-page.v1", "deliveryId": row["id"], "originalManifestSha256": row["manifest_sha"],
+        return {"schema": self.profile.document_schema("warehouse-page"), "deliveryId": row["id"], "originalManifestSha256": row["manifest_sha"],
                 "head": self.head(), "columns": columns, "filters": filters or [], "total": total, "items": result,
                 "nextAfter": result[-1]["ordinal"] if len(values) > limit else None}
 
@@ -718,23 +780,24 @@ class Warehouse:
                     require(actual["bytes"] == original_entries[name]["bytes"] and actual["sha256"] == original_entries[name]["sha256"],
                             "EXPORT_IDENTITY", "Complete received records do not reproduce the original customer file.")
                 require(count == original["customerRecords"], "EXPORT_COUNT", "Export is not the complete received selection.")
-            receipt = {"schema": "tj.databento-warehouse-export.v1", "createdAt": now(), "deliveryId": row["id"],
+            receipt = {"schema": self.profile.document_schema("warehouse-export"), "createdAt": now(), "deliveryId": row["id"],
                        "originalManifestSha256": row["manifest_sha"], "originalEditionId": row["edition_id"],
                        "originalWorkspaceSha256": row["workspace_sha"], "originalCustomerRecords": original["customerRecords"],
                        "selectedRecords": count, "filters": filters, "selection": "filtered" if filters else "complete-original-customer",
                        "originalSourceCoverage": original["sourceCoverage"], "sourceRoleIsUnchanged": True,
                        "columns": columns, "headAtExport": captured_head}
             (target / "README.md").write_text(
-                "# Databento customer receiving export\n\n"
+                "# " + self.profile.label + " customer receiving export\n\n" +
                 "This is the retained original customer selection" + (" filtered by the exact filters in receiving-manifest.json." if filters else ".") +
                 "\n\nMapped JSON keeps original line bytes. CSV keeps original lexical values and selected labels. "
-                "Numeric tokens are not converted to floating point. Original source role, scope, coverage and exclusions remain in provenance. "
-                "A reference sample is not a production/preview comparison. "
+                "Numeric tokens are not converted to floating point. Original source role, scope, coverage and exclusions remain in provenance. " +
+                ("A reference sample is not a production/preview comparison. " if self.profile is DATABENTO else
+                 "Source time units, symbol spelling and exact JSON value kinds keep their original interpretation. ") +
                 "Original operator notes and private review files are not included.\n", encoding="utf-8")
             (target / "receiving-decisions.json").write_text(
-                dumps({"schema": "tj.databento-warehouse-decisions.v1", "deliveryId": row["id"],
+                dumps({"schema": self.profile.document_schema("warehouse-decisions"), "deliveryId": row["id"],
                        "headAtExport": captured_head, "decisions": decisions}) + "\n", encoding="utf-8")
-            overview = render_overview(self.inspect(row["id"]), self.query(row["id"], filters, limit=50), receipt, decisions)
+            overview = render_overview(self.inspect(row["id"]), self.query(row["id"], filters, limit=50), receipt, decisions, self.profile)
             (target / "receiving-overview.html").write_text(overview, encoding="utf-8")
             receipt["files"] = []
             for p in sorted(target.rglob("*")):
@@ -761,21 +824,24 @@ class Warehouse:
                 backup.close()
             os.chmod(destination, 0o600)
             (target / "receiver.py").write_bytes(Path(__file__).read_bytes())
+            profile_args = "" if self.profile is DATABENTO else "--profile " + self.profile.key + " "
             (target / "README.md").write_text(
-                "# Databento customer warehouse\n\n"
+                "# " + self.profile.label + " customer warehouse\n\n" +
                 "This snapshot includes all staged deliveries, exact original row bytes and source manifests, "
                 "the selected customer head, and its named activation/rollback history.\n\n"
-                "Inspect with: python3 receiver.py status --warehouse .\n\n"
-                "Restore to a new directory with: python3 receiver.py restore --bundle . --out /new/customer-warehouse\n\n"
+                "Inspect with: python3 receiver.py " + profile_args + "status --warehouse .\n\n" +
+                "Restore to a new directory with: python3 receiver.py " + profile_args + "restore --bundle . --out /new/customer-warehouse\n\n" +
                 "Complete received deliveries need no provider credentials, producer workspace or network access. "
-                "A snapshot taken during an incomplete import preserves its committed prefix; resuming that import needs the same original complete delivery directory. "
-                "Receiving is a customer decision; it does not approve the provider's migration or turn reference scopes into a baseline/preview pair. "
+                "A snapshot taken during an incomplete import preserves its committed prefix; resuming that import needs the same original complete delivery directory. " +
+                ("Receiving is a customer decision; it does not approve the provider's migration or turn reference scopes into a baseline/preview pair. "
+                 if self.profile is DATABENTO else self.profile.scope_note + " ") +
                 "Use Python 3.11+ on Linux/macOS. Existing destinations are preserved.\n", encoding="utf-8")
             files = []
             for p in sorted(target.iterdir()):
                 fsync_file(p)
                 files.append({"path": p.name, **identity(p)})
-            manifest = {"schema": "tj.databento-warehouse-backup.v1", "createdAt": now(), "warehouseSchema": SCHEMA,
+            manifest = {"schema": self.profile.document_schema("warehouse-backup"), "createdAt": now(),
+                        "warehouseSchema": self.profile.warehouse_schema,
                         "head": captured_head, "files": files}
             (target / "backup-manifest.json").write_text(dumps(manifest) + "\n", encoding="utf-8")
             fsync_file(target / "backup-manifest.json")
@@ -785,11 +851,12 @@ class Warehouse:
             raise
 
 
-def restore(bundle, directory):
+def restore(bundle, directory, profile=None):
+    profile = resolve_profile(profile)
     source = Path(bundle).resolve()
     manifest = metadata_document(read_metadata(regular_file(source, "backup-manifest.json")), "BACKUP_SCHEMA")
-    require(manifest.get("schema") == "tj.databento-warehouse-backup.v1"
-            and manifest.get("warehouseSchema") == SCHEMA, "BACKUP_SCHEMA", "Select a complete customer receiving backup.")
+    require(manifest.get("schema") == profile.document_schema("warehouse-backup")
+            and manifest.get("warehouseSchema") == profile.warehouse_schema, "BACKUP_SCHEMA", "Select a complete customer receiving backup.")
     entries = manifest.get("files", [])
     require(isinstance(entries, list) and len(entries) == 3 and all(isinstance(x, dict) for x in entries)
             and {x.get("path") for x in entries} == {"warehouse.sqlite3", "receiver.py", "README.md"},
@@ -808,7 +875,7 @@ def restore(bundle, directory):
         require(actual["bytes"] == expected["bytes"] and actual["sha256"] == expected["sha256"],
                 "BACKUP_CHANGED", "Backup bytes changed while restoring.")
         (target / "locks").mkdir(mode=0o700)
-        warehouse = Warehouse(target)
+        warehouse = Warehouse(target, profile=profile)
         try:
             require(warehouse.db.execute("PRAGMA integrity_check").fetchone()[0] == "ok", "RESTORE_INTEGRITY", "The restored database is not intact.")
             require(not warehouse.db.execute("SELECT 1 FROM sqlite_schema WHERE type IN ('trigger','view') LIMIT 1").fetchone(),
@@ -823,8 +890,11 @@ def restore(bundle, directory):
         raise
 
 
-def main(argv=None):
+def main(argv=None, profile=None):
     parser = argparse.ArgumentParser(description=__doc__)
+    if profile is None:
+        parser.add_argument("--profile", choices=tuple(PROFILES), default="databento",
+                            help="Select the original producer format; defaults to databento.")
     commands = parser.add_subparsers(dest="command", required=True)
     p = commands.add_parser("init", help="Create a new customer warehouse.")
     p.add_argument("--warehouse", required=True)
@@ -854,12 +924,13 @@ def main(argv=None):
     p.add_argument("--bundle", required=True)
     p.add_argument("--out", required=True)
     args = parser.parse_args(argv)
+    profile = resolve_profile(profile if profile is not None else args.profile)
     if args.command == "restore":
-        return restore(args.bundle, args.out)
+        return restore(args.bundle, args.out, profile=profile)
     if args.command == "init":
-        warehouse = Warehouse.create(args.warehouse)
+        warehouse = Warehouse.create(args.warehouse, profile=profile)
     else:
-        warehouse = Warehouse(args.warehouse, readonly=args.command in ("status", "inspect", "query", "export", "backup"))
+        warehouse = Warehouse(args.warehouse, readonly=args.command in ("status", "inspect", "query", "export", "backup"), profile=profile)
     try:
         if args.command in ("init", "status"):
             return warehouse.status()

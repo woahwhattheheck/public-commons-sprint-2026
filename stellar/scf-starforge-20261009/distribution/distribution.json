@@ -345,7 +345,8 @@
     "baserow-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/cli.mjs",
     "stac": "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/cli.mjs",
     "grant-demo": "stellar/scf_2026/presentation/reviewer/cli.mjs",
-    "merchant-api-pass": "stellar-forge/mcp-merchant-operator/api-pass-cli.mjs"
+    "merchant-api-pass": "stellar-forge/mcp-merchant-operator/api-pass-cli.mjs",
+    "merchant-accounting-cryptoworth": "stellar-forge/mcp-merchant-operator/accounting-cryptoworth-cli.mjs"
   },
   "exports": {
     "./seller/opencage": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opencage/index.mjs",
@@ -786,7 +787,15 @@
       "types": "./source/stellar-forge/mcp-merchant-operator/api-pass-setup.d.mts",
       "import": "./source/stellar-forge/mcp-merchant-operator/api-pass-setup.mjs"
     },
-    "./merchant/api-pass-workspace/agent-setup": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/agent-setup.mjs"
+    "./merchant/api-pass-workspace/agent-setup": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/agent-setup.mjs",
+    "./merchant/accounting-cryptoworth": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/accounting-cryptoworth-client.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/accounting-cryptoworth-client.mjs"
+    },
+    "./merchant/accounting-cryptoworth/operations": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/accounting-cryptoworth-cli.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/accounting-cryptoworth-cli.mjs"
+    }
   },
   "nativePeers": {
     "@x402/core": {
