@@ -106,7 +106,7 @@ export async function openDatasetteWorkspace({
   directory = absolute(directory, 'Datasette workspace directory');
   await privateDirectory(directory, create);
   const releaseLock = await acquireWorkspace(directory);
-  let closed = false, active = null, publisher = null, publisherTail = Promise.resolve(), closing = null;
+  let closed = false, active = null, publisher = null, files = null, publisherTail = Promise.resolve(), closing = null;
   try {
     const settingsFile = join(directory, 'workspace.json');
     if (!await exists(settingsFile)) {
@@ -125,7 +125,7 @@ export async function openDatasetteWorkspace({
     for (const name of ['captures', 'editions', 'exports', 'imports'])
       await privateDirectory(join(directory, name), true);
 
-    const files = retainedDatasetteFiles({ directory, workspaceId: settings.workspaceId });
+    files = retainedDatasetteFiles({ directory, workspaceId: settings.workspaceId });
     const capturePath = operationId => join(directory, 'captures', identifier(operationId, 'capture operation'), 'capture.json');
     const editionPath = id => join(directory, 'editions', identifier(id, 'edition identifier'), 'edition.json');
     const selectedSource = join(directory, 'selected-source.json');
@@ -381,20 +381,43 @@ export async function openDatasetteWorkspace({
         return { operationId: current.operationId, cancelling: true };
       }
       if (operation === 'operations.inspect') return execute(operation, input, new AbortController());
+      return admitted(operation, input.operationId ?? input.runId ?? input.requestId ?? randomUUID(),
+        controller => execute(operation, input, controller));
+    }
+    async function admitted(operation, operationId, action) {
+      ensureOpen();
       if (active) throw fault('DATASETTE_WORKSPACE_BUSY', 'The workspace is continuing ' + active.operation + '.', 409);
       const controller = new AbortController();
-      const selectedOperation = { operation, operationId: input.operationId ?? input.runId ?? randomUUID(),
+      const selectedOperation = { operation, operationId,
         startedAt: stamp(), controller, cancel: null, promise: null };
       active = selectedOperation;
       selectedOperation.promise = Promise.resolve().then(async () => {
-        // A status read may already own the native publisher. Drain that exact
-        // queue before an archive or source mutation uses the same workspace.
+        // Drain the original publisher queue before an archive, file intake or
+        // source mutation uses this same workspace.
         await publisherTail;
         controller.signal.throwIfAborted();
-        return execute(operation, input, controller);
+        return action(controller);
       });
       try { return await selectedOperation.promise; }
       finally { if (active === selectedOperation) active = null; }
+    }
+    async function uploadStatus(input) {
+      ensureOpen();
+      return files.uploadStatus(input);
+    }
+    async function receiveUpload(input, stream) {
+      if (!object(input) || !UUID.test(input.uploadId ?? '') ||
+          !stream || typeof stream[Symbol.asyncIterator] !== 'function')
+        throw fault('DATASETTE_UPLOAD_INPUT_INVALID', 'Use the original upload UUID and raw byte stream.');
+      return admitted('files.upload', input.uploadId, async controller => {
+        // Native HTTP streams must wake when their original operation is
+        // cancelled, even while the peer has stopped sending the next byte.
+        const stop = () => stream.destroy?.(controller.signal.reason);
+        active.cancel = stop;
+        controller.signal.addEventListener('abort', stop, {once:true});
+        try { return await files.receiveUpload(input, stream, {signal:controller.signal}); }
+        finally { controller.signal.removeEventListener('abort', stop); }
+      });
     }
     async function close() {
       if (closing) return closing;
@@ -402,12 +425,14 @@ export async function openDatasetteWorkspace({
       closing = (async () => {
         if (active?.cancel) { try { await active.cancel(); } catch {} }
         try { await active?.promise; } catch {}
-        try { await publisherTail; } finally { await releaseLock(); }
+        try { await publisherTail; await files.close(); } finally { await releaseLock(); }
       })();
       return closing;
     }
-    return Object.freeze({ directory, workspaceId: settings.workspaceId, status, operations, dispatch, close });
+    return Object.freeze({ directory, workspaceId: settings.workspaceId, status, operations, dispatch,
+      uploadStatus, receiveUpload, close });
   } catch (issue) {
-    await publisher?.close(); await releaseLock(); throw issue;
+    try { await files?.close(); await publisher?.close(); } finally { await releaseLock(); }
+    throw issue;
   }
 }

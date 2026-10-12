@@ -3,6 +3,7 @@ import { constants } from 'node:fs';
 import { open, readdir, lstat } from 'node:fs/promises';
 import { resolve, relative, sep, basename } from 'node:path';
 import { absolute, hashPrivate, fault } from '../postgres/publisher/files.mjs';
+import { retainedDatasetteUploads } from './uploads.mjs';
 
 const MAX_FILE = 2 * 1024 * 1024 * 1024;
 const MAX_FILES = 30000;
@@ -143,5 +144,7 @@ export function retainedDatasetteFiles({ directory, workspaceId }) {
     if (!name || name.startsWith('../') || name.startsWith('/')) throw fault('DATASETTE_FILE_PATH_INVALID');
     return name;
   }
-  return Object.freeze({ inspect, list, read, relativeName });
+  const uploads = retainedDatasetteUploads({ directory, workspaceId, inspect });
+  return Object.freeze({ inspect, list, read, relativeName,
+    uploadStatus: uploads.status, receiveUpload: uploads.receive, close: uploads.close });
 }
