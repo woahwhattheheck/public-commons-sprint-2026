@@ -12,9 +12,10 @@ let token = location.hash.slice(1) || sessionStorage.getItem(tokenKey) || '';
 if (location.hash) { sessionStorage.setItem(tokenKey, token); history.replaceState(null, '', location.pathname); }
 let state, selectedId = null, profileReview = null, selectedArchive = null, handoff = null;
 let loading = false, refreshAgain = false, view = 'runtime', logSelection = null, initial = true;
+let archiveSelectionGeneration = 0;
 const pendingKey = () => 'starforge-runtime-pending-request-' + state?.workspaceId;
 function message(text = '') { $('message').textContent = text; $('message').hidden = !text; }
-function error(value) { message((value.code ? value.code + ': ' : '') + value.message); }
+function error(value) { if (!value.workspaceChanged) message((value.code ? value.code + ': ' : '') + value.message); }
 async function api(path, value) {
   const response = await fetch(path, { method: value === undefined ? 'GET' : 'POST',
     headers: { 'x-runtime-workspace-token': token, ...(value === undefined ? {} : { 'content-type': 'application/json' }) },
@@ -239,6 +240,7 @@ async function refresh({ quiet = false } = {}) {
       const match = value.archives.find(item => item.sourceRoot === value.selected?.sourceRoot) ?? value.archives[0];
       $('archive-select').value = match.id;
     }
+    if (previousArchive !== $('archive-select').value) archiveSelectionGeneration++;
     if ($('archive-select').value && (!selectedArchive || previousArchive !== $('archive-select').value)) await loadCatalog();
     renderRuntime(); renderOperations(); switchView(view); await images.render();
     let pending;
@@ -263,10 +265,12 @@ function invalidateReview() {
 }
 async function loadCatalog() {
   invalidateReview();
-  const id = $('archive-select').value;
+  const id = $('archive-select').value, generation = archiveSelectionGeneration,
+    requestedToken = token, workspaceId = state?.workspaceId;
   if (!id) { selectedArchive = null; updateControls(); return; }
   const value = await api(query('/api/catalog', { archiveId: id }));
-  if ($('archive-select').value !== id) return;
+  if ($('archive-select').value !== id || generation !== archiveSelectionGeneration ||
+      token !== requestedToken || state?.workspaceId !== workspaceId) return;
   selectedArchive = value.archive;
   $('archive-detail').textContent = value.archive.packageVersion + ' · source ' + value.archive.sourceCommit + ' · SHA-256 ' + value.archive.sha256;
   const original = selected()?.profile?.source?.sourceCommit === value.archive.sourceCommit ? selected().profile.selection : null;
@@ -301,30 +305,48 @@ async function reviewProfile() {
   else output.append(make('p', 'The base profile uses the original toolkit without optional Node dependencies.', 'note'));
   const detail = make('details'); detail.append(make('summary', 'Full exact profile'), make('pre', JSON.stringify(value, null, 2))); output.append(detail); updateControls();
 }
+function operationScope() {
+  if (!state?.workspaceId) throw new Error('Open the runtime workspace before creating an operation.');
+  const requestedToken = token, workspaceId = state.workspaceId, storageKey = pendingKey();
+  return { storageKey,
+    current: () => token === requestedToken && state?.workspaceId === workspaceId,
+    clear: encoded => { if (sessionStorage.getItem(storageKey) === encoded) sessionStorage.removeItem(storageKey); },
+  };
+}
+async function showOperationResult(result, scope) {
+  if (!scope.current()) return false;
+  if (result.runtimeId) selectedId = result.runtimeId;
+  if (result.homeId) await managed.choose(result.homeId);
+  if (!scope.current()) return false;
+  if (result.cacheTransferId) await transfers.choose(result.cacheTransferId);
+  if (!scope.current()) return false;
+  switchView('operations'); await refresh();
+  return scope.current();
+}
 async function operation(value) {
+  const scope = operationScope();
   message('');
-  if (sessionStorage.getItem(pendingKey()))
+  if (sessionStorage.getItem(scope.storageKey))
     throw new Error('Recover the retained request shown in the sidebar before creating another operation.');
-  const input = { requestId: crypto.randomUUID(), ...value };
-  sessionStorage.setItem(pendingKey(), JSON.stringify(input));
+  const input = { requestId: crypto.randomUUID(), ...value }, encoded = JSON.stringify(input);
+  sessionStorage.setItem(scope.storageKey, encoded);
   let result;
   try { result = await api('/api/operation', input); }
   catch (value) {
-    if (value.status) {
+    if (value.status && scope.current()) {
       try {
         const current = await api('/api/state');
-        if (!current.operations.some(job => job.id === input.requestId)) sessionStorage.removeItem(pendingKey());
+        if (scope.current() && current.workspaceId === state.workspaceId &&
+            !current.operations.some(job => job.id === input.requestId)) scope.clear(encoded);
       } catch {}
     }
-    $('retry-request').hidden = !sessionStorage.getItem(pendingKey());
+    if (scope.current()) $('retry-request').hidden = !sessionStorage.getItem(scope.storageKey);
+    else value.workspaceChanged = true;
     throw value;
   }
-  sessionStorage.removeItem(pendingKey());
-  if (result.runtimeId) selectedId = result.runtimeId;
-  if (result.homeId) await managed.choose(result.homeId);
-  if (result.cacheTransferId) await transfers.choose(result.cacheTransferId);
-  switchView('operations'); await refresh();
-  message('Operation retained. Progress and the original result appear below.');
+  scope.clear(encoded);
+  if (await showOperationResult(result, scope))
+    message('Operation retained. Progress and the original result appear below.');
   return result;
 }
 async function openLog(value) {
@@ -346,7 +368,7 @@ $('attach-form').addEventListener('submit', async event => {
     $('attach-details').open = false; await refresh(); message('Existing runtime opened at its original directory.');
   } catch (value) { error(value); }
 });
-$('archive-select').addEventListener('change', () => loadCatalog().catch(error));
+$('archive-select').addEventListener('change', () => { archiveSelectionGeneration++; loadCatalog().catch(error); });
 for (const id of ['native', 'operator', 'pins']) $(id).addEventListener('input', invalidateReview);
 $('review-profile').addEventListener('click', () => reviewProfile().catch(error));
 $('prepare').addEventListener('click', () => operation({ operation: 'prepare', ...profileReview, name: $('new-name').value.trim() }).catch(error));
@@ -368,14 +390,15 @@ $('compare').addEventListener('click', async () => {
 $('install-log').addEventListener('click', () => openLog({ runtimeId: selectedId }).catch(error));
 $('refresh-log').addEventListener('click', () => logSelection && openLog(logSelection).catch(error));
 $('retry-request').addEventListener('click', async () => {
+  let scope;
   try {
-    const pending = JSON.parse(sessionStorage.getItem(pendingKey()));
+    scope = operationScope();
+    const encoded = sessionStorage.getItem(scope.storageKey), pending = JSON.parse(encoded);
     if (!pending) return;
-    const result = await api('/api/operation', pending); sessionStorage.removeItem(pendingKey());
-    if (result.runtimeId) selectedId = result.runtimeId;
-    if (result.cacheTransferId) await transfers.choose(result.cacheTransferId);
-    switchView('operations'); await refresh();
-  } catch (value) { error(value); }
+    const result = await api('/api/operation', pending);
+    scope.clear(encoded);
+    await showOperationResult(result, scope);
+  } catch (value) { if (scope && !scope.current()) value.workspaceChanged = true; error(value); }
 });
 $('archive-form').addEventListener('submit', async event => {
   event.preventDefault();
@@ -416,14 +439,16 @@ $('copy-handoff').addEventListener('click', () => handoff && navigator.clipboard
 const sourceBuilds = createSourceBuildWorkspaceView({ root: $('source-build-workspace'), api, getState: () => state,
   operation, refreshWorkspace: refresh, openLog, switchView, message, error,
   chooseArchive: async id => {
-    const requestedToken = token;
+    const requestedToken = token, workspaceId = state?.workspaceId, generation = ++archiveSelectionGeneration;
+    const currentSelection = () => token === requestedToken && state?.workspaceId === workspaceId &&
+      archiveSelectionGeneration === generation;
     const current = await api(query('/api/catalog', { archiveId: id }));
-    if (token !== requestedToken) return;
+    if (!currentSelection()) return;
     setOptions($('archive-select'), [...state.archives.filter(item => item.id !== id), current.archive]
       .map(item => ({ id: item.id, label: item.label + ' · ' + item.packageVersion })), 'Choose a source archive', id);
     $('archive-select').value = id;
     await loadCatalog();
-    if (token !== requestedToken || $('archive-select').value !== id) return;
+    if (!currentSelection() || $('archive-select').value !== id) return;
     switchView('profile');
   },
 });
@@ -455,6 +480,7 @@ window.addEventListener('hashchange', () => {
   transfers.reset();
   python.reset();
   sourceBuilds.reset();
+  archiveSelectionGeneration++;
   initial = true; state = undefined; selectedId = null; selectedArchive = null;
   profileReview = null; handoff = null; logSelection = null; view = 'runtime';
   $('handoff').hidden = true; $('comparison').hidden = true; $('profile-review').hidden = true;

@@ -167,6 +167,13 @@ export function createSourceBuildWorkspaceView({ root, api, getState, operation,
   }
   function buildActions(build, original) {
     const actions = make('div', undefined, 'actions');
+    if (original?.displayPhase === 'INITIALIZING')
+      actions.append(button('Continue saving build', async alive => {
+        if (!alive()) return;
+        await operation({ requestId: build.requestId, operation: 'source-build',
+          reviewId: build.reviewId, selectionSha256: build.selectionSha256 });
+        if (alive()) { lastRead = 0; await refresh({ force: true }); }
+      }));
     if (original) {
       if (['FAILED', 'QUEUED'].includes(original.phase) || original.displayPhase === 'INTERRUPTED')
         actions.append(button('Continue original build', alive => continueBuild(build, alive), original.workerActive));

@@ -35,7 +35,7 @@ import { pythonOperationFields, initializePythonWorkspace, reviewPythonRuntime, 
 import { bindPythonApplicationCommand } from '../python-runtime/command-binding.mjs';
 import { openApiConnectionSetupAction } from './openapi-connection-setup.mjs';
 import { sourceBuildOperationFields, initializeSourceBuildWorkspace, sourceBuildWorkspaceState,
-  sourceBuildCatalog, reviewSourceBuild, readSourceBuildReview, normalizeSourceBuildOperation,
+  sourceBuildCatalog, reviewSourceBuild, readSourceBuildReview, normalizeSourceBuildOperation, initializeSourceBuildRequest,
   executeSourceBuildOperation, recoverSourceBuildOperation, openSourceBuildArchive } from './source-build-workspace.mjs';
 
 export const WORKSPACE_SCHEMA = 'stellar-forge.runtime-workspace.v1';
@@ -304,10 +304,10 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
       const retainedRequest = await readJSON(join(jobPath(root, id), 'request.json'), true);
       if (retainedRequest?.clientRequestHash) {
         need(retainedRequest.clientRequestHash === clientRequestHash, 'RUNTIME_WORKSPACE_REQUEST_ID_REUSED');
-        return { operationId: id, runtimeId: retainedRequest.targetId ?? retainedRequest.runtimeId ?? null,
+        if (input.operation !== 'source-build') return { operationId: id, runtimeId: retainedRequest.targetId ?? retainedRequest.runtimeId ?? null,
           homeId: retainedRequest.homeId ?? null, imageId: retainedRequest.imageId ?? null, transferId: retainedRequest.transferId ?? null, cacheTransferId: retainedRequest.cacheTransferId ?? null, reopened: true };
       }
-      if (!retainedRequest) request.clientRequestHash = clientRequestHash;
+      if (!retainedRequest || input.operation === 'source-build') request.clientRequestHash = clientRequestHash;
       for (const key of ['offline', 'load', 'source', 'install']) if (request[key] !== undefined)
         need(typeof request[key] === 'boolean', 'RUNTIME_WORKSPACE_BOOLEAN_REQUIRED');
       if (Object.hasOwn(managedOperationFields, request.operation)) await normalizeManagedOperation(root, request);
@@ -362,6 +362,11 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
       if (Object.hasOwn(transferOperationFields, request.operation))
         await normalizeRuntimeTransferOperation(root, request, id, config);
       const operationDirectory = jobPath(root, id), body = canonical(request), requestHash = digest(json(body));
+      if (request.operation === 'source-build') {
+        const result = await initializeSourceBuildRequest(root, id, { ...body, requestHash, createdAt: now() });
+        if (result.needsSpawn) await spawnWorker(root, id);
+        return { operationId: id, sourceBuildId: request.sourceBuildId, reopened: result.reopened };
+      }
       const previous = await readJSON(join(operationDirectory, 'request.json'), true);
       if (previous) {
         need(previous.requestHash === requestHash, 'RUNTIME_WORKSPACE_REQUEST_ID_REUSED');
