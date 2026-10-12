@@ -1,13 +1,14 @@
 import {createCommercialReceivingDesk} from './commercial/receiving-desk.mjs';
+import {createCommercialTariffDesk} from './commercial/tariff-desk.mjs';
 const SCHEMA='stellar-forge.merchant-commercial-desk.v1';
-const TAB_NAMES=[['overview','Overview'],['pricing','Pricing workspace'],['quote','Quote editor'],['review','Review'],['editions','Quote editions'],['customer','Customer response'],['implementation','Implementation'],['export','Export and reopen']];
+const TAB_NAMES=[['overview','Overview'],['pricing','Pricing workspace'],['tariffs','Tariff sources'],['quote','Quote editor'],['review','Review'],['editions','Quote editions'],['customer','Customer response'],['implementation','Implementation'],['export','Export and reopen']];
 const money=value=>value===null||value===undefined||value===''?'—':'USD '+String(value);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 const clone=value=>JSON.parse(JSON.stringify(value));
 const uuid=()=>crypto.randomUUID();
 const digest=async bytes=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),b=>b.toString(16).padStart(2,'0')).join('');
-const emptyDraft=()=>({parentId:null,title:'',customer:{name:'',contact:''},currency:'USD',implementationSourceId:'',serviceSourceId:'',pricingSourceId:'',validThrough:'',implementation:{lines:[]},service:{period:'MONTH',lines:[]},pricing:{routes:[]},terms:{scope:'',deliverables:'',exclusions:'',payment:'',acceptance:''},notes:''});
+const emptyDraft=()=>({parentId:null,title:'',customer:{name:'',contact:''},currency:'USD',implementationSourceId:'',serviceSourceId:'',pricingSourceId:'',tariffSourceId:'',validThrough:'',implementation:{lines:[]},service:{period:'MONTH',lines:[]},pricing:{routes:[]},terms:{scope:'',deliverables:'',exclusions:'',payment:'',acceptance:''},notes:''});
 function requireService(services,name){if(typeof services[name]!=='function')throw new Error('Commercial desk service is missing: '+name);return services[name];}
 export function mountCommercialDesk({root,services}){
   if(!root||!services)throw new TypeError('root and services are required.');
@@ -19,7 +20,18 @@ export function mountCommercialDesk({root,services}){
   const listeners=[];
   const ownsUrl=new Set();
   const receiving=createCommercialReceivingDesk({root,services,changed:()=>render(),refreshCase:refresh,
-    usePricingSource:sourceId=>{change(()=>{draft.pricingSourceId=sourceId;});tab='quote';message='Original pricing source selected. Review its routes and explicit monthly request volumes.';render();}});
+    usePricingSource:sourceId=>{change(()=>{draft.pricingSourceId=sourceId;draft.tariffSourceId='';});tab='quote';message='Original pricing source selected. Review its routes and explicit monthly request volumes.';render();}});
+  const tariffs=createCommercialTariffDesk({root,services,changed:()=>render(),refreshCase:refresh,
+    useTariffSource:selection=>{
+      change(()=>{
+        draft.tariffSourceId=selection.sourceId;draft.pricingSourceId=selection.pricingSourceId;
+        const source=sourceById('pricingSources',selection.pricingSourceId),old=new Map(draft.pricing.routes.map(row=>[row.routeId,row]));
+        draft.pricing.routes=(source?.rows||[]).map(row=>row.routeId===selection.routeId?
+          {routeId:row.routeId,monthlyRequests:selection.selectedQuantity}:
+          old.get(row.routeId)||{routeId:row.routeId,monthlyRequests:String(row.monthlyRequests??'')});
+      });
+      tab='quote';message='Original tariff and matching pricing selected. Review the saved uniform rate, monthly quantities and complete customer terms.';render();
+    }});
   const key=identity=>SCHEMA+':'+identity.workspaceId+':'+identity.caseId;
   const identity=record=>{const value=record?.scope;if(!value||typeof value.caseId!=='string'||typeof value.workspaceId!=='string'||!value.caseId||!value.workspaceId)throw new Error('The original case identity is missing.');return {caseId:value.caseId,workspaceId:value.workspaceId};};
   function storageRead(which){try{return JSON.parse(sessionStorage.getItem(key(which))||'null');}catch{return null;}}
@@ -33,7 +45,7 @@ export function mountCommercialDesk({root,services}){
   function forget(which){if(which)try{sessionStorage.removeItem(key(which));}catch{}}
   function resetRuntime({forgetSaved=false}={}){
     epoch++;connected=false;view=null;review=null;comparison=null;busy=false;message='';error='';invalidateImplementationReview();
-    receiving.clear({identityChanged:forgetSaved});
+    receiving.clear({identityChanged:forgetSaved});tariffs.clear({identityChanged:forgetSaved});
     for(const url of ownsUrl)URL.revokeObjectURL(url);ownsUrl.clear();
     if(forgetSaved){forget(scope);scope=null;restoredScope=null;draft=emptyDraft();dirty=false;selectedQuoteId='';pending=null;responseDraft={status:'ACCEPTED',observedAt:'',source:'',note:''};implementationDraft={actor:'',note:'',resolutions:{},resolutionSelection:null};editSerial++;}
   }
@@ -43,6 +55,12 @@ export function mountCommercialDesk({root,services}){
   function area(id,label,value,rows=4){return '<label class="cq-field" for="'+id+'"><span>'+esc(label)+'</span><textarea id="'+id+'" rows="'+rows+'">'+esc(value)+'</textarea></label>';}
   function options(rows,value,placeholder){return '<option value="">'+esc(placeholder)+'</option>'+rows.map(row=>'<option value="'+esc(row.id)+'"'+(row.id===value?' selected':'')+'>'+esc(row.title||row.id)+'</option>').join('');}
   function sourceSelect(id,label,kind,value,optional=false){return '<label class="cq-field" for="'+id+'"><span>'+esc(label)+'</span><select id="'+id+'">'+options(view?.[kind]||[],value,optional?'No recurring service selected':'Select a saved source')+'</select></label>';}
+  function tariffSelect(){
+    const selected=draft.tariffSourceId??'';
+    return '<label class="cq-field" for="cq-tariff-source"><span>Original tariff basis</span><select id="cq-tariff-source"><option value="">No tariff basis selected</option>'+
+      (view?.tariffSources||[]).filter(row=>row.pricingSourceId===draft.pricingSourceId).map(row=>'<option value="'+esc(row.id)+'"'+(row.id===selected?' selected':'')+'>'+
+        esc((row.planLabel||row.tariffLabel)+' · '+row.selectedQuantity+' requests')+'</option>').join('')+'</select></label>';
+  }
   function sourceCard(label,row){return '<section class="cq-source"><h4>'+esc(label)+'</h4>'+(row?'<strong>'+esc(row.title||row.id)+'</strong><p>'+esc(row.summary||'')+'</p><dl><dt>Original identity</dt><dd><code>'+esc(row.id)+'</code></dd><dt>SHA-256</dt><dd><code>'+esc(row.sha256||row.reviewSha256||'')+'</code></dd>'+(row.version?'<dt>Saved version</dt><dd><code>'+esc(row.version)+'</code></dd>':'')+'</dl>':'<p class="cq-muted">Select the original saved source in the quote editor.</p>')+'</section>';}
   function totals(value){
     const totals=value?.totals||{};
@@ -68,7 +86,7 @@ export function mountCommercialDesk({root,services}){
     const routes=draft.pricing.routes;
     return '<div class="cq-section-heading"><div><h3>Quote editor</h3><p>Amounts and quantities remain exact decimal text until the original pricing engine reviews them.</p></div><div class="cq-actions"><button type="button" data-action="save-draft"'+(busy?' disabled':'')+'>Save draft</button><button type="button" data-action="preview"'+(busy?' disabled':'')+'>Review quote</button></div></div>'+
       '<div class="cq-grid">'+field('cq-title','Quote title',draft.title)+field('cq-customer','Customer',draft.customer.name)+field('cq-contact','Customer contact',draft.customer.contact)+field('cq-valid-through','Valid through',draft.validThrough,'date')+'</div>'+
-      '<div class="cq-grid cq-three">'+sourceSelect('cq-implementation-source','Implementation edition','implementationSources',draft.implementationSourceId)+sourceSelect('cq-service-source','Service commitments','serviceSources',draft.serviceSourceId,true)+sourceSelect('cq-pricing-source','Saved pricing scenario','pricingSources',draft.pricingSourceId)+'</div>'+
+      '<div class="cq-grid cq-three">'+sourceSelect('cq-implementation-source','Implementation edition','implementationSources',draft.implementationSourceId)+sourceSelect('cq-service-source','Service commitments','serviceSources',draft.serviceSourceId,true)+sourceSelect('cq-pricing-source','Saved pricing scenario','pricingSources',draft.pricingSourceId)+'</div><div class="cq-grid">'+tariffSelect()+'</div>'+
       '<section class="cq-editor-section"><div class="cq-section-heading"><h4>Implementation work</h4><div class="cq-actions"><button type="button" data-action="add-tasks">Add original tasks</button><button type="button" data-action="add-implementation">Add quoted line</button></div></div>'+lineTable('implementation')+'</section>'+
       '<section class="cq-editor-section"><div class="cq-section-heading"><h4>Recurring service</h4><div class="cq-actions"><button type="button" data-action="add-commitments">Add service commitments</button><button type="button" data-action="add-service">Add service line</button></div></div>'+lineTable('service')+'</section>'+
       '<section class="cq-editor-section"><div class="cq-section-heading"><h4>Route usage</h4><button type="button" data-action="use-routes">Use saved scenario routes</button></div><p>Monthly request volumes refer to the selected original scenario. The review retains its service quote, units and valuation basis.</p><div class="cq-table-wrap"><table><thead><tr><th>Original route</th><th>Requests / month</th></tr></thead><tbody>'+routes.map((row,index)=>'<tr><td><code>'+esc(row.routeId)+'</code></td><td><input data-route="'+index+'" inputmode="numeric" aria-label="Monthly requests for '+esc(row.routeId)+'" value="'+esc(row.monthlyRequests)+'"></td></tr>').join('')+(routes.length?'':'<tr><td colspan="2">Select a saved scenario, then choose its routes.</td></tr>')+'</tbody></table></div></section>'+
@@ -234,7 +252,7 @@ export function mountCommercialDesk({root,services}){
   }
   function render(){
     if(destroyed)return;
-    const renderers={overview:renderOverview,pricing:()=>receiving.render(),quote:renderEditor,review:renderReview,editions:renderEditions,customer:renderCustomer,implementation:renderImplementation,export:renderExport};
+    const renderers={overview:renderOverview,pricing:()=>receiving.render(),tariffs:()=>tariffs.render(),quote:renderEditor,review:renderReview,editions:renderEditions,customer:renderCustomer,implementation:renderImplementation,export:renderExport};
     root.innerHTML='<section class="commercial-desk" aria-label="Implementation and service quotations"><header class="cq-header"><div><h2>Commercial quotation</h2><p>'+esc(connected&&scope?'Case '+scope.caseId:'Open an original merchant case to begin.')+'</p></div><span class="cq-state">'+esc(busy?'Working':connected?'Connected':'Reopen case')+'</span></header>'+
       '<div class="cq-status" role="status">'+(message?'<p>'+esc(message)+'</p>':'')+(error?'<p role="alert">'+esc(error)+'</p>':'')+
       (pending&&connected?'<div class="cq-pending"><strong>Retained '+esc(pending.action)+' request</strong><code>'+esc(pending.requestId)+'</code><p>Reopen the original case or retry this exact request to recover its retained result.</p><button type="button" data-action="retry"'+(busy?' disabled':'')+'>Retry exact request</button><button type="button" data-action="refresh"'+(busy?' disabled':'')+'>Reopen original case</button></div>':'')+'</div>'+
@@ -251,7 +269,7 @@ export function mountCommercialDesk({root,services}){
       if(!workspaceChanged){scope=null;restoredScope=null;draft=emptyDraft();dirty=false;selectedQuoteId='';pending=null;responseDraft={status:'ACCEPTED',observedAt:'',source:'',note:''};implementationDraft={actor:'',note:'',resolutions:{},resolutionSelection:null};editSerial++;}
     }
     if(view?.revision!==record.revision)invalidateImplementationReview();
-    scope=received;view=record;connected=true;receiving.connect(record);
+    scope=received;view=record;connected=true;receiving.connect(record);tariffs.connect(record);
     if(!same(restoredScope,scope)){
       restoredScope=clone(scope);const saved=storageRead(scope);
       if(saved?.schema===SCHEMA&&same(saved.scope,scope)){draft=saved.draft||emptyDraft();dirty=Boolean(saved.dirty);selectedQuoteId=saved.selectedQuoteId||'';pending=saved.pending||null;responseDraft=saved.responseDraft||responseDraft;implementationDraft={actor:'',note:'',resolutions:{},resolutionSelection:null,...saved.implementationDraft};tab=TAB_NAMES.some(([name])=>name===saved.tab)?saved.tab:'overview';}
@@ -328,7 +346,7 @@ export function mountCommercialDesk({root,services}){
       if(pending){if(pending.action!=='receivePricing'||pending.args.sourceSha256!==sourceSha256)throw new Error('Choose the same source file for the retained request, or recover the other original request first.');
         pending.args.sourceText=sourceText;return retry();}
       return invoke('receivePricing',{sourceText,sourceSha256},{mutation:true,onResult:result=>{
-        if(result.pricingSourceId){change(()=>{draft.pricingSourceId=result.pricingSourceId;draft.pricing.routes=[];});tab='quote';}
+        if(result.pricingSourceId){change(()=>{draft.pricingSourceId=result.pricingSourceId;draft.tariffSourceId='';draft.pricing.routes=[];});tab='quote';}
       }});
     }
     if(name==='refresh')return refresh();
@@ -396,7 +414,7 @@ export function mountCommercialDesk({root,services}){
   };
   const onInput=event=>{
     const target=event.target;
-    const fields={'cq-title':()=>{draft.title=target.value;},'cq-customer':()=>{draft.customer.name=target.value;},'cq-contact':()=>{draft.customer.contact=target.value;},'cq-valid-through':()=>{draft.validThrough=target.value;},'cq-implementation-source':()=>{draft.implementationSourceId=target.value;},'cq-service-source':()=>{draft.serviceSourceId=target.value;},'cq-pricing-source':()=>{draft.pricingSourceId=target.value;},'cq-scope':()=>{draft.terms.scope=target.value;},'cq-deliverables':()=>{draft.terms.deliverables=target.value;},'cq-exclusions':()=>{draft.terms.exclusions=target.value;},'cq-payment':()=>{draft.terms.payment=target.value;},'cq-acceptance':()=>{draft.terms.acceptance=target.value;},'cq-notes':()=>{draft.notes=target.value;}};
+    const fields={'cq-title':()=>{draft.title=target.value;},'cq-customer':()=>{draft.customer.name=target.value;},'cq-contact':()=>{draft.customer.contact=target.value;},'cq-valid-through':()=>{draft.validThrough=target.value;},'cq-implementation-source':()=>{draft.implementationSourceId=target.value;},'cq-service-source':()=>{draft.serviceSourceId=target.value;},'cq-pricing-source':()=>{draft.pricingSourceId=target.value;draft.tariffSourceId='';},'cq-tariff-source':()=>{draft.tariffSourceId=target.value;},'cq-scope':()=>{draft.terms.scope=target.value;},'cq-deliverables':()=>{draft.terms.deliverables=target.value;},'cq-exclusions':()=>{draft.terms.exclusions=target.value;},'cq-payment':()=>{draft.terms.payment=target.value;},'cq-acceptance':()=>{draft.terms.acceptance=target.value;},'cq-notes':()=>{draft.notes=target.value;}};
     if(fields[target.id])change(fields[target.id]);
     else if({'cq-response-status':'status','cq-response-time':'observedAt','cq-response-source':'source','cq-response-note':'note'}[target.id]){responseDraft[{'cq-response-status':'status','cq-response-time':'observedAt','cq-response-source':'source','cq-response-note':'note'}[target.id]]=target.value;storageWrite();}
     else if(target.id==='cq-implementation-actor'||target.id==='cq-implementation-note'){implementationDraft[target.id==='cq-implementation-actor'?'actor':'note']=target.value;storageWrite();}
@@ -417,7 +435,7 @@ export function mountCommercialDesk({root,services}){
       storageWrite();render();
     }
     else if(target.id==='cq-before-quote'){selectedBefore=target.value;comparison=null;render();}
-    else if(['cq-implementation-source','cq-service-source','cq-pricing-source'].includes(target.id))render();
+    else if(['cq-implementation-source','cq-service-source','cq-pricing-source','cq-tariff-source'].includes(target.id))render();
   };
   const onSubmit=event=>{
     if(event.target.dataset.form!=='customer')return;
@@ -432,7 +450,7 @@ export function mountCommercialDesk({root,services}){
   return {
     refresh,connect:refresh,
     clear({identityChanged=false}={}){storageWrite();resetRuntime({forgetSaved:identityChanged});render();},
-    destroy(){storageWrite();resetRuntime();destroyed=true;receiving.destroy();for(const [name,handler] of listeners)root.removeEventListener(name,handler);root.replaceChildren();},
-    snapshot(){return {schema:SCHEMA,scope:scope&&clone(scope),connected,dirty,tab,selectedQuoteId,pending:pending?clone(pending):receiving.snapshot().pending,receiving:receiving.snapshot(),implementationReviewCurrent:implementationReviewCurrent(),implementationDraft:clone(implementationDraft)};}
+    destroy(){storageWrite();resetRuntime();destroyed=true;receiving.destroy();tariffs.destroy();for(const [name,handler] of listeners)root.removeEventListener(name,handler);root.replaceChildren();},
+    snapshot(){return {schema:SCHEMA,scope:scope&&clone(scope),connected,dirty,tab,selectedQuoteId,pending:pending?clone(pending):receiving.snapshot().pending??tariffs.snapshot().pending,receiving:receiving.snapshot(),tariffs:tariffs.snapshot(),implementationReviewCurrent:implementationReviewCurrent(),implementationDraft:clone(implementationDraft)};}
   };
 }

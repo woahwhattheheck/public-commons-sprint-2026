@@ -1,4 +1,5 @@
 import {commercialReceivingTools} from './commercial-receiving.mjs';
+import {commercialTariffTools} from './commercial-tariffs.mjs';
 // MIT. Quotation controls use the configured original SF74 case writer.
 import {MAX_MATERIAL_BYTES} from '../../../stellar/scf-starforge-20261009/sf74-merchant-support-console/commissioning.mjs';
 import {MAX_RETAINED_CHUNK_BYTES} from '../retained-file-contracts.mjs';
@@ -15,6 +16,7 @@ const draft=object({parentId:nullable(uuid),title:text(400),customer:object({nam
   pricing:object({routes:rows(object({routeId:text(200),monthlyRequests:text(24)}))}),
   terms:object({scope:text(64000),deliverables:text(64000),exclusions:text(64000),payment:text(64000),acceptance:text(64000)}),
   notes:text(16000)});
+draft.properties.tariffSourceId=text(200);
 const selected={id:uuid,expectedRevision:digest},change={...selected,requestId:uuid,actor:text(200)};
 const implementationSelection={quoteId:uuid,quoteSha256:digest,acceptanceId:uuid,
   resolutions:{type:'object',additionalProperties:{enum:['accepted','current']}}};
@@ -22,6 +24,7 @@ export function commercialTools(tool) {
   const read={readOnly:true,idempotent:true},write={idempotent:true};
   return [
     ...commercialReceivingTools(tool),
+    ...commercialTariffTools(tool),
     tool('merchant_case_commercial','Open the complete original saved quotation workspace: implementation editions, service terms, received SF97 pricing sources, unfinished draft, immutable quotes, actual customer responses and accepted-quote implementation adoption. Keep its current case revision for a new change.',
       {id:uuid,revision:digest},['id'],read),
     tool('merchant_case_commercial_preview','Review explicit work hours, service fees and monthly route requests against the retained original sources. Returns exact decimal calculations, a customer-readable proposal and reviewSha256. No case write.',

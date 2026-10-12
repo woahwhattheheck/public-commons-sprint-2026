@@ -215,3 +215,7 @@ File receiving uses the original retained-file reader. Select the saved case rev
 **captureCommercialPricingSource({model,planning,planId,scenarioId})** accepts the original configured SF97 model and planning reader. **inspectCommercialPricingSource** verifies the complete received packet. **reviewCommercialUsage** delegates the explicit monthly volume to the original scenario engine.
 
 The browser, CLI, MCP and receiving counterpart all use these same methods, case revisions and original retained events.
+
+## Original tariff selections
+
+The [Tariff quotation and receiving guide](commercial/TARIFFS.md) carries a completed original tariff selection into the customer quote, complete pricing backup and restored recipient workspace. Use the Tariff sources tab or `merchant-commercial tariffs --help`; the original tier calculation, both native pricing requests, three case attachment requests and full portfolio remain in their existing engines.
