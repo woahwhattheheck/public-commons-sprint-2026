@@ -1,4 +1,4 @@
-# Set up OpenAPI provider connections
+# Set up provider connections
 
 The **API merchant authoring** application can prepare its registered outbound OAuth connections from the original provider definition. Open **Applications**, choose the ready runtime and **API merchant authoring**, then open **Set up provider connections** below the application form.
 
@@ -20,7 +20,7 @@ The existing **Use a local development OAuth provider** application setting is f
 
 ## 1. Import the actual OpenAPI source
 
-Choose the provider's original UTF-8 JSON or YAML file, or paste the complete source into the panel. Give it a recognizable source name and select **Import and inspect source**.
+Choose **OpenAPI authorization-code provider** in **Connection type**. Choose the provider's original UTF-8 JSON or YAML file, or paste the complete source into the panel. Give it a recognizable source name and select **Import and inspect source**.
 
 The browser preserves the file's UTF-8 bytes, including an existing byte-order mark, and the original importer decides whether the source is supported. A file cannot silently pass through an encoding conversion. The receiving limit is 4 MiB per source.
 
@@ -52,6 +52,30 @@ The panel displays the selected endpoints and resource origins. Scopes required 
 The optional settings section accepts the registered revocation endpoint, expected issuer, additional authorization parameters and resource parameters. Authorization parameters use a JSON object; resource parameters use a JSON array of URL strings. The original profile rules reject secret values and attempts to replace protocol-controlled parameters.
 
 Select **Add connection to review**. This updates the proposed edition in the browser. Repeat for the other providers or registrations. An edition supports up to 64 connections and up to 64 operation selections per new connection.
+
+## Native QuickBooks and Xero registrations
+
+Choose **QuickBooks Online** or **Xero accounting** in **Connection type**. The panel reads the selected installed runtime's original provider descriptor and factory. It shows that provider's availability, exact source bytes and source identity. Select **Import installed provider definition** once; an already retained definition is reused.
+
+The original provider factory determines its endpoints, scope set, token authentication, PKCE mode and provider dialect. The registration form collects the client-specific fields:
+
+| Field | Meaning |
+| --- | --- |
+| Connection alias, display name and directory environment name | The same complete-edition identity fields used by generic connections. |
+| Registered client ID | The original Intuit or Xero app registration. |
+| Client-secret environment name | The existing private host reference for this registered client's secret. |
+| Registered callback origin | The exact origin recorded for this client. The full callback address is generated and shown in the edition review. |
+| QuickBooks environment | Select **Sandbox** or **Production** explicitly for the registered Intuit app. Xero does not use this selector. |
+
+Select **Add connection to review**. The complete edition can contain both native accounting registrations and generic OpenAPI connections. Existing aliases remain in the list, and the final review shows every addition, replacement and removal together.
+
+For QuickBooks the original factory retains its Intuit dialect, selected resource environment and PKCE setting. Xero retains its original accounting scope set and S256 behavior. The final registration review displays the actual resulting profile, including the provider dialect, registered callback origin, environment when applicable, PKCE, endpoints, scopes and exact callback URI. Register those exact callbacks in the provider console and confirm the displayed registration before creating the edition.
+
+**Replace source or client** opens an existing accounting registration in its native form. The same complete-edition review compares it with the original profile. An unchanged profile reuses its existing connection and grant; a changed profile receives its own original store while prior editions retain the previous one. An unavailable provider displays the selected runtime's specific availability result. Generic source setup remains usable for a runtime that supports the generic interface.
+
+After creation, use the four prepared settings in the Applications form. Continue actual authorization and native company or tenant selection through the original accounting connection workflow. That workflow binds the currently reviewed grant to the selected QuickBooks company or Xero organization, then opens the original accounting application with that saved selection. A running application keeps the company or tenant it opened until its normal reviewed reopen.
+
+Native provider imports use the same request retention as file imports. If the reply is lost, **Read retained request** or **Continue original request** resolves the original imported source. These controls read the retained request even if a draft callback port has subsequently changed.
 
 ## Preserve or replace existing registrations
 
@@ -127,7 +151,7 @@ The private environment edition and grant/token files are not download choices i
 
 ## Host integration
 
-The additive browser module is `public/openapi-connection-setup.mjs`. It mounts outside the Applications configuration form and uses the existing authenticated runtime-workspace API.
+The additive browser module is `public/openapi-connection-setup.mjs`. It mounts outside the Applications configuration form and uses the existing authenticated runtime-workspace API. The same mounted view supports generic and native registration modes. Its optional `applicationKinds` array lists the original application type IDs that host it; the default is `['openapi']`. The accounting integration supplies its actual type ID to that existing view and receives the same four `onPrepared` settings.
 
 The shared host resolves the selected runtime entry and supplies the original workspace root to `openApiConnectionSetupAction`. Default setup and grant roots are private children of that workspace. Optional root locations and development-provider permissions come from host configuration, not browser-supplied write destinations.
 
@@ -137,8 +161,9 @@ All setup endpoints use the existing authenticated POST transport:
 
 | Action | Purpose |
 | --- | --- |
-| `catalog` | Read retained sources, editions, current aliases, available secret names and limits. |
+| `catalog` | Read retained sources, editions, current aliases, available secret names, native provider availability and limits. |
 | `import-source` | Retain and inspect one original source using a stable request ID. |
+| `import-provider` | Retain the selected runtime's exact native provider descriptor through the same source journal. |
 | `inspect-source` | Inspect an already retained original source. |
 | `review` | Prepare the entire desired registry and callback registration review. |
 | `commit` | Create the exact reviewed edition and original stores. |
@@ -147,7 +172,11 @@ All setup endpoints use the existing authenticated POST transport:
 | `activate` | Select an existing edition without changing a live application or grant history. |
 | `download` | Retrieve a complete allowed edition handover file. |
 
-The route prefix is `/api/applications/openapi-setup/`. Requests use `{runtimeId, context, input}`. The setup engine and facade define the full typed source, review, revision, idempotency and recovery contracts; browser changes cannot override the host's selected runtime or private roots.
+The route prefix is `/api/applications/openapi-setup/`. Requests use `{runtimeId, context, input}`. Native import input is `{requestId, expectedRevision, provider, sourceSha256}`, where `provider` is `quickbooks` or `xero` and the exact source SHA comes from `catalog.providers`. The browser pins the current `factorySha256` in its native review entry. The setup engine and facade define the full typed source, review, revision, idempotency and recovery contracts.
+
+The trusted accounting host calls `resolveOpenApiSetupEdition(root, {runtimeId, editionId, alias, expectedProfileSha256}, {policy})`. This resolves the original immutable registry and environment, selected profile and status, and stable private company/tenant selection directory. Selection identity follows the workspace, alias and profile across edition reuse; the original provider helpers still check the current grant and native company/tenant before acquisition or save. Host configuration may choose `selectionRoot`; its default is the private `oauth-accounting` child of the original Applications workspace.
+
+The resolver returns the effective **private** environment to its host caller. It has no browser action. The installed `oauth-connection setup provider-binding` command uses `openApiSetupEditionSummary`, which emits only the explicit public registration and selection summary. The original generic CLI also exposes `import-provider` through the same facade. See `sf30-seller-sdk/oauth-connections/setup/API.md` for the complete input union and host contract.
 
 ## Complete native receiving
 
