@@ -102,6 +102,8 @@ The module intercepts each real UI-issued action only to retain its exact origin
 
 An interrupted action is reconciled through the original native operation record and the original browser pending request. The function never fabricates a replacement accepted request. A definitively failed/unreserved action stops with its original journal for concrete operator correction.
 
+For a station save, archive or source-review save that was reserved before interruption, the native first write requires its original subject to remain unchanged. A newer staff decision produces a retained conflict; inspect the saved record and draft before issuing a new operation. A write already materialized before interruption replays its original result, preserving later changes and station history.
+
 On restart, the native application marks interrupted running captures/studies as paused. Inspect that retained capture and use its existing Resume action when the underlying cause is resolved; keep the original capture ID. The journey does not silently refetch a failed period under a new capture identity.
 
 ## Output and completion

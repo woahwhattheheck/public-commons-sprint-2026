@@ -172,6 +172,16 @@ export async function openCoopsWorkspace({directory,inboxDirectory,releaseRuntim
      op.context={profile:structuredClone(profile),query:makeQuery(profile,payload)};
     }
    }
+   if(action==='station.save'||action==='station.archive'){
+    const prior=action==='station.archive'||payload.profileId?selected(s.stations,payload.profileId,'station profile'):null,targetId=prior?.id??'station-'+key(operationId);
+    if(!prior&&s.stations.some(profile=>profile.id===targetId))throw fault('COOPS_STATION_TARGET','The original creation identity already belongs to a saved station profile. Inspect that record before choosing a new request.',409);
+    op.context={stationTarget:{id:targetId,recordSha256:prior?hashBytes(Buffer.from(stable(prior))):null,updatedAt:prior?.updatedAt??null}};
+   }
+   if(action==='annotation.save'){
+    const subject=text(payload.subject,'a review subject',300),prior=s.annotations.find(a=>a.editionId===payload.editionId&&a.subject===subject)??null,targetId=prior?.id??key(operationId);
+    if(!prior&&s.annotations.some(a=>a.id===targetId))throw fault('COOPS_REVIEW_TARGET','The original creation identity already belongs to a saved source review. Inspect that record before choosing a new request.',409);
+    op.context={annotationTarget:{id:targetId,editionId:payload.editionId,subject,recordSha256:prior?hashBytes(Buffer.from(stable(prior))):null,updatedAt:prior?.updatedAt??null}};
+   }
    if(action==='mapping.save'){
     const prior=payload.mappingId?selected(s.mappings,payload.mappingId,'model-input mapping'):null,targetId=prior?.id??'mapping-'+key(operationId);
     if(!prior&&s.mappings.some(m=>m.id===targetId))throw fault('COOPS_MAPPING_TARGET','The original creation identity already belongs to a saved mapping. Inspect that record before choosing a new request.',409);
@@ -190,8 +200,19 @@ export async function openCoopsWorkspace({directory,inboxDirectory,releaseRuntim
  async function execute(op){
   const p=op.payload,id=key(op.operationId);let result,launchId,backfillId;
   switch(op.action){
-   case'station.save':{const input=normaliseStation(p);result=await local(op,s=>{const prior=p.profileId?selected(s.stations,p.profileId,'station profile'):null,profile={id:prior?.id??'station-'+id,...input,createdAt:prior?.createdAt??op.createdAt,updatedAt:op.createdAt,history:prior?[...(prior.history??[]),Object.fromEntries(Object.entries(prior).filter(([k])=>k!=='history'))]:[]};s.stations=s.stations.filter(x=>x.id!==profile.id);s.stations.push(profile);return profile;});break;}
-   case'station.archive':result=await local(op,s=>{const r=selected(s.stations,p.profileId,'station profile');r.active=false;r.updatedAt=op.createdAt;return{id:r.id,active:false};});break;
+   case'station.save':{const input=normaliseStation(p);result=await local(op,s=>{
+    const target=op.context?.stationTarget;
+    if(!target)throw fault('COOPS_STATION_REVIEW_REQUIRED','This unfinished request predates retained station comparison. Review the current profile and preserve this request before issuing a new save.',409);
+    const prior=s.stations.find(profile=>profile.id===target.id)??null,currentSha256=prior?hashBytes(Buffer.from(stable(prior))):null;
+    if(currentSha256!==target.recordSha256)throw fault('COOPS_STATION_CHANGED','The selected station profile changed after this request was reserved. Review its current record and the retained draft before issuing a new save.',409);
+    const profile={id:target.id,...input,createdAt:prior?.createdAt??op.createdAt,updatedAt:op.createdAt,history:prior?[...(prior.history??[]),Object.fromEntries(Object.entries(prior).filter(([k])=>k!=='history'))]:[]};
+    s.stations=s.stations.filter(x=>x.id!==profile.id);s.stations.push(profile);return profile;});break;}
+   case'station.archive':result=await local(op,s=>{
+    const target=op.context?.stationTarget;
+    if(!target)throw fault('COOPS_STATION_REVIEW_REQUIRED','This unfinished request predates retained station comparison. Review the current profile before issuing a new archive request.',409);
+    const r=s.stations.find(profile=>profile.id===target.id)??null,currentSha256=r?hashBytes(Buffer.from(stable(r))):null;
+    if(!r||currentSha256!==target.recordSha256)throw fault('COOPS_STATION_CHANGED','The selected station profile changed after this archive request was reserved. Review its current record before issuing a new archive request.',409);
+    r.history=[...(r.history??[]),Object.fromEntries(Object.entries(r).filter(([k])=>k!=='history'))];r.active=false;r.updatedAt=op.createdAt;return{id:r.id,active:false};});break;
    case'capture.preview':result=requestPlan(op.context.profile,op.context.query);break;
    case'backfill.preview':result=op.context.plan;break;
    case'backfill.start':result=await local(op,s=>{if(!s.backfills.some(b=>b.id===id)){s.backfills.push({id,plan:op.context.plan,state:'QUEUED',createdAt:op.createdAt,pauseRequested:false,error:null,parts:op.context.plan.parts.map(p=>({...p,id:'part-'+p.index,captureId:key(id+':'+p.index),state:'PENDING',editionId:null,error:null}))});}return{backfillId:id,state:selected(s.backfills,id,'backfill').state};});backfillId=id;break;
@@ -223,7 +244,13 @@ export async function openCoopsWorkspace({directory,inboxDirectory,releaseRuntim
     await local(op,s=>{if(!s.exports.some(e=>e.id===item.id))s.exports.push(item);return item;});
     result={...comparison,export:item};break;
    }
-   case'annotation.save':{await store.edition(p.editionId);const subject=text(p.subject,'a review subject',300),note=text(p.note,'a review note',12000,true);if(!['open','reviewed','follow_up'].includes(p.status))throw fault('COOPS_REVIEW','Choose open, reviewed or follow_up.');result=await local(op,s=>{const prior=s.annotations.find(a=>a.editionId===p.editionId&&a.subject===subject),a={id:prior?.id??id,editionId:p.editionId,subject,note,status:p.status,updatedAt:op.createdAt,history:prior?[...(prior.history??[]),{note:prior.note,status:prior.status,updatedAt:prior.updatedAt}]:[]};s.annotations=s.annotations.filter(x=>x.id!==a.id);s.annotations.push(a);return a;});break;}
+   case'annotation.save':{await store.edition(p.editionId);const subject=text(p.subject,'a review subject',300),note=text(p.note,'a review note',12000,true);if(!['open','reviewed','follow_up'].includes(p.status))throw fault('COOPS_REVIEW','Choose open, reviewed or follow_up.');result=await local(op,s=>{
+    const target=op.context?.annotationTarget;
+    if(!target)throw fault('COOPS_REVIEW_REQUIRED','This unfinished request predates retained source-review comparison. Review the current decision and preserve this request before issuing a new save.',409);
+    const prior=s.annotations.find(a=>a.editionId===target.editionId&&a.subject===target.subject)??null,currentSha256=prior?hashBytes(Buffer.from(stable(prior))):null;
+    if(currentSha256!==target.recordSha256||!prior&&s.annotations.some(a=>a.id===target.id))throw fault('COOPS_REVIEW_CHANGED','The selected source review changed after this request was reserved. Compare the current decision with the retained note before issuing a new save.',409);
+    const a={id:target.id,editionId:p.editionId,subject,note,status:p.status,updatedAt:op.createdAt,history:prior?[...(prior.history??[]),{note:prior.note,status:prior.status,updatedAt:prior.updatedAt}]:[]};
+    s.annotations=s.annotations.filter(x=>x.id!==a.id);s.annotations.push(a);return a;});break;}
    case'dataset.prepare':{
     if(p.mappingId&&!op.context?.mapping)throw fault('COOPS_DATASET_MAPPING_PIN','The original selected mapping revision is not retained with this unfinished request. Review the saved mapping before issuing a new preparation.',409);
     result=await prepareCoastalDataset(store,{edition:await store.edition(p.editionId),table:p.table,name:p.name,beginDate:p.beginDate,endDate:p.endDate,products:p.products,id:'dataset-'+id,mapping:op.context?.mapping??null});

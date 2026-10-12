@@ -36,6 +36,13 @@
         "ui/review-sheet.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/concentrations.mjs",
+      [
+        "ui/concentrations.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

@@ -9,6 +9,8 @@ import { reviewSheetCsv, reviewSheetTsv } from './csv.mjs';
 
 export const REVIEW_SHEET_REVIEW_SCHEMA = 'starforge.wqx-receiving-decision-review.v1';
 export const REVIEW_SHEET_BUNDLE_SCHEMA = 'starforge.wqx-receiving-decision-bundle.v1';
+import { validateConcentrationChoices, assertConcentrationPlan } from './concentrations.mjs';
+
 const PENDING_SCHEMA = 'starforge.wqx-receiving-decision-pending.v1';
 const PREVIEW_SCHEMA = 'starforge.wqx-receiving-decision-preview.v1';
 const RECORD_LIMIT = 64 * 1024 * 1024;
@@ -80,8 +82,10 @@ export async function previewReviewSheet({ project, document, newPlanId } = {}) 
   const normalized = normalizeReviewSheetDocument(document);
   if (newPlanId === normalized.sourcePlanId) reviewSheetFail('Choose a new immutable receiving plan name.');
   const original = await project.readOpenWaters(normalized.sourcePlanId), composed = composeReviewSheet(original, normalized);
+  const concentration = validateConcentrationChoices(original, normalized);
   const plan = assignPlanId(await project.previewOpenWaters({ reviewId: original.reviewId, options: composed.options,
     expectedReviewSha256: original.reviewSha256 }), newPlanId);
+  assertConcentrationPlan(plan, concentration);
   const result = { schema: PREVIEW_SCHEMA, source: composed.source, document: composed.document,
     documentSha256: composed.documentSha256, newPlanId, newPlanSha256: plan.planSha256,
     changes: composed.changes, decisionCounts: composed.decisionCounts,

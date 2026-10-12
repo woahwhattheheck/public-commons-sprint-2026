@@ -191,7 +191,7 @@ export async function reopenWfsSources({sourceDirectory,projectDirectory,id,pyth
   const {binding,bundle,summary}=await originalReceivedSources(sourceDirectory,{python,signal});
   signal?.throwIfAborted();
   const receiving=await receiveWfsProject({directory:resolve(projectDirectory),bundle,
-    id:id??'source-'+binding.sourceSetId,maxBytes:SOURCE_BYTES,signal});
+    id:id??'source-'+binding.sourceSetId,maxBytes:SOURCE_BYTES,signal,python});
   need(receiving.projectId===summary.project.id&&receiving.bundleSha256===binding.sourceSetId,
     'The original project receiver returned another project.');
   return {schema:'stellar-forge.wfs-customer-reopen.v1',directory:resolve(projectDirectory),
