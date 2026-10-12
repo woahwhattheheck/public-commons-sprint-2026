@@ -6,6 +6,7 @@ from pathlib import Path
 import fcntl
 import json
 import os
+import re
 import sqlite3
 import stat
 import threading
@@ -28,6 +29,7 @@ CREATE TABLE IF NOT EXISTS disposition_heads(period_id TEXT NOT NULL,item_id TEX
 CREATE TABLE IF NOT EXISTS reviews(id TEXT PRIMARY KEY, period_id TEXT NOT NULL, created_at TEXT NOT NULL, body TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS closes(id TEXT PRIMARY KEY, period_id TEXT NOT NULL, sequence INTEGER NOT NULL, created_at TEXT NOT NULL, body TEXT NOT NULL,UNIQUE(period_id,sequence));
 CREATE TABLE IF NOT EXISTS events(sequence INTEGER PRIMARY KEY, created_at TEXT NOT NULL, action TEXT NOT NULL, body TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS api_requests(id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, operation TEXT NOT NULL, created_at TEXT NOT NULL, body TEXT NOT NULL);
 """
 
 
@@ -58,6 +60,7 @@ class Store:
         self.lock = threading.RLock()
         self.closed = False
         self.connection = None
+        self.request_context = None
         self.lease = os.open(self.root / "operator.lock", os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600)
         try:
             private_file(self.root / "operator.lock")
@@ -131,6 +134,50 @@ class Store:
         self.connection.execute("INSERT INTO " + table + "(id,body) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body",
                                 (body["id"], canonical(body)))
 
+    @staticmethod
+    def request_id(value):
+        if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}", value):
+            raise Problem("REQUEST_ID", "Retain one request ID of 1 to 128 letters, numbers, dot, underscore, colon or hyphen")
+        return value
+
+    def inspect_request(self, ident):
+        ident = self.request_id(ident)
+        with self.lock:
+            row = self.connection.execute("SELECT * FROM api_requests WHERE id=?", (ident,)).fetchone()
+            if row is None:
+                raise Problem("REQUEST_NOT_COMMITTED", "No successful mutation with this request ID is retained. Retry only the same original request.", 404)
+            return {"id": ident, "state": "COMMITTED", "fingerprint": row["fingerprint"],
+                    "operation": row["operation"], "created_at": row["created_at"], "response": json.loads(row["body"])}
+
+    def requests(self, offset=0, limit=50):
+        with self.lock:
+            if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 200:
+                raise Problem("INVALID_PAGE", "Use a nonnegative offset and a page size from 1 to 200")
+            total = self.connection.execute("SELECT COUNT(*) FROM api_requests").fetchone()[0]
+            rows = [dict(row) for row in self.connection.execute(
+                "SELECT id,fingerprint,operation,created_at FROM api_requests ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?", (limit, offset))]
+            return {"items": rows, "total": total, "offset": offset, "next": offset + limit if offset + limit < total else None}
+
+    def perform_request(self, ident, path, payload, expected, operation):
+        """The optional HTTP request identity commits in the native mutation transaction."""
+        ident = self.request_id(ident)
+        fingerprint = digest({"method": "POST", "path": path, "payload": payload, "expected_revision": expected})
+        with self.lock:
+            if self.closed:
+                raise Problem("WORKSPACE_CLOSED", "The workspace is closing", 503)
+            previous = self.connection.execute("SELECT fingerprint,body FROM api_requests WHERE id=?", (ident,)).fetchone()
+            if previous:
+                if previous["fingerprint"] != fingerprint:
+                    raise Problem("REQUEST_CONFLICT", "This request ID already names different original content or revision; inspect its retained response", 409)
+                return json.loads(previous["body"])
+            if self.request_context is not None:
+                raise Problem("REQUEST_NESTED", "Complete the current native request before opening another", 409)
+            self.request_context = {"id": ident, "fingerprint": fingerprint, "operation": path}
+            try:
+                return operation()
+            finally:
+                self.request_context = None
+
     def _change(self, expected, action, operation):
         with self.lock:
             if self.closed:
@@ -145,8 +192,14 @@ class Store:
                 self.connection.execute("UPDATE meta SET value=? WHERE key='revision'", (str(revision),))
                 self.connection.execute("INSERT INTO events(created_at,action,body) VALUES(?,?,?)",
                                         (now(), action, canonical({"revision": revision, "record": result.get("id") if isinstance(result, dict) else None})))
+                response = {"revision": revision, "result": result}
+                if self.request_context is not None:
+                    request = self.request_context
+                    response["request_id"] = request["id"]
+                    self.connection.execute("INSERT INTO api_requests VALUES(?,?,?,?,?)",
+                        (request["id"], request["fingerprint"], request["operation"], now(), canonical(response)))
                 self.connection.execute("COMMIT")
-                return {"revision": revision, "result": result}
+                return response
             except BaseException:
                 with suppress(sqlite3.Error):
                     if self.connection.in_transaction:

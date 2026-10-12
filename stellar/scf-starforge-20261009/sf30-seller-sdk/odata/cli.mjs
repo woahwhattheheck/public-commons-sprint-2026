@@ -10,7 +10,7 @@ const HELP=`OData source and merchant workspace
 node cli.mjs --workspace DIRECTORY COMMAND [options]
 
   init | status
-  serve [--port 8797]
+  serve [--port 8797] [--live-service SERVICE]
   connect --url SERVICE --name NAME [--id ID] [--auth-env VARIABLE]
   schema --connection ID
   refresh --connection ID
@@ -30,6 +30,11 @@ node cli.mjs --workspace DIRECTORY COMMAND [options]
   merchant activate --id ID --expect GENERATION --reason TEXT
   merchant rollback [--to ID] --expect GENERATION --reason TEXT
   merchant run --expect GENERATION
+  live prepare --input PROFILE.json
+  live status | detail --id SERVICE
+  live run --id SERVICE
+  live buyer --id SERVICE --intent STABLE_INTENT [--received RECEIPT]
+  live receive --id SERVICE --response ORIGINAL_RESPONSE.json
 
 Plans use declared entity properties and typed filter clauses. Imports follow the
 original nextLink and save every page before continuing. --pages sets the work
@@ -53,15 +58,21 @@ export async function main(args=process.argv.slice(2)){
   const workspace=await openODataWorkspace({directory:resolve(o.workspace)});
   const abort=new AbortController(),interrupt=()=>abort.abort();
   process.once('SIGINT',interrupt);process.once('SIGTERM',interrupt);
-  let persistent=false,result;
+  let persistent=false,result,live;
   try{
     switch(command){
       case 'init':case 'status':result=await workspace.state();break;
       case 'serve':{
-        const {startODataServer}=await import('./server.mjs');
-        const server=await startODataServer({workspace,port:o.port===undefined?8797:Number(o.port)});
-        console.log(JSON.stringify({workspace:workspace.directory,url:server.url}));persistent=true;
-        const close=()=>server.close().finally(()=>process.exit(0));process.once('SIGINT',close);process.once('SIGTERM',close);return;
+        const [{startODataServer},{prepareODataLaunch,announceODataWorkspace}]=await Promise.all([import('./server.mjs'),import('./live/startup.mjs')]);
+        const launch=await prepareODataLaunch({workspace,expectedIdentity:o['expected-workspace-identity'],
+          liveId:o['live-service'],expectedLive:o['expected-live-identity']});
+        const server=await startODataServer({workspace,port:o.port===undefined?8797:Number(o.port),liveServiceId:o['live-service']});
+        try{console.log(JSON.stringify(await announceODataWorkspace({workspace,server,launch,liveRuntime:server.liveRuntime??null})));}
+        catch(error){await server.close();throw error;}
+        persistent=true;let closing=false;
+        const close=()=>{if(closing)return;closing=true;void server.close().then(()=>process.exit(0),error=>{
+          console.error(JSON.stringify({error:error.code||'ODATA_SHUTDOWN_FAILED',message:error.message}));process.exit(1);});};
+        process.once('SIGINT',close);process.once('SIGTERM',close);return;
       }
       case 'connect':result=await workspace.connect({id:o.id,url:o.url,name:o.name,authEnv:o['auth-env'],signal:abort.signal});break;
       case 'schema':{const connection=(await workspace.state()).connections.find(value=>value.id===o.connection);if(!connection)throw new Error('Connection not found.');result=connection.catalog;break;}
@@ -92,6 +103,18 @@ export async function main(args=process.argv.slice(2)){
         }
         else throw new Error('Unknown merchant command.');break;
       }
+      case 'live':{
+        const {openODataLiveOperations}=await import('./live-operations.mjs');live=await openODataLiveOperations({workspace});
+        if(subcommand==='prepare')result=await live.prepare(await jsonFile(o.input));
+        else if(subcommand==='status')result=await live.status();
+        else if(subcommand==='detail')result=await live.detail(o.id);
+        else if(subcommand==='buyer')result=await live.buyer({id:o.id,intentId:o.intent,receivedId:o.received});
+        else if(subcommand==='receive')result=await live.receive({id:o.id,bodyBase64:(await readFile(resolve(o.response))).toString('base64')});
+        else if(subcommand==='run'){
+          console.log(JSON.stringify(await live.start({id:o.id}),null,2));
+          if(!abort.signal.aborted)await new Promise(resolve=>abort.signal.addEventListener('abort',resolve,{once:true}));return;
+        }else throw new Error('Unknown live operation.');break;
+      }
       default:throw new Error('Unknown command; use --help.');
     }
     if(o.out){await writeNew(resolve(o.out),formatted(result));console.log(JSON.stringify({created:resolve(o.out)}));}
@@ -99,7 +122,7 @@ export async function main(args=process.argv.slice(2)){
     return result;
   }finally{
     process.removeListener('SIGINT',interrupt);process.removeListener('SIGTERM',interrupt);
-    if(!persistent)await workspace.close();
+    try{await live?.close();}finally{if(!persistent)await workspace.close();}
   }
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href)

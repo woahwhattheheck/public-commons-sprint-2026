@@ -214,6 +214,7 @@ export async function openApplication({ applicationId, runtimeDirectory, handoff
   const publicRequest = entry => structuredClone(entry.view);
   return {
     identity: structuredClone(schema),
+    selectedIntentIds: Object.freeze([...selections.keys()]),
     async requests(context) {
       await current(); await permitted(context, 'list', null);
       const out = [];
@@ -287,20 +288,43 @@ export const TOOLS = Object.freeze([
       intentId: { type: 'string' }, format: { type: 'string', enum: ['json','text','base64','file'] },
       limitBytes: { type: 'integer', minimum: 1, maximum: 1048576 } }, required: ['intentId'], additionalProperties: false } },
 ]);
+const REMOTE_TOOLS = Object.freeze([
+  ...['cancel','spending'].map(action => ({
+    name: 'stellar_request_' + action,
+    description: action === 'cancel' ?
+      'Cancel this selected remote MCP quote through the original broker and retain any spending reservation.' :
+      'Read this selected remote MCP quote’s original aggregate budget preview or durable reservation.',
+    annotations: { readOnlyHint: action === 'spending', destructiveHint: false, idempotentHint: true },
+    inputSchema: selectedSchema,
+  })),
+  { name: 'stellar_request_reconcile',
+    description: 'Reconcile this selected remote MCP quote’s original transaction and finalize its retained SF36 spending record.',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+    inputSchema: { type: 'object', properties: { intentId: { type: 'string' },
+      transaction: { type: 'string', pattern: '^[0-9a-fA-F]{64}$' } },
+      required: ['intentId'], additionalProperties: false } },
+]);
 export function applicationTools(application, context, { signal } = {}) {
-  return { tools: TOOLS, async call(name, args = {}) {
+  const extras = REMOTE_TOOLS.filter(tool => application.supportsAction?.(tool.name.slice('stellar_request_'.length)));
+  const tools = TOOLS.map(tool => {
+    if (!extras.length || tool.name !== 'stellar_request_read') return tool;
+    const copy = structuredClone(tool); copy.inputSchema.properties.limitBytes.maximum = 2097152;
+    return copy;
+  }).concat(extras);
+  return { tools, async call(name, args = {}) {
     need(object(args), 'APPLICATION_TOOL_ARGUMENTS_INVALID');
     if (name === 'stellar_requests') {
       need(Object.keys(args).length === 0, 'APPLICATION_TOOL_ARGUMENTS_INVALID');
       return application.requests(context);
     }
     const action = name.startsWith('stellar_request_') ? name.slice('stellar_request_'.length) : '';
-    need(['review','execute','status','recover','read'].includes(action), 'TOOL_NOT_FOUND');
-    const allowed = action === 'read' ? ['intentId','format','limitBytes'] : ['intentId'];
+    need(tools.some(tool => tool.name === name), 'TOOL_NOT_FOUND');
+    const allowed = action === 'read' ? ['intentId','format','limitBytes'] :
+      action === 'reconcile' ? ['intentId','transaction'] : ['intentId'];
     need(Object.keys(args).every(x => allowed.includes(x)), 'APPLICATION_TOOL_ARGUMENTS_INVALID');
     return application.call(context, action, args.intentId,
       { signal, ...(args.format === undefined ? {} : { format: args.format }),
-        ...(args.limitBytes === undefined ? {} : { limitBytes: args.limitBytes }) });
+        ...(args.limitBytes === undefined ? {} : { limitBytes: args.limitBytes }),
+        ...(args.transaction === undefined ? {} : { transaction: args.transaction }) });
   } };
 }
-
