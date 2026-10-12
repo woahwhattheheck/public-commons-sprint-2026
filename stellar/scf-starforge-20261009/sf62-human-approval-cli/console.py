@@ -24,6 +24,8 @@ from operator_gate import (  # type: ignore[import-not-found]  # noqa: E402
     ReservationApprovalDenied, reserve_for_approval,
 )
 
+from expired_resume import operator_resume_selection, public_resume_review  # noqa: E402
+
 MAX_INPUT = 65_536
 
 
@@ -111,8 +113,11 @@ def reserve_reviewed(intent: dict, request: dict, *, policy_path: Path,
     os.umask(0o077)
     governor = Governor(str(ledger_path), policy, ck, ak, ok)
     try:
+        resume = operator_resume_selection(governor, request)
         estimate = governor.estimate(request)
         review, _ = review_payload(intent, request)
+        if resume is not None:
+            review['expired_authorization'] = public_resume_review(resume)
         if not estimate.get('approved'):
             raise Denied('SPEND_POLICY_ESTIMATE_DENIED')
         digest = review['request_sha256']
@@ -127,13 +132,16 @@ def reserve_reviewed(intent: dict, request: dict, *, policy_path: Path,
             if mapped != request or hashlib.sha256(canonical(mapped)).hexdigest() != digest:
                 raise Denied('MAPPED_INTENT_CHANGED_AFTER_OPERATOR_REVIEW')
             expiry = datetime.now(timezone.utc) + timedelta(minutes=5)
-            return issue_consent(ck, mapped, expiry.isoformat())
+            return issue_consent(ck, mapped, expiry.isoformat(),
+                **({'resume_release_journal_mac': resume['release_journal_mac']} if resume is not None else {}))
 
-        # This native gate refuses an old/duplicate request_id even if the owner
-        # supplied the exact same typed command again. It alone returns TRUE.
+        # Ordinary duplicate IDs remain refused. One authenticated expired
+        # generation needs BOTH its separately signed resume permit and this
+        # freshly reviewed, release-bound consent before the same gate returns TRUE.
         approved = reserve_for_approval(
             intent, actor=request['actor'], service=request['service'],
             governor=governor, consent_for_request=operator_issue,
+            **({'resume_authorization_token': resume['token']} if resume is not None else {}),
         )
         if approved is not True:
             raise Denied('NO_FRESH_DURABLE_RESERVATION')
@@ -148,6 +156,7 @@ def reserve_reviewed(intent: dict, request: dict, *, policy_path: Path,
             'reserved_atomic_units': request['max_amount'],
             'network': request['network'],
             'asset': request['asset'],
+            **({'resumed_expired_authorization': public_resume_review(resume)} if resume is not None else {}),
             'signed_requests': 0, 'wallet_calls': 0, 'payments_confirmed': 0,
             'next_action': 'SEPARATE_APPROVED_SIGNER_AND_TRUSTED_FINALITY_RECONCILIATION',
         }
