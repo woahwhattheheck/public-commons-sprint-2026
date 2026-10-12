@@ -485,6 +485,8 @@ def _source_html(source, label):
         ("Original request", "<pre>" + _esc(_display(request)) + "</pre>"),
         ("Provider request", "<pre>" + _esc(_display(source.get("providerRequest", {}))) + "</pre>"),
         ("Acquisition provenance", "<pre>" + _esc(_display(source.get("provenance", {}))) + "</pre>"),
+        ("Original capture relationship", "<pre>" + _esc(_display(source.get("original", {}))) + "</pre>"),
+        ("Explicit credential redactions", "<pre>" + _esc(_display(source.get("redactions", []))) + "</pre>"),
     ]
     if source.get("job"):
         entries.append(("Original Bulk job", "<pre>" + _esc(_display(source["job"])) + "</pre>"))
