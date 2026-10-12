@@ -10,7 +10,7 @@ import { publisher360GivingTools } from './catalog/360giving-workspace.mjs';
 import { PUBLISHER_CONNECTION_SCHEMA, PUBLISHER_MANIFEST_NAME, PUBLISHER_MANIFEST_SCHEMA, PUBLISHER_MAX_FILE,
   PUBLISHER_MAX_MANIFEST, PUBLISHER_SHA, PUBLISHER_ALIAS, PUBLISHER_KEY, PUBLISHER_UUID,
   plain, exact, check, counter, encode, digest, failure, sourceSelection, publisherExportId,
-  publisherManifest, parsePublisherManifest } from './360giving-contract.mjs';
+  publisherManifest, parsePublisherManifest, originalPublisherInput } from './360giving-contract.mjs';
 
 export { publisher360GivingTools } from './catalog/360giving-workspace.mjs';
 const stamp = value => [value.dev,value.ino,value.size,value.mtimeNs,value.ctimeNs,value.nlink].join(':');
@@ -276,7 +276,11 @@ export class Merchant360GivingWorkspaces {
     this.#retaining.set(key, pending); return pending;
   }
   async #submit(alias, action, requestId, input) {
-    const client = await this.#client(alias), record = await client.submit({ id: requestId, action, input });
+    const client = await this.#client(alias), state = await client.state();
+    if (!Array.isArray(state.requests)) throw failure('WORKSPACE_CHANGED', 'The original saved request inventory differs.');
+    const original = state.requests.find(record => record.id === requestId);
+    const retainedInput = originalPublisherInput(original, action, input);
+    const record = await client.submit({ id: requestId, action, input: retainedInput });
     const result = { workspace: alias, workspaceId: record.workspaceId, request: record };
     if (action === 'export' && record.status === 'complete') result.delivery = await this.#retain(alias, client, 'handoff', record,
       { requestId, edition: input.edition, decision: input.decision ?? null, candidate: input.candidate ?? null });
