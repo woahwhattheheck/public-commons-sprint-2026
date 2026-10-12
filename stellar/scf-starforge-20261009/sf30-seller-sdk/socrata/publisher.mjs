@@ -10,7 +10,8 @@ import { DATASET_SNAPSHOT_PARAMETER, openDatasetVersions } from '../dataset-refr
 import { datasetControl } from '../dataset-refresh/service.mjs';
 import { openPublisherDrafts, pendingDraftPublication } from '../dataset-refresh/workspace-state.mjs';
 import { readDatasetBuyerOffer, prepareDatasetBuyer } from '../dataset-refresh/buyer-handoff.mjs';
-import { DATASET_BINDING_SCHEMA, datasetContractSha256, prepareDatasetRelease } from '../../sf82-seller-pilot/release-dataset.mjs';
+import { DATASET_BINDING_SCHEMA, datasetContractSha256, prepareDatasetRelease,
+  DATASET_SOURCE_FILE_LIMITS, readDatasetSourceFiles, copyDatasetSourceFiles } from '../../sf82-seller-pilot/release-dataset.mjs';
 import { initReleaseStore, stageRelease, inspectRelease, activateRelease,
   rollbackRelease, releaseStatus, runActiveRelease } from '../../sf82-seller-pilot/releases.mjs';
 
@@ -148,9 +149,12 @@ export async function openSocrataPublisher({ directory } = {}) {
     const configBytes = await bytes(join(sourceDirectory, 'dataset.json'), 65536);
     const config = JSON.parse(configBytes), csv = await bytes(join(sourceDirectory, 'dataset.csv'), 256 * MiB);
     if (config.file !== 'dataset.csv') throw fault('SOCRATA_EXPORT_CONFIG', 'Use the original export with adjacent dataset.csv.', 400);
-    const sourceBytes = await bytes(join(sourceDirectory, 'source.json'));
+    const sourceBytes = await bytes(join(sourceDirectory, 'source.json'), DATASET_SOURCE_FILE_LIMITS.sourceBytes);
     const merchantBytes = await bytes(join(sourceDirectory, 'seller.json'), 65536);
     const source = JSON.parse(sourceBytes), merchant = JSON.parse(merchantBytes);
+    if (!Object.hasOwn(source ?? {}, 'sourceFiles') && sourceBytes.length > MiB)
+      throw fault('SOCRATA_SOURCE_SIZE', 'The original source provenance exceeds 1 MiB.', 413);
+    await readDatasetSourceFiles(sourceDirectory, source);
     const native = await loadDatasetConfig(join(sourceDirectory, 'dataset.json')), description = native.describe();
     if (!(await bytes(join(sourceDirectory, 'dataset.csv'), 256 * MiB)).equals(csv) ||
         !(await bytes(join(sourceDirectory, 'dataset.json'), 65536)).equals(configBytes))
@@ -173,6 +177,7 @@ export async function openSocrataPublisher({ directory } = {}) {
         for (const [name,data] of [['dataset.csv',csv],['dataset.json',configBytes],['seller.json',json(versioned)],
           ['source.json',sourceBytes],['binding.json',json(binding)],['original-seller.json',merchantBytes]])
           await writeNew(join(staged, name), data);
+        await copyDatasetSourceFiles(sourceDirectory, staged, source);
         await prepareDatasetRelease(staged);
         await syncDirectory(staged); await rename(staged, packageDirectory); await syncDirectory(packagesDirectory);
       } catch (error) { await rm(staged, { recursive: true, force: true }); throw error; }
