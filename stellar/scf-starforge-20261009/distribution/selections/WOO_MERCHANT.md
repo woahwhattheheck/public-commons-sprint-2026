@@ -30,6 +30,7 @@ The original source and guides travel under:
 Use the maintained commands and their complete original options:
 
 ```sh
+starforge woo-catalog --help
 starforge woo-managed --help
 starforge woo-seller --help
 starforge woo-buyer --help
@@ -39,6 +40,27 @@ starforge delivery --help
 starforge delivery-workspace --help
 starforge buyer-agent --help
 ```
+
+## Commission current product terms
+
+Open **WooCommerce → Stellar catalog** in the original WordPress admin. Select the
+existing products, save an exact plan, compare current prices and gateway settings,
+and apply the reviewed mapping with its retained request identity. The plan editor
+keeps saved editions, source files, named application history and complete workspace
+exports in the same database. The original Woo product editor controls prices,
+stock, visibility and downloads.
+
+The seller handoff carries current routes plus the frozen versions needed by
+earlier pending orders. Receive it with `starforge woo-catalog receive` into a new
+configuration, keeping the existing configuration, secret environment binding and
+outbox. Review that exact configuration through the original managed application.
+The versioned seller selects the original order's terms by authenticated lookup;
+commissioning does not alter its amount, generation or payment state.
+
+Use the complete original guide at
+`source/stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/CATALOG.md`.
+It includes CSV and full-workspace imports, the original request recovery commands,
+version limits and same-origin ingress requirements.
 
 ## Existing site, orders and purchased files
 
