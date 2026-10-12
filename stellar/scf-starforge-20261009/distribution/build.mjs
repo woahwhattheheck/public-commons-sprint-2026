@@ -2,16 +2,19 @@
 // MIT. Package one immutable Git snapshot without bundling or rewriting native source.
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { resolve, join, dirname, posix } from 'node:path';
+import { resolve, posix } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { openGitSource } from './git-source.mjs';
 import { createBrowserAssetIndex } from './browser-assets.mjs';
+import { readDistributionBuildPin, recoverCompletedDistribution, openDistributionBuild,
+  inspectDistributionBuild } from './build-state.mjs';
+
+export { inspectDistributionBuild };
 
 const ownPath = 'stellar/scf-starforge-20261009/distribution';
 const json = value => JSON.stringify(value, null, 2) + '\n';
 const digest = data => createHash('sha256').update(data).digest('hex');
-const supported = /\.(?:mjs|js|cjs|ts|mts|py|php|go|rs|json|toml|md|html|css|txt|sql|csv|xml|svg|png|woff2|service)$/i;
+const supported = /\.(?:mjs|js|cjs|ts|mts|py|php|go|rs|java|json|toml|md|html|css|txt|sql|csv|xml|svg|png|woff2|service)$/i;
 const excludedName = /(?:^test[_.-]|[.]test[.]|[.]spec[.]|(?:^|[-_])acceptance(?:[-_.]|$)|(?:^|[-_])focused[-_]?check[.]|_check[.])/i;
 const excludedDirs = new Set(['test', 'tests', 'fixtures', 'snapshots', 'node_modules', '__pycache__']);
 
@@ -63,12 +66,26 @@ process.stdout.write(JSON.stringify(result));
   return requests;
 }
 
-export async function buildDistribution({ repository = fileURLToPath(new URL('../../../', import.meta.url)), ref = 'HEAD', output,
-  offline = false, onProgress = () => {} }) {
+export async function buildDistribution({ repository = fileURLToPath(new URL('../../../', import.meta.url)), ref, output,
+  offline = false, resume = false, python = 'python3', onProgress = () => {} }) {
   if (typeof output !== 'string' || !output) throw new TypeError('An output directory is required');
+  if (typeof resume !== 'boolean' || typeof onProgress !== 'function') throw new TypeError('Expected a resume boolean and progress callback');
   const repo = resolve(repository), out = resolve(output);
-  const source = openGitSource({ repository: repo, ref, offline, onProgress });
+  let pin;
+  if (resume) {
+    const receipt = await recoverCompletedDistribution(out, ref);
+    if (receipt) {
+      onProgress({ phase: 'reused', sourceCommit: receipt.sourceCommit, archive: receipt.archive, sha256: receipt.sha256 });
+      return { ...receipt, reused: true };
+    }
+    pin = await readDistributionBuildPin(out);
+    if (ref === undefined && !pin) throw Object.assign(new Error('Resume this partial legacy output with its original --ref COMMIT.'),
+      { code: 'DISTRIBUTION_ORIGINAL_REF_REQUIRED' });
+  }
+  const source = openGitSource({ repository: repo, ref: ref ?? pin?.sourceCommit ?? 'HEAD', offline, onProgress });
   const { commit, tree } = source;
+  if (pin && pin.sourceCommit !== commit) throw Object.assign(new Error('The selected ref differs from the retained distribution source.'),
+    { code: 'DISTRIBUTION_SOURCE_COMMIT_CONFLICT' });
   const byPath = new Map(tree.map(item => [item.path, item]));
   const initial = source.readFiles([byPath.get(ownPath + '/distribution.json'), byPath.get('LICENSE')]);
   const spec = JSON.parse(initial.get(ownPath + '/distribution.json'));
@@ -201,49 +218,51 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
       [feature, Object.fromEntries(Object.entries(peers).map(([name, value]) => [name, value.version]))])),
     optionalRuntimeDependencies: runtimeDependencies, runtimePackageSources,
   };
-  // The caller chooses a new output directory. No prior archive or workspace is replaced.
-  source.progress('materializing', { files: selected.length, bytes: totalBytes });
-  await mkdir(out, { mode: 0o700 });
-  const stage = join(out, 'package');
-  await mkdir(stage, { mode: 0o700 });
-  for (const item of selected) {
-    const destination = join(stage, 'source', item.path);
-    await mkdir(dirname(destination), { recursive: true, mode: 0o755 });
-    await writeFile(destination, sources.get(item.path), { flag: 'wx', mode: item.mode === '100755' ? 0o755 : 0o644 });
-  }
-  for (const [name, content] of Object.entries({ 'package.json': metadataBytes, 'manifest.json': json(manifest), 'README.md': readme, 'LICENSE': license }))
-    await writeFile(join(stage, name), content, { flag: 'wx', mode: 0o644 });
-  const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  source.progress('packing', { files: selected.length });
-  const packed = JSON.parse(execFileSync(npm, ['pack', '--ignore-scripts', '--json', '--pack-destination', out],
-    { cwd: stage, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] }));
-  if (!Array.isArray(packed) || packed.length !== 1 || !/^[A-Za-z0-9_.-]+\.tgz$/.test(packed[0]?.filename ?? ''))
-    throw new TypeError('npm did not return one package archive');
-  const archive = join(out, packed[0].filename);
-  const receipt = { status: 'PACKAGED', packageName: spec.name, packageVersion: version,
-    sourceCommit: commit, archive, sha256: digest(await readFile(archive)),
-    integrity: packed[0].integrity, sourceFiles: selected.length, sourceBytes: totalBytes,
-    archiveBytes: packed[0].size, installedBytes: packed[0].unpackedSize, sourceAcquisition: source.metrics() };
-  await writeFile(join(out, 'distribution.json'), json(receipt), { flag: 'wx', mode: 0o600 });
-  source.progress('packaged', { files: selected.length, archiveBytes: receipt.archiveBytes, sha256: receipt.sha256 });
-  return receipt;
+  const files = selected.map(item => ({ path: 'source/' + item.path, bytes: sources.get(item.path),
+    mode: item.mode === '100755' ? 0o755 : 0o644 }));
+  for (const [path, bytes] of Object.entries({ 'package.json': metadataBytes, 'manifest.json': Buffer.from(json(manifest)),
+    'README.md': readme, 'LICENSE': license })) files.push({ path, bytes, mode: 0o644 });
+  const operation = await openDistributionBuild({ output: out, resume, manifest, files,
+    onProgress: (phase, details) => source.progress(phase, details) });
+  try {
+    const previous = await operation.completed();
+    if (previous) return { ...previous, reused: true };
+    source.progress('materializing', { files: selected.length, bytes: totalBytes, resume });
+    const materialization = await operation.materialize();
+    const packed = await operation.pack({ python });
+    const receipt = { status: 'PACKAGED', packageName: spec.name, packageVersion: version,
+      sourceCommit: commit, ...packed, sourceFiles: selected.length, sourceBytes: totalBytes,
+      sourceAcquisition: source.metrics(), materialization };
+    await operation.complete(receipt);
+    source.progress('packaged', { files: selected.length, archiveBytes: receipt.archiveBytes, sha256: receipt.sha256 });
+    return receipt;
+  } finally { await operation.close(); }
 }
 
 async function main(args) {
   if (args.length === 1 && args[0] === '--help') {
-    console.log('node build.mjs --out NEW_DIRECTORY [--repo CHECKOUT] [--ref COMMIT_OR_BRANCH] [--offline]'); return;
+    console.log('node build.mjs --out DIRECTORY [--repo CHECKOUT] [--ref COMMIT_OR_BRANCH] [--offline] [--resume] [--python EXECUTABLE]\n' +
+      'node build.mjs --out DIRECTORY --status'); return;
   }
   const options = {};
-  let offline = false;
+  let offline = false, resume = false, status = false;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--offline' && !offline) { offline = true; continue; }
-    if (!['--out', '--repo', '--ref'].includes(args[i]) || Object.hasOwn(options, args[i]) || !args[i + 1])
-      throw new TypeError('Expected --out NEW_DIRECTORY [--repo CHECKOUT] [--ref COMMIT_OR_BRANCH] [--offline]');
+    if (args[i] === '--resume' && !resume) { resume = true; continue; }
+    if (args[i] === '--status' && !status) { status = true; continue; }
+    if (!['--out', '--repo', '--ref', '--python'].includes(args[i]) || Object.hasOwn(options, args[i]) || !args[i + 1])
+      throw new TypeError('Expected --out DIRECTORY [--repo CHECKOUT] [--ref COMMIT] [--offline] [--resume] [--python EXECUTABLE]');
     options[args[i]] = args[i + 1];
     i++;
   }
-  console.log(json(await buildDistribution({ output: options['--out'], repository: options['--repo'], ref: options['--ref'], offline,
+  if (status) {
+    if (offline || resume || Object.keys(options).some(key => key !== '--out')) throw new TypeError('--status accepts only --out DIRECTORY');
+    console.log(json(await inspectDistributionBuild({ output: options['--out'] })).trimEnd()); return;
+  }
+  console.log(json(await buildDistribution({ output: options['--out'], repository: options['--repo'], ref: options['--ref'], offline, resume,
+    python: options['--python'],
     onProgress: event => process.stderr.write('[starforge build] ' + JSON.stringify(event) + '\n') })).trimEnd());
 }
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url)
-  main(process.argv.slice(2)).catch(error => { console.error(error.message); process.exitCode = 1; });
+  main(process.argv.slice(2)).catch(error => { console.error(error.code ? error.code + ': ' + error.message : error.message); process.exitCode = 1; });
+

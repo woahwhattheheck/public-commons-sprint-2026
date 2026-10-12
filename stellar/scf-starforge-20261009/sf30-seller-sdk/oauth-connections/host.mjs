@@ -81,7 +81,7 @@ function requestedScopes(values) {
  * token hash, secret value, authorization verifier or provider response body.
  */
 export async function openOAuthConnectionRegistry({
-  connections = [], env = process.env, allowLoopback = false, lookup,
+  connections = [], env = process.env, allowLoopback = false, lookup, agent,
 } = {}) {
   const definitions = normalizeOAuthHostConnections(connections);
   need(env !== null && typeof env === 'object', 'OAUTH_HOST_CONFIGURATION', 'Host environment references are required.');
@@ -107,7 +107,7 @@ export async function openOAuthConnectionRegistry({
       const identity = await inspectOAuthHostDirectory(directory, { directoryEnv: item.directoryEnv, ownerUid });
       need(!directories.has(directory), 'OAUTH_HOST_CONFIGURATION', 'Configure each private OAuth store under one alias.');
       directories.add(directory);
-      const core = await openOAuthConnection(directory, { env: environment, allowLoopback, lookup });
+      const core = await openOAuthConnection(directory, { env: environment, allowLoopback, lookup, agent });
       entries.set(item.alias, { ...item, directory, identity, core });
     }
   } catch (error) {

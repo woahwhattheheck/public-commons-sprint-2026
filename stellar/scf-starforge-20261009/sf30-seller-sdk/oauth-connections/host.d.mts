@@ -1,6 +1,6 @@
 // MIT. Declarations for the original host-owned alias registry.
 import type {
-  OAuthEnvironment, OAuthLookup, OAuthConnectionSnapshot, OAuthStatusRequest,
+  OAuthEnvironment, OAuthLookup, OAuthAgent, OAuthConnectionSnapshot, OAuthStatusRequest,
   OAuthBeginRequest, OAuthAuthorizationStart, OAuthCompleteRequest, OAuthFlow,
   OAuthApproveRequest, OAuthCommandReceipt, OAuthDiscardRequest, OAuthRefreshRequest,
   OAuthDisconnectRequest, OAuthRevokeRequest,
@@ -24,6 +24,8 @@ export interface OAuthRegistryOptions {
   env?: OAuthEnvironment;
   allowLoopback?: boolean;
   lookup?: OAuthLookup;
+  /** Borrowed runtime transport, shared by this registry's original connections. */
+  agent?: OAuthAgent;
 }
 export interface OAuthHostDirectoryIdentity {
   device: string;
