@@ -152,7 +152,7 @@ async function openOwned({directory,deployment,profileSha256,create,env,sdkFacto
       endpoint:prescientCatalogEndpoint(profile.endpoint),transport:deployment.transport,sourceAuth,assetAccess,create});
     const state=await original.getState();
     need(normalizeEndpoint(prescientCatalogEndpoint(profile.endpoint))===state.endpoint,'PRESCIENT_WORKSPACE_ENDPOINT_CHANGED');
-  }catch(error){await facade?.close().catch(()=>{});await native?.close().catch(()=>{});throw error;}
+  }catch(error){await original?.close().catch(()=>{});await facade?.close().catch(()=>{});await native?.close().catch(()=>{});throw error;}
   const workspace=Object.freeze({...original,
     discover:owned(async value=>{await requireApproved();return original.discover(value);}),
     saveQuery:owned(async value=>{await collectionScope(value);return original.saveQuery(value);}),
