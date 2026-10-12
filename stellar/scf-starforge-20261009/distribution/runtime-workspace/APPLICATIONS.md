@@ -21,6 +21,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Stellar agent application | stellar-application serve | Original HTTP and governed MCP requests, current subject authorization, retained results and aggregate spending |
 | OData source and live merchant | dataset odata | Saved source metadata, typed queries, retained editions, live paid pages, buyer handoffs and received records |
 | SEC EDGAR source operator | sec-edgar workspace | Original company facts and filings, retained source editions, merchant drafts and complete customer exports |
+| USGS water and native DSS | usgs-water managed | Original source selection, scientific review, saved editions, native HEC-DSS mapping and complete project receiving |
 | Google Sheets source authoring | sheets-source workspace serve | Retained workbook observations, typed source projections, original dataset publisher and merchant receiving |
 | NocoDB source authoring | nocodb-source workspace serve | Original database observations, complete captures, public projections, dataset publisher and retained workspace recovery |
 | Stellar asset investigation | dataset-workspace --stellar-expert | Original asset observations, exact editions, reviewed findings, native dataset and merchant releases, purchased page receiving |
@@ -609,3 +610,8 @@ Complete historical source editions, inspect field mappings, perform the named r
 ## WooCommerce merchant
 
 **WooCommerce merchant** starts the original SF104 native seller and the original SF98 notice worker together over the selected merchant configuration and same private outbox. Review retains the actual store, notice endpoint, source/configuration identities and named secret environment binding. First start binds the outbox to its original store under the existing exclusive delivery lease; subsequent launches reuse that binding and journal. Open uses the original Operations dashboard, and the WordPress order-console link keeps order, frozen-term, release and refund work in the actual configured store. Stop drains the original seller before awaiting delivery termination; a delivery failure also drains the seller. See the [complete managed Woo operating guide](../../sf104-woocommerce-merchant-bridge/MANAGED.md) for setup, original CLI, same-request recovery and same-outbox receiving. The installed command is `woo-managed`; no independent process manager or payment engine is added.
+
+
+## USGS Water and native DSS
+
+Choose **USGS water and native DSS** to review and save the original project, optional buyer and official HEC-DSS interpreter. Start opens the original Water workspace; Open uses its verified local listener, and Stop drains its original source/edition/native work before releasing the project. A received project can reopen its existing source edition and DSS export without a saved project selection or another native write. Changes to a saved selection or other reviewed inputs require reviewing the current application before the next Start. The existing managed-home adoption, operation history and restart behavior apply. See [the complete Water Applications guide](../../sf30-seller-sdk/usgs-water/MANAGED.md) for setup, received-project operation, command-line use and recovery.

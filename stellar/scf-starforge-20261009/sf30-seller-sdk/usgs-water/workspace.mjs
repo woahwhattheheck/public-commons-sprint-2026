@@ -46,7 +46,7 @@ function plainRuntime(session, editionId) {
   return { running: Boolean(session), editionId: editionId ?? null, merchantUrl: session?.merchantUrl ?? session?.url ?? null,
     paths: session?.paths ?? null, mode: session?.mode ?? null, snapshot: typeof session?.snapshot === 'function' ? null : session?.snapshot ?? null };
 }
-export async function startWaterWorkspace({ directory, port = 0, merchantPort = 0, nativeFactory, facilitator, transport, buyer, env = process.env } = {}) {
+export async function startWaterWorkspace({ directory, port = 0, merchantPort = 0, nativeFactory, facilitator, transport, buyer, env = process.env, application } = {}) {
   const project = await openWaterProject(resolve(directory), { transport, env });
   const token = randomBytes(32).toString('hex'), jobs = new Map(), purchasePlans = new Map();
   let origin, activeMerchant, activeEditionId, closing, stopping = false;
@@ -99,6 +99,11 @@ export async function startWaterWorkspace({ directory, port = 0, merchantPort = 
       let match;
       if (request.method === 'GET' && STATIC.has(path)) {
         const [file, mime] = STATIC.get(path); return send(response, 200, await readFile(join(HERE, file)), mime);
+      }
+      if (request.method === 'GET' && path === '/api/application' && application) {
+        const ready = await application();
+        if (!ready) fail('The managed workspace is starting.', 'WATER_MANAGED_STARTING', 503);
+        return send(response, 200, ready);
       }
       if (request.method === 'GET' && path === '/api/workspace') return send(response, 200, await view());
       if (request.method === 'GET' && path === '/api/status')
