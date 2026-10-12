@@ -733,9 +733,27 @@ $('repricing-save').addEventListener('click',() => run(async () => {
   $('repricing-history').scrollIntoView({behavior:'smooth',block:'nearest'});
 }));
 window.addEventListener('beforeunload',event => { if (dirty || sourceDirty || repricingDirty) { event.preventDefault(); event.returnValue = ''; } });
+
+async function applyScenarioFromHash() {
+  const match = /^#scenario-plan\/([a-f0-9-]{36})\/([a-zA-Z0-9._%-]+)$/.exec(location.hash);
+  if (!match) return false;
+  if ((dirty || sourceDirty || repricingDirty) && !window.confirm('Replace the current unsaved commercial assumptions with this saved scenario?')) return false;
+  const latest = await readState();
+  const result = await api('/api/planning/apply',{planId:match[1],scenarioId:decodeURIComponent(match[2])});
+  if (result.sellerSha256 !== latest.seller.sha256)
+    throw new Error('The seller configuration changed while this page was open. Refresh merchant pricing, then open the selected scenario again.');
+  current = latest; draft = structuredClone(result.commercial); editRevision = latest.revision; selected = 0;
+  pendingSave = null; renderInputs(); $('review-name').value = (result.label+' · '+result.scenarioLabel).slice(0,100);
+  markDirty(); history.replaceState(null,'',location.pathname);
+  notice('Applied '+result.scenarioLabel+' from '+result.label+'. Calculate and save this commercial review with the current operations source.');
+  return true;
+}
+window.addEventListener('hashchange',() => run(applyScenarioFromHash));
+
 async function initialize() {
   current = await api('/api/state'); draft = current.commercial; editRevision = current.revision; renderInputs();
   $('save-state').textContent = current.revision ? 'Loaded latest saved assumptions' : 'Unsaved review';
+  if (await applyScenarioFromHash()) return;
   notice(current.sourceError || (current.sellerChanged ? 'Seller configuration has changed since the latest review. Review its current payment choices before saving.'
     : 'Select the original operations source, enter merchant assumptions, then calculate or save a review.'),Boolean(current.sourceError));
 }

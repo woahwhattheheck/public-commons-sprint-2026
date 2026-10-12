@@ -174,3 +174,32 @@ If interruption occurs during this handoff, status shows `PREPARED`; the same
 explicit action and attempt hash finish the handoff. Each new refusal retains a
 separate attempt hash. The ordinary Recover action reads retained files; final
 accounting still uses the original SF36/SF82 workers and completed page receipts.
+
+
+## Carry the complete provider source through the original release
+
+A provider may add a **sourceFiles** array to its original **source.json**. Every entry binds one relative path, byte length and SHA-256:
+
+    {
+      "schema": "provider-specific-source-schema",
+      "sourceFiles": [
+        {"path":"capture/capture.json","bytes":1234,"sha256":"EXACT_64_HEX_SHA256"},
+        {"path":"capture/pages/ORIGINAL_RESPONSE_SHA256.xml","bytes":5678,"sha256":"EXACT_64_HEX_SHA256"}
+      ]
+    }
+
+Use the actual retained bytes and lengths. List the entire intended source closure, including its manifest, original responses, request log, mapping, lineage and source configuration. A source manifest that itself lists other files does not implicitly include them: add each member explicitly. This makes the release's file inventory complete and independently inspectable.
+
+The shared **sf82-seller-pilot/release-dataset.mjs** exports:
+
+- **readDatasetSourceFiles(packageDirectory, sourceObject)** verifies every declared canonical regular file and returns its normalized descriptors.
+- **copyDatasetSourceFiles(sourceDirectory, targetDirectory, sourceObject)** copies those exact bytes into an existing canonical package directory, using create-only private files, streamed hash checks and cleanup limited to files it created.
+- **DATASET_SOURCE_FILE_LIMITS** exposes the supported metadata, file and complete closure budgets.
+
+The original Publisher prepare action invokes these helpers before adopting a package. It keeps every declared member beneath the same immutable package directory. Original SF82 staging copies them beneath **dataset/**, records them in the original release manifest and release identity, and rechecks them during inspection and reopening. A compatible retained-release/facilitator change uses that same complete original file inventory. The versioned dataset controller, snapshot selection, merchant payment terms and SF88 customer acquisition remain their existing implementations.
+
+Provenance files cannot replace **dataset.csv**, **dataset.json**, **seller.json**, **source.json**, **binding.json**, or **original-seller.json**, nor use any of those file names as a parent directory. Paths cannot be absolute, contain traversal/control/backslash components, collide, or traverse symlinks. A changed member or missing original file rejects the prepared/reopened source, preserving the existing release.
+
+The complete closure supports up to 20,000 descriptors, 512 MiB per member and 2 GiB of members. The formatted descriptors must also fit 1 MiB, leaving space inside the original SF82 2 MiB source manifest for its dataset and service metadata. Source JSON with the optional closure may use up to 2 MiB; the original 1 MiB source limit remains in effect when the field is absent. Ordinary CSV, dataset configuration, seller and controller limits are unchanged.
+
+An absent **sourceFiles** field retains the original five-file release behavior and identities. It creates no additional source directories or provider-specific runtime. This is the same seam used by OAI-PMH to retain raw XML, unsuccessful HTTP exchanges, exact repository identities, record deletions, reviewed editions and mapping decisions with the published native dataset.

@@ -2,7 +2,9 @@
 // MIT. Original SF93 continuous incident operation and portable support handoff.
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {initializeIncidentStore,readPrivateFile} from './incident-store.mjs';
+import {initializeIncidentStore,readPrivateFile,openIncidentStore} from './incident-store.mjs';
+import {resolveDestination} from './notifications.mjs';
+import {inspectSlackDestination} from './notifications-slack.mjs';
 import {runIncidentWatch} from './watch.mjs';
 import {acknowledgeIncident,configureIncidents,incidentStatus,remindIncident,
   operateNotification,pruneIncidents,exportIncident} from './incident-operator.mjs';
@@ -12,6 +14,7 @@ const usage=`SF93 merchant incident operations (Node 22+, Linux flock)
 init      --state NEW_DIRECTORY --config PRIVATE_CONFIG
 run       --state DIRECTORY
 status    --state DIRECTORY [--details]
+destination --state DIRECTORY
 ack       --state DIRECTORY --incident ID --revision N --by OPERATOR [--note-file PRIVATE_FILE]
 notify    --state DIRECTORY --incident ID --revision N
 retry     --state DIRECTORY --event ID --attempts N --by OPERATOR
@@ -21,11 +24,12 @@ prune     --state DIRECTORY
 export    --state DIRECTORY --incident ID --revision N --workspace PRIVATE_SF74_FILE --route ID --out NEW_DIRECTORY
 
 run owns only the watcher. SIGINT/SIGTERM finishes its current state write and releases its kernel lease.
-Notifications read their configured URL/signing key environment references in that process.
+Notifications use the configured webhook URL/signing key or Slack token environment reference.
+destination reads the current Slack actor/workspace; its command sends no notification.
 status contains private merchant operational metadata; --details also includes acknowledgment notes.
 See INCIDENT_OPERATIONS.md for original runtime startup, webhook signature and case import.
 `;
-const shapes={init:['config'],run:[],status:[],ack:['incident','revision','by','note-file'],
+const shapes={init:['config'],run:[],status:[],destination:[],ack:['incident','revision','by','note-file'],
   notify:['incident','revision'],retry:['event','attempts','by'],cancel:['event','attempts','by'],
   configure:['config','config-revision'],prune:[],export:['incident','revision','workspace','route','out']};
 function parse(args) {
@@ -65,6 +69,15 @@ export async function main(args=process.argv.slice(2)) {
       onReady:state=>process.stdout.write(JSON.stringify({event:'WATCH_READY',...state})+'\n')});}
     finally {process.removeListener('SIGINT',stop);process.removeListener('SIGTERM',stop);}
   } else if(command==='status')result=await incidentStatus({directory,details:Boolean(v.details)});
+  else if(command==='destination') {
+    const state=await(await openIncidentStore(directory)).read();
+    const selected=resolveDestination(state.config,process.env);
+    if(selected.reason)result={accepted:false,reason:selected.reason};
+    else if(selected.transport!=='slack')result={accepted:true,reason:'WEBHOOK_CONFIGURATION_RESOLVED',
+      destinationId:selected.binding.id};
+    else result=await inspectSlackDestination(selected,state.config.notification);
+    if(!result.accepted)process.exitCode=1;
+  }
   else if(command==='ack')result=await acknowledgeIncident({...incident,by:v.by,
     notes:v['note-file']?await privateText(v['note-file'],2000):''});
   else if(command==='notify')result=await remindIncident(incident);
@@ -77,3 +90,4 @@ export async function main(args=process.argv.slice(2)) {
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
   main().catch(error=>{process.stderr.write(error.message+'\n');process.exitCode=1;});
 }
+
