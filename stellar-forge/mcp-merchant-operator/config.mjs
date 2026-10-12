@@ -105,7 +105,7 @@ export async function readPublisherConfiguration(path) {
     const saved = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(join(directory, 'workspace.json'), input.kind === 'timescale' ? 16384 : 4096)));
     const workspaceSchema = input.kind === 'timescale' ? 'stellar-forge.timescale-workspace.v1'
       : 'stellar-forge.' + input.kind + '-publisher-workspace.v1';
-    if (saved.schema !== workspaceSchema)
+    if (saved.schema !== workspaceSchema && !(input.kind === 'frictionless' && saved.schema === 'stellar-forge.frictionless-publisher-workspace.v2'))
       throw failure('CONFIGURATION_ERROR', 'The declared kind must match the original retained publisher workspace.');
     if (input.kind === 'timescale') {
       if (typeof saved.id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(saved.id))
