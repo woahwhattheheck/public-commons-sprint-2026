@@ -331,8 +331,18 @@ export function mountOperations({container,api:transport,plan,inform:notify,muta
             result=await api('/api/operations/import?name='+encodeURIComponent(data.name),raw,{raw:true,headers:{'content-type':'application/zip','X-Request-ID':requestId,'X-Recorded-By':encodeURIComponent(actor)}});
           }
           if(result.selectedInstallation){
-            retainedInstallationSessions.set(result.id,{selected:{id:result.selectedInstallation.id,
-              revision:result.selectedInstallation.revision},mode:'saved'});
+            installationView?.dispose();installationView=null;
+            const retained=retainedInstallationSessions.get(result.id)||{};
+            if(!retained.initialized){
+              let stored;try{stored=JSON.parse(sessionStorage.getItem('sf47.installations.'+result.id)||'null');}catch{}
+              if(stored?.schema==='sf47.installation-editor.v1'&&stored.caseId===result.id){
+                for(const key of ['drafts','pending','accepted','notice'])
+                  if(!Object.hasOwn(retained,key)&&Object.hasOwn(stored,key))retained[key]=stored[key];
+              }
+            }
+            Object.assign(retained,{initialized:true,selected:{id:result.selectedInstallation.id,
+              revision:result.selectedInstallation.revision},mode:'saved',draftKey:null});
+            retainedInstallationSessions.set(result.id,retained);
             view.tab='installations';
           }
           await loadCases(result.id);inform('Received complete operations source with its retained history.');return;
