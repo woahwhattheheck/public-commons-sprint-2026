@@ -49,7 +49,7 @@ const policy = {
 
 export function publisherTools(tool) {
   return [
-    tool('merchant_publishers', 'List host-declared retained PostgreSQL/SQLite/MySQL/MongoDB/Google Sheets/Sheet Best/SFTP/ArcGIS publisher aliases and process ownership. Does not open a workspace, start a timer or query a source.', {}, [], read),
+    tool('merchant_publishers', 'List host-declared retained PostgreSQL/SQLite/MySQL/MongoDB/Google Sheets/Sheet Best/SFTP/ArcGIS publisher aliases, including Census ACS, and process ownership. Does not open a workspace, start a timer or query a source.', {}, [], read),
     tool('merchant_publisher_open', 'Open the original retained publisher and its single native scheduler under the original workspace lease. Previously enabled refreshes resume as in the original browser server. An already-open alias returns the same instance.', selected, ['publisher'], { idempotent: true, openWorld: true }),
     tool('merchant_publisher_close', 'Close this exact process-owned publisher instance. Original scheduler stops future intervals, original active work drains or cancels through its existing close method, and the workspace lease is released. Saved policy and operations remain.', { ...selected, instanceId: uuid }, ['publisher', 'instanceId'], { destructive: true }),
     tool('merchant_publisher_status', 'Read native saved plans, extraction runs, events and active progress, with original pagination. Local source paths are omitted; native hashes and identities are unchanged. Open the alias first.', {
@@ -172,6 +172,8 @@ function operationFailure(error) {
 /** Only constant original driver imports are selected by a host-declared kind.
  * No module, path, connection URL, source JSON or executable is an MCP argument. */
 async function originalFactory(kind) {
+  if (kind === 'bls-labor') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/bls-labor/publisher/model.mjs')).openBlsPublisher;
+  if (kind === 'census-acs') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/publisher/model.mjs')).openCensusPublisher;
   if (kind === 'postgres') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/model.mjs')).openPostgresPublisher;
   if (kind === 'sqlite') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/publisher/model.mjs')).openSqlitePublisher;
   if (kind === 'mysql') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/publisher/model.mjs')).openMysqlPublisher;
@@ -180,7 +182,7 @@ async function originalFactory(kind) {
   if (kind === 'sheetbest') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/sheetbest/publisher/model.mjs')).openSheetBestPublisher;
   if (kind === 'sftp') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/publisher/model.mjs')).openSftpPublisher;
   if (kind === 'arcgis') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/publisher.mjs')).openArcgisPublisher;
-  throw failure('PUBLISHER_KIND_INVALID', 'Choose a host-declared PostgreSQL, SQLite, MySQL, MongoDB, Google Sheets, Sheet Best, SFTP or ArcGIS publisher.');
+  throw failure('PUBLISHER_KIND_INVALID', 'Choose a host-declared Census ACS, PostgreSQL, SQLite, MySQL, MongoDB, Google Sheets, Sheet Best, SFTP or ArcGIS publisher.');
 }
 
 export class MerchantPublisher {

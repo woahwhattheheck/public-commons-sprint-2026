@@ -11,12 +11,14 @@ Keep the original buyer state, operator workspace, and dossiers under the custom
 ~~~sh
 SF88_DIR=/absolute/installed/source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli
 CUSTOMER_ROOT=/absolute/private/customer
-node "$SF88_DIR/node/examples/linkup-dossier-cli.mjs" open \
+starforge linkup-research open \
   --runtime "$SF88_DIR" \
   --state "$CUSTOMER_ROOT/buyer" \
   --workspace-id research-team \
   --dossiers "$CUSTOMER_ROOT/dossiers"
 ~~~
+
+The maintained package exposes `starforge linkup-research`. From an original source checkout, the same command is `node "$SF88_DIR/node/examples/linkup-dossier-cli.mjs"` followed by the unchanged action and arguments.
 
 Open the complete local address printed by the command. Its session fragment authorizes this local workspace. Existing trusted provider modules can be joined with --edition-adapter /absolute/provider-adapters.mjs; they retain their current names, and this command registers Linkup alongside them.
 
@@ -27,7 +29,7 @@ Choose **New**, give the dossier a decision-oriented title, then use **Questions
 Export the exact completed intent to a private research result file:
 
 ~~~sh
-node "$SF88_DIR/node/examples/linkup-dossier-cli.mjs" export-envelope \
+starforge linkup-research export-envelope \
   --runtime "$SF88_DIR" \
   --state "$CUSTOMER_ROOT/buyer" \
   --workspace-id research-team \
@@ -62,6 +64,8 @@ The existing application supports the whole research workflow:
 4. Add another saved search or answer as a new edition. Earlier excerpts, notes, citations, and findings stay in the original dossier history.
 5. In **Revisions**, choose the earlier and later saved states to compare added sources, changed content/citations, selections, and analysis.
 
+Selection and evidence-role changes save immediately. Notes typed while a save is finishing remain drafts, including a return to the earlier saved text. The workspace keeps the newer text and enables **Save note** when the active save finishes; save that draft to include it in the report.
+
 The provider's inline citation numbering remains unchanged. The dossier's report references identify its own selected sources; they do not reinterpret or renumber the text inside the provider answer.
 
 ## Export and receive the completed work
@@ -73,7 +77,7 @@ For a receiving user, choose **Open dossier file** in the original research work
 The inner records can also be checked directly:
 
 ~~~sh
-node "$SF88_DIR/node/examples/linkup-dossier-cli.mjs" verify-envelope \
+starforge linkup-research verify-envelope \
   --file "$CUSTOMER_ROOT/linkup-search-october.research.json"
 ~~~
 
@@ -84,7 +88,7 @@ This checks the canonical original byte encodings, their SHA-256 values and leng
 Applications can attach the saved purchase through the same existing store. Supply the current dossier/question IDs and revision from the original workspace.
 
 ~~~sh
-node "$SF88_DIR/node/examples/linkup-dossier-cli.mjs" receive \
+starforge linkup-research receive \
   --runtime "$SF88_DIR" \
   --state "$CUSTOMER_ROOT/buyer" \
   --workspace-id research-team \
@@ -98,7 +102,19 @@ node "$SF88_DIR/node/examples/linkup-dossier-cli.mjs" receive \
 
 The command returns the current dossier, original purchase binding and edition ID. If a committed reply was lost, repeating the same exact edition/label recovers it without creating another revision. A different new edition requires the current expected revision; stale writes remain conflicts.
 
-Programmatic integration uses createLinkupEditionProvider(buyer,{workspaceId}) and receiveLinkupEdition(store,dossierId,{provider,intentId,questionId,label,expectedRevision}) from node/examples/linkup-dossier.mjs. The original Buyer and openDossierStore objects own execution and persistence.
+Programmatic integration uses the maintained package export:
+
+~~~js
+import { createLinkupEditionProvider, receiveLinkupEdition }
+  from '@tokenjunkielabs/starforge-merchant/buyer/linkup-dossier';
+
+const provider = createLinkupEditionProvider(buyer, {workspaceId: 'research-team'});
+await receiveLinkupEdition(store, dossierId, {
+  provider, intentId, questionId, label, expectedRevision
+});
+~~~
+
+The original Buyer and openDossierStore objects own execution and persistence. The existing saved-response reader is exported as @tokenjunkielabs/starforge-merchant/buyer/linkup.
 
 ## Reference editions and whole customer backup
 

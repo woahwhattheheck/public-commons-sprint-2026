@@ -263,3 +263,19 @@ Retain the project source pointer and capture directories, publisher workspaces,
 - [QCEW aggregation classification](https://www.bls.gov/cew/classifications/aggregation/agg-level-titles.htm)
 - [BLS geography concepts](https://www.bls.gov/bls/geography.htm)
 - [BLS linking and reuse policy](https://www.bls.gov/bls/linksite.htm)
+
+## Installed command and merchant MCP
+
+The maintained Starforge distribution includes the complete application. Invoke
+`starforge bls-publisher` with the same command and arguments shown above. The
+installed `./seller/bls-labor`, `./seller/bls-labor/publisher`,
+`./seller/bls-labor/publisher/plan` and `./seller/bls-labor/release` module exports
+refer to these original source modules.
+
+The original merchant MCP host configuration accepts a publisher whose `kind`
+is `bls-labor` and whose workspace is the original BLS publisher directory.
+Existing `merchant_publisher_*` tools open that workspace through
+`openBlsPublisher` and retain its original capture selection, extraction,
+review, publication, recurring execution, recovery and buyer handoff. Configure
+the workspace on the host, then use the same merchant publisher operations that
+serve the other maintained source applications.
