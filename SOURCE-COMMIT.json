@@ -1,0 +1,50 @@
+{
+  "sha": "ab242b54c999972be2467ef122b11c23c770b7db",
+  "node_id": "C_kwDOUDKwt9oAKGFiMjQyYjU0Yzk5OTk3MmJlMjQ2N2VmMTIyYjExYzIzYzc3MGI3ZGI",
+  "url": "https://api.github.com/repos/woahwhattheheck/public-commons-sprint-2026/git/commits/ab242b54c999972be2467ef122b11c23c770b7db",
+  "html_url": "https://github.com/woahwhattheheck/public-commons-sprint-2026/commit/ab242b54c999972be2467ef122b11c23c770b7db",
+  "author": {
+    "name": "woahwhattheheck",
+    "email": "brycembusiness2@gmail.com",
+    "date": "2026-10-12T16:45:10Z"
+  },
+  "committer": {
+    "name": "woahwhattheheck",
+    "email": "brycembusiness2@gmail.com",
+    "date": "2026-10-12T16:45:10Z"
+  },
+  "tree": {
+    "sha": "612aa27a208a3c37b4de63209d41a0ef2d352431",
+    "url": "https://api.github.com/repos/woahwhattheheck/public-commons-sprint-2026/git/trees/612aa27a208a3c37b4de63209d41a0ef2d352431"
+  },
+  "message": "Bind complete OECD source-rights edition to original native launcher and source inventory",
+  "parents": [
+    {
+      "sha": "6dd5257a22f6dcd2b403d46ccc4151eca59b05f5",
+      "url": "https://api.github.com/repos/woahwhattheheck/public-commons-sprint-2026/git/commits/6dd5257a22f6dcd2b403d46ccc4151eca59b05f5",
+      "html_url": "https://github.com/woahwhattheheck/public-commons-sprint-2026/commit/6dd5257a22f6dcd2b403d46ccc4151eca59b05f5"
+    }
+  ],
+  "verification": {
+    "verified": false,
+    "reason": "unsigned",
+    "signature": null,
+    "payload": null,
+    "verified_at": null
+  },
+  "commitText": "tree 612aa27a208a3c37b4de63209d41a0ef2d352431\nparent 6dd5257a22f6dcd2b403d46ccc4151eca59b05f5\nauthor woahwhattheheck <brycembusiness2@gmail.com> 1791823510 -0400\ncommitter woahwhattheheck <brycembusiness2@gmail.com> 1791823510 -0400\n\nBind complete OECD source-rights edition to original native launcher and source inventory",
+  "originalApiResponse": {
+    "schema": "stellar-forge.retained-github-response.v1",
+    "url": "https://api.github.com/repos/woahwhattheheck/public-commons-sprint-2026/git/commits/ab242b54c999972be2467ef122b11c23c770b7db",
+    "bytes": 1310,
+    "sha256": "325a729ed9b4273f0526dd6a177a5c56351772894a2c74395a5bd805eda5abb0",
+    "content": "{\"sha\":\"ab242b54c999972be2467ef122b11c23c770b7db\",\"node_id\":\"C_kwDOUDKwt9oAKGFiMjQyYjU0Yzk5OTk3MmJlMjQ2N2VmMTIyYjExYzIzYzc3MGI3ZGI\",\"url\":\"https://api.github.com/repos/woahwhattheheck/public-commons-sprint-2026/git/commits/ab242b54c999972be2467ef122b11c23c770b7db\",\"html_url\":\"https://github.com/woahwhattheheck/public-commons-sprint-2026/commit/ab242b54c999972be2467ef122b11c23c770b7db\",\"author\":{\"name\":\"woahwhattheheck\",\"email\":\"brycembusiness2@gmail.com\",\"date\":\"2026-10-12T16:45:10Z\"},\"committer\":{\"name\":\"woahwhattheheck\",\"email\":\"brycembusiness2@gmail.com\",\"date\":\"2026-10-12T16:45:10Z\"},\"tree\":{\"sha\":\"612aa27a208a3c37b4de63209d41a0ef2d352431\",\"url\":\"https://api.github.com/repos/woahwhattheheck/public-commons-sprint-2026/git/trees/612aa27a208a3c37b4de63209d41a0ef2d352431\"},\"message\":\"Bind complete OECD source-rights edition to original native launcher and source inventory\",\"parents\":[{\"sha\":\"6dd5257a22f6dcd2b403d46ccc4151eca59b05f5\",\"url\":\"https://api.github.com/repos/woahwhattheheck/public-commons-sprint-2026/git/commits/6dd5257a22f6dcd2b403d46ccc4151eca59b05f5\",\"html_url\":\"https://github.com/woahwhattheheck/public-commons-sprint-2026/commit/6dd5257a22f6dcd2b403d46ccc4151eca59b05f5\"}],\"verification\":{\"verified\":false,\"reason\":\"unsigned\",\"signature\":null,\"payload\":null,\"verified_at\":null}}"
+  },
+  "commitTextRecovery": {
+    "method": "Native metadata reconstruction accepted only by the original complete Git object SHA-1",
+    "authorOffset": "-0400",
+    "committerOffset": "-0400",
+    "messageTrailingNewline": false,
+    "gitObject": "ab242b54c999972be2467ef122b11c23c770b7db"
+  }
+}
