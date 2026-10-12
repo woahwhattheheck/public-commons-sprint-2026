@@ -268,6 +268,14 @@ MCP action requests are sent once. If transport loses the reply, `MCP_OUTCOME_UN
 
 A held-file read ID belongs to the native client instance and selected file/SHA. A one-shot CLI connection closes its owned read on exit; the returned receipt preserves what was read, and the next invocation resumes the same selector/SHA/offset without that expired ID. The complete downloader keeps one client for the whole transfer and uses the original receiver’s persistent checkpoint across process restarts.
 
+### Installed TypeScript contract
+
+The source-owned distribution pairs `./sensorthings/mcp`, `./sensorthings/mcp-protocol` and `./sensorthings/download` with their adjacent `.d.mts` declarations. The installed exports expose `MerchantSensorThingsWorkspaces`, `readSensorThingsWorkspaceConfiguration`, the same fourteen-tool catalogue, and `inspectSensorThingsFiles` / `downloadSensorThingsFiles`. The complete installed receiving example is in [DISTRIBUTION.md](DISTRIBUTION.md#5-operate-through-the-same-writer).
+
+`SensorThingsToolArguments` and `SensorThingsToolResults` map the original tool names to their actual envelopes. `SensorThingsActionPayloads` retains the original action-specific required fields, including explicit source review, native public payment terms, seller generation and buyer whole-operation budget. Runtime UUID, hash, range and field validation remains authoritative; a TypeScript annotation is not an approval or a native execution receipt.
+
+The capture overloads distinguish the legacy full object, compact summary and journal parts. For `CaptureJournalPage<'tasks'>`, rows contain task metadata and attempt/parent counts; use each task row's `record.id` as `taskId` with the corresponding attempt/parent part. Later page inputs retain the first reply's revision. `ValueCell` distinguishes missing, null and exact source value/type; numeric tokens and every projected table cell remain strings. `FileMetadata` distinguishes a fixed file with complete byte/SHA identity from a generated review whose identity is returned only by its first retained read. Durable download options bind the real alias, persistent workspace UUID and exact native selection; they do not synthesize a new provider export.
+
 ### Large capture journals
 
 The complete local capture journal remains unchanged. The operating view shows its first 100 issues with exact `issueCount` and `issuesTruncated`; all remaining original issues are available through their capture pages. For a large request history, use the same capture ID with `part=summary`, `tasks`, `pages`, `issues`, `attempts` or `parents` on `GET /api/captures/:id`. The fourteen-tool MCP catalog exposes these same optional fields on `merchant_sensorthings_capture`; the CLI exposes `capture --part PART`.

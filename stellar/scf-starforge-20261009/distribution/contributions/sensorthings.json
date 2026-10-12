@@ -17,13 +17,23 @@
     "./sensorthings/dataset": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/dataset.mjs",
     "./sensorthings/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/provider.mjs",
     "./sensorthings/schema": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/schema.mjs",
-    "./sensorthings/mcp": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/mcp.mjs",
-    "./sensorthings/mcp-protocol": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/mcp-protocol.mjs",
+    "./sensorthings/mcp": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/mcp.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/mcp.mjs"
+    },
+    "./sensorthings/mcp-protocol": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/mcp-protocol.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/mcp-protocol.mjs"
+    },
     "./sensorthings/portable": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/portable.mjs",
     "./sensorthings/files": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/files.mjs",
     "./sensorthings/setup": {
       "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/setup.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/setup.mjs"
+    },
+    "./sensorthings/download": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/download.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/download.mjs"
     }
   },
   "merchantProviders": {
