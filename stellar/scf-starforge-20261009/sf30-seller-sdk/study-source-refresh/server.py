@@ -19,6 +19,7 @@ from application import call
 from delivery import extract_package, import_package
 from model import ROOT, StudyError, dump, fail, member, parse, private_directory, read
 from workspace import Workspace, close_active_intakes, file_identity
+from operator_runtime import operator_lease
 
 ASSETS = {"/": ("index.html", "text/html; charset=utf-8"),
           "/app.js": ("app.js", "text/javascript; charset=utf-8"),
@@ -92,6 +93,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(raw)
                 return
             self.authenticated()
+            if path == "/api/access":
+                return self.result({"ok": True, "result": self.server.operator_identity})
             if path != "/download":
                 fail("ROUTE_NOT_FOUND")
             self.download(parse_qs(urlsplit(self.path).query, keep_blank_values=True))
@@ -212,6 +215,11 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def serve(directory, port=0, open_browser=False):
+    with operator_lease(directory) as identity:
+        return _serve(directory, port, open_browser, identity)
+
+
+def _serve(directory, port, open_browser, identity):
     if type(port) is not int or not 0 <= port <= 65535:
         fail("PORT_INVALID")
     directory = private_directory(directory)
@@ -219,28 +227,37 @@ def serve(directory, port=0, open_browser=False):
     workspace.close()
     connection_file = directory / "connection.json"
     if connection_file.exists():
-        token = parse(read(connection_file, 16384)).get("token")
+        token = parse(read(connection_file, 131072)).get("token")
         if not isinstance(token, str) or len(token) < 40:
             fail("OPERATOR_TOKEN_INVALID")
     else:
         token = secrets.token_urlsafe(40)
     server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
-    server.directory, server.token, server.stopping = directory, token, False
-    base = "http://127.0.0.1:" + str(server.server_port)
-    dump(connection_file, {"schema": "stellar-forge.study-operator-connection.v1",
-                          "base_url": base, "token": token, "pid": os.getpid()})
-    print(json.dumps({"base_url": base, "connection_file": str(connection_file)}), flush=True)
-    if open_browser:
-        webbrowser.open(base + "/#" + token)
     previous = None
-    if threading.current_thread() is threading.main_thread():
-        previous = signal.getsignal(signal.SIGTERM)
-        signal.signal(signal.SIGTERM, lambda *_: threading.Thread(target=server.shutdown, daemon=True).start())
     try:
+        server.directory, server.token, server.stopping = directory, token, False
+        base = "http://127.0.0.1:" + str(server.server_port)
+        server.operator_identity = dict(identity, base_url=base)
+        dump(connection_file, {"schema": "stellar-forge.study-operator-connection.v1",
+                              "base_url": base, "token": token, "pid": os.getpid(),
+                              "operator": server.operator_identity})
+        print(json.dumps({"base_url": base, "connection_file": str(connection_file)}), flush=True)
+        if open_browser:
+            webbrowser.open(base + "/#" + token)
+        if threading.current_thread() is threading.main_thread():
+            previous = signal.getsignal(signal.SIGTERM)
+
+            def request_stop(*_):
+                server.stopping = True
+                threading.Thread(target=server.shutdown, daemon=True).start()
+
+            signal.signal(signal.SIGTERM, request_stop)
         server.serve_forever(poll_interval=0.2)
     finally:
         server.stopping = True
-        close_active_intakes()
-        server.server_close()
-        if previous is not None:
-            signal.signal(signal.SIGTERM, previous)
+        try:
+            close_active_intakes()
+        finally:
+            server.server_close()
+            if previous is not None:
+                signal.signal(signal.SIGTERM, previous)
