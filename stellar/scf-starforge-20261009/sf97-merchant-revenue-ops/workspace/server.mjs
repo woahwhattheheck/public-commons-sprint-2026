@@ -2,6 +2,8 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { pipeline } from 'node:stream/promises';
+import { openBundleDownload } from '../economics/archive.mjs';
 import { openWorkspace, fault } from './model.mjs';
 import { openPlanningWorkspace } from '../planning/workspace.mjs';
 
@@ -14,6 +16,9 @@ export async function startWorkspace({port = 8457, ...options} = {}) {
   const planning = await openPlanningWorkspace({model,directory:options.directory});
   const assets = new Map(await Promise.all([
     ['/', 'index.html','text/html; charset=utf-8'],
+    ['/economics','../economics/index.html','text/html; charset=utf-8'],
+    ['/economics/browser.mjs','../economics/browser.mjs','text/javascript; charset=utf-8'],
+    ['/economics/style.css','../economics/style.css','text/css; charset=utf-8'],
     ['/browser.mjs','browser.mjs','text/javascript; charset=utf-8'],
     ['/style.css','style.css','text/css; charset=utf-8'],
     ['/planning','../planning/index.html','text/html; charset=utf-8'],
@@ -31,17 +36,20 @@ export async function startWorkspace({port = 8457, ...options} = {}) {
       res.end(req.method === 'HEAD' ? undefined : bytes);
     }
     const json = (status,value) => reply(status,'application/json; charset=utf-8',value);
-    async function body() {
-      if (req.headers['content-type']?.split(';')[0].trim().toLowerCase() !== 'application/json')
-        throw fault('JSON_REQUIRED','Use application/json.',415);
+    function authorize() {
       const supplied = Buffer.from(String(req.headers['x-sf97-workspace'] ?? ''));
       const expected = Buffer.from(token);
       if (supplied.length !== expected.length || !timingSafeEqual(supplied,expected))
         throw fault('WORKSPACE_SESSION_REQUIRED','Reload this workspace before saving.',403);
+    }
+    async function body(maximum = 2 * 1024 * 1024) {
+      if (req.headers['content-type']?.split(';')[0].trim().toLowerCase() !== 'application/json')
+        throw fault('JSON_REQUIRED','Use application/json.',415);
+      authorize();
       let size = 0; const chunks = [];
       for await (const chunk of req) {
         size += chunk.length;
-        if (size > 2 * 1024 * 1024) throw fault('REQUEST_TOO_LARGE','Commercial inputs exceed 2 MiB.',413);
+        if (size > maximum) throw fault('REQUEST_TOO_LARGE','Input exceeds the documented workspace size limit.',413);
         chunks.push(chunk);
       }
       try {
@@ -59,6 +67,31 @@ export async function startWorkspace({port = 8457, ...options} = {}) {
       if (req.method === 'GET' || req.method === 'HEAD') {
         const asset = assets.get(url.pathname);
         if (asset) return reply(200,asset.type,asset.bytes);
+        if (url.pathname === '/api/economics/state') return json(200,{...await model.economics.state(),token});
+        const costFile = /^\/cost-files\/(source|export|edition)\/([a-f0-9-]{36})(?:\/(.+))?$/.exec(url.pathname);
+        if (costFile) {
+          if (costFile[1] === 'source' && !costFile[3]) {
+            const value=await model.economics.sourceDownload(costFile[2]);
+            return reply(200,'application/octet-stream',value.bytes,{'content-disposition':'attachment; filename="'+value.source.metadata.name.replace(/[^a-zA-Z0-9_.-]/g,'_')+'"'});
+          }
+          if (costFile[1] === 'edition' && costFile[3]) {
+            const name=decodeURIComponent(costFile[3]),bytes=await model.economics.download(costFile[2],name);
+            return reply(200,name.endsWith('.csv')?'text/csv; charset=utf-8':'application/json; charset=utf-8',bytes,
+              {'content-disposition':'attachment; filename="'+name.replace(/[^a-zA-Z0-9_.-]/g,'_')+'"'});
+          }
+          if (costFile[1] === 'export' && !costFile[3]) {
+            const file=await model.economics.exportFile(costFile[2]),opened=await openBundleDownload(file);
+            try{
+              res.writeHead(200,{'content-type':'application/x-tar','content-length':String(file.bytes),
+                'content-disposition':'attachment; filename="'+file.filename+'"','cache-control':'no-store',
+                'x-content-type-options':'nosniff','referrer-policy':'no-referrer','cross-origin-resource-policy':'same-origin',
+                'content-security-policy':POLICY});
+              if(req.method==='HEAD')res.end();else await pipeline(opened.stream(),res);
+            }finally{await opened.close();}
+            return;
+          }
+          throw fault('NOT_FOUND','Cost file not found.',404);
+        }
         if (url.pathname === '/api/state') return json(200,{...await model.state(),token});
         if (url.pathname === '/api/planning/state') return json(200,await planning.list());
         const match = /^\/(files|repricing-files|planning-files)\/([a-f0-9-]{36})\/(.+)$/.exec(url.pathname);
@@ -76,7 +109,31 @@ export async function startWorkspace({port = 8457, ...options} = {}) {
         throw fault('NOT_FOUND','Workspace page not found.',404);
       }
       if (req.method !== 'POST') return reply(405,'text/plain','Use GET or POST.',{allow:'GET, HEAD, POST'});
-      const input = await body();
+      const upload = /^\/api\/economics\/uploads\/([a-f0-9-]{36})$/.exec(url.pathname);
+      if (upload) {
+        authorize();let metadata;
+        const header=req.headers['x-sf97-source'];
+        if(typeof header!=='string'||header.length>12000)throw fault('SOURCE_METADATA_REQUIRED','Provide the original source metadata header.');
+        try{metadata=JSON.parse(decodeURIComponent(header));}catch{throw fault('SOURCE_METADATA_INVALID','Source metadata header is invalid.');}
+        return json(200,await model.economics.upload({requestId:upload[1],metadata,body:req}));
+      }
+      const input = await body(url.pathname.startsWith('/api/economics/') ? 32*1024*1024 : 2*1024*1024);
+      const costActions = {
+        '/api/economics/list':()=>model.economics.list(input),
+        '/api/economics/pricing':()=>model.economics.pricing(input.version),
+        '/api/economics/source-inspect':()=>model.economics.inspectSource(input.sourceId,input),
+        '/api/economics/map-charges':()=>model.economics.mapCharges(input),
+        '/api/economics/capture':()=>model.economics.capture(input),
+        '/api/economics/weights':()=>model.economics.weights(input),
+        '/api/economics/preview':()=>model.economics.preview(input),
+        '/api/economics/save':()=>model.economics.save(input),
+        '/api/economics/edition':()=>model.economics.edition(input.edition),
+        '/api/economics/compare':()=>model.economics.compare(input),
+        '/api/economics/proposal':()=>model.economics.proposal(input),
+        '/api/economics/apply-pricing':()=>model.economics.applyPricing(input),
+        '/api/economics/export':()=>model.economics.bundle(input),
+      };
+      if(Object.hasOwn(costActions,url.pathname))return json(200,await costActions[url.pathname]());
       if (url.pathname === '/api/planning/source') return json(200,await planning.source(input.version));
       if (url.pathname === '/api/planning/preview') return json(200,await planning.preview(input));
       if (url.pathname === '/api/planning/save') return json(200,await planning.save(input));

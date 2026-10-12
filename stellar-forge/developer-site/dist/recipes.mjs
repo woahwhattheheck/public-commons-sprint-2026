@@ -126,7 +126,7 @@ export const ROLES = Object.freeze({
       "Save and capture query drafts. Add relevance cases, judge original document identities and evaluate the saved query variants.",
       "Review native outcomes and customer reports, select the evaluated variant, and prepare its original merchant package.",
       "Stage the saved package, compare retained releases, select the reviewed generation and start its seller. Generate the customer client from the actual running contract.",
-      "For agent operations, declare the same workspace and host runtime settings in a private connection file. The 43 OpenSearch tools cover the same authoring, deployment, upgrade, rollback and customer delivery workflow."
+      "For agent operations, declare the same workspace and host runtime settings in a private connection file. The 44 OpenSearch tools cover the same authoring, deployment, upgrade, rollback and customer delivery workflow, including recovery of intact customer exports."
     ],
     "docs": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/workspace/README.md",
     "label": "TERMINAL / OPENSEARCH WORKSPACE",

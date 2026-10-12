@@ -1,0 +1,22 @@
+{
+  "schema": "stellar-forge.grpc-source.v1",
+  "target": "127.0.0.1:50051",
+  "transport": {
+    "mode": "plaintext"
+  },
+  "metadata": [
+    {
+      "name": "authorization",
+      "valueEnv": "GRPC_DEMO_AUTHORIZATION"
+    }
+  ],
+  "limits": {
+    "timeoutMs": 30000,
+    "readyTimeoutMs": 10000,
+    "maxInFlight": 8,
+    "maxRequestBytes": 1048576,
+    "maxResponseBytes": 1048576,
+    "maxJsonRequestBytes": 2097152,
+    "maxJsonResponseBytes": 2097152
+  }
+}

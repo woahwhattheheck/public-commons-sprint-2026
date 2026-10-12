@@ -11,6 +11,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Redis and Valkey merchant authoring | redis workspace open | Saved products, source profiles, live previews, customer packages and managed release controls |
 | Dataset preview | dataset-workspace | A dataset configuration file or retained dataset state, native query and preview |
 | Dataset buyer | buyer-dataset-workspace | Original acquisitions, received rows and files, private customer history and Python analysis |
+| Request collections | buyer-collections-workspace | Grouped request review, original approvals and runs, retained outcomes and verified customer file downloads |
 | PostgreSQL publisher | postgres-publisher serve | Plans, extraction, candidate review, publication, schedules and buyer handoff |
 | Google Sheets publisher | sheets-publisher serve | Original authorization/source, range plans, extraction, review and recurring publication |
 | PostgreSQL authoring | postgres-workspace | Original database inspection, query contracts, merchant package and release |
@@ -56,6 +57,21 @@ For a new PostgreSQL or Sheets publisher, select **Initialize a new publisher** 
 Once its workspace.json exists with the reviewed source and target, a later launch reopens without --create. The original database, plans, candidates, review/publication history and schedules remain in that workspace. An incomplete or different directory is retained and reports the original error; Applications does not recreate or erase it.
 
 Source configurations can retain their existing environment references and renewable credential files. Applications does not add provider credentials to source packages or replace the original OAuth/database connection manager.
+
+## Request collections
+
+Choose **Applications → New application → Request collections**. Select the
+private collection store and its existing initialized SF88 inbox. A new store
+requires that inbox; an existing store remembers the same original binding.
+Review, save and start through the existing managed lifecycle, then open its
+announced private URL.
+
+The current source runs selected original requests through its native browser
+approval, retains the owned run across lost responses, supports Pause and original
+recovery, and downloads saved customer responses alongside complete collection
+exports. Older selected collection runtimes retain their original terminal
+command. Follow [Request collections in Applications](COLLECTIONS_APPLICATIONS.md)
+for the complete source selection, setup, operating and reopening workflow.
 
 ## Object buyer receiving and reopening
 
