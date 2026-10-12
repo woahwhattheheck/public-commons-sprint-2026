@@ -129,12 +129,19 @@ export async function openODataWorkspace({ directory, fetchImpl = globalThis.fet
     }
     return result;
   }
-  async function startCapture({planId,label}) {
+  async function startCapture({id,planId,label}) {
+    if(id!==undefined)id=identifier(id,'edition ID');
     return store.mutate(state=>{
       const selected=find(state.plans,planId,'Plan'),connection=find(state.connections,selected.connectionId,'Connection');
+      const requestedLabel=String(label||selected.name).slice(0,128),existing=id?state.editions.find(value=>value.id===id):null;
+      if(existing){
+        if(existing.planId!==planId||existing.label!==requestedLabel||existing.catalogHash!==selected.catalogHash||stable(existing.query)!==stable(selected.query))
+          throw fault('ODATA_EDITION_EXISTS','This edition ID already belongs to a different saved query or label.',409);
+        return summary(existing);
+      }
       if(!selected.reviewedAt) throw fault('ODATA_QUERY_REVIEW','Review the displayed query before importing its records.',409);
       if(connection.catalogHash!==selected.catalogHash) throw fault('ODATA_CATALOG_CHANGED','The service schema changed. Create and review a new plan from its current metadata.',409);
-      const record={id:randomUUID(),label:String(label||selected.name).slice(0,128),planId,connectionId:connection.id,
+      const record={id:id||randomUUID(),label:requestedLabel,planId,connectionId:connection.id,
         catalog:copy(connection.catalog),catalogHash:connection.catalogHash,query:copy(selected.query),reviewNote:selected.reviewNote,
         createdAt:now(),status:'PAUSED',pages:[],rowCount:0,sourceCount:null,nextLink:selected.query.url,
         completedAt:null,error:null,decisions:[]};state.editions.push(record);return summary(record);
@@ -305,7 +312,9 @@ export async function openODataWorkspace({ directory, fetchImpl = globalThis.fet
   async function restore(bundle){
     if(bundle?.schema!=='stellar-forge.odata-transfer.v1'||bundle.state?.schema!=='stellar-forge.odata-workspace.v1'||!Array.isArray(bundle.files))
       throw fault('ODATA_TRANSFER_SCHEMA','Use an original OData workspace transfer.');
-    const current=await store.read();if(current.connections.length||current.editions.length||current.plans.length)throw fault('ODATA_RESTORE_TARGET','Restore into an empty workspace.',409);
+    const transferSha256=digest(formatted(bundle)),current=await store.read();
+    if(current.restoredFrom?.sha256===transferSha256){const {sha256,...counts}=current.restoredFrom;return counts;}
+    if(current.connections.length||current.editions.length||current.plans.length)throw fault('ODATA_RESTORE_TARGET','Restore into an empty workspace.',409);
     const permitted=/^(sources\/[a-f0-9]{64}|exports\/[a-f0-9]{64}\/(dataset\.csv|dataset\.json|source\.json|rows\.json|seller\.json)|live\/products\/[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\/(profile\.json|package\/[a-z-]+\.json|buyers\/[a-f0-9]{64}\/(request|offers|buyer|handoff|response)\.json|receiving\/[a-f0-9]{64}\/(original-response\.json|rows\.jsonl|receiving\.json|next-request\.json)))$/;
     const seen=new Set(),validated=[];
     for(const file of bundle.files){if(!permitted.test(file.path)||seen.has(file.path))throw fault('ODATA_TRANSFER_PATH','The transfer contains an unsupported or repeated file path.');
@@ -332,9 +341,14 @@ export async function openODataWorkspace({ directory, fetchImpl = globalThis.fet
     if([...required].some(path=>!seen.has(path)))throw fault('ODATA_TRANSFER_MISSING','The transfer omits a referenced source, export, or live service file.');
     for(const file of validated){const target=join(root,file.path);await mkdir(resolve(target,'..'),{recursive:true,mode:0o700});
       try{await writeNew(target,file.bytes);}catch(error){if(error.code!=='EEXIST')throw error;if(digest(await readFile(target))!==digest(file.bytes))throw fault('ODATA_RESTORE_CHANGED','A receiving file differs.',409);}}
-    return store.mutate(state=>{const revision=state.revision;Object.assign(state,copy(bundle.state));state.revision=revision;state.restoredAt=now();
+    return store.mutate(state=>{
+      if(state.restoredFrom?.sha256===transferSha256){const {sha256,...counts}=state.restoredFrom;return counts;}
+      if(state.connections.length||state.editions.length||state.plans.length)throw fault('ODATA_RESTORE_TARGET','The receiving workspace changed during restore.',409);
+      const revision=state.revision;Object.assign(state,copy(bundle.state));state.revision=revision;state.restoredAt=now();
       for(const record of state.exports)record.directory=join(root,'exports',record.id);
-      for(const record of state.editions)if(record.status==='IMPORTING')record.status='PAUSED';return {connections:state.connections.length,editions:state.editions.length,exports:state.exports.length,liveProducts:state.liveProducts?.length||0};});
+      for(const record of state.editions)if(record.status==='IMPORTING')record.status='PAUSED';
+      const counts={connections:state.connections.length,editions:state.editions.length,exports:state.exports.length,liveProducts:state.liveProducts?.length||0};
+      state.restoredFrom={sha256:transferSha256,...counts};return counts;});
   }
   async function close(){closed=true;for(const control of running.values())control.abort();await Promise.allSettled([...completions.values()]);await store.settle();}
   return {directory:root,state,connect,refreshConnection,plan,reviewPlan,startCapture,capture,pause,edition,rows,reviewEdition,compare,
