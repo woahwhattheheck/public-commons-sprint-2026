@@ -82,7 +82,9 @@ export async function createPMTilesController({workspace,runtime}){
     const review=await readJson(join(root,'review.json'),MAX_METADATA_BYTES),prepared=review.inspection.prepared;
     if(path==='style.json')return {kind:'json',value:resolveStyle(prepared,{tilesBase:'/preview/'+token+'/tiles',resourcesBase:'/preview/'+token+'/resources'})};
     if(path==='manifest.json')return {kind:'json',value:{release,rights:prepared.sources.map(row=>row.rights),layers:prepared.layerRows,
-      glyphCoverage:prepared.glyphCoverage}};
+      glyphCoverage:prepared.glyphCoverage,sources:prepared.sources,edition:review.edition,
+      review:{id:review.id,reviewSha256:review.reviewSha256,reviewer:review.reviewer,note:review.note,
+        createdAt:review.createdAt,inspectionRequestId:review.inspectionRequestId,previousReleaseId:review.previousReleaseId}}};
     const tile=path.match(/^tiles\/([A-Za-z0-9_-]+)\/(\d+)\/(\d+)\/(\d+)$/);
     if(tile){
       const row=prepared.sources.find(row=>row.nativeId===tile[1]);need(row,'PMTILES_PREVIEW_SOURCE_NOT_FOUND');
