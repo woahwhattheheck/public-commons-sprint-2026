@@ -42,7 +42,7 @@ export class Store {
   const payload={schema:'dspace-repository-workspace-handoff/v1',created_at:new Date().toISOString(),meta,records,blobs};
   return gzipSync(Buffer.from(JSON.stringify({...payload,manifest_sha256:digest(payload)})));
  }
- restore(bytes){
+ restore(bytes,savedOperation=null){
   const decoded=gunzipSync(bytes);const obj=JSON.parse(decoded);
   if(obj.schema!=='dspace-repository-workspace-handoff/v1')fail('INVALID_ARCHIVE','Use a complete repository workspace handover.');
   const {manifest_sha256,...payload}=obj;if(digest(payload)!==manifest_sha256)fail('INVALID_ARCHIVE','The handover manifest does not match.');
@@ -50,13 +50,15 @@ export class Store {
   const allowed=new Set(['profiles','captures','requests','selections','plans','executions','assets','operations']);
   for(const row of obj.records)if(!allowed.has(row.kind)||typeof row.id!=='string')fail('INVALID_ARCHIVE','Unknown handover record type.');
   for(const b of obj.blobs){const raw=Buffer.from(b.base64,'base64');if(raw.length!==b.bytes||digest(raw)!==b.sha256)fail('INVALID_ARCHIVE','An original source/file digest differs.');}
+  const result={records:obj.records.length,files:obj.blobs.length,format:'legacy-gzip-json',...(savedOperation?.archive??{})};
   this.tx(()=>{
    this.db.exec('DELETE FROM records; DELETE FROM blobs;');
    for(const b of obj.blobs)this.blob(Buffer.from(b.base64,'base64'));
    for(const r of obj.records)this.put(r.kind,r.id,r.value,r.summary||r.value);
    for(const m of obj.meta){if(['revision','selected_profile_id','tools'].includes(m.key))this.meta(m.key,m.value);}
+   if(savedOperation)this.put('operations',savedOperation.id,{...savedOperation,receiving_result:result});
   });
-  return {records:obj.records.length,files:obj.blobs.length};
+  return result;
  }
  async nativeFile(){
   const directory=path.join(this.directory,'exports');fs.mkdirSync(directory,{recursive:true,mode:0o700});

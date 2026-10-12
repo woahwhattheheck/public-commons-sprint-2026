@@ -91,6 +91,7 @@ export class RepositoryWorkspace{
    const op=reservation.existing;
    if(op.status==='COMPLETE')return {...op.result,revision:this.store.revision(),replayed:true};
    if(op.status==='FAILED')fail(op.error.code,op.error.message,op.error.status);
+   if(action==='restore'&&op.receiving_result){this.store.finish(input.operationId,op.receiving_result);return {...op.receiving_result,revision:this.store.revision(),replayed:true};}
    if(action==='execute-plan'&&this.store.maybe('executions',input.operationId))return {execution_id:input.operationId,status:this.store.get('executions',input.operationId).status,revision:this.store.revision(),replayed:true};
    fail('OPERATION_RUNNING','Inspect this original operation before changing or repeating it.',409);
   }
@@ -108,7 +109,7 @@ export class RepositoryWorkspace{
    else if(action==='execute-plan')result=await this.execute(input);
    else if(action==='recover-execution')result=await this.recover(input);
    else if(action==='prepare-reversal')result=await this.reversal(input);
-   else if(action==='restore'){const savedOp=this.store.get('operations',input.operationId);result=this.store.restore(base64(input.content_b64));this.store.tx(()=>this.put('operations',savedOp));}
+   else if(action==='restore'){const savedOp=this.store.get('operations',input.operationId);result=this.store.restore(base64(input.content_b64),savedOp);}
    else fail('UNKNOWN_ACTION','Unknown repository workspace action.',404);
    this.store.finish(input.operationId,result);return {...result,revision:this.store.revision()};
   }catch(error){
@@ -150,29 +151,36 @@ export class RepositoryWorkspace{
  }
  importCapture(input){
   const sourceBytes=base64(input.content_b64),source=JSON.parse(sourceBytes.toString('utf8'));
-  if(source.schema!=='dspace-source-capture/v1'||!Array.isArray(source.requests))fail('INVALID_CAPTURE','Use a dspace-source-capture/v1 source bundle.');
+  if(source.schema!=='dspace-source-capture/v1'||!Array.isArray(source.requests)||!Array.isArray(source.files??[]))fail('INVALID_CAPTURE','Use a dspace-source-capture/v1 source bundle.');
   const url=validateProfile({base_url:source.base_url,auth_env:{}});
   let p=this.store.list('profiles').find(p=>p.base_url===url);
   if(!p){const r=this.saveProfile({name:source.name||'Imported repository',base_url:url,auth_env:{token:'',user:'',password:''}});p=this.profile(r.profile_id);}
   const requestIds=[];
   for(const r of source.requests){
    const u=new URL(r.url);if(!u.href.startsWith(url+'/'))fail('SOURCE_TARGET_MISMATCH','Every imported response must belong to the exact repository.');
-   let bytes;
+   let bytes=null;
    if(r.body_base64!==undefined)bytes=base64(r.body_base64);
    else if(typeof r.body_text==='string')bytes=Buffer.from(r.body_text);
    else if(r.body!==undefined)bytes=Buffer.from(JSON.stringify(r.body));
-   else fail('SOURCE_BODY_REQUIRED','Bundle original response bytes or a labeled native response object.');
-   const sha=digest(bytes);if(r.body_sha256&&sha!==r.body_sha256)fail('SOURCE_DIGEST_MISMATCH','Original response digest differs.');
-   let body=r.body;try{body=JSON.parse(bytes.toString('utf8'));}catch{body=bytes.toString('utf8');}
+   else if(!r.error)fail('SOURCE_BODY_REQUIRED','Bundle original response bytes or retain the original request error.');
+   const sha=bytes?digest(bytes):null;if(bytes&&r.body_sha256&&sha!==r.body_sha256)fail('SOURCE_DIGEST_MISMATCH','Original response digest differs.');
+   if(bytes&&typeof r.body_bytes==='number'&&bytes.length!==r.body_bytes)fail('SOURCE_DIGEST_MISMATCH','Original response length differs.');
+   let body=null;if(bytes){try{body=JSON.parse(bytes.toString('utf8'));}catch{body=bytes.toString('utf8');}}
    if(r.status!==undefined&&r.status!==null&&(!Number.isInteger(r.status)||r.status<100||r.status>599))fail('INVALID_CAPTURE','An observed HTTP status must be an integer from 100 through 599, or null when unknown.');
-   const req={id:id('source'),source_request_id:r.id??null,method:r.method||'GET',url:r.url,status:r.status??null,received_at:r.received_at??null,started_at:r.received_at??null,content_type:r.content_type??null,body,body_sha256:sha,body_bytes:bytes.length,source_mode:r.source_mode||source.source_mode||(r.body_base64||r.body_text?'retained-response-bytes':'retained-native-object')};
-   this.store.tx(()=>{this.store.blob(bytes);this.put('requests',req);});requestIds.push(req.id);
+   const req={id:id('source'),source_request_id:r.id??null,method:r.method||'GET',url:r.url,status:r.status??null,started_at:r.started_at??null,received_at:r.received_at??null,body_completed_at:r.body_completed_at??null,response_url:r.response_url??null,redirected:r.redirected??null,response_headers:clone(r.response_headers??null),content_type:r.content_type??null,error:r.error??null,body,body_sha256:sha,body_bytes:bytes?.length??null,source_mode:r.source_mode||source.source_mode||(bytes===null?'retained-request-error':r.body_base64!==undefined||r.body_text!==undefined?'retained-response-bytes':'retained-native-object')};
+   this.store.tx(()=>{if(bytes)this.store.blob(bytes);this.put('requests',req);});requestIds.push(req.id);
   }
   const sourceContext=Object.fromEntries(Object.entries(source).filter(([key])=>!['requests','files'].includes(key)));
   const sourceBundle=this.store.tx(()=>this.store.blob(sourceBytes));
   const requests=this.requests(requestIds),capture={id:id('capture'),label:source.name||input.filename||'Imported repository source',profile_id:p.id,tool:'source-import',args:{},created_at:now(),principal:null,result:{content:[{type:'text',text:'Retained original repository source imported.'}]},requests:requestIds,objects:extractObjects(requests),assets:[],source_mode:source.source_mode||'source-import',source_context:sourceContext,source_bundle:{...sourceBundle,name:path.basename(input.filename||'repository-source.json')}};
-  for(const f of source.files||[]){if(!f.content_b64)continue;const bytes=base64(f.content_b64);if(f.sha256&&digest(bytes)!==f.sha256)fail('SOURCE_DIGEST_MISMATCH','Original file digest differs.');capture.assets.push(this.asset(bytes,f.name||f.path,f.content_type||'application/octet-stream',{profile_id:p.id,bitstream_uuid:f.bitstream_uuid}).id);}
-  capture.object_count=capture.objects.length;capture.request_count=requestIds.length;capture.is_error=requests.some(r=>r.status>=400);this.save('captures',capture);
+  for(const f of source.files||[]){
+   if(f.content_b64===undefined)continue;
+   const bytes=base64(f.content_b64);if(f.sha256&&digest(bytes)!==f.sha256)fail('SOURCE_DIGEST_MISMATCH','Original file digest differs.');
+   if(typeof f.bytes==='number'&&bytes.length!==f.bytes)fail('SOURCE_DIGEST_MISMATCH','Original file length differs.');
+   const sourceFile=Object.fromEntries(Object.entries(f).filter(([key])=>key!=='content_b64'));
+   capture.assets.push(this.asset(bytes,f.name||f.original_name||f.path,f.content_type||'application/octet-stream',{profile_id:p.id,bitstream_uuid:f.bitstream_uuid,item_uuid:f.item_uuid,bundle_uuid:f.bundle_uuid,bundle_name:f.bundle_name,source_url:f.source_url,source_file:sourceFile}).id);
+  }
+  capture.object_count=capture.objects.length;capture.request_count=requestIds.length;capture.is_error=failedFinalResponses(requests);this.save('captures',capture);
   return {capture_id:capture.id,profile_id:p.id,object_count:capture.object_count};
  }
  selection(input){
@@ -368,9 +376,11 @@ export class RepositoryWorkspace{
   const initial=created._embedded?.item?.metadata??created.sections?.traditionalpageone??{};
   const operations=[];
   for(const [field,expected] of Object.entries(step.after.metadata)){
-   const values=(metadata[field]??[]).map(v=>v.value),before=(initial[field]??[]).map(v=>v.value),after=expected.map(v=>v.value);
+   const values=(metadata[field]??[]).map(v=>v.value),after=expected.map(v=>v.value);
    if(json(values)===json(after))continue;
-   if(json(values)!==json(before))fail('SOURCE_CONFLICT','Staff changed a draft field after creation. Review the current draft before completing it.',409);
+   const fieldPath='/metadata/'+field.replace(/~/g,'~0').replace(/\//g,'~1');
+   const unchanged=checkChanges({metadata},[{path:fieldPath,before:{present:Object.hasOwn(initial,field),value:initial[field]},after:{present:true,value:expected}}],'before');
+   if(unchanged.length)fail('SOURCE_CONFLICT','Staff changed a draft field or its qualifiers after creation. Review the current draft before completing it.',409);
    const path='/sections/traditionalpageone/'+field.replace(/~/g,'~0').replace(/\//g,'~1');
    operations.push({op:'add',path,value:expected.map(({place,...v})=>v)});
   }
@@ -400,7 +410,7 @@ export class RepositoryWorkspace{
  file(kind,recordId){
   if(['handoff','backup'].includes(kind))return {bytes:this.store.snapshot(),filename:'DSpace_Repository_Workspace.'+kind+'.json.gz',contentType:'application/gzip'};
   if(kind==='assets'){const a=this.store.get('assets',recordId);return {bytes:this.store.bytes(a.sha256),filename:a.name,contentType:a.media_type};}
-  if(kind==='responses'){const r=this.store.get('requests',recordId);if(!r.body_sha256)fail('NO_BODY','This authentication exchange has no saved body.',404);return {bytes:this.store.bytes(r.body_sha256),filename:'DSpace_Response_'+recordId+'.'+(/json/.test(r.content_type)?'json':'bin'),contentType:r.content_type};}
+  if(kind==='responses'){const r=this.store.get('requests',recordId);if(!r.body_sha256)fail('NO_BODY','This source request has no saved response body.',404);return {bytes:this.store.bytes(r.body_sha256),filename:'DSpace_Response_'+recordId+'.'+(/json/.test(r.content_type)?'json':'bin'),contentType:r.content_type};}
   if(kind==='source-bundles'){const capture=this.store.get('captures',recordId),source=capture.source_bundle;if(!source)fail('NO_SOURCE_BUNDLE','This capture was received through the original MCP session.',404);return {bytes:this.store.bytes(source.sha256),filename:source.name,contentType:'application/json'};}
   const record=this.read(kind,recordId,{offset:0,limit:100});return {bytes:Buffer.from(JSON.stringify(record,null,2)+'\n'),filename:'DSpace_'+kind+'_'+recordId+'.json',contentType:'application/json'};
  }
@@ -430,7 +440,7 @@ export class RepositoryWorkspace{
     const original={...this.store.get('operations',input.operationId),archive:{sha256,bytes}},fd=fs.openSync(absolute,'r'),signature=Buffer.alloc(16);try{fs.readSync(fd,signature,0,16,0);}finally{fs.closeSync(fd);}
     let result;
     if(signature.equals(Buffer.from('SQLite format 3\0')))result=this.store.restoreNative(absolute,original);
-    else {result=this.store.restore(fs.readFileSync(absolute));this.store.tx(()=>this.put('operations',original));result.format='legacy-gzip-json';}
+    else result=this.store.restore(fs.readFileSync(absolute),original);
     result={...result,sha256,bytes};this.store.finish(input.operationId,result);return {...result,revision:this.store.revision()};
    }catch(error){const safe=Object.assign(new Error(cleanError(error)),{code:error.code||'RECEIVING_FAILED',status:error.status||500});this.store.finish(input.operationId,null,safe);throw safe;}
   });this.tail=task.catch(()=>{});return task;
