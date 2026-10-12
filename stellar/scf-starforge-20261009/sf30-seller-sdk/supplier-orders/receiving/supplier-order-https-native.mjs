@@ -55,8 +55,10 @@ async function post(url,ca,body,headers={}){
   });
 }
 async function localPeer({path,cert,key,port:listenPort,token}){
-  await directory(path);const sockets=new Set(),active=new Set();
+  await directory(path);const sockets=new Set(),active=new Set();let stopping=false;
   const server=createServer({cert,key},(req,res)=>{
+    if(stopping){req.destroy();res.destroy();return;}
+    req.setTimeout(30000,()=>req.destroy(new Error('The original local peer body stalled.')));
     const task=(async()=>{
       assert.equal(req.headers.authorization,'Bearer '+token);assert.equal(req.method,'POST');
       const parts=[];let count=0;for await(const part of req){count+=part.length;assert.ok(count<=64*1024*1024);parts.push(part);}assert.ok(req.complete);
@@ -72,7 +74,7 @@ async function localPeer({path,cert,key,port:listenPort,token}){
     })();active.add(task);void task.catch(e=>res.destroy(e)).finally(()=>active.delete(task));
   });server.on('connection',s=>{sockets.add(s);s.once('close',()=>sockets.delete(s));});
   await new Promise((r,j)=>{server.once('error',j);server.listen(listenPort,'127.0.0.1',r);});
-  return{server,async close(){const stopped=new Promise((r,j)=>server.close(e=>e&&e.code!=='ERR_SERVER_NOT_RUNNING'?j(e):r()));while(active.size)await Promise.allSettled([...active]);for(const s of sockets)s.destroy();await stopped;}};
+  return{server,async close(){stopping=true;const stopped=new Promise((r,j)=>server.close(e=>e&&e.code!=='ERR_SERVER_NOT_RUNNING'?j(e):r()));for(const s of sockets)s.destroy();while(active.size)await Promise.allSettled([...active]);await stopped;}};
 }
 export async function runSupplierOrderHttpsReceiving({
   directory:runDirectory,producerDirectory,customerDirectory,
@@ -183,6 +185,7 @@ export async function runSupplierOrderHttpsReceiving({
       assert.equal(previous.status,'PASS');assert.equal(previous.lifetimes,'CLOSED');assert.deepEqual(previous.source,source);
       for(const file of previous.artifacts){const body=await bytes(file.path,256*1024*1024);assert.equal(body.length,file.bytes);assert.equal(sha(body),file.sha256);}
       for(const row of previous.transmissions){assert.equal(producer.transport.get({transmissionId:row.id}).sha256,row.sha256);assert.equal(customer.transport.get({transmissionId:row.id}).sha256,row.sha256);}
+      const retainedLocal=customer.operation({requestId:id('customer-local-review')});assert.equal(retainedLocal.state,'COMPLETE');assert.equal(retainedLocal.result.draftId,previous.exported.localDraftId);assert.equal(customer.draft({draftId:previous.exported.localDraftId}).sha256,previous.exported.localDraftSha256);
       await customer.close();customer=null;await producer.close();producer=null;closed=true;return{...previous,reused:true};
     }
     if(prerequisites)await phase('00-complete-installed-snapshot-receiving',async()=>{
@@ -277,13 +280,15 @@ export async function runSupplierOrderHttpsReceiving({
       const received=await customer.importWorkspace({requestId:id('customer-receive'),path:file.path,expectedBytes:file.bytes,expectedSha256:file.sha256});assert.equal(received.state,'COMPLETE',JSON.stringify(received.error));
       for(const sourceRow of producer.transport.list({}).items){const retained=customer.transport.get({transmissionId:sourceRow.id});assert.equal(retained.sha256,sourceRow.sha256);assert.equal(retained.foreign,true);}
       await assert.rejects(customer.transport.send({requestId:id('foreign-send-denied'),transmissionId:invoice.transmissionId,expectedRevision:customer.transport.get({transmissionId:invoice.transmissionId}).revision}),{code:'ORDER_TRANSMISSION_FOREIGN'});
-      const seed=customer.newDraft({kind:'ORDERRESPONSE',orderIds:[source.orderId]}),local=customer.saveDraft({requestId:id('customer-local-review'),kind:seed.kind,orderIds:seed.orderIds,document:seed.document,expectedOrderRevisions:seed.orderRevisions,expectedOrderStateSha256:seed.orderStateSha256,reason:'The customer retains a local review after receiving complete original transport history.'});
+      const localRequest=await valueFile('requests/customer-local-review',()=>{const seed=customer.newDraft({kind:'ORDERRESPONSE',orderIds:[source.orderId]});return{requestId:id('customer-local-review'),kind:seed.kind,orderIds:seed.orderIds,document:seed.document,expectedOrderRevisions:seed.orderRevisions,expectedOrderStateSha256:seed.orderStateSha256,reason:'The customer retains a local review after receiving complete original transport history.'};});
+      const local=customer.saveDraft(copy(localRequest));assert.equal(local.state,'COMPLETE',JSON.stringify(local.error));assert.equal(local.id,localRequest.requestId);
       const before=customer.draft({draftId:local.result.draftId}).sha256;
       await customer.importWorkspace({requestId:id('customer-receive-older-again'),path:file.path,expectedBytes:file.bytes,expectedSha256:file.sha256});
       assert.equal(customer.draft({draftId:local.result.draftId}).sha256,before);
       return{exportRequestId:exportId,file:{id:file.id,bytes:file.bytes,sha256:file.sha256},customerWorkspaceId:customer.store.id,localDraftId:local.result.draftId,localDraftSha256:before};
     });
     if(!customer)customer=await openSupplierOrderWorkspace({directory:customerPath});
+    const retainedLocal=customer.operation({requestId:id('customer-local-review')});assert.equal(retainedLocal.state,'COMPLETE');assert.equal(retainedLocal.result.draftId,exported.localDraftId);assert.equal(customer.draft({draftId:exported.localDraftId}).sha256,exported.localDraftSha256);
     const transmissions=producer.transport.list({}).items.map(({id,sha256,state,direction})=>({id,sha256,state,direction}));
     for(const row of transmissions)assert.equal(customer.transport.get({transmissionId:row.id}).sha256,row.sha256);
     const report={schema:SUPPLIER_ORDER_HTTPS_RECEIVING_SCHEMA,operationId,status:'PASS',lifetimes:'CLOSED',source,
