@@ -1,8 +1,10 @@
 // MIT. Industrial operator console, one retained XML/OAI workspace.
+import {createIslandoraDesk} from './islandora.mjs';
 const token=document.querySelector('meta[name="oai-session"]').content;
 const $=id=>document.getElementById(id), short=id=>String(id??'').slice(0,12);
 let state,tab='Repositories',selectedRepo='',selectedOperation='',selectedPreview='',selectedEdition='',selectedBuild='',mappingDraft=null;
-const tabs=['Repositories','Harvests','Edition review','Records','Projection','Exports'];
+const tabs=['Repositories','Harvests','Edition review','Records','Projection','Islandora','Exports'];
+const islandora=createIslandoraDesk({get,action,onState:()=>refresh(false)});
 function el(tag,attrs={},...children){const n=document.createElement(tag);for(const [k,v]of Object.entries(attrs)){if(k.startsWith('on'))n.addEventListener(k.slice(2),v);else if(k==='class')n.className=v;else if(k==='text')n.textContent=v;else if(k in n)n[k]=v;else n.setAttribute(k,v);}for(const child of children.flat(Infinity)){if(child!==null&&child!==undefined)n.append(child instanceof Node?child:document.createTextNode(String(child)));}return n;}
 const paragraph=text=>el('p',{},text), pre=value=>el('pre',{},typeof value==='string'?value:JSON.stringify(value,null,2));
 const button=(label,fn,primary=false)=>el('button',{class:primary?'primary':'',onclick:()=>work(fn)},label);
@@ -17,7 +19,7 @@ async function get(path){const r=await fetch(path,{cache:'no-store'}),v=await r.
 async function action(action,payload){const r=await fetch('/api/action',{method:'POST',headers:{'Content-Type':'application/json','X-OAI-Session':token},body:JSON.stringify({action,payload})}),v=await r.json();if(!r.ok)throw Error(v.error??r.statusText);return v;}
 async function object(kind,id){return get('/api/object?'+new URLSearchParams({kind,id}));}
 async function work(fn){try{notice('');$('activity').textContent='Working';await fn();}catch(e){notice(e.message);}finally{activity();}}
-function activity(){if(state)$('activity').textContent=state.running?'Harvest running · '+(state.active??'starting'):'Workspace ready';}
+function activity(){if(state)$('activity').textContent=state.islandoraRunning?'Islandora batch running':state.running?'Harvest running · '+(state.active??'starting'):'Workspace ready';}
 async function refresh(renderView=true){state=await get('/api/state');selectedRepo ||=state.repositories[0]?.id??'';selectedEdition ||=state.editions[0]?.id??'';selectedOperation ||=state.operations[0]?.id??'';selectedPreview ||=state.previews[0]?.id??'';selectedBuild ||=state.builds[0]?.id??'';$('workspace').textContent=state.directory;activity();if(state.workerError)notice(state.workerError);if(renderView)await render();}
 function go(name){tab=name;return render();}
 async function more(kind){const next=state.pages[kind]?.next;if(next==null)return;const result=await get('/api/history?'+new URLSearchParams({kind,offset:next,limit:50}));state[kind].push(...result.items);state.pages[kind]={...result};delete state.pages[kind].items;return render();}
@@ -28,6 +30,7 @@ function operationSelect(verbs,fn){return select(state.operations.filter(o=>verb
 function metrics(values){return el('div',{class:'metrics'},...Object.entries(values).map(([label,value])=>el('div',{class:'metric'},el('b',{},value),el('span',{},label))));}
 async function paged(container,path,draw,offset=0){const join=path.includes('?')?'&':'?';const data=await get(path+join+'offset='+offset+'&limit=100');container.replaceChildren(draw(data.items),el('div',{class:'pager'},el('span',{class:'muted'},data.total+' records · '+(data.items.length?offset+1:0)+'–'+(offset+data.items.length)),...(offset?[button('Previous',()=>paged(container,path,draw,Math.max(0,offset-100)))]:[]),...(data.next!==null?[button('Next',()=>paged(container,path,draw,data.next))]:[])));return data;}
 async function render(){
+ if(tab!=='Islandora')islandora.leave();
  $('navigation').replaceChildren(...tabs.map(name=>el('button',{'aria-current':tab===name?'page':'false',onclick:()=>work(()=>go(name))},name)));
  const root=$('content');root.replaceChildren();
  if(tab==='Repositories')await repositories(root);
@@ -35,6 +38,7 @@ async function render(){
  if(tab==='Edition review')await reviews(root);
  if(tab==='Records')await records(root);
  if(tab==='Projection')await projection(root);
+ if(tab==='Islandora')await islandora.render(root,{builds:state.builds,selectedBuild,selectBuild:value=>{selectedBuild=value;},goProjection:()=>go('Projection'),loadMoreBuilds:state.pages.builds?.next!=null?()=>more('builds'):null});
  if(tab==='Exports')await exportsView(root);
 }
 async function repositories(root){
@@ -121,4 +125,4 @@ async function exportsView(root){
 }
 $('refresh').addEventListener('click',()=>work(()=>refresh()));
 await work(()=>refresh());
-setInterval(async()=>{if(!state?.running)return;try{const previous=state.running;await refresh(false);const tag=document.activeElement?.tagName;if(!['INPUT','TEXTAREA','SELECT'].includes(tag)&&['Harvests','Repositories'].includes(tab))await render();if(previous&&!state.running)notice('Harvest stopped at its saved state. The operation and retained responses are available.');}catch(e){notice(e.message);}},2500);
+setInterval(async()=>{if(!state?.running&&!state?.islandoraRunning)return;try{const previous=state.running;await refresh(false);const tag=document.activeElement?.tagName;if(!['INPUT','TEXTAREA','SELECT'].includes(tag)&&['Harvests','Repositories'].includes(tab))await render();if(previous&&!state.running)notice('Harvest stopped at its saved state. The operation and retained responses are available.');}catch(e){notice(e.message);}},2500);
