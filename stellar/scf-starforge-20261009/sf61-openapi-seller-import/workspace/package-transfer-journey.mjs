@@ -56,6 +56,7 @@ export async function runPackageTransferJourney({parent,initialPackage,policyPac
     input:{initial:{name:initialName,id:inputInitial.manifest.id},policy:{name:policyName,id:inputPolicy.manifest.id,
       sourceRevisionSha256:inputPolicy.manifest.files['source-revision.json']}}};
   const sourceFiles=['model.mjs','package-transfer.mjs','package-transfer-http.mjs','server.mjs',
+    '../../../../stellar-forge/mcp-merchant-operator/host-files.mjs','package-name.mjs','package-export-format.mjs',
     'revisions.mjs','cache-policy-revisions.mjs','package-transfer-journey.mjs',
     '../../sf82-seller-pilot/releases.mjs',
     '../../../../stellar-forge/mcp-merchant-operator/config.mjs',
