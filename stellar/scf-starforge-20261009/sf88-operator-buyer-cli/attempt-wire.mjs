@@ -1,13 +1,16 @@
 // MIT. Private original SF88 HTTP/signing checkpoints; SF31/SF81 retain payment authority.
-import { lstat, open, readdir, rename } from 'node:fs/promises';
+import { lstat, open, readdir, rename } from './dataset-location.mjs';
 import { constants } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import {
-  BuyerError, digest, now, privateDirectory, readBytes, parseJson, writeBytes,
-  jsonBytes, exists, need, prepareWriteReservations, absolute, syncDirectory,
+  BuyerError, digest, now, parseJson, jsonBytes, need, absolute,
 } from './node/store.mjs';
+import {datasetPrivateStateDirectory as privateDirectory,datasetReadStateBytes as readBytes,
+  datasetWriteStateBytes as writeBytes,datasetStateExists as exists,
+  datasetPrepareWriteReservations as prepareWriteReservations,
+  datasetSyncStateDirectory as syncDirectory} from './dataset-location.mjs';
 
 const SCHEMA = 'stellar-forge.sf88.attempt-wire.v1';
 const SOURCE_LIMIT = 2_000_000;

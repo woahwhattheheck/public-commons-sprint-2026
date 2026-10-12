@@ -1,11 +1,12 @@
 // MIT. Original tool metadata; provider runtimes load only when selected.
+import { buyerAccountingDefinitions } from './accounting-buyer.mjs';
 import { platformDefinitions, platformFileNames } from './accounting-platforms.mjs';
 import { bitwaveDefinitions } from './bitwave.mjs';
 import { adjustmentDefinitions } from './accounting-adjustments.mjs';
 import { statementDefinitions, statementFileNames } from './accounting-statements.mjs';
 import { cryptoworthDefinitions, cryptoworthFileName, cryptoworthNativeId } from '../accounting-cryptoworth-contract.mjs';
-import { runbookDefinitions } from '../accounting-runbooks-contract.mjs';
 import { portfolioDefinitions } from '../accounting-portfolio-contract.mjs';
+import { runbookDefinitions } from '../accounting-runbooks-contract.mjs';
 import { supportsSellerMethod } from '../../../stellar/scf-starforge-20261009/sf30-seller-sdk/http-methods.mjs';
 
 const alias = { type: 'string', pattern: '^[a-z0-9][a-z0-9_-]{0,63}$' };
@@ -57,6 +58,7 @@ const accountantNames = ['handoff.json', 'accountant.csv', 'review.html', 'origi
 const supportedMethods = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'].filter(supportsSellerMethod);
 
 const definitions = [
+  ...buyerAccountingDefinitions,
   ...platformDefinitions,
   ...bitwaveDefinitions,
   ...adjustmentDefinitions,
@@ -90,7 +92,7 @@ const definitions = [
   ['merchant_accounting_review', 'Retain a named review of an actual original exception using its current note version. Notes and assignments do not change native settlement classifications.', { ...base, runId: uuid, exceptionId: sha256, version: { type: 'integer', minimum: 0 }, status: { type: 'string', enum: ['open', 'investigating', 'reviewed'] }, note: { type: 'string', minLength: 1, maxLength: 4000 }, assignee: { type: 'string', maxLength: 160 }, actor }, ['workspace', 'runId', 'exceptionId', 'version', 'status', 'note', 'actor']],
   ['merchant_accounting_compare', 'Compare two retained original reconciliations, with event, exception and option deltas. Page changed, added, removed or option rows without reclassifying or contacting a merchant.', { ...base, runId: uuid, baselineId: uuid, view: { type: 'string', enum: ['changed', 'added', 'removed', 'options'] }, ...page }, ['workspace', 'runId', 'baselineId'], readOnly],
   ['merchant_accounting_export', 'Create the original retained review TAR from a completed run and current named notes. Explicit includeSources:true includes the captured private original input files and retained delivered responses; false includes the report, review notes and source identities.', { ...change, runId: uuid, includeSources: { type: 'boolean' } }, ['workspace', 'revision', 'actor', 'runId', 'includeSources']],
-  ['merchant_accounting_file', 'Read exact original response, report, export, collection result, pricing source, period close, accountant packet, adjustment request/proof original QuickBooks/Xero retained bytes, complete portfolio captures, separate received client packets or saved close calendars in bounded base64 chunks. Keep every source selector unchanged with readId/expectedSha256. The original owner verifies once per read; later chunks reuse its private snapshot. See the accounting guide for each kind and filename.', { ...base, kind: { type: 'string', enum: ['response', 'report', 'export', 'collection', 'pricing', 'period', 'accountant', 'adjustment', 'qbo', 'xero', 'customer-statement', 'customer-statement-preview', 'cryptoworth', 'runbooks', 'portfolio'] }, receivedId: uuid, clientId: uuid, cycleId: uuid, fileId: uuid, recoveryId: sha256, runId: uuid, exportId: uuid, collectionId: uuid, sourceId: uuid, reviewId: uuid, closeId: uuid, handoffId: uuid, revisionId: returnSelection, adjustmentId: uuid, jobId: uuid, planId: { anyOf: [uuid, cryptoworthNativeId] }, profileId: cryptoworthNativeId, captureId: cryptoworthNativeId, returnId: cryptoworthNativeId, rollbackId: cryptoworthNativeId, scope: { type: 'string', enum: ['stage', 'completed'] }, responseId: uuid, nativePost: { type: 'boolean', enum: [true] }, attemptId: uuid, statementId: uuid, customerId: uuid, usageId: nullableId, replacesId: nullableId, from: timestamp, until: timestamp, file: { anyOf: [cryptoworthFileName,
+  ['merchant_accounting_file', 'Read exact original response, report, export, collection result, pricing source, period close, accountant packet, adjustment request/proof or original QuickBooks/Xero retained bytes in bounded base64 chunks. Keep every source selector unchanged with readId/expectedSha256. The original owner verifies once per read; later chunks reuse its private snapshot. See the accounting guide for each kind and filename.', { ...base, kind: { type: 'string', enum: ['buyer-source', 'response', 'report', 'export', 'collection', 'pricing', 'period', 'accountant', 'adjustment', 'qbo', 'xero', 'customer-statement', 'customer-statement-preview', 'cryptoworth', 'runbooks', 'portfolio'] }, cycleId: uuid, fileId: uuid, receivedId: uuid, clientId: uuid, recoveryId: sha256, runId: uuid, exportId: uuid, collectionId: uuid, sourceId: uuid, reviewId: uuid, closeId: uuid, handoffId: uuid, revisionId: returnSelection, adjustmentId: uuid, jobId: uuid, planId: { anyOf: [uuid, cryptoworthNativeId] }, profileId: cryptoworthNativeId, captureId: cryptoworthNativeId, returnId: cryptoworthNativeId, rollbackId: cryptoworthNativeId, scope: { type: 'string', enum: ['stage', 'completed'] }, responseId: uuid, nativePost: { type: 'boolean', enum: [true] }, attemptId: uuid, statementId: uuid, customerId: uuid, usageId: nullableId, replacesId: nullableId, from: timestamp, until: timestamp, file: { anyOf: [cryptoworthFileName,
     { type: 'string', enum: [...new Set([...reportNames, ...periodNames, ...accountantNames, ...platformFileNames, ...statementFileNames, 'report', 'terms', 'archive', 'request.json', 'proof.json', 'xero-handoff.tar'])] },
     { type: 'string', maxLength: 100, pattern: '^[A-Za-z0-9][A-Za-z0-9._/-]*$' }
   ] }, readId: uuid, offset: { type: 'integer', minimum: 0 }, limit: { type: 'integer', minimum: 1, maximum: 196608 }, expectedSha256: sha256 }, ['workspace', 'kind'], readOnly],

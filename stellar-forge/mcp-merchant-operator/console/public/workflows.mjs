@@ -1,6 +1,6 @@
 // MIT. Saved native workflows in the original merchant operator interface.
 import { createWorkflowRecipes } from './workflow-recipes.mjs';
-export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties,selectionList,action,busy,api,notice,uid,requireProfile,loadProfile,openCall,chooseTool,download,schedulePoll}){
+export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties,selectionList,action,busy,api,notice,uid,requireProfile,loadProfile,openCall,chooseTool,download,schedulePoll,customerCallReady,prepareCustomer}){
   const own={profileId:null,definitions:[],runs:[],definition:null,steps:[],editorId:null,dirty:false,run:null,pendingRun:null,pendingHandover:null,editorVersion:0,inputsVersion:0,definitionOpenSeq:0,runOpenSeq:0,refreshSeq:0,intentReady:false,mutating:false,sessionEpoch:null};
   const unchanged=(a,b)=>JSON.stringify(order(a))===JSON.stringify(order(b));
   function order(value){if(Array.isArray(value))return value.map(order);if(value&&typeof value==='object')return Object.fromEntries(Object.keys(value).sort().map(key=>[key,order(value[key])]));return value;}
@@ -254,6 +254,15 @@ export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties
       const row=node('tr'),stateCell=node('td'),actionCell=node('td');stateCell.append(tag(step.state));
       const button=node('button','Open request');button.type='button';button.disabled=step.draftRevision===null;
       action(button,()=>openCall(step.resolvedCallId??step.callId));actionCell.append(button);
+      const callId=step.resolvedCallId??step.callId,call=state.details?.calls.find(value=>value.id===callId);
+      if(finished(step)&&customerCallReady?.(call)){
+        const receive=node('button','Prepare customer');receive.type='button';
+        action(receive,()=>{
+          const ctx=context(),sequence=own.runOpenSeq,runId=run.id;
+          return prepareCustomer(callId,{isCurrent:()=>current(ctx)&&sequence===own.runOpenSeq&&own.run?.id===runId});
+        });
+        actionCell.append(receive);
+      }
       row.append(node('td',String(index+1)),node('td',step.id),stateCell,node('td',step.callId,'mono break'),actionCell);return row;
     }));
     const step=run.steps.find(value=>!finished(value)),choices=run.recoveryCalls??[];

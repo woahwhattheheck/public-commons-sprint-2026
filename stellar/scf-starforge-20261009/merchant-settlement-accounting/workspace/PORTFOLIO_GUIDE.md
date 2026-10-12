@@ -6,7 +6,7 @@ Open **Client portfolio** in the installed Applications panel, or start the orig
 
 ## Select the original workspaces
 
-The host reads the existing `accounting.workspaces` configuration. Add a `portfolioClients` map to the coordinator entry; each value names another workspace already in the same configuration. A coordinator can select up to 15 distinct client workspaces. The complete accounting configuration supports up to 16 workspace aliases.
+The host reads the existing `accounting.workspaces` configuration. Add a `portfolioClients` map to the coordinator entry; each value names another workspace already in the same configuration. A coordinator can select up to 15 distinct client workspaces. The complete accounting configuration supports up to 16 workspace aliases. Select original merchant accounting workspaces with client Runbooks for the coordinator and each portfolio client. The same host configuration can retain other buyer workspace aliases for their issued-period operations.
 
 This is an illustrative configuration with host paths to replace with the already-initialized original workspaces and their actual source directories:
 

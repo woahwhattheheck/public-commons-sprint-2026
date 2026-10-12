@@ -39,11 +39,13 @@ export async function inspectPortfolioConfiguration(configPath,coordinatorAlias)
   const normalized=new Map(),directories=new Set();
   for(const [name,value] of Object.entries(workspaces)){
     alias(name);need(plain(value),'PORTFOLIO_CONFIG_WORKSPACE','Describe each original accounting workspace.');
+    need(value.sourceMode===undefined||['merchant','buyer'].includes(value.sourceMode),'PORTFOLIO_CONFIG_SOURCE_MODE','Choose the original merchant or buyer accounting source mode.');
     const directory=hostPath(value.directory,base),clients=value.portfolioClients??{};
     need(!directories.has(directory),'PORTFOLIO_CONFIG_DUPLICATE','Declare each original accounting workspace directory once.');directories.add(directory);
     need(plain(clients)&&Object.keys(clients).length<=15,'PORTFOLIO_CONFIG_CLIENTS','Declare up to 15 client aliases for a portfolio coordinator.');
     for(const [client,target] of Object.entries(clients)){alias(client);alias(target);}
     need(new Set(Object.values(clients)).size===Object.values(clients).length,'PORTFOLIO_CONFIG_DUPLICATE','Each portfolio client alias must select a different original accounting workspace.');
+    if(Object.keys(clients).length)need(value.sourceMode!=='buyer','ACCOUNTING_MERCHANT_SOURCE_REQUIRED','Portfolio coordinators and selected clients require original merchant accounting workspaces with client Runbooks.',409);
     normalized.set(name,{directory,clients,value,recovery:recoveryConfig(value.recovery,base)});
   }
   const visited=new Set(),active=new Set();
@@ -51,14 +53,19 @@ export async function inspectPortfolioConfiguration(configPath,coordinatorAlias)
     need(normalized.has(name),'PORTFOLIO_CONFIG_CLIENT','Select existing accounting workspace aliases.');
     need(!active.has(name),'PORTFOLIO_CONFIG_CYCLE','Portfolio client aliases must not return to their coordinator.');
     if(visited.has(name))return;active.add(name);
-    for(const target of Object.values(normalized.get(name).clients))visit(target);
+    for(const target of Object.values(normalized.get(name).clients)){
+      visit(target);need(normalized.get(target).value.sourceMode!=='buyer','ACCOUNTING_MERCHANT_SOURCE_REQUIRED','Portfolio coordinators and selected clients require original merchant accounting workspaces with client Runbooks.',409);
+    }
     active.delete(name);visited.add(name);
   };
   for(const name of normalized.keys())visit(name);
   need(normalized.has(coordinatorAlias),'PORTFOLIO_CONFIG_COORDINATOR','Choose the original coordinator from accounting.workspaces.');
   const selected=normalized.get(coordinatorAlias);
   const inspect=async(name,clientAlias)=>{
-    const row=normalized.get(name),binding=await inspectAccountingWorkspaceBinding(row.directory);
+    const row=normalized.get(name);
+    need(row.value.sourceMode!=='buyer','ACCOUNTING_MERCHANT_SOURCE_REQUIRED','Portfolio coordinators and selected clients require original merchant accounting workspaces with client Runbooks.',409);
+    const binding=await inspectAccountingWorkspaceBinding(row.directory);
+    need(binding.sources.sourceMode!=='buyer','ACCOUNTING_MERCHANT_SOURCE_REQUIRED','Portfolio coordinators and selected clients require original merchant accounting workspaces with client Runbooks.',409);
     for(const field of ['outboxDir','proofDir','termsFile','recoveredDir','buyerSourceFile']){
       if(row.value[field]!==undefined)need(hostPath(row.value[field],base)===binding.sources[field],'PORTFOLIO_CONFIG_SOURCE_CHANGED','The configured source differs from the original accounting workspace.',409);
     }
@@ -76,6 +83,7 @@ export async function openPortfolioClientPool({configPath,coordinatorAlias,expec
   if(expectedPortfolioSha256!==undefined)need(binding.sha256===expectedPortfolioSha256,'PORTFOLIO_CONFIG_CHANGED','The configured portfolio differs from the reviewed original workspaces.',409);
   if(coordinatorWorkspace){
     const actual=accountingWorkspaceBinding(coordinatorWorkspace.directory,coordinatorWorkspace.state);
+    need(actual.sources.sourceMode!=='buyer','ACCOUNTING_MERCHANT_SOURCE_REQUIRED','Portfolio coordinators and selected clients require original merchant accounting workspaces with client Runbooks.',409);
     need(actual.workspaceId===binding.coordinator.workspaceId&&actual.sourcesSha256===binding.coordinator.sourcesSha256,'PORTFOLIO_COORDINATOR_CHANGED','The current writer is not the reviewed portfolio coordinator.',409);
   }
   const entries=new Map(binding.clients.map(row=>[row.alias,row])),records=new Map(),calls=new Set();let closing=false,closingPromise=null;
@@ -107,6 +115,7 @@ export async function openPortfolioClientPool({configPath,coordinatorAlias,expec
       const owned=await record(clientAlias),admission=owned.maintenance.enter();
       try{
         const actual=accountingWorkspaceBinding(admission.workspace.directory,admission.workspace.state);
+        need(actual.sources.sourceMode!=='buyer','ACCOUNTING_MERCHANT_SOURCE_REQUIRED','Portfolio coordinators and selected clients require original merchant accounting workspaces with client Runbooks.',409);
         need(actual.workspaceId===owned.selected.workspaceId&&actual.sourcesSha256===owned.selected.sourcesSha256,'PORTFOLIO_CLIENT_CHANGED','The original admitted client binding changed.',409);
         return await work(admission);
       }finally{admission.release();}

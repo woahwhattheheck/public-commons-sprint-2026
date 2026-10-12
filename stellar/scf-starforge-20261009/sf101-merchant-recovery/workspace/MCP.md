@@ -4,7 +4,7 @@ The `recovery-workspaces` provider operates the same SF101 recovery workspace
 that Applications and the browser use. An agent can inspect host-declared plans,
 capture and verify an encrypted bundle, use the original off-host store, follow
 a retained transfer, cold restore the original files, and prepare a restored
-typed dataset publisher. Each change uses the native selection, review hash and
+typed dataset publisher or managed merchant fleet. Each change uses the native selection, review hash and
 operation ID.
 
 The original listener owns its workspace lease, current execution, passphrase
@@ -17,8 +17,9 @@ reader and lazy runtime through the maintained `merchantProviders` contribution.
 Use the complete existing setup in [GUIDE.md](GUIDE.md). The host configuration
 names its bundle parents, original operation directories, capture plans and
 receiving parents. A profile can be local-only or include its existing S3
-configuration. Typed publisher restores can be selected from a completed original
-remote restore or declared by the host.
+configuration. Typed publisher and fleet restores can be selected from a completed original
+remote restore or declared by the host. Fleet receiving additionally selects a
+host-declared target file and its original receiving operation directory.
 
 Start that original workspace through Applications, or use its existing command:
 
@@ -137,7 +138,7 @@ The initialized configured provider advertises the following tools.
 
 | Tool | Original operation |
 | --- | --- |
-| `merchant_recovery_status` | Existing workspace, profiles, plans, restored publishers and active execution. |
+| `merchant_recovery_status` | Existing workspace, profiles, plans, restored publishers/fleets, receiving targets and active execution. |
 | `merchant_recovery_bundles` | Local encrypted bundle candidates under the selected profile's declared parents. |
 | `merchant_recovery_inventory` | Paginated completed snapshots in the original remote store. |
 | `merchant_recovery_requests` | Paginated retained workspace requests, including local operations. |
@@ -162,7 +163,8 @@ A status call uses only the declared alias:
 
 The result is the original workspace state plus a `workspace` alias and
 `connection` identity. Inspect its actual profile IDs, capture plan IDs, bundle
-roots, `remoteConfigured`, declared `publisherRestores` and current execution.
+roots, `remoteConfigured`, declared `publisherRestores`, `fleetRestores`,
+`fleetTargets` and current execution.
 It reports passphrase availability in the native server environment without
 returning the passphrase.
 
@@ -375,7 +377,113 @@ receiving contract is in
 [DATASET_PUBLISHER.md](../DATASET_PUBLISHER.md). The browser and the MCP result
 refer to that same saved preparation.
 
-## 8. Continue an interruption or stop the current execution
+## 8. Prepare a restored managed merchant fleet
+
+Fleet preparation uses the original managed-fleet receiver. It authenticates the
+selected encrypted bundle and restored files, binds the saved fleet plan and
+service identity, and prepares the original receiving roots and deployment
+bundle. Its journal and completed result remain under the host's selected
+operation directory.
+
+The host adds these members to the existing recovery profile, using the actual
+retained paths on that machine:
+
+```json
+{
+  "fleetRestores": [
+    {
+      "id": "fleet-october",
+      "label": "Original October fleet restore",
+      "bundleDirectory": "/private/recovery/bundles/fleet-october",
+      "restoreDirectory": "/private/recovery/restored/fleet-october"
+    }
+  ],
+  "fleetTargets": [
+    {
+      "id": "original-fleet-host",
+      "label": "Original fleet service paths",
+      "targetFile": "/private/recovery/fleet-targets.json",
+      "operationDirectory": "/private/recovery/fleet-operations/october-receive"
+    }
+  ]
+}
+```
+
+The encrypted bundle and restored folder must lie within the profile's declared
+source parents. The target file uses the original
+`stellar-forge.fleet-recovery-targets.v1` contract: the captured
+`sourcePlanSha256`, approved absolute `destinationParents`, and a new
+`deploymentBundle` destination. Obtain those values from the retained
+original fleet plan and the receiving host. The complete target contract and
+source ownership rules are in
+[managed fleet recovery](../../merchant-fleet-gateway/RECOVERY.md).
+
+The receiver retains the original absolute root paths and captured service
+UID/GID. Use the actual matching nonroot Linux service account. Before a first
+preparation, the selected original receiving paths must be available and the
+source producers must be stopped. The native review reports each path's actual
+availability; an existing unrelated target is an error. Keep the original
+stopped source and its recovery artifacts under their existing custody.
+
+Read `merchant_recovery_status` and choose its actual `fleetRestoreId` and
+`fleetTargetId`. A local restored-source selection is:
+
+```json
+{
+  "name": "merchant_recovery_review",
+  "arguments": {
+    "workspace": "merchant",
+    "selection": {
+      "profileId": "primary",
+      "action": "fleet-prepare",
+      "id": "october-fleet-receive",
+      "fleetRestoreId": "fleet-october",
+      "fleetTargetId": "original-fleet-host",
+      "quiesced": true
+    }
+  }
+}
+```
+
+For an original completed remote restore, replace `fleetRestoreId` with that
+request's `restoreId`. Supply exactly one source selector. The target selector
+and explicit `quiesced: true` remain required in both modes. Filesystem paths,
+environment-variable names and a caller-supplied native operation ID are not
+part of this public selection.
+
+Inspect the complete workspace review. It includes the original snapshot and
+plan identity, target declaration, source and destination roots, captured
+service account, native receiving review and its deterministic operation ID.
+Retain the two distinct review identities:
+
+| Review identity | Use |
+| --- | --- |
+| Workspace `reviewHash` | Send as `expectedReviewHash` to the existing workspace start call. |
+| Native receiving `reviewSha256` | The workspace retains and binds this value when invoking the original fleet engine. |
+
+Start with the exact selection above and the returned outer
+`expectedReviewHash`, using `merchant_recovery_start`. Read
+`merchant_recovery_request` with the same alias, profile and
+`october-fleet-receive` ID until its original native result is complete.
+A completed receiver reports `FLEET_RECEIVING_COMPLETE` and retains
+`operationId`, `snapshotId`, `sourcePlanSha256`, `profileSha256`,
+`reviewSha256`, service UID/GID, original and prepared deployment bundles,
+root records, runtime instructions and `completedAt`.
+
+If a response is lost, read the same workspace request first. Continue it
+through `merchant_recovery_resume` when the original source and target remain
+selected. The original receiving journal preserves prepared roots and its
+write progress. Reopening completed preparation returns the original result.
+Do not create another request or target directory to resolve an uncertain
+response.
+
+Preparation ends with the retained receiving result. Start the prepared fleet
+through its original managed deployment controls, then inspect native health,
+release state and customer export provenance. Rollback and later reopen use
+those original fleet operations. The separate fleet Applications product can
+attach through its own configured original deployment.
+
+## 9. Continue an interruption or stop the current execution
 
 After a lost `start`, `resume` or `cancel` response, read
 `merchant_recovery_request` for the same alias, profile and ID. Keep the original
@@ -403,7 +511,7 @@ original capture ownership remain part of that review.
 
 To request a stop, use `merchant_recovery_cancel` with the same three arguments.
 The native model records the request and closes the active original transfer
-handle. Local verification or restore can complete after a stop request.
+handle. Local verification, restore or fleet preparation can complete after a stop request.
 Continue reading the same operation until its actual completion or interrupted
 state is visible.
 
@@ -425,7 +533,78 @@ Closing the MCP server drains its accepted adapter HTTP calls. The original
 recovery workspace continues to own any accepted operation. Use its native
 cancel, status and normal Applications/browser lifecycle for that execution.
 
-## 9. Source and installed API
+## 10. Use the complete workflow from the CLI
+
+The workspace CLI exposes the same original listener and merchant client. Keep
+the selected complete installed source, private host configuration and workspace
+directory unchanged. Start the listener with the existing `serve` command, or
+open it through Applications. Then inspect it:
+
+```sh
+starforge merchant-recovery-remote workspace status \
+  --config /private/recovery/host.json \
+  --directory /private/recovery/workspace
+```
+
+All commands in the table take those same `--config` and `--directory`
+arguments. They borrow the listener; they do not acquire a second workspace
+writer or start a new server.
+
+| Command | Additional arguments | Native result |
+| --- | --- | --- |
+| `status` | None | Current workspace and configured selectors. |
+| `bundles` | `--profile ID` | Original encrypted bundle candidates. |
+| `inventory` | `--profile ID [--cursor CURSOR] [--limit N]` | Original remote snapshot page. |
+| `requests` | `[--cursor CURSOR] [--limit N]` | Retained local and transfer requests. |
+| `request` | `--profile ID --id ID` | One exact workspace request. |
+| `operations` | `--profile ID [--cursor CURSOR] [--limit N]` | Original remote journal page. |
+| `operation` | `--profile ID --id ID` | One original remote journal. |
+| `review` | `--selection ABS_SELECTION_JSON` | Full review and outer review hash. |
+| `start` | `--selection ABS_SELECTION_JSON --expected-review-hash HASH` | Original accepted or completed request. |
+| `resume` | `--profile ID --id ID` | Continuation of the same saved request. |
+| `cancel` | `--profile ID --id ID` | Native stop request and retained state. |
+
+Use `request` and `requests` for fleet preparation. The `operation` and
+`operations` commands inspect original remote transfer journals. Page sizes
+are 1–100; continue an opaque cursor with its unchanged workspace/profile/query.
+
+For fleet receiving, save the complete selection object from section 8, without
+the MCP name/arguments wrapper, in an owned mode-0600 regular file at an
+absolute canonical path. The CLI reads at most 64 KiB and checks that its bytes
+remain unchanged during the read.
+
+```sh
+starforge merchant-recovery-remote workspace review \
+  --config /private/recovery/host.json \
+  --directory /private/recovery/workspace \
+  --selection /private/recovery/fleet-selection.json
+
+starforge merchant-recovery-remote workspace start \
+  --config /private/recovery/host.json \
+  --directory /private/recovery/workspace \
+  --selection /private/recovery/fleet-selection.json \
+  --expected-review-hash THE_ACTUAL_64_HEX_WORKSPACE_REVIEW_HASH
+
+starforge merchant-recovery-remote workspace request \
+  --config /private/recovery/host.json \
+  --directory /private/recovery/workspace \
+  --profile primary \
+  --id october-fleet-receive
+```
+
+Replace the descriptive hash placeholder with the actual returned
+`reviewHash`. Every caller returns the same native fields and connection
+identity as MCP. A failed mutation response includes the original structured
+readback details; use its profile and ID before resuming. Stopping a CLI process
+only ends that caller. Observe the original request through the still-running
+workspace to determine whether its native work completed.
+
+The existing `show` command remains an offline/read-only view of saved state and
+can run beside the server without its controller lease. `status` reads the
+actual running native listener. `serve` continues to own the original normal
+shutdown and retained-operation lifecycle.
+
+## 11. Source and installed API
 
 The contribution is
 `distribution/contributions/merchant-provider-recovery-workspaces.json`.
@@ -460,7 +639,7 @@ same original SF101 workspace and underlying recovery engines. A receiving host
 selects its own declared paths and operation IDs while retaining the source
 host's snapshot and original journal in the handoff.
 
-## 10. Receive an existing workspace through merchant MCP
+## 12. Receive an existing workspace through merchant MCP
 
 The installed `merchant-recovery-mcp-receive` command carries an existing
 recovery workspace through the actual registered merchant transport. Select

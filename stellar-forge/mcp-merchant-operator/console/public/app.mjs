@@ -3,7 +3,7 @@ import { createWorkflowPage } from './workflows.mjs';
 const $=id=>document.getElementById(id);
 const state={token:'',host:null,profiles:[],profile:null,details:null,page:'host',tools:[],tool:null,
   definition:null,draft:null,dirty:false,offset:0,next:null,total:0,call:null,recovery:new Map(),customer:null,
-  profileMode:'new',poll:null,polling:false,pollDelay:1500,sessionEpoch:0,profileEpoch:0,callOpenSeq:0,toolOpenSeq:0,importPacket:null};
+  profileMode:'new',poll:null,polling:false,pollDelay:1500,sessionEpoch:0,profileEpoch:0,callOpenSeq:0,toolOpenSeq:0,importPacket:null,review:null,reviewProfileId:null,reviewBaseline:'',reviewOffset:0,reviewOpenSeq:0};
 const text=(node,value)=>{node.textContent=value??'';return node;};
 const node=(tag,value,className)=>{const valueNode=document.createElement(tag);if(value!==undefined)text(valueNode,value);if(className)valueNode.className=className;return valueNode;};
 const pretty=value=>JSON.stringify(value,null,2);
@@ -62,7 +62,7 @@ function setPage(name){
 }
 function syncControls(){
   updateRun();workflowPage.sync();
-  for(const id of ['rename-profile','export-profile','native-status'])$(id).disabled=!state.profile;
+  for(const id of ['rename-profile','export-profile','native-status','review-host'])$(id).disabled=!state.profile;
   $('previous-tools').disabled=state.offset===0;$('next-tools').disabled=state.next===null;
   if(state.customer){$('resume-customer').disabled=Boolean(state.customer.active);$('pause-customer').disabled=!state.customer.active;$('download-customer').disabled=!state.customer.localFiles;}
 }
@@ -78,9 +78,20 @@ function renderHost(){
     [bytes(host.maxRequestBytes),'Native request capacity']
   ];
   $('host-metrics').replaceChildren(...metrics.map(([value,label])=>{const card=node('div',undefined,'metric');card.append(node('strong',value),node('span',label));return card;}));
+  const declarations=new Map((host.composition?.providers??[]).map(value=>[value.family,value]));
   $('providers').replaceChildren(...host.providers.map(value=>{
     const row=node('tr'),name=node('td',value.name);
     if(!value.configured)name.append(node('p','Shared dependency','hint'));
+    const declaration=declarations.get(value.name);
+    if(declaration) {
+      const details=node('details'),content=node('dl',undefined,'properties');
+      details.append(node('summary','Declaration '+short(declaration.source.sha256)));
+      properties(content,[['Title',declaration.title],['Source file',declaration.source.path,true],
+        ['Declaration SHA-256',declaration.source.sha256,true],['Host input',declaration.configurationInput??'Common host'],
+        ['Request capacity',bytes(declaration.maxRequestBytes)],['Concurrency',declaration.concurrency],
+        ['Shutdown',declaration.shutdown],['Concurrent controls',declaration.concurrentTools.join(', ')||'—']]);
+      details.append(content);name.append(details);
+    }
     const status=node('td');status.append(tag(value.state));
     if(value.error)status.append(node('p',value.error.code+': '+value.error.message,'hint'));
     row.append(name,status,node('td',value.durationMs==null?'—':value.durationMs+' ms'),node('td',(value.dependencies??[]).join(', ')||'—'));return row;
@@ -88,6 +99,9 @@ function renderHost(){
   properties($('host-details'),[
     ['Merchant',host.merchant],['Config file',host.configuration.name],['Config SHA-256',host.configuration.sha256,true],
     ['Host binding',host.configurationFingerprint,true],['Console workspace',host.console.workspaceId,true],
+    ['Tool catalog',host.composition?.catalogSha256??'Available after host upgrade',true],
+    ['Provider declarations',host.composition?.registrySha256??'Available after host upgrade',true],
+    ['Installed source commit',host.composition?.sourceCommit??'Checkout declaration identities',true],
     ['Accepted calls',host.operator.activeCalls],['Console calls',host.console.activeCalls],['Active workflows',host.console.workflows?.activeRuns??0],
     ['Customer transfers',host.console.customers?.activeDownloads??0],['Customer archives',host.console.customers?.activeArchives??0],
     ['HTTP requests',host.console.activeRequests??0],['Incomplete bodies',host.console.pendingBodies??0],
@@ -112,7 +126,7 @@ function renderBinding(){
     ['Saved merchant',state.profile.host.merchant],['Saved binding',state.profile.hostFingerprint,true],
     ['Current merchant',state.host.merchant],['Current binding',state.host.configurationFingerprint,true]
   ]);
-  for(const id of ['rename-profile','export-profile','native-status'])$(id).disabled=!state.profile;
+  for(const id of ['rename-profile','export-profile','native-status','review-host'])$(id).disabled=!state.profile;
   updateRun();
 }
 async function refreshHost(){const epoch=state.sessionEpoch,host=await api('host',{epoch});if(epoch!==state.sessionEpoch)return;state.host=host;renderHost();}
@@ -130,12 +144,14 @@ async function loadProfile(){
   const epoch=state.sessionEpoch,selection=state.profileEpoch,profileId=state.profile.id;
   const packet=await api('profile/'+encodeURIComponent(profileId),{epoch});
   if(epoch!==state.sessionEpoch||selection!==state.profileEpoch||state.profile?.id!==profileId)return;
-  state.profile=packet.profile;state.details=packet;renderProfile();await workflowPage.refresh();schedulePoll();
+  state.profile=packet.profile;state.details=packet;
+  if(state.review&&state.review.profile.revision!==state.profile.revision)state.review=null;
+  renderProfile();await workflowPage.refresh();schedulePoll();
 }
 function renderProfile(){
   const packet=state.details??{drafts:[],calls:[],deliveries:[]};
   text($('request-count'),packet.calls.length);text($('customer-count'),packet.deliveries.length);
-  renderBinding();renderDrafts();renderCalls();renderCustomers();workflowPage.profileChanged();
+  renderBinding();renderDrafts();renderCalls();renderCustomers();renderReviewBindings();workflowPage.profileChanged();
   if(state.customer){const current=packet.deliveries.find(value=>value.id===state.customer.id);if(current){state.customer=current;renderCustomer();}}
   schedulePoll();
 }
@@ -164,6 +180,7 @@ async function connect(){
 function disconnect(){
   state.sessionEpoch++;state.profileEpoch++;
   clearTimeout(state.poll);state.token='';state.host=null;state.profile=null;state.details=null;state.call=null;state.customer=null;
+  state.review=null;state.reviewProfileId=null;state.reviewBaseline='';state.reviewOpenSeq++;
   $('connected').hidden=true;$('connect-panel').hidden=false;$('disconnect').hidden=true;text($('connection-state'),'Disconnected');
   $('connection-state').removeAttribute('data-state');notice('');$('access-token').value='';
   for(const id of ['call-result','call-arguments','customer-json'])$(id).textContent='';
@@ -178,9 +195,118 @@ async function saveProfile(){
   $('profile-form').hidden=true;state.draft=null;state.call=null;await loadProfiles(packet.profile.id);notice('Saved '+packet.profile.name+' · revision '+packet.profile.revision+'.');
 }
 async function bindProfile(){
-  const profile=requireProfile(),packet=await api('bind',{method:'POST',body:{id:profile.id,expectedRevision:profile.revision,expectedHostFingerprint:state.host.configurationFingerprint}});
-  await loadProfiles(packet.profile.id);notice('Profile revision '+packet.profile.revision+' now uses the displayed host configuration.');
+  const profile=requireProfile(),epoch=state.sessionEpoch,selection=state.profileEpoch;
+  const packet=await api('bind',{method:'POST',epoch,body:{id:profile.id,expectedRevision:profile.revision,
+    expectedHostFingerprint:state.host.configurationFingerprint,
+    ...(state.host.composition?{expectedCompositionFingerprint:state.host.composition.fingerprint}:{})}});
+  if(epoch!==state.sessionEpoch||selection!==state.profileEpoch||state.profile?.id!==profile.id)return;
+  state.review=null;state.reviewBaseline='';
+  await loadProfiles(packet.profile.id);
+  if(epoch!==state.sessionEpoch||state.profile?.id!==profile.id)return;
+  await loadHostReview();
+  if(epoch!==state.sessionEpoch||state.profile?.id!==profile.id)return;
+  notice('Saved host binding at profile revision '+packet.profile.revision+'. Earlier bindings, native requests and customer records remain in this profile.');
 }
+function reviewPath(download=false) {
+  const profile=requireProfile(),query=new URLSearchParams();
+  if(state.reviewBaseline)query.set('revision',state.reviewBaseline);
+  if(download)query.set('download','1');
+  return 'host-review/'+encodeURIComponent(profile.id)+(query.size?'?'+query:'');
+}
+function renderReviewBindings() {
+  $('host-review-panel').hidden=!state.profile;
+  if(!state.profile)return;
+  if(state.reviewProfileId!==state.profile.id) {
+    state.reviewProfileId=state.profile.id;state.review=null;state.reviewBaseline='';state.reviewOffset=0;state.reviewOpenSeq++;
+  }
+  const history=state.details?.bindings??[];
+  if(state.reviewBaseline&&!history.some(value=>String(value.revision)===state.reviewBaseline))state.reviewBaseline='';
+  $('review-binding').replaceChildren(new Option('Current saved binding',''),
+    ...history.map(value=>new Option('Revision '+value.revision+' · '+when(value.recordedAt)+' · '+value.merchant,String(value.revision))));
+  $('review-binding').value=state.reviewBaseline;
+  text($('binding-history-count'),history.length+' retained host '+(history.length===1?'binding':'bindings'));
+  $('binding-history').replaceChildren(...history.map(value=>{
+    const row=node('tr');
+    row.append(node('td',value.revision),node('td',when(value.recordedAt)),node('td',value.origin.replaceAll('_',' ').toLowerCase()),
+      node('td',value.toolCount??'—'),node('td',short(value.hostFingerprint)));
+    const target=node('td'),button=node('button','Compare');button.type='button';
+    action(button,async()=>{state.reviewBaseline=String(value.revision);$('review-binding').value=state.reviewBaseline;await loadHostReview();});
+    target.append(button);row.append(target);return row;
+  }));
+  renderHostReview();
+}
+async function loadHostReview() {
+  const profileId=requireProfile().id,epoch=state.sessionEpoch,selection=state.profileEpoch,
+    sequence=++state.reviewOpenSeq,path=reviewPath();
+  const current=()=>epoch===state.sessionEpoch&&selection===state.profileEpoch&&
+    state.profile?.id===profileId&&sequence===state.reviewOpenSeq;
+  await refreshHost();if(!current())return;
+  const review=await api(path,{epoch});if(!current())return;
+  state.review=review;state.reviewOffset=0;renderHostReview();
+}
+function hostReviewRows(review) {
+  const rows=[];
+  const include=(value,group,key)=>{
+    for(const after of value.added)rows.push({group,change:'Added',name:after[key],before:null,after});
+    for(const before of value.removed)rows.push({group,change:'Removed',name:before[key],before,after:null});
+    for(const value of value.changed)rows.push({group,change:'Changed',name:value[key],before:value.before,after:value.after,fields:value.fields});
+  };
+  if(review.configurationChanged)rows.push({group:'Configuration',change:'Changed',name:'Host binding',
+    before:review.before.configurationFingerprint,after:review.after.configurationFingerprint});
+  if(review.requestCapacity.changed)rows.push({group:'Capacity',change:'Changed',name:'Native request bytes',
+    before:review.requestCapacity.before,after:review.requestCapacity.after});
+  include(review.tools,'Tools','name');include(review.providers,'Providers','family');include(review.sourceBindings,'Sources','source');
+  if(review.tools.coverage!=='COMPLETE'&&review.tools.before!==review.tools.after)
+    rows.push({group:'Tools',change:'Count changed',name:'Configured tool count',before:review.tools.before,after:review.tools.after});
+  return rows;
+}
+function renderHostReview() {
+  const review=state.review;
+  $('host-review-empty').hidden=Boolean(review);$('host-review-content').hidden=!review;
+  $('export-host-review').disabled=!review;$('adopt-host-snapshot').disabled=!state.profile;
+  if(!review)return;
+  text($('host-review-state'),review.state.replaceAll('_',' '));
+  $('host-review-state').dataset.state=review.state;
+  text($('host-review-scope'),review.scope.baseline);
+  const changes=value=>value.added.length+value.removed.length+value.changed.length;
+  const metrics=[
+    [review.configurationChanged?'Changed':'Unchanged','Host configuration'],
+    [review.complete?changes(review.tools):'Counts available','Tool definitions'],
+    [changes(review.providers),'Provider changes'],
+    [bytes(review.requestCapacity.before)+' → '+bytes(review.requestCapacity.after),'Request capacity']
+  ];
+  $('review-metrics').replaceChildren(...metrics.map(([value,label])=>{
+    const item=node('div',undefined,'metric');item.append(node('strong',value),node('span',label));return item;
+  }));
+  const show=(target,value)=>properties(target,[
+    ['Merchant',value.merchant],['Configured tools',value.toolCount],['Host binding',value.configurationFingerprint,true],
+    ['Composition',value.compositionFingerprint??'Earlier profile snapshot',true],['Source commit',value.sourceCommit??'Checkout declaration identities',true]
+  ]);
+  show($('review-before'),review.before);show($('review-after'),review.after);
+  const query=$('review-search').value.toLowerCase(),group=$('review-category').value;
+  const all=hostReviewRows(review),rows=all.filter(value=>(!group||value.group===group)&&
+    (!query||[value.group,value.change,value.name,...(value.fields??[])].join(' ').toLowerCase().includes(query)));
+  if(state.reviewOffset>=rows.length)state.reviewOffset=0;
+  const page=rows.slice(state.reviewOffset,state.reviewOffset+50);
+  $('review-changes').replaceChildren(...page.map(value=>{
+    const row=node('tr'),description=node('td'),detail=node('details');
+    detail.append(node('summary',value.fields?.join(', ')||'Retained values'),node('pre',pretty({before:value.before,after:value.after})));
+    description.append(detail);
+    if(value.group==='Tools'&&value.after) {
+      const button=node('button','Open current tool');button.type='button';
+      action(button,()=>chooseTool(value.name));description.append(button);
+    }
+    row.append(node('td',value.group),node('td',value.change),node('td',value.name,'break'),description);return row;
+  }));
+  $('review-no-changes').hidden=page.length>0;
+  text($('review-no-changes'),all.length?'No changes match these filters.':review.complete?
+    'The saved configuration, tool definitions and provider declarations match this host.':
+    'Available saved values match. Save this host binding to retain the complete current tool and declaration snapshot.');
+  text($('review-page'),rows.length?'Showing '+(state.reviewOffset+1)+'–'+(state.reviewOffset+page.length)+' of '+rows.length:'0 changes');
+  $('previous-review').disabled=state.reviewOffset===0;$('next-review').disabled=state.reviewOffset+50>=rows.length;
+  text($('host-review-json'),pretty(review));
+}
+
 async function importProfile(file){
   if(file.size>128*1024*1024)throw new Error('The profile archive exceeds the 128 MiB receiving capacity.');
   let packet;try{packet=JSON.parse(await file.text());}catch{throw new Error('Choose a complete operator profile JSON archive.');}
@@ -341,31 +467,92 @@ async function nativeStatus(){
   if(!current()||state.draft?.id!==saved.draft.id||state.tool!==saved.draft.tool)return;
   await runDraft();
 }
+function customerFamily(call){
+  if(['merchant_openapi_export','merchant_openapi_manifest'].includes(call?.tool))return 'openapi';
+  if(call?.tool?.startsWith('merchant_opensearch_deployment_'))return 'opensearch';
+  if(call?.tool?.startsWith('merchant_client_export'))return 'core';
+  return null;
+}
+const customerAuthority=family=>({core:'Merchant release store',opensearch:'OpenSearch workspace deployment',openapi:'API workspace package'}[family]??family);
+const customerWorkspace=family=>family==='opensearch'||family==='openapi';
+const customerCallReady=call=>call?.state==='COMPLETE'&&Boolean(customerFamily(call));
+function customerResults(result){
+  const queue=[result],seen=new Set(),values=[];
+  while(queue.length){
+    const value=queue.shift();
+    if(!plain(value)||seen.has(value))continue;seen.add(value);values.push(value);
+    for(const key of ['result','structuredContent','export','client','manifest'])if(plain(value[key]))queue.push(value[key]);
+    for(const item of (Array.isArray(value.content)?value.content:[]))if(item?.type==='text'&&typeof item.text==='string'){
+      try{const decoded=JSON.parse(item.text);if(plain(decoded))queue.push(decoded);}catch{}
+    }
+  }
+  return values;
+}
 function customerSelection(call,result){
-  const args=JSON.parse(call.argumentsJson),family=call.tool.startsWith('merchant_opensearch_deployment_')?'opensearch':call.tool.startsWith('merchant_client_export')?'core':null;
-  if(!family||!result)return null;
-  const values=[result,result.result,result.export,result.client,result.manifest].filter(plain);
+  const family=customerFamily(call);
+  if(!family||call.state!=='COMPLETE'||!result||result.isError===true)return null;
+  const args=JSON.parse(call.argumentsJson),values=customerResults(result);
+  if(values.some(value=>value.isError===true))return null;
+  if(family==='openapi'){
+    const packet=values.find(value=>['EXPORTED','MANIFEST_RETAINED'].includes(value.state)&&
+      value.manifest?.schema==='stellar-forge.api-merchant-package-export.v1'&&
+      value.manifest.exportId===value.exportId&&/^[a-f0-9]{64}$/.test(value.exportId??'')&&
+      value.manifestFile?.name==='package-export.json'&&/^[a-f0-9]{64}$/.test(value.manifestFile.sha256??''));
+    if(!packet||args.exportId!==undefined&&args.exportId!==packet.exportId)return null;
+    const workspace=args.workspace??packet.workspace;
+    if(!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(workspace??'')||
+      packet.workspace!==undefined&&packet.workspace!==workspace)return null;
+    return{family,workspace,exportId:packet.exportId,expectedManifestSha256:packet.manifestFile.sha256};
+  }
   const exportId=args.exportId??values.map(value=>value.exportId??value.id).find(value=>typeof value==='string'&&/^[a-z0-9][a-z0-9_-]{0,63}$/.test(value));
   const sha=values.map(value=>value.manifestSha256??value.manifestSha??value.manifestFile?.sha256??value.manifest?.sha256??(value.name==='client-manifest.json'?value.sha256:undefined)).find(value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value));
   if(!exportId||!sha)return null;
   return {family,exportId,expectedManifestSha256:sha,...(family==='opensearch'?{workspace:args.workspace}:{})};
 }
+function customerFormRules(){
+  const family=$('customer-family').value,workspace=customerWorkspace(family),apiPackage=family==='openapi';
+  $('customer-workspace-field').hidden=!workspace;$('customer-workspace').required=workspace;
+  $('customer-export').pattern=apiPackage?'[a-f0-9]{64}':'[a-z0-9][a-z0-9_-]{0,63}';
+  $('customer-export').maxLength=64;
+  $('customer-export').title=apiPackage?'Use the exact 64-character API export ID.':'Use the original export ID.';
+  text($('customer-form-hint'),apiPackage?
+    'Use the API workspace alias and the full package-export.json digest returned by Export or Manifest. The internal package manifest has its own separate digest.':
+    'Use the export identity and manifest digest returned by the original merchant.');
+}
 function fillCustomer(value){
-  $('customer-family').value=value.family;$('customer-workspace').value=value.workspace??'';$('customer-export').value=value.exportId;$('customer-sha').value=value.expectedManifestSha256;
-  $('customer-workspace-field').hidden=value.family!=='opensearch';$('customer-workspace').required=value.family==='opensearch';setPage('customers');
+  if(!value)throw new Error('Open a completed export or manifest request first.');
+  requireProfile();
+  $('customer-family').value=value.family;$('customer-workspace').value=value.workspace??'';
+  $('customer-export').value=value.exportId;$('customer-sha').value=value.expectedManifestSha256;
+  customerFormRules();setPage('customers');$('customer-export').focus();
+}
+async function prepareCustomer(callId,{isCurrent=()=>true}={}){
+  const profile=requireProfile(),epoch=state.sessionEpoch,selection=state.profileEpoch;
+  const current=()=>epoch===state.sessionEpoch&&selection===state.profileEpoch&&state.profile?.id===profile.id&&isCurrent();
+  const call=await api('call/'+encodeURIComponent(callId),{epoch});
+  if(!current())return;
+  if(call.profileId!==profile.id||call.state!=='COMPLETE'||call.resultJson===null)
+    throw new Error('Open a completed export in this operator profile.');
+  let result;try{result=JSON.parse(call.resultJson);}catch{throw new Error('Open the original saved export result.');}
+  const customer=customerSelection(call,result);
+  if(!customer)throw new Error('This request does not retain a complete customer export identity. Open its original Export or Manifest result.');
+  fillCustomer(customer);
+  notice('Prepared '+customerAuthority(customer.family)+' from request '+call.id+'. Review the displayed original export and receive its complete files.');
 }
 async function receiveCustomer(selection){
   const profile=requireProfile(),epoch=state.sessionEpoch,profileSelection=state.profileEpoch,customerId=state.customer?.id??null;
   const current=()=>epoch===state.sessionEpoch&&profileSelection===state.profileEpoch&&state.profile?.id===profile.id;
-  const body={profileId:profile.id,...selection,expectedHostFingerprint:state.host.configurationFingerprint};
+  const body={profileId:profile.id,family:selection.family,exportId:selection.exportId,
+    expectedManifestSha256:selection.expectedManifestSha256,...(customerWorkspace(selection.family)?{workspace:selection.workspace}:{}),
+    expectedHostFingerprint:state.host.configurationFingerprint};
   const packet=await api('customers',{method:'POST',body,epoch});if(!current())return;
   if((state.customer?.id??null)===customerId)state.customer=packet.delivery;
   await loadProfile();if(!current())return;
-  renderCustomer();notice('Receiving the reviewed original customer export '+body.exportId+'.');
+  renderCustomer();notice('Receiving the reviewed original '+(body.family==='openapi'?'API package ':'customer export ')+body.exportId+'.');
 }
 function renderCustomers(){
   selectionList($('customer-list'),state.details?.deliveries??[],state.customer?.id,(button,value)=>{
-    button.append(node('strong',value.identity.exportId),node('p',(value.identity.workspace?value.identity.workspace+' / ':'')+value.identity.family));
+    button.append(node('strong',value.identity.exportId),node('p',customerAuthority(value.identity.family)+(value.identity.workspace?' / '+value.identity.workspace:'')));
     const meta=node('div',undefined,'meta');meta.append(tag(value.state),node('span',when(value.updatedAt)));button.append(meta);
   },value=>{state.customer=value;renderCustomer();},state.profile?'No customer receiving records yet.':'Select or create a profile.');
 }
@@ -373,11 +560,14 @@ function renderCustomer(){
   const value=state.customer;if(!value){$('customer-detail').hidden=true;return;}
   $('customer-detail').hidden=false;text($('customer-title'),value.identity.exportId);text($('customer-state'),value.state);$('customer-state').dataset.state=value.state;
   properties($('customer-details'),[
-    ['Original authority',value.identity.family+(value.identity.workspace?' / '+value.identity.workspace:'')],
+    ['Original authority',customerAuthority(value.identity.family)+(value.identity.workspace?' / '+value.identity.workspace:'')],
     ['Manifest SHA-256',value.identity.expectedManifestSha256,true],['Receiving ID',value.id,true],
     ['Started',when(value.startedAt)],['Updated',when(value.updatedAt)],['Files',value.files?.length??'Receiving'],
+    ['Total file bytes',value.files?value.files.reduce((total,file)=>total+file.bytes,0).toLocaleString():'Receiving'],
     ['Current custody',value.localFiles?'Complete verified local customer':value.active?'Active original transfer':'Retained receiving record']
   ]);
+  $('customer-openapi-guidance').hidden=value.identity.family!=='openapi';
+  text($('download-customer'),value.identity.family==='openapi'?'Download original API package archive':'Download original customer archive');
   const progress=value.progress;
   text($('customer-progress'),value.error?value.error.code+': '+value.error.message:progress?pretty(progress):value.state==='COMPLETE'?'Original manifest and customer files are ready.':'Resume the same reviewed export to continue its original files.');
   $('resume-customer').disabled=Boolean(value.active);$('pause-customer').disabled=!value.active;$('download-customer').disabled=!value.localFiles;
@@ -398,6 +588,14 @@ action($('bind-profile'),bindProfile);action($('export-profile'),()=>download('e
 action($('import-profile'),()=>$('profile-file').click());
 $('profile-file').addEventListener('change',()=>{const file=$('profile-file').files[0];if(file)busy($('import-profile'),()=>importProfile(file));$('profile-file').value='';});
 action($('refresh-host'),refreshHost);action($('native-status'),nativeStatus);
+action($('review-host'),async()=>{setPage('host');await loadHostReview();$('host-review-panel').scrollIntoView({block:'start'});});
+action($('compare-host'),loadHostReview);
+action($('export-host-review'),()=>download(reviewPath(true),requireProfile().id+'-host-review.json'));
+action($('adopt-host-snapshot'),bindProfile);
+$('review-binding').addEventListener('change',()=>{state.reviewBaseline=$('review-binding').value;busy($('compare-host'),loadHostReview);});
+$('review-filter').addEventListener('submit',event=>{event.preventDefault();state.reviewOffset=0;renderHostReview();});
+action($('previous-review'),()=>{state.reviewOffset=Math.max(0,state.reviewOffset-50);renderHostReview();});
+action($('next-review'),()=>{state.reviewOffset+=50;renderHostReview();});
 $('tool-filter').addEventListener('submit',event=>{event.preventDefault();state.offset=0;busy(event.submitter,loadTools);});
 action($('previous-tools'),()=>{state.offset=Math.max(0,state.offset-75);return loadTools();});
 action($('next-tools'),()=>{if(state.next!==null){state.offset=state.next;return loadTools();}});
@@ -410,13 +608,14 @@ action($('reopen-draft'),async()=>{const packet=await api('draft/'+encodeURIComp
 action($('download-result'),()=>download('result/'+encodeURIComponent(state.call.id),state.call.id+'-result.json'));
 action($('use-customer'),()=>fillCustomer(state.customerSelection));
 action($('prepare-recovery'),async()=>{const selection=state.recovery.get($('recovery-tools').value);if(!selection)return;await chooseTool(selection.definition.name,{arguments:selection.arguments,recoveryOf:state.call.id});$('draft-name').value=selection.kind+' '+state.call.id.slice(0,8)+' · '+selection.definition.name.replace(/^merchant_/,'');notice('Prepared the original native '+selection.kind.toLowerCase()+'. Review its identifiers and save the linked draft.');});
-$('customer-family').addEventListener('change',()=>{$('customer-workspace-field').hidden=$('customer-family').value!=='opensearch';$('customer-workspace').required=$('customer-family').value==='opensearch';});
-$('customer-form').addEventListener('submit',event=>{event.preventDefault();busy(event.submitter,()=>receiveCustomer({family:$('customer-family').value,...($('customer-family').value==='opensearch'?{workspace:$('customer-workspace').value}:{}),exportId:$('customer-export').value,expectedManifestSha256:$('customer-sha').value}));});
+$('customer-family').addEventListener('change',customerFormRules);
+$('customer-form').addEventListener('submit',event=>{event.preventDefault();busy(event.submitter,()=>receiveCustomer({family:$('customer-family').value,...(customerWorkspace($('customer-family').value)?{workspace:$('customer-workspace').value}:{}),exportId:$('customer-export').value,expectedManifestSha256:$('customer-sha').value}));});
+customerFormRules();
 action($('refresh-customers'),()=>loadProfile());
 action($('resume-customer'),()=>receiveCustomer(state.customer.identity));
 action($('pause-customer'),async()=>{await api('customer-pause',{method:'POST',body:{id:state.customer.id}});await loadProfile();notice('Pause requested at the original receiving checkpoint.');});
 action($('download-customer'),()=>download('customer-archive/'+encodeURIComponent(state.customer.id),state.customer.identity.exportId+'.tar.gz'));
 const workflowPage=createWorkflowPage({state,$,node,text,pretty,when,tag,properties,selectionList,action,busy,api,notice,uid,
-  requireProfile,loadProfile,openCall,chooseTool,download,schedulePoll});
+  requireProfile,loadProfile,openCall,chooseTool,download,schedulePoll,customerCallReady,prepareCustomer});
 const bootstrap=new URLSearchParams(location.hash.slice(1)).get('token');
 if(bootstrap){history.replaceState(null,'',location.pathname+location.search);$('access-token').value=bootstrap;busy($('connect-form').querySelector('button'),connect);}
