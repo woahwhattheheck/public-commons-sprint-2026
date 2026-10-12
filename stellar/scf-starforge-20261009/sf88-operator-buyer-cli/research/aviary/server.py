@@ -51,14 +51,31 @@ class Workbench:
             job = {"id": uuid.uuid4().hex, "kind": kind, "arguments": arguments,
                    "state": "QUEUED", "created": a.now()}
             self.jobs.append(job)
+            try:
+                self.persist()
+            except BaseException as error:
+                job.update({"state": "FAILED", "completed": a.now(),
+                            "error": {"error": type(error).__name__,
+                                      "message": "Job was not started: " + str(error)}})
+                # An unreturned file write may have retained QUEUED on disk. A
+                # restart already marks that original record INTERRUPTED.
+                raise
             self.active = job["id"]
-            self.persist()
+
+        def persist_outcome():
+            try:
+                self.persist()
+                job.pop("persistenceError", None)
+            except BaseException as error:
+                job["persistenceError"] = {
+                    "error": type(error).__name__, "message": str(error),
+                    "recovery": "Reopen the original saved operation after restarting the server."}
 
         def work():
-            with self.guard:
-                job.update({"state": "RUNNING", "started": a.now()})
-                self.persist()
             try:
+                with self.guard:
+                    job.update({"state": "RUNNING", "started": a.now()})
+                    self.persist()
                 result = action()
                 with self.guard:
                     job.update({"state": "COMPLETED", "completed": a.now(), "result": result})
@@ -72,8 +89,18 @@ class Workbench:
             finally:
                 with self.guard:
                     self.active = None
-                    self.persist()
-        threading.Thread(target=work, name="aviary-" + kind, daemon=False).start()
+                    persist_outcome()
+        thread = threading.Thread(target=work, name="aviary-" + kind, daemon=False)
+        try:
+            thread.start()
+        except BaseException as error:
+            with self.guard:
+                self.active = None
+                job.update({"state": "FAILED", "completed": a.now(),
+                            "error": {"error": type(error).__name__,
+                                      "message": "Job was not started: " + str(error)}})
+                persist_outcome()
+            raise
         return {"job": job, "queued": True}
 
     def output(self, suffix):
@@ -154,6 +181,36 @@ class Handler(http.server.BaseHTTPRequestHandler):
             raise a.Problem("JSON", "Request body must be an object.")
         return result
 
+    def preview_value(self, kind, offset=0, limit=50, revision=None, document=None):
+        if kind not in a.KINDS:
+            raise a.Problem("TABLE", "Unknown preview table.")
+        offset, limit = max(0, int(offset)), min(200, max(1, int(limit)))
+        if revision is not None:
+            revision = int(revision)
+        if document is not None and not isinstance(document, dict):
+            raise a.Problem("MAPPING", "Preview requires a mapping document.")
+        result = a.preview(self.app.root, revision=revision, supplied=document)
+        rows = result["tables"][kind]
+        result["tables"] = {kind: rows[offset:offset + limit]}
+        result["page"] = {"table": kind, "offset": offset, "limit": limit,
+                          "total": len(rows),
+                          "nextOffset": offset + limit if offset + limit < len(rows) else None}
+        result["draft"] = document is not None
+        return result
+
+    def send_download(self, file, name):
+        size = file.stat().st_size
+        self.send_response(200)
+        self.send_header("Content-Type", mimetypes.guess_type(name)[0] or "application/octet-stream")
+        self.send_header("Content-Disposition", "attachment; filename*=UTF-8''" + quote(name))
+        self.send_header("Content-Length", str(size))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.end_headers()
+        with open(file, "rb") as source:
+            while block := source.read(a.CHUNK):
+                self.wfile.write(block)
+
     def do_GET(self):
         try:
             self.base_checks()
@@ -171,17 +228,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
             elif path == "/api/jobs":
                 self.send_json(200, self.app.summaries())
             elif path == "/api/preview":
-                kind = query.get("table", ["resources"])[0]
-                if kind not in a.KINDS:
-                    raise a.Problem("TABLE", "Unknown preview table.")
-                offset = max(0, int(query.get("offset", ["0"])[0]))
-                limit = min(200, max(1, int(query.get("limit", ["50"])[0])))
-                result = a.preview(self.app.root)
-                rows = result["tables"][kind]
-                result["tables"] = {kind: rows[offset:offset + limit]}
-                result["page"] = {"table": kind, "offset": offset, "limit": limit,
-                                  "total": len(rows), "nextOffset": offset + limit if offset + limit < len(rows) else None}
-                self.send_json(200, result)
+                self.send_json(200, self.preview_value(
+                    query.get("table", ["resources"])[0],
+                    query.get("offset", ["0"])[0], query.get("limit", ["50"])[0],
+                    query.get("revision", [None])[0]))
             elif path == "/api/source-table":
                 name = query.get("path", [""])[0]
                 source = a.meta_from_workspace(self.app.root, "source")
@@ -197,14 +247,24 @@ class Handler(http.server.BaseHTTPRequestHandler):
             elif path == "/api/events":
                 after = max(0, int(query.get("after", ["0"])[0]))
                 limit = min(200, max(1, int(query.get("limit", ["100"])[0])))
+                tail = query.get("tail", [None])[0]
                 with a.connect(self.app.root) as db:
-                    rows = [dict(row) for row in db.execute(
-                        "SELECT sequence,run_id,action_key,kind,created FROM events WHERE sequence>? ORDER BY sequence LIMIT ?",
-                        (after, limit))]
+                    if tail is not None:
+                        limit = min(200, max(1, int(tail)))
+                        rows = [dict(row) for row in db.execute(
+                            "SELECT sequence,run_id,action_key,kind,created FROM events "
+                            "ORDER BY sequence DESC LIMIT ?", (limit,))]
+                        rows.reverse()
+                    else:
+                        rows = [dict(row) for row in db.execute(
+                            "SELECT sequence,run_id,action_key,kind,created FROM events "
+                            "WHERE sequence>? ORDER BY sequence LIMIT ?", (after, limit))]
                     latest = db.execute("SELECT coalesce(max(sequence),0) FROM events").fetchone()[0]
                 next_after = rows[-1]["sequence"] if rows else after
                 self.send_json(200, {"events": rows, "nextAfter": next_after,
-                                    "complete": next_after >= latest, "latestSequence": latest})
+                                    "complete": next_after >= latest, "latestSequence": latest,
+                                    "mode": "tail" if tail is not None else "after",
+                                    "earlierAvailable": bool(rows and rows[0]["sequence"] > 1)})
             elif path == "/api/artifacts":
                 files = []
                 for entry in sorted(self.app.artifacts.iterdir()):
@@ -221,17 +281,19 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 file = a.within(self.app.artifacts, name)
                 if not file.is_file():
                     raise a.Problem("ARTIFACT", "Artifact is not available.")
-                size = file.stat().st_size
-                self.send_response(200)
-                self.send_header("Content-Type", mimetypes.guess_type(name)[0] or "application/octet-stream")
-                self.send_header("Content-Disposition", "attachment; filename*=UTF-8''" + quote(name))
-                self.send_header("Content-Length", str(size))
-                self.send_header("Cache-Control", "no-store")
-                self.send_header("X-Content-Type-Options", "nosniff")
-                self.end_headers()
-                with open(file, "rb") as source:
-                    while block := source.read(a.CHUNK):
-                        self.wfile.write(block)
+                self.send_download(file, name)
+            elif path == "/download-transcript":
+                name = query.get("path", [""])[0]
+                with a.connect(self.app.root) as db:
+                    row = db.execute("SELECT document FROM downloads WHERE path=?", (name,)).fetchone()
+                if row is None:
+                    raise a.Problem("DOWNLOAD", "Select an original retained transcript export.")
+                entry = json.loads(row["document"])
+                file = a.within(self.app.root, entry["path"])
+                if not file.is_file() or a.fingerprint(file) != {
+                        key: entry[key] for key in ("bytes", "sha256")}:
+                    raise a.Problem("DOWNLOAD_CHANGED", "Retained transcript export bytes changed.", name)
+                self.send_download(file, file.name)
             elif path == "/review":
                 content = a.report_html(a.preview(self.app.root), a.show(self.app.root))
                 self.send_content(200, content.encode(), "text/html; charset=utf-8")
@@ -251,7 +313,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.base_checks(mutation=True)
             data = self.body()
             path = urlsplit(self.path).path
-            if path == "/api/mapping":
+            if path == "/api/preview":
+                result = self.preview_value(data.get("table", "resources"),
+                    data.get("offset", 0), data.get("limit", 50),
+                    data.get("revision"), data.get("document"))
+            elif path == "/api/mapping":
                 result = a.save_mapping(self.app.root, data["document"], int(data["expectedRevision"]))
             elif path == "/api/assign-keys":
                 result = a.allocate_keys(self.app.root, int(data["expectedRevision"]))
@@ -272,8 +338,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 result = client.refresh_upload(self.app.root, data["operationId"], data["mediaKey"], data["manifest"])
             elif path == "/api/package":
                 output = self.app.output("Native_Package")
-                result = self.app.queue("native-package", {"output": str(output)},
-                                        lambda: a.build_package(self.app.root, output))
+                revision = int(data["revision"]) if data.get("revision") is not None else None
+                result = self.app.queue("native-package", {"output": str(output), "revision": revision},
+                                        lambda: a.build_package(self.app.root, output, revision))
             elif path == "/api/export":
                 output = self.app.output("Complete_Workspace")
                 result = self.app.queue("workspace-export", {"output": str(output)},
