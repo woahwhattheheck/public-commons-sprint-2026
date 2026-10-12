@@ -21,6 +21,11 @@ async function api(path,body) {
   return value;
 }
 function available() {
+  const cacheNavigation=$('cache-workspace-navigation');cacheNavigation.replaceChildren();
+  if(selectedPackage) {
+    const link=make('a','Open cache operations');link.href='/cache-operations?name='+encodeURIComponent(selectedPackage)+'#'+token;
+    cacheNavigation.append(link,make('p','Review saved cache activity, apply retention changes and restore prior settings.','small'));
+  }
   $('preview').disabled=busy||!specText;
   $('save').disabled=busy||!specText;
   $('start-preview').disabled=busy||!selectedPackage||customerOpen;

@@ -256,3 +256,9 @@ SF30 dataset/seller acceptance journey, unchanged, including its labelled local
 payment-adapter fixture and `--core-only` option. Browser navigation can be checked
 with the normal workspace command; do not equate an offline renderer exercise
 with a full browser-to-server run.
+
+## SDMX sources, retained editions and customer receiving
+
+`starforge sdmx` and `starforge dataset sdmx` open the same maintained SDMX workflow. It retains the original dataflow, data structure, codelists and observation sources; projects their exact string values through this dataset engine; compares saved editions; and transfers complete source-backed projects to another workspace. Its merchant release binds the native snapshot and lineage to explicit original SF30 public terms. Publication uses the original version store's current snapshot and revision, and customer acquisition uses the original SF88 paginated buyer and delivery.
+
+See [the SDMX operator guide](sdmx/README.md) for the captured ECB input, source acquisition receipts, native CLI, public imports and complete merchant/customer commands.

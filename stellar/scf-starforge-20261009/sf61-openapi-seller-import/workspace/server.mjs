@@ -22,6 +22,8 @@ import { startCommerceConsole } from '../../sf66-demo-launcher/commerce-console.
 import { inspectPostman, preparePostmanSource } from '../postman/collection.mjs';
 import { openOAuthConnectionRegistry, readOAuthHostConnections } from '../../sf30-seller-sdk/oauth-connections/host.mjs';
 import { createOAuthWorkspaceAdapter } from './oauth-http.mjs';
+import { openCacheWorkspace } from '../../sf30-seller-sdk/response-cache/workspace/model.mjs';
+import { cacheWorkspaceApi, serveCacheWorkspaceAsset, sendCacheWorkspaceResponse } from '../../sf30-seller-sdk/response-cache/workspace/http.mjs';
 import { createMigrationRoutes } from '../blockworks/routes.mjs';
 import { readBrowserAssets } from '../../distribution/browser-assets.mjs';
 
@@ -77,6 +79,35 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
     env:runtimeEnv,oauthConnections,allowLoopbackOAuth,oauthLookup,validatePlan:oauth.validatePlan})
     .then(value=>(migrationInstance=value)).catch(error=>{migrationPromise=null;throw error;});
 
+  const cacheWorkspaces=new Map(), cacheRequests=new Set();
+  function operatingWorkspace(name) {
+    name=packageName(name);
+    if(!cacheWorkspaces.has(name)) {
+      const opening=(async()=>{
+        const project=await readPackage(output,name);
+        if(shuttingDown)throw Object.assign(new Error('Workspace is stopping'),{status:503});
+        return openCacheWorkspace({directory:join(project.folder,'cache-operations'),
+          sources:[{id:'merchant',label:project.name}],request:(_source,command)=>{
+            const management=active?.name===project.name?active.session.session?.cacheManagement:null;
+            if(!management)throw Object.assign(new Error('Start this saved API package to operate its response cache.'),
+              {code:'CACHE_WORKSPACE_SOURCE_OFFLINE',status:409});
+            return management.dispatch(command);
+          }});
+      })();
+      cacheWorkspaces.set(name,opening);
+      opening.catch(()=>{if(cacheWorkspaces.get(name)===opening)cacheWorkspaces.delete(name);});
+    }
+    return cacheWorkspaces.get(name);
+  }
+  function cacheOperation(req,res,url,body) {
+    const operation=(async()=>{
+      const workspace=await operatingWorkspace(url.searchParams.get('name'));
+      return sendCacheWorkspaceResponse(res,await cacheWorkspaceApi(workspace,{
+        operation:url.pathname.slice('/api/cache-operations/'.length),method:req.method,query:url.searchParams,body}));
+    })();
+    cacheRequests.add(operation);operation.finally(()=>cacheRequests.delete(operation)).catch(()=>{});
+    return operation;
+  }
   const cacheView = () => {
     const rows = active?.session.session?.upstreamSnapshot?.().bindings ?? [];
     return rows.filter(row=>row.cachePolicy).map(row=>({binding:row.name,method:row.method,routes:row.routes,
@@ -129,6 +160,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
           !oauth.acceptCallbackRequest(req,url)) return send(403,{error:'Use the exact local workspace origin'});
       if(req.method==='GET'&&oauth.returned(res,url))return;
       if(await oauth.callback(req,res,url))return;
+      if(await serveCacheWorkspaceAsset(req,res,pathname))return;
       if (req.method==='GET' && STATIC.has(pathname)) {
         const asset=STATIC.get(pathname);
         res.writeHead(200,{'Content-Type':asset.type});res.end(await readFile(asset.url));return;
@@ -136,6 +168,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
       if (!pathname.startsWith('/api/')) return send(404,{error:'Not found'});
       if (!constantEqual(req.headers['x-workspace-token'],token)) return send(401,{error:'Open the complete workspace URL printed by the launcher'});
       if (req.method==='GET') {
+        if(pathname.startsWith('/api/cache-operations/'))return await cacheOperation(req,res,url);
         if(pathname==='/api/oauth/connections')return send(200,await oauth.list());
         if(pathname==='/api/oauth/connection')return send(200,await oauth.status(url.searchParams.get('alias'),url.searchParams.get('flowId')));
         if (pathname.startsWith('/api/migrations/')) return await (await migrations()).get(pathname,url,send,res);
@@ -198,6 +231,12 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
       if (!/^application\/json(?:;|$)/i.test(req.headers['content-type']??'')) return send(415,{error:'Use application/json'});
       const body=await limited(req);
       if (body===null || typeof body!=='object' || Array.isArray(body)) return send(400,{error:'Expected a JSON object'});
+      if(pathname.startsWith('/api/cache-operations/')) {
+        if(busy)return send(409,{error:'A workspace operation is in progress'});
+        busy=true;let finishMutation;mutationDone=new Promise(yes=>{finishMutation=yes;});
+        try{return await cacheOperation(req,res,url,body);}
+        finally{busy=false;finishMutation();}
+      }
       if (pathname==='/api/postman/inspect') return send(200,inspectPostman(body));
       if (pathname==='/api/postman/prepare') return send(200,preparePostmanSource(body));
       if (pathname==='/api/inspect') return send(200,inspectOpenApi(body.specText));
@@ -368,6 +407,11 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
     // drain order. One failed optional application must not skip the others.
     const closed=new Promise((yes,no)=>server.close(e=>e?no(e):yes())).catch(error=>{errors.push(error);});
     await mutationDone;
+    await Promise.allSettled([...cacheRequests]);
+    for(const opening of cacheWorkspaces.values()) await attempt(async()=>{
+      const workspace=await opening.catch(()=>null);if(workspace)await workspace.close();
+    });
+    cacheWorkspaces.clear();
     const migration=migrationPromise;
     if (migration) await attempt(async()=>{await (await migration).close();});
     await attempt(closeCustomer);

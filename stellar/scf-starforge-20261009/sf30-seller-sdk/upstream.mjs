@@ -14,9 +14,13 @@ import { compileOAuthClientCredentials, createOAuthClientCredentials } from './o
 import { compileOAuthConnection } from './oauth-connections/profile.mjs';
 import { createOAuthConnectionProvider } from './oauth-connections/provider.mjs';
 import { compileUpstreamCache, createConfiguredCachedUpstream } from './response-cache/config.mjs';
+import { createCacheControlBinding } from './response-cache/bind.mjs';
+import { createCacheManagement } from './response-cache/control.mjs';
 import { compileUpstreamStreamPolicy } from './upstream-stream.mjs';
 import { compileSupplierAccounts } from './supplier-quota/config.mjs';
 import { createSupplierQuotaRegistry, attachSupplierQuota } from './supplier-quota/application.mjs';
+import { compileUpstreamTls, upstreamTlsReferences } from './upstream-tls/config.mjs';
+import { loadUpstreamTls, deferUpstreamTls } from './upstream-tls/profile.mjs';
 import { compileUpstreamTransports, upstreamTransportReferences, createUpstreamTransports } from './upstream-transports.mjs';
 
 const SCHEMA = 'stellar-forge.seller-upstreams.v1';
@@ -25,7 +29,7 @@ const plain = value => value !== null && typeof value === 'object' && !Array.isA
   [Object.prototype,null].includes(Object.getPrototypeOf(value));
 const reserved = /^(?:host|connection|keep-alive|content-length|transfer-encoding|te|trailer|upgrade|expect|proxy-.*|cookie|set-cookie|accept-encoding|content-encoding|content-type|origin|referer|forwarded|x-forwarded-.*|sec-.*|payment-.*|x-payment.*|extension-responses|settlement-overrides|x402-.*|www-authenticate)$/i;
 const responseAllowed = new Set(['content-type','content-language','etag','last-modified','content-disposition','x-credits-remaining','x-ratelimit-limit','x-ratelimit-remaining','x-ratelimit-reset']);
-const bindingKeys = new Set(['origin','path','method','query','requestHeaders','headerEnv','responseHeaders','responseMode','timeoutMs','maxResponseBytes','maxRequestBytes','bodyType','maxInFlight','availability','responseContract','idempotency','cache','oauth2','oauthConnection','stream','supplierAccount','transport']);
+const bindingKeys = new Set(['origin','path','method','query','requestHeaders','headerEnv','responseHeaders','responseMode','timeoutMs','maxResponseBytes','maxRequestBytes','bodyType','maxInFlight','availability','responseContract','idempotency','cache','oauth2','oauthConnection','stream','supplierAccount','tls','transport']);
 const bad = text => { throw new TypeError(text); };
 const handlerRuntimes = new WeakMap();
 const handlerSupplierQuotas = new WeakMap();
@@ -50,12 +54,12 @@ function originURL(value,allowLoopback) {
   let url;
   try { url = new URL(value); } catch { bad('Upstream origin must be a canonical origin'); }
   if (typeof value !== 'string' || value !== url.origin || url.username || url.password || url.search || url.hash || url.pathname !== '/') bad('Upstream origin must be a canonical origin');
-  if (url.protocol === 'http:' && url.hostname === '127.0.0.1' && allowLoopback === true) return url;
+  if (['http:','https:'].includes(url.protocol) && url.hostname === '127.0.0.1' && allowLoopback === true) return url;
   const host = url.hostname;
   if (url.protocol !== 'https:' || url.port || isIP(host.replace(/^\[|\]$/g,'')) || !host.includes('.') ||
       host.length > 253 || host.split('.').some(part => !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(part)) ||
       ['localhost','local','localdomain','internal','home.arpa'].some(name => host === name || host.endsWith('.'+name))) {
-    bad('Use public HTTPS port 443, or explicit --allow-loopback-upstream for http://127.0.0.1');
+    bad('Use public HTTPS port 443, or explicit --allow-loopback-upstream for HTTP(S) on 127.0.0.1');
   }
   return url;
 }
@@ -105,6 +109,7 @@ export function upstreamCredentialReferences(config) {
   for (const reference of upstreamTransportReferences(config)) add(reference);
   for (const binding of Object.values(config.bindings)) {
     if (!plain(binding)) bad('Invalid upstream binding');
+    for (const reference of upstreamTlsReferences(binding.tls)) add(reference);
     if (binding.headerEnv !== undefined) {
       if (!plain(binding.headerEnv)) bad('Invalid headerEnv');
       for (const value of Object.values(binding.headerEnv)) add(value);
@@ -151,6 +156,7 @@ export function compileUpstreamBindings(config,{allowLoopback=false,env=process.
     if (!/^[A-Za-z_$][\w$]{0,127}$/.test(name) || ['__proto__','prototype','constructor'].includes(name) || !plain(raw) ||
         Object.keys(raw).some(k => !bindingKeys.has(k))) bad('Invalid upstream binding');
     const url = originURL(raw.origin,allowLoopback), keys = pathKeys(raw.path);
+    const tls = compileUpstreamTls(raw.tls,{origin:url.origin});
     const requestHeaders = headerList(raw.requestHeaders,'requestHeaders',name => headerName(name));
     const responseHeaders = headerList(raw.responseHeaders,'responseHeaders',name => responseAllowed.has(name));
     const credentialRefs = Object.create(null);
@@ -199,6 +205,7 @@ export function compileUpstreamBindings(config,{allowLoopback=false,env=process.
       ...(stream ? {stream} : {}),
       ...(oauth2 ? {oauth2} : {}),
       ...(oauthConnection ? {oauthConnection} : {}),
+      ...(tls ? {tls} : {}),
       ...(responseContract === undefined ? {} : {responseContract}),
       timeoutMs:integer(raw.timeoutMs,10000,120000,'timeoutMs'),
       maxResponseBytes,
@@ -261,6 +268,14 @@ export function createUpstreamHandlers(config,{allowLoopback=false,env=process.e
   if (typeof lookup !== 'function') bad('lookup must be a function');
   const compiled = compileUpstreamBindings(config,{allowLoopback,env,deferCredentials});
   const handlers = Object.create(null), providers = new Map();
+  // Paid launch resolves TLS before other resources. Challenge-only launch
+  // retains references until the original admitted supplier attempt.
+  const tlsProfiles = new Map();
+  for (const binding of Object.values(compiled)) {
+    if (!binding.tls) continue;
+    const key = JSON.stringify(binding.tls);
+    if (!tlsProfiles.has(key)) tlsProfiles.set(key,(deferCredentials ? deferUpstreamTls : loadUpstreamTls)(binding.tls,{env,origin:binding.origin}));
+  }
   const transports = createUpstreamTransports(compiled,{env});
   let supplierQuotas;
   try {
@@ -275,7 +290,9 @@ export function createUpstreamHandlers(config,{allowLoopback=false,env=process.e
       createOAuthClientCredentials(binding.oauth2,{...runtime,validateCredentials:!deferCredentials}));
     const provider = key ? providers.get(key) : undefined;
     const supplierQuota = binding.supplierAccount ? supplierQuotas.controller(binding.supplierAccount) : undefined;
+    const tls = binding.tls ? tlsProfiles.get(JSON.stringify(binding.tls)) : undefined;
     const options = {...(supplierQuota ? {supplierQuota} : {}),...(provider ? {credentialProvider:provider} : {}),baseUrl:binding.origin,path:binding.path,method:binding.method,
+      ...(tls ? {tls} : {}),
       bodyType:binding.bodyType,maxRequestBytes:binding.maxRequestBytes,
       query:binding.query,headers:binding.credentialRefs ? () => resolveCredentialHeaders(binding.credentialRefs,env) : binding.credentials,
       requestHeaders:binding.requestHeaders,
@@ -300,6 +317,10 @@ export function createUpstreamHandlers(config,{allowLoopback=false,env=process.e
     }
     if (supplierQuota) handlers[name] = attachSupplierQuota(handlers[name], supplierQuota,
       {preflight:!binding.cache && !binding.idempotency});
+    if (tls) {
+      const originalSnapshot = handlers[name].snapshot;
+      handlers[name].snapshot = () => Object.freeze({...originalSnapshot(),tls:tls.snapshot()});
+    }
     handlers[name] = transports.retain(handlers[name],binding.transport);
     if (binding.idempotency) handlers[binding.idempotency.admission] = handlers[name].admit;
   }
@@ -355,6 +376,9 @@ export function createUpstreamApplication(config,bindings,options={}) {
   const operationControl = createUpstreamOperationControl(compiled,originals,{
     closeHandlers:closeOptions => closeUpstreamHandlers(originals,closeOptions)});
   const caches = new Map(Object.entries(originals).filter(([,handler]) => handler.cache).map(([name,handler]) => [name,handler.cache]));
+  const cacheBinding = createCacheControlBinding(caches, { routeIds: Object.fromEntries([...caches.keys()].map(name =>
+    [name, config.routes.filter(route => route.handler === name).map(route => route.id)])) });
+  const cacheManagement = createCacheManagement(cacheBinding);
   const service = structuredClone(config);
   service.maxRequestBytes=Math.max(config.maxRequestBytes??1048576,...Object.values(compiled).map(binding=>binding.maxRequestBytes));
   let sequence = 0;
@@ -367,18 +391,15 @@ export function createUpstreamApplication(config,bindings,options={}) {
     handlers[name] = handler.admit;
     route.admit = name;
   }
-  return {config:service,handlers:Object.freeze(handlers),operationControl,
+  return {config:service,handlers:Object.freeze(handlers),operationControl,cacheBinding,cacheManagement,
     ...(supplierQuotas.names.length ? {supplierQuotaSnapshot:() => supplierQuotas.snapshot()} : {}),
-    invalidateCache:name => {
-      if (name !== undefined && !caches.has(name)) bad('Unknown cached upstream binding');
-      return Object.fromEntries([...caches].filter(([id]) => name === undefined || id === name).map(([id,cache]) => [id,cache.invalidate()]));
-    },
+    invalidateCache:cacheBinding.invalidate,
     close:options => operationControl.close(options),
     snapshot:() => ({
     schema:'stellar-forge.seller-upstream-availability.v1',capturedAt:new Date().toISOString(),
     bindings:Object.entries(compiled).map(([name,binding]) => ({name,method:binding.method,
       routes:service.routes.filter(route=>route.handler===name).map(route=>({id:route.id,path:route.path})),
-      protected:binding.availability !== null,...(binding.cache ? {cachePolicy:binding.cache} : {}),...originals[name].snapshot()})),
+      protected:binding.availability !== null,...(binding.cache ? {cachePolicy:{...binding.cache,...caches.get(name).inspect().policy}} : {}),...originals[name].snapshot()})),
     semantics:{availability:'Original backend response health, not payment or settlement status',
       recovery:'One backend trial; admitted requests are not capacity reservations',
       retention:supplierQuotas.names.length ? 'Availability uses process memory; supplier quotas retain the original account ledger across restarts' : 'Process memory; restart resets availability and counters',
