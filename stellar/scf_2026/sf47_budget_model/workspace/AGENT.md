@@ -187,3 +187,23 @@ completionExtension takes receiptId, confirmedOn, deadlineOn, reference, optiona
 completionDecision takes outcomeId, state, date, sourceNote and optional sourceIds. It updates the recorded issuer outcome while preserving the form identity, prepared source and earlier events. Use a newly prepared form and the actual new form reference for a resubmission.
 
 asOfDate selects which payment, confirmation and submission dates participate in the calendar view. Issuer outcomes display their current recorded state. Complete case export/import retains all completion plans, confirmations, form receipts, source files and complete frozen reviews.
+
+## Cohort acceptance through the existing native case
+
+The maintained typed client and original MCP provider delegate the complete workflow to this same Operations service. See [OPERATIONS-COHORT.md](OPERATIONS-COHORT.md) for the original rule and explicit review inputs.
+
+| Typed client | Original MCP tool | Native result |
+| --- | --- | --- |
+| `cohortSeed(caseId, expectedVersion, tranche)` | `merchant_grant_cohort_seed` | Pinned proposed tranche-2/3 rule, original purchase/deployment/source inventory and complete input seed. |
+| `cohortPreview(caseId, expectedVersion, inputs)` | `merchant_grant_cohort_preview` | Exact cutoff measurement, numerator/denominator scopes, source findings and reviewed preview digest. |
+| `cohortPrepare(caseId, body)` | `merchant_grant_cohort_prepare` | Original `cohort.prepare` request receipt and immutable review identity, including unmet findings. |
+| `read('review', {caseId,reviewId})` | `merchant_grant_review` | Complete original frozen review, source snapshot and observation history. |
+| `download('cohort', {caseId,reviewId})` | `merchant_grant_export` with `kind:'cohort'` | Complete private evidence ZIP with readable result, CSV tables and original files. |
+
+The preparation body is `{expectedVersion,requestId,actor,note?,inputs,expectedPreviewSha256}`. Preserve the exact body and request ID after an uncertain result. It replays the first committed case result before the case-version check. The provider can take the complete `inputs` inline or through its existing verified original input/snapshot/transfer selection, with `inputPointer` selecting the original seed's `/inputs`. It does not create a second input journal or a second business case.
+
+Both `completionPreview` and `completionPrepare` accept optional `cohortReviewIds`, at most twenty distinct original review IDs. The corresponding `merchant_grant_completion_preview` and `merchant_grant_completion_prepare` retain that same optional array. Omit it when no cohort is selected to preserve the previous request shape. Currentness, the correct tranche, the observation cutoff and unmet target/source findings are checked by the original service. The prepared form and complete export embed the selected immutable evidence.
+
+A `COHORT_EVALUATION` may truthfully retain unmet targets. There is no additional submission endpoint, payment action, award date or generated independent participant. The original payment-based completion clock, deliverables, form receipt and issuer outcome keep their existing owners and identities.
+
+MCP responses use the same retained complete-file and array-page interfaces as other Operations results. Page the original `/observations`, `/intents`, `/targets` and other arrays from the returned immutable snapshot; preserve its ID and SHA. An oversized row remains available from the complete original file. Reopening the review or export does not recapture an Inbox or repeat a provider/payment operation.

@@ -162,10 +162,19 @@ export function createAccountingPlatformClient({ workspace, platform, call } = {
       'Use the prepared platform and original workspace alias.', 'CONNECTION_BINDING');
     return operation;
   }
-  function read(action, args = {}, options) {
+  async function read(action, args = {}, options) {
     need(plain(args) && (args.workspace === undefined || args.workspace === workspace), 'Keep this selected original workspace alias.');
     need(WIRE_TOOLS[platform][action]?.readOnly, 'Choose a declared read; mutations use an explicitly prepared command.');
-    return invoke(nativeTool(platform, action), wireArguments(platform, action, { ...args, workspace }), options);
+    const tool = nativeTool(platform, action), selectedArguments = wireArguments(platform, action, { ...args, workspace });
+    try { return await invoke(tool, selectedArguments, options); }
+    catch (error) {
+      if (platform !== 'buyer' || !['startup', 'prepare'].includes(action) || error.code !== 'ACCOUNTING_NOT_OPEN') throw error;
+      // Reopen the configured native Store; only its explicit initialize command creates it.
+      // Native open reports INITIALIZATION_REQUIRED for a new buyer directory. Observation
+      // classifies that specific result; NOT_OPEN itself never means an absent source.
+      await invoke(PREFIX + 'open', {}, options);
+      return invoke(tool, selectedArguments, options);
+    }
   }
   async function findPage(action, args, view, predicate, options) {
     let offset = 0, expectedTotal, expectedRevision;

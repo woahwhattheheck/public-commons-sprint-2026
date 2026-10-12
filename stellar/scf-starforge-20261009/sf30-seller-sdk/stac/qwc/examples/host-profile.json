@@ -1,0 +1,26 @@
+{
+  "schema": "starforge.stac-qwc-host.v1",
+  "id": "customer-qwc",
+  "tenant": "default",
+  "themeId": "customer-map",
+  "mapPrefix": "starforge/customer-map",
+  "inputRoot": "/srv/qwc/config-in",
+  "viewerRoot": "/srv/qwc/viewer",
+  "qgisResourcesRoot": "/srv/qwc/qgis-resources",
+  "generatedConfigRoot": "/srv/qwc/config",
+  "generatorSource": "/opt/qwc-config-generator/src",
+  "generatorCwd": "/opt/qwc-config-generator",
+  "tenantConfig": "default/tenantConfig.json",
+  "themeInput": "default/themesConfig.json",
+  "themePointer": "/themes/items/-",
+  "permissionsDefaultAllow": false,
+  "qgisPython": "/usr/bin/python3",
+  "generatorPython": "/opt/qwc-config-generator/.venv/bin/python",
+  "qgisServerBaseUrl": "http://127.0.0.1:9090/ows/",
+  "wmsBaseUrl": "https://customer.example/ows/",
+  "viewerUrl": "https://customer.example/",
+  "qwcVersion": "ACTUAL_INSTALLED_VERSION",
+  "environmentNames": [
+    "PGSERVICEFILE"
+  ]
+}
