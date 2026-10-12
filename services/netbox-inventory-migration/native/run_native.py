@@ -202,9 +202,33 @@ class Journey:
                     review = read_json(directory / "review.json")
                     result = dispatch(directory, api, manifest, packet, "APPLY", review["review_digest"], 120)
         require(result.get("state") == "APPLIED", "The original lost-response apply remains available for same-request recovery.")
-        require((self.root / "actual-response-discarded.json").exists(), "The actual provider response fault was not observed.")
+        attempt_dir, attempt = current_attempt(self.first)
+        require(attempt and attempt["phase"] == "APPLY"
+                and attempt["operation_id"] == result["operation_id"]
+                and attempt["review_digest"] == result["review_digest"],
+                "The recovered native apply must retain its exact reviewed original attempt.")
+        marker = self.root / "actual-response-discarded.json"
+        discarded = read_json(marker) if marker.exists() else None
+        if discarded:
+            require(discarded.get("operation_id") == OPERATION,
+                    "The retained response-discard receipt belongs to another receiving operation.")
+        original_job = (read_json(attempt_dir / "job.json")
+                        if (attempt_dir / "job.json").exists() else None)
+        transport = {
+            "outcome": ("ACTUAL_RESPONSE_DISCARDED" if discarded
+                        else "ORIGINAL_APPLY_RECOVERED_WITHOUT_DISCARD_RECEIPT"),
+            "response_discard_receipt": discarded,
+            "execution_reference": attempt["execution_reference"],
+            "attempt": str(attempt_dir.relative_to(self.first)),
+            "native_job_id": original_job.get("id") if original_job else None,
+            "journal": result["journal"],
+            "detail": ("The returned native HTTP response was deliberately discarded."
+                       if discarded else
+                       "The original applied transaction was recovered before a response-discard receipt was retained.")
+        }
         return {"state": "APPLIED", "journal": result["journal"], "receipt_sha256": result["receipt_sha256"],
-                "review_digest": result["review_digest"], "resolved": result["resolved"], "counts": result["counts"]}
+                "review_digest": result["review_digest"], "resolved": result["resolved"],
+                "counts": result["counts"], "transport_recovery": transport}
 
     def verify_applied(self):
         actual = self.devices()
@@ -322,7 +346,7 @@ def main():
             refreshed = journey.stage("07-refreshed-review", lambda: journey.review(True))
             require(refreshed["review_digest"] != read_json(journey.steps / "02-review.json")["review_digest"],
                     "The actual changed component default did not change its native review identity.")
-            journey.stage("08-apply-lost-reply", journey.lost_reply_apply)
+            lost_reply = journey.stage("08-apply-lost-reply", journey.lost_reply_apply)
             journey.stage("09-native-commit-and-recovery", journey.verify_applied)
             journey.stage("10-corrected-source", journey.corrected_input)
             journey.stage("11-corrected-native-apply", journey.corrected_apply)
@@ -332,6 +356,7 @@ def main():
             result = {"schema": "tjlabs.netbox.native-receiving/v1", "operation_id": OPERATION,
                       "state": "COMPLETE", "completed_at": now(), "actual_netbox_version": fixture["actual_netbox_version"],
                       "contract_source_commit": SOURCE_COMMIT, "source_sha256": source_hashes,
+                      "transport_recovery": lost_reply.get("transport_recovery"),
                       "steps": [path.name for path in sorted(journey.steps.glob("*.json"))], "customer_delivery": delivery}
             write_atomic(root / "native-result.json", json_bytes(result), immutable=True)
             print(json.dumps(result, ensure_ascii=False, indent=2), flush=True)
