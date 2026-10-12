@@ -118,7 +118,9 @@ export async function runManagedCentralCli(argv=process.argv.slice(2),{
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   runManagedCentralCli().catch(error=>{
     process.stderr.write(JSON.stringify({error:{code:error.code||'ODK_MANAGED_FAILED',
-      message:'The original Central application could not complete. Inspect its retained operation and private workspace.'}})+'\n');
+      message:String(error.message||'The original Central operation failed.').slice(0,4000),
+      ...(error.operationId?{operationId:error.operationId}:{}),...(error.providerStatus?{providerStatus:error.providerStatus}:{}),
+      ...(error.retryAfter?{retryAfter:error.retryAfter}:{}),...(error.details?{details:error.details}:{})}})+'\n');
     process.exitCode=1;
   });
 }

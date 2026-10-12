@@ -29,7 +29,8 @@ function summary(capture) {
     tables:tables.map(({query,...table})=>({...table,fieldCount:query.fields.length})),
     rowCount:tables.reduce((sum,table)=>sum+table.rowCount,0)};
 }
-export async function openCentralWorkspace({directory,fetchImpl=globalThis.fetch}={}) {
+export async function openCentralWorkspace({directory,fetchImpl=globalThis.fetch,extend}={}) {
+  if(extend!==undefined&&typeof extend!=='function')throw fault('CENTRAL_EXTENSION','Use a trusted workspace extension function.');
   const store=await openCentralStore(directory),root=store.directory,running=new Map(),operations=new Set();
   let closed=false,closing=null,publisher=null;
   for(const capture of store.list('capture'))if(capture.status==='CAPTURING')
@@ -330,5 +331,6 @@ export async function openCentralWorkspace({directory,fetchImpl=globalThis.fetch
     workspace[name]=(...args)=>{ensureOpen();const operation=Promise.resolve().then(()=>method(...args));operations.add(operation);
       return operation.finally(()=>operations.delete(operation));};
   }
-  return workspace;
+  try{if(extend)await extend({workspace,store});return workspace;}
+  catch(error){await workspace.close();throw error;}
 }

@@ -33,8 +33,8 @@ const collections=new Set(['forms','scope','findings','indicators','payment','ru
 export const CENTRAL_CLI_HELP = `ODK Central Field Data
 
 Use the single installed command:
-  odk-central-workspace serve --workspace /absolute/private/workspace --operator "Field operations"
-  odk-central-workspace <command> --workspace /absolute/private/workspace [options]
+  starforge odk-central-workspace serve --workspace /absolute/private/workspace --operator "Field operations"
+  starforge odk-central-workspace <command> --workspace /absolute/private/workspace [options]
 
 Data commands:
   init, state                         Open the original database or read its current state.

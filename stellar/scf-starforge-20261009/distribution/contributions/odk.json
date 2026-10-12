@@ -3,11 +3,9 @@
   "id": "odk",
   "description": "Original ODK Central field captures, source-linked reporting, Stellar dataset releases and complete receiving",
   "commands": {
-    "odk": "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/cli.mjs",
     "odk-central-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/managed.mjs"
   },
   "commandDescriptions": {
-    "odk": "Operate original Central field source, reporting editions, datasets, releases and complete receiving",
     "odk-central-workspace": "Open the original Central workspace through Applications or its native data commands"
   },
   "exports": {

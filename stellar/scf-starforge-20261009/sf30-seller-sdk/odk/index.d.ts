@@ -5,7 +5,7 @@ export type RecordValue = Record<string,unknown>;
 export interface CentralScope {
   submittedFrom?:string; submittedBefore?:string; updatedSince?:string; pageSize?:number;
 }
-export interface CentralFormSelection {projectId:number;formId:string}
+export interface CentralFormSelection {projectId:number|string;formId:string}
 export interface CentralConnectionInput {
   id?:string;name:string;url:string;authEnv:string;allowLoopback?:boolean;
 }
@@ -47,6 +47,10 @@ export interface CentralState {
   exports:RecordValue[];reports:RecordValue[];archives:RecordValue[];running:string[];
   receivedArchive:CentralReceivedArchive|null;[key:string]:unknown;
 }
+export interface CentralCaptureSummary extends RecordValue {
+  id:string;revision:number;status:string;contentHash?:string;rowCount:number;submissionCount:number;
+  forms:RecordValue[];tables:RecordValue[];decision:RecordValue|null;
+}
 export interface CentralCapture extends RecordValue {
   id:string;revision:number;status:string;contentHash?:string;
   forms:RecordValue[];tables:RecordValue[];decisions:RecordValue[];
@@ -58,9 +62,9 @@ export interface CentralWorkspace {
   state():CentralState;
   connect(input:CentralConnectionInput):Awaitable<RecordValue>;
   projects(input:{connectionId:string}):Awaitable<unknown>;
-  forms(input:{connectionId:string;projectId:number}):Awaitable<unknown>;
+  forms(input:{connectionId:string;projectId:number|string}):Awaitable<unknown>;
   createPlan(input:CentralPlanInput):Awaitable<RecordValue>;
-  capture(input:{planId:string;id?:string;label?:string}):Awaitable<CentralCapture>;
+  capture(input:{planId:string;id?:string;label?:string}):Awaitable<CentralCaptureSummary>;
   resume(input:{id:string}):Awaitable<unknown>;
   pause(input:{id:string}):Awaitable<unknown>;
   wait(input:{id:string}):Awaitable<unknown>;
@@ -82,7 +86,21 @@ export interface CentralWorkspace {
   rollbackRelease(input:{to:string;expectedGeneration:number;reason:string}):Awaitable<RecordValue>;
   close():Promise<void>;
 }
-export function openCentralWorkspace(options:{directory:string;fetchImpl?:typeof fetch}):Promise<CentralWorkspace>;
+export interface CentralExtensionStore {
+  directory:string;
+  get<T extends RecordValue=RecordValue>(kind:string,id:string,required?:boolean):T|null;
+  list<T extends RecordValue=RecordValue>(kind:string):T[];
+  put<T extends RecordValue>(kind:string,id:string,value:T,expectedRevision?:number):T;
+  writeRecord<T extends RecordValue>(kind:string,id:string,value:T,expectedRevision?:number):T;
+  transaction<T>(operation:()=>T):T;
+  retain(body:Uint8Array|string):Promise<{sha256:string;bytes:number}>;
+  raw(hash:string):Promise<Uint8Array>;
+  resource(captureId:string,key:string):RecordValue|null;
+  saveResource(captureId:string,key:string,kind:string,receipt:RecordValue):RecordValue;
+  [key:string]:unknown;
+}
+export type CentralWorkspaceExtension=(context:{workspace:CentralWorkspace;store:CentralExtensionStore})=>Awaitable<unknown>;
+export function openCentralWorkspace(options:{directory:string;fetchImpl?:typeof fetch;extend?:CentralWorkspaceExtension}):Promise<CentralWorkspace>;
 export interface CentralServer {
   url:string;origin:string;directory:string;token:string;close():Promise<void>;
 }
@@ -115,9 +133,9 @@ export class CentralWorkspaceClient {
   action<T=unknown>(method:CentralAction,input?:RecordValue,options?:CentralRequestOptions):Promise<T>;
   connect(input:CentralConnectionInput,options?:CentralRequestOptions):Promise<RecordValue>;
   projects(input:{connectionId:string},options?:CentralRequestOptions):Promise<unknown>;
-  forms(input:{connectionId:string;projectId:number},options?:CentralRequestOptions):Promise<unknown>;
+  forms(input:{connectionId:string;projectId:number|string},options?:CentralRequestOptions):Promise<unknown>;
   createPlan(input:CentralPlanInput,options?:CentralRequestOptions):Promise<RecordValue>;
-  capture(input:{planId:string;id?:string;label?:string},options?:CentralRequestOptions):Promise<CentralCapture>;
+  capture(input:{planId:string;id?:string;label?:string},options?:CentralRequestOptions):Promise<CentralCaptureSummary>;
   captureStatus(id:string,options?:CentralRequestOptions):Promise<RecordValue>;
   resume(input:{id:string},options?:CentralRequestOptions):Promise<unknown>;
   pause(input:{id:string},options?:CentralRequestOptions):Promise<unknown>;
