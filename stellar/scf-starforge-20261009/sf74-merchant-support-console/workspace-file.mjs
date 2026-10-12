@@ -1,9 +1,10 @@
+import {validateServiceRecord,serviceSummary,MAX_SERVICE_BYTES} from './service-commitments.mjs';
 import {MAX_COMMISSIONING_BYTES,validateCommissioning,commissioningSummary} from './commissioning.mjs';
 // MIT. Portable SF74 merchant cases. Browser/Node 22+, no dependencies or I/O.
 // A digest detects changed bytes; it does not authenticate a merchant or approval.
 export const WORKSPACE_SCHEMA = 'stellar-forge.merchant-workspace.v1';
 export const MAX_SOURCE_BYTES = 2_000_000;
-export const MAX_WORKSPACE_BYTES = 16_100_000 + MAX_COMMISSIONING_BYTES + 8 * 1024 * 1024;
+export const MAX_WORKSPACE_BYTES = 16_100_000 + MAX_COMMISSIONING_BYTES + MAX_SERVICE_BYTES + 8 * 1024 * 1024;
 const MAX_TERMS_BYTES = 65_536;
 const INPUT_KEYS = ['resource', 'catalog', 'origin', 'network', 'payTo', 'method', 'credentialed'];
 const SOURCE_SCHEMAS = Object.freeze({
@@ -92,7 +93,7 @@ function sourceSchema(bytes, slot) {
   return data.schema;
 }
 function draft(value) {
-  object(value, ['name', 'inputs', 'sources', 'termsText', 'baselineOnly', 'workorderSource', 'commissioning'], 'workspace draft');
+  object(value, ['name', 'inputs', 'sources', 'termsText', 'baselineOnly', 'workorderSource', 'commissioning', 'service'], 'workspace draft');
   if(value.workorderSource!==undefined&&!['diagnostic','runtime'].includes(value.workorderSource))
     throw new TypeError('Unknown workorder source');
   return {
@@ -103,13 +104,21 @@ function draft(value) {
     baselineOnly: bool(value.baselineOnly ?? false, 'baselineOnly'),
     ...(value.workorderSource===undefined?{}:{workorderSource:value.workorderSource}),
     ...(value.commissioning===undefined||value.commissioning===null?{}:{commissioning:value.commissioning}),
+    ...(value.service===undefined||value.service===null?{}:{service:value.service}),
   };
+}
+
+/** Preserve every saved case arm while removing parsed-file metadata. */
+export function workspaceDraft(value,changes={}) {
+  const {savedAt,summary,...original}=value;
+  return draft({...original,...changes});
 }
 
 /** Return one downloadable JSON file, retaining source bytes rather than reformatting JSON. */
 export async function serializeWorkspace(value, {now = new Date().toISOString()} = {}) {
   const state = draft(value);
   const commissioning=await validateCommissioning(state.commissioning);
+  const service=state.service===undefined?undefined:await validateServiceRecord(state.service);
   const blobs = Object.create(null), refs = {};
   for (const slot of SLOTS) {
     const encoded = state.sources[slot];
@@ -126,6 +135,7 @@ export async function serializeWorkspace(value, {now = new Date().toISOString()}
     baselineOnly: state.baselineOnly,
     ...(state.workorderSource==='runtime'?{workorderSource:'runtime'}:{}),
     ...(commissioning?{commissioning}:{}),
+    ...(service===undefined?{}:{service}),
   }, null, 2) + '\n';
   if (textEncoder.encode(file).length > MAX_WORKSPACE_BYTES) throw new TypeError('Workspace exceeds file size limit');
   return file;
@@ -136,7 +146,7 @@ export async function parseWorkspace(text) {
   string(text, MAX_WORKSPACE_BYTES, 'workspace file', {empty: false});
   let file;
   try { file = JSON.parse(text); } catch { throw new TypeError('Workspace is not valid JSON'); }
-  object(file, ['schema', 'savedAt', 'name', 'inputs', 'sources', 'blobs', 'termsText', 'baselineOnly', 'workorderSource', 'commissioning'], 'workspace');
+  object(file, ['schema', 'savedAt', 'name', 'inputs', 'sources', 'blobs', 'termsText', 'baselineOnly', 'workorderSource', 'commissioning', 'service'], 'workspace');
   for (const key of ['schema', 'savedAt', 'name', 'inputs', 'sources', 'blobs', 'termsText', 'baselineOnly'])
     if (!own(file, key)) throw new TypeError(`Missing workspace field: ${key}`);
   if (file.schema !== WORKSPACE_SCHEMA) throw new TypeError('Unsupported merchant workspace version');
@@ -166,13 +176,15 @@ export async function parseWorkspace(text) {
   if (used.size !== keys.length) throw new TypeError('Workspace contains unreferenced source blobs');
   const state = draft({name: file.name, inputs: file.inputs, sources: restored,
     termsText: file.termsText, baselineOnly: file.baselineOnly,...(own(file,'workorderSource')?{workorderSource:file.workorderSource}:{}),
-    ...(own(file,'commissioning')&&file.commissioning!==null?{commissioning:await validateCommissioning(file.commissioning)}:{})});
+    ...(own(file,'commissioning')&&file.commissioning!==null?{commissioning:await validateCommissioning(file.commissioning)}:{}),
+    ...(own(file,'service')&&file.service!==null?{service:await validateServiceRecord(file.service)}:{})});
   return { ...state, savedAt, summary: {
     sourceCount: Object.values(restored).filter(v => v !== null).length,
     uniqueSourceCount: used.size,
     sourceBytes: keys.reduce((total, key) => total + file.blobs[key].bytes, 0),
     termsPresent: state.termsText.trim().length > 0,
     ...(state.commissioning?{commissioning:commissioningSummary(state.commissioning)}:{}),
+    ...(state.service?{service:serviceSummary(state.service)}:{}),
   }};
 }
 
