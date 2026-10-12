@@ -513,6 +513,9 @@ def reopen_project(workspace, project_id, *, progress=None):
     state = workspace.read()
     record = next((x for x in state["projects"] if x["id"] == project_id), None)
     require(record is not None, "PROJECT_NOT_FOUND", "Select a retained native project version.")
+    if record.get("kind") == "field":
+        from .field_native import reopen_field_project
+        return reopen_field_project(workspace, project_id, progress=progress)
     for source_id in record["sourceIds"]:
         workspace.source(source_id, verify=True, progress=progress)
     for value in [record["file"]] + record.get("derivedFiles", []):

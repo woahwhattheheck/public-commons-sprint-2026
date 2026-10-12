@@ -833,6 +833,9 @@ class QgisWorkspace:
                 add(dependency)
         for record in historical_style_refs(snapshot):
             add(record)
+        from .field import field_file_refs
+        for record in field_file_refs(snapshot):
+            add(record)
         return [records[name] for name in sorted(records)]
 
     def export_package(self, destination, *, expected_revision=None, progress=None):
@@ -849,13 +852,14 @@ class QgisWorkspace:
         records.insert(0, {"path": "workspace-snapshot.json", "bytes": len(snapshot_body), "sha256": sha_bytes(snapshot_body)})
         software = {}
         plugin_root = Path(__file__).resolve().parent
-        for name in ("__init__.py", "model.py", "vector_source.py", "qgis_project.py", "plugin.py", "cli.py", "metadata.txt"):
+        for name in ("__init__.py", "model.py", "vector_source.py", "qgis_project.py", "plugin.py", "cli.py",
+                     "field.py", "field_native.py", "field_bridge.py", "field_ui.py", "metadata.txt"):
             path = plugin_root / name
             require(path.is_file() and not path.is_symlink(), "PLUGIN_SOURCE_MISSING",
                     "Keep the complete installed QGIS plugin with the project handover.", path=name)
             body = path.read_bytes()
             software["software/starforge_stac/" + name] = body
-        for name in ("OPERATIONS.md", "VECTOR_RECEIVING.md", "LICENSE"):
+        for name in ("OPERATIONS.md", "VECTOR_RECEIVING.md", "FIELD_OPERATIONS.md", "LICENSE"):
             path = plugin_root / name
             if not path.is_file():
                 path = plugin_root.parent / name
