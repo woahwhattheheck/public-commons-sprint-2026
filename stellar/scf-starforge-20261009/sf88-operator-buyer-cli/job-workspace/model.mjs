@@ -4,19 +4,20 @@ import { randomUUID } from 'node:crypto';
 import { openJobBuyer, createJobBuyer } from '../../sf30-seller-sdk/jobs/buyer.mjs';
 import { acquireStateLease } from '../../merchant-fleet-gateway/state-lease.mjs';
 import { openLibrary } from '../resource-library/library.mjs';
+import { openJobCheckout } from './checkout/controller.mjs';
 import { readBytes, writeBytes, exists, digest, privateDirectory } from '../node/store.mjs';
 import { SCHEMA, STATES, HASH, canonicalDirectory, readCatalog, saveCatalog, catalogPath,
   buyerId, resourceId, delivered, within, now, requireValue, failure } from './state.mjs';
 
 export async function openJobWorkspace({ directory, buyerRoots, fileRoots, transport, fetchImpl,
-  requestTimeoutMs = 60000, maxConcurrent = 4 } = {}) {
+  requestTimeoutMs = 60000, maxConcurrent = 4, checkout: checkoutOptions = {} } = {}) {
   directory = await canonicalDirectory(directory, { privateState: true, create: true });
   requireValue(Number.isInteger(maxConcurrent) && maxConcurrent >= 1 && maxConcurrent <= 4,
     'JOB_WORKSPACE_CONCURRENCY_INVALID');
   for (const name of ['buyers','artifacts','intake','library'])
     await privateDirectory(join(directory, name));
   const lease = await acquireStateLease(directory);
-  let library;
+  let library, checkout;
   try {
     const normalize = async roots => {
       requireValue(Array.isArray(roots) && roots.length <= 30, 'JOB_WORKSPACE_ROOTS_INVALID');
@@ -48,7 +49,7 @@ export async function openJobWorkspace({ directory, buyerRoots, fileRoots, trans
     library = await openLibrary({ state: join(directory, 'library'), kind: 'paid-jobs', source: directory,
       roots, maxFileBytes: 67108864, indexBytes: 1024 * 1024 });
     const handles = new Map(), tasks = new Map();
-    let tail = Promise.resolve(), closing = false, indexWork = null;
+    let tail = Promise.resolve(), closing = false, closePromise = null, indexWork = null;
     const serial = fn => {
       const result = tail.then(() => { lease.assertHeld(); return fn(); });
       tail = result.catch(() => {}); return result;
@@ -100,8 +101,9 @@ export async function openJobWorkspace({ directory, buyerRoots, fileRoots, trans
         await commit(next); return item(row(id));
       });
     }
-    async function register({ buyerDirectory, label = '' } = {}) {
-      active();
+    async function register(options) { return registerBuyer(options); }
+    async function registerBuyer({ buyerDirectory, label = '' } = {}, finishingCheckout = false) {
+      if (!finishingCheckout) active();
       buyerDirectory = await canonicalDirectory(buyerDirectory, { privateState: true });
       requireValue([join(directory, 'buyers'), ...catalog.buyerRoots].some(root => within(buyerDirectory, root)),
         'JOB_BUYER_DIRECTORY_OUTSIDE_ROOTS', 403);
@@ -109,7 +111,7 @@ export async function openJobWorkspace({ directory, buyerRoots, fileRoots, trans
       const buyer = await openJobBuyer({ directory: buyerDirectory, transport, fetchImpl, requestTimeoutMs });
       const receipt = await buyer.receipt(), id = buyerId(receipt);
       return serial(async () => {
-        active();
+        if (!finishingCheckout) active();
         const existing = catalog.entries.find(entry => entry.id === id);
         if (existing) return { entry: item(existing), reused: true };
         requireValue(catalog.entries.length < 10000, 'JOB_WORKSPACE_CAPACITY_REACHED', 409);
@@ -260,29 +262,46 @@ export async function openJobWorkspace({ directory, buyerRoots, fileRoots, trans
       return { schema: SCHEMA, directory, revision: catalog.revision,
         buyerRoots: [...catalog.buyerRoots], fileRoots: [...roots], entries: catalog.entries.length,
         counts, capacity: maxConcurrent, active: [...tasks.values()].map(task => ({ entryId: task.entryId, ...task.public })),
-        library: library.status(), closing };
+        library: library.status(), checkout: checkout.status(), closing };
     }
-    return Object.freeze({ directory, library, register, retain, reconcile, update, start, cancel, scan, list, status,
+    checkout = await openJobCheckout({ ...checkoutOptions, directory: join(directory, 'checkout'), lease,
+      adopt: async ({ result, handoff, label }) => {
+        const acceptedBytes = Buffer.from(await result.bytes({ limit: 65536 }));
+        const buyer = await createJobBuyer({ directory: join(directory, 'buyers', digest(acceptedBytes)),
+          result, handoff, transport, fetchImpl, requestTimeoutMs });
+        return registerBuyer({ buyerDirectory: buyer.directory, label }, true);
+      },
+    });
+    return Object.freeze({ directory, library, checkout, register, retain, reconcile, update, start, cancel, scan, list, status,
       get(id) { return item(row(id)); },
       async wait(id) {
         const task = tasks.get(id);
         if (task) await task.promise;
         return item(row(id));
       },
-      async close() {
-        if (closing) return;
-        closing = true; await tail;
-        for (const task of tasks.values()) task.controller.abort(new Error('JOB_WORKSPACE_CLOSED'));
-        const results = await Promise.allSettled([...tasks.values()].map(task => task.promise));
-        await tail;
-        try { await library.close(); }
-        finally { await lease.close(); }
-        const rejected = results.filter(value => value.status === 'rejected');
-        if (rejected.length) throw new AggregateError(rejected.map(value => value.reason), 'JOB_WORKSPACE_CLOSE_FAILED');
+      close() {
+        if (closePromise) return closePromise;
+        closing = true;
+        closePromise = (async () => {
+          await tail;
+          for (const task of tasks.values()) task.controller.abort(new Error('JOB_WORKSPACE_CLOSED'));
+          const results = await Promise.allSettled([checkout.close(), ...[...tasks.values()].map(task => task.promise)]);
+          // Checkout may have finished accepting a paid result while draining.
+          // Its final catalog write uses this same lease and must finish first.
+          await tail;
+          try { await library.close(); } catch (error) { results.push({ status: 'rejected', reason: error }); }
+          try { await lease.close(); } catch (error) { results.push({ status: 'rejected', reason: error }); }
+          const rejected = results.filter(value => value.status === 'rejected');
+          if (rejected.length) throw new AggregateError(rejected.map(value => value.reason), 'JOB_WORKSPACE_CLOSE_FAILED');
+        })();
+        return closePromise;
       },
     });
   } catch (error) {
-    try { await library?.close(); } finally { await lease.close(); }
+    const cleanup = await Promise.allSettled([checkout?.close(), library?.close()]);
+    try { await lease.close(); } catch (closed) { cleanup.push({ status: 'rejected', reason: closed }); }
+    const failures = cleanup.filter(value => value.status === 'rejected').map(value => value.reason);
+    if (failures.length) throw new AggregateError([error, ...failures], 'JOB_WORKSPACE_OPEN_FAILED');
     throw error;
   }
 }

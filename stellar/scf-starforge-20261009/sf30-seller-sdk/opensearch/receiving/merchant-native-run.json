@@ -1,0 +1,203 @@
+{
+  "schema": "stellar-forge.opensearch-native-journey.v1",
+  "operation": "ASTRA-EE290-OPENSEARCH-20261011",
+  "startedAt": "2026-10-11T23:50:20.082Z",
+  "runtime": "v24.19.0",
+  "engine": {
+    "name": "opensearch-cluster-leader-0",
+    "cluster_name": "opensearch-cluster",
+    "cluster_uuid": "l7JU9tA0RmO3hbTc1ayTOw",
+    "version": {
+      "distribution": "opensearch",
+      "number": "3.9.0",
+      "build_type": "tar",
+      "build_hash": "4ee42a94e87f66fbf1e62a9871b1b87f91e02472",
+      "build_date": "2026-09-23T01:01:31.883915140Z",
+      "build_snapshot": false,
+      "lucene_version": "10.5.1",
+      "minimum_wire_compatibility_version": "2.19.0",
+      "minimum_index_compatibility_version": "2.0.0"
+    },
+    "tagline": "The OpenSearch Project: https://opensearch.org/"
+  },
+  "sourceDeclaration": {
+    "schema": "stellar-forge.opensearch-source.v1",
+    "endpointEnv": "OPENSEARCH_PLAYGROUND_ENDPOINT",
+    "auth": {
+      "type": "none"
+    },
+    "allowLocal": true,
+    "maxInFlight": 1,
+    "queries": {
+      "flights": {
+        "indices": [
+          "opensearch_dashboards_sample_data_flights"
+        ],
+        "query": {
+          "bool": {
+            "filter": [
+              {
+                "term": {
+                  "OriginCountry": {
+                    "$param": "country"
+                  }
+                }
+              },
+              {
+                "range": {
+                  "AvgTicketPrice": {
+                    "gte": {
+                      "$param": "minimum_price"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "parameters": {
+          "country": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2
+          },
+          "minimum_price": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "fields": [
+          "FlightNum",
+          "Origin",
+          "Dest",
+          "OriginCountry",
+          "DestCountry",
+          "AvgTicketPrice",
+          "timestamp",
+          "FlightDelay",
+          "Cancelled"
+        ],
+        "sort": [
+          {
+            "timestamp": "asc"
+          },
+          {
+            "FlightNum": "asc"
+          }
+        ],
+        "pageSize": 3,
+        "maxHits": 7,
+        "maxBytes": 917504,
+        "timeoutMs": 30000,
+        "probe": {
+          "country": "US",
+          "minimum_price": 0
+        }
+      }
+    }
+  },
+  "captureRequestId": "ee290-native-flights-capture-20261011T234116Z-bd81fdd1",
+  "nativeMetadataDirectory": "/dev/shm/astra-ee290-opensearch/receiving-native-3/native/20261011T235004Z-ab38fe2d",
+  "stages": [
+    {
+      "name": "draft",
+      "draftId": "e3f7a796-c2cd-44f7-bb42-c72e76994294",
+      "expectedRevision": 1
+    },
+    {
+      "name": "native-capture",
+      "editionId": "49042fc669d38005ea9363a73c5fc9c9",
+      "hitCount": 7,
+      "pages": 3,
+      "total": {
+        "value": 8,
+        "relation": "gte"
+      },
+      "truncated": true,
+      "snapshotReleased": true,
+      "source": {
+        "clusterFingerprint": "b99826a9a6b8e05bb082e7fc2522ab215ac3c12657c7580ad1d66c35519c35ab",
+        "serverVersion": "3.9.0"
+      },
+      "resultSha256": "5cd0d983106d5691dc4680277590568beb3ec28de67004e8ba0ece0e53546825"
+    },
+    {
+      "name": "original-customer-export",
+      "packageId": "867732dab4e426b5710b3e332343d454",
+      "fileCount": 11,
+      "url": "https://search.example.com/search/flights",
+      "method": "POST"
+    },
+    {
+      "name": "original-seller-http",
+      "mode": "CHALLENGE_ONLY",
+      "status": 402,
+      "invalidUnsignedStatus": 402,
+      "invalidSourceAdmission": {
+        "status": 422,
+        "body": {
+          "error": "QUERY_INPUT_INVALID",
+          "code": "STRING_LENGTH",
+          "field": "country"
+        }
+      },
+      "advertisedUrl": "https://search.example.com/search/flights",
+      "openapiOperation": "flight_search",
+      "sourceStatus": {
+        "schema": "stellar-forge.opensearch-status.v1",
+        "state": "READY",
+        "active": 0,
+        "maxInFlight": 1,
+        "completed": 0,
+        "failures": 0,
+        "cleanupFailures": 0,
+        "pendingSnapshotRelease": 0
+      }
+    },
+    {
+      "name": "workspace-reopen",
+      "draftId": "e3f7a796-c2cd-44f7-bb42-c72e76994294",
+      "editionId": "49042fc669d38005ea9363a73c5fc9c9",
+      "packageId": "867732dab4e426b5710b3e332343d454",
+      "identicalResult": true,
+      "reusedOriginalRequest": true
+    }
+  ],
+  "code": [
+    {
+      "path": "source.mjs",
+      "sha256": "deb2a021b201623710ec30ed6d217c08ee9de2148ecdf1ffa6f9dd6800ff8420"
+    },
+    {
+      "path": "wire.mjs",
+      "sha256": "deb7690e86ce7d5077853e2fa43c75e1b8b9c18ddf3be65c0978d1c664811fc9"
+    },
+    {
+      "path": "declaration.mjs",
+      "sha256": "0b740064d2b5431c6718812fd79d244af5b64c211129243a0baa8237584d2adc"
+    },
+    {
+      "path": "projection.mjs",
+      "sha256": "ef6ff17122805a928438024920cd8a2e90da3e746bd050073f9a4bf34a6ba534"
+    },
+    {
+      "path": "prepare.mjs",
+      "sha256": "be9337795eddc849c1a2b23d6351c2e8f3f67257219f7ecf0e3621f31330e349"
+    },
+    {
+      "path": "start.mjs",
+      "sha256": "12a01b1152e579f35a93e509e6fdb196b4c18570e6a36dba188f7e2607fbaf80"
+    },
+    {
+      "path": "workspace/service.mjs",
+      "sha256": "40dfc87aebba654c1b07061224c8ee813e5ac56c12f8e184e3e81600210d9063"
+    },
+    {
+      "path": "workspace/store.mjs",
+      "sha256": "cef641a478e0fd4672b4a81b9a7f75e08ee197e4a4e5163895fa51a5b4f5be6a"
+    }
+  ],
+  "state": "PASS",
+  "completedAt": "2026-10-11T23:50:20.645Z",
+  "directory": "/dev/shm/astra-ee290-opensearch/receiving-native-3/workspace"
+}

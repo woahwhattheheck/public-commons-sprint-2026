@@ -1,0 +1,42 @@
+{
+  "schema": "dwellir.application-migration.v1",
+  "family": "substrate",
+  "chain": "Polkadot",
+  "chainName": "Polkadot",
+  "network": "mainnet",
+  "expectedGenesis": "0x91b171bb158e2d3848fa23a9f1c25182fb8e20313b2c1eb49219da7a70ce90c3",
+  "baseline": {
+    "file": ".env",
+    "name": "APP_RPC_URL"
+  },
+  "candidate": {
+    "mode": "published-public",
+    "url": "https://polkadot-rpc.n.dwellir.com"
+  },
+  "bindings": [
+    {
+      "kind": "env",
+      "path": ".env",
+      "name": "APP_RPC_URL"
+    },
+    {
+      "kind": "json",
+      "path": "application-config.json",
+      "pointer": "/rpc/url"
+    }
+  ],
+  "sourceFiles": [
+    "polkadot_reader.py",
+    "polkadot_reader.mjs"
+  ],
+  "requiredMethods": [
+    "chain_getBlockHash",
+    "chain_getFinalizedHead",
+    "chain_getHeader",
+    "state_getRuntimeVersion"
+  ],
+  "historicalProbes": [],
+  "timeoutSeconds": 15,
+  "maxResponseBytes": 1048576,
+  "maxFinalizedLag": 8
+}
