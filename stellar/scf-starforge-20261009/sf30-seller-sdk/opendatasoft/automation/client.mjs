@@ -40,6 +40,15 @@ function own(value, names, code = 'ODS_AUTOMATION_INPUT_INVALID') {
     fail(code, 'Use the named inputs in the native Automation contract.');
   return value;
 }
+function exactInteger(value) {
+  if (!(value instanceof ExactOpendatasoftNumber)) return Number.isSafeInteger(value);
+  const match = /^-?(0|[1-9]\d*)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/.exec(value.source);
+  if (!match) return false;
+  const fraction = match[2] ?? '', digits = match[1] + fraction;
+  if (!/[1-9]/.test(digits)) return true;
+  const trailing = /0*$/.exec(digits)[0].length;
+  return BigInt(match[3] ?? '0') - BigInt(fraction.length) + BigInt(trailing) >= 0n;
+}
 function integer(value, low, high, code) {
   if (!Number.isSafeInteger(value) || value < low || value > high) fail(code, 'Use an integer within the configured range.');
   return value;
@@ -104,7 +113,7 @@ function checkBody(value, schema, at = 'body', refs = new Set(), depth = 0) {
     const matches = types.some(type => type === 'null' ? value === null :
       type === 'object' ? object(value) && !(value instanceof ExactOpendatasoftNumber) :
       type === 'array' ? Array.isArray(value) : type === 'number' ? numeric :
-      type === 'integer' ? Number.isSafeInteger(value) : typeof value === type);
+      type === 'integer' ? exactInteger(value) : typeof value === type);
     if (!matches) fail('ODS_AUTOMATION_BODY_INVALID', 'The native type does not match ' + at + '.');
   }
   if (schema.enum && !schema.enum.some(item => JSON.stringify(item) === JSON.stringify(value)))
