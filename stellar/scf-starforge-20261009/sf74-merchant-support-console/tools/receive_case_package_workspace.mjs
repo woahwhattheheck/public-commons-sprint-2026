@@ -782,12 +782,16 @@ async function main(){
         '',
         '## Open the received workspace',
         '',
-        'Use the selected distribution and an existing Node/Python runtime:',
+        'Extract the complete stopped-workspace delivery, then change to its root containing OPEN.md and source/. Use the selected distribution and an existing Node/Python runtime:',
         '',
-        '    node '+JSON.stringify(join(source,P,'server.mjs'))+' --cases-dir '+JSON.stringify(paths.remoteCases)+
-          ' --source-dir '+JSON.stringify(paths.remoteSources)+' --package-dir '+JSON.stringify(paths.remotePackages)+' --port 8784',
+        '    export SCF_DELIVERY_ROOT="$(pwd)"',
+        '    export SCF_PYTHON="$(command -v python3)"',
+        '    node "$SCF_DELIVERY_ROOT/source/'+P+'/server.mjs"'+
+          ' --cases-dir "$SCF_DELIVERY_ROOT/case-package-continuation/native/'+relative(root,paths.remoteCases).split(sep).join('/')+'"'+
+          ' --source-dir "$SCF_DELIVERY_ROOT/case-package-continuation/native/'+relative(root,paths.remoteSources).split(sep).join('/')+'"'+
+          ' --package-dir "$SCF_DELIVERY_ROOT/case-package-continuation/native/'+relative(root,paths.remotePackages).split(sep).join('/')+'" --port 8784',
         '',
-        'Set SCF_PYTHON to the installed Python executable. Open the loopback URL returned by this original host, then select case '+selected.id+'. Its completed local package operations and source files reopen without the former source listener.',
+        'Set SCF_PYTHON to the receiving machine’s installed Python executable if python3 resolves elsewhere. The case-package paths in this guide are relative to case-package-continuation/native/ within that extracted delivery. The native JSON retains the original observed absolute paths. Open the loopback URL returned by this original host, then select case '+selected.id+'. Its completed local package operations and source files reopen without the former source listener.',
         '',
         'For another independent receiver, use the actual final package above with the original commissioning-cli.mjs receive-package command, a new private receiving directory, the exact manifest SHA-256, and its existing case/source directories. Installed MCP uses the same casesDirectory, sourceDirectory and packagesDirectory in its private Support connection.',
         '',
