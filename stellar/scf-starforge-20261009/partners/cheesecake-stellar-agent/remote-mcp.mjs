@@ -387,7 +387,10 @@ export async function attachRemoteMcpApplication({application,configurationFile,
         const args = {quoteId:record.quoteId};
         if (action === 'status') return outcome(entry,record,quote);
         if (action === 'cancel') return outcome(entry,record,broker.cancel(args));
-        if (action === 'spending') return outcome(entry,record,quote,{spending:await broker.spendingStatus(args)});
+        if (action === 'spending') {
+          const spending = await broker.spendingStatus(args);
+          return outcome(entry,record,checkQuote(entry,record,broker.status(args)),{spending});
+        }
         if (action === 'reconcile') return outcome(entry,record,await broker.reconcilePayment(
           {...args,...(options.transaction ? {transaction:options.transaction} : {})}));
         if (action === 'recover') {
