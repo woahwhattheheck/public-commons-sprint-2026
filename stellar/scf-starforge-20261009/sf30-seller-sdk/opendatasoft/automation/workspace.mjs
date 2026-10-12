@@ -1009,7 +1009,7 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
         'The before and after files preserve native configuration. receiving contains complete Explore exports and their original capture manifests.',
         'The private host connection supplies the named tenant and token environment variable. Tokens and the connection file are not included in this handoff.', '',
         '## Continue the same operation', '',
-        'Open the original Huwise workbench with its private Automation connection. Inspect this exact plan before continuing.',
+        'Open the original Huwise workbench with its private Automation connection and read this exact tenant-plan. Use recovery and status when its native application has already started.',
         'Use tenant-recover for an interrupted native dispatch; retained successful response bytes are adopted before any new call.',
         'An interrupted upload is first looked up using its unique reviewed filename. Recovery adopts only the returned actual file UID after downloading and matching every original source byte. An explicit file UID can also be supplied.',
         'Use tenant-apply with the existing saved review to continue remaining configuration steps.',
@@ -1023,14 +1023,16 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
       const preparations = join(directory,'tenant-export-preparations');
       await privateDirectory(exportsRoot,true); await privateDirectory(preparations,true);
       if (!pending) {
+        // Publish the plan pointer only after its complete frozen basis is durable.
         plan.exportPreparation = { id:exportId,state:'PREPARING',createdAt:stamp(),planRevisionSha256 };
-        await save(plan);
       }
       const destination = join(exportsRoot,exportId), preparationFile = join(preparations,exportId + '.json');
       await privateDirectory(destination,true);
       let basis;
       if (await exists(preparationFile)) basis = await readJson(preparationFile,268435456);
       else {
+        if (planRevisionSha256 !== plan.exportPreparation.planRevisionSha256)
+          throw fail('EXPORT_PREPARATION_CHANGED','Restore the original frozen delivery basis before continuing this saved preparation.');
         const frozen = [];
         async function inventory(path,prefix = '') {
           for (const item of await readdir(path,{ withFileTypes:true })) {
@@ -1080,7 +1082,9 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
           if (raw.length !== file.bytes || digest(raw) !== file.sha256) throw fail('EXPORT_CHANGED','The frozen native state changed.');
           await retainBytes(target,raw);
         } else await retainExportFile(target,join(location(value),file.path),file,signal,fileProgress);
-        completeFiles++; completeBytes += file.bytes; fileProgress(file.bytes);
+        completeFiles++; completeBytes += file.bytes;
+        progress({ phase:'tenant-export',exportId,completeFiles,totalFiles:basis.files.length,completeBytes,totalBytes,
+          path:null,copiedBytes:0,fileBytes:0 });
       }
       signal?.throwIfAborted();
       const companion = Buffer.from(basis.guide);
