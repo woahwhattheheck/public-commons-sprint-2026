@@ -64,11 +64,13 @@ export function rowSelection(edition,{table='observations',beginDate,endDate,pro
  if(begin<edition.query.beginDate||end>edition.query.endDate||end<begin)throw fault('COOPS_SELECTED_WINDOW','The selected projection must lie inside its retained source edition.');
  const included=products??edition.query.products;
  if(!Array.isArray(included)||!included.length||new Set(included).size!==included.length||included.some(p=>!edition.query.products.includes(p)))throw fault('COOPS_SELECTED_PRODUCTS','Select original products from this edition.');
+ if(['coverage','metadata'].includes(table)&&(begin!==edition.query.beginDate||end!==edition.query.endDate))throw fault('COOPS_CONTEXT_WINDOW','Coverage and station metadata describe the complete original edition. Select its full dates or inspect a data table for a narrower period.');
+ if(table==='metadata'&&(included.length!==edition.query.products.length||edition.query.products.some(p=>!included.includes(p))))throw fault('COOPS_METADATA_SCOPE','Station metadata is shared edition context; retain the full original product selection.');
  return{table,beginDate:begin,endDate:end,products:[...included]};
 }
 export async function* iterateEditionRows(store,edition,options={}){
  const selected=rowSelection(edition,options),table=selected.table;
- if(table==='coverage'){for(const row of coverageRows(edition))yield row;return;}
+ if(table==='coverage'){for(const row of coverageRows(edition))if(selected.products.includes(row.product))yield row;return;}
  for(const page of edition.pages){
   if(page.unavailable)continue;
   if(table==='metadata'&&page.kind!=='metadata'||table==='observations'&&(page.kind!=='data'||page.product==='predictions')||table==='predictions'&&page.product!=='predictions')continue;
@@ -138,26 +140,72 @@ function compatibility(left,right,table){
  return fields.filter(k=>left.query[k]!==right.query[k]).map(field=>({field,left:left.query[field],right:right.query[field]}));
 }
 function comparable(row){return Object.fromEntries(['product','timestamp','field','value','valueType','unit','sigma','quality','flags','eventType','metadataKind','metadataPath','detailsJson'].map(k=>[k,row[k]]));}
-export async function compareEditions(store,left,right,table='observations'){
- const mismatches=compatibility(left,right,table),context={
-  left:{id:left.id,query:left.query,sourceSha256:left.sourceSha256},right:{id:right.id,query:right.query,sourceSha256:right.sourceSha256},
-  metadataChanged:stable(left.pages.filter(p=>p.kind==='metadata').map(p=>({resource:p.resource,sha256:p.sha256})))!==stable(right.pages.filter(p=>p.kind==='metadata').map(p=>({resource:p.resource,sha256:p.sha256})))};
- if(mismatches.length)return{schema:'stellar-forge.coops-comparison.v1',compatible:false,mismatches,context,added:[],removed:[],changed:[],ambiguous:[],scopeAdded:[],scopeRemoved:[],note:'Different station, datum, units or time basis requires explicit engineering reconciliation; no automatic numerical comparison.'};
- const [a,b]=await Promise.all([editionRows(store,left,{table,limit:250000}),editionRows(store,right,{table,limit:250000})]);
- const map=rows=>{const m=new Map();for(const r of rows){const v=m.get(r.recordId)||[];v.push(r);m.set(r.recordId,v);}return m;},am=map(a.rows),bm=map(b.rows);
- const out={schema:'stellar-forge.coops-comparison.v1',compatible:true,mismatches,context,added:[],removed:[],changed:[],ambiguous:[],scopeAdded:[],scopeRemoved:[]};
- const overlapStart=left.query.beginDate>right.query.beginDate?left.query.beginDate:right.query.beginDate,overlapEnd=left.query.endDate<right.query.endDate?left.query.endDate:right.query.endDate;
- const sharedProducts=left.query.products.filter(p=>right.query.products.includes(p));
- const within=r=>!r.timestamp||(r.timestamp>=overlapStart+' 00:00'&&r.timestamp<=overlapEnd+' 23:59:59'&&sharedProducts.includes(r.product));
- for(const id of new Set([...am.keys(),...bm.keys()])){
-  const x=am.get(id)||[],y=bm.get(id)||[];
-  if(x.length>1||y.length>1){out.ambiguous.push({recordId:id,left:x,right:y,reason:'Duplicate source timestamps/keys remain explicit; occurrence order is not an identity.'});continue;}
-  if(!x.length){(within(y[0])?out.added:out.scopeAdded).push(y[0]);continue;}
-  if(!y.length){(within(x[0])?out.removed:out.scopeRemoved).push(x[0]);continue;}
-  if(stable(comparable(x[0]))!==stable(comparable(y[0])))out.changed.push({recordId:id,before:x[0],after:y[0]});
+const CHANGE_KINDS=['added','removed','changed','ambiguous','scopeAdded','scopeRemoved'];
+export function comparisonSummary(left,right,table='observations'){
+ if(!TABLES.some(t=>t.id===table))throw fault('COOPS_TABLE','Choose an advertised coastal source table.');
+ const mismatches=compatibility(left,right,table);
+ return{schema:'stellar-forge.coops-comparison.v1',table,compatible:mismatches.length===0,mismatches,
+  context:{left:{id:left.id,query:left.query,sourceSha256:left.sourceSha256},right:{id:right.id,query:right.query,sourceSha256:right.sourceSha256},
+   metadataChanged:stable(left.pages.filter(p=>p.kind==='metadata').map(p=>({resource:p.resource,sha256:p.sha256})))!==stable(right.pages.filter(p=>p.kind==='metadata').map(p=>({resource:p.resource,sha256:p.sha256})))},
+  counts:Object.fromEntries(CHANGE_KINDS.map(k=>[k,0])),...Object.fromEntries(CHANGE_KINDS.map(k=>[k,[]])),previewLimit:200,
+  note:mismatches.length?'Different station, datum, units or time basis requires explicit engineering reconciliation; no automatic numerical comparison.':
+   'Counts cover every original selected record. The console retains at most 200 examples per change kind; the complete JSON export streams all changes. Changed window/products, metadata and duplicate keys remain separate. No value is automatically adopted.'};
+}
+function comparisonPartitions(left,right,table){
+ if(table==='metadata')return [...new Set([...left.pages,...right.pages].filter(p=>p.kind==='metadata').map(p=>p.resource))].sort().map(resource=>({table,resource}));
+ if(table==='coverage')return[{table}];
+ const products=[...new Set([...left.query.products,...right.query.products])].filter(p=>table==='predictions'?p==='predictions':p!=='predictions').sort();
+ const intervals=[left,right].map(e=>({begin:e.query.beginDate,end:e.query.endDate})).sort((a,b)=>a.begin.localeCompare(b.begin)),merged=[];
+ for(const item of intervals){const prior=merged.at(-1);if(prior&&item.begin<=prior.end){if(item.end>prior.end)prior.end=item.end;}else merged.push({...item});}
+ const partitions=[];
+ for(const product of products)for(const interval of merged){
+  const final=Date.parse(interval.end+'T00:00:00Z');
+  for(let first=Date.parse(interval.begin+'T00:00:00Z');first<=final;first+=7*86400000)
+   partitions.push({table,product,beginDate:new Date(first).toISOString().slice(0,10),endDate:new Date(Math.min(final,first+6*86400000)).toISOString().slice(0,10)});
  }
- out.counts=Object.fromEntries(['added','removed','changed','ambiguous','scopeAdded','scopeRemoved'].map(k=>[k,out[k].length]));
- out.note='Compare original fields only; changed window/products, metadata, duplicate keys and observation edits remain separate. No value is automatically adopted.';return out;
+ return partitions;
+}
+async function comparisonRows(store,edition,partition){
+ const options={table:partition.table};let source=edition;
+ if(partition.resource!==undefined)source={...edition,pages:edition.pages.filter(p=>p.kind==='metadata'&&p.resource===partition.resource)};
+ if(partition.product){
+  if(!edition.query.products.includes(partition.product))return new Map();
+  options.beginDate=partition.beginDate>edition.query.beginDate?partition.beginDate:edition.query.beginDate;
+  options.endDate=partition.endDate<edition.query.endDate?partition.endDate:edition.query.endDate;
+  if(options.beginDate>options.endDate)return new Map();options.products=[partition.product];
+ }
+ const rows=new Map();
+ for await(const row of iterateEditionRows(store,source,options)){const prior=rows.get(row.recordId);if(prior)prior.push(row);else rows.set(row.recordId,[row]);}
+ return rows;
+}
+export async function* iterateComparisonChanges(store,left,right,table='observations'){
+ if(!comparisonSummary(left,right,table).compatible)return;
+ const overlapStart=left.query.beginDate>right.query.beginDate?left.query.beginDate:right.query.beginDate,
+  overlapEnd=left.query.endDate<right.query.endDate?left.query.endDate:right.query.endDate,
+  sharedProducts=left.query.products.filter(p=>right.query.products.includes(p));
+ const within=row=>table==='metadata'||(!row.timestamp?sharedProducts.includes(row.product):
+  row.timestamp>=overlapStart+' 00:00'&&row.timestamp<=overlapEnd+' 23:59:59'&&sharedProducts.includes(row.product));
+ // At most one source resource or seven-day product partition is held at a time.
+ // The original response pages, duplicate rows and source identities are unchanged.
+ for(const partition of comparisonPartitions(left,right,table)){
+  const am=await comparisonRows(store,left,partition),bm=await comparisonRows(store,right,partition);
+  for(const id of new Set([...am.keys(),...bm.keys()])){
+   const x=am.get(id)||[],y=bm.get(id)||[];
+   if(x.length>1||y.length>1){yield{kind:'ambiguous',record:{recordId:id,left:x,right:y,reason:'Duplicate source timestamps/keys remain explicit; occurrence order is not an identity.'}};continue;}
+   if(!x.length){yield{kind:within(y[0])?'added':'scopeAdded',record:y[0]};continue;}
+   if(!y.length){yield{kind:within(x[0])?'removed':'scopeRemoved',record:x[0]};continue;}
+   if(stable(comparable(x[0]))!==stable(comparable(y[0])))yield{kind:'changed',record:{recordId:id,before:x[0],after:y[0]}};
+  }
+ }
+}
+export function recordComparisonChange(summary,change){
+ if(!CHANGE_KINDS.includes(change.kind))throw fault('COOPS_COMPARISON','The comparison produced an unknown change kind.');
+ summary.counts[change.kind]++;if(summary[change.kind].length<summary.previewLimit)summary[change.kind].push(change.record);
+}
+export async function compareEditions(store,left,right,table='observations'){
+ const summary=comparisonSummary(left,right,table);
+ for await(const change of iterateComparisonChanges(store,left,right,table))recordComparisonChange(summary,change);
+ return summary;
 }
 export async function exportEdition(store,edition,annotations,table,format){
  if(format==='source-package'){

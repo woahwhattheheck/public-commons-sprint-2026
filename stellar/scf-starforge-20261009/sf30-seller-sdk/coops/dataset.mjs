@@ -30,10 +30,7 @@ export async function prepareCoastalDataset(store,{edition,table,name,beginDate,
     const page=[...edition.pages,...(edition.failedResponses??[])][i],path='provenance/'+String(i).padStart(5,'0')+'-'+page.sha256+'.json',
       bytes=await store.object(page.sha256);
     await store.immutable(join(packageDirectory,path),bytes);sourceFiles.push({path,bytes:bytes.length,sha256:page.sha256});
-    if(page.responseSha256&&page.responseSha256!==page.sha256){
-      const wire=await store.object(page.responseSha256),wirePath='provenance/'+String(i).padStart(5,'0')+'-'+page.responseSha256+'.response';
-      await store.immutable(join(packageDirectory,wirePath),wire);sourceFiles.push({path:wirePath,bytes:wire.length,sha256:page.responseSha256});
-    }
+
   }
   if(edition.sourcePackageSha256){
     const original=await store.object(edition.sourcePackageSha256),path='provenance/original-capture-package.json';
