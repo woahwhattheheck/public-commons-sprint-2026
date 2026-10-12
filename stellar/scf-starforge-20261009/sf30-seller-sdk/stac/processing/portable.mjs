@@ -7,6 +7,7 @@ import { privateDirectory, readBytes, readJson, writeBytes, writeJson, exists, n
   from '../../../sf88-operator-buyer-cli/node/store.mjs';
 import { canonicalJson, sha256 } from '../provider.mjs';
 import { readProcessingContract, readProcessingCapture } from './provider.mjs';
+import { isCirrus, bindCirrusConnectorDocument, cirrusTaskRows } from './cirrus.mjs';
 
 const SCHEMA = 'scf-stac-processing-handover/v1';
 const PACK = 'scf-stac-processing-packed/v1';
@@ -165,12 +166,14 @@ export async function readProcessingHandover({ directory } = {}) {
   const editionIds = new Set(payload.editions.map(v => v.id)), deploymentKeys = new Set(payload.deployments.map(v => v.key));
   need(editionIds.size === payload.editions.length && canonicalJson([...editionIds].sort()) === canonicalJson([...manifest.editionIds].sort()),
     'PROCESSING_HANDOVER_EDITION_IDENTITY_INVALID');
+  const sourceBodies = new Map(), contracts = new Map();
   for (const deployment of payload.deployments) {
     need(checked.names.has(deployment.source.path), 'PROCESSING_HANDOVER_SOURCE_MISSING');
     const raw = await read(deployment.source.path);
     need(raw.length === deployment.source.bytes && sha256(raw) === deployment.source.sha256, 'PROCESSING_HANDOVER_SOURCE_CHANGED');
     const contract = readProcessingContract(raw, deployment.deployment, deployment.source);
     need(digest({ deployment: deployment.deployment, contract }) === deployment.fingerprint, 'PROCESSING_HANDOVER_DEPLOYMENT_CHANGED');
+    sourceBodies.set(deployment.key,raw); contracts.set(deployment.key,contract);
   }
   for (const edition of payload.editions) {
     need(deploymentKeys.has(edition.deploymentKey), 'PROCESSING_HANDOVER_DEPLOYMENT_MISSING');
@@ -180,6 +183,12 @@ export async function readProcessingHandover({ directory } = {}) {
         'PROCESSING_HANDOVER_CAPTURE_MISSING');
       const captured = await readProcessingCapture(join(directory, pathName(page.directory)), page.requestHash);
       need(captured && captured.record.sha256 === page.sha256, 'PROCESSING_HANDOVER_CAPTURE_CHANGED');
+      const contract = contracts.get(edition.deploymentKey);
+      if (captured.record.bodyOrigin === 'connector-document') {
+        need(isCirrus(contract), 'PROCESSING_CIRRUS_CONNECTOR_BINDING_REQUIRED');
+        bindCirrusConnectorDocument(captured.raw,captured.record,sourceBodies.get(edition.deploymentKey),captured.request);
+      }
+      if (isCirrus(contract)) cirrusTaskRows(captured.document,task,contract);
     }
   }
   let stac = null;
@@ -213,7 +222,7 @@ export async function importProcessingHandover(workspace, { directory, operation
     editionIds: manifest.editionIds, files: manifest.files.length, bytes: manifest.bytes,
     stac: stacReceipt, completedAt: stamp() };
   await workspace._mergePortable(payload, receipt);
-  for (const deployment of payload.deployments) await workspace.sourceFor(deployment.key);
+  for (const deployment of payload.deployments) { const source = await workspace.sourceFor(deployment.key); source.provider.close(); }
   for (const edition of payload.editions) for (const task of edition.tasks) for (const page of task.pages) {
     const captured = await workspace.readCapture(page.directory);
     need(captured && captured.record.sha256 === page.sha256, 'PROCESSING_IMPORTED_CAPTURE_CHANGED');
