@@ -528,6 +528,9 @@ export function createBuyerPageFetcher({buyer,requestForPage,buyerOptions={}}){
       // The logical page intent, request and edition cursor remain unchanged.
       if(typeof operation.followContinuation==='function')operation=await operation.followContinuation();
       else if(typeof operation.followUnpaidContinuation==='function')operation=await operation.followUnpaidContinuation();
+      // Apply the receiver's explicit execution selection to the exact recorded
+      // child after following its immutable lineage.
+      if(typeof buyer.openOperation==='function')operation=await buyer.openOperation(operation.intentId,{signal});
       result=await operation.recover();
       if(result===null){
         const state=await operation.inspect();

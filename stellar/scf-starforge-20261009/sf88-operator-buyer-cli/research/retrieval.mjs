@@ -163,9 +163,11 @@ async function openRuntimeSelection({stateDirectory,runtimeDirectory,binding,nat
   }
   return{...value,path};
 }
-async function routedNativeBuyer(original,selection){
+async function routedNativeBuyer(original,selection,selectedOptions){
   if(selection===null)return original;
-  const selected=await createRuntimeBoundBuyer(original,selection.runtimeSource);
+  // The allocator belongs to the selected source. Original prepared intents
+  // retain their original native execution path and do not seek its bootstrap.
+  const selected=await createRuntimeBoundBuyer(new Buyer(selectedOptions),selection.runtimeSource);
   return{
     operation(intentId){return original.operation(intentId);},
     async openOperation(intentId,options={}){
@@ -217,10 +219,11 @@ async function openNative({buyerProfile,clientFile,clientOrigin,productId,env,na
     clientSourceSha256:inspected.sourceSha256,clientFilesSha256:inspected.filesSha256,
     authorization:copy(profile.authorization)};
   const runtimeSelection=await openRuntimeSelection({stateDirectory,runtimeDirectory,binding,nativeRuntimeSource,nativeFileReservation});
-  const originalBuyer=new Buyer({runtimeDirectory,stateDirectory,operatorProfile,...runtimeOptions,
-    ...(runtimeSelection?.nativeFileReservation===undefined?{}:{nativeFileReservation:runtimeSelection.nativeFileReservation})});
+  const buyerConfiguration={runtimeDirectory,stateDirectory,operatorProfile,...runtimeOptions};
+  const originalBuyer=new Buyer(buyerConfiguration);
   await originalBuyer.ready();
-  const buyer=await routedNativeBuyer(originalBuyer,runtimeSelection);
+  const buyer=await routedNativeBuyer(originalBuyer,runtimeSelection,{...buyerConfiguration,
+    ...(runtimeSelection?.nativeFileReservation===undefined?{}:{nativeFileReservation:runtimeSelection.nativeFileReservation})});
   const buyerOptions={};
   for(const key of ['responseFile','requestTimeoutMs'])if(profile[key]!==undefined)buyerOptions[key]=profile[key];
   const nativeFetch=createBuyerPageFetcher({buyer,buyerOptions,requestForPage:(request,{intentId,signal})=>{

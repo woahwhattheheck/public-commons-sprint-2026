@@ -163,7 +163,7 @@ try {
 }
 ```
 
-The receiver records one immutable runtime selection under the existing buyer state. Original page intents reopen through their recorded source. An already-selected recovery child is followed through its original choice. Only absent page intents are prepared through the selected replacement Buyer. Each new native invocation rechecks the selected source manifest. A native downstream finalizer can use \`await retrieval.openOperation(savedNativeIntentId)\` to reopen an exact recorded page across the original and selected runtimes.
+The receiver records one immutable runtime selection under the existing buyer state. Original page intents reopen through their recorded source. An already-prepared original intent retains its original native execution and approval behavior; the selected bootstrap descriptor is attached to the selected runtime. An already-selected recovery child is followed through its original choice. Only absent page intents are prepared through the selected replacement Buyer. Each new native invocation rechecks the selected source manifest. A native downstream finalizer can use \`await retrieval.openOperation(savedNativeIntentId)\` to reopen an exact recorded page across the original and selected runtimes.
 
 The CLI accepts the two descriptor files:
 
