@@ -1,6 +1,6 @@
 // MIT. Native CLI for complete Public Assistance capture, analysis and delivery.
 import {readFile,open,lstat} from 'node:fs/promises';
-import {resolve} from 'node:path';
+import {resolve,basename} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {randomUUID} from 'node:crypto';
 import {gunzipSync} from 'node:zlib';
@@ -21,6 +21,12 @@ const USAGE='OpenFEMA Public Assistance\n\n'+
 '  openfema operation --workspace PRIVATE_DIR --operation-id ORIGINAL_ID\n'+
 '  openfema export --workspace PRIVATE_DIR --version VERSION_ID --format html|json|csv --out NEW_FILE\n'+
 '  openfema source-export --workspace PRIVATE_DIR --source EDITION_ID --out NEW_JSON\n'+
+'  openfema mapping-save --workspace PRIVATE_DIR --mapping MAPPING_JSON [--previous MAPPING_ID]\n'+
+'  openfema mapping-review --workspace PRIVATE_DIR --mapping-id ID --reviewer NAME --note TEXT\n'+
+'  openfema project-delivery --workspace PRIVATE_DIR --mapping-id ID --version VERSION_ID [--customer-base RECONCILIATION_ID] [--out NEW_ZIP]\n'+
+'  openfema reconcile-projects --workspace PRIVATE_DIR --delivery ID --customer-file ORIGINAL_CSV [--out NEW_ZIP]\n'+
+'  openfema apply-project-review --workspace PRIVATE_DIR --reconciliation ID --version CURRENT_VERSION_ID --rows 2,17 --reviewer NAME --note TEXT\n'+
+'  openfema compare-deliveries --workspace PRIVATE_DIR --before DELIVERY_ID --after DELIVERY_ID [--out NEW_ZIP]\n'+
 '  openfema backup --workspace PRIVATE_DIR --out NEW_ZIP\n'+
 '  openfema inspect-backup --archive ORIGINAL_ZIP\n'+
 '  openfema restore --archive ORIGINAL_ZIP --workspace NEW_ABSOLUTE_PRIVATE_DIRECTORY\n\n'+
@@ -52,6 +58,9 @@ export async function main(args=process.argv.slice(2)){
     'receive-source':['--bundle'],portfolio:['--source','--name','--criteria'],
     schema:[],view:[],rows:['--version','--table','--search','--sort','--direction','--offset','--limit'],
     action:['--request','--wait'],operation:[],export:['--version','--table','--format','--out'],
+    'mapping-save':['--mapping','--previous'],'mapping-review':['--mapping-id','--reviewer','--note'],
+    'project-delivery':['--mapping-id','--version','--customer-base','--out'],'reconcile-projects':['--delivery','--customer-file','--out'],
+    'apply-project-review':['--reconciliation','--version','--rows','--reviewer','--note'],'compare-deliveries':['--before','--after','--out'],
     'source-export':['--source','--out'],backup:['--out'],'inspect-backup':['--archive'],restore:['--archive']
   };
   if(!Object.hasOwn(specific,command)||Object.keys(o).some(k=>!common.includes(k)&&!specific[command].includes(k)))throw fault('OPENFEMA_OPTIONS','Use a supported command and its options; see --help.');
@@ -77,6 +86,31 @@ export async function main(args=process.argv.slice(2)){
     }
     if(command==='receive-source'){print(await act('source.import',{bundle:await originalJSON(o['--bundle'])}));return;}
     if(command==='portfolio'){const criteria=o['--criteria']?await originalJSON(o['--criteria']):{name:o['--name']};if(o['--name'])criteria.name=o['--name'];print(await act('portfolio.create',{name:criteria.name,editionId:o['--source'],criteria}));return;}
+    if(['mapping-save','mapping-review','project-delivery','reconcile-projects','apply-project-review','compare-deliveries'].includes(command)){
+      let action,payload;
+      if(command==='mapping-save'){action='delivery.mapping.save';payload={mapping:await originalJSON(o['--mapping']),...(o['--previous']?{previousMappingId:o['--previous']}:{})};}
+      if(command==='mapping-review'){
+        const mapping=(await app.view()).deliveryMappings.find(item=>item.id===o['--mapping-id']);
+        if(!mapping)throw fault('OPENFEMA_DELIVERY_MAPPING','Select a retained mapping ID.');
+        action='delivery.mapping.review';payload={mappingId:mapping.id,expectedMappingSha256:mapping.mappingSha256,reviewer:o['--reviewer'],note:o['--note']};
+      }
+      if(command==='project-delivery'){action='delivery.export';payload={mappingId:o['--mapping-id'],versionId:o['--version']??app.store.read().selectedVersionId,...(o['--customer-base']?{customerReconciliationId:o['--customer-base']}:{})};}
+      if(command==='reconcile-projects'){
+        const bytes=await originalFile(o['--customer-file'],16*1024*1024);
+        action='delivery.reconcile';payload={deliveryId:o['--delivery'],customerFile:{name:basename(o['--customer-file']),content:new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes)}};
+      }
+      if(command==='apply-project-review'){
+        const values=String(o['--rows']||'').split(',');if(values.some(x=>!/^\d+$/.test(x.trim())))throw fault('OPENFEMA_DELIVERY_ROWS','Use comma-separated original CSV row numbers.');
+        action='delivery.review.apply';payload={reconciliationId:o['--reconciliation'],versionId:o['--version']??app.store.read().selectedVersionId,rowNumbers:values.map(Number),reviewer:o['--reviewer'],note:o['--note']};
+      }
+      if(command==='compare-deliveries'){action='delivery.compare';payload={beforeDeliveryId:o['--before'],afterDeliveryId:o['--after']};}
+      const result=await act(action,payload);
+      if(o['--out']){
+        const id=result.result.export?.id;if(!id)throw fault('OPENFEMA_OUTPUT','This action has no retained ZIP output.');
+        const output=await app.exported(id);await writeNew(resolve(o['--out']),output.bytes);print({...result,output:resolve(o['--out'])});
+      }else print(result);
+      return;
+    }
     if(command==='action'){
       const request=await originalJSON(o['--request']);if(!request||typeof request!=='object'||Object.keys(request).some(k=>!['action','payload','operationId','expectedRevision'].includes(k)))throw fault('OPENFEMA_ACTION','Select an original action request.');
       print(await act(request.action,request.payload??{},request));if(o['--wait']){await app.waitForCaptures();print(await app.view());}return;
