@@ -272,7 +272,7 @@ export function createWorkbookPanel(h) {
         el('input',{type:'checkbox',checked:u().selected.some(s=>s.row===r.row&&s.sourceRowSha256===r.sourceRowSha256),disabled:!canEdit()||!sourceCurrent(),onchange:e=>toggleRow(r,e.target.checked)}),
         el('div',{},mono(r.locator||r.id),small(r.blank?'Blank row':r.hidden?'Hidden original row':'Original row'),small(r.present?'Stored in original sheet':'Blank position in explicit range')),
         el('div',{},...(choices.length?choices.slice(0,8).map(key=>small(key+': '+h.fmt(r.fields?.[key]??r.cells?.[book.fieldMap[key]]?.value))):
-          Object.entries(r.cells||{}).slice(0,6).map(([key,c])=>small(key+': '+h.fmt(c.value)))),
+          Object.entries(r.cells||{}).slice(0,6).map(([key,c])=>small(key+': '+h.fmt(c.value))))),
         el('div',{},mono(r.values?.carton_ref),small(r.values?.site_ref||''),small(r.values?.admitted_at||'')),
         el('div',{},badge(r.disposition||'unassigned'),...(r.issues||[]).map(i=>small(i.message)),
           row(button('Read all original cells',()=>{u().focused=copy(r);h.persist();},{read:true}),
@@ -305,7 +305,7 @@ export function createWorkbookPanel(h) {
       d.status==='include'?el('div',{},txt('p','These are actual original custody values, not temporary labels or planned dates. Confirm each value against the retained evidence.'),
         el('div',{class:'grid'},canonical.map(([key,label])=>field(label,key==='termination_kind'?
           select([['','Active / no termination'],['WITHDRAWN','Actual withdrawal'],['DESTROYED','Actual destruction']],d.values[key]||'',{disabled:!canEdit(),onchange:e=>{d.values[key]=e.target.value;h.persist();}}):
-          input(d.values[key]??'',{disabled:!canEdit(),placeholder:key.endsWith('_at')?'YYYY-MM-DDTHH:MM:SSZ':'',oninput:e=>{d.values[key]=e.target.value;h.persist();}}))),
+          input(d.values[key]??'',{disabled:!canEdit(),placeholder:key.endsWith('_at')?'YYYY-MM-DDTHH:MM:SSZ':'',oninput:e=>{d.values[key]=e.target.value;h.persist();}})))),
         field('Actual custody evidence',select(documents,d.evidence.documentId||'',{disabled:!canEdit(),onchange:e=>{d.evidence.documentId=e.target.value;h.persist();}})),
         field('Exact evidence page / row / receipt reference',input(d.evidence.reference||'',{disabled:!canEdit(),oninput:e=>{d.evidence.reference=e.target.value;h.persist();}}))):null,
       row(button('Record row decision in draft',saveRow,{primary:true,disabled:!canEdit()}),button('Cancel row edit',()=>{u().rowDraft=null;h.persist();},{read:true})));
