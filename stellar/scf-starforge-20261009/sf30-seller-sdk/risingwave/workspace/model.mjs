@@ -1,7 +1,8 @@
 // MIT. Private RisingWave source authoring and original retained dataset operations.
-import { lstat, open, readdir, unlink } from 'node:fs/promises';
+import { lstat, open, readdir, link, unlink } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { resolve, join } from 'node:path';
+import { openBrowserWorkspaces } from './recovery.mjs';
 import { randomUUID, createHash } from 'node:crypto';
 import { createCaptureComparison, readCaptureComparison, openComparisonFile } from './comparison.mjs';
 import { validateRisingWaveSource, openRisingWaveSourceFile } from '../config.mjs';
@@ -34,6 +35,25 @@ async function exists(path) {
   try { await lstat(path); return true; } catch (issue) { if (issue.code !== 'ENOENT') throw issue; return false; }
 }
 async function directory(path) { await privateDirectory(path, true); return path; }
+async function retainBytes(location, name, content) {
+  const path = join(location, name);
+  if (await exists(path)) {
+    if (digest(await readPrivate(path, Math.max(1048576, content.length))) !== digest(content))
+      throw fault('WORKSPACE_REQUEST_BYTES_CHANGED', 'Continue the original request with its retained contents.', 409);
+    return;
+  }
+  const temporary = join(location, '.retaining-' + randomUUID());
+  try {
+    await createFile(temporary, content);
+    try { await link(temporary, path); }
+    catch (issue) {
+      if (issue.code !== 'EEXIST') throw issue;
+      if (digest(await readPrivate(path, Math.max(1048576, content.length))) !== digest(content))
+        throw fault('WORKSPACE_REQUEST_BYTES_CHANGED', 'Continue the original request with its retained contents.', 409);
+    }
+    await syncDirectory(location);
+  } finally { await unlink(temporary).catch(issue => { if (issue.code !== 'ENOENT') throw issue; }); }
+}
 function merchantTerms(value) {
   if (value === null || value === undefined) return null;
   fields(value, ['publicOrigin', 'description', 'serviceName', 'tags', 'payment', 'paymentOptions']);
@@ -78,7 +98,7 @@ export async function openRisingWaveWorkbench({ directory: selectedDirectory, so
   await directory(root);
   const release = await acquireWorkspace(root);
   const sessions = new Map(), operations = new Set(), sources = new Set(), captureTasks = new Map(), verifiedFiles = new Map(), sourceConnections = new Map();
-  let queue = Promise.resolve(), closing = null, closed = false;
+  let queue = Promise.resolve(), closing = null, closed = false, browserRecovery;
   const admitted = action => (...args) => {
     if (closed) return Promise.reject(fault('WORKSPACE_CLOSED', 'Reopen this private workspace.', 409));
     let operation;
@@ -119,24 +139,40 @@ export async function openRisingWaveWorkbench({ directory: selectedDirectory, so
     return current;
   }
   async function save(input) {
-    fields(input, ['expectedRevision', 'source', 'merchant']);
+    fields(input, ['expectedRevision', 'source', 'merchant', 'requestId']);
+    if (input.requestId !== undefined && (!id(input.requestId).startsWith('save-'))) throw fault('SOURCE_SAVE_ID_INVALID');
     return mutate(async () => {
-      const before = await expected(input.expectedRevision);
       const source = structuredClone(input.source);
       validateRisingWaveSource(source);
-      const merchant = merchantTerms(input.merchant);
-      const sourceBytes = bytes(source), merchantBytes = bytes(merchant), number = (before?.revision ?? 0) + 1;
-      const item = { id: key('revision'), revision: number, savedAt: timestamp(), sourceHash: digest(sourceBytes),
-        merchantHash: digest(merchantBytes), reports: Object.keys(source.queries).length };
-      const location = await directory(join(root, 'revisions', item.id));
-      await createFile(join(location, 'source.json'), sourceBytes);
-      await createFile(join(location, 'merchant.json'), merchantBytes);
-      await createFile(join(location, 'revision.json'), bytes(item)); await syncDirectory(location);
+      const merchant = merchantTerms(input.merchant), sourceBytes = bytes(source), merchantBytes = bytes(merchant);
+      const requestHash = digest(bytes({expectedRevision: input.expectedRevision, source, merchant}));
+      const retained = input.requestId && (await state()).revisions.find(item => item.saveRequestId === input.requestId);
+      const result = async item => ({...await inspect(), saveOperation: {
+        requestId: input.requestId ?? null, id: item.id, revision: item.revision,
+        sourceHash: item.sourceHash, merchantHash: item.merchantHash}});
+      if (retained) {
+        if (retained.requestHash !== requestHash) throw fault('SOURCE_SAVE_REQUEST_CHANGED', 'Continue this save with its original source and merchant terms.', 409);
+        await revision(retained.revision);
+        return result(retained);
+      }
+      const before = await expected(input.expectedRevision), number = (before?.revision ?? 0) + 1;
+      const selected = input.requestId ? 'revision-' + digest(bytes(input.requestId)) : key('revision');
+      const location = await directory(join(root, 'revisions', selected));
+      let item = await readJson(join(location, 'revision.json'), 16384).catch(issue => {if (issue.code !== 'ENOENT') throw issue; return null;});
+      if (item && (item.id !== selected || item.revision !== number || item.requestHash !== requestHash ||
+          item.sourceHash !== digest(sourceBytes) || item.merchantHash !== digest(merchantBytes)))
+        throw fault('SOURCE_SAVE_REQUEST_CHANGED', 'Continue this save with its original source and merchant terms.', 409);
+      item ??= {id: selected, revision: number, savedAt: timestamp(), sourceHash: digest(sourceBytes),
+        merchantHash: digest(merchantBytes), reports: Object.keys(source.queries).length,
+        ...(input.requestId ? {saveRequestId: input.requestId, requestHash} : {})};
+      await retainBytes(location, 'source.json', sourceBytes);
+      await retainBytes(location, 'merchant.json', merchantBytes);
+      await retainBytes(location, 'revision.json', bytes(item));
       const current = await state();
       if ((current.revisions.at(-1)?.revision ?? 0) !== input.expectedRevision) throw conflict();
       current.revisions.push(item); current.updatedAt = timestamp();
       await atomicJson(root, 'workspace.json', current);
-      return inspect();
+      return result(item);
     });
   }
   async function sourceFor(saved) {
@@ -522,14 +558,35 @@ export async function openRisingWaveWorkbench({ directory: selectedDirectory, so
     return readDatasetBuyerOffer({ seller: session.seller.url, resource: session.link.merchant.publicOrigin + session.link.path, snapshot, query });
   }
   async function buyer(session, runId, input) {
-    const selected = await offer(session, runId, input.query ?? '');
-    const prepared = prepareDatasetBuyer(selected, input), item = key('buyer');
-    await createFile(join(session.directory, 'buyers', item + '.json'), Buffer.from(prepared.configText));
-    const record = { id: item, createdAt: timestamp(), runId, snapshot: prepared.snapshot,
-      configSha256: prepared.configSha256, offerSha256: prepared.offerSha256, intentId: input.intentId };
-    await createFile(join(session.directory, 'buyers', item + '.manifest.json'), bytes(record));
-    await syncDirectory(join(session.directory, 'buyers'));
-    return { ...prepared, id: item, path: join(session.directory, 'buyers', item + '.json') };
+    const item = input.buyerId ?? key('buyer');
+    if (!id(item).startsWith('buyer-')) throw fault('BUYER_REQUEST_ID_INVALID');
+    const location = join(session.directory, 'buyers');
+    const request = {runId, query: input.query ?? '', intentId: input.intentId,
+      acceptIndex: input.acceptIndex, offerSha256: input.offerSha256};
+    const requestHash = digest(bytes(request));
+    let retained = await readJson(join(location, item + '.request.json'), 4194304)
+      .catch(issue => {if (issue.code !== 'ENOENT') throw issue; return null;});
+    if (retained && (retained.id !== item || retained.requestHash !== requestHash ||
+        digest(bytes(retained.request)) !== requestHash))
+      throw fault('BUYER_REQUEST_CHANGED', 'Continue the original customer request with its selected offer, intent and payment choice.', 409);
+    if (!retained) {
+      if (await exists(join(location, item + '.manifest.json')))
+        throw fault('BUYER_REQUEST_ALREADY_RETAINED', 'Open the original customer file from retained customer requests.', 409);
+      const selected = await offer(session, runId, request.query);
+      const prepared = prepareDatasetBuyer(selected, input);
+      retained = {id: item, createdAt: timestamp(), requestHash, request, prepared};
+      await retainBytes(location, item + '.request.json', bytes(retained));
+    }
+    const prepared = retained.prepared;
+    if (!prepared || digest(Buffer.from(prepared.configText ?? '')) !== prepared.configSha256 ||
+        prepared.offerSha256 !== request.offerSha256)
+      throw fault('BUYER_REQUEST_BYTES_CHANGED');
+    await retainBytes(location, item + '.json', Buffer.from(prepared.configText));
+    const record = {id: item, createdAt: retained.createdAt, runId, snapshot: prepared.snapshot,
+      configSha256: prepared.configSha256, offerSha256: prepared.offerSha256, intentId: input.intentId,
+      requestHash, query: request.query, acceptIndex: input.acceptIndex, url: prepared.url};
+    await retainBytes(location, item + '.manifest.json', bytes(record));
+    return {...prepared, id: item, path: join(location, item + '.json')};
   }
   async function sessionFor(selected) {
     id(selected);
@@ -564,7 +621,7 @@ export async function openRisingWaveWorkbench({ directory: selectedDirectory, so
           status: options => ({ ...publisher.status(options), buyer: session.seller ?
             { seller: session.seller.url, resource: link.merchant.publicOrigin + link.path } : null }),
           buyerOffer: (runId, query) => offer(session, runId, query),
-          prepareBuyer: (runId, input) => buyer(session, runId, input),
+          prepareBuyer: (runId, input) => mutate(() => buyer(session, runId, input)),
         };
         session.console = await startPostgresPublisherServer({ publisher: surface, port: 0 });
         return session;
@@ -573,45 +630,63 @@ export async function openRisingWaveWorkbench({ directory: selectedDirectory, so
     sessions.set(selected, pending);
     try { return await pending; } catch (issue) { sessions.delete(selected); throw issue; }
   }
-  async function publicationView(session) {
+  async function publicationView(session, input = {}) {
+    fields(input, ['buyerLimit', 'buyerOffset']);
+    const limit = input.buyerLimit ?? 20, offset = input.buyerOffset ?? 0;
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100 || !Number.isSafeInteger(offset) || offset < 0)
+      throw fault('BUYER_PAGE_INVALID');
+    const names = (await readdir(join(session.directory, 'buyers'))).filter(name => name.endsWith('.manifest.json')).sort().reverse();
     const buyers = [];
-    for (const name of (await readdir(join(session.directory, 'buyers'))).filter(name => name.endsWith('.manifest.json')).sort().reverse().slice(0, 20))
-      buyers.push(await readJson(join(session.directory, 'buyers', name), 16384));
-    return { ...session.link, consoleUrl: session.console.url, seller: sellerView(session), startError: session.startError,
-      status: session.publisher.status({ limit: 20 }), target: await session.publisher.target(),
-      schedule: session.console.schedule.status({ limit: 10 }), buyers };
+    for (const name of names.slice(offset, offset + limit)) buyers.push(await readJson(join(session.directory, 'buyers', name), 16384));
+    return {...session.link, consoleUrl: session.console.url, seller: sellerView(session), startError: session.startError,
+      status: session.publisher.status({limit: 20}), target: await session.publisher.target(),
+      schedule: session.console.schedule.status({limit: 10}), buyers,
+      buyerPage: {total: names.length, offset, limit, nextOffset: offset + buyers.length < names.length ? offset + buyers.length : null}};
   }
-  async function inspectPublication(selected) { return publicationView(await sessionFor(selected)); }
+  async function inspectPublication(selected, input = {}) { return publicationView(await sessionFor(selected), input); }
   async function createPublication(input) {
     fields(input, ['expectedRevision', 'query', 'path', 'publicationId']);
+    if (!Number.isSafeInteger(input.expectedRevision) || input.expectedRevision < 1) throw conflict();
     return mutate(async () => {
-      const saved = await expected(input.expectedRevision);
-      if (!saved || !Object.hasOwn(saved.source.queries, input.query)) throw fault('RISINGWAVE_REPORT_REQUIRED', 'Save and select a RisingWave report.');
-      if (!saved.merchant) throw fault('MERCHANT_TERMS_REQUIRED', 'Save the public merchant origin and payment choices first.');
       const selected = input.publicationId ?? key('publication');
       id(selected); if (!selected.startsWith('publication-')) throw fault('PUBLICATION_ID_INVALID');
-      const currentState = await state();
-      if (currentState.publications.includes(selected)) {
+      const currentState = await state(), existing = currentState.publications.includes(selected);
+      const location = join(root, 'publications', selected);
+      const staged = await exists(join(location, 'publication.json')) || await exists(join(location, 'source.json'));
+      const saved = existing || staged ? await revision(input.expectedRevision) : await expected(input.expectedRevision);
+      if (!saved || !Object.hasOwn(saved.source.queries, input.query)) throw fault('RISINGWAVE_REPORT_REQUIRED', 'Save and select a RisingWave report.');
+      if (!saved.merchant) throw fault('MERCHANT_TERMS_REQUIRED', 'Save the public merchant origin and payment choices first.');
+      const path = resourcePath(input.path);
+      if (existing) {
         const retained = await inspectPublication(selected);
-        if (retained.revision !== saved.revision || retained.query !== input.query || retained.path !== resourcePath(input.path) ||
-            retained.sourceHash !== saved.sourceHash || retained.merchantHash !== saved.merchantHash) throw fault('PUBLICATION_REQUEST_CHANGED');
+        if (retained.revision !== saved.revision || retained.query !== input.query || retained.path !== path ||
+            retained.sourceHash !== saved.sourceHash || retained.merchantHash !== saved.merchantHash)
+          throw fault('PUBLICATION_REQUEST_CHANGED');
         return retained;
       }
-      const location = await directory(join(root, 'publications', selected));
-      await directory(join(location, 'buyers'));
-      const boundSource = bytes({ ...saved.source, queries: { [input.query]: saved.source.queries[input.query] } });
-      const link = { schema: 'stellar-forge.risingwave-browser-publication.v1', id: selected, createdAt: timestamp(),
+      await directory(location); await directory(join(location, 'buyers'));
+      const boundSource = bytes({...saved.source, queries: {[input.query]: saved.source.queries[input.query]}});
+      let link = await readJson(join(location, 'publication.json'), 1048576)
+        .catch(issue => {if (issue.code !== 'ENOENT') throw issue; return null;});
+      if (link && (link.schema !== 'stellar-forge.risingwave-browser-publication.v1' || link.id !== selected ||
+          link.revision !== saved.revision || link.sourceRevisionId !== saved.id || link.sourceHash !== saved.sourceHash ||
+          link.merchantHash !== saved.merchantHash || link.publicationSourceHash !== digest(boundSource) ||
+          link.query !== input.query || link.path !== path || digest(bytes(link.merchant)) !== saved.merchantHash))
+        throw fault('PUBLICATION_REQUEST_CHANGED', 'Continue the original product with its saved source, report, merchant and path.', 409);
+      link ??= {schema: 'stellar-forge.risingwave-browser-publication.v1', id: selected, createdAt: timestamp(),
         revision: saved.revision, sourceRevisionId: saved.id, sourceHash: saved.sourceHash, merchantHash: saved.merchantHash,
-        publicationSourceHash: digest(boundSource), query: input.query, path: resourcePath(input.path), merchant: structuredClone(saved.merchant) };
-      await createFile(join(location, 'source.json'), boundSource);
-      await createFile(join(location, 'publication.json'), bytes(link)); await syncDirectory(location);
-      const current = await state(); current.publications.push(selected); current.updatedAt = timestamp();
-      await atomicJson(root, 'workspace.json', current);
+        publicationSourceHash: digest(boundSource), query: input.query, path, merchant: structuredClone(saved.merchant)};
+      // Persist the complete original request before staging its derived source bytes.
+      await retainBytes(location, 'publication.json', bytes(link));
+      await retainBytes(location, 'source.json', boundSource);
+      const current = await state();
+      if (!current.publications.includes(selected)) current.publications.push(selected);
+      current.updatedAt = timestamp(); await atomicJson(root, 'workspace.json', current);
       return inspectPublication(selected);
     });
   }
   async function publicationAction(selected, action, input = {}) {
-    fields(input, action === 'buyer' ? ['runId', 'query', 'intentId', 'acceptIndex', 'offerSha256'] : []);
+    fields(input, action === 'buyer' ? ['runId', 'query', 'intentId', 'acceptIndex', 'offerSha256', 'buyerId'] : []);
     return mutate(async () => {
       const session = await sessionFor(selected);
       if (action === 'seller/start') { await startSeller(session); return publicationView(session); }
@@ -665,7 +740,9 @@ export async function openRisingWaveWorkbench({ directory: selectedDirectory, so
     }
     const requiredEnvironment = [...new Set(['connectionStringEnv', 'caFileEnv']
       .map(name => saved?.source[name]).filter(value => typeof value === 'string'))];
-    return { schema: SCHEMA, directory: root, revision: saved?.revision ?? 0, savedAt: saved?.savedAt ?? null,
+    return { schema: SCHEMA, directory: root, createdAt: current.createdAt,
+      workspaceIdentity: digest(bytes({schema: SCHEMA, directory: root, createdAt: current.createdAt})),
+      revision: saved?.revision ?? 0, savedAt: saved?.savedAt ?? null,
       sourceHash: saved?.sourceHash ?? null, source: saved?.source ?? null, merchant: saved?.merchant ?? null,
       requiredEnvironment, environment: requiredEnvironment.map(name => ({ name, configured: Boolean(environment[name]) })),
       history: current.revisions.slice().reverse(), publications };
@@ -708,9 +785,11 @@ export async function openRisingWaveWorkbench({ directory: selectedDirectory, so
         await atomicJson(join(root, 'captures'), name, record);
       }
     }
-    await inspect();
+    browserRecovery = await openBrowserWorkspaces(root, (await inspect()).workspaceIdentity);
     return { directory: root,
-      ...Object.fromEntries(Object.entries({ inspect, revision, save, catalogue, compileReport, subscriptionInspect, subscriptionPrepare, subscriptionCreate, subscriptionRecord, subscriptions, sample, capture: value => mutate(() => capture(value)), captures, captureRecord, cancelCapture,
+      ...Object.fromEntries(Object.entries({ inspect, revision, save,
+        browserWorkspaces: () => browserRecovery.list(), browserWorkspace: selected => browserRecovery.read(selected),
+        saveBrowserWorkspace: input => mutate(() => browserRecovery.save(input)), catalogue, compileReport, subscriptionInspect, subscriptionPrepare, subscriptionCreate, subscriptionRecord, subscriptions, sample, capture: value => mutate(() => capture(value)), captures, captureRecord, cancelCapture,
         resumeCapture: value => mutate(() => resumeCapture(value)), recoverCapture: value => mutate(() => recoverCapture(value)), captureFile, captureChunk, compareCaptures, comparisons, comparisonRecord, comparisonFile, comparisonChunk,
         publicationCommand, createPublication,
         inspectPublication, publicationAction, buyerOffer, inspectRun, candidateFile, file })
