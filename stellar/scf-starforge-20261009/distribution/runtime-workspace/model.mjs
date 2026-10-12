@@ -29,6 +29,11 @@ import { transferOperationFields, initializeTransferWorkspace, runtimeTransferWo
   uploadWorkspaceRuntimeTransferPart, downloadWorkspaceRuntimeTransfer, normalizeRuntimeTransferOperation,
   executeRuntimeTransferOperation, recoverWorkspaceRuntimeTransferOperation } from './transfer-workspace.mjs';
 
+import { pythonOperationFields, initializePythonWorkspace, reviewPythonRuntime, normalizePythonOperation,
+  executePythonOperation, recoverPythonOperation, pythonWorkspaceState, receivePythonArchive,
+  openPythonBundle } from '../python-runtime/workspace.mjs';
+import { bindPythonApplicationCommand } from '../python-runtime/command-binding.mjs';
+
 export const WORKSPACE_SCHEMA = 'stellar-forge.runtime-workspace.v1';
 const WORKER = fileURLToPath(new URL('./worker.mjs', import.meta.url));
 const recordPath = (root, type, id) => join(root, type, recordId(id) + '.json');
@@ -122,6 +127,8 @@ async function jobView(root, id) {
   const commandActive = state.phase === 'RUNNING' && Boolean(state.commandProcess) && (await managedCommandAlive(state) || active);
   return { id, operation: request.operation, runtimeId: request.runtimeId ?? request.targetId ?? null,
     homeId: request.homeId ?? null, applicationId: request.applicationId ?? null, terminal: request.terminal === true, commandActive,
+    ...(Object.hasOwn(pythonOperationFields, request.operation) ? { python: request.python,
+      candidateId: request.candidateId ?? null, pythonInstallationId: request.installationId ?? null } : {}),
     targetId: request.targetId ?? null, imageId: request.imageId ?? null, transferId: request.transferId ?? null,
     cacheTransferId: request.cacheTransferId ?? null,
     targetDirectory: request.targetDirectory ?? null, createdAt: request.createdAt,
@@ -158,6 +165,7 @@ const fields = {
   ...managedOperationFields,
   ...imageOperationFields,
   ...transferOperationFields,
+  ...pythonOperationFields,
   import: ['archive', 'sha256', 'label'],
   prepare: ['archiveId', 'name', 'selection', 'profileId'],
   install: ['runtimeId', 'offline', 'cache', 'nodeHeaders'],
@@ -171,8 +179,28 @@ export async function openRuntimeWorkspace({ directory } = {}) {
   await initializeManagedWorkspace(root);
   await initializeApplications(root);
   await initializeTransferWorkspace(root);
+  await initializePythonWorkspace(root);
   const model = {
     directory: root,
+    async pythonState(input) {
+      const selected = await entry(root, recordId(input.runtimeId));
+      return pythonWorkspaceState(root, { ...input, runtimeDirectory: selected.directory });
+    },
+    async pythonReview(input) {
+      const selected = await entry(root, recordId(input.runtimeId));
+      return reviewPythonRuntime(root, { ...input, runtimeDirectory: selected.directory });
+    },
+    async pythonUpload(input) { return receivePythonArchive(root, input); },
+    async pythonDownload(input) { return openPythonBundle(root, input); },
+    async pythonCommand(input) {
+      const selected = await entry(root, recordId(input.runtimeId));
+      return bindPythonApplicationCommand(root, { ...input, runtimeDirectory: selected.directory });
+    },
+    async recoverPythonOperation(id) {
+      const result = await recoverPythonOperation(root, id);
+      if (result.resume) await spawnWorker(root, id);
+      return result;
+    },
     async transfersState(input) { return runtimeTransferWorkspaceState(root, input); },
     async transfersReview(input) {
       const selected = await entry(root, recordId(input.runtimeId));
@@ -268,6 +296,7 @@ export async function openRuntimeWorkspace({ directory } = {}) {
       if (request.cache) absolute(request.cache);
       if (request.nodeHeaders !== undefined) absolute(request.nodeHeaders);
       if (request.runtimeId) request.runtimeDirectory = (await entry(root, request.runtimeId)).directory;
+      if (Object.hasOwn(pythonOperationFields, request.operation)) await normalizePythonOperation(root, request, id);
       if (['install', 'inspect', 'upgrade', 'recover'].includes(request.operation))
         need(request.runtimeDirectory, 'RUNTIME_WORKSPACE_RUNTIME_REQUIRED');
       if (request.runtimeId && !['inspect', 'transfer-export'].includes(request.operation)) {
@@ -347,11 +376,15 @@ export async function openRuntimeWorkspace({ directory } = {}) {
       need(observed.ready && observed.status === 'READY', 'RUNTIME_WORKSPACE_READY_HANDOFF_REQUIRED');
       const plan = await readJSON(join(selected.directory, 'runtime-install.json'));
       const command = await runtimeCommand({ directory: selected.directory, args: ['source'] });
+      const activePython = await readJSON(join(selected.directory, 'python-runtime', 'active.json'), true);
+      const python = activePython ? await pythonWorkspaceState(root, { runtimeId, runtimeDirectory: selected.directory }) : null;
       return { schema: 'stellar-forge.runtime-deployment-handoff.v1', createdAt: now(),
         installationId: observed.installationId, directory: observed.directory, sourceCommit: observed.sourceCommit,
         packageVersion: observed.packageVersion, profileId: observed.profileId, lockSha256: observed.lockSha256,
         sourceRoot: observed.sourceRoot, dependencyRoot: observed.dependencyRoot, originalCommand: command,
         sourceManifestSha256: plan.source.manifestSha256,
+        pythonRuntime: python ? { binding: python.binding, active: python.active,
+          installations: python.installations, originalCommands: 'runtime-workspace python-command' } : null,
         managedRelease: { packageExport: '@tokenjunkielabs/starforge-merchant/installation/runtime',
           operation: 'adoptMerchantRuntime',
           arguments: { directory: observed.directory, expectedManifest: plan.source.manifestSha256 },
@@ -440,7 +473,13 @@ export async function executeRuntimeWorkspaceOperation({ directory, operation: i
       let result;
       const installOptions = { offline: request.offline ?? false, cache: request.cache ?? null,
         ...(request.nodeHeaders ? { nodeHeaders: request.nodeHeaders } : {}) };
-      if (Object.hasOwn(managedOperationFields, request.operation)) {
+      if (Object.hasOwn(pythonOperationFields, request.operation)) {
+        result = await executePythonOperation({ root, request, operationDirectory, leaseFd: lease.fd,
+          checkpoint: async value => {
+            Object.assign(started, value, { updatedAt: now() });
+            await saveJSON(join(operationDirectory, 'state.json'), started, true);
+          } });
+      } else if (Object.hasOwn(managedOperationFields, request.operation)) {
         result = await executeManagedOperation({ root, request, operationDirectory, leaseFd: lease.fd,
           checkpoint: async value => {
             Object.assign(started, value, { updatedAt: now() });

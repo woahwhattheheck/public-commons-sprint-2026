@@ -150,3 +150,59 @@ try {
 Use the same start/wait interface with kind execute or recover for explicit application actions. The action returns promptly after durable task creation; wait resolves after the actual original operation and accepted-result adoption finish. get, list and status expose safe customer state. cancel requests cancellation of the active original task.
 
 The controller borrows the customer workspace’s existing kernel lease. It owns checkout records and its original Node buyer directories under checkout/; the original paid-job buyers remain in buyers/, output remains in artifacts/, and research remains in library/. A complete installation backup retains the whole customer state and the original absolute operator/runtime locations required by its saved operations.
+
+## Native checkout continuation
+
+The complete source includes one retained operation driver at
+[native-continuation.py](./native-continuation.py), with the Node application
+flow in [native-continuation.mjs](./native-continuation.mjs). It continues the
+application retained by the original paid-jobs journey and exercises the
+checkout through the original Node SDK child, native operator console, merchant
+settlement callback, customer workspace and resource library.
+
+Run it from the complete source cut with the existing native dependencies:
+
+~~~sh
+python3 stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/checkout/native-continuation.py \
+  --retained /absolute/original/sf30-paid-jobs-directory
+~~~
+
+The host needs Node 24, Python 3.11 or later, OpenSSL, the installed x402 2.28
+dependencies, RE2JS, and the complete original SF88/SF81/SF62/SF54/SF59/SF36
+source. Use --node with the absolute installed Node executable when it is
+outside PATH. --out selects an additional absolute result file in an existing
+directory. The launcher caps each Node process's old-generation heap at 256 MiB;
+allow 512 MiB for the two Node processes plus 256 MiB for native/Python/TLS
+overhead and the application worker.
+
+The original retained configuration uses a demonstration asset label. The
+driver saves a named checkout configuration beneath checkout-continuation/
+with a disposable contract-shaped asset accepted by the original SF36
+validator. It uses the exact retained application module and records both
+configuration hashes and that module's hash. The original merchant records
+are read before and after the continuation. The new job has the stable
+reference checkout:2026.10 and its own source-pinned merchant directory.
+
+The transport uses the original explicit CONNECT configuration and actual TLS
+verification against a local, scoped certificate. The configured signer and
+facilitator supply the local protocol envelope. A controlling PTY displays the
+original SF62 review and answers its exact digest only when the job, request,
+body, actor, service and payment terms match this disposable fixture. SF36
+creates and audits its ordinary SQLite reservation. These fixture selections
+are written explicitly into the result.
+
+The driver follows the browser's private API: import the saved merchant ticket,
+review and execute its original operation, retain the actual 202 BuyerResult,
+fetch the completed application output, preview/download it from the library,
+annotate it, export and receive a collection, and reopen the original checkout
+and customer state. Reopening verifies that the original attempt and settlement
+identity stay attached to the same job.
+
+Use the same --retained path for continuation. The private capability is saved
+before merchant creation, and the exact ticket is saved before buyer
+preparation. Existing checkouts recover their original operation. All state,
+the original native stdout/stderr, private terminal log, certificate, fixture
+keys and ledger remain in checkout-continuation/. The complete result is
+checkout-continuation/native-complete.json; its source identities, actual
+native outcome, delivered artifact hash, received collection and ledger audit
+describe the completed flow.

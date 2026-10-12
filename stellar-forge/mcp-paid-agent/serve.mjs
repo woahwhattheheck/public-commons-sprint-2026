@@ -34,15 +34,16 @@ export async function startMcpWorkspace({ environment = process.env } = {}) {
       operator = await import(pathToFileURL(modulePath).href);
       const pays = typeof operator.approve === 'function' && typeof operator.signPayment === 'function';
       const readsOnly = operator.approve === undefined && operator.signPayment === undefined &&
-        typeof operator.reconcilePayment === 'function';
+        (typeof operator.reconcilePayment === 'function' || typeof operator.spendingStatus === 'function');
       if ((!pays && !readsOnly) ||
           (operator.reconcilePayment !== undefined && typeof operator.reconcilePayment !== 'function') ||
+          (operator.spendingStatus !== undefined && typeof operator.spendingStatus !== 'function') ||
           (operator.close !== undefined && typeof operator.close !== 'function'))
-        throw new TypeError('Export paired approve/signPayment functions, a read-only reconcilePayment function, or both.');
+        throw new TypeError('Export paired approve/signPayment functions, reconciliation or spending inspection functions, or both.');
     }
     broker = new McpPaidToolBroker({ discoveryUrl, allowedResourceOrigins, quoteStore, resultStore, timeoutMs,
       ...(operator ? { ...(operator.signPayment ? {approve:operator.approve,signPayment:operator.signPayment} : {}),
-        reconcilePayment:operator.reconcilePayment ?? null,
+        reconcilePayment:operator.reconcilePayment ?? null,spendingStatus:operator.spendingStatus ?? null,
         agentCommerce: operator.agentCommerce ?? null,
         ...(operator.fetchImpl === undefined ? {} : {fetchImpl:operator.fetchImpl}),
         remoteMcpPolicies: operator.remoteMcpPolicies ?? [] } : {}) });
@@ -74,6 +75,7 @@ export async function startMcpWorkspace({ environment = process.env } = {}) {
     broker, server, address, consoleUrl: `${address}/console/`,
     durable: Boolean(quoteStore), paymentAdapterConnected: typeof operator?.signPayment === 'function',
     paymentReconciliationConnected: typeof operator?.reconcilePayment === 'function',
+    aggregateSpendingConnected: typeof operator?.spendingStatus === 'function',
     close() {
       if (closing) return closing;
       closing = (async () => {

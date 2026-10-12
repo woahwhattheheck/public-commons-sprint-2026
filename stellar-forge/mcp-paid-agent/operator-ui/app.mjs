@@ -10,7 +10,7 @@ const time = value => Number.isFinite(value) ? new Date(value).toLocaleString() 
 const size = bytes => Number.isFinite(bytes) ? bytes.toLocaleString() + ' bytes' : '—';
 const state = {connected:false, serial:0, view:'discover', resources:[], searchArgs:null, searchCursor:null,
   description:null, quote:null, history:[], historyCursor:null, results:[], resultCursor:null,
-  result:null, reading:null, selection:0, describing:0, executing:new Set(), uncertain:new Set(), urls:new Set()};
+  result:null, reading:null, spending:null, spendingRead:0, selection:0, describing:0, executing:new Set(), uncertain:new Set(), urls:new Set()};
 
 function node(tag, {text, className, ...attrs} = {}, children = []) {
   const element = document.createElement(tag);
@@ -77,7 +77,7 @@ function setView(view) {
 function reset() {
   state.serial++; client.disconnect(); revokeDownloads();
   state.selection++; state.describing++;
-  Object.assign(state, {connected:false, resources:[], description:null, quote:null, result:null, reading:null,
+  Object.assign(state, {connected:false, resources:[], description:null, quote:null, result:null, reading:null, spending:null,
     searchArgs:null, searchCursor:null, history:[], historyCursor:null, results:[], resultCursor:null});
   state.executing.clear(); state.uncertain.clear();
   $('workspace').hidden = true; $('connection').hidden = false; $('disconnect').hidden = true;
@@ -214,23 +214,24 @@ async function loadResults(more = false) {
 async function openQuote(quoteId, scroll = true) {
   const serial = state.serial, selection = ++state.selection, quote = await client.call('bazaar_status', {quoteId});
   if (serial !== state.serial || selection !== state.selection) return false;
-  selectQuote(quote); state.uncertain.delete(quoteId); renderQuote();
+  selectQuote(quote); state.spending = null; state.spendingRead++; state.uncertain.delete(quoteId); renderQuote();
   if (scroll) $('quote-detail').scrollIntoView({behavior:'smooth', block:'start'});
   return true;
 }
 function selectQuote(quote) {
   if (state.quote?.quoteId !== quote.quoteId) {
+    state.spending = null; state.spendingRead++;
     revokeDownloads(); state.result = null; $('result-detail').replaceChildren(); $('result-detail').hidden = true;
   }
   state.quote = quote;
 }
 async function executeQuote(quoteId) {
-  const serial = state.serial; state.executing.add(quoteId); renderQuote();
+  const serial = state.serial; state.spending = null; state.spendingRead++; state.executing.add(quoteId); renderQuote();
   notice('Host approval requested for ' + quoteId + '. Refresh status or cancel this original quote while the host responds.');
   try {
     const quote = await client.call('bazaar_execute_approved', {quoteId});
     if (serial !== state.serial) return;
-    if (state.quote?.quoteId === quoteId) state.quote = quote;
+    if (state.quote?.quoteId === quoteId) { state.quote = quote; state.spending = null; state.spendingRead++; }
     state.uncertain.delete(quoteId);
     notice('Original quote ' + quoteId + ' returned ' + quote.status + '.');
   } catch (error) {
@@ -246,7 +247,7 @@ async function executeQuote(quoteId) {
 async function quoteAction(name, quoteId, additional = {}) {
   const serial = state.serial, quote = await client.call(name, {...additional,quoteId});
   if (serial !== state.serial) return;
-  if (state.quote?.quoteId === quoteId) { state.quote = quote; renderQuote(); }
+  if (state.quote?.quoteId === quoteId) { state.quote = quote; state.spending = null; state.spendingRead++; renderQuote(); }
   notice(name === 'bazaar_reconcile_payment'
     ? 'Transaction observation: ' + (quote.transactionObservation ?? quote.result.reconciliation).outcome +
       (quote.transactionObservation ? '. Observation was not saved; inspect and download its details. Original quote remains ' : '. Original quote: ') + quote.status + '.'
@@ -292,6 +293,51 @@ function paymentInspection(q, active) {
   }
   return panel;
 }
+async function inspectSpending(quoteId) {
+  const serial = state.serial, selection = state.selection, reading = ++state.spendingRead;
+  const report = await client.call('bazaar_spending_status', {quoteId});
+  if (serial !== state.serial || selection !== state.selection || reading !== state.spendingRead ||
+      state.quote?.quoteId !== quoteId) return;
+  state.spending = {quoteId,report,checkedAt:new Date().toISOString()};
+  renderQuote(); notice('Spending ledger read for the selected quote.');
+}
+function spendingInspection(q) {
+  const saved = state.spending?.quoteId === q.quoteId ? state.spending : null;
+  const finalized = (q.transactionObservation ?? q.result?.reconciliation)?.spending;
+  const report = saved?.report ?? finalized;
+  const panel = node('section', {className:'content-block', id:'spending-inspection'}, [
+    node('h4', {text:'Spending ledger'}),
+    button('Read spending ledger', () => inspectSpending(q.quoteId),
+      {disabled:!client.tools.has('bazaar_spending_status')}),
+  ]);
+  if (!report) {
+    panel.append(node('p', {className:'caption',
+      text:'Review the host’s aggregate budget and this quote’s retained reservation.'}));
+    return panel;
+  }
+  const held = report.reservation;
+  panel.append(facts([
+    ['Status', report.outcome], ['Ledger state', held?.state],
+    ['Reserved maximum (base units)', held?.amount ?? held?.max_amount],
+    ['Finalized amount (base units)', held?.actual ?? report.actual],
+    ['Network receipt', held?.receipt_ref ?? report.receipt_ref],
+    ['Read at', saved?.checkedAt], ['Request digest', report.request_sha256],
+  ]));
+  if (report.estimate) {
+    const labels = {max_single:'One payment',max_total:'Lifetime total',
+      max_per_utc_day:'UTC day',max_per_actor_utc_day:'Actor / UTC day',
+      max_per_service_utc_day:'Service / UTC day'};
+    panel.append(node('h4', {text:'Capacity for this request'}),
+      table(['Budget','Available base units'],Object.entries(report.estimate.limit_remaining ?? {})
+        .map(([key,value])=>[labels[key] ?? key,value])),
+      node('p', {className:'caption',text:report.estimate.approved
+        ? 'The current estimate fits. Signing rechecks and reserves the exact amount atomically.'
+        : 'This request exceeds: ' + (report.estimate.denied_by ?? []).map(key=>labels[key] ?? key).join(', ') + '.'}));
+  }
+  panel.append(detail('Complete spending record',report),
+    button('Download spending record',()=>download(new TextEncoder().encode(stringify(report)),q.quoteId+'-spending.json')));
+  return panel;
+}
 function renderQuote() {
   const q = state.quote, target = $('quote-detail'); if (!q) { target.hidden = true; return; }
   target.hidden = false;
@@ -315,6 +361,7 @@ function renderQuote() {
     ]), ...(q.invocation ? [detail('Complete invocation and arguments', q.invocation)] : [])]),
     node('div', {}, [node('h4', {text:'Selected payment terms'}), facts(Object.entries(q.acceptedTerms ?? q.selected ?? {})),
       ...(q.result?.paymentResponse || q.signedRequestDispatched ? [paymentInspection(q, active)] : []),
+      ...(q.invocation ? [spendingInspection(q)] : []),
       ...(q.failure ? [node('p', {text:q.failure})] : []),
       ...(q.result?.responseFile ? [detail('Saved file', q.result.responseFile)] : []),
       ...(q.result?.content ? [detail(q.result.content.truncated ? 'Truncated status preview' : 'Status preview', q.result.content)] : []),
