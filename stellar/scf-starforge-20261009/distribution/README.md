@@ -4775,3 +4775,10 @@ applications' stores.
 See the [award research operating guide](../sf30-seller-sdk/usaspending/README.md)
 and [complete dossier receiving guide](../sf30-seller-sdk/usaspending/DOSSIER.md)
 for configuration, original acquisition, operator use and portable handover.
+
+
+## SDMX sources, exact editions and customer receiving
+
+The installed `starforge sdmx` command and `starforge dataset sdmx` dispatch the same original source workspace. Retain complete SDMX data and structural metadata, inspect exact values, save and compare editions, run the native dataset engine, and transfer the original project/source history. The merchant bridge binds the native snapshot and source lineage to explicit SF30 public terms; publication uses the original version store's current/revision comparison. The customer bridge reviews the live original offer, pins the selected snapshot and continues through the original SF88 page acquisition and data-room delivery.
+
+Public imports: `@tokenjunkielabs/starforge-merchant/seller/sdmx` and `@tokenjunkielabs/starforge-merchant/buyer/sdmx`. The [SDMX operator guide](../sf30-seller-sdk/sdmx/README.md) includes the complete captured ECB case, acquisition receipts, source/edition/receiving CLI, merchant publication and original buyer commands.
