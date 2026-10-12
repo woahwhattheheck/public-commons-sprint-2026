@@ -27,13 +27,13 @@
     },
     {
       "path": "batch-portfolio-d76c/package_candidate.py",
-      "bytes": 2513,
-      "sha256": "cc0b6d4033cac0086b58a1c7d13117f71d20a3fb25b0a3f1d8251b64bbc52cbc"
+      "bytes": 5761,
+      "sha256": "b595df7c8c8a314fe66c4f9c186a8e144f5c6d718f3606148580e147005f036f"
     },
     {
       "path": "batch-portfolio-d76c/README.md",
-      "bytes": 6473,
-      "sha256": "f718f20a5f6a3a7c8da73bb846b91441bce6c13aaf1b0a4189c55b8d6aee3e5c"
+      "bytes": 8026,
+      "sha256": "bcc73425a93afd3e33d57d357239d80c81631433f40ac651ac9c6c148f7d1dad"
     },
     {
       "path": "batch-portfolio-d76c/requirements.txt",
@@ -167,8 +167,8 @@
     },
     {
       "path": "runner/run_cpu.sh",
-      "bytes": 993,
-      "sha256": "706c22439029ec50010cd5e566eeffc4172624e4ce6289698ba5726a86f3d8f8"
+      "bytes": 1050,
+      "sha256": "bea9f74db24f51ee2f0949b16017ef33eb8c86b0a4703a1c63ac1496538912bc"
     },
     {
       "path": "runner/run_public_uifo.py",
@@ -177,8 +177,8 @@
     },
     {
       "path": "runner/run_recorded_cpu.sh",
-      "bytes": 1410,
-      "sha256": "97c55ae3559befea87db90a3ae902e903042579ab81ca50320a452813ad76356"
+      "bytes": 1467,
+      "sha256": "ec0e8f9d9ba157db70b1e69c9fba965e6f066c8b816965a0eee5058e2030d9be"
     },
     {
       "path": "runner/run_recorded.py",
@@ -188,7 +188,7 @@
     {
       "path": "SOURCES.json",
       "bytes": 16600,
-      "sha256": "ff4a75446599f6777002f5fcc07116176a3acc7850cf4cca3fed53748a589b8e"
+      "sha256": "b881c1f8f3c3b42f390bb5fc8df71ee00b30e18bdd48574c76ec6b8f453aaa72"
     },
     {
       "path": "submission-zips/099.zip",
@@ -211,7 +211,7 @@
       "sha256": "205b7a3778e163cab1673a20dd4f3202dcad53be46be9575bed2431e7df59150"
     }
   ],
-  "revision": 5,
+  "revision": 6,
   "coordinate_map_entrypoint": "coordinate-map-110/submission.py",
   "invocation_adapter": "runner/invocation.py",
   "batch_entrypoint": "batch-portfolio-d76c/submission.py",
