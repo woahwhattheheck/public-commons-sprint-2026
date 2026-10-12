@@ -36,7 +36,7 @@ export function parseReconciliationManifest(bytes,exportId){
  need(Array.isArray(result.queries)&&Array.isArray(result.sources),'DUCKDB_RECONCILIATION_MANIFEST_INVALID');
  const kinds=new Set();
  for(const query of result.queries){
-  need(plain(query)&&['rows','groups','decisions','changes'].includes(query.kind)&&!kinds.has(query.kind)&&
+  need(plain(query)&&['rows','groups','decisions','changes','fields'].includes(query.kind)&&!kinds.has(query.kind)&&
    sha(query.query_id)&&sha(query.export_id)&&Number.isSafeInteger(query.revision)&&query.revision>0&&
    Number.isSafeInteger(query.rows)&&query.rows>=0&&query.directory==='queries/'+query.kind,
    'DUCKDB_RECONCILIATION_MANIFEST_INVALID');
@@ -45,6 +45,11 @@ export function parseReconciliationManifest(bytes,exportId){
    need(names.has(query.directory+'/'+file),'DUCKDB_RECONCILIATION_PACKAGE_INCOMPLETE');
  }
  need(['rows','groups','decisions'].every(kind=>kinds.has(kind)),'DUCKDB_RECONCILIATION_PACKAGE_INCOMPLETE');
+ if(result.comparison_rules!==undefined){
+  need(plain(result.comparison_rules)&&result.comparison_rules.schema==='stellar-forge.duckdb-reconciliation.numeric-rules.v1'&&
+   Array.isArray(result.comparison_rules.columns)&&result.comparison_rules.columns.length>0&&kinds.has('fields'),
+   'DUCKDB_RECONCILIATION_COMPARISON_RULES_CHANGED');
+ }else need(!kinds.has('fields'),'DUCKDB_RECONCILIATION_COMPARISON_RULES_CHANGED');
  const editions=new Set();
  for(const source of result.sources){
   need(plain(source)&&sha(source.edition_id)&&!editions.has(source.edition_id)&&
@@ -147,6 +152,7 @@ export async function openDuckDBReconciliationClient({url,client:provided,worksp
   execute:request=>call('reconcile-execute',request),
   groups:(run_id,options={})=>call('reconcile-groups',{run_id,...options}),
   rows:(run_id,options={})=>call('reconcile-rows',{run_id,...options}),
+  fields:(run_id,options={})=>call('reconcile-fields',{run_id,...options}),
   row:(run_id,side,row)=>call('reconcile-row',{run_id,side,row}),
   decisions:(run_id,options={})=>call('reconcile-decisions',{run_id,...options}),
   decide:request=>call('reconcile-decide',request),
