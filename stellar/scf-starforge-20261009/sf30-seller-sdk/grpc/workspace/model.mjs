@@ -16,6 +16,7 @@ import { compileGrpcMerchantPlan, prepareGrpcSeller, readGrpcPrepared, CUSTOMER_
 import { startGrpcMerchant } from '../merchant.mjs';
 import { assertGrpcWorkspaceBinding } from './binding.mjs';
 import { createGrpcUpgradeWorkspace } from './upgrade.mjs';
+import { createGrpcHealthWorkspace } from './health.mjs';
 import { fields, text, canonical, sha256, jsonBytes, readJson, readBytes, writeNew,
   syncDirectory, privateDirectory, fail, assertProtoArchiveFits, writeJsonSnapshot } from '../common.mjs';
 
@@ -80,7 +81,7 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
   const root = await privateDirectory(stateDirectory, true), lease = await acquireStateLease(root);
   const environment = { ...env };
   const retainedRuntime = releaseRuntime === undefined ? (nativeFactory ? null : { port: sellerPort }) : structuredClone(releaseRuntime);
-  const folders = Object.fromEntries(['revisions', 'prepared', 'intents', 'attempts', 'temporary', 'reflections', 'upgrades'].map(name => [name, join(root, name)]));
+  const folders = Object.fromEntries(['revisions', 'prepared', 'intents', 'attempts', 'temporary', 'reflections', 'upgrades', 'health'].map(name => [name, join(root, name)]));
   let current = null, revisionIndex = [], reflectionIndex = [], busy = null, closing = false, closePromise, active = null, previousRun = null;
   let navigationOrigin = null, releaseConsole = null, activeCall = null;
   const cached = new Map(), reflectionControllers = new Set();
@@ -95,6 +96,13 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
   const upgrades = createGrpcUpgradeWorkspace({ directory: folders.upgrades,
     selection: () => ({ revision: currentId(), generation: current?.generation ?? 0 }),
     loadRevision: revision, loadReflection: readReflection, saveRevision: saveInside, visibleRevision: visible });
+  const health = createGrpcHealthWorkspace({ directory: folders.health, loadRevision: revision,
+    selection: () => ({ revision: currentId(), generation: current?.generation ?? 0 }),
+    assertHeld: () => lease.assertHeld(), env: environment });
+  const healthStart = body => execute(() => health.start(body));
+  const healthResume = body => execute(() => health.resume(body));
+  const healthRead = body => health.read(body), healthList = body => health.list(body);
+  const healthCancel = body => health.cancel(body), healthExport = body => health.exportSnapshot(body);
   const revisionPath = id => join(folders.revisions, identifier(id) + '.json');
   async function revision(id) {
     identifier(id);
@@ -155,7 +163,7 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
         prepared.manifest.planSha256 !== sha256(canonical(saved.plan))) fail('GRPC_WORKSPACE_RELEASE_CHANGED', 409);
     return { record, prepared };
   }
-  const runtime = () => ({ busy: Boolean(busy), closing,
+  const runtime = () => ({ busy: Boolean(busy), closing, healthOperations: health.runtime(),
     active: active ? { id: active.id, releaseId: active.releaseId, revision: active.revision, phase: active.phase,
       startedAt: active.startedAt, url: active.session?.url, mode: active.session?.mode,
       docs: active.session ? active.session.url + '/_seller/docs' : null,
@@ -201,12 +209,12 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
     for (const file of await readdir(folders.intents)) {
       if (file.endsWith('.json') && UUID.test(file.slice(0, -5))) intents.push(await readJson(join(folders.intents, file), 65536));
     }
-    const attempts = await attemptInventory();
+    const attempts = await attemptInventory(), healthPage = await health.list({ limit: 50 });
     return { schema: 'stellar-forge.grpc-workspace-state.v1', stateDirectory: root, currentRevision: currentId(),
       generation: current?.generation ?? 0, revisions: revisions.sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
       prepared: prepared.sort((a, b) => b.createdAt.localeCompare(a.createdAt)), intents,
       attempts: attempts.slice(0, 50),
-      attemptCount: attempts.length, upgrades: upgrades.list(), reflections: structuredClone(reflectionIndex).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), runtime: runtime() };
+      attemptCount: attempts.length, health: healthPage.items, healthCount: healthPage.total, upgrades: upgrades.list(), reflections: structuredClone(reflectionIndex).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), runtime: runtime() };
   }
   async function reflectionAction(action, signal) {
     const controller = new AbortController(); reflectionControllers.add(controller);
@@ -334,7 +342,8 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
       const observed = await source.ready();
       const report = { schema: 'stellar-forge.grpc-workspace-review.v1', revision: saved.id, reviewedAt: stamp(),
         protoSha256: saved.protoSource.sha256, channelReady: true, methods: describe(saved.contract, saved.source.limits),
-        routes: routeSummary(saved.bundle), limits: observed.limits,
+        routes: routeSummary(saved.bundle), limits: observed.limits, health: health.latest(saved.id),
+        healthMeaning: 'These are retained native service-health observations on this exact saved revision; their timestamps and original outcomes remain visible.',
         meaning: 'The captured protobuf contract compiled with the native runtime and the selected channel became ready. No application RPC was executed.' };
       await atomicJson(join(root, 'review-' + saved.id + '.json'), report); return report;
     } finally { await source.close(); }
@@ -612,12 +621,14 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
   function close() {
     if (closePromise) return closePromise;
     closing = true;
+    const healthClosing = health.close(); healthClosing.catch(() => {});
     activeCall?.controller.abort();
     for (const controller of reflectionControllers) controller.abort();
     closePromise = (async () => {
       // The request owns its failure; shutdown still closes every owned runtime.
       try { await busy; } catch {}
       const issues = [];
+      try { await healthClosing; } catch (issue) { issues.push(issue); }
       try { await releaseConsole?.close(); releaseConsole = null; } catch (issue) { issues.push(issue); }
       try { await stopInside(); } catch (issue) { issues.push(issue); }
       try { await lease.close(); } catch (issue) { issues.push(issue); }
@@ -641,6 +652,7 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
         !REV.test(current.revision) || !Number.isSafeInteger(current.generation))) fail('GRPC_WORKSPACE_CURRENT_INVALID', 409);
     if (current) await revision(current.revision);
     await upgrades.initialize();
+    await health.initialize();
     previousRun = await optional(join(root, 'run.json'), 65536);
     if (previousRun && !['STOPPED', 'START_FAILED'].includes(previousRun.phase))
       previousRun = { ...previousRun, phase: 'PREVIOUS_OWNER_ENDED', note: 'The prior workspace process ended before recording its final stop. Select a retained merchant to run again.' };
@@ -652,7 +664,7 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
       await saveInside({ source, protoSource, plan, baseRevision: null, title: 'gRPC merchant' });
     }
   } catch (issue) { await lease.close(); throw issue; }
-  return { stateDirectory: root, state, attemptsPage, runtime, save, capture, reflectionInventory, reflectionCapture, reflectionOpen, reflectionSave, upgradeReview, upgradeOpen, upgradeAdopt, upgradeMethod, open, checkout, method, validateInput, review,
+  return { stateDirectory: root, state, attemptsPage, runtime, healthStart, healthRead, healthList, healthResume, healthCancel, healthExport, save, capture, reflectionInventory, reflectionCapture, reflectionOpen, reflectionSave, upgradeReview, upgradeOpen, upgradeAdopt, upgradeMethod, open, checkout, method, validateInput, review,
     call, readAttempt, cancelCall, streamDownload, prepare, run, stop, download, archive, stage, openReleaseConsole, closeReleaseConsole, close,
     bindOperationsNavigationOrigin(origin) {
       const url = new URL(origin);
