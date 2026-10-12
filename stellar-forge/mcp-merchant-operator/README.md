@@ -532,3 +532,17 @@ or add `socrataWorkspaceConnection` to the existing merchant configuration.
 The `merchant_socrata_*` tools use the original source and publisher objects.
 Their industrial browser borrows that same operator, and complete customer files
 use the existing verified retained-file reader.
+
+## Geocodio address review and customer workspaces
+
+[GEOCODIO_WORKSPACES.md](./GEOCODIO_WORKSPACES.md) connects this merchant host to
+the original Geocodio address application. Exact source intake, prepared provider
+requests, retained responses, candidate and coordinate review, native datasets,
+portable source closure, managed publication and customer delivery share the
+same original operator object.
+
+Use `init-geocodio-workspaces --dir NEW_DIRECTORY --connection CONNECTION_JSON`,
+or add `geocodioWorkspaceConnection` to the existing merchant configuration.
+The 16 `merchant_geocodio_*` tools retain the original address revision, provider
+request body and customer session. Browser listeners borrow that same instance;
+source, prepared-request and customer files use the maintained chunk reader.
