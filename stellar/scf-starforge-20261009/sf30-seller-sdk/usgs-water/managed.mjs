@@ -89,8 +89,8 @@ export function waterManagedUrl(value, port = 0) {
   let url; try { url = new URL(value); } catch { need(false, 'WATER_MANAGED_URL_INVALID'); }
   need(url.protocol === 'http:' && url.hostname === '127.0.0.1' && url.pathname === '/' &&
     !url.username && !url.password && !url.search && !url.hash &&
-    Number(url.port) > 0 && Number(url.port) <= 65535 &&
-    (!port || Number(url.port) === port), 'WATER_MANAGED_URL_INVALID');
+    Number(url.port || 80) > 0 && Number(url.port || 80) <= 65535 &&
+    (!port || Number(url.port || 80) === port), 'WATER_MANAGED_URL_INVALID');
   return url.href;
 }
 function selectedPort(value) {
@@ -163,7 +163,7 @@ export async function startManagedWaterWorkspace({ directory, buyerConfiguration
     const observed = await reviewWaterManagedInputs({ directory, buyerConfiguration, nativePython });
     sameRetainedSelection(current, observed);
     const url = waterManagedUrl(workspace.url, port), address = workspace.server.address();
-    need(address?.address === '127.0.0.1' && address.port === Number(new URL(url).port),
+    need(address?.address === '127.0.0.1' && address.port === Number(new URL(url).port || 80),
       'WATER_MANAGED_LISTENER_CHANGED');
     listener = { schema: WATER_MANAGED_PROBE, launchId, process: originalProcess,
       directory, reviewedInputsSha256: selected.sha256, inputsSha256: observed.sha256 };
