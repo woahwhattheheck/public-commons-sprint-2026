@@ -192,10 +192,24 @@ try {
     const uiPath = join(output, 'browser-journey.mjs');
     await writeFile(uiPath, config.options.uiRunner, { flag: 'wx', mode: 0o600 });
     const ui = await import(pathToFileURL(uiPath));
-    const result = await ui.run({ config, output, product, reporting: api, preparedWorkspace: receiverDirectory,
-      preparedLaunch: http.launch, sourceFile: join(output, 'original-collection.json'),
-      profileFile: join(output, 'operator-profile.json'), report, successor, save });
-    journey.browser = result;
+    check(typeof ui.runReportingBrowserJourney === 'function', 'The complete browser operation export is missing.');
+    const playwright = await import(pathToFileURL(config.playwrightModule)), { chromium } = playwright.default ?? playwright;
+    const operatorDirectory = join(output, 'browser-operator-workspace'), browserReceivingDirectory = join(output, 'browser-receiving-workspace');
+    for (const directory of [operatorDirectory, browserReceivingDirectory]) {
+      const initialized = api.openWorkspace(directory); initialized.close();
+    }
+    let operatorDesk, receivingDesk;
+    try {
+      operatorDesk = await api.serveReporting({ directory: operatorDirectory, port: 0 });
+      receivingDesk = await api.serveReporting({ directory: browserReceivingDirectory, port: 0 });
+      journey.browser = await ui.runReportingBrowserJourney({ chromium, baseUrl: operatorDesk.launch.url,
+        receivingUrl: receivingDesk.launch.url, sourceFile: join(output, 'original-collection.json'),
+        profile, definition, outputDirectory: join(output, 'browser'),
+        executablePath: config.chromiumExecutablePath, reviewer: 'TJLabs commissioning operator' });
+    } finally {
+      if (receivingDesk) await receivingDesk.close();
+      if (operatorDesk) await operatorDesk.close();
+    }
   } else {
     const playwright = await import(pathToFileURL(config.playwrightModule)), { chromium } = playwright.default ?? playwright;
     browser = await chromium.launch({ headless: true, ...(config.chromiumExecutablePath ? { executablePath: config.chromiumExecutablePath } : {}),
@@ -215,8 +229,8 @@ try {
   const { main } = await import(pathToFileURL(join(product, 'cli.mjs')));
   let cliState;
   await main(['state', '--workspace', receiverDirectory], { output: value => { cliState = value; } });
-  check(cliState.workspaceId === received.workspaceId && cliState.reports.some(r => r.id === successor.id), 'The installed CLI state differs from the reopened report workspace.');
-  journey.checks.push({ name: 'installed-command-read', command: 'open311-reporting state', workspaceId: cliState.workspaceId, revision: cliState.revision });
+  check(cliState.workspaceId === received.workspaceId && cliState.reports.some(r => r.id === successor.id), 'The reporting CLI state differs from the reopened report workspace.');
+  journey.checks.push({ name: 'reporting-command-module-read', command: 'open311-reporting state', workspaceId: cliState.workspaceId, revision: cliState.revision });
   journey.state = 'passed'; journey.reportId = successor.id; journey.reportSha256 = successor.sha256;
 } catch (error) {
   journey.state = 'failed'; journey.error = { code: error.code, message: error.message, details: error.details, stack: error.stack };
