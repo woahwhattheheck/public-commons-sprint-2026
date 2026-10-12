@@ -544,6 +544,8 @@ function inspection(ctx, extra = {}) {
     reviewSha256: ctx.reviewSha256, operationId: ctx.operationId,
     manifestSha256: ctx.manifestSha256, planSha256: ctx.planSha256,
     bundleDirectory: ctx.bundleDirectory, restoreDirectory: ctx.restoreDirectory,
+    originalPaths: { datasetDirectory: ctx.profile.original.datasetDirectory,
+      publisherDirectory: ctx.profile.original.publisherDirectory },
     paths: { datasetDirectory: ctx.target.datasetDirectory, publisherDirectory: ctx.target.publisherDirectory,
       sellerConfigFile: ctx.profile.original.sellerConfigFile ? ctx.target.sellerConfigFile : null },
     summary: copy(ctx.profile.summary),
