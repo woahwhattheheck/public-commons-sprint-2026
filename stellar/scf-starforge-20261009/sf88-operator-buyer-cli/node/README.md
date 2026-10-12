@@ -410,8 +410,35 @@ consumed. This is not a claim that settlement or process success was proven.
 Partial/missing output remains recoverable only when the original native process
 actually finishes; `recover()` does not fabricate a result.
 
-Pass an `AbortSignal` to `execute` or generated `call`. On abort/timeout the SDK
-sends SIGTERM to its own tracked native child, waits for `close`, and allows the
+Use one `AbortController` for the whole application task:
+
+```js
+const controller = new AbortController();
+const { signal } = controller;
+const operation = await buyer.fromRequest(request, { signal });
+const review = await operation.review({ signal });
+const result = await operation.execute({ review, signal });
+// A Stop action calls controller.abort(); await the task before closing its workspace.
+```
+
+Preparation accepts `{signal}` in `fromConfig`, `fromWorkspace`,
+`fromOperationHandoff`, and `prepare`. A generated `fromRequest` or `call`
+accepts either `request.signal` or `options.signal`; when both are supplied,
+aborting either stops the task. `call` carries the same combined signal through
+preparation, offline review, and its original execution. A signal that is already
+aborted is rejected before creating an operation or launching a review child.
+The signal is an in-memory task control and is never written into the operation.
+
+When preparation is cancelled, the creating call drains its native review and
+removes its own unpublished operation. The same intent can then be prepared
+again. Cancelling `operation.review({signal})` retains the already prepared
+operation, so the application can review it again using a fresh signal.
+Cancelling execution retains its original attempt and uses the recovery workflow
+above. A workspace Stop/close handler should abort and await the active task
+before releasing its lease.
+
+On abort/timeout the SDK sends SIGTERM to its own tracked native child, waits for
+`close`, and allows the
 configured cleanup grace (default 15 seconds). If the native child does not exit,
 it sends SIGKILL and records `NATIVE_CLEANUP_DEADLINE_EXCEEDED`. It does not promise
 that forced termination reconciles payment or kills arbitrary grandchildren.

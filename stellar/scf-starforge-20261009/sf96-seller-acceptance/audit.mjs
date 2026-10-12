@@ -10,6 +10,7 @@ import { resolve, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { supportsSellerMethod, requiresJsonBody } from '../sf30-seller-sdk/http-methods.mjs';
 import { MAX_PAYMENT_OPTIONS } from '../sf30-seller-sdk/seller.mjs';
+import { encodeQueryParameters } from '../sf30-seller-sdk/query-parameters.mjs';
 
 const sha = b => createHash('sha256').update(b).digest('hex');
 const obj = x => x !== null && typeof x === 'object' && !Array.isArray(x);
@@ -102,14 +103,17 @@ export function planProbes(routes, cases={}) {
     const decoded = new URL(path,'http://127.0.0.1').pathname;
     if (route.template ? !templateMatches(route.template,decoded) : original.pathname !== decoded)
       die('CASE_PATH_OUTSIDE_DECLARED_ROUTE');
+    const querySchema = route.offer.extensions.bazaar.schema?.properties?.input?.properties?.queryParams;
     const examples = input.queryParams ?? {};
-    const query = c?.query ?? examples;
-    if (!obj(query) || Object.keys(query).some(k=>!Object.hasOwn(examples,k))) die('CASE_QUERY_OUTSIDE_DECLARED_INPUT');
+    // Optional null/empty discovery examples do not select a concrete wire
+    // filter. Operator-supplied cases remain exact and are never silently edited.
+    const automatic = Object.fromEntries(Object.entries(examples).filter(([key,value]) =>
+      querySchema?.required?.includes(key) || value !== null && !(Array.isArray(value) && !value.length)));
+    const query = c?.query ?? automatic;
+    if (!obj(query) || Object.keys(query).some(k=>!Object.hasOwn(querySchema?.properties ?? {},k)))
+      die('CASE_QUERY_OUTSIDE_DECLARED_INPUT');
     const target = new URL(path,'http://127.0.0.1');
-    for (const [k,v] of Object.entries(query)) {
-      if (typeof v !== 'string' && typeof v !== 'number' && typeof v !== 'boolean') die('CASE_QUERY_MUST_BE_SCALAR');
-      target.searchParams.set(k,String(v));
-    }
+    target.search = encodeQueryParameters(query, querySchema, route.offer.extensions.bazaar.querySerialization);
     if (target.pathname !== decoded || target.href.length > 2048) die('UNSAFE_FINAL_PROBE_TARGET');
     if (requiresJsonBody(route.method) && input.bodyType !== 'json') die('ONLY_JSON_BODY_SUPPORTED');
     const body = requiresJsonBody(route.method) ? JSON.stringify(c.body) : undefined;

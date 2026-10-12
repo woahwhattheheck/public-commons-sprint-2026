@@ -287,3 +287,11 @@ question-specific finding references.
 - [OpenAlex synchronization](https://help.openalex.org/access/sync/)
 - [Valyu acceptable use policy](https://www.valyu.ai/valyu-acceptable-use-policy)
 - [Valyu platform service agreement](https://www.valyu.ai/valyu-platform-service-agreement)
+
+## Runtime Applications launch contract
+
+The `research-workspace` command serves the same private dossier store used by this SDK and CLI. The runtime Applications entry supplies `--dir`, optional `--edition-adapter`, optional `--openalex-workspace` and `--openalex-module`, and the selected local port. An existing directory reopens the retained questions, source editions, selections, findings and history.
+
+Startup writes one JSON line containing `mode: "RESEARCH_DOSSIER_WORKSPACE"`, the exact selected `directory`, the actual private `url`, configured `providers`, and `openalexConfigured`. Managed consumers should accept this URL only from this command and the matching `--dir` input. Use the returned URL; its fragment supplies the original capability. SIGINT or SIGTERM closes the HTTP server and the original configured OpenAlex workspace.
+
+An OpenAlex workspace must already contain its original queries and editions. Without an explicit module override, it is opened by the original `research/workspace.mjs` in the same selected source. The Applications configuration retains the chosen directory and module paths; the research application controls source intake, review and exports.

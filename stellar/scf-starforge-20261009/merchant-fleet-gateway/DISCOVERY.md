@@ -200,6 +200,10 @@ resources, pagination, source URL and observation time. Use the explorer's
 existing page export and review preparation to pass those exact resource and
 payment choices to SF88.
 
+The workspace page download uses the original SF61 observed-page envelope, with
+its unchanged native provider rows and the exact submitted filters and cursor.
+That saved page can be passed directly to the original SF88 preparation command.
+
 The fleet consumes only the owned tenant source. Requests supply page options,
 while the original owner selects the catalogue origin, private stores and
 signing paths.
