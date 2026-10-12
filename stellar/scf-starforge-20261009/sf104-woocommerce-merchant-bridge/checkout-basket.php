@@ -121,7 +121,14 @@ final class Starforge_SF104_Basket {
         return (int) $value;
     }
     static function catalog() {
-        $settings = get_option('woocommerce_sf104_native_settings', []);
+        $read = static function () {
+            $settings = get_option('woocommerce_sf104_native_settings', []);
+            return self::compile_catalog($settings, static function ($id) { return wc_get_product((int) $id); });
+        };
+        return class_exists('Starforge_SF104_Catalog') ? Starforge_SF104_Catalog::with_lock($read) : $read();
+    }
+    // The original catalog compiler is shared by live checkout and the unsaved manager review.
+    static function compile_catalog($settings, $product_for_id) {
         if (($settings['basket_enabled'] ?? 'no') !== 'yes') throw new RuntimeException('Digital baskets are not enabled by this store.');
         $route = $settings['basket_route_id'] ?? '';
         if (!is_string($route) || !preg_match('/^[A-Za-z0-9_-]{1,64}$/D', $route)) throw new RuntimeException('Save a distinct basket route ID.');
@@ -136,7 +143,7 @@ final class Starforge_SF104_Basket {
         $products = []; $identity = null;
         foreach ($ids as $id) {
             if (!preg_match('/^[1-9][0-9]{0,17}$/D', $id) || (string) (int) $id !== $id) throw new RuntimeException('Invalid approved product ID.');
-            $product = wc_get_product((int) $id);
+            $product = $product_for_id($id);
             $map = Starforge_SF104_Checkout::product_mapping($product);
             if ($map['routeId'] === $route || $map['url'] === $url) throw new RuntimeException('Use a basket endpoint and route ID distinct from the individual product routes.');
             $terms = [$map['storefront']['currency'], $map['network'], $map['asset'], $map['payTo']];
