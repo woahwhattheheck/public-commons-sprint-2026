@@ -94,7 +94,9 @@ export async function receiveMerchantWorkflowRecipes({directory,chromiumPath,pla
     await response(page,'profiles',()=>page.locator('#connect-form button[type=submit]').click(),{method:'GET'});
     await page.locator('#connected').waitFor({state:'visible'});
     await page.locator('#profiles').selectOption(profileId);await page.locator('[data-page=workflows]').click();
-    await page.waitForFunction(()=>!document.getElementById('workflow-recipes-open').disabled);
+    await page.waitForFunction(id=>!document.getElementById('workflow-recipes-open').disabled&&
+      document.getElementById('workflow-recipe-panel').dataset.intentReady==='true'&&
+      document.getElementById('workflow-recipe-panel').dataset.profileId===id,profileId);
   };
   const capture=async(page,path,key,act)=>{
     const handler=async route=>{
@@ -300,7 +302,7 @@ export async function receiveMerchantWorkflowRecipes({directory,chromiumPath,pla
         await targetPage.locator('#use-customer').click();
         assert.equal(await targetPage.locator('#customer-export').inputValue(),inputs.customerId);
         assert.equal(await targetPage.locator('#customer-sha').inputValue(),report.customerSelection.expectedManifestSha256);
-        const accepted=await response(targetPage,'customers',()=>targetPage.locator('#customer-form button[type=submit]').click());
+        const accepted=await response(targetPage,'customers',()=>targetPage.locator('#customer-form button[type=submit]').click(),{status:202});
         report.customerId=accepted.delivery.id;await save();
       }
       const delivery=await waitUntil(async()=>{
@@ -319,7 +321,17 @@ export async function receiveMerchantWorkflowRecipes({directory,chromiumPath,pla
       await emit('recipe-customer-received',{deliveryId:delivery.id,files:6,archiveSha256:report.customerArchive.sha256});
     }
     if(!report.phases['later-edition-saved']){
-      await exportProfile(receiver,'recipe-first-edition-profile.json');
+      const firstName='recipe-first-edition-profile.json';
+      let first;
+      if(report.artifacts.some(file=>file.name===firstName))first=JSON.parse(await retained(firstName));
+      else{
+        assert.equal((await api(receiver,'workflow/'+report.requests.install.id)).definition.revision,1,
+          'Retain the original first-edition archive before editing the installed workflow.');
+        first=await exportProfile(receiver,firstName);
+      }
+      const originalEditions=first.workflowData.definitions.filter(value=>value.id===report.requests.install.id);
+      assert.equal(originalEditions.length,1);assert.equal(originalEditions[0].revision,1);
+      assert.equal(originalEditions[0].contentSha256,report.installation.definitionSha256);
       const current=await openInstalled();
       if(current.revision===1){
         await targetPage.locator('#workflow-name').fill('Commission merchant with receiving checkpoint');
