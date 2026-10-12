@@ -1,10 +1,12 @@
 // MIT. Resume exact original file receiving through the private operator browser.
-import { mkdir, lstat, realpath } from 'node:fs/promises';
+import { mkdir, lstat, realpath, open, unlink } from 'node:fs/promises';
+import { constants } from 'node:fs';
 import { join } from 'node:path';
 import { canonical, sha256, atomicJson, boundedFile } from '../../sf46-release/release-core.mjs';
 import { compileSnowflakeSource, fault } from './declaration.mjs';
 import { HASH, UUID } from './store.mjs';
 
+export const MAX_SNOWFLAKE_TRANSFER_CHUNK_BYTES = 196608;
 const parse = bytes => JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
 export function validateSnowflakeReceivingManifest(manifest) {
   if (manifest?.schema !== 'stellar-forge.snowflake-receiving.v1' ||
@@ -46,7 +48,8 @@ export async function createSnowflakeTransfers(workspace) {
   const write = state => atomicJson(join(root, filename(state.id)), state);
   const view = state => ({ id: state.id, status: state.status, requestId: state.manifest.requestId,
     editionId: state.editionId ?? null, received: state.uploaded.filter(Boolean).length,
-    partitions: state.manifest.partitions.map((part, index) => ({ ...part, received: Boolean(state.uploaded[index]) })),
+    partitions: state.manifest.partitions.map((part, index) => ({ ...part, received: Boolean(state.uploaded[index]),
+      receivedBytes: state.uploaded[index] ? part.bytes : state.offsets?.[index] ?? 0 })),
     ...(state.lastError ? { lastError: state.lastError } : {}) });
   function exclusive(id, task) {
     if (closing) return Promise.reject(fault('SNOWFLAKE_WORKSPACE_CLOSING', undefined, 503));
@@ -82,8 +85,86 @@ export async function createSnowflakeTransfers(workspace) {
         if (!(bytes instanceof Uint8Array) || bytes.length !== part.bytes || sha256(bytes) !== part.sha256)
           throw fault('SNOWFLAKE_RECEIVING_BYTES_CHANGED');
         await store.putObject(bytes);
-        state.uploaded[index] = true; state.updatedAt = new Date().toISOString();
-        await write(state); return view(state);
+        state.uploaded[index] = true; (state.offsets ??= [])[index] = part.bytes; state.updatedAt = new Date().toISOString();
+        await write(state);
+        await unlink(join(root, filename(id) + '.' + index + '.part')).catch(error => { if (error.code !== 'ENOENT') throw error; });
+        return view(state);
+      });
+    },
+    /** Continue one original partition without putting its complete body in MCP JSON. */
+    append(id, index, { offset, bytes, chunkSha256 }) {
+      return exclusive(id, async () => {
+        const state = await load(id), part = state.manifest.partitions[index];
+        if (!Number.isSafeInteger(index) || index < 0 || !part) throw fault('SNOWFLAKE_PARTITION_UNKNOWN', undefined, 404);
+        if (!Number.isSafeInteger(offset) || offset < 0 || !(bytes instanceof Uint8Array) ||
+            bytes.length < 1 || bytes.length > MAX_SNOWFLAKE_TRANSFER_CHUNK_BYTES ||
+            offset + bytes.length > part.bytes || !HASH.test(chunkSha256 ?? '') || sha256(bytes) !== chunkSha256)
+          throw fault('SNOWFLAKE_RECEIVING_CHUNK_INVALID');
+        if (state.uploaded[index]) {
+          const original = await store.readObject(part);
+          if (!Buffer.from(original.subarray(offset, offset + bytes.length)).equals(Buffer.from(bytes)))
+            throw fault('SNOWFLAKE_RECEIVING_CHUNK_CHANGED', 'The replay differs from the received original partition.', 409);
+          return view(state);
+        }
+        const committed = state.offsets?.[index] ?? 0;
+        if (!Number.isSafeInteger(committed) || committed < 0 || committed > part.bytes || offset > committed ||
+            offset < committed && offset + bytes.length > committed)
+          throw fault('SNOWFLAKE_RECEIVING_OFFSET_CONFLICT', 'Continue at the original receivedBytes offset or replay a complete saved chunk.', 409);
+        const path = join(root, filename(id) + '.' + index + '.part');
+        const handle = await open(path, constants.O_RDWR | constants.O_CREAT |
+          (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0), 0o600);
+        try {
+          const info = await handle.stat();
+          if (!info.isFile() || info.mode & 0o077 || info.size < committed || info.size > part.bytes)
+            throw fault('SNOWFLAKE_RECEIVING_PARTIAL_CHANGED', 'Repair this original partition before continuing.');
+          // Bytes after the saved cursor were never acknowledged. The original
+          // receiving journal, not the process lifetime, owns this boundary.
+          if (info.size > committed) { await handle.truncate(committed); await handle.sync(); }
+          if (offset < committed) {
+            const saved = Buffer.alloc(bytes.length); let used = 0;
+            while (used < saved.length) {
+              const result = await handle.read(saved, used, saved.length - used, offset + used);
+              if (!result.bytesRead) throw fault('SNOWFLAKE_RECEIVING_PARTIAL_CHANGED');
+              used += result.bytesRead;
+            }
+            if (!saved.equals(Buffer.from(bytes))) throw fault('SNOWFLAKE_RECEIVING_CHUNK_CHANGED', undefined, 409);
+          } else {
+            let used = 0;
+            while (used < bytes.length) {
+              const result = await handle.write(bytes, used, bytes.length - used, offset + used);
+              if (!result.bytesWritten) throw fault('SNOWFLAKE_RECEIVING_WRITE_INTERRUPTED');
+              used += result.bytesWritten;
+            }
+            await handle.sync();
+            (state.offsets ??= [])[index] = offset + bytes.length;
+            state.updatedAt = new Date().toISOString(); await write(state);
+          }
+          if (state.offsets?.[index] === part.bytes) {
+            const original = Buffer.alloc(part.bytes); let used = 0;
+            while (used < original.length) {
+              const result = await handle.read(original, used, original.length - used, used);
+              if (!result.bytesRead) throw fault('SNOWFLAKE_RECEIVING_PARTIAL_CHANGED');
+              used += result.bytesRead;
+            }
+            if (sha256(original) !== part.sha256) throw fault('SNOWFLAKE_RECEIVING_BYTES_CHANGED',
+              'The complete partition differs from its original manifest; repair this partition and upload it again.');
+            await store.putObject(original);
+            state.uploaded[index] = true; await write(state);
+          }
+        } finally { await handle.close(); }
+        if (state.uploaded[index]) await unlink(path).catch(error => { if (error.code !== 'ENOENT') throw error; });
+        return view(state);
+      });
+    },
+    /** Repair an incomplete partition in this same receiving record. */
+    repair(id, index) {
+      return exclusive(id, async () => {
+        const state = await load(id), part = state.manifest.partitions[index];
+        if (!Number.isSafeInteger(index) || index < 0 || !part) throw fault('SNOWFLAKE_PARTITION_UNKNOWN', undefined, 404);
+        if (state.uploaded[index]) { await store.readObject(part); return view(state); }
+        (state.offsets ??= [])[index] = 0; state.updatedAt = new Date().toISOString(); await write(state);
+        await unlink(join(root, filename(id) + '.' + index + '.part')).catch(error => { if (error.code !== 'ENOENT') throw error; });
+        return view(state);
       });
     },
     commit(id) {

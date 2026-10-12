@@ -1,14 +1,18 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "snowflake",
-  "description": "Snowflake retained editions and merchant releases",
+  "description": "Snowflake native editions, managed workspace and merchant agent operations",
   "commands": {
     "snowflake": "stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/cli.mjs",
-    "snowflake-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/server.mjs"
+    "snowflake-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/server.mjs",
+    "merchant-snowflake": "stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/merchant/cli.mjs",
+    "merchant-snowflake-receive": "stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/merchant/receiving.mjs"
   },
   "commandDescriptions": {
     "snowflake": "Capture, receive, review and resume original Snowflake editions and publications",
-    "snowflake-workspace": "Open the Snowflake source, edition and merchant workspace"
+    "snowflake-workspace": "Open the Snowflake source, edition and merchant workspace",
+    "merchant-snowflake": "Operate native Snowflake workspaces and receive complete original merchant files",
+    "merchant-snowflake-receive": "Run the complete original Snowflake merchant and customer receiving case"
   },
   "exports": {
     "./seller/snowflake": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/source.mjs",
@@ -22,7 +26,13 @@
     "./seller/snowflake/cloud-delivery": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/cloud-delivery.mjs",
     "./seller/snowflake/managed": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/managed.mjs",
     "./seller/snowflake/application": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/application.mjs",
-    "./seller/snowflake/receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/receiving/managed.mjs"
+    "./seller/snowflake/receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/receiving/managed.mjs",
+    "./merchant/snowflake": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/merchant/client.mjs",
+    "./merchant/snowflake/catalog": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/merchant/catalog.mjs",
+    "./merchant/snowflake/runtime": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/merchant/runtime.mjs",
+    "./merchant/snowflake/files": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/merchant/files.mjs",
+    "./merchant/snowflake/setup": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/merchant/setup.mjs",
+    "./merchant/snowflake/receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/merchant/receiving.mjs"
   },
   "browserAssets": [
     {
@@ -34,6 +44,11 @@
     "snowflake": "stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/application-provider.mjs"
   },
   "supportFiles": [
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/MANAGED.md"
-  ]
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/MANAGED.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/merchant/client.d.mts",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/merchant/README.md"
+  ],
+  "merchantProviders": {
+    "snowflake-workspaces": "stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/merchant/provider.mjs"
+  }
 }
