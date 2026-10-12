@@ -12,6 +12,7 @@
   <div class="layout">
     <aside class="sidebar" aria-label="Runbook navigation">
       <button id="new-draft" class="primary full">New acquisition plan</button>
+      <button id="open-operator" class="request-entry full">Local buyer setup <span id="operator-ready" class="badge">Set up</span></button>
       <button id="open-clients" class="request-entry full">Receive customer SDK <span id="client-count" class="badge">0</span></button>
       <button id="open-requests" class="request-entry full">Receive merchant request <span id="request-count" class="badge">0</span></button>
       <button id="open-paid-files" class="request-entry full">Receive paid file order <span id="file-order-count" class="badge">0</span></button>
@@ -22,7 +23,39 @@
     </aside>
     <main id="main" tabindex="-1">
       <div id="notice" role="status" aria-live="polite" hidden></div>
-      <section id="welcome" class="welcome"><p class="eyebrow">RESOURCE ACQUISITION</p><h1>One plan. Every selected resource.</h1><p>Receive a private merchant request or arrange existing buyer configurations. Review exact request ceilings and follow each acquisition from terminal approval to saved files.</p><div class="toolbar"><button id="welcome-new" class="primary">Create a plan</button><button id="welcome-clients">Receive customer SDK</button><button id="welcome-requests">Receive merchant request</button><button id="welcome-paid-files">Receive paid file order</button></div><div id="source-summary" class="source-summary"></div></section>
+      <section id="welcome" class="welcome"><p class="eyebrow">RESOURCE ACQUISITION</p><h1>One plan. Every selected resource.</h1><p>Receive a private merchant request or arrange existing buyer configurations. Review exact request ceilings and follow each acquisition from terminal approval to saved files.</p><div class="toolbar"><button id="welcome-new" class="primary">Create a plan</button><button id="welcome-operator">Set up local buyer</button><button id="welcome-clients">Receive customer SDK</button><button id="welcome-requests">Receive merchant request</button><button id="welcome-paid-files">Receive paid file order</button></div><div id="source-summary" class="source-summary"></div></section>
+      <section id="operator-panel" hidden>
+        <div class="page-heading"><div><p class="eyebrow">RECEIVING HOST</p><h1>Local buyer setup</h1><p class="muted">Configure the host used when preparing merchant requests and file orders. Existing prepared buyers retain their own settings, keys and spending ledgers.</p></div></div>
+        <section id="operator-current" class="panel"></section>
+        <form id="operator-form" class="panel">
+          <div class="section-heading"><h2>Host settings</h2><span id="operator-draft-state" class="badge"></span></div>
+          <div class="operator-settings-grid">
+            <label>Actor ID<input id="operator-actor" required maxlength="160" pattern="[A-Za-z0-9._:\-]+" autocomplete="off"></label>
+            <label>Service ID<input id="operator-service" required maxlength="160" pattern="[A-Za-z0-9._:\-]+" autocomplete="off"></label>
+            <label class="operator-wide">Stellar payer public address<input id="operator-payer" required maxlength="56" pattern="G[A-Z2-7]{55}" autocomplete="off" spellcheck="false"></label>
+            <label class="operator-wide">Python executable on this host<input id="operator-python" required placeholder="/usr/bin/python3" autocomplete="off" spellcheck="false"></label>
+            <label>Signing reference<select id="operator-signer-kind"><option value="ENVIRONMENT">Existing wallet environment variable</option><option value="PROVIDER">Trusted SEP-43 provider configuration</option></select></label>
+            <label id="operator-environment-row">Wallet environment variable name<input id="operator-secret-env" maxlength="128" pattern="[A-Z][A-Z0-9_]{0,127}" autocomplete="off" spellcheck="false"></label>
+            <label id="operator-provider-row" hidden>Provider configuration file<input id="operator-provider" placeholder="/absolute/private/provider.json" autocomplete="off" spellcheck="false"></label>
+            <label>Maximum total atomic units per prepared request<input id="operator-total" required inputmode="numeric" pattern="[1-9][0-9]{0,18}" maxlength="19" autocomplete="off"></label>
+            <label>Maximum atomic units per UTC day per prepared request<input id="operator-daily" required inputmode="numeric" pattern="[1-9][0-9]{0,18}" maxlength="19" autocomplete="off"></label>
+            <label class="operator-wide">RPC URL override <span class="muted">Optional; must serve the request's selected network</span><input id="operator-rpc" maxlength="2048" autocomplete="off" spellcheck="false"></label>
+            <label class="operator-wide">HTTPS proxy environment variable name <span class="muted">Optional</span><input id="operator-proxy-env" maxlength="128" pattern="[A-Z][A-Z0-9_]{0,127}" autocomplete="off" spellcheck="false"></label>
+            <label class="operator-wide">Reason for this settings change <span class="muted">Optional</span><textarea id="operator-note" rows="3" maxlength="1000"></textarea></label>
+          </div>
+          <p class="muted">Enter a signing reference here. Set the existing wallet or proxy secret in the launching process, or supply the original trusted provider file. The buyer keeps each request's selected network and exact payment terms.</p>
+          <div class="toolbar"><button id="operator-review" type="submit" class="primary">Review host settings</button><button id="operator-reload" type="button">Discard edits and reload</button></div>
+        </form>
+        <section id="operator-review-panel" class="panel" hidden>
+          <h2>Review this host change</h2><p id="operator-review-summary"></p><div id="operator-changes"></div>
+          <h3>Local references</h3><div id="operator-review-availability"></div>
+          <h3>Effect on received requests</h3><div id="operator-review-impact"></div>
+          <details><summary>Reviewed revision identity</summary><p class="wrap">Review SHA-256: <code id="operator-review-digest"></code></p><p class="wrap">Settings SHA-256: <code id="operator-settings-digest"></code></p></details>
+          <button id="operator-save" type="button" class="primary" disabled>Save host settings</button>
+        </section>
+        <section class="panel"><h2>Current receiving state</h2><div id="operator-current-impact"><p class="muted">Open or refresh this setup view to compare retained request reviews with the selected host settings.</p></div></section>
+        <section><h2>Saved host revisions</h2><div id="operator-history"></div></section>
+      </section>
       <section id="clients-panel" hidden>
         <div class="page-heading"><div><p class="eyebrow">CUSTOMER SDK RECEIVING</p><h1>Receive an API and prepare a request</h1><p class="muted">Keep the merchant’s original SDK, review its operations and payment options, then add your selected request to an acquisition.</p></div></div>
         <form id="client-upload-form" class="panel">
@@ -84,7 +117,7 @@
             <div class="fields two request-budgets"><label>Total budget · atomic<input id="file-total" inputmode="numeric" pattern="[1-9][0-9]{0,18}" maxlength="19" required></label><label>Per UTC day · atomic<input id="file-daily" inputmode="numeric" pattern="[1-9][0-9]{0,18}" maxlength="19" required></label></div>
             <label>Save customer file as<input id="file-save-name" pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,127}" maxlength="128" required></label>
             <label>Existing claim token environment<select id="file-claim-env" required></select></label>
-            <button type="submit">Save order review</button><p id="file-review-changed" class="muted" hidden>Your choices changed. Save the current review before preparing the buyer.</p>
+            <button type="submit">Save order review</button><p id="file-review-changed" class="muted" hidden>The order fields or selected host settings changed. Save a current order review before preparing.</p>
           </form>
           <div id="file-review-saved" class="panel" hidden></div><button id="prepare-file-order" class="primary" disabled>Prepare local buyer</button>
           <div id="file-prepared" class="panel" hidden><h3>Ready for acquisition</h3><p id="file-prepared-name" class="wrap muted"></p><p>The plan keeps the checkout acknowledgement and the separately delivered customer file.</p><button id="add-file-to-plan" class="primary">Add to acquisition plan</button></div>
@@ -107,7 +140,7 @@
             <label>Merchant payment option<select id="request-option" required><option value="">Choose a payment option</option></select></label>
             <div id="request-option-terms" class="table-wrap"></div>
             <div class="fields two request-budgets"><label>Total budget · atomic<input id="request-total" inputmode="numeric" pattern="[1-9][0-9]{0,18}" maxlength="19" required></label><label>Per UTC day · atomic<input id="request-daily" inputmode="numeric" pattern="[1-9][0-9]{0,18}" maxlength="19" required></label></div>
-            <button type="submit">Save request review</button><p id="request-review-changed" class="muted" hidden>Your choices changed. Save a new review before preparing the buyer.</p>
+            <button type="submit">Save request review</button><p id="request-review-changed" class="muted" hidden>The request fields or selected host settings changed. Save a current request review before preparing.</p>
           </form>
           <div id="request-payment-review" class="panel" hidden></div>
           <div class="toolbar"><button id="prepare-request" class="primary" disabled>Prepare local buyer</button></div>

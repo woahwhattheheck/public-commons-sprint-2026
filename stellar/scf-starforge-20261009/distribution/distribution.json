@@ -64,7 +64,8 @@
     "stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api",
     "stellar/scf-starforge-20261009/partners/coingecko-stellar-market",
     "stellar/scf-starforge-20261009/sf61-bazaar-explorer",
-    "stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent"
+    "stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent",
+    "stellar/scf-starforge-20261009/partners/unstructured"
   ],
   "browserAssets": [
     {
@@ -94,6 +95,10 @@
     {
       "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/diffbot/workbench.mjs",
       "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/diffbot/browser-assets.json"
+    },
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/geocodio/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/geocodio/browser-assets.json"
     },
     {
       "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/workspace/server.mjs",
@@ -203,6 +208,7 @@
     "seller": "stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs",
     "arcgis": "stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/cli.mjs",
     "arcgis-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/cli.mjs",
+    "arcgis-agent": "stellar-forge/mcp-merchant-operator/arcgis-workspace-launcher.mjs",
     "upstream": "stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-serve.mjs",
     "supplier-quotas": "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-quota/cli.mjs",
     "jsonrpc": "stellar/scf-starforge-20261009/sf30-seller-sdk/jsonrpc/cli.mjs",
@@ -426,7 +432,10 @@
     "grpc-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/workspace/server.mjs",
     "grpc-example": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/examples/server.mjs",
     "stellar-application": "stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent/installed.mjs",
-    "sec-edgar-download": "stellar-forge/mcp-merchant-operator/sec-edgar-download.mjs"
+    "sec-edgar-download": "stellar-forge/mcp-merchant-operator/sec-edgar-download.mjs",
+    "nocodb-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/cli.mjs",
+    "unstructured-merchant": "stellar/scf-starforge-20261009/partners/unstructured/merchant.mjs",
+    "unstructured-commerce": "stellar/scf-starforge-20261009/partners/unstructured/commerce.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -621,6 +630,8 @@
     "./merchant/mcp/graphql-workspaces": "./source/stellar-forge/mcp-merchant-operator/graphql-workspace.mjs",
     "./merchant/mcp/graphql-download": "./source/stellar-forge/mcp-merchant-operator/graphql-workspace-download.mjs",
     "./seller/graphql/workspace-files": "./source/stellar/scf-starforge-20261009/sf105-subquery-graphql-merchant/workspace/files.mjs",
+    "./merchant/mcp/arcgis": "./source/stellar-forge/mcp-merchant-operator/arcgis-workspace.mjs",
+    "./merchant/mcp/arcgis/server": "./source/stellar-forge/mcp-merchant-operator/arcgis-workspace-launcher.mjs",
     "./merchant/mcp/redis": "./source/stellar-forge/mcp-merchant-operator/redis-workspace.mjs",
     "./merchant/mcp/server": "./source/stellar-forge/mcp-merchant-operator/serve.mjs",
     "./seller/merchant-desk": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/desk/server.mjs",
@@ -1040,7 +1051,19 @@
     "./seller/jobs/recovery": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/paid-jobs.mjs",
     "./seller/jobs/recovery/cli": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/paid-jobs-cli.mjs",
     "./seller/jobs/source-binding": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/source-binding.mjs",
-    "./seller/jobs/recovery-state": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/recovery-state.mjs"
+    "./seller/jobs/recovery-state": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/recovery-state.mjs",
+    "./seller/nocodb/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/model.mjs",
+    "./seller/nocodb/workspace/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/server.mjs",
+    "./seller/nocodb/workspace/launch": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/launch.mjs",
+    "./seller/nocodb/workspace/packet": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/packet.mjs",
+    "./seller/unstructured-partition": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/unstructured-partition.mjs",
+    "./buyer/unstructured": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/unstructured/index.mjs",
+    "./buyer/research-dossiers/unstructured-workspace": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/unstructured-workspace.mjs",
+    "./partners/unstructured": "./source/stellar/scf-starforge-20261009/partners/unstructured/merchant.mjs",
+    "./partners/unstructured/commerce": "./source/stellar/scf-starforge-20261009/partners/unstructured/commerce.mjs",
+    "./merchant/mcp/coingecko": "./source/stellar-forge/mcp-merchant-operator/coingecko-workspace.mjs",
+    "./merchant/mcp/fiscaldata": "./source/stellar-forge/mcp-merchant-operator/fiscaldata-workspace.mjs",
+    "./seller/fiscaldata/portable": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/portable.mjs"
   },
   "nativePeers": {
     "@x402/core": {
