@@ -18,6 +18,7 @@ import { collectionsApplication, prepareCollectionsApplication } from './applica
 import { grantApplication, prepareGrantApplication } from './application-grant.mjs';
 import { eventFeedApplications, prepareEventFeedApplication } from './application-event-feed.mjs';
 import { tenderlyApplication, prepareTenderlyApplication } from './application-tenderly.mjs';
+import { merchantSupportApplication, prepareMerchantSupportApplication } from './application-merchant-support.mjs';
 import { browserWalletApplication, prepareBrowserWalletApplication } from './application-browser-wallet.mjs';
 import { rssAtomApplication, prepareRssAtomApplication } from './application-rss-atom.mjs';
 import { inspectMerchantRuntime } from '../../sf46-release/runtime-package.mjs';
@@ -61,6 +62,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   collectionsApplication(common),
   grantApplication(common),
   tenderlyApplication(common),
+  merchantSupportApplication(common),
   browserWalletApplication(common),
   rssAtomApplication(common),
   { id: 'xml', command: 'dataset', requiredSource: 'stellar/scf-starforge-20261009/sf30-seller-sdk/xml/cli.mjs',
@@ -245,6 +247,9 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     args.push(...original.args); inputs.push(...original.inputs);
   } else if (type.id === 'job-checkout') {
     const original = await prepareJobCheckoutApplication(settings, runtimeDirectory, inputPath);
+    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'merchant-support') {
+    const original = await prepareMerchantSupportApplication(settings, { inputPath, runtimeDirectory });
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
   } else if (type.id === 'buyer-collections') {
     const prepared = await prepareCollectionsApplication(settings, { inputPath, runtimeDirectory });
