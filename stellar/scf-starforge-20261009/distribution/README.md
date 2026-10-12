@@ -4775,3 +4775,7 @@ applications' stores.
 See the [award research operating guide](../sf30-seller-sdk/usaspending/README.md)
 and [complete dossier receiving guide](../sf30-seller-sdk/usaspending/DOSSIER.md)
 for configuration, original acquisition, operator use and portable handover.
+
+## Satellite imagery operations
+
+`starforge stac --help` opens the complete STAC analyst and customer command surface: catalog/AOI search, retained scene editions, decisions, public asset acquisition, comparisons, portable handover, original merchant staging and native customer receiving. The [STAC guide](../sf30-seller-sdk/stac/README.md) covers the full workflow, and its [merchant guide](../sf30-seller-sdk/stac/MERCHANT.md) covers the original dataset/file/object purchase and offline delivery. The existing whole-SF30 component carries its source, browser assets and native examples; there is no additional runtime dependency.

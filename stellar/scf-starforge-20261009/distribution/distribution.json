@@ -339,7 +339,8 @@
     "merchant-accounting-platforms": "stellar-forge/mcp-merchant-operator/accounting-platform-cli.mjs",
     "linkup-research": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/examples/linkup-dossier-cli.mjs",
     "socrata": "stellar/scf-starforge-20261009/sf30-seller-sdk/socrata/cli.mjs",
-    "socrata-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/socrata/publisher.mjs"
+    "socrata-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/socrata/publisher.mjs",
+    "stac": "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -761,7 +762,13 @@
     "./seller/releases/dataset": "./source/stellar/scf-starforge-20261009/sf82-seller-pilot/release-dataset.mjs",
     "./seller/arcgis/deployment": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/deployment.mjs",
     "./seller/opensearch/relevance": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/relevance/native.mjs",
-    "./seller/opensearch/relevance/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/relevance/workspace.mjs"
+    "./seller/opensearch/relevance/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/relevance/workspace.mjs",
+    "./seller/stac": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/merchant.mjs",
+    "./seller/stac/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/workspace.mjs",
+    "./seller/stac/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/provider.mjs",
+    "./seller/stac/customer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/customer.mjs",
+    "./seller/stac/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/server.mjs",
+    "./buyer/stac": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/customer.mjs"
   },
   "nativePeers": {
     "@x402/core": {
