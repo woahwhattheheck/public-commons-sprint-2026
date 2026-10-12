@@ -30,6 +30,8 @@ Read the original retained workspace:
                      --quantity DECIMAL_TEXT --unit ORIGINAL_UNIT
   catalog-decisions  --catalog ID [--offset N] [--limit N]
   catalog-operation  --request-id ORIGINAL_ID
+  catalog-import-storage [--import-request-id ORIGINAL_ID] [--offset N] [--limit N]
+  catalog-retire-import-stage --request RETIREMENT.json
 
 Supplier delivery:
   catalog-supplier-profile [--target xchange-2.0|2ba-xchange-2.0]
@@ -72,7 +74,14 @@ Export complete retained work:
 Formats: catalog.csv, catalog.jsonl, approved-matches.csv, facets.json, index.json,
 bulk.ndjson, delta.ndjson, source.json, search-client.ts, catalog-bundle.jsonl.
 
-Every mutating request supplies its original requestId. Save, preview and select
+Stage retirement uses {importRequestId, expectedRequestSha256} from catalog-import-storage.
+It retires only the closed temporary stage of that COMPLETE import. Original
+bundles, canonical source files and completed operation results stay retained.
+The same retirement selection resumes after interruption; it creates no new
+catalog or import. Storage reports distinguish estimated staged allocation,
+verified removals and files already absent before a durable removal receipt.
+
+Every business mutation supplies its original requestId. Save, preview and select
 retain expectedRevision; decisions retain expectedCatalogRevision, material hash,
 and an existing decisionId/expectedRevision when revising a saved customer match.
 The JSON fields are the same fields used by the browser and workspace methods.
@@ -108,6 +117,8 @@ const OPTIONS = {
   'catalog-quantity': ['--catalog', '--material-key', '--material-sha256', '--quantity', '--unit'],
   'catalog-decisions': ['--catalog', ...PAGING],
   'catalog-operation': ['--request-id'],
+  'catalog-import-storage': ['--import-request-id', ...PAGING],
+  'catalog-retire-import-stage': ['--request'],
   'catalog-supplier-profile': ['--target'],
   'catalog-supplier-state': ['--catalog'],
   'catalog-supplier-plan': ['--submission'],
@@ -130,6 +141,7 @@ const OPTIONS = {
   'catalog-export': ['--catalog', '--format', '--output', '--edition', '--index']
 };
 const MUTATIONS = {
+  'catalog-retire-import-stage': 'retireImportStage',
   'catalog-save': 'save',
   'catalog-preview': 'preview',
   'catalog-select': 'select',
@@ -187,7 +199,7 @@ async function readText(path, limit, stdin) {
         fail('CATALOG_CLI_STDIN_REQUIRED', 'This command requires its original JSON input stream.');
       iterable = stdin;
     } else {
-      file = await open(resolve(path), constants.O_RDONLY | constants.O_NOFOLLOW);
+      file = await open(resolve(path), constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
       const stat = await file.stat();
       if (!stat.isFile()) fail('CATALOG_CLI_INPUT_FILE_INVALID', 'Select a regular input file.');
       if (stat.size > limit) fail('CATALOG_CLI_INPUT_TOO_LARGE', 'The command input exceeds ' + limit + ' bytes.');
@@ -206,14 +218,14 @@ async function readText(path, limit, stdin) {
     return text;
   } finally { if (file) await file.close(); }
 }
-async function requestInput(options, stdin) {
+async function requestInput(options, stdin, { requireRequestId = true } = {}) {
   const text = await readText(required(options, '--request'), 1024 * 1024, stdin);
   let value;
   try { value = JSON.parse(text); }
   catch { fail('CATALOG_CLI_JSON_REQUIRED', 'Supply one complete JSON request object.'); }
   if (!value || typeof value !== 'object' || Array.isArray(value))
     fail('CATALOG_CLI_JSON_REQUIRED', 'Supply one complete JSON request object.');
-  if (typeof value.requestId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,95}$/.test(value.requestId))
+  if (requireRequestId && (typeof value.requestId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,95}$/.test(value.requestId)))
     fail('CATALOG_CLI_REQUEST_ID_REQUIRED', 'Supply the original requestId in the request JSON.');
   return value;
 }
@@ -238,7 +250,7 @@ async function hashHandle(file) {
 }
 async function transferFile(workspace, command, options, request) {
   const path = resolve(required(options, '--file'));
-  const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
   try {
     const before = await file.stat({ bigint: true });
     if (!before.isFile() || before.size < 1n || before.size > BigInt(MAX_INPUT))
@@ -292,7 +304,7 @@ async function exportFile(value, destination, stdout) {
     try { await link(temporary, path); }
     catch (error) {
       if (error.code !== 'EEXIST') throw error;
-      const existing = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+      const existing = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
       try {
         const stat = await existing.stat({ bigint: true });
         if (!stat.isFile() || stat.size !== BigInt(bytes))
@@ -313,7 +325,8 @@ async function exportFile(value, destination, stdout) {
 async function perform(workspace, command, options, context) {
   const catalog = workspace.catalog;
   if (Object.hasOwn(MUTATIONS, command))
-    return catalog[MUTATIONS[command]](await requestInput(options, context.stdin));
+    return catalog[MUTATIONS[command]](await requestInput(options, context.stdin, {
+      requireRequestId: command !== 'catalog-retire-import-stage' }));
   if (command === 'catalog-supplier-profile') return catalog.supplier.templates(options['--target']?{target:options['--target']}:{});
   if (command === 'catalog-supplier-state') return catalog.supplier.state({catalogId:required(options,'--catalog')});
   if (command === 'catalog-supplier-plan') return catalog.supplier.plan(required(options,'--submission'));
@@ -368,6 +381,8 @@ async function perform(workspace, command, options, context) {
   if (command === 'catalog-decisions') return catalog.decisions({
     catalogId: required(options, '--catalog'), ...paging(options) });
   if (command === 'catalog-operation') return workspace.operation(required(options, '--request-id'));
+  if (command === 'catalog-import-storage') return catalog.importStorage({
+    ...(options['--import-request-id'] ? { importRequestId: options['--import-request-id'] } : {}), ...paging(options) });
   if (command === 'catalog-export') {
     const catalogId = required(options, '--catalog'), format = required(options, '--format');
     const output = required(options, '--output');

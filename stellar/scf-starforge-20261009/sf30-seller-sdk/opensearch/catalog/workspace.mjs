@@ -10,6 +10,7 @@ import { normalizeCatalogMapping, compileCatalogMapping, catalogText, catalogIde
 import { exportCatalog, createCatalogQueryDraft } from './exports.mjs';
 import { exportCatalogBundle, importCatalogBundle } from './transfer.mjs';
 import { SupplierWorkspace } from './supplier/workspace.mjs';
+import { setupCatalogImportStorage, inspectCatalogImportStorage, retireCatalogImportStage } from './import-storage.mjs';
 
 export const CATALOG_SCHEMA = 'stellar-forge.material-catalog.v1';
 export const SOURCE_SCHEMA = 'stellar-forge.material-catalog-source.v1';
@@ -89,6 +90,7 @@ export class OpenSearchCatalogWorkspace {
   constructor(workspace) {
     this.workspace = workspace; this.store = workspace.store; this.db = this.store.db;
     this.root = join(this.store.directory, 'catalog');
+    this.importStageReaders = new Map(); this.importClosedStages = new Set(); this.importStorageReaders = new Map();
     this.db.exec(
       'CREATE TABLE IF NOT EXISTS catalog_catalogs(id TEXT PRIMARY KEY,revision INTEGER NOT NULL,record_json TEXT NOT NULL);' +
       'CREATE TABLE IF NOT EXISTS catalog_history(catalog_id TEXT NOT NULL,revision INTEGER NOT NULL,record_json TEXT NOT NULL,PRIMARY KEY(catalog_id,revision));' +
@@ -103,9 +105,21 @@ export class OpenSearchCatalogWorkspace {
       'CREATE TABLE IF NOT EXISTS catalog_refs(edition_id TEXT NOT NULL,value TEXT NOT NULL,material_key TEXT NOT NULL,kind TEXT NOT NULL,PRIMARY KEY(edition_id,value,material_key,kind));' +
       "CREATE VIRTUAL TABLE IF NOT EXISTS catalog_terms USING fts5(edition_id UNINDEXED,material_key UNINDEXED,terms,tokenize='unicode61 remove_diacritics 2');"
     );
+    setupCatalogImportStorage(this.db);
     this.supplier = new SupplierWorkspace(this);
   }
   open() { if (this.workspace.closed) fail('WORKSPACE_CLOSING', 'Workspace is closing.', 503); }
+  close() {
+    // A failed stage close keeps its exact handle and original owner for this retry.
+    for (const [id, db] of this.importStageReaders) {
+      db.close();
+      this.importStageReaders.delete(id); this.importClosedStages.add(id);
+    }
+    for (const [id, reader] of this.importStorageReaders) {
+      reader.db.close();
+      this.importStorageReaders.delete(id);
+    }
+  }
   async directories() {
     await privateDirectory(this.root);
     for (const name of ['sources','incoming','transfers']) await privateDirectory(join(this.root, name));
@@ -471,6 +485,8 @@ export class OpenSearchCatalogWorkspace {
     return exportCatalog(this, catalogId, format, options);
   }
   importBundle(meta, bytes) { return importCatalogBundle(this, meta, bytes); }
+  importStorage(options) { return inspectCatalogImportStorage(this, options); }
+  retireImportStage(request) { return retireCatalogImportStage(this, request); }
   createDraft(request) { this.open(); return createCatalogQueryDraft(this, request); }
   supplierSave(request) { return this.supplier.save(request); }
   supplierCorrection(request) { return this.supplier.saveCorrection(request); }
