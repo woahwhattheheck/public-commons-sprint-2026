@@ -41,8 +41,13 @@ export function createCloudUploads(){
     directory=await privateDirectory(directory);
     const request={schema:SCHEMA,...selection};
     const requestSha256=identity(request),requestPath=join(directory,'request.json');
-    await atomicJson(requestPath,{...request,requestSha256});
-    const retained=await readJson(requestPath);
+    let retained;
+    try{retained=await readJson(requestPath);}
+    catch(error){
+      if(error.code!=='ENOENT')throw error;
+      await atomicJson(requestPath,{...request,requestSha256});
+      retained=await readJson(requestPath);
+    }
     if(retained.requestSha256!==requestSha256||identity(Object.fromEntries(Object.entries(retained).filter(([key])=>key!=='requestSha256')))!==requestSha256)
       throw issue('CLOUD_UPLOAD_SELECTION_CHANGED',undefined,409);
     const part=join(directory,'payload.partial'),progressPath=join(directory,'progress.json');
@@ -110,7 +115,8 @@ export function createCloudUploads(){
   }
   async function finish(t,part){
     const full=part.hash.copy().digest('hex');
-    if(String(part.offset)!==t.selection.bytes||t.selection.sha256&&full!==t.selection.sha256)
+    if(String(part.offset)!==t.selection.bytes||t.selection.sha256&&full!==t.selection.sha256||
+       t.expectedSha256&&full!==t.expectedSha256)
       throw issue('CLOUD_UPLOAD_DIGEST_MISMATCH',undefined,409);
     await part.handle.sync();
     await privateDirectory(dirname(t.target));
