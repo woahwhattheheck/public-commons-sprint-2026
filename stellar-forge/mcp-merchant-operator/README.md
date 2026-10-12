@@ -540,3 +540,20 @@ or add `socrataWorkspaceConnection` to the existing merchant configuration.
 The `merchant_socrata_*` tools use the original source and publisher objects.
 Their industrial browser borrows that same operator, and complete customer files
 use the existing verified retained-file reader.
+
+
+## XML and NDJSON source workspaces
+
+Operate complete source-file datasets through the original private source console.
+The browser and the `merchant_source_*` tools share saved source bytes, explicit
+mappings, native SF30 builds and queries, and keyed edition comparisons. Prepare
+complete project, dataset, changes or NDJSON merchant exports, read their exact
+bytes across interrupted downloads, and import a project into another original
+receiving workspace.
+
+Use `init-source-workspaces --dir NEW_DIRECTORY --connection CONNECTION_JSON`,
+or attach `--source-workspaces` during ordinary merchant initialization. The
+[complete source workspace guide](SOURCE_WORKSPACES.md) covers original console
+startup, source-file handles, mapping, merchant preparation, resumable delivery
+and reconstruction. `starforge dataset ndjson` opens the source application;
+its browser remains the same workspace used by the agent.

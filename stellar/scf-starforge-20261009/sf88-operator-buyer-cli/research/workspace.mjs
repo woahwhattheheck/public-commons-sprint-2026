@@ -507,7 +507,8 @@ export async function openResearchWorkspace(directory){
     if(name==='buyer-result.json'&&nativeRaw)return nativeRaw;
     return frozenPageBytes(directory,p,name);
   }
-  return {root,query,saveQuery,listQueries,createEdition,edition,listEditions,receivePage,receiveBuyerResult,receiveResultFile,
+  // Extensions share the original workspace lock. A transaction must not call another mutation.
+  return {root,transaction:serial,query,saveQuery,listQueries,createEdition,edition,listEditions,receivePage,receiveBuyerResult,receiveResultFile,
     setDecision,copyDecisions,recoverPendingPage,gatherEdition,compare,report,exportFiles,exportEntries,exportManifest,exportFile,export:exportEdition,pageBytes,
     async close(){await pending;closed=true;}};
 }

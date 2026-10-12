@@ -8,7 +8,7 @@ Use the original OData operator to connect to a source, inspect CSDL, and save i
 
 ```sh
 node odata/cli.mjs --workspace /private/odata schema --connection northwind --out /private/catalog.json
-node odata/live/cli.mjs template --catalog /private/catalog.json --out /private/live-plan.json
+node odata/live/cli.mjs template --workspace /private/odata --saved-plan northwind-orders --out /private/live-plan.json
 ```
 
 Edit the plan with the merchant's HTTPS origin, actual Stellar asset and recipient, and selected operation policies. `amountAtomic` is the price of each successful provider page. The template leaves the asset and recipient as explicit configuration fields.
@@ -42,7 +42,7 @@ A plan has this form; `metadataSha256` is copied from the selected original cata
 }
 ```
 
-Supplier credentials use the existing SF30 `headerEnv` references or `oauth2` declaration. Keep the selected host environment available to the merchant. The integration owns `Accept`, `OData-MaxVersion`, and the compiled `Prefer` header. Existing SF30 HTTPS/DNS checks, deadlines, bounded byte reading and supplier connection handling remain in the request path.
+The workspace template carries the selected query's entity, output fields, filters, ordering and total. Its `sourceFilters` and `sourceFilterMode` keep the saved query's scope fixed; omitted customer filters inherit that scope, and supplied filters must match. A merchant may enable separate output, filter and ordering fields in an explicitly configured flexible-query plan without `sourceFilters`. Direct catalog templates can select `--entity-set NAME`. Saved connection `authEnv` is carried into the native `headerEnv.authorization` reference when the live plan has no explicit Authorization/OAuth selection. Supplier credentials use the existing SF30 `headerEnv` references or `oauth2` declaration. Keep the selected host environment available to the merchant. The integration owns `Accept`, `OData-MaxVersion`, and the compiled `Prefer` header. Existing SF30 HTTPS/DNS checks, deadlines, bounded byte reading and supplier connection handling remain in the request path.
 
 Export directly from the original retained workspace:
 
@@ -103,6 +103,7 @@ The existing OData operator UI can call these same exports without another works
 
 | Export | Input and result |
 | --- | --- |
+| `templateFromWorkspace` (`client.mjs`) | `(workspace, {planId, publicOrigin, payment, amountAtomic})` supplies the operator form from the selected saved query, metadata and original connection reference. |
 | `prepareFromWorkspace` (`client.mjs`) | `(workspace, {planId, plan, operation}, options)` reads `state().connections/plans`, the saved `query.plan`, and original `raw(sha256)`; returns the compiled merchant package model. |
 | `prepareDraft` (`client.mjs`) | `({catalog, plan, selection}, options)` compiles an explicit catalog/query selection. |
 | `writePackage`, `readPackage` (`client.mjs`) | Write a new private release; reopen and verify that exact release. |
