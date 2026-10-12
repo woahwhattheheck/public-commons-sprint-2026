@@ -92,8 +92,9 @@ An example native preview call is:
 }
 ~~~
 
-The returned response preserves the original status and body. A successful body
-has dataset.snapshot, fields, rows and page.nextCursor. Pass the complete original
+The returned response is the original native page object. It has the
+stellar-forge.dataset-page.v1 schema, dataset.snapshot, fields, rows and
+page.nextCursor. Pass the complete original
 cursor as a URL-encoded query value on the next preview or seller request.
 A snapshot query parameter can select an explicitly retained edition.
 

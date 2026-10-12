@@ -44,13 +44,13 @@ try {
   assert.equal(challenge.status, 402);
   await challenge.arrayBuffer();
   const pageOne = (await operator.call('merchant_dataset_preview', { releaseId: first.id, query })).response;
-  assert.equal(pageOne.status, 200);
-  assert.equal(pageOne.body.dataset.snapshot, first.dataset.baselineSnapshot);
-  const cursor = pageOne.body.page.nextCursor;
+  assert.equal(pageOne.schema, 'stellar-forge.dataset-page.v1');
+  assert.equal(pageOne.dataset.snapshot, first.dataset.baselineSnapshot);
+  const cursor = pageOne.page.nextCursor;
   assert.ok(cursor);
   const cursorQuery = new URLSearchParams({ limit: '1', cursor }).toString();
   const pageTwo = (await operator.call('merchant_dataset_preview', { releaseId: first.id, query: cursorQuery })).response;
-  assert.equal(pageTwo.status, 200);
+  assert.equal(pageTwo.schema, 'stellar-forge.dataset-page.v1');
   const nextStaged = await operator.call('merchant_stage', { source: 'next', id: 'ndjson-next', label: 'Next NDJSON edition' });
   const next = nextStaged.release;
   assert.notEqual(first.dataset.baselineSnapshot, next.dataset.baselineSnapshot);
@@ -62,9 +62,9 @@ try {
   assert.equal(published.versions.current, next.dataset.baselineSnapshot);
   assert.equal(published.versions.versions.length, 2);
   const continued = (await operator.call('merchant_dataset_preview', { releaseId: next.id, query: cursorQuery })).response;
-  assert.deepEqual(continued.body, pageTwo.body);
+  assert.deepEqual(continued, pageTwo);
   const current = (await operator.call('merchant_dataset_preview', { releaseId: next.id, query })).response;
-  assert.equal(current.body.dataset.snapshot, next.dataset.baselineSnapshot);
+  assert.equal(current.dataset.snapshot, next.dataset.baselineSnapshot);
   const deliveries = {};
   await mkdir(join(operatorDirectory, 'deliveries'), { mode: 0o700 });
   for (const [edition, release] of [['first', first], ['next', next]]) {
@@ -75,8 +75,8 @@ try {
       const requestQuery = new URLSearchParams({ limit: '3', snapshot: release.dataset.baselineSnapshot,
         ...(selectedCursor ? { cursor: selectedCursor } : {}) }).toString();
       const page = (await operator.call('merchant_dataset_preview', { releaseId: release.id, query: requestQuery })).response;
-      assert.equal(page.status, 200);
-      const pageBytes = JSON.stringify(page.body) + '\n';
+      assert.equal(page.schema, 'stellar-forge.dataset-page.v1');
+      const pageBytes = JSON.stringify(page) + '\n';
       const pagePath = join(operatorDirectory, edition + '-page-' + pageIndex + '.json');
       const evidencePath = join(operatorDirectory, edition + '-context-' + pageIndex + '.json');
       await writeFile(pagePath, pageBytes, { mode: 0o600 });
@@ -85,7 +85,7 @@ try {
         sha256: createHash('sha256').update(pageBytes).digest('hex') }) + '\n', { mode: 0o600 });
       await append(directory, { page: pagePath, intent: randomUUID(), evidence: evidencePath,
         ...(selectedCursor ? { cursor: selectedCursor } : {}) });
-      selectedCursor = page.body.page.nextCursor;
+      selectedCursor = page.page.nextCursor;
       pageIndex++;
     } while (selectedCursor);
     await finalize(directory);
@@ -124,9 +124,9 @@ try {
   status = await operator.call('merchant_status');
   await operator.call('merchant_start', { expectedGeneration: status.state.generation, expectedDigest: first.digest });
   const reopened = (await operator.call('merchant_dataset_preview', { releaseId: next.id, query })).response;
-  assert.equal(reopened.body.dataset.snapshot, next.dataset.baselineSnapshot);
+  assert.equal(reopened.dataset.snapshot, next.dataset.baselineSnapshot);
   const resumed = (await operator.call('merchant_dataset_preview', { releaseId: next.id, query: cursorQuery })).response;
-  assert.deepEqual(resumed.body, pageTwo.body);
+  assert.deepEqual(resumed, pageTwo);
   result.native.mcpReopenPreservedCurrentAndCursor = true;
   result.state = 'COMPLETE';
   await writeFile(join(operatorDirectory, 'native-result.json'), JSON.stringify(result, null, 2) + '\n', { mode: 0o600 });
