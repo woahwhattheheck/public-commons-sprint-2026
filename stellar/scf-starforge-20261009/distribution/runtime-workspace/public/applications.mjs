@@ -55,7 +55,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   let loading = false, sending = false, scope = 0, settingsScope = 0, initial = true, navigationVersion = 0;
   let historyData = null, historyApplicationId = null, historyCursor = null, historyTrail = [], historyScope = 0, historyLoading = false;
   const key = (name, workspaceId = getState()?.workspaceId) => 'starforge-applications-' + workspaceId + '-' + name;
-  const readSaved = name => { try { return JSON.parse(sessionStorage.getItem(key(name)) ?? 'null'); } catch { return null; } };
+  const readSaved = (name, workspaceId) => { try { return JSON.parse(sessionStorage.getItem(key(name, workspaceId)) ?? 'null'); } catch { return null; } };
   const saveSaved = (name, value, workspaceId) => {
     try {
       if (value === null) sessionStorage.removeItem(key(name, workspaceId));
@@ -288,11 +288,17 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       throw new Error('The browser could not retain this application request. Restore tab storage, then retry this reviewed action.');
     return completeRetainedRequest(pending);
   }
+  function clearRetainedRequest(pending, workspaceId) {
+    const current = readSaved('pending', workspaceId);
+    if (!current || current.route !== pending.route ||
+        JSON.stringify(current.body) !== JSON.stringify(pending.body)) return false;
+    return saveSaved('pending', null, workspaceId);
+  }
   async function completeRetainedRequest(pending) {
     const workspaceId = pending.workspaceId ?? pending.setupTicket?.workspaceId ?? getState()?.workspaceId;
     try {
       const result = await api(pending.route, pending.body);
-      saveSaved('pending', null, workspaceId); return result;
+      clearRetainedRequest(pending, workspaceId); return result;
     } catch (issue) {
       // These original save guards precede the application record write.
       const rejectedSave = pending.route === '/api/applications/save' &&
@@ -301,8 +307,8 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       if (rejectedSave) {
         saveSaved('rejected-save', { ...pending, error: { code: issue.code, status: issue.status },
           observedAt: new Date().toISOString() }, workspaceId);
-        saveSaved('pending', null, workspaceId);
-        if (workspaceId === getState()?.workspaceId) {
+        clearRetainedRequest(pending, workspaceId);
+        if (workspaceId === getState()?.workspaceId && configurationReview?.id === pending.body.reviewId) {
           configurationReview = null; reviewResult.hidden = true; drafts.refresh();
         }
       }
