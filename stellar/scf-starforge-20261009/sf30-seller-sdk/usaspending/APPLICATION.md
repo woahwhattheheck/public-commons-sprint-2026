@@ -63,3 +63,46 @@ The command prints one structured startup line containing the private browser UR
 The usaspending distribution contribution declares the application, original research and dossier commands, and ./research/usaspending/application export. Its provider consumes the maintained Applications preparation, retained operation, startup observer and stop/reopen lifecycle.
 
 The application source selection includes the existing award, transaction and browser modules plus its source-specific startup adapter. The installed runtime and managed release remain the original source owners. The launcher verifies the selected source in both locations and authenticates the original /api/identity before the shared observer saves the launch link.
+
+## Continue the original native receiving operation
+
+The maintained receiver consumes the completed transaction receiving directory.
+It reopens the original SQLite workspace and source capture, retains the browser
+announcement through the original Applications provider, stops the original
+process, and reopens its saved transactions and assessment. It also opens a new
+workspace, restores the original complete workspace, and reopens that restored
+research.
+
+From the complete original source materialized under DELIVERY/source:
+
+```sh
+node stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/application-native.mjs \
+  --received /PRIVATE_DELIVERY/native \
+  --out /PRIVATE_DELIVERY/applications-source
+```
+
+For the full installed Applications lifecycle, supply the actual READY runtime
+containing this contribution:
+
+```sh
+node stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/application-native.mjs \
+  --received /PRIVATE_DELIVERY/native \
+  --runtime /PRIVATE_RUNTIME/federal-awards \
+  --out /PRIVATE_DELIVERY/applications-managed
+```
+
+The managed run calls the existing workspace model to attach the retained runtime,
+review and save both an existing and a new application, adopt its original release,
+launch its original worker, retain its private browser URL, stop the operation,
+and reopen the application after closing the operator workspace. The new-folder
+case passes through the existing save-time directory creation and fresh start
+preparation. It then restores the original transaction workspace into the new
+folder and reopens that saved application.
+
+The result identifies its actual mode as original-source-application or
+original-managed-applications. Each creates application-receiving-result.json,
+original operation records, session identities, complete workspace exports,
+transaction CSVs, workshare documents, and the saved original assessment.
+Use the same original operation ID, SCF-USASPENDING-AWARD-TRANSACTIONS-64B7-20261012,
+and the existing receiving output. Both runs use the retained award and source
+bytes already delivered with that operation.
