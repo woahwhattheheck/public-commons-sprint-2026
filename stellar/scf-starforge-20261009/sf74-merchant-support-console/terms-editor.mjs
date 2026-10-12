@@ -13,7 +13,8 @@ export function termsDocumentFromDraft(values) {
   if(!['NOT_RECORDED','CONFIRMED'].includes(draft.consentStatus)||
       !['NOT_APPROVED','OWNER_APPROVED_PROPOSAL'].includes(draft.priceApproval))throw new Error('Unknown owner terms draft status.');
   const approved=draft.priceApproval==='OWNER_APPROVED_PROPOSAL',confirmed=draft.consentStatus==='CONFIRMED';
-  if(approved)for(const key of ['feeUsd','costUsd'])if(!/^-?(?:\d+|\d*\.\d+)(?:[eE][+-]?\d+)?$/.test(draft[key])||!Number.isFinite(Number(draft[key])))
+  const costText=draft.costUsd.trim();
+  if(approved)for(const key of ['feeUsd',...(costText?['costUsd']:[])])if(!/^-?(?:\d+|\d*\.\d+)(?:[eE][+-]?\d+)?$/.test(draft[key].trim())||!Number.isFinite(Number(draft[key])))
     throw new Error('Provide the recorded '+key+' value before preparing the proposal.');
   const delivery=Object.fromEntries(Object.entries(deliveryFields).map(([name,key])=>[key,draft[name].trim()]));
   return {workOrderRef:draft.workOrderRef.trim(),sellerDisplayName:draft.sellerDisplayName.trim(),
@@ -21,7 +22,7 @@ export function termsDocumentFromDraft(values) {
     ...(Object.values(delivery).some(Boolean)?{delivery}:{}),
     merchantConsent:{status:draft.consentStatus,receiptUrl:confirmed?draft.consentReceipt.trim():null},
     commercial:{priceApproval:draft.priceApproval,feeUsd:approved?Number(draft.feeUsd):null,
-      costUsd:approved?Number(draft.costUsd):null,approvalReceiptUrl:approved?draft.approvalReceipt.trim():null}};
+      costUsd:approved&&costText?Number(costText):null,approvalReceiptUrl:approved?draft.approvalReceipt.trim():null}};
 }
 
 export function termsDraftFromDocument(doc) {
@@ -73,12 +74,12 @@ export function mountTermsEditor(container, {onChange=()=>{}}={}) {
       <label data-consent-receipt hidden>Permission record URL <small>Existing HTTPS record supplied by the relationship owner</small><input name="consentReceipt" data-label="Permission record URL" type="url" pattern="https://.+" autocomplete="off" placeholder="https://…" disabled></label>
     </div>
     <h3>Owner-approved proposal</h3>
-    <p>A proposed price is separate from the seller accepting the work. Leave approval unrecorded until the commercial owner supplies the economics and approval record.</p>
+    <p>A proposed price is separate from the seller accepting the work. Record approval when the commercial owner supplies the proposal price and approval record. Delivery cost is optional when it has not been recorded.</p>
     <div class="form-grid">
       <label class="full">Price approval <select name="priceApproval" data-label="Price approval"><option value="NOT_APPROVED">Not approved — withhold price from the packet</option><option value="OWNER_APPROVED_PROPOSAL">Proposal already approved by the owner</option></select></label>
       <label data-approved-price hidden>Approved fee · USD <small>Price proposed to the seller</small><input name="feeUsd" data-label="Approved fee" type="number" min="0.01" step="0.01" inputmode="decimal" autocomplete="off" placeholder="0.00" disabled></label>
-      <label data-approved-price hidden>Approved delivery cost · USD <small>Owner-supplied cost to deliver the agreed scope</small><input name="costUsd" data-label="Approved delivery cost" type="number" min="0" step="0.01" inputmode="decimal" autocomplete="off" placeholder="0.00" disabled></label>
-      <label data-approved-price class="full" hidden>Owner approval record URL <small>Existing HTTPS record approving this proposal and its economics</small><input name="approvalReceipt" data-label="Owner approval record URL" type="url" pattern="https://.+" autocomplete="off" placeholder="https://…" disabled></label>
+      <label data-approved-price hidden>Recorded delivery cost · USD <small>Optional. Leave blank when unknown; enter 0 only for a recorded zero cost.</small><input name="costUsd" data-label="Recorded delivery cost" type="number" min="0" step="0.01" inputmode="decimal" autocomplete="off" placeholder="0.00" disabled></label>
+      <label data-approved-price class="full" hidden>Owner approval record URL <small>Existing HTTPS record approving the proposal price</small><input name="approvalReceipt" data-label="Owner approval record URL" type="url" pattern="https://.+" autocomplete="off" placeholder="https://…" disabled></label>
     </div>
     <p data-terms-summary class="hint" aria-live="polite"></p>
     `;
@@ -86,16 +87,25 @@ export function mountTermsEditor(container, {onChange=()=>{}}={}) {
   function showFields(selector,visible) {
     for(const label of container.querySelectorAll(selector)) {
       label.hidden=!visible;
-      const input=label.querySelector('input');input.disabled=!visible;input.required=visible;
+      const input=label.querySelector('input');input.disabled=!visible;input.required=visible&&input.name!=='costUsd';
     }
   }
   function sync() {
     const consent=fields.consentStatus.value==='CONFIRMED';
     const approved=fields.priceApproval.value==='OWNER_APPROVED_PROPOSAL';
     showFields('[data-consent-receipt]',consent);showFields('[data-approved-price]',approved);
-    container.querySelector('[data-terms-summary]').textContent=approved
-      ? 'The packet will include the owner-approved proposal. Seller acceptance stays open.'
-      : 'The packet will withhold price. You can still prepare the workorder from its original sources.';
+    let summary='The packet will withhold price. You can still prepare the workorder from its original sources.';
+    if(approved) {
+      summary='The packet will include the owner-approved proposal. Seller acceptance stays open.';
+      const costText=fields.costUsd.value.trim(),fee=Number(fields.feeUsd.value),cost=costText?Number(costText):null;
+      if(cost===null)summary+=' Delivery cost is not recorded; margin is unknown.';
+      else if(Number.isFinite(fee)&&fee>0&&Number.isFinite(cost)&&cost>=0) {
+        const money=value=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(value);
+        summary+=' Recorded delivery cost: '+money(cost)+'. Margin before other costs: '+((fee-cost)/fee*100).toFixed(2)+'%.';
+        if(cost>fee)summary+=' Recorded cost exceeds the approved fee by '+money(cost-fee)+'. The approved fee stays unchanged.';
+      }
+    }
+    container.querySelector('[data-terms-summary]').textContent=summary;
   }
   function read() {
     sync();

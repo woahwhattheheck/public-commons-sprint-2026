@@ -248,7 +248,7 @@ export function recoveryPlan(p) {
   for (const [i, input] of p.inputFiles.entries()) if (!inside(p.stateRoot, input.path)) roots.push({ name: 'configuration' + i, path: input.path });
   return { schema: 'stellar-forge.merchant-recovery-plan.v1', roots };
 }
-export async function generate(planFile, output, options) {
+export async function generate(planFile, output, options = {}) {
   const p = await prepare(planFile, options), out = path(resolve(output), 'output');
   need(!inside(p.sourceRoot, out) && !inside(p.stateRoot, out) && !inside(out, p.stateRoot) &&
     !p.inputFiles.some(f => inside(out, f.path)) &&
@@ -261,6 +261,13 @@ export async function generate(planFile, output, options) {
   const { renderRunbook } = await import('./runbook.mjs');
   artifacts.set('RUNBOOK.md', renderRunbook(p, out));
   const manifest = { ...p, bundle: out, artifacts: Object.fromEntries([...artifacts].map(([name, value]) => [name, hash(value)])) };
+  if (options.resume === true) {
+    const { resumeHostGeneration } = await import('./generation.mjs');
+    const generation = await resumeHostGeneration(out, artifacts, manifest);
+    return { bundle: out, merchant: p.merchant, kind: p.kind, mode: p.mode, publicOrigin: p.publicOrigin,
+      target: p.target, services: p.services.map(s => s.unit), routes: p.routes.length,
+      files: artifacts.size + 1, generation };
+  }
   let created = false;
   try {
     await mkdir(out, { mode: 0o700 }); created = true;

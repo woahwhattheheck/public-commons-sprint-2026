@@ -1,7 +1,7 @@
 'use strict';
 (()=>{
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)],esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),json=v=>esc(JSON.stringify(v,null,2)),clone=v=>JSON.parse(JSON.stringify(v)),canonical=v=>JSON.stringify(v);
-const A={view:null,schema:null,db:null,key:null,drafts:{},pending:null,history:[],busy:false,tab:'overview',edition:null,rows:null,rowOffset:0,table:'observations',allEditions:[],preview:null,lastResult:null,polling:false};
+const A={view:null,schema:null,db:null,key:null,drafts:{},draftTokens:{},draftBases:{},draftConflict:null,selectionToken:null,pending:null,history:[],busy:false,tab:'overview',edition:null,rows:null,rowOffset:0,table:'observations',allEditions:[],preview:null,mappingImport:null,lastResult:null,polling:false};
 let selectionEpoch=0;
 let token=sessionStorage.getItem('coops-session')||'',epoch=0;
 const fragment=location.hash.slice(1);if(/^[A-Za-z0-9_-]{43}$/.test(fragment)){token=fragment;sessionStorage.setItem('coops-session',token);history.replaceState(null,'',location.pathname);}
@@ -12,14 +12,103 @@ function options(rows,selected,value='id',label='label'){return rows.map(r=>'<op
 function field(form,key,label,value='',type='text',extra=''){return'<label>'+esc(label)+'<input data-form="'+form+'" data-field="'+key+'" name="'+key+'" type="'+type+'" value="'+esc(value)+'" '+extra+'></label>';}
 function area(form,key,label,value='',extra=''){return'<label '+extra+'>'+esc(label)+'<textarea data-form="'+form+'" data-field="'+key+'" name="'+key+'">'+esc(value)+'</textarea></label>';}
 function select(form,key,label,items,value,extra=''){return'<label>'+esc(label)+'<select data-form="'+form+'" data-field="'+key+'" name="'+key+'" '+extra+'>'+items.map(x=>{const v=typeof x==='string'?x:x.value,l=typeof x==='string'?x:x.label;return'<option value="'+esc(v)+'"'+(v===value?' selected':'')+'>'+esc(l)+'</option>';}).join('')+'</select></label>';}
-function draft(key,defaults){return A.drafts[key]??=(clone(defaults));}
+function subjectBinding(key,value=A.drafts[key]){
+ if(key==='station')return{type:'station',id:value?.profileId||null};
+ if(key==='mapping')return{type:'mapping',id:value?.mappingId||null};
+ if(key.startsWith('review:'))return{type:'review',editionId:key.slice(7),subject:String(value?.subject??'').trim()};
+ return null;
+}
+function recordKey(value){if(value===null||typeof value!=='object')return JSON.stringify(value);if(Array.isArray(value))return'['+value.map(recordKey).join(',')+']';return'{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+recordKey(value[k])).join(',')+'}';}
+function savedSubject(binding,view=A.view){
+ if(binding.type==='station')return view.stations.find(p=>p.id===binding.id)??null;
+ if(binding.type==='mapping')return view.mappings.find(m=>m.id===binding.id)??null;
+ return view.annotations.find(a=>a.editionId===binding.editionId&&a.subject===binding.subject)??null;
+}
+function nativeDraft(binding,record,current){
+ if(!record){const value=clone(current);if(binding.type==='station')value.profileId='';if(binding.type==='mapping')value.mappingId='';return value;}
+ if(binding.type==='station')return{profileId:record.id,stationId:record.stationId,label:record.label,owner:record.owner,note:record.note,active:record.active};
+ if(binding.type==='mapping')return{mappingId:record.id,name:record.name,table:record.table,columns:clone(record.columns),note:record.note};
+ return{subject:record.subject,note:record.note,status:record.status};
+}
+function setDraft(key,value,{known=true}={}){
+ A.drafts[key]=clone(value);A.draftTokens[key]=crypto.randomUUID();
+ const binding=subjectBinding(key);if(binding)A.draftBases[key]={binding,known,record:clone(savedSubject(binding))};
+ if(A.draftConflict?.key===key)A.draftConflict=null;
+ return A.drafts[key];
+}
+function clearDraft(key){delete A.drafts[key];delete A.draftTokens[key];delete A.draftBases[key];if(A.draftConflict?.key===key)A.draftConflict=null;}
+function draft(key,defaults){
+ if(!Object.hasOwn(A.drafts,key)){
+  const binding=subjectBinding(key,defaults),saved=binding?savedSubject(binding):null;
+  return setDraft(key,binding?.type==='review'&&saved?nativeDraft(binding,saved,defaults):defaults);
+ }
+ A.draftTokens[key]??=crypto.randomUUID();
+ const binding=subjectBinding(key);
+ if(binding&&!A.draftBases[key]){
+  const saved=savedSubject(binding),unsaved=(binding.type==='station'||binding.type==='mapping')&&!binding.id;
+  A.draftBases[key]={binding,known:unsaved,record:clone(saved)};
+ }
+ return A.drafts[key];
+}
+function showDraftConflict(key,binding,current){
+ const base=A.draftBases[key];A.draftConflict={key,token:A.draftTokens[key],binding:clone(binding),current:clone(current)};
+ modal('Review the changed saved record',
+  '<p>The draft stays as entered. Its original saved record has changed, or its earlier baseline is unavailable. Review these versions before choosing which fields to keep. Saving remains a separate action.</p>'+
+  details('Draft inputs',A.drafts[key])+details(base?.known?'Original saved version':'Earlier baseline was not retained',base?.known?base.record:null)+details('Current saved version',current)+
+  '<div class="actions">'+(current?button('draft-use-current','Use current saved fields'):button('draft-use-current','Keep this as a distinct new record'))+
+  button('draft-keep','Keep draft against this reviewed version')+'</div>');
+}
+function checkDraftSave(key){
+ const value=draft(key,{}),binding=subjectBinding(key,value),base=A.draftBases[key],current=savedSubject(binding);
+ if(base?.known&&recordKey(base.binding)!==recordKey(binding)&&current===null){
+  A.draftBases[key]={binding:clone(binding),known:true,record:null};
+ }else if(!base?.known||recordKey(base.binding)!==recordKey(binding)||recordKey(base.record)!==recordKey(current)){
+  showDraftConflict(key,binding,current);throw new Error('Review the current saved record before saving this retained draft.');
+ }
+ return{key,token:A.draftTokens[key],binding:clone(binding)};
+}
+async function resolveDraftConflict(useCurrent){
+ const conflict=A.draftConflict;if(!conflict)throw new Error('Open the current draft comparison first.');
+ await refresh(false);
+ if(A.draftTokens[conflict.key]!==conflict.token)throw new Error('A different draft is open. Its fields were kept.');
+ const binding=subjectBinding(conflict.key),current=savedSubject(binding);
+ if(recordKey(binding)!==recordKey(conflict.binding)||recordKey(current)!==recordKey(conflict.current)){
+  showDraftConflict(conflict.key,binding,current);throw new Error('The record changed again. Review this current version before continuing.');
+ }
+ if(useCurrent){
+  A.drafts[conflict.key]=nativeDraft(binding,current,A.drafts[conflict.key]);
+  A.draftTokens[conflict.key]=crypto.randomUUID();
+ }
+ const selected=subjectBinding(conflict.key);
+ A.draftBases[conflict.key]={binding:clone(selected),known:true,record:clone(savedSubject(selected))};
+ A.draftConflict=null;await persist();$('#dialog').close();renderPage();
+ notice(useCurrent?'Current saved fields are open. Review and save any intended changes.':'The entered draft is retained against the version you reviewed. Save when ready.');
+}
+function applyDraftEffect(pending,response){
+ const effect=pending.draftEffect;if(!effect)return;
+ if(!A.drafts[effect.key]||A.draftTokens[effect.key]!==effect.token){effect.outcome='different_draft_preserved';return;}
+ const record=response.result,binding=effect.binding;
+ if(!record||typeof record.id!=='string')throw Object.assign(new Error('The saved record identity is missing from the original reply.'),{uncertain:true});
+ if(binding.type==='station'||binding.type==='mapping'){
+  const field=binding.type==='station'?'profileId':'mappingId',current=A.drafts[effect.key][field]||null;
+  if(binding.id&&record.id!==binding.id)throw Object.assign(new Error('The original reply refers to another saved record.'),{uncertain:true});
+  if(current&&current!==binding.id&&current!==record.id){effect.outcome='different_record_preserved';return;}
+  A.drafts[effect.key][field]=record.id;
+ }else if(record.editionId!==binding.editionId||record.subject!==binding.subject){
+  throw Object.assign(new Error('The original review reply refers to another edition or subject.'),{uncertain:true});
+ }
+ const selected=subjectBinding(effect.key);
+ if(binding.type!=='review'||recordKey(selected)===recordKey(binding))A.draftBases[effect.key]={binding:clone(selected),known:true,record:clone(record)};
+ if(binding.type==='mapping'&&pending.request.payload.mappingSource&&recordKey(A.drafts[effect.key].mappingSource??null)===recordKey(pending.request.payload.mappingSource)){delete A.drafts[effect.key].mappingSource;delete A.drafts[effect.key].mappingSourceReceipt;}
+ effect.outcome='saved_identity_applied';effect.savedId=record.id;
+}
 function details(title,value){return'<details><summary>'+esc(title)+'</summary><pre>'+json(value)+'</pre></details>';}
 function table(headers,rows){return'<div class="scroll"><table><thead><tr>'+headers.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';}
 function modal(title,body){$('#dialog-content').innerHTML='<h2>'+esc(title)+'</h2>'+body;if(!$('#dialog').open)$('#dialog').showModal();}
 function heading(title,description){return'<h1>'+esc(title)+'</h1><p class="muted">'+esc(description)+'</p>';}
 async function database(){return new Promise((resolve,reject)=>{const r=indexedDB.open('coops-original-operations',1);r.onupgradeneeded=()=>r.result.createObjectStore('state');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
 async function stored(value){return new Promise((resolve,reject)=>{const t=A.db.transaction('state',value===undefined?'readonly':'readwrite'),o=t.objectStore('state'),r=value===undefined?o.get(A.key):o.put(value,A.key);let data;r.onsuccess=()=>data=r.result;t.oncomplete=()=>resolve(data);t.onerror=()=>reject(t.error);t.onabort=()=>reject(t.error);});}
-async function persist(){await stored({workspaceId:A.view.workspaceId,drafts:A.drafts,pending:A.pending,history:A.history.slice(-100),tab:A.tab,edition:A.edition?.id??null,table:A.table});}
+async function persist(){await stored({workspaceId:A.view.workspaceId,drafts:A.drafts,draftTokens:A.draftTokens,draftBases:A.draftBases,selectionToken:A.selectionToken,preview:A.preview,mappingImport:A.mappingImport,pending:A.pending,history:A.history.slice(-100),tab:A.tab,edition:A.edition?.id??null,table:A.table});}
 async function api(path,{body}={}){
  const response=await fetch(path,{method:body===undefined?'GET':'POST',headers:{Authorization:'Bearer '+token,...(body===undefined?{}:{'Content-Type':'application/json'})},...(body===undefined?{}:{body:JSON.stringify(body)})});
  let value;try{value=await response.json();}catch{throw Object.assign(new Error('The original response is incomplete. Its pending request remains retained.'),{uncertain:true,status:response.status});}
@@ -31,10 +120,22 @@ function renderPending(){
  const p=A.pending;if(!p){$('#pending').innerHTML='';return;}
  $('#pending').innerHTML='<strong>Original request retained</strong><p>'+esc(p.request.action)+' · <span class="pin">'+esc(p.request.operationId)+'</span> · '+esc(p.state)+'</p>'+(p.error?'<p>'+esc(p.error)+'</p>':'')+'<div class="actions">'+button('retry','Retry this exact request')+button('inspect-pending','Inspect native outcome')+(p.state==='rejected'?button('return-draft','Keep inputs and close this rejected request'):'')+'</div>'+details('Original request',p.request);
 }
-async function perform(action,payload){
+function applyViewEffects(pending,response){
+ const selected=pending.editionEffect;
+ if(selected&&A.selectionToken===selected.token){
+  if(response.result?.editionId!==selected.edition.id)throw Object.assign(new Error('The original selection reply refers to another source edition.'),{uncertain:true});
+  A.edition=clone(selected.edition);A.rowOffset=0;A.rows=null;A.tab='editions';
+ }
+ const preview=pending.previewEffect;
+ if(preview&&A.draftTokens.capture===preview.token&&A.drafts.capture?.mode===preview.kind&&canonical(capturePayload())===preview.payload&&profilePin(A.drafts.capture.profileId)===preview.profile){
+  A.preview={kind:preview.kind,payload:preview.payload,profile:preview.profile,result:clone(response.result)};
+ }
+}
+async function perform(action,payload,{draftKey,editionEffect=null,previewEffect=null}={}){
  if(A.pending)throw new Error('Resolve the retained original request before issuing another action.');
  if(A.busy)throw new Error('The current original request is still in progress.');
- A.pending={request:{action,payload:clone(payload),operationId:crypto.randomUUID(),expectedRevision:A.view.revision},createdAt:new Date().toISOString(),state:'prepared'};
+ const draftEffect=draftKey?checkDraftSave(draftKey):null;
+ A.pending={request:{action,payload:clone(payload),operationId:crypto.randomUUID(),expectedRevision:A.view.revision},draftEffect,editionEffect,previewEffect,createdAt:new Date().toISOString(),state:'prepared'};
  await persist();renderPending();return dispatch();
 }
 async function dispatch(){
@@ -42,11 +143,11 @@ async function dispatch(){
  try{
   const response=await api('/api/action',{body:pending.request});
   if(response.operationId!==pending.request.operationId||!response.view)throw Object.assign(new Error('The original action reply did not retain its request identity.'),{uncertain:true});
-  adoptView(response.view);pending.response=response;pending.state=response.state==='RUNNING'?'running':'complete';await persist();
+  adoptView(response.view);pending.response=response;pending.state=response.state==='RUNNING'?'running':'complete';if(pending.state==='complete'){applyDraftEffect(pending,response);applyViewEffects(pending,response);}await persist();
   if(pending.state==='running'){notice('The original operation is running. Inspect its native outcome before continuing.');return response;}
-  A.history.push({request:pending.request,response,completedAt:new Date().toISOString()});A.pending=null;A.lastResult=response.result;await persist();renderPending();notice('Saved '+pending.request.action+' at revision '+A.view.revision+(response.reused?' · original request replayed.':'.'));
+  A.history.push({request:pending.request,response,draftEffect:pending.draftEffect??null,editionEffect:pending.editionEffect?{token:pending.editionEffect.token,editionId:pending.editionEffect.edition.id}:null,previewEffect:pending.previewEffect??null,completedAt:new Date().toISOString()});A.pending=null;A.lastResult=response.result;await persist();renderPending();notice('Saved '+pending.request.action+' at revision '+A.view.revision+(response.reused?' · original request replayed.':'.'));
   return response;
- }catch(error){pending.state=error.uncertain?'uncertain':'rejected';pending.error=error.message;pending.status=error.status??null;await persist();renderPending();if([401,403].includes(error.status))notice('Open the current private session URL printed by the original workspace, then retry this retained request.',true);throw error;}
+ }catch(error){A.pending??=pending;pending.state=error.uncertain?'uncertain':'rejected';pending.error=error.message;pending.status=error.status??null;await persist();renderPending();if([401,403].includes(error.status))notice('Open the current private session URL printed by the original workspace, then retry this retained request.',true);throw error;}
  finally{A.busy=false;}
 }
 async function refresh(render=true){const view=await api('/api/view');adoptView(view);for(const e of view.editions)if(!A.allEditions.some(x=>x.id===e.id))A.allEditions.push(e);if(render)renderPage();else updateProgress();}
@@ -98,7 +199,7 @@ function renderEditions(){
  body+='<h2>Source review</h2>';const d=draft('review:'+e.id,{subject:'Source, datum and coverage review',note:'',status:'open'});
  body+='<form id="review-form"><div class="form-grid">'+field('review:'+e.id,'subject','Review subject',d.subject,'text','required')+select('review:'+e.id,'status','Review decision',A.schema.annotationStatuses,d.status)+area('review:'+e.id,'note','Review note and responsible reviewer',d.note,'class="wide"')+'</div><button type="submit" class="primary">Save source review</button></form>'+details('Retained review history',A.view.annotations.filter(a=>a.editionId===e.id));
  body+='<h2>Original response register</h2>'+table(['Resource','Recorded outcome','Bytes / SHA-256',''],e.pages.map((p,i)=>[esc(p.resource??p.product),esc(p.unavailable?p.reason:'HTTP '+(p.statusObserved??'unrecorded')+' · '+p.records+' records'),esc(p.bytes)+'<br><span class="pin">'+esc(p.sha256)+'</span>',button('source-detail','Receipt',String(i))+button('source-download','Original bytes',String(i))]));
- body+='<div class="actions">'+button('export-edition','Prepare edition export',e.id)+button('new-dataset','Prepare native dataset',e.id)+'</div>';return body;
+ body+='<div class="actions">'+button('export-edition','Prepare edition export',e.id)+button('coastal-analysis','Build coastal workbook',e.id)+button('new-dataset','Prepare native dataset',e.id)+'</div>';return body;
 }
 function renderRows(){
  if(!A.rows)return'<p>Open one of the source tables.</p>';const value=A.rows,fields=value.table==='metadata'?['metadataKind','metadataPath','value','valueType']:value.table==='coverage'?['product','field','value','valueType']:['product','timestamp','value','unit','valueType','quality','inferred','excludedSamples'];
@@ -109,14 +210,123 @@ function renderCompare(){
  const d=draft('compare',{leftId:'',rightId:'',table:'observations'});
  return heading('Compare retained editions','A comparison preserves source changes, window changes and duplicate keys separately. Different station, datum, units or time basis must be reconciled explicitly.')+
  '<form id="compare-form"><div class="form-grid"><label>Earlier edition<select data-form="compare" data-field="leftId"><option value="">Choose</option>'+editionOptions(d.leftId)+'</select></label><label>Later edition<select data-form="compare" data-field="rightId"><option value="">Choose</option>'+editionOptions(d.rightId)+'</select></label>'+select('compare','table','Original table',A.schema.tables.map(t=>({value:t.id,label:t.label})),d.table)+'</div><button type="submit">Compare selected editions</button></form>'+
- (A.lastResult?.schema==='stellar-forge.coops-comparison.v1'?details('Native comparison and complete export identity',A.lastResult):'');
+ (A.lastResult?.schema==='stellar-forge.coops-comparison.v1'?details('Native comparison and complete export identity',A.lastResult):'')+renderAnalysis();
 }
+function renderAnalysis(){
+ const d=draft('analysis',{observationsEditionId:'',predictionsEditionId:'',quality:'all',begin:'',end:'',excludeInferred:false,excludeToleranceFlags:false,maxSigma:'',upperThreshold:'',lowerThreshold:'',name:'',project:'',question:'',interpretation:'',followUp:''});
+ const eligible=product=>A.allEditions.filter(e=>e.query.timeZone==='gmt'&&e.query.products.includes(product)&&(product!=='predictions'||e.query.predictionInterval==='6'))
+  .map(e=>({value:e.id,label:e.profile.label+' · '+e.query.stationId+' · '+e.query.beginDate+' → '+e.query.endDate+' · '+e.query.datum+' / '+e.query.units+' · '+e.id.slice(0,10)}));
+ return '<section class="card"><h2>Coastal residual workbook</h2><p>Select the retained six-minute GMT observation and prediction editions. A capture containing both products can supply both selections. The workbook carries every original response, source outcome, analysis row and analyst note.</p>'+
+ '<form id="analysis-form"><div class="form-grid">'+
+ select('analysis','observationsEditionId','Original water-level edition',[{value:'',label:'Choose an observation edition'},...eligible('water_level')],d.observationsEditionId,'required')+
+ select('analysis','predictionsEditionId','Original tide-prediction edition',[{value:'',label:'Choose a prediction edition'},...eligible('predictions')],d.predictionsEditionId,'required')+
+ select('analysis','quality','Observation quality',['all','verified','preliminary'],d.quality)+
+ field('analysis','begin','Optional analysis start (GMT)',d.begin,'datetime-local','step="360"')+
+ field('analysis','end','Optional analysis end (GMT)',d.end,'datetime-local','step="360"')+
+ select('analysis','excludeInferred','Exclude inferred verified observations',[{value:'false',label:'Keep original inferred observations'},{value:'true',label:'Exclude inferred observations'}],String(d.excludeInferred))+
+ select('analysis','excludeToleranceFlags','Exclude flat/rate/height flags',[{value:'false',label:'Keep original flagged observations'},{value:'true',label:'Exclude tolerance-flagged observations'}],String(d.excludeToleranceFlags))+
+ field('analysis','maxSigma','Optional maximum sigma (source unit)',d.maxSigma,'number','step="any" min="0"')+
+ field('analysis','upperThreshold','Optional upper residual threshold (source unit)',d.upperThreshold,'number','step="any"')+
+ field('analysis','lowerThreshold','Optional lower residual threshold (source unit)',d.lowerThreshold,'number','step="any"')+
+ field('analysis','name','Analyst',d.name)+field('analysis','project','Project',d.project)+
+ area('analysis','question','Engineering question',d.question)+area('analysis','interpretation','Interpretation',d.interpretation)+area('analysis','followUp','Follow-up',d.followUp)+
+ '</div><p>Blank date fields use the full overlapping source window. Thresholds use the selected source unit. Missing and ambiguous observations remain explicit in the complete workbook.</p>'+
+ '<button type="submit" class="primary">Build and retain complete workbook</button></form></section>';
+}
+function analysisPayload(){
+ const d=clone(A.drafts.analysis);
+ if(!d.observationsEditionId||!d.predictionsEditionId)throw new Error('Select both original coastal editions.');
+ const options={quality:d.quality,excludeInferred:d.excludeInferred===true||d.excludeInferred==='true',excludeToleranceFlags:d.excludeToleranceFlags===true||d.excludeToleranceFlags==='true'};
+ for(const key of ['begin','end'])if(d[key])options[key]=/Z$/.test(d[key])?d[key]:d[key]+(/T\d\d:\d\d$/.test(d[key])?':00Z':'Z');
+ for(const key of ['maxSigma','upperThreshold','lowerThreshold'])if(d[key]!==''&&d[key]!==undefined)options[key]=d[key];
+ const analyst=Object.fromEntries(['name','project','question','interpretation','followUp'].map(key=>[key,d[key]??'']));
+ return{observationsEditionId:d.observationsEditionId,predictionsEditionId:d.predictionsEditionId,options,analyst};
+}
+function analysisCompletion(result){
+ modal('Complete coastal workbook','<p>Station '+esc(result.context.station)+' · '+esc(result.context.datum)+' · '+esc(result.context.unitLabel)+' · GMT</p>'+
+ '<p>'+esc(result.coverage.included)+' included pairs across '+esc(result.coverage.expectedSlots)+' original six-minute slots. '+esc(result.files.length)+' complete files are retained in Handoff files.</p>'+
+ '<div class="actions">'+button('download-export','Download complete offline workbook',result.workbookExportId)+button('download-export','Download editable portable workbook',result.portableExportId)+'</div>'+
+ details('Coverage, original source and analysis',result));
+}
+
+function mappingFields(value){return{name:value.name,table:value.table,columns:clone(value.columns),note:value.note};}
+function mappingDocument(){
+ const d=draft('mapping',{}),record=A.view.mappings.find(m=>m.id===d.mappingId)??null;
+ return{schema:'stellar-forge.coops-model-input-mapping-file.v1',role:'operator_mapping',mapping:mappingFields(d),
+  source:{workspaceId:A.view.workspaceId,mappingId:d.mappingId||null,revision:record?.revision??null,sourceFile:d.mappingSourceReceipt??record?.sourceFile??null},
+  note:'Selected column convention only. Original source values and empty/null distinctions remain unchanged. Receiving record selection is explicit.'};
+}
+function mappingFileForm(){
+ const prior=A.mappingImport,targets='<option value="">Distinct new mapping</option>'+options(A.view.mappings,prior?.targetId??'','id','name');
+ modal('Select an original mapping file','<form id="mapping-file-import-form"><label>Original UTF-8 JSON convention (up to 64 KiB)<input id="mapping-file" type="file" accept=".json,application/json"'+(prior?'':' required')+'></label>'+
+  (prior?'<p>Retained incoming file: '+esc(prior.file.filename)+' · '+esc(prior.preview.source.bytes)+' bytes · <span class="pin">'+esc(prior.preview.source.sha256)+'</span>. Select another file to replace this incoming selection.</p>':'')+
+  '<label>Receiving mapping<select id="mapping-file-target">'+targets+'</select></label><p>Any ID inside the file remains original provenance. Choose a current saved mapping here only when its next revision is intended.</p>'+
+  '<label>Intake decision and model owner<textarea id="mapping-file-note" required maxlength="12000">'+esc(prior?.decision??'')+'</textarea></label><button class="primary" type="submit">Inspect file and compare target</button></form>');
+}
+function mappingFileReview(){
+ const incoming=A.mappingImport;if(!incoming)return mappingFileForm();
+ const original=incoming.targetRecord;
+ modal('Review the incoming mapping convention',
+  '<p>The next action opens a browser draft. Save mapping revision remains explicit, with the original file retained in that saved version.</p>'+
+  details('Exact selected input file',incoming.preview.source)+details('Incoming convention',incoming.preview.mapping)+
+  details(original?'Current receiving mapping · revision '+original.revision:'Distinct receiving mapping',original?mappingFields(original):null)+
+  details('Current browser draft that will be replaced',incoming.draftValue)+
+  '<p><strong>Intake decision:</strong> '+esc(incoming.decision)+'</p><div class="actions">'+button('mapping-file-apply','Open reviewed file as draft')+button('mapping-file-recompare','Review another target / file')+'</div>');
+}
+async function inspectMappingFile(form){
+ const file=$('#mapping-file').files[0],targetId=$('#mapping-file-target').value,decision=$('#mapping-file-note').value;
+ if(!decision.trim()||decision.length>12000)throw new Error('Record the intended model owner and intake decision.');
+ const baseDraft=clone(draft('mapping',{})),draftToken=A.draftTokens.mapping;
+ let selected=A.mappingImport?.file??null;
+ if(file){
+  if(!file.size||file.size>(A.schema.limits.mappingFileBytes??65536))throw new Error('Select one nonempty mapping JSON file up to 64 KiB.');
+  const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let start=0;start<bytes.length;start+=8192)binary+=String.fromCharCode(...bytes.subarray(start,start+8192));
+  selected={filename:file.name,base64:btoa(binary)};
+ }
+ if(!selected)throw new Error('Select the original mapping file.');
+ await refresh(false);
+ const targetRecord=targetId?clone(A.view.mappings.find(m=>m.id===targetId)??null):null;
+ if(targetId&&!targetRecord)throw new Error('The chosen receiving mapping is no longer saved.');
+ const preview=await api('/api/mapping-file',{body:selected});
+ if(!form.isConnected||!$('#dialog').open||$('#mapping-file-target')?.value!==targetId||$('#mapping-file-note')?.value!==decision||$('#mapping-file')?.files[0]!==file||
+    A.draftTokens.mapping!==draftToken||recordKey(A.drafts.mapping)!==recordKey(baseDraft)){
+  throw new Error('The file selection or draft changed during inspection. The later inputs were kept; inspect them again.');
+ }
+ A.mappingImport={token:crypto.randomUUID(),file:selected,preview,targetId:targetId||null,targetRecord,decision,draftToken,draftValue:baseDraft,inspectedAt:new Date().toISOString()};
+ await persist();mappingFileReview();
+}
+async function applyMappingFile(){
+ const incoming=A.mappingImport,review=$('#dialog [data-cmd="mapping-file-apply"]');
+ if(!incoming||!review?.isConnected||!$('#dialog').open)throw new Error('Inspect the selected original file first.');
+ await refresh(false);
+ if(A.mappingImport?.token!==incoming.token||!review.isConnected||!$('#dialog').open)throw new Error('The incoming file review changed while its target was refreshed. The later selection was kept; apply it from its current review.');
+ const current=incoming.targetId?A.view.mappings.find(m=>m.id===incoming.targetId)??null:null;
+ if(recordKey(current)!==recordKey(incoming.targetRecord))throw new Error('The receiving mapping changed after inspection. Review another target / file to compare its current revision.');
+ if(A.draftTokens.mapping!==incoming.draftToken||recordKey(A.drafts.mapping)!==recordKey(incoming.draftValue))throw new Error('A later browser draft is open. Keep it or inspect the incoming file again before replacing its fields.');
+ const d={mappingId:incoming.targetId??'',...mappingFields(incoming.preview.mapping),
+  mappingSource:{...clone(incoming.file),decision:incoming.decision},mappingSourceReceipt:clone(incoming.preview.source)};
+ setDraft('mapping',d);A.mappingImport=null;$('#dialog').close();A.tab='mappings';renderPage();await persist();
+ notice('The reviewed file is open as a draft. Edit intended headings, record the decision and explicitly save its mapping revision.');
+}
+function mappingSourceDetails(d){
+ const current=A.view.mappings.find(m=>m.id===d.mappingId),source=d.mappingSourceReceipt??current?.sourceFile;
+ return source?details(d.mappingSource?'Selected incoming file · retained when saved':'Original file behind this mapping revision',source):'';
+}
+function mappingHistory(id){
+ const mapping=A.view.mappings.find(m=>m.id===id);if(!mapping)throw new Error('Choose an original saved mapping.');
+ const versions=[mapping,...(mapping.history??[])];
+ modal('Mapping revisions and original input files',table(['Revision','Convention','Original input file',''],versions.map(m=>[
+  String(m.revision),esc(m.name)+'<br>'+esc(m.updatedAt),m.sourceFile?esc(m.sourceFile.filename)+'<br><span class="pin">'+esc(m.sourceFile.sha256)+'</span>':'Entered directly',
+  (m.sourceFile?button('mapping-source-download','Download exact input',m.id,'data-revision="'+m.revision+'"'):'')+button('mapping-revision-details','Original convention / adaptations',m.id,'data-revision="'+m.revision+'"')
+ ])));
+}
+
 function defaultColumns(){return ['editionId','recordId','sourcePageSha256','stationId','timestamp','value','valueType','unit','datum','timeZone','quality','flags'].map(source=>({source,heading:source}));}
 function renderMappings(){
  const d=draft('mapping',{mappingId:'',name:'',table:'observations',columns:defaultColumns(),note:''});
  return heading('Model-input mappings','Select original columns and explicit receiving headings. Datum, time and unit conversions stay outside this values-preserving exchange.')+
- table(['Mapping','Table','Revision',''],A.view.mappings.map(m=>[esc(m.name),esc(m.table),String(m.revision),button('edit-mapping','Open',m.id)]))+
- '<div class="actions">'+button('new-mapping','New explicit mapping')+'</div><form id="mapping-form"><div class="form-grid">'+field('mapping','name','Mapping name',d.name,'text','required')+select('mapping','table','Separate source product table',['observations','predictions'],d.table)+'</div><p>Keep editionId, recordId and sourcePageSha256 to join the receiving rows to their complete retained source.</p><div id="mapping-columns">'+d.columns.map((c,i)=>'<div class="columns-row"><label>Original field<select data-column="'+i+'" data-part="source">'+A.schema.columns.map(k=>'<option'+(k===c.source?' selected':'')+'>'+esc(k)+'</option>').join('')+'</select></label><label>Receiving heading<input data-column="'+i+'" data-part="heading" value="'+esc(c.heading)+'" required></label>'+button('remove-column','Remove',String(i))+'</div>').join('')+'</div>'+button('add-column','Add source column')+area('mapping','note','Model owner, intended input and explicit decision',d.note)+'<div class="actions"><button class="primary" type="submit">Save mapping revision</button>'+button('mapping-json','Download mapping draft')+'</div></form>';
+ table(['Mapping','Table','Revision',''],A.view.mappings.map(m=>[esc(m.name),esc(m.table),String(m.revision),button('edit-mapping','Open',m.id)+button('mapping-history','Revisions / input file',m.id)]))+
+ '<div class="actions">'+button('new-mapping','New explicit mapping')+button('mapping-file-open','Select mapping file')+(A.mappingImport?button('mapping-file-resume','Resume incoming file review'):'')+'</div><form id="mapping-form"><div class="form-grid">'+field('mapping','name','Mapping name',d.name,'text','required')+select('mapping','table','Separate source product table',['observations','predictions'],d.table)+'</div><p>Keep editionId, recordId and sourcePageSha256 to join the receiving rows to their complete retained source.</p><div id="mapping-columns">'+d.columns.map((c,i)=>'<div class="columns-row"><label>Original field<select data-column="'+i+'" data-part="source">'+A.schema.columns.map(k=>'<option'+(k===c.source?' selected':'')+'>'+esc(k)+'</option>').join('')+'</select></label><label>Receiving heading<input data-column="'+i+'" data-part="heading" value="'+esc(c.heading)+'" required></label>'+button('remove-column','Remove',String(i))+'</div>').join('')+'</div>'+button('add-column','Add source column')+area('mapping','note','Model owner, intended input and explicit decision',d.note)+mappingSourceDetails(d)+'<div class="actions"><button class="primary" type="submit">Save mapping revision</button>'+button('mapping-json','Download mapping draft')+'</div></form>';
 }
 
 function renderDatasets(){
@@ -136,7 +346,7 @@ function renderCustomers(){
 }
 function renderExports(){
  return heading('Retained handoff files','Each export pins the original selected source editions, review notes and mapping revision. Downloads stream the retained bytes directly to the browser.')+
- table(['Original file','Source selection','Identity',''],[...A.view.exports].reverse().map(x=>[esc(x.name)+'<br>'+esc(x.format),esc(x.backfillId??x.editionId??'Comparison')+'<br>'+esc(x.mapping?.name??''),esc(x.bytes)+' bytes<br><span class="pin">'+esc(x.sha256)+'</span>',button('download-export','Download retained file',x.id)+button('export-details','Receipt / source mapping',x.id)]));
+ table(['Original file','Source selection','Identity',''],[...A.view.exports].reverse().map(x=>[esc(x.name)+'<br>'+esc(x.format),esc(x.analysisId??x.backfillId??x.editionId??'Comparison')+'<br>'+esc(x.mapping?.name??''),esc(x.bytes)+' bytes<br><span class="pin">'+esc(x.sha256)+'</span>',button('download-export','Download retained file',x.id)+button('export-details','Receipt / source mapping',x.id)]));
 }
 function renderOperations(){
  return heading('Native operations and request recovery','The original workspace journal reconciles a stable operation ID before checking the current revision. Browser drafts and unresolved requests remain separate from saved source editions.')+
@@ -153,7 +363,7 @@ async function loadEdition(id){
  if(A.pending||A.busy)throw new Error('Resolve the retained action before changing the saved edition selection.');
  const generation=++selectionEpoch,selected=await api('/api/edition?editionId='+encodeURIComponent(id));
  if(generation!==selectionEpoch)return;if(selected.id!==id)throw new Error('The returned source edition differs from the selection.');
- await perform('edition.select',{editionId:id});if(generation!==selectionEpoch)return;
+ A.selectionToken=crypto.randomUUID();await perform('edition.select',{editionId:id},{editionEffect:{token:A.selectionToken,edition:selected}});if(generation!==selectionEpoch)return;
  A.edition=selected;A.rowOffset=0;A.rows=null;A.tab='editions';await loadRows();await persist();renderPage();
 }
 async function loadRows(){
@@ -175,7 +385,7 @@ async function inspectOperation(id){
  const record=await api('/api/operation?operationId='+encodeURIComponent(id));modal('Original native operation',details('Exact native disposition',record));
  return record;
 }
-function pendingDescription(p){return{request:p.request,state:p.state,createdAt:p.createdAt,error:p.error??null};}
+function pendingDescription(p){return{request:p.request,draftEffect:p.draftEffect??null,state:p.state,createdAt:p.createdAt,error:p.error??null};}
 async function reconcilePending(){
  const p=A.pending;if(!p)return;const record=await inspectOperation(p.request.operationId);
  if(record.state==='COMPLETE'){notice('The original request is complete. Retry its exact retained request to receive the original result.');}
@@ -195,19 +405,24 @@ document.addEventListener('submit',event=>{
  const form=event.target;if(!(form instanceof HTMLFormElement))return;event.preventDefault();
  void (async()=>{
   if(form.id==='station-form'){
-   const original=A.drafts.station,d=clone(original);if(!d.profileId)delete d.profileId;const saved=await perform('station.save',d);if(A.drafts.station===original)A.drafts.station.profileId=saved.result.id;await persist();await refresh();return;
+   const d=clone(draft('station',{}));if(!d.profileId)delete d.profileId;await perform('station.save',d,{draftKey:'station'});await refresh();return;
   }
   if(form.id==='capture-form'){
-   const payload=capturePayload(),kind=A.drafts.capture.mode,profile=profilePin(payload.profileId),r=await perform(kind==='backfill'?'backfill.preview':'capture.preview',payload);
-   A.preview={kind,payload:canonical(payload),profile,result:r.result};renderPage();return;
+   const payload=capturePayload(),kind=A.drafts.capture.mode,profile=profilePin(payload.profileId);await perform(kind==='backfill'?'backfill.preview':'capture.preview',payload,{previewEffect:{kind,payload:canonical(payload),profile,token:A.draftTokens.capture}});renderPage();return;
   }
   if(form.id==='source-import-form'){
    const file=$('#source-package').files[0];if(!file||file.size>64*1024*1024)throw new Error('Choose a complete source package up to 64 MiB.');
    const payload={profileId:A.drafts.capture.profileId,label:A.drafts.capture.label||file.name,bundle:await file.text()};await perform('capture.import',payload);await refresh();return;
   }
-  if(form.id==='review-form'){await perform('annotation.save',{editionId:A.edition.id,...clone(A.drafts['review:'+A.edition.id])});renderPage();return;}
+  if(form.id==='review-form'){const key='review:'+A.edition.id;await perform('annotation.save',{editionId:A.edition.id,...clone(draft(key,{}))},{draftKey:key});renderPage();return;}
   if(form.id==='compare-form'){await perform('edition.compare',clone(A.drafts.compare));renderPage();return;}
-  if(form.id==='mapping-form'){const original=A.drafts.mapping,d=clone(original);if(!d.mappingId)delete d.mappingId;const saved=await perform('mapping.save',d);if(A.drafts.mapping===original)A.drafts.mapping.mappingId=saved.result.id;await persist();renderPage();return;}
+  if(form.id==='analysis-form'){
+   const saved=await perform('analysis.export',analysisPayload());
+   if(saved?.result?.schema==='stellar-forge.coops-retained-analysis.v1')analysisCompletion(saved.result);
+   return;
+  }
+  if(form.id==='mapping-file-import-form'){await inspectMappingFile(form);return;}
+  if(form.id==='mapping-form'){const d=draft('mapping',{}),payload={...mappingFields(d),...(d.mappingId?{mappingId:d.mappingId}:{}),...(d.mappingSource?{mappingSource:clone(d.mappingSource)}:{})};await perform('mapping.save',payload,{draftKey:'mapping'});renderPage();return;}
   if(form.id==='dataset-form'){
    const p=clone(A.drafts.dataset);for(const k of ['beginDate','endDate'])if(!p[k])delete p[k];if(p.products.trim())p.products=p.products.split(',').map(x=>x.trim());else delete p.products;
    await perform('dataset.prepare',p);renderPage();return;
@@ -233,15 +448,16 @@ document.addEventListener('click',event=>{
  if(!cmd)return;
  void(async()=>{
   if(cmd==='navigate')return navigate(id);
-  if(cmd==='retry'){await dispatch();await refresh();return;}
+  if(cmd==='draft-use-current'||cmd==='draft-keep')return resolveDraftConflict(cmd==='draft-use-current');
+  if(cmd==='retry'){await dispatch();if(A.edition&&!A.rows)await loadRows();await refresh();return;}
   if(cmd==='inspect-pending')return reconcilePending();
   if(cmd==='return-draft'){
    if(A.pending?.state!=='rejected')throw new Error('Keep an uncertain request until its native disposition is known.');
    A.history.push({...pendingDescription(A.pending),closedAt:new Date().toISOString()});A.pending=null;await persist();renderPending();return;
   }
-  if(cmd==='new-station'){delete A.drafts.station;renderPage();return;}
-  if(cmd==='reference-station'){A.drafts.station={profileId:'',stationId:'9410230',label:'La Jolla (Scripps Pier) public reference',owner:'',note:'Selected regional public-source reference: January 1–7, 2025, water_level, MLLW, metric, GMT. Station metadata and observations will come from the original NOAA capture.',active:true};await persist();renderPage();return;}
-  if(cmd==='edit-station'){const p=A.view.stations.find(p=>p.id===id);A.drafts.station={profileId:p.id,stationId:p.stationId,label:p.label,owner:p.owner,note:p.note,active:p.active};await persist();renderPage();return;}
+  if(cmd==='new-station'){clearDraft('station');renderPage();await persist();return;}
+  if(cmd==='reference-station'){setDraft('station',{profileId:'',stationId:'9410230',label:'La Jolla (Scripps Pier) public reference',owner:'',note:'Selected regional public-source reference: January 1–7, 2025, water_level, MLLW, metric, GMT. Station metadata and observations will come from the original NOAA capture.',active:true});await persist();renderPage();return;}
+  if(cmd==='edit-station'){const p=A.view.stations.find(p=>p.id===id);if(!p)throw new Error('The selected station profile is no longer saved.');setDraft('station',{profileId:p.id,stationId:p.stationId,label:p.label,owner:p.owner,note:p.note,active:p.active});await persist();renderPage();return;}
   if(cmd==='reference-dates'){Object.assign(A.drafts.capture,{beginDate:'2025-01-01',endDate:'2025-01-07',label:'La Jolla public source reference · January 1–7, 2025',products:['water_level'],units:'metric',timeZone:'gmt',datum:'MLLW',predictionInterval:'6',mode:'capture'});A.preview=null;await persist();renderPage();return;}
   if(cmd==='start-capture'){
    const p=capturePayload();if(!A.preview||A.preview.payload!==canonical(p)||A.preview.profile!==profilePin(p.profileId)||A.preview.kind!==A.drafts.capture.mode)throw new Error('Review the exact current request plan before starting it.');
@@ -264,13 +480,28 @@ document.addEventListener('click',event=>{
   if(cmd==='row-detail'){const row=A.rows.rows[Number(id)];modal('Original projected record',details('Value, datum, native flags and exact source locator',row));return;}
   if(cmd==='source-detail'){modal('Original response receipt',details('Native capture receipt',A.edition.pages[Number(id)]));return;}
   if(cmd==='source-download')return download({kind:'source',id:A.edition.id,page:Number(id)});
+  if(cmd==='coastal-analysis'){
+   const e=A.allEditions.find(e=>e.id===id)??A.edition;
+   if(!A.drafts.analysis)renderAnalysis();
+   if(e?.query.timeZone==='gmt'){
+    if(e.query.products.includes('water_level'))A.drafts.analysis.observationsEditionId=e.id;
+    if(e.query.products.includes('predictions')&&e.query.predictionInterval==='6')A.drafts.analysis.predictionsEditionId=e.id;
+   }
+   await persist();return navigate('compare');
+  }
   if(cmd==='export-edition'){exportDialog('edition',id);return;}
   if(cmd==='new-dataset'){A.drafts.dataset={editionId:id,table:A.table,name:A.edition.profile.label+' · '+A.table,beginDate:'',endDate:'',products:''};return navigate('datasets');}
-  if(cmd==='new-mapping'){delete A.drafts.mapping;renderPage();return;}
-  if(cmd==='edit-mapping'){const m=A.view.mappings.find(m=>m.id===id);A.drafts.mapping={mappingId:m.id,name:m.name,table:m.table,columns:clone(m.columns),note:m.note};await persist();renderPage();return;}
+  if(cmd==='mapping-file-open'||cmd==='mapping-file-recompare')return mappingFileForm();
+  if(cmd==='mapping-file-resume')return mappingFileReview();
+  if(cmd==='mapping-file-apply')return applyMappingFile();
+  if(cmd==='mapping-history')return mappingHistory(id);
+  if(cmd==='mapping-source-download')return download({kind:'mapping-source',id,page:Number(control.dataset.revision)});
+  if(cmd==='mapping-revision-details'){const m=A.view.mappings.find(m=>m.id===id),r=[m,...(m?.history??[])].find(m=>m?.revision===Number(control.dataset.revision));if(!r)throw new Error('The selected original mapping revision is unavailable.');modal('Original mapping revision',details('Saved convention, exact source and adaptations',r));return;}
+  if(cmd==='new-mapping'){clearDraft('mapping');renderPage();await persist();return;}
+  if(cmd==='edit-mapping'){const m=A.view.mappings.find(m=>m.id===id);if(!m)throw new Error('The selected mapping is no longer saved.');setDraft('mapping',{mappingId:m.id,name:m.name,table:m.table,columns:clone(m.columns),note:m.note});await persist();renderPage();return;}
   if(cmd==='add-column'){A.drafts.mapping.columns.push({source:'value',heading:'value'});await persist();renderPage();return;}
   if(cmd==='remove-column'){A.drafts.mapping.columns.splice(Number(id),1);await persist();renderPage();return;}
-  if(cmd==='mapping-json'){downloadJSON('coastal-model-input-mapping.json',A.drafts.mapping);return;}
+  if(cmd==='mapping-json'){downloadJSON('coastal-model-input-mapping.json',mappingDocument());return;}
   if(cmd==='dataset-details'){modal('Original dataset and source identity',details('Native dataset receipt',A.view.datasets.find(d=>d.id===id)));return;}
   if(cmd==='query-dataset'){modal('Query the original SF30 dataset','<form id="query-form" data-id="'+esc(id)+'"><label>Native URL-encoded fields, filters, order or cursor<textarea name="query">limit=20</textarea></label><button type="submit">Run original dataset query</button></form>');return;}
   if(cmd==='choose-release'){A.drafts.release??={origin:'',path:'/coastal',network:'stellar:testnet',asset:'',amount:'',payTo:'',maxTimeoutSeconds:'60'};A.drafts.release.datasetId=id;await persist();renderPage();return;}
@@ -298,7 +529,7 @@ window.addEventListener('beforeunload',event=>{if(A.pending){event.preventDefaul
 async function initialize(){
  try{
   A.schema=await api('/api/schema');A.db=await database();A.key=A.schema.workspaceId;adoptView(await api('/api/view'));
-  const saved=await stored();if(saved){if(saved.workspaceId!==A.view.workspaceId)throw new Error('The retained browser journal belongs to another workspace.');A.drafts=saved.drafts??{};A.pending=saved.pending??null;A.history=saved.history??[];A.tab=saved.tab??'overview';A.table=saved.table??'observations';if(saved.edition){A.edition=await api('/api/edition?editionId='+encodeURIComponent(saved.edition));}}
+  const saved=await stored();if(saved){if(saved.workspaceId!==A.view.workspaceId)throw new Error('The retained browser journal belongs to another workspace.');A.drafts=saved.drafts??{};A.draftTokens=saved.draftTokens??{};A.draftBases=saved.draftBases??{};A.selectionToken=saved.selectionToken??null;A.preview=saved.preview??null;A.mappingImport=saved.mappingImport??null;A.pending=saved.pending??null;A.history=saved.history??[];A.tab=saved.tab??'overview';A.table=saved.table??'observations';if(saved.edition){A.edition=await api('/api/edition?editionId='+encodeURIComponent(saved.edition));}}
   A.allEditions=[...A.view.editions];renderPage();if(A.edition){await loadRows();renderPage();}
   if(A.pending)notice('An original request is retained. Inspect its native outcome, then retry the same request if needed.');
   setInterval(()=>{if(A.polling||A.busy||document.hidden)return;A.polling=true;void refresh(false).catch(e=>notice(e.message,true)).finally(()=>A.polling=false);},2500);

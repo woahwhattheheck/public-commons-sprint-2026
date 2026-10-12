@@ -6,6 +6,16 @@ One customer call runs one point-in-time search and gathers its pages before the
 
 Agent hosts can use [merchant MCP](../../../../stellar-forge/mcp-merchant-operator/OPENSEARCH_WORKSPACE.md) to author queries, maintain relevance judgments, operate managed releases and deliver original customer files. Its 44 OpenSearch tools use the existing source, plan, workspace and per-alias deployment store. After preparing a query, stage and compare its retained release, select and run it, generate the customer client from the actual seller, then use the same lifecycle for upgrades and rollback. Intact customer exports can recover their original completion manifest through the same alias. Original request recovery and SHA-pinned result, report, client and archive reads continue from the saved records.
 
+## Material catalogs and supplier delivery
+
+Use **Material catalogs** in the original workspace to upload a complete supplier file, map stable identifiers and source fields, inspect a full or delta edition, and keep the selected customer catalog. **Supplier delivery** uses that same edition for recipient settings, source-linked product corrections and complete delivery files.
+
+The [native ETIM xChange guide](catalog/supplier/xchange/GUIDE.md) covers the complete xChange 2.0 JSON message, supplier headers, exact numeric values, products and trade items. Select **ETIM xChange 2.0** or the **2BA xChange 2.0** recipient profile. The operator can review recipient additions, changes, retained records and removals, then export native JSON, complete recipient JSONL and impact CSV. A CHANGE message refers to its selected previous catalogue version; a FULL message applies its full membership to that recipient state.
+
+The [supplier guide](catalog/supplier/GUIDE.md) covers the existing Sonepar/BMEcat profiles. Both workflows keep reasoned corrections and immutable reviews alongside original source files. Their complete catalog handover preserves the receiving operator's newer work when an earlier delivery is replayed.
+
+Agents and scripts use the [material/supplier MCP and typed client](../../../../stellar-forge/mcp-merchant-operator/OPENSEARCH_MATERIALS.md). The [complete xChange receiving operation](receiving/XCHANGE_NATIVE.md) runs the unchanged publisher example through the browser API, source CLI, full customer handover and merchant MCP continuation.
+
 ## Publish a captured edition
 
 The [captured-edition dataset operator](CAPTURED-DATASETS.md) turns an edition already saved in the search workspace into an independent dataset product. It retains the original query, input, result bytes, document identities, exact-integer metadata and capture date alongside the typed CSV projection. Customers query the saved rows through the original versioned dataset engine.

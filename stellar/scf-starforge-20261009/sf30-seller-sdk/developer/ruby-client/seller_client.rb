@@ -18,7 +18,9 @@ module Starforge
   INTENT = /\A[A-Za-z0-9._:-]{1,128}\z/
   CALL_ID = /\A[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}\z/
   ORIGINAL_FILES = %w[seller-client.mjs seller-client.d.mts seller-openapi.json package.json README.md].freeze
-  RUBY_FILES = %w[seller_client.rb seller_client.rbs seller-client-bridge.mjs seller-buyer-bridge.mjs seller-contract.json rails_receiving.rb customer.rb RUBY.md].freeze
+  LEGACY_RUBY_FILES = %w[seller_client.rb seller_client.rbs seller-client-bridge.mjs seller-buyer-bridge.mjs seller-contract.json rails_receiving.rb customer.rb RUBY.md].freeze
+  LEGACY_DATASET_RUBY_FILES = %w[seller_client.rb seller_client.rbs seller-client-bridge.mjs seller-buyer-bridge.mjs seller-contract.json rails_receiving.rb customer.rb RUBY.md seller-dataset-bridge.mjs dataset_delivery.rb dataset_receiving.rb dataset_customer.rb rails_dataset.rb DATASETS.md examples/dataset_lifecycle.rb examples/rails_dataset/create_dataset_import_tables.rb examples/rails_dataset/models.rb examples/rails_dataset/import_dataset_job.rb examples/rails_dataset/commission.rb examples/rails_dataset/mapping.json examples/rails_dataset/README.md].freeze
+  RUBY_FILES = (LEGACY_DATASET_RUBY_FILES + %w[native_dataset.rb native_dataset_receiving.rb native_dataset_customer.rb NATIVE_DATASETS.md examples/native_dataset_lifecycle.rb]).freeze
 
   class Error < StandardError
     attr_reader :code, :call_id, :intent_id
@@ -177,14 +179,19 @@ module Starforge
       Files.need(@environment.all? { |k,v| k.is_a?(String) && v.is_a?(String) && !k.include?("\0") && !v.include?("\0") },
         "RUBY_ENVIRONMENT_INVALID")
     end
-    def signal(waiter, name)
-      Process.kill(name, waiter.pid) if waiter.alive?
+    def signal(waiter, name, process_group: false)
+      Process.kill(name, process_group ? -waiter.pid : waiter.pid) if process_group || waiter.alive?
     rescue Errno::ESRCH
       # The child completed between the liveness read and the signal.
     end
-    def run(script, arguments = [], input: "".b, timeout: 420, limit: MAX_INPUT, cancel: nil, inherit_stdin: false)
+    def run(script, arguments = [], input: "".b, timeout: 420, limit: MAX_INPUT, cancel: nil, inherit_stdin: false,
+      interpreter_arguments: [], process_group: false)
       Files.need(timeout.is_a?(Numeric) && timeout.finite? && timeout > 0 && timeout <= 7200, "RUBY_TIMEOUT_INVALID")
-      Files.need(arguments.all? { |a| a.is_a?(String) && !a.include?("\0") }, "RUBY_ARGUMENTS_INVALID")
+      Files.need(arguments.is_a?(Array) && interpreter_arguments.is_a?(Array) &&
+        (arguments + interpreter_arguments).all? { |a| a.is_a?(String) && !a.include?("\0") } &&
+        [true,false].include?(process_group), "RUBY_ARGUMENTS_INVALID")
+      spawn_options = {unsetenv_others: true}
+      spawn_options[:pgroup] = true if process_group
       raise Error, "RUBY_CANCELLED_BEFORE_START" if cancel&.cancelled?
       input = input.b
       stdout, stderr, issue, stop_at = "".b, "".b, nil, nil
@@ -195,13 +202,13 @@ module Starforge
           Files.need(input.empty?, "RUBY_NATIVE_STDIN_CONFLICT")
           o,out_writer = IO.pipe
           e,error_writer = IO.pipe
-          pid = Process.spawn(@environment,@node,File.realpath(script),*arguments,
-            unsetenv_others: true,in: $stdin,out: out_writer,err: error_writer)
+          pid = Process.spawn(@environment,@node,*interpreter_arguments,File.realpath(script),*arguments,
+            **spawn_options,in: $stdin,out: out_writer,err: error_writer)
           waiter = Process.detach(pid)
           out_writer.close
           error_writer.close
         else
-          i,o,e,waiter = Open3.popen3(@environment,@node,File.realpath(script),*arguments,unsetenv_others: true)
+          i,o,e,waiter = Open3.popen3(@environment,@node,*interpreter_arguments,File.realpath(script),*arguments,**spawn_options)
         end
         [i,o,e].compact.each(&:binmode)
         position, readers = 0, [o,e]
@@ -211,12 +218,12 @@ module Starforge
           issue ||= "RUBY_NATIVE_CANCELLED" if cancel&.cancelled?
           issue ||= "RUBY_NATIVE_TIMEOUT" if now - started >= timeout
           if issue && stop_at.nil?
-            signal(waiter, "TERM")
+            signal(waiter, "TERM",process_group: process_group)
             stop_at = now + 30
             i.close if i && !i.closed?
           end
           if stop_at && now >= stop_at
-            signal(waiter, "KILL")
+            signal(waiter, "KILL",process_group: process_group)
             readers.each { |stream| stream.close unless stream.closed? }
             readers.clear
             break
@@ -251,15 +258,18 @@ module Starforge
       ensure
         if waiter&.alive?
           begin
-            Process.kill("TERM", waiter.pid)
+            signal(waiter, "TERM",process_group: process_group)
             unless waiter.join(30)
-              Process.kill("KILL", waiter.pid)
+              signal(waiter, "KILL",process_group: process_group)
               waiter.join
             end
           rescue Errno::ESRCH
             waiter.join
           end
         end
+        # A read-only Python receiver and its original Node scanner share this
+        # dedicated group. Retain the ordinary buyer terminal process behavior.
+        signal(waiter, "KILL",process_group: true) if process_group && waiter
         [i,o,e,out_writer,error_writer].compact.each { |stream| stream.close unless stream.closed? }
       end
     rescue Errno::ENOENT, Errno::EACCES
@@ -324,15 +334,29 @@ module Starforge
       base = Files.parse(base_bytes)
       Files.need(Files.hash(base_bytes) == @manifest["originalManifestSha256"] &&
         base["sourceSha256"] == @manifest["sourceSha256"], "RUBY_ORIGINAL_EXPORT_CHANGED")
-      [[ORIGINAL_FILES,base["files"]],[RUBY_FILES,@manifest["files"]]].each do |names,entries|
+      selected = [LEGACY_RUBY_FILES,LEGACY_DATASET_RUBY_FILES,RUBY_FILES].find { |files|
+        @manifest["files"].is_a?(Array) && @manifest["files"].length == files.length
+      }
+      Files.need(selected, "RUBY_PACKAGE_INCOMPLETE")
+      [[ORIGINAL_FILES,base["files"]],[selected,@manifest["files"]]].each do |names,entries|
         Files.need(entries.is_a?(Array) && entries.map { |item| item["name"] } == names, "RUBY_PACKAGE_INCOMPLETE")
         entries.each do |entry|
-          raw = Files.read(File.join(@directory,entry.fetch("name")))
+          path = File.join(@directory,entry.fetch("name"))
+          Files.directory(File.dirname(path),private: false)
+          raw = Files.read(path)
           Files.need(entry["bytes"].is_a?(Integer) && raw.bytesize == entry["bytes"] &&
             Files.hash(raw) == entry["sha256"], "RUBY_PACKAGE_FILE_CHANGED")
         end
       end
       true
+    end
+    def dataset_available?
+      verify_package!
+      @manifest["files"].any? { |entry| entry["name"] == "seller-dataset-bridge.mjs" }
+    end
+    def native_dataset_available?
+      verify_package!
+      @manifest["files"].any? { |entry| entry["name"] == "native_dataset.rb" }
     end
     def source
       Files.parse(Files.json(@snapshot.slice("schema","sourceSha256","mode","title","origin")))
@@ -469,8 +493,11 @@ module Starforge
             if File.exist?(marker)
               raise Error.new("RUBY_NATIVE_REPLY_UNAVAILABLE_USE_RECOVER",call_id: call_id,intent_id: intent_id)
             end
+            dataset_call = action.start_with?("dataset.")
+            Files.need(!dataset_call || @client.dataset_available?, "RUBY_DATASET_PACKAGE_REQUIRED")
+            bridge = dataset_call ? "seller-dataset-bridge.mjs" : "seller-buyer-bridge.mjs"
             Files.once(marker,Files.json({"requestSha256"=>Files.hash(raw),"callId"=>call_id}))
-            run = @runner.run(File.join(@client.directory,"seller-buyer-bridge.mjs"),
+            run = @runner.run(File.join(@client.directory,bridge),
               [File.join(scope,"request.json")],timeout: @timeout,limit: @output_limit,cancel: token,inherit_stdin: true)
             Files.once(File.join(scope,"process.json"),Files.json({"exitCode"=>run[:status].exitstatus,
               "signal"=>run[:status].termsig,"error"=>run[:error]}))

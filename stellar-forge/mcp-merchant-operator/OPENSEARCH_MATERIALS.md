@@ -2,7 +2,7 @@
 
 The OpenSearch merchant operator exposes the original material catalogue and supplier submission workspace to agents, scripts and the operator CLI. It retains input files, exact material identifiers and units, mapping revisions, edition changes, customer decisions, supplier corrections and delivered files in the same workspace used by the browser and source CLI.
 
-Use this interface to complete a supplier intake, review and correct its recipient submission, deliver the original BMEcat and source bundle, and reopen that delivery at the receiving operator. The retained request journal also supports interrupted calls and later receiving of the same result.
+Use this interface to complete a supplier intake, review and correct its recipient submission, deliver the original BMEcat or native ETIM xChange files and source bundle, and reopen that delivery at the receiving operator. The retained request journal also supports interrupted calls and later receiving of the same result.
 
 ## Configure the existing host
 
@@ -33,13 +33,13 @@ Run the maintained merchant MCP host with its existing bearer-token environment.
 
 ## Complete operating workflow
 
-1. Read `material_inputs`, then `material_upload` the selected original file with a retained `requestId`, `inputId`, complete source format and provenance. Retain the returned source ID. Supported original formats are CSV, TSV, JSONL and JSON; JSON may select its original `rowsPath`.
+1. Read `material_inputs`, then `material_upload` the selected original file with a retained `requestId`, `inputId`, complete source format and provenance. Retain the returned source ID. Supported original formats are CSV, TSV, JSONL, JSON and native ETIM xChange JSON. JSON may select its original `rowsPath`; xChange uses `format:{"kind":"xchange-json"}` and retains its complete nested message.
 2. Save the complete catalogue mapping with `material_save`: `title`, `tenantId`, `mapping` and a retained request ID. A new catalogue omits both `catalogId` and `expectedRevision`; an update supplies both. Mapping expressions, joins and lookups use the existing catalogue schema. Material identifiers remain text, and unit ratios remain exact decimal/rational data.
 3. `material_preview` binds the source to the current catalogue revision. Full and delta modes retain the original edition and changes. Read `material_edition`, every `material_rows` and `material_changes` page, and any individual `material_get` record needed for a decision. `material_select` supplies the exact catalogue revision, edition ID and its `reviewSha256`.
 4. For customer matching, use `material_suggest` with the actual description and customer. Inspect the complete returned material, then save `material_decision` with its `expectedMaterialSha256`, current catalogue revision and `APPROVED` or `REJECTED`. Updates also identify the existing decision and revision. The raw decision history retains what was decided; current suggestions expose whether that decision still matches the selected material. `material_quantity` takes an exact decimal string, the original unit and current material hash.
-5. Read `supplier_templates` and the complete original product schema, then `supplier_save` a submission with the selected catalogue/edition, complete recipient `profile` and `bindings`. A new plan omits both `planId` and `expectedRevision`; an update supplies both. Read the exact plan and `supplier_product` projection before correcting it.
+5. Read `supplier_templates` with the intended native `target` when applicable and the complete original product schema, then `supplier_save` a submission with the selected catalogue/edition, complete recipient `profile` and `bindings`. A new plan omits both `planId` and `expectedRevision`; an update supplies both. Read the exact plan and `supplier_product` projection before correcting it.
 6. `supplier_correction` includes the plan revision, material hash, base-product hash, current correction revision and the complete reasoned patch list. A new correction uses `expectedRevision:0`. An empty patch list clears that existing correction while keeping its history. Save changed source mappings as new catalogue revisions and review their actual edition; obsolete correction bases must be reconciled against the updated product.
-7. `supplier_review` freezes the submission at its selected plan revision. Read the full review and all `supplier_rows` pages, including global findings and individual `supplier_row` records. `supplier_export` selects the review's original SHA-256 and required delivery formats. The original recipient/product validators determine whether BMEcat is ready to export.
+7. `supplier_review` freezes the submission at its selected plan revision. Read the full review and all `supplier_rows` pages, including global findings and individual `supplier_row` records. `supplier_export` selects the review's original SHA-256 and required delivery formats. For native xChange, read every `supplier_recipient_rows` page as well. The original recipient/product validators determine whether the selected native delivery is ready to export.
 8. `material_export` retains the complete selected material formats and `catalog-bundle.jsonl`. The bundle carries the original source bytes, catalogue history, mappings, editions, customer decisions and supplier records. Download the complete export into a private receiving directory, declare the bundle as a host input, and call `material_receive` on the receiving alias.
 9. Reopen the receiver's catalogues, supplier plan/review/corrections and customer decisions. Continue using the same original IDs and request IDs. Receiving an earlier complete bundle follows the maintained catalogue import rules and preserves newer receiving work.
 10. Use `material_draft` to turn the selected catalogue into an original OpenSearch query draft. Its variants are `baseline` and `identifiers`. Continue actual query capture, evaluation and paid merchant preparation through the existing tools in [OPENSEARCH_WORKSPACE.md](OPENSEARCH_WORKSPACE.md). Close the original workspace handle when the caller has finished its work.
@@ -56,9 +56,9 @@ A committed operation whose full result exceeds the one MiB tool budget retains 
 
 Material formats: `catalog.csv`, `catalog.jsonl`, `approved-matches.csv`, `index.json`, `bulk.ndjson`, `delta.ndjson`, `facets.json`, `search-client.ts`, `source.json`, `catalog-bundle.jsonl`.
 
-Supplier formats: `review.json`, `issues.csv`, `products.jsonl`, `bmecat.xml`.
+Supplier formats: `review.json`, `issues.csv`, `products.jsonl`, `bmecat.xml`, `xchange.json`, `recipient.jsonl`, `impact.csv`. BMEcat belongs to the original BMEcat profile; the three native xChange formats belong to a native xChange review.
 
-Supply a nonempty selection without repeated formats. The request order is preserved. Each completed export has an original `exportId`, `manifestSha256`, manifest-file identity and manifest with the exact selection and every delivered filename, media type, byte count and SHA-256. Format-order prefixes keep filenames distinct. The manifest identifies the original workspace, request hash and immutable review/edition pins.
+Supply a nonempty selection without repeated formats. The request order is preserved. Match a format to the same index in `manifest.selection.formats` and `manifest.files`: the original descriptor controls the filename, such as `ETIM_XCHANGE_<review>_FULL.json` or `material-catalog-<id>-r<revision>.jsonl`. Each completed export has an original `exportId`, `manifestSha256`, manifest-file identity and manifest with the exact selection and every delivered filename, media type, byte count and SHA-256. Format-order prefixes keep filenames distinct. The manifest identifies the original workspace, request hash and immutable review/edition pins.
 
 Export generation reads a single transaction on the original catalogue database. Before constructing file bodies, it pins the complete selected records, including customer decisions and supplier/history records used by bundle exports, on the original operation. New manifests carry this `sourceSnapshotSha256`. An unsealed retry uses the same request and requires the same complete source pin; sealed files remain adoptable after later edits. It streams full source/export bodies into private files and seals their complete manifest before publication. If publication is interrupted, replay the original export request to finish those same staged files. Downloading uses the maintained retained-file reader owned by the original workspace host.
 
@@ -111,7 +111,7 @@ A material export request supplies its original `requestId`, `catalogId`, `expec
 
 `createOpenSearchMaterialClient({workspace,client})` reuses an existing maintained native client with `endpoint` and `call`. `new OpenSearchMaterialClient(client,workspace,callOptions)` uses the same interface. Constructing a client initializes transport; opening and closing the original workspace remain explicit.
 
-`pages(method,args)` supports material/supplier lists and histories, material rows/changes/facets/suggestions and supplier rows. It yields every full page, follows the original continuation, and rejects repeated or nonadvancing positions. `inspectExport(exportId)` reads and verifies the selected original manifest. `downloadExport` receives the complete export into the given directory.
+`pages(method,args)` supports material/supplier lists and histories, material rows/changes/facets/suggestions and supplier product/recipient rows. It yields every full page, follows the original continuation, and rejects repeated or nonadvancing positions. `inspectExport(exportId)` reads and verifies the selected original manifest. `downloadExport` receives the complete export into the given directory.
 
 ## Operator CLI
 
@@ -164,7 +164,7 @@ All tools below require a configured `workspace`. The SDK offers matching camelC
 | `material_draft` | `requestId`, `catalogId`, `expectedRevision`, `index` |
 | `material_receive` | `requestId`, `inputId` |
 | `material_export` | `requestId`, `catalogId`, `expectedCatalogRevision`, `formats` |
-| `supplier_templates` | None |
+| `supplier_templates` | Optional `target`: `xchange-2.0` or `2ba-xchange-2.0`; omission selects the original BMEcat template |
 | `supplier_list` | `collection` |
 | `supplier_plan` | `planId` |
 | `supplier_history` | `kind`, `id` |
@@ -172,6 +172,7 @@ All tools below require a configured `workspace`. The SDK offers matching camelC
 | `supplier_correction_get` | `correctionId` |
 | `supplier_review_get` | `reviewId` |
 | `supplier_rows` | `reviewId` |
+| `supplier_recipient_rows` | `reviewId`; optional `kind`, `change`, `search`, `offset`, `limit` |
 | `supplier_row` | `reviewId`, `materialKey` |
 | `supplier_save` | `requestId`, `catalogId`, `editionId`, `title`, `profile`, `bindings` |
 | `supplier_correction` | `requestId`, `planId`, `expectedPlanRevision`, `materialKey`, `expectedMaterialSha256`, `expectedBaseProductSha256`, `expectedRevision`, `patches` |
@@ -181,6 +182,38 @@ All tools below require a configured `workspace`. The SDK offers matching camelC
 | `material_export_file` | `exportId`, `file`, `expectedManifestSha256`, `expectedSha256`, `offset`, `limit` |
 | `material_export_file_release` | `exportId`, `readId` |
 
+## Native ETIM xChange recipient workflow
+
+Select the native template before material mapping:
+
+~~~js
+const template = await client.supplierTemplates({ target: 'xchange-2.0' });
+// template.catalogMapping retains the complete source context.
+const rows = client.pages('supplierRecipientRows', {
+  reviewId: selectedReview.id,
+  kind: 'all',
+  change: 'all',
+  search: '',
+  limit: 50
+});
+for await (const page of rows) {
+  // page.reviewSha256 and page.recipient identify this immutable target state.
+  for (const row of page.rows) {
+    // Inspect the complete original supplier/product/trade identity and before/after values.
+  }
+}
+~~~
+
+A recipient page returns the original review ID/hash, complete recipient summary, total and continuation. Its kinds are all/product/tradeItem; actions are all/added/changed/unchanged/expired/deleted. Search uses original identifier, supplier key or supplier name.
+
+A native profile retains whole catalogue-header and supplier-header overrides with reasons. Product patches address original `/xChange/product/...` paths. Actual numeric JSON fields retain string lexemes with their JSON Pointer map in `/xChange/numberTokens`; decimal strings already defined as strings in the ETIM schema stay ordinary strings. The typed definitions distinguish the profile, header overrides, exact token map and full recipient records.
+
+CHANGE selects a previous review in the same catalog, tenant and target, with the exact original reference version. Supplied product and trade-item bodies are complete records; unlisted CHANGE records remain in the recipient state. FULL marks missing products expired and removes absent trade items. The native message, complete recipient JSONL and impact CSV describe those distinct outputs. The original source-bound 2BA status mapping and modelling-class selections travel with its explicit profile.
+
+Read the [full operator and source-rule guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/supplier/xchange/GUIDE.md) for original fields and the current recipient requirements. The full bundle carries the source bytes and every prior review; import rederives complete recipient state and findings before adopting it.
+
 ## Full native receiving
 
 The [native receiving guide](receiving/OPENSEARCH_MATERIALS_NATIVE.md) runs the complete published ETIM source through its original supplier delivery, this merchant MCP, the typed client and CLI, full exports, interrupted download, bundle receiving and closed/reopened records. It uses the original public supplier source and original request IDs across continuation. Read the guide for the original directory, operation and final receipt.
+
+The [xChange receiving operation](../../stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/receiving/XCHANGE_NATIVE.md) adds the complete original xChange publisher example, precise numeric corrections, cross-plan FULL/CHANGE, recipient pages and the same host-restart/full-bundle receiving lifecycle.

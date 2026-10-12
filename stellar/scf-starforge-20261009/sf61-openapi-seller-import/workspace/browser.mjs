@@ -9,11 +9,13 @@ import { createTransportPanel, createTransportDelivery, appendTransportReview, r
 import { createHarPanel, mergeHarMerchantPlan } from '/har-browser.mjs';
 import { createRouteSheetPanel } from './route-sheet-browser.mjs';
 import { routeKey } from './route-sheet-model.mjs';
+import { createOperationPolicyPanel } from './operation-policy-browser.mjs';
+import { operationPolicyCanonical } from './operation-policy-model.mjs';
 const $=id=>document.getElementById(id);
 const countLabel=(n,label)=>n+' '+label+(n===1?'':'s');
 const token=location.hash.slice(1);
 $('migration-link').href='/migrations/#'+token;
-let specText='', inspection=null, routeFields=[], selectedPackage=null, busy=false, customerOpen=false, revisionDesk=null, connections=null, postmanPanel=null, transportPanel=null, transportDelivery=null, lastPreview=null, harPanel=null, capturedSource=null, routeSheet=null, workspaceOutput='';
+let specText='', inspection=null, routeFields=[], selectedPackage=null, busy=false, customerOpen=false, revisionDesk=null, connections=null, postmanPanel=null, transportPanel=null, transportDelivery=null, lastPreview=null, harPanel=null, capturedSource=null, routeSheet=null, workspaceOutput='', operationPolicies=null, appliedOperationPolicy=null;
 const notice=(message,error=false)=>{$('notice').textContent=message;$('notice').classList.toggle('error',error);};
 const make=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
 async function api(path,body) {
@@ -34,10 +36,11 @@ function available() {
   $('start-preview').disabled=busy||!selectedPackage||customerOpen;
   $('start-native').disabled=busy||!selectedPackage||customerOpen||!$('facilitator').value.trim();
   revisionDesk?.available(busy);connections?.available(busy);postmanPanel?.refresh(busy);harPanel?.refresh(busy);
-  transportPanel?.available(busy);transportDelivery?.available(busy);routeSheet?.available(busy);
+  transportPanel?.available(busy);transportDelivery?.available(busy);routeSheet?.available(busy);operationPolicies?.available(busy);
   if(!busy)for(const route of routeFields)route.toggle();
 }
 function dirty() {
+  appliedOperationPolicy=null;operationPolicies?.changed();
   routeSheet?.changed();
   selectedPackage=null;lastPreview=null;transportDelivery?.clear();
   $('run-label').textContent='Save this configuration as a new package before starting it.';
@@ -175,6 +178,39 @@ routeSheet=createRouteSheetPanel({container:$('route-worksheet'),make,field,sele
     route.card.scrollIntoView({behavior:'smooth',block:'center'});route.check.focus({preventScroll:true});
   }
 });
+operationPolicies=createOperationPolicyPanel({container:$('operation-policies'),make,field,selectField,api,act,notice,
+  context:()=>inspection?{workspace:workspaceOutput,specText,sourceSha256:inspection.sourceSha256,
+    operations:inspection.operations,plan:planFromForm(),selectedPackage,...(capturedSource?{capturedSource}:{})}:null,
+  async apply(result,expected) {
+    if(specText!==expected.specText||operationPolicyCanonical(planFromForm())!==operationPolicyCanonical(expected.plan)||
+      operationPolicyCanonical(capturedSource??null)!==operationPolicyCanonical(expected.capturedSource??null))
+      throw new Error('Merchant settings changed. Review this policy against the current configuration.');
+    const original=planFromForm(),nodes=[...$('routes').childNodes],fields=routeFields;
+    if(operationPolicyCanonical({...original,operations:[]})!==operationPolicyCanonical({...result.plan,operations:[]}))
+      throw new Error('The policy review changes settings outside its selected operations. Review the current merchant configuration.');
+    try {
+      drawRoutes(result.plan.operations);
+      const changed=new Set(result.changes.map(row=>routeKey(row))),retained=new Map(fields.filter(row=>!changed.has(routeKey(row.op))).map(row=>[routeKey(row.op),row]));
+      routeFields=routeFields.map(row=>{const previous=retained.get(routeKey(row.op));if(!previous)return row;row.card.replaceWith(previous.card);return previous;});
+      if(operationPolicyCanonical(planFromForm())!==operationPolicyCanonical(result.plan))
+        throw new Error('This exact policy uses native settings or omissions that the editable form represents differently. Save the reviewed merchant package directly.');
+    } catch(error) {$('routes').replaceChildren(...nodes);routeFields=fields;throw error;}
+    dirty();appliedOperationPolicy=structuredClone(result.operationPolicy);preview(result.preview);
+  },
+  async onSaved(result,accepted) {
+    const loaded=await api('load?name='+encodeURIComponent(result.name));
+    if(loaded.specText!==accepted.input.specText||operationPolicyCanonical(loaded.plan)!==operationPolicyCanonical(accepted.result.plan)||
+      operationPolicyCanonical(loaded.operationPolicy)!==operationPolicyCanonical(accepted.result.operationPolicy))
+      throw new Error('The reopened package differs from the reviewed source, plan or policy record.');
+    await loadSource(loaded.specText,loaded.plan,loaded.capturedSource,loaded.operationPolicy);preview(loaded.preview);await saved(loaded.name,loaded);
+    $('package-name').value=loaded.name;$('saved-path').textContent='Saved to '+loaded.folder+'\n\n'+(loaded.command??result.command??'');$('saved-path').hidden=false;
+    await refresh();
+  },
+  focusRoute(key) {
+    const route=routeFields.find(row=>routeKey(row.op)===key);if(!route)return;
+    route.card.scrollIntoView({behavior:'smooth',block:'center'});route.check.focus({preventScroll:true});
+  }
+});
 function drawRoutes(saved=[]) {
   const map=new Map(saved.map(v=>[v.method.toUpperCase()+' '+v.path,v]));
   $('routes').replaceChildren();routeFields=[];
@@ -186,6 +222,8 @@ function drawRoutes(saved=[]) {
     if(op.summary)card.append(make('p',op.summary,'route-summary'));
     if(op.error)card.append(make('p',op.error,'hint'));
     if(op.supported) {
+      const policyButton=make('button','Use reusable policy');policyButton.type='button';
+      policyButton.addEventListener('click',()=>{if(!busy)operationPolicies.target(op);});head.append(policyButton);
       const settings=make('div',undefined,'route-settings');
       const server=selectField('Backend server',op.servers.map(s=>[s.index,s.url+(s.variables?' (expand variables first)':'')]),previous?.serverIndex??0);
       const amount=field('Price in atomic units',previous?.amountAtomic??'');amount.input.inputMode='numeric';amount.input.placeholder='e.g. 20000';
@@ -252,6 +290,7 @@ function drawRoutes(saved=[]) {
       const guardControls=[failureThreshold.input,resetAfter.input,maxResetAfter.input];
       const toggle=()=>{
         const streaming=isStreamFormat(mode.input.value);
+        policyButton.disabled=busy||!check.checked;
         controls.forEach(c=>{c.disabled=!check.checked;});
         validation.input.disabled=!check.checked||mode.input.value!=='json';
         size.container.hidden=streaming;
@@ -308,7 +347,7 @@ function fillPlan(plan) {
   transportPanel.load(plan?.transports??{});
   drawRoutes(plan?.operations??[]);
 }
-async function loadSource(text,plan,captured) {
+async function loadSource(text,plan,captured,operationPolicy) {
   const info=await api('inspect',{specText:text});
   specText=text;inspection=info;selectedPackage=null;capturedSource=null;
   $('source-summary').replaceChildren(make('p',info.title+' · OpenAPI '+info.version+' · '+countLabel(info.operations.length,'operation')),
@@ -316,7 +355,10 @@ async function loadSource(text,plan,captured) {
   fillPlan(plan);dirty();available();
   await postmanPanel.reopen(text);
   capturedSource=await harPanel.reopen(text,captured);
-  routeSheet.load();
+  routeSheet.load();operationPolicies.load();
+  const samePlan=Boolean(operationPolicy&&plan&&operationPolicyCanonical(planFromForm())===operationPolicyCanonical(plan));
+  appliedOperationPolicy=samePlan?structuredClone(operationPolicy):null;
+  operationPolicies.saved(operationPolicy?{operationPolicy,formMatches:samePlan}:null);
 }
 function preview(value) {
   lastPreview=value;
@@ -344,6 +386,7 @@ async function saved(name,value) {
   transportDelivery.select(name,value?.preview??lastPreview);available();
   await customerPanel.setPackage(name);
   routeSheet?.saved(name);
+  operationPolicies?.saved({name,operationPolicy:value?.operationPolicy??appliedOperationPolicy,formMatches:Boolean(appliedOperationPolicy)});
 }
 function runtime(value) {
   customerOpen=Boolean(value.customer);customerPanel.renderRuntime(value.customer);available();
@@ -396,13 +439,13 @@ async function refresh() {
       make('span',project.title+' · '+countLabel(project.routes,'route')));
     button.addEventListener('click',()=>act(async()=>{
       const loaded=await api('load?name='+encodeURIComponent(project.name));
-      await loadSource(loaded.specText,loaded.plan);preview(loaded.preview);await saved(loaded.name,loaded);
+      await loadSource(loaded.specText,loaded.plan,loaded.capturedSource,loaded.operationPolicy);preview(loaded.preview);await saved(loaded.name,loaded);
       $('package-name').value=loaded.name;
       notice('Reopened '+loaded.name+'. Save edits under a new package name.');
     }));$('packages').append(button);
   }
   if(!result.packages.length)$('packages').append(make('p','No saved projects yet.','small'));
-  $('output').textContent='Output: '+result.output;runtime(result.runtime);await revisionDesk.refresh();await harPanel.list();
+  $('output').textContent='Output: '+result.output;runtime(result.runtime);await revisionDesk.refresh();await harPanel.list();await operationPolicies.refresh();
 }
 $('file').addEventListener('change',()=>act(async()=>{
   const file=$('file').files[0];if(!file)return;
@@ -424,8 +467,8 @@ $('preview').addEventListener('click',()=>act(async()=>{
   const result=await api('preview',{specText,plan:planFromForm(),...(capturedSource?{capturedSource}:{})});preview(result);notice('Configuration accepted. Review the exact routes, then save a new package.');
 }));
 $('save').addEventListener('click',()=>act(async()=>{
-  const result=await api('save',{specText,plan:planFromForm(),name:$('package-name').value.trim(),...(capturedSource?{capturedSource}:{})});
-  preview(result.preview);await saved(result.name);$('saved-path').textContent='Saved to '+result.folder+'\n\nStart from a shell:\n'+result.command;$('saved-path').hidden=false;
+  const result=await api('save',{specText,plan:planFromForm(),name:$('package-name').value.trim(),...(capturedSource?{capturedSource}:{}),...(appliedOperationPolicy?{operationPolicy:appliedOperationPolicy}:{})});
+  preview(result.preview);await saved(result.name,result);$('saved-path').textContent='Saved to '+result.folder+'\n\nStart from a shell:\n'+result.command;$('saved-path').hidden=false;
   await refresh();notice('Saved '+result.name+'. The compiled seller and private configuration are ready.');
 }));
 async function start(native) {
@@ -450,7 +493,7 @@ else act(async()=>{
     notice('Loaded '+retained.metadata.name+' from migration '+migration+'. Select its routes and enter your merchant terms.');
   } else if(selected.get('package')) {
     const name=selected.get('package'),loaded=await api('load?name='+encodeURIComponent(name));
-    await loadSource(loaded.specText,loaded.plan);preview(loaded.preview);await saved(loaded.name,loaded);
+    await loadSource(loaded.specText,loaded.plan,loaded.capturedSource,loaded.operationPolicy);preview(loaded.preview);await saved(loaded.name,loaded);
     $('package-name').value=loaded.name;
     notice('Reopened '+loaded.name+'. Start its saved policy with the original seller controls.');
   } else notice('Ready. Load an OpenAPI description or reopen a saved project.');

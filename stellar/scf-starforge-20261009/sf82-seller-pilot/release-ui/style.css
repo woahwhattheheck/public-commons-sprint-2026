@@ -24,3 +24,15 @@
 #client-review { margin-top: 24px; }
 #client-files code { display: block; max-width: 38rem; font-size: 12px; }
 @media (max-width: 700px) { .client-operations { padding: 16px; } .client-operations .section-heading { align-items: flex-start; flex-direction: column; } }
+
+.delivery-operations{background:#fff;border:1px solid #c9c9c7;margin-top:22px;padding:23px 26px;min-width:0}
+.delivery-operations p,.delivery-operations pre,.delivery-operations td{overflow-wrap:anywhere}
+.delivery-operations p{font-size:12px;line-height:1.55}.delivery-operations h3{margin-top:24px}
+.delivery-operations table{table-layout:fixed;width:100%;min-width:620px}.delivery-operations .table-scroll{max-width:100%;overflow:auto;margin:16px 0}
+.delivery-operations td>div>div{font-size:11px;margin-top:4px}
+.delivery-operations .actions a{color:inherit;font-size:12px;font-weight:600;border:1px solid #9d9e9f;border-radius:3px;padding:9px 11px;display:inline-flex;align-items:center;min-height:36px}
+.delivery-operations details{margin-top:18px}.delivery-operations summary{cursor:pointer;font-weight:600;font-size:12px}
+.delivery-operations pre{white-space:pre-wrap;font:12px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;background:#f5f5f4;border:1px solid #ddd;padding:12px;max-width:100%}
+.delivery-operations #delivery-review{margin-top:22px;padding-top:2px;border-top:1px solid #c9c9c7}
+.delivery-operations .section-note{color:#55585a}.delivery-operations [hidden]{display:none!important}
+@media(max-width:680px){.delivery-operations{padding:20px;min-width:0}.delivery-operations .section-heading{display:block}.delivery-operations .section-heading>button{margin-top:8px}.delivery-operations .actions{align-items:stretch}.delivery-operations .actions a{justify-content:center}}

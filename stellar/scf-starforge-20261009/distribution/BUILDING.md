@@ -47,6 +47,14 @@ archives remain supported. The regular-file restrictions, complete component
 inventory, static-import parsing and pinned runtime dependency rules remain part
 of packaging.
 
+Source-owned `supportFiles` may retain explicitly named CSV, JSON, TXT and
+Parquet data inside an original `fixtures` directory. This keeps a receiver's
+published input paths, manifests and hashes intact. Parquet and ZIP files require
+an explicit declaration; they are not selected automatically from a component.
+Executable fixtures, test directories and hidden paths remain excluded. Declared
+data still passes the original regular-file, explicit-exclusion, Git identity,
+individual-file and complete-package checks.
+
 The progress stream reports the resolved commit, selected file count, source
 inspection, each fetch, bytes loaded, materialization, npm packaging and final
 archive hash. It carries configured remote names instead of credential-bearing

@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 import sys
 
-from .model import (QgisWorkspace, ReceivingSource, receive_package, read_json,
+from .model import (QgisWorkspace, open_receiving_source, receive_package, read_json,
                     QgisReceivingError, require)
 from . import qgis_project
 
@@ -15,7 +15,7 @@ from . import qgis_project
 def execute(args, progress=None):
     command = args.command
     if command == "source-open":
-        source = ReceivingSource(args.directory, args.expected_sha256, progress=progress)
+        source = open_receiving_source(args.directory, args.expected_sha256, progress=progress)
         return {"sourceId": source.id, "source": source.source, "summary": source.summary,
                 "scenes": source.scene_rows(), "assets": source.asset_rows()}
     if command == "receive":

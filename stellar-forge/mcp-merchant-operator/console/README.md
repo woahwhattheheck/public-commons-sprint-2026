@@ -4,14 +4,17 @@ Use [Merchant operator in Applications](APPLICATIONS.md) to save the original co
 
 The operator console adds a durable browser workspace to the existing authenticated merchant host. It uses the configured tool catalog, the original provider operations, the original authorization and the existing customer file reader. Applications remains the authority for selecting and starting a merchant profile.
 
-The console contains four working areas:
+The console contains five working areas:
 
 | Area | Work completed there |
 | --- | --- |
 | Host | Inspect configured capabilities and declaration identities, compare saved host bindings, retain an approved revision and review original native status. |
 | Tools | Search the actual configured catalog, keep favorites, review each tool's schema and save named immutable request revisions. |
 | Requests | Run an exact saved revision, retain the native return, reopen earlier revisions, recover an original operation and download its exact JSON. |
+| Workflows | Arrange native requests into complete operations with input bindings, required results, recovery and named receiving ownership. Export and install reviewed recipes to reuse the whole operating procedure. |
 | Customers | Receive an original seller-generated client, retain partial progress, resume the same reviewed export and download its verified files or original archive. |
+
+Use [Workflow recipes](WORKFLOW_RECIPES.md) to export a complete saved operation, review another profile’s configured native tools and inputs, and install all of its requests and first workflow edition together. The complete source, review and original installation travel with its profile.
 
 ## Open the existing host
 
@@ -88,6 +91,14 @@ The original tool performs its own source validation, generation checks, native 
 
 Accepted requests appear immediately in Requests. A browser reconnect reads the existing record. If the host ended before it retained a native return, the record shows **RETURN_PENDING**. The recovery picker selects original read operations from the same configured family whose required identifiers are present in that call. It prepares a linked draft using those original identifiers. Review, save and run that original read to reconcile the native operation.
 
+## Complete saved workflows
+
+[Saved merchant workflows](WORKFLOWS.md) covers the full stage, activate, start, customer generation, manifest, stop and status operation. Add immutable saved request revisions in their execution order, bind actual inputs or earlier native results, select required result values and save the complete workflow edition.
+
+A run retains its original input object, workflow digest, native call IDs and ordered events. **Pause after current request** lets the current accepted native request return before stopping progress. **Continue same run** reopens the same run. Lost browser Start or Handover responses use their displayed durable original action; unfinished native calls use the existing linked recovery requests in **Requests**.
+
+An unfinished run can be handed to a named console workspace and host after its current owner releases it. Importing the complete post-handover profile extends that receiver's verified history. The receiving owner can later hand the same run back with all native calls and events preserved. The guide explains the exact lifecycle checkpoints, current host binding and original provider state required for that transfer.
+
 ## Receive an original customer
 
 Customer receiving composes the maintained retained-file transport and SF82 customer archive encoder:
@@ -113,8 +124,11 @@ The console's customer receiving action reads an existing generated export. Gene
 - Every immutable saved draft revision.
 - Original call IDs, exact arguments, exact returned JSON and their digests.
 - Customer selection, receiving status and original file identities.
+- Immutable workflow editions, complete run inputs, native step references, progress and owner-release events.
 
-The archive has a canonical content SHA-256. Import validates the full packet, original draft-to-call references, identifiers, timestamps, state transitions and all retained JSON hashes before an atomic SQLite transaction. For host bindings it also validates every immutable binding digest, both composition digests and the selected profile-to-binding identity. Existing archives from before binding history keep their original shape and remain importable. Receiving the same original archive again reopens its imported record. Conflicting original IDs require a separate operator workspace.
+The archive has a canonical content SHA-256 and is captured in one SQLite transaction across the complete profile. Import validates the full packet, original draft-to-call and workflow references, identifiers, exact timestamps, state transitions and all retained JSON hashes before an atomic transaction. Receiving the same original archive again reopens its imported record. For host bindings it also validates every immutable binding digest, both composition digests and the selected profile-to-binding identity. Existing archives from before binding history keep their original shape and remain importable.
+
+A compatible later archive extends the same profile's immutable revisions, calls and contiguous workflow-event history. It preserves the receiving workspace's local profile settings, host binding and verified customer files. An incoming terminal call record cannot replace a local call that the current host is still executing; the original active call retains its own completion callback. Incoming host-binding records retain their exact original bodies. When that history extends, the local profile revision advances beyond the received revisions while its selected host, name and favorites remain unchanged. A legacy local profile selects an exact matching retained host record, or retains its original host as a legacy binding at the new receiving revision. Conflicting immutable source, finalized returns or divergent workflow history are rejected. [Named workflow handover](WORKFLOWS.md#hand-over-a-paused-run-and-return-it) uses this receiving path to review, transfer and return unfinished work.
 
 The profile archive preserves operator history. The complete customer archive contains the received customer files. Existing Applications and provider backup/reopen commands remain the authority for the underlying native provider workspaces.
 
@@ -130,10 +144,11 @@ Keep the private console directory to reopen the same operator database and part
 | `snapshot()` | Pure configured-host snapshot with the current console identity. |
 | `startCall(input, context)` | Reserves an exact native request and retains its original asynchronous return. |
 | `store` | Original private profile/request SQLite store. |
-| `beginClose()` | Stops new console calls and pauses original customer transfers at retained checkpoints. |
+| `workflows` | Saved workflow definitions, original run driver, recovery and receiving controls over that store. |
+| `beginClose()` | Stops new calls, requests workflow pauses and pauses original customer transfers at retained checkpoints. |
 | `close()` | Waits for accepted native returns and closes its own store after the original owner begins cancellation/drain. |
 
-`startMerchantMcp()` owns the shared listener. On close, it refuses new interface requests, pauses customer transfers at their original checkpoints and starts the existing merchant owner's cancellation/drain immediately. It waits for the accepted native returns and customer cleanup before closing the interface database and original authorization. The console never replaces the provider lifecycle or closes a separate seller owner.
+`startMerchantMcp()` owns the shared listener. On close, it refuses new interface requests, requests workflow pauses, pauses customer transfers at their original checkpoints and starts the existing merchant owner's cancellation/drain immediately. It waits for workflow drivers, accepted native returns and customer cleanup before closing the interface database and original authorization. The console never replaces the provider lifecycle or closes a separate seller owner.
 
 The API uses the native host request capacity for saved and executed requests. The exact MCP call envelope is checked again before native dispatch, including calls imported from a profile archive. The separate history-import route accepts a complete archive up to 128 MiB; importing a history does not run its saved tools.
 
@@ -147,17 +162,19 @@ The following authenticated host-review routes use the same handler and authoriz
 | `GET /operator/api/host-binding/PROFILE?revision=N` | Read the exact immutable binding record. |
 | `POST /operator/api/bind` | Original revision-guarded bind with optional `expectedCompositionFingerprint`. |
 
-The existing profile read includes compact binding-history summaries. `compareHostProfiles(before, after)` and `captureHostComposition(...)` in `host-profile.mjs` are pure metadata functions. `MerchantConsoleStore.hostBindings()` and `.hostBinding()` read the original SQLite history.
+The existing profile read includes compact binding-history summaries. Its existing `hostBound` describes the configuration binding; `compositionBound` separately describes the saved declaration/tool snapshot and is `null` for a legacy snapshot. A changed declaration is available for review, and original native tool admission remains the authority for execution. `compareHostProfiles(before, after)` and `captureHostComposition(...)` in `host-profile.mjs` are pure metadata functions. `MerchantConsoleStore.hostBindings()` and `.hostBinding()` read the original SQLite history.
 
 Static assets use the original loopback host, same-origin requests and a restrictive content-security policy. There are no external scripts, fonts or image dependencies.
 
 ## Source layout
 
+- `records.mjs`: shared canonical JSON, hashes and original record validation.
 - `store.mjs`: private profiles, immutable host bindings and request revisions, exact calls, customer records and atomic archive receiving.
 - `../host-profile.mjs`: pure original declaration capture, digest validation and host comparison.
+- `workflow-records.mjs`, `workflows.mjs`: saved workflow editions, original request guards, progress, recovery and receiving ownership.
 - `service.mjs`: authenticated API and original native dispatch.
 - `customers.mjs`: original retained download and SF82 archive composition.
-- `public/index.html`, `public/app.mjs`, `public/style.css`: the industrial browser interface.
+- `public/index.html`, `public/app.mjs`, `public/workflows.mjs`, `public/style.css`: the industrial browser interface and durable original workflow actions.
 - `../operator.mjs`: pure configured-host snapshot and original operator lifecycle.
 - `../serve.mjs`: opt-in same-listener startup and existing authorization.
 
@@ -192,3 +209,8 @@ node stellar-forge/mcp-merchant-operator/receiving/host-review.mjs \
 The driver retains each binding intent before the original mutation and reconciles its revision and exact target after an uncertain response. Restarting the same receiving directory resumes the recorded phase. The original configuration file and its source bytes remain the input; the changed profile uses a separate configuration file in that same private merchant directory so all original relative paths resolve identically.
 
 Outputs include `host-review-native-run.json`, a durable phase checkpoint, the original and changed comparison exports, the complete profile with binding history, the unchanged customer archive and desktop/mobile browser views. The driver uses the original authenticated HTTP/UI and SQLite implementation. Reading archived results and comparing metadata does not create another seller, native search or customer-export operation.
+
+
+The complete saved-workflow receiver is `receiving/workflow-journey.mjs`. Its [native receiving instructions](WORKFLOWS.md#run-the-complete-native-receiving-workflow) cover the original seven-step merchant operation, browser action recovery, named workspace transfer and return, complete profile receiving and customer files. Use its selected source and existing native runtime for that original operation.
+
+The same following receiver also returns the complete newer archive to a console that already received the original profile. It checks exact historical binding bodies, retained local host/name/favorites, the advanced receiving revision, duplicate reuse and another cold reopen. `host-review-returned-profile.json` and its browser view retain that complete round trip.

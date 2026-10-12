@@ -13,7 +13,7 @@ const HASH=/^[a-f0-9]{64}$/;
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 const TOP_FILES=new Set(['original-openapi.json','original-openapi.yaml','merchant-plan.json',
   'facade-openapi.json','selections.json','route-bindings.json','upstreams.json',
-  'operator-cases.json','source-revision.json']);
+  'operator-cases.json','source-revision.json','operation-policy.json']);
 const REQUIRED=['merchant-package.json','RUN.md','merchant-plan.json','facade-openapi.json',
   'selections.json','route-bindings.json','upstreams.json','compiled/manifest.json',
   'compiled/offers.json','compiled/seller-service.json'];
@@ -59,14 +59,15 @@ export function parseMerchantPackageExport(bytes,exportId) {
   exact(value,['schema','exportId','package','files','totalBytes'],['schema','exportId','package','files','totalBytes']);
   if(value.schema!==PACKAGE_EXPORT_SCHEMA||!HASH.test(value.exportId??'')||
       exportId!==undefined&&value.exportId!==exportIdentifier(exportId))fail('The retained package export identity differs.');
-  exact(value.package,['name','id','manifestSha256','sourceFile','sourceSha256','planSha256','sourceRevisionSha256','createdAt'],
+  exact(value.package,['name','id','manifestSha256','sourceFile','sourceSha256','planSha256','sourceRevisionSha256','operationPolicySha256','createdAt'],
     ['name','id','manifestSha256','sourceFile','sourceSha256','planSha256','createdAt']);
   packageName(value.package.name);
   if(!UUID.test(value.package.id??'')||
       !['original-openapi.json','original-openapi.yaml'].includes(value.package.sourceFile)||
       typeof value.package.createdAt!=='string'||!Number.isFinite(Date.parse(value.package.createdAt))||
       !['manifestSha256','sourceSha256','planSha256'].every(k=>HASH.test(value.package[k]??''))||
-      value.package.sourceRevisionSha256!==undefined&&!HASH.test(value.package.sourceRevisionSha256))
+      value.package.sourceRevisionSha256!==undefined&&!HASH.test(value.package.sourceRevisionSha256)||
+      value.package.operationPolicySha256!==undefined&&!HASH.test(value.package.operationPolicySha256))
     fail('The export must retain its original package UUID and input hashes.');
   if(!Array.isArray(value.files)||value.files.length<REQUIRED.length+1||value.files.length>256)
     fail('The export must list its complete original source and compiled files.');
@@ -81,13 +82,15 @@ export function parseMerchantPackageExport(bytes,exportId) {
   if(REQUIRED.some(name=>!names.has(name))||!names.has(value.package.sourceFile)||
       names.has(value.package.sourceFile==='original-openapi.json'?'original-openapi.yaml':'original-openapi.json')||
       names.has('source-revision.json')!==Object.hasOwn(value.package,'sourceRevisionSha256')||
+      names.has('operation-policy.json')!==Object.hasOwn(value.package,'operationPolicySha256')||
       total!==value.totalBytes||total>PACKAGE_EXPORT_MAX_BYTES)
     fail('The transfer manifest has an incomplete original file set or byte total.');
   const byName=new Map(value.files.map(file=>[file.name,file]));
   if(byName.get('merchant-package.json').sha256!==value.package.manifestSha256||
       byName.get(value.package.sourceFile).sha256!==value.package.sourceSha256||
       byName.get('merchant-plan.json').sha256!==value.package.planSha256||
-      names.has('source-revision.json')&&byName.get('source-revision.json').sha256!==value.package.sourceRevisionSha256)
+      names.has('source-revision.json')&&byName.get('source-revision.json').sha256!==value.package.sourceRevisionSha256||
+      names.has('operation-policy.json')&&byName.get('operation-policy.json').sha256!==value.package.operationPolicySha256)
     fail('The original package identity differs from its selected file hashes.');
   if(sha(canonical(manifestCore(value)))!==value.exportId)
     fail('The original export identity does not match its complete file manifest.');

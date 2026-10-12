@@ -18,9 +18,10 @@ from .report_server import ReportServer
 from .sql_server import SqlServer, SQL_KINDS
 from .billback import Billing, KINDS as BILLING_KINDS
 from .azure_exports import AzureExports, KINDS as AZURE_KINDS
+from .tourism import Tourism, KINDS as TOURISM_KINDS
 from .store import Store, Conflict, digest, encoded, identifier, now
 
-KINDS = ("source", "dataset", "plan", "artifact", "capture", "comparison", "rollout", "support", "usage", "delivery", "backup", "server_report", "server_bundle", "server_job", "server_result") + BILLING_KINDS + AZURE_KINDS
+KINDS = ("source", "dataset", "plan", "artifact", "capture", "comparison", "rollout", "support", "usage", "delivery", "backup", "server_report", "server_bundle", "server_job", "server_result") + BILLING_KINDS + AZURE_KINDS + TOURISM_KINDS
 
 
 def decoded_file(request):
@@ -59,6 +60,7 @@ class Service:
         self.report_server = ReportServer(self)
         self.billing = Billing(self)
         self.azure = AzureExports(self)
+        self.tourism = Tourism(self)
         self.actions = {
             "source.import": self.source_import, "source.assign": self.source_assign,
             "dataset.import": self.dataset_import, "dataset.correct": self.dataset_correct,
@@ -80,6 +82,7 @@ class Service:
         self.actions.update(self.sql.actions())
         self.actions.update(self.billing.actions)
         self.actions.update(self.azure.actions)
+        self.actions.update(self.tourism.actions)
 
     def close(self):
         self.sql.close()
