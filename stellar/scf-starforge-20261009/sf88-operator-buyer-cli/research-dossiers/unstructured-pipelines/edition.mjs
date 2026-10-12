@@ -2,6 +2,8 @@
 import { createHash } from 'node:crypto';
 import { need, object, parseJson, jsonBytes } from '../../node/store.mjs';
 
+import {RESEARCH_OBJECT_REFERENCE,validateResearchObjectReference} from '../object-reference.mjs';
+
 export const PIPELINE_EDITION_MODE = 'ORIGINAL_UNSTRUCTURED_PIPELINES_OUTPUT';
 export const PIPELINE_EDITION_SCHEMA = 'stellar-forge.unstructured-pipelines-edition.v1';
 export const MAX_PIPELINE_EDITION_BYTES = 64 * 1024 * 1024;
@@ -63,7 +65,7 @@ function checkedOriginal(value) {
     'PIPELINE_EDITION_INPUTS_REQUIRED');
   const ids = new Set();
   for (const input of value.inputs) {
-    record(input, ['id','index','filename','contentType','bytes','sha256'], 'PIPELINE_EDITION_INPUT_INVALID');
+    record(input, ['id','index','filename','contentType','bytes','sha256','sourceRef'], 'PIPELINE_EDITION_INPUT_INVALID');
     need(/^in_[a-f0-9]{64}$/.test(input.id ?? '') && !ids.has(input.id) &&
       Number.isSafeInteger(input.index) && input.index >= 0 && input.index <= 1024 &&
       Number.isSafeInteger(input.bytes) && input.bytes >= 0,
@@ -72,6 +74,7 @@ function checkedOriginal(value) {
     text(input.filename, 'PIPELINE_INPUT_FILENAME_REQUIRED', 1024);
     text(input.contentType, 'PIPELINE_INPUT_TYPE_REQUIRED', 256);
     hash(input.sha256, 'PIPELINE_INPUT_DIGEST_INVALID');
+    if(input.sourceRef!==undefined)validateResearchObjectReference(input.sourceRef,input);
   }
   const output = record(value.output, ['id','fileId','nodeId','bytes','sha256',
     'contentType','receivedAt','receiptId'], 'PIPELINE_EDITION_OUTPUT_INVALID');
@@ -165,8 +168,11 @@ export function createPipelineResearchEdition({view,output,body,workspaceId}={})
       providerStatus:String(details.status ?? view.operation.job?.status ?? view.operation.phase),
       workflowId:details.workflow_id ?? view.operation.job?.workflow_id ?? null,
     },
-    inputs:payload.inputs.map(input=>Object.fromEntries(
-      ['id','index','filename','contentType','bytes','sha256'].map(key=>[key,input[key]]))),
+    inputs:payload.inputs.map(input=>({
+      ...Object.fromEntries(['id','index','filename','contentType','bytes','sha256'].map(key=>[key,input[key]])),
+      ...(input.sourceRef?.schema===RESEARCH_OBJECT_REFERENCE?
+        {sourceRef:validateResearchObjectReference(input.sourceRef,input)}:{}),
+    })),
     output:Object.fromEntries(['id','fileId','nodeId','bytes','sha256','contentType','receivedAt','receiptId']
       .map(key=>[key,key==='nodeId' ? output[key]??null : output[key]])),
     payload:{encoding:'base64',bytes:body.length,sha256:sha(body),body:Buffer.from(body).toString('base64')},
