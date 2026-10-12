@@ -20,6 +20,8 @@ Related original operating surfaces:
 - [Original Node buyer SDK](../../sf88-operator-buyer-cli/node/)
 - [Original Tenderly analysis workspace](../../sf88-operator-buyer-cli/tenderly-analysis/)
 
+The [public Safe receiving guide](receiving/PUBLIC_SAFE_RECEIVING.md) supplies an original Gnosis execution from Safe's maintained source and a read helper using the caller's actual Protocol Kit. It obtains the original outer transaction and receipt, verifies the SDK hash and complete execution calldata, and captures the actual block position, caller, gas limit and value through `prepareSafeSelection`. The saved source, runtime selection and original buyer intent stay together through receiving.
+
 All CLI paths below are absolute. Set `SAFE_REVIEW_CLI` to this directory's `cli.mjs`; `BUYER_RUNTIME` to the original SF88 runtime directory; and `REVIEW_ROOT` to an operator-owned private working directory.
 
 ```sh
