@@ -29,6 +29,7 @@ from .response_documents import validate_manifest
 from .storage import digest, lock, private_directory, read, sync_directory, write
 from .workspace_archive_receive import restore_archive
 from .errors import StateError
+from . import sensorthings_components as component_analysis
 
 _SCHEMA = "stellar-forge.sensorthings-analysis-programme.v1"
 _INTAKE = "stellar-forge.sensorthings-python-intake.v1"
@@ -230,8 +231,12 @@ def _source(selection):
           _HASH.fullmatch(intake_sha256) and digest(body) == intake_sha256,
           "REVIEWED_INTAKE_CHANGED")
     intake = json.loads(body)
-    _need(intake.get("schema") == _INTAKE and set(intake.get("tables", {})) == set(_TABLES),
-          "COMPLETE_FIVE_TABLE_INTAKE_REQUIRED")
+    has_components = intake.get("schema") == component_analysis.INTAKE_SCHEMA
+    tables = (*_TABLES, *component_analysis.TABLES) if has_components else _TABLES
+    _need(intake.get("schema") in {_INTAKE, component_analysis.INTAKE_SCHEMA} and
+          set(intake.get("tables", {})) == set(tables) and
+          ("componentAnalysis" in intake) == has_components,
+          "COMPLETE_SOURCE_TABLE_INTAKE_REQUIRED")
     root = intake_path.parent
     def input_path(name):
         if downloaded is None:
@@ -305,8 +310,8 @@ def _source(selection):
     _need(offset == archive["bytes"] and checksum.hexdigest() == archive["sha256"],
           "WHOLE_SOURCE_ARCHIVE_CHANGED")
     document = _read_exact_json(input_path(source["document"]["path"]), source["document"], _MAX_DOCUMENT)
-    _need(set(document) == set(_TABLES), "DOCUMENT_COLLECTIONS_CHANGED")
-    for table in _TABLES:
+    _need(set(document) == set(tables), "DOCUMENT_COLLECTIONS_CHANGED")
+    for table in tables:
         description, rows = intake["tables"][table], document[table]
         columns = description["columns"]
         _need(description["collection"] == "/" + table and isinstance(rows, list) and
@@ -332,12 +337,25 @@ def _source(selection):
               row["method"] == "original-sensorthings-analysis-numericEligibility" and
               (row["eligible"] == "true") == (row["reason"] == "eligible"),
               "ORIGINAL_CLASSIFICATION_CHANGED")
+    component = None
+    if has_components:
+        def component_original(role):
+            _need(role in originals, "ORIGINAL_COMPONENT_METADATA_REQUIRED")
+            item = originals[role]
+            raw = read(input_path(item["path"]), _MAX_DOCUMENT)
+            _need(len(raw) == item["bytes"] and digest(raw) == item["sha256"],
+                  "ORIGINAL_COMPONENT_METADATA_CHANGED")
+            return raw
+        component = component_analysis.verify_component_document(intake, document, edition,
+            component_original("original-component-analysis-version"),
+            component_original("original-component-binding-manifest"),
+            component_original("original-source-edition"))
     return {"name": selection["name"], "intake_path": intake_path, "root": root,
             "intake": intake, "source": source, "document": document, "edition": edition,
             "intake_sha256": intake_sha256, "manifest_path": input_path("source.json"),
             "document_files": None if downloaded is None else
                 {item["path"]: str(input_path(item["path"])) for item in descriptors},
-            "download": downloaded}
+            "download": downloaded, "component": component}
 
 
 class Programme:
@@ -363,6 +381,7 @@ class Programme:
         self.workspace = None
         self.outputs = {}
         self.queries = {}
+        self.component_queries = {"summary_keys": [], "comparison_keys": [], "receiving_sql": None}
 
     def identifier(self, key):
         return uuid.uuid5(self.namespace, key).hex
@@ -701,6 +720,9 @@ FROM entities GROUP BY edition_label,entity_kind,capture_phase ORDER BY edition_
                        title="Observed record comparison",
                        note="This matches the original SensorThings comparison rules, including stream meaning and relationships. Observed-only records do not establish provider insertion or deletion, and no synchronized snapshot is asserted.")
             summary_keys.append("comparison_summary")
+        self.component_queries = component_analysis.install_queries(self, sources, registered, views)
+        summary_keys.extend(self.component_queries["summary_keys"])
+        comparison_keys.extend(self.component_queries["comparison_keys"])
         return registered, summary_keys, comparison_keys, observation_sql
 
     def run(self):
@@ -720,8 +742,10 @@ FROM entities GROUP BY edition_label,entity_kind,capture_phase ORDER BY edition_
             sources = [_source(item) for item in self.request["sources"]]
             _need(len({source["name"].lower() for source in sources}) == len(sources),
                   "SOURCE_NAMES_MUST_DIFFER")
-            _need(len({source["intake"]["editionId"] for source in sources}) == len(sources),
-                  "SELECT_DISTINCT_ORIGINAL_EDITIONS")
+            _need(len({(source["intake"]["editionId"],
+                         source["component"]["analysis_version_id"] if source["component"] else None)
+                        for source in sources}) == len(sources),
+                  "SELECT_DISTINCT_ORIGINAL_EDITION_VERSIONS")
             self.event("complete_original_sources_verified", sources=[
                 {"name": x["name"], "edition_id": x["intake"]["editionId"],
                  "observations": x["intake"]["tables"]["observations"]["rows"],
@@ -779,11 +803,20 @@ FROM entities GROUP BY edition_label,entity_kind,capture_phase ORDER BY edition_
                 continued = self.query("stream_coverage", daily_sql, workspace=with_workspace, revision=2,
                     title="Receiving edit: daily source coverage",
                     note="An actual saved-query revision in the reopened workspace. It groups explicit source instants by UTC date while preserving the original stream coverage recipe at revision 1.")
+                continued_component = None
+                if self.component_queries["receiving_sql"]:
+                    continued_component = self.query("component_time_coverage",
+                        self.component_queries["receiving_sql"], workspace=with_workspace, revision=2,
+                        title="Receiving edit: daily selected-component counts",
+                        note="An actual saved-query revision in the restored original workspace. The complete original selection, source vectors, exact numbers and version-1 event/separation query remain retained; this revision groups explicit source instants by UTC date.")
                 new_sections = [dict(section) for section in report_request["sections"]]
                 for section in new_sections:
                     if section["query_name"] == continued["definition"]["name"]:
                         section.update(title="Receiving edit: daily source coverage",
                                        query_revision=2, note=continued["note"])
+                    if continued_component and section["query_name"] == continued_component["definition"]["name"]:
+                        section.update(title=continued_component["title"], query_revision=2,
+                                       note=continued_component["note"])
                 continued_report = self.export_report("receiving", report_name, {
                     "id": self.identifier("report-definition:receiving"), "expected_revision": report["revision"],
                     "title": report_request["title"] + " — receiving revision",
@@ -794,17 +827,25 @@ FROM entities GROUP BY edition_label,entity_kind,capture_phase ORDER BY edition_
                 new_sheets = [dict(sheet) for sheet in first["request"]["sheets"]]
                 position = first["query_keys"].index("stream_coverage")
                 new_sheets[position] = _query_sheet(continued, position + 1)
+                if continued_component:
+                    component_position = first["query_keys"].index("component_time_coverage")
+                    new_sheets[component_position] = _query_sheet(continued_component, component_position + 1)
                 continued_book = self.workbook("receiving", first["name"], {
                     "id": self.identifier("workbook-definition:receiving"),
                     "expected_revision": first["revision"],
                     "title": first["request"]["title"] + " — receiving revision",
                     "notes": first["request"]["notes"] +
-                        " The daily-coverage sheet was replaced with the actual saved query revision 2 from this receiving workspace.",
+                        " The original daily-coverage sheet and, when selected, the component daily-count sheet use the actual saved query revision 2 from this receiving workspace.",
                     "sheets": new_sheets}, workspace=with_workspace)
                 continued_archive = self.archive("receiving", workspace=with_workspace)
                 received_queries = {
                     "original": with_workspace.saved_query(continued["definition"]["name"], revision=1)["revision"],
                     "edited": with_workspace.saved_query(continued["definition"]["name"], revision=2)["revision"]}
+                if continued_component:
+                    received_queries["component_original"] = with_workspace.saved_query(
+                        continued_component["definition"]["name"], revision=1)["revision"]
+                    received_queries["component_edited"] = with_workspace.saved_query(
+                        continued_component["definition"]["name"], revision=2)["revision"]
             finally:
                 with_workspace.close()
             result = {"schema": _SCHEMA, "operation_id": self.operation, "status": "COMPLETE",
@@ -812,11 +853,16 @@ FROM entities GROUP BY edition_label,entity_kind,capture_phase ORDER BY edition_
                 "sources": [{"name": item["name"], "edition_id": item["intake"]["editionId"],
                              "intake_sha256": item["intake_sha256"],
                              "archive": {k: item["intake"]["archive"][k] for k in ("bytes", "sha256")},
-                             "tables": item["intake"]["tables"]} for item in sources],
+                             "tables": item["intake"]["tables"],
+                             **({"component_analysis": {k: item["component"][k] for k in
+                                 ("analysis_version_id", "project_id", "binding_manifest_id", "selection",
+                                  "selected_occurrences", "complete_parent_binding")}}
+                                if item["component"] else {})} for item in sources],
                 "registered": registered, "queries": list(self.queries.values()), "report": report,
                 "workbooks": books, "original_workspace": original_archive,
                 "receiving": {"operation_id": receive_operation, "result": receiving_intent,
                               "continued_query": continued, "saved_query_revisions": received_queries,
+                              **({"continued_component_query": continued_component} if continued_component else {}),
                               "report": continued_report, "workbook": continued_book,
                               "continued_workspace": continued_archive},
                 "interpretation": "Original source facts, query scope, metadata phases and analytical derivations remain separate. Categorical occurrences are not elapsed durations. Numerical source values remain exact text, and numerical summaries retain exact rational values."}
@@ -948,6 +994,10 @@ def _metadata_document(programme, sources):
     root = private_directory(programme.output / "analysis-method-source")
     private_directory(root / "files")
     value = {"inventory": inventory, "exact_numeric_statistics": statistics}
+    component_tables, component_descriptions = ({}, {})
+    if any(source["component"] for source in sources):
+        component_tables, component_descriptions = component_analysis.analysis_tables(sources)
+        value.update(component_tables)
     body = _json(value)
     _need(len(body) <= _MAX_DOCUMENT, "METHOD_DOCUMENT_CAPACITY")
     document = {"path": "files/" + digest(body) + ".json", "bytes": len(body),
@@ -968,6 +1018,13 @@ def _metadata_document(programme, sources):
                      "role": "complete-calculation-programme-source"}
     _immutable(root / module_record["path"], module)
     originals.append(module_record)
+    if component_descriptions:
+        component_module = read(_path(component_analysis.__file__), 1024 * 1024)
+        component_record = {"path": "files/" + digest(component_module) + ".txt",
+            "bytes": len(component_module), "sha256": digest(component_module),
+            "contentType": "text/plain;charset=utf-8", "role": "complete-component-verification-analysis-source"}
+        _immutable(root / component_record["path"], component_module)
+        originals.append(component_record)
     captured = programme.intent("method-capture-time", lambda: {"at": _now()})["at"]
     manifest = {
         "schema": "stellar-forge.analysis-source-document.v1",
@@ -976,7 +1033,7 @@ def _metadata_document(programme, sources):
         "complete": all(source["source"]["complete"] for source in sources),
         "provenance": {"kind": "operator-file", "publisher": "SensorThings analysis workspace",
             "capturedAt": captured, "scope": "The exact retained source editions selected by operation " + programme.operation,
-            "description": "Derived inventory and exact source-number summaries. Original source intake descriptors and the complete calculation module accompany this document; every original source edition and its complete archive are separately retained in this same Analysis workspace. The classifier is the unchanged SensorThings analysis numericEligibility function. Numerical summaries preserve source number text and use exact rational arithmetic. The decimal mean alone is rounded to 34 significant digits. No source query, capture, quality label or payment status is invented or changed."}}
+            "description": "Derived inventory and exact source-number summaries. Explicit component inputs additionally retain positional verification, category/quality/time tables and separate exact/browser statistics, with the complete companion module. Original source intake descriptors and the complete calculation module accompany this document; every original source edition and its complete archive are separately retained in this same Analysis workspace. The classifier is the unchanged SensorThings analysis numericEligibility function. Numerical summaries preserve source number text and use exact rational arithmetic. The decimal mean alone is rounded to 34 significant digits. No source query, capture, quality label or payment status is invented or changed."}}
     validate_manifest(manifest)
     manifest_path = root / "source.json"
     _immutable(manifest_path, _json(manifest))
@@ -987,7 +1044,8 @@ def _metadata_document(programme, sources):
     return manifest_path, {
         "inventory": {"collection": "/inventory", "rows": len(inventory), "columns": inventory_columns},
         "exact_numeric_statistics": {"collection": "/exact_numeric_statistics",
-                                     "rows": len(statistics), "columns": statistics_columns}}
+                                     "rows": len(statistics), "columns": statistics_columns},
+        **component_descriptions}
 
 
 def _query_sheet(query, ordinal):
@@ -1007,7 +1065,7 @@ def _handover_guide(result):
         str(item["tables"]["components"]["rows"]) + " component rows, " +
         str(item["tables"]["entities"]["rows"]) + " entity occurrences."
         for item in result["sources"])
-    return """SENSORTHINGS SOURCE ANALYSIS
+    base = """SENSORTHINGS SOURCE ANALYSIS
 Complete retained source, editable analysis and portable customer receiving
 
 Operation: """ + result["operation_id"] + """
@@ -1038,7 +1096,7 @@ original source engine's numeric-view decision and reason for every
 observation. Source archives retain original response bodies, request URLs,
 connector records, query scope, metadata phases and licence terms.
 
-All five tables are imported through the original Analysis response-document
+All five base tables are imported through the original Analysis response-document
 path. The complete document and original source archive are stored once per
 edition inside the workspace's content-addressed document collection. The
 three raw tables are not replaced by the derived index or classifier.
@@ -1049,7 +1107,7 @@ and unambiguous adjacent observed code differences. It does not assign an
 elapsed duration to an observation, infer uptime, interpolate coverage or
 assert current station capacity. A source time is not a capture clock.
 
-Numeric summaries include only rows admitted by the unchanged scalar
+The scalar numerical summaries include only rows admitted by the unchanged scalar
 analysis numericEligibility function. Each group retains its original
 stream kind, typed ID, observation type, observed property and unit. It
 does not combine different units or implicitly select a multidimensional
@@ -1109,6 +1167,60 @@ receiving operation and every supplied file's byte count and SHA-256.
 All paths in the outer handover ZIP are relative. The original workspace
 receiver reconstructs the original internal relative content addresses.
 Vendor connections and credentials remain outside this handover.
+"""
+
+
+    component_sources = [x for x in result["sources"] if "component_analysis" in x]
+    if not component_sources:
+        return base
+    component_lines = "\n".join(
+        "- " + x["name"] + ": saved version " + x["component_analysis"]["analysis_version_id"] +
+        "; binding manifest " + x["component_analysis"]["binding_manifest_id"] +
+        "; " + str(x["component_analysis"]["selected_occurrences"]) + " selected component occurrences."
+        for x in component_sources)
+    return base + """
+EXPLICIT MULTIDATASTREAM COMPONENT ANALYSIS
+""" + component_lines + """
+
+Each component handover adds selected_components, component_index,
+component_eligibility and component_bindings to the same complete source
+document. The saved original analysis version and ordered binding manifest
+are retained as complete originals. Receiving verifies every selected row
+against its unchanged parent vector, exact array position and original
+property/unit/type declaration before the first Analysis import.
+
+Missing, null, non-array and short-vector values retain distinct states and
+actual source pointers. Selected semantic identity is separate from parent
+semantic identity. Comparisons identify selected changes, metadata meaning
+changes, unselected parent context changes, ambiguous original keys and
+observed-only records without asserting source insertions or deletions.
+
+Component exact statistics use the explicit saved interpretation and original
+componentExactEligibility rules, independent of finite browser plotting.
+All eligible retained occurrences contribute equally, including coincident
+timestamps. Exact sums, means and medians are rational values; source extrema
+remain original tokens. The mean_decimal_34 field alone is rounded. These
+are sample statistics, not time-weighted, interpolated or interval coverage
+statistics. Original units are not converted or pooled across bindings.
+
+The report retains duplicate-instant counts and observed inter-instant
+separations. Complete endpoint citations, every coincident occurrence,
+category codes, quality states and excluded numeric reasons are available
+in the full query exports and additional workbook sheets. A long separation
+does not establish a missing sample or service outage without another
+explicit source rule.
+
+The receiving workspace also contains an actual revision 2 of the
+component_time_coverage query, its corresponding revised report section and
+workbook sheet. It groups explicit selected-component instants by UTC date.
+Revision 1 retains the original event/separation summary and remains readable.
+The full second workspace export contains both histories and all originals.
+
+To change a selected component, source edition, unit interpretation or issue
+acknowledgment, create an explicit new version in the original SensorThings
+analysis UI, prepare it with analysis.python.components.prepare and use a
+new programme operation. Reopen the existing operation to recover an
+interrupted run; do not substitute new inputs into its retained identity.
 """
 
 
