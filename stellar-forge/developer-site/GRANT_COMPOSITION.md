@@ -87,6 +87,7 @@ complete authoring source used by the existing command:
 | grant-entry.mjs | Joins the current product opening and original installed/source commands. |
 | grant-submission.mjs | Binds issuer preparation to the exact composed application. |
 | grant-review-round.mjs | Attaches the original named review, author revision and complete handover to that same application identity. |
+| grant-companion.mjs | Opens the complete current product and financing companion through its chapter reader. |
 
 Keep these original modules, their guides, **browser-assets.json** and its full
 declared files together when receiving a source edition. The manifest includes
@@ -133,3 +134,13 @@ Keep the four-reader callback on its original Page and continue with the complet
 The complete original model result, three native draft inputs, every review export and report are retained in [the operating source packet](../../operations/scf-submission-review-round-7108-20261012/README.md). The installed grant-reviewer contribution explicitly selects that entire packet and exposes the original model, composition helper and both receiving callbacks under `./grant/review-round`, `./grant/review-round/composition`, `./grant/review-round/model-receiving` and `./grant/review-round/browser-receiving`. Use the package's actual name when importing those exports. The native model result is complete; the existing Page owner records the actual browser result separately.
 
 A receiving continuation keeps the original operation ID, full checkpoint, selected inputs and artifact bytes. Completed downloads are verified and reused before another UI export. Independent Save copy steps reconcile their durably selected original destination through the existing draft store. Preserve that checkpoint on interruption and invoke the same callback with it; do not create another reviewer round to replace unfinished work.
+
+## Read the complete companion
+
+Choose **Product and financing** in the application navigation. The maintained
+[companion reader](GRANT_COMPANION.md) consumes the same complete Markdown and
+source index, with chapter navigation, full-text chapter search, original-file
+downloads, selected or complete printing, and a self-contained offline export.
+Its four assets are declared by the existing browser manifest and travel with
+the complete developer-site source. Composition refreshes its source descriptor
+while retaining the original four-reader sourcePins contract.
