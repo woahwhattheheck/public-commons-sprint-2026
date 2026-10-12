@@ -259,9 +259,9 @@ def retain_response(root, source, *, checkout=None, node="node"):
         originals = {x["role"]: x["path"] for x in opened.inputs}
         if source["input_kind"] == "stream":
             manifest = parse(read(Path(originals["manifest"]), 1_048_576))
-            originals.update(records=str(opened.file.path), response=manifest["source"]["path"])
+            originals.update(records=str(opened.file.expected_destination), response=manifest["source"]["path"])
         else:
-            originals["response"] = str(opened.file.path)
+            originals["response"] = str(opened.file.expected_destination)
         for row in expected:
             _copy(Path(originals[row["role"]]), stage / row["path"], row)
         capsule = {"schema": SCHEMA, "source_sha256": identifier, "input_kind": source["input_kind"],

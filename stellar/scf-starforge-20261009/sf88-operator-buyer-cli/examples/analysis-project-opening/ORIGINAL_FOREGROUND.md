@@ -16,15 +16,22 @@ the complete project before returning.
 | Original receiving | `82e78351199f4a8b8c4d6f9c95fd2881` |
 | Complete archive operation | `18c5be43c7ed4e2a9871ba8acf210612` |
 | Customer receiving | `a01cedccfe9c4075a690651b4edf0631` |
-| Complete source frame | `original-source-frame.json`, 72,217 UTF-8 bytes |
-| Source frame Git blob | `9e316e27abf83a37be7b049f1779922ae901c876` |
+| Complete source frame | `original-source-frame.json`, 95,195 UTF-8 bytes |
+| Source frame Git blob | `2d8748ecb589535428c7640fbbf150c2534e1311` |
 
 The frame contains every complete changed source postimage and its Git blob
-identity. It also records the previous receiving attempt: all 51 original
-payload files were extracted, then complete directory validation stopped before
-application startup. The correction explicitly creates each private
-intermediate directory and keeps the original archive database in a separate
-immutable file for source registration reads.
+identity. It preserves the original directory-validation interruption and the
+actual continuation in session 69100: original receiving completed, then the
+first response retention stopped because the native FileDelivery exposes
+expected_destination. The corrected retention module uses that verified native
+field for both stream and MCP files. Session 69100 remains the idle custodian of
+its original received tree; the corrected physical continuation retains its
+complete returned outcome and every original business and receiving ID.
+
+The selected receiver explicitly creates each private intermediate directory
+and keeps the original archive database in a separate immutable file for source
+registration reads. The source inventory includes the complete corrected
+retention module and preserves its original preimage.
 
 The selected existing runtime is the original 42-module Python closure and
 eight-module Node reader under
@@ -46,10 +53,10 @@ For an interactive operator shell with these three complete source files:
 ```sh
 { cat original-source-frame.json; cat; } | \
   python3 -B receive_complete_source.py \
-  72217 9e316e27abf83a37be7b049f1779922ae901c876 --run
+  95195 2d8748ecb589535428c7640fbbf150c2534e1311 --run
 ```
 
-An existing framed execution client may instead send the exact 72,217 bytes
+An existing framed execution client may instead send the exact 95,195 bytes
 after `SOURCE_FRAME_READY`, then retain that same input stream. The receiver
 verifies the frame and all complete Python postimages before writing them.
 
