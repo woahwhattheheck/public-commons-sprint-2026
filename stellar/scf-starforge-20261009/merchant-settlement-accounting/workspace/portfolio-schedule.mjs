@@ -31,7 +31,8 @@ export function normalizePortfolioStaff(rows){
       need(plain(interval),'Describe each time-off interval.');
       const from=portfolioDate(interval.from),to=portfolioDate(interval.to);
       need(from<=to,'Keep time-off dates in order.');
-      return {from,to,note:typeof interval.note==='string'?interval.note.slice(0,1000):''};
+      const note=interval.note??'';need(typeof note==='string'&&note.length<=1000&&!note.includes('\0'),'Keep complete time-off notes within 1000 characters.');
+      return {from,to,note};
     });
     const capacity=minutes(row.minutesPerDay,'daily capacity');
     need(capacity<=1440,'Daily capacity cannot exceed 1440 minutes.');

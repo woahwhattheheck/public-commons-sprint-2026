@@ -76,14 +76,14 @@ export class PortfolioWorkspace{
     });
   }
   async view(){
-    await this.workspace.tail;const state=this.state;
+    await this.workspace.tail;const state=this.state,successors=new Map(state.commands.filter(row=>row.replacesCommandId).map(row=>[row.replacesCommandId,row.id]));
     return this.envelope({schema:PORTFOLIO_SCHEMA,clientAliases:clone(this.clientAliases),
       firm:state.latestFirmEditionId?clone(this.firm()):null,firmEditions:clone(state.firmEditions),
       clients:state.clients.map(row=>({...clone(row),commission:clone(row.commissions.find(item=>item.id===row.latestCommissionId))})),
       plans:state.plans.map(row=>({id:row.id,seriesId:row.seriesId,previousPlanId:row.previousPlanId,label:row.label,startDate:row.startDate,endDate:row.endDate,
         createdAt:row.createdAt,actor:row.actor,rows:row.rows.length,previewSha256:row.previewSha256,totals:clone(row.calendar.totals),conflicts:row.calendar.conflicts.length,
         superseded:state.plans.some(next=>next.previousPlanId===row.id)})),
-      commands:state.commands.map(stripCommand),captures:clone(state.captures),received:clone(state.received)});
+      commands:state.commands.map(row=>({...stripCommand(row),replacesCommandId:row.replacesCommandId??null,replacedByCommandId:successors.get(row.id)??null,current:!successors.has(row.id)})),captures:clone(state.captures),received:clone(state.received)});
   }
   async client(id){await this.workspace.tail;return this.envelope({client:clone(this.clientRow(id))});}
   async plan(id){await this.workspace.tail;return this.envelope({plan:clone(this.planRow(id))});}
@@ -311,7 +311,7 @@ export class PortfolioWorkspace{
         exact(selection.clientWorkspaceId,runbooks.workspaceId,'PORTFOLIO_CLIENT_CHANGED','Refresh the selected original client workspace.');
         exact(selection.clientRevision,runbooks.workspace.state.revision,'PORTFOLIO_CLIENT_REVISION_CHANGED','Refresh the client before capturing its complete handover.');
         const revision=runbooks.workspace.state.revision;
-        need(selection.cycleIds.some(id=>runbooks.cycle(id).editionId===commission.editionId),'PORTFOLIO_CAPTURE_EDITION','Include a complete period using the commissioned procedure edition.');
+        need(selection.cycleIds.some(id=>{const cycle=runbooks.cycle(id);return cycle.editionId===commission.editionId&&hash(cycle.edition)===commission.editionSha256;}),'PORTFOLIO_CAPTURE_EDITION','Include a complete period using the exact commissioned procedure edition and contents.');
         for(const cycleId of selection.cycleIds){
           const cycle=runbooks.cycle(cycleId);exact(cycle.runbookId,commission.runbookId,'PORTFOLIO_CAPTURE_PERIOD_CHANGED','Choose periods of this commissioned client runbook.');
           const file=await runbooks.packet(cycleId),compressed=gzipSync(file.bytes,{level:6});
@@ -378,9 +378,10 @@ export class PortfolioWorkspace{
     }
     need(Array.isArray(packet.packets)&&packet.packets.length>0&&packet.packets.length<=1500,'PORTFOLIO_PACKET','The complete selected client period packets are missing.');
     need(new Set(packet.packets.map(row=>row.clientId+'/'+row.cycleId)).size===packet.packets.length,'PORTFOLIO_PACKET','The handover repeats a client period.');
-    let expanded=0;
+    let expanded=0;const commissionedEditions=new Set(),selectedClients=new Set();
     for(const row of packet.packets){
-      uid(row.clientId,'packet client');uid(row.cycleId,'packet period');
+      uid(row.clientId,'packet client');uid(row.cycleId,'packet period');selectedClients.add(row.clientId);
+      need(Number.isSafeInteger(row.clientRevision)&&row.clientRevision>=0,'PORTFOLIO_PACKET','The selected client observation has no original revision.');
       const client=metadata.clients.find(item=>item.id===row.clientId),commission=client?.commissions.find(item=>item.id===client.latestCommissionId);
       need(commission&&row.alias===commission.alias&&row.clientWorkspaceId===commission.clientWorkspaceId,'PORTFOLIO_PACKET','The client period does not belong to its commissioned workspace.');
       need(Number.isSafeInteger(row.bytes)&&row.bytes>0&&row.bytes<=RUNBOOK_PACKET_BYTES&&Number.isSafeInteger(row.compressedBytes)&&row.compressedBytes>0&&row.compressedBytes<=PORTFOLIO_PACKET_BYTES&&SHA.test(row.sha256??'')&&SHA.test(row.compressedSha256??''),'PORTFOLIO_PACKET','A complete native client packet has invalid size or digest.');
@@ -388,6 +389,8 @@ export class PortfolioWorkspace{
       need(typeof row.gzipBase64==='string'&&row.gzipBase64.length<=Math.ceil(row.compressedBytes/3)*4,'PORTFOLIO_PACKET','The complete compressed client packet is missing.');
       if(validateClients){const native=this.unpackClient(row),parsed=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(native));
         this.runbooks.validatePacket(parsed);exact(parsed.cycle.id,row.cycleId,'PORTFOLIO_PACKET_CHANGED','The original client period identity changed.');
+        if(parsed.edition.id===commission.editionId&&hash(parsed.edition)===commission.editionSha256)commissionedEditions.add(row.clientId);
+        if(row.receivedSource===false)exact(parsed.asOfWorkspaceRevision,row.clientRevision,'PORTFOLIO_PACKET_CHANGED','The native client packet observation revision changed.');
         exact(parsed.runbookId,commission.runbookId,'PORTFOLIO_PACKET_CHANGED','The original client runbook identity changed.');
         // A received native packet preserves its first authoring workspace in full.
         exact(parsed.originWorkspaceId,row.authoringWorkspaceId,'PORTFOLIO_PACKET_CHANGED','The original client authoring workspace changed.');
@@ -395,6 +398,7 @@ export class PortfolioWorkspace{
           'PORTFOLIO_PACKET_CHANGED','The client source or received-packet binding changed.');
       }
     }
+    if(validateClients)need([...selectedClients].every(id=>commissionedEditions.has(id)),'PORTFOLIO_PACKET_EDITION','Each selected client needs a complete period carrying its exact commissioned procedure edition and contents.');
     exact(expanded,packet.expandedBytes,'PORTFOLIO_PACKET_CHANGED','The complete expanded packet size changed.');return packet;
   }
   unpackClient(row){
@@ -424,6 +428,11 @@ export class PortfolioWorkspace{
     const packet=this.decodePacket(bytes);
     return this.envelope({received:record,metadata:packet.metadata,packets:packet.packets.map(({gzipBase64,...row})=>row)});
   }
+  async receivedPacket(id){
+    await this.workspace.tail;const record=clone(this.receivedRow(id));
+    const bytes=await readRunbookBytes(join(this.workspace.directory,'runbooks','portfolio',record.sha256+'.json'),record,PORTFOLIO_PACKET_BYTES);
+    return {bytes,name:'received-client-portfolio-'+record.id+'.json',type:'application/json; charset=utf-8'};
+  }
   async clientPacket(receivedId,clientId,cycleId){
     await this.workspace.tail;const record=clone(this.receivedRow(receivedId));
     const bytes=await readRunbookBytes(join(this.workspace.directory,'runbooks','portfolio',record.sha256+'.json'),record,PORTFOLIO_PACKET_BYTES),packet=this.decodePacket(bytes);
@@ -446,7 +455,8 @@ export class PortfolioWorkspace{
         exact(runbooks.workspaceId,binding.clientWorkspaceId,'PORTFOLIO_CLIENT_CHANGED','Refresh the local receiving client workspace.');
         exact(runbooks.workspace.state.revision,binding.clientRevision,'PORTFOLIO_CLIENT_REVISION_CHANGED','Refresh the received local client periods.');
         const book=runbooks.book(commission.runbookId);
-        need(book.editions.some(row=>row.id===commission.editionId),'PORTFOLIO_RECEIVING_EDITION','Receive the commissioned procedure edition into its original local client desk first.',409);
+        const edition=book.editions.find(row=>row.id===commission.editionId);
+        need(edition&&hash(edition)===commission.editionSha256,'PORTFOLIO_RECEIVING_EDITION','Receive the exact commissioned procedure edition and contents into its original local client desk first.',409);
         for(const packet of packets){
           const cycle=runbooks.cycle(packet.cycleId);
           need(cycle.readOnly===true&&cycle.receivedPacket?.sha256===packet.sha256,'PORTFOLIO_RECEIVING_PERIOD','Receive every selected complete native period into this local client desk first.',409);
@@ -512,6 +522,7 @@ export async function handlePortfolioRequest(portfolio,{method,path,value}){
   }
   if(parts.length===5&&parts[2]==='commands'&&parts[4]==='result'&&method==='GET')return {value:await portfolio.result(parts[3])};
   if(parts.length===5&&parts[2]==='commands'&&parts[4]==='execute'&&method==='POST')return {value:await portfolio.execute(parts[3],value)};
+  if(parts.length===5&&parts[2]==='received'&&parts[4]==='packet'&&method==='GET')return {file:await portfolio.receivedPacket(parts[3])};
   if(parts.length===5&&parts[2]==='captures'&&parts[4]==='packet'&&method==='GET')return {file:await portfolio.packet(parts[3])};
   if(parts.length===5&&parts[2]==='plans'&&method==='GET'){
     if(parts[4]==='calendar.csv')return {file:await portfolio.calendarCsv(parts[3])};
