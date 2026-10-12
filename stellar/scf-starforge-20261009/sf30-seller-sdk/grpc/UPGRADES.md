@@ -101,6 +101,14 @@ A lost HTTP reply is not a reason to create another payment or call. This workfl
 
 Workspace files live in the existing private workspace's `upgrades/` directory. Review files are create-only; the existing atomic index contains their compact summaries. Adoption intent/result files use the same original review ID. No second workspace database, source compiler or payment engine is introduced.
 
+## Continue with a merchant agent or CLI
+
+The original [merchant upgrade guide](../../../../stellar-forge/mcp-merchant-operator/GRPC_UPGRADES.md) covers the six agent tools and the installed `grpc-upgrade` command. They use the same review UUID, digest, source records and original Save/CAS path shown in this panel.
+
+Use the running console's private URL file with `--console-url-file`, or use `--state` after that original workspace closes. Complete receiving carries four records: the retained review/adoption, base revision, candidate revision or reflection capture, and proposed plan. Native inspection compiles those captured contracts and the selected merchant plan before the receiving operator continues. The seven prepared customer files remain a separate usable client delivery.
+
+Open or receive the same review after interruption. Its immutable digest stays the reference; adopting, calling, preparing and publishing keep their own original operation identities.
+
 ## Original API integration
 
 Authenticated requests use the same `x-workspace-token` and local-origin rules as the original operator.
