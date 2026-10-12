@@ -263,15 +263,32 @@ export async function exercisePMTilesOutputCommerce({sourceRoot,directory,runtim
         const purchase=purchases[name],pages=[];let offset=0,total=null;
         do{
           const stepName='accounting-'+name+'-'+offset;
-          const page=await step(stepName,()=>call('purchase_finalize',{
-            buyer:'original',purchaseRequestId:purchase.requestId,offset,limit:100}));
+          const expectedTotal=rows[name].pricing.requests,expectedEnd=Math.min(expectedTotal,offset+100);
+          const completeRange=page=>{
+            const result=page?.accounting,native=result?.native,range=native?.range;
+            return page?.requestSha256===purchase.requestSha256&&native?.kind==='object'&&
+              native.mode==='FINALIZE'&&native.workspace===operatorWorkspace&&
+              range?.offset===offset&&range.limit===100&&range.total===expectedTotal&&
+              range.nextOffset===(expectedEnd<expectedTotal?expectedEnd:null)&&
+              native.interrupted===false&&result.process?.exitCode===0&&!result.process.errorCode&&
+              Array.isArray(native.entries)&&native.entries.length===expectedEnd-offset&&
+              native.entries.every(entry=>['FINALIZED','IDEMPOTENT_FINALIZED'].includes(entry.outcome));
+          };
+          const page=await step(stepName,async()=>{
+            // Reconcile the original command first. A partial native report stays
+            // in that command's own records and does not complete this page.
+            const recovered=await call('purchase_accounting_recover',{
+              buyer:'original',purchaseRequestId:purchase.requestId});
+            const prior=recovered.accounting?.lastComplete;
+            const reopened=prior?{...recovered,accounting:prior}:null;
+            if(completeRange(reopened))return reopened;
+            const current=await call('purchase_finalize',{
+              buyer:'original',purchaseRequestId:purchase.requestId,offset,limit:100});
+            assert.ok(completeRange(current),'The original accounting range needs its retained idempotent continuation.');
+            return current;
+          });
+          assert.ok(completeRange(page),'The retained complete accounting range changed.');
           const result=page.accounting,native=result.native;
-          assert.equal(page.requestSha256,purchase.requestSha256);
-          assert.equal(native.mode,'FINALIZE');assert.equal(native.workspace,operatorWorkspace);
-          assert.equal(native.range.offset,offset);assert.equal(native.range.total,rows[name].pricing.requests);
-          assert.equal(native.interrupted,false);assert.equal(result.process.exitCode,0);
-          assert.ok(!result.process.errorCode);
-          assert.ok(native.entries.every(entry=>['FINALIZED','IDEMPOTENT_FINALIZED'].includes(entry.outcome)));
           total??=native.range.total;assert.equal(native.range.total,total);
           const recovered=await call('purchase_accounting_recover',{
             buyer:'original',purchaseRequestId:purchase.requestId,commandId:result.commandId});

@@ -322,8 +322,12 @@ engine. Repeating a range returns its original idempotent finalization
 outcome. The map chunk requests, complete assemblies and payment receipts
 remain attached to that same SF88 object.
 
-The complete native phase saves every full accounting page under its
-original `steps/` directory, checks every planned chunk reaches
+The complete native phase reconciles the original accounting command before
+continuing a range. It saves a completed page under its original `steps/`
+directory only after the complete range, native process and final outcomes
+have passed. Partial responses stay in their original SF88 command records,
+so that same idempotent range can continue after interruption. It checks
+every planned chunk reaches
 `FINALIZED` or `IDEMPOTENT_FINALIZED`, then reopens the exact saved
 accounting commands after MCP restart. Its result includes those file
 hashes alongside the original map, complete ZIP, seller release and

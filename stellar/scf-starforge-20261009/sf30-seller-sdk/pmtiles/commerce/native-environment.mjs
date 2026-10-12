@@ -233,7 +233,6 @@ export async function startPMTilesNativeEnvironment({selection,commerce,buyerCon
           }
           if(value.before===undefined)delete process.env[name];else process.env[name]=value.before;
         }
-        if(processOwner===owner)processOwner=null;
       }
       if(native&&native.drained!==true)errors.push(Object.assign(new Error('The original facilitator drain is incomplete.'),{code:'PMTILES_NATIVE_ENVIRONMENT_DRAIN_INCOMPLETE'}));
       const result={schema:'starforge.pmtiles-native-environment-close.v1',inputSha256,origin:merchantOrigin.origin,
@@ -241,10 +240,16 @@ export async function startPMTilesNativeEnvironment({selection,commerce,buyerCon
         facilitator:{drained:native?.drained??null,httpDrained:native?.httpDrained??null},
         counters:clone(counters),closedAt:new Date().toISOString(),
         errors:errors.map(error=>({code:typeof error.code==='string'?error.code:'PMTILES_NATIVE_ENVIRONMENT_CLOSE_FAILED'}))};
-      try{await writeJson(join(directory,'status.json'),{state:errors.length?'INTERRUPTED':'CLOSED',...result});}
-      catch(error){errors.push(error);}
-      if(errors.length)throw new AggregateError(errors,'The original native environment needs its retained continuation.');
-      return result;
+      try{
+        try{await writeJson(join(directory,'status.json'),{state:errors.length?'INTERRUPTED':'CLOSED',...result});}
+        catch(error){errors.push(error);}
+        if(errors.length)throw new AggregateError(errors,'The original native environment needs its retained continuation.');
+        return result;
+      }finally{
+        // Keep the same owner through its final status write so a new startup
+        // cannot be followed by this older lifetime's CLOSED observation.
+        if(processOwner===owner)processOwner=null;
+      }
     })();return closePromise;
   }
   try{
