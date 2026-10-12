@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "stac-postgis",
-  "description": "Retained PostGIS intake, customer edit review, publication, rollback and complete database/QGIS receiving",
+  "description": "Retained PostGIS intake, customer edit review, publication, rollback, original-operation recovery and complete database/QGIS receiving",
   "commands": {
     "stac-postgis": "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/cli.mjs"
   },
@@ -24,6 +24,7 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/index.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/verify.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/backup.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/operation-output.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/cli.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/operator.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/operator.html",

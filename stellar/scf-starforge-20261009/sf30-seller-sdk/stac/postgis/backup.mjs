@@ -1,5 +1,6 @@
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
+import {inspectCommittedOutput, requireAvailableOutput} from './operation-output.mjs';
 import {BACKUP, META, need, id, hash, integer, canonical, digest, qi, ql, physicalName,
   normalizeProfile, parseExactJSON, viewContract} from './contract.mjs';
 import {privateDirectory, member, claimDirectory, readJSON, fileRecord, verifyFile, writeJSONOnce,
@@ -93,13 +94,25 @@ export async function exportDatabaseBackup({db, profile, root, sourceOptions, op
   need(typeof directory === 'string' && directory.length, 'POSTGIS_BACKUP_DESTINATION_REQUIRED');
   const request = {schema: 'starforge.postgis-backup-request.v1', operationId,
     projectId: profile.projectId, directory: resolve(directory)};
+  async function verifiedResult(result) {
+    const artifact = await inspectCommittedOutput({kind: 'backup', projectId: profile.projectId,
+      operationId, requestSha256: result.requestSha256, directory: request.directory,
+      manifestFile: result.manifestFile}, openBackup);
+    requireAvailableOutput(artifact, operationId);
+    return {...result, artifact};
+  }
+  const committed = await db.transaction(async client => {
+    const saved = await db.savedOperation(client, operationId, digest(request));
+    return saved ? {...saved, replayed: true, current: await db.project(client)} : null;
+  }, {readOnly: true});
+  if (committed) return verifiedResult(committed);
   const output = await claimDirectory(directory, request);
   let completed = null;
   try { completed = await openBackup(output); }
   catch (error) { if (error.code !== 'ENOENT') throw error; }
   if (completed) need(completed.manifest.operationId === operationId &&
     completed.manifest.requestSha256 === digest(request), 'POSTGIS_ORIGINAL_BACKUP_OPERATION_CHANGED');
-  return db.mutate(operationId, 'export-backup', request, async (client, current, requestSha256) => {
+  const result = await db.mutate(operationId, 'export-backup', request, async (client, current, requestSha256) => {
     if (completed) return {...completed, recoveredCompletedFile: true};
     const editionIds = (await client.query('SELECT edition_id FROM ' + db.q(META.editions) +
       ' WHERE project_id=$1 ORDER BY edition_id', [profile.projectId])).rows.map(row => row.edition_id);
@@ -167,6 +180,7 @@ export async function exportDatabaseBackup({db, profile, root, sourceOptions, op
     await writeJSONOnce(member(output, 'postgis-backup.json'), manifest);
     return openBackup(output);
   });
+  return verifiedResult(result);
 }
 
 export async function restoreDatabaseBackup({db, profile, root, sourceOptions, operationId, directory, expectedManifestSha256}) {

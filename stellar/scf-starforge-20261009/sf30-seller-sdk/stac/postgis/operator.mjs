@@ -10,15 +10,17 @@ import {claimDirectory, member, writeJSONOnce, readJSON, fileRecord} from './fil
 
 const ACTIONS = Object.freeze({
   inspect: 'inspect', stage: 'stage', review: 'review', row: 'readRow', promote: 'promote', rollback: 'rollback',
-  'export-receiving': 'exportReceiving', 'export-backup': 'exportBackup', 'restore-backup': 'restoreBackup'
+  'export-receiving': 'exportReceiving', 'export-backup': 'exportBackup', 'restore-backup': 'restoreBackup',
+  'recover-operation': 'recoverOperation'
 });
 const MUTATIONS = new Set(['stage', 'promote', 'rollback', 'export-receiving', 'export-backup', 'restore-backup']);
 const MAX_REQUEST_BYTES = 16 * 1024 * 1024;
 
-export async function startOperator({connection, profile: inputProfile, directory, python, port = 0}) {
+export async function startOperator({connection, profile: inputProfile, directory, python, port = 0, handleSignals = true}) {
   const profile = normalizeProfile(inputProfile);
   const assets = await readBrowserAssets(new URL('./browser-assets.json', import.meta.url));
   need(Number.isInteger(port) && port >= 0 && port <= 65535, 'POSTGIS_OPERATOR_PORT_INVALID');
+  need(typeof handleSignals === 'boolean', 'POSTGIS_OPERATOR_SIGNAL_OWNERSHIP_REQUIRED');
   const root = resolve(directory), cookie = randomBytes(32).toString('hex');
   const initial = await openPostgisIntake({connection, profile, directory: root, python});
   await initial.close();
@@ -43,6 +45,14 @@ export async function startOperator({connection, profile: inputProfile, director
   async function execute(action, supplied) {
     need(ACTIONS[action] || action === 'source-inspect' || action === 'history', 'POSTGIS_OPERATOR_ACTION_NOT_FOUND');
     const selectedProfile = supplied.profile || profile, request = supplied.request || {};
+    if (action === 'recover-operation') {
+      need(request && typeof request === 'object' && !Array.isArray(request) &&
+        Object.keys(request).length === 1 && typeof request.operationId === 'string' && request.operationId.length > 0,
+        'POSTGIS_RECOVERY_OPERATION_ID_ONLY');
+      // Recovery reads the original committed record in this selected installation.
+      // A restored record's old profile is evidence, never an executable selection.
+      return withIntake(profile, intake => intake.recoverOperation({operationId: request.operationId}));
+    }
     if (action === 'source-inspect') {
       const source = await openVectorExport(request.sourceDirectory,
         {python, expectedManifestSha256: request.expectedManifestSha256, native: true});
@@ -173,6 +183,9 @@ export async function startOperator({connection, profile: inputProfile, director
       if (response.headersSent) { response.destroy(); return; }
       const code = error.code?.startsWith('POSTGIS_') ? error.code : 'POSTGIS_NATIVE_OPERATION_FAILED';
       const status = /SESSION|ORIGIN|HOST|NAVIGATION/.test(code) ? 403 : /TOO_LARGE/.test(code) ? 413 :
+        code === 'POSTGIS_RECOVERY_OPERATION_ID_ONLY' ? 400 :
+        code === 'POSTGIS_ORIGINAL_OPERATION_NOT_COMMITTED' ? 404 :
+        code === 'POSTGIS_COMMITTED_EXPORT_UNAVAILABLE' ? 409 :
         /CHANGED|CONFLICT|REQUIRED|MISSING|INVALID/.test(code) ? 409 : 500;
       json(response, status, {ok: false, error: {code,
         message: error.code?.startsWith('POSTGIS_') ? error.message : 'The selected database operation did not complete.',
@@ -187,10 +200,22 @@ export async function startOperator({connection, profile: inputProfile, director
   origin = 'http://127.0.0.1:' + server.address().port;
   server.requestTimeout = 0; server.headersTimeout = 30000;
   let closePromise;
+  const signals = ['SIGINT', 'SIGTERM'];
+  const signalHandler = () => {
+    close().catch(() => {
+      process.exitCode = 1;
+      process.stderr.write('PostGIS operator shutdown did not complete cleanly.\n');
+    });
+  };
   const close = () => closePromise ||= (async () => {
-    closing = true; await queue;
-    await new Promise((done, reject) => server.close(error => error ? reject(error) : done()));
+    closing = true;
+    try {
+      await queue;
+      await new Promise((done, reject) => server.close(error => error ? reject(error) : done()));
+    } finally {
+      if (handleSignals) for (const signal of signals) process.removeListener(signal, signalHandler);
+    }
   })();
-  for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => { close().finally(() => process.exit(0)); });
+  if (handleSignals) for (const signal of signals) process.on(signal, signalHandler);
   return {url: origin, server, close};
 }

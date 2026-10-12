@@ -3,9 +3,22 @@ const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 const mutations = new Set(['stage', 'promote', 'rollback', 'export-receiving', 'export-backup', 'restore-backup']);
 let config, profile, project, review, decisions = new Map(), changePage = 0, historyPage = 0, pending = [], busy = 0;
+let historyTotal = null, selectedRecovery = null, acknowledgedPending = [];
+const pendingChecks = new Map();
 const pageSize = 100;
 const jsonText = value => stringifyExactJSON(value, 2);
 const keyOf = row => row.layerId + '\0' + row.rowKey;
+const valueText = value => value === undefined || value === null ? '—' :
+  typeof value === 'string' ? value : stringifyExactJSON(value);
+function sameValue(left, right) {
+  if (Object.is(left, right)) return true;
+  if (!left || !right || typeof left !== 'object' || typeof right !== 'object' ||
+    Array.isArray(left) !== Array.isArray(right)) return false;
+  const a = Object.keys(left).sort(), b = Object.keys(right).sort();
+  return a.length === b.length && a.every((key, index) => key === b[index] && sameValue(left[key], right[key]));
+}
+const sameDatabase = (left, right) => Boolean(left?.database && right?.database &&
+  sameValue(left.database, right.database));
 const entry = (tag, value, className) => {
   const node = document.createElement(tag);
   if (value !== undefined) node.textContent = String(value);
@@ -17,7 +30,12 @@ function restoreLocal(name, fallback) {
   try { return parseExactJSON(localStorage.getItem(storageKey(name)) || 'null') || fallback; } catch { return fallback; }
 }
 function retainLocal(name, value) {
-  try { localStorage.setItem(storageKey(name), stringifyExactJSON(value)); } catch {}
+  try { localStorage.setItem(storageKey(name), stringifyExactJSON(value)); return true; } catch { return false; }
+}
+function acknowledgedRequest(original) {
+  const saved = {action: original.action, request: original.request, profile: original.profile};
+  return acknowledgedPending.some(item => item.operationId === original.request.operationId &&
+    typeof item.requestSha256 === 'string' && sameValue(item.saved, saved));
 }
 function show(name) {
   $$('[data-pane]').forEach(node => { node.hidden = node.dataset.pane !== name; });
@@ -28,11 +46,17 @@ function setBusy(change) {
   busy += change;
   $('#busy-label').textContent = busy ? 'Native operation in progress' : 'Ready';
   $$('button').forEach(button => { button.disabled = busy > 0; });
-  if (!busy) { renderReviewControls(); renderPending(); }
+  if (!busy) { renderReviewControls(); renderPending(); renderHistoryControls(); renderRecoveryControls(); }
 }
 function describeError(error) {
   const labels = {
     POSTGIS_PROJECT_REVISION_CHANGED: 'The active project changed. Refresh and review the current edition.',
+    POSTGIS_ORIGINAL_OPERATION_NOT_COMMITTED: 'No committed result for that original operation is recorded in this selected project. Recovery made no database change.',
+    POSTGIS_COMMITTED_EXPORT_UNAVAILABLE: 'The export operation committed, but its original files are missing or changed. Recover its original result and exact expected manifest; this request does not create a replacement snapshot.',
+    POSTGIS_RECOVERY_OPERATION_ID_ONLY: 'Recovery accepts only the original operation ID, without an executable stage, publication or export request.',
+    POSTGIS_PENDING_ORIGINAL_DATABASE_REQUIRED: 'This saved request selects another database profile. Recover its committed result here, or reopen the original database to continue the original request.',
+    POSTGIS_OPERATOR_RECOVERY_RESULT_CHANGED: 'The returned recovery record does not match the selected original operation and project.',
+    POSTGIS_LOCAL_RECOVERY_REMINDER_NOT_SAVED: 'The browser could not save this acknowledgement. The original committed result remains available; keep its request reminder and try again when local storage is available.',
     POSTGIS_LIVE_REVIEW_CHANGED: 'Customer rows changed after this review. Review the edition again before publishing.',
     POSTGIS_SOURCE_AND_CUSTOMER_EDIT_CONFLICT: 'Choose a decision for every conflicting customer edit.',
     POSTGIS_RESTORE_EMPTY_DESTINATION_PROJECT_REQUIRED: 'Restore requires an empty selected destination project.',
@@ -53,7 +77,9 @@ async function api(action, request = {}, selectedProfile = profile) {
     response = await fetch('/api/' + action, {method: 'POST', credentials: 'same-origin',
       headers: {'content-type': 'application/json'}, body: stringifyExactJSON({request, profile: selectedProfile})});
   } catch {
-    throw {code: 'RESPONSE_NOT_RECEIVED', message: 'The original response was not received. Continue the retained original request from Operations.'};
+    throw {code: 'RESPONSE_NOT_RECEIVED', message: action === 'recover-operation'
+      ? 'The committed-operation readback was not received. Check the same operation ID again; this read does not execute the request.'
+      : 'The original response was not received. Check its committed result in Operations before continuing the retained original request.'};
   }
   const result = parseExactJSON(await response.text());
   if (!response.ok || !result.ok) throw result.error || {message: 'The native operation did not return a result.'};
@@ -82,7 +108,14 @@ async function perform(action, request, original = null) {
   } finally { setBusy(-1); }
 }
 async function guarded(fn) {
-  try { await fn(); } catch (error) { if (!$('#status').textContent) status(describeError(error)); }
+  try { await fn(); } catch (error) {
+    if (error.code === 'POSTGIS_COMMITTED_EXPORT_UNAVAILABLE' && typeof error.operationId === 'string') {
+      $('#operation-recovery-id').value = error.operationId;
+      show('history');
+      try { await recoverCommitted(error.operationId); }
+      catch (readError) { status(describeError(error) + ' ' + describeError(readError)); }
+    } else status(describeError(error));
+  }
 }
 function replaceRows(selector, rows) {
   const body = $(selector); body.replaceChildren(...rows);
@@ -175,12 +208,106 @@ function renderPending() {
   const current = pending.find(item => item.request.operationId === $('#pending-select').value) || pending[0];
   $('#pending-label').textContent = pending.length + ' original response' + (pending.length === 1 ? '' : 's') + ' awaiting reconciliation.';
   $('#pending-detail').textContent = current ? jsonText(current) : '';
-  $('#retry').disabled = busy > 0 || !current;
+  const checked = current ? pendingChecks.get(current.request.operationId) : null;
+  const originalDatabase = current && config && sameDatabase(current.profile, config.profile);
+  $('#pending-context').textContent = !current ? '' : checked?.state === 'committed'
+    ? 'A committed original result is available below. Continuing this saved command is disabled; keep the result in Operations or recheck its original export files.'
+    : !originalDatabase
+      ? 'This saved request belongs to another database profile. Committed-result recovery is available here; continuation requires its original database.'
+      : 'Continue first checks the original committed record. It submits the retained request only when no committed record is returned in this original database.';
+  $('#retry').disabled = busy > 0 || !current || !originalDatabase || checked?.state === 'committed';
+  $('#recover-pending').disabled = busy > 0 || !current;
+  $('#acknowledge-pending').disabled = busy > 0 || !current || checked?.state !== 'committed';
+}
+function renderHistoryControls() {
+  $('#history-previous').disabled = busy > 0 || historyPage === 0;
+  $('#history-next').disabled = busy > 0 || historyTotal === null ||
+    BigInt((historyPage + 1) * pageSize) >= BigInt(historyTotal);
+}
+function renderRecoveryControls() {
+  $('#save-operation-recovery').disabled = busy > 0 || !selectedRecovery;
+}
+function renderCommittedRecovery(result) {
+  const original = result.original, current = result.current;
+  $('#committed-recovery').hidden = false;
+  $('#operation-recovery-id').value = result.operationId;
+  $('#committed-recovery-status').textContent = 'Original result recovered. No operation was executed.';
+  const facts = [
+    ['Original operation', result.operationId], ['Action', original.kind],
+    ['Committed', original.committedAt], ['Original request SHA-256', original.requestSha256],
+    ['Original profile SHA-256', result.originalProfileSha256 ?? 'Not recorded by this original action'],
+    ['Original result revision', original.result?.revision],
+    ['Current profile SHA-256', current.project?.profileSha256],
+    ['Current revision', current.project?.revision],
+    ['Current active edition', current.project?.activeEditionId],
+    ['Current database profile', current.database?.profileId],
+    ['Current database', current.database?.name], ['Current schema', current.database?.schema]
+  ];
+  $('#committed-recovery-facts').replaceChildren(...facts.map(([label, value]) => {
+    const node = entry('div'); node.append(entry('dt', label), entry('dd', valueText(value))); return node;
+  }));
+  $('#recovered-profile-changed').hidden = !result.profileChanged;
+  $('#recovered-profile-changed').textContent = 'The current database mapping differs from the original request. The original request remains historical; recovery does not submit it to this destination.';
+  $('#recovered-original-request').textContent = jsonText(original.request);
+  $('#recovered-original-result').textContent = jsonText(original.result);
+  $('#recovered-current').textContent = jsonText(current);
+  $('#operation-detail').textContent = jsonText(original);
+  const artifact = result.artifact;
+  $('#recovered-artifact').hidden = artifact === null;
+  $('#recovered-no-artifact').hidden = artifact !== null;
+  if (artifact) {
+    $('#recovered-artifact-state').textContent = artifact.state === 'available'
+      ? 'Original ' + artifact.kind + ' files verified'
+      : 'Original ' + artifact.kind + ' files unavailable';
+    $('#recovered-artifact-directory').textContent = artifact.directory;
+    $('#recovered-artifact-manifest').textContent = jsonText({expectedManifest: artifact.expectedManifest,
+      verifiedManifest: artifact.manifestFile});
+    $('#recovered-artifact-issue').textContent = artifact.issue
+      ? artifact.issue.code + ': ' + artifact.issue.message : 'The complete original export passed its native file verification.';
+    $('#recovered-artifact-next').textContent = artifact.state === 'available'
+      ? 'Use this verified original directory and manifest identity for receiving. A current database edition check is a separate reader action.'
+      : 'Keep the original committed result and expected manifest. Restore the exact original files to their recorded location before rechecking. A new current export is a separate explicit operation.';
+  }
+  renderRecoveryControls(); renderPending();
+}
+async function recoverCommitted(operationId, {allowNotCommitted = false} = {}) {
+  $('#operation-recovery-id').value = operationId;
+  show('history');
+  selectedRecovery = null;
+  $('#committed-recovery').hidden = true;
+  renderRecoveryControls();
+  let result;
+  try { result = await perform('recover-operation', {operationId}); }
+  catch (error) {
+    if (error.code === 'POSTGIS_ORIGINAL_OPERATION_NOT_COMMITTED') {
+      selectedRecovery = null;
+      pendingChecks.set(operationId, {state: 'not-committed'});
+      $('#committed-recovery').hidden = true;
+      renderPending(); renderRecoveryControls();
+      if (allowNotCommitted) return null;
+    }
+    throw error;
+  }
+  if (result?.schema !== 'starforge.postgis-operation-recovery.v1' || result.operationId !== operationId ||
+    result.projectId !== config.projectId || result.state !== 'committed' || result.executed !== false ||
+    result.original?.operationId !== operationId || result.current?.project?.projectId !== config.projectId ||
+    !result.current?.database || typeof result.profileChanged !== 'boolean' ||
+    !(result.originalProfileSha256 === null || typeof result.originalProfileSha256 === 'string') ||
+    !(result.artifact === null || result.artifact && ['receiving', 'backup'].includes(result.artifact.kind) &&
+      ['available', 'unavailable'].includes(result.artifact.state)))
+    throw {code: 'POSTGIS_OPERATOR_RECOVERY_RESULT_CHANGED'};
+  selectedRecovery = result;
+  pendingChecks.set(operationId, {state: 'committed', artifact: result.artifact?.state || null});
+  renderCommittedRecovery(result);
+  status(result.artifact?.state === 'unavailable'
+    ? 'Committed result recovered. Its original export files are unavailable; no replacement or database change was made.'
+    : 'Committed result recovered. No operation was executed.');
+  return result;
 }
 async function refreshHistory() {
   const result = await api('history', {limit: 100, offset: historyPage * 100});
   for (const original of result.unfinishedRequests || []) {
-    if (!pending.some(item => item.request.operationId === original.request.operationId)) pending.push(original);
+    if (!acknowledgedRequest(original) && !pending.some(item => item.request.operationId === original.request.operationId)) pending.push(original);
   }
   retainLocal('pending', pending); renderPending();
   const incomplete = result.incompleteJournals || [];
@@ -190,12 +317,15 @@ async function refreshHistory() {
     const tr = tableRow([operation.committedAt, operation.operationId, operation.kind]);
     const cell = entry('td'), button = entry('button', 'Open original'); button.type = 'button';
     button.addEventListener('click', () => { $('#operation-detail').textContent = jsonText(operation); });
-    cell.append(button); tr.append(cell); return tr;
+    const recover = entry('button', 'Recover committed operation'); recover.type = 'button';
+    recover.dataset.recoverOperation = operation.operationId;
+    recover.addEventListener('click', () => guarded(() => recoverCommitted(operation.operationId)));
+    cell.append(button, recover); tr.append(cell); return tr;
   }));
+  historyTotal = result.total;
   $('#history-page').textContent = Math.min(historyPage * 100 + 1, Number(result.total)) + '–' +
     Math.min((historyPage + 1) * 100, Number(result.total)) + ' of ' + result.total + ' operations';
-  $('#history-previous').disabled = historyPage === 0;
-  $('#history-next').disabled = BigInt((historyPage + 1) * 100) >= BigInt(result.total);
+  renderHistoryControls();
 }
 $$('[data-show]').forEach(button => button.addEventListener('click', () => guarded(async () => {
   show(button.dataset.show); if (button.dataset.show === 'history') await refreshHistory();
@@ -276,8 +406,44 @@ $('#next-page').addEventListener('click', () => { changePage++; renderChanges();
 $('#history-previous').addEventListener('click', () => guarded(async () => { historyPage--; await refreshHistory(); }));
 $('#history-next').addEventListener('click', () => guarded(async () => { historyPage++; await refreshHistory(); }));
 $('#pending-select').addEventListener('change', renderPending);
+$('#operation-recovery-form').addEventListener('submit', event => {
+  event.preventDefault();
+  guarded(() => recoverCommitted($('#operation-recovery-id').value.trim()));
+});
+$('#recover-pending').addEventListener('click', () => guarded(async () => {
+  const original = pending.find(item => item.request.operationId === $('#pending-select').value) || pending[0];
+  if (original) await recoverCommitted(original.request.operationId);
+}));
+$('#acknowledge-pending').addEventListener('click', () => guarded(async () => {
+  const original = pending.find(item => item.request.operationId === $('#pending-select').value) || pending[0];
+  if (!original) return;
+  const result = await recoverCommitted(original.request.operationId);
+  const acknowledgements = acknowledgedPending.filter(item => item.operationId !== original.request.operationId);
+  acknowledgements.push({operationId: original.request.operationId, requestSha256: result.original.requestSha256,
+    saved: {action: original.action, request: original.request, profile: original.profile},
+    confirmedAt: new Date().toISOString()});
+  if (!retainLocal('acknowledged-pending', acknowledgements)) throw {code: 'POSTGIS_LOCAL_RECOVERY_REMINDER_NOT_SAVED'};
+  acknowledgedPending = acknowledgements;
+  pending = pending.filter(item => item.request.operationId !== original.request.operationId);
+  retainLocal('pending', pending); renderPending();
+  status(result.artifact?.state === 'unavailable'
+    ? 'The committed result remains in Operations. The saved response reminder was cleared; its original export files are still unavailable.'
+    : 'The committed result remains in Operations. The saved response reminder was cleared.');
+}));
+$('#save-operation-recovery').addEventListener('click', () => {
+  if (!selectedRecovery) return;
+  const url = URL.createObjectURL(new Blob([jsonText(selectedRecovery) + '\n'], {type: 'application/json'}));
+  const link = entry('a'); link.href = url;
+  link.download = selectedRecovery.operationId.replace(/[^A-Za-z0-9._-]/g, '-').slice(0,120) + '-operation-recovery.json';
+  document.body.append(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
 $('#retry').addEventListener('click', () => guarded(async () => {
   const original = pending.find(item => item.request.operationId === $('#pending-select').value) || pending[0];
+  if (!original) return;
+  const committed = await recoverCommitted(original.request.operationId, {allowNotCommitted: true});
+  if (committed) return;
+  if (!sameDatabase(original.profile, config.profile)) throw {code: 'POSTGIS_PENDING_ORIGINAL_DATABASE_REQUIRED'};
   const result = await perform(original.action, original.request, original);
   $('#operation-detail').textContent = jsonText(result);
   await refreshProject(); await refreshHistory(); status('Original operation reconciled.');
@@ -285,6 +451,15 @@ $('#retry').addEventListener('click', () => guarded(async () => {
 await guarded(async () => {
   const response = await fetch('/api/config', {credentials: 'same-origin'});
   if (!response.ok) throw {message: 'Open the private operator address again to establish its session.'};
-  config = parseExactJSON(await response.text()); profile = restoreLocal('profile', config.profile); pending = restoreLocal('pending', []);
-  $('#profile-json').value = jsonText(profile); renderPending(); await refreshProject(); await refreshHistory();
+  config = parseExactJSON(await response.text());
+  const retainedProfile = restoreLocal('profile', config.profile);
+  const matchingDatabase = sameDatabase(retainedProfile, config.profile);
+  profile = matchingDatabase ? retainedProfile : config.profile;
+  acknowledgedPending = restoreLocal('acknowledged-pending', []);
+  pending = restoreLocal('pending', []).filter(item => !acknowledgedRequest(item));
+  $('#retained-profile-panel').hidden = matchingDatabase;
+  $('#retained-profile-detail').textContent = matchingDatabase ? '' : jsonText(retainedProfile);
+  $('#profile-json').value = jsonText(profile); renderPending(); renderRecoveryControls();
+  await refreshProject(); await refreshHistory();
+  if (!matchingDatabase) status('Opened the currently configured database. The prior saved mapping and pending requests are retained for review; committed operations can be recovered without executing them.');
 });

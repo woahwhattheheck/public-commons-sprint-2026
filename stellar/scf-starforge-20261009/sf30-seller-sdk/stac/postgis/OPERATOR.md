@@ -93,9 +93,40 @@ The metadata includes only this controller's projects, editions, operations and 
 
 Every mutation has an original `operationId` and a full frozen request. Keep both. The browser retains that request locally before sending; the server retains it before invoking the database. The database stores its committed original result in the same transaction as the change.
 
-Use **Continue original request** in Operations. A committed original request returns its original result and current project state. An uncertain COMMIT is reconciled through the same project lock and operation journal. A new operation ID must not be used merely because a response was lost.
+### Recover the committed result first
 
-Filesystem publication is create-only. A digest in a request's receiving filename binds an interrupted write to its complete original request. Retrying that same request can finish publication while retaining prior receiving files. Legacy complete temporary requests are accepted only when all their bytes match. Partial or conflicting unknown content remains visible in the interrupted-journal view and does not make the whole Operations page unusable.
+Open **Operations**, enter the original operation ID and select **Recover committed operation**. Each history row also has that action; **Open original** continues to display the recorded history entry. Manual recovery can select an exact operation outside the current history page.
+
+Recovery reads the committed original operation in the currently configured project. It does not execute its stage, publication, rollback, export or restore request. The result shows:
+
+- the unchanged original request, request SHA-256, original profile SHA-256 when recorded, result and commit time;
+- the current project revision, active edition, profile SHA-256 and actual database environment;
+- whether the current profile differs from the original request;
+- for a receiving or backup export, its original directory and manifest identity plus the current availability of those exact files.
+
+**Save recovery report** downloads that complete readback as lossless JSON. Its original and current sections remain separate. A historical publication result does not assert that the same edition is active now, and a verified original export does not assert that its database observation is still current. Use independent receiving verification for that comparison.
+
+A restored project retains the source installation's original committed requests and results. Open the operator using the destination connection and current destination profile, then recover the original operation ID there. Do not submit the old profile-bound stage, promotion or rollback command to the destination merely to retrieve its result. The recovery view explicitly shows the changed profile alongside the unchanged original request.
+
+When the same browser has a saved mapping for another database, the operator opens its currently configured database. **Source and mapping** retains the prior mapping for inspection, and the old pending requests remain available in **Operations**. Continuing those requests requires their original database; reading imported committed results does not.
+
+### Resolve the actual outcome
+
+| Recovery outcome | Operator action |
+| --- | --- |
+| Committed operation; no file output | Keep the unchanged original result and assess the current project separately. |
+| Committed export; original files verified | Use the original directory and verified manifest for receiving. |
+| Committed export; original files unavailable | Preserve its original result and expected manifest. Recover the exact original files to their recorded paths, then check the same committed operation again. |
+| No committed result recorded | On the original database, continue the retained original request with the same ID and complete body. Recovery by itself does not execute it. |
+| Readback failed or was not received | Keep the original request and operation ID, then repeat that same readback. Do not treat a failed read as proof that the operation never committed. |
+
+Missing or changed files from a committed export are reported as **unavailable**. Calling that export again with the same original operation fails with `POSTGIS_COMMITTED_EXPORT_UNAVAILABLE` and its retained artifact details. It does not generate replacement bytes or take a fresh database snapshot. If the operator deliberately needs a new export of the current state, use the normal export form with a new explicit operation and destination. Keep the unavailable historical export in its original history.
+
+For a saved response reminder, **Check committed result** performs the same read-only recovery. **Keep committed result** rechecks it and acknowledges that exact saved request locally; it does not change the database history, erase an unavailable-file finding or repair a server journal. A confirmed committed command cannot be submitted by **Continue original request**.
+
+**Continue original request** first checks for a committed result. Only when none is recorded, and the saved request selects the original configured database, does it submit the complete retained request. An uncertain COMMIT is reconciled through the same project lock and original operation identity. A new operation ID must not be used merely because a response was lost.
+
+Filesystem publication is create-only. A digest in a request's receiving filename binds an interrupted write to its complete original request. Retrying that same uncommitted request can finish publication while retaining prior receiving files. Legacy complete temporary requests are accepted only when all their bytes match. Partial or conflicting unknown content remains visible in the interrupted-journal view and does not make the whole Operations page unusable.
 
 The server never silently changes a frozen request to match a later mapping or review. A revision or review conflict represents later work that needs its own explicit review and operation. Existing committed operation results remain unchanged.
 
@@ -160,7 +191,7 @@ Restore requires a second selected existing database/schema and an empty project
 
 The importer verifies every file and original source through the native receiver, inserts exact identities, restores all typed rows and geometries, and checks the complete database counts and hashes before accepting the restore. It advances shared imported-ID and per-layer operator-ID sequences without changing another project's rows. Only the restored active edition receives the selected live grants; later rollback regrants its selected retained edition.
 
-Historic operation results keep their original paths and observation identities. A restore and a new receiving export have their own original operations and current destination observations.
+Historic operation results keep their original paths and observation identities. Use **Recover committed operation** on the restored project to read those results without executing their old database profiles. Original receiving and backup paths may be unavailable on the destination; that condition remains explicit even when the database restore succeeded. A restore and a deliberately requested new receiving export have their own operations and current destination observations.
 
 ## CLI and module use
 
@@ -170,6 +201,7 @@ Every mutating command reads one original request JSON. Command arguments do not
 | --- | --- |
 | `inspect` | None |
 | `history` | Optional `limit` (at most 500) and `offset` |
+| `recover-operation` | Only `operationId`, supplied by `--operation ID` or a request JSON file |
 | `stage` | `operationId`, `sourceDirectory`, `expectedManifestSha256` |
 | `review` | `editionId` |
 | `row` | `editionId`, `layerId`, `rowKey` |
@@ -184,6 +216,26 @@ An explicit review decision is `{"layerId":"…","rowKey":"…","choice":"keep-c
 
 All database commands other than receiving verification require `--connection`, `--profile` and `--workspace`. For programmatic use, import `openPostgisIntake`, `openReceiving`, `verifyReceiving` and `openBackup` from `./index.mjs`, and close the owned intake in the caller's cleanup.
 
+When embedding the operator in a larger application or the native journey, call `startOperator({...options, handleSignals:false})` and close the returned server from the host's own shutdown sequence. The direct CLI keeps the default `handleSignals:true`: SIGINT/SIGTERM stop new work and drain the existing native queue and HTTP server through one close promise. Repeated signals retain that same drain. The operator removes its signal handlers after closing and never calls `process.exit()`; an embedded host remains responsible for all of its other children and cleanup.
+
+### Recover an original operation through the CLI or API
+
+Use the actual current destination profile when recovering an imported operation:
+
+```sh
+node stac/postgis/cli.mjs recover-operation \
+  --connection /absolute/private/current-connection.json \
+  --profile /absolute/private/current-profile.json \
+  --workspace /absolute/project/workspace \
+  --operation retained-original-operation-id
+```
+
+Alternatively, pass `--request /absolute/project/recover-original.json` containing only `{"operationId":"retained-original-operation-id"}`. Select one input form. Recovery does not accept an old executable request body or add a new operation ID.
+
+The existing module method is `await intake.recoverOperation({operationId})` on the same `openPostgisIntake` instance. Close that owned instance normally. The response schema is `starforge.postgis-operation-recovery.v1`; it contains `executed:false`, `original`, `current`, `originalProfileSha256`, `profileChanged` and the optional artifact status described in [RECEIVING.md](RECEIVING.md).
+
+The same-origin operator route is `POST /api/recover-operation` with `{"request":{"operationId":"retained-original-operation-id"}}`. It uses the server's current configured project/profile and existing private session. A successful read returns `{ok:true,result}`; an absent committed operation returns HTTP 404 with `POSTGIS_ORIGINAL_OPERATION_NOT_COMMITTED`. This route does not create a mutation journal or submit a supplied historical profile.
+
 ## Run one complete native customer journey
 
 Copy [native-journey.example.json](native-journey.example.json) to a private original request. Replace its placeholders with the actual two distinct original vector exports, profiles, existing role connections, selected customer edits and independent restore environment. The selected customer edit must conflict with a real changed row in the successor source; set the expected conflict floor and explicit decisions accordingly.
@@ -194,11 +246,11 @@ Run:
 node stac/postgis/native-journey.mjs /absolute/private/original-native-journey.json
 ```
 
-The single retained journey stages and publishes the original source, applies the agreed customer edits under the actual selected role, stages the successor, opens the conflict values, publishes the selected decisions, closes/reopens the project, independently verifies readers, rolls back, checks stale receiving, returns to the successor, exports the whole backup, restores it independently and compares all restored values and identities. It replays the original publication result and preserves its full phase history.
+The single retained journey stages and publishes the original source, applies the agreed customer edits under the actual selected role, stages the successor, opens the conflict values, publishes the selected decisions, closes/reopens the project, independently verifies readers, rolls back, checks stale receiving, returns to the successor, exports the whole backup, restores it independently and compares all restored values and identities. It recovers the original publication result on the restored destination without executing its historical request, and preserves its full phase history.
 
-If both the actual Playwright module and Chromium executable are supplied, the same journey also opens the real operator, its original operation and native source inspection, and saves the current screenshot. Its result states whether that browser phase actually ran. When the original request includes `qgis`, the same journey launches `qgis/examples/receive_project.py` through that actual QGIS interpreter. It passes the exact accepted receipt, existing service/authentication reference and one retained QGIS operation; the child independently verifies every selected relation, saves/reopens the native project, preserves existing layers/history, exports the complete project, receives it into a second workspace and reopens that received map. Producer pools close before this independent desktop phase. `qgisExecuted` and the complete child result identify whether it actually completed. See [QGIS receiving inputs](qgis/RECEIVING_RUN.md).
+If both the actual Playwright module and Chromium executable are supplied, the same journey also opens the real operator, its original operation and native source inspection, and saves the current screenshot. It then opens the restored operator, uses **Recover committed operation** on the original publication ID, compares the unchanged request/result against the current destination and saves the restored recovery view. The same journey invokes the actual `recover-operation` CLI against that destination. Its result states whether the browser phase actually ran. When the original request includes `qgis`, the same journey launches `qgis/examples/receive_project.py` through that actual QGIS interpreter. It passes the exact accepted receipt, existing service/authentication reference and one retained QGIS operation; the child independently verifies every selected relation, saves/reopens the native project, preserves existing layers/history, exports the complete project, receives it into a second workspace and reopens that received map. Producer pools close before this independent desktop phase. `qgisExecuted` and the complete child result identify whether it actually completed. See [QGIS receiving inputs](qgis/RECEIVING_RUN.md).
 
-A failed phase is resumed from the same request, operation and directory. A phase output is retained only after its complete native action succeeds. The result is `native-result.json`; until that file is produced by the native run, source review alone is not a claimed database or desktop run.
+A failed phase is resumed from the same request, operation and directory. A phase output is retained only after its complete native action succeeds. Resuming an already recorded receiving or backup phase rechecks its exact original package bytes. A recorded QGIS phase rechecks its original handoff/result, complete exported project, saved images and native observation files without replaying QGIS or database work. The same journey retains and restores an exact required export member around its unavailable-output check; startup resolves that retained file before consuming recorded phases. The result is `native-result.json`; until that file is produced by the native run, source review alone is not a claimed database or desktop run.
 
 ## Native references
 

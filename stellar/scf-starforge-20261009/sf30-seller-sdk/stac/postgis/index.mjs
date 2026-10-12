@@ -6,7 +6,8 @@ import {privateDirectory, member, claimDirectory, writeJSONOnce, readJSON, fileR
   copyVerified, listFiles, retainVectorSource, openRetainedSource, sourceFeatures, validateSourceMapping,
   openReceiving} from './files.mjs';
 import {createDatabase} from './database.mjs';
-import {exportDatabaseBackup, restoreDatabaseBackup} from './backup.mjs';
+import {exportDatabaseBackup, restoreDatabaseBackup, openBackup} from './backup.mjs';
+import {inspectCommittedOutput, requireAvailableOutput} from './operation-output.mjs';
 
 export {normalizeProfile, parseExactJSON, stringifyExactJSON, ExactNumber} from './contract.mjs';
 export {openReceiving} from './files.mjs';
@@ -56,6 +57,39 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
           requestSha256: row.request_sha256, committedAt: row.committed_at,
           request: parseExactJSON(row.request_json), result: parseExactJSON(row.result_json)}))};
     }, {repeatable: true});
+  }
+
+  async function recoverOperation({operationId}) {
+    id(operationId);
+    const observed = await db.transaction(async client => {
+      const current = await db.project(client);
+      need(current, 'POSTGIS_ORIGINAL_OPERATION_NOT_COMMITTED', operationId);
+      need(current.productVersion === 1 &&
+        canonical(current.profile.database) === canonical(profile.database),
+        'POSTGIS_RECOVERY_DATABASE_PROFILE_CHANGED');
+      const original = await db.committedOperation(client, operationId);
+      need(original, 'POSTGIS_ORIGINAL_OPERATION_NOT_COMMITTED', operationId);
+      return {original, project: current};
+    }, {readOnly: true, repeatable: true});
+    const {original} = observed;
+    let artifact = null;
+    if (original.kind === 'export-receiving' || original.kind === 'export-backup') {
+      need(original.result.directory === original.request.directory,
+        'POSTGIS_COMMITTED_EXPORT_DIRECTORY_CHANGED', operationId);
+      const kind = original.kind === 'export-receiving' ? 'receiving' : 'backup';
+      artifact = await inspectCommittedOutput({kind, projectId: profile.projectId, operationId,
+        requestSha256: original.requestSha256, directory: original.request.directory,
+        manifestFile: original.result.manifestFile}, kind === 'receiving' ? openReceiving : openBackup);
+    }
+    // Restored metadata keeps the original request/result unchanged. Reading that
+    // commitment does not rebuild a request with the destination's profile hash.
+    return {schema: 'starforge.postgis-operation-recovery.v1', projectId: profile.projectId,
+      operationId, state: 'committed', executed: false, original,
+      current: {project: observed.project, database: db.environment},
+      profileChanged: typeof original.request.profileSha256 === 'string' &&
+        original.request.profileSha256 !== observed.project.profileSha256,
+      originalProfileSha256: original.request.profileSha256 || null,
+      artifact};
   }
 
   async function stage({operationId, sourceDirectory, expectedManifestSha256}) {
@@ -315,6 +349,18 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
     need(typeof destination === 'string' && destination.length, 'POSTGIS_RECEIVING_DESTINATION_REQUIRED');
     const request = {schema: 'starforge.postgis-receiving-request.v1', operationId,
       projectId: profile.projectId, directory: resolve(destination)};
+    async function verifiedResult(result) {
+      const artifact = await inspectCommittedOutput({kind: 'receiving', projectId: profile.projectId,
+        operationId, requestSha256: result.requestSha256, directory: request.directory,
+        manifestFile: result.manifestFile}, openReceiving);
+      requireAvailableOutput(artifact, operationId);
+      return {...result, artifact};
+    }
+    const committed = await db.transaction(async client => {
+      const saved = await db.savedOperation(client, operationId, digest(request));
+      return saved ? {...saved, replayed: true, current: await db.project(client)} : null;
+    }, {readOnly: true});
+    if (committed) return verifiedResult(committed);
     const output = await claimDirectory(destination, request);
     let existing = null;
     try { existing = await openReceiving(output); }
@@ -322,7 +368,7 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
     if (existing) need(existing.manifest.operationId === operationId &&
       existing.manifest.projectId === profile.projectId && existing.manifest.requestSha256 === digest(request),
       'POSTGIS_EXISTING_RECEIVING_OPERATION_CHANGED');
-    return db.mutate(operationId, 'export-receiving', request, async (client, current, requestSha256) => {
+    const result = await db.mutate(operationId, 'export-receiving', request, async (client, current, requestSha256) => {
       if (existing) return {...existing, recoveredCompletedFile: true};
       let observation;
       try { observation = await readJSON(member(output, 'database-observation.json')); }
@@ -371,6 +417,7 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
       await writeJSONOnce(member(output, 'postgis-receiving.json'), receipt);
       return openReceiving(output);
     });
+    return verifiedResult(result);
   }
 
   async function exportBackup({operationId, directory: destination}) {
@@ -380,6 +427,6 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
     return restoreDatabaseBackup({db, profile, root, sourceOptions, operationId,
       directory: source, expectedManifestSha256});
   }
-  return {inspect, operationHistory, stage, review, readRow, promote, rollback, exportReceiving, exportBackup, restoreBackup,
+  return {inspect, operationHistory, recoverOperation, stage, review, readRow, promote, rollback, exportReceiving, exportBackup, restoreBackup,
     close: () => db.close(), profile, directory: root};
 }
