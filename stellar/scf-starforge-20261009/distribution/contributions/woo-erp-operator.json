@@ -14,5 +14,16 @@
       "import": "./source/stellar-forge/mcp-merchant-operator/woo-erp-client.mjs"
     },
     "./merchant/mcp/woocommerce/erp-tools": "./source/stellar-forge/mcp-merchant-operator/woo-erp-schema.mjs"
-  }
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-erp.php",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-erp-mapping.php",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-erp-acumatica.php",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-erp-store.php",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-erp-console.php",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-erp.js",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-erp.css",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/ERP.md",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/erp-map.example.json"
+  ]
 }
