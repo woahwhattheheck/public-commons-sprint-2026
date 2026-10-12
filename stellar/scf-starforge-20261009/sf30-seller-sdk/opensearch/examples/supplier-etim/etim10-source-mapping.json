@@ -1,0 +1,1558 @@
+{
+  "schema": "stellar-forge.published-supplier-mapping.v1",
+  "source": {
+    "archiveUrl": "https://www.etim-international.com/wp-content/uploads/2021/09/ETIM-BMEcat-Guideline-V5-0-2-2024-12-12.zip",
+    "member": "SampleFile_bmecat_etim_V5_T_NEW_CATALOG_ETIM10.xml",
+    "bytes": 18076,
+    "sha256": "50568f0357c982a853eaf523475d18d6f2a594d0c8a392143a4df50007cddf8e",
+    "carrierGitBlob": "936df68a18b9cd262bbe7d6288762adbc1ea4093",
+    "originalSchemaMember": "bmecat_etim_501.xsd",
+    "schemaSha256": "821e4dbcec9fa32b64df4298531adc5d3cdab68507686317dd08e8266378b005"
+  },
+  "targetTemplateGitBlob": "a02433856bed4e7245fa04604c2538bac2bab955",
+  "scope": {
+    "products": 1,
+    "materialIds": [
+      "411061"
+    ],
+    "sourceFields": 301,
+    "mappedUniqueSourceFields": 203,
+    "unmappedSourceFields": 98
+  },
+  "fieldMappings": [
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/CATALOG[1]/LANGUAGE[1]/text()",
+      "targetPath": "/profile/defaultLanguage",
+      "sourceValue": "eng"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/CATALOG[1]/LANGUAGE[1]/@default",
+      "targetPath": "/profile/defaultLanguage",
+      "sourceValue": "true"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/CATALOG[1]/LANGUAGE[1]/text()",
+      "targetPath": "/profile/languages/0",
+      "sourceValue": "eng"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/CATALOG[1]/LANGUAGE[2]/text()",
+      "targetPath": "/profile/languages/1",
+      "sourceValue": "dut"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/CATALOG[1]/TERRITORY[1]/text()",
+      "targetPath": "/profile/countries/0",
+      "sourceValue": "NL"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/CATALOG[1]/CATALOG_ID[1]/text()",
+      "targetPath": "/profile/envelope/catalogId",
+      "sourceValue": "ETIM-BMEcat-5.0"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/CATALOG[1]/CATALOG_VERSION[1]/text()",
+      "targetPath": "/profile/envelope/catalogVersion",
+      "sourceValue": "01.01"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/CATALOG[1]/CATALOG_NAME[1]/text()",
+      "targetPath": "/profile/envelope/catalogName/eng",
+      "sourceValue": "Sample file 01 for testing version 5.0"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/CATALOG[1]/CATALOG_NAME[2]/@lang",
+      "targetPath": "/profile/envelope/catalogName/{language}",
+      "sourceValue": "dut"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/CATALOG[1]/CATALOG_NAME[2]/text()",
+      "targetPath": "/profile/envelope/catalogName/dut",
+      "sourceValue": "Test bestand 01 voor testen versie 5.0"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/CATALOG[1]/CURRENCY[1]/text()",
+      "targetPath": "/profile/envelope/currency",
+      "sourceValue": "EUR"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/CATALOG[1]/MIME_ROOT[1]/text()",
+      "targetPath": "/profile/envelope/mimeRoot/eng",
+      "sourceValue": "https://www.etim-international.com/downloads/pictures"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/CATALOG[1]/DATETIME[1]/@type",
+      "targetPath": "/profile/envelope/generationDate",
+      "sourceValue": "generation_date"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/CATALOG[1]/DATETIME[1]/DATE[1]/text()",
+      "targetPath": "/profile/envelope/generationDate",
+      "sourceValue": "2021-06-22"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/BUYER[1]/BUYER_NAME[1]/text()",
+      "targetPath": "/profile/envelope/buyer/name",
+      "sourceValue": "Test buyer"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/BUYER[1]/BUYER_ID[1]/@type",
+      "targetPath": "/profile/envelope/buyer/ids/0/type",
+      "sourceValue": "gln"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/BUYER[1]/BUYER_ID[1]/text()",
+      "targetPath": "/profile/envelope/buyer/ids/0/value",
+      "sourceValue": "8714161999000"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/BUYER[1]/BUYER_ID[2]/@type",
+      "targetPath": "/profile/envelope/buyer/ids/1/type",
+      "sourceValue": "buyer_specific"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/BUYER[1]/BUYER_ID[2]/text()",
+      "targetPath": "/profile/envelope/buyer/ids/1/value",
+      "sourceValue": "12345"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/SUPPLIER[1]/SUPPLIER_NAME[1]/text()",
+      "targetPath": "/profile/envelope/supplier/name",
+      "sourceValue": "Test supplier"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/SUPPLIER[1]/SUPPLIER_ID[1]/@type",
+      "targetPath": "/profile/envelope/supplier/ids/0/type",
+      "sourceValue": "gln"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/SUPPLIER[1]/SUPPLIER_ID[1]/text()",
+      "targetPath": "/profile/envelope/supplier/ids/0/value",
+      "sourceValue": "8714161999999"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/SUPPLIER[1]/SUPPLIER_ID[2]/@type",
+      "targetPath": "/profile/envelope/supplier/ids/1/type",
+      "sourceValue": "duns"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/SUPPLIER[1]/SUPPLIER_ID[2]/text()",
+      "targetPath": "/profile/envelope/supplier/ids/1/value",
+      "sourceValue": "123456789"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/SUPPLIER[1]/ADDRESS[1]/CONTACT[1]/text()",
+      "targetPath": "/profile/envelope/supplier/address/contact",
+      "sourceValue": "Theodore Test"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/SUPPLIER[1]/ADDRESS[1]/STREET[1]/text()",
+      "targetPath": "/profile/envelope/supplier/address/street",
+      "sourceValue": "Trial avenue"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/SUPPLIER[1]/ADDRESS[1]/ZIP[1]/text()",
+      "targetPath": "/profile/envelope/supplier/address/zip",
+      "sourceValue": "16230"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/SUPPLIER[1]/ADDRESS[1]/CITY[1]/text()",
+      "targetPath": "/profile/envelope/supplier/address/city",
+      "sourceValue": "Experiment city"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/SUPPLIER[1]/ADDRESS[1]/COUNTRY[1]/text()",
+      "targetPath": "/profile/envelope/supplier/address/country",
+      "sourceValue": "Testonia"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/SUPPLIER[1]/ADDRESS[1]/VAT_ID[1]/text()",
+      "targetPath": "/profile/envelope/supplier/address/vatId",
+      "sourceValue": "XX0817146830"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/SUPPLIER[1]/ADDRESS[1]/EMAIL[1]/text()",
+      "targetPath": "/profile/envelope/supplier/address/email",
+      "sourceValue": "info@testsupplier.te"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/SUPPLIER[1]/ADDRESS[1]/URL[1]/text()",
+      "targetPath": "/profile/envelope/supplier/address/url",
+      "sourceValue": "www.testsupplier.te"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/SUPPLIER[1]/ADDRESS[1]/@type",
+      "targetPath": "/profile/envelope/supplier/address (supplier address context)",
+      "sourceValue": "supplier"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.VERSION[1]/text()",
+      "targetPath": "/profile/targets/0 (EDXF version)",
+      "sourceValue": "5.0"
+    },
+    {
+      "sourcePath": "/BMECAT/@version",
+      "targetPath": "/profile/targets/0 (BMEcat version)",
+      "sourceValue": "2005"
+    },
+    {
+      "sourcePath": "/BMECAT/@schemaLocation",
+      "targetPath": "/mappingReport/source/schemaLocation",
+      "sourceValue": "https://www.etim-international.com/bmecat/50 https://www.etim-international.com/bmecat_etim_50.xsd"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/SUPPLIER_PID[1]/text()",
+      "targetPath": "/records/0/supplier/supplierProductId",
+      "sourceValue": "411061"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/MANUFACTURER_PID[1]/text()",
+      "targetPath": "/records/0/supplier/manufacturerProductId",
+      "sourceValue": "411061"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/MANUFACTURER_NAME[1]/text()",
+      "targetPath": "/records/0/supplier/manufacturerName",
+      "sourceValue": "Test manufacturer"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/MANUFACTURER_TYPE_DESCR[1]/text()",
+      "targetPath": "/records/0/supplier/manufacturerTypeDescription",
+      "sourceValue": "Test product"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/SUPPLIER_ALT_PID[1]/text()",
+      "targetPath": "/records/0/supplier/alternativeSupplierId",
+      "sourceValue": "123"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/INTERNATIONAL_PID[1]/text()",
+      "targetPath": "/records/0/supplier/productGtin",
+      "sourceValue": "03414970351821"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/INTERNATIONAL_PID[1]/@type",
+      "targetPath": "/records/0/supplier/productGtin (GTIN identifier context)",
+      "sourceValue": "gtin"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/DESCRIPTION_SHORT[1]/text()",
+      "targetPath": "/records/0/supplier/descriptions/eng/short",
+      "sourceValue": "Earth leakage circuit breaker"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/DESCRIPTION_SHORT[2]/@lang",
+      "targetPath": "/records/0/supplier/descriptions/{language}",
+      "sourceValue": "dut"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/DESCRIPTION_SHORT[2]/text()",
+      "targetPath": "/records/0/supplier/descriptions/dut/short",
+      "sourceValue": "Aardlekautomaat"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/DESCRIPTION_LONG[1]/text()",
+      "targetPath": "/records/0/supplier/descriptions/eng/long",
+      "sourceValue": "Earth leakage circuit breaker 1P+N C16A 6000A 30mA, BiConnect"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.DESCRIPTION_VERY_SHORT[1]/text()",
+      "targetPath": "/records/0/supplier/descriptions/eng/veryShort",
+      "sourceValue": "Test product"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.DESCRIPTION_VERY_SHORT[2]/@lang",
+      "targetPath": "/records/0/supplier/descriptions/{language}",
+      "sourceValue": "dut"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.DESCRIPTION_VERY_SHORT[2]/text()",
+      "targetPath": "/records/0/supplier/descriptions/dut/veryShort",
+      "sourceValue": "Test product"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.BRAND_NAME[1]/text()",
+      "targetPath": "/records/0/supplier/brand",
+      "sourceValue": "Test brand"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_SERIES[1]/text()",
+      "targetPath": "/records/0/supplier/series/0/value",
+      "sourceValue": "TEST series"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_VARIATION[1]/text()",
+      "targetPath": "/records/0/supplier/types/0/value",
+      "sourceValue": "TEST variation"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.EXPIRATION_DATE[1]/text()",
+      "targetPath": "/records/0/supplier/expiresAt",
+      "sourceValue": "2022-01-01"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.COUNTRY_BRANCH_NUMBERS[1]/UDX.EDXF.COUNTRY_BRANCH_NUMBER[1]/@country",
+      "targetPath": "/records/0/supplier/branchNumbers/0/country",
+      "sourceValue": "SE"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.COUNTRY_BRANCH_NUMBERS[1]/UDX.EDXF.COUNTRY_BRANCH_NUMBER[1]/@type",
+      "targetPath": "/records/0/supplier/branchNumbers/0/type",
+      "sourceValue": "HVAC"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.COUNTRY_BRANCH_NUMBERS[1]/UDX.EDXF.COUNTRY_BRANCH_NUMBER[1]/text()",
+      "targetPath": "/records/0/supplier/branchNumbers/0/value",
+      "sourceValue": "12234"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.COUNTRY_BRANCH_NUMBERS[1]/UDX.EDXF.COUNTRY_BRANCH_NUMBER[2]/@country",
+      "targetPath": "/records/0/supplier/branchNumbers/1/country",
+      "sourceValue": "NO"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.COUNTRY_BRANCH_NUMBERS[1]/UDX.EDXF.COUNTRY_BRANCH_NUMBER[2]/@type",
+      "targetPath": "/records/0/supplier/branchNumbers/1/type",
+      "sourceValue": "electrical"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.COUNTRY_BRANCH_NUMBERS[1]/UDX.EDXF.COUNTRY_BRANCH_NUMBER[2]/text()",
+      "targetPath": "/records/0/supplier/branchNumbers/1/value",
+      "sourceValue": "12244"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.COUNTRY_BRANCH_SUPPLIER_IDS[1]/UDX.EDXF.COUNTRY_BRANCH_SUPPLIER_ID[1]/@country",
+      "targetPath": "/records/0/supplier/branchSupplierIds/0/country",
+      "sourceValue": "NO"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.COUNTRY_BRANCH_SUPPLIER_IDS[1]/UDX.EDXF.COUNTRY_BRANCH_SUPPLIER_ID[1]/@type",
+      "targetPath": "/records/0/supplier/branchSupplierIds/0/type",
+      "sourceValue": "HVAC"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.COUNTRY_BRANCH_SUPPLIER_IDS[1]/UDX.EDXF.COUNTRY_BRANCH_SUPPLIER_ID[1]/text()",
+      "targetPath": "/records/0/supplier/branchSupplierIds/0/value",
+      "sourceValue": "11"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.COUNTRY_BRANCH_SUPPLIER_IDS[1]/UDX.EDXF.COUNTRY_BRANCH_SUPPLIER_ID[2]/@country",
+      "targetPath": "/records/0/supplier/branchSupplierIds/1/country",
+      "sourceValue": "SE"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.COUNTRY_BRANCH_SUPPLIER_IDS[1]/UDX.EDXF.COUNTRY_BRANCH_SUPPLIER_ID[2]/@type",
+      "targetPath": "/records/0/supplier/branchSupplierIds/1/type",
+      "sourceValue": "electrical"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.COUNTRY_BRANCH_SUPPLIER_IDS[1]/UDX.EDXF.COUNTRY_BRANCH_SUPPLIER_ID[2]/text()",
+      "targetPath": "/records/0/supplier/branchSupplierIds/1/value",
+      "sourceValue": "22"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/REFERENCE_FEATURE_SYSTEM_NAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/version",
+      "sourceValue": "ETIM-10.0"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[1]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/0/code",
+      "sourceValue": "EF008618"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[1]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/0/values/0",
+      "sourceValue": "2"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[2]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/1/code",
+      "sourceValue": "EF005548"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[2]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/1/values/0",
+      "sourceValue": "1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[3]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/2/code",
+      "sourceValue": "EF000228"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[3]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/2/values/0",
+      "sourceValue": "230"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[4]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/3/code",
+      "sourceValue": "EF001366"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[4]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/3/values/0",
+      "sourceValue": "-"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[4]/FVALUE_DETAILS[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/3/details",
+      "sourceValue": "UN"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[5]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/4/code",
+      "sourceValue": "EF011980"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[5]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/4/values/0",
+      "sourceValue": "-"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[5]/FVALUE_DETAILS[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/4/details",
+      "sourceValue": "UN"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[6]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/5/code",
+      "sourceValue": "EF000227"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[6]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/5/values/0",
+      "sourceValue": "16"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[7]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/6/code",
+      "sourceValue": "EF002358"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[7]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/6/values/0",
+      "sourceValue": "0.03"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[8]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/7/code",
+      "sourceValue": "EF000003"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[8]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/7/values/0",
+      "sourceValue": "EV000242"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[9]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/8/code",
+      "sourceValue": "EF002560"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[9]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/8/values/0",
+      "sourceValue": "EV000896"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[10]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/9/code",
+      "sourceValue": "EF002568"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[10]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/9/values/0",
+      "sourceValue": "3"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[11]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/10/code",
+      "sourceValue": "EF005387"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[11]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/10/values/0",
+      "sourceValue": "5"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[12]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/11/code",
+      "sourceValue": "EF012628"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[12]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/11/values/0",
+      "sourceValue": "-"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[12]/FVALUE_DETAILS[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/11/details",
+      "sourceValue": "UN"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[13]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/12/code",
+      "sourceValue": "EF006065"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[13]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/12/values/0",
+      "sourceValue": "6"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[14]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/13/code",
+      "sourceValue": "EF011981"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[14]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/13/values/0",
+      "sourceValue": "-"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[14]/FVALUE_DETAILS[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/13/details",
+      "sourceValue": "UN"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[15]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/14/code",
+      "sourceValue": "EF012587"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[15]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/14/values/0",
+      "sourceValue": "EV003978"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[16]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/15/code",
+      "sourceValue": "EF002564"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[16]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/15/values/0",
+      "sourceValue": "-"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[16]/FVALUE_DETAILS[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/15/details",
+      "sourceValue": "UN"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[17]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/16/code",
+      "sourceValue": "EF000187"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[17]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/16/values/0",
+      "sourceValue": "EV000460"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[18]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/17/code",
+      "sourceValue": "EF005455"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[18]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/17/values/0",
+      "sourceValue": "EV008013"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[19]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/18/code",
+      "sourceValue": "EF000889"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[19]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/18/values/0",
+      "sourceValue": "EV000084"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[20]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/19/code",
+      "sourceValue": "EF005997"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[20]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/19/values/0",
+      "sourceValue": "true"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[21]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/20/code",
+      "sourceValue": "EF007385"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[21]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/20/values/0",
+      "sourceValue": "false"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[22]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/21/code",
+      "sourceValue": "EF002569"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[22]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/21/values/0",
+      "sourceValue": "-"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[22]/FVALUE_DETAILS[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/21/details",
+      "sourceValue": "UN"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[23]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/22/code",
+      "sourceValue": "EF002570"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[23]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/22/values/0",
+      "sourceValue": "2"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[24]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/23/code",
+      "sourceValue": "EF007515"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[24]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/23/values/0",
+      "sourceValue": "-10"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[24]/FVALUE[2]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/23/values/1",
+      "sourceValue": "60"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[25]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/24/code",
+      "sourceValue": "EF002950"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[25]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/24/values/0",
+      "sourceValue": "2"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[26]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/25/code",
+      "sourceValue": "EF000218"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[26]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/25/values/0",
+      "sourceValue": "44.2"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[27]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/26/code",
+      "sourceValue": "EF009497"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[27]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/26/values/0",
+      "sourceValue": "false"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[28]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/27/code",
+      "sourceValue": "EF005474"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[28]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/27/values/0",
+      "sourceValue": "EV006409"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[29]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/28/code",
+      "sourceValue": "EF007337"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[29]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/28/values/0",
+      "sourceValue": "-"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[29]/FVALUE_DETAILS[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/28/details",
+      "sourceValue": "UN"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[30]/FNAME[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/29/code",
+      "sourceValue": "EF007343"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[30]/FVALUE[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/29/values/0",
+      "sourceValue": "1.5"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/FEATURE[30]/FVALUE[2]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/features/29/values/1",
+      "sourceValue": "4"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_FEATURES[1]/REFERENCE_FEATURE_GROUP_ID[1]/text()",
+      "targetPath": "/records/0/supplier/classification/etim/classId",
+      "sourceValue": "EC000905"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_LOGISTIC_DETAILS[1]/CUSTOMS_TARIFF_NUMBER[1]/CUSTOMS_NUMBER[1]/text()",
+      "targetPath": "/records/0/supplier/customsTariff",
+      "sourceValue": "85362010"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.DISCOUNT_GROUP[1]/UDX.EDXF.DISCOUNT_GROUP_SUPPLIER[1]/text()",
+      "targetPath": "/records/0/supplier/discountGroup/supplier",
+      "sourceValue": "DS001"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.DISCOUNT_GROUP[1]/UDX.EDXF.DISCOUNT_GROUP_MANUFACTURER[1]/text()",
+      "targetPath": "/records/0/supplier/discountGroup/manufacturer",
+      "sourceValue": "no_discount_group"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_ORDER_DETAILS[1]/ORDER_UNIT[1]/text()",
+      "targetPath": "/records/0/supplier/order/unit",
+      "sourceValue": "C62"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_ORDER_DETAILS[1]/CONTENT_UNIT[1]/text()",
+      "targetPath": "/records/0/supplier/order/contentUnit",
+      "sourceValue": "C62"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_ORDER_DETAILS[1]/NO_CU_PER_OU[1]/text()",
+      "targetPath": "/records/0/supplier/order/contentUnitsPerOrderUnit",
+      "sourceValue": "1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_ORDER_DETAILS[1]/PRICE_QUANTITY[1]/text()",
+      "targetPath": "/records/0/supplier/order/priceQuantity",
+      "sourceValue": "1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_ORDER_DETAILS[1]/QUANTITY_MIN[1]/text()",
+      "targetPath": "/records/0/supplier/order/minimum",
+      "sourceValue": "1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_ORDER_DETAILS[1]/QUANTITY_INTERVAL[1]/text()",
+      "targetPath": "/records/0/supplier/order/interval",
+      "sourceValue": "1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_PRICE_DETAILS[1]/PRODUCT_PRICE[1]/@price_type",
+      "targetPath": "/records/0/supplier/prices/0/type",
+      "sourceValue": "nrp"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_PRICE_DETAILS[1]/PRODUCT_PRICE[1]/PRICE_AMOUNT[1]/text()",
+      "targetPath": "/records/0/supplier/prices/0/amount",
+      "sourceValue": "11.22"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_PRICE_DETAILS[1]/PRODUCT_PRICE[1]/PRICE_CURRENCY[1]/text()",
+      "targetPath": "/records/0/supplier/prices/0/currency",
+      "sourceValue": "EUR"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_PRICE_DETAILS[1]/PRODUCT_PRICE[1]/TAX[1]/text()",
+      "targetPath": "/records/0/supplier/prices/0/tax",
+      "sourceValue": "0.21"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_PRICE_DETAILS[1]/PRODUCT_PRICE[1]/PRICE_FACTOR[1]/text()",
+      "targetPath": "/records/0/supplier/prices/0/priceFactor",
+      "sourceValue": "1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_PRICE_DETAILS[1]/PRODUCT_PRICE[1]/LOWER_BOUND[1]/text()",
+      "targetPath": "/records/0/supplier/prices/0/lowerBound",
+      "sourceValue": "1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_PRICE_DETAILS[1]/PRODUCT_PRICE[1]/TERRITORY[1]/text()",
+      "targetPath": "/records/0/supplier/prices/0/territories/0",
+      "sourceValue": "NL"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_PRICE_DETAILS[1]/DATETIME[1]/DATE[1]/text()",
+      "targetPath": "/records/0/supplier/prices/0/validFrom",
+      "sourceValue": "2021-01-01"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_PRICE_DETAILS[1]/DATETIME[1]/@type",
+      "targetPath": "/records/0/supplier/prices/0/validFrom",
+      "sourceValue": "valid_start_date"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_PRICE_DETAILS[1]/DATETIME[2]/DATE[1]/text()",
+      "targetPath": "/records/0/supplier/prices/0/validTo",
+      "sourceValue": "2022-12-31"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_PRICE_DETAILS[1]/DATETIME[2]/@type",
+      "targetPath": "/records/0/supplier/prices/0/validTo",
+      "sourceValue": "valid_end_date"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_PRICE_DETAILS[1]/DAILY_PRICE[1]/text()",
+      "targetPath": "/records/0/supplier/prices/0/dailyPrice",
+      "sourceValue": "false",
+      "transformation": "XML boolean lexical value to JSON boolean"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_PRICE_DETAILS[1]/PRICE_BASE[1]/PRICE_UNIT[1]/text()",
+      "targetPath": "/records/0/supplier/prices/0/priceBase/unit",
+      "sourceValue": "C62"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_PRICE_DETAILS[1]/PRICE_BASE[1]/PRICE_UNIT_FACTOR[1]/text()",
+      "targetPath": "/records/0/supplier/prices/0/priceBase/factor",
+      "sourceValue": "1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_LOGISTIC_DETAILS[1]/UDX.EDXF.NETVOLUME[1]/text()",
+      "targetPath": "/records/0/supplier/net/volume/value",
+      "sourceValue": "1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_LOGISTIC_DETAILS[1]/UDX.EDXF.NETWEIGHT[1]/text()",
+      "targetPath": "/records/0/supplier/net/weight/value",
+      "sourceValue": "1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_LOGISTIC_DETAILS[1]/UDX.EDXF.NETLENGTH[1]/text()",
+      "targetPath": "/records/0/supplier/net/length/value",
+      "sourceValue": "1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_LOGISTIC_DETAILS[1]/UDX.EDXF.NETWIDTH[1]/text()",
+      "targetPath": "/records/0/supplier/net/width/value",
+      "sourceValue": "1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_LOGISTIC_DETAILS[1]/UDX.EDXF.NETDEPTH[1]/text()",
+      "targetPath": "/records/0/supplier/net/depth/value",
+      "sourceValue": "1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_LOGISTIC_DETAILS[1]/UDX.EDXF.NETDIAMETER[1]/text()",
+      "targetPath": "/records/0/supplier/net/diameter/value",
+      "sourceValue": "1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PACKING_UNITS[1]/UDX.EDXF.PACKING_UNIT[1]/UDX.EDXF.GTIN[1]/text()",
+      "targetPath": "/records/0/supplier/packaging/0/gtin",
+      "sourceValue": "8717114911215"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PACKING_UNITS[1]/UDX.EDXF.PACKING_UNIT[1]/UDX.EDXF.PACKING_UNIT_CODE[1]/text()",
+      "targetPath": "/records/0/supplier/packaging/0/code",
+      "sourceValue": "CT"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PACKING_UNITS[1]/UDX.EDXF.PACKING_UNIT[1]/UDX.EDXF.PACKING_UNIT_NAME[1]/text()",
+      "targetPath": "/records/0/supplier/packaging/0/name/eng",
+      "sourceValue": "t-pak"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PACKING_UNITS[1]/UDX.EDXF.PACKING_UNIT[1]/UDX.EDXF.QUANTITY_MIN[1]/text()",
+      "targetPath": "/records/0/supplier/packaging/0/min",
+      "sourceValue": "30"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PACKING_UNITS[1]/UDX.EDXF.PACKING_UNIT[1]/UDX.EDXF.QUANTITY_MAX[1]/text()",
+      "targetPath": "/records/0/supplier/packaging/0/max",
+      "sourceValue": "30"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PACKING_UNITS[1]/UDX.EDXF.PACKING_UNIT[1]/UDX.EDXF.PACKING_PARTS[1]/text()",
+      "targetPath": "/records/0/supplier/packaging/0/parts",
+      "sourceValue": "1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PACKING_UNITS[1]/UDX.EDXF.PACKING_UNIT[1]/UDX.EDXF.PACKAGE_BREAK[1]/text()",
+      "targetPath": "/records/0/supplier/packaging/0/breakable",
+      "sourceValue": "false",
+      "transformation": "XML boolean lexical value to JSON boolean"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PACKING_UNITS[1]/UDX.EDXF.PACKING_UNIT[1]/UDX.EDXF.VOLUME[1]/text()",
+      "targetPath": "/records/0/supplier/packaging/0/volume/value",
+      "sourceValue": "0.017"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PACKING_UNITS[1]/UDX.EDXF.PACKING_UNIT[1]/UDX.EDXF.WEIGHT[1]/text()",
+      "targetPath": "/records/0/supplier/packaging/0/weight/value",
+      "sourceValue": "7.6"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PACKING_UNITS[1]/UDX.EDXF.PACKING_UNIT[1]/UDX.EDXF.LENGTH[1]/text()",
+      "targetPath": "/records/0/supplier/packaging/0/length/value",
+      "sourceValue": "0.17"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PACKING_UNITS[1]/UDX.EDXF.PACKING_UNIT[1]/UDX.EDXF.WIDTH[1]/text()",
+      "targetPath": "/records/0/supplier/packaging/0/width/value",
+      "sourceValue": "0.32"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PACKING_UNITS[1]/UDX.EDXF.PACKING_UNIT[1]/UDX.EDXF.DEPTH[1]/text()",
+      "targetPath": "/records/0/supplier/packaging/0/depth/value",
+      "sourceValue": "0.32"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PACKING_UNITS[1]/UDX.EDXF.PACKING_UNIT[1]/UDX.EDXF.DIAMETER[1]/text()",
+      "targetPath": "/records/0/supplier/packaging/0/diameter/value",
+      "sourceValue": "0.11"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/DELIVERY_TIME[1]/text()",
+      "targetPath": "/records/0/supplier/deliveryTime/value",
+      "sourceValue": "5"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.WARRANTY[1]/UDX.EDXF.WARRANTY_BUSINESS[1]/text()",
+      "targetPath": "/records/0/supplier/warranty/businessMonths",
+      "sourceValue": "12"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.WARRANTY[1]/UDX.EDXF.WARRANTY_CONSUMER[1]/text()",
+      "targetPath": "/records/0/supplier/warranty/consumerMonths",
+      "sourceValue": "24"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.MIME_INFO[1]/UDX.EDXF.MIME[1]/UDX.EDXF.MIME_SOURCE[1]/text()",
+      "targetPath": "/records/0/supplier/assets/0/source",
+      "sourceValue": "testmime1.jpg"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.MIME_INFO[1]/UDX.EDXF.MIME[1]/UDX.EDXF.MIME_CODE[1]/text()",
+      "targetPath": "/records/0/supplier/assets/0/code",
+      "sourceValue": "MD01"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.MIME_INFO[1]/UDX.EDXF.MIME[1]/UDX.EDXF.MIME_FILENAME[1]/text()",
+      "targetPath": "/records/0/supplier/assets/0/filename",
+      "sourceValue": "testmime1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.MIME_INFO[1]/UDX.EDXF.MIME[1]/UDX.EDXF.MIME_DESIGNATION[1]/text()",
+      "targetPath": "/records/0/supplier/assets/0/designation",
+      "sourceValue": "Picture1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.MIME_INFO[1]/UDX.EDXF.MIME[1]/UDX.EDXF.MIME_ALT[1]/text()",
+      "targetPath": "/records/0/supplier/assets/0/alt",
+      "sourceValue": "alternative"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.MIME_INFO[1]/UDX.EDXF.MIME[1]/UDX.EDXF.MIME_ISSUE_DATE[1]/text()",
+      "targetPath": "/records/0/supplier/assets/0/issuedAt",
+      "sourceValue": "2021-01-01"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.MIME_INFO[1]/UDX.EDXF.MIME[1]/UDX.EDXF.MIME_EXPIRY_DATE[1]/text()",
+      "targetPath": "/records/0/supplier/assets/0/expiresAt",
+      "sourceValue": "2022-01-01"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.MIME_INFO[1]/UDX.EDXF.MIME[1]/UDX.EDXF.MIME_ORDER[1]/text()",
+      "targetPath": "/records/0/supplier/assets/0/order",
+      "sourceValue": "1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.MIME_INFO[1]/UDX.EDXF.MIME[2]/UDX.EDXF.MIME_SOURCE[1]/text()",
+      "targetPath": "/records/0/supplier/assets/1/source",
+      "sourceValue": "testmime2.jpg"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.MIME_INFO[1]/UDX.EDXF.MIME[2]/UDX.EDXF.MIME_CODE[1]/text()",
+      "targetPath": "/records/0/supplier/assets/1/code",
+      "sourceValue": "MD01"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.MIME_INFO[1]/UDX.EDXF.MIME[2]/UDX.EDXF.MIME_FILENAME[1]/text()",
+      "targetPath": "/records/0/supplier/assets/1/filename",
+      "sourceValue": "testmime2"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.MIME_INFO[1]/UDX.EDXF.MIME[2]/UDX.EDXF.MIME_DESIGNATION[1]/text()",
+      "targetPath": "/records/0/supplier/assets/1/designation",
+      "sourceValue": "Picture2"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.MIME_INFO[1]/UDX.EDXF.MIME[2]/UDX.EDXF.MIME_ALT[1]/text()",
+      "targetPath": "/records/0/supplier/assets/1/alt",
+      "sourceValue": "alternative"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.MIME_INFO[1]/UDX.EDXF.MIME[2]/UDX.EDXF.MIME_ISSUE_DATE[1]/text()",
+      "targetPath": "/records/0/supplier/assets/1/issuedAt",
+      "sourceValue": "2021-01-01"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.MIME_INFO[1]/UDX.EDXF.MIME[2]/UDX.EDXF.MIME_EXPIRY_DATE[1]/text()",
+      "targetPath": "/records/0/supplier/assets/1/expiresAt",
+      "sourceValue": "2022-01-01"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.MIME_INFO[1]/UDX.EDXF.MIME[2]/UDX.EDXF.MIME_ORDER[1]/text()",
+      "targetPath": "/records/0/supplier/assets/1/order",
+      "sourceValue": "2"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_REFERENCE[1]/@type",
+      "targetPath": "/records/0/supplier/relations/0/type",
+      "sourceValue": "consists_of"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_REFERENCE[1]/@quantity",
+      "targetPath": "/records/0/supplier/relations/0/quantity",
+      "sourceValue": "1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_REFERENCE[1]/PROD_ID_TO[1]/text()",
+      "targetPath": "/records/0/supplier/relations/0/targetSupplierProductId",
+      "sourceValue": "654321"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_REFERENCE[1]/CATALOG_ID[1]/text()",
+      "targetPath": "/records/0/supplier/relations/0/catalogId",
+      "sourceValue": "Parts"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_REFERENCE[1]/CATALOG_VERSION[1]/text()",
+      "targetPath": "/records/0/supplier/relations/0/catalogVersion",
+      "sourceValue": "02.02"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_REFERENCE[1]/REFERENCE_DESCR[1]/text()",
+      "targetPath": "/records/0/supplier/relations/0/description/eng",
+      "sourceValue": "test reference"
+    }
+  ],
+  "languageInheritance": [
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/CATALOG[1]/CATALOG_NAME[1]",
+      "targetPath": "/profile/envelope/catalogName/{language}",
+      "language": "eng",
+      "languageOrigin": "CATALOG/LANGUAGE[@default='true']"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/CATALOG[1]/CATALOG_NAME[2]",
+      "targetPath": "/profile/envelope/catalogName/{language}",
+      "language": "dut",
+      "languageOrigin": "explicit @lang"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/CATALOG[1]/MIME_ROOT[1]",
+      "targetPath": "/profile/envelope/mimeRoot/{language}",
+      "language": "eng",
+      "languageOrigin": "CATALOG/LANGUAGE[@default='true']"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/DESCRIPTION_SHORT[1]",
+      "targetPath": "/records/0/supplier/descriptions/{language}",
+      "language": "eng",
+      "languageOrigin": "CATALOG/LANGUAGE[@default='true']"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/DESCRIPTION_SHORT[2]",
+      "targetPath": "/records/0/supplier/descriptions/{language}",
+      "language": "dut",
+      "languageOrigin": "explicit @lang"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/DESCRIPTION_LONG[1]",
+      "targetPath": "/records/0/supplier/descriptions/{language}",
+      "language": "eng",
+      "languageOrigin": "CATALOG/LANGUAGE[@default='true']"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.DESCRIPTION_VERY_SHORT[1]",
+      "targetPath": "/records/0/supplier/descriptions/{language}",
+      "language": "eng",
+      "languageOrigin": "CATALOG/LANGUAGE[@default='true']"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.DESCRIPTION_VERY_SHORT[2]",
+      "targetPath": "/records/0/supplier/descriptions/{language}",
+      "language": "dut",
+      "languageOrigin": "explicit @lang"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_SERIES[1]",
+      "targetPath": "/records/0/supplier/series/0/language",
+      "language": "eng",
+      "languageOrigin": "CATALOG/LANGUAGE[@default='true']"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_VARIATION[1]",
+      "targetPath": "/records/0/supplier/types/0/language",
+      "language": "eng",
+      "languageOrigin": "CATALOG/LANGUAGE[@default='true']"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PACKING_UNITS[1]/UDX.EDXF.PACKING_UNIT[1]/UDX.EDXF.PACKING_UNIT_NAME[1]",
+      "targetPath": "/records/0/supplier/packaging/0/name/{language}",
+      "language": "eng",
+      "languageOrigin": "CATALOG/LANGUAGE[@default='true']"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.MIME_INFO[1]/UDX.EDXF.MIME[1]/UDX.EDXF.MIME_SOURCE[1]",
+      "targetPath": "/records/0/supplier/assets/0/language",
+      "language": "eng",
+      "languageOrigin": "CATALOG/LANGUAGE[@default='true']"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.MIME_INFO[1]/UDX.EDXF.MIME[2]/UDX.EDXF.MIME_SOURCE[1]",
+      "targetPath": "/records/0/supplier/assets/1/language",
+      "language": "eng",
+      "languageOrigin": "CATALOG/LANGUAGE[@default='true']"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_REFERENCE[1]/REFERENCE_DESCR[1]",
+      "targetPath": "/records/0/supplier/relations/0/description/{language}",
+      "language": "eng",
+      "languageOrigin": "CATALOG/LANGUAGE[@default='true']"
+    }
+  ],
+  "unmappedSourceFields": [
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/GENERATOR_INFO[1]/text()",
+      "value": "ETIM International"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/SUPPLIER[1]/MIME_INFO[1]/MIME[1]/MIME_SOURCE[1]/text()",
+      "value": "samplelogo.jpg"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/SUPPLIER[1]/MIME_INFO[1]/MIME[1]/MIME_DESCR[1]/text()",
+      "value": "MD18"
+    },
+    {
+      "sourcePath": "/BMECAT/HEADER[1]/SUPPLIER[1]/MIME_INFO[1]/MIME[1]/MIME_ALT[1]/text()",
+      "value": "alternative"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/@mode",
+      "value": "new"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/BUYER_PID[1]/text()",
+      "value": "123454"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/BUYER_PID[1]/@type",
+      "value": "buyer_specific"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/SPECIAL_TREATMENT_CLASS[1]/text()",
+      "value": "true"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/SPECIAL_TREATMENT_CLASS[1]/@type",
+      "value": "MSDS"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/KEYWORD[1]/text()",
+      "value": "test 1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/KEYWORD[2]/text()",
+      "value": "test 2"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/KEYWORD[2]/@lang",
+      "value": "dut"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/REMARKS[1]/text()",
+      "value": "test remark"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/REMARKS[2]/text()",
+      "value": "test opmerking"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/REMARKS[2]/@lang",
+      "value": "dut"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/PRODUCT_STATUS[1]/text()",
+      "value": "new_assortment"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/PRODUCT_STATUS[1]/@type",
+      "value": "new"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_DETAILS[1]/PRODUCT_TYPE[1]/text()",
+      "value": "physical"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.MANUFACTURER_ACRONYM[1]/text()",
+      "value": "Test"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.TENDER_TEXT[1]/text()",
+      "value": "Can be specified in test tender offers"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.VALID_FROM[1]/text()",
+      "value": "2021-01-01"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.BONUS_GROUP_SUPPLIER[1]/text()",
+      "value": "no_bonus_group"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.ADDITIONAL_FACTORS[1]/UDX.EDXF.ADDITIONAL_PRICE_FACTOR[1]/text()",
+      "value": "0.95"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.ADDITIONAL_FACTORS[1]/UDX.EDXF.ADDITIONAL_FACTOR_INFO[1]/text()",
+      "value": "test factor"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_TO_STOCK[1]/text()",
+      "value": "true"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PREDECESSOR_PID[1]/text()",
+      "value": "12458930"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PACKING_UNITS[1]/UDX.EDXF.PACKING_UNIT[1]/UDX.EDXF.GS1_128[1]/text()",
+      "value": "00 12345678 0000000001"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_LOGISTIC_DETAILS[1]/UDX.EDXF.REGION_OF_ORIGIN[1]/text()",
+      "value": "NO-21"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SHELF_LIFE_PERIOD[1]/text()",
+      "value": "99"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.BATTERY_CONTAINED[1]/text()",
+      "value": "false"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.ROHS_INDICATOR[1]/text()",
+      "value": "false"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.CE_MARKING[1]/text()",
+      "value": "true"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.REACH[1]/UDX.EDXF.REACH.LISTDATE[1]/text()",
+      "value": "2021-02-23"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.REACH[1]/UDX.EDXF.REACH.INFO[1]/text()",
+      "value": "true"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.REACH[1]/UDX.EDXF.SCIP_NUMBER[1]/text()",
+      "value": "f5716c60-d07c-415c-b4c0-c1a796eaaf04"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.HAZARDOUS_SUBSTANCES[1]/UDX.EDXF.UN_NUMBER[1]/text()",
+      "value": "1234"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.HAZARDOUS_SUBSTANCES[1]/UDX.EDXF.NET_WEIGHT_OF_HAZARDOUS_SUBSTANCE[1]/text()",
+      "value": "0.003"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.HAZARDOUS_SUBSTANCES[1]/UDX.EDXF.VOLUME_OF_HAZARDOUS_SUBSTANCES[1]/text()",
+      "value": "0.02"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.SHIPPING_NAME[1]/text()",
+      "value": "UN 2902 PESTICIDE, LIQUID, TOXIC, N.O.S. (drazoxolon)"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.PACKING_GROUP[1]/text()",
+      "value": "II"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.TRANSPORT_CATEGORY[1]/text()",
+      "value": "3"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.MULTIPLICATION_FACTOR[1]/text()",
+      "value": "50"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.LIMITED_QUANTITIES[1]/text()",
+      "value": "false"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.EXCEPTED_QUANTITIES[1]/text()",
+      "value": "false"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.AGGREGATION_STATE[1]/text()",
+      "value": "S"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.SPECIAL_PROVISION_ID[1]/text()",
+      "value": "SP123"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.HAZARD_CLASS[1]/text()",
+      "value": "2.1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.CLASSIFICATION_CODE[1]/text()",
+      "value": "FT2"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.HAZARD_LABEL[1]/text()",
+      "value": "7C"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.ENVIRONMENTAL_HAZARDS[1]/text()",
+      "value": "false"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.TUNNEL_CODE[1]/text()",
+      "value": "D"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.GHS_LABEL_CODE[1]/text()",
+      "value": "GHS02"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.GHS_SIGNAL_WORD[1]/text()",
+      "value": "W"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.HAZARD_STATEMENT[1]/text()",
+      "value": "H241"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.PRECAUTIONARY_STATEMENT[1]/text()",
+      "value": "P234"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.LI-ION_TESTED[1]/text()",
+      "value": "false"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.LITHIUM_AMOUNT[1]/text()",
+      "value": "11"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.BATTERY_ENERGY[1]/text()",
+      "value": "12"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.NOS_274[1]/text()",
+      "value": "false"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SPECIAL_TREATMENT_CLASS_DETAILS[1]/UDX.EDXF.HAZARD_TRIGGER[1]/text()",
+      "value": "test"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SURCHARGE_LIST[1]/UDX.EDXF.SURCHARGE[1]/UDX.EDXF.SURCHARGE_TYPE[1]/text()",
+      "value": "silver"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SURCHARGE_LIST[1]/UDX.EDXF.SURCHARGE[1]/UDX.EDXF.SURCHARGE_CLASS[1]/text()",
+      "value": "700180"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SURCHARGE_LIST[1]/UDX.EDXF.SURCHARGE[1]/UDX.EDXF.SURCHARGE_MANNER[1]/text()",
+      "value": "base"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SURCHARGE_LIST[1]/UDX.EDXF.SURCHARGE[1]/UDX.EDXF.SURCHARGE_PERCENTAGE[1]/text()",
+      "value": "0.05"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SURCHARGE_LIST[1]/UDX.EDXF.SURCHARGE[1]/UDX.EDXF.SURCHARGE_CALCULATION[1]/text()",
+      "value": "1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SURCHARGE_LIST[1]/UDX.EDXF.SURCHARGE[1]/UDX.EDXF.MATERIAL_BASIS[1]/text()",
+      "value": "150"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SURCHARGE_LIST[1]/UDX.EDXF.SURCHARGE[1]/UDX.EDXF.MATERIAL_BASIS_SURCHARGE_THRESHOLD[1]/text()",
+      "value": "50"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SURCHARGE_LIST[1]/UDX.EDXF.SURCHARGE[1]/UDX.EDXF.MATERIAL_BASIS_SURCHARGE_SHUTTER[1]/text()",
+      "value": "2"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SURCHARGE_LIST[1]/UDX.EDXF.SURCHARGE[1]/UDX.EDXF.MATERIAL_BASIS_SURCHARGE_CREDIT[1]/text()",
+      "value": "1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SURCHARGE_LIST[1]/UDX.EDXF.SURCHARGE[2]/UDX.EDXF.SURCHARGE_TYPE[1]/text()",
+      "value": "packaging"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SURCHARGE_LIST[1]/UDX.EDXF.SURCHARGE[2]/UDX.EDXF.SURCHARGE_MANNER[1]/text()",
+      "value": "base"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.SURCHARGE_LIST[1]/UDX.EDXF.SURCHARGE[2]/UDX.EDXF.SURCHARGE_PERCENTAGE[1]/text()",
+      "value": "0.01"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_FEATURES_MC[1]/UDX.EDXF.REFERENCE_FEATURE_MC_ID[1]/text()",
+      "value": "MC000023"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_FEATURES_MC[1]/UDX.EDXF.REFERENCE_FEATURE_MC_VERSION[1]/text()",
+      "value": "1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_FEATURES_MC[1]/UDX.EDXF.BIM_STATUS[1]/text()",
+      "value": "ready"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_FEATURES_MC[1]/UDX.EDXF.FEATURE_MC[1]/UDX.EDXF.PORTCODE[1]/text()",
+      "value": "0"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_FEATURES_MC[1]/UDX.EDXF.FEATURE_MC[1]/UDX.EDXF.FNAME[1]/text()",
+      "value": "EF023191"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_FEATURES_MC[1]/UDX.EDXF.FEATURE_MC[1]/UDX.EDXF.FVALUE[1]/text()",
+      "value": "EV020207"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_FEATURES_MC[1]/UDX.EDXF.FEATURE_MC[2]/UDX.EDXF.PORTCODE[1]/text()",
+      "value": "0"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_FEATURES_MC[1]/UDX.EDXF.FEATURE_MC[2]/UDX.EDXF.FNAME[1]/text()",
+      "value": "EF006272"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_FEATURES_MC[1]/UDX.EDXF.FEATURE_MC[2]/UDX.EDXF.FVALUE[1]/text()",
+      "value": "32"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_FEATURES_MC[1]/UDX.EDXF.FEATURE_MC[3]/UDX.EDXF.PORTCODE[1]/text()",
+      "value": "0"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_FEATURES_MC[1]/UDX.EDXF.FEATURE_MC[3]/UDX.EDXF.FNAME[1]/text()",
+      "value": "EF000229"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_FEATURES_MC[1]/UDX.EDXF.FEATURE_MC[3]/UDX.EDXF.FVALUE[1]/text()",
+      "value": "1.4"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_FEATURES_MC[1]/UDX.EDXF.FEATURE_MC[4]/UDX.EDXF.PORTCODE[1]/text()",
+      "value": "1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_FEATURES_MC[1]/UDX.EDXF.FEATURE_MC[4]/UDX.EDXF.FNAME[1]/text()",
+      "value": "EF000321"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_FEATURES_MC[1]/UDX.EDXF.FEATURE_MC[4]/UDX.EDXF.FVALUE[1]/text()",
+      "value": "EV020374"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_FEATURES_MC[1]/UDX.EDXF.FEATURE_MC[5]/UDX.EDXF.PORTCODE[1]/text()",
+      "value": "2"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_FEATURES_MC[1]/UDX.EDXF.FEATURE_MC[5]/UDX.EDXF.FNAME[1]/text()",
+      "value": "EF000322"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_FEATURES_MC[1]/UDX.EDXF.FEATURE_MC[5]/UDX.EDXF.FVALUE[1]/text()",
+      "value": "EV020374"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_CHARACTERISTICS[1]/UDX.EDXF.PRODUCT_CHARACTERISTIC[1]/UDX.EDXF.PRODUCT_CHARACTERISTIC_CODE[1]/text()",
+      "value": "NO_UNSPSC_NUMBER"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_CHARACTERISTICS[1]/UDX.EDXF.PRODUCT_CHARACTERISTIC[1]/UDX.EDXF.PRODUCT_CHARACTERISTIC_NAME[1]/text()",
+      "value": "UNSPSC"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_CHARACTERISTICS[1]/UDX.EDXF.PRODUCT_CHARACTERISTIC[1]/UDX.EDXF.PRODUCT_CHARACTERISTIC_VALUE_NUMERIC[1]/text()",
+      "value": "12345678"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_CHARACTERISTICS[1]/UDX.EDXF.PRODUCT_CHARACTERISTIC[2]/UDX.EDXF.PRODUCT_CHARACTERISTIC_CODE[1]/text()",
+      "value": "IT_E011-3"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_CHARACTERISTICS[1]/UDX.EDXF.PRODUCT_CHARACTERISTIC[2]/UDX.EDXF.PRODUCT_CHARACTERISTIC_NAME[1]/text()",
+      "value": "ECOFEE_CONSORTIUM"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/USER_DEFINED_EXTENSIONS[1]/UDX.EDXF.PRODUCT_CHARACTERISTICS[1]/UDX.EDXF.PRODUCT_CHARACTERISTIC[2]/UDX.EDXF.PRODUCT_CHARACTERISTIC_VALUE_STRING[1]/text()",
+      "value": "ECOLIGHT"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_LOGISTIC_DETAILS[1]/STATISTICS_FACTOR[1]/text()",
+      "value": "1"
+    },
+    {
+      "sourcePath": "/BMECAT/T_NEW_CATALOG[1]/PRODUCT[1]/PRODUCT_LOGISTIC_DETAILS[1]/COUNTRY_OF_ORIGIN[1]/text()",
+      "value": "NL"
+    }
+  ],
+  "semanticMappings": [
+    {
+      "target": "supplier.net.basis",
+      "value": "order_unit",
+      "sourceRule": "ETIM BMEcat5.0 UDX.EDXF.PRODUCT_LOGISTIC_DETAILS measurements are based on one ORDER_UNIT."
+    },
+    {
+      "target": "supplier.net/packaging measure units",
+      "value": {
+        "length": "MTR",
+        "width": "MTR",
+        "depth": "MTR",
+        "diameter": "MTR",
+        "weight": "KGM",
+        "volume": "MTQ"
+      },
+      "sourceRule": "Original ETIM fixed SI measurement units; source numbers are unchanged."
+    },
+    {
+      "target": "supplier.deliveryTime.basis",
+      "value": "working_days",
+      "sourceRule": "ETIM5.0 PRODUCT_DETAILS/DELIVERY_TIME uses working days."
+    }
+  ],
+  "retainedDifferences": [
+    "The original publisher sample is an explicitly dated example, with generation2021-06-22 and original2022 expiry/price dates.",
+    "Feature kind/class metadata is absent from this XML; feature code/value(s)/details/unit are preserved without invented types.",
+    "Original implicit default-language fields are recorded separately from explicit lang attributes; the exporter may emit explicit original language.",
+    "Unsupported source nodes stay in this mapping report and the exact original XML; they are not reclassified into unrelated supplier fields.",
+    "Sonepar-only category,segment,title proposal,asset quality metrics and packaging supplier IDs remain empty or omitted.",
+    "Original relative MIME_SOURCE and stem-only MIME_FILENAME values remain separate; referenced image bodies are not present in the publisher XML."
+  ]
+}

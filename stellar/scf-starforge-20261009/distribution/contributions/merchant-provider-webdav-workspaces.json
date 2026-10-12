@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-webdav-workspaces",
+  "description": "Original webdav workspaces MCP provider",
+  "merchantProviders": {
+    "webdav-workspaces": "stellar-forge/mcp-merchant-operator/providers/webdav-workspaces.mjs"
+  }
+}

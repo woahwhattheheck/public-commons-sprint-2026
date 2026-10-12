@@ -16,5 +16,9 @@
     "./seller/sheets/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/publisher/model.mjs",
     "./seller/sheets/auth": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/auth/oauth.mjs",
     "./seller/sheets/auth/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/auth/server.mjs"
+  },
+  "applicationProviders": {
+    "sheets": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/sheets.mjs",
+    "sheets-publisher": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/sheets-publisher.mjs"
   }
 }

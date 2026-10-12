@@ -12,6 +12,7 @@ import {createNativeDatasets, nativeDatasetActions} from './native-datasets.mjs'
 import {createNativeAnalysis, nativeAnalysisActions} from './native-analysis.mjs';
 import {createNativeDuckDB,nativeDuckDBActions} from './native-duckdb.mjs';
 import {createNativeCollections,nativeCollectionActions} from './native-collections.mjs';
+import {createNativeCollectionRecovery,nativeCollectionRecoveryActions} from './native-collections-recovery.mjs';
 import {NATIVE_SOURCE,nativeSourceFiles,checkNativeSourceFiles,sealNativeSource,
   registerNativeSourceInbox,selectedNativeSourceInbox} from './native-analysis-sources.mjs';
 import {createSavedFileReader} from './native-file.mjs';
@@ -275,6 +276,7 @@ export async function openNativeWorkspace(directory) {
   const analysis=createNativeAnalysis({manifest,completedDataset:datasets.completedDataset,
     completedObject:objects.completedObject,completedResponse,isClosed:()=>closed});
   const collections=createNativeCollections({manifest,isClosed:()=>closed});
+  const collectionRecovery=createNativeCollectionRecovery({manifest,registerCollections:collections.register,isClosed:()=>closed});
   const duckdb=createNativeDuckDB({manifest,isClosed:()=>closed});
   async function retained(intentId) {
     const path = join(root, 'requests', intentKey(intentId));
@@ -479,6 +481,8 @@ export async function openNativeWorkspace(directory) {
     registerAnalysis:analysis.register,
     registerDuckDB:duckdb.register,
     registerCollections:collections.register,
+    registerCollectionRecovery:collectionRecovery.register,
+    collectionRecoveryOpenedConnection:collectionRecovery.openedConnection,
     async registerSourceInbox(options){need(!closed,'MCP_NATIVE_WORKSPACE_CLOSING');await currentWorkspace();return registerNativeSourceInbox(manifest,options);},
     async call(args = {}, context = {}) {
       need(!closed, 'MCP_NATIVE_WORKSPACE_CLOSING');
@@ -490,6 +494,7 @@ export async function openNativeWorkspace(directory) {
       if(nativeAnalysisActions.includes(action))return analysis.call(args,context);
       if(nativeDuckDBActions.includes(action))return duckdb.call(args,context);
       if(nativeCollectionActions.includes(action))return collections.call(args,context);
+      if(nativeCollectionRecoveryActions.includes(action))return collectionRecovery.call(args,context);
       need(Object.hasOwn(allowedFields, action) &&
         Object.keys(args).every(key => key === 'action' || allowedFields[action].includes(key)), 'MCP_NATIVE_ARGUMENTS_INVALID');
       if (action !== 'history') intentKey(args.intentId);
@@ -526,7 +531,7 @@ export async function openNativeWorkspace(directory) {
     async close() {
       if (closed) return;
       closed = true; shutdown.abort();
-      await Promise.allSettled([objects.close(), datasets.close(), analysis.close(), collections.close(), duckdb.close(), ...preparing.values(), ...[...active.values()].map(value => value.promise)]);
+      await Promise.allSettled([objects.close(), datasets.close(), analysis.close(), collections.close(), collectionRecovery.close(), duckdb.close(), ...preparing.values(), ...[...active.values()].map(value => value.promise)]);
     },
   };
 }

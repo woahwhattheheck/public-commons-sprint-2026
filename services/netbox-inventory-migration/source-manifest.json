@@ -1,0 +1,86 @@
+{
+  "schema": "tjlabs.netbox.source-manifest/v1",
+  "operation_id": "NETBOX-INVENTORY-RECEIVING-20261012-B9D2",
+  "native_contract": {
+    "repository": "netbox-community/netbox",
+    "version": "4.7.2",
+    "commit": "251458b89a5eb2f5fe0d20ecd1140ba08f141a9c"
+  },
+  "files": [
+    {
+      "path": "examples/connection.json",
+      "git_blob": "546ff8d4f745f8406f541ecbe0903732d799784e",
+      "bytes": 242
+    },
+    {
+      "path": "examples/devices.csv",
+      "git_blob": "685a2737f6a1cf9c56f7643293fdfd1a2205e68d",
+      "bytes": 375
+    },
+    {
+      "path": "examples/interfaces.csv",
+      "git_blob": "7aa8e722a896ef222525cb65fc5b4a2f9fc35db0",
+      "bytes": 151
+    },
+    {
+      "path": "examples/ip_addresses.csv",
+      "git_blob": "f08964126cdfce75adc829cea919ea440ab0a082",
+      "bytes": 221
+    },
+    {
+      "path": "examples/mapping.json",
+      "git_blob": "511d609b6c698f9fcaa134f488e00d7aacffdbd3",
+      "bytes": 4069
+    },
+    {
+      "path": "examples/racks.csv",
+      "git_blob": "24a80e45f7285f5b9d1489cf0951007ee39b9db9",
+      "bytes": 146
+    },
+    {
+      "path": "examples/sites.csv",
+      "git_blob": "b2f0e8c69aee9b4ed378fda10c65355d1229b0a8",
+      "bytes": 125
+    },
+    {
+      "path": "inventory_migration.py",
+      "git_blob": "7f8f2c48c63619fffa63f703a2fe7841a797ef54",
+      "bytes": 47099
+    },
+    {
+      "path": "native/native_fixture.py",
+      "git_blob": "afb72f8b2279d0e99b637d8d4e5a15d5bd32f5b4",
+      "bytes": 11287
+    },
+    {
+      "path": "native/README.md",
+      "git_blob": "0227caed1a71d724f10c4be7c0755a29b9eb3207",
+      "bytes": 7010
+    },
+    {
+      "path": "native/run_native.py",
+      "git_blob": "184fc0439194d0948f7f327ba1023c40cea9cef4",
+      "bytes": 23505
+    },
+    {
+      "path": "native/runtime-request.json",
+      "git_blob": "e1e44f84ed80689fd08f65be603b4da6c9fe9ff3",
+      "bytes": 1655
+    },
+    {
+      "path": "operate_inventory.py",
+      "git_blob": "6ee5edfdb2e8534026185148c6e8d13700888250",
+      "bytes": 46827
+    },
+    {
+      "path": "prepare_inventory.py",
+      "git_blob": "13c8423c2e23ebe159cebead89b7394e9605466f",
+      "bytes": 18917
+    },
+    {
+      "path": "README.md",
+      "git_blob": "39668a3245d770cc7344ae1ff9ae444edc227109",
+      "bytes": 17602
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+source_key,match_id,name,site_key,rack_key,location_id,device_type_id,role_id,platform_id,position,face,status,serial,description
+existing-chassis,401,Example chassis,site-b,rack-b,302,501,601,,1,front,active,EX-001,Move with original child-device propagation
+new-switch,,Example switch,site-b,rack-b,302,502,601,,4,front,active,EX-002,Prepared from the original source feed

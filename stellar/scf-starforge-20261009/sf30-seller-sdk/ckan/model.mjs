@@ -1,11 +1,12 @@
 // MIT. One retained CKAN project around the original publisher and merchant lifecycle.
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { initReleaseStore } from '../../sf82-seller-pilot/releases.mjs';
-import { mkdir, lstat } from 'node:fs/promises';
+import { mkdir, lstat, readdir } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { object, bytes, digest, identity, readJson, createFile, atomicJson, privateDirectory,
   acquireWorkspace, fault, stamp } from '../postgres/publisher/files.mjs';
 import { catalogOrigin, captureSelection, captureCkanResource, ExactCkanNumber, readCkanCapture, requestCkan, searchCkan } from './capture.mjs';
+import { createCkanWorkspaceArchive, receiveCkanWorkspaceArchive, assertCkanWorkspaceReceived } from './archive.mjs';
 import { compileQueries, readCkanSourceFile } from './declaration.mjs';
 import { bindCkanCapture, projectCkanValue } from './source.mjs';
 import { describeCkanSemantics, projectCkanSemantics, checkCkanSemanticReview, compareCkanSemantics } from './semantics.mjs';
@@ -67,6 +68,7 @@ export async function openCkanWorkbench({ directory, create = false, origin, aut
   if (create && await exists(join(directory, 'workbench.json'))) throw fault('CKAN_PROJECT_EXISTS');
   await privateDirectory(dirname(directory));
   await privateDirectory(directory, create);
+  await assertCkanWorkspaceReceived(directory);
   const release = await acquireWorkspace(directory);
   let state, active = null, closed = false;
   const persist = () => atomicJson(directory, 'workbench.json', state);
@@ -236,7 +238,7 @@ export async function openCkanWorkbench({ directory, create = false, origin, aut
           const semanticReview = semantics ? { sha256: semantics.sha256, definitionSha256: semantics.definitionSha256 } : null;
           const config = { schema: 'stellar-forge.ckan-source.v1', catalogOrigin: state.catalogOrigin,
             packageId: capture.manifest.packageId, resourceId: capture.manifest.resourceId,
-            connection: { kind: 'capture', file: captureFile(editionId), sha256: capture.manifestSha256 },
+            connection: { kind: 'capture', file: '../editions/' + editionId + '/capture.json', sha256: capture.manifestSha256 },
             queries: { [query]: { projection: input.projection, ...(semanticReview ? { semanticReview } : {}) } } };
           bindCkanCapture(capture, config, queries[query]);
           const preview = capture.rows.slice(0, 20).map(row => Object.fromEntries(Object.entries(queries[query].projection)
@@ -345,6 +347,51 @@ export async function openCkanWorkbench({ directory, create = false, origin, aut
           const saved = { id: requestId, exportId: value, createdAt: stamp(), out, ...result };
           state.buyerRequests.push(saved); await persist(); return structuredClone(saved);
         });
+      },
+      async workspaceArchives() {
+        const root = join(directory, 'workspace-archives');
+        if (!await exists(root)) return [];
+        const records = [];
+        for (const item of await readdir(root, { withFileTypes: true })) {
+          if (!item.isFile() || !/^[a-f0-9-]{36}\.json$/.test(item.name)) continue;
+          const record = await readJson(join(root, item.name), 33554432);
+          if (record.id + '.json' !== item.name || record.schema !== 'stellar-forge.ckan-workspace-archive.v1')
+            throw fault('CKAN_WORKSPACE_ARCHIVE_INVALID');
+          records.push(record);
+        }
+        return records.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      },
+      async workspaceArchive(value) {
+        const selected = await readJson(join(directory, 'workspace-archives', id(value) + '.json'), 33554432);
+        if (selected.id !== value || selected.schema !== 'stellar-forge.ckan-workspace-archive.v1')
+          throw fault('CKAN_WORKSPACE_ARCHIVE_INVALID');
+        return selected;
+      },
+      archiveWorkspace(input = {}) {
+        const snapshot = bytes(state), value = randomUUID();
+        return launch('export complete workspace', async (signal, progress) => {
+          const root = join(directory, 'workspace-archives');
+          await privateDirectory(root, true);
+          const out = input.out ? resolve(input.out) : join(root, value + '.ckanw');
+          const result = await createCkanWorkspaceArchive({ directory, out,
+            workbenchBytes: snapshot, projectLeaseHeld: true, signal, onProgress: progress,
+            ...(input.maxBytes === undefined ? {} : { maxBytes: input.maxBytes }),
+            ...(input.maxFiles === undefined ? {} : { maxFiles: input.maxFiles }) });
+          const saved = { id: value, ...result };
+          await createFile(join(root, value + '.json'), bytes(saved));
+          return saved;
+        });
+      },
+      receiveWorkspace(input) {
+        if (typeof input.name !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/.test(input.name) ||
+            ['.', '..', basename(directory)].includes(input.name))
+          throw fault('CKAN_RECEIVE_NAME_INVALID', 'Enter a new project directory name beside this project.');
+        const destination = join(dirname(directory), input.name);
+        return launch('receive complete workspace', (signal, progress) =>
+          receiveCkanWorkspaceArchive({ file: resolve(input.file), directory: destination,
+            expectedSha256: input.expectedSha256, signal, onProgress: progress,
+            ...(input.maxBytes === undefined ? {} : { maxBytes: input.maxBytes }),
+            ...(input.maxFiles === undefined ? {} : { maxFiles: input.maxFiles }) }));
       },
       cancel() { if (!active) throw fault('CKAN_NO_ACTIVE_OPERATION'); active.controller.abort(); return { cancelling: active.operation.id }; },
       async close() {

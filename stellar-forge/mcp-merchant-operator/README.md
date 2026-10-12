@@ -1,5 +1,7 @@
 # Starforge merchant operations through MCP
 
+Provider authors register tool metadata, host configuration, native ownership and setup through the original distribution contributions. See [Source-owned merchant providers](MERCHANT_PROVIDERS.md) for the complete module contract and `starforge merchant-providers list|inspect|init` commands.
+
 The host advertises its configured tools and loads each original provider when it is needed. Release-state reads use the small native release layer; workspace, seller and customer operations retain their existing ownership and recovery paths. See [Configured providers and startup](CONFIGURED_PROVIDERS.md) for setup, capability status, request limits, lifecycle and provider integration.
 
 Operate a complete Baserow source and merchant through the same browser workspace. Capture native rows and files, review source versions, run the original publisher and refresh schedule, stage the merchant, and deliver the complete original source to a customer. Manifest-pinned downloads resume after MCP restart, and the recipient reopens the same native import offline. See [Baserow source, merchant and customer operations](BASEROW_WORKSPACE.md) for all 20 tools, host setup and the original-source continuation.
@@ -63,6 +65,10 @@ the same compiled source through the original release controls. The complete
 review survives reopen and is checked at native startup. See
 [Retained facilitator workflow](../../stellar/scf-starforge-20261009/sf82-seller-pilot/FACILITATORS.md)
 for the three MCP tools, console and CLI commands.
+
+## Census address operations
+
+Use `starforge census-geocoder-agent serve` or **Census address operations** in Applications to operate the original address workspace from its browser and MCP together. Retained official captures, explicit match reviews, typed editions, native publication and SF88 customer receiving share one owner. The managed terminal preserves the original purchase approval. [CENSUS_GEOCODER_WORKSPACE.md](CENSUS_GEOCODER_WORKSPACE.md) covers complete host setup, source-to-customer operations, file receiving and close/reopen.
 
 ## ArcGIS merchant workspace
 

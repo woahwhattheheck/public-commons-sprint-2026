@@ -446,7 +446,14 @@ export async function openWorkspace({config, directory, snapshot, history:histor
     if (input.sellerSha256 !== sellerSha256 || current.hash !== sellerSha256)
       throw fault('SELLER_CHANGED','The configured seller differs from this saved pricing review. Save a review of its current configuration before preparing new prices.',409);
     const {createRepricingReview} = await import('./repricing.mjs');
-    const core = createRepricingReview({seller:original.sellerValue,edits:input.edits});
+    const hasQuotes=Object.hasOwn(input,'quoteValuations'), hasEdits=Object.hasOwn(input,'edits');
+    if (hasQuotes === hasEdits)
+      throw fault('PRICE_INPUT_REQUIRED','Supply either explicit atomic edits or explicit quote valuations.');
+    const quoteConversion=hasQuotes
+      ? (await import('./quote-prices.mjs')).createQuotePriceEdits({seller:original.sellerValue,
+          commercial:commercialInputs(original.termsValue,merchantRoutes(original.sellerValue)),
+          quoteValuations:input.quoteValuations}) : null;
+    const core = createRepricingReview({seller:original.sellerValue,edits:quoteConversion?.edits ?? input.edits});
     const proposedBytes = encode(core.proposedSeller);
     const launchBytes = encode(resolveSellerConfigPaths(structuredClone(core.proposedSeller),configPath));
     if (proposedBytes.length > 1024*1024 || launchBytes.length > 1024*1024)
@@ -460,7 +467,7 @@ export async function openWorkspace({config, directory, snapshot, history:histor
       sellerSha256,proposedSellerSha256:digest(proposedBytes),launchSellerSha256:digest(launchBytes),
       termsSha256:digest(termsBytes),edits:core.edits,changes:core.changes,routes:core.routes,
       changedRoutes:core.changedRoutes,changedPaymentOptions:core.changedPaymentOptions,
-      sourcePackage:source?.review ?? null};
+      sourcePackage:source?.review ?? null,...(quoteConversion ? {quoteConversion} : {})};
     return {original,core,proposedBytes,launchBytes,termsBytes,source,
       review:{...review,reviewSha256:digest(canonical(review))}};
   }

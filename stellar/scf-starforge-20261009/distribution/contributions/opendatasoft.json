@@ -4,11 +4,17 @@
   "description": "Opendatasoft and Huwise data products",
   "commands": {
     "opendatasoft": "stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/cli.mjs",
-    "huwise": "stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/cli.mjs"
+    "huwise": "stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/cli.mjs",
+    "merchant-opendatasoft": "stellar-forge/mcp-merchant-operator/opendatasoft-cli.mjs",
+    "merchant-huwise": "stellar-forge/mcp-merchant-operator/opendatasoft-cli.mjs",
+    "merchant-huwise-receive": "stellar-forge/mcp-merchant-operator/examples/opendatasoft-receiving.mjs"
   },
   "commandDescriptions": {
     "opendatasoft": "Discover, retain and publish Huwise data with original buyer handoff",
-    "huwise": "Alias for the same Opendatasoft data workspace"
+    "huwise": "Alias for the same Opendatasoft data workspace",
+    "merchant-opendatasoft": "Operate the shared merchant agent and receive complete original Huwise files",
+    "merchant-huwise": "Alias for the same complete Huwise merchant agent client",
+    "merchant-huwise-receive": "Capture a complete original Huwise dataset and receive every analyst file"
   },
   "exports": {
     "./seller/opendatasoft": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/source.mjs",
@@ -17,6 +23,14 @@
     "./seller/opendatasoft/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/workspace/server.mjs",
     "./seller/opendatasoft/workspace/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/engine.mjs",
     "./seller/opendatasoft/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/publisher/model.mjs",
-    "./seller/opendatasoft/publisher/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/publisher/release.mjs"
+    "./seller/opendatasoft/publisher/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/publisher/release.mjs",
+    "./merchant/mcp/opendatasoft": "./source/stellar-forge/mcp-merchant-operator/opendatasoft-workspace.mjs",
+    "./merchant/mcp/opendatasoft/client": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/opendatasoft-client.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/opendatasoft-client.mjs"
+    }
+  },
+  "merchantProviders": {
+    "opendatasoft-workspaces": "stellar-forge/mcp-merchant-operator/providers/opendatasoft-workspaces.mjs"
   }
 }

@@ -1,0 +1,24 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "accounting-connections",
+  "description": "Managed accounting authorization, reviewed native company selections and original application launch",
+  "exports": {
+    "./merchant/accounting-connections": {
+      "types": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/connections-workspace.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/connections-workspace.mjs"
+    },
+    "./merchant/accounting-managed": {
+      "types": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/managed-launch.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/managed-launch.mjs"
+    }
+  },
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/browser-assets.json"
+    }
+  ],
+  "applicationProviders": {
+    "accounting-connections": "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-accounting.mjs"
+  }
+}

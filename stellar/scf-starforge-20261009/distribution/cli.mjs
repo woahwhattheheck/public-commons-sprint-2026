@@ -80,7 +80,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   buyer-node  Review, execute and recover generated-client purchases in a Node application
   buyer-expenses                            Allocate native buyer expenses and issue accountant periods
   buyer-n8n-workflows Generate six original customer workflows for the selected n8n credential
-  buyer-agent Operate the original buyer through LangGraph checkpoints and LangChain tools
+  buyer-agent-example                       Operate the original buyer through LangGraph checkpoints and LangChain tools
   stac                                      Discover imagery, compare scenes and deliver selected assets to customers
   coingecko                                 Operate CoinGecko sources, market research and original purchases
   tenderly / tenderly-workspace              Prepare and operate the Tenderly simulation merchant
@@ -144,6 +144,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-accounting-recovery               Review, import and reopen an original completed purchase
   merchant-accounting-maintenance            Back up, recover and reopen the same merchant MCP accounting workspace
   merchant-accounting-adjustments            Review, retain and reconcile original merchant cancellations and refunds
+  merchant-accounting-cryptoworth            Review customer templates, native receiving, accountant returns and original packet recovery through MCP
   merchant-accounting-statements             Retain, recover and deliver original customer statements through MCP
   merchant-accounting-platforms              Review, retain and reconcile original QuickBooks and Xero operations
   databento-workspace                        Review historical source editions, map customer records and reopen handoffs

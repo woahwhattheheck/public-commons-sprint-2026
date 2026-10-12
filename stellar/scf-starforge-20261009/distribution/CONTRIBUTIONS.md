@@ -91,6 +91,7 @@ component, such as `sf30-seller-sdk`, does not need another component entry.
 | `nativePeers` | Original native dependency version and import probe declarations. |
 | `featurePeers` | Per-feature dependency declarations and original probes. |
 | `browserAssets` | Original server and asset-manifest pairs. |
+| `applicationProviders` | Stable provider IDs mapped to original Applications adapter `.mjs` modules. |
 
 The built-in `init`, `run`, `doctor`, `source`, `help` and `registrations` command
 names are reserved. Repository source paths must be relative and remain inside
@@ -106,6 +107,17 @@ selection and native-driver preparation still apply.
 Browser servers keep using `readBrowserAssets`. Contributions give the existing
 collector those same server manifests. [BROWSER_ASSETS.md](BROWSER_ASSETS.md)
 defines the URL mapping and original asset closure.
+
+## Applications providers
+
+A product can own its original Applications catalog, command preparation and startup
+reader in the same contribution. Add `applicationProviders` with the stable provider
+ID and the adapter's original source path. Shared Review/Save, Start/Open/Stop,
+private environments, terminals, resource leases and recovery stay in the maintained
+runtime. The complete [Applications provider contract](runtime-workspace/APPLICATION_PROVIDERS.md)
+contains the native adapter interface, source discovery, exact migration rules and
+installed receiving workflow. The existing Databento contribution provides a full
+original example. No central catalog or observer branch is required.
 
 ## Composition and migration
 

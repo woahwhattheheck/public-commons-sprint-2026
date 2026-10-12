@@ -15,6 +15,8 @@ from model import Problem, canonical, digest, now, text, short_id, csv_bytes, MA
 import operations_domain as domain
 import forecast as forecasts
 import portfolio as portfolios
+import operations_support as support
+import operations_completion as completion
 
 SCHEMA = "stellar-forge.sf47-operations.v1"
 MAX_SOURCE = 8 * 1024 * 1024
@@ -88,6 +90,7 @@ class Operations:
                     program_id TEXT NOT NULL REFERENCES ops_programs(id),id TEXT NOT NULL,
                     body_json TEXT NOT NULL,PRIMARY KEY(program_id,id));
             """)
+            completion.install(workspace.db)
             row = workspace.db.execute("SELECT value FROM ops_metadata WHERE key='schema'").fetchone()
             if row and row[0] != SCHEMA:
                 domain.fail("This workspace uses a newer operations schema.", "OPERATIONS_SCHEMA", 409)
@@ -112,20 +115,28 @@ class Operations:
             records[kind].append(json.loads(raw))
         sources = {row["id"]: row for row in (json.loads(raw[0]) for raw in self.db.execute(
             "SELECT metadata_json FROM ops_sources WHERE program_id=? ORDER BY id", (program_id,)))}
-        return {"program": program, "plan": plan, "records": records, "sources": sources}
+        return {"program": program, "plan": plan, "records": records, "sources": sources,
+                "completionPlans": completion.load_plans(self, program_id)}
 
     @staticmethod
     def _business(context):
         p = context["program"]
-        return {"program": {key: p[key] for key in ("id", "name", "mode", "calendarStart")},
-                "plan": context["plan"], "records": context["records"],
-                "sources": sorted(context["sources"].values(), key=lambda row: row["id"])}
+        result = {"program": {key: p[key] for key in ("id", "name", "mode", "calendarStart")},
+                  "plan": context["plan"], "records": context["records"],
+                  "sources": sorted(context["sources"].values(), key=lambda row: row["id"])}
+        if context.get("completionPlans"):
+            result["completionPlans"] = context["completionPlans"]
+        return result
 
     def _read(self, program_id):
         context = self._context(program_id)
         result = {**context, "sources": list(context["sources"].values()),
                   "report": domain.report(**context)}
-        result["reviews"] = [{key: row[key] for key in ("id", "version", "createdAt", "actor", "note", "businessSha256")}
+        result["completion"] = completion.dashboard(context)
+        result["reviews"] = [{**{key: row[key] for key in ("id", "version", "createdAt", "actor", "note", "businessSha256")},
+                              "purpose": row.get("purpose"),
+                              **({"completionTranche": row["completion"]["clock"]["tranche"],
+                                  "receiptId": row["completion"]["receipt"]["id"]} if row.get("purpose") == "TRANCHE_COMPLETION" else {})}
             for row in (json.loads(raw[0]) for raw in self.db.execute(
                 "SELECT body_json FROM ops_reviews WHERE program_id=? ORDER BY rowid DESC", (program_id,)))]
         latest = self.db.execute("SELECT current_revision FROM plans WHERE id=?", (result["program"]["planId"],)).fetchone()
@@ -151,10 +162,12 @@ class Operations:
                      "state": row[4], "name": row[5], "mode": row[6], "updatedAt": row[7]}
                 for row in self.db.execute("SELECT id,plan_id,plan_revision,version,state,name,mode,updated_at FROM ops_programs" + where + " ORDER BY updated_at DESC,id", params)]
 
-    def _event(self, program_id, version, body, action, before=None, after=None, kind=None, record_id=None):
+    def _event(self, program_id, version, body, action, before=None, after=None, kind=None, record_id=None, source_change=None):
         event = {"version": version, "at": now(), "actor": body["actor"], "note": body.get("note", ""),
                  "requestId": body["requestId"], "action": action, "kind": kind, "recordId": record_id,
                  "before": before, "after": after}
+        if source_change is not None:
+            event["sourceChange"] = source_change
         event["sha256"] = digest(event)
         self.db.execute("INSERT INTO ops_events VALUES(?,?,?)", (program_id, version, canonical(event)))
 
@@ -231,9 +244,30 @@ class Operations:
                 domain.fail("Reopen this closed review before recording new work.", "OPERATIONS_CLOSED", 409)
             next_version = expected + 1
             before, after, kind, record_id = None, None, None, None
+            extra_receipt, source_change = {}, None
             if command == "source.add":
                 after = self._source_add(program_id, data)
                 kind, record_id = "source", after["id"]
+            elif command == "support.receive":
+                result = support.receive(self, context, data, actor, next_version)
+                source_change = result["sourceChange"]
+                before, after, kind = result["before"], result["after"], "deployments"
+                record_id = after["id"]
+                extra_receipt = {"sourceIds": result["sourceIds"], "sourceSha256": result["sourceSha256"],
+                                 "unchanged": result["unchanged"]}
+                if result["unchanged"]:
+                    return {"id": program_id, "version": expected, "action": command, "kind": kind,
+                            "recordId": record_id, **extra_receipt}
+            elif command.startswith("completion."):
+                if command == "completion.submit" and self.db.execute("SELECT COUNT(*) FROM ops_records WHERE program_id=?", (program_id,)).fetchone()[0] >= MAX_RECORDS:
+                    domain.fail("This operations case has reached its retained-record bound.", status=413)
+                result = completion.command(self, context, command, data, actor, next_version)
+                before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
+                extra_receipt = {key: value for key, value in result.items()
+                                 if key not in ("before", "after", "kind", "recordId")}
+                if result["unchanged"]:
+                    return {"id": program_id, "version": expected, "action": command, "kind": kind,
+                            "recordId": record_id, **extra_receipt}
             elif command == "forecast.save":
                 candidate = forecasts.preview(context, data.get("inputs"))
                 if candidate["previewSha256"] != domain.sha(data.get("expectedPreviewSha256"), "Reviewed forecast", False):
@@ -330,10 +364,43 @@ class Operations:
                              "reviewedBy": actor, "reviewNote": note}
                 self._save(program_id, kind, after)
             self.db.execute("UPDATE ops_programs SET version=?,updated_at=? WHERE id=?", (next_version, now(), program_id))
-            self._event(program_id, next_version, {**body, "actor": actor, "note": note}, command, before, after, kind, record_id)
+            self._event(program_id, next_version, {**body, "actor": actor, "note": note}, command, before, after, kind, record_id,
+                        source_change=source_change)
             return {"id": program_id, "version": next_version, "action": command, "kind": kind, "recordId": record_id,
-                    **({"businessSha256": after["businessSha256"]} if command == "review" else {})}
+                    **extra_receipt, **({"businessSha256": after["businessSha256"]} if command == "review" else {})}
         return self.workspace._transaction(body.get("requestId"), payload, action)
+
+
+    def completion_calendar(self, program_id, as_of=None):
+        with self.workspace.mutex:
+            return completion.dashboard(self._context(identifier(program_id, "operation")), as_of)
+
+    def _completion_context(self, program_id, body, keys):
+        completion.object_value(body, ("expectedVersion", *keys), "completion operation")
+        expected = domain.integer(body.get("expectedVersion"), "Reviewed operations version", 1, 10000000)
+        context = self._context(identifier(program_id, "operation"))
+        if context["program"]["version"] != expected:
+            domain.fail("The original case changed. Reopen it before continuing.", "OPERATIONS_CONFLICT", 409)
+        return context
+
+    def seed_completion(self, program_id, body):
+        with self.workspace.mutex:
+            return completion.seed(self._completion_context(program_id, body, ("tranche",)), body.get("tranche"))
+
+    def preview_completion(self, program_id, body):
+        with self.workspace.mutex:
+            context = self._completion_context(program_id, body, ("receiptId", "asOfDate", "summary"))
+            return completion.preview(context, {key: value for key, value in body.items() if key != "expectedVersion"})
+
+    def export_completion(self, program_id, review_id):
+        with self.workspace.mutex:
+            review = self.review(program_id, review_id)
+            return completion.review_files(review, lambda source_id: self.source(program_id, source_id))
+
+    def preview_support(self, program_id, body):
+        with self.workspace.mutex:
+            context = deepcopy(self._context(identifier(program_id, "operation")))
+        return support.preview(context, body)
 
     def preview_forecast(self, program_id, body):
         if not isinstance(body, dict) or set(body) - {"expectedVersion", "inputs"}:
@@ -496,6 +563,7 @@ class Operations:
             files = {"planning.zip": original,
                      "operations.json": (canonical(document) + "\n").encode(),
                      "summary.json": (canonical(report) + "\n").encode(),
+                     "completion-calendar.json": (canonical(completion.dashboard(context)) + "\n").encode(),
                      "recorded-cash.csv": csv_bytes(["id", "state", "date", "direction", "category", "currency", "network", "asset", "amount", "usdValue", "externalRef", "sourceBasis"], context["records"]["cash"]),
                      "invoice-balances.csv": csv_bytes(["id", "number", "state", "totalUsd", "paidUsd", "openUsd", "overpaidUsd", "dueDate"], report["invoices"]),
                      "recorded-work.csv": csv_bytes(["id", "state", "contributorId", "costId", "description", "startDate", "endDate", "hours", "fundingBasis", "sourceBasis"], context["records"]["work"]),
@@ -553,6 +621,10 @@ class Operations:
         source_ids = {row["id"] for row in document["sources"]}
         expected = {"planning.zip", "operations.json", "summary.json", "recorded-cash.csv", "invoice-balances.csv",
                     "recorded-work.csv", "plan-versus-actual.csv", "README.txt"} | {"sources/" + ident for ident in source_ids}
+        # This derived view was added with Completion; older complete cases omit it.
+        # Original completion plans and source records retain their native validation below.
+        if "completion-calendar.json" in files:
+            expected.add("completion-calendar.json")
         if set(files) != expected or len(source_ids) != len(document["sources"]):
             domain.fail("The operations source set is not exact.")
         for item in document["sources"]:
@@ -593,7 +665,8 @@ class Operations:
         sources = {row["id"]: row for row in document["sources"]}
         if sum(row["bytes"] for row in sources.values()) > MAX_SOURCES_TOTAL:
             domain.fail("The original attachment total exceeds its supported bound.", status=413)
-        context = {"program": source_program, "plan": plan, "records": document["records"], "sources": sources, "restoring": True}
+        context = {"program": source_program, "plan": plan, "records": document["records"], "sources": sources,
+                   "restoring": True, "completionPlans": document.get("completionPlans", [])}
         for kind, values in document["records"].items():
             seen = set()
             for row in values:
@@ -633,6 +706,7 @@ class Operations:
                 domain.fail("The complete original review snapshot and report are required.")
             if digest(review["snapshot"]) != review["businessSha256"]:
                 domain.fail("A frozen review differs from its retained business snapshot.")
+        completion.validate_import(context, document.get("completionPlans", []), reviews, events, source_program["version"])
         saved_forecasts = document.get("forecasts", [])
         if not isinstance(saved_forecasts, list) or len(saved_forecasts) > forecasts.MAX_FORECASTS:
             domain.fail("The complete retained forecast set is invalid.", "INVALID_FORECAST")
@@ -719,6 +793,8 @@ class Operations:
                 self.db.execute("INSERT INTO ops_events VALUES(?,?,?)", (pid, event["version"], canonical(event)))
             for review in document["reviews"]:
                 self.db.execute("INSERT INTO ops_reviews VALUES(?,?,?)", (pid, review["id"], canonical(review)))
+            for value in document.get("completionPlans", []):
+                completion.save_row(self, pid, value)
             for value in saved_forecasts:
                 self.db.execute("INSERT INTO ops_forecasts VALUES(?,?,?)", (pid, value["id"], canonical(value)))
             for value in saved_portfolios:

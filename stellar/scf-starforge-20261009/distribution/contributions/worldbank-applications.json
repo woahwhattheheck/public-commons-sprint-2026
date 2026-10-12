@@ -10,5 +10,8 @@
   },
   "exports": {
     "./merchant/mcp/worldbank-launcher": "./source/stellar-forge/mcp-merchant-operator/worldbank-workspace-launcher.mjs"
+  },
+  "applicationProviders": {
+    "worldbank-agent": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/worldbank-agent.mjs"
   }
 }
