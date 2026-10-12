@@ -140,3 +140,9 @@ The terminal result is `results/NATIVE_ACCEPTANCE.json`. It contains:
 Desktop/mobile and received-workspace screenshots, the native CSV download and edition comparison stay beside that result. The application's existing source table and cumulative merchant package consume the same PR/component; the completed native result is joined into their original receiving/demo entry.
 
 The CLI startup phase exercises the actual source-owned startup observer. Installation into a cumulative Applications runtime is completed by its original package owner using the existing `applicationProviders.wordpress` contribution.
+
+## Dedicated testnet host
+
+An equipped Linux worker can commission the same full receiving journey using [testnet.mjs](testnet.mjs) and the retained host selection in [TESTNET.md](TESTNET.md). This mode creates dedicated native testnet payer and merchant accounts, original SF88/SF36 operator state, a verified private HTTPS ingress and the original native facilitator. It binds each actual SF81 approval to the original WordPress product, acquisition and retained page attempt, then joins the actual settled token transfers to the complete source receiving result. The same original operation ID and journey are retained throughout.
+
+The complete host entry and installed-path example are [testnet-input.example.json](testnet-input.example.json). Its result is `results/TESTNET_RECEIVING.json`, alongside the existing `NATIVE_ACCEPTANCE.json` and screenshots. Existing configured buyer workspaces continue to use the selector above.
