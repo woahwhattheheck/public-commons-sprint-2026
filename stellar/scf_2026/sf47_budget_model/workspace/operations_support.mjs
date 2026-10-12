@@ -71,7 +71,8 @@ export function mountSupportDelivery({container,current,api,saveApi=api,mutation
     if(!sources.length)return '<p class="ops-empty">This case has no received merchant support file.</p>';
     return table(['Original file','Linked deployments','Source identity','Open'],sources.map(source=>{
       const deployments=current.records.deployments.filter(row=>row.sourceIds.includes(source.id));
-      const reports=source.supportHandoff.reports.map(item=>current.sources.find(row=>row.id===item.sourceId&&row.sha256===item.sha256)).filter(Boolean);
+      const reports=source.supportHandoff.reports.filter(item=>item&&typeof item.sourceId==='string'&&typeof item.sha256==='string')
+        .map(item=>current.sources.find(row=>row.id===item.sourceId&&row.sha256===item.sha256)).filter(Boolean);
       return [esc(source.supportHandoff.originalFilename||source.filename),
         deployments.map(row=>esc(row.name)+'<small>'+esc(row.operator)+' · '+esc(title(row.state))+'</small>').join('')||'Retained source',
         '<code>'+esc(source.sha256)+'</code><small>'+source.bytes.toLocaleString()+' bytes</small>',
@@ -155,6 +156,7 @@ export function mountSupportDelivery({container,current,api,saveApi=api,mutation
     restoreDraft();configureDeployment();syncBusy();
   }
   async function previewSelected(){
+    if(session.pending||session.accepted||session.sending)throw new Error('Recover the retained save request before selecting another review.');
     if(!session.selected)throw new Error('Select the original support handoff.');
     const selected=session.selected;
     session.review=null;render();
@@ -209,6 +211,7 @@ export function mountSupportDelivery({container,current,api,saveApi=api,mutation
   root.addEventListener('input',event=>{if(event.target.closest('[data-support-form]'))captureDraft();});
   root.addEventListener('change',event=>{
     if(event.target.matches('[data-support-file]')){
+      if(!changeable())return;
       const file=event.target.files?.[0];
       if(file)run(async()=>{if(file.size>MAX_FILE)throw new Error('Select an original support handoff up to 8 MiB.');const bytes=await file.arrayBuffer();requireActive();await previewFile(file.name,bytes);});
     }
@@ -219,6 +222,7 @@ export function mountSupportDelivery({container,current,api,saveApi=api,mutation
     const target=event.target.closest('[data-support-action]');if(!target)return;
     run(async()=>{
       const action=target.dataset.supportAction;
+      if(action==='saved-open'&&(session.pending||session.accepted||session.sending))return;
       if(action==='reload'){captureDraft();return onReload();}
       if(action==='retry')return sendPending();
       if(action==='preview')return previewSelected();
