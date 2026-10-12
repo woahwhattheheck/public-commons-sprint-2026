@@ -54,7 +54,7 @@ A saved terms file has the existing workspace shape:
 }
 ```
 
-Use the actual saved file for the invocation. Credential values stay in the original local environment and buyer workspace. The private WordPress fixture creates its own application password and retains it only in the operation's private work directory.
+Use the actual saved file for the invocation. Credential values stay in the original local environment and buyer workspace. The private WordPress fixture creates its own application password and retains it in the operation's private WordPress database and work directory.
 
 ## Freeze one invocation
 
@@ -120,7 +120,9 @@ The final source metadata uses the same compact manifest summary as the product.
 
 The runner writes `work/journey-checkpoint.json`, stable workspace operation UUIDs, capture IDs and original buyer session IDs. It keeps source and merchant listener selections stable across a continuation.
 
-A completed phase is reused. A completed purchase is read from its original acquisition. A buyer session advances only when the original SF88 report is `READY`; paid or uncertain original attempts remain with their original recovery and accounting operations. The actual report, page identity and next action are retained if the journey encounters a native continuation that needs the existing operator.
+The native fixture stores its original operation binding and progress in the same private WordPress database. Interrupted term, post, media and added-record creation reuse their exact native identities. An already completed original deletion remains completed. Native credentials stay in that private database and selected work directory.
+
+A completed phase is reused. Restarting an unowned process uses a new continuation operation for the current invocation while keeping the original release generation, capture and customer session. A completed purchase is read from its original acquisition. A buyer session advances only when the original SF88 report is `READY`; paid or uncertain original attempts remain with their original recovery and accounting operations. The actual report, page identity and next action are retained if the journey encounters a native continuation that needs the existing operator.
 
 After an interrupted carrier, inspect its original native record and owned children first, then resume that same command through the maintained lifecycle. Reuse `selected.json`, the private work directory and the original buyer workspace. Earlier failed acceptance records are kept under `results/history/` when the same journey continues.
 
