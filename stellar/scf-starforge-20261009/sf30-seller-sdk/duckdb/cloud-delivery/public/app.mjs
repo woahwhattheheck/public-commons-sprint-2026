@@ -66,6 +66,11 @@ export function mountCloudDelivery(host, { api, download, onSelected, perform, g
     try { sessionStorage.setItem(storageName, JSON.stringify(pending)); }
     catch { throw new Error('This browser could not retain the exact operation request. Free browser storage before starting this operation.'); }
   }
+  function archiveIntake(value) {
+    if (!value) return null;
+    const record = value.intake ?? value.edition ?? value;
+    return { ...record, uploads: value.uploads ?? record.uploads };
+  }
   function initializeStorage() {
     const workspaceId = getWorkspace()?.workspaceId;
     if (!workspaceId) return;
@@ -78,7 +83,7 @@ export function mountCloudDelivery(host, { api, download, onSelected, perform, g
         entry && typeof entry.path === 'string' && entry.path.startsWith('/api/cloud/') && entry.payload && typeof entry.kind === 'string'));
     } catch { pending = {}; }
     try {
-      const saved = JSON.parse(sessionStorage.getItem(name + ':archive') ?? 'null');
+      const saved = archiveIntake(JSON.parse(sessionStorage.getItem(name + ':archive') ?? 'null'));
       if (saved && (saved.id || saved.intakeId) && Array.isArray(saved.uploads)) ui.receiveIntake = saved;
     } catch {}
   }
@@ -165,7 +170,7 @@ export function mountCloudDelivery(host, { api, download, onSelected, perform, g
     } else if (entry.kind === 'export') {
       ui.lastDelivery = result.delivery ?? result; ui.tab = 'handover';
     } else if (entry.kind === 'receive-intake') {
-      ui.receiveIntake = result.intake ?? result; rememberArchiveIntake();
+      ui.receiveIntake = archiveIntake(result); rememberArchiveIntake();
     } else if (entry.kind === 'receive') {
       ui.lastDelivery = result.delivery ?? result;
       ui.receiveIntake = null; rememberArchiveIntake(); ui.tab = 'handover';
@@ -568,13 +573,14 @@ export function mountCloudDelivery(host, { api, download, onSelected, perform, g
       await submit('receive-intake', '/api/cloud/intake', operationPayload({ archive: { name: file.name, bytes: String(file.size) } }));
     }
     const retained = await api('/api/cloud/intake?id=' + encodeURIComponent(ui.receiveIntake.id ?? ui.receiveIntake.intakeId));
-    ui.receiveIntake = retained.intake ?? retained; rememberArchiveIntake();
+    ui.receiveIntake = archiveIntake(retained); rememberArchiveIntake();
     const intake = ui.receiveIntake;
     const upload = list(intake.uploads)[0] ?? intake.upload;
     if (!upload?.url) throw new Error('The archive intake did not return its original upload URL.');
-    if (upload.name && upload.name !== file.name || upload.bytes && String(upload.bytes) !== String(file.size))
+    if (intake.archive?.name && intake.archive.name !== file.name || upload.bytes && String(upload.bytes) !== String(file.size))
       throw new Error('Choose the same archive retained by this receiving intake.');
     if (!upload.present) await api(safeCloudPath(upload.url), file, { method: 'PUT', binary: true });
+    await refreshCloud({ selected: false });
     await submit('receive', '/api/cloud/receive', operationPayload({ intakeId: intake.id ?? intake.intakeId }));
     notice('The handover is received. Open its source editions and deliberately select the source for the merchant.');
   }
@@ -648,7 +654,7 @@ export function mountCloudDelivery(host, { api, download, onSelected, perform, g
     'receive-upload': receiveUpload,
     'resume-archive': async node => {
       const result = await api('/api/cloud/intake?id=' + encodeURIComponent(node.dataset.cloudId));
-      ui.receiveIntake = result.intake ?? result; ui.archiveFile = null; rememberArchiveIntake();
+      ui.receiveIntake = archiveIntake(result); ui.archiveFile = null; rememberArchiveIntake();
       notice('The original archive intake is open. Select the same archive to continue from its retained upload.');
     },
     'clear-archive': async () => {
