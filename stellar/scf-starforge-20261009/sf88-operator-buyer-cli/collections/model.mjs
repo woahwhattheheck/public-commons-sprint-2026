@@ -306,6 +306,12 @@ export async function openCollections({ directory, queueRoot } = {}) {
     need(originalJobMatches(item, job), 'COLLECTION_ORIGINAL_JOB_CHANGED');
     return job;
   }
+  async function retainOriginalJob(item, job) {
+    await retainInitializationRecord(join(dirname(item.configFile), 'enqueued.json'),
+      { schema: 'stellar-forge.sf88.collection-enqueued.v1', intentId: item.intentId,
+        sourceConfigSha256: job.sourceConfigSha256, configSha256: job.configSha256, observedAt: date() },
+      { resume: true, ignore: ['observedAt'] });
+  }
   async function runsAt(path) {
     const entries = await readdir(join(path, 'runs'), { withFileTypes: true }).catch(error => {
       if (error.code === 'ENOENT') return []; throw error;
@@ -385,7 +391,14 @@ export async function openCollections({ directory, queueRoot } = {}) {
       catch (error) { if (error.code !== 'COLLECTION_NOT_FOUND') throw error; }
       if (existing) {
         need(existing.manifest.name === name && existing.manifest.previewSha256 === expectedPreviewSha256, 'COLLECTION_ID_CONFLICT');
-        if (await preparedAt(existing)) return inspect(id);
+        if (await preparedAt(existing)) {
+          const view = await inspect(id);
+          for (const item of existing.manifest.items) {
+            const job = view.items[item.index].job;
+            if (job) await retainOriginalJob(item, job);
+          }
+          return view;
+        }
       }
       const captured = await capture(configFiles);
       need(captured.preview.previewSha256 === expectedPreviewSha256, 'COLLECTION_PREVIEW_CHANGED');
@@ -394,16 +407,25 @@ export async function openCollections({ directory, queueRoot } = {}) {
         let job;
         try { job = await queue.show(input.entry.intentId); }
         catch (error) { if (error.code !== 'ENOENT') throw error; }
-        if (job && !originalJobMatches(input.entry, job)) {
+        if (job) {
           const item = input.entry;
-          need((job.sourceConfigSha256 === item.sourceConfig.sha256 ||
-              job.configSha256 === item.queueConfigSha256) &&
-            same(job.operation, item.queueOperation) && same(job.dependencies, item.dependencies) &&
-            job.bodySha256 === (item.body?.sha256 ?? null) &&
-            (job.operationTicket?.sha256 ?? null) === (item.ticket?.sha256 ?? null),
-            'COLLECTION_ORIGINAL_JOB_CHANGED');
+          if (!originalJobMatches(item, job))
+            need((job.sourceConfigSha256 === item.sourceConfig.sha256 ||
+                job.configSha256 === item.queueConfigSha256) &&
+              same(job.operation, item.queueOperation) && same(job.dependencies, item.dependencies) &&
+              job.bodySha256 === (item.body?.sha256 ?? null) &&
+              (job.operationTicket?.sha256 ?? null) === (item.ticket?.sha256 ?? null),
+              'COLLECTION_ORIGINAL_JOB_CHANGED');
+          // An exact derived-config match is still a previously queued job.
+          // Retain that fact before a later missing inbox record could be retried.
           input.entry = { ...item, queueSourceConfigSha256: job.sourceConfigSha256,
             queueConfigSha256: job.configSha256, adoptedOriginalJob: true };
+          input.adoptedJob = job;
+          // Preserve an earlier interrupted manifest byte-for-byte. Its same
+          // original job is remembered in the existing enqueue receipt below.
+          const retainedItem = existing?.manifest.items[item.index];
+          if (retainedItem && !retainedItem.adoptedOriginalJob && originalJobMatches(retainedItem, job))
+            delete input.entry.adoptedOriginalJob;
         }
       }
       const manifest = { schema: MANIFEST, id, name, directory: destination, queueRoot,
@@ -419,6 +441,7 @@ export async function openCollections({ directory, queueRoot } = {}) {
         await initializationDirectory(input.directory, { create: true });
         for (const file of input.files)
           await retainInitializationFile(join(input.directory, file.name), file.bytes, { resume: true });
+        if (input.adoptedJob) await retainOriginalJob(input.entry, input.adoptedJob);
       }
       await retainInitializationRecord(join(destination, 'prepared.json'),
         { schema: 'stellar-forge.sf88.collection-prepared.v1', manifestSha256, completedAt: date() },
@@ -454,10 +477,7 @@ export async function openCollections({ directory, queueRoot } = {}) {
             job = await queue.enqueue(item.configFile);
             need(originalJobMatches(item, job), 'COLLECTION_ORIGINAL_JOB_CHANGED');
           }
-          await retainInitializationRecord(join(dirname(item.configFile), 'enqueued.json'),
-            { schema: 'stellar-forge.sf88.collection-enqueued.v1', intentId: item.intentId,
-              sourceConfigSha256: job.sourceConfigSha256, configSha256: job.configSha256, observedAt: date() },
-            { resume: true, ignore: ['observedAt'] });
+          await retainOriginalJob(item, job);
           results.push(actionResult(item.intentId, job.state));
         } catch (error) {
           results.push(actionResult(item.intentId, 'REVIEW_REQUIRED', error));
@@ -476,6 +496,7 @@ export async function openCollections({ directory, queueRoot } = {}) {
       for (const item of selected) {
         try {
           let job = await readJob(item);
+          await retainOriginalJob(item, job);
           if (kind === 'CANCEL') {
             if (job.state === 'QUEUED') job = await queue.cancel(item.intentId);
             else if (job.state !== 'CANCELLED') {
@@ -524,6 +545,7 @@ export async function openCollections({ directory, queueRoot } = {}) {
           let job;
           try {
             job = await readJob(item);
+            await retainOriginalJob(item, job);
             if (job.state === 'QUEUED') job = await queue.run(item.intentId, {
               signal: controller.signal,
               ...(workspaceByIntent[item.intentId] ? { workspace: workspaceByIntent[item.intentId] } : {}),

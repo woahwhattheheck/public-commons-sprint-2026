@@ -618,6 +618,43 @@ The 16 `merchant_geocodio_*` tools retain the original address revision, provide
 request body and customer session. Browser listeners borrow that same instance;
 source, prepared-request and customer files use the maintained chunk reader.
 
+
+
+## Captured API workspaces
+
+Attach the original SF61 HAR console with
+`init-har-workspaces --dir NEW_DIRECTORY --connection CONNECTION_JSON`
+or ordinary `init --har-workspaces CONNECTION_JSON`. The existing merchant
+host supplies 24 `merchant_har_*` tools for complete retained capture
+intake, observations and immutable review, later capture editions, native
+merchant plan carry/preview/save, whole receiving copy/adoption and resumable
+original files. Browser and agent share the original source library and merchant
+compiler. `inspect-har` and `download-har` use the maintained checkpointed
+file transport. See the [complete HAR operating guide](HAR_WORKSPACE.md).
+
+
+## Saved GraphQL authoring, native releases and customer handover
+
+The same merchant MCP now connects the original SF105 GraphQL workspaces with
+`init-graphql-workspaces --dir NEW_DIRECTORY --connection CONNECTION_JSON`, or
+`graphqlWorkspaceConnection` in an existing merchant configuration. Host aliases
+select the original private workspace, source endpoint and launch settings.
+
+`merchant_graphql_*` tools capture and save the actual schema, author bounded
+field/argument/variable operations, preserve raw drafts and revision conflicts,
+run and recover stable-ID native previews, prepare merchant/schema-evolution
+packets, and operate the original deployment/SF82 release console. The person
+using the returned native browser and the agent share the same store and IDs.
+
+`merchant_graphql_export_prepare` retains a selected original file set.
+`inspect-graphql` and `download-graphql` deliver its exact source, preview,
+merchant/buyer, revision, deployment or host files through the shared resumable
+downloader, including nested paths and process-reopen continuation. It does not
+create another workspace or transfer engine.
+
+See [GRAPHQL_WORKSPACES.md](GRAPHQL_WORKSPACES.md) for host configuration, the
+complete authoring-to-release flow, exact tool arguments and customer receiving.
+
 ## CoinGecko market research and native purchase workspaces
 
 [COINGECKO-WORKSPACE.md](COINGECKO-WORKSPACE.md) connects the original CoinGecko browser and research model to this same merchant MCP. Its 32 tools cover complete request collections, exact source imports, paged market rows and linked entities, snapshots and comparisons, versioned research notes, original provider compilation, native SF88 purchase preparation/action recovery, and full retained handover downloads/restoration. The host declares private directory, input and buyer-profile aliases; browser and agents share the original project revision and operation IDs. Start with `starforge merchant-mcp init-coingecko-workspaces --dir NEW_PRIVATE_DIRECTORY --connection COINGECKO_WORKSPACE_CONNECTION.json`. Opening the CoinGecko native SQLite workspace requires Node.js 24 or later.

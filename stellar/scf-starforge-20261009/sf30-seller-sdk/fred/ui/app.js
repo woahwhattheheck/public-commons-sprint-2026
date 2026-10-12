@@ -57,7 +57,7 @@ function select(id, choices, wanted) {
   for (const [value, label] of choices) { const option = document.createElement('option'); option.value = value; option.textContent = label; control.append(option); }
   if (choices.some(([value]) => value === selected)) control.value = selected;
 }
-const labelCapture = item => (item.sourceMode === 'PUBLIC_TABLE' ? 'Captured ' : 'Vintage ') + item.selection.asOf + ' · ' + item.selection.series.join(', ') + ' · ' + item.rowCount + ' rows · ' + item.id.slice(0, 10);
+const labelCapture = item => (item.sourceMode === 'PUBLIC_TABLE' ? item.retrievalWindow ? 'Collected through ' : 'Captured ' : 'Vintage ') + item.selection.asOf + ' · ' + item.selection.series.join(', ') + ' · ' + item.rowCount + ' rows · ' + item.id.slice(0, 10);
 function renderState(value) {
   state = value.project; $('project-title').textContent = state.title + ' · revision ' + state.revision;
   $('summary').replaceChildren();
@@ -72,6 +72,15 @@ function renderState(value) {
   }
   const captures = state.captures.map(item => [item.id, labelCapture(item)]);
   select('capture-select', captures, $('capture-select').value || state.selectedCapture);
+  
+  const combined = $('combine-captures'), chosen = new Set(state.pending?.kind === 'combine'
+    ? state.pending.payload.captureIds : [...combined.selectedOptions].map(option => option.value));
+  combined.replaceChildren();
+  for (const item of state.captures.filter(item => item.sourceMode === 'PUBLIC_TABLE' && item.series.length === 1)) {
+    const option = document.createElement('option'); option.value = item.id; option.textContent = labelCapture(item);
+    option.selected = chosen.has(item.id); combined.append(option);
+  }
+
   select('compare-before', captures); select('compare-after', captures, $('compare-after').value || state.selectedCapture);
   select('review-select', state.reviews.map(item => [item.id, item.id.slice(0,12) + ' · ' + item.captureId.slice(0,12) + ' · ' + item.reviewedAt]));
   const publications = state.publications.map(item => [item.id, item.id.slice(0,12) + ' · ' + item.resource]);
@@ -97,7 +106,7 @@ async function showRows() {
   currentPage = await api('/api/observations?' + query);
   select('row-series', [['','All original series'], ...currentPage.series.map(item => [item.id,item.id + ' · ' + item.title])]);
   table('observations', currentPage.rows);
-  table('series-detail', currentPage.series, ['id','title','publisher','asOf','timeBasis','frequency','units','seasonalAdjustment','count','missing','lastUpdated','notes','sourceUrl']);
+  table('series-detail', currentPage.series, ['id','title','publisher','asOf','timeBasis','frequency','units','seasonalAdjustment','count','missing','lastUpdated','notes','notesCoverage','sourceUrl']);
   $('row-count').textContent = currentPage.total + ' observations · ' + (currentPage.total ? rowOffset + 1 : 0) + '–' + Math.min(rowOffset + 100, currentPage.total);
   $('rows-previous').disabled = rowOffset === 0; $('rows-next').disabled = rowOffset + 100 >= currentPage.total;
 }
@@ -120,7 +129,7 @@ async function showPublication(customer = false) {
       payment: value.plan.payment, resource: value.plan.resource, sourceFiles: value.plan.downloads }, null, 2);
   } else {
     publication = value;
-    table('publication-detail', [{ edition: value.edition.editionId, sourceMode: value.edition.sourceMode, asOf: value.edition.selection.asOf, timeBasis: value.edition.timeBasis,
+    table('publication-detail', [{ edition: value.edition.editionId, sourceMode: value.edition.sourceMode, asOf: value.edition.selection.asOf, timeBasis: value.edition.timeBasis, retrievalWindow: value.edition.retrievalWindow ?? null,
       rows: value.edition.rowCount, snapshot: value.edition.snapshot, resource: value.plan.resource, payment: value.plan.payment }]);
   }
   return value;
@@ -136,6 +145,14 @@ document.querySelectorAll('[data-tab]').forEach(button => button.addEventListene
 }));
 $('selection-form').addEventListener('input', () => { selectionDirty = true; });
 event('refresh', refresh);
+
+event('combine-tables', async () => {
+  const captureIds = [...$('combine-captures').selectedOptions].map(option => option.value);
+  const result = await action('combine', { captureIds });
+  $('capture-select').value = result.captureId; rowOffset = 0;
+  await showRows(); message('Combined original tables are retained. Review this economic edition before publication.');
+});
+
 event('selection-form', async () => {
   const selection = { series: $('series').value.split(/[\s,]+/).filter(Boolean), asOf: $('as-of').value,
     start: $('start-date').value, end: $('end-date').value, pageSize: Number($('page-size').value), maxRows: Number($('max-rows').value) };

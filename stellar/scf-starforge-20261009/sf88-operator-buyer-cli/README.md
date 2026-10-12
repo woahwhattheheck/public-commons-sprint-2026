@@ -31,6 +31,57 @@ local review config; the buyer supplies its own operator settings afterward.
 
 Operator-side executable joining SF31 buyer HTTP, SF81/SF62/SF36 approval and reservation, and SF82/SF43/SF52 checkout recording. The native operator workspace supplies the official Stellar SDK signer adapter and private local setup for the selected testnet or mainnet network. Existing operator-provided signer modules remain supported. The example below uses testnet; [MAINNET.md](MAINNET.md) covers the complete mainnet workspace and accounting workflow.
 
+## Browser or terminal approval
+
+The [commerce browser workspace](../sf66-demo-launcher/COMMERCE_CONSOLE.md)
+provides the complete browser path over this same buyer. It first reviews the
+saved operation, then dispatches the original inbox once. When SF31 receives the
+merchant's live HTTP 402 challenge, the page shows the exact accepted terms,
+body identity and native budget estimate for **Approve** or **Reject**.
+
+The shared [SF81 broker](../sf81-buyer-operator-bridge/README.md) carries that
+decision to the original SF62/SF54/SF59/SF36 flow. A successful decision creates
+one fresh native reservation before the existing signer continues. The inbox,
+response writer, payment evidence and recovery retain their original operation
+IDs and results.
+
+Standalone CLI execution continues to use the original terminal unless its
+trusted host explicitly supplies a browser approval channel. The owned commerce
+console selects browser mode by default. Its `--approval-mode terminal` CLI
+option, or `approvalMode: 'TERMINAL'` in an embedding host, selects the original
+typed prompt.
+
+The host-selected channel uses `SF81_APPROVAL_SOCKET` and
+`SF81_APPROVAL_TOKEN` in private process configuration. Saved operator JSON
+still contains only `python, actor, service, policy, ledger`. The shared
+`checkOperatorChannel` preflight applies to native execution, the inbox,
+dataset customer flow and language bridge. Workspace loading keeps the three
+governor keys separate from the host's chosen transport while passing both to
+their original consumers.
+
+A browser refresh reads the existing approval and attempt. If a decision
+response is lost, retain the same approval ID and canonical request digest.
+`APPROVED` records a fresh reservation; the original buyer result still
+determines execution and delivery. An attempted intent remains the same
+attempt after rejection, interruption or restart. Use its original inbox
+recovery and ledger association when a result needs reconciliation.
+
+The [dataset customer workflow](DATASETS.md) also retains its explicit unpaid-page
+continuation. That original recovery checks the authenticated governor journal
+and exact absence of a reservation and response, preserves the failed attempt
+in immutable history, then permits the unchanged page, cursor, configuration and
+intent through fresh normal approval. Use that customer recovery path for its
+eligible page; earlier paid pages keep their original accounting and delivery.
+
+The Node SDK also provides its own
+[explicit unpaid transport continuation](node/unpaid-continuation.mjs).
+`Operation.inspectUnpaidContinuation()` reads the retained original failure;
+`prepareUnpaidContinuation({intentId, expectedResultSha256, reason, signal})`
+selects one linked successor for an eligible initial transport failure before
+signature. `followUnpaidContinuation()` reopens that already prepared choice.
+The original result, request/body/ticket and evidence remain bound to the
+continuation. Its successor enters the same normal operator approval flow.
+
 ## Set up a complete native testnet operator workspace
 
 Use the complete public sprint checkout on Linux or another POSIX operator host,
@@ -104,19 +155,20 @@ the default is the official testnet endpoint. RPC credentials, query parameters
 and fragments are not accepted in the URL.
 
 `--diagnose-workspace` checks the existing workspace, pinned SDK versions,
-provider file or environment-variable presence, and access to the controlling
-operator terminal at `/dev/tty`. It never reads the SF36 key
-file, opens a wallet, signs, reserves funds or calls RPC. `READY_TO_EXECUTE`
+provider file or environment-variable presence, and the selected operator
+channel. Its `operator-browser` check verifies the host-selected broker;
+`operator-terminal` checks the original `/dev/tty` device. It never reads the
+SF36 key file, opens a wallet, signs, reserves funds or calls RPC. `READY_TO_EXECUTE`
 means the setup requirements are present; actual wallet access, payer identity
 and network availability are checked during approved execution. An empty or
 invalid wallet variable is still rejected at that point. Existing environment
 workspaces keep the same generated signer and operator ledger.
 
-An allocated terminal stream can report `isTTY` while `/dev/tty` is unavailable.
-The original approval helper uses `/dev/tty`, so both direct execution and the
-inbox check that device before preparing output or recording a permanent
-attempt. `OPERATOR_CONTROLLING_TERMINAL_REQUIRED` leaves an unattempted inbox
-item queued. On a Linux host with util-linux `script`, run the same command in a
+In terminal mode, an allocated stream can report `isTTY` while `/dev/tty` is
+unavailable. The original terminal helper uses `/dev/tty`, so both direct
+execution and the inbox check that device before preparing output or recording
+a permanent attempt. `OPERATOR_CONTROLLING_TERMINAL_REQUIRED` leaves an
+unattempted inbox item queued. On a Linux host with util-linux `script`, run the same command in a
 controlling terminal:
 
 ```sh
@@ -131,10 +183,10 @@ reset by this setup check.
 
 Execution checks the configured provider file or wallet-variable presence, and
 loads the pinned local SDK before creating an inbox attempt or reserving budget.
-It then supplies only the three SF36 keys to the original approval
-bridge without changing the parent environment. The lazy signer reads the
-existing wallet key only after the native terminal approval and durable budget
-reservation. It checks the payer and chosen terms, then uses the official
+It supplies the three SF36 keys and, when selected by the host, the validated
+browser transport to the original approval bridge without changing the parent
+environment. The lazy signer reads the existing wallet key only after the
+selected native operator approval and durable budget reservation. It checks the payer and chosen terms, then uses the official
 `@x402/core` and `@x402/stellar` implementation through the shared
 [SF103 native payload engine](../sf103-native-buyer-signer/README.md) to simulate and sign the actual
 authorization. SF31 performs the one paid HTTP retry and SF82 records its
@@ -156,7 +208,7 @@ From the complete public sprint checkout, using Node 22+ and Python 3.11+:
 1. Put an owner-reviewed config JSON in a private local directory. It contains only chosen public quote terms and paths to trusted operator files and the existing signer module. Keep the SF36 secret keys outside the config in the operator environment.
 2. Review the method, resource URL, base-unit spend cap and body digest without network via: node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs --review --config /private/pilot.json
 3. Optionally use --discover --config /private/pilot.json to read the ORIGINAL catalog without payment or signing. Save the result and use --prepare below to select its actual source terms without retyping them. Discovery is not approval.
-4. Execute with --execute --config /private/pilot.json from the trusted terminal. Original SF81 invokes SF62 terminal review and SF36 durable fresh reservation before the owner-provisioned signer. SF31 makes one unsigned request and at most one signed retry. Original SF82 persists one create-only evidence file and checks RPC for the approved Stellar network when qualified.
+4. Execute with --execute --config /private/pilot.json from the trusted operator host. Original SF81 invokes the selected SF62 browser or terminal review and SF36 durable fresh reservation before the owner-provisioned signer. SF31 makes one unsigned request and at most one signed retry. Original SF82 persists one create-only evidence file and checks RPC for the approved Stellar network when qualified.
 
 The evidence directory must already exist with POSIX permissions 0700. Original SF36 policy and ledger paths are absolute. After any unknown payment outcome, reconcile the original SF36 ledger and chain before another attempt, never replace a stable operation ID to force retry.
 
@@ -349,7 +401,7 @@ private buyer file and binds that file to the new signer configuration. The
 source input is unchanged. An existing trusted provider module can replace
 `--secret-env`; SF103 documents that interface and the optional `check-signer`
 command. Use the generated buyer file for the existing `--execute` command;
-the original terminal approval and reservation run before native signing.
+the selected original operator approval and reservation run before native signing.
 
 ## Save the returned dataset or other output
 
@@ -447,7 +499,7 @@ The output reservation is prepared before loading the trusted signer module. If 
 
 If evidence processing fails after a native buyer error, the summary now retains that original error's code, its known payment-sent state (or null when unknown), and the bounded original reservation metadata. `interrupted` and `retry:NO_AUTOMATIC_RETRY` accompany the original buyer status, independently produced outcome report and separate `responseFile.status`. Local file output is not payment proof, and a failed save does not undo an operation.
 
-This increment retains the original SF88 launcher (PR #767), response-output integration (PR #795), and unchanged SF31 writer (PR #774), SF81 approval bridge and SF82 evidence adapter.
+Execution continues through the original SF88 launcher, SF31 response writer, selected SF81 operator channel and SF82 evidence adapter.
 
 Focused local composition check (Node 22.3+ with module mocks): `node --experimental-test-module-mocks --test stellar/scf-starforge-20261009/sf88-operator-buyer-cli/test/response-delivery.test.mjs`. It uses original SF31 transport/writer and SF82 evidence with a substituted privileged SF81 constructor and local Response streams; it does not execute terminal approval, a signer, network or payment.
 
