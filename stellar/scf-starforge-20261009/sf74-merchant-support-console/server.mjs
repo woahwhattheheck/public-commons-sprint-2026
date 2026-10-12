@@ -9,7 +9,8 @@ import {createHash} from 'node:crypto';
 import {parseArgs, capture} from '../sf70-merchant-intake/run.mjs';
 import {compare, validateIntake} from '../sf76-merchant-remediation-delta/compare.mjs';
 import {evaluate as postPreflight} from '../sf72-post-only-preflight/preflight.mjs';
-import {buildPacket, buildRuntimePacket, renderHtml, renderChecklist} from '../sf77-merchant-workorder/workorder.mjs';
+import {uploadedSource,workorderFromSources} from './workorder-source.mjs';
+import {operateCaseCommissioning,prepareCaseCommissioning,inspectCaseCommissioning} from './case-commissioning.mjs';
 import {openCaseStore, inspectCaseWriter, recoverCaseWriter, CASE_STATUSES, caseMetadata} from './case-store.mjs';
 import {MAX_WORKSPACE_BYTES} from './workspace-file.mjs';
 import {openIncidentSources, incidentProblem} from './incident-sources.mjs';
@@ -22,6 +23,9 @@ const ASSETS = Object.freeze({
   '/console.mjs': ['console.mjs', 'text/javascript; charset=utf-8'],
   '/terms-editor.mjs': ['terms-editor.mjs', 'text/javascript; charset=utf-8'],
   '/workspace-file.mjs': ['workspace-file.mjs', 'text/javascript; charset=utf-8'],
+  '/commissioning.mjs': ['commissioning.mjs', 'text/javascript; charset=utf-8'],
+  '/commissioning-desk.mjs': ['commissioning-desk.mjs', 'text/javascript; charset=utf-8'],
+  '/commissioning-desk.css': ['commissioning-desk.css', 'text/css; charset=utf-8'],
   '/workspace-files.mjs': ['workspace-files.mjs', 'text/javascript; charset=utf-8'],
   '/case-desk.mjs': ['case-desk.mjs', 'text/javascript; charset=utf-8'],
   '/runtime-desk.mjs': ['runtime-desk.mjs', 'text/javascript; charset=utf-8'],
@@ -88,23 +92,6 @@ async function boundedBody(req, maximum = MAX_BODY) {
   catch { throw new TypeError('Invalid JSON document'); }
 }
 
-function uploadedSource(encoded, field, required = false) {
-  if (encoded === undefined || encoded === null) {
-    if (required) throw new TypeError('Missing ' + field + ' source');
-    return null;
-  }
-  if (typeof encoded !== 'string' || !encoded.length ||
-      encoded.length > Math.ceil(MAX_SOURCE / 3) * 4)
-    throw new TypeError(field + ' source must contain 1..2,000,000 bytes');
-  // Hash the uploaded bytes, never a parsed/reformatted JSON representation.
-  const bytes = Buffer.from(encoded, 'base64');
-  if (bytes.toString('base64') !== encoded || !bytes.length || bytes.length > MAX_SOURCE)
-    throw new TypeError(field + ' source has invalid encoding or size');
-  let data;
-  try { data = JSON.parse(new TextDecoder('utf-8', {fatal: true, ignoreBOM: true}).decode(bytes)); }
-  catch { throw new TypeError(field + ' source must be valid UTF-8 JSON'); }
-  return {data, sha: createHash('sha256').update(bytes).digest('hex')};
-}
 
 function compareUploadedSources(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input))
@@ -117,31 +104,7 @@ function compareUploadedSources(input) {
     postBefore: pb?.data, postAfter: pa?.data, postBeforeSha: pb?.sha, postAfterSha: pa?.sha});
 }
 
-export function workorderFromSources(input) {
-  if (!input || typeof input !== 'object' || Array.isArray(input))
-    throw new TypeError('Expected original capture files and owner terms');
-  const fields = ['before', 'after', 'postBefore', 'postAfter', 'terms', 'supportText', 'inputs'];
-  if (Object.keys(input).some(key => !fields.includes(key))) throw new TypeError('Unexpected workorder field');
-  const terms = uploadedSource(input.terms, 'terms', true);
-  if(Object.hasOwn(input,'supportText')) {
-    if(['before','after','postBefore','postAfter'].some(key=>Object.hasOwn(input,key)))
-      throw new TypeError('Select original diagnostic sources or the attached runtime case for this workorder');
-    const packet=buildRuntimePacket({supportText:input.supportText,inputs:input.inputs},terms.data,new Date().toISOString());
-    return {packet,html:renderHtml(packet),checklist:renderChecklist(packet)};
-  }
-  if(Object.hasOwn(input,'inputs'))throw new TypeError('Runtime mapping requires its original supportText');
-  const before = uploadedSource(input.before, 'before', true);
-  const after = uploadedSource(input.after, 'after');
-  const pb = uploadedSource(input.postBefore, 'postBefore'), pa = uploadedSource(input.postAfter, 'postAfter');
-  if (!after && (pb || pa)) throw new TypeError('Browser check comparison requires an after capture');
-  validateIntake(before.data);
-  // Original SF77 owns terms, economics, acceptance and its optional SF76 repair review.
-  const packet = buildPacket(before.data, terms.data, before.sha, new Date().toISOString(), after ? {
-    after: after.data, afterSha: after.sha, postBefore: pb?.data, postAfter: pa?.data,
-    postBeforeSha: pb?.sha, postAfterSha: pa?.sha,
-  } : null);
-  return {packet, html: renderHtml(packet), checklist: renderChecklist(packet)};
-}
+export {workorderFromSources} from './workorder-source.mjs';
 
 // Injection is only for the focused loopback HTTP-contract check, not for deployed usage.
 export function createConsoleServer({runCapture = capture, allowLoopback = false, caseStore = null, handoffDesk = null, incidentDesk = null, launchRecord = () => null} = {}) {
@@ -298,6 +261,25 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
         if (route === '/api/cases' && req.method === 'POST') {
           json(res,200,await caseStore.save(await boundedBody(req, (MAX_WORKSPACE_BYTES + MAX_RUNTIME_BYTES) * 2 + 100000))); return;
         }
+        const implementation=/^\/api\/cases\/([a-f0-9-]+)\/implementation(?:\/(prepare))?$/.exec(route);
+        if(implementation) {
+          if(req.method==='GET'&&!implementation[2]) {
+            const options=Object.fromEntries(url.searchParams);
+            if(Object.keys(options).some(key=>!['revision','section','offset','limit'].includes(key)))
+              throw new TypeError('Unexpected implementation query');
+            for(const key of ['offset','limit'])if(Object.hasOwn(options,key))options[key]=Number(options[key]);
+            json(res,200,await inspectCaseCommissioning(caseStore,{id:implementation[1],...options}));return;
+          }
+          if(req.method==='POST') {
+            if(url.search)throw new TypeError('Unexpected implementation query');
+            const input=await boundedBody(req,MAX_WORKSPACE_BYTES*2+100000);
+            if(!input||typeof input!=='object'||Array.isArray(input)||Object.hasOwn(input,'id'))
+              throw new TypeError('Supply the implementation command for the selected case');
+            const operate=implementation[2]?prepareCaseCommissioning:operateCaseCommissioning;
+            json(res,200,await operate(caseStore,{id:implementation[1],...input}));return;
+          }
+          json(res,405,{error:'METHOD_NOT_ALLOWED'});return;
+        }
         const match = /^\/api\/cases\/([a-f0-9-]+)(\/history)?$/.exec(route);
         if (match && req.method === 'GET') {
           if ([...url.searchParams.keys()].some(key=>!['revision','before','limit'].includes(key)))
@@ -309,7 +291,7 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
         }
         json(res,404,{error:'NOT_FOUND'});
       } catch (error) {
-        const known = /^CASE_|^INVALID_/.test(error.code || '');
+        const known = /^(?:CASE_|INVALID_|COMMISSIONING_|REQUEST_|EDITION_|SOURCE_CHANGE_|HISTORY_|MATERIAL_|UNKNOWN_COMMISSIONING_)/.test(error.code || '');
         json(res, Number(error.status) || (error instanceof TypeError ? 422 : 503), {
           error:known ? error.code : 'CASE_OPERATION_FAILED',
           detail:known || error instanceof TypeError ? String(error.message).slice(0,240) : 'The case operation could not be completed. Your editor is unchanged.',

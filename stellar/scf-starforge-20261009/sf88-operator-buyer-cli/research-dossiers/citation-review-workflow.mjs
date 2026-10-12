@@ -217,7 +217,7 @@ export async function runCitationReviewWorkflow({operation,editionFile,editionSh
   if(previousConnection)need(previousConnection.directory===workspace,'WORKFLOW_CONNECTION_CHANGED');
   const port=previousConnection?Number(new URL(previousConnection.url).port):0;
   const app=await startDossierWorkspace({directory:workspace,port});
-  let browser,selection;
+  let browser,selection,merchant;
   try{
     await writeJson(connectionFile,{schema:'stellar-forge.research-workspace-connection.v1',
       mode:'RESEARCH_DOSSIER_WORKSPACE',directory:workspace,url:app.url,workspaceId:app.workspaceId,instanceId:app.instanceId});
@@ -242,6 +242,13 @@ export async function runCitationReviewWorkflow({operation,editionFile,editionSh
     const duplicate=await store.reviewCitationUpdate(seed.dossierId,review.request);
     need(duplicate.duplicate&&duplicate.review.id===review.id&&
       (await store.getMetadata(seed.dossierId)).revision===before,'WORKFLOW_REQUEST_RECOVERY_CHANGED');
+    const {runCitationReviewMerchant}=await import('./citation-review-merchant.mjs');
+    merchant=await runCitationReviewMerchant({url:app.url,workspaceDirectory:workspace,runDirectory,
+      dossierId:seed.dossierId,noticeId:seed.noticeId,selection,reviewRequest:review.request});
+    need(merchant?.reviewId===review.id&&merchant.originalRevision===selection.originalRevision&&
+      merchant.reviewedRevision===selection.reviewedRevision&&merchant.currentRevision===selection.currentRevision,
+      'WORKFLOW_MERCHANT_SELECTION_CHANGED');
+    need((await store.getMetadata(seed.dossierId)).revision===before,'WORKFLOW_MERCHANT_REPLAY_CREATED_REVISION');
   }finally{await app.close();}
   const outputDirectory=await privateDirectory(join(runDirectory,'delivery'));
   await immutableBytes(join(outputDirectory,'original-source-edition.json'),raw);
@@ -257,17 +264,21 @@ export async function runCitationReviewWorkflow({operation,editionFile,editionSh
   const gzipReopen=await verifyReopened({original:store,received:gzipStore,id:seed.dossierId,
     selection,noticeId:seed.noticeId,rawSha256:editionSha256});
   const alteredReview=await rejectAlteredReview({portableFile:jsonFile,selection,runDirectory});
-  for(const output of Array.isArray(browser.nativeOutputs)?browser.nativeOutputs:[]){
+  const nativeOutputs=[
+    ...(Array.isArray(browser.nativeOutputs)?browser.nativeOutputs:[]).map(output=>({output,kind:'browser'})),
+    ...(Array.isArray(merchant.nativeOutputs)?merchant.nativeOutputs:[]).map(output=>({output,kind:'merchant'}))
+  ];
+  for(const {output,kind} of nativeOutputs){
     const candidate=typeof output==='string'?output:output.file??output.path??output.filename;
-    need(typeof candidate==='string','WORKFLOW_BROWSER_ARTIFACT_INVALID');
+    need(typeof candidate==='string','WORKFLOW_NATIVE_ARTIFACT_INVALID');
     const file=isAbsolute(candidate)?candidate:join(runDirectory,candidate),name=relative(runDirectory,file);
     need(name&&!name.startsWith('..'+sep)&&!isAbsolute(name)&&
-      !name.split(sep).some(value=>['connection.json','citation-browser-profile','source-state','workspace',
+      !name.split(sep).some(value=>['connection.json','connection.private.json','retained-exports','citation-browser-profile','source-state','workspace',
         'reopened-json','reopened-gzip','rejected-review'].includes(value)),'WORKFLOW_PRIVATE_ARTIFACT_REFUSED');
     const checked=await identity(file);
     if(object(output))need((output.bytes===undefined||output.bytes===checked.bytes)&&
-      (output.sha256===undefined||output.sha256===checked.sha256),'WORKFLOW_BROWSER_ARTIFACT_CHANGED');
-    artifacts.push({...checked,kind:'browser'});
+      (output.sha256===undefined||output.sha256===checked.sha256),'WORKFLOW_NATIVE_ARTIFACT_CHANGED');
+    artifacts.push({...checked,kind});
   }
   const unique=new Map();
   for(const artifact of artifacts){
@@ -276,7 +287,8 @@ export async function runCitationReviewWorkflow({operation,editionFile,editionSh
     const value={...artifact,file:name.split(sep).join('/')},old=unique.get(value.file);
     need(!old||old.sha256===value.sha256&&old.bytes===value.bytes,'WORKFLOW_ARTIFACT_CHANGED');unique.set(value.file,value);
   }
-  const result={schema:SCHEMA,state:'COMPLETE',operation,binding,seed,selection,jsonReopen,gzipReopen,
+  const result={schema:SCHEMA,state:'COMPLETE',operation,binding,seed,selection,
+    merchant:{workspaceId:merchant.workspaceId,exports:merchant.exports},jsonReopen,gzipReopen,
     alteredReview,artifacts:[...unique.values()],completedAt:new Date().toISOString()};
   await writeJson(resultFile,result,{exclusive:true});
   return result;
