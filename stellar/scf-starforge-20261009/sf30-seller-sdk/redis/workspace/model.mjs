@@ -392,7 +392,7 @@ export class RedisAuthoringWorkspace {
       this.writable();
       if(!this.releaseConsole){
         const {startReleaseConsole}=await import('../../../sf82-seller-pilot/release-console.mjs');
-        this.releaseConsole=await startReleaseConsole(await this.ensureReleaseStore(),{port:0});
+        this.releaseConsole=await startReleaseConsole(await this.ensureReleaseStore(),{port:0,env:this.environment});
       }
       return {url:this.releaseConsole.url,operatorUrl:this.releaseConsole.operatorUrl};
     });
