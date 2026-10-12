@@ -202,6 +202,45 @@ def executable(path):
     return candidate
 
 
+def yente_interpreter(yente_bin, selected_python=None):
+    if not yente_bin:
+        if selected_python:
+            raise ValueError("--yente-python requires --yente-bin")
+        return None
+    # Keep the invocation path: resolving a venv's python symlink before launch
+    # would select the base interpreter and lose that environment's packages.
+    yente_path = Path(os.path.abspath(os.path.expanduser(yente_bin)))
+    candidate = (Path(os.path.abspath(os.path.expanduser(selected_python)))
+                 if selected_python else yente_path.parent / "python")
+    if not candidate.exists():
+        raise ValueError("Select --yente-python for this installed Yente environment: " + str(candidate))
+    binary = executable(candidate)
+    probe = subprocess.run([str(candidate), "-c",
+        "import json,sys;print(json.dumps({'version':list(sys.version_info[:3]),"
+        "'executable':sys.executable,'prefix':sys.prefix,'basePrefix':sys.base_prefix}))"],
+        capture_output=True, text=True, timeout=20)
+    if probe.returncode:
+        raise ValueError("Selected Yente interpreter failed: " + probe.stderr[-2000:])
+    environment = json.loads(probe.stdout)
+    if not (3, 11) <= tuple(environment["version"][:2]) <= (3, 14):
+        raise ValueError("The original Yente release needs Python 3.11 through 3.14")
+    configuration = Path(environment["prefix"]) / "pyvenv.cfg"
+    return {"invocation": str(candidate), "binary": identity(binary),
+            "environment": environment,
+            "configuration": identity(configuration) if configuration.is_file() else None}
+
+
+def verify_yente_interpreter(item):
+    if identity(executable(item["invocation"])) != item["binary"]:
+        raise ValueError("Selected Yente interpreter target changed")
+    if item["configuration"]:
+        verify_identity(item["configuration"])
+    current = yente_interpreter(str(Path(item["invocation"]).parent / "yente"),
+                                item["invocation"])
+    if current != item:
+        raise ValueError("Selected Yente Python environment changed")
+
+
 def runtime_versions(python, node):
     python_code = "import json,platform,sys;print(json.dumps({'version':list(sys.version_info[:3]),'executable':sys.executable,'system':platform.system(),'machine':platform.machine()}))"
     result = subprocess.run([str(python), "-c", python_code], capture_output=True, text=True, timeout=20)
@@ -267,6 +306,7 @@ def prepare(args):
         node = executable(args.node)
         versions = runtime_versions(python, node)
         search_user = selected_account(args.search_user)
+        yente_python = yente_interpreter(args.yente_bin, args.yente_python)
         native, _ = load_controller(host)
         for expected in ("start", "inspect", "run_path", "resume_capacity", "stop"):
             if not callable(getattr(native, expected, None)):
@@ -291,6 +331,7 @@ def prepare(args):
             "searchUser": search_user,
             "searchArchive": identity(args.search_archive) if args.search_archive else None,
             "yenteBin": identity(executable(args.yente_bin)) if args.yente_bin else None,
+            "yentePython": yente_python,
             "privateDevelopmentPackages": bool(args.allow_private_development_packages),
             "memoryMib": args.memory_mib, "memoryReserveMib": 256,
             "memoryReclaim": args.memory_reclaim, "memoryStorage": "included",
@@ -325,6 +366,10 @@ def selection(root, *, verify=True):
         for key in ("searchArchive", "yenteBin"):
             if selected.get(key):
                 verify_identity(selected[key])
+        if selected.get("yentePython"):
+            verify_yente_interpreter(selected["yentePython"])
+        elif selected.get("yenteBin"):
+            raise ValueError("The installed Yente selection needs its retained Python interpreter")
         for row in selected["sourceFiles"]:
             verify_identity({key: row[key] for key in ("path", "bytes", "sha256")})
         if host_inventory(Path(selected["host"])) != selected["hostSource"]:
@@ -346,7 +391,8 @@ def native_args(root, selected):
     if selected["searchArchive"]:
         command += ["--search-archive", selected["searchArchive"]["path"]]
     if selected["yenteBin"]:
-        command += ["--yente-bin", selected["yenteBin"]["path"]]
+        command += ["--yente-bin", selected["yenteBin"]["path"],
+                    "--yente-python", selected["yentePython"]["invocation"]]
     if selected["privateDevelopmentPackages"]:
         command += ["--allow-private-development-packages"]
     runtime_paths = [selected["host"], str(root / "source"), str(root / "inbox"),
@@ -355,6 +401,8 @@ def native_args(root, selected):
         runtime_paths.append(selected["searchArchive"]["path"])
     if selected["yenteBin"]:
         runtime_paths.append(str(Path(selected["yenteBin"]["path"]).parent.parent))
+        runtime_paths.extend([selected["yentePython"]["invocation"],
+                              selected["yentePython"]["environment"]["prefix"]])
     return SimpleNamespace(
         peer="dce4-opensanctions-native", operation_id=OPERATION, project=str(operation),
         java=None, node=None, command=command,
@@ -490,7 +538,8 @@ def main(argv=None):
     p.add_argument("--source-root", help="Existing exact merged sf30-seller-sdk directory, read only")
     p.add_argument("--search-user", help="Existing nonroot account when the selected worker is root")
     p.add_argument("--search-archive", help="Existing exact publisher OpenSearch core TAR, read only")
-    p.add_argument("--yente-bin", help="Existing original yente5.5 installation, read only")
+    p.add_argument("--yente-bin", help="Existing original yente5.5 console script, read only")
+    p.add_argument("--yente-python", help="Actual Python interpreter for --yente-bin; defaults to its sibling python and preserves the venv invocation path")
     p.add_argument("--allow-private-development-packages", action="store_true")
     p.add_argument("--memory-mib", type=int, default=1536)
     p.add_argument("--memory-reclaim", choices=("none", "clean-cache"), default="clean-cache")

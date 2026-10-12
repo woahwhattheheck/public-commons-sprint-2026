@@ -26,7 +26,8 @@
     "./merchant/mcp/timescale/setup": "./source/stellar-forge/mcp-merchant-operator/timescale-setup.mjs",
     "./merchant/mcp/timescale/launcher": "./source/stellar-forge/mcp-merchant-operator/timescale-workspace-launcher.mjs",
     "./merchant/mcp/timescale/download": "./source/stellar-forge/mcp-merchant-operator/timescale-workspace-download.mjs",
-    "./merchant/mcp/timescale/provider": "./source/stellar-forge/mcp-merchant-operator/providers/timescale-workspaces.mjs"
+    "./merchant/mcp/timescale/provider": "./source/stellar-forge/mcp-merchant-operator/providers/timescale-workspaces.mjs",
+    "./seller/timescale/remediation": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/remediation.mjs"
   },
   "runtimePackageManifests": {
     "timescale": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/package.json"
@@ -36,7 +37,8 @@
     "stellar-forge/mcp-merchant-operator/TIMESCALE_WORKSPACE.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/native-demo.mjs",
     "stellar-forge/mcp-merchant-operator/timescale-workspace-native-receiving.mjs",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/browser-receiving.mjs"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/browser-receiving.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/REMEDIATION.md"
   ],
   "browserAssets": [
     {

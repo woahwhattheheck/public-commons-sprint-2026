@@ -44,8 +44,9 @@ async function boundedBytes(response,limit) {
   for await (const chunk of response.body) { size+=chunk.length; if(size>limit) problem('destination_response_size','The destination response exceeds its supported size.',{status:502}); pieces.push(Buffer.from(chunk)); }
   return Buffer.concat(pieces,size);
 }
-async function request(rawConfig,path,{method='GET',body,headers={}}={}) {
-  const config=normalizeDestinationConfig(rawConfig),url=new URL(config.baseUrl+'/'); url.searchParams.set('rest_route','/cskt-migration/v1'+path);
+async function request(rawConfig,path,{method='GET',body,headers={},namespace='cskt-migration/v1',query={}}={}) {
+  const config=normalizeDestinationConfig(rawConfig),url=new URL(config.baseUrl+'/'); url.searchParams.set('rest_route','/'+namespace+path);
+  for (const [key,value] of Object.entries(query)) url.searchParams.set(key,String(value));
   const password=await credential(config),auth=Buffer.from(config.username+':'+password).toString('base64');
   let response;
   try { response=await fetch(url,{method,redirect:'manual',headers:{Accept:'application/json',Authorization:'Basic '+auth,...headers,...(body!==undefined&&!Buffer.isBuffer(body)?{'Content-Type':'application/json'}:{})},body:body===undefined?undefined:Buffer.isBuffer(body)?body:JSON.stringify(body),signal:AbortSignal.timeout(config.timeoutMs)}); }
@@ -60,6 +61,19 @@ function originalManifest({manifestBytes,sha256}) {
   const bytes=Buffer.from(manifestBytes);let manifest;try{manifest=JSON.parse(bytes.toString('utf8'));}catch{problem('manifest_json','The original release is not valid JSON.');}
   if(manifest.schema!=='cskt.migration.release.v1'||!validId(manifest.id)||!Array.isArray(manifest.items)||!Array.isArray(manifest.redirects))problem('manifest_schema','Use the complete reviewed CSKT migration release v1.');
   return {bytes,manifest,sha256};
+}
+/** Engagement shares the original destination and private app-password resolver. */
+export async function requestEngagement(config,path,{method='GET',body}={}) {
+  if(typeof path!=='string'||path.includes('#')||path.split('?').length>2)problem('engagement_route','Use a local engagement route.');
+  const [route,search='']=path.split('?');
+  if(!/^\/[a-z0-9_/-]*$/.test(route))problem('engagement_route','Use a local engagement route.');
+  const query={};
+  for(const [key,value] of new URLSearchParams(search)){
+    if(!['search','page','after','formId','state','mode'].includes(key))problem('engagement_query','Use the supported engagement collection filters.');
+    query[key]=value;
+  }
+  if(!['GET','POST'].includes(method))problem('engagement_method','Use GET or POST for the native engagement operator.');
+  return request(config,route,{method,body,namespace:'cskt-engagement/v1',query});
 }
 export async function inspectDestination(config) { return request(config,'/inspect'); }
 export async function previewRelease(config,input) { const {bytes,sha256}=originalManifest(input);return request(config,'/preview',{method:'POST',body:{manifestBase64:bytes.toString('base64'),sha256}}); }

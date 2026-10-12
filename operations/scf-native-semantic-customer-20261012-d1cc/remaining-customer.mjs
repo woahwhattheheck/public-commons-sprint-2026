@@ -7,7 +7,14 @@ import {join} from 'node:path';
 
 const project='/workspace/scratch/d1ccf784531e/scf-native-semantic-receiving';
 const root=process.argv[2];
-assert.equal(root,join(project,'operation-remaining1'));
+assert.equal(root,join(project,'operation-remaining2'));
+const priorRoot=join(project,'operation-remaining1');
+const priorRaw=await readFile(join(priorRoot,'results.json'));
+assert.equal(createHash('sha256').update(priorRaw).digest('hex'),'31f0936d55b9a61540c8ef07e2a403fd39ead0b48d0943d6c81efa78ea5ab03d');
+const prior=JSON.parse(priorRaw);
+assert.equal(prior.status,'INTERRUPTED');
+assert.deepEqual(prior.stages,['original-finalized-room-received','original-analysis-imported','complete-query-delivered','customer-report-published']);
+const completed=stage=>prior.stages.includes(stage);
 const originalRoot=join(project,'operation');
 const predecessorRaw=await readFile(join(originalRoot,'results.json'));
 assert.equal(createHash('sha256').update(predecessorRaw).digest('hex'),'ac457ee2bc8bb422ce0786eabc4295d8d0cda248d268ea336c7492d084b83435');
@@ -19,6 +26,7 @@ const expectedClosureSha256=process.argv[3];
 assert.match(expectedClosureSha256??'',/^[a-f0-9]{64}$/,'Pass the exact completed source-closure SHA256.');
 assert.equal(sha(closureRaw),expectedClosureSha256);
 const closure=JSON.parse(closureRaw),checkout=closure.sourceRoot;
+assert.equal(prior.sourceClosureSha256,sha(closureRaw));
 const source=join(checkout,'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python'),cli=join(checkout,'stellar-forge/mcp-paid-agent/native-workspace-cli.mjs');
 const database=join(originalRoot,'database');
 const native=join(originalRoot,'mcp'),room='/workspace/scratch/c271b14dff0a/ckan-semantics-staged/receiving/customer-delivery';
@@ -45,13 +53,15 @@ const token=secret.mcpToken;
 const env={...process.env,PYTHONPATH:source,PYTHONDONTWRITEBYTECODE:'1',NODE_NO_WARNINGS:'1',NODE_DISABLE_COMPILE_CACHE:'1',
  MCP_ACCESS_TOKEN:token,TMPDIR:join(root,'tmp'),TMP:join(root,'tmp'),TEMP:join(root,'tmp')};
 const result=await optional(join(root,'results.json'))??{
- schema:'original-native-semantic-dataset-customer/v1',operation:'SCF-NATIVE-SEMANTIC-RECEIVING-20261012-D1CC',
- continuationOperation:'SCF-NATIVE-SEMANTIC-RECEIVING-20261012-D1CC-REMAINING-1',
-  predecessor:{operation:'SCF-NATIVE-SEMANTIC-RECEIVING-20261012-D1CC',result:join(originalRoot,'results.json'),resultSha256:sha(predecessorRaw),sourceClosureSha256:predecessor.sourceClosureSha256},
-  sourceCommit:closure.runtimeComponentCommit,sourceClosureSha256:sha(closureRaw),
- sourceClosureFiles:closure.files.length,originalDatabase:database,nativeWorkspace:native,
- source:{room,sourceFormat:'SF100_SCAN',session:null,acquisitionId,rows:32,pages:7,semanticSha256:semanticSha,dictionarySha256:dictionarySha},
- newAcquisitions:0,newProviderRequests:0,newPayments:0,stages:[]};
+ ...prior,
+ continuationOperation:'SCF-NATIVE-SEMANTIC-RECEIVING-20261012-D1CC-REMAINING-2',
+ predecessor:{operation:prior.continuationOperation,result:join(priorRoot,'results.json'),resultSha256:sha(priorRaw),
+  original:prior.predecessor,sourceClosureSha256:prior.sourceClosureSha256},
+ stages:[...prior.stages],status:'RUNNING'};
+delete result.error;
+await save('results.json',result);
+say({stage:'resuming-retained-customer',completedStages:prior.stages,predecessorSha256:sha(priorRaw),newAcquisitions:0,newProviderRequests:0,newPayments:0});
+
 function child(command,args){
  const p=spawn(command,args,{env,stdio:['ignore','pipe','pipe']});
  children.add(p);p.once('close',()=>children.delete(p));return p;
@@ -122,7 +132,14 @@ async function registerAnalysis(name,folder){
  return command(process.execPath,[cli,'analysis-register','--dir',native,'--name',name,'--database',folder]);
 }
 async function job(kind,label,request){
- const id=opId(label);await call(kind,{id,...request});let value;
+ const id=opId(label);let value;
+ const retained=await optional(join(priorRoot,'job-'+label+'.json'));
+ if(retained?.status==='COMPLETE'){
+  value=await call('job',{id,limit:100});assert.equal(value.id,id);assert.equal(value.kind,kind);
+  assert.equal(value.status,'COMPLETE');assert.deepEqual(value.result,retained.result);
+  return value;
+ }
+ await call(kind,{id,...request});
  for(let n=0;n<600;n++){
   value=await call('job',{id,limit:100});if(value.status!=='RUNNING')break;await sleep(100);
  }
@@ -131,6 +148,7 @@ async function job(kind,label,request){
  return value;
 }
 async function checkpoint(stage,details){
+ if(completed(stage)){assert.deepEqual(details,prior[stage]);return;}
  if(!result.stages.includes(stage))result.stages.push(stage);
  result[stage]=details;await save('results.json',result);say({stage,...details});
 }
@@ -182,7 +200,10 @@ async function dictionaryFromAnalysis(version){
 }
 async function download(kind,build,filename){
  const record=kind==='report'?{...build.result,name:filename}:build.result.files.find(file=>file.name===filename);
- assert.ok(record);const folder=join(root,'downloaded',build.id);await mkdir(folder,{recursive:true,mode:0o700});
+ assert.ok(record);
+ const retained=join(priorRoot,'downloaded',build.id,filename);
+ if(await exists(retained)){assert.deepEqual(await fileIdentity(retained),{bytes:record.bytes,sha256:record.sha256});return {path:retained,...record};}
+ const folder=join(root,'downloaded',build.id);await mkdir(folder,{recursive:true,mode:0o700});
  const destination=join(folder,filename);
  if(await exists(destination)){assert.deepEqual(await fileIdentity(destination),{bytes:record.bytes,sha256:record.sha256});return {path:destination,...record};}
  const temporary=destination+'.part';const output=await open(temporary,'w',0o600);let offset=0;
@@ -228,9 +249,11 @@ try{
   const previous=JSON.parse(await readFile('/workspace/scratch/d1ccf784531e/scf-native-agent-workbooks/operation/mcp/native-workspace.json','utf8'));
   await command(process.execPath,[cli,'init','--dir',native,'--workspace',previous.workspace]);
  }
- const registered=await command(process.execPath,[cli,'datasets-receive','--dir',native,'--id',acquisitionId,'--room',room]);
- assert.equal(registered.status,'FINALIZED_DATASET_REGISTERED');
- assert.equal(registered.sourceFormat,'SF100_SCAN');assert.equal(registered.readOnly,true);
+ if(!completed('original-finalized-room-received')){
+  const registered=await command(process.execPath,[cli,'datasets-receive','--dir',native,'--id',acquisitionId,'--room',room]);
+  assert.equal(registered.status,'FINALIZED_DATASET_REGISTERED');
+  assert.equal(registered.sourceFormat,'SF100_SCAN');assert.equal(registered.readOnly,true);
+ }
  const launch=await startAnalysis(database);await registerAnalysis(alias,database);await startMcp();
  const tools=await rpc('tools/list'),descriptor=tools.tools.find(tool=>tool.name==='sf43_discover_review_and_pay');
  for(const op of ['dataset-semantics','semantics','semantic-compare','semantics-file','attach-dataset'])
@@ -240,6 +263,7 @@ try{
  assert.equal(status.sourceFormat,'SF100_SCAN');
  const history=await dataset('dataset-history',{limit:100});
  assert.ok(history.records.some(row=>row.acquisitionId===acquisitionId&&row.readOnly));
+ if(!completed('original-finalized-room-received')){
  const meaning=[];
  let offset=0;
  do{
@@ -257,18 +281,24 @@ try{
  }while(offset!==null);
  assert.equal(typed.length,32);
  await save('native-meaning.json',{source:status.source,columns:meaning});
+ }
  await checkpoint('original-finalized-room-received',{workspaceId:launch.workspace_id,acquisitionId,
   sourceFormat:'SF100_SCAN',session:null,rows:32,pages:7,semanticSha256:semanticSha,
   dictionarySha256:dictionarySha,manifestSha256:status.source.manifestSha256,
   sourceBindingSha256:status.sourceBindingSha256,readOnly:true});
 
  const attachRequest={acquisition_id:acquisitionId,name:'svk_capacity',expected_revision:0};
- const attached=await call('attach-dataset',attachRequest);
+ const attached=completed('original-analysis-imported')?await optional(join(priorRoot,'native-source.json')):await call('attach-dataset',attachRequest);
+ if(completed('original-analysis-imported')){
+  const current=(await call('state')).sources.find(item=>item.name===attached.name);
+  assert.equal(current.revision,attached.revision);assert.deepEqual(current.expected_native,attached.expected_native);
+ }
  assert.equal(attached.kind,'finalized-dataset');assert.equal(attached.source_format,'SF100_SCAN');
  assert.equal(attached.revision,1);assert.equal(attached.rows,32);
  assert.equal(attached.expected_native.sourceBindingSha256,status.sourceBindingSha256);
- assert.deepEqual(await call('attach-dataset',attachRequest),attached);
- await save('native-source.json',attached);
+ if(!completed('original-analysis-imported')){
+  assert.deepEqual(await call('attach-dataset',attachRequest),attached);await save('native-source.json',attached);
+ }
  const imported=await job('import','original-typed-import',{source:attached.name,source_revision:1,
   columns_text:JSON.stringify({observation_id:'observation_key'})});
  const version=imported.result.version;assert.equal(version.row_count,32);
@@ -301,10 +331,10 @@ try{
   introduction:'This customer report uses the complete retained 32-row SF100 room and its original semantic dictionary. The published dataset definition, selected fields, Swedish local and UTC timestamp descriptions, price units and volume units remain the source authority. The view renames observation_id to observation_key without changing its meaning. The summary groups by declared units and does not add unlike quantities. Receiving this room did not create a provider request, SF88 acquisition or payment.',
   sections:[{title:'Complete retained observations',query_name:recipe.name,query_revision:recipe.revision},
    {title:'Observations grouped by declared units',query_name:overview.name,query_revision:overview.revision}]};
- await call('save-report',reportRequest);
+ if(!completed('customer-report-published'))await call('save-report',reportRequest);
  const definition=await call('report-definition',{name:reportName,revision:1});
  const report=await job('report','customer-report',{name:reportName,revision:1,definition_sha256:definition.sha256,expected_views:(await call('state')).views});
- const publication=await call('publish',{report_id:report.id,id:opId('report-publication'),
+ const publication=completed('customer-report-published')?{id:prior['customer-report-published'].publicationId}:await call('publish',{report_id:report.id,id:opId('report-publication'),
   result_sha256:report.result.result_sha256,expected_revision:0,
   note:'Reviewed the complete retained room, original dictionary and source-to-SQL mapping. Grouped counts retain price and volume units.'});
  const publicationRow=(await call('publications',{name:reportName})).publications.find(row=>row.publication.id===publication.id);
@@ -317,8 +347,8 @@ try{
  await checkpoint('customer-report-published',{reportId:report.id,publicationId:publication.id,
   publicationSha256:publicationRow.sha256,resultSha256:report.result.result_sha256,files:reportFiles});
 
- const querySource=(await call('workbook-sources',{kind:'query-export',limit:100})).items.find(item=>item.source.id===exported.id);
- const reportSource=(await call('workbook-sources',{kind:'report',limit:100})).items.find(item=>item.source.id===publication.id&&item.source.section===1);
+ const querySource=(await call('workbook-sources',{kind:'query-export',limit:100})).items.find(item=>item.id===exported.id&&item.available!==false);
+ const reportSource=(await call('workbook-sources',{kind:'report',limit:100})).items.find(item=>item.id===publication.id&&item.section===1&&item.available!==false);
  assert.ok(querySource);assert.ok(reportSource);
  const minimal=value=>Object.fromEntries(['kind','id','sha256','section'].filter(key=>Object.hasOwn(value,key)).map(key=>[key,value[key]]));
  const columns=[
@@ -334,8 +364,8 @@ try{
  const workbookRequest={name:workbookName,id:opId('workbook-definition'),expected_revision:0,
   title:'SVK capacity-market observations',
   notes:'Original 32-row finalized SF100 source; original dictionary and source-to-SQL mapping retained. Price and volume are exact text to retain precision. Timestamp text and declared units remain unchanged.',
-  sheets:[{name:'Observations',source:minimal(querySource.source),columns},
-   {name:'Unit summary',source:minimal(reportSource.source),columns:summaryColumns}]};
+  sheets:[{name:'Observations',source:minimal(querySource),columns},
+   {name:'Unit summary',source:minimal(reportSource),columns:summaryColumns}]};
  const workbookDefinition=await call('save-workbook',workbookRequest);
  const workbook=await job('workbook','customer-workbook',{name:workbookName,revision:1,definition_sha256:workbookDefinition.definition_sha256});
  assert.equal(workbook.result.sheets.length,2);assert.ok(workbook.result.row_count>=33);

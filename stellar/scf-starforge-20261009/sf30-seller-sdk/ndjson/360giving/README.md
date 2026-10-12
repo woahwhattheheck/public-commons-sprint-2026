@@ -125,7 +125,9 @@ The original source-project ZIP remains the native engine's complete reconstruct
 
 Every command prints one JSON result. Successful native-ready preparation and completed candidate/export/receiving return exit 0. Preparation returns exit 2 with a complete review when official schema errors or duplicate grant identifiers need resolution before the keyed native workflow. File, parsing, schema-resource and selected-source conflicts return exit 1 with a specific message.
 
-Output directories preserve existing bytes. Repeating an unchanged preparation resumes the same original source edition; a different source or changed operator program uses a new edition directory.
+Output directories preserve existing bytes. Original files and complete ZIPs are synced before their final paths are published; POSIX systems also sync the containing directory. Repeating an unchanged preparation or export resumes the same original source edition; a different source or changed operator program uses a new edition directory.
+
+Receiving retains the selected archive identity before publishing its files. Repeat the same `receive --file ... --out ...` command after an interruption: completed original members are reused and incomplete publication resumes. A completed receiver is verified and reused. A different archive or pre-existing unrelated directory returns an actionable selection error. The complete manifest is published only after every original member.
 
 ## Operate the complete retained publisher editions
 

@@ -29,6 +29,27 @@
         "upgrade.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/fields.mjs",
+      [
+        "fields.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/request-series.mjs",
+      [
+        "request-series.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/request-series.css",
+      [
+        "request-series.css",
+        "text/css; charset=utf-8"
+      ]
     ]
   ]
 }

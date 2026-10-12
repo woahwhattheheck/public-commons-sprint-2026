@@ -30,6 +30,8 @@
     "stellar-forge/mcp-merchant-operator/PRESCIENT.md",
     "stellar-forge/mcp-merchant-operator/stac-prescient-contract.mjs",
     "stellar-forge/mcp-merchant-operator/STAC_RECEIVING.md",
-    "stellar-forge/mcp-merchant-operator/examples/stac-client-retained-receiving.mjs"
+    "stellar-forge/mcp-merchant-operator/examples/stac-client-retained-receiving.mjs",
+    "stellar-forge/mcp-merchant-operator/PRESCIENT_CONTINUATION.md",
+    "stellar-forge/mcp-merchant-operator/examples/prescient-client-retained-operation.mjs"
   ]
 }
