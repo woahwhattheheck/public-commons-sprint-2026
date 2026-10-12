@@ -50,3 +50,7 @@
 .cskt-eng .cskt-eng-comments article{border-top:1px solid #d8d8d8;padding:.7rem 0}
 @media(max-width:900px){.cskt-eng .cskt-eng-split{grid-template-columns:1fr}}
 @media(max-width:600px){.cskt-eng .cskt-eng-grid{grid-template-columns:1fr}.cskt-eng dl{display:block}.cskt-eng dd{margin:0 0 .8rem}.cskt-eng .cskt-eng-panel{padding:.9rem}.cskt-eng .cskt-eng-tabs{flex-wrap:wrap}.cskt-eng .cskt-eng-actions button{flex:1 1 auto}.cskt-eng th,.cskt-eng td{padding:.6rem}.cskt-eng-receipt{padding:.9rem}}
+
+.cskt-eng-portal { margin:0; background:#f5f5f5; color:#222; }
+.cskt-eng-portal > main { max-width:760px; margin:2rem auto; padding:1.5rem; background:#fff; }
+@media (max-width:600px) { .cskt-eng-portal > main { margin:0; padding:1rem; } }
