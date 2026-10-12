@@ -75,15 +75,31 @@ def save(path, value):
 def copy_original(source, target):
     source, target = regular(source), Path(target)
     target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    expected = identity(source)
     if target.exists():
-        need(identity(source) == identity(target), "The retained original copy changed: " + str(target))
-        return identity(target)
-    with source.open("rb") as inp, target.open("xb") as out:
-        os.chmod(target, 0o600)
-        shutil.copyfileobj(inp, out, 1024 * 1024)
-        out.flush()
-        os.fsync(out.fileno())
-    return identity(target)
+        need(expected == identity(target), "The retained original copy changed: " + str(target))
+        return expected
+    temporary = target.with_name("." + target.name + "." + uuid.uuid4().hex + ".copy")
+    try:
+        with source.open("rb") as inp, temporary.open("xb") as out:
+            os.chmod(temporary, 0o600)
+            shutil.copyfileobj(inp, out, 1024 * 1024)
+            out.flush()
+            os.fsync(out.fileno())
+        need(identity(temporary) == expected, "The original source changed while copying: " + str(source))
+        if target.exists():
+            need(identity(target) == expected, "The retained original copy changed: " + str(target))
+        else:
+            os.replace(temporary, target)
+            descriptor = os.open(target.parent, os.O_RDONLY)
+            try:
+                os.fsync(descriptor)
+            finally:
+                os.close(descriptor)
+        return expected
+    finally:
+        if temporary.exists():
+            temporary.unlink()
 
 def absolute(value, label):
     need(isinstance(value, str) and Path(value).is_absolute(), "Choose an absolute " + label + ".")
@@ -328,6 +344,14 @@ def main():
         frozen_report = output / "upload-report.json"
         if not frozen_report.exists():
             copy_original(journal_path, frozen_report)
+        frozen_identity = {"path": str(frozen_report), **identity(frozen_report)}
+        completion = journal.get("completion")
+        need(completion, "Retain the completed original product bundle before transferring files.")
+        if completion.get("report"):
+            need(completion["report"] == frozen_identity, "The frozen original upload report changed.")
+        else:
+            completion["report"] = frozen_identity
+            save(journal_path, journal)
         sources = {
             "bundle": Path(bundle["path"]), "report": frozen_report,
             "portable": output / "final-utility-workspace.zip",
@@ -392,6 +416,21 @@ def main():
         return result
 
     try:
+        if journal.get("completion"):
+            stage = "ARTIFACT_DELIVERY"
+            result = journal["completion"]["artifact"]
+            need(result.get("status") == "COMPLETE" and
+                 identity(result["path"]) == {key: result[key] for key in ("bytes", "sha256")},
+                 "The retained completed product artifact changed; recover its exact original bytes.")
+            transfers = transfer_artifacts(result)
+            journal.update(status="COMPLETE", passed=True, productPassed=True, transfersCompletedAt=now())
+            journal.pop("error", None)
+            journal.pop("failedChild", None)
+            save(journal_path, journal)
+            print(json.dumps({"status": "COMPLETE", "passed": True, "operation": str(journal_path),
+                              "artifact": result, "transfers": transfers, "reusedProduct": True},
+                             separators=(",", ":")), flush=True)
+            return
         checkpoint("SOURCE_VERIFIED", {"commit": declaration["sourceCommit"], "files": len(declaration["files"]),
                                       "originalOperation": identity(original_report)})
         copy_original(original_report, output / "original-operation.json")
@@ -587,16 +626,22 @@ console.log(JSON.stringify({status:'ORIGINAL_COMPONENTS_IMPORTED',modules:6}));
         save(output / "customer-after-managed.json", after_managed)
         need(source_identity(before_managed) == source_identity(after_managed),
              "Managed receiving changed the original reviewed customer.")
-        journal.update(status="COMPLETE", passed=True, completedAt=now())
+        journal.update(status="COMPLETE", passed=True, productPassed=True, completedAt=now())
         journal.pop("error", None)
         journal.pop("failedChild", None)
         checkpoint("COMPLETE")
+        stage = "ARTIFACT_DELIVERY"
         result = package()
+        journal["completion"] = {"artifact": result, "completedAt": journal["completedAt"]}
+        save(journal_path, journal)
         transfers = transfer_artifacts(result)
+        journal["transfersCompletedAt"] = now()
+        save(journal_path, journal)
         print(json.dumps({"status": "COMPLETE", "passed": True, "operation": str(journal_path),
                           "artifact": result, "transfers": transfers}, separators=(",", ":")), flush=True)
     except BaseException as error:
-        journal.update(status="RETAINED_CONTINUATION_REQUIRED", passed=False, failedAt=now(),
+        journal.update(status="DELIVERY_REQUIRES_CONTINUATION" if journal.get("completion") else
+                       "RETAINED_CONTINUATION_REQUIRED", passed=False, failedAt=now(),
                        error={"phase": stage, "message": str(error), "type": type(error).__name__,
                               "traceback": traceback.format_exc()})
         save(journal_path, journal)
@@ -608,8 +653,9 @@ console.log(JSON.stringify({status:'ORIGINAL_COMPONENTS_IMPORTED',modules:6}));
                 child.kill()
                 child.wait()
         try:
-            result = package()
-            print(json.dumps({"status": journal["status"], "phase": stage, "artifact": result}, separators=(",", ":")),
+            result = journal["completion"]["artifact"] if journal.get("completion") else package()
+            print(json.dumps({"status": journal["status"], "phase": stage, "artifact": result,
+                              "productPassed": journal.get("productPassed", False)}, separators=(",", ":")),
                   flush=True)
         except BaseException as save_error:
             print(json.dumps({"status": journal["status"], "phase": stage, "outputDirectory": str(output),
