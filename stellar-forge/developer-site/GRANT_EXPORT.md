@@ -4,7 +4,17 @@ Prepare complete copyable answers from the same submission draft used by the bro
 
 ## Export a saved draft
 
-Use Node.js 22 or newer and the complete current developer-site source:
+Use the installed grant-reviewer product or complete merchant toolkit:
+
+~~~sh
+starforge grant-export \
+  --draft /private/scf/saved-submission.json \
+  --out /private/scf/prepared-20261012
+~~~
+
+The original command registry passes every argument and exit code to the maintained exporter. Use `starforge grant-export --help` for its options or `starforge registrations --command grant-export` to inspect the selected source. The package also exposes the same functions as `./grant/application-exporter` under its actual package name.
+
+For a complete source checkout, use Node.js 22 or newer:
 
 ~~~sh
 node stellar-forge/developer-site/grant-export.mjs \
