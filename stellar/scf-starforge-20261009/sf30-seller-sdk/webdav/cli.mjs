@@ -50,7 +50,7 @@ function options(argv) {
   const result = {};
   for (let i = 0; i < argv.length; i += 2) {
     const key = argv[i];
-    if (!/^--[a-z-]+$/.test(key ?? '') || !argv[i + 1] || Object.hasOwn(result, key.slice(2)))
+    if (!/^--[a-z][a-z0-9-]*$/.test(key ?? '') || !argv[i + 1] || Object.hasOwn(result, key.slice(2)))
       fail('WEBDAV_CLI_ARGUMENTS', HELP);
     result[key.slice(2)] = argv[i + 1];
   }
