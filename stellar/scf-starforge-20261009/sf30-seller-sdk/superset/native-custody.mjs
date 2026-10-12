@@ -123,8 +123,9 @@ export async function captureSupersetVersionStores(workspace){
   value.sha256=identity(value);
   return value;
 }
-export function validateSupersetVersionStores(workspace,value){
+export function validateSupersetVersionStores(workspace,value,{allowAdditionalGroups=false}={}){
   if(value===null||value===undefined)return null;
+  need(typeof allowAdditionalGroups==='boolean','Choose an explicit received-project validation mode.');
   const {sha256,...unsigned}=value;
   need(value.schema===SCHEMA&&value.workspaceId===workspace.meta('workspace_id')&&HASH.test(sha256??'')&&
     identity(unsigned)===sha256&&Array.isArray(value.stores),'The native project custody identity changed.');
@@ -133,7 +134,7 @@ export function validateSupersetVersionStores(workspace,value){
     need(object(store)&&selected.has(store.group)&&!seen.has(store.group),'A native store has no original merchant or is duplicated.');
     seen.add(store.group);checkFiles(workspace,store,selected.get(store.group));
   }
-  need(seen.size===selected.size,'The complete project is missing an original merchant version group.');
+  if(!allowAdditionalGroups)need(seen.size===selected.size,'The complete project is missing an original merchant version group.');
   return value;
 }
 /** Restore into a private staged store, let the ORIGINAL version engine validate
@@ -141,7 +142,10 @@ export function validateSupersetVersionStores(workspace,value){
  * Process locks and local control capabilities are created by the receiving host. */
 export async function restoreSupersetVersionStores(workspace,value){
   if(!value)return [];
-  validateSupersetVersionStores(workspace,value);
+  // The archive was validated in full before receiving_source was committed.
+  // A resumed received project may already contain newer merchant groups.
+  validateSupersetVersionStores(workspace,value,{allowAdditionalGroups:
+    workspace.meta('receiving_source')?.schema==='stellar-forge.superset-receiving.v1'});
   const restored=[],parent=join(workspace.directory,'versions');
   await privateDirectory(parent,true);
   for(const store of value.stores){
@@ -166,12 +170,23 @@ export async function restoreSupersetVersionStores(workspace,value){
     }
     const original=await openDatasetVersions({directory:root,collectOnOpen:false});
     try{
-      const status=original.status();
-      need(status.current===store.current&&status.revision===store.revision,
-        'The restored original writer differs from the captured selection or revision.');
-      const originalState=await readPrivate(join(root,'state.json'),256*1024);
-      need(digest(originalState)===store.stateSha256,'The restored native state differs from the captured state bytes.');
-      restored.push({group:store.group,current:status.current,revision:status.revision,generations:status.versions.length,stateSha256:store.stateSha256});
+      const status=original.status(),reused=root===destination;
+      const originalState=await readPrivate(join(root,'state.json'),256*1024),stateSha256=digest(originalState);
+      if(reused){
+        // The matching receipt reached this destination only with the validated
+        // atomic publication below. Keep subsequent refreshes and collection.
+        const current=stateOf(originalState),captured=stateOf(workspace.bytes(store.stateSha256));
+        const binding=store.files.find(member=>member.path==='superset-source-binding.json');
+        need(current.contractHash===captured.contractHash&&
+          digest(await readPrivate(join(root,'superset-source-binding.json'),256*1024))===binding.sha256,
+          'The received writer no longer belongs to the original chart, field contract or merchant terms.');
+      }else{
+        need(status.current===store.current&&status.revision===store.revision,
+          'The restored original writer differs from the captured selection or revision.');
+        need(stateSha256===store.stateSha256,'The restored native state differs from the captured state bytes.');
+      }
+      restored.push({group:store.group,current:status.current,revision:status.revision,
+        generations:status.versions.length,stateSha256,sourceStateSha256:store.stateSha256,reused});
     }finally{await original.close();}
     if(root===stage){await rename(stage,destination);await syncDirectory(parent);await syncDirectory(dirname(stage));}
   }

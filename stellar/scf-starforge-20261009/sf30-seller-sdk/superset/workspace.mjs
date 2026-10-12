@@ -462,7 +462,7 @@ export async function receiveSupersetWorkspace({file,directory}={}){
   const sourceIdentity=await hashPrivate(file,2*1024*MiB);
   await privateDirectory(directory,true);
   const unlock=await acquireWorkspace(directory),finalFile=join(directory,WORKSPACE_FILE);
-  let source,target;
+  let source,target,versionCustody;
   const receiving={schema:'stellar-forge.superset-receiving.v1',bytes:sourceIdentity.bytes,sha256:sourceIdentity.hash};
   try{
     let exists=true;try{await lstat(finalFile);}catch(e){if(e.code==='ENOENT')exists=false;else throw e;}
@@ -473,6 +473,12 @@ export async function receiveSupersetWorkspace({file,directory}={}){
         const row=prior.prepare('SELECT value FROM meta WHERE key=?').get('receiving_source');
         if(!row||identity(JSON.parse(row.value))!==identity(receiving))throw fault('SUPERSET_RECEIVING_EXISTS','The destination retains another workspace.',409);
       }finally{prior.close();}
+      // A later export can update the received workspace's version_custody.
+      // Resume the exact original archive identified by receiving_source instead.
+      source=new DatabaseSync(file,{readOnly:true});source.exec('PRAGMA trusted_schema=OFF;BEGIN');
+      const custody=source.prepare('SELECT value FROM meta WHERE key=?').get('version_custody');
+      versionCustody=custody?JSON.parse(custody.value):null;
+      source.exec('COMMIT');source.close();source=null;
     }else{
       source=new DatabaseSync(file,{readOnly:true});source.exec('PRAGMA trusted_schema=OFF;BEGIN');
       if(Number(source.prepare('PRAGMA application_id').get().application_id)!==APP_ID||
@@ -484,6 +490,7 @@ export async function receiveSupersetWorkspace({file,directory}={}){
         if(!row||row.type!=='table'||row.sql!==TABLES[i])throw fault('SUPERSET_RECEIVING_SCHEMA','The original workspace schema differs.');
       }
       const metadata=source.prepare('SELECT key,value FROM meta').all(),values=new Map(metadata.map(r=>[r.key,JSON.parse(r.value)]));
+      versionCustody=values.get('version_custody')??null;
       if(values.get('schema')!==WORKSPACE_SCHEMA||!Number.isSafeInteger(values.get('revision'))||values.get('revision')<0)
         throw fault('SUPERSET_RECEIVING_FORMAT','The retained workspace metadata is invalid.');
       const stage=join(directory,'receiving-stage');target=await openSupersetWorkspace({directory:stage});
@@ -565,7 +572,7 @@ export async function receiveSupersetWorkspace({file,directory}={}){
       const native=await loadDatasetConfig(staged.datasetPath);
       if(native.describe().snapshot!==edition.snapshot)throw fault('SUPERSET_RECEIVING_SNAPSHOT','The original dataset snapshot differs.',409);
     }
-    const versionCustody=workspace.meta('version_custody'),restored=workspace.meta('receiving_version_stores');
+    const restored=workspace.meta('receiving_version_stores');
     if(versionCustody&&restored?.sourceCustodySha256!==versionCustody.sha256){
       const stores=await restoreSupersetVersionStores(workspace,versionCustody);
       workspace.setMeta('receiving_version_stores',{sourceCustodySha256:versionCustody.sha256,stores,restoredAt:new Date().toISOString()});
