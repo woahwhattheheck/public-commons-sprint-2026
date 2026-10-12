@@ -185,7 +185,7 @@ export type WherobotsWorkspace = Omit<WorkspaceMethods, "get"> & {
   execute<K extends CoreOperation>(operation: K, ...args: ArgumentsTuple<CoreArguments[K]>): Promise<CoreResults[K]>;
   get<K extends RecordKind>(args: {kind: K; id: string}): Promise<RecordByKind[K]>;
   tools(): ToolDefinition[];
-  callTool<K extends CoreOperation>(name: `wherobots_${K}`, args: CoreArguments[K]): Promise<ToolReply<CoreResults[K]>>;
+  callTool<K extends CoreOperation>(name: `wherobots_${K}`, ...args: ArgumentsTuple<CoreArguments[K]>): Promise<ToolReply<CoreResults[K]>>;
 };
 export function createWherobotsWorkspace(options: WorkspaceOptions): WherobotsWorkspace;
 export const wherobotsToolDefinitions: ToolDefinition[];

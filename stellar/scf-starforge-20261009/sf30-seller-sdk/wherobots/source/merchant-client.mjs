@@ -115,36 +115,81 @@ async function assertFile(filename,item){
   if(value.bytes!==item.bytes||value.sha256!==item.sha256)
     throw fail("WHEROBOTS_RECEIVE_CHANGED","A complete received file differs from its original inventory.",{file:item.path});
 }
+async function processStart(pid){
+  if(process.platform!=="linux")return null;
+  try{
+    const value=await readFile("/proc/"+pid+"/stat","utf8");
+    return value.slice(value.lastIndexOf(")")+2).trim().split(/\s+/)[19]??null;
+  }catch(error){if(error.code==="ENOENT"||error.code==="ESRCH")return null;throw error;}
+}
 async function lease(root){
-  const filename=path.join(root,"receiving.lock"),owner={schema:SCHEMA,pid:process.pid,host:hostname(),id:randomUUID()};
+  const filename=path.join(root,"receiving.lock");
+  const owner={schema:SCHEMA,pid:process.pid,host:hostname(),id:randomUUID(),start:await processStart(process.pid)};
   const candidate=path.join(root,".lease-"+owner.id);await writeJson(candidate,owner);
-  let acquired=false;
+  const claims=new Set();let acquired=false,handedOff=false;
+  const ownerMatches=async name=>await exists(name)&&equal(await readJson(name),owner);
+  async function alive(record){
+    if(record.host!==owner.host||!Number.isSafeInteger(record.pid)||record.pid<1||typeof record.id!=="string")
+      throw fail("WHEROBOTS_RECEIVE_ACTIVE","Another host owns this receiving directory.");
+    try{process.kill(record.pid,0);}
+    catch(error){if(error.code==="ESRCH")return false;if(error.code!=="EPERM")throw error;}
+    const started=await processStart(record.pid);
+    return !(record.start&&started&&record.start!==started);
+  }
+  async function recover(previous){
+    let generation=sha(stable({target:"receiving.lock",owner:previous}));
+    for(;;){
+      const claim=path.join(root,".recover-"+generation);
+      try{await link(candidate,claim);claims.add(claim);await syncDirectory(root);break;}
+      catch(error){
+        if(error.code!=="EEXIST")throw error;
+        const predecessor=await readJson(claim);
+        if(equal(predecessor,owner)){claims.add(claim);break;}
+        if(await alive(predecessor))
+          throw fail("WHEROBOTS_RECEIVE_ACTIVE","Another live process is recovering this receiving directory.",{pid:predecessor.pid});
+        // Every dead claimant admits one atomic next generation. A crash at any
+        // point retains enough identity for the next process to continue.
+        generation=sha(stable({generation,owner:predecessor}));
+      }
+    }
+    // A live winner is the only process allowed to retire this exact dead
+    // generation. Another process may already have acquired a newer main lease.
+    if(!await exists(filename))return;
+    const current=await readJson(filename);
+    if(!equal(current,previous))return;
+    if(await alive(current))throw fail("WHEROBOTS_RECEIVE_ACTIVE","The original receiving lease now has a live owner.");
+    await unlink(filename);await syncDirectory(root);
+  }
+  async function release(){
+    if(await ownerMatches(filename)){await unlink(filename);await syncDirectory(root);}
+  }
+  async function cleanupClaims(){
+    for(const claim of claims)if(await ownerMatches(claim))await unlink(claim);
+    await unlink(candidate).catch(error=>{if(error.code!=="ENOENT")throw error;});
+  }
   try{
     for(let attempt=0;attempt<3;attempt++){
-      try{await link(candidate,filename);await syncDirectory(root);acquired=true;break;}
+      try{await link(candidate,filename);acquired=true;await syncDirectory(root);break;}
       catch(error){if(error.code!=="EEXIST")throw error;}
       const previous=await readJson(filename);
-      if(previous.host!==owner.host||!Number.isSafeInteger(previous.pid)||previous.pid<1||typeof previous.id!=="string")
-        throw fail("WHEROBOTS_RECEIVE_ACTIVE","Another host owns this receiving directory.",{owner:previous});
-      let alive=true;
-      try{process.kill(previous.pid,0);}catch(error){if(error.code==="ESRCH")alive=false;else if(error.code!=="EPERM")throw error;}
-      if(alive)throw fail("WHEROBOTS_RECEIVE_ACTIVE","This receiving directory already has an active process.",{pid:previous.pid});
-      // A complete hard-linked generation claim admits one stale-owner recovery.
-      const marker=path.join(root,".recovered-"+sha(stable(previous)));
-      try{await link(filename,marker);}
-      catch(error){if(error.code==="EEXIST")throw fail("WHEROBOTS_RECEIVE_ACTIVE","The previous receiving lease is being recovered; repeat the same command.");throw error;}
-      const [current,retired]=await Promise.all([lstat(filename),lstat(marker)]);
-      if(current.ino!==retired.ino||current.dev!==retired.dev||!equal(await readJson(marker),previous))
-        throw fail("WHEROBOTS_RECEIVE_ACTIVE","The original receiving lease changed during recovery.");
-      await unlink(filename);await syncDirectory(root);
+      if(await alive(previous))
+        throw fail("WHEROBOTS_RECEIVE_ACTIVE","This receiving directory already has an active process.",{pid:previous.pid});
+      await recover(previous);
     }
     if(!acquired)throw fail("WHEROBOTS_RECEIVE_ACTIVE","Another process acquired this receiving directory.");
-    return {
-      assert:async()=>{if(!equal(await readJson(filename),owner))throw fail("WHEROBOTS_RECEIVE_ACTIVE","The original receiving lease changed.");},
-      close:async()=>{if(await exists(filename)&&equal(await readJson(filename),owner)){await unlink(filename);await syncDirectory(root);}}
+    const result={
+      assert:async()=>{if(!await ownerMatches(filename))throw fail("WHEROBOTS_RECEIVE_ACTIVE","The original receiving lease changed.");},
+      close:release
     };
-  }finally{await unlink(candidate).catch(error=>{if(error.code!=="ENOENT")throw error;});}
+    await cleanupClaims();handedOff=true;return result;
+  }finally{
+    if(!handedOff){
+      try{if(acquired)await release();}
+      finally{await cleanupClaims();}
+    }
+  }
 }
+
 function unwrap(result){
   if(!plain(result))return result;
   if(result.isError===true){
@@ -368,9 +413,9 @@ async function initialize(directoryName,{python,env,title}){
   const output=await new Promise((resolve,reject)=>{
     const child=spawn(python,[path.join(here,"operate.py"),"--workspace",directoryName,"init","--title",title],
       {env,shell:false,stdio:["ignore","pipe","pipe"],windowsHide:true});
-    const chunks=[];let bytes=0,overflow=false;child.stderr.resume();
+    const chunks=[];let bytes=0,overflow=false;child.stderr?.resume();
     child.on("error",reject);
-    child.stdout.on("data",chunk=>{bytes+=chunk.length;if(bytes>2*1024*1024){overflow=true;child.kill("SIGTERM");}else chunks.push(chunk);});
+    child.stdout?.on("data",chunk=>{bytes+=chunk.length;if(bytes>2*1024*1024){overflow=true;child.kill("SIGTERM");}else chunks.push(chunk);});
     child.on("close",(code,signal)=>{
       if(overflow)return reject(fail("WHEROBOTS_RECEIVE_INIT","The original initializer exceeded its reply size."));
       let value;try{value=JSON.parse(Buffer.concat(chunks).toString("utf8"));}catch{return reject(fail("WHEROBOTS_RECEIVE_INIT","The original initializer ended without a complete reply.",{code,signal}));}
@@ -442,6 +487,20 @@ export async function runWherobotsMerchantClientCli(argv=process.argv.slice(2),{
     if(name==="create-customer")options[name]=true;
     else{const value=rest[++index];if(value===undefined||value.startsWith("--"))throw new TypeError("Missing value for --"+name);options[name]=value;}
   }
+  const commands={
+    status:["config","workspace","workspace-id"],
+    export:["config","workspace","workspace-id","workflow-id","expected-revision","export-id"],
+    "export-dataset":["config","workspace","workspace-id","edition-id","dataset-id","expected-revision","export-id"],
+    receive:["config","workspace","workspace-id","export-id","directory","manifest-sha256","chunk-bytes"],
+    inspect:["directory","manifest-sha256"],
+    import:["directory","customer-workspace","customer-id","create-customer","python"],
+    deliver:["config","workspace","workspace-id","export-id","directory","manifest-sha256","chunk-bytes",
+      "customer-workspace","customer-id","create-customer","python"],
+    call:["config","workspace","workspace-id","operation","arguments"]
+  };
+  if(!Object.hasOwn(commands,command))throw new TypeError("Choose a documented merchant consumer command.");
+  for(const name of Object.keys(options))if(!commands[command].includes(name))
+    throw new TypeError("--"+name+" is not an option for "+command+".");
   const need=name=>{if(options[name]===undefined)throw new TypeError("Missing --"+name);return options[name];};
   const write=value=>stdout.write(JSON.stringify(value,null,2)+"\n");
   const importOptions=()=>({directory:need("directory"),workspace:need("customer-workspace"),workspaceId:options["customer-id"],
@@ -451,12 +510,13 @@ export async function runWherobotsMerchantClientCli(argv=process.argv.slice(2),{
   if(!["status","export","export-dataset","receive","deliver","call"].includes(command))throw new TypeError("Choose a documented merchant consumer command.");
   const configuration=absolute(need("config"),"merchant configuration");
   const {openMerchantOperator}=await import("../../../../../stellar-forge/mcp-merchant-operator/operator.mjs");
-  const merchant=await openMerchantOperator(configuration),client=createWherobotsMerchantClient({
-    merchant,workspace:need("workspace"),workspaceId:options["workspace-id"]
-  });
+  const workspace=alias(need("workspace"),"workspace"),workspaceId=options["workspace-id"];
+  if(workspaceId!==undefined&&(!workspaceId||workspaceId.length>240))throw new TypeError("Pin the original workspace_id.");
   const controller=new AbortController(),interrupt=()=>controller.abort();
-  process.on("SIGINT",interrupt);process.on("SIGTERM",interrupt);
+  const merchant=await openMerchantOperator(configuration);
   try{
+    const client=createWherobotsMerchantClient({merchant,workspace,workspaceId});
+    process.on("SIGINT",interrupt);process.on("SIGTERM",interrupt);
     let result;
     if(command==="status")result=await client.status();
     if(command==="export")result=await client.export({workflow_id:need("workflow-id"),
