@@ -217,7 +217,9 @@ export async function adoptMerchantRuntime({ directory, home, activate = false, 
   let prepared, installed, attachment, failure, cleanup, failed = false;
   try {
     prepared = await prepareMerchantRuntime({ directory: originalDirectory, output: join(temporary, 'release'), expectedManifest });
-    installed = await install(prepared.release, home, { expected: prepared.digest, activate,
+    // Only this invocation owns the private prepared tree. Hand it to the
+    // existing installer; the retained original runtime is never consumed.
+    installed = await install(prepared.release, home, { expected: prepared.digest, activate, consumePrepared: true,
       prepareInstalledRelease: async context => {
         attachment = await prepareInstalledRuntime(context, prepared.runtimeInstallation);
       } });

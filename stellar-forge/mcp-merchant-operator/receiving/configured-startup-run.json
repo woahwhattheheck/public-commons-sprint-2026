@@ -1,0 +1,450 @@
+{
+  "schema": "stellar-forge.configured-startup-receiving.v1",
+  "state": "COMPLETE",
+  "startedAt": "2026-10-12T03:58:12.247Z",
+  "node": "v24.19.0",
+  "sourceCommit": "112ef417585eafc9c1880c8fe4914a630a885fa8",
+  "stages": [
+    "SYNCHRONOUS_SCOPED_CONSTRUCTOR",
+    "ORIGINAL_MERCHANT_HTTP_SELLER_CUSTOMER_EXERCISE",
+    "ORIGINAL_CONFIG_READ_AND_PROVIDER_STATUS",
+    "MULTI_PROVIDER_READS_DRAIN_DURING_CLOSE",
+    "ORIGINAL_HTTP_SCOPED_CATALOG_AND_INSTRUCTIONS",
+    "ORIGINAL_MERCHANT_STDIO_AND_OWNED_HOST_SHUTDOWN",
+    "ORIGINAL_DISTRIBUTION_BIN_FORWARDING"
+  ],
+  "startup": {
+    "node": "v24.19.0",
+    "importMs": 41.021392999999996,
+    "totalMs": 42.60993,
+    "tools": 30,
+    "completeTools": 797,
+    "moduleCount": 52,
+    "sourceBytes": 483667,
+    "loaded": [
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/operator.mjs",
+        "bytes": 17853
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog.mjs",
+        "bytes": 14632
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/providers.mjs",
+        "bytes": 9162
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-export-contracts.mjs",
+        "bytes": 415
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/retained-file-contracts.mjs",
+        "bytes": 156
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/discovery.mjs",
+        "bytes": 1731
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/controls.mjs",
+        "bytes": 3638
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/fleet.mjs",
+        "bytes": 4974
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/accounting.mjs",
+        "bytes": 23998
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/accounting-platforms.mjs",
+        "bytes": 17822
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/bitwave.mjs",
+        "bytes": 7570
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/accounting-adjustments.mjs",
+        "bytes": 4836
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/accounting-statements.mjs",
+        "bytes": 5513
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar/scf-starforge-20261009/sf30-seller-sdk/http-methods.mjs",
+        "bytes": 454
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/support.mjs",
+        "bytes": 10725
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar/scf-starforge-20261009/sf74-merchant-support-console/case-statuses.mjs",
+        "bytes": 207
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/receiving.mjs",
+        "bytes": 4765
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/python-workspace.mjs",
+        "bytes": 9488
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/graphql-workspace.mjs",
+        "bytes": 10631
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/graphql-workspace-files.mjs",
+        "bytes": 2501
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/s3-workspace.mjs",
+        "bytes": 5403
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/opensearch-workspace.mjs",
+        "bytes": 10776
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/opensearch-deployment.mjs",
+        "bytes": 6581
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/socrata-workspace.mjs",
+        "bytes": 7194
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/worldbank-workspace.mjs",
+        "bytes": 8796
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/fiscaldata-workspace.mjs",
+        "bytes": 6875
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/geocodio-workspace.mjs",
+        "bytes": 8161
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/webdav-tools.mjs",
+        "bytes": 9044
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/sec-edgar-tools.mjs",
+        "bytes": 7852
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/sheets-workspace.mjs",
+        "bytes": 17648
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/ckan-workspace.mjs",
+        "bytes": 13478
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/tenderly-workspace.mjs",
+        "bytes": 12019
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/coingecko-workspace.mjs",
+        "bytes": 14340
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar/scf-starforge-20261009/partners/coingecko-stellar-market/limits-contracts.mjs",
+        "bytes": 246
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/redis-workspace.mjs",
+        "bytes": 7142
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/usaspending-workspace.mjs",
+        "bytes": 18475
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/source-workspace.mjs",
+        "bytes": 5709
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/dataset-lifecycle.mjs",
+        "bytes": 2728
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/openapi-workspace.mjs",
+        "bytes": 11034
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/sf61-connection-contracts.mjs",
+        "bytes": 196
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/har-workspace.mjs",
+        "bytes": 7072
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/har-export-contracts.mjs",
+        "bytes": 467
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/publisher.mjs",
+        "bytes": 10857
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/arcgis-workspace.mjs",
+        "bytes": 7859
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/pricing.mjs",
+        "bytes": 12112
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/woocommerce.mjs",
+        "bytes": 8675
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/mpp-console.mjs",
+        "bytes": 7170
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/mpp-files.mjs",
+        "bytes": 1742
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/mpp-contracts.mjs",
+        "bytes": 143
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/catalog/buyer-expenses.mjs",
+        "bytes": 10357
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/config.mjs",
+        "bytes": 90250
+      },
+      {
+        "url": "file:///dev/ee290-configured-startup-112ef417/source/stellar-forge/mcp-merchant-operator/host-files.mjs",
+        "bytes": 2195
+      }
+    ]
+  },
+  "originalExercise": {
+    "schema": "stellar-forge.merchant-mcp-exercise.v1",
+    "result": "PASS",
+    "checks": [
+      "authenticated original MCP transport, fixed source aliases, exact original compilation and price diff",
+      "original seller child readiness, real metadata, exact customer SDK export and non-overwrite",
+      "generation conflict, ownership, explicit upgrade and rollback, original history, server shutdown drain",
+      "original buyer MCP entrypoint and tool registration preserved"
+    ],
+    "merchantTools": 30,
+    "pricesAtomic": [
+      "20000",
+      "30000",
+      "20000"
+    ],
+    "paidRequests": 0
+  },
+  "configured": {
+    "tools": 115,
+    "openSearchRequestBytes": 2097152,
+    "graphqlRequestBytes": 8388608,
+    "families": [
+      {
+        "name": "core",
+        "tools": 19
+      },
+      {
+        "name": "cache",
+        "tools": 6
+      },
+      {
+        "name": "graphqlWorkspaces",
+        "tools": 28
+      },
+      {
+        "name": "s3Workspaces",
+        "tools": 13
+      },
+      {
+        "name": "opensearchWorkspaces",
+        "tools": 44
+      },
+      {
+        "name": "dataset",
+        "tools": 5
+      }
+    ],
+    "providers": [
+      {
+        "name": "clientExports",
+        "state": "READY",
+        "durationMs": 0.616
+      },
+      {
+        "name": "graphqlWorkspaces",
+        "state": "READY",
+        "durationMs": 0.577
+      },
+      {
+        "name": "s3Workspaces",
+        "state": "READY",
+        "durationMs": 0.462
+      },
+      {
+        "name": "opensearchWorkspaces",
+        "state": "READY",
+        "durationMs": 0.382
+      }
+    ],
+    "sourceSha256": "42c7b3542d83a89ac5a14b1f4a40f1fddc64a16a5d73e425f48e8c110df60368"
+  },
+  "closeRecovery": {
+    "acceptedReads": 4,
+    "completedReads": 4,
+    "closedNewCalls": true
+  },
+  "http": {
+    "tools": 115,
+    "instructionBytes": 2036,
+    "workspace": "CLOSED",
+    "acceptedFrameBytes": 4194304,
+    "rejectedFrameBytes": 8388609,
+    "rejectedStatus": 413
+  },
+  "sourceVerification": {
+    "receiverBlob": "2598fb0433fb8042104d4d3b3136c085ab7ab8d5",
+    "files": 142,
+    "sf82Files": 20,
+    "allGitBlobMatches": true,
+    "manifestSha256": "effad850bf526b8eef4c8cc8e918c6e9b08206c26708680664fe20f716dec32d"
+  },
+  "receivingAttempts": [
+    {
+      "startedAt": "2026-10-12T03:55:40.327Z",
+      "state": "FAILED",
+      "stages": [
+        "SYNCHRONOUS_SCOPED_CONSTRUCTOR"
+      ],
+      "driverExitCode": 1,
+      "continuation": "Added the original OAuth host source to the receiving carrier before the merchant exercise began."
+    },
+    {
+      "startedAt": "2026-10-12T03:58:12.247Z",
+      "state": "FAILED",
+      "stages": [
+        "SYNCHRONOUS_SCOPED_CONSTRUCTOR",
+        "ORIGINAL_MERCHANT_HTTP_SELLER_CUSTOMER_EXERCISE",
+        "ORIGINAL_CONFIG_READ_AND_PROVIDER_STATUS",
+        "MULTI_PROVIDER_READS_DRAIN_DURING_CLOSE",
+        "ORIGINAL_HTTP_SCOPED_CATALOG_AND_INSTRUCTIONS"
+      ],
+      "driverExitCode": 1,
+      "continuation": "Completed the receiving client initialization handshake; retained the five completed native phases and resumed only stdio/distribution."
+    }
+  ],
+  "receivingOperation": "ee290-configured-startup-112ef417",
+  "driverExitCode": 0,
+  "resumedAt": "2026-10-12T04:02:05.845Z",
+  "receiverSha256": "c0d36b3e82dfbab9b144000f0d4c254407e09e3c8003888e79689ee5dc72a4af",
+  "stdio": {
+    "tools": 115,
+    "workspace": "CLOSED",
+    "exitCode": 0,
+    "acceptedFrameBytes": 4194304,
+    "graphqlWorkspaceOpen": false
+  },
+  "distribution": {
+    "tools": 115,
+    "workspace": "CLOSED",
+    "exitCode": 0,
+    "acceptedFrameBytes": 4194304,
+    "graphqlWorkspaceOpen": false
+  },
+  "completedAt": "2026-10-12T04:02:06.639Z",
+  "catalogIntegration": {
+    "state": "COMPLETE",
+    "node": "v24.19.0",
+    "sourceModules": 58,
+    "importMs": 59.789,
+    "compatibilityTools": 918,
+    "defaultTools": 30,
+    "selectedTools": 115,
+    "allConfiguredTools": 918,
+    "providerRegistry": 38,
+    "configuredFamilies": [
+      {
+        "name": "core",
+        "tools": 19
+      },
+      {
+        "name": "cache",
+        "tools": 6
+      },
+      {
+        "name": "graphqlWorkspaces",
+        "tools": 28
+      },
+      {
+        "name": "s3Workspaces",
+        "tools": 13
+      },
+      {
+        "name": "opensearchWorkspaces",
+        "tools": 44
+      },
+      {
+        "name": "dataset",
+        "tools": 5
+      }
+    ],
+    "loadedProviders": [],
+    "limits": [
+      {
+        "fields": [],
+        "bytes": 131072
+      },
+      {
+        "fields": [
+          "opensearchWorkspaces"
+        ],
+        "bytes": 2097152
+      },
+      {
+        "fields": [
+          "grpcWorkspaces"
+        ],
+        "bytes": 2097152
+      },
+      {
+        "fields": [
+          "mpp",
+          "opensearchWorkspaces"
+        ],
+        "bytes": 3145728
+      },
+      {
+        "fields": [
+          "graphqlWorkspaces",
+          "mpp"
+        ],
+        "bytes": 8388608
+      },
+      {
+        "fields": [
+          "feedsWorkspaces",
+          "graphqlWorkspaces"
+        ],
+        "bytes": 16842752
+      }
+    ],
+    "closed": true,
+    "sourceBytes": 551542,
+    "sourceCarrierSha256": "53f9d6c4ac106a46457b12dc801b02a00b8a47d3efef8129502e380b940e2c35",
+    "baseCommit": "745d7389dc207caf2986793dd7c19db3f536cb36"
+  }
+}

@@ -261,3 +261,9 @@ Routes and native serializers were read from the original Baserow source at comm
 - [Public metadata serializers](https://github.com/baserow/baserow/blob/ae95e512e1675db6cb1b73e8ac2266b9369b4061/backend/src/baserow/contrib/database/api/views/serializers.py).
 - [Authorized fields](https://github.com/baserow/baserow/blob/ae95e512e1675db6cb1b73e8ac2266b9369b4061/backend/src/baserow/contrib/database/api/fields/views.py) and [authorized rows](https://github.com/baserow/baserow/blob/ae95e512e1675db6cb1b73e8ac2266b9369b4061/backend/src/baserow/contrib/database/api/rows/views.py).
 - [Structured values and file serializer](https://github.com/baserow/baserow/blob/ae95e512e1675db6cb1b73e8ac2266b9369b4061/backend/src/baserow/contrib/database/api/fields/serializers.py) and [native ordering](https://github.com/baserow/baserow/blob/ae95e512e1675db6cb1b73e8ac2266b9369b4061/backend/src/baserow/contrib/database/table/models.py).
+
+## Operate the complete source and merchant with an agent
+
+The existing Baserow browser workspace can attach to the merchant MCP operator. Its 20 tools operate complete source discovery, capture, native rows/files, immutable versions, the original publisher and refresh schedule, merchant deployment and customer receiving. The browser and agent keep the same source requests, plans, runs and release records. Complete original packets and merchant files remain downloadable after the source browser closes, and the customer can reopen the same received source offline.
+
+See [Baserow merchant MCP and customer receiving](../../../../stellar-forge/mcp-merchant-operator/BASEROW_WORKSPACE.md) for host setup, exact tools and the continuation of an existing native public-catalog run.
