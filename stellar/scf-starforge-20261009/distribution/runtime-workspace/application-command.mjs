@@ -94,6 +94,15 @@ export function observeApplicationOutput(request, directory) {
             ready.state === request.args[stateIndex + 1] && typeof ready.url === 'string') candidate = ready.url;
       } catch {}
     }
+    if (request.command === 'research-workspace') {
+      try {
+        const ready = JSON.parse(text);
+        const directoryIndex = request.args.indexOf('--dir');
+        if (ready.mode === 'RESEARCH_DOSSIER_WORKSPACE' && directoryIndex >= 0 &&
+            ready.directory === request.args[directoryIndex + 1] && typeof ready.url === 'string')
+          candidate = ready.url;
+      } catch {}
+    }
     const url = candidate && privateUrl(candidate);
     if (!url) return;
     seen = true;

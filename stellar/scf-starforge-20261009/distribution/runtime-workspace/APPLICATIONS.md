@@ -134,3 +134,15 @@ Choose GoldRush wallet research after initializing the original `goldrush workbe
 The Object Buyer analysis Python path remains the selected executable, including a virtual environment's `bin/python` symlink. Review records the link, resolved executable and any `pyvenv.cfg`; it does not substitute the base interpreter and discard that environment.
 
 The terminal records both the child PID used by its parent and the procfs PID when `/proc` was mounted in an ancestor namespace. The retained, unreaped `pty.fork` child and its original process group govern shutdown; loss of a procfs observation does not leave exception cleanup waiting indefinitely after a single TERM.
+
+## Research dossiers and saved source collections
+
+Choose **Research dossiers**, then select the private dossier directory. An existing store reopens its questions, editions, original source occurrences, selections, findings and revision history. A new directory can be created in an existing private parent. The original application creates and operates its own store.
+
+To read an existing OpenAlex collection, select its original research workspace directory. Applications retains that directory and its original queries and editions directories as launch inputs. The selected runtime supplies its original OpenAlex workspace module; an explicit original module can be selected when continuing a separately retained provider installation. Source gathering is an operation in that original provider workspace. Opening a dossier does not gather or purchase data.
+
+The optional provider edition adapter is the original local module passed as --edition-adapter. It can reopen Valyu editions through the original retained provider store, preserving that store's access and retention behavior. Applications records the module file identity and passes the same path to research-workspace.
+
+The original command announces one JSON line with mode RESEARCH_DOSSIER_WORKSPACE, its selected directory and its actual loopback capability URL. The observer accepts it only for the research-workspace command and matching --dir argument, then applies the existing local URL checks. The source command owns HTTP shutdown and closure of its original provider workspace; saved dossiers remain available for the next reviewed start.
+
+Inside the original research application, create or reopen a question, receive saved source editions, compare provider occurrences, select evidence, write findings, compare revisions and download HTML, Markdown or complete portable JSON. Reopen the same portable dossier through its original API or CLI to retain all revision and source identities.
