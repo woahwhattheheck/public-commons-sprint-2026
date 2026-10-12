@@ -73,7 +73,7 @@ function endPoint(value) {
   const point = timePoint(value);
   return point && isDate(value) ? { seconds: point.seconds + 86400, fraction: '' } : point;
 }
-function windowOf(value) {
+export function windowOf(value) {
   if (value === null || value === undefined) return null;
   if (typeof value !== 'object' || Array.isArray(value)) fail('Choose a start and end for the analysis period.');
   const result = {};
@@ -94,7 +94,7 @@ function windowOf(value) {
   }
   return Object.keys(result).length ? result : null;
 }
-function inWindow(row, window) {
+export function inWindow(row, window) {
   if (!window) return true;
   const value = text(field(row, 'time'));
   if (!value) return false;
@@ -109,7 +109,7 @@ function inWindow(row, window) {
   return (!start || comparePoint(stamp, start) >= 0) &&
     (!end || (isDate(window.end) ? comparePoint(stamp, end) < 0 : comparePoint(stamp, end) <= 0));
 }
-function seriesIdentity(row) {
+export function seriesIdentity(row) {
   return {
     timeSeriesId: text(field(row, 'time_series_id')),
     locationId: text(field(row, 'monitoring_location_id')),
@@ -120,7 +120,7 @@ function seriesIdentity(row) {
     methodCategory: text(field(row, 'method_category')),
   };
 }
-const seriesKey = row => sha(seriesIdentity(row));
+export const seriesKey = row => sha(seriesIdentity(row));
 const rawFeatureId = row => text(row.feature_id ?? row.id) || semanticSha({ series: seriesIdentity(row), time: field(row, 'time'), properties: row.properties, geometry: row.geometry });
 const rowIdentity = row => seriesIdentity(row).collection + ':' + rawFeatureId(row);
 function rowView(row) {
