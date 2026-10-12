@@ -1,6 +1,7 @@
 // MIT. Private, explicit merchant registrations and environment references.
 import {createHash} from 'node:crypto';
 import {loopbackOrigin} from './bundle.mjs';
+import {slackTeamId,slackChannelId} from './notifications-slack.mjs';
 
 export const CONFIG_SCHEMA = 'stellar-forge.seller-watch-config.v1';
 export const hash = value => createHash('sha256').update(value).digest('hex');
@@ -67,6 +68,20 @@ export function compileConfig(input) {
       seller:loopbackOrigin(m.seller,'merchant.seller'),ops:loopbackOrigin(m.ops,'merchant.ops'),delivery});
   }
   if (c.notification != null) {
+    if (c.notification.transport === 'slack') {
+      const n = fields(c.notification,['id','transport','teamId','channelId','tokenEnv',
+        'timeoutMs','maxAttempts','retryMs','maxRetryMs','minIntervalMs'],'notification');
+      const retryMs = integer(n.retryMs ?? 1000,100,3_600_000,'notification.retryMs');
+      result.notification = {id:text(n.id,64,'notification.id',idPattern),transport:'slack',
+        teamId:text(n.teamId,32,'notification.teamId',slackTeamId),
+        channelId:text(n.channelId,32,'notification.channelId',slackChannelId),
+        tokenEnv:text(n.tokenEnv,128,'notification.tokenEnv',/^[A-Za-z_][A-Za-z0-9_]{0,127}$/),
+        timeoutMs:integer(n.timeoutMs ?? 5000,100,30_000,'notification.timeoutMs'),
+        maxAttempts:integer(n.maxAttempts ?? 8,1,100,'notification.maxAttempts'),retryMs,
+        maxRetryMs:integer(n.maxRetryMs ?? 3_600_000,retryMs,86_400_000,'notification.maxRetryMs'),
+        minIntervalMs:integer(n.minIntervalMs ?? 1100,1000,300_000,'notification.minIntervalMs')};
+      return result;
+    }
     const n = fields(c.notification,['id','urlEnv','secretEnv','allowLoopback','timeoutMs',
       'maxAttempts','retryMs','maxRetryMs'],'notification');
     const envName = /^[A-Za-z_][A-Za-z0-9_]{0,127}$/;
@@ -87,3 +102,4 @@ export const merchantBinding = (config, merchant) => hash(JSON.stringify({id:mer
   seller:merchant.seller,ops:merchant.ops,delivery:merchant.delivery,
   failurePolls:config.failurePolls,recoveryPolls:config.recoveryPolls,
   windowMinutes:config.windowMinutes,httpErrors:config.httpErrors,disconnects:config.disconnects}));
+

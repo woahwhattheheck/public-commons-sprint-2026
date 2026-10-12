@@ -1,7 +1,7 @@
 // MIT. One source-selected OAuth POST with the original public-address policy.
 import { createHash } from 'node:crypto';
 import { lookup as systemLookup } from 'node:dns/promises';
-import { request as httpRequest } from 'node:http';
+import { request as httpRequest, Agent as HttpAgent } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 import { isIP } from 'node:net';
 import { isPublicAddress } from '../../sf31-buyer-client/public-transport.mjs';
@@ -35,13 +35,15 @@ function publicLookup(expectedHost, lookup) {
 const knownErrors = new Set(['invalid_request', 'invalid_client', 'invalid_grant', 'unauthorized_client',
   'unsupported_grant_type', 'invalid_scope', 'access_denied', 'temporarily_unavailable', 'server_error', 'unsupported_token_type']);
 export async function oauthRequest(profile, mode, fields, {
-  env = process.env, lookup = systemLookup, allowLoopback = false, signal,
+  env = process.env, lookup = systemLookup, allowLoopback = false, signal, agent,
 } = {}) {
   if (!['token', 'revoke'].includes(mode) || !plain(fields) || typeof lookup !== 'function')
     throw oauthFailure('OAUTH_CONNECTION_REQUEST_INVALID', 'Invalid private connection request.', 'not_sent', 400);
   const target = mode === 'token' ? profile.tokenEndpoint : profile.revocationEndpoint;
   if (!target) throw oauthFailure('OAUTH_CONNECTION_REVOCATION_UNAVAILABLE', 'This profile has no declared revocation endpoint.', 'not_sent', 400);
   endpoint(target, { allowLoopback });
+  if (agent !== undefined && (!(agent instanceof HttpAgent) || agent.protocol !== new URL(target).protocol))
+    throw oauthFailure('OAUTH_CONNECTION_REQUEST_INVALID', 'Use a trusted Node Agent for the selected provider protocol.', 'not_sent', 400);
   const selected = credential(profile, env), form = new URLSearchParams(), intuit = intuitQboProfile(profile);
   for (const [key, value] of Object.entries(fields)) {
     if (Array.isArray(value)) for (const item of value) form.append(key, item);
@@ -82,8 +84,9 @@ export async function oauthRequest(profile, mode, fields, {
       timer = setTimeout(() => fail('OAUTH_CONNECTION_TIMEOUT', 'The provider did not complete the connection request in time.'), 30000);
       try {
         request = (url.protocol === 'https:' ? httpsRequest : httpRequest)(url, {
-          method: 'POST', headers, agent: false, maxHeaderSize: 16384,
-          ...(url.protocol === 'https:' ? { lookup: publicLookup(url.hostname, lookup),
+          method: 'POST', headers, agent: agent ?? false, maxHeaderSize: 16384,
+          ...(url.protocol === 'https:' ? {
+            ...(agent === undefined ? {lookup:publicLookup(url.hostname,lookup)} : {}),
             rejectUnauthorized: true, minVersion: 'TLSv1.2' } : {}),
         }, res => {
           response = res; dispatched = true;

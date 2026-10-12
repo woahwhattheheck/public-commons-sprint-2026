@@ -56,7 +56,7 @@ export async function prepareJobCheckoutApplication(settings, runtimeDirectory, 
   }
   // The application cannot select a different executable or customer runtime.
   // Its original SF88 source comes from the same reviewed merchant installation.
-  const runtime = await inspectMerchantRuntime(absolute(runtimeDirectory), { load: false });
+  const runtime = await inspectMerchantRuntime(absolute(runtimeDirectory), { load: false, source: false });
   const native = join(runtime.sourceRoot, SOURCE);
   for (const name of ['cli.mjs', 'job-workspace/launch.mjs', 'job-workspace/checkout/controller.mjs'])
     inputs.push(await inputPath(join(native, name), 'file'));
@@ -103,7 +103,7 @@ export async function jobCheckoutStartup(request, text) {
   'APPLICATION_JOB_STARTUP_CHANGED', 'Reopen the current original customer launch');
   const port = Number(selectedValue(request, '--port', true) ?? 0);
   need(Number.isInteger(port) && port >= 0 && port <= 65535 &&
-    (port === 0 || Number(new URL(ready.checkoutUrl).port) === port), 'APPLICATION_JOB_PORT_CHANGED');
+    (port === 0 || Number(new URL(ready.checkoutUrl).port || 80) === port), 'APPLICATION_JOB_PORT_CHANGED');
   return { url: ready.checkoutUrl, original: { schema: STARTUP, directory, runtimeDirectory,
     operatorSelection: ready.operatorSelection, pid: ready.pid, instanceId: ready.instanceId, privateLaunch } };
 }
