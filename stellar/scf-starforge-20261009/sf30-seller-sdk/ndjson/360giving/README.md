@@ -8,7 +8,13 @@ The profile uses the original NDJSON engine for immutable source intake, project
 
 The maintained Starforge distribution includes this entire profile: the publisher program, local review, exact source examples, official schemas, attribution and complete receiving workflow. Use `starforge dataset-360giving` with the same arguments as `publisher.py`. The `example` subcommand runs the original complete two-fund workflow.
 
-Select Python 3.11 or later with `jsonschema>=4.23,<5` and `referencing>=0.35,<1` installed, as declared in this profile's `requirements.txt`. The command uses `SF30_NDJSON_PYTHON` when set, or `python3` (`python` on Windows). A leading `--python` selects an explicit executable for this invocation.
+Select Python 3.11 or later and install this profile's complete declared requirements with that same executable:
+
+~~~sh
+/absolute/venv/bin/python -m pip install -r /absolute/360giving/requirements.txt
+~~~
+
+The requirements are `jsonschema[format-nongpl]>=4.23,<5` and `referencing>=0.35,<1`. The format extra supplies the standard JSON Schema format validators used by the retained official schemas. The command uses `SF30_NDJSON_PYTHON` when set, or `python3` (`python` on Windows). A leading `--python` selects an explicit executable for this invocation.
 
 ~~~sh
 starforge dataset-360giving --python /absolute/venv/bin/python prepare \
@@ -63,6 +69,8 @@ The command reads every grant. It preserves the original package bytes and numer
 ## Schema and publisher questions
 
 The original pinned 1.4.3 package schema currently references the 1.4.2 grant schema. Both original resources are resolved locally and verified against their Git blob identities. The 1.4.3 grant schema is retained alongside them. Validation uses Draft202012Validator with format checking and exact decimal values; it does not fetch schema references at runtime.
+
+The publisher discovers the formats required by these exact schema documents and checks that the selected Python provides every checker before validating the package. These retained schemas require `date-time` and `uri`. A missing checker is reported as a runtime dependency with its exact format name and the original requirements installation command. Install the declared `format-nongpl` extra before repeating the same source command. The official grant schema accepts an award date through either a checked date-time or its date-only pattern, so the date-time checker must be active for that `oneOf` to evaluate correctly. The original schema bytes and numeric tokens are preserved.
 
 Schema errors identify the complete grant path and official keyword. Publisher questions are presented separately: a date sequence needing context, an identifier scheme needing confirmation, a mismatch with the registered grant prefix, or duplicate grant identities. These questions do not supply replacement facts. The profile sums awarded amounts separately for each original currency.
 
