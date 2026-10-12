@@ -17,7 +17,7 @@ import tempfile
 import uuid
 
 from inventory_migration import (
-    CATALOG, FIELDS, LINKS, MAX_BYTES, MAX_OBJECTS, MAX_RESULT_BYTES, ORDER, SCHEMA,
+    CATALOG, FIELDS, LINKS, MANY, MAX_BYTES, MAX_OBJECTS, MAX_RESULT_BYTES, ORDER, SCHEMA,
     InventoryError, canonical, clean_scalar, digest, keys, load_json, positive_id, validate_packet,
 )
 
@@ -246,7 +246,7 @@ def compile_mapping(mapping, mapping_path, operation_id):
     captures, errors, source_names = {}, [], set()
     for source_number, definition in enumerate(sources, 1):
         try:
-            keys(definition, ("kind", "file", "key", "match_id", "fields", "links", "catalog", "primary"), "CSV source mapping")
+            keys(definition, ("kind", "file", "key", "match_id", "fields", "links", "many", "catalog", "primary"), "CSV source mapping")
             kind = definition.get("kind")
             if kind not in ORDER:
                 raise InventoryError("Select a supported inventory kind.")
@@ -271,7 +271,7 @@ def compile_mapping(mapping, mapping_path, operation_id):
                            "original_path": str(path), "retained": retained}
                 captures[file_sha] = (capture, raw)
                 packet["sources"].append({key: capture[key] for key in ("name", "sha256", "bytes", "rows")})
-            for target, allowed in (("fields", FIELDS[kind]), ("links", LINKS[kind]), ("catalog", CATALOG[kind])):
+            for target, allowed in (("fields", FIELDS[kind]), ("links", LINKS[kind]), ("many", MANY[kind]), ("catalog", CATALOG[kind])):
                 keys(definition.get(target, {}), allowed, kind + " " + target)
             for row_number, record in enumerate(records, 1):
                 try:
@@ -296,6 +296,33 @@ def compile_mapping(mapping, mapping_path, operation_id):
                                         "text" if mode == "key" else "id")
                         if value is not OMIT:
                             row["links"][field] = None if value is None else {mode: value}
+                    for field, rule in definition.get("many", {}).items():
+                        mode = rule.get("by") if isinstance(rule, dict) else None
+                        if mode not in ("key", "id"):
+                            raise InventoryError("A membership must explicitly use by:key or by:id.")
+                        separator = rule.get("separator", ";")
+                        if not isinstance(separator, str) or len(separator) != 1 or ord(separator) < 32:
+                            raise InventoryError("A membership separator must be one printable character.")
+                        value = expression(rule, record, permitted_extra=("by", "separator"))
+                        if value is OMIT:
+                            continue
+                        if value is None:
+                            values = []
+                        elif isinstance(value, list):
+                            values = value
+                        elif isinstance(value, str):
+                            values = [] if not value else value.split(separator)
+                        else:
+                            values = [value]
+                        selected = []
+                        for item in values:
+                            if isinstance(item, str) and rule.get("trim", True):
+                                item = item.strip()
+                            converted = convert(item, "text" if mode == "key" else "id")
+                            if converted is None or converted is OMIT or converted == "":
+                                raise InventoryError("A membership list contains an empty relationship.")
+                            selected.append({mode: converted})
+                        row.setdefault("many", {})[field] = selected
                     for field, rule in definition.get("catalog", {}).items():
                         value = convert(expression(rule, record), "id")
                         if value is not OMIT:
