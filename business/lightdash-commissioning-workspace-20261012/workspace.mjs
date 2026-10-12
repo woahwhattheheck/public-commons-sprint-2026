@@ -417,7 +417,7 @@ export class CommissioningWorkspace {
       if(typeof fn!=='function')throw problem('The selected engine does not expose this original operation.');
       operation.status=inspect?operation.status:'RUNNING';this.storeOperation(operation);
       try{
-        const result=await fn({workspaceDir:this.root,operationDir,operation:operation.plan});
+        const result=await fn({workspaceDir:this.root,operationDir,operation:operation.plan,refresh:inspect});
         operation.nativeResult=result;
         operation.status=result.status??result.state??'RETURNED';
         operation.resultSummary=result.summary??result.message??null;
