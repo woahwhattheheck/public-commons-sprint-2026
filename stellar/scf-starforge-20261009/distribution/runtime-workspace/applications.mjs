@@ -19,6 +19,7 @@ import { datasetBuyerApplication, prepareDatasetBuyerApplication } from './appli
 import { pricingApplication, validatePricingSelection, preparePricingApplication } from './application-pricing.mjs';
 import { collectionsApplication, prepareCollectionsApplication } from './application-collections.mjs';
 import { grantApplication, prepareGrantApplication } from './application-grant.mjs';
+import { fredApplication, prepareFredApplication } from './application-fred.mjs';
 import { eventFeedApplications, prepareEventFeedApplication } from './application-event-feed.mjs';
 import { tenderlyApplication, prepareTenderlyApplication } from './application-tenderly.mjs';
 import { browserWalletApplication, prepareBrowserWalletApplication } from './application-browser-wallet.mjs';
@@ -66,6 +67,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   pricingApplication(common),
   collectionsApplication(common),
   grantApplication(common),
+  fredApplication(common),
   tenderlyApplication(common),
   browserWalletApplication(common),
   rssAtomApplication(common),
@@ -221,7 +223,10 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     const value = await inputPath(settings[name], kind, missing, privateOnly); inputs.push(value); return value;
   };
   const option = (name, value) => { if (value !== undefined && value !== '') args.push(name, String(value)); };
-  if (type.id === 'mpp') {
+  if (type.id === 'fred') {
+    const original = await prepareFredApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'mpp') {
     const original = await prepareMppApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs); mppBinding = original.binding;
   } else if (type.id === 'stellar-application') {

@@ -448,3 +448,7 @@ Choose **SEC EDGAR source operator** to open the original private operator works
 ## Retained recovery and job destinations
 
 The existing **Merchant recovery** selection also retains each declared capture-plan file when available. Completed captures can reopen when a live plan is unavailable; the original recovery workspace requires the current plan for a fresh capture review. Existing job applications retain every original private destination returned by their selected checkout helper, including Request, approval, Jobs, library and collections.
+
+## Economic data editions
+
+Choose **Economic data editions** to reopen the initialized FRED project, retained public tables or explicit API vintages, saved reviews and merchant editions, and the original configured buyer. The standard managed terminal carries customer approval; the same application stops and reopens its project and buyer journal. Select the original merchant port already routed by the publication HTTPS origin separately from the private UI port. The complete input, source, customer, export and receiving workflow is in [FRED Applications](FRED_APPLICATIONS.md).
