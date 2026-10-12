@@ -59,7 +59,7 @@ export function createCatalogOperator({$, make, api, act, disabled, notice}) {
     if (!catalog) return [['Durable catalog','Disabled']];
     return [['Durable catalog journal',catalog.directory],...catalog.merchants.map((row,index)=>[
       'Catalog merchant '+(index+1),
-      'Seller: '+row.sellerId+'\nCatalog signer: '+row.signer+'\nOrigin: '+row.origin+'\nRecipient: '+row.payTo
+      'Seller: '+row.sellerId+'\nCatalog signer: '+JSON.stringify(row.signer)+'\nOrigin: '+row.origin+'\nRecipient: '+row.payTo
     ])];
   }
   $('catalog-enabled').addEventListener('change',()=>{
