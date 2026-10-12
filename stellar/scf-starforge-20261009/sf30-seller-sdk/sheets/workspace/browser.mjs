@@ -111,7 +111,6 @@ async function refresh({loadDraft = false} = {}) {
   return latest;
 }
 async function finishReceipt(result, marker) {
-  forget();
   await refresh();
   if (marker.path === '/api/import' || marker.path === '/api/capture') {
     const capture = result.capture || result;
@@ -127,6 +126,11 @@ async function finishReceipt(result, marker) {
   } else if (marker.path === '/api/publisher/start') {
     view('versions');
   }
+  if (marker.path?.startsWith('/api/deployment/')) await finishDeploymentReceipt(result, marker);
+  // Keep the same request marker until its result and refreshed current state
+  // are both applied. A lost refresh must not enable a new source/deploy action.
+  forget();
+  renderState();
   notice(marker.label + ' completed. The original receipt is retained.');
   return result;
 }
@@ -273,6 +277,7 @@ function renderState() {
   else $('publisher-link').removeAttribute('href');
   renderOperations(rowsOf(state.operations));
   renderDraftState();
+  renderDeploymentOwnership();
 }
 function selectedVersionId() { return typeof state?.selectedVersion === 'object' ? state.selectedVersion?.id ?? null : state?.selectedVersion ?? null; }
 function renderCaptures(items) {
@@ -331,7 +336,7 @@ function renderOperations(items) {
     if (item.status === 'interrupted' || item.status === 'pending') actions.append(button('Recover this request', async () => {
       if (pending) throw new Error('Recover the current request first.');
       const requestId = item.requestId || item.id;
-      const paths = {IMPORT:'/api/import', CAPTURE:'/api/capture', PACKET:'/api/import-package', DRAFT:'/api/draft', PREVIEW:'/api/preview', VERSION:'/api/version', SELECT:'/api/select', PUBLISHER:'/api/publisher/start', STOP_PUBLISHER:'/api/publisher/stop'};
+      const paths = {IMPORT:'/api/import', CAPTURE:'/api/capture', PACKET:'/api/import-package', DRAFT:'/api/draft', PREVIEW:'/api/preview', VERSION:'/api/version', SELECT:'/api/select', PUBLISHER:'/api/publisher/start', STOP_PUBLISHER:'/api/publisher/stop', ...deploymentPaths};
       remember({requestId, path: paths[item.kind], label: item.kind + ' recovery', createdAt: item.createdAt}, null);
       await reconcile();
     }));
@@ -622,8 +627,215 @@ function invalidateWorkbook() {
   workbook = null; viewGeneration++;
   $('workbook-summary').textContent = ''; $('live-tab').replaceChildren(); renderConnection();
 }
-document.querySelectorAll('[data-view]').forEach(node => node.addEventListener('click', () => view(node.dataset.view)));
-$('refresh').addEventListener('click', run(() => refresh()));
+
+let deploymentData = null, deploymentChosenRun = null, deploymentReviewed = null, deploymentPrepared = null;
+let deploymentRunsOffset = 0, deploymentOperationsOffset = 0, deploymentLoadGeneration = 0, deploymentChoiceGeneration = 0;
+const deploymentPaths = {DEPLOYMENT_REVIEW:'/api/deployment/review', DEPLOYMENT_PREPARE:'/api/deployment/prepare',
+  DEPLOYMENT_STAGE:'/api/deployment/stage', DEPLOYMENT_CONSOLE_OPEN:'/api/deployment/console/open',
+  DEPLOYMENT_CONSOLE_CLOSE:'/api/deployment/console/close', DEPLOYMENT_COMMAND:'/api/deployment/command'};
+function deploymentSummary(container, pairs) {
+  container.replaceChildren(); container.classList.remove('empty');
+  const dl = text('dl', '', 'deployment-summary');
+  for (const [label, value] of pairs) dl.append(text('dt', label), text('dd', display(value)));
+  container.append(dl);
+}
+function deploymentChanged() {
+  deploymentChoiceGeneration++; deploymentReviewed = null;
+  $('deployment-review-summary').replaceChildren(text('p', 'Review the selected publication and current merchant terms.'));
+  $('deployment-prepare').disabled = true;
+}
+function renderDeploymentOwnership(current = state?.deployment) {
+  const running = Boolean(current?.running);
+  $('deployment-console-state').textContent = running ? 'Original deployment controls open' : 'Deployment controls closed';
+  $('deployment-console-open').disabled = running;
+  $('deployment-console-close').disabled = !running;
+  $('deployment-console-link').hidden = !running;
+  if (running) $('deployment-console-link').href = current.url;
+  else $('deployment-console-link').removeAttribute('href');
+}
+function chooseDeploymentRun(row, versionId) {
+  deploymentChanged(); deploymentChosenRun = clone(row);
+  $('deployment-selected-run').textContent = 'Original published run ' + row.id;
+  const versions = row.sourceVersions || [];
+  $('deployment-version').replaceChildren(...versions.map(item => option(item.id, 'Version ' + item.id + ' · ' + (item.title || item.sourceSha256 || 'reviewed source'))));
+  if (versionId != null) $('deployment-version').value = String(versionId);
+  $('deployment-review').disabled = !versions.length;
+}
+function applyDeploymentReview(result) {
+  const row = deploymentData?.publisher?.runs?.find(item => item.id === result.runId);
+  chooseDeploymentRun(row || {id:result.runId, state:'PUBLISHED', sourceSha256:result.sourceSha256,
+    sourceVersions:deploymentData?.sourceVersions?.filter(item => item.sourceSha256 === result.sourceSha256) ||
+      [{id:result.sourceVersion, title:'Retained reviewed source'}]}, result.sourceVersion);
+  if (!$('deployment-version').value) {
+    $('deployment-version').append(option(result.sourceVersion, 'Version ' + result.sourceVersion));
+    $('deployment-version').value = String(result.sourceVersion);
+  }
+  const terms = result.terms, payment = terms.payment;
+  for (const [name, value] of Object.entries({origin:terms.origin, path:terms.path, scheme:payment.scheme,
+    network:payment.network, asset:payment.asset, payto:payment.payTo, amount:payment.amount, timeout:payment.maxTimeoutSeconds}))
+    $('deployment-' + name).value = String(value);
+  deploymentReviewed = clone(result);
+  deploymentSummary($('deployment-review-summary'), [
+    ['Review request', result.reviewRequestId], ['Review SHA256', result.reviewSha256],
+    ['Source version', result.sourceVersion], ['Public rows', result.rows], ['Snapshot', result.snapshot],
+    ['Public route', terms.origin + terms.path], ['Payment', payment], ['Merchant SHA256', result.sellerSha256],
+    ['Public source SHA256', result.packageSourceSha256],
+  ]);
+  $('deployment-prepare').disabled = false;
+}
+async function loadDeploymentPackage(packageId, intent = ++deploymentChoiceGeneration) {
+  deploymentPrepared = null;
+  $('deployment-stage').disabled = true;
+  $('deployment-files').replaceChildren();
+  $('deployment-package-summary').replaceChildren(text('p', 'Opening exact retained package ' + packageId + '…'));
+  const result = await api('/api/deployment/package?id=' + encodeURIComponent(packageId));
+  if (intent !== deploymentChoiceGeneration) return;
+  deploymentPrepared = result;
+  deploymentSummary($('deployment-package-summary'), [
+    ['Package request', result.packageRequestId], ['Public source SHA256', result.sourceSha256],
+    ['Original run', result.runId], ['Source version', result.sourceVersion], ['Snapshot', result.dataset.baselineSnapshot],
+    ['Dataset directory', result.dataset.datasetDirectory], ['Package directory', result.packageDirectory],
+    ['Binding', result.bindingScope],
+  ]);
+  $('deployment-files').replaceChildren();
+  for (const file of result.files) {
+    const node = button('Download ' + file.file, async () => {
+      const selectedPackage = packageId;
+      const response = await api('/api/deployment/file?' + new URLSearchParams({packageId:selectedPackage, file:file.file}), {binary:true});
+      const url = URL.createObjectURL(response.bytes), link = text('a', 'Download');
+      link.href = url; link.download = response.filename || file.file;
+      document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+      notice('Downloaded original ' + file.file + ' from package request ' + selectedPackage + '.');
+    });
+    node.title = file.sha256 + ' · ' + file.bytes + ' bytes'; $('deployment-files').append(node);
+  }
+  $('deployment-stage').disabled = false;
+}
+function renderDeployment() {
+  if (!deploymentData) return;
+  const data = deploymentData, runs = data.publisher?.runs || [], runsTotal = data.publisher?.pages?.total ?? runs.length;
+  $('deployment-publisher-note').textContent = data.publisher
+    ? 'These are the original saved publisher runs. Only published candidates that match a retained source version can be deployed.'
+    : 'Open the original publisher, save a plan and publish the reviewed source before preparing a merchant deployment.';
+  $('deployment-runs').replaceChildren();
+  for (const item of runs) {
+    const row = text('tr', ''), original = text('td', '');
+    original.append(text('code', item.id), text('small', time(item.createdAt)));
+    const publication = text('td', item.state); publication.append(text('small', item.publication?.snapshot || 'No published snapshot'));
+    const versions = text('td', item.sourceVersions.map(saved => 'v' + saved.id + ' ' + saved.title).join(' · ') || 'No matching saved source version');
+    const actions = text('td', '');
+    if (item.state === 'PUBLISHED' && item.sourceVersions.length)
+      actions.append(button('Use publication', () => chooseDeploymentRun(item)));
+    row.append(original, publication, versions, actions); $('deployment-runs').append(row);
+  }
+  if (!runs.length) { const row = text('tr',''), cell = text('td', 'No original publisher runs on this page.'); cell.colSpan=4; row.append(cell); $('deployment-runs').append(row); }
+  $('deployment-runs-page').textContent = runsTotal ? (deploymentRunsOffset+1) + '–' + Math.min(deploymentRunsOffset+runs.length,runsTotal) + ' of ' + runsTotal : 'No saved runs';
+  $('deployment-runs-prev').disabled = deploymentRunsOffset === 0;
+  $('deployment-runs-next').disabled = deploymentRunsOffset + runs.length >= runsTotal;
+  const native = data.native;
+  if (native) deploymentSummary($('deployment-native-summary'), [
+    ['Selection generation', native.state?.generation], ['Selected release', native.state?.active],
+    ['Merchant state', native.runtime?.state], ['Running release', native.runtime?.observed?.releaseId],
+    ['Merchant instance', native.runtime?.observed?.instanceId], ['Original release store', data.releaseDirectory],
+    ['Original console action', native.console?.busy ?? 'Idle'], ['Last native error', native.console?.lastError],
+  ]);
+  else $('deployment-native-summary').replaceChildren(text('p','Stage a reviewed release or open the original controls to initialize the retained release store.'));
+  renderDeploymentOwnership(data.console);
+  $('deployment-operations').replaceChildren();
+  for (const item of data.operations) {
+    const row = text('tr',''), identity = text('td',''), actions = text('td','', 'actions');
+    identity.append(text('code',item.id));
+    actions.append(button('Inspect receipt', () => {
+      $('deployment-operation-detail').textContent = JSON.stringify(item,null,2);
+      $('deployment-operation-detail').hidden = false;
+    }));
+    if (item.status === 'complete' && item.kind === 'DEPLOYMENT_REVIEW')
+      actions.append(button('Use reviewed terms', () => applyDeploymentReview(item.result)));
+    if (item.status === 'complete' && item.kind === 'DEPLOYMENT_PREPARE')
+      actions.append(button('Inspect package', () => loadDeploymentPackage(item.id)));
+    if (['interrupted','pending'].includes(item.status)) actions.append(button('Recover original request', async () => {
+      if (pending || busy) throw new Error('Recover the current request first.');
+      remember({requestId:item.id,path:deploymentPaths[item.kind],label:item.kind + ' recovery',createdAt:item.createdAt},null);
+      await reconcile();
+    }));
+    row.append(identity,text('td',item.kind + ' · ' + item.status),text('td',time(item.updatedAt)),actions);
+    $('deployment-operations').append(row);
+  }
+  const total = data.pages.operationsTotal;
+  $('deployment-ops-page').textContent = total ? (deploymentOperationsOffset+1) + '–' + Math.min(deploymentOperationsOffset+data.operations.length,total) + ' of ' + total : 'No deployment operations';
+  $('deployment-ops-prev').disabled = deploymentOperationsOffset === 0;
+  $('deployment-ops-next').disabled = deploymentOperationsOffset + data.operations.length >= total;
+}
+async function refreshDeployment() {
+  const generation = ++deploymentLoadGeneration;
+  const data = await api('/api/deployment/status?' + new URLSearchParams({runsOffset:deploymentRunsOffset,
+    operationsOffset:deploymentOperationsOffset,limit:pageSize}));
+  if (generation !== deploymentLoadGeneration) return;
+  deploymentData = data; renderDeployment();
+  return data;
+}
+async function finishDeploymentReceipt(result, marker) {
+  await refreshDeployment();
+  if (marker.path === '/api/deployment/review') applyDeploymentReview(result);
+  if (marker.path === '/api/deployment/prepare') await loadDeploymentPackage(result.packageRequestId);
+  view('deployment');
+}
+async function reviewDeploymentTerms() {
+  if (!deploymentChosenRun || !$('deployment-version').value) throw new Error('Select a published run and its exact saved source version.');
+  const fields = ['origin','path','scheme','network','asset','payto','amount'];
+  for (const field of fields) if (!$('deployment-' + field).value.trim()) throw new Error('Enter ' + field + ' before reviewing merchant terms.');
+  const amount = $('deployment-amount').value.trim(), maxTimeoutSeconds = Number($('deployment-timeout').value);
+  if (!/^[0-9]+$/.test(amount) || !Number.isSafeInteger(maxTimeoutSeconds) || maxTimeoutSeconds < 1)
+    throw new Error('Use an integer atomic amount and positive integer timeout.');
+  await mutation('/api/deployment/review', {versionId:Number($('deployment-version').value),runId:deploymentChosenRun.id,
+    terms:{origin:$('deployment-origin').value.trim(),path:$('deployment-path').value.trim(),
+      payment:{scheme:$('deployment-scheme').value.trim(),network:$('deployment-network').value.trim(),
+        asset:$('deployment-asset').value.trim(),payTo:$('deployment-payto').value.trim(),amount,maxTimeoutSeconds}}},
+    'Review merchant deployment');
+}
+$('deployment-refresh').addEventListener('click',run(refreshDeployment));
+$('deployment-review').addEventListener('click',run(reviewDeploymentTerms));
+for (const name of ['version','origin','path','scheme','network','asset','payto','amount','timeout'])
+  $('deployment-' + name).addEventListener('input',deploymentChanged);
+$('deployment-prepare').addEventListener('click',run(async () => {
+  if (!deploymentReviewed) throw new Error('Review the current publication and merchant terms first.');
+  await mutation('/api/deployment/prepare',{reviewRequestId:deploymentReviewed.reviewRequestId,
+    expectedReviewSha256:deploymentReviewed.reviewSha256},'Prepare reviewed merchant package');
+}));
+$('deployment-stage').addEventListener('click',run(async () => {
+  if (!deploymentPrepared) throw new Error('Inspect the prepared package first.');
+  const port = Number($('deployment-port').value), id = $('deployment-release-id').value.trim();
+  if (!id || !Number.isSafeInteger(port) || port < 0 || port > 65535) throw new Error('Enter the immutable release ID and a port from 0 to 65535.');
+  const facilitator = $('deployment-facilitator').value.trim(), runtime = {port};
+  if (facilitator) runtime.facilitator = facilitator;
+  if ($('deployment-local-facilitator').checked) runtime.allowLocalFacilitator = true;
+  await mutation('/api/deployment/stage',{packageRequestId:deploymentPrepared.packageRequestId,
+    expectedSourceSha256:deploymentPrepared.sourceSha256,id,label:$('deployment-label').value.trim() || id,runtime},
+    'Stage original merchant release');
+}));
+$('deployment-console-open').addEventListener('click',run(async () => {
+  await mutation('/api/deployment/console/open',{},'Open original deployment controls');
+  if (deploymentData?.console?.running) $('deployment-console-link').focus();
+}));
+$('deployment-console-close').addEventListener('click',run(async () => {
+  const current = deploymentData?.console;
+  if (!current?.running) throw new Error('Refresh the current original console ownership.');
+  await mutation('/api/deployment/console/close',{instanceId:current.instanceId},'Close original controls and drain owned merchant');
+}));
+for (const [element, direction, collection] of [
+  ['deployment-runs-prev',-1,'runs'],['deployment-runs-next',1,'runs'],
+  ['deployment-ops-prev',-1,'operations'],['deployment-ops-next',1,'operations']])
+  $(element).addEventListener('click',run(async () => {
+    if (collection === 'runs') deploymentRunsOffset = Math.max(0,deploymentRunsOffset+direction*pageSize);
+    else deploymentOperationsOffset = Math.max(0,deploymentOperationsOffset+direction*pageSize);
+    await refreshDeployment();
+  }));
+
+document.querySelectorAll('[data-view]').forEach(node => node.addEventListener('click', run(async () => {
+  view(node.dataset.view);
+  if (node.dataset.view === 'deployment') await refreshDeployment();
+})));
+$('refresh').addEventListener('click', run(async () => { await refresh(); if (deploymentData) await refreshDeployment(); }));
 $('source-file').addEventListener('change', run(() => chooseUpload($('source-file').files[0])));
 $('import-source').addEventListener('click', run(importUpload));
 $('live-connection').addEventListener('change', invalidateWorkbook);
@@ -685,4 +897,3 @@ window.addEventListener('beforeunload', event => {
     if (pending) showRecovery(null, 'The workspace is unavailable. Keep this original request and check again after reopening the server.');
   } finally { busy = false; lock(); }
 })();
-

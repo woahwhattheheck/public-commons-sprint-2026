@@ -10,6 +10,19 @@ const LIMIT = 16 * 1024 * 1024;
 const runtimeImport = "import { buildUnpaidRequest } from './request.mjs';";
 const runtimeSource = readFileSync(new URL('./client-runtime.mjs', import.meta.url), 'utf8');
 const requestSource = readFileSync(new URL('./request.mjs', import.meta.url), 'utf8');
+const queryImport = "import { encodeQueryParameters, decodeQueryParameters } from '../query-parameters.mjs';";
+const querySource = readFileSync(new URL('../query-parameters.mjs', import.meta.url), 'utf8');
+if (!requestSource.includes(queryImport)) throw new Error('Developer query codec import is missing');
+// Keep the exact maintained codec in the dependency-free generated module.
+// Its lexical scope is separate from the original request/runtime helpers.
+const queryRuntime = [
+  'const { encodeQueryParameters, decodeQueryParameters } = (() => {',
+  querySource.replace(/^export /gm, ''),
+  'return { encodeQueryParameters, decodeQueryParameters };',
+  '})();',
+  '',
+].join('\n');
+const standaloneRequestSource = requestSource.replace(queryImport, queryRuntime);
 if (!runtimeSource.includes(runtimeImport)) throw new Error('Client runtime request import is missing');
 
 function pointer(root, ref) {
@@ -113,7 +126,7 @@ together for JavaScript execution and TypeScript autocomplete.
 
 \`buildRequest(operationId, inputs, authorization)\` is offline. The exact operation
 IDs are listed in \`operations\` and the declaration file. Supply \`inputs.path\`
-for dynamic paths, \`inputs.query\` as strings or repeated arrays of strings, and
+for dynamic paths, \`inputs.query\` as scalar text or nonempty arrays of textual items, and
 an explicit JSON \`inputs.body\` for JSON POST, PUT or PATCH. Multipart operations
 use \`inputs.multipart = {body: retainedUint8Array, contentType: exactContentType}\`.
 Prepare and review those bytes once with the merchant workspace or the original
@@ -137,7 +150,11 @@ not authorize a purchase. If an operation has multiple advertised payment choice
 authorization must include an explicit zero-based \`acceptIndex\`; it has no default
 in that case. The selected option supplies the exact original payment identity.
 Inputs are serialized by the original SF30 developer
-request builder. JSON bodies reject lossy values and cycles. Body bytes must fit
+request builder. Saved query serialization determines whether array items become
+repeated keys or one comma-separated field. Textual numeric and boolean values
+are checked against the declared type; explicit null and empty arrays have no
+implicit wire representation. Offers without serialization metadata retain their
+existing raw string/repeated-key behavior. JSON bodies reject lossy values and cycles. Body bytes must fit
 the merchant's exported request limit (1 MiB by default, up to 16 MiB).
 Input declarations project advertised Bazaar metadata; numeric ranges, patterns
 and the application's complete business constraints remain with the seller.
@@ -213,7 +230,7 @@ export function sellerClientSnapshot(input) {
 /** Exact bytes in; standalone source and declaration artifacts out. No I/O beyond source reads. */
 export function generateSellerClient(input) {
   const snapshot = sellerClientSnapshot(input);
-  const runtime = runtimeSource.replace(runtimeImport, requestSource.replace(/^export /gm, ''))
+  const runtime = runtimeSource.replace(runtimeImport, standaloneRequestSource.replace(/^export /gm, ''))
     .replace('export function createClientRuntime', 'function createClientRuntime');
   const javascript = `// MIT. Generated from original SF30 seller OpenAPI SHA-256 ${snapshot.sourceSha256}.\n` + runtime +
     '\nconst generated = createClientRuntime(JSON.parse(' + JSON.stringify(JSON.stringify(snapshot)) + '));\n' +
