@@ -58,9 +58,12 @@ export async function startMatomoWorkspace({port=0,...options}={}) {
         if(url.pathname==='/api/releases'){send(200,await model.merchant.releases());return;}
         if(url.pathname==='/api/release-diff'){send(200,await model.merchant.diff(url.searchParams.get('before'),url.searchParams.get('after')));return;}
         if(url.pathname==='/api/delivery'){send(200,await model.merchant.inspectDelivery(id,url.searchParams.get('query')??undefined));return;}
+        if(url.pathname==='/api/handover'){send(200,{handover:model.handover.handover(id)});return;}
+        if(url.pathname==='/api/receiving'){send(200,{receiving:model.handover.receiving(id)});return;}
+        if(url.pathname==='/api/receiving/rows'){send(200,await model.handover.receivedRows(id,{offset,limit}));return;}
         if(url.pathname==='/api/source-read'){send(200,await model.sourceRead(id));return;}
         if(url.pathname.startsWith('/files/')){
-          const value=await model.artifact(url.pathname.slice(7),id,{kind:url.searchParams.get('kind')});
+          const value=await model.artifact(url.pathname.slice(7),id,{kind:url.searchParams.get('kind')??undefined});
           const disposition='attachment; filename="'+value.name.replace(/[^A-Za-z0-9_.-]/g,'_')+'"';
           if(value.content){res.writeHead(200,{...headers,'Content-Type':value.mediaType,'Content-Disposition':disposition,'Content-Length':value.content.length});res.end(value.content);return;}
           if(value.stream){res.writeHead(200,{...headers,'Content-Type':value.mediaType,'Content-Disposition':disposition});await pipeline(Readable.from(value.stream),res);return;}
