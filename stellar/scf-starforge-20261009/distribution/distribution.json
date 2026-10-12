@@ -391,7 +391,8 @@
     "upstream-tls": "stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-tls/cli.mjs",
     "fred": "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/cli.mjs",
     "browser-wallet": "stellar/scf-starforge-20261009/sf103-native-buyer-signer/browser-wallet/cli.mjs",
-    "frictionless": "stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/cli.mjs"
+    "frictionless": "stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/cli.mjs",
+    "mcp-analysis-archive": "stellar-forge/mcp-paid-agent/native-analysis-archive-download.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -901,7 +902,8 @@
     "./buyer/browser-wallet/server": "./source/stellar/scf-starforge-20261009/sf103-native-buyer-signer/browser-wallet/server.mjs",
     "./seller/frictionless": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/source.mjs",
     "./seller/frictionless/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/model.mjs",
-    "./seller/frictionless/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/release.mjs"
+    "./seller/frictionless/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/release.mjs",
+    "./buyer/mcp/analysis-archives": "./source/stellar-forge/mcp-paid-agent/native-analysis-archive-download.mjs"
   },
   "nativePeers": {
     "@x402/core": {
