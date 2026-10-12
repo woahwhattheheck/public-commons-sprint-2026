@@ -9,11 +9,28 @@ from urllib.request import Request, HTTPCookieProcessor, build_opener, HTTPRedir
 from concurrent.futures import ThreadPoolExecutor
 from http.client import HTTPSConnection
 from queue import LifoQueue, Empty
-import base64, json, threading, os, sys, ssl, time
+import base64, hashlib, json, threading, os, sys, ssl, time
+
+if len(sys.argv) not in (2, 3) or (len(sys.argv) == 3 and sys.argv[2] != "--public-flight-profile"):
+    raise SystemExit("Usage: playground-bridge.py OUTPUT [--public-flight-profile]")
+PUBLIC_FLIGHTS = len(sys.argv) == 3
+if PUBLIC_FLIGHTS:
+    from public_flight_profile import (
+        PublicFlightProfile, PublicFlightPolicyError, PROFILE_ID, CAT_PATH,
+    )
+    public_profile = PublicFlightProfile()
+else:
+    public_profile = None
+    class PublicFlightPolicyError(ValueError):
+        pass
 
 ROOT = Path(sys.argv[1]).resolve()
 ROOT.mkdir(parents=True, exist_ok=True, mode=0o700)
 ORIGIN = "https://playground.opensearch.org"
+if public_profile:
+    profile_path = ROOT / "public-egress-profile.json"
+    profile_path.write_text(json.dumps(public_profile.describe(), indent=2) + "\n")
+    os.chmod(profile_path, 0o600)
 jar = CookieJar()
 class GuestRedirect(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
@@ -35,7 +52,10 @@ for guest_step in range(5):
     if guest_status not in (301, 302, 303, 307, 308) or not guest_location:
         raise RuntimeError("Anonymous session bootstrap status " + str(guest_status))
     guest_url = urljoin(guest_url, guest_location)
-    if urlsplit(guest_url).scheme != "https" or urlsplit(guest_url).hostname != "playground.opensearch.org":
+    guest_target = urlsplit(guest_url)
+    if (guest_target.scheme != "https" or guest_target.hostname != "playground.opensearch.org"
+            or (PUBLIC_FLIGHTS and (guest_target.port not in (None, 443)
+                or guest_target.username is not None or guest_target.password is not None))):
         raise RuntimeError("Unexpected anonymous session destination")
 else:
     raise RuntimeError("Anonymous session redirect limit")
@@ -76,6 +96,19 @@ def record_request(item):
         os.chmod(ROOT / "native-requests.jsonl", 0o600)
 
 def native(method, path, body=None):
+    permit = None
+    if public_profile:
+        try:
+            permit = public_profile.begin(method, path, body)
+        except ValueError as error:
+            record_request({
+                "profile": PROFILE_ID, "rejectedBeforeSend": True,
+                "code": str(error), "method": method,
+                "pathSha256": hashlib.sha256(path.encode()).hexdigest(),
+                "bodySha256": hashlib.sha256(body or b"").hexdigest(),
+            })
+            raise
+    profile_response_observed = False
     began = time.monotonic()
     url = ORIGIN + "/api/console/proxy?" + urlencode({"path": path, "method": method})
     request = Request(url, data=body or b"", method="POST", headers={
@@ -86,6 +119,9 @@ def native(method, path, body=None):
             "startedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "transport": "http-keepalive-pool" if pooled else "urllib",
             "reusedConnection": False}
+    if permit is not None:
+        item.update({"profile": PROFILE_ID, "requestKind": permit.kind,
+                     "requestBodySha256": permit.request_sha256})
     slot = None
     try:
         if pooled:
@@ -145,6 +181,9 @@ def native(method, path, body=None):
         item.update({"status": status, "responseBytes": len(raw)})
         if status >= 400:
             item["nativeError"] = raw[:16000].decode("utf-8", "replace")
+        if public_profile:
+            public_profile.observe(permit, status, raw)
+        profile_response_observed = True
         return status, response_headers, raw
     except Exception as error:
         item["transportError"] = type(error).__name__
@@ -155,6 +194,8 @@ def native(method, path, body=None):
         # creation. The caller retains the actual failed attempt.
         raise
     finally:
+        if public_profile and permit is not None:
+            public_profile.finish(permit, failed=not profile_response_observed)
         if slot is not None:
             slots.put(slot)
         item["durationMs"] = round((time.monotonic() - began) * 1000, 3)
@@ -171,7 +212,7 @@ def close_connections():
 
 with ThreadPoolExecutor(max_workers=2) as metadata_reads:
     root_read = metadata_reads.submit(native, "GET", "/")
-    index_read = metadata_reads.submit(native, "GET", "/_cat/indices?format=json&h=index,docs.count&bytes=b")
+    index_read = metadata_reads.submit(native, "GET", CAT_PATH if PUBLIC_FLIGHTS else "/_cat/indices?format=json&h=index,docs.count&bytes=b")
     status, _, raw = root_read.result()
     index_status, _, index_raw = index_read.result()
 if status != 200:
@@ -213,6 +254,14 @@ class Handler(BaseHTTPRequestHandler):
         self.handle_native()
     def handle_native(self):
         try:
+            if PUBLIC_FLIGHTS:
+                credentials = ("authorization", "proxy-authorization", "cookie",
+                               "x-api-key", "api-key", "x-auth-token")
+                lengths = self.headers.get_all("content-length", [])
+                if (any(self.headers.get(name) is not None for name in credentials)
+                        or self.headers.get("transfer-encoding") is not None
+                        or len(lengths) > 1):
+                    raise PublicFlightPolicyError("PUBLIC_FLIGHT_HEADERS_REJECTED")
             parsed = urlsplit(self.path)
             if parsed.scheme or parsed.netloc or not self.path.startswith("/"):
                 self.send_error(400)
@@ -241,6 +290,18 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
             self.wfile.write(raw)
+        except PublicFlightPolicyError as error:
+            raw = json.dumps({"error": "PUBLIC_FLIGHT_REQUEST_REJECTED",
+                              "code": str(error)}).encode()
+            try:
+                self.send_response(403)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(raw)))
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(raw)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
         except (BrokenPipeError, ConnectionResetError):
             pass
         except Exception:
@@ -261,13 +322,15 @@ endpoint = "http://127.0.0.1:" + str(server.server_port) + "/"
     "endpoint": endpoint, "pid": os.getpid(), "index": index,
     "engineMetadata": str(ROOT / "native-engine.json"),
     "mapping": str(ROOT / "native-index-mapping.json"),
-    "source": ORIGIN
+    "source": ORIGIN, "publicProfile": PROFILE_ID if PUBLIC_FLIGHTS else None
 }, indent=2) + "\n")
 print(json.dumps({"endpoint": endpoint, "index": index,
                   "version": metadata["version"]["number"],
+                  "publicProfile": PROFILE_ID if PUBLIC_FLIGHTS else None,
                   "ready": str(ROOT / "bridge-ready.json")}), flush=True)
 try:
     server.serve_forever()
 finally:
     server.server_close()
     close_connections()
+

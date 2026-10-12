@@ -540,6 +540,32 @@ function manifestMatchesProfile(manifest, profile, roots) {
   need(same(trees, profile.source.trees), 'PAID_JOB_RECOVERY_CAPTURE_SOURCE_MISMATCH',
     'The encrypted capture contains source bytes that differ from the reviewed typed plan.');
 }
+/** Compare an already authenticated SF101 manifest with the exact retained
+ * reviewed plan bytes. This is a pure completed-capture check: the maintained
+ * runner verifies ciphertext/HMAC first, then uses this check before adopting a
+ * found bundle even if the original plan or live merchant has since changed. */
+export function inspectCapturedPaidJobManifest({ planBytes, manifest } = {}) {
+  need(Buffer.isBuffer(planBytes) || planBytes instanceof Uint8Array,
+    'PAID_JOB_RECOVERY_PLAN_BYTES_REQUIRED', 'Supply the exact retained reviewed plan bytes.', 400);
+  const raw = Buffer.from(planBytes);
+  need(raw.length > 0 && raw.length <= PLAN_LIMIT, 'PAID_JOB_RECOVERY_PLAN_LIMIT', undefined, 400);
+  const { profile, roots } = typedPlan(raw), planSha256 = digest(raw);
+  need(object(manifest) && manifest.schema === BUNDLE_SCHEMA &&
+    Array.isArray(manifest.roots) && Array.isArray(manifest.entries) &&
+    manifest.entries.length <= MAX_ENTRIES,
+  'PAID_JOB_RECOVERY_BUNDLE_INVALID', 'Supply the original authenticated SF101 manifest.');
+  const retainedPlan = manifest.entries.find(entry => entry?.path === PLAN_ROOT);
+  need(retainedPlan?.kind === 'file' && retainedPlan.size === raw.length &&
+    retainedPlan.sha256 === planSha256,
+  'PAID_JOB_RECOVERY_PLAN_CHANGED', 'The captured typed plan differs from its retained reviewed bytes.');
+  need(manifest.capture?.schema === 'stellar-forge.merchant-recovery-capture.v1' &&
+    HASH.test(manifest.capture.id ?? '') && manifest.capture.planSha256 === planSha256,
+  'PAID_JOB_RECOVERY_CAPTURE_MISMATCH', 'The authenticated capture binds a different reviewed typed plan.');
+  manifestMatchesProfile(manifest, profile, roots);
+  return { status: 'PAID_JOB_RECOVERY_CAPTURE_MATCHED', planSha256,
+    profileSha256: identity(profile), captureId: manifest.capture.id };
+}
+
 async function verifiedBundle(bundleDirectory, passphraseEnv, expectedManifestSha256) {
   absolute(bundleDirectory, 'encrypted bundle'); await privateDirectory(bundleDirectory);
   passphraseName(passphraseEnv);

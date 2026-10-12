@@ -6,7 +6,7 @@ The executable owns source intake and preparation. SF88 owns the buyer configura
 
 ## Receive the original request
 
-Use a complete Commons checkout with Python 3.11+ and Node 22+. Run from the checkout root. Choose a private parent directory that already exists.
+Use a complete Commons checkout with Python 3.11+ and Node 22.16+. Run from the checkout root. Choose a private parent directory that already exists.
 
 ```sh
 AGENTSMITH_CHECKOUT="$PWD"
@@ -100,7 +100,11 @@ python3 stellar/scf-starforge-20261009/partners/agentsmith/capture.py inspect \
   --capture "$AGENTSMITH_PRIVATE/source"
 ```
 
-Reopening checks the retained request, original HTTP bodies, decoded header, complete saved offer and selected terms together. `restore`, `capture` and `prepare` create new output directories. An interrupted preparation retains its original files; correct setup, keep the same source and intent, and select a fresh preparation output directory.
+Reopening checks the retained request, original HTTP bodies, decoded header, complete saved offer and selected terms together. Repeat `restore` or `prepare` with the original directory and stable intent after an interruption. Both commands retain completed, byte-identical files and continue the same operation. They publish complete private files atomically and use an operating-system lock to prevent concurrent writers.
+
+Preparation derives the exact original SF88 configuration before reopening an existing draft. If the native CLI completed `review.json` before its output was saved, the maintained preparer reopens that same configuration and the original buyer reviews it again. Request bytes, configuration, source capture, intent and response path must still match. Existing preparation records and successful review output remain intact.
+
+`capture` obtains fresh merchant terms in a new source directory. The receiving packet at `stellar-forge/developer-site/dist/agentsmith.html` carries this same source program and adds the original operator initializer's resume operation, exact operator/request binding, and cancellation propagation through the native child process.
 
 For another agreed AgentSmith seller, pass its actual HTTPS URL, facilitator and JSON body:
 

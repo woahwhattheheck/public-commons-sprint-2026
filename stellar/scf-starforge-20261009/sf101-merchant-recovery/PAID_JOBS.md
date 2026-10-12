@@ -238,9 +238,12 @@ All profile functions are exported by **sf101-merchant-recovery/paid-jobs.mjs** 
 | preparePaidJobRecoveryPlan({planFile, ...selection}) | Create the ordinary SF101 plan with its encrypted typed mapping |
 | inspectPaidJobRecoveryPlan(planFile) | Match current original saved state against the exact typed plan |
 | withPaidJobRecoveryCapture({planFile, expectedPlanSha256}, operation) | Wrap the maintained local runner’s new capture and verification block |
+| inspectCapturedPaidJobManifest({planBytes, manifest}) | Match an authenticated completed capture against retained reviewed plan bytes without reading current source |
 | capturePaidJobRecovery({planFile, bundleDirectory, passphraseEnv, expectedPlanSha256?, captureId?}) | Run original snapshot and verification with exact typed capture binding |
 | inspectRestoredPaidJobs({bundleDirectory, restoreDirectory, passphraseEnv, expectedManifestSha256?}) | Review the original completed restore or a retained receiving operation |
 | prepareRestoredPaidJobs({...receivingSelection, expectedReviewSha256}) | Publish the original merchant’s verified physical binding and retain its receiving result |
+
+A maintained capture runner retains the exact reviewed plan bytes in its private request before starting capture. After the original SF101 runner authenticates every encrypted object and manifest, it calls **inspectCapturedPaidJobManifest({planBytes, manifest})** before adopting a completed bundle. The function accepts a **Buffer** or **Uint8Array**, checks the encrypted plan entry and capture identity against those bytes, and matches every selected plaintext tree against the typed review. It returns **PAID_JOB_RECOVERY_CAPTURE_MATCHED**, **planSha256**, **profileSha256** and **captureId**. This same check applies when a process stopped after snapshot creation but before the typed callback returned; it uses the retained plan even after the live merchant changes or the original plan path moves. The original verification still owns ciphertext and HMAC authentication.
 
 A selection contains **configPath**, **directory** and **applicationDirectory**, with optional **deliveryDirectories**, **destinationsFile** and **roots: [{name, path}]**. The original **readJobMerchantSource** and **adoptRestoredJobSource** exports own source binding. Shared **inspectJobRecoveryState** and **acquireJobRecoveryLeases** exports own the portable state inventory and the actual merchant, outbox and result-delivery leases.
 
