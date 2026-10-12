@@ -1,3 +1,5 @@
+import { createSorobanWatchView } from './watch.mjs';
+import { saveSourceFolder } from './source-transfer.mjs';
 const $ = (id) => document.getElementById(id);
 const tokenKey = 'soroban-events-session:' + location.origin;
 let token = new URLSearchParams(location.hash.slice(1)).get('token') ?? sessionStorage.getItem(tokenKey) ?? '';
@@ -16,7 +18,8 @@ async function request(route, body, binary = false) {
   if (!response.ok) {
     let result; try { result = await response.json(); } catch {}
     const error = new Error(result?.error?.message ?? 'Workspace returned HTTP ' + response.status);
-    error.code = result?.error?.code; error.definitive = response.status < 500;
+    error.code = result?.error?.code;
+    error.definitive = response.status < 500 && !['WATCH_BUSY', 'WATCH_REQUEST_PENDING'].includes(error.code);
     if (response.status === 401) { $('session').hidden = false; $('workspace').hidden = true; }
     throw error;
   }
@@ -73,6 +76,7 @@ async function refresh(message = true) {
     if (saved) { try { pending = JSON.parse(saved); } catch { sessionStorage.removeItem(pendingKey()); } }
   }
   showPending(); renderPlans(); renderCaptures(); renderEditions();
+  await watchView.refresh();
   if (message) notice('Workspace refreshed.');
 }
 function renderPlans() {
@@ -189,7 +193,8 @@ function exportFile(exported, path) { return path === 'manifest.json' ? {path,sh
 async function sourceBytes(exported, path) {
   const file = exportFile(exported, path);
   if (!file) throw new Error('The selected original export does not contain ' + path);
-  const bytes = await request('/api/source-file?' + new URLSearchParams({exportId:exported.id,path}), undefined, true);
+  const route = exported.watchId ? '/api/watch/source-file?' : '/api/source-file?';
+  const bytes = await request(route + new URLSearchParams({exportId:exported.id,path}), undefined, true);
   if ((file.bytes !== undefined && file.bytes !== bytes.length) || await sha256(bytes) !== file.sha256) throw new Error('Received source bytes differ from the selected original export: ' + path);
   return bytes;
 }
@@ -212,51 +217,43 @@ function renderExport() {
 const CRC_TABLE=Array.from({length:256},(_,number)=>{let c=number;for(let bit=0;bit<8;bit++)c=c&1?0xedb88320^(c>>>1):c>>>1;return c>>>0;});
 function crc32(bytes){let crc=0xffffffff;for(const byte of bytes)crc=CRC_TABLE[(crc^byte)&255]^(crc>>>8);return(crc^0xffffffff)>>>0;}
 function header(length){const bytes=new Uint8Array(length);return{bytes,view:new DataView(bytes.buffer)};}
-async function downloadArchive(){
-  if(!selectedExport || transferring)return;
-  const exported = structuredClone(selectedExport);
+async function downloadArchive(selection = selectedExport, options = {}){
+  if(!selection || transferring)return;
+  const exported = structuredClone(selection), progress = $(options.progressId ?? 'export-progress');
+  const prefix = options.filenamePrefix ?? 'soroban-events', identity = exported.editionId ?? exported.watchId ?? exported.id;
   if(exported.manifest.bytes>256*1024*1024)throw new Error('Use Save source folder for an export larger than 256 MiB.');
-  setTransferring(true);
+  setTransferring(true); options.setTransferring?.(true);
   try {
   const entries=[{path:'manifest.json'},...exported.manifest.files],local=[],central=[];let offset=0;
   if(entries.length>65535)throw new Error('Use Save source folder for this export.');
   for(let index=0;index<entries.length;index++){
     const file=entries[index],bytes=await sourceBytes(exported,file.path),name=new TextEncoder().encode(file.path),crc=crc32(bytes);
-    $('export-progress').textContent='Receiving original file '+(index+1)+' of '+entries.length;
+    progress.textContent='Receiving original file '+(index+1)+' of '+entries.length;
     const lh=header(30);lh.view.setUint32(0,0x04034b50,true);lh.view.setUint16(4,20,true);lh.view.setUint16(6,0x800,true);lh.view.setUint16(12,33,true);lh.view.setUint32(14,crc,true);lh.view.setUint32(18,bytes.length,true);lh.view.setUint32(22,bytes.length,true);lh.view.setUint16(26,name.length,true);
     const ch=header(46);ch.view.setUint32(0,0x02014b50,true);ch.view.setUint16(4,20,true);ch.view.setUint16(6,20,true);ch.view.setUint16(8,0x800,true);ch.view.setUint16(14,33,true);ch.view.setUint32(16,crc,true);ch.view.setUint32(20,bytes.length,true);ch.view.setUint32(24,bytes.length,true);ch.view.setUint16(28,name.length,true);ch.view.setUint32(42,offset,true);
     local.push(lh.bytes,name,bytes);central.push(ch.bytes,name);offset+=30+name.length+bytes.length;
   }
   const centralBytes=central.reduce((total,part)=>total+part.length,0),end=header(22);end.view.setUint32(0,0x06054b50,true);end.view.setUint16(8,entries.length,true);end.view.setUint16(10,entries.length,true);end.view.setUint32(12,centralBytes,true);end.view.setUint32(16,offset,true);
-  download('soroban-events-'+exported.editionId+'.zip',new Blob([...local,...central,end.bytes]),'application/zip');$('export-progress').textContent='Complete source ZIP downloaded for edition ' + exported.editionId + '.';
-  } finally { setTransferring(false); }
+  download(prefix+'-'+identity+'.zip',new Blob([...local,...central,end.bytes]),'application/zip');progress.textContent='Complete source ZIP downloaded for ' + identity + '.';
+  } finally { setTransferring(false); options.setTransferring?.(false); }
 }
-async function saveFolder(){
-  if(!selectedExport || transferring)return;
-  const exported = structuredClone(selectedExport);
-  setTransferring(true);
+async function saveFolder(selection = selectedExport, options = {}){
+  if(!selection || transferring)return;
+  const exported = structuredClone(selection), progress = $(options.progressId ?? 'export-progress');
+  const prefix = options.filenamePrefix ?? 'soroban-events';
+  setTransferring(true); options.setTransferring?.(true);
   try {
-    const root=await window.showDirectoryPicker({mode:'readwrite'});
-    const folder=await root.getDirectoryHandle('soroban-events-'+exported.id.slice(0,16),{create:true});
-    const entries=[{path:'manifest.json'},...exported.manifest.files];
-    for(let index=0;index<entries.length;index++){
-      const file=entries[index],parts=file.path.split('/');let target=folder;
-      for(const part of parts.slice(0,-1))target=await target.getDirectoryHandle(part,{create:true});
-      let existing;try{existing=await target.getFileHandle(parts.at(-1));}catch(error){if(error.name!=='NotFoundError')throw error;}
-      if(existing){
-        const original=exportFile(exported,file.path),saved=await existing.getFile();
-        if((original.bytes!==undefined && original.bytes!==saved.size) || await sha256(await saved.arrayBuffer())!==original.sha256)throw new Error('The selected folder contains different original bytes at '+file.path+'. Choose a new destination folder.');
-      } else {
-        const bytes=await sourceBytes(exported,file.path);
-        const handle=await target.getFileHandle(parts.at(-1),{create:true}),writer=await handle.createWritable();
-        try{await writer.write(bytes);await writer.close();}
-        catch(error){await writer.abort().catch(()=>{});await target.removeEntry(parts.at(-1)).catch(()=>{});throw error;}
-      }
-      $('export-progress').textContent='Saved original file '+(index+1)+' of '+entries.length;
-    }
-    $('export-progress').textContent='Complete source folder saved for edition ' + exported.editionId + '.';
-  } finally { setTransferring(false); }
+    const route = exported.watchId ? '/api/watch/source-file?' : '/api/source-file?';
+    const result = await saveSourceFolder({exported,filenamePrefix:prefix,
+      readRange:(path,offset,length)=>request(route+new URLSearchParams({exportId:exported.id,path,offset:String(offset),length:String(length)}),undefined,true),
+      progress(value){progress.textContent=value.phase+' · '+value.index+' of '+value.fileCount+' files · '+value.bytes.toLocaleString()+' of '+value.totalBytes.toLocaleString()+' bytes\n'+value.path;}});
+    progress.textContent='Complete source folder saved: '+result.directory+'\n'+result.fileCount+' original files · '+result.bytes.toLocaleString()+' bytes';
+  } finally {setTransferring(false);options.setTransferring?.(false);}
 }
+const watchView = createSorobanWatchView({ request, notice, getWorkspace: () => state,
+  refreshWorkspace: () => refresh(false),
+  openCapture: async (captureId) => { await refresh(false); selectedCapture=captureId;show('captures');renderCaptureDetail(); },
+  downloadArchive, saveFolder });
 for(const button of document.querySelectorAll('[data-view]'))button.addEventListener('click',()=>show(button.dataset.view));
 $('session-form').addEventListener('submit',(event)=>{event.preventDefault();token=$('session-token').value.trim();sessionStorage.setItem(tokenKey,token);run(()=>refresh());});
 $('refresh').addEventListener('click',()=>run(()=>refresh()));
@@ -279,3 +276,4 @@ $('download-export').addEventListener('click',()=>run(downloadArchive));
 $('save-export-folder').addEventListener('click',()=>run(saveFolder));
 fillPlan();
 if(token)run(()=>refresh(false));else $('session').hidden=false;
+setInterval(()=>{if(state && token && !busy && document.visibilityState==='visible')refresh(false).catch(()=>{});},5000);

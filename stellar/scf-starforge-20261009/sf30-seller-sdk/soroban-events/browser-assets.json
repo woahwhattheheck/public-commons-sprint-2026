@@ -24,10 +24,31 @@
       ]
     ],
     [
+      "/watch.mjs",
+      [
+        "public/watch.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
       "/style.css",
       [
         "public/style.css",
         "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/source-transfer.mjs",
+      [
+        "public/source-transfer.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/source-sha256.mjs",
+      [
+        "../../sf88-operator-buyer-cli/job-workspace/inputs/public/sha256.mjs",
+        "text/javascript; charset=utf-8"
       ]
     ]
   ]

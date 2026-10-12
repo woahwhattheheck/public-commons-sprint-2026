@@ -5,15 +5,12 @@ import { resolve } from 'node:path';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { openSorobanEventsWorkspace, inspectSorobanEventsWorkspace } from './engine.mjs';
 import { SorobanEventsError, requireValue, integer } from './rpc.mjs';
+import { openSorobanEventWatches } from './watch.mjs';
+import { readBrowserAssets } from '../../distribution/browser-assets.mjs';
 
-const ASSETS = new Map([
-  ['/', ['index.html', 'text/html; charset=utf-8']],
-  ['/index.html', ['index.html', 'text/html; charset=utf-8']],
-  ['/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']],
-  ['/style.css', ['style.css', 'text/css; charset=utf-8']],
-]);
+const ASSETS = await readBrowserAssets(new URL('./browser-assets.json', import.meta.url));
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'";
-const API_CODES = { NOT_FOUND: 404, REVISION_CONFLICT: 409, REQUEST_CONFLICT: 409, WORKSPACE_BUSY: 409, SOURCE_CONFLICT: 409, CAPTURE_INCOMPLETE: 409, CONNECTION_REQUIRED: 409, WORKSPACE_CLOSED: 503 };
+const API_CODES = { NOT_FOUND: 404, REVISION_CONFLICT: 409, REQUEST_CONFLICT: 409, WORKSPACE_BUSY: 409, WATCH_BUSY: 409, WATCH_REQUEST_PENDING: 409, WATCH_CLOSED: 503, SOURCE_CONFLICT: 409, CAPTURE_INCOMPLETE: 409, CONNECTION_REQUIRED: 409, WORKSPACE_CLOSED: 503 };
 function send(res, status, value, contentType = 'application/json; charset=utf-8', headers = {}) {
   const bytes = Buffer.isBuffer(value) ? value : Buffer.from(JSON.stringify(value));
   res.writeHead(status, { 'content-type': contentType, 'content-length': bytes.length,
@@ -46,8 +43,25 @@ export async function startSorobanEventsServer(options = {}) {
   }
   const workspace = options.workspace ?? await openSorobanEventsWorkspace(options);
   const ownedWorkspace = !options.workspace;
+  let watches;
+  const ownedWatches = !options.watches;
+  try { watches = options.watches ?? await openSorobanEventWatches({ workspace, directory: options.watchDirectory }); }
+  catch (error) { if (ownedWorkspace) await workspace.close(); throw error; }
   const tasks = new Set();
-  let origin;
+  const runnerAbort = new AbortController();
+  let origin, closing, runnerTask = null;
+  let runnerState = { status: 'STARTING', startedAt: null, lastError: null };
+  function startRunner() {
+    if (closing || runnerTask || runnerAbort.signal.aborted) return;
+    runnerState = { status: 'RUNNING', startedAt: new Date().toISOString(), lastError: null };
+    const task = Promise.resolve().then(() => watches.run({ signal: runnerAbort.signal })).then(() => {
+      runnerState = { ...runnerState, status: 'STOPPED' };
+    }, (error) => {
+      runnerState = { ...runnerState, status: runnerAbort.signal.aborted ? 'STOPPED' : 'INTERRUPTED',
+        lastError: runnerAbort.signal.aborted ? null : { code: error.code ?? 'WATCH_RUNNER_ERROR', message: error.message } };
+    }).finally(() => { if (runnerTask === task) runnerTask = null; });
+    runnerTask = task;
+  }
   const server = createServer((req, res) => {
     const task = (async () => {
       const url = new URL(req.url, origin ?? 'http://127.0.0.1');
@@ -55,26 +69,49 @@ export async function startSorobanEventsServer(options = {}) {
       if (req.headers.origin && req.headers.origin !== origin) return send(res, 403, { error: { code: 'ORIGIN_MISMATCH', message: 'Use the original operator page' } });
       const asset = ASSETS.get(url.pathname);
       if (req.method === 'GET' && asset) {
-        const bytes = await fs.readFile(new URL('./public/' + asset[0], import.meta.url));
-        return send(res, 200, bytes, asset[1]);
+        const bytes = await fs.readFile(asset.url);
+        return send(res, 200, bytes, asset.type);
       }
       if (!url.pathname.startsWith('/api/')) return send(res, 404, { error: { code: 'NOT_FOUND', message: 'Unknown workspace route' } });
       if (!authenticated(req, token)) return send(res, 401, { error: { code: 'AUTH_REQUIRED', message: 'Open the private workspace link or enter its session token' } });
       const args = Object.fromEntries(url.searchParams);
       if (req.method === 'GET') {
         if (url.pathname === '/api/state') return send(res, 200, await workspace.describe());
+        if (url.pathname === '/api/watches') return send(res, 200, { ...await watches.describe(), runner: runnerState });
+        if (url.pathname === '/api/watch') return send(res, 200, await watches.watchStatus({ watchId: args.watchId }));
+        if (url.pathname === '/api/watch/source-file') {
+          const result = await watches.sourceFile({ exportId: args.exportId, path: args.path,
+            ...(args.offset === undefined ? {} : { offset: Number(args.offset) }),
+            ...(args.length === undefined ? {} : { length: Number(args.length) }) });
+          return send(res, 200, result.content, result.contentType,
+            { 'content-disposition': 'attachment; filename="' + args.path.split('/').at(-1).replace(/[^A-Za-z0-9._-]/g, '_') + '"' });
+        }
         if (url.pathname === '/api/capture') return send(res, 200, await workspace.captureStatus({ captureId: args.captureId }));
         if (url.pathname === '/api/events') return send(res, 200, await workspace.eventPage({ captureId: args.captureId, after: args.after ?? null, limit: args.limit === undefined ? 100 : Number(args.limit), contractId: args.contractId || null, type: args.type || null }));
         if (url.pathname === '/api/edition') return send(res, 200, await workspace.edition({ editionId: args.editionId }));
         if (url.pathname === '/api/publisher-source') return send(res, 200, await workspace.publisherSource({ editionId: args.editionId }));
         if (url.pathname === '/api/source-file') {
-          const result = await workspace.sourceFile({ exportId: args.exportId, path: args.path });
+          const result = await workspace.sourceFile({ exportId: args.exportId, path: args.path,
+            ...(args.offset === undefined ? {} : { offset: Number(args.offset) }),
+            ...(args.length === undefined ? {} : { length: Number(args.length) }) });
           return send(res, 200, result.content, result.contentType,
             { 'content-disposition': 'attachment; filename="' + args.path.split('/').at(-1).replace(/[^A-Za-z0-9._-]/g, '_') + '"' });
         }
       }
       if (req.method === 'POST') {
         requireValue((req.headers['content-type'] ?? '').split(';')[0].trim() === 'application/json', 'CONTENT_TYPE', 'Use application/json for workspace changes');
+        const watchMethods = new Map([
+          ['/api/watch/save', 'watchSave'], ['/api/watch/configure', 'watchConfigure'],
+          ['/api/watch/start', 'watchStart'], ['/api/watch/pause', 'watchPause'],
+          ['/api/watch/repair', 'watchRepair'], ['/api/watch/export', 'watchExport'],
+          ['/api/watch/receive', 'watchReceive'],
+        ]);
+        const watchMethod = watchMethods.get(url.pathname);
+        if (watchMethod) {
+          const result = await watches[watchMethod](await bodyJSON(req));
+          if (watchMethod === 'watchStart' || watchMethod === 'watchConfigure') startRunner();
+          return send(res, 200, result);
+        }
         const methods = new Map([
           ['/api/plan', 'planSave'], ['/api/capture/start', 'captureStart'], ['/api/capture/resume', 'captureResume'],
           ['/api/edition', 'editionCreate'], ['/api/export', 'sourceExport'], ['/api/receive', 'sourceReceive'],
@@ -93,18 +130,21 @@ export async function startSorobanEventsServer(options = {}) {
   });
   try {
     await new Promise((accept, reject) => { server.once('error', reject); server.listen(port, host, accept); });
-  } catch (error) { if (ownedWorkspace) await workspace.close(); throw error; }
+  } catch (error) { if (ownedWatches) await watches.close(); if (ownedWorkspace) await workspace.close(); throw error; }
   const address = server.address();
   const hostname = host === '::1' ? '[::1]' : host;
   origin = 'http://' + hostname + ':' + address.port;
-  let closing;
-  return { workspace, origin, url: origin + '/#token=' + encodeURIComponent(token), token, address,
+  startRunner();
+  return { workspace, watches, origin, url: origin + '/#token=' + encodeURIComponent(token), token, address,
     close() {
       if (!closing) closing = (async () => {
+        runnerAbort.abort();
         const stopped = new Promise((accept) => server.close(accept));
         server.closeIdleConnections?.();
         await Promise.allSettled([...tasks]);
+        if (runnerTask) await runnerTask;
         await stopped;
+        if (ownedWatches) await watches.close();
         if (ownedWorkspace) await workspace.close();
       })();
       return closing;
