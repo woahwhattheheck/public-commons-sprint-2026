@@ -567,6 +567,8 @@ def application_modules(source):
         modules["duckdb"] = "stellar_forge_buyer.duckdb_cli"
     if source.get("scripts", {}).get("stellar-forge-postgres") == "stellar_forge_buyer.postgres_cli:main":
         modules["postgres"] = "stellar_forge_buyer.postgres_cli"
+    if source.get("scripts", {}).get("stellar-forge-synthesis") == "stellar_forge_buyer.synthesis_cli:main":
+        modules["synthesis"] = "stellar_forge_buyer.synthesis_cli"
     return modules
 
 
