@@ -126,7 +126,7 @@ async function readPreparedRedisRelease(packageDirectory) {
     sourceConfigSha256: manifest.files['source.json'].sha256, planSha256: manifest.files['merchant-plan.json'].sha256,
     queryDefinitionSha256: hash(stable(source.queries)), connectionProfileSha256: hash(stable(source.connection)),
     databaseCaSha256: hasCa ? manifest.files['database-ca.pem'].sha256 : null,
-    credentialReferences: source.connection.passwordEnv ? [source.connection.passwordEnv] : [],
+    credentialReferences: [...manifest.requiredEnvironment],
     sourceSemantics: manifest.sourceSemantics, queries: declaration.description };
   const redis = { ...content, executionSha256: hash(stable(content)) };
   const offers = { schema: 'stellar-forge.redis-seller-offers.v1',

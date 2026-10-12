@@ -291,7 +291,7 @@ The original native session/page/evidence/SF100 files, raw response files, full-
 
 Save the verified backup bytes as datasets.sqlite3 in a new private directory, then start the original AnalysisWorkspace there. Register a new native analytical alias for that running service. The restored database preserves its original analytical identity and histories.
 
-Copied full-query exports and customer workbooks can reopen their existing bytes when their complete original `analysis-query-exports/JOB_ID` or `analysis-workbooks/BUILD_ID` directories are retained under the registered receiving database. The adapter derives local paths from that selected database and validated job ID, preserves the producer location in the original result, and checks the original manifest and file digests. Generated report exports still retain their original file-job path; a new report-export job regenerates bytes from the same publication without source files or another query. A database backup alone does not restore external export or workbook files.
+Copied full-query exports and customer workbooks can reopen their existing bytes when their complete original `analysis-query-exports/JOB_ID` or `analysis-workbooks/BUILD_ID` directories are retained under the registered receiving database. The adapter derives local paths from that selected database and validated job ID, preserves the producer location in the original result, and checks the original manifest and file digests. Copied complete report/change exports and SQLite backups likewise resolve from the selected receiving database and their original job, filename and file-hash bindings. A database backup alone does not restore external export or workbook files.
 
 The original database service remains the single process/worker owner. This integration needs no additional scheduler, proxy, lock service or recovery daemon.
 
@@ -299,3 +299,7 @@ The original database service remains the single process/worker owner. This inte
 ## Customer workbooks
 
 Native agents can also use the original customer Workbooks application through this same registered analysis service. The [complete native workbook workflow](WORKBOOKS.md) covers retained complete query/report sources, typed sheet mappings, saved definition review, original full builds and cancellation, verified file receiving, recurring-edition review/save and historical reopening. It uses the existing workbook engine and its original source/definition/build identities. The host must select the complete maintained workbook and recurring-edition source with the original Python workbooks extra; no additional analysis service or package producer is introduced.
+
+## Complete portable workspace delivery
+
+Use the [native portable workspace workflow](ARCHIVES.md) to export and receive the original SQLite snapshot together with its retained query-export, report and workbook files. The same analysis host exposes complete selection review, export history, progress, cancellation, exact same-ID recovery and verified file ranges. The installed MCP download client retains durable partial transport; the original Python receiver validates and atomically publishes the complete customer workspace for offline and live reopening.

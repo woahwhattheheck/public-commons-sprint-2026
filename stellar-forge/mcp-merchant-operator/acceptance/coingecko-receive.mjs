@@ -244,7 +244,7 @@ try{
     return{originalProjectId:projectId,restoredProjectId:C.restoredProjectId,retainedResearch:true,nativePurchaseJobs:0};
   });
   const report={schema:'stellar-forge.coingecko-mcp-receiving-result.v1',status:'PASS',completedAt:new Date().toISOString(),
-    sourceCommit:input.sourceCommit??null,manifestSha256:C.manifestSha256,stages:C.stages,projectId:C.projectId,restoredProjectId:C.restoredProjectId,
+    sourceCommit:input.sourceCommit??null,runtimeBaseCommit:input.runtimeBaseCommit??null,manifestSha256:C.manifestSha256,stages:C.stages,projectId:C.projectId,restoredProjectId:C.restoredProjectId,
     archiveSha256:C.archiveSha256,sourceFamilies:input.requests.map(r=>r.definition.endpoint),paymentsInitiated:0};
   await writeFile(join(out,'NATIVE_MCP_RECEIVING_RESULT.json'),JSON.stringify(report,null,2)+'\n',{mode:0o600});
   process.stdout.write(JSON.stringify(report)+'\n');
