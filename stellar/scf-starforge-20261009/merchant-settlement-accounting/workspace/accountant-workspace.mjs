@@ -7,6 +7,8 @@ import {spawn} from 'node:child_process';
 import {createHandoff,importReturn,inspectHandoff,renderCsv,renderHtml,validateHandoff,validateRevision} from '../accountant/engine.mjs';
 import {renderAdjustmentCsv,renderAdjustmentHtml} from '../adjustments.mjs';
 import {freezeAccountantAdjustments} from '../accountant/adjustments.mjs';
+import {inspectBuyerSource,isBuyerHandoff} from '../accountant/buyer-source.mjs';
+import {createBuyerReturnPacket} from '../accountant/buyer-return.mjs';
 
 export const ACCOUNTANT_CSV_BYTES=64*1024*1024;
 export const ACCOUNTANT_REQUEST_BYTES=Math.ceil(ACCOUNTANT_CSV_BYTES*4/3)+500_000;
@@ -74,7 +76,7 @@ export class AccountantWorkspace{
   async readHandoff(handoffId){
     const record=this.row(handoffId),file=record.files.find(item=>item.name==='handoff.json');
     const handoff=JSON.parse((await readExact(join(this.directory(handoffId),'handoff.json'),file)).toString('utf8'));
-    validateHandoff(handoff);check(handoff.id===record.id,'ACCOUNTANT_HANDOFF_CHANGED','The retained handoff identity changed.',409);return handoff;
+    validateHandoff(handoff,{allowBuyer:true});check(handoff.id===record.id,'ACCOUNTANT_HANDOFF_CHANGED','The retained handoff identity changed.',409);return handoff;
   }
   async readRevision(record,handoff,revisionId){
     const revision=this.revisionRow(record,revisionId);if(!revision)return null;
@@ -83,7 +85,20 @@ export class AccountantWorkspace{
     validateRevision(handoff,value);return value;
   }
   view(){return {revision:this.workspace.state.revision,handoffs:copy(records(this.workspace)),closes:copy(this.workspace.periods?.view().closes??[])};}
-  async source({runId,closeId=null}){
+  buyerSource(value){
+    check(value&&typeof value==='object'&&!Array.isArray(value),'BUYER_SOURCE_REQUIRED','Choose the original issued buyer source file.');
+    const raw=bytesFromBase64(value.contentBase64);
+    check(typeof value.sha256==='string'&&hash(raw)===value.sha256,'BUYER_SOURCE_CHANGED','The selected buyer source bytes differ from the reviewed file.',409);
+    const inspected=inspectBuyerSource(raw);
+    return {buyerSourceBytes:raw,source:inspected.source,inspected};
+  }
+  async prepareBuyer(value){
+    const selected=this.buyerSource(value.buyerSource),v=selected.inspected;
+    return {source:v.source,period:v.document.issued.period,totals:v.document.issued.totals,creditTotals:v.document.issued.credit_totals??[],netTotals:v.document.issued.net_totals??v.document.issued.totals,options:[],rowCount:v.rows.length,
+      workspaceRevision:this.workspace.state.revision,sourceKind:'buyer-expense-period',buyerSourceSha256:v.sha256,rows:v.rows.slice(0,25),retainedRows:v.rows.length};
+  }
+  async source({runId,closeId=null,buyerSource}){
+    if(buyerSource!==undefined){check(!runId&&!closeId,'ACCOUNTANT_SOURCE_AMBIGUOUS','Choose one original buyer source or merchant source.');return this.buyerSource(buyerSource);}
     const workspace=this.workspace;let periodCloseBytes=null,reviewNotesBytes=null,periodClose=null,adjustmentsBytes=null,adjustmentFiles=null;
     if(closeId){
       check(workspace.periods,'ACCOUNTING_PERIODS_UNAVAILABLE','Open this workspace with the maintained recorded-activity periods module.');
@@ -123,7 +138,7 @@ export class AccountantWorkspace{
     const workspace=this.workspace;
     return workspace.serial(async()=>{
       const handoffId=id(value.id??randomUUID()),name=label(value.name,'handoff name'),actor=label(value.actor,'operator',1000);
-      const request={runId:value.runId??null,closeId:value.closeId??null,name,actor,labels:value.labels??[]},requestSha256=hash(json(request));
+      const request={runId:value.runId??null,closeId:value.closeId??null,name,actor,labels:value.labels??[],...(value.buyerSource!==undefined?{buyerSource:copy(value.buyerSource)}:{})},requestSha256=hash(json(request));
       const prior=records(workspace).find(item=>item.id===handoffId);
       if(prior){check(prior.requestSha256===requestSha256,'HANDOFF_REQUEST_CONFLICT','This request ID already belongs to another handoff.',409);return {record:copy(prior),duplicate:true,state:workspace.view()};}
       workspace.expected(value.revision);check(records(workspace).length<2000,'ACCOUNTANT_HANDOFF_LIMIT','This workspace already retains 2,000 accountant handoffs.');
@@ -135,8 +150,10 @@ export class AccountantWorkspace{
       let committed=false;
       try{
         await privateDirectory(join(directory,'returns'),{create:true});
-        const files={'handoff.json':json(handoff),'accountant.csv':renderCsv(handoff),'review.html':renderHtml(handoff),'original-report.json':selected.reportBytes,'original-manifest.json':selected.manifestBytes,'input-manifest.json':selected.inputManifestBytes};
-        const archiveNames=['handoff.json','accountant.csv','review.html','original-report.json','original-manifest.json','input-manifest.json'];
+        const files={'handoff.json':json(handoff),'accountant.csv':renderCsv(handoff),'review.html':renderHtml(handoff)};
+        if(selected.buyerSourceBytes)files['original-buyer-source.json']=selected.buyerSourceBytes;
+        else Object.assign(files,{'original-report.json':selected.reportBytes,'original-manifest.json':selected.manifestBytes,'input-manifest.json':selected.inputManifestBytes});
+        const archiveNames=Object.keys(files);
         if(selected.periodCloseBytes){files['period-close.json']=selected.periodCloseBytes;files['review-notes.json']=selected.reviewNotesBytes;archiveNames.push('period-close.json','review-notes.json');}
         if(selected.adjustmentFiles)for(const [filename,bytes] of Object.entries(selected.adjustmentFiles)){files[filename]=bytes;archiveNames.push(filename);}
         const savedFiles=await writePacket(directory,files,archiveNames);
@@ -179,8 +196,12 @@ export class AccountantWorkspace{
       const handoff=await this.readHandoff(handoffId),directory=join(this.directory(handoffId),'returns',returnId);await privateDirectory(directory,{create:true});let committed=false;
       try{
         const files={'return.json':json(result),'returned.csv':csvBytes,'accountant.csv':renderCsv(handoff,result),'review.html':renderHtml(handoff,result),'handoff.json':json(handoff)};
-        for(const filename of ['original-report.json','original-manifest.json','input-manifest.json','period-close.json','review-notes.json','adjustments.json','adjustments.csv','adjustments.html']){
+        for(const filename of ['original-buyer-source.json','original-report.json','original-manifest.json','input-manifest.json','period-close.json','review-notes.json','adjustments.json','adjustments.csv','adjustments.html']){
           const original=record.files.find(file=>file.name===filename);if(original)files[filename]=await readExact(join(this.directory(handoffId),filename),original);
+        }
+        if(isBuyerHandoff(handoff)){
+          const revisions=[];for(const saved of record.revisions)revisions.push(await this.readRevision(record,handoff,saved.id));revisions.push(result);
+          files['buyer-return.json']=json(createBuyerReturnPacket({handoff,revisions,buyerSourceBytes:files['original-buyer-source.json']}));
         }
         const savedFiles=await writePacket(directory,files,Object.keys(files));
         const saved={id:returnId,name,actor,createdAt:result.createdAt,requestSha256,parentRevisionId:result.parentRevisionId,importSha256:result.importSha256,summary:result.summary,integrity:result.integrity,files:savedFiles};
@@ -195,7 +216,7 @@ export class AccountantWorkspace{
     const revision=this.revisionRow(record,revisionId),files=revision?.files??record.files;
     const file=files.find(item=>item.name===name);check(file,'ACCOUNTANT_FILE_NOT_FOUND','Choose a retained accountant handoff file.',404);
     const directory=revision?join(this.directory(handoffId),'returns',revision.id):this.directory(handoffId);
-    return {bytes:await readExact(join(directory,file.name),file),name:'merchant-accountant-'+(revision?.id??handoffId)+'-'+file.name,type:({csv:'text/csv; charset=utf-8',json:'application/json; charset=utf-8',html:'text/html; charset=utf-8',tar:'application/x-tar'})[file.name.split('.').at(-1)]??'application/octet-stream'};
+    return {bytes:await readExact(join(directory,file.name),file),name:(record.source.kind==='buyer-expense-period'?'buyer-accountant-':'merchant-accountant-')+(revision?.id??handoffId)+'-'+file.name,type:({csv:'text/csv; charset=utf-8',json:'application/json; charset=utf-8',html:'text/html; charset=utf-8',tar:'application/x-tar'})[file.name.split('.').at(-1)]??'application/octet-stream'};
   }
 }
 
@@ -203,6 +224,7 @@ export async function handleAccountantRequest(accountant,{method,path,query={},v
   const parts=path.split('/').filter(Boolean);if(parts[0]!=='api'||parts[1]!=='accountant')return null;
   if(parts.length===2&&method==='GET')return {value:accountant.view()};
   if(path==='/api/accountant/source'&&method==='GET')return {value:await accountant.prepare(query)};
+  if(path==='/api/accountant/buyer-source/preview'&&method==='POST')return {value:await accountant.prepareBuyer(value)};
   if(path==='/api/accountant/handoffs'&&method==='POST')return {value:await accountant.create(value)};
   if(parts[2]==='handoffs'&&parts[3]){
     const handoffId=parts[3];
