@@ -96,7 +96,7 @@ The adjacent TypeScript declaration supplies exact action payloads, table names,
 
 ### The complete native tool surface
 
-Names below have the prefix `merchant_openfema_`. The catalog contains 12 read/file tools and all 23 original native actions.
+Names below have the prefix `merchant_openfema_`. The catalog contains 12 read/file tools and all 29 original native actions (41 tools in total).
 
 | Tool or action group | What it operates |
 | --- | --- |
@@ -113,9 +113,13 @@ Names below have the prefix `merchant_openfema_`. The catalog contains 12 read/f
 | release_prepare/inspect/activate/start/stop/rollback | Existing SF82 release, generation and runtime operations. |
 | buyer_inspect/receive | Existing completed SF88/SF100 buyer intents and native customer files. |
 | export_create, source_export | Frozen table/portfolio/report and the whole original source bundle. |
-| workspace_export | The original complete-workspace download descriptor; preserve the actual received archive identity through native workspace receiving. |
+| delivery_mapping_save/review | Complete host-declared destination mapping and named review of its exact SHA. |
+| delivery_export/reconcile/review_apply/compare | Complete mapped projects, original customer CSV, selected analyst changes and full edition/delivery comparison. |
+| workspace_export | Original native action followed by complete ZIP receiving in the existing merchant export directory; returns a stable workspace file selector. |
 
 Rows select `projects`, `applicants`, `disasters`, `declarations`, `categories` or `issues`. Sorting uses an actual column from the running schema, including the original exact amount ordering. A row request accepts up to 1,000 rows. Continue the same immutable version, table, search, sort and direction with the returned `nextOffset`.
+
+The archive also pages deliveryMappings, deliveryMappingReviews, projectDeliveries, deliveryReconciliations, deliveryReviewImports and deliveryComparisons. These records belong to the same original workspace and revision.
 
 Archive pages accept up to 500 entries. Retain `expectedRevision` from the first result and send it on all later pages. If the original collection changes, restart that listing at its current revision. This does not change any source or portfolio edition.
 
@@ -141,6 +145,11 @@ The merchant adapter validates its action field contract against the running con
 | portfolio | Portfolio-version ID | Its complete retained canonical portfolio JSON. |
 | export | Export ID | The native frozen JSON, CSV, HTML report, complete portfolio comparison or full source bundle listed in the original exports manifest. |
 | receipt | Native buyer receipt ID | dataset.csv, dataset.jsonl, review.html, delivery.json and manifest.json. |
+| mapping | Mapping ID | Full canonical destination mapping, including the retained schema specification. |
+| delivery | Delivery ID | Full manifest, all mapped rows, exact target CSV and complete original portfolio. |
+| reconciliation | Reconciliation ID | Full original-file comparison and every proposed analyst row; its linked export ZIP includes original CSV bytes. |
+| delivery-comparison | Delivery comparison ID | Complete before/after scope, source, amount and analyst comparisons; linked export ZIP includes both portfolios. |
+| workspace | Stable ID from workspaceArchive.selection | Complete original native workspace ZIP, retained through application and merchant restarts. |
 
 The source list preserves every occurrence with a deterministic filename and its original response receipt. Shared hashes do not erase distinct source URLs or positions. These are the original retained HTTP body bytes; a separately captured wire representation is not asserted.
 
@@ -162,7 +171,7 @@ starforge openfema-mcp reopen --out /absolute/private/received-export \
 
 Use `--file EXACT_FILENAME` to select one member from the original list. Without it, download includes every file in that selection. Inspection returns the transfer manifest and its exact digest. Download saves that manifest and every selected full file. The original downloader owns prefix hashes, write progress, exclusive local file ownership, exact completion and interrupted receiving. Repeating the same command continues the same directory and same file identities.
 
-The transfer's endpoint identity is the immutable workspace UUID, so a legitimate listener-port change does not invalidate it. Offline reopen rederives the transfer identity from its workspace, selection and complete file manifest, verifies every completed file, and checks the supplied manifest SHA256 when present, without opening a provider or payment connection. It proves those original saved bytes; it does not assert that a portable workspace has been restored or a merchant release is live. The original `workspace.export` action currently returns a fresh `/api/workspace.zip` download descriptor. That mutable URL is separate from the frozen `kind: export` files. Receive the complete archive and preserve its actual bytes and hash through the native workspace workflow described in the main product guide before restoration.
+The transfer's endpoint identity is the immutable workspace UUID, so a legitimate listener-port change does not invalidate it. Offline reopen rederives the transfer identity from its workspace, selection and complete file manifest, verifies every completed file, and checks the supplied manifest SHA256 when present, without opening a provider or payment connection. It proves those original saved bytes; it does not assert that a portable workspace has been restored or a merchant release is live. The original `workspace.export` action returns its native archive descriptor. The merchant adapter then receives that complete native ZIP, binds its actual revision, byte count and SHA, and returns `workspaceArchive.selection` with `kind: 'workspace'`. The exact received file lives under the original merchant export directory, so it remains available after the application or merchant process restarts. `workspaceArchive.state: 'RECEIVING'` means the native action completed while file receiving still needs continuation; repeat its exact original request. The saved pending identity prevents a changed workspace from being substituted for that archive. Completed archive files remain outside the source workspace, so later backups do not recursively contain earlier transport copies. After complete receiving, run the original `openfema restore` command into a new private directory.
 
 ### Bounded file reads
 
@@ -173,6 +182,88 @@ A retained reader can finish after the original console closes. If it expires, r
 Interrupted transport prefixes are retained privately and never advertised as complete originals. Only a complete, byte-matched temporary transport copy is unlinked after its read-only descriptor is held. The original downloader's completed files and journal are the receiving authority.
 
 The file/transfer budget is 1 GiB. Transfer manifests use the existing 65,000-byte native manifest limit. If a large response inventory exceeds that limit, select an exact member or create the original complete `source.export` bundle and receive its single retained export. The client allows a bounded 64 MiB MCP response so complete manifests and source context are not truncated; binary files still travel in bounded chunks.
+
+## Complete mapped project exchange
+
+The browser's **Data integration** view, native CLI and merchant tools use the same mappings, explicit reviews, project deliveries and customer files. The operating contract and exact source/analyst fields are in [DATA_INTEGRATION.md](DATA_INTEGRATION.md). A destination mapping retains the full supplied schema, maps between 2 and 200 columns, and includes one required disaster identity and one required project identity. Writable analyst fields have one destination column each.
+
+### Declare the complete inputs once
+
+Prepare the original mapping JSON and the complete original UTF-8 customer CSV as owned private files. Inspect each file with the installed client:
+
+~~~sh
+starforge openfema-mcp input --kind mapping \
+  --file /absolute/private/destination-mapping.json --label "Reviewed destination mapping"
+
+starforge openfema-mcp input --kind customer_csv \
+  --file /absolute/private/complete-customer-projects.csv --label "Current complete project register"
+~~~
+
+Each result contains an `entry` with the absolute host path, kind, original filename and whole-file SHA256. Merge those entries under `deliveryInputs` in the existing selected workspace connection:
+
+~~~json
+{
+  "deliveryInputs": {
+    "project-mapping-v1": {
+      "path": "/absolute/private/destination-mapping.json",
+      "kind": "mapping",
+      "name": "destination-mapping.json",
+      "label": "Reviewed destination mapping",
+      "sha256": "ACTUAL_COMPLETE_MAPPING_FILE_SHA256"
+    },
+    "customer-register-20261012": {
+      "path": "/absolute/private/complete-customer-projects.csv",
+      "kind": "customer_csv",
+      "name": "complete-customer-projects.csv",
+      "label": "Current complete project register",
+      "sha256": "ACTUAL_COMPLETE_CSV_FILE_SHA256"
+    }
+  }
+}
+~~~
+
+Reload the original merchant connection after changing its host configuration. `workspaces` lists these aliases, input kinds, names and digests. It keeps private paths in the host. Save a later input under its own alias and digest; an existing action keeps its original full input.
+
+The host accepts up to 128 delivery input aliases per workspace. Mapping JSON files are at most 16 MiB and their native schema evidence is at most 2 MiB of UTF-8. Customer CSV is at most 16 MiB of original UTF-8, including a retained byte-order mark if present. The HTTP action limits accommodate JSON escaping of these full files; native validation retains the original content limits. Merchant/tool requests remain small because they carry aliases.
+
+### Run the entire operation
+
+Use a retained original portfolio version and the actual reviewed mapping and customer-file aliases:
+
+~~~sh
+starforge openfema-merchant-exchange \
+  --url ACTUAL_MCP_URL --workspace public-assistance \
+  --version ACTUAL_ORIGINAL_PORTFOLIO_VERSION \
+  --mapping-package project-mapping-v1 \
+  --customer-file-package customer-register-20261012 \
+  --operation ORIGINAL_EXCHANGE_OPERATION \
+  --reviewer "Receiving analyst" \
+  --mapping-note "Confirmed each destination column against the retained schema." \
+  --rows 2,17 --review-note "Accepted these two original CSV analyst decisions." \
+  --out /absolute/private/project-exchange \
+  --token-env MCP_ACCESS_TOKEN
+~~~
+
+Select real CSV row numbers from the reconciliation; row 1 is the header. Omit `--rows` and `--review-note` when receiving and comparing without applying analyst decisions. The native engine checks each selected proposal against the exact current portfolio and earlier exported review baseline.
+
+The maintained example [merchant-project-exchange.mjs](examples/merchant-project-exchange.mjs) saves and reviews the mapping, creates the complete first delivery, receives the entire customer CSV, applies the explicitly selected valid analyst rows, creates the complete reviewed delivery with its customer base, compares both deliveries, and receives the full original workspace ZIP. It downloads the complete mapping, exchange documents and all linked ZIPs through the existing downloader, then reopens every received file set offline. Its local operation lease and retained requests let the same command continue after an interrupted action or transfer.
+
+The final `merchant-exchange-result.json` links the native mapping, reconciliation, delivery and comparison IDs to their complete receiving directories. The original customer file is inside `customer-reconciliation-files`; `reviewed-delivery-files` includes the selected customer base and full source portfolio. Restore `complete-workspace/OpenFEMA_Complete_Workspace.zip` through the original product command and open the restored directory in Applications.
+
+### Typed action payloads
+
+| Native action | Merchant client payload |
+| --- | --- |
+| delivery.mapping.save | mappingPackage; optional previousMappingId |
+| delivery.mapping.review | mappingId, expectedMappingSha256, reviewer, note |
+| delivery.export | mappingId, versionId; optional customerReconciliationId |
+| delivery.reconcile | deliveryId, customerFilePackage |
+| delivery.review.apply | reconciliationId, versionId, rowNumbers, reviewer, note |
+| delivery.compare | beforeDeliveryId, afterDeliveryId |
+
+`mappingPackage` and `customerFilePackage` are complete-file references supplied by this adapter; the original native API still receives its full mapping or customerFile object. Every action returns the native result and original operation identity. Reconciliation keeps customer-only/pre-obligation rows, duplicate source identities, official-source differences and invalid analyst values visible. It applies only explicitly selected valid analyst decisions.
+
+The complete DR4724 example contains 195 actual source projects. Its unchanged full-file round trip matches all 195 rows; the retained TJLabs analyst example changes one review while leaving all source fields and four financial measures intact. A source edition with declarations and no funded projects retains its full declared cohort and header-only project projection. Use these source-native behaviors when commissioning a customer installation, with its actual source scope, supplied schema and receiving analyst.
 
 ## Preserve the source meaning
 
