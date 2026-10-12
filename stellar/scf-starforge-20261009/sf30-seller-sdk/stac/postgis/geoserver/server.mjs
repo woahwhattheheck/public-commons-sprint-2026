@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { Transform } from 'node:stream';
+import { setTimeout as pause } from 'node:timers/promises';
 import { openGeoServerOperator } from './adapter.mjs';
 import { atomicJson } from '../../../postgres/publisher/files.mjs';
 import { readReceiving, verifyFile } from './journal.mjs';
@@ -26,7 +27,7 @@ export async function startGeoServerConsole({directory,profileFile,readerFile,po
   const publisher=await openGeoServerOperator({directory,profileFile,readerFile,environment,
     expectedProfileSha256,expectedReaderSha256,fetchImpl,signal});
   const token=randomBytes(32).toString('hex'),instanceId=randomUUID(),requests=new Set(),connections=new Set(),jobs=new Map();
-  const lifetime=new AbortController();let origin,draining=false,closing=null,listenerClose=null,active=null,lastJob=null,started=false,listenerFault=null;
+  const lifetime=new AbortController();let origin,draining=false,closing=null,listenerClose=null,active=null,lastJob=null,started=false,listenerFault=null,parentClose=null,parentCloseFault=null;
   let resolveFinished,rejectFinished;const finished=new Promise((resolve,reject)=>{resolveFinished=resolve;rejectFinished=reject;});
   void finished.catch(()=>{});
   const native=createServer((request,response)=>{
@@ -173,9 +174,22 @@ export async function startGeoServerConsole({directory,profileFile,readerFile,po
       native.closeIdleConnections();
       for(const socket of connections)socket.destroy();
       await Promise.allSettled([...requests]);await listenerClose;
-      await publisher.close();if(active)await active.work.catch(()=>{});if(listenerFault)rejectFinished(listenerFault);else resolveFinished({state:'CLOSED'});
+      await publisher.close();if(active)await active.work.catch(()=>{});
+      signal?.removeEventListener('abort',abortParent);
+      const fault=listenerFault??parentCloseFault;if(fault)rejectFinished(fault);else resolveFinished({state:'CLOSED'});
     })();
     closing=task;void task.catch(()=>{if(closing===task)closing=null;});return task;
+  };
+  // A programmatic caller owns the same service through its parent signal.
+  // Keep that original close owner until a retryable failure really drains.
+  const abortParent=()=>{
+    if(parentClose)return;
+    lifetime.abort(signal.reason??new Error('The parent GeoServer operation was cancelled.'));
+    parentClose=(async()=>{for(;;){
+      try{await close();return;}
+      catch(error){parentCloseFault??=error;await pause(250);}
+    }})();
+    void parentClose.catch(error=>{error.close=close;rejectFinished(error);});
   };
   try{
     signal?.throwIfAborted();
@@ -188,7 +202,9 @@ export async function startGeoServerConsole({directory,profileFile,readerFile,po
     signal?.throwIfAborted();
     const connectionFile=join(publisher.directory,'console-connection.json');
     await atomicJson(publisher.directory,'console-connection.json',{schema:'starforge.geoserver-console-connection.v1',
-      workspace:publisher.directory,instanceId,url:origin+'/#'+token,origin,profile:publisher.profile});started=true;
+      workspace:publisher.directory,instanceId,url:origin+'/#'+token,origin,profile:publisher.profile});
+    signal?.throwIfAborted();started=true;
+    signal?.addEventListener('abort',abortParent,{once:true});if(signal?.aborted)abortParent();
     return {schema:'starforge.geoserver-console-launch.v1',workspace:publisher.directory,instanceId,
       url:origin+'/#'+token,origin,connectionFile,profile:publisher.profile,finished,close};
   }catch(error){
