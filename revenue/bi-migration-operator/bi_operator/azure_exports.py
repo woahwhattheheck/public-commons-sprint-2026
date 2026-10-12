@@ -245,11 +245,10 @@ class AzureExports:
         payload["state"] = "submitted" if payload.get("submission") else (
             "uncertain" if payload.get("submitted") else "prepared")
         if payload.get("selected_run"):
-            selected = candidates.get(payload["selected_run"]["id"])
-            if selected:
-                payload["selected_run"] = selected
-                payload["native_status"] = selected.get("properties", {}).get("status", "")
-                payload["state"] = "completed" if payload["native_status"] == "Completed" else "observed"
+            selected = candidates.get(payload["selected_run"]["id"], payload["selected_run"])
+            payload["selected_run"] = selected
+            payload["native_status"] = selected.get("properties", {}).get("status", "")
+            payload["state"] = "completed" if payload["native_status"] == "Completed" else "observed"
         payload.update({"refreshed": now(), "error": "", "retry_at": 0})
         payload.pop("provider_error", None)
         return self.write("azure_run", payload, record["id"], record["revision"])
