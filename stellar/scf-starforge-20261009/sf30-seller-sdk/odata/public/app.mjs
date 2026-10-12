@@ -1,4 +1,5 @@
 // MIT. Plain, retained-state operator UI; all domain behavior stays in the application.
+import { createCollectionView } from './collection-view.mjs';
 const $=id=>document.getElementById(id),esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let state,selectedEdition=null,loadedRows=[],rowPage=0,merchant=null,pageIdentity=null;
 let liveProducts=[],selectedLive=null,liveDetail=null,livePlanIdentity=null;
@@ -11,6 +12,7 @@ function options(id,items,label=value=>value.name||value.label||value.id){const 
 function table(headers,rows){return rows.length?`<table><thead><tr>${headers.map(value=>`<th>${esc(value)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${row.map(value=>`<td>${value}</td>`).join('')}</tr>`).join('')}</tbody></table>`:'<div class="empty">No records yet.</div>';}
 const badge=value=>`<span class="status ${value==='COMPLETE'?'complete':value==='FAILED'?'failed':''}">${esc(value)}</span>`;
 const time=value=>value?new Date(value).toLocaleString():'';
+const collectionView=createCollectionView({root:$('live-collections'),api,esc,table,notify});
 const connection=()=>state?.connections.find(value=>value.id===$('connection').value);
 const entity=()=>connection()?.catalog.entitySets.find(value=>value.name===$('entity-set').value);
 const fields=()=>entity()?.fields||[];
@@ -151,7 +153,29 @@ $('export-form').onsubmit=event=>{event.preventDefault();action('Create dataset 
   return api('/api/export',input);},event.submitter);};
 $('query-export-form').onsubmit=event=>{event.preventDefault();action('Dataset preview',async()=>{const result=await api('/api/query',Object.fromEntries(new FormData(event.target)));const body=result.body;
   $('dataset-response').innerHTML=`<p>Response ${esc(result.status)}</p>`+(body?.rows?.length?table(Object.keys(body.rows[0]),body.rows.map(row=>Object.values(row).map(value=>esc(typeof value==='object'?JSON.stringify(value):value)))):`<pre>${esc(JSON.stringify(body,null,2))}</pre>`);},event.submitter);};
-$('restore-file').onchange=event=>{const file=event.target.files[0];if(file)action('Restore workspace',async()=>api('/api/restore',JSON.parse(await file.text())));event.target.value='';};
+$('restore-file').onchange=event=>{
+  const file=event.target.files[0];event.target.value='';if(!file)return;
+  void action('Review workspace transfer',async()=>{
+    const options=await api('/api/transfer-options');
+    if(file.size>options.browserMaxBytes){
+      const occupied=state.connections.length||state.editions.length||state.plans.length||state.liveProducts?.length;
+      const destination=occupied?'NEW_EMPTY_WORKSPACE_DIRECTORY':options.workspaceDirectory;
+      const quote=value=>"'"+String(value).replaceAll("'","'\\''")+"'";
+      const args=[...options.nativeCommand,'--workspace',destination,'restore','--input','FULL_PATH_TO_TRANSFER/'+file.name];
+      $('native-restore-command').textContent=args.map(quote).join(' ');
+      $('native-restore-file').textContent=file.name+' · '+(file.size/1048576).toFixed(1)+' MiB';
+      $('native-restore-target').textContent=occupied
+        ?'Choose a new empty destination directory in the command, then open that workspace.'
+        :'Stop this application before the native restore, then reopen the same workspace.';
+      $('native-restore').hidden=false;
+      $('native-restore').scrollIntoView({block:'start',behavior:'smooth'});
+      return {route:'original-native-restore'};
+    }
+    $('native-restore').hidden=true;
+    return api('/api/restore',JSON.parse(await file.text()));
+  });
+};
+$('native-restore-close').onclick=()=>{$('native-restore').hidden=true;};
 async function refreshMerchant(){merchant=await api('/api/merchant');const generation=merchant.state?.generation??merchant.generation??0;$('generation').value=generation;
   const releases=merchant.releases||[],runtime=merchant.runtime||{};
   $('merchant-status').innerHTML=`<h3>Release store</h3><div class="metadata"><span>Generation ${generation}</span><span>Active: ${esc(merchant.state?.active||'None')}</span><span>Runtime: ${esc(runtime.state||'STOPPED')}</span></div>`+
@@ -188,7 +212,8 @@ async function refreshLive(){const result=await api('/api/live');liveProducts=re
   $('live-products').innerHTML=table(['Service','Source query','State','Created','Actions'],liveProducts.map(row=>[esc(row.name),esc(state.plans.find(plan=>plan.id===row.planId)?.name||row.planId),badge(row.runtime?'RUNNING':'PREPARED'),esc(time(row.createdAt)),
     '<button class="small" data-live-open="'+esc(row.id)+'">Open</button>']));
   if(!liveProducts.some(row=>row.id===selectedLive))selectedLive=liveProducts.at(-1)?.id||null;
-  if(selectedLive){liveDetail=await api('/api/live/detail?id='+encodeURIComponent(selectedLive));drawLiveDetail();}}
+  if(selectedLive){liveDetail=await api('/api/live/detail?id='+encodeURIComponent(selectedLive));drawLiveDetail();collectionView.setService(liveDetail);}
+  else collectionView.setService(null);}
 $('live-plan').onchange=drawLiveScope;$('live-refresh').onclick=()=>action('Live service status',refreshLive);
 $('live-prepare').onsubmit=event=>{event.preventDefault();action('Prepare live service',async()=>{const data=Object.fromEntries(new FormData(event.target)),input={id:data.id,name:data.name,planId:data.planId,origin:data.origin,amount:data.amount,
     payment:{network:data.network,asset:data.asset,payTo:data.payTo,maxTimeoutSeconds:Number(data.maxTimeoutSeconds)},maxPageRows:Number(data.maxPageRows),maxTotalRows:Number(data.maxTotalRows),port:Number(data.port),operationsPort:Number(data.operationsPort)};
