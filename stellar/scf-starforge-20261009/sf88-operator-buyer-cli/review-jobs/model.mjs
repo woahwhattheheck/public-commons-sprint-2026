@@ -206,6 +206,11 @@ export async function openReviewJobs(options){
             saved.operation.method===expected.method&&canonical(saved.operation.expect)===canonical(expected.expect)&&
             canonical(saved.operation.headers??{})===canonical(expected.headers??{})&&
             saved.preparedFrom?.discoveryFileSha256===input.catalogSha256,'RETAINED_NATIVE_OPERATION_DIFFERS',409);
+          const savedBodyPresent=saved.operation.bodyFile!==undefined;
+          requireValue(savedBodyPresent===(body!==undefined),'RETAINED_NATIVE_BODY_DIFFERS',409);
+          if(savedBodyPresent)requireValue(typeof saved.operation.bodyFile==='string'&&
+            hash(await readBytes(saved.operation.bodyFile,1048576))===hash(body),
+            'RETAINED_NATIVE_BODY_DIFFERS',409);
         }
         await inbox.enqueue(operation);
         const original=(await inbox.show(intentId)).native;
