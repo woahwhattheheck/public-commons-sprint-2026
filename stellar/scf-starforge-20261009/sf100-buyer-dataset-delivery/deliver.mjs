@@ -1,8 +1,8 @@
 // MIT. SF100 buyer delivery for original SF30 dataset-page.v1 responses.
 // Never contacts a seller, signer, facilitator, wallet or payment service.
-import { readFile, writeFile, mkdir, readdir, open, rm, stat, lstat } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
-import { join, resolve } from 'node:path';
+import { readFile, writeFile, mkdir, readdir, open, rm, stat, lstat, link } from 'node:fs/promises';
+import { createHash, randomUUID } from 'node:crypto';
+import { join, resolve, dirname, basename } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const MAX_INPUT = 2 * 1024 * 1024;
@@ -58,6 +58,63 @@ async function bounded(path, limit = MAX_INPUT) {
   return raw;
 }
 
+
+async function syncDirectory(directory) {
+  let handle;
+  try { handle = await open(directory, 'r'); await handle.sync(); }
+  catch (error) { if (process.platform !== 'win32') throw error; }
+  finally { await handle?.close(); }
+}
+async function fingerprint(path) {
+  const before = await lstat(path);
+  need(before.isFile() && !before.isSymbolicLink(), 'Immutable delivery output must be a regular file');
+  const handle = await open(path, 'r');
+  try {
+    const info = await handle.stat();
+    need(info.dev === before.dev && info.ino === before.ino, 'Delivery output changed while opening');
+    const hash = createHash('sha256'); let bytes = 0;
+    for await (const chunk of handle.createReadStream({ autoClose: false })) { bytes += chunk.length; hash.update(chunk); }
+    const after = await handle.stat();
+    need(bytes === info.size && after.size === info.size && after.mtimeMs === info.mtimeMs &&
+      after.ctimeMs === info.ctimeMs, 'Delivery output changed while reading');
+    return { bytes, sha256: hash.digest('hex'), dev: info.dev, ino: info.ino };
+  } finally { await handle.close(); }
+}
+// A completed no-replace link may survive before its staging link was retired.
+// Only our matching inode is unlinked; no partial/foreign output is overwritten.
+async function retirePublishedLinks(out, destination) {
+  const current = await lstat(destination).catch(error => { if(error.code === 'ENOENT')return null; throw error; });
+  if (!current || current.nlink === 1) return;
+  need(current.isFile() && !current.isSymbolicLink(), 'Invalid retained delivery output');
+  const prefix = '.sf100-' + basename(destination) + '-';
+  for (const name of await readdir(out)) {
+    if (!name.startsWith(prefix)) continue;
+    const path = join(out, name), info = await lstat(path);
+    if (info.isFile() && !info.isSymbolicLink() && info.dev === current.dev && info.ino === current.ino)
+      await rm(path, { force: true });
+  }
+  await syncDirectory(out);
+}
+async function publishStaged(out, temporary, destination) {
+  const expected = await fingerprint(temporary);
+  try { await link(temporary, destination); }
+  catch (error) {
+    if (error.code !== 'EEXIST') throw error;
+    const actual = await fingerprint(destination);
+    need(actual.bytes === expected.bytes && actual.sha256 === expected.sha256,
+      'A different retained delivery output already exists: ' + basename(destination));
+  }
+  await syncDirectory(dirname(destination));
+  await rm(temporary, { force: true }); await syncDirectory(out);
+  await retirePublishedLinks(out, destination);
+}
+async function immutableFile(out, destination, content) {
+  const temporary = join(out, '.sf100-' + basename(destination) + '-' + randomUUID());
+  const handle = await open(temporary, 'wx', 0o600);
+  try { await handle.writeFile(content); await handle.sync(); } finally { await handle.close(); }
+  try { await publishStaged(out, temporary, destination); }
+  finally { await rm(temporary, { force: true }); }
+}
 
 // Reviewed source meanings travel unchanged with the original typed pages. Their
 // two identities distinguish this retained edition from value-independent meaning.
@@ -415,6 +472,7 @@ async function scan(out, { retainPayload = true } = {}) {
     need(info.isDirectory() && (process.platform === 'win32' || (info.mode & 0o077) === 0),
       'Buyer delivery session requires private directories (0700)');
   }
+  await retirePublishedLinks(out, join(out, 'session.json'));
   const session = JSON.parse((await bounded(join(out, 'session.json'), 4096)).toString('utf8'));
   need(obj(session) && session.schema === 'stellar-forge.buyer-delivery.v1', 'Invalid private session');
   const files = (await readdir(join(out, 'pages'))).sort();
@@ -427,6 +485,7 @@ async function scan(out, { retainPayload = true } = {}) {
     finalized: (await readdir(out)).includes('manifest.json') };
   const intents = new Set(), sourceHashes = new Set();
   for (let i = 0; i < files.length; i++) {
+    await retirePublishedLinks(out, join(out, 'pages', files[i]));
     const { archive, bytes } = await readArchive(out, i);
     need(state.archiveBytes + bytes <= MAX_ARCHIVE, 'Private page archive exceeds total byte limit');
     need(archive.previous === state.chain, 'Page archive chain mismatch: ' + files[i]);
@@ -441,12 +500,17 @@ async function scan(out, { retainPayload = true } = {}) {
 }
 
 async function init(out) {
-  await mkdir(out, { mode: 0o700 });
-  await mkdir(join(out, 'pages'), { mode: 0o700 });
-  await writeFile(join(out, 'session.json'), JSON.stringify({
+  for (const directory of [out, join(out, 'pages')]) {
+    try { await mkdir(directory, { mode: 0o700 }); } catch (error) { if (error.code !== 'EEXIST') throw error; }
+    const info = await lstat(directory);
+    need(info.isDirectory() && !info.isSymbolicLink() && (process.platform === 'win32' || !(info.mode & 0o077)),
+      'Buyer delivery session requires private real directories');
+  }
+  await immutableFile(out, join(out, 'session.json'), JSON.stringify({
     schema: 'stellar-forge.buyer-delivery.v1', protocol: 'SF30 dataset-page.v1',
     authorization: 'EACH_PAGE_REQUIRES_INDEPENDENT_ORIGINAL_BUYER_APPROVAL',
-  }, null, 2) + '\n', { mode: 0o600, flag: 'wx' });
+  }, null, 2) + '\n');
+  await scan(out, { retainPayload: false });
   return { action: 'INITIALIZED', directory: out };
 }
 
@@ -486,7 +550,7 @@ async function appendMany(out, inputs) {
     need(archiveBytes <= MAX_INPUT + 4096 && state.archiveBytes + archiveBytes <= MAX_ARCHIVE,
       'Private page archive exceeds individual or total byte limit');
     const path = join(out, 'pages', pageName(state.pages.length));
-    await writeFile(path, encoded, { mode: 0o600, flag: 'wx' });
+    await immutableFile(out, path, encoded);
     acceptRecord(state, archive, next, archiveBytes, false);
     intents.add(args.intent); sourceHashes.add(sourceSha256);
   }
@@ -539,20 +603,20 @@ function html(state, manifest) {
 
 async function finalize(out) {
   const state = await scan(out, { retainPayload: false });
-  need(!state.finalized && state.pages.length > 0 && state.nextCursor === null &&
-    state.count === state.total, 'All original pages must be present and not yet finalized');
+  need(state.pages.length > 0 && state.nextCursor === null &&
+    state.count === state.total, 'All original pages must be present');
   const files = ['dataset.jsonl', 'dataset.csv', 'review.html', 'manifest.json',
     ...(state.semantics ? ['semantics.json'] : [])];
-  need(!(await readdir(out)).some(f => files.includes(f)), 'A prior export exists');
   const jsonPath = join(out, files[0]), csvPath = join(out, files[1]);
   let jsonHandle, csvHandle, jsonBytes = 0, csvBytes = 0;
   const created = [];
   const jsonDigest = createHash('sha256'), csvDigest = createHash('sha256');
   async function createOutput(path) {
-    const handle = await open(path, 'wx', 0o600);
+    const temporary = join(out, '.sf100-' + basename(path) + '-' + randomUUID());
+    const handle = await open(temporary, 'wx', 0o600);
     try {
       const info = await handle.stat();
-      created.push({ path, dev: info.dev, ino: info.ino });
+      created.push({ path: temporary, destination: path, dev: info.dev, ino: info.ino });
       return handle;
     } catch (error) {
       await handle.close().catch(() => {});
@@ -561,7 +625,7 @@ async function finalize(out) {
   }
   async function writeOutput(path, content) {
     const handle = await createOutput(path);
-    try { await handle.writeFile(content, { encoding: 'utf8' }); }
+    try { await handle.writeFile(content, { encoding: 'utf8' }); await handle.sync(); }
     finally { await handle.close(); }
   }
   try {
@@ -583,8 +647,8 @@ async function finalize(out) {
       await push(csvHandle, csvDigest,
         rows.map(row => state.fields.map(f => csvCell(row[f])).join(',') + '\r\n').join(''), 'csv');
     }
-    await jsonHandle.close(); jsonHandle = null;
-    await csvHandle.close(); csvHandle = null;
+    await jsonHandle.sync(); await jsonHandle.close(); jsonHandle = null;
+    await csvHandle.sync(); await csvHandle.close(); csvHandle = null;
     const manifest = {
       schema: 'stellar-forge.buyer-delivery-manifest.v1',
       dataset: { name: state.name, snapshot: state.snapshot, rows: state.count,
@@ -616,7 +680,9 @@ async function finalize(out) {
     await writeOutput(join(out, 'review.html'), review);
     manifest.outputs['review.html'] = { sha256:sha(review), bytes:Buffer.byteLength(review) };
     await writeOutput(join(out, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
-    return { ...summary(state, 'EXPORTED'), output:out, outputs:manifest.outputs };
+    // Data and review files commit first; the complete original manifest commits last.
+    for (const file of created) await publishStaged(out, file.path, file.destination);
+    return { ...summary({ ...state, finalized: true }, 'EXPORTED'), output:out, outputs:manifest.outputs };
   } catch (error) {
     if (jsonHandle) await jsonHandle.close().catch(() => {});
     if (csvHandle) await csvHandle.close().catch(() => {});
@@ -633,6 +699,7 @@ async function finalize(out) {
 }
 
 export { init, append, appendMany, scan, finalize, checkPage, checkCursor,
+  immutableFile as retainDeliveryFile, publishStaged as publishDeliveryFile, retirePublishedLinks as reconcileDeliveryFile,
   MAX_INPUT as MAX_DATASET_PAGE_BYTES, MAX_PAGES as MAX_DATASET_PAGES };
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
   try {

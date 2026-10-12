@@ -88,8 +88,8 @@ export async function readPublisherConfiguration(path) {
   for (const [alias, input] of Object.entries(raw.workspaces)) {
     identifier(alias, 'Publisher alias');
     exact(input, ['label', 'kind', 'directory', 'seller', 'resource'], ['kind', 'directory']);
-    if (!['postgres', 'sqlite', 'mysql', 'mongodb', 'sheets', 'sheetbest', 'nocodb', 'sftp', 'arcgis', 'census-acs', 'bls-labor', 'timescale'].includes(input.kind))
-      throw failure('CONFIGURATION_ERROR', 'Publisher kind must be postgres, sqlite, mysql, mongodb, sheets, sheetbest, nocodb, sftp, arcgis, census-acs, bls-labor or timescale.');
+    if (!['postgres', 'sqlite', 'mysql', 'mongodb', 'sheets', 'sheetbest', 'nocodb', 'sftp', 'arcgis', 'census-acs', 'bls-labor', 'timescale', 'frictionless'].includes(input.kind))
+      throw failure('CONFIGURATION_ERROR', 'Publisher kind must be postgres, sqlite, mysql, mongodb, sheets, sheetbest, nocodb, sftp, arcgis, census-acs, bls-labor, timescale or frictionless.');
     const directory = hostPath(input.directory, base), info = await lstat(directory);
     if (!info.isDirectory() || info.isSymbolicLink() || process.platform !== 'win32' && (info.mode & 0o077))
       throw failure('CONFIGURATION_ERROR', 'Bind an existing private original publisher directory (0700).');
