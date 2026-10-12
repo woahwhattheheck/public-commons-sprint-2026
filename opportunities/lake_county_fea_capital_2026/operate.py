@@ -258,6 +258,7 @@ class Programme:
             require(review["complete"] and review["workspace_id"] == self.w.context["workspace_id"]
                     and review["publication_id"] == publication["id"],
                     "browser_identity", "Retain the actual completed review of this received publication.")
+            self.verify_browser(review, selected, report)
             return review
         browser = self.config["browser"]
         require(sys.platform.startswith("linux"), "browser_runtime",
@@ -367,6 +368,13 @@ class Programme:
                 editions[key] = self.step("edition-" + key, "edition.create", {
                     "name": item["name"], "predecessor_id": editions[item["predecessor_key"]]["id"] if item.get("predecessor_key") else None,
                     "selections": selections})
+            comparisons = {}
+            for item in self.config.get("comparisons", []):
+                key = identifier(item["key"], "Source comparison key")
+                comparisons[key] = self.step("compare-" + key, "edition.compare", {
+                    "baseline_id":editions[item["baseline_key"]]["id"],
+                    "candidate_id":editions[item["candidate_key"]]["id"],
+                    "tables":item["tables"]})
             exchanges = {}
             for item in self.config.get("exchanges", []):
                 key = identifier(item["key"], "Exchange key")
@@ -441,6 +449,7 @@ class Programme:
                       "client_acceptance": False, "source_files": source_files,
                       "editions": {k:{"id":v["id"],"sha256":v["sha256"],"counts":v["counts"],
                                     "issue_count":v["issue_count"],"intake_complete":v["intake_complete"]} for k,v in editions.items()},
+                      "comparisons":{key:{k:value[k] for k in ("id","revision","sha256")} for key,value in comparisons.items()},
                       "publication": {k:publication[k] for k in ("id","revision","sha256")},
                       "report": {"path":str(report),**file_identity(report)}, "export":exported,
                       "receiving": received, "independent_received_application":True, "independent_readbacks":readbacks,

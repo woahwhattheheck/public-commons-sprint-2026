@@ -18,7 +18,8 @@ TABLES = {
         "key": "source_asset_id",
         "fields": ["source_asset_id", "asset_name", "asset_class", "ownership_relation",
                    "responsible_entity", "record_unit", "parent_source_asset_id", "ownership_basis",
-                   "as_of", "area", "area_unit", "source_note"],
+                   "as_of", "area", "area_unit", "address", "source_asset_id_namespace", "source_url",
+                   "source_locator", "source_sha256", "source_capture_status", "source_note"],
         "decimal": ["area"], "year": [], "refs": [],
     },
     "assessments": {
@@ -67,6 +68,19 @@ TABLES = {
 TABLES["asset_observations"] = {"key": "observation_id",
     "fields": ["observation_id"] + TABLES["assets"]["fields"],
     "decimal": ["area"], "year": [], "refs": []}
+TABLES["financial_observations"] = {
+    "key":"observation_id",
+    "fields":["observation_id","record_kind","amount","currency","amount_precision","status",
+              "as_of","as_of_precision","recipient","scope","unit","source_url","source_locator",
+              "source_sha256","source_capture_status","source_note"],
+    "decimal":["amount"],"year":[],"refs":[]}
+TABLES["capital_rollforward"] = {
+    "key":"record_id",
+    "fields":["record_id","entity","activity","fiscal_year","opening_date","closing_date","currency",
+              "asset_class","measure_basis","opening","additions","deletions","closing","row_role",
+              "value_basis","sign_convention","source_url","source_locator","source_sha256",
+              "source_capture_status","source_note"],
+    "decimal":["opening","additions","deletions","closing"],"year":["fiscal_year"],"refs":[]}
 FUNDING_STATUS = {"historical_actual", "adopted", "committed", "requested",
                   "anticipated", "proposed", "unknown"}
 RECEIPT_STATUS = {"actual_received", "scheduled", "unknown"}
@@ -195,7 +209,7 @@ def project_record(table, raw, mapping, structural=None):
         value = projected.get(field)
         if not missing(value):
             try:
-                decimal(value, field, allow_negative=field in {"amount", "operating_impact"})
+                decimal(value, field, allow_negative=field in {"amount", "operating_impact", "opening", "additions", "deletions", "closing"})
             except ProgrammeError as exc:
                 issues.append(fact_issue("invalid_decimal", str(exc), field, value=value))
     for field in schema["year"]:
@@ -232,6 +246,24 @@ def project_record(table, raw, mapping, structural=None):
             issues.append(fact_issue("model_metric", "Map the supplied output to one supported metric.", "metric"))
         if missing(projected.get("model_version")):
             issues.append(fact_issue("model_version", "Retain the original model version.", "model_version"))
+    if table in {"asset_observations","financial_observations","capital_rollforward"}:
+        status = projected.get("source_capture_status")
+        if status not in (None,"verified_complete_original"):
+            issues.append(fact_issue("source_capture_unverified",
+                "The public observation retains its prepared source reference; the selected original response was not verified in this capture.",
+                "source_capture_status","warning",status=status))
+    if table == "capital_rollforward":
+        if projected.get("row_role") not in {"component","summary","unknown"}:
+            issues.append(fact_issue("accounting_row_role","Keep each component or summary role explicit.","row_role"))
+        if all(not missing(projected.get(field)) for field in ("opening","additions","deletions","closing")):
+            try:
+                with localcontext() as context:
+                    context.prec=320
+                    values={field:decimal(projected[field],field) for field in ("opening","additions","deletions","closing")}
+                    require(values["opening"]+values["additions"]+values["deletions"]==values["closing"],
+                            "rollforward","The supplied opening plus additions plus deletions does not equal closing.")
+            except ProgrammeError as exc:
+                issues.append(fact_issue("accounting_reconciliation",str(exc),"closing"))
     return projected, key, issues
 
 def read_table(path, fmt, mapping):

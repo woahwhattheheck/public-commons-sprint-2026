@@ -38,6 +38,10 @@ Each mapping is explicit: `columns` maps the canonical name below to the actual 
 | funding | funding_id | programme, amount/currency, fiscal_year, status, amount_role, programme_scope, eligible_actions, conditions, receipt_year/status, source_note |
 | budgets | budget_observation_id | fund, account, fiscal_year, column_label, basis, amount/currency, source_note |
 | model_outputs | result_id | scenario_label, source_asset_id/action_id, fiscal_year, metric, amount/currency/price_basis, model_version, source_note |
+| financial_observations | observation_id | record_kind, amount/currency/precision, status, date/precision, recipient, scope/unit, source URL/locator/hash/capture status |
+| capital_rollforward | record_id | entity/activity/year, opening/closing dates, asset_class, measure_basis, exact opening/additions/deletions/closing, component/summary role, source identity |
+
+The historical financial-context and capital-rollforward registers are source records. They do not feed asset-capital scenarios automatically. A proposed study's component amounts and stated total stay separate; source authorization and cash-receipt dates must be supplied independently. Historical capital book value is not replacement cost or a future funding requirement.
 
 The exact complete field lists are returned by `GET /api/status` and declared in `domain.TABLES`.
 

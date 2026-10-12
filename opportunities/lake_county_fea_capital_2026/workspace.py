@@ -26,7 +26,7 @@ MAX_FILE = 32 * 1024 * 1024
 MAX_ARCHIVE = 512 * 1024 * 1024
 RUNTIME_FILES = ("domain.py", "workspace.py", "server.py", "cli.py", "operate.py",
                  "web/index.html", "web/app.js", "web/style.css", "operate_browser.mjs", "README.md",
-                 "INPUTS.md", "WORKSHARE.md", "LICENSE")
+                 "INPUTS.md", "WORKSHARE.md", "LICENSE", "commission_public.py")
 DB_SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS files(id TEXT PRIMARY KEY,sha256 TEXT NOT NULL,bytes INTEGER NOT NULL,
@@ -832,6 +832,15 @@ def render_report(publication):
                      " · " + escape(result["price_basis"]) + "</p><div class='scroll'><table><thead><tr>" + heading +
                      "</tr></thead><tbody>" + "".join(lines) + "</tbody></table></div><h3>Unresolved inputs</h3><ul>" +
                      "".join("<li>" + escape(x) + "</li>" for x in problems) + "</ul><p>" + escape(result["cash_note"]) + "</p></section>")
+    history = [row for row in p["rows"] if row["table"] == "capital_rollforward"]
+    if history:
+        fields=("asset_class","measure_basis","row_role","opening","additions","deletions","closing")
+        header="".join("<th>"+escape(field.replace("_"," "))+"</th>" for field in fields)
+        body="".join("<tr>"+"".join("<td>"+escape(row["values"].get(field))+"</td>" for field in fields)+"</tr>" for row in history)
+        cards.insert(0,"<section><h2>Selected historical capital-asset rollforward</h2>"
+            "<p>Original accounting categories and component/summary roles are retained. "
+            "These historical balances are separate from asset-specific appraisal, future replacement need, funding and cash.</p>"
+            "<div class='scroll'><table><thead><tr>"+header+"</tr></thead><tbody>"+body+"</tbody></table></div></section>")
     sources = "".join("<tr><td>" + escape(s["file_id"]) + "</td><td>" + escape(s["table"]) + "</td><td>" + escape(s["sha256"]) +
                       "</td><td>" + escape(s["bytes"]) + "</td></tr>" for s in p["edition"]["selections"])
     issues = [dict(row_id=r["row_id"], table=r["table"], source_row=r["source_row"], **issue)
