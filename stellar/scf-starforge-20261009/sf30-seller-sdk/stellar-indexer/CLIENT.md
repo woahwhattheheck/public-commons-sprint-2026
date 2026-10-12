@@ -8,6 +8,18 @@ The browser and headless CLI use the same native stores. The original SDK owns r
 
 Select **Stellar client workspace** in an installed runtime containing the complete source. The source-owned command is **stellar-indexer-workspace**; **stellar-indexer** exposes the full headless operator.
 
+Build the complete selected package from this repository when preparing a managed installation:
+
+~~~sh
+node stellar/scf-starforge-20261009/distribution/build.mjs \
+  --repo /absolute/public-commons-sprint-2026 \
+  --ref HEAD \
+  --selection stellar-client-indexer \
+  --out /absolute/private/stellar-client-package
+~~~
+
+The build result identifies the package archive and its resolved Git commit. The installed package provides **stellar-indexer**, **starforge**, and **starforge-merchant**. The two dispatcher commands also accept `stellar-indexer` as their source-owned command. The selected package carries every file declared by the original application source manifest, including the native network catalog used during Buyer receiving.
+
 For an existing source checkout, invoke the original module directly:
 
 ~~~sh
