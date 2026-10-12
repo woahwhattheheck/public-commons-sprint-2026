@@ -44,7 +44,7 @@ _MCP_READER = r"""
 import {pathToFileURL} from 'node:url';
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
-const [checkout,path,expected] = process.argv.slice(1);
+const [checkout,path,expected,retained] = process.argv.slice(1);
 const {McpResultStore,readPrivateResultSource} = await import(pathToFileURL(resolve(checkout,'stellar-forge/mcp-paid-agent/result-store.mjs')));
 const raw = await readPrivateResultSource(path,{maxBytes:524288});
 if(createHash('sha256').update(raw).digest('hex')!==expected) throw Error('ANALYSIS_RESPONSE_SOURCE_CHANGED');
@@ -52,9 +52,21 @@ const manifest=JSON.parse(raw);
 if(manifest.schema!=='stellar-forge.mcp-result.v1') throw Error('ANALYSIS_MCP_MANIFEST_INVALID');
 const store=new McpResultStore({directory:resolve(path,'..'),readOnly:true});
 try {
- const file=store.file(manifest.quote);
+ const original=manifest.quote.result?.responseFile;
+ let quote=manifest.quote;
+ if(retained) {
+  if(resolve(retained)!==resolve(path,'..') ||
+     resolve(path)!==resolve(retained,manifest.quote.quoteId+'.meta.json'))
+    throw Error('ANALYSIS_RETAINED_MCP_DIRECTORY_INVALID');
+  // Only the local addresses change in this read-only in-memory view.
+  // The original manifest bytes, quote, invocation and outcome stay retained.
+  quote=structuredClone(manifest.quote);
+  const destination=resolve(retained,quote.quoteId+'.json');
+  quote.result.responseFile={...original,path:destination,destination,manifestPath:resolve(path)};
+ }
+ const file=store.file(quote);
  await file.verify();
- process.stdout.write(JSON.stringify({saved:file.metadata}));
+ process.stdout.write(JSON.stringify({saved:original,localPath:file.metadata.path}));
 } finally {await store.close();}
 """
 
@@ -242,17 +254,27 @@ def _read_source(input_kind, paths, format, checkout, node, cache_dir):
             raise StateError("ANALYSIS_ORIGINAL_RUNTIME_CHECKOUT_REQUIRED")
         try:
             process = subprocess.run([node, "--input-type=module", "-e", _MCP_READER, str(checkout),
-                                      str(Path(paths["manifest"]).expanduser().absolute()), digest(manifest_raw)],
+                                      str(Path(paths["manifest"]).expanduser().absolute()), digest(manifest_raw),
+                                      str(paths.get("retained") or "")],
                                      capture_output=True, timeout=30, check=False)
         except (OSError, subprocess.TimeoutExpired):
             raise StateError("RESPONSE_NATIVE_MCP_READER_UNAVAILABLE") from None
         if process.returncode or len(process.stdout) > 1_048_576:
             raise StateError("RESPONSE_NATIVE_MCP_FILE_NOT_VERIFIED")
-        saved = parse(process.stdout)["saved"]
+        verified = parse(process.stdout)
+        saved = verified["saved"]
         quote = manifest["quote"]
         if saved != quote.get("result", {}).get("responseFile"):
             raise StateError("RESPONSE_NATIVE_MCP_FILE_CHANGED")
-        file = _file(saved, saved["destination"], saved["maxBytes"])
+        if paths.get("retained"):
+            local_path = str(Path(paths["retained"]) / (quote["quoteId"] + ".json"))
+            if verified.get("localPath") != local_path:
+                raise StateError("RESPONSE_NATIVE_MCP_FILE_CHANGED")
+            file = _file({**saved, "path": local_path, "destination": local_path}, local_path, saved["maxBytes"])
+        else:
+            if verified.get("localPath") != saved.get("path"):
+                raise StateError("RESPONSE_NATIVE_MCP_FILE_CHANGED")
+            file = _file(saved, saved["destination"], saved["maxBytes"])
         context = {"nativeKind": "SF32_MCP_RESULT", "quoteId": quote["quoteId"],
                    "invocationSha256": saved["invocationSha256"], "nativeStatus": quote["status"],
                    "paymentStatus": quote["status"], "paidAttempted": quote["result"].get("paidAttempted"),
@@ -564,6 +586,8 @@ class AnalysisResponses:
                 path.unlink()
 
     def _open(self, source):
+        from .response_sources import locate_response
+        source = locate_response(self.database.directory, source)
         if source.get("input_kind") == "document":
             from .response_documents import document_path
             document_id = source.get("document_id")
