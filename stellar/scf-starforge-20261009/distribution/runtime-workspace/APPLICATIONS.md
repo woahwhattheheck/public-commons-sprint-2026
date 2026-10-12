@@ -255,7 +255,8 @@ CLI state/output are private operator data and can include original capability U
 
 | Method | API | Purpose |
 | --- | --- | --- |
-| GET | /api/applications/state | Saved bindings, runs and current private URL |
+| GET | /api/applications/state | Saved bindings and current private URL; optional `historyLimit=1..100` (default 30) |
+| GET | /api/applications/history | One application's complete retained chronology, paged by `applicationId`, optional `limit=1..100` and returned `cursor` |
 | POST | /api/applications/review | New configuration or current revision review |
 | POST | /api/applications/save | Save configuration and join original managed adoption |
 | POST | /api/applications/connect | Continue the same pending adoption |
@@ -266,6 +267,21 @@ CLI state/output are private operator data and can include original capability U
 | GET | /api/applications/output | Retained original command output |
 | GET | /api/applications/terminal | Original PTY output, identities and input receipts |
 | POST | /api/applications/input | Explicit idempotent terminal input |
+
+### Browse retained application operations
+
+The Applications overview refreshes the current run for each saved application. Select an application to see its latest 30 operations, then use **Older operations**, **Newer operations** or **Latest operations** to navigate its full retained history. **Open output** works on any selected page. The selected page and operation reopen with the same browser session, while the application controls continue to show the current run.
+
+The CLI supplies the same navigation:
+
+```sh
+starforge runtime-workspace applications --workspace /absolute/workspace
+starforge runtime-workspace application-history --workspace /absolute/workspace --application-id APPLICATION_ID --limit 30
+starforge runtime-workspace application-history --workspace /absolute/workspace --application-id APPLICATION_ID --limit 30 --cursor RETURNED_NEXT_CURSOR
+starforge runtime-workspace application-output --workspace /absolute/workspace --application-id APPLICATION_ID --operation-id OPERATION_UUID
+```
+
+The application list defaults to one run per application in the CLI; use `--history-limit 30` for the earlier expanded list. History responses include `runs`, `totalRuns` and `nextCursor`; a null cursor ends the chronology. Cursors belong to one application and continue after the last returned operation, so newly created runs do not shift an older page. The JavaScript model exposes `applicationsHistory({ applicationId, limit, cursor })` and `applicationsState({ historyLimit })`. Existing model and HTTP state calls retain their default of 30 runs.
 
 These routes use the existing loopback, Host, Origin and capability checks. Output is rendered as text. No original application capability is placed in a public asset.
 
