@@ -217,3 +217,9 @@ The workspace closes health sources before releasing its writer lease. Reopening
 Only an incomplete final journal append can be truncated during recovery. Complete lines must retain their sequence and content hashes. Snapshot validation checks the operation binding, every event link, the derived summary and the complete snapshot hash.
 
 Health snapshots travel with the source and operator history needed to interpret them. The generated merchant customer files and the original SF82 release selection remain the concrete delivery and deployment interfaces.
+
+## Run the complete native operating journey
+
+The source-owned `native-health/journey.mjs` opens the included `examples/health-server.mjs` through actual mutual TLS and metadata. It retains one original workspace, observation UUIDs, the server’s durable call journal, full health receiving, editor captures and the original merchant customer/release lifecycle. Its `--phase core` and `--phase browser` modes continue the same saved result and original operations. The browser records its original UUID before submitting a new observation and reopens that UUID on continuation.
+
+A stop during the original operation’s publication window returns `GRPC_HEALTH_START_IN_PROGRESS` with HTTP 409. Retry the stop for the same UUID after registration. Saved stop and workspace-close records precede native cancellation. On reopen, a current-epoch control record preserves the original cancellation reason, and a persisted unary status or failure preserves its returned outcome. A stop from an earlier Watch epoch remains in history after an explicit resume.
