@@ -1,12 +1,13 @@
 // MIT. Original OpenFema MCP client and complete retained-file receiver.
 import { createHash, randomUUID } from 'node:crypto';
-import { resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 import { constants } from 'node:fs';
 import { open } from 'node:fs/promises';
 import { ACTIONS as NATIVE_ACTIONS } from './schema.mjs';
 import { pathToFileURL } from 'node:url';
 import { openMerchantFileClient, createRetainedDownload } from '../../../../stellar-forge/mcp-merchant-operator/retained-download.mjs';
-import { openFemaWorkspaceTools, OPENFEMA_OPERATION_PATTERN } from './mcp-protocol.mjs';
+import { openFemaWorkspaceTools, OPENFEMA_OPERATION_PATTERN, OPENFEMA_FILE_KINDS } from './mcp-protocol.mjs';
+import {validateMapping} from './delivery.mjs';
 
 const PREFIX='merchant_openfema_';
 const MANIFEST='openfema-transfer.json';
@@ -48,7 +49,7 @@ export async function openOpenFemaClient({workspace,...options}={}){
 function parse(bytes,exportId){
   let value;try{value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}catch{throw fail('MANIFEST','The saved transfer index is not valid UTF-8 JSON.');}
   if(!plain(value)||value.schema!==SCHEMA||value.exportId!==exportId||!ALIAS.test(value.workspace??'')||!UUID.test(value.workspaceId??'')||
-      !['source','portfolio','export','receipt'].includes(value.kind)||typeof value.id!=='string'||!Array.isArray(value.files)||value.files.length<1)
+      !OPENFEMA_FILE_KINDS.includes(value.kind)||typeof value.id!=='string'||!Array.isArray(value.files)||value.files.length<1)
     throw fail('MANIFEST','Use a complete original OPENFEMA transfer index.');
   const names=new Set();let total=0;
   for(const file of value.files){
@@ -68,7 +69,7 @@ function parse(bytes,exportId){
 }
 async function selected(options){
   const {workspace,kind,id,file,expectedWorkspaceId}=options;
-  if(!['source','portfolio','export','receipt'].includes(kind)||typeof id!=='string'||
+  if(!OPENFEMA_FILE_KINDS.includes(kind)||typeof id!=='string'||
     file!==undefined&&(typeof file!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._-]{0,239}$/.test(file)))
     throw fail('CONFIGURATION','Select an original source, portfolio, export or customer receipt and optional exact filename.');
   const client=await openOpenFemaClient(options),response=accepted(await client.call('files',{kind,id}));
@@ -158,6 +159,29 @@ export async function reopenOpenFemaFiles({directory,expectedManifestSha256}={})
   });
 }
 
+/** Inspect one complete host-owned input; merge entry under its chosen deliveryInputs alias. */
+export async function inspectOpenFemaDeliveryInput({path,kind,label}={}){
+  if(typeof path!=='string'||!path||!['mapping','customer_csv'].includes(kind))throw fail('CONFIGURATION','Select a complete mapping JSON or customer_csv file.');
+  const selected=resolve(path),file=await open(selected,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);
+  let bytes,stat;
+  try{
+    stat=await file.stat({bigint:true});
+    if(!stat.isFile()||stat.size>BigInt(16*1024*1024)||process.platform!=='win32'&&((Number(stat.mode)&0o077)||Number(stat.uid)!==process.getuid()))
+      throw fail('CONFIGURATION','Use the complete owned private input within 16 MiB.');
+    bytes=await file.readFile();const after=await file.stat({bigint:true});
+    if(BigInt(bytes.length)!==stat.size||stat.size!==after.size||stat.mtimeNs!==after.mtimeNs||stat.ctimeNs!==after.ctimeNs)
+      throw fail('FILE_CHANGED','The complete input changed while it was inspected.');
+  }finally{await file.close();}
+  const content=new TextDecoder('utf-8',{fatal:true,ignoreBOM:kind==='customer_csv'}).decode(bytes);
+  let mapping;if(kind==='mapping')mapping=validateMapping(JSON.parse(content));
+  const name=basename(selected),selectedLabel=label??name;
+  if(!name.trim()||name.length>200||!selectedLabel.trim()||selectedLabel.length>200||/[\x00-\x1f\x7f]/.test(name+selectedLabel))
+    throw fail('CONFIGURATION','Use printable original input filenames and labels of at most 200 characters.');
+  return {entry:{path:selected,kind,name,label:selectedLabel,sha256:hash(bytes)},bytes:bytes.length,encoding:'utf-8',
+    ...(mapping?{mapping:{name:mapping.name,targetName:mapping.target.name,columns:mapping.columns.length,schemaBytes:Buffer.byteLength(mapping.target.evidence.content)}}:{originalBom:bytes[0]===239&&bytes[1]===187&&bytes[2]===191}),
+    receiving:'Declare entry in the existing connection deliveryInputs. Retain its alias and SHA with the original action request.'};
+}
+
 async function requestFile(path){
   const file=await open(resolve(path),constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);
   try{
@@ -171,14 +195,14 @@ async function requestFile(path){
     return value;
   }finally{await file.close();}
 }
-const HELP = "OpenFEMA merchant MCP client and complete-file receiver\n  tools --url MCP_URL --workspace ALIAS [--token-env MCP_ACCESS_TOKEN]\n  call --url MCP_URL --workspace ALIAS --request-file PRIVATE_JSON\n  action --url MCP_URL --workspace ALIAS --request-file PRIVATE_JSON\n  inspect --url MCP_URL --workspace ALIAS --kind source|portfolio|export|receipt --id ORIGINAL_ID\n          [--file EXACT_FILENAME] [--token-env MCP_ACCESS_TOKEN]\n  download --url MCP_URL --workspace ALIAS --kind source|portfolio|export|receipt --id ORIGINAL_ID\n           --out PRIVATE_DIRECTORY [--file EXACT_FILENAME]\n           [--token-env MCP_ACCESS_TOKEN] [--workspace-id ORIGINAL_UUID]\n           [--manifest-sha256 REVIEWED_SHA256] [--chunk-bytes 196608]\n  reopen --out PRIVATE_DIRECTORY [--manifest-sha256 REVIEWED_SHA256]\n\ncall reads {tool,args}. action reads {action,payload,operationId,expectedRevision}.\nKeep that exact request after uncertainty. source.import reads payload.sourcePackage,\na host-declared alias with the unchanged original bundle hash. The native engine\nvalidates every metadata, field and source-page response.\nAmount fields remain exact original decimal strings, including negative source\nadjustments. Portfolio revisions, source selections and analyst notes stay with\ntheir actual IDs. Complete files include every source response, retained\nportfolio JSON, report/export, source bundle and native customer files.\nThe original workspace ZIP uses its separate native download/restore workflow.\nDownload resumes in the same directory and verifies the whole original SHA256.\nReopen checks all completed bytes offline; it performs no provider or payment call.\nThe existing merchant token is read only from its selected environment variable.\n";
+const HELP = "OpenFEMA merchant MCP client and complete-file receiver\n  tools --url MCP_URL --workspace ALIAS [--token-env MCP_ACCESS_TOKEN]\n  call --url MCP_URL --workspace ALIAS --request-file PRIVATE_JSON\n  action --url MCP_URL --workspace ALIAS --request-file PRIVATE_JSON\n  inspect --url MCP_URL --workspace ALIAS --kind source|portfolio|export|receipt|mapping|delivery|reconciliation|delivery-comparison|workspace --id ORIGINAL_ID\n          [--file EXACT_FILENAME] [--token-env MCP_ACCESS_TOKEN]\n  download --url MCP_URL --workspace ALIAS --kind source|portfolio|export|receipt|mapping|delivery|reconciliation|delivery-comparison|workspace --id ORIGINAL_ID\n           --out PRIVATE_DIRECTORY [--file EXACT_FILENAME]\n           [--token-env MCP_ACCESS_TOKEN] [--workspace-id ORIGINAL_UUID]\n           [--manifest-sha256 REVIEWED_SHA256] [--chunk-bytes 196608]\n  reopen --out PRIVATE_DIRECTORY [--manifest-sha256 REVIEWED_SHA256]\n\ncall reads {tool,args}. action reads {action,payload,operationId,expectedRevision}.\nKeep that exact request after uncertainty. input --kind mapping|customer_csv\n--file PRIVATE_FILE [--label LABEL] describes one complete host input.\nMapping save uses mappingPackage; reconcile uses customerFilePackage.\nsource.import reads payload.sourcePackage,\na host-declared alias with the unchanged original bundle hash. The native engine\nvalidates every metadata, field and source-page response.\nAmount fields remain exact original decimal strings, including negative source\nadjustments. Portfolio revisions, source selections and analyst notes stay with\ntheir actual IDs. Complete files include every source response, retained\nportfolio JSON, report/export, source bundle and native customer files.\nworkspace.export retains its exact native ZIP and returns workspaceArchive.selection;\nreceive it with kind workspace, then use the original openfema restore command.\nDownload resumes in the same directory and verifies the whole original SHA256.\nReopen checks all completed bytes offline; it performs no provider or payment call.\nThe existing merchant token is read only from its selected environment variable.\n";
 export async function main(args=process.argv.slice(2)){
   if(!args.length||args.length===1&&['--help','-h'].includes(args[0])){process.stdout.write(HELP);return;}
   const [command,...rest]=args;
-  if(!['tools','call','action','inspect','download','reopen'].includes(command))
-    throw fail('CONFIGURATION','Choose tools, call, action, inspect, download or reopen.');
+  if(!['tools','call','action','inspect','download','reopen','input'].includes(command))
+    throw fail('CONFIGURATION','Choose tools, call, action, inspect, download, reopen or input.');
   const common=['--url','--workspace','--token-env'];
-  const allowed=new Set(command==='reopen'?['--out','--manifest-sha256']:
+  const allowed=new Set(command==='input'?['--file','--kind','--label']:command==='reopen'?['--out','--manifest-sha256']:
     ['tools','call','action'].includes(command)?[...common,...(command==='tools'?[]:['--request-file'])]:
     [...common,'--kind','--id','--file','--workspace-id','--manifest-sha256',...(command==='download'?['--out','--chunk-bytes']:[])]);
   const values={};
@@ -187,7 +211,7 @@ export async function main(args=process.argv.slice(2)){
       throw fail('CONFIGURATION','Use complete, unique declared options.');
     values[rest[i]]=rest[i+1];
   }
-  const required=command==='reopen'?['--out']:['--url','--workspace',
+  const required=command==='input'?['--file','--kind']:command==='reopen'?['--out']:['--url','--workspace',
     ...(['call','action'].includes(command)?['--request-file']:[]),
     ...(['inspect','download'].includes(command)?['--kind','--id']:[]),
     ...(command==='download'?['--out']:[])];
@@ -204,7 +228,8 @@ export async function main(args=process.argv.slice(2)){
       ...(values['--chunk-bytes']===undefined?{}:{chunkSize:Number(values['--chunk-bytes'])}),
       onProgress:value=>process.stderr.write(JSON.stringify(value)+'\n')};
     let result;
-    if(['tools','call','action'].includes(command)){
+    if(command==='input')result=await inspectOpenFemaDeliveryInput({path:values['--file'],kind:values['--kind'],label:values['--label']});
+    else if(['tools','call','action'].includes(command)){
       const client=await openOpenFemaClient(options);
       if(command==='tools'){
         const schema=accepted(await client.call('schema'));
@@ -226,7 +251,7 @@ export async function main(args=process.argv.slice(2)){
     }else result=command==='inspect'?await inspectOpenFemaFiles(options):
       command==='download'?await downloadOpenFemaFiles(options):await reopenOpenFemaFiles(options);
     process.stdout.write(JSON.stringify(result,null,2)+'\n');
-    if(result?.ok===false)process.exitCode=2;
+    if(result?.ok===false||result?.workspaceArchive?.state==='RECEIVING')process.exitCode=2;
     return result;
   }finally{process.off('SIGINT',stop);process.off('SIGTERM',stop);}
 }
