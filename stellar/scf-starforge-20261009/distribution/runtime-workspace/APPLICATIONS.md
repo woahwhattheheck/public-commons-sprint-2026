@@ -36,6 +36,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Tenderly simulation merchant | tenderly-workspace | Pinned EVM requests, original merchant, saved-provider observation review, exact-generation recovery and complete customer results |
 | Merchant recovery | merchant-recovery-remote workspace serve | Off-host inventory, original transfer journals and encrypted cold restore |
 | Commerce session | commerce-console start | An initialized SF66 session, original buyer/delivery/recovery and terminal approval |
+| RSS, Atom and subscription collections | dataset-feeds … serve | Original XML and OPML, saved selections, acquisition recovery, review, native editions and customer receiving |
 | XML dataset onboarding | dataset xml … serve | An initialized XML workspace, source intake, mapping, native query, comparison and portable editions |
 
 A selected runtime must actually contain the command. XML and Object Buyer additionally require their original forwarding/server source; an older package cannot acquire these capabilities by selecting a label. The chosen original profile supplies the dependencies required by the application. Applications installs no replacement engine or new npm dependency.
@@ -400,3 +401,15 @@ Choose **Grant planning and delivery** to reopen the original SF47 planning and 
 The original launch keeps the selected runtime source identity and verifies the adopted execution copy before opening SQLite. Open comes from the matching private launch record and authenticated original listener. Stop removes readiness, drains existing requests and closes the original workspace lock; the next reviewed start reopens the same saved plans, revisions and operating cases.
 
 Follow [Grant planning and delivery in Applications](GRANT_APPLICATIONS.md) for the complete selection, operating, export, Stop/reopen and original CLI workflow.
+
+## RSS, Atom and subscription collections
+
+Choose **RSS, Atom and subscription collections** from an installation containing the original managed feed source. Select the existing private workspace initialized by **dataset-feeds … init**, or the workspace received from its original feed/collection project. Choose the original absolute Python 3.11+ executable, retaining its virtual environment. **Opening page** accepts **subscriptions** (the default) or **feeds**; port **0** chooses an available local listener.
+
+**Review application** reads the original workspace and database identity, selected interpreter and all 21 original feed/XML/dataset/browser source files. **Save**, **Review start** and **Start reviewed application** use the same installed release and managed process. The original launcher validates that binding before and after acquiring its workspace writer. The binding follows the installer's exact source bytes into the adopted release while the startup records its actual execution location.
+
+The managed run retains **Open retained feeds** and **Open subscription collections**. Applications matches the original compact startup with its authenticated live **/api/launch** response before exposing those destinations. Original XML, OPML folders, saved collection choices, capture progress, conflict review, private notes and selected native editions remain in the original console. The complete collection and customer workflows continue through those existing controls.
+
+**Stop application** requests original capture cancellation and drains the current worker and requests before closing the workspace lease. Repeated Stop signals preserve that drain. Reopen the saved application for a new private session on the same collection, source records and native edition. The XML and feed Applications entries share the same workspace resource, including existing saved XML applications; stop its current run before using that directory through the other original console.
+
+The [complete feed Applications guide](../../sf30-seller-sdk/feeds/MANAGED_APPLICATIONS.md) includes initialization, exact CLI selection, structured startup, original receiving and recovery. This entry uses the existing **dataset-feeds** command and generic Applications browser controls.
