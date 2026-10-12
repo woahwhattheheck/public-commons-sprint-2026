@@ -100,3 +100,11 @@ and reopens the same saved query and result.
 Keep the source edition and both received workspaces in the customer's retained
 operation directory. Every original edition member and the full handover are
 included in the Analysis source document and its workspace transfer.
+
+## Resume after an adapter correction
+
+A retained failed or interrupted receiving operation can adopt corrected application code while keeping its original handover, workspace, output directory, expected rows, capacity, country selection and request IDs. Select the complete corrected source checkout and commit, then repeat the original receiving command with both `--resume` and `--accept-source-update`.
+
+The receiver permits only the executable source reference and file identities to change. It keeps the earlier source identities and failure in `source_history` before continuing the original HTTP request. Changing the source alone does not alter the customer's source selection or any other business input. Completed operations keep their original identity checks.
+
+ResponseDocument provenance names the published Datasette endpoint. The exact URL, query and filter selection remain in the retained `source-meaning.json`, original request/page attachments and customer report. Source descriptors are content-addressed, so a corrected preparation preserves the previous failed descriptor alongside the new one. The original Analysis engine still owns source registration, workbooks, reports and archive receiving.
