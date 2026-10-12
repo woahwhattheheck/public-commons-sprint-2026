@@ -306,8 +306,9 @@ async function reconcilePending(continueIt=false){
     await pendingSave();return;
   }
   const mode=pending.body.mode;
-  const complete=mode==='handover'?current.handover?.state==='READY'&&current.handover.resultSha256===pending.resultSha256:
-    current.progress?.mode===mode&&current.progress.inputSha256===current.inputSha256&&current.progress.state==='COMPLETED';
+  const complete=!current.attached&&!current.lastFailure&&(mode==='handover'
+    ?current.handover?.state==='READY'&&current.handover.resultSha256===pending.resultSha256
+    :current.progress?.mode===mode&&current.progress.inputSha256===current.inputSha256&&current.progress.state==='COMPLETED');
   if(complete){
     pending=null;await pendingSave();renderState();status('Original '+mode+' outcome retained: '+(mode==='handover'?'HANDOVER READY':current.result?.status??current.progress.outcome));
     await refreshHistory();return;
