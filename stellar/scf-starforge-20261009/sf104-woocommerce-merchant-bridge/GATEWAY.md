@@ -15,6 +15,10 @@ For independent chain review and the final selected-order release, use the
 [native merchant operator](NATIVE_REVIEW.md). It composes the original SF86
 verifier with this same gateway, accepted notice and Woo completion controller.
 
+For several products or quantities above one, enable the complete
+[digital basket workflow](BASKET.md). It uses the same checkout, buyer inbox,
+native settlement, merchant release and Woo download permissions.
+
 ## Install and enable
 
 Keep these files together in the installed `starforge-sf98-woo` plugin folder:
@@ -24,6 +28,8 @@ Keep these files together in the installed `starforge-sf98-woo` plugin folder:
 - `checkout-gateway.php`: product mapping, gateway registration, frozen order
   handoff and customer download.
 - `checkout-admission.php`: signed live order admission and merchant recovery.
+- `checkout-basket.php` and `BASKET.md`: merchant-approved catalogs, exact multi-line
+  order terms, authenticated quotes and the complete basket operating guide.
 - `merchant-console.php`, `merchant-console.js` and `merchant-console.css`:
   the joined native order, attempt, notice and review workspace.
 - `OPERATIONS.md`: the merchant's operating and recovery guide.
@@ -34,7 +40,7 @@ Keep these files together in the installed `starforge-sf98-woo` plugin folder:
 - `refund-networks.json`: the release's canonical Stellar network profiles.
 - `REFUNDS.md`: the verified refund, store-credit and operator CLI guide.
 
-Keep all 14 files when upgrading an existing installation; the original
+Keep all 16 files when upgrading an existing installation; the original
 plugin loads the console PHP and its matching browser assets. The maintained
 [Site setup tool](../../../stellar-forge/developer-site/dist/woo.html) copies
 the complete plugin from its selected toolkit source.
@@ -103,8 +109,10 @@ Save the product with **Enable Stellar mapping** checked. This records the
 merchant operator and approval time. No exchange rate is looked up or computed:
 the store total and atomic amount are an explicit merchant price mapping.
 
-A cart must contain exactly one mapped simple virtual product at quantity one.
-Coupons, fees, shipping, variations, multiple lines and a changed final total
+With baskets disabled, a cart contains exactly one mapped simple virtual product
+at quantity one. The [basket setting](BASKET.md) instead accepts approved product
+lines and integer quantities, preserving exact unit prices and one aggregate
+native amount. Coupons, fees, shipping, variations and a changed final total
 make this payment method unavailable. The actual Woo order is checked again
 during processing. Location-dependent tax that changes the final total must
 match a deliberately configured merchant price before this gateway can be used.

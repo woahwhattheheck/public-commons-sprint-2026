@@ -80,6 +80,7 @@ final class Starforge_SF104_Admission {
     }
 
     static function payload_ok($p) {
+        if (is_array($p) && ($p['schema'] ?? '') === Starforge_SF104_Basket::ADMISSION_SCHEMA) return Starforge_SF104_Basket::payload_ok($p);
         if (!is_array($p) || ($p['schema'] ?? '') !== self::SCHEMA ||
             !in_array($p['phase'] ?? null, ['inspect', 'reserve'], true)) return false;
         $fields = ['schema', 'phase', 'orderReference', 'productId', 'attemptGeneration', 'routeId', 'method',
@@ -104,6 +105,8 @@ final class Starforge_SF104_Admission {
     }
 
     static function matches($payload, $record, $h) {
+        if (($payload['schema'] ?? '') === Starforge_SF104_Basket::ADMISSION_SCHEMA) return Starforge_SF104_Basket::matches($payload, $record, $h);
+        if (($h['schema'] ?? '') !== Starforge_SF104_Checkout::HANDOFF_SCHEMA) return false;
         if ($payload['attemptGeneration'] !== $h['attemptGeneration']) return false;
         $b = $record['binding'];
         $expect = [
@@ -140,6 +143,7 @@ final class Starforge_SF104_Admission {
                 $record = Starforge_SF104_Checkout::snapshot($order);
                 $handoff = Starforge_SF104_Checkout::available_handoff($order, $record);
                 if (!self::matches($payload, $record, $handoff)) return self::response(409, 'ORDER_TERMS_MISMATCH');
+                if ($payload['phase'] === 'quote') return Starforge_SF104_Basket::quote_response($handoff);
                 if ($payload['phase'] === 'inspect') return self::response(200, 'READY', $payload['orderReference']);
                 $prior = self::row($order->get_id());
                 if ($prior && hash_equals($prior->attempt_digest, $payload['attemptDigest'])) {
@@ -239,4 +243,5 @@ final class Starforge_SF104_Admission {
 }
 
 Starforge_SF104_Admission::boot();
+
 
