@@ -62,7 +62,8 @@
     "stellar/mercury-event-operations",
     "stellar/scf-starforge-20261009/partners/open-meteo-operations",
     "stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api",
-    "stellar/scf-starforge-20261009/partners/coingecko-stellar-market"
+    "stellar/scf-starforge-20261009/partners/coingecko-stellar-market",
+    "stellar/scf-starforge-20261009/sf61-bazaar-explorer"
   ],
   "browserAssets": [
     {
@@ -156,7 +157,8 @@
     "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-refunds.js",
     "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-refunds.css",
     "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/refund-networks.json",
-    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/REFUNDS.md"
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/REFUNDS.md",
+    "stellar/scf-starforge-20261009/sf44-developer-onramp/onboard.mjs"
   ],
   "commands": {
     "openalex": "stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/cli.mjs",
@@ -358,7 +360,9 @@
     "fiscaldata": "stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/cli.mjs",
     "coingecko": "stellar/scf-starforge-20261009/partners/coingecko-stellar-market/cli.mjs",
     "webdav": "stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/cli.mjs",
-    "cache-operations": "stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/cli.mjs"
+    "cache-operations": "stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/cli.mjs",
+    "atlas": "stellar/scf-starforge-20261009/sf61-bazaar-explorer/server.mjs",
+    "atlas-workspace": "stellar/scf-starforge-20261009/sf61-bazaar-explorer/workspace-cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -829,7 +833,10 @@
     "./seller/webdav/packet": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/packet.mjs",
     "./seller/response-cache/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/model.mjs",
     "./seller/response-cache/workspace/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/server.mjs",
-    "./seller/response-cache/workspace/report": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/reports.mjs"
+    "./seller/response-cache/workspace/report": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/reports.mjs",
+    "./catalog/atlas/workspace": "./source/stellar/scf-starforge-20261009/sf61-bazaar-explorer/workspace.mjs",
+    "./catalog/atlas/transfer": "./source/stellar/scf-starforge-20261009/sf61-bazaar-explorer/workspace-transfer.mjs",
+    "./catalog/explorer": "./source/stellar/scf-starforge-20261009/sf61-bazaar-explorer/server.mjs"
   },
   "nativePeers": {
     "@x402/core": {
