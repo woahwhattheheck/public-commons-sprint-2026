@@ -196,3 +196,20 @@ An explicit family/measure selection applies to every selected geography definit
 ## Original SF100 delivery intake
 
 A producer with a direct SF100 data room can save the unchanged result of the original `scan(directory, {retainPayload:false})`. Receive that saved scan with `cli.py --workspace WORK receive-scan --scan-file NATIVE_SCAN.json --provider acs` (or `bls`). For an observation product, select `--source-id ID --projection observations` (or `laus`, `qcew`, `limits`). The original DatasetDelivery.from_finalized_scan verifies the real manifest, original page chain, typed output rows and retained byte identities. Its directory must be the current original data room; after moving a data room, invoke the original producer's scan at its new location. This intake retains the original result and keeps the original buyer/session accounting in its owning runtime.
+
+## Receive an original Census county API capture
+
+The Sources view and CLI accept the original county API capture protocol as `acs_api`. Point it to the existing `SOURCE_MANIFEST.json` beside its original metadata/data responses and `county_housing_observations.json`:
+
+```sh
+python3 cli.py --workspace /private/study import-source \
+  --provider acs_api --source /private/original-api-capture/SOURCE_MANIFEST.json
+```
+
+The capture schema is `commons.public-housing-study-source.v1`. The importer retains the original manifest, all declared JSON response bytes, the complete original observation JSON and any original CSV. It checks the HTTP/source-file inventory, exact requested county coverage, all E/M/EA/MA cells, the original variable concept/label, derived integer/null status and complete selected estimate coverage. It performs no API request. API credentials remain with the original acquisition operator; the retained public source URLs exclude credential parameters.
+
+The same source can carry more than one ACS release. Its catalog exposes the exact source definition edition for each geography. Freeze separate portfolios for the baseline and candidate definition editions, and use the same explicit comparison group only after reviewing the geographic correspondence. County FIPS identifiers are formed from the two original state/county response cells; both cells and the original projection's geography label remain in source provenance.
+
+Original API annotations stay attached to each estimate and MOE. Negative special values remain null in the normalized value alongside the unchanged raw token. Published period-end monetary units include their original year, so a cross-year change does not silently become a common-dollar delta. The unchanged API rows and their source-column coordinates are available through the existing observation inspector, packet export and receiving workflow.
+
+This product uses the Census Bureau Data API but is not endorsed or certified by the Census Bureau. [Census data attribution and terms](https://www.census.gov/data/developers/about/terms-of-service.html).
