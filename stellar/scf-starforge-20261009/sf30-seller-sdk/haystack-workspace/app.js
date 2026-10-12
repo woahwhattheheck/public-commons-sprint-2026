@@ -1,5 +1,5 @@
 import {HaystackClient} from "./client.mjs";
-import {stringifyJson} from "./json-codec.mjs";
+import {stringifyJson,canonicalJson} from "./json-codec.mjs";
 
 const $ = id => document.getElementById(id);
 const PAGE = 100;
@@ -8,6 +8,8 @@ const S = {
   sources:[], editions:[], proposals:[], sourceDraft:new Set(), sourceDirty:false,
   edits:[], preview:null, activeProposal:null, activeRecord:null, delivery:null,
   pages:{}, disabled:new Map(), localOperations:[], draftTimer:null,
+  works:[], activeWork:null, selectedWorkId:null, workDrafts:{}, workCapture:null, workUploads:new Map(),
+  returnDraft:{file:null,preview:null,decisions:{},author:"",note:""},
   pendingDraft:null, draftWrites:Promise.resolve(), draftReady:false, draftSerial:0, draftSavedSerial:0
 };
 const tabKey = "commons.haystack.operator.tab";
@@ -56,7 +58,7 @@ function controls(){
   for(const element of document.querySelectorAll("[data-connected],[data-action]"))element.disabled=unavailable;
   $("refresh-workspace").disabled=unavailable;
   for(const input of document.querySelectorAll("[data-source-id]"))input.disabled=unavailable;
-  for(const kind of ["asset","diagnostic","comparison"]){
+  for(const kind of ["asset","diagnostic","comparison","work"]){
     const page=S.pages[kind];
     $(kind+"-previous").disabled=unavailable||!page||page.history.length<2;
     $(kind+"-next").disabled=unavailable||!page||!page.response?.hasMore;
@@ -69,7 +71,9 @@ function controls(){
   const native=$("report-kind").value==="native-grid";
   $("report-format").disabled=S.busy||native;
   $("report-source").disabled=S.busy||!native;
-  $("report-role").disabled=S.busy||native||$("report-kind").value==="diagnostics";
+  $("report-role").disabled=S.busy||native||["diagnostics","work-register"].includes($("report-kind").value);
+  $("report-edition").disabled=S.busy||$("report-kind").value==="work-register";
+  workControls();
 }
 function setBusy(value){
   S.busy=value;document.body.dataset.busy=String(value);$("main").setAttribute("aria-busy",String(value));
@@ -213,7 +217,8 @@ function draftSnapshot(){
     title:$("proposal-title").value,note:$("proposal-note").value,
     edits:structuredClone(S.edits),jsonText:$("proposal-json").value,
     editRecord:$("edit-record").value,editTag:$("edit-tag").value,editAction:$("edit-action").value,editValue:$("edit-value").value,
-    sourceDirty:S.sourceDirty,sourceIds:[...S.sourceDraft],sourceUrl:$("source-url").value,sourceImportSelect:$("source-import-select").checked};
+    sourceDirty:S.sourceDirty,sourceIds:[...S.sourceDraft],sourceUrl:$("source-url").value,sourceImportSelect:$("source-import-select").checked,
+    workState:workDraftSnapshot()};
 }
 function queueDraft(snapshot){
   if(!snapshot)return S.draftWrites;
@@ -221,8 +226,9 @@ function queueDraft(snapshot){
   S.draftWrites.then(()=>{if(snapshot.key===draftKey()){
     S.draftSavedSerial=Math.max(S.draftSavedSerial,snapshot.serial||0);
     $("proposal-draft-status").textContent=S.draftSavedSerial===S.draftSerial?"Draft retained for this workspace and browser tab.":"Retaining the latest draft changes.";
+    $("work-draft-status").textContent=S.draftSavedSerial===S.draftSerial?"Work forms, review choices and file references are retained for this workspace and browser tab.":"Retaining the latest work draft changes.";
   }}
-    ,error=>{if(snapshot.key===draftKey()){$("proposal-draft-status").textContent="Draft could not be retained: "+error.message;notice("Keep this tab open until its draft can be retained. "+error.message,"error");}});
+    ,error=>{if(snapshot.key===draftKey()){$("proposal-draft-status").textContent="Draft could not be retained: "+error.message;$("work-draft-status").textContent="Work draft could not be retained: "+error.message;notice("Keep this tab open until its draft can be retained. "+error.message,"error");}});
   return S.draftWrites;
 }
 function rememberDraft(){
@@ -247,6 +253,7 @@ async function restoreDraft(retained){
   S.sourceDirty=!!draft?.sourceDirty;
   S.sourceDraft=new Set(S.sourceDirty&&Array.isArray(draft.sourceIds)?draft.sourceIds:S.status.selectedSourceIds);
   $("source-url").value=draft?.sourceUrl||"";$("source-import-select").checked=draft?.sourceImportSelect!==false;
+  restoreWorkDraft(draft?.workState);
   S.preview=null;S.draftSerial=0;S.draftSavedSerial=0;S.draftReady=true;
   $("proposal-draft-status").textContent=draft?"Restored this tab's retained draft. Preview it against the current working selection.":"Drafts are retained separately for this workspace and browser tab.";
   renderEdits();renderSources();
@@ -317,6 +324,7 @@ async function loadSection(name){
   if(name==="sources")renderSources();
   else if(name==="assets")await loadAssets(0,true);
   else if(name==="diagnostics")await loadDiagnostics(0,true);
+  else if(name==="work"){await loadWorks(0,true);await loadWorkReturns();renderReturnPreview();}
   else if(name==="proposals")await loadProposals();
   else if(name==="editions")renderEditions();
   else if(name==="operations")await loadOperations();
@@ -398,6 +406,7 @@ async function importCharlie(){
 function pageArgs(kind){
   if(kind==="asset")return cleanArgs({expectedRevision:revision(),editionId:$("asset-edition").value,sourceId:$("asset-source").value,role:$("asset-role").value,query:$("asset-query").value.trim()});
   if(kind==="diagnostic")return cleanArgs({expectedRevision:revision(),editionId:$("diagnostic-edition").value,sourceId:$("diagnostic-source").value,severity:$("diagnostic-severity").value,recordKey:$("diagnostic-record").value.trim()});
+  if(kind==="work")return cleanArgs({expectedRevision:revision(),status:$("work-status-filter").value,assignee:$("work-assignee-filter").value.trim(),priority:$("work-priority-filter").value,sourceId:$("work-source-filter").value,query:$("work-query-filter").value.trim()});
   const beforeEditionId=$("compare-before").value,afterEditionId=$("compare-after").value;
   if(!beforeEditionId||!afterEditionId)throw new Error("Choose two saved editions.");
   const raw=$("compare-source-pairs").value.trim();
@@ -412,7 +421,7 @@ async function readPage(kind,actionName,offset=0,reset=false){
   if(!reset&&previous){const earlier=history.indexOf(offset);if(earlier>=0)history=history.slice(0,earlier+1);else history.push(offset);}
   S.pages[kind]={args,response,history,offset};
   const start=response.items.length?offset+1:0,end=offset+response.items.length;
-  $(kind+"-page-status").textContent=start+"–"+end+" of "+number(response.total)+" records · workspace revision "+args.expectedRevision+(args.editionId?" · edition "+short(args.editionId):"");
+  $(kind+"-page-status").textContent=start+"–"+end+" of "+number(response.total)+(kind==="work"?" work items · workspace revision ":" records · workspace revision ")+args.expectedRevision+(args.editionId?" · edition "+short(args.editionId):"");
   return response;
 }
 async function pageMove(kind,direction){
@@ -421,6 +430,7 @@ async function pageMove(kind,direction){
   if(offset===undefined||offset===null)return;
   if(kind==="asset")await loadAssets(offset);
   else if(kind==="diagnostic")await loadDiagnostics(offset);
+  else if(kind==="work")await loadWorks(offset);
   else await loadComparison(offset);
 }
 async function loadAssets(offset=0,reset=false){
@@ -433,9 +443,9 @@ async function loadAssets(offset=0,reset=false){
   )):[emptyRow(4,"No records match this source, edition and filter.")]));
 }
 function diagnosticMessage(item){return item.message||item.description||item.code||"Finding";}
-function diagnosticList(items){
+function diagnosticList(items,editionId=""){
   if(!items?.length)return node("p",{class:"help"},"No diagnostics for this scope.");
-  return node("ul",{class:"diagnostic-list"},items.map(item=>node("li",{},badge(item.severity||"info")," ",node("strong",{},diagnosticMessage(item)),item.tag?node("span",{}," · "+item.tag):null,detail("Complete finding",item))));
+  return node("ul",{class:"diagnostic-list"},items.map(item=>node("li",{},badge(item.severity||"info")," ",node("strong",{},diagnosticMessage(item)),item.tag?node("span",{}," · "+item.tag):null,detail("Complete finding",item),action("Capture work from finding",()=>startWorkCapture({diagnostic:item,editionId})))));
 }
 async function openRecord(recordKey,editionId){
   const args=cleanArgs({expectedRevision:revision(),editionId,recordKey});
@@ -464,12 +474,13 @@ async function openRecord(recordKey,editionId){
     dl([["Record",record.key],["Source",sourceLabel(record.sourceId)],["Reference ID",record.id],["Roles",(record.roles||[]).join(", ")||"Other"],["Edition",editionId||"Working selection"],["Workspace revision",args.expectedRevision]]),
     node("div",{class:"detail-actions"},
       action("Find diagnostics",()=>{ $("diagnostic-record").value=record.key;$("diagnostic-edition").value=editionId||"";$("diagnostic-source").value=record.sourceId;return openSection("diagnostics");}),
-      action("Use record in proposal",()=>editFromRecord(record,"",undefined,editionId))
+      action("Use record in proposal",()=>editFromRecord(record,"",undefined,editionId)),
+      action("Capture work from record",()=>startWorkCapture({recordKey:record.key,sourceId:record.sourceId,editionId,title:"Work for "+(record.display||record.id||record.key)}))
     ),
     node("h4",{},"Complete native tags"),node("div",{class:"table-wrap"},tagTable),
     node("h4",{},"Source-local hierarchy and references"),
     ...(relationNodes.length?relationNodes:[node("p",{class:"help"},"This record has no indexed references or incoming relationships.")]),
-    node("h4",{},"Diagnostics"),diagnosticList(result.diagnostics||[])
+    node("h4",{},"Diagnostics"),diagnosticList(result.diagnostics||[],editionId)
   );
   controls();
 }
@@ -485,7 +496,7 @@ async function loadDiagnostics(offset=0,reset=false){
     node("td",{},badge(item.severity||"info",item.severity==="error")),
     node("td",{},node("strong",{},diagnosticMessage(item)),item.code?node("p",{class:"help"},item.code):null),
     node("td",{},item.recordKey?linkButton(item.recordKey,async()=>{await openSection("assets",{load:false});await openRecord(item.recordKey,S.pages.diagnostic.args.editionId);}):item.sourceId?sourceLabel(item.sourceId):"Workspace"),
-    node("td",{},detail("Complete finding",item))
+    node("td",{},action("Capture work",()=>startWorkCapture({diagnostic:item,editionId:S.pages.diagnostic.args.editionId||""})),detail("Complete finding",item))
   )):[emptyRow(4,"No diagnostics match this scope.")]));
 }
 function checkEdits(edits){
@@ -636,12 +647,13 @@ function reportRules(){
   if(kind!=="native-grid")$("report-source").value="";
   if(kind==="native-grid"){$("report-format").value="json";$("report-help").textContent="Choose one exact source. The export is a complete native JSON-v4 grid for that source, including accepted changes in the selected edition.";}
   else if(kind==="diagnostics")$("report-help").textContent="The report includes every finding and its source or record reference for the chosen scope.";
+  else if(kind==="work-register")$("report-help").textContent="The complete corrective work register includes current assignment, progress, source context and retained evidence across this workspace.";
   else $("report-help").textContent="The report includes every source-linked asset or point in the chosen scope, with native tag values.";
   controls();
 }
 async function prepareReport(){
   const kind=$("report-kind").value;
-  const fields=cleanArgs({kind,format:$("report-format").value,editionId:$("report-edition").value,sourceId:kind==="native-grid"?$("report-source").value:undefined,role:kind==="register"?$("report-role").value:undefined});
+  const fields=cleanArgs({kind,format:$("report-format").value,editionId:kind==="work-register"?undefined:$("report-edition").value,sourceId:kind==="native-grid"?$("report-source").value:undefined,role:kind==="register"?$("report-role").value:undefined});
   if(kind==="native-grid"&&!fields.sourceId)throw new Error("Choose one exact source for the native grid export.");
   const result=await mutate("delivery.prepare",fields);
   S.delivery=result;renderDelivery(result);await loadLocalOperations();
@@ -718,6 +730,9 @@ async function recoverOperation(item,resend){
 }
 function showReceipt(receipt,actionName){
   replace("operation-details",detail("Complete original operation receipt",receipt));
+  const workResult=receipt.result?.itemId?receipt.result:receipt;
+  if(actionName?.startsWith("work.")&&workResult.itemId)$("operation-details").append(action("Open original work item",async()=>{await openSection("work");await openWork(workResult.itemId);}));
+  if(actionName==="return.apply")$("operation-details").append(action("Read retained return decisions",()=>openSection("work")));
   const delivery=receipt.result?.kind?receipt.result:receipt;
   if((actionName==="delivery.prepare"||delivery.kind)&&delivery.operationId&&delivery.sha256&&delivery.name){
     S.delivery=delivery;
@@ -758,6 +773,7 @@ function showConnect(){
   if(!$("connect-dialog").open)$("connect-dialog").showModal();
 }
 function resetContent(){
+  resetWorkContent();
   S.pages={};S.activeProposal=null;S.activeRecord=null;S.delivery=null;S.preview=null;S.proposals=[];
   $("proposal-review-card").hidden=true;
   replace("record-details",node("p",{class:"empty"},"Choose a record to read its complete native tags and source-local relationships."));
@@ -835,7 +851,7 @@ bindButton("save-source-selection",async()=>{
 bindForm("asset-filter-form",()=>loadAssets(0,true));
 bindButton("reload-assets",()=>loadAssets(0,true));
 bindForm("diagnostic-filter-form",()=>loadDiagnostics(0,true));
-for(const kind of ["asset","diagnostic","comparison"]){bindButton(kind+"-previous",()=>pageMove(kind,"previous"));bindButton(kind+"-next",()=>pageMove(kind,"next"));}
+for(const kind of ["asset","diagnostic","comparison","work"]){bindButton(kind+"-previous",()=>pageMove(kind,"previous"));bindButton(kind+"-next",()=>pageMove(kind,"next"));}
 bindButton("add-edit",addEdit);
 $("edit-action").addEventListener("change",()=>{controls();rememberDraft();});
 for(const id of ["proposal-title","proposal-note","edit-record","edit-tag","edit-value","proposal-json","source-url"])$(id).addEventListener("input",rememberDraft);
@@ -871,4 +887,459 @@ window.addEventListener("pagehide",()=>{const snapshot=S.pendingDraft||draftSnap
 window.addEventListener("beforeunload",event=>{
   if(S.busy||S.pendingDraft||(S.draftReady&&S.draftSavedSerial<S.draftSerial)){event.preventDefault();event.returnValue="";}
 });
+
+const WORK_FIELDS=["title","description","assignee","dueDate","priority"];
+const RETURN_FIELDS=[...WORK_FIELDS,"progress"];
+const WORK_LABELS={title:"Title",description:"Required work",assignee:"Assigned to",dueDate:"Due date",priority:"Priority",progress:"Status, submission and review"};
+const WORK_FILE_LIMIT=8*1024*1024,WORK_RETURN_LIMIT=192*1024*1024;
+function valueText(value){return value===null||value===undefined?"Not recorded":typeof value==="object"?json(value):String(value);}
+function workFields(prefix){return {title:$(prefix+"title").value,description:$(prefix+"description").value,assignee:$(prefix+"assignee").value,dueDate:$(prefix+"due").value,priority:$(prefix+"priority").value};}
+function setWorkFields(prefix,fields={}){
+  for(const [key,suffix] of [["title","title"],["description","description"],["assignee","assignee"],["dueDate","due"],["priority","priority"]])$(prefix+suffix).value=fields[key]??(key==="priority"?"routine":"");
+}
+function activeWorkDraft(){
+  const item=S.activeWork;if(!item)return null;
+  return S.workDrafts[item.id]||(S.workDrafts[item.id]={
+    itemId:item.id,expectedHeadSha256:item.headSha256,base:structuredClone(item.current),
+    fields:structuredClone(item.current.fields),author:"",note:"",
+    evidenceKind:"note",evidenceAuthor:"",evidenceNote:"",evidenceProposalId:"",evidenceFile:null,
+    reviewAuthor:"",reviewNote:"",reviewEditionId:"",rebases:[]
+  });
+}
+function captureVisibleWorkDrafts(){
+  if(S.workCapture){
+    S.workCapture.fields=workFields("work-capture-");
+    S.workCapture.author=$("work-capture-author").value;
+    S.workCapture.recordKey=$("work-capture-record").value;
+  }
+  if(S.activeWork){
+    const d=activeWorkDraft();d.fields=workFields("work-edit-");
+    d.author=$("work-edit-author").value;d.note=$("work-edit-note").value;
+    d.evidenceKind=$("work-evidence-kind").value;d.evidenceAuthor=$("work-evidence-author").value;
+    d.evidenceNote=$("work-evidence-note").value;d.evidenceProposalId=$("work-evidence-proposal").value;
+    d.reviewAuthor=$("work-review-author").value;d.reviewNote=$("work-review-note").value;d.reviewEditionId=$("work-review-edition").value;
+  }
+  S.returnDraft.author=$("work-return-author").value;S.returnDraft.note=$("work-return-note").value;
+}
+function workDraftSnapshot(){
+  captureVisibleWorkDrafts();
+  return structuredClone({capture:S.workCapture,selectedId:S.selectedWorkId,items:S.workDrafts,returned:S.returnDraft});
+}
+function restoreWorkDraft(saved){
+  S.workCapture=saved?.capture&&typeof saved.capture==="object"?structuredClone(saved.capture):null;
+  S.workDrafts=saved?.items&&typeof saved.items==="object"?structuredClone(saved.items):{};
+  S.selectedWorkId=typeof saved?.selectedId==="string"?saved.selectedId:null;
+  S.returnDraft=saved?.returned&&typeof saved.returned==="object"?structuredClone(saved.returned):{file:null,preview:null,decisions:{},author:"",note:""};
+  S.returnDraft.decisions||={};S.workUploads=new Map();S.activeWork=null;
+  renderWorkCapture();renderReturnPreview();
+}
+function resetWorkContent(){
+  S.works=[];S.activeWork=null;S.selectedWorkId=null;S.workDrafts={};S.workCapture=null;S.workUploads=new Map();
+  S.returnDraft={file:null,preview:null,decisions:{},author:"",note:""};
+  $("work-capture-card").hidden=true;$("work-detail-card").hidden=true;$("work-recovery").hidden=true;
+  $("work-return-apply-form").hidden=true;$("work-return-stale").hidden=true;
+  $("work-evidence-file").value="";$("work-return-file").value="";
+  replace("work-body",emptyRow(5,"Read work for this workspace."));
+  for(const id of ["work-page-status","work-returns-list","work-return-read","work-return-summary","work-return-items"])replace(id);
+  $("work-count").textContent="";$("work-return-file-status").textContent="No return file retained.";
+}
+function workControls(){
+  const unavailable=S.busy||!S.client,d=S.activeWork?activeWorkDraft():null,stale=!!d&&d.expectedHeadSha256!==S.activeWork.headSha256;
+  for(const id of ["work-update-save","work-evidence-save","work-submit","work-verify","work-reopen","work-exception"])$(id).disabled=unavailable||!d||stale;
+  $("work-submit").disabled=unavailable||!d||stale||!S.activeWork.evidence?.length;
+  $("work-verify").disabled=unavailable||!d||stale||S.activeWork.current.status!=="submitted"||!S.activeWork.current.submission?.sha256;
+  $("work-capture-save").disabled=unavailable||!S.workCapture;
+  $("work-capture-record").readOnly=!!S.workCapture?.context?.diagnostic;
+  $("work-capture-edition").disabled=unavailable||!!S.workCapture?.context?.diagnostic;
+  $("work-adopt-current").disabled=unavailable||!stale;
+  const preview=S.returnDraft.preview;
+  $("work-return-apply").disabled=unavailable||!preview||preview.expectedRevision!==S.status?.revision||preview.packageSha256!==S.returnDraft.file?.sha256;
+  $("work-return-stale").hidden=!preview||preview.expectedRevision===S.status?.revision;
+  const kind=$("work-evidence-kind").value;
+  $("work-evidence-file-fields").hidden=kind!=="file";$("work-evidence-proposal-fields").hidden=kind!=="proposal";
+}
+async function digestWorkBytes(bytes){
+  if(!crypto.subtle)throw new Error("Complete file and finding verification needs Web Crypto.");
+  return [...new Uint8Array(await crypto.subtle.digest("SHA-256",bytes))].map(x=>x.toString(16).padStart(2,"0")).join("");
+}
+async function canonicalWorkHash(value){return digestWorkBytes(new TextEncoder().encode(canonicalJson(value)));}
+function encodeWorkBytes(bytes){let binary="";for(let p=0;p<bytes.length;p+=32768)binary+=String.fromCharCode(...bytes.subarray(p,p+32768));return btoa(binary);}
+async function retainWorkUpload(file,kind){
+  requireWorkspace();const limit=kind==="return"?WORK_RETURN_LIMIT:WORK_FILE_LIMIT;
+  if(!file||file.size<1||file.size>limit)throw new Error("Choose a complete "+(kind==="return"?"workspace return of up to 192 MiB.":"evidence file of up to 8 MiB."));
+  const bytes=new Uint8Array(await file.arrayBuffer());if(bytes.length!==file.size)throw new Error("The complete selected file could not be read.");
+  const sha256=await digestWorkBytes(bytes),key=draftKey()+":work-"+kind+":"+sha256;
+  const entry={key,workspaceId:S.identity.workspaceId,tabId,kind:"work-"+kind,name:file.name,mediaType:file.type||"application/octet-stream",bytes:bytes.length,sha256,base64:encodeWorkBytes(bytes),retainedAt:new Date().toISOString()};
+  S.workUploads.set(key,entry);
+  await dbWrite("drafts",entry);
+  return {key,name:entry.name,mediaType:entry.mediaType,bytes:entry.bytes,sha256:entry.sha256};
+}
+async function retainedWorkUpload(reference,kind){
+  if(!reference||typeof reference.key!=="string"||reference.key!==draftKey()+":work-"+kind+":"+reference.sha256||typeof reference.name!=="string"||!reference.name||typeof reference.mediaType!=="string"||!reference.mediaType)throw new Error("Select and retain the complete original file and its reviewed name and type for this workspace and tab.");
+  let entry=S.workUploads.get(reference.key);
+  if(!entry){entry=await dbRead("drafts",reference.key);if(entry)S.workUploads.set(reference.key,entry);}
+  if(!entry||entry.workspaceId!==S.identity.workspaceId||entry.tabId!==tabId||entry.kind!=="work-"+kind||entry.bytes!==reference.bytes||entry.sha256!==reference.sha256)throw new Error("The retained file reference no longer matches its original bytes. Select the original file again.");
+  if(!entry.verified){
+    const binary=atob(entry.base64),bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
+    if(bytes.length!==reference.bytes||await digestWorkBytes(bytes)!==reference.sha256)throw new Error("The retained file bytes differ from the reviewed original.");
+    entry.verified=true;
+  }
+  // The shared content entry deduplicates bytes. Each draft retains its own reviewed file metadata.
+  return {...entry,name:reference.name,mediaType:reference.mediaType};
+}
+function workScope(actionName,fields,item){
+  if(item.action==="return.apply"||actionName==="return.apply")return item.action===actionName&&item.args.base64===fields.base64;
+  if(fields.itemId)return item.action.startsWith("work.")&&item.args.itemId===fields.itemId;
+  if(actionName==="work.capture")return item.action===actionName&&item.args.materialSha256===fields.materialSha256&&
+    (fields.diagnosticId?item.args.diagnosticId===fields.diagnosticId:item.args.recordKey===fields.recordKey);
+  return false;
+}
+async function mutateWork(actionName,fields){
+  await flushDraft();
+  const rows=(await dbRead("operations")).filter(x=>x.workspaceId===S.identity.workspaceId&&workScope(actionName,fields,x));
+  const pending=rows.find(x=>x.state==="prepared"||x.state==="outcome unknown");
+  if(pending){await renderWorkRecovery();throw new Error("The original "+pending.action+" request "+pending.operationId+" needs its receipt read before a new action. Use Continue an original request below or Operations.");}
+  if(actionName==="work.capture"){
+    const known=rows.find(x=>x.state==="completed"&&canonicalJson(Object.fromEntries(Object.entries(x.args).filter(([key])=>!["operationId","expectedRevision"].includes(key))))===canonicalJson(fields));
+    if(known?.receipt){notice("This exact capture already completed. Opening its original work item.");return known.receipt.result?.itemId?known.receipt.result:known.receipt;}
+  }
+  try{return await mutate(actionName,fields);}
+  catch(error){try{await renderWorkRecovery();}catch{}throw error;}
+}
+async function renderWorkRecovery(){
+  if(!S.identity)return;
+  const rows=(await dbRead("operations")).filter(x=>x.workspaceId===S.identity.workspaceId&&(x.action.startsWith("work.")||x.action==="return.apply")&&(x.state==="prepared"||x.state==="outcome unknown"));
+  $("work-recovery").hidden=!rows.length;
+  replace("work-recovery-items",...rows.map(row=>node("div",{class:"list-item"},node("strong",{},row.action+" · "+row.state),sourceKey(row.operationId),
+    node("p",{},"The complete original arguments and expected revision remain retained."),
+    node("div",{class:"button-row"},action("Read original receipt",async()=>{await recoverOperation(row,false);await loadWorks(0,true);}),
+      action("Continue original request",async()=>{await recoverOperation(row,true);await loadWorks(0,true);}),
+      action("Open request details",()=>{showLocalOperation(row);return openSection("operations",{load:false});}))
+  )));
+}
+function selectedWorkMaterial(editionId){
+  if(!editionId)return S.status.materialSha256;
+  const edition=S.editions.find(x=>x.id===editionId);if(!edition)throw new Error("The retained material edition is unavailable. Read the original source selection again.");
+  return edition.materialSha256;
+}
+async function startWorkCapture({diagnostic=null,recordKey=null,sourceId=null,editionId="",title=""}={}){
+  captureVisibleWorkDrafts();await flushDraft();
+  if(S.workCapture?.fields?.title&&!await confirmAction("Choose a new work source?","The existing capture draft has not been submitted. Replace its source and form with this selected record or finding?","Use this source"))return;
+  const context={editionId:editionId||"",materialSha256:selectedWorkMaterial(editionId),sourceId:sourceId||diagnostic?.sourceId||null};
+  if(diagnostic){context.diagnostic=structuredClone(diagnostic);context.diagnosticSha256=await canonicalWorkHash(diagnostic);}
+  S.workCapture={context,recordKey:recordKey||diagnostic?.recordKey||"",author:"",fields:{title:title||diagnosticMessage(diagnostic||{})||"",description:"",assignee:"",dueDate:"",priority:diagnostic?.severity==="error"?"high":"routine"},open:true};
+  if(!diagnostic&&!title)S.workCapture.fields.title="";
+  renderWorkCapture();rememberDraft();await flushDraft();await openSection("work");$("work-capture-title").focus();
+}
+function renderWorkCapture(){
+  const draft=S.workCapture;$("work-capture-card").hidden=!draft?.open;
+  if(!draft)return;
+  setWorkFields("work-capture-",draft.fields);$("work-capture-author").value=draft.author||"";
+  $("work-capture-record").value=draft.recordKey||"";$("work-capture-edition").value=draft.context?.editionId||"";
+  $("work-capture-help").textContent=draft.context?.diagnostic?"Capturing the exact selected finding and its material. The source snapshot stays fixed while you describe the work.":"Choose an exact source record and describe the work. The displayed material identifies the source snapshot.";
+  replace("work-capture-context",detail("Retained capture context",draft.context||{}));
+}
+async function captureWork(){
+  captureVisibleWorkDrafts();const d=S.workCapture;if(!d)throw new Error("Choose a source record or diagnostic first.");
+  const context=d.context;if(!context?.materialSha256)throw new Error("Choose a complete material snapshot.");
+  const fields={...d.fields,title:d.fields.title.trim(),author:d.author.trim(),materialSha256:context.materialSha256};
+  if(!fields.title||!fields.author)throw new Error("Enter a work title and the person recording it.");
+  if(context.editionId)fields.editionId=context.editionId;
+  if(context.diagnostic){fields.diagnosticId=context.diagnostic.id;fields.diagnosticSha256=context.diagnosticSha256;}
+  else{fields.recordKey=d.recordKey.trim();if(!fields.recordKey)throw new Error("Enter the exact source record key.");}
+  const result=await mutateWork("work.capture",fields);
+  S.workCapture=null;$("work-capture-card").hidden=true;rememberDraft();await flushDraft();
+  await synchronize();await loadWorks(0,true);await openWork(result.itemId);
+  notice("Work captured with the complete original source context.");
+}
+async function loadWorks(offset=0,reset=false){
+  const page=await readPage("work","works.list",offset,reset);S.works=page.items;
+  $("work-count").textContent=number(page.total);
+  replace("work-body",...(page.items.length?page.items.map(item=>node("tr",{dataset:{active:String(item.id===S.selectedWorkId)}},
+    node("td",{},linkButton(item.current.fields.title,()=>openWork(item.id)),sourceKey(item.id),node("p",{class:"help"},item.current.fields.description)),
+    node("td",{},badge(item.current.status,["submitted","exception"].includes(item.current.status)),node("p",{class:"help"},"Finding: "+text(item.finding?.state))),
+    node("td",{},item.current.fields.assignee||"Unassigned",node("p",{class:"help"},item.current.fields.dueDate?"Due "+item.current.fields.dueDate:"No due date"),badge(item.current.fields.priority)),
+    node("td",{},sourceName(item.origin.sourceId)||"Workspace",sourceKey(item.origin.recordKey||item.origin.sourceId),item.origin.diagnostic?node("p",{class:"help"},diagnosticMessage(item.origin.diagnostic)):null),
+    node("td",{},number(item.evidenceCount??item.current.evidenceIds?.length??0))
+  )):[emptyRow(5,"No work items match this filter.")]));
+  await renderWorkRecovery();
+  if(S.selectedWorkId)await openWork(S.selectedWorkId,{scroll:false});
+}
+async function openWork(itemId,{scroll=true}={}){
+  if(!itemId)throw new Error("The completed operation did not identify a work item.");
+  captureVisibleWorkDrafts();await flushDraft();
+  const item=await request("work.read",{expectedRevision:revision(),itemId});
+  if(item.id!==itemId||item.workspaceId!==S.identity.workspaceId||item.revision!==revision())throw new Error("The work item belongs to another workspace or revision.");
+  S.activeWork=item;S.selectedWorkId=itemId;activeWorkDraft();renderWorkDetail();
+  rememberDraft();if(scroll)$("work-detail-card").scrollIntoView({block:"start",behavior:"instant"});
+}
+function fieldComparison(label,base,local,incoming,headings=["Original editing base","Your draft","Current saved value"]){
+  return node("section",{class:"work-return-field"},node("h5",{},label),node("div",{class:"work-diff"},
+    [base,local,incoming].map((v,i)=>node("div",{},node("h5",{},headings[i]),node("div",{class:"work-value"},valueText(v))))));
+}
+function renderWorkDetail(){
+  const item=S.activeWork;$("work-detail-card").hidden=!item;if(!item)return;
+  const d=activeWorkDraft();$("work-detail-heading").textContent=item.current.fields.title;$("work-detail-label").textContent="Work item · "+short(item.id);
+  replace("work-detail-summary",node("div",{class:"work-status-line"},badge(item.current.status,true),badge(item.current.fields.priority),node("span",{},"Finding: "+text(item.finding?.state))),
+    dl([["Assigned to",item.current.fields.assignee||"Unassigned"],["Due",item.current.fields.dueDate||"No due date"],["Retained evidence",item.evidence.length]]));
+  replace("work-origin",detail("Original captured source and finding",item.origin),detail("Current material finding",item.finding),detail("Retained material context",item.context));
+  setWorkFields("work-edit-",d.fields);$("work-edit-author").value=d.author||"";$("work-edit-note").value=d.note||"";
+  $("work-evidence-kind").value=d.evidenceKind||"note";$("work-evidence-author").value=d.evidenceAuthor||"";
+  $("work-evidence-note").value=d.evidenceNote||"";$("work-evidence-proposal").value=d.evidenceProposalId||"";
+  $("work-review-author").value=d.reviewAuthor||"";$("work-review-note").value=d.reviewNote||"";$("work-review-edition").value=d.reviewEditionId||"";
+  $("work-evidence-file-status").textContent=d.evidenceFile?d.evidenceFile.name+" · "+size(d.evidenceFile.bytes)+" · original bytes retained":"No evidence file retained for this draft.";
+  const stale=d.expectedHeadSha256!==item.headSha256;$("work-stale").hidden=!stale;
+  replace("work-base-comparison",...(stale?WORK_FIELDS.map(key=>fieldComparison(WORK_LABELS[key],d.base?.fields?.[key],d.fields[key],item.current.fields[key])):[]),
+    ...(stale?[fieldComparison("Status, submission and review",{status:d.base.status,submission:d.base.submission,review:d.base.review},"Your retained decision notes remain in the forms below.",{status:item.current.status,submission:item.current.submission,review:item.current.review})]:[]));
+  renderWorkEvidence();replace("work-submission",...(item.current.submission?[detail("Exact retained submission",item.current.submission)]:[node("p",{class:"help"},"This work item has no retained submission yet.")]),...(item.current.review?[detail("Current review decision",item.current.review)]:[]));
+  replace("work-history",...(item.history||[]).map((event,index)=>detail("Recorded work edition "+(index+1),event)),...(d.rebases?.length?[detail("This tab's reviewed editing bases",d.rebases)]:[]));
+  workControls();
+}
+async function adoptCurrentWork(){
+  captureVisibleWorkDrafts();const item=S.activeWork,d=activeWorkDraft();if(!item||!d)throw new Error("Read the work item first.");
+  if(d.expectedHeadSha256===item.headSha256)return;
+  d.rebases||=[];d.rebases.push({at:new Date().toISOString(),fromHeadSha256:d.expectedHeadSha256,toHeadSha256:item.headSha256,original:structuredClone(d.base),draft:structuredClone(d.fields),current:structuredClone(item.current)});
+  d.expectedHeadSha256=item.headSha256;d.base=structuredClone(item.current);
+  renderWorkDetail();rememberDraft();await flushDraft();notice("Your authored values and notes remain; the reviewed current version is now this draft's editing base.");
+}
+function workMutationBase(){
+  captureVisibleWorkDrafts();const d=activeWorkDraft();if(!d||!S.activeWork)throw new Error("Open a work item first.");
+  if(d.expectedHeadSha256!==S.activeWork.headSha256)throw new Error("Review the original, draft and current values before adopting the current editing base.");
+  return {itemId:S.activeWork.id,expectedHeadSha256:d.expectedHeadSha256};
+}
+async function updateWork(){
+  const base=workMutationBase(),d=activeWorkDraft();
+  const fields={...d.fields,title:d.fields.title.trim()};
+  if(!fields.title||!d.author.trim()||!d.note.trim())throw new Error("Enter the work title, person making the change and a change note.");
+  const receipt=await mutateWork("work.update",{...base,fields,author:d.author.trim(),note:d.note});
+  await finishWorkMutation(base.itemId,"fields",receipt);notice("Assignment and scope saved with their original history.");
+}
+
+
+function renderWorkEvidence(){
+  const items=S.activeWork?.evidence||[];
+  replace("work-evidence-list",...(items.length?items.map(evidence=>node("section",{class:"work-evidence-item"},
+    node("h5",{},evidence.name),node("div",{class:"work-status-line"},badge(evidence.kind),node("span",{},size(evidence.bytes))),
+    node("div",{class:"button-row"},action("Download original evidence",async()=>{
+      const bytes=await S.client.completeBytes("evidence.read",{evidenceId:evidence.id});
+      if(bytes.length!==evidence.bytes||await digestWorkBytes(bytes)!==evidence.sha256)throw new Error("The complete evidence does not match its retained summary.");
+      saveFile(bytes,evidence.name,evidence.mediaType);notice("Downloaded the complete retained evidence.");
+    }),evidence.proposal?action("Copy native changes to tag draft",()=>copyWorkProposal(evidence)):null),
+    evidence.proposal?detail("Frozen native proposal and review",evidence.proposal):null,detail("Retained evidence details",evidence)
+  )):[node("p",{class:"empty"},"Retain at least one evidence item before submitting this work.")]));
+}
+async function copyWorkProposal(evidence){
+  const proposal=evidence.proposal;if(!proposal||!Array.isArray(proposal.changes))throw new Error("This evidence has no complete native proposal changes.");
+  const edits=checkEdits(proposal.changes.map(change=>{
+    if(!change.after||typeof change.after.present!=="boolean")throw new Error("A retained native change has no complete after-value.");
+    return change.after.present?{recordKey:change.recordKey,tag:change.tag,action:"set",value:change.after.value}:{recordKey:change.recordKey,tag:change.tag,action:"remove"};
+  }));
+  if(!edits.length)throw new Error("The retained proposal contains no tag edits to copy.");
+  let current;try{current=JSON.parse($("proposal-json").value);}catch{current=null;}
+  if((!Array.isArray(current)||current.length||$("proposal-title").value||$("proposal-note").value)&&
+    !await confirmAction("Replace the current tag draft?","Copy the frozen evidence changes into the original tag proposal editor. The current unsaved tag draft will be replaced; existing saved proposals remain retained.","Copy these changes"))return;
+  S.edits=edits;S.preview=null;$("proposal-title").value=proposal.title||"Changes from retained work evidence";
+  $("proposal-note").value="Copied from retained evidence "+evidence.id+". "+(proposal.note||"");$("proposal-json").value=json(edits);
+  renderEdits();rememberDraft();await flushDraft();await openSection("proposals");
+  notice("The frozen native changes are in the ordinary tag draft. Preview the current material before preparing and accepting a proposal.");
+}
+async function previewWorkEvidenceProposal(){
+  const proposalId=$("work-evidence-proposal").value.trim();if(!proposalId)throw new Error("Enter an existing native proposal ID.");
+  const result=await request("proposal.read",{expectedRevision:revision(),proposalId});
+  replace("work-evidence-proposal-preview",node("h5",{},result.proposal.title),badge(result.proposal.state),
+    renderChanges(result.proposal.changes),detail("Complete current native proposal",result.proposal));
+}
+async function selectWorkEvidenceFile(){
+  const d=activeWorkDraft();if(!d)throw new Error("Open a work item first.");
+  const file=$("work-evidence-file").files?.[0];if(!file)return;
+  const reference=await retainWorkUpload(file,"evidence");
+  d.evidenceFile=reference;$("work-evidence-file").value="";
+  $("work-evidence-file-status").textContent=reference.name+" · "+size(reference.bytes)+" · original bytes retained";
+  rememberDraft();await flushDraft();
+}
+async function finishWorkMutation(itemId,kind,receipt){
+  if(receipt?.itemId!==itemId||receipt.workspaceId!==S.identity.workspaceId||!/^[0-9a-f]{64}$/.test(receipt.headSha256||""))throw new Error("The completed mutation did not return its exact work item and head.");
+  const d=S.workDrafts[itemId];S.activeWork=null;
+  await synchronize();const item=await request("work.read",{expectedRevision:revision(),itemId});
+  if(item.id!==itemId||item.workspaceId!==S.identity.workspaceId||item.revision!==revision())throw new Error("The completed work item returned a different identity.");
+  if(d){
+    // A later peer edition must remain stale against this tab\'s retained base and authored fields.
+    // Only the exact head returned by our completed mutation can advance that editing base.
+    if(item.headSha256===receipt.headSha256){
+      d.expectedHeadSha256=item.headSha256;d.base=structuredClone(item.current);
+      if(kind==="fields")d.fields=structuredClone(item.current.fields);
+    }
+    if(kind==="fields")d.note="";
+    if(kind==="evidence"){d.evidenceNote="";d.evidenceProposalId="";d.evidenceFile=null;$("work-evidence-file").value="";}
+    if(kind==="review")d.reviewNote="";
+  }
+  S.activeWork=item;S.selectedWorkId=item.id;renderWorkDetail();rememberDraft();await flushDraft();await loadWorks(0,true);
+}
+async function addWorkEvidence(){
+  const base=workMutationBase(),d=activeWorkDraft();
+  if(!d.evidenceAuthor.trim()||!d.evidenceNote.trim())throw new Error("Enter the evidence author and note.");
+  const fields={...base,author:d.evidenceAuthor.trim(),note:d.evidenceNote,kind:d.evidenceKind};
+  if(fields.kind==="file"){
+    if($("work-evidence-file").files?.length)await selectWorkEvidenceFile();
+    const file=await retainedWorkUpload(d.evidenceFile,"evidence");
+    Object.assign(fields,{name:file.name,mediaType:file.mediaType,base64:file.base64});
+  }else if(fields.kind==="proposal"){
+    fields.proposalId=d.evidenceProposalId.trim();if(!fields.proposalId)throw new Error("Enter the exact existing proposal ID.");
+  }else if(fields.kind!=="note")throw new Error("Choose file, proposal or note evidence.");
+  const receipt=await mutateWork("work.evidence",fields);await finishWorkMutation(base.itemId,"evidence",receipt);notice("The complete evidence is retained with this work item.");
+}
+async function decideWork(decision){
+  if(!["submit","verify","reopen","accept-exception"].includes(decision))throw new Error("Choose a submission or review decision.");
+  const base=workMutationBase(),d=activeWorkDraft(),item=S.activeWork;
+  if(!d.reviewAuthor.trim()||!d.reviewNote.trim())throw new Error("Enter the person making this submission or decision and its note.");
+  const fields={...base,author:d.reviewAuthor.trim(),note:d.reviewNote};
+  if(d.reviewEditionId)fields.editionId=d.reviewEditionId;
+  let receipt;
+  if(decision==="submit"){
+    if(!item.evidence.length)throw new Error("Retain original evidence before submitting this work.");
+    receipt=await mutateWork("work.submit",fields);
+  }else{
+    fields.decision=decision;
+    if(decision==="verify"){
+      if(item.current.status!=="submitted"||!item.current.submission?.sha256)throw new Error("Read the exact submitted work before verifying it.");
+      fields.submissionSha256=item.current.submission.sha256;
+    }
+    receipt=await mutateWork("work.review",fields);
+  }
+  await finishWorkMutation(base.itemId,"review",receipt);
+  notice(decision==="submit"?"The exact work and material snapshot is submitted for review.":decision==="verify"?"Verification of the submitted work is recorded.":decision==="reopen"?"The work item is reopened with its review history.":"The documented exception is recorded as its own decision.");
+}
+async function selectReturnFile(){
+  const file=$("work-return-file").files?.[0];if(!file)return S.returnDraft.file;
+  const reference=await retainWorkUpload(file,"return");
+  if(S.returnDraft.file?.sha256!==reference.sha256){
+    S.returnDraft.preview=null;S.returnDraft.decisions={};S.returnDraft.applied=null;
+  }
+  S.returnDraft.file=reference;$("work-return-file").value="";
+  renderReturnPreview();rememberDraft();await flushDraft();return reference;
+}
+async function previewReturnedWork(){
+  if($("work-return-file").files?.length)await selectReturnFile();
+  captureVisibleWorkDrafts();const file=await retainedWorkUpload(S.returnDraft.file,"return");await flushDraft();
+  const expectedRevision=revision(),result=await request("return.preview",{expectedRevision,base64:file.base64});
+  if(result.packageSha256!==file.sha256||!Array.isArray(result.items))throw new Error("The return preview does not match the complete selected file.");
+  if(result.workspaceId&&result.workspaceId!==S.identity.workspaceId)throw new Error("The return preview belongs to another workspace.");
+  const decisions={};
+  for(const item of result.items){
+    if(!item||typeof item.itemId!=="string"||!Array.isArray(item.conflicts)||!item.fields)throw new Error("The returned work comparison is incomplete.");
+    const prior=S.returnDraft.decisions[item.itemId];
+    const retained=prior&&prior.expectedHeadSha256===(item.localHeadSha256??null)&&prior.incomingHeadSha256===item.incomingHeadSha256;
+    decisions[item.itemId]={itemId:item.itemId,decision:retained&&prior.decision==="accept"?"accept":"keep",expectedHeadSha256:item.localHeadSha256??null,
+      incomingHeadSha256:item.incomingHeadSha256,choices:retained?Object.fromEntries(Object.entries(prior.choices||{}).filter(([key,value])=>item.conflicts.includes(key)&&["local","incoming"].includes(value))):{}};
+  }
+  S.returnDraft.preview={...result,expectedRevision};S.returnDraft.decisions=decisions;
+  renderReturnPreview();rememberDraft();await flushDraft();
+  notice("The complete return is compared with the retained common revision and current work. Review each item and actual conflict.");
+}
+function renderReturnPreview(){
+  const draft=S.returnDraft||{},file=draft.file,preview=draft.preview;
+  $("work-return-file-status").textContent=file?file.name+" · "+size(file.bytes)+" · original file retained in this tab":"No return file retained.";
+  $("work-return-author").value=draft.author||"";$("work-return-note").value=draft.note||"";
+  $("work-return-apply-form").hidden=!preview;
+  if(!preview){
+    replace("work-return-summary",...(draft.applied?[node("p",{class:"work-accepted-note"},"The reviewed return was applied. Its complete original receipt is retained below."),detail("Completed original return operation",draft.applied)]:[]));
+    replace("work-return-items");$("work-return-stale").hidden=true;return;
+  }
+  const accepted=preview.items.filter(x=>draft.decisions?.[x.itemId]?.decision==="accept").length;
+  replace("work-return-summary",dl([["Work items",preview.items.length],["Selected to accept",accepted],["Selected to keep",preview.items.length-accepted],["Common retained revision",preview.commonRevision],["Returned revision",preview.incomingRevision],["Current review revision",preview.expectedRevision]]),
+    detail("Returned package identity",{name:file?.name,bytes:file?.bytes,packageSha256:preview.packageSha256,payloadSha256:preview.payloadSha256,incomingRevision:preview.incomingRevision,commonRevision:preview.commonRevision}));
+  replace("work-return-items",...preview.items.map(item=>{
+    const choice=draft.decisions[item.itemId];
+    const section=node("section",{class:"work-return-item",dataset:{itemId:item.itemId,decision:choice.decision}});
+    const select=node("select",{id:"return-item-"+item.itemId,dataset:{connected:"true",returnDecision:item.itemId},disabled:S.busy,onchange:event=>{
+      choice.decision=event.target.value;captureVisibleWorkDrafts();renderReturnPreview();rememberDraft();workControls();
+    }},node("option",{value:"keep"},"Keep current work"),node("option",{value:"accept"},"Accept reviewed changes"));select.value=choice.decision;
+    section.append(node("div",{class:"section-heading"},node("div",{},node("h4",{},item.title),sourceKey(item.itemId),badge(item.kind,item.kind==="diverged")),
+      node("label",{class:"inline-label return-decision",htmlFor:select.id},"Decision",select)));
+    const differences=node("details",{open:item.kind==="diverged"||choice.decision==="accept"},node("summary",{},item.conflicts.length?item.conflicts.length+" field conflicts · complete original, current and returned values":"Compare complete original, current and returned values"));
+    for(const key of RETURN_FIELDS){
+      const field=item.fields[key];if(!field)continue;
+      const conflict=item.conflicts.includes(key);
+      const block=node("fieldset",{class:"work-return-field"+(conflict?" work-conflict":"")},node("legend",{},WORK_LABELS[key],conflict?" · explicit choice required":""),
+        node("div",{class:"work-diff"},[[field.baseAmbiguous?"Values in the shared history":"Original common value",field.baseAmbiguous?field.baseAlternatives:field.base],["Current local value",field.local],["Returned value",field.incoming]].map(([heading,value])=>node("div",{},node("h5",{},heading),node("div",{class:"work-value"},valueText(value))))));
+      if(field.baseAmbiguous)block.append(node("p",{class:"help"},conflict?"The shared history contains different earlier values. Choose the complete current or returned value explicitly.":"The shared history contains different earlier values; both copies now agree on the displayed value."));
+      if(conflict){
+        const control=node("select",{id:"return-choice-"+item.itemId+"-"+key,dataset:{connected:"true",returnChoice:item.itemId,field:key},disabled:S.busy,onchange:event=>{
+          if(event.target.value)choice.choices[key]=event.target.value;else delete choice.choices[key];
+          rememberDraft();
+        }},node("option",{value:""},"Choose a value for accepted work"),node("option",{value:"local"},"Use current local value"),node("option",{value:"incoming"},"Use returned value"));control.value=choice.choices[key]||"";
+        block.append(node("label",{class:"work-choice",htmlFor:control.id},"Accepted "+WORK_LABELS[key].toLowerCase()+" value",control));
+      }else block.append(node("p",{class:"help"},"If accepted, the retained comparison selects: "+valueText(field.suggested)));
+      differences.append(block);
+    }
+    differences.append(detail("Exact local, returned and common work heads",{localHeadSha256:item.localHeadSha256,incomingHeadSha256:item.incomingHeadSha256,commonHeadSha256:item.commonHeadSha256,commonHeadSha256s:item.commonHeadSha256s}));
+    section.append(differences);return section;
+  }));
+  workControls();
+}
+async function applyReturnedWork(){
+  captureVisibleWorkDrafts();const draft=S.returnDraft,preview=draft.preview;
+  if(!preview||preview.expectedRevision!==revision())throw new Error("Read the retained return against the current workspace before applying decisions.");
+  const file=await retainedWorkUpload(draft.file,"return");
+  if(file.sha256!==preview.packageSha256)throw new Error("The selected original return differs from this preview.");
+  if(!draft.author.trim()||!draft.note.trim())throw new Error("Enter the reviewer and the return decision note.");
+  const decisions=preview.items.map(item=>{
+    const selected=draft.decisions[item.itemId];
+    if(!selected||!["keep","accept"].includes(selected.decision)||selected.expectedHeadSha256!==(item.localHeadSha256??null)||selected.incomingHeadSha256!==item.incomingHeadSha256)throw new Error("Review every item against its current and returned work heads.");
+    if(selected.decision==="accept")for(const field of item.conflicts)if(!["local","incoming"].includes(selected.choices[field]))throw new Error("Choose the "+WORK_LABELS[field]+" value for "+item.title+".");
+    return {itemId:item.itemId,decision:selected.decision,expectedHeadSha256:selected.expectedHeadSha256,choices:structuredClone(selected.choices)};
+  });
+  const result=await mutateWork("return.apply",{author:draft.author.trim(),note:draft.note,base64:file.base64,decisions});
+  draft.applied={...result,packageSha256:preview.packageSha256};draft.preview=null;draft.decisions={};
+  renderReturnPreview();rememberDraft();await flushDraft();await synchronize();await loadWorks(0,true);await loadWorkReturns();
+  notice("The reviewed return is retained with every decision and its original event history. Current source selection and native tag proposal acceptance remain explicit.");
+}
+async function loadWorkReturns(){
+  const items=await collect("returns.list",{expectedRevision:revision()});
+  replace("work-returns-list",...(items.length?items.map(item=>node("div",{class:"list-item"},node("strong",{},"Returned revision "+item.incomingRevision),
+    node("p",{},when(item.at)+(item.author?" · "+item.author:"")),item.note?node("p",{},item.note):null,
+    action("Read retained decisions",async()=>{
+      const value=await request("return.read",{expectedRevision:revision(),returnId:item.id});
+      if(value.id!==item.id||value.workspaceId!==S.identity.workspaceId||value.revision!==revision())throw new Error("The retained return decision has a different identity.");
+      replace("work-return-read",node("h4",{},"Retained return decisions"),dl([["Reviewed by",value.author],["Recorded",when(value.at)],["Note",value.note],["Returned revision",value.incomingRevision],["Common revision",value.commonRevision]]),
+        detail("Complete retained decisions",value.decisions),detail("Applied result and original return provenance",value));
+    })
+  )):[node("p",{class:"empty"},"No returned-work reviews are recorded in this workspace.")]));
+}
+async function clearWorkReturn(){
+  if(!S.returnDraft.file&&!S.returnDraft.preview)return;
+  if(!await confirmAction("Clear this return draft?","This clears the file selection and unapplied choices in this tab. Original uploaded bytes, completed operations and saved return history remain retained.","Clear return draft"))return;
+  if(S.returnDraft.file)S.workUploads.delete(S.returnDraft.file.key);
+  S.returnDraft={file:null,preview:null,decisions:{},author:"",note:""};$("work-return-file").value="";
+  renderReturnPreview();rememberDraft();await flushDraft();
+}
+function bindWorkUi(){
+  bindButton("work-new",()=>startWorkCapture());
+  bindButton("work-reload",async()=>{await flushDraft();await synchronize();await loadWorks(0,true);await loadWorkReturns();renderReturnPreview();});
+  bindForm("work-filter-form",()=>loadWorks(0,true));bindForm("work-capture-form",captureWork);
+  bindButton("work-capture-close",()=>{captureVisibleWorkDrafts();if(S.workCapture)S.workCapture.open=false;renderWorkCapture();rememberDraft();});
+  bindButton("work-detail-close",()=>{captureVisibleWorkDrafts();S.activeWork=null;S.selectedWorkId=null;$("work-detail-card").hidden=true;rememberDraft();});
+  bindButton("work-adopt-current",adoptCurrentWork);bindForm("work-update-form",updateWork);
+  bindForm("work-evidence-form",addWorkEvidence);bindButton("work-evidence-proposal-read",previewWorkEvidenceProposal);
+  bindForm("work-review-form",(_event,submitter)=>decideWork(submitter?.value));
+  bindForm("work-return-preview-form",previewReturnedWork);bindForm("work-return-apply-form",applyReturnedWork);
+  bindButton("work-return-clear",clearWorkReturn);bindButton("work-returns-reload",loadWorkReturns);
+  bindButton("work-evidence-file-clear",()=>{const d=activeWorkDraft();if(d)d.evidenceFile=null;$("work-evidence-file").value="";$("work-evidence-file-status").textContent="No evidence file retained.";rememberDraft();});
+  $("work-evidence-file").addEventListener("change",()=>run(selectWorkEvidenceFile));
+  $("work-return-file").addEventListener("change",()=>run(selectReturnFile));
+  $("work-evidence-kind").addEventListener("change",()=>{rememberDraft();workControls();});
+  $("work-capture-edition").addEventListener("change",()=>run(async()=>{
+    if(!S.workCapture||S.workCapture.context.diagnostic)return;
+    const editionId=$("work-capture-edition").value;
+    S.workCapture.context={...S.workCapture.context,editionId,materialSha256:selectedWorkMaterial(editionId)};
+    captureVisibleWorkDrafts();renderWorkCapture();rememberDraft();await flushDraft();
+  }));
+  for(const id of ["work-capture-title","work-capture-description","work-capture-assignee","work-capture-due","work-capture-priority","work-capture-author","work-capture-record",
+    "work-edit-title","work-edit-description","work-edit-assignee","work-edit-due","work-edit-priority","work-edit-author","work-edit-note",
+    "work-evidence-author","work-evidence-note","work-evidence-proposal","work-review-author","work-review-note","work-review-edition","work-return-author","work-return-note"]){
+    $(id).addEventListener("input",rememberDraft);$(id).addEventListener("change",rememberDraft);
+  }
+}
+
+bindWorkUi();
 renderIdentity();reportRules();controls();showConnect();

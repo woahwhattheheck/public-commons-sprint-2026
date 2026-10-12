@@ -9,7 +9,7 @@ export async function handleRpc(workspace, request) {
   if (request.id === undefined) return null;
   if (!["string", "number"].includes(typeof request.id) && request.id !== null) return error(-32600, "Invalid JSON-RPC request identity");
   const reply = result => ({ jsonrpc: "2.0", id: request.id, result });
-  if (request.method === "initialize") return reply({ protocolVersion: "2025-03-26", capabilities: { tools: { listChanged: false } }, serverInfo: { name: "tjlabs-haystack-workspace", version: "0.1.0" } });
+  if (request.method === "initialize") return reply({ protocolVersion: "2025-03-26", capabilities: { tools: { listChanged: false } }, serverInfo: { name: "tjlabs-haystack-workspace", version: "0.2.0" } });
   if (request.method === "ping") return reply({});
   if (request.method === "tools/list") return reply({ tools: tools.map(({ action, ...tool }) => tool) });
   if (request.method !== "tools/call") return error(-32601, "Method not found");
