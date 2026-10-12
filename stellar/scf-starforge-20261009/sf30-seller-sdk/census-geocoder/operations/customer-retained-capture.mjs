@@ -35,7 +35,6 @@ const PINS = {
   "stellar/scf-starforge-20261009/sf30-seller-sdk/census-geocoder/public/style.css": "f2c0c5dd1c5f385711bc195e33f6656a3c589fa9",
   "stellar-forge/mcp-merchant-operator/census-geocoder-workspace.mjs": "712811e3316c9b332dfd9c05fe977f82e50139a3",
   "stellar-forge/mcp-merchant-operator/catalog/census-geocoder-workspace.mjs": "49ad1cbf0aa5e748bbb1d899feca9b0b849115cb",
-  "stellar/scf-starforge-20261009/distribution/contributions/census-geocoder-mcp.json": "fc09ea9f3690eb6b68596ed1181a0dddf13dd4ca",
   "stellar-forge/mcp-merchant-operator/census-geocoder-download.d.mts": "d98c62faca5531a6e575cb9e97fee9a20d8e2b54",
   "stellar-forge/mcp-merchant-operator/providers/census-geocoder-workspaces.mjs": "bacc169fca63847f4f2429ee27430ad173fbfb6b",
   "stellar/scf-starforge-20261009/sf30-seller-sdk/census-geocoder/recording.mjs": "951ccf84c81c4464e2de7f676287ae53f4c626e2",
@@ -341,6 +340,7 @@ async function main(options) {
       const binding = await call('browser', { action: 'open', port: 0 });
       const { chromium } = await import(pathToFileURL(options['--playwright']).href);
       assert((await lstat(options['--browser'])).isFile());
+      ensureRunning(); // No await between cancellation admission and registering the owned launch.
       browserOpening = chromium.launch({ executablePath: options['--browser'], headless: true,
         args: ['--no-sandbox', '--disable-dev-shm-usage'] }).then(value => { browser = value; return value; });
       await browserOpening; browserOpening = null; ensureRunning();
