@@ -153,7 +153,7 @@ class AzureExports:
             return record
         if time.time() < payload.get("retry_at", 0):
             raise ValueError("Azure requested a retry after " + str(int(payload["retry_at"] - time.time()) + 1) + " seconds.")
-        profile = self.get("azure_profile", payload["profile"]["id"])
+        profile = self.get("azure_profile", payload["profile"]["id"], payload["profile"]["revision"])
         api = Azure(profile["payload"])
         cursor = payload["next"]
         if cursor in payload["seen"]:
@@ -197,7 +197,7 @@ class AzureExports:
         record, payload = self.current("azure_run", request)
         if payload["state"] != "prepared":
             raise ValueError("This run already has an execution attempt. Refresh its original execution history.")
-        profile = self.get("azure_profile", payload["profile"]["id"])
+        profile = self.get("azure_profile", payload["profile"]["id"], payload["profile"]["revision"])
         # Persist the uncertain boundary before the provider POST. An interrupted response
         # reopens this same record and proceeds through run history, never a second POST.
         payload.update({"state": "uncertain", "submitted": now(), "request": {"timePeriod": payload["time_period"]}})
@@ -216,7 +216,7 @@ class AzureExports:
         record, payload = self.current("azure_run", request)
         if time.time() < payload.get("retry_at", 0):
             raise ValueError("Wait for the provider's retained Retry-After time before refreshing this run.")
-        profile = self.get("azure_profile", payload["profile"]["id"])
+        profile = self.get("azure_profile", payload["profile"]["id"], payload["profile"]["revision"])
         api = Azure(profile["payload"])
         cursor = payload.get("history_next") or payload["export_id"] + "/runHistory"
         result = api.json(cursor)
@@ -412,7 +412,7 @@ class AzureExports:
             raise ValueError("Honor the retained provider retry time before continuing this transfer.")
         if not payload.get("profile"):
             raise ValueError("Bind the existing source's Azure profile or receive its complete native files.")
-        profile = self.get("azure_profile", payload["profile"]["id"])
+        profile = self.get("azure_profile", payload["profile"]["id"], payload["profile"]["revision"])
         config = profile["payload"]
         if payload["origin"].get("container_url") != config["container_url"]:
             raise ValueError("The saved source and selected profile use different containers.")
@@ -520,7 +520,34 @@ class AzureExports:
             raise ValueError("The selected basis differs from the native export's " + payload["dataset_type"] + " declaration.")
         if not isinstance(settings["columns"], dict):
             raise ValueError("Supply an explicit field-to-header mapping object.")
-        review_parts, candidates, totals = [], [], {}
+        from .service import package_files
+        review_parts, totals, batches, group = [], {}, [], []
+        group_bytes = group_rows = 0
+
+        def flush():
+            nonlocal group_bytes, group_rows
+            if not group:
+                return
+            raw = package_files({item["member"]: item["data"] for item in group})
+            metadata = self.store.blob(raw, "azure-cost-" + str(len(batches) + 1).zfill(4) + ".zip", "application/zip")
+            batches.append({"index": len(batches), "currency": group[0]["currency"], "file": metadata,
+                "rows": group_rows, "source_parts": sorted({item["part"] for item in group}),
+                "members": [{key: item[key] for key in ("part", "member", "row_count", "native_rows")} for item in group]})
+            group.clear()
+            group_bytes = group_rows = 0
+
+        def append_input(item):
+            nonlocal group_bytes, group_rows
+            if group and (item["currency"] != group[0]["currency"]
+                    or group_bytes + len(item["data"]) > 48 * 1024 * 1024
+                    or group_rows + item["row_count"] > MAX_ROWS):
+                flush()
+            group.append(item)
+            group_bytes += len(item["data"])
+            group_rows += item["row_count"]
+            if group_bytes >= 48 * 1024 * 1024 or group_rows >= MAX_ROWS:
+                flush()
+
         with localcontext() as context:
             context.prec = 64
             for part in payload["parts"]:
@@ -576,25 +603,9 @@ class AzureExports:
                             writer.writerow(originals[ordinal - 1])
                         selected_data = out.getvalue().encode("utf-8")
                     member = str(part["index"]).zfill(4) + "/" + name
-                    candidates.append({"currency": code, "part": part["index"], "member": member, "data": selected_data,
+                    append_input({"currency": code, "part": part["index"], "member": member, "data": selected_data,
                         "row_count": len(ordinals), "native_rows": ordinals if originals is not None else None})
-        from .service import package_files
-        batches, group = [], []
-        def flush():
-            if not group:
-                return
-            raw = package_files({item["member"]: item["data"] for item in group})
-            metadata = self.store.blob(raw, "azure-cost-" + str(len(batches) + 1).zfill(4) + ".zip", "application/zip")
-            batches.append({"index": len(batches), "currency": group[0]["currency"], "file": metadata,
-                "rows": sum(item["row_count"] for item in group), "source_parts": sorted({item["part"] for item in group}),
-                "members": [{key: item[key] for key in ("part", "member", "row_count", "native_rows")} for item in group]})
-            group.clear()
-        for item in sorted(candidates, key=lambda item: (item["currency"], item["part"])):
-            if group and (item["currency"] != group[0]["currency"]
-                or sum(len(i["data"]) for i in group) + len(item["data"]) > 48 * 1024 * 1024
-                or sum(i["row_count"] for i in group) + item["row_count"] > MAX_ROWS):
-                flush()
-            group.append(item)
+                del rows, groups, originals
         flush()
         identity = {"source": reference(source), "settings": settings,
                     "inputs": [batch["file"]["digest"] for batch in batches], "note": str(request.get("note", ""))[:10000]}
@@ -842,6 +853,9 @@ class AzureExports:
             source_payload = source["payload"]
             manifest_raw = self.store.bytes(source_payload["manifest"]["digest"])
             parsed = parse_manifest(manifest_raw)
+            for field, value in parsed.items():
+                if field != "parts" and source_payload.get(field) != value:
+                    raise ValueError("The receiving " + field + " differs from its original native manifest.")
             if source["id"] != "azure_source_" + digest(manifest_raw)[:40]:
                 raise ValueError("The receiving source ID differs from its original manifest.")
             for expected, actual in zip(parsed["parts"], source_payload.get("parts", [])):

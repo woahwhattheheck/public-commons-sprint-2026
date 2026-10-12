@@ -86,7 +86,7 @@ Map fields to the actual header names. The amount and currency columns are requi
 
 The review reads every original row and validates the complete native row count and selected billing month. It preserves refunds, signed high-precision decimal amounts, separate duplicate-looking rows and original file/row order. The supplier view retains Azure's internal allocation rows as excluded records according to the original Billing engine.
 
-If a partition contains several currencies, receiving creates separate complete inputs by currency and records their original row ordinals. Choose each currency's inputs in a separate billing period. For a single currency the original CSV bytes flow into the prepared input without row rewriting. Inputs are grouped by currency into complete ZIPs within the existing billing import size and row limits.
+If a partition contains several currencies, receiving creates separate complete inputs by currency and records their original row ordinals. Choose each currency's inputs in a separate billing period. For a single currency the original CSV bytes flow into the prepared input without row rewriting. The review processes native partitions in manifest order, flushing complete billing ZIPs as currency or the existing byte/row limits require. One capped batch remains in memory while saved batches are retained as workspace objects.
 
 **Save source review** creates an immutable review. Correcting a mapping creates another review of the same acquired source. The earlier review remains available. **Prepare original billing import**, then **Import next billing input** or **Complete billing import**, sends each reviewed input through billing.cost.import with a stable operation identity. Retrying after response loss reopens the same original billing import.
 
@@ -156,7 +156,7 @@ Use the returned revision for the following step. Replay the same operation ID a
 | azure.run.select | id, expected, native_run_id from retained history |
 | azure.source.select | profile_id and manifest_path, or run_id/run_revision |
 | azure.source.import | filename/base64, manifest_path, optional archive_prefix |
-| azure.source.receive | id, expected, partition index, filename/base64 |
+| azure.source.receive | id, expected, partition index, native_name, filename/base64 |
 | azure.source.bind | id, expected, profile_id for the same native container |
 | azure.source.advance / cancel / resume | id, expected |
 | azure.source.review | source_id/source_revision, period, basis, allocation_view, invoice_status, date_format, columns, note |
@@ -185,4 +185,4 @@ The installed Azure export path uses these original Microsoft contracts:
 - [Azure Storage — Get Blob](https://learn.microsoft.com/en-us/rest/api/storageservices/get-blob)
 - [Improve exports and native partition manifests](https://learn.microsoft.com/en-us/azure/cost-management-billing/costs/tutorial-improved-exports)
 
-The source does not require a provider SDK or a second billing engine. Original Cognos, Power BI, Report Server, SQL Server, support, billing and full-workspace recovery remain available in this same release.
+The Azure source path uses Python’s standard transport and the original billing engine. This release also includes the complete Cognos, Power BI, Report Server, SQL Server, support and full-workspace recovery flows.
