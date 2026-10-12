@@ -17,14 +17,16 @@ const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const need=(condition,message)=>{if(!condition)throw new Error(message);};
 const pause=ms=>new Promise(done=>setTimeout(done,ms));
 const {values}=parseArgs({options:{
-  runtime:{type:'string'},workspace:{type:'string'},installation:{type:'string'},
+  runtime:{type:'string'},workspace:{type:'string'},installation:{type:'string'},python:{type:'string'},
   project:{type:'string'},out:{type:'string'},'source-commit':{type:'string'},
 }});
-for(const name of ['runtime','workspace','installation','project','out','source-commit'])
+for(const name of ['runtime','workspace','project','out','source-commit'])
   need(values[name],'Supply --'+name+' with its actual original selection.');
 for(const name of ['runtime','workspace','project','out'])
   need(resolve(values[name])===values[name],'Select absolute canonical '+name+'.');
-need(/^[a-f0-9]{64}$/.test(values.installation),'Select the original installed Python environment ID.');
+need(Boolean(values.installation)!==Boolean(values.python),'Select exactly one of --installation or --python.');
+if(values.installation)need(/^[a-f0-9]{64}$/.test(values.installation),'Select the original installed Python environment ID.');
+if(values.python)need(resolve(values.python)===values.python,'Select the actual absolute Python executable.');
 need(/^[a-f0-9]{40}$/.test(values['source-commit']),'Select the installed source commit.');
 const root=values.out;
 await mkdir(root,{recursive:true,mode:0o700});
@@ -67,8 +69,65 @@ async function identity(path){
 async function waitFor(label,readValue,ready,seconds=120){
   const until=Date.now()+seconds*1000;let last;
   while(Date.now()<until){last=await readValue();if(ready(last))return last;await pause(250);}
-  await keep('waiting-'+label,{operation:OPERATION,label,last});
+  await keep('waiting-'+label+'-'+randomUUID(),{operation:OPERATION,label,last});
   throw new Error('Continue the retained '+label+' operation; its final state is saved.');
+}
+async function pythonOperation(name,operation,selection){
+  const request=await once(name+'-request',async()=>({
+    requestId:randomUUID(),operation,runtimeId:attached.runtimeId,...selection,
+  }));
+  const view=async()=>(await model.pythonState({runtimeId:attached.runtimeId}))
+    .operations.find(item=>item.id===request.requestId)??null;
+  const previous=await view();
+  await once(name+'-accepted',()=>model.begin(request));
+  if(previous && !previous.workerActive &&
+    (['QUEUED','FAILED'].includes(previous.phase) || previous.displayPhase==='INTERRUPTED')){
+    const recovered=await model.recoverPythonOperation(request.requestId);
+    await keep(name+'-recovery-'+randomUUID(),recovered);
+  }
+  const completed=await waitFor(name,view,row=>Boolean(row &&
+    (['SUCCEEDED','FAILED'].includes(row.phase) || row.displayPhase==='INTERRUPTED')),900);
+  need(completed.phase==='SUCCEEDED',
+    'Continue the original Python operation '+request.requestId+': '+JSON.stringify(completed.error??completed.displayPhase));
+  const receipt=completed.result;
+  need(receipt?.schema==='stellar-forge.python-operation-result.v1' && receipt.operation===operation &&
+    receipt.binding?.runtimeId===attached.runtimeId &&
+    receipt.binding.sourceCommit===values['source-commit'] &&
+    receipt.binding.sourceManifestSha256===plan.source.manifestSha256,
+    'Retain the actual Python operation result from this selected source release.');
+  await keep(name+'-result',receipt);
+  return receipt.result;
+}
+async function selectPython(){
+  if(values.installation)return values.installation;
+  const review=await once('python-source-review',()=>model.pythonReview({
+    runtimeId:attached.runtimeId,python:values.python,extras:[],
+  }));
+  const version=review.interpreter?.version;
+  need(Array.isArray(version) && (version[0]>3 || version[0]===3 && version[1]>=12),
+    'The original Analysis project requires Python 3.12 or newer.');
+  need(review.binding?.sourceCommit===values['source-commit'] &&
+    review.binding.sourceManifestSha256===plan.source.manifestSha256 &&
+    review.project?.scripts?.['stellar-forge-analysis-project']==='stellar_forge_buyer.analysis_projects:main',
+    'Review the original selected package containing the Analysis project command.');
+  const candidate=await pythonOperation('python-resolve','python-resolve',{reviewId:review.reviewId});
+  need(/^[a-f0-9]{64}$/.test(candidate?.id??''),'Read the exact original resolved Python cohort.');
+  const installation=await pythonOperation('python-install','python-install',{
+    candidateId:candidate.id,reviewId:review.reviewId,
+  });
+  need(/^[a-f0-9]{64}$/.test(installation?.id??'') &&
+    installation.entrypoints?.['stellar-forge-analysis-project']?.target==='stellar_forge_buyer.analysis_projects:main',
+    'Read the actual original installed Analysis project command.');
+  const activation=await once('python-activation-selection',async()=>{
+    const current=await model.pythonState({runtimeId:attached.runtimeId});
+    return {installationId:installation.id,expectedInstallationId:current.active?.installation??null,python:review.python};
+  });
+  const active=await pythonOperation('python-activate','python-activate',activation);
+  need(active.installation===installation.id,'Retain the exact activated Python installation.');
+  await keep('python-selection',{mode:'commissioned',installationId:installation.id,python:review.python,
+    reviewId:review.reviewId,candidateId:candidate.id,sourceCommit:values['source-commit'],
+    sourceManifestSha256:plan.source.manifestSha256});
+  return installation.id;
 }
 async function app(id){
   const state=await model.applicationsState({historyLimit:30});
@@ -131,7 +190,7 @@ async function stop(name,run){
   return keep(name+'-stopped',stopped);
 }
 async function cli(name,args){
-  const bound=await model.pythonCommand({runtimeId:attached.runtimeId,installationId:values.installation,
+  const bound=await model.pythonCommand({runtimeId:attached.runtimeId,installationId,
     command:'stellar-forge-analysis-project',args});
   const attempt=join(root,name+'-'+randomUUID());
   await mkdir(attempt,{mode:0o700});
@@ -166,7 +225,7 @@ function redact(value){
   if(typeof value==='string' && /^https?:\/\//.test(value)){try{const url=new URL(value);url.hash='';return url.href;}catch{}}
   return value;
 }
-let attached;
+let attached,installationId;
 try{
   await keep('operation',config);
   const existing=await read('complete');
@@ -178,13 +237,14 @@ try{
     const input=await identity(values.project);
     need(input.bytes===ORIGINAL.bytes && input.sha256===ORIGINAL.sha256,'Select the exact original 7DE2 complete project.');
     attached=await once('runtime-attachment',()=>model.attach({directory:values.runtime,label:'Analysis project installed continuation'}));
+    installationId=await selectPython();
     await once('python-installation',()=>model.pythonState({runtimeId:attached.runtimeId}));
     const inspected=await once('original-inspection',()=>cli('inspect-original',[
       '--checkout',sourceRoot,'--project',values.project,'--project-sha256',ORIGINAL.sha256,'inspect']));
     need(inspected.workspace_id===ORIGINAL.workspaceId && inspected.members===ORIGINAL.members,'Keep the complete original case.');
     const database=join(root,'customer','analysis'),cache=join(root,'retained-project');
     await mkdir(dirname(database),{recursive:true,mode:0o700});
-    const settings={installationId:values.installation,projectPath:values.project,databaseDirectory:database,
+    const settings={installationId,projectPath:values.project,databaseDirectory:database,
       projectCache:cache,projectSha256:ORIGINAL.sha256,nodeExecutable:process.execPath,port:0};
     const opening=await ensureApp('customer','python-analysis-project',settings);
     const run=await start('customer-first',opening);
@@ -242,7 +302,7 @@ try{
     await once('customer-reopen-stop',()=>stop('customer-reopen',restarted));
     const output=join(root,'following-delivery');
     const exporting=await ensureApp('handover','python-analysis-project-export',{
-      installationId:values.installation,projectPath:values.project,databaseDirectory:database,
+      installationId,projectPath:values.project,databaseDirectory:database,
       projectCache:cache,projectSha256:ORIGINAL.sha256,nodeExecutable:process.execPath,
       outputDirectory:output,title:'Retained source coverage and customer analysis',
     });
@@ -269,7 +329,7 @@ try{
     const secondDatabase=join(root,'independent-customer','analysis'),secondCache=join(root,'following-retained-project');
     await mkdir(dirname(secondDatabase),{recursive:true,mode:0o700});
     const second=await ensureApp('independent-customer','python-analysis-project',{
-      installationId:values.installation,projectPath:delivery.path,databaseDirectory:secondDatabase,
+      installationId,projectPath:delivery.path,databaseDirectory:secondDatabase,
       projectCache:secondCache,projectSha256:delivery.sha256,nodeExecutable:process.execPath,port:0,
     });
     const secondRun=await start('independent-open',second);
@@ -297,7 +357,8 @@ try{
     need(repeated.reused===true && repeated.delivery.archive.sha256===delivery.sha256,
       'The same complete export must return its exact original bytes.');
     const records={};
-    for(const name of ['runtime-attachment','python-installation','original-inspection','customer-source-review',
+    for(const name of ['runtime-attachment','python-source-review','python-resolve-result','python-install-result',
+      'python-activation-selection','python-activate-result','python-selection','python-installation','original-inspection','customer-source-review',
       'customer-query-decision','customer-query-saved','customer-query-result','customer-first-stop','customer-reopened',
       'customer-reopen-stop','handover-review','handover-run-result','following-project','following-inspection',
       'independent-receiving','independent-stop','repeated-export'])records[name]=await read(name);
