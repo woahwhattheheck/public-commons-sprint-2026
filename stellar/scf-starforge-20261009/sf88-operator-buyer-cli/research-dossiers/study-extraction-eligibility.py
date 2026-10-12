@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import re
+import signal
 import stat
 import sys
 
@@ -116,8 +117,20 @@ def main():
 
 
 if __name__ == "__main__":
+    def cancel(signum, frame):
+        # Unwind the active original Runtime call before its workspace joins it.
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        raise KeyboardInterrupt("STUDY_ELIGIBILITY_CANCELLED")
+
+    signal.signal(signal.SIGTERM, cancel)
+    signal.signal(signal.SIGINT, cancel)
     try:
         main()
+    except KeyboardInterrupt:
+        print(json.dumps({"error": "STUDY_ELIGIBILITY_CANCELLED",
+                          "type": "KeyboardInterrupt"}), file=sys.stderr)
+        sys.exit(130)
     except Exception as error:
         print(json.dumps({"error": getattr(error, "code", "STUDY_ELIGIBILITY_RECEIVING_FAILED"),
                           "type": type(error).__name__}), file=sys.stderr)
