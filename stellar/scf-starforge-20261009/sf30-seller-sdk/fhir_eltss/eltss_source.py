@@ -14,7 +14,7 @@ from eltss_runtime import InputError, MAX_SOURCE, fhir
 SOURCE_SCHEMA = "stellar-forge.eltss-source.v1"
 PLAN_SCHEMA = "stellar-forge.eltss-mapping.v1"
 MAX_RESOURCE = 16 * 1024 * 1024
-MAX_RESOURCES = 5000
+MAX_RESOURCES = 10000
 MAX_CAREPLANS = 100
 MAX_MEMBERS = 4096
 MAX_INTERACTIVE = 4 * 1024 * 1024
