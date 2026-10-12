@@ -2,7 +2,7 @@
 const fragment=new URLSearchParams(location.hash.slice(1));let token=fragment.get('token')??'';
 history.replaceState(null,'',location.pathname);
 const $=selector=>document.querySelector(selector),main=$('#main'),status=$('#status');
-let state=null,page='overview',epoch=0,selectedProfile=null,selectedProject=null,projectOffset=0,projectQuery='',poll=null,busy=0;
+let state=null,page='overview',epoch=0,selectedProfile=null,selectedProject=null,newProjectEdition=null,projectOffset=0,projectQuery='',poll=null,busy=0;
 const clientId=crypto.randomUUID(),pendingKey='zotero-pending-actions-v1';
 const pending=(()=>{try{return JSON.parse(sessionStorage.getItem(pendingKey)??'{}');}catch{return {};}})();
 function persist(){sessionStorage.setItem(pendingKey,JSON.stringify(pending));}
@@ -92,7 +92,7 @@ function profileSelector(){
 }
 function projectSelector(){
   const select=field('Saved project','select');options(select.node,state.records.project.rows.map(p=>({value:p.id,label:p.title+' · r'+p.revision})),selectedProject);
-  select.node.onchange=()=>{selectedProject=select.node.value;projectOffset=0;epoch++;show(page).catch(e=>toast(e.message,true));};return select;
+  select.node.onchange=()=>{selectedProject=select.node.value;newProjectEdition=null;projectOffset=0;epoch++;show(page).catch(e=>toast(e.message,true));};return select;
 }
 const pages={
   async overview(){
@@ -192,7 +192,7 @@ const pages={
       e.counts.items+' items · '+e.counts.collections+' collections',
       row(button('Source files',async()=>detail('Original retained source files',e.documents),true),
         button('Download complete edition',()=>downloadRecord({kind:'edition',id:e.id}),true),
-        button('New project',async()=>{page='projects';await show('projects');const input=$('[aria-label="Selected edition"]');if(input)input.value=e.id;},true))
+        button('New project',async()=>{selectedProject=null;newProjectEdition=e.id;projectOffset=0;await show('projects');},true))
     ])));
     const edition=field('Edition for original document download','select');
     options(edition.node,state.records.edition.rows.map(e=>({value:e.id,label:e.label+' · '+e.id.slice(-12)})),state.records.edition.rows[0]?.id);
@@ -201,10 +201,10 @@ const pages={
   },
   async projects(c){
     heading('Projects and evidence decisions','Save a collection view, select exact item keys, and preserve findings against the chosen edition.');
-    const chooser=projectSelector();main.append(row(chooser.wrap,button('New project',()=>{selectedProject=null;epoch++;show('projects');},true)));
+    const chooser=projectSelector();main.append(row(chooser.wrap,button('New project',()=>{selectedProject=null;newProjectEdition=null;projectOffset=0;epoch++;show('projects');},true)));
     const p=state.records.project.rows.find(x=>x.id===selectedProject)??null;
     const title=field('Project title','text',p?.title??''),description=field('Project description','textarea',p?.description??'');
-    const ed=field('Selected edition','select');options(ed.node,state.records.edition.rows.map(e=>({value:e.id,label:e.label+' · '+e.coverage.mode+' · '+e.id.slice(-12)})),p?.editionId??state.records.edition.rows[0]?.id);
+    const ed=field('Selected edition','select');options(ed.node,state.records.edition.rows.map(e=>({value:e.id,label:e.label+' · '+e.coverage.mode+' · '+e.id.slice(-12)})),p?.editionId??newProjectEdition??state.records.edition.rows[0]?.id);
     const collections=field('Project collection keys','text',(p?.scope.collectionKeys??[]).join(', '),'Changing edition or scope preserves prior project revisions. Missing finding sources must be reviewed explicitly.');
     const descend=field('Include descendants in project','checkbox',p?.scope.includeDescendants??true);
     const findings=field('Findings with original item keys','textarea',JSON.stringify(p?.findings??[],null,2));
@@ -215,9 +215,20 @@ const pages={
       const result=await stable('project-save','project.save',{...(p?{id:p.id}:{}),expectedRevision:p?.revision??0,title:title.node.value,
         description:description.node.value,editionId:ed.node.value,scope:{collectionKeys:collections.node.value.split(',').map(x=>x.trim()).filter(Boolean),
           includeDescendants:descend.node.checked},findings:JSON.parse(findings.node.value)});
-      selectedProject=result.value.id;await refresh();toast('Project revision saved.');
+      selectedProject=result.value.id;newProjectEdition=null;await refresh();toast('Project revision saved.');
     }));main.append(edit);
-    if(!p)return;
+    if(!p){
+      const sourceScope=async()=>{
+        const saveControl=edit.querySelector('button');saveControl.disabled=true;
+        const selected=ed.node.value;if(!selected)return;
+        const edition=await invoke('edition.get',{id:selected});check(c);
+        if(ed.node.value!==selected)return;
+        collections.node.value=edition.scope.collectionKeys.join(', ');
+        descend.node.checked=edition.scope.includeDescendants;saveControl.disabled=false;
+      };
+      ed.node.onchange=()=>act(sourceScope);
+      await sourceScope();check(c);return;
+    }
     const view=await invoke('project.page',{id:p.id,revision:p.revision,offset:projectOffset,limit:50,query:projectQuery});check(c);
     const query=field('Find retained items','search',projectQuery);
     const search=button('Search',async()=>{projectQuery=query.node.value;projectOffset=0;await show('projects');},true);
