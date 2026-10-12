@@ -2,12 +2,8 @@
 import { constants } from 'node:fs';
 import { access, lstat, realpath } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { readBundle, bundlePath } from '../../../mercury-event-operations/starforge-feed/plan.mjs';
-import { mercuryConfiguration } from '../../../mercury-event-operations/starforge-feed/native.mjs';
-import { DELIVERY_PATH } from '../../../mercury-event-operations/starforge-feed/bridge.mjs';
 import { absolute, canonical, digest, json, need, plain, privateDirectory, readJSON,
   recordId, regular } from './storage.mjs';
 
@@ -108,10 +104,74 @@ async function pythonSelection(settings, context, selectedExecutable) {
   return { executable: selected.executable, inputs: selected.inputs, installation, version };
 }
 
+/** Pin the selected database file, not event/cursor/WAL progress. */
+async function sqliteInput(value) {
+  const path = absolute(value);
+  need(await realpath(dirname(path)) === dirname(path), 'EVENT_APPLICATION_INPUT_PARENT_CHANGED');
+  const stat = await lstat(path);
+  need(stat.isFile() && !stat.isSymbolicLink() && await realpath(path) === path,
+    'EVENT_APPLICATION_DATABASE_REQUIRED');
+  return { path, kind: 'sqlite-store', exists: true, dev: stat.dev, ino: stat.ino };
+}
+
+/** Read selected original configuration in one readonly snapshot, excluding live event state. */
+async function feedConfiguration(bundle) {
+  const { DatabaseSync } = await import('node:sqlite');
+  const { bundlePath } = await import('../../../mercury-event-operations/starforge-feed/plan.mjs');
+  const database = bundlePath(bundle.directory, bundle.config.stateDirectory) + '/events.sqlite';
+  const db = new DatabaseSync(database, { readOnly: true });
+  try {
+    db.exec('BEGIN');
+    const meta = key => db.prepare('SELECT value FROM metadata WHERE key=?').get(key)?.value ?? null;
+    need(db.prepare('PRAGMA user_version').get().user_version === 1 &&
+      meta('schema') === 'stellar-forge.webhook-feed.v1' && meta('storeId') === bundle.config.storeId,
+    'EVENT_APPLICATION_FEED_STORE_CHANGED');
+    const cursorKey = meta('cursorKey');
+    need(typeof cursorKey === 'string' && Buffer.from(cursorKey, 'base64').length === 32,
+      'EVENT_APPLICATION_FEED_STORE_CHANGED');
+    const merchant = meta('merchantPlan'), merchantRevision = meta('merchantPlanRevision');
+    need(merchant === null && merchantRevision === null || typeof merchant === 'string' &&
+      merchant.length <= 262144 && HEX.test(merchantRevision) && digest(merchant) === merchantRevision,
+    'EVENT_APPLICATION_MERCHANT_PLAN_CHANGED');
+    const plan = merchant === null ? null : JSON.parse(merchant);
+    need(plan === null || Array.isArray(plan.feeds) && plan.feeds.length >= 1 && plan.feeds.length <= 64,
+      'EVENT_APPLICATION_MERCHANT_PLAN_CHANGED');
+    const feedIds = [...new Set([...bundle.config.feedIds, ...(plan?.feeds ?? []).map(row => row.feedId)])].sort();
+    const sources = new Set([bundle.config.sourceId]), feeds = [];
+    const read = (table, id) => {
+      need(typeof id === 'string' && id.length <= 256, 'EVENT_APPLICATION_FEED_CONFIGURATION_CHANGED');
+      const size = db.prepare('SELECT length(definition) AS bytes FROM ' + table + ' WHERE id=?').get(id);
+      need(size && size.bytes <= 262144, 'EVENT_APPLICATION_FEED_CONFIGURATION_CHANGED');
+      const row = db.prepare('SELECT revision,definition FROM ' + table + ' WHERE id=?').get(id);
+      need(row && HEX.test(row.revision) && digest(row.definition) === row.revision,
+        'EVENT_APPLICATION_FEED_CONFIGURATION_CHANGED');
+      return { id, revision: row.revision, definition: JSON.parse(row.definition) };
+    };
+    for (const id of feedIds) {
+      const row = read('feeds', id);
+      need(Array.isArray(row.definition.sourceIds) && row.definition.sourceIds.length <= 64,
+        'EVENT_APPLICATION_FEED_CONFIGURATION_CHANGED');
+      for (const source of row.definition.sourceIds) sources.add(source);
+      feeds.push({ id, revision: row.revision });
+    }
+    const sourceRevisions = [...sources].sort().map(id => {
+      const row = read('sources', id); return { id, revision: row.revision };
+    });
+    const value = { storeId: meta('storeId'), cursorKeySha256: digest(cursorKey),
+      merchantPlanRevision: merchantRevision, feeds, sources: sourceRevisions };
+    db.exec('COMMIT');
+    return value;
+  } finally { db.close(); }
+}
+
 /** Read the original immutable subscription definition without changing its WAL or cursor. */
-function subscriptionDefinition(directory) {
+async function subscriptionDefinition(directory) {
+  const { DatabaseSync } = await import('node:sqlite');
   const db = new DatabaseSync(join(directory, 'subscription.sqlite'), { readOnly: true });
   try {
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(row => row.name);
+    need(['definition', 'checkpoint', 'pages', 'events', 'exports'].every(name => tables.includes(name)),
+      'EVENT_APPLICATION_SUBSCRIPTION_SCHEMA_CHANGED');
     const row = db.prepare('SELECT body,sha256 FROM definition WHERE singleton=1').get();
     need(row && HEX.test(row.sha256) && digest(row.body) === row.sha256,
       'EVENT_APPLICATION_SUBSCRIPTION_DEFINITION_CHANGED');
@@ -135,8 +195,8 @@ export async function prepareEventFeedApplication(kind, settings, {
   inputs.push(await inputPath(directory, 'directory', false, true));
   if (kind === BUYER) {
     const database = join(directory, 'subscription.sqlite');
-    inputs.push(await inputPath(database, 'file'));
-    const { definition, sha256 } = subscriptionDefinition(directory);
+    inputs.push(await sqliteInput(database));
+    const { definition, sha256 } = await subscriptionDefinition(directory);
     inputs.push(await inputPath(definition.runtimeDirectory, 'directory'));
     inputs.push(await inputPath(definition.buyerStateDirectory, 'directory', true, true));
     return {
@@ -148,6 +208,8 @@ export async function prepareEventFeedApplication(kind, settings, {
         buyerStateDirectory: definition.buyerStateDirectory, port: settings.port ?? 0 },
     };
   }
+  const { readBundle, bundlePath } = await import('../../../mercury-event-operations/starforge-feed/plan.mjs');
+  const { mercuryConfiguration } = await import('../../../mercury-event-operations/starforge-feed/native.mjs');
   const bundle = await readBundle(directory);
   const mercury = await mercuryConfiguration(bundle);
   const feed = bundlePath(directory, bundle.config.stateDirectory);
@@ -157,7 +219,8 @@ export async function prepareEventFeedApplication(kind, settings, {
   inputs.push(await inputPath(mercury.path, 'file'));
   inputs.push(await inputPath(environment, 'file'));
   inputs.push(await inputPath(feed, 'directory', false, true));
-  inputs.push(await inputPath(join(feed, 'events.sqlite'), 'file'));
+  inputs.push(await sqliteInput(join(feed, 'events.sqlite')));
+  const configuration = await feedConfiguration(bundle);
   const python = await pythonSelection(settings, context, selectedExecutable);
   inputs.push(...python.inputs);
   const selectedFacilitator = facilitator(settings.facilitator, settings.allowLocalFacilitator);
@@ -173,7 +236,7 @@ export async function prepareEventFeedApplication(kind, settings, {
       environmentFile: environment,
       storeId: bundle.config.storeId, sourceId: bundle.config.sourceId,
       feedIds: bundle.config.feedIds, scope: bundle.config.scope,
-      ports: bundle.config.ports, feedDirectory: feed,
+      ports: bundle.config.ports, feedDirectory: feed, configuration,
       python: { executable: python.executable, installation: python.installation, version: python.version },
     },
   };
@@ -216,7 +279,7 @@ async function recheckInput(expected) {
     return;
   }
   need(!actual.isSymbolicLink() && await realpath(expected.path) === expected.path &&
-    (expected.kind === 'file' ? actual.isFile() : actual.isDirectory()) &&
+    (['file', 'sqlite-store'].includes(expected.kind) ? actual.isFile() : actual.isDirectory()) &&
     actual.dev === expected.dev && actual.ino === expected.ino,
   'EVENT_APPLICATION_INPUT_CHANGED');
   if (expected.kind === 'file') {
@@ -235,12 +298,16 @@ export async function verifyEventFeedLaunch(request, operationDirectory) {
   for (const item of selected.reviewed.command.inputs) await recheckInput(item);
   await privateDirectory(selected.identity.directory);
   if (selected.identity.kind === MERCURY) {
+    const { readBundle } = await import('../../../mercury-event-operations/starforge-feed/plan.mjs');
+    const { mercuryConfiguration } = await import('../../../mercury-event-operations/starforge-feed/native.mjs');
     const current = await readBundle(selected.identity.directory);
     const mercury = await mercuryConfiguration(current);
     need(current.descriptorSha256 === selected.identity.bridgeSha256 &&
       mercury.path === selected.identity.mercuryConfig &&
       digest(await regular(mercury.path, 262144)) === selected.identity.mercuryConfigSha256,
     'EVENT_APPLICATION_MERCURY_SOURCE_CHANGED');
+    need(same(await feedConfiguration(current), selected.identity.configuration),
+      'EVENT_APPLICATION_FEED_CONFIGURATION_CHANGED');
     await privateFile(selected.identity.environmentFile);
     const python = selected.identity.python;
     await access(python.executable, constants.X_OK);
@@ -256,7 +323,7 @@ export async function verifyEventFeedLaunch(request, operationDirectory) {
         observed.installation.lockSha256 === previous.lockSha256, 'EVENT_APPLICATION_PYTHON_CHANGED');
     }
   } else {
-    const current = subscriptionDefinition(selected.identity.directory);
+    const current = await subscriptionDefinition(selected.identity.directory);
     need(current.sha256 === selected.identity.definitionSha256 &&
       current.definition.subscriptionKey === selected.identity.subscriptionKey,
     'EVENT_APPLICATION_SUBSCRIPTION_DEFINITION_CHANGED');
@@ -267,9 +334,9 @@ function loopback(value, port, mode) {
   if (typeof value !== 'string' || value.length > 4096) return null;
   let url;
   try { url = new URL(value); } catch { return null; }
-  const actualPort = Number(url.port || 80);
+  const effectivePort = Number(url.port || 80);
   if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' ||
-      actualPort < 1 || actualPort > 65535 || port && actualPort !== port ||
+      effectivePort < 1 || effectivePort > 65535 || port && effectivePort !== port ||
       url.username || url.password) return null;
   if (mode === 'feed' && (url.pathname !== '/' || url.search ||
       !/^#token=[A-Za-z0-9_-]{32,256}$/.test(url.hash))) return null;
@@ -293,6 +360,7 @@ export async function eventFeedStartup(request, operationDirectory, value) {
   }
   if (value.storeId !== identity.storeId || !Array.isArray(value.feedIds) || !same(value.feedIds, identity.feedIds) ||
       value.mercury?.managed !== true) return null;
+  const { DELIVERY_PATH } = await import('../../../mercury-event-operations/starforge-feed/bridge.mjs');
   const url = loopback(value.feedWorkspace, identity.ports.workspace, 'feed');
   const mercury = loopback(value.mercury.url, identity.ports.mercury, 'origin');
   let bridge;
@@ -306,7 +374,7 @@ export async function eventFeedStartup(request, operationDirectory, value) {
   if (value.merchant) {
     merchant = loopback(value.merchant.url, identity.ports.merchant, 'origin');
     if (!merchant) return null;
-    links.push({ id: 'merchant', label: 'Open feed merchant', url: merchant });
+    links.push({ id: 'merchant', label: 'Open feed merchant', url: new URL('/_seller/docs', merchant).href });
   }
   return { url, links, original: { ...identity,
     observed: { feedWorkspace: url, mercury, bridge: bridge.href, merchant } } };

@@ -69,6 +69,12 @@ compiled configuration supplies the original route admission and request-body
 limits to the native seller. The same handlers retain cache, OAuth connection,
 idempotency and shared supplier-account state throughout the merchant session.
 
+Use `--upstreams` with a matching generic seller and upstream configuration.
+Provider merchant exports may name their own admission handlers; those stay with
+the original provider command or its trusted handler module. For upstream
+bindings, preflight requires route admissions to match the binding's configured
+idempotency contract before the application opens.
+
 Use the installed `starforge merchant` command with the arguments above. Keep
 the original upstream file's credential references, cache directories and
 idempotency directories. A configured `supplierAccounts` map and each binding's
