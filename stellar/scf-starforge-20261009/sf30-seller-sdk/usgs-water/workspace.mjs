@@ -214,7 +214,7 @@ export async function startWaterWorkspace({ directory, port = 0, merchantPort = 
   try {
     await new Promise((done, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', done); });
   } catch (error) { await project.close(); throw error; }
-  origin = 'http://127.0.0.1:' + server.address().port;
+  origin = new URL('http://127.0.0.1:' + server.address().port).origin;
   function close() {
     return closing ??= (async () => {
       stopping = true;
