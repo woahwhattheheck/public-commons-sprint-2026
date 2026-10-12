@@ -27,5 +27,8 @@
     },
     "./merchant/n8n/agent-operations": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/n8n/agent-operations.mjs",
     "./merchant/n8n/transfer-format": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/n8n/transfer-format.mjs"
+  },
+  "applicationProviders": {
+    "n8n": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/n8n.mjs"
   }
 }
