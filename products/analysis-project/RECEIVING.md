@@ -20,7 +20,7 @@ The installed entrypoint inventory must contain `stellar-forge-analysis-project`
 
 ## Run the retained installed journey
 
-After the original runtime and Python installation above are ready, use the included program with their actual selectors:
+After the original runtime is ready, use the included program with its actual selectors. Select either an existing original Python installation or the actual Python executable for commissioning.
 
 ~~~sh
 node products/analysis-project/receiving.mjs \
@@ -31,6 +31,12 @@ node products/analysis-project/receiving.mjs \
   --project /private/deliveries/SCF_Analysis_Complete_Project_20261012.zip \
   --out /private/analysis-installed-receiving
 ~~~
+
+For a host that has the selected merchant runtime and Python 3.12 or newer but has not yet installed this release's Python package, replace `--installation ORIGINAL_PYTHON_INSTALLATION_SHA256` with `--python /actual/selected/python3`. Keep every other argument unchanged. The two options are mutually exclusive.
+
+The `--python` path reviews that exact interpreter and source release, resolves the original package with `extras: []`, installs its retained wheel cohort, and activates the resulting installation using the currently observed active-selection ID. Each step runs through the existing runtime-workspace Python worker. Its original review, request IDs, wheel and installation identities, activation result and selected entrypoint are retained in this operation. The fixed project journey uses SQLite and the existing saved query and archive engines; an optional analysis package is needed only for a later job that calls it.
+
+On reentry, the program joins those saved Python requests. It uses the original Python recovery operation for a queued or interrupted worker and reuses completed installation results. A current source/interpreter/active-selection mismatch stays attached to that original operation and its error; resolve the actual selection before continuing. Keep the same original `--python` or `--installation` argument and `--out` directory.
 
 The program binds the installed release and exact original ZIP before using the original Applications model. It saves one useful customer query, `delivery_inventory_d9b53`, which reports actual row counts for each currently selected original view. Its saved decision contains the exact SQL, views and query operation ID. Existing queries, reports and workbook definitions remain attached to the same database.
 

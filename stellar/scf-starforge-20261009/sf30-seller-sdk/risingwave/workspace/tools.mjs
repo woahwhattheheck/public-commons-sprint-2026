@@ -7,7 +7,7 @@ const tool=(name,description,properties,required,readOnly=false)=>({name,descrip
 export const RISINGWAVE_TOOLS=Object.freeze([
   tool('risingwave_status','Read source revisions, environment references, products and original running services.',{},[],true),
   tool('risingwave_revision','Read the complete original source and merchant revision.',{revision},['revision'],true),
-  tool('risingwave_save_source','Save a complete source and merchant revision using the displayed expectedRevision.',{expectedRevision:revision,source:object,merchant:{type:['object','null']}},['expectedRevision','source','merchant']),
+  tool('risingwave_save_source','Save a complete source and merchant revision using the displayed expectedRevision.',{expectedRevision:revision,source:object,merchant:{type:['object','null']},requestId:id},['expectedRevision','source','merchant']),
   tool('risingwave_compile_report','Compile a keyed native relation/subscription report with typed output columns and membership filters. Include probe values for every required parameter.',{report:object},['report'],true),
   tool('risingwave_discover','Discover native relations, visible typed columns, keys and existing subscriptions.',{expectedRevision:revision,schemas:{type:'array',items:text},relations:{type:'array',items:text},subscriptions:{type:'array',items:text}},['expectedRevision'],true),
   tool('risingwave_subscription_inspect','Inspect the selected report’s native relation and existing subscription.',{expectedRevision:revision,query:text},['expectedRevision','query'],true),

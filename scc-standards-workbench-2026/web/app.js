@@ -151,6 +151,13 @@ async function render(){
  }
  renderCollection(collection,rows);
 }
+function findingContext(finding){
+ const records=project?.[finding.collection],record=Array.isArray(records)?records.find(r=>r.id===finding.record_id):null;
+ const kind=humanValue(RECORD_NAMES[finding.collection]||finding.collection||"project");
+ if(!record)return kind;
+ const title=record.title_en||record.title||record.label||record.name||record.identifier||"";
+ return [kind,record.number,title].filter(value=>value!==undefined&&value!==null&&value!=="").join(" · ");
+}
 function renderOverview(){
  const a=project.analysis,reviewed=a.languages.filter(r=>r.review_status==="reviewed").length;
  const balance=a.live_interest_balance;
@@ -160,7 +167,7 @@ function renderOverview(){
  html+='<div class="grid">'+panel("Working scope",a.scope?'<h3>'+esc(a.scope.title_en)+'</h3><p>'+esc(a.scope.purpose)+'</p><div class="meta-line">'+badge(a.scope.deliverable_type)+badge(a.funding_status)+'</div>'+actionButton("edit","Edit scope",'data-collection="scope" data-id="'+esc(a.scope.id)+'"'):empty("Set the proposed standard’s scope and the source-bound procedure.",actionButton("new-record","Set scope",'data-collection="scope"')))+
  panel("Next delivery work",'<p class="compact">Next progress report: <strong>'+esc(a.next_progress_report_due?readableDate(a.next_progress_report_due):"No previous submitted phase report")+'</strong></p>'+(a.reporting_schedule?.planning_due_before_first_phase_report?'<p class="compact">Planning date before the first phase report: '+esc(readableDate(a.reporting_schedule.planning_due_before_first_phase_report))+'</p>':'')+
  '<ul class="list-plain">'+project.tasks.filter(t=>!["delivered","cancelled"].includes(t.status)).slice(0,5).map(t=>'<li><strong>'+esc(t.title)+'</strong><br>Phase '+esc(t.phase)+' · '+esc(t.due?readableDate(t.due):"Date not set")+' · '+esc(t.owner||"Owner not set")+'</li>').join("")+'</ul>'+actionButton("section","Open phases",'data-target="delivery"'))+'</div>';
- html+=panel("Source and procedural attention",a.findings.length?'<ul class="list-plain">'+a.findings.slice(0,10).map(f=>'<li><strong>'+esc(label(f.code))+'</strong><br>'+esc(f.message)+(f.record_id?' '+actionButton("edit","Open",'data-collection="'+esc(f.collection)+'" data-id="'+esc(f.record_id)+'"'):"")+'</li>').join("")+'</ul>':"<p>No current record gaps are reported. Authority decisions and receipt evidence remain the operator’s records.</p>");
+ html+=panel("Source and procedural attention",a.findings.length?'<ul class="list-plain">'+a.findings.slice(0,10).map(f=>'<li><strong>'+esc(humanValue(f.code))+'</strong><br><small>'+esc(findingContext(f))+'</small><br>'+esc(f.message)+(f.record_id?' '+actionButton("edit","Open "+(RECORD_NAMES[f.collection]||"record"),'data-collection="'+esc(f.collection)+'" data-id="'+esc(f.record_id)+'"'):"")+'</li>').join("")+'</ul>':"<p>No current record gaps are reported. Authority decisions and receipt evidence remain the operator’s records.</p>");
  html+='<div class="grid">'+panel("Current committee composition",table(["Interest","Eligible voters"],Object.entries(balance.categories).map(([k,v])=>[esc(k),esc(v)]))+
  '<p class="compact">Current composition: '+esc(balance.eligible)+' eligible. '+esc(balance.balanced?"Recorded categories satisfy the DGSI balance formula.":"DGSI category balance is not currently established.")+' A frozen ballot retains its own roster and applicable profile.</p>')+
  panel("Retained work",'<p>Edits create an atomic project revision. Frozen editions, ballots, reports and financial receipts keep the exact content they concern. Later source edits remain visible without changing historical votes.</p><p>Complete private continuation ZIPs include original bytes and development history. Selected edition packages include only the chosen public text and explicitly selected source originals.</p>'+actionButton("section","View development history",'data-target="history"'))+'</div>';

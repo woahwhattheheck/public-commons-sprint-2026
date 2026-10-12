@@ -243,3 +243,46 @@ Use [MANAGED_WORKBENCH.md](MANAGED_WORKBENCH.md) and its complete installed oper
 to adopt the original finished native workbench, receive both complete captures and
 all differences through MCP, inspect both published editions and original buyer,
 stop, and reopen the same saved application in a second managed process.
+
+## Complete browser drafts and original request continuation
+
+The browser's draft store is part of the private workbench. Its identity is the
+SHA-256 of the original workspace schema, directory and creation time. The state
+response exposes createdAt and workspaceIdentity, so a changed launch port
+continues the same workbench without retaining a private connection token.
+
+Each browser-workspaces file contains a complete draft, version, original
+writeId and state hash. The workbench mutation queue applies its expectedVersion
+guard. Replaying a lost draft-save response returns that original version.
+Concurrent tabs preserve both complete drafts under distinct browser IDs.
+
+| Browser route | Operation |
+| --- | --- |
+| GET /api/browser-workspaces | List all retained browser drafts |
+| GET /api/browser-workspaces/BROWSER_ID | Read one complete draft |
+| POST /api/browser-workspace | Save id, expectedVersion, writeId and complete state |
+
+The workbench client exposes browserWorkspaces, browserWorkspace and
+saveBrowserWorkspace for the same operations. Draft state is limited to 8 MiB
+of complete formatted JSON and remains exportable in the browser. It contains
+the full form state and original request bodies; retained native datasets stay
+in their original edition, comparison and publication stores.
+
+Source save accepts an optional stable requestId beginning with save-. The
+same request reopens its accepted revision even if another source revision is
+now current. Changed content under that ID returns SOURCE_SAVE_REQUEST_CHANGED.
+The response keeps the latest workspace state and identifies the original
+accepted revision in saveOperation. Its source and merchant files are retained
+atomically before the workspace revision is published.
+
+Customer preparation accepts an optional buyerId beginning with buyer-. It
+retains the original request and native prepared config before exposing the
+customer file. Replaying the same buyerId returns that original config, intent,
+offer digest and snapshot. Changed selections under it return
+BUYER_REQUEST_CHANGED. Existing callers that omit buyerId retain their original
+new-request behavior.
+
+Publication creation reopens its original publicationId against the original
+source revision after later source edits. It still requires the same query,
+resource path and merchant binding. Publication inspection accepts buyerOffset
+and buyerLimit; buyerPage describes the full retained customer history.
