@@ -12,14 +12,15 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 const options={};
 for(let i=2;i<process.argv.length;i+=2){
  const key=process.argv[i],value=process.argv[i+1];
- if(!['--checkout','--inputs','--run','--python','--peoria-source'].includes(key)||
+ if(!['--checkout','--inputs','--run','--python','--peoria-source','--source-index'].includes(key)||
     Object.hasOwn(options,key)||!value||value.startsWith('--'))throw Error('Invalid or duplicate option: '+key);
  options[key]=value;
 }
 for(const key of ['--checkout','--inputs','--run','--python','--peoria-source'])
  if(!options[key])throw Error('Required option: '+key);
 const OPERATION='CENSUS-ACS-NATIVE-4BF5-20261011';
-const SOURCE_COMMIT='8716f9b6774330330b1937b4bfba6428a65c83db';
+const SOURCE_COMMIT='685b78f39901fe0afd2fa2f477481984466ad555';
+const SOURCE_INDEX_SHA256='03732b374ae6dbccfdc170090f89663f1c91dcc5bab98d91f229fd2616eaec4f';
 const SOURCE=resolve(options['--checkout']);
 const NATIVE=join(SOURCE,'stellar/scf-starforge-20261009');
 const RUN=resolve(options['--run']);
@@ -64,13 +65,37 @@ await mkdir(RUN,{recursive:true,mode:0o700});
 assert.equal(await realpath(RUN),RUN,'Run directory must be an original absolute directory');
 assert.equal((await lstat(RUN)).mode&0o077,0,'Run directory must be private');
 assert.equal(await realpath(SOURCE),SOURCE,'Checkout must resolve to its original source directory');
-assert.equal(await command('git',['-C',SOURCE,'rev-parse','--show-toplevel'],{parse:false}),SOURCE);
-await command('git',['-C',SOURCE,'merge-base','--is-ancestor',SOURCE_COMMIT,'HEAD'],{parse:false});
-await command('git',['-C',SOURCE,'diff','--exit-code',SOURCE_COMMIT,'--','stellar/scf-starforge-20261009','stellar-forge'],{parse:false});
+let sourceIndexSha256=null;
+if(options['--source-index']){
+ const bytes=await readFile(resolve(options['--source-index']));
+ assert.equal(hash(bytes),SOURCE_INDEX_SHA256,'Use the retained complete source index for this application revision');
+ const index=JSON.parse(bytes);
+ assert.equal(index.schema,'stellar-forge.native-source-index.v1');
+ assert.equal(index.source_commit,SOURCE_COMMIT);
+ assert.equal(index.files.length,386);
+ const seen=new Set();
+ for(const entry of index.files){
+  assert.equal(typeof entry.path,'string');
+  assert(!seen.has(entry.path)&&!entry.path.startsWith('/')&&!entry.path.split('/').some(x=>x==='..'||x==='.'||x===''),'Canonical source path required');
+  seen.add(entry.path);
+  const path=join(SOURCE,entry.path),info=await lstat(path);
+  assert(info.isFile()&&!info.isSymbolicLink(),'Retain the original source file: '+entry.path);
+  assert.equal(await realpath(path),path,'Original source path changed: '+entry.path);
+  const raw=await readFile(path);
+  assert.equal(raw.length,entry.bytes,'Source length changed: '+entry.path);
+  const header=Buffer.concat([Buffer.from('blob '+raw.length),Buffer.from([0])]);
+  assert.equal(createHash('sha1').update(header).update(raw).digest('hex'),entry.git_blob_sha,'Source blob changed: '+entry.path);
+ }
+ sourceIndexSha256=hash(bytes);
+}else{
+ assert.equal(await command('git',['-C',SOURCE,'rev-parse','--show-toplevel'],{parse:false}),SOURCE);
+ await command('git',['-C',SOURCE,'merge-base','--is-ancestor',SOURCE_COMMIT,'HEAD'],{parse:false});
+ await command('git',['-C',SOURCE,'diff','--exit-code',SOURCE_COMMIT,'--','stellar/scf-starforge-20261009','stellar-forge'],{parse:false});
+}
 const inputBytes=await readFile(INPUTS);
 const inputs=JSON.parse(inputBytes);
 assert.equal(inputs.schema,'stellar-forge.census-native-inputs.v1');
-const binding={sourceCommit:SOURCE_COMMIT,source:SOURCE,inputsSha256:hash(inputBytes),run:RUN,peoriaSource:PEORIA,python:PYTHON};
+const binding={sourceCommit:SOURCE_COMMIT,sourceIndexSha256,source:SOURCE,inputsSha256:hash(inputBytes),run:RUN,peoriaSource:PEORIA,python:PYTHON};
 const statePath=join(RUN,'journey-state.json');
 const state=await exists(statePath)?await json(statePath):{schema:'census-original-native-journey.v1',startedAt:new Date().toISOString(),candidates:{},sessions:{},boundaries:{buyer:'Original SF88 trusted executePage seam with original X402BuyerClient, SF31 writer and SF82 evidence; free HTTP transport to the original version store.',merchant:'Original SF30 CHALLENGE_ONLY seller exposes actual offers, snapshot metadata and private publication control.'}};
 if(state.binding)assert.deepEqual(state.binding,binding,'Reopen this operation with its original source, inputs and directories');

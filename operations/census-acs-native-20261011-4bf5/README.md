@@ -2,7 +2,7 @@
 
 This execution branch carries the complete two-release operation
 `CENSUS-ACS-NATIVE-4BF5-20261011`. Application source is
-`8716f9b6774330330b1937b4bfba6428a65c83db` in
+`685b78f39901fe0afd2fa2f477481984466ad555` in
 `woahwhattheheck/public-commons-sprint-2026`. Product modules retain those
 original bytes; this directory supplies the operator journey and input paths.
 
@@ -28,10 +28,11 @@ CENSUS_RUN=/absolute/private-work/census-native-4bf5
 PEORIA_SOURCE=/absolute/original-peoria-application
 ```
 
-The checkout may be this handoff branch because its additional files are all
-under `operations/`. The runner checks the complete tracked
-`stellar/scf-starforge-20261009` and `stellar-forge` source against the pinned
-application commit.
+Use a checkout at the merged application source above. With a full Git checkout, the runner checks all tracked `stellar/scf-starforge-20261009` and `stellar-forge` files against that pin. The handoff branch carries the operation separately from the application checkout.
+
+A retained source closure may instead pass `--source-index /absolute/source-index-685b.json`. The runner binds the exact index SHA256 `03732b374ae6dbccfdc170090f89663f1c91dcc5bab98d91f229fd2616eaec4f`, all386 paths and their4,438,571 source bytes to the merged commit; every regular file is matched to its original Git blob. Both routes use the same original application, inputs and journey. The optional index digest is part of the retained run binding.
+
+This is an explicit update from the pre-merge application pin to the complete merged Census application. It keeps the same operation ID, captured data, original publisher/acquisition/receiving engines and original Peoria assembler.
 
 Use the same absolute run path for a continuation:
 
