@@ -195,6 +195,9 @@ Native commands (arguments pass unchanged to the maintained implementation):
   python-workspace                           Author Python sources, run private previews and operate native releases
   diffbot-workspace                          Review retained web data, publish customer editions and reopen handoffs
   diffbot-acquire                            Retain original Diffbot Account, Extract and Bulk results
+  databento-workspace                        Review historical source editions, map customer records and reopen handoffs
+  databento-acquire                          Retain original Databento metadata, batch jobs and complete captures
+  databento-warehouse                        Receive complete customer data, select editions and recover the warehouse
   merchant-readiness                         Review every configured Stellar receiving account
   availability                              Review, pause and resume a running seller's selected routes
   cube-onboarding                            Capture and prepare reviewed Cube reports as a merchant

@@ -95,6 +95,10 @@
       "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/diffbot/browser-assets.json"
     },
     {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/databento/workbench.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/databento/browser-assets.json"
+    },
+    {
       "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/workspace/server.mjs",
       "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/workspace/browser-assets.json"
     },
@@ -300,6 +304,9 @@
     "python-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/python/workspace/cli.mjs",
     "diffbot-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/diffbot/workbench.mjs",
     "diffbot-acquire": "stellar/scf-starforge-20261009/sf30-seller-sdk/diffbot/acquire.mjs",
+    "databento-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/databento/workbench.mjs",
+    "databento-acquire": "stellar/scf-starforge-20261009/sf30-seller-sdk/databento/acquire.mjs",
+    "databento-warehouse": "stellar/scf-starforge-20261009/sf30-seller-sdk/databento/warehouse.mjs",
     "revenue-report": "stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/analyze.mjs",
     "openapi-workspace": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.mjs",
     "oauth-connection": "stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/cli.mjs",
@@ -641,6 +648,9 @@
     "./seller/python/workspace/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/python/workspace/server.mjs",
     "./seller/diffbot/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/diffbot/workbench.mjs",
     "./seller/diffbot/acquire": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/diffbot/acquire.mjs",
+    "./seller/databento/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/databento/workbench.mjs",
+    "./seller/databento/acquire": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/databento/acquire.mjs",
+    "./seller/databento/warehouse": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/databento/warehouse.mjs",
     "./merchant/revenue-report": "./source/stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/analyze.mjs",
     "./seller/openapi/workspace": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.mjs",
     "./seller/openapi/blockworks": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/blockworks/application.mjs",

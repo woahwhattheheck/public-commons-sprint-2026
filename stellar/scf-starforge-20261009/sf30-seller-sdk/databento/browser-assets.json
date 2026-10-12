@@ -1,0 +1,34 @@
+{
+  "schema": "stellar-forge.browser-assets.v1",
+  "root": "./",
+  "routes": [
+    [
+      "/databento-migration/",
+      [
+        "web/index.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/databento-migration/browser.mjs",
+      [
+        "web/browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/databento-migration/style.css",
+      [
+        "web/style.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/local-draft-store.mjs",
+      [
+        "../python/workspace/local-draft-store.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ]
+  ]
+}

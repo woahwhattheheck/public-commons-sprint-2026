@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Databento migration workspace</title>
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./browser.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to workspace</a>
+  <header class="app-header">
+    <div><p class="eyebrow">Historical market data</p><h1>Databento migration workspace</h1><p id="workspace-label">Opening saved workspace…</p></div>
+    <div id="header-actions" class="button-row"></div>
+  </header>
+  <div class="state-bar"><div id="save-state" class="button-row"></div><div id="edition-control"></div></div>
+  <nav id="navigation" class="navigation" aria-label="Workspace"></nav>
+  <main>
+    <p id="notice" role="status" aria-live="polite" hidden></p>
+    <section id="recovery" class="recovery" aria-label="Operation recovery" hidden></section>
+    <div id="content" tabindex="-1"><p class="empty">Opening source editions, saved reviews and completed results.</p></div>
+  </main>
+  <footer><span id="footer-state"></span><span>Source scope · exact values · complete delivery</span></footer>
+</body>
+</html>
