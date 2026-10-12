@@ -43,26 +43,29 @@ export function sourceInspector(){
     return result;
   }
   function source(value){
-    if(value.inspection?.schema===SOURCE_INSPECTION_SCHEMA)return value;
+    if(value.sourceProjection==='inspection')return value;
     const contentDigest=hash(encoded(value.content));
     const selected=[...value.citations].reverse().find(citation=>citation.contentDigest===contentDigest)??value.citations.at(-1);
-    const current=content(value.content,selected?.provider==='source-bundle');
+    const current=selected?.retained?content(value.content,selected.provider==='source-bundle'):
+      {value:value.content,descriptor:null};
     const citations=value.citations.map(citation=>{
+      if(!citation.retained)return citation; // The original provider remains the authority for its live record.
       const {original,...fields}=citation;
       return {...fields,originalRecord:original===undefined?null:record(original)};
     });
     const variants=value.variants.map(variant=>{
       const {original,content:originalContent,...fields}=variant;
       const citation=citations.find(row=>row.editionId===variant.editionId&&row.contentDigest===variant.contentDigest);
-      const preview=content(originalContent,citation?.provider==='source-bundle');
+      if(!citation?.retained)return variant;
+      const preview=content(originalContent,citation.provider==='source-bundle');
       return {...fields,content:preview.value,inspection:{schema:SOURCE_INSPECTION_SCHEMA,
         ...preview.descriptor,selection:retainedSelection(citation)},
         originalRecord:original===undefined?null:record(original)};
     });
-    return {...value,snippet:typeof value.snippet==='string'?value.snippet.slice(0,4096):value.snippet,
+    return {...value,sourceProjection:'inspection',
       content:current.value,citations,variants,
-      inspection:{schema:SOURCE_INSPECTION_SCHEMA,...current.descriptor,
-        snippetComplete:typeof value.snippet!=='string'||value.snippet.length<=4096,selection:retainedSelection(selected)}};
+      inspection:current.descriptor?{schema:SOURCE_INSPECTION_SCHEMA,...current.descriptor,
+        selection:retainedSelection(selected)}:null};
   }
   return {source,record,content};
 }

@@ -257,7 +257,9 @@ titles, DOI/URL identity, authors, publication metadata, citations, references,
 review notes and classifications. Typed content up to 16 KiB is included; large
 content carries an explicit preview and download descriptor. A source bundle
 keeps its summary and file metadata in the response while the original file
-bodies stay in the retained edition.
+bodies stay in the retained edition. Live reference-provider content and records
+continue through their original entitled view, including reference variants in
+a DOI group that also contains retained editions.
 
 Use a citation's **editionId and key** to select an occurrence. A DOI group can
 contain several retained editions, including different versions of a file with
@@ -279,6 +281,10 @@ starforge research-client export-source-file \
   --out /private/original-study.pdf
 ~~~
 
+Source-page filtering and search use the complete original records before the
+selected page is compacted. Descriptive fields and source snippets retain their
+original values. Comparison pages compact only the requested source rows.
+
 The source inspection returns **source.inspection.files**. Each file keeps its
 original relative name, encoding, byte length, SHA-256 and media type. Use that
 name and digest together. The server reads the original retained edition through
@@ -287,12 +293,15 @@ occurrence, and decodes it with the original bundle reader. Binary bytes and a
 UTF-8 byte-order mark survive the complete download.
 
 ~~~js
-const page = await client.section(dossierId, {section: 'sources', limit: 20});
-const citation = page.items[0].citations[0];
+const page = await client.section(dossierId, {section: 'sources', query: 'source-bundle', limit: 20});
+const citation = page.items.flatMap(source => source.citations)
+  .find(row => row.retained && row.provider === 'source-bundle');
+if (!citation) throw new Error('Select a retained source-bundle occurrence from the saved source pages');
 const inspected = await client.source(dossierId, {
   editionId: citation.editionId, key: citation.key, revision: page.revision,
 });
 const original = inspected.source.inspection.files[0];
+if (!original) throw new Error('Select an occurrence containing the original file to download');
 const received = await client.exportSourceFile(dossierId, {
   editionId: inspected.editionId, key: inspected.key, revision: inspected.revision,
   name: original.name, expectedSha256: original.sha256,
