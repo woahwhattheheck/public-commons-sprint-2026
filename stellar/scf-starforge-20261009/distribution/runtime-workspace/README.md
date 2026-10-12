@@ -95,7 +95,10 @@ The existing model, CLI and browser share the same saved-plan records. Local
 reopens reuse the stored source inspection and original request UUID. Complete
 receiving inputs remain available for continuation or corrected source settings.
 See [Saved product plans](PRODUCT_PLANS.md) for the complete browser, CLI,
-typed API and import/export workflow.
+typed API and import/export workflow. **View / print briefing** opens a clean
+customer document with the saved purpose, full required capabilities, actual
+dependency declarations and original package state. Export self-contained HTML,
+complete Markdown or structured briefing data from the same saved plan.
 
 ## Receive a release and choose its adapters
 
