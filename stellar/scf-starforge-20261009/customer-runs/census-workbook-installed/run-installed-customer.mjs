@@ -16,6 +16,18 @@ const digest=b=>createHash('sha256').update(b).digest('hex');
 const json=async p=>JSON.parse(await fs.readFile(p,'utf8'));
 const write=async(p,v)=>{await fs.writeFile(p,JSON.stringify(v,null,2)+'\n',{mode:0o600});await fs.chmod(p,0o600);};
 assert.equal(digest(await fs.readFile(join(packageRoot,'manifest.json'))),manifestSha256,'original installed package manifest');
+const upgradeCommit='d723d8709de2495b865fa2073f5e7ff844cac262';
+const upgradePrefix='source/stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/';
+const upgrades=[];
+for(const [name,expected] of [
+ ['versions.mjs','079e4f8eca9819b7cd916579e34f703664ef4346'],
+ ['writer-lease.mjs','b0d0207910ffc77e6b8bd0a8c5558c52c5c8dbea']
+]){
+ const path=upgradePrefix+name,bytes=await fs.readFile(join(packageRoot,path));
+ const gitBlobSha=createHash('sha1').update(Buffer.from('blob '+bytes.length+'\0')).update(bytes).digest('hex');
+ assert.equal(gitBlobSha,expected,'maintained writer upgrade '+name);
+ upgrades.push({path,gitBlobSha,sha256:digest(bytes),bytes:bytes.length});
+}
 assert.equal(digest(await fs.readFile(binary)),binarySha256,'original released Rust binary');
 const inputs=[
  {year:2023,bytes:13138,sha256:'c884b6c56f0951b8fbc28217b00577fbc22e2372dc375686d024e507c4e8d807'},
@@ -99,7 +111,7 @@ for(const name of ['merchant-desktop.png','merchant-mobile.png','annual-review-d
 }
 const result={
  schema:'stellar-forge.installed-census-customer-result.v1',status:'PASS',completedAt:new Date().toISOString(),
- source:{commit:source,packageManifestSha256:manifestSha256,rustCommit:'712ae7f7d9fac5d2e3d3c239ac9dedf28d2d0f62',rustBinarySha256:binarySha256},
+ source:{baseCommit:source,basePackageManifestSha256:manifestSha256,upgrades:[{commit:upgradeCommit,files:upgrades}],rustCommit:'712ae7f7d9fac5d2e3d3c239ac9dedf28d2d0f62',rustBinarySha256:binarySha256},
  runtime:{platform:process.platform,architecture:process.arch,node:process.version},
  inputs,phases:native.phases.map(p=>({name:p.name,completedAt:p.completedAt})),
  workbook:{rows:16,sheet:'Jam Values',range:'A20:G36',originalSnapshot:native.candidateSnapshot},
