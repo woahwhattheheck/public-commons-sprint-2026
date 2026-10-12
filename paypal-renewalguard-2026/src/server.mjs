@@ -1,7 +1,10 @@
-// Local-only PayPal sandbox subscription inspector and opt-in AI draft reviewer.
-// Zero payment writes, customer messages, external notifications or production PayPal URLs.
+// RenewalGuard local merchant case desk with original PayPal sandbox and AI adapters.
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
+import { CaseWorkbench, sourceScope } from './case-workbench.mjs';
+import { CaseError } from './case-store.mjs';
 import { DEMO, summarize, validId } from './logic.mjs';
 import { isLocalBrowserRequest } from './local-boundary.mjs';
 
@@ -142,17 +145,28 @@ function response(res,status,data) {
   });
   res.end(JSON.stringify(data));
 }
-async function incoming(req) {
+async function incoming(req, limit = 8192) {
   let bytes = 0, chunks = [];
   for await (const chunk of req) {
     bytes += chunk.length;
-    if (bytes > 8192) throw new Error('Request too large');
+    if (bytes > limit) throw new CaseError('request_too_large','Request exceeds the supported upload size',413);
     chunks.push(chunk);
   }
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); }
   catch { throw new Error('Invalid request JSON'); }
 }
-export function makeServer() {
+export function makeServer(options = {}) {
+  const dataRoot = resolve(options.dataDir || process.env.RENEWALGUARD_DATA_DIR ||
+    fileURLToPath(new URL('../.renewalguard-data/', import.meta.url)));
+  const workbenches = new Map();
+  function workbench(mode) {
+    const scope = sourceScope(mode, options.clientId ?? process.env.PAYPAL_CLIENT_ID ?? '');
+    if (!workbenches.has(scope.id)) workbenches.set(scope.id, new CaseWorkbench({
+      root:dataRoot,scope,listing:options.listing || listing,detail:options.detail || detail,
+      draft:options.reviewerDraft || reviewerDraft,clock:options.clock,
+    }));
+    return workbenches.get(scope.id);
+  }
   return createServer(async (req,res) => {
     try {
       if (!isLocalBrowserRequest(req.headers))
@@ -177,6 +191,44 @@ export function makeServer() {
           'X-Content-Type-Options':'nosniff'});
         return res.end(css);
       }
+      if (req.method === 'GET' && url.pathname === '/api/settings') {
+        return response(res,200,{schema:'renewalguard-settings-v1',
+          sandbox_configured:!!(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET),
+          ai_configured:!!process.env.OPENAI_API_KEY,
+          list_page_limit:10,list_record_limit:200,mode:'local'});
+      }
+      if (req.method === 'GET' && url.pathname === '/api/workspace') {
+        const mode=validateMode(url.searchParams.get('mode'));
+        return response(res,200,await workbench(mode).workspace());
+      }
+      if (req.method === 'GET' && url.pathname === '/api/case') {
+        const mode=validateMode(url.searchParams.get('mode'));
+        return response(res,200,await workbench(mode).getCase(url.searchParams.get('case_id')));
+      }
+      if (req.method === 'GET' && url.pathname === '/api/document') {
+        const mode=validateMode(url.searchParams.get('mode'));
+        return response(res,200,await workbench(mode).document(url.searchParams.get('case_id'),url.searchParams.get('sha')));
+      }
+      if (req.method === 'GET' && url.pathname === '/api/export') {
+        const mode=validateMode(url.searchParams.get('mode'));
+        return response(res,200,await workbench(mode).exportCase(url.searchParams.get('case_id'),url.searchParams.has('revision')?Number(url.searchParams.get('revision')):null));
+      }
+      if (req.method === 'GET' && url.pathname === '/api/operation') {
+        const mode=validateMode(url.searchParams.get('mode'));
+        return response(res,200,await workbench(mode).operation(url.searchParams.get('request_id')));
+      }
+      if (req.method === 'POST' && url.pathname === '/api/resume') {
+        if (!(req.headers['content-type'] || '').startsWith('application/json'))
+          throw new CaseError('invalid_content_type','Send commands as application/json',415);
+        const body=await incoming(req),mode=validateMode(body?.mode);
+        return response(res,200,await workbench(mode).resume(body.request_id));
+      }
+      if (req.method === 'POST' && url.pathname === '/api/command') {
+        if (!(req.headers['content-type'] || '').startsWith('application/json'))
+          throw new CaseError('invalid_content_type','Send commands as application/json',415);
+        const body=await incoming(req,32*1024*1024),mode=validateMode(body?.mode);
+        return response(res,200,await workbench(mode).run(body.request_id,body.action,body.input));
+      }
       if (req.method === 'GET' && url.pathname === '/api/list') {
         const mode = validateMode(url.searchParams.get('mode'));
         return response(res,200,{mode,...await listing(mode)});
@@ -197,11 +249,13 @@ export function makeServer() {
       }
       response(res,404,{error:'Not found'});
     } catch(e) {
-      response(res,/not configured/.test(e.message)?503:400,{error:String(e.message || 'Request failed').slice(0,180)});
+      const status=e instanceof CaseError?e.status:(/not configured|Remote provider|fetch failed|timeout|ENOSPC|EIO|EROFS|ENOENT/i.test(e.message)?503:400);
+      response(res,status,{error:String(e.message || 'Request failed').slice(0,240),
+        code:e.code || (status===503?'provider_or_storage':'invalid_request'),details:e.details || {}});
     }
   });
 }
-if (import.meta.url === new URL('file://' + process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === new URL('file://' + process.argv[1]).href) {
   if (!Number.isInteger(PORT) || PORT < 1024 || PORT > 65535) throw new Error('Invalid PORT');
   makeServer().listen(PORT,'127.0.0.1',() => console.log('RenewalGuard local: http://127.0.0.1:' + PORT));
 }
