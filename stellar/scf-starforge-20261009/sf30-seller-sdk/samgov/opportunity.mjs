@@ -112,7 +112,7 @@ export async function prepareSamOpportunity({
         description:'Operating project for retained SAM notice '+notice.noticeId+'.',
         opportunity:{title:normalizedTitle,buyer:(notice.fullParentPathName??'').slice(0,500),
           reference:(notice.solicitationNumber??notice.noticeId).slice(0,240),url:notice.uiUrl,
-          documentKind,stage:'research',dueAt:selectedDeadline?.at??null,
+          documentKind,stage:'research',dueAt:selectedDeadline?.at??'',
           timeZone:selectedDeadline?.timeZone??'',notes:'Original SAM notice: '+notice.noticeId+
             '. Raw response deadline: '+(notice.responseDeadLine??'not supplied')+
             '. Source basis: '+(edition.sourceBasis??SOURCE_BASIS)+'.'}}));
