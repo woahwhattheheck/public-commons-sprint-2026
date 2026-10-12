@@ -26,6 +26,9 @@ function parse(args) {
   return { command, options };
 }
 export async function main(args = process.argv.slice(2)) {
+  if(args[0]?.startsWith('project-')){
+    const {main:project}=await import('./project-cli.mjs');return project(args);
+  }
   const input = parse(args);
   if (input.help) {
     process.stdout.write(

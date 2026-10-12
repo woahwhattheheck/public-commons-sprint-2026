@@ -492,9 +492,12 @@ export class MerchantODataWorkspaces {
         }
         return result;
       }
+      case 'merchant_odata_semantics':
+        return original.semantics({ id: nativeId(args.editionId), fields: args.fields });
       case 'merchant_odata_export': {
         const terms = args.profile === undefined ? null : this.#profile(entry, args.profile);
         const result = await original.exportEdition({ id: nativeId(args.editionId), name: args.name, fields: args.fields,
+          expectedSemanticSha256: args.expectedSemanticSha256,
           ...(terms ? { origin: terms.origin, path: terms.path, payment: { scheme: 'exact', ...terms.payment, amount: terms.amount } } : {}),
           ...(args.defaultLimit === undefined ? {} : { defaultLimit: count(args.defaultLimit, 'Default dataset rows', 1, 10000) }),
           ...(args.maxLimit === undefined ? {} : { maxLimit: count(args.maxLimit, 'Maximum dataset rows', 1, 10000) }) });

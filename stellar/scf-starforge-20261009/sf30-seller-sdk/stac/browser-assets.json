@@ -1,0 +1,97 @@
+{
+  "schema": "stellar-forge.browser-assets.v1",
+  "root": "./",
+  "routes": [
+    [
+      "/",
+      [
+        "ui.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/ui.html",
+      [
+        "ui.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/ui.css",
+      [
+        "ui.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/ui.mjs",
+      [
+        "ui.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/eoapi/ui.mjs",
+      [
+        "eoapi/ui.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/eoapi/ui.css",
+      [
+        "eoapi/ui.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/eoapi/policy-view.mjs",
+      [
+        "eoapi/policy-view.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/eoapi/policy.css",
+      [
+        "eoapi/policy.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/eoapi/commissioning/view.mjs",
+      [
+        "eoapi/commissioning/view.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/eoapi/commissioning/view.css",
+      [
+        "eoapi/commissioning/view.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/processing/view.mjs",
+      [
+        "processing/view.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/prescient/view.mjs",
+      [
+        "prescient/view.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/prescient/view.css",
+      [
+        "prescient/view.css",
+        "text/css; charset=utf-8"
+      ]
+    ]
+  ]
+}

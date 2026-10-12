@@ -26,12 +26,42 @@ Use the existing Fiscal workspace or its managed Applications entry:
 4. Compare the two immutable editions using their complete common key and selected measure fields.
 5. Inspect added, removed, changed and unchanged observations. Review the exact first/last dated values for stock series.
 6. Create the original complete comparison export. Its source delivery includes both editions, both original captures, all retained response pages and the comparison.
-7. Stop this workspace's managed Application before opening the standalone briefing command. The original kernel lease serializes the two operators.
-8. Select the comparison and export below, create the briefing, and give the complete archive to its intended reader.
+7. Expand **Customer briefing** in the comparison view, select the complete delivery, and enter the title, audience and analyst notes. Choose **Create complete briefing** and download briefing.tar.gz from its completed card.
+8. Extract the archive, open index.html, and give the complete archive to its intended reader. The original source delivery and all report pages remain together.
+
+The managed browser keeps its existing model and named operator for this action. To use the separate standalone command below, first stop this workspace's managed Application; its original kernel lease serializes standalone access.
 
 The managed Applications guide is at
 [FISCALDATA_APPLICATIONS.md](../../distribution/runtime-workspace/FISCALDATA_APPLICATIONS.md).
 The original [README](README.md) and [domain contract](DOMAIN.md) describe the model actions and exact source semantics.
+
+## Create through the current workspace or MCP
+
+The comparison view can create its complete source export and briefing without closing the Application. A report stays in the existing **Complete exports** collection, with **Retry** for an interrupted creation and downloads for the complete offline archive, JSON, Markdown and dated-measure CSV. Polling preserves authored form text, and navigation retains each comparison's draft.
+
+An existing model owner calls the original action:
+
+~~~js
+const {result} = await workspace.dispatch('briefings.create', {
+  comparisonId,
+  expectedComparisonSha256,
+  exportId,
+  title: 'Reviewed Treasury observations',
+  audience: 'Research and editorial review',
+  notes: 'Analyst-authored commentary',
+  rowsPerPage: 200,
+  requestId: 'monthly-observations-1'
+});
+const archive = await workspace.file('export', result.id, 'briefing.tar.gz');
+~~~
+
+The HTTP API accepts the same action and payload through its authenticated session. The existing named MCP family exposes `merchant_fiscaldata_briefing` with `{workspace,payload}`; it keeps the original named operator audit and shared browser/model lifetime. The original CLI uses `starforge fiscaldata action --dir ... --action briefings.create --input ...` when it owns the workspace.
+
+This action selects an exact READY comparison and its existing complete delivery. Its retained export records the source IDs, digests, authored text, original producer and creation time before rendering. The original helper borrows the same internal comparison/file readers while the model's serial writer is held. Complete files are verified and published through the existing export engine.
+
+Download briefing.tar.gz as the offline reader handover. The outer workspace delivery.tar.gz also includes the briefing archive, briefing-manifest.json, briefing.json, briefing.md and dated-measures.csv with the ordinary workspace export manifest and overview. The original report's manifest retains the name manifest.json inside briefing.tar.gz.
+
+The original helper stages privately beside the source workspace at `<workspace-directory>-briefings`. The complete report is retained inside the workspace exports, so an ordinary portable checkpoint includes every delivered byte. Unfinished requests can recreate their helper output after a source-workspace restore using the retained timestamp and exact producer. Reopening a completed export verifies and reuses its sealed files.
 
 ## Installed command
 
@@ -191,6 +221,8 @@ Import createFiscalBriefing and verifyFiscalBriefing from the installed export o
     });
 
 An existing owner can additionally supply model: its already-open original model. In that form, the helper checks that verified original file paths belong to directory, borrows the model and leaves its lifetime with the caller. The caller keeps its managed browser and operator history.
+
+An embedding owner may explicitly supply optional createdAt as a canonical UTC ISO string whose exact Date roundtrip is unchanged, such as 2026-10-12T03:39:24.907Z. When supplied, it becomes part of that request and determines a new intent's report timestamp. Omit it for the standalone default timestamp and original request shape. The workspace action supplies its own already-retained export timestamp so a restored unfinished request can reproduce the same report. Existing saved intents and request digests remain unchanged when this option was not used.
 
 The selected complete source export is mandatory. The helper checks its source ID and comparison SHA-256, and verifies its comparison/rows/change digests against the original model's file descriptors before rendering.
 

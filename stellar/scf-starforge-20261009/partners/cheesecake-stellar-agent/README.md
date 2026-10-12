@@ -2,7 +2,7 @@
 
 A complete receiving application for selected original Stellar merchant requests. It combines the maintained native buyer, exact request review, application authorization, the existing MCP transport and an industrial browser.
 
-Start with [INSTALLED.md](INSTALLED.md) to prepare a private receiving application from an installed Starforge runtime and launch it through the Applications workspace or the `stellar-application` command. [OPERATOR.md](OPERATOR.md) covers the complete configuration, review, execution, result and recovery flow. [SCOPE.md](SCOPE.md) describes the Cheesecake Labs implementation workshare and acceptance inputs.
+Start with [INSTALLED.md](INSTALLED.md) to prepare a private receiving application from an installed Starforge runtime and launch it through the Applications workspace or the `stellar-application` command. [OPERATOR.md](OPERATOR.md) covers the complete configuration, review, execution, result and recovery flow. [PROJECT_RECOVERY.md](PROJECT_RECOVERY.md) covers encrypted backups, complete offline receiving and reopening the original native owners. [SCOPE.md](SCOPE.md) describes the Cheesecake Labs implementation workshare and acceptance inputs.
 
 ## Source entry points
 
@@ -14,6 +14,9 @@ Start with [INSTALLED.md](INSTALLED.md) to prepare a private receiving applicati
 | `configuration.mjs` | Trusted receiving-host paths, operator selection and authorization module. |
 | `cli.mjs` | Source verification, request review, original execution, recovery and result export. |
 | `server.mjs` | Authenticated HTTP application and the maintained MCP transport. |
+| `project.mjs` | Whole application backup, original financial components and capture lifecycle. |
+| `project-receive.mjs` | Complete archived results, receiving review and original-owner restore or reattachment. |
+| `project-cli.mjs` | Installed encrypted project commands. |
 | `ui/` | Requests, review, explicit execution confirmation, original operation and result workflow. |
 | `operations/operator_receiving.cjs` | Same-state receiving operation for the supplied reference, real Chromium and server restart. |
 

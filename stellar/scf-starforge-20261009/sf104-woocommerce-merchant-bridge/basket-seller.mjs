@@ -123,7 +123,7 @@ async function compileQuote(h,{call,nativeFactory,outbox,timeoutMs}) {
 /** Same original native handler owns verification, cancellation and settlement.
  * Cache retirement waits for its complete dispatch promise, not HTTP finish. */
 export async function startWooBasketMerchant(compiled,{nativeFactory=null,env=process.env,fetchImpl,
-  port=8423,operationsPort=8424,maxInFlight=64,drainGraceMs=60000}={}) {
+  port=8423,operationsPort=8424,operationsNavigationOrigin=null,maxInFlight=64,drainGraceMs=60000}={}) {
   need(Array.isArray(compiled.baskets) && compiled.baskets.length>=1,'WOO_BASKET_CONFIG_REQUIRED');
   need(Number.isInteger(port) && port>=0 && port<=65535,'WOO_PORT_INVALID');
   const outbox=await openOutbox(compiled.outbox),call=wordpress(compiled,{env,fetchImpl});
@@ -221,7 +221,8 @@ export async function startWooBasketMerchant(compiled,{nativeFactory=null,env=pr
         return fixed.handler(req,res);
       });
     };
-    operations=await startSellerOperations(session,{port:operationsPort,deliveryOutbox:outbox});
+    operations=await startSellerOperations(session,{port:operationsPort,deliveryOutbox:outbox,
+      navigationOrigin:operationsNavigationOrigin});
     return {seller:session,operations,outbox,close};
   } catch(error){await close().catch(()=>{});throw error;}
 }
