@@ -5,12 +5,14 @@
 import type {NativeObject,JsonValue,Sha256,WorkspaceId,WorkspaceAlias,OperationId,
   SourceReference,EditionScope,SourceIssue,SourceLicense,EditionReview} from '../mcp.mjs';
 
+import type {ComponentSelectionInput,ComponentSelection,ComponentCatalogue,ComponentSummary,ComponentEligibility,ComponentSourceRef} from './components.mjs';
+
 export type AnalysisProjectId = string;
 export type AnalysisVersionId = Sha256;
 export type AnalysisView = 'events' | 'numeric' | 'map';
 export interface AnalysisPeriodInput { start: string; end: string; }
 export interface AnalysisPeriod extends AnalysisPeriodInput { startUtc: string; endUtc: string; }
-export interface AnalysisSelectionInput {
+export interface ScalarAnalysisSelectionInput {
   /** One to twenty exact scalar Datastream keys from this retained edition. */
   streamKeys: Sha256[];
   /** Explicit offset-qualified start and exclusive end, or the retained source extent. */
@@ -19,7 +21,7 @@ export interface AnalysisSelectionInput {
   timeBasis?: 'phenomenonTime';
   viewerId?: Sha256 | null;
 }
-export interface AnalysisSelection {
+export interface ScalarAnalysisSelection {
   streamKeys: Sha256[];
   period: AnalysisPeriod | null;
   view: AnalysisView;
@@ -29,6 +31,8 @@ export interface AnalysisSelection {
   instantPolicy: 'events-only';
   unresolvedTimePolicy: 'retain-unplaced';
 }
+export type AnalysisSelectionInput = ScalarAnalysisSelectionInput | ComponentSelectionInput;
+export type AnalysisSelection = ScalarAnalysisSelection | ComponentSelection;
 export interface AnalysisCitation {
   editionId: Sha256;
   sha256: Sha256;
@@ -112,6 +116,7 @@ export interface NativeViewerProfile {
   identities: NativeViewerIdentity[];
   issues: NativeObject[];
   firstLocationPolicy: string;
+  derivedComponent?:boolean;numericAvailable?:boolean;graphConflictCheck?:string;meaning?:string;
 }
 export interface RetainedRelatedEntity {
   /** Browser-readable metadata; sourceJson preserves exact original numeric tokens. */
@@ -144,7 +149,7 @@ export interface AnalysisStreamSummary {
   firstUtc: string | null;
   lastUtc: string | null;
 }
-export interface AnalysisSummary {
+export interface ScalarAnalysisSummary {
   schema: 'stellar-forge.sensorthings-analysis-summary.v1';
   editionId: Sha256;
   selection: AnalysisSelection;
@@ -161,9 +166,11 @@ export interface AnalysisSummary {
   streams: AnalysisStreamSummary[];
   meaning: Record<string,string>;
 }
+export type AnalysisSummary = ScalarAnalysisSummary | ComponentSummary;
 export interface AnalysisStreams {
   editionId: Sha256;
   streams: AnalysisStreamSummary[];
+  componentCatalogue:ComponentCatalogue;
   scope: EditionScope;
   issues: SourceIssue[];
   license?: SourceLicense;
@@ -185,11 +192,16 @@ export type AnalysisObservationRow = Record<AnalysisObservationColumn,string> & 
   source: AnalysisSourceReference;
   numeric: NumericEligibility;
 };
+export type AnalysisComponentColumn = AnalysisObservationColumn |
+  'source_result' | 'source_result_state' | 'source_result_type' | 'source_observation_type' | 'source_observed_property' | 'source_unit' | 'source_stream_key' | 'component_series_key' | 'component_index' | 'component_name' | 'component_binding_id' | 'component_meaning_id' | 'component_occurrence_id' | 'component_property' | 'component_unit' | 'component_observation_type' | 'component_value' | 'component_value_state' | 'component_value_type' | 'component_result_pointer' | 'component_source_pointer' | 'component_pointer_state' | 'component_alignment' | 'component_interpretation' | 'component_interpretation_note' | 'component_acknowledged_issues' | 'component_declaration_issues' | 'component_numeric_basis';
+export type AnalysisComponentObservationRow = Record<AnalysisComponentColumn,string> & {
+  source:ComponentSourceRef;componentSource:ComponentSourceRef;numeric:ComponentEligibility;exactNumeric:ComponentEligibility;
+};
 export interface AnalysisRows {
   editionId: Sha256;
   selection: AnalysisSelection;
-  columns: AnalysisObservationColumn[];
-  rows: AnalysisObservationRow[];
+  columns: (AnalysisObservationColumn | AnalysisComponentColumn)[];
+  rows: (AnalysisObservationRow | AnalysisComponentObservationRow)[];
   total: number;
   offset: number;
   nextOffset: number | null;
@@ -224,6 +236,13 @@ export interface AnalysisComparisonSourceContext {
     left:AnalysisSourceBracketRead[];right:AnalysisSourceBracketRead[]}[];
   meaning:string;
 }
+export interface AnalysisComponentComparisonOccurrence {
+  occurrenceId:Sha256;semanticHash:null;componentOccurrenceId:Sha256;
+  sourceRef:ComponentSourceRef;componentSourceRef:ComponentSourceRef;streamKey:string;componentIndex:number;
+  result:{state:string;type:string;value:string};phenomenonTime:string;resultTime:string;quality:string;
+  issues:JsonValue;row:Record<string,string>;meaning:string;
+}
+export interface AnalysisComponentUnkeyed {side:'left'|'right';sourceRef:ComponentSourceRef;componentIndex:number}
 export interface AnalysisComparison {
   schema: 'stellar-forge.sensorthings-analysis-comparison.v1';
   id: Sha256;
@@ -237,9 +256,12 @@ export interface AnalysisComparison {
   sourceQueryCompatible: boolean;
   sourceContext: AnalysisComparisonSourceContext;
   counts: AnalysisComparisonCounts;
-  unkeyed: {left:AnalysisComparisonOccurrence[];right:AnalysisComparisonOccurrence[]};
+  unkeyed: {left:(AnalysisComparisonOccurrence|AnalysisComponentUnkeyed)[];right:(AnalysisComparisonOccurrence|AnalysisComponentUnkeyed)[]};
   changes: {key:string;state:Exclude<AnalysisDifferenceState,'same'>;
-    left:AnalysisComparisonOccurrence[];right:AnalysisComparisonOccurrence[]}[];
+    left:(AnalysisComparisonOccurrence|AnalysisComponentComparisonOccurrence)[];right:(AnalysisComparisonOccurrence|AnalysisComponentComparisonOccurrence)[]}[];
+  analysisKind?:'explicit-multidatastream-components';
+  parentContextChanges?:NativeObject[];componentMetadata?:NativeObject[];
+  componentMeaning?:Record<string,string>;componentSourceContext?:NativeObject;
   meaning: string;
   actor: string;
   note: string;

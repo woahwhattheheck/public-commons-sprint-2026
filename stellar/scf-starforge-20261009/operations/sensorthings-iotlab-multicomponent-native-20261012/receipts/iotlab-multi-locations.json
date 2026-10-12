@@ -1,0 +1,39 @@
+{
+  "schema": "stellar-forge.sensorthings-connector-acquisition.v1",
+  "role": "iotlab-multi-locations",
+  "sourceUrl": "https://frost.iotlab.com/sensorthings/v1.1/Things(26)/Locations",
+  "requestedFilename": "iotlab-multi-locations.json",
+  "requestedAt": "2026-10-12T12:55:29.759Z",
+  "uploadCompletedAt": "2026-10-12T12:55:39.995Z",
+  "downloadRequestedAt": "2026-10-12T12:55:39.995Z",
+  "downloadCompletedAt": "2026-10-12T12:55:40.446Z",
+  "originalHttp": {
+    "method": null,
+    "status": null,
+    "headers": null
+  },
+  "originalBody": {
+    "path": "originals/iotlab-multi-locations.json",
+    "bytes": 573,
+    "sha256": "02d8ad73cb37d2a77a3b77e6d2d30fe4aae168a3f3ac85dc0914ce351de6b40f",
+    "gitSha": "1688a19a3698dce4bab29492f1c01e55d17e5424"
+  },
+  "uploadToolResponse": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"file_upload_id\":\"3f7dd772-3100-8130-a103-00b21104e564\",\"filename\":\"iotlab-multi-locations.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":573,\"status\":\"uploaded\",\"markdown_source\":\"file-upload://3f7dd772-3100-8130-a103-00b21104e564\",\"suggested_markdown\":\"<file src=\\\"file-upload://3f7dd772-3100-8130-a103-00b21104e564\\\"></file>\"}"
+      }
+    ],
+    "isError": false
+  },
+  "downloadToolResponse": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"file_upload_id\":\"3f7dd772-3100-8130-a103-00b21104e564\",\"filename\":\"iotlab-multi-locations.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":573,\"content\":\"{\\\"@iot.count\\\":1,\\\"value\\\":[{\\\"@iot.selfLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/Locations(25)\\\",\\\"@iot.id\\\":25,\\\"description\\\":\\\"Weidendammer Brücke at river Spree in the Berlin City Center\\\",\\\"encodingType\\\":\\\"application/geo+json\\\",\\\"location\\\":{\\\"type\\\":\\\"Point\\\",\\\"coordinates\\\":[13.39,52.52]},\\\"name\\\":\\\"Weidendammer Brücke at river Spree in the Berlin City Center\\\",\\\"HistoricalLocations@iot.navigationLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/Locations(25)/HistoricalLocations\\\",\\\"Things@iot.navigationLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/Locations(25)/Things\\\"}]}\"}"
+      }
+    ],
+    "isError": false
+  }
+}

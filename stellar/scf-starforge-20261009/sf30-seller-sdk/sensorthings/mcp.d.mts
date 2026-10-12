@@ -67,7 +67,10 @@ export interface WorkspaceSchema {
   workspaceSchema: 'stellar-forge.sensorthings-workspace.v1';
   workspaceId: WorkspaceId;
   sourceContract: SourceContract;
-  analysis?: {reads:Record<string,string>;meaning:Record<string,string>;limits:Record<string,number>};
+  analysis?: {reads:Record<string,string>;meaning:Record<string,string>;limits:Record<string,number>;
+    componentSelection?:{schema:'stellar-forge.sensorthings-component-selection.v1';source:string;fields:readonly string[];
+      componentFields:readonly string[];interpretationFields:readonly string[];modes:readonly ('source-declared'|'numeric-json')[];
+      indexBasis:string;limits:{selections:80;index:4095;rows:250000;pageRows:500};receiving:string}};
   actions: { [K in SensorThingsActionName]: readonly string[] };
   tables: SourceTable[];
   captureReads: {
