@@ -1,6 +1,7 @@
 // MIT. The same original live controller used by the operator UI and CLI.
 import type { Buffer } from 'node:buffer';
 import type { ODataWorkspace } from './workspace.mjs';
+import type { ODataServiceCollectionController, ODataServiceCollectionInput } from './live/collection-store.mjs';
 import type { ODataEnvironment, ODataLiveProfile, ODataPayment } from './types.mjs';
 import type { ODataNativeFactory, ODataLiveSnapshot, ODataNormalizedLivePlan, ODataLiveQuery,
   ODataBuyerHandoff, ODataLiveReceiving } from './live-sdk.mjs';
@@ -17,6 +18,8 @@ export interface ODataLivePrepareInput {
   port?: number; operationsPort?: number; facilitator?: string;
 }
 export type ODataLiveReceivedRecord = Omit<ODataLiveReceiving, 'directory'> & { id: string; directory?: string };
+export interface ODataLiveCollectionReference { id: string; collectionId: string }
+export type ODataLiveCollectionInput = ODataLiveCollectionReference & Omit<ODataServiceCollectionInput, 'id'>;
 export interface ODataLiveOperations {
   root: string;
   status(): Promise<{ products: Array<ODataLiveProfile & {
@@ -27,6 +30,16 @@ export interface ODataLiveOperations {
   stop(input: { id: string }): Promise<{ id: string; state: 'STOPPED' }>;
   buyer(input: { id: string; intentId: string; receivedId?: string }): Promise<ODataBuyerHandoff & { id: string; files: string[] }>;
   receive(input: { id: string; bodyBase64: string }): Promise<ODataLiveReceivedRecord & { files: string[] }>;
+  /** Complete collections remain under the original live-service workspace and lease. */
+  collections(input: { id: string }): ReturnType<ODataServiceCollectionController['list']>;
+  collection(input: ODataLiveCollectionReference): ReturnType<ODataServiceCollectionController['inspect']>;
+  collectionRows(input: ODataLiveCollectionReference & { offset?: number; limit?: number }):
+    ReturnType<ODataServiceCollectionController['rows']>;
+  collect(input: ODataLiveCollectionInput): ReturnType<ODataServiceCollectionController['collect']>;
+  restoreCollection(input: ODataLiveCollectionReference & { sourceManifest: string; expectedSha256: string }):
+    ReturnType<ODataServiceCollectionController['restore']>;
+  file(input: { id: string; name: string; kind: 'collection'; recordId: string }):
+    ReturnType<ODataServiceCollectionController['file']>;
   file(input: { id: string; name: string; kind?: 'package'; recordId?: never } |
     { id: string; name: string; kind: 'buyer' | 'receiving'; recordId: string }): Promise<{ bytes: Buffer; name: string }>;
   detail(id: string): Promise<ODataLiveProfile & {
