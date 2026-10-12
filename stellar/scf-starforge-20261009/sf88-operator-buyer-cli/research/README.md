@@ -348,6 +348,10 @@ Programmatic callers can use `store.exportEntries(editionId, options)` as an asy
 
 Saved filesystem exports retain their existing content-addressed directory and recoverable plan. They calculate the manifest, then write files in a second pass over the same frozen edition and review snapshot; this uses no extra temporary export directory. The collector's retained cohort and the largest individual generated file still contribute to memory use.
 
+## Target metadata feeds
+
+Open the **Feed** tab on a retained works edition to edit a field contract, review source-linked exceptions, compare mapped editions, and freeze JSONL/CSV with complete portable receiving. [Feed operator and API guide](feed/README.md).
+
 
 ### Receive large saved cohorts without generating reports
 
