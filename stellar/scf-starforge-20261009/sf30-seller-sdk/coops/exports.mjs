@@ -21,6 +21,49 @@ export function mappingValue(input){
  for(const required of ['editionId','recordId','sourcePageSha256'])if(!sources.has(required))throw fault('COOPS_MAPPING_PROVENANCE','Keep editionId, recordId and sourcePageSha256 in the receiving mapping.');
  return{name,table:input.table,columns,note,transform:'Field selection and column renaming only. Original values, precision and empty/null distinctions remain unchanged; datum/time/unit conversion is outside this mapping.'};
 }
+
+export const MAPPING_FILE_BYTES=64*1024;
+const MAPPING_FILE_SCHEMA='stellar-forge.coops-model-input-mapping-file.v1';
+const mappingRecordFields=['name','table','columns','note','transform','id','mappingId','revision','createdAt','updatedAt','history','sourceFile'];
+export function mappingSourceValue(input,{requireDecision=false}={}){
+ if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(k=>!['filename','base64','decision'].includes(k)))throw fault('COOPS_MAPPING_FILE','Use an original mapping filename, base64 bytes and an explicit intake decision.');
+ const filename=text(input.filename,'the original mapping filename',255);
+ if(!/\.json$/i.test(filename)||/[\\/\x00-\x1f\x7f]/.test(filename))throw fault('COOPS_MAPPING_FILE','Select a JSON mapping file with its original filename, without directory components.');
+ if(typeof input.base64!=='string'||input.base64.length>Math.ceil(MAPPING_FILE_BYTES/3)*4||!input.base64.length||!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(input.base64))throw fault('COOPS_MAPPING_FILE','Supply canonical base64 for a mapping JSON file up to 64 KiB.',413);
+ const bytes=Buffer.from(input.base64,'base64');
+ if(!bytes.length||bytes.length>MAPPING_FILE_BYTES||bytes.toString('base64')!==input.base64)throw fault('COOPS_MAPPING_FILE','Keep the exact original mapping file within its 64 KiB limit.',413);
+ let document;try{document=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}catch{throw fault('COOPS_MAPPING_FILE','The selected mapping must be a complete UTF-8 JSON object.');}
+ if(!document||typeof document!=='object'||Array.isArray(document))throw fault('COOPS_MAPPING_FILE','Select one original mapping object or the native public-reference mapping envelope.');
+ let selected=document,declaredSource=null;
+ if(document.schema==='stellar-forge.coops-model-input-example.v1'){
+  if(Object.keys(document).some(k=>!['schema','role','action','payload','note'].includes(k))||document.action!=='mapping.save')throw fault('COOPS_MAPPING_FILE','The public-reference envelope must contain its original mapping.save payload.');
+  selected=document.payload;
+ }else if(document.schema===MAPPING_FILE_SCHEMA){
+  if(Object.keys(document).some(k=>!['schema','role','mapping','source','note'].includes(k)))throw fault('COOPS_MAPPING_FILE','Keep the native mapping envelope and its declared source metadata.');
+  selected=document.mapping;declaredSource=document.source??null;
+ }else if(Object.hasOwn(document,'schema'))throw fault('COOPS_MAPPING_FILE','Choose a plain saved mapping, native mapping-file envelope or the published public-reference mapping example.');
+ if(!selected||typeof selected!=='object'||Array.isArray(selected)||Object.keys(selected).some(k=>!mappingRecordFields.includes(k)))throw fault('COOPS_MAPPING_FILE','The file may contain the declared mapping fields and original record metadata only.');
+ const mapping=mappingValue(selected);
+ if(selected.transform!==undefined&&selected.transform!==mapping.transform)throw fault('COOPS_MAPPING_FILE_TRANSFORM','This adapter preserves original values. Review any requested numerical, datum or time conversion outside the column mapping.');
+ if(declaredSource!==null&&(!declaredSource||typeof declaredSource!=='object'||Array.isArray(declaredSource)))throw fault('COOPS_MAPPING_FILE','Declared mapping source metadata must be an object.');
+ const identifier=selected.id??selected.mappingId??declaredSource?.mappingId??null,revision=selected.revision??declaredSource?.revision??null;
+ if(identifier!==null&&(typeof identifier!=='string'||identifier.length>200))throw fault('COOPS_MAPPING_FILE','A declared source mapping ID must be bounded text.');
+ if(revision!==null&&(!Number.isSafeInteger(revision)||revision<1))throw fault('COOPS_MAPPING_FILE','A declared source mapping revision must be a positive integer.');
+ if(document.role!==undefined&&(typeof document.role!=='string'||document.role.length>200))throw fault('COOPS_MAPPING_FILE','Keep a bounded declared file role.');
+ const decision=requireDecision||input.decision!==undefined?text(input.decision,'the explicit mapping-file intake decision',12000):null;
+ return{bytes,mapping,source:{schema:'stellar-forge.coops-mapping-source.v1',filename,bytes:bytes.length,sha256:hashBytes(bytes),
+  fileSchema:document.schema??null,declaredRole:document.role??null,declaredMappingId:identifier,declaredRevision:revision,
+  mapping:structuredClone(mapping),mappingSha256:hashBytes(Buffer.from(stable(mapping))),decision,
+  scope:'The uploaded identifiers and role are source declarations. Staff select the receiving mapping; no supplied ID is adopted automatically.'}};
+}
+export function mappingChanges(original,current){
+ const changes=[];
+ for(const field of ['name','table','note'])if(original[field]!==current[field])changes.push({field,original:original[field],current:current[field]});
+ const count=Math.max(original.columns.length,current.columns.length);
+ for(let i=0;i<count;i++)if(stable(original.columns[i]??null)!==stable(current.columns[i]??null))changes.push({field:'columns/'+i,original:original.columns[i]??null,current:current.columns[i]??null});
+ return changes;
+}
+
 async function identity(path){
  const stat=await lstat(path);if(!stat.isFile()||stat.isSymbolicLink()||stat.size>MAX)throw fault('COOPS_EXPORT_FILE','The retained native export is not its expected bounded regular file.',409);
  const digest=createHash('sha256');let bytes=0;for await(const part of createReadStream(path)){bytes+=part.length;digest.update(part);}

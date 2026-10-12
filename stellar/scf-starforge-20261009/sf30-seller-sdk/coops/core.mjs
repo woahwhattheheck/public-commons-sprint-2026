@@ -1,7 +1,7 @@
 // MIT. Coastal source operations over the original workspace, publisher and receiver.
 import {makeBackfillPlan} from './history.mjs';
 import {writeRetainedAnalysisBundle} from './analysis/retained.mjs';
-import {mappingValue,materializeExport,retainedExport,writeTableExport,writeSourcePackage,writeComparisonExport} from './exports.mjs';
+import {mappingValue,mappingSourceValue,mappingChanges,materializeExport,retainedExport,writeTableExport,writeSourcePackage,writeComparisonExport} from './exports.mjs';
 import {openWorkspaceStore,jsonBytes,stable} from '../stellar-expert/store.mjs';
 import {WORKSPACE_SCHEMA,workspaceSchema,ACTIONS,SOURCE_CONTRACT} from './schema.mjs';
 import {normaliseStation,makeQuery,requestPlan,metadataTasks,decodeSource,fetchCoopsResponse,normaliseBundle,importedResponse,text,fault,hashBytes} from './provider.mjs';
@@ -151,8 +151,9 @@ export async function openCoopsWorkspace({directory,inboxDirectory,releaseRuntim
   if(typeof operationId!=='string'||!/^[A-Za-z0-9_-]{8,100}$/.test(operationId))throw fault('COOPS_OPERATION_ID','Supply the original stable operationId.');
   const digest=hashBytes(Buffer.from(stable({action,payload}))),prior=store.read().operations[operationId];
   if(prior){if(prior.requestSha256!==digest)throw fault('COOPS_OPERATION_CONFLICT','That operation identity belongs to another request.',409);return{...prior,reused:true};}
-  let imported=null,sourceObject=null;
+  let imported=null,sourceObject=null,mappingSource=null;
   if(action==='capture.import'){imported=normaliseBundle(payload.bundle);sourceObject=await retain(imported.bytes);for(const response of imported.failedResponses)await retain(response.body);}
+  if(action==='mapping.save'&&payload.mappingSource!==undefined){const incoming=mappingSourceValue(payload.mappingSource,{requireDecision:true});await retain(incoming.bytes);mappingSource=incoming.source;}
   let op;await store.mutate(s=>{
    const prior=s.operations[operationId];if(prior){if(prior.requestSha256!==digest)throw fault('COOPS_OPERATION_CONFLICT','The operation identity changed.',409);op={...prior,reused:true};return;}
    if(!Number.isSafeInteger(expectedRevision)||s.revision!==expectedRevision)throw fault('COOPS_REVISION_CHANGED','The workspace changed. Review its saved state while retaining the pending form.',409,{currentRevision:s.revision});
@@ -171,6 +172,7 @@ export async function openCoopsWorkspace({directory,inboxDirectory,releaseRuntim
      op.context={profile:structuredClone(profile),query:makeQuery(profile,payload)};
     }
    }
+   if(action==='mapping.save'){op.payload=structuredClone(payload);delete op.payload.mappingSource;op.context={mappingSource:structuredClone(mappingSource)};}
    if(action==='export.create')op.context={annotations:structuredClone(s.annotations.filter(a=>a.editionId===payload.editionId)),mapping:payload.mappingId?structuredClone(selected(s.mappings,payload.mappingId,'model-input mapping')):null};
    if(action==='backfill.export'){const b=selected(s.backfills,payload.backfillId,'backfill');op.context={backfill:structuredClone(b),annotations:structuredClone(s.annotations.filter(a=>b.parts.some(p=>p.editionId===a.editionId))),mapping:payload.mappingId?structuredClone(selected(s.mappings,payload.mappingId,'model-input mapping')):null};}
    if(action==='release.prepare')op.context={releaseRuntime:structuredClone(releaseRuntime)};
@@ -189,7 +191,12 @@ export async function openCoopsWorkspace({directory,inboxDirectory,releaseRuntim
    case'backfill.start':result=await local(op,s=>{if(!s.backfills.some(b=>b.id===id)){s.backfills.push({id,plan:op.context.plan,state:'QUEUED',createdAt:op.createdAt,pauseRequested:false,error:null,parts:op.context.plan.parts.map(p=>({...p,id:'part-'+p.index,captureId:key(id+':'+p.index),state:'PENDING',editionId:null,error:null}))});}return{backfillId:id,state:selected(s.backfills,id,'backfill').state};});backfillId=id;break;
    case'backfill.resume':result=await local(op,s=>{const b=selected(s.backfills,p.backfillId,'backfill');b.pauseRequested=false;return{backfillId:b.id,state:b.state==='COMPLETE'?'COMPLETE':'QUEUED'};});if(result.state!=='COMPLETE')backfillId=p.backfillId;break;
    case'backfill.pause':result=await local(op,s=>{const b=selected(s.backfills,p.backfillId,'backfill');b.pauseRequested=true;return{backfillId:b.id,state:'PAUSING',captureIds:b.parts.filter(p=>p.state==='RUNNING').map(p=>p.captureId)};});for(const cid of result.captureIds)controllers.get(cid)?.abort();break;
-   case'mapping.save':{const value=mappingValue(p);result=await local(op,s=>{const prior=p.mappingId?selected(s.mappings,p.mappingId,'model-input mapping'):null,m={id:prior?.id??'mapping-'+id,...value,revision:(prior?.revision??0)+1,createdAt:prior?.createdAt??op.createdAt,updatedAt:op.createdAt,history:prior?[...(prior.history??[]),Object.fromEntries(Object.entries(prior).filter(([k])=>k!=='history'))]:[]};s.mappings=s.mappings.filter(x=>x.id!==m.id);s.mappings.push(m);return m;});break;}
+   case'mapping.save':{const value=mappingValue(p);result=await local(op,s=>{
+    const prior=p.mappingId?selected(s.mappings,p.mappingId,'model-input mapping'):null,original=op.context?.mappingSource??prior?.sourceFile??null,
+     sourceFile=original?{...structuredClone(original),retainedAt:original.retainedAt??op.createdAt,appliedMappingSha256:hashBytes(Buffer.from(stable(value))),adaptations:mappingChanges(original.mapping,value)}:null,
+     m={id:prior?.id??'mapping-'+id,...value,sourceFile,revision:(prior?.revision??0)+1,createdAt:prior?.createdAt??op.createdAt,updatedAt:op.createdAt,
+      history:prior?[...(prior.history??[]),Object.fromEntries(Object.entries(prior).filter(([k])=>k!=='history'))]:[]};
+    s.mappings=s.mappings.filter(x=>x.id!==m.id);s.mappings.push(m);return m;});break;}
    case'capture.start':
    case'capture.import':{
     result=await local(op,s=>{if(!s.captures.some(c=>c.id===id)){
@@ -251,6 +258,8 @@ export async function openCoopsWorkspace({directory,inboxDirectory,releaseRuntim
  }
  for(const c of store.read().captures)if(c.pages.length&&!c.editionId)await seal(c.id);
  return{store,schema,view,action,editions,
+  inspectMappingFile(input){const {mapping,source}=mappingSourceValue(input);return{schema:'stellar-forge.coops-mapping-file-preview.v1',mapping,source};},
+  async mappingRaw(id,revision){const m=selected(store.read().mappings,id,'model-input mapping'),r=revision===undefined?m:[m,...(m.history??[])].find(x=>x.revision===revision);if(!r?.sourceFile)throw fault('COOPS_MAPPING_SOURCE','Choose a saved mapping revision with its original input file.',404);const bytes=await store.object(r.sourceFile.sha256);if(bytes.length!==r.sourceFile.bytes)throw fault('COOPS_MAPPING_SOURCE_CHANGED','The retained mapping source size changed.',409);return{receipt:structuredClone(r.sourceFile),mappingId:m.id,revision:r.revision,bytes,type:'application/json; charset=utf-8',item:{name:'coops-mapping-source-'+r.sourceFile.sha256+'.json',type:'application/json; charset=utf-8',bytes:bytes.length,sha256:r.sourceFile.sha256}};},
   async operation(operationId){const op=store.read().operations[operationId];if(!op)return{operationId,state:'NOT_RESERVED'};const {payload,context,materializedResult,...record}=op;return{...record,result:op.resultSha256?JSON.parse((await store.object(op.resultSha256)).toString('utf8')):undefined};},
   async edition(id){if(!store.read().editionIds.includes(id))throw fault('COOPS_EDITION','Choose a retained edition.',404);return store.edition(id);},
   rows:(id,options)=>store.edition(id).then(e=>editionRows(store,e,options)),

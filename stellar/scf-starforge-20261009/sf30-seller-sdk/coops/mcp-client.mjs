@@ -47,7 +47,7 @@ export async function openCoopsClient({workspace,...options}={}){
 function parse(bytes,exportId){
   let value;try{value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}catch{throw fail('MANIFEST','The saved transfer index is not valid UTF-8 JSON.');}
   if(!plain(value)||value.schema!==SCHEMA||value.exportId!==exportId||!ALIAS.test(value.workspace??'')||!UUID.test(value.workspaceId??'')||
-      !['source','capture-source','export','receipt'].includes(value.kind)||typeof value.id!=='string'||!Array.isArray(value.files)||value.files.length<1)
+      !['source','capture-source','mapping-source','export','receipt'].includes(value.kind)||typeof value.id!=='string'||!Array.isArray(value.files)||value.files.length<1)
     throw fail('MANIFEST','Use a complete original COOPS transfer index.');
   const names=new Set();let total=0;
   for(const file of value.files){
@@ -63,9 +63,9 @@ function parse(bytes,exportId){
 }
 async function selected(options){
   const {workspace,kind,id,page,expectedWorkspaceId}=options;
-  if(!['source','capture-source','export','receipt'].includes(kind)||typeof id!=='string'||
-      page!==undefined&&(!['source','capture-source'].includes(kind)||!Number.isSafeInteger(page)||page<0))
-    throw fail('CONFIGURATION','Select source, capture-source, export or receipt with its original ID; page applies only to original responses.');
+  if(!['source','capture-source','mapping-source','export','receipt'].includes(kind)||typeof id!=='string'||
+      page!==undefined&&(!['source','capture-source','mapping-source'].includes(kind)||!Number.isSafeInteger(page)||page<(kind==='mapping-source'?1:0)))
+    throw fail('CONFIGURATION','Select an original source, mapping-source, export or receipt. Mapping-source page selects an exact positive revision; other source pages use their original zero-based index.');
   const client=await openCoopsClient(options),response=accepted(await client.call('files',{kind,id}));
   if(expectedWorkspaceId!==undefined&&response.workspaceId!==expectedWorkspaceId)
     throw fail('IDENTITY_CHANGED','The original running workspace differs from the selected UUID.');
@@ -73,7 +73,7 @@ async function selected(options){
   if(page!==undefined)files=files.filter(file=>file.selection.page===page);
   if(!files.length)throw fail('SELECTION','Select a retained original file or source page.');
   files=files.map(file=>({...file,originalName:file.name,
-    name:['source','capture-source'].includes(kind)?'page-'+String(file.selection.page).padStart(6,'0')+'-'+file.name:file.name}));
+    name:['source','capture-source','mapping-source'].includes(kind)?(kind==='mapping-source'?'revision-':'page-')+String(file.selection.page).padStart(6,'0')+'-'+file.name:file.name}));
   const identity={workspace,workspaceId:response.workspaceId,kind,id,...(page===undefined?{}:{page}),files};
   const exportId='coops-transfer-'+hash(Buffer.from(JSON.stringify(identity))).slice(0,24);
   const manifest={schema:SCHEMA,exportId,...identity,
@@ -182,10 +182,10 @@ async function requestFile(path){
   const file=await open(resolve(path),constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);
   try{
     const stat=await file.stat();
-    if(!stat.isFile()||stat.size>128*1024||process.platform!=='win32'&&((stat.mode&0o077)||stat.uid!==process.getuid()))
+    if(!stat.isFile()||stat.size>512*1024||process.platform!=='win32'&&((stat.mode&0o077)||stat.uid!==process.getuid()))
       throw fail('CONFIGURATION','Use an owned private regular JSON request file of at most128KiB.');
     const bytes=await file.readFile();
-    if(bytes.length>128*1024)throw fail('CONFIGURATION','The selected request file grew beyond its limit.');
+    if(bytes.length>512*1024)throw fail('CONFIGURATION','The selected request file grew beyond its limit.');
     const value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));
     if(!plain(value))throw fail('CONFIGURATION','Use one original request object.');
     return value;
@@ -195,9 +195,9 @@ const HELP = `COOPS original merchant MCP client
   tools --url MCP_URL --workspace ALIAS [--token-env MCP_ACCESS_TOKEN]
   call --url MCP_URL --workspace ALIAS --request-file PRIVATE_JSON
   action --url MCP_URL --workspace ALIAS --request-file PRIVATE_JSON
-  inspect --url MCP_URL --workspace ALIAS --kind source|capture-source|export|receipt --id ORIGINAL_ID
+  inspect --url MCP_URL --workspace ALIAS --kind source|capture-source|mapping-source|export|receipt --id ORIGINAL_ID
           [--page SOURCE_PAGE] [--token-env MCP_ACCESS_TOKEN]
-  download --url MCP_URL --workspace ALIAS --kind source|capture-source|export|receipt --id ORIGINAL_ID
+  download --url MCP_URL --workspace ALIAS --kind source|capture-source|mapping-source|export|receipt --id ORIGINAL_ID
            --out PRIVATE_DIRECTORY [--page SOURCE_PAGE]
            [--token-env MCP_ACCESS_TOKEN] [--workspace-id ORIGINAL_UUID]
            [--manifest-sha256 REVIEWED_SHA256] [--chunk-bytes 196608]
