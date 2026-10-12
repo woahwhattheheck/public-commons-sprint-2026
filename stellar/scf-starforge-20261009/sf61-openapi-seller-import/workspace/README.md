@@ -1,5 +1,7 @@
 # API merchant workspace
 
+Configure per-operation host connections in the [backend transport profile guide](TRANSPORTS.md). The workspace retains the original upstream configuration through source reviews and seller releases.
+
 Declared finite SSE and NDJSON routes use the same workspace, saved merchant package and native seller. The [streaming workflow](STREAMING.md) covers explicit payment flow, source limits, generated customer review, and opening the existing commerce console for approval and retained output.
 
 A local merchant setup application connecting an OpenAPI-described backend to
@@ -381,11 +383,10 @@ Challenge preview returns the original HTTP 402 challenge. A challenge,
 dashboard counter or backend response does not establish settlement or revenue.
 Native payment verification remains in the original seller and facilitator.
 
-
-
 ## Cache operating history and live policy control
 
 Save or reopen an API package and use **Open cache operations** in its run section. The page retains operating snapshots and change history in that saved package, uses its managed seller for live inspection and changes, and remains available for review when the seller is stopped. It supports policy comparisons, explicit apply, restoring prior retention, recovery by operation ID, notes and complete receiving/export. [Cache operations guide](../../sf30-seller-sdk/response-cache/workspace/README.md) covers the same browser, command-line and agent workflow.
+
 
 ## Retained HAR captures and later editions
 

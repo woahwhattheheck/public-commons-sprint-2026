@@ -6,7 +6,7 @@ import { hostname } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { config, operation, execution, InputError, need } from './config.mjs';
 import { execute } from './execute.mjs';
-import { createOperatorApproval, checkOperatorTerminal } from '../sf81-buyer-operator-bridge/bridge.mjs';
+import { createOperatorApproval, checkOperatorChannel } from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { analyzeOne } from '../sf52-buyer-outcomes/outcomes.mjs';
 import { canonical, digest, inspectDatasetPage, object, validateDatasetQuery } from './dataset-page.mjs';
 import { MAX_DATASET_PAGE_BYTES, MAX_DATASET_PAGES } from '../sf100-buyer-dataset-delivery/deliver.mjs';
@@ -382,7 +382,7 @@ async function originalPreflight(cfg, environment) {
   need(info.isFile(), 'SIGNER_MODULE_MUST_EXIST');
   // Constructor-only original approval validation: no ledger mutation, signer or HTTP call.
   createOperatorApproval({...cfg.operator, environment});
-  await checkOperatorTerminal(cfg.operation.intentId);
+  await checkOperatorChannel(cfg.operation.intentId, {environment});
 }
 async function executionContext(definition,{workspace,environment,executePage}) {
   let operatorEnvironment = environment, evidenceRpcEndpoint;
@@ -397,10 +397,10 @@ async function executionContext(definition,{workspace,environment,executePage}) 
   if (workspace !== undefined && definition.workspaceDirectory === undefined) {
     // Query-specific configs still use the selected original workspace's
     // keys, current cap and evidence RPC. Keep executePage unchanged so its
-    // original terminal preflight remains before the durable attempt marker.
+    // original approval-channel preflight remains before the durable attempt marker.
     const queue = await import('./queue.mjs');
     if (executePage === execute) {
-      const selected = await queue.workspaceExecution(definition.config, workspace);
+      const selected = await queue.workspaceExecution(definition.config, workspace, {environment});
       operatorEnvironment = selected.environment;
       evidenceRpcEndpoint = selected.evidenceRpcEndpoint;
     } else await queue.workspaceConfiguration(workspace, {configuration:definition.config});

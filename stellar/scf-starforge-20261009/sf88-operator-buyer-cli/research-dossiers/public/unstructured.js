@@ -89,7 +89,8 @@ export function createUnstructuredPanel({root,tab,api,task,notify,getDossier,onR
     if(!local.purchases.length)$('document-purchases').append(element('p',local.configured?
       'Completed purchases from the configured original buyer appear here.':'Connect an original document buyer to receive new purchases.','muted small'));
     $('document-editions').replaceChildren(...local.editions.map(row=>button({editionId:row.id},
-      row.label,(row.document?.filename||'Document')+' · '+row.elementCount+' elements')));
+      row.label,(row.document?.filename||'Document')+' · '+
+        (row.elementCount===null?'open to review':row.elementCount+' elements'))));
     if(!local.editions.length)$('document-editions').append(element('p','Retained document editions appear here.','muted small'));
     $('document-more').hidden=!local.next;
   }

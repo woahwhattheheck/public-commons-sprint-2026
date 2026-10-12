@@ -19,8 +19,8 @@ export function createPythonWorkspaceView({api,getState,operation,refreshWorkspa
   const sourceFacts=make('div'),selectionPanel=make('section',undefined,'panel');
   selectionPanel.append(make('h3','Select interpreter and original extras'));
   const python=input('/usr/bin/python3');python.autocomplete='off';python.value='/usr/bin/python3';
-  const extrasBox=make('div',undefined,'checks'),workbooks=input('','checkbox'),agents=input('','checkbox');
-  workbooks.checked=true;extrasBox.append(label('Workbook building · openpyxl 3.1.5',workbooks),label('Original agent workflows',agents));
+  const extrasBox=make('div',undefined,'checks'),workbooks=input('','checkbox'),agents=input('','checkbox'),duckdb=input('','checkbox');
+  workbooks.checked=true;extrasBox.append(label('Workbook building · openpyxl 3.1.5',workbooks),label('Original agent workflows',agents),label('DuckDB dataset workspace · duckdb 1.5.6',duckdb));
   const reviewButton=button('Review source and interpreter',reviewSelection),resolveButton=button('Resolve and retain exact wheels',async()=>{
     if(!review)throw new Error('Review this interpreter and source first.');
     await submit({operation:'python-resolve',reviewId:review.reviewId});
@@ -36,7 +36,7 @@ export function createPythonWorkspaceView({api,getState,operation,refreshWorkspa
   installsPanel.append(make('h3','Installed customer environments'),installsBody);
   const commandPanel=make('section',undefined,'panel');commandPanel.hidden=true;
   const commandTitle=make('h3','Original customer commands'),commandInfo=make('div'),commandKind=make('select');
-  for(const [value,text]of [['analysis','Analysis workspace'],['workbooks','Workbook build or receiving'],['workbookDelivery','Workbook delivery'],['stellar-forge-buyer','Original buyer CLI'],['stellar-forge-agent','Original agent workflow']])commandKind.append(new Option(text,value));
+  for(const [value,text]of [['duckdb','DuckDB dataset workspace'],['analysis','Analysis workspace'],['workbooks','Workbook build or receiving'],['workbookDelivery','Workbook delivery'],['stellar-forge-buyer','Original buyer CLI'],['stellar-forge-agent','Original agent workflow']])commandKind.append(new Option(text,value));
   const commandArgs=make('textarea');commandArgs.rows=5;commandArgs.spellcheck=false;commandArgs.value='[]';
   const commandDisplay=make('div',undefined,'result');commandDisplay.hidden=true;
   const commandReview=button('Prepare original command handoff',async()=>{
@@ -50,7 +50,7 @@ export function createPythonWorkspaceView({api,getState,operation,refreshWorkspa
       details('Complete retained command descriptor',result));
     const copy=button('Copy command descriptor',()=>navigator.clipboard.writeText(JSON.stringify(result,null,2)));
     commandDisplay.append(copy);
-    if(openApplication && ['analysis','workbooks','workbookDelivery'].includes(result.command))
+    if(openApplication && ['duckdb','analysis','workbooks','workbookDelivery'].includes(result.command))
       commandDisplay.append(button('Configure in Applications',()=>openApplication(result)));
   });
   commandPanel.append(commandTitle,commandInfo,label('Original tool',commandKind),label('Original arguments (JSON array)',commandArgs),commandReview,commandDisplay);
@@ -78,10 +78,10 @@ export function createPythonWorkspaceView({api,getState,operation,refreshWorkspa
   const operationPanel=make('section',undefined,'panel'),operationsBody=make('div');
   operationPanel.append(make('h3','Python operations and recovery'),operationsBody);
   root.replaceChildren(title,intro,sourceFacts,selectionPanel,candidatesPanel,installsPanel,commandPanel,receivePanel,operationPanel);
-  function extras(){return[...(agents.checked?['agents']:[]),...(workbooks.checked?['workbooks']:[])].sort();}
+  function extras(){return[...(agents.checked?['agents']:[]),...(workbooks.checked?['workbooks']:[]),...(duckdb.checked?['duckdb']:[])].sort();}
   function selectedReview(){return review && review.python===python.value.trim() && JSON.stringify(review.extras)===JSON.stringify(extras()) && review.binding.runtimeId===runtimeId;}
   function invalidate(){review=null;reviewDisplay.hidden=true;controls();}
-  python.addEventListener('input',invalidate);workbooks.addEventListener('change',invalidate);agents.addEventListener('change',invalidate);
+  python.addEventListener('input',invalidate);workbooks.addEventListener('change',invalidate);agents.addEventListener('change',invalidate);duckdb.addEventListener('change',invalidate);
   function isBusy(){return working||current?.operations.some(item=>item.workerActive||item.phase==='QUEUED');}
   function controls(){
     const available=Boolean(runtimeId && selected()),busy=isBusy();
@@ -115,7 +115,9 @@ export function createPythonWorkspaceView({api,getState,operation,refreshWorkspa
     await operation({runtimeId,...value});await refreshWorkspace();await refresh();
   }
   function setCommandExample(){
-    if(commandKind.value==='analysis' && current?.binding)
+    if(commandKind.value==='duckdb')
+      commandArgs.value=JSON.stringify(['--workspace','/srv/starforge/customer/warehouse','serve','--port','0'],null,2);
+    else if(commandKind.value==='analysis' && current?.binding)
       commandArgs.value=JSON.stringify(['--database','/srv/starforge/customer/analysis','--checkout',current.binding.sourceRoot,'serve','--port','0'],null,2);
     else if(commandKind.value==='workbooks')commandArgs.value=JSON.stringify(['inspect','--delivery','/srv/starforge/customer/workbook','--manifest-sha256','RETAINED_MANIFEST_SHA256'],null,2);
     else if(commandKind.value==='workbookDelivery')commandArgs.value=JSON.stringify(['--database','/srv/starforge/customer/analysis','--recipe','/srv/starforge/customer/recipe.json','--operation','/srv/starforge/customer/delivery'],null,2);
@@ -128,7 +130,7 @@ export function createPythonWorkspaceView({api,getState,operation,refreshWorkspa
   }
   async function install(item){
     if(!selectedReview()||JSON.stringify(item.extras??[])!==JSON.stringify(review.extras)){
-      workbooks.checked=(item.extras??[]).includes('workbooks');agents.checked=(item.extras??[]).includes('agents');
+      workbooks.checked=(item.extras??[]).includes('workbooks');agents.checked=(item.extras??[]).includes('agents');duckdb.checked=(item.extras??[]).includes('duckdb');
       await reviewSelection();
     }
     await submit({operation:'python-install',candidateId:item.id,reviewId:review.reviewId});

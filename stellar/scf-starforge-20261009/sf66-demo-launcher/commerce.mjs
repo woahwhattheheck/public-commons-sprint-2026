@@ -12,6 +12,7 @@ import { startSellerOperations } from '../sf30-seller-sdk/operations/server.mjs'
 import { validateAvailabilityDirectory } from '../sf30-seller-sdk/availability/store.mjs';
 import { selectServiceRoute } from '../sf30-seller-sdk/route-path.mjs';
 import { initializeQueue, openQueue } from '../sf88-operator-buyer-cli/queue.mjs';
+import { operatorApprovalEnvironment } from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { acquireInitialization, initializationJson, retainInitializationFile,
   retainInitializationRecord, optionalInitializationBytes, verifyInitializationFile } from '../sf88-operator-buyer-cli/initialization.mjs';
 import { readRequestBody } from '../sf88-operator-buyer-cli/request-body.mjs';
@@ -444,6 +445,7 @@ async function signerEnvironment(saved, job, environment) {
 export async function openCommerce(directory, { nativeFactory, environment = process.env, purchaseFetch,
   finalityNode = process.execPath } = {}) {
   const { saved, queue, jobs, python: pythonApplication } = await readSession(directory);
+  let approvalEnvironment = Object.freeze(operatorApprovalEnvironment(environment));
   absolute(finalityNode);
   await access(finalityNode, constants.X_OK);
   need(nativeFactory === undefined || typeof nativeFactory === 'function', 'COMMERCE_NATIVE_FACTORY_INVALID');
@@ -661,6 +663,11 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
       return work.finally(() => pending.delete(work));
     };
     return Object.freeze({ seller, operations, status, close, waitForIdle,
+      setOperatorApprovalEnvironment(selected) {
+        need(state === 'RUNNING' && !active, 'COMMERCE_APPROVAL_CHANNEL_BUSY');
+        approvalEnvironment = Object.freeze(operatorApprovalEnvironment(selected));
+        return { mode: Object.keys(approvalEnvironment).length ? 'BROWSER' : 'TERMINAL' };
+      },
       requestInput: intentId => requestAction(intentId, readCommerceRequestInput),
       requestBytes: intentId => requestAction(intentId, readCommerceRequestBytes),
       async streamRecords(intentId, options) { return streams.records(await retainedJobFor(intentId), options); },
@@ -697,6 +704,10 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
           const job = await jobFor(intentId);
           need(job.state === 'QUEUED', 'COMMERCE_USE_RETAINED_INBOX_RESULT');
           const { env, workspace } = await signerEnvironment(saved, job, environment);
+          // Transport is privileged live host configuration, never retained
+          // seller/queue JSON or a per-request browser field.
+          delete env.SF81_APPROVAL_SOCKET; delete env.SF81_APPROVAL_TOKEN;
+          Object.assign(env, approvalEnvironment);
           const args = ['execute', '--root', queue.root, '--intent', intentId];
           if (workspace) args.push('--workspace', workspace);
           return runOriginal(queueCli, args, { environment: env, signal });
@@ -728,4 +739,5 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
 }
 
 export { codeOf as commerceErrorCode };
+
 
