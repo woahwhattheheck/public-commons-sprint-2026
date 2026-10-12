@@ -267,3 +267,7 @@ against the same saved building project. A customer package retains every
 source byte, proposal and review, saved edition, original request outcome and
 portable application file; the received application reopens that original
 workspace for continued work.
+
+## Complete Groundwater installation receiving
+
+The existing `groundwater-reports` product is exercised through its original managed source review, package build, selected runtime install, lock-bound offline transfer, independent install and saved-build reopen. The [complete receiving guide](receiving/GROUNDWATER.md) and its caller retain one source-build request and verify all 64 scientific files in both installations. The separate `groundwater-report` selection remains the Report Desk product. Scientific execution continues through its existing workspace and owner.
