@@ -24,6 +24,7 @@ import { n8nApplication, prepareN8nApplication } from './application-n8n.mjs';
 import { redisApplication, prepareRedisApplication } from './application-redis.mjs';
 import { openApiApplication, prepareOpenApiApplication } from './application-openapi.mjs';
 import { arcgisAgentApplication, prepareArcgisAgentApplication } from './application-arcgis.mjs';
+import { duckdbAgentApplication, prepareDuckDBAgentApplication } from './application-duckdb-agent.mjs';
 import { s3MerchantApplication, prepareS3MerchantApplication } from './application-s3-merchant.mjs';
 import { jobCheckoutApplication, validateJobCheckoutSelection, prepareJobCheckoutApplication } from './application-job-checkout.mjs';
 import { datasetBuyerApplication, prepareDatasetBuyerApplication } from './application-dataset-buyer.mjs';
@@ -87,6 +88,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   stellarExpertApplication(common),
   redisApplication(common),
   arcgisAgentApplication(common),
+  duckdbAgentApplication(common),
   s3MerchantApplication(common),
   jobCheckoutApplication(common),
   datasetBuyerApplication(common),
@@ -327,6 +329,9 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   } else if (type.id === 'arcgis-agent') {
     const original = await prepareArcgisAgentApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'duckdb-agent') {
+    const original = await prepareDuckDBAgentApplication(settings, inputPath, runtimeDirectory);
+    args.push(...original.args); inputs.push(...original.inputs);
   } else if (type.id === 'job-checkout') {
     const original = await prepareJobCheckoutApplication(settings, runtimeDirectory, inputPath);
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
@@ -529,6 +534,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
 function resourceKey(type, settings) {
   if (type.python) return pythonApplicationResource(type, settings);
   if (type.id === 'arcgis-agent') return hash({ family: 'merchant-mcp', directory: settings.configurationFile });
+  if (type.id === 'duckdb-agent') return hash({ family: 'native-mcp', directory: settings.nativeDirectory });
   const value = settings.outputParent ?? settings.workspaceDirectory ?? settings.directory ??
     settings.outputDirectory ?? settings.stateDirectory ?? settings.datasetFile;
   // Feeds, repository metadata and XML retain the same original SQLite workspace and writer.

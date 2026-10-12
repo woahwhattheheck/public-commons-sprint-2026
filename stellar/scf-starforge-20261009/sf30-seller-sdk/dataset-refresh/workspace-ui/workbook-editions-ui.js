@@ -98,7 +98,7 @@ function createWorkbookEditionControls(host) {
     $('we-cell-detail').hidden=false;$('we-cell-title').textContent=(names[row.kind]??row.kind)+' · '+keyText(row);const body=$('we-cell-body');body.replaceChildren();
     const t=table(['Field','Earlier public value','Replacement public value','Original coordinates']);
     for(const name of report.columns??report.plan.columns.map(c=>c.name)){const tr=el('tr');tr.append(el('th',name),el('td',literal(row.before?.values[name]),'mono'),el('td',literal(row.after?.values[name]),'mono'),el('td',(row.before?.cells[name]?.cell??'—')+' → '+(row.after?.cells[name]?.cell??'—')));t.body.append(tr);}
-    const scroll=el('div',undefined,'table-scroll');scroll.append(t.node);body.append(scroll);
+    const scroll=el('div',undefined,'table-scroll');scroll.tabIndex=0;scroll.setAttribute('role','region');scroll.setAttribute('aria-label','Earlier and replacement workbook values');scroll.append(t.node);body.append(scroll);
     const detail=el('details');detail.append(el('summary','Exact source cells, saved formulas and formats'),el('pre',JSON.stringify({before:row.before,after:row.after,changes:row.changes},null,2),'wb-literal'));body.append(detail);$('we-cell-detail').scrollIntoView({block:'nearest'});
   }
   function renderRows(){
