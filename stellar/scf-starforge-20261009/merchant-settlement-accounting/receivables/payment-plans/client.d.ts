@@ -21,7 +21,7 @@ export interface PaymentPlanProjection {
   collectionStatus: 'DRAFT' | 'FUTURE' | 'CANCELLED' | 'ACTIVE' | 'OVERDUE' |
     'REPLAN_REQUIRED' | 'SATISFIED' | 'INVOICE_CLOSED';
   invoiceId: string; invoiceNumber: string; customerId: string; customerName: string;
-  currency: Currency; asOf: string; effectiveDate: string | null; title: string; reference: string; customerNote?: string;
+  currency: Currency; asOf: string; effectiveDate?: string; title: string; reference: string; customerNote?: string;
   hasDraftChanges: boolean; editionId: string | null; installments: InstallmentProjection[];
   scheduledOutstanding: string; unscheduledAmount: string; overdueAmount: string;
   nextDueDate: string | null; baselineChanged: boolean;
