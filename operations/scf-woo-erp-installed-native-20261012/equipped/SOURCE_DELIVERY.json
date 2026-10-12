@@ -1,0 +1,38 @@
+{
+  "schema": "commons.woo-erp.installed-source-delivery.v1",
+  "operationFamily": "BC08-WOO-ERP-RECEIVING-20261012",
+  "sourceCommit": "b39da9bbf56ef4bdbd8d81513966ac636fed6c7a",
+  "archive": {
+    "filename": "Woo_ERP_Installed_Operator_Source_b39da9bb_20261012.zip",
+    "bytes": 3315202,
+    "sha256": "992c0d8901d0fef531e7f9cfb4b7fdd928423f897f7dcd7d4c4b5eccf181001f",
+    "gitBlob": "70afac7386df552e0c91d015357f2794a3759be3",
+    "members": 320,
+    "sourceFiles": 319,
+    "sourceBytes": 3150764,
+    "manifestSha256": "450c198a644ef1acdf8762f01a446794224e98eb62cee32a1dc76e5af2ba6166",
+    "sourceCommit": "b39da9bbf56ef4bdbd8d81513966ac636fed6c7a"
+  },
+  "receiver": {
+    "filename": "receive-source.py",
+    "gitBlob": "e5a9d1b57433ba6d471c4408fcb3b92ba3a9134c",
+    "sha256": "ff55b0d301309f44831caf41298bbd2d879265acb40c110fd249f799b890a815",
+    "bytes": 6441
+  },
+  "nativeCompanion": {
+    "path": "operations/scf-woo-erp-installed-native-20261012/operate.mjs",
+    "gitBlob": "4d5862eac7312e5cc5f2aa28b721253e2ad1424b",
+    "phases": [
+      "capture",
+      "receive"
+    ]
+  },
+  "originalProvider": "woocommerce",
+  "originalTools": 23,
+  "dependency": {
+    "name": "re2js",
+    "version": "2.8.6",
+    "manifest": "stellar-forge/payment-auto-catalog/package.json",
+    "lockfile": "stellar-forge/payment-auto-catalog/package-lock.json"
+  }
+}
