@@ -14,7 +14,8 @@ import { validateDatasetQuery, inspectDatasetPage } from '../../sf88-operator-bu
 import { readBytes } from '../../sf88-operator-buyer-cli/node/store.mjs';
 import { need, plain, canonical, clone, hash, digest, jsonBytes, isHash, operationId, LIMITS,
   ATTRIBUTION, NOTICE, CODEBOOK_URL, TERMS_URL, columnMeaning, projectionPolicy, projectionCsv, schemaDocument } from './model.mjs';
-import { durableDirectory, exactFile, optionalJson, inspectGdeltCapture, verifyGdeltCapture } from './source.mjs';
+import { GKG_CODEBOOK_URL, GKG_NOTICE, isGkgTable } from './gkg.mjs';
+import { durableDirectory, exactFile, optionalJson, inspectGdeltCapture, verifyGdeltCapture, gdeltCaptureCodebook } from './source.mjs';
 
 const EDITION='stellar-forge.gdelt-edition.v1', PLAN='stellar-forge.gdelt-merchant.v1';
 const PURCHASE='stellar-forge.gdelt-purchase.v1';
@@ -25,20 +26,22 @@ export const SOURCE_COLUMNS=Object.freeze(['capture_id','source_set_id','path','
   'chunk_index','chunk_count','chunk_sha256','content_base64']);
 const PAGE_BYTES=LIMITS.pageBytes;
 const member=(path,bytes,contentType,role)=>({path,bytes:bytes.length,sha256:hash(bytes),contentType,role});
-const setIdentity=value=>({schema:SOURCE_SET,captures:value.captures,attribution:ATTRIBUTION,codebookUrl:CODEBOOK_URL});
+const setIdentity=value=>({schema:SOURCE_SET,captures:value.captures,attribution:ATTRIBUTION,codebookUrl:value.codebookUrl});
 export function makeGdeltSourceSet(captures) {
   need(Array.isArray(captures)&&captures.length>=1&&captures.length<=LIMITS.captures,'Select complete original source captures.');
   captures=[...captures].sort((a,b)=>a.batch.localeCompare(b.batch)||a.captureId.localeCompare(b.captureId));
   captures.forEach(inspectGdeltCapture);
   need(new Set(captures.map(item=>item.batch)).size===captures.length,'A source set retains one selected edition per update timestamp.');
-  const set={schema:SOURCE_SET,captures,attribution:ATTRIBUTION,codebookUrl:CODEBOOK_URL};
+  const codebookUrl=gdeltCaptureCodebook(captures[0]);
+  need(captures.every(capture=>gdeltCaptureCodebook(capture)===codebookUrl),'A reviewed source set uses one original source family.');
+  const set={schema:SOURCE_SET,captures,attribution:ATTRIBUTION,codebookUrl};
   set.sourceSetId=digest(setIdentity(set));
   need(jsonBytes(set).length<=80*1024*1024,'A merchant source set supports80 MiB of complete original capture data. Select fewer retained updates.','GDELT_SOURCE_SET_TOO_LARGE',413);
   return set;
 }
 export async function verifyGdeltSourceSet(set,options={}) {
   need(set?.schema===SOURCE_SET&&set.sourceSetId===digest(setIdentity(set))&&set.attribution===ATTRIBUTION&&
-    set.codebookUrl===CODEBOOK_URL,'Original GDELT source-set identity changed.');
+    [CODEBOOK_URL,GKG_CODEBOOK_URL].includes(set.codebookUrl),'Original GDELT source-set identity changed.');
   const expected=makeGdeltSourceSet(set.captures);
   need(canonical(expected)===canonical(set),'Original source-set inventory changed.');
   for(const capture of set.captures)await verifyGdeltCapture(capture,options);
@@ -77,13 +80,13 @@ export async function prepareGdeltEdition({directory,captures,review}={}) {
     const semantics=schemaDocument(policy,captureIds);
     need(canonical(semantics)===canonical(review.semantics),'The original reviewed field meanings changed.');
     const config={schema:'stellar-forge.csv-dataset.v1',file:'data.csv',name:review.name,
-      columns:Object.fromEntries(policy.fields.map(name=>{const {type,nullable}=columnMeaning(name);return[name,{type,nullable}];})),
+      columns:Object.fromEntries(policy.fields.map(name=>{const {type,nullable}=columnMeaning(name,{table:policy.table});return[name,{type,nullable}];})),
       filters:policy.filters,ranges:policy.ranges,sorts:policy.sorts,defaultLimit:policy.defaultLimit,maxLimit:policy.maxLimit,
       maxRows:LIMITS.rows,maxBytes:256*1024*1024,maxCellChars:LIMITS.cellChars,maxPageBytes:PAGE_BYTES};
     const sourceBytes=jsonBytes(sourceSet),semanticsBytes=jsonBytes(semantics),reviewBytes=jsonBytes(review);
     const originals=[['source-set.json',sourceBytes],['gdelt-schema.json',semanticsBytes],['review.json',reviewBytes]];
     const sourceManifest={schema:SOURCE_FILES,sourceSetId:sourceSet.sourceSetId,reviewId:review.id,attribution:ATTRIBUTION,
-      codebookUrl:CODEBOOK_URL,files:originals.map(([path,bytes])=>({path,bytes:bytes.length,sha256:hash(bytes)}))};
+      codebookUrl:sourceSet.codebookUrl,files:originals.map(([path,bytes])=>({path,bytes:bytes.length,sha256:hash(bytes)}))};
     const manifestBytes=jsonBytes(sourceManifest),sourceProjection=sourceFileCsv(sourceSet.sourceSetId,manifestBytes,originals);
     const sourceConfig={schema:'stellar-forge.csv-dataset.v1',file:'source-files.csv',name:'GDELT original source files',
       columns:Object.fromEntries(SOURCE_COLUMNS.map(name=>[name,{type:['file_bytes','chunk_index','chunk_count'].includes(name)?'integer':'string',nullable:false}])),
@@ -99,7 +102,7 @@ export async function prepareGdeltEdition({directory,captures,review}={}) {
     const edition={schema:EDITION,sourceSetId:sourceSet.sourceSetId,sourceManifestSha256:sourceProjection.captureId,
       reviewId:review.id,captureIds,batches:sourceSet.captures.map(item=>item.batch),table:policy.table,policy,
       snapshot:dataset.describe().snapshot,sourceSnapshot:sources.describe().snapshot,rowCount:review.rowCount,
-      sourceFileRows:sourceProjection.rows,sourceRows:review.sourceRows,attribution:ATTRIBUTION,notice:NOTICE,files};
+      sourceFileRows:sourceProjection.rows,sourceRows:review.sourceRows,attribution:ATTRIBUTION,notice:isGkgTable(policy.table)?GKG_NOTICE:NOTICE,files};
     edition.editionId='gdelt-'+digest(editionIdentity(edition));
     await exactFile(directory,'edition.json',jsonBytes(edition));
     return {...edition,directory};
@@ -135,7 +138,7 @@ export async function stageGdeltMerchant({directory,origin,path='/gdelt',payment
   const config=await buildDatasetSellerConfig(dataset,{payment,origin,path:resourcePath});
   const sourceConfig=await buildDatasetSellerConfig(sources,{payment,origin,path:sourcePath});
   const route=config.routes[0];route.id='gdelt-rows';
-  route.definition.serviceName='GDELT event desk';
+  route.definition.serviceName=isGkgTable(edition.table)?'GDELT article desk':'GDELT event desk';
   route.definition.description=ATTRIBUTION+'; '+edition.table+'; explicit source coverage '+edition.batches[0]+'–'+edition.batches.at(-1)+'.';
   route.definition.queryParameters.push(clone(DATASET_SNAPSHOT_PARAMETER));
   const sourceRoute=sourceConfig.routes[0];
@@ -156,7 +159,7 @@ export async function stageGdeltMerchant({directory,origin,path='/gdelt',payment
     const assetPath=base+'/files/'+file.path;
     downloads.push({...file,resource:config.publicOrigin+assetPath});
     config.routes.push({id:'gdelt-'+file.path.replaceAll('.','-'),path:assetPath,
-      definition:{method:'GET',serviceName:'GDELT event desk',description:ATTRIBUTION+'; exact '+file.role.toLowerCase().replaceAll('_',' '),payment},
+      definition:{method:'GET',serviceName:isGkgTable(edition.table)?'GDELT article desk':'GDELT event desk',description:ATTRIBUTION+'; exact '+file.role.toLowerCase().replaceAll('_',' '),payment},
       responseAsset:{file:file.path,sha256:file.sha256,contentType:file.contentType,downloadName:file.path}});
   }
   config.maxResponseBytes=maxResponseBytes;config.assetBudgetBytes=MAX_ASSET_BUDGET;

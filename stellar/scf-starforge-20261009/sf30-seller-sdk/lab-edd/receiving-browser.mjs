@@ -9,6 +9,7 @@ import { writeBytes } from '../../sf88-operator-buyer-cli/node/store.mjs';
 import { canonicalJson, sha256, normalizeDecisions } from './model.mjs';
 import { parseReviewTable } from './decisions.mjs';
 import { labProfile } from './profiles.mjs';
+import { receiveLabReconciliationBrowser } from './receiving-reconciliation.mjs';
 const equal=(a,b,message)=>{if(canonicalJson(a)!==canonicalJson(b))throw Error(message);};
 async function immutable(path,bytes){
   await privateDirectory(dirname(path));
@@ -114,7 +115,9 @@ export async function receiveLabBrowser({directory,configuration,families,signal
         await page.reload({waitUntil:'load'});
         const after=await downloaded(page,()=>page.locator('#download-json').click(),join(root,'original-after-reload.json'));
         equal(normalizeDecisions(delivery,JSON.parse(after.bytes)),normalizeDecisions(delivery,originalDoc),'Reload changed the immutable completed decision edition.');
-        results.push({family:name,sourceSha256:source.sourceSha256,reviewSha256:retained.manifest.reviewSha256,
+        const crossProfile=retained.manifest.reconciliation?await receiveLabReconciliationBrowser({page,origin,family:name,retained,
+          directory:join(root,'cross-profile'),downloaded,signal}):null;
+        results.push({family:name,sourceSha256:source.sourceSha256,reviewSha256:retained.manifest.reviewSha256,crossProfile,
           rows,downloads:exports,editor:draftResult,immutableReload:true,desktop:join(root,'desktop.png'),mobile:join(root,'mobile.png'),
           nativePreparation:retained.manifest.nativePreparation});
       }

@@ -13,6 +13,12 @@ export const REQUEST_SCHEMA='stellar-forge.sf49.source-edition-workorder-request
 export const BUNDLE_SCHEMA='stellar-forge.sf49.source-edition-workorder.v1';
 export const ATTACHMENT_SCHEMA='stellar-forge.sf49.source-edition-attachments.v1';
 const MAX_META=2*1024*1024,MAX_TERMS=1024*1024,MAX_ATTACHMENT=8*1024**3,MAX_TOTAL=16*1024**3;
+// The original runtime owns its handoff allowance. All transfer and archive
+// admission derives from these same original carrier boundaries.
+export const SOURCE_EDITION_LIMITS=Object.freeze({
+  metadataBytes:MAX_META,termsBytes:MAX_TERMS,fileBytes:MAX_ATTACHMENT,sourceBytes:MAX_TOTAL,
+  handoffBytes:MAX_HANDOFF_BYTES,bundleBytes:MAX_TOTAL+MAX_HANDOFF_BYTES+2*MAX_META
+});
 const nativePaths={
   workorder:'../../scf-starforge-20261009/sf77-merchant-workorder/workorder.mjs',
   runtimeSupport:'../../scf-starforge-20261009/sf74-merchant-support-console/runtime-support.mjs',
@@ -289,7 +295,7 @@ export async function prepareSourceEditionWorkorder({handoff,terms,attachments,o
   await publishBytes(path.join(out,'manifest.json'),manifestBytes);
   return replaySourceEditionWorkorder({directory:out});
 }
-async function readBundle(directory) {
+async function readBundle(directory,{verifyFiles=true}={}) {
   const root=path.resolve(directory),manifestBytes=await readBounded(path.join(root,'manifest.json'),MAX_META),manifest=json(manifestBytes);
   fields(manifest,['schema','operationId','generatedAt','bundleId','nativeSource','attachments','files'],'bundle manifest');
   ensure(manifest.schema===BUNDLE_SCHEMA&&identity(manifest.operationId)&&instant(manifest.generatedAt)&&digestOK(manifest.bundleId),'Invalid bundle identity');
@@ -301,7 +307,7 @@ async function readBundle(directory) {
     fields(value,['path','role','bytes','sha256'],'bundle file');relPath(value.path);
     ensure(!seen.has(value.path)&&typeof value.role==='string'&&value.role.length>0&&value.role.length<=160&&bytesOK(value.bytes,MAX_TOTAL)&&digestOK(value.sha256),'Invalid or duplicate bundle file');
     seen.add(value.path);total+=value.bytes;ensure(total<=MAX_TOTAL+MAX_HANDOFF_BYTES+MAX_META*2,'Bundle exceeds the total limit');
-    await hashFile(path.join(root,value.path),value);
+    if(verifyFiles)await hashFile(path.join(root,value.path),value);
   }
   for(const required of ['request.json','originals/support.json','originals/terms.json','packet.json','seller-packet.html','acceptance-checklist.md'])ensure(seen.has(required),'Missing original bundle file: '+required);
   const inventory=new Map(manifest.files.map(value=>[value.path,value]));
@@ -317,15 +323,51 @@ async function readBundle(directory) {
   }
   return {root,manifestBytes,manifest,request,inventory};
 }
-export async function replaySourceEditionWorkorder({directory}) {
-  const bundle=await readBundle(directory),sourcePins=await checkedNativeSource();
+async function replayBundle(bundle) {
+  const sourcePins=await checkedNativeSource();
   const original=await originalPacket(await readPinned(path.join(bundle.root,'originals/support.json'),MAX_HANDOFF_BYTES,bundle.request.inputs.support),await readPinned(path.join(bundle.root,'originals/terms.json'),MAX_TERMS,bundle.request.inputs.terms),bundle.request.generatedAt);
   for(const [name,bytes]of Object.entries(original.outputs)) {
     const retained=bundle.inventory.get(name);
     ensure(retained.bytes===bytes.length&&retained.sha256===sha(bytes),'The current native SF77 output differs from the retained '+name);
   }
   ensure(canonical(await checkedNativeSource())===canonical(sourcePins),'Native source changed during original workorder replay');
-  return summary(bundle.manifest,bundle.manifestBytes,original.packet,sourcePins);
+  return {summary:summary(bundle.manifest,bundle.manifestBytes,original.packet,sourcePins),original};
+}
+export async function replaySourceEditionWorkorder({directory}) {
+  return (await replayBundle(await readBundle(directory))).summary;
+}
+/** Original validated inventory and replay result; attachment bytes stay in files. */
+export async function inspectSourceEditionWorkorder({directory}) {
+  const bundle=await readBundle(directory),checked=await replayBundle(bundle);
+  return {...checked.summary,manifest:bundle.manifest,request:bundle.request,
+    packet:checked.original.packet,manifestBytes:bundle.manifestBytes.length};
+}
+/** A descriptor bound to the original manifest/request. The streaming caller
+ * verifies the selected opened file; complete inspection/replay remains explicit.
+ */
+export async function sourceEditionWorkorderFile({directory,name}) {
+  const bundle=await readBundle(directory,{verifyFiles:false});
+  const selected=name==='manifest.json'?{path:name,role:'source-edition-manifest',
+    bytes:bundle.manifestBytes.length,sha256:sha(bundle.manifestBytes)}:bundle.inventory.get(relPath(name));
+  ensure(selected,'The original bundle does not declare this file');
+  return {...selected,path:path.join(bundle.root,selected.path),name:selected.path,verification:'ORIGINAL_MANIFEST_BOUND',
+    bundleId:bundle.manifest.bundleId,manifestSha256:sha(bundle.manifestBytes)};
+}
+/** Bounded original workorder input for the existing case adapter.
+ * The full handoff and attachments remain available through their declared files.
+ */
+export async function sourceEditionWorkorderInput({directory}) {
+  const bundle=await readBundle(directory),checked=await replayBundle(bundle);
+  const handoff=await importRuntimeHandoff(new TextDecoder('utf-8',{fatal:true}).decode(
+    await readPinned(path.join(bundle.root,'originals/support.json'),MAX_HANDOFF_BYTES,bundle.request.inputs.support)));
+  const workspace=await parseWorkspace(handoff.workspaceText);
+  const terms=await readPinned(path.join(bundle.root,'originals/terms.json'),MAX_TERMS,bundle.request.inputs.terms);
+  return {summary:checked.summary,manifest:bundle.manifest,request:bundle.request,
+    result:{packet:checked.original.packet,html:checked.original.outputs['seller-packet.html'].toString('utf-8'),
+      checklist:checked.original.outputs['acceptance-checklist.md'].toString('utf-8')},
+    inputs:{terms:terms.toString('base64'),supportText:handoff.supportText,inputs:workspace.inputs},
+    source:{workspaceSha256:sha(Buffer.from(handoff.workspaceText)),supportSha256:sha(Buffer.from(handoff.supportText)),
+      termsSha256:sha(terms),handoff:bundle.request.inputs.support}};
 }
 export async function receiveSourceEditionWorkorder({directory,destination}) {
   const before=await replaySourceEditionWorkorder({directory}),bundle=await readBundle(directory);
@@ -350,22 +392,37 @@ export async function receiveSourceEditionWorkorder({directory,destination}) {
 export async function main(argv=process.argv.slice(2)) {
   const command=argv[0];
   if(!command||command==='--help'||command==='help') {
-    console.log('SF49 source-edition workorder\n\nprepare --handoff CASE.merchant-support.json --terms OWNER_TERMS.json --id STABLE_ID --out PRIVATE_DIRECTORY [--attachments EXACT_FILES.json] [--at UTC_TIMESTAMP]\nreplay --bundle PRIVATE_DIRECTORY\nreceive --bundle PRIVATE_DIRECTORY --out NEW_PRIVATE_DIRECTORY\n\nThe original SF74/SF77 modules validate and rebuild the workorder. Attachment files remain separate source or receiving evidence.');
+    console.log('SF49 source-edition workorder\n\nprepare --handoff CASE.merchant-support.json --terms OWNER_TERMS.json --id STABLE_ID --out PRIVATE_DIRECTORY [--attachments EXACT_FILES.json] [--at UTC_TIMESTAMP]\nreplay --bundle PRIVATE_DIRECTORY\ninspect --bundle PRIVATE_DIRECTORY\nreceive --bundle PRIVATE_DIRECTORY --out NEW_PRIVATE_DIRECTORY\nexport --bundle PRIVATE_DIRECTORY --out ARCHIVE.zip [--python PYTHON]\ninspect-archive --archive ARCHIVE.zip [--python PYTHON]\nreceive-archive --archive ARCHIVE.zip --intake PRIVATE_INTAKE_DIRECTORY --out NEW_PRIVATE_DIRECTORY [--python PYTHON]\n\nThe original SF74/SF77 modules validate and rebuild the workorder. Source files remain separate from receiving observations. Archives stream through the maintained Python ZIP64 engine.');
     return;
   }
-  ensure(['prepare','replay','receive'].includes(command),'Unknown command');
+  ensure(['prepare','replay','inspect','receive','export','inspect-archive','receive-archive'].includes(command),'Unknown command');
   const flags={};
   for(let i=1;i<argv.length;i+=2) {
-    ensure(['--handoff','--terms','--id','--out','--attachments','--at','--bundle'].includes(argv[i])&&typeof argv[i+1]==='string'&&!argv[i+1].startsWith('--')&&!Object.hasOwn(flags,argv[i]),'Invalid or duplicate command argument');
+    ensure(['--handoff','--terms','--id','--out','--attachments','--at','--bundle','--archive','--intake','--python'].includes(argv[i])&&typeof argv[i+1]==='string'&&!argv[i+1].startsWith('--')&&!Object.hasOwn(flags,argv[i]),'Invalid or duplicate command argument');
     flags[argv[i]]=argv[i+1];
   }
-  const allowed=command==='prepare'?['--handoff','--terms','--id','--out','--attachments','--at']:command==='receive'?['--bundle','--out']:['--bundle'];
+  const allowed={
+    prepare:['--handoff','--terms','--id','--out','--attachments','--at'],
+    receive:['--bundle','--out'],replay:['--bundle'],inspect:['--bundle'],
+    export:['--bundle','--out','--python'],'inspect-archive':['--archive','--python'],
+    'receive-archive':['--archive','--intake','--out','--python']
+  }[command];
   ensure(Object.keys(flags).every(key=>allowed.includes(key)),'Argument does not belong to this command');
-  for(const required of command==='prepare'?['--handoff','--terms','--id','--out']:command==='receive'?['--bundle','--out']:['--bundle'])ensure(flags[required],'Missing '+required);
+  const required={prepare:['--handoff','--terms','--id','--out'],receive:['--bundle','--out'],
+    replay:['--bundle'],inspect:['--bundle'],export:['--bundle','--out'],
+    'inspect-archive':['--archive'],'receive-archive':['--archive','--intake','--out']}[command];
+  for(const key of required)ensure(flags[key],'Missing '+key);
   let result;
   if(command==='prepare')result=await prepareSourceEditionWorkorder({handoff:flags['--handoff'],terms:flags['--terms'],operationId:flags['--id'],directory:flags['--out'],attachments:flags['--attachments'],generatedAt:flags['--at']});
   else if(command==='receive')result=await receiveSourceEditionWorkorder({directory:flags['--bundle'],destination:flags['--out']});
-  else result=await replaySourceEditionWorkorder({directory:flags['--bundle']});
+  else if(command==='inspect')result=await inspectSourceEditionWorkorder({directory:flags['--bundle']});
+  else if(command==='replay')result=await replaySourceEditionWorkorder({directory:flags['--bundle']});
+  else {
+    const archive=await import('./source-edition-archive.mjs'),options=flags['--python']?{python:flags['--python']}:{};
+    if(command==='export')result=await archive.exportSourceEditionArchive({directory:flags['--bundle'],destination:flags['--out'],...options});
+    else if(command==='inspect-archive')result=await archive.inspectSourceEditionArchive({archive:flags['--archive'],...options});
+    else result=await archive.receiveSourceEditionArchive({archive:flags['--archive'],stagingDirectory:flags['--intake'],destination:flags['--out'],...options});
+  }
   console.log(JSON.stringify(result,null,2));
 }
 const loadedNativeSource=await nativeSource();

@@ -24,7 +24,8 @@ function sourceCatalog(edition, metadataBytes) {
   const receipt = edition.catalog.receipts?.metadata;
   need(hash(receipt?.sha256) && digest(metadataBytes) === receipt.sha256,
     'The CSDL must match the original retained metadata bytes.');
-  const model = parseMetadata(metadataBytes, { contentType: receipt.headers?.['content-type'] ?? '' });
+  const model = parseMetadata(metadataBytes, { contentType: receipt.headers?.['content-type'] ?? '',
+    identifierDialect: edition.catalog.identifierDialect ?? 'odata' });
   const selected = getEntitySet(model, edition.query.plan.entitySet);
   need(selected.entityType === edition.query.entityType &&
     stable(selected.keyFields) === stable(edition.query.keyFields),

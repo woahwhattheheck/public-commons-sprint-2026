@@ -4,7 +4,8 @@ import { basename, dirname, resolve, join } from 'node:path';
 import { timingSafeEqual } from 'node:crypto';
 import { merchantToolFamily } from '../catalog.mjs';
 import { compareHostProfiles } from '../host-profile.mjs';
-import { createConsoleCustomers } from './customers.mjs';
+import { createConsoleCustomers, customerAccess } from './customers.mjs';
+import { buildReviewerCustomerRecipe } from './reviewer-recipes.mjs';
 import { createMerchantWorkflows } from './workflows.mjs';
 import { createMerchantWorkflowRecipes, MAX_WORKFLOW_RECIPE_REQUEST_BYTES } from './workflow-recipes.mjs';
 import { MerchantConsoleStore, CONSOLE_SCHEMA, canonical, digest, fail } from './store.mjs';
@@ -15,6 +16,7 @@ const assets = new Map([
   ['/operator/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']],
   ['/operator/workflows.mjs', ['workflows.mjs', 'text/javascript; charset=utf-8']],
   ['/operator/workflow-recipes.mjs', ['workflow-recipes.mjs', 'text/javascript; charset=utf-8']],
+  ['/operator/customer-reviewer.mjs', ['customer-reviewer.mjs', 'text/javascript; charset=utf-8']],
   ['/operator/style.css', ['style.css', 'text/css; charset=utf-8']]
 ]);
 const equal = (a,b) => typeof a === 'string' && typeof b === 'string' &&
@@ -100,11 +102,7 @@ export async function createMerchantConsole({operator,configPath,directory,autho
     if (authorization) try { await authorization.authorizeTool(context,name,args); }
     catch(error){error.merchantConsoleAuthorization=true;throw error;}
   }
-  const deliveryAccess = value => {
-    const selection=value.identity;
-    return {name:(selection.family==='core'?'merchant_client_export':'merchant_opensearch_deployment')+'_manifest',
-      args:{exportId:selection.exportId,...(selection.workspace?{workspace:selection.workspace}:{})}};
-  };
+  const deliveryAccess = value => customerAccess(value.identity);
   const bindingView = value => {
     const {host,...rest}=value;
     return {...rest,merchant:host.merchant,toolCount:host.capabilities?.tools??null,
@@ -201,6 +199,18 @@ export async function createMerchantConsole({operator,configPath,directory,autho
       }
       if(req.method==='GET'&&route.startsWith('customer-archive/')){
         await customers.archive(decodeURIComponent(route.slice(17)),req,res);return true;
+      }
+      if(req.method==='GET'&&route.startsWith('reviewer-value/')){
+        const record=store.call(decodeURIComponent(route.slice('reviewer-value/'.length)));
+        await requireTool(context,record.tool,JSON.parse(record.argumentsJson));
+        const {readReviewerConsoleCall}=await import('./customer-reviewer.mjs');
+        send(res,200,await readReviewerConsoleCall({record,operator,authorize:authorizeRequest,request:req}));return true;
+      }
+      if(req.method==='GET'&&route==='reviewer-recipe'){
+        const recipe=buildReviewerCustomerRecipe({definitions,mode:url.searchParams.get('mode')??'deliver'});
+        // This is a source recipe, not an invocation. The maintained recipe review and install
+        // authorize its resolved original workspace inputs before any native action.
+        send(res,200,{recipe});return true;
       }
       if(req.method==='GET'&&route==='host'){send(res,200,snapshot());return true;}
       if(req.method==='GET'&&route==='tools'){
@@ -307,9 +317,8 @@ export async function createMerchantConsole({operator,configPath,directory,autho
       if(!input||typeof input!=='object'||Array.isArray(input))throw fail('CONSOLE_JSON','Supply an operator request object.',400);
       if(route==='customers'){send(res,202,{delivery:await customers.start(input,req)});return true;}
       if(route==='customer-pause'){
-        const record=store.delivery(input.id),selection=record.identity;
-        await requireTool(context,(selection.family==='core'?'merchant_client_export':'merchant_opensearch_deployment')+'_manifest',
-          {exportId:selection.exportId,...(selection.workspace?{workspace:selection.workspace}:{})});
+        const record=store.delivery(input.id),access=deliveryAccess(record);
+        await requireTool(context,access.name,access.args);
         requireOpen();
         send(res,200,{delivery:customers.pause(input.id)});return true;
       }

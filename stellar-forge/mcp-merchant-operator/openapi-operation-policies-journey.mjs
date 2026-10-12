@@ -120,9 +120,9 @@ async function browserContinuation(context,selected) {
  } finally {await browser.close();}
 }
 
-export async function runOperationPolicyJourney({parent}={}) {
+export async function runOperationPolicyJourney({parent,extension,operatorConsole=false}={}) {
  const paths={};
- const outcome=await runRouteWorksheetJourney({parent,extension:{
+ const outcome=await runRouteWorksheetJourney({parent,operatorConsole,extension:{
   async prepare(context) {
    await installationSelection(context);
    Object.assign(paths,{policy:join(context.hostFiles,'operation-policy.json'),
@@ -149,6 +149,7 @@ export async function runOperationPolicyJourney({parent}={}) {
     '../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/package-export-format.mjs',
     '../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/package-transfer.mjs'])
     context.report.source[path]=hash(await readFile(new URL(path,import.meta.url)));
+   await extension?.prepare?.(context);
   },
   async run(context) {
    let current={...context},dropPackage=null,dropResult=null,unavailableReview=false,forbiddenReviews=0;
@@ -167,11 +168,11 @@ export async function runOperationPolicyJourney({parent}={}) {
      forbiddenReviews++;throw Object.assign(new Error('The current live policy review is unavailable during original package recovery'),{code:'NATIVE_REVIEW_UNAVAILABLE'});
     }
     const response=await context.originalFetch(target,options);
-    if(dropPackage&&url.origin===current.sender.origin&&url.pathname==='/api/operation-policies/package'&&request?.name===dropPackage&&response.ok()){
+    if(dropPackage&&url.origin===current.sender.origin&&url.pathname==='/api/operation-policies/package'&&request?.name===dropPackage&&response.ok){
      dropResult=await response.clone().json();dropPackage=null;await response.body?.cancel();
      throw Object.assign(new Error('The native package response was discarded after its completed publication'),{code:'NATIVE_RESPONSE_DISCARDED'});
     }
-    if(url.href===current.mcp.url&&request?.params?.name?.startsWith('merchant_openapi_operation_')&&response.ok())
+    if(url.href===current.mcp.url&&request?.params?.name?.startsWith('merchant_openapi_operation_')&&response.ok)
      sizes[request.params.name]=Math.max(sizes[request.params.name]??0,(await response.clone().arrayBuffer()).byteLength);
     return response;
    };};
@@ -308,6 +309,8 @@ export async function runOperationPolicyJourney({parent}={}) {
      packageId:restored.manifest.id,releaseDigest:release.digest,challengeStatus:challenge.status,shutdown:'STOPPED'});
     const browser=await browserContinuation({...context,...current,native},first);
     step('original-browser-review-discarded-save-and-reopen',browser);
+    await extension?.run?.({...context,...current,native,firstPolicy:first,currentPolicy:advanced,
+      policyPackage:name,policyRequest:request,policyReviewed:reviewed,policyApplication:application});
     policyReport.responseBytes=sizes;policyReport.largestMerchantReplyBytes=Math.max(...Object.values(sizes));
     policyReport.defaultMerchantReplyLimit=2*1024*1024;
     policyReport.state='PASSED';policyReport.completedAt=new Date().toISOString();

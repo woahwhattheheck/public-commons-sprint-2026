@@ -34,7 +34,8 @@ export async function runEchoApplications({sourceRoot,sourceCommit,artifactDirec
  journal.runtime={directory:runtime.directory,installationId:runtime.installationId,sourceCommit:runtime.sourceCommit,profileId:runtime.profileId,sourceManifestSha256:runtime.sourceManifestSha256};
  const manager=join(artifactDirectory,'operator');
  if(!await read(join(manager,'workspace.json')))await createRuntimeWorkspace({directory:manager});
- let model=await openRuntimeWorkspace({directory:manager}),browser,context;
+ let model=await openRuntimeWorkspace({directory:manager}),browser,context,completedResult,operationError;
+ const cleanupErrors=[];
  const view=async()=>{
   const state=await model.applicationsState();need(state.catalog.filter(c=>c.id==='epa-echo-portfolios').length===1,'The installed registry must advertise the original EPA application exactly once.');
   return state.applications.find(app=>app.id===journal.applicationId);
@@ -121,7 +122,23 @@ export async function runEchoApplications({sourceRoot,sourceCommit,artifactDirec
   need(Object.values(journal.runs).every(run=>history.runs.some(r=>r.id===run.requestId&&!r.active)),'Both original stopped application runs must remain in their complete history.');
   const result={schema:journal.schema,state:'COMPLETE',...identity,applicationId:journal.applicationId,runtime:journal.runtime,
    runs:journal.runs,history:{totalRuns:history.totalRuns,runs:history.runs.map(r=>({id:r.id,phase:r.phase,active:r.active}))},completedAt:new Date().toISOString(),journalFile,steps:journal.steps};
-  await saved(resultFile,result);return result;
- }catch(error){journal.lastError={code:error.code,message:error.message,at:new Date().toISOString()};await save();throw error;}
- finally{await context?.close();await browser?.close();await model?.close();}
+  completedResult=result;
+ }catch(error){operationError=error;}
+ finally{
+  for(const [resource,close]of [['browser context',()=>context?.close()],['browser',()=>browser?.close()],['runtime workspace',()=>model?.close()]]){
+   try{await close();}catch(error){cleanupErrors.push({resource,code:error.code??'EPA_ECHO_APPLICATION_CLEANUP_FAILED',message:error.message,at:new Date().toISOString()});}
+  }
+ }
+ if(operationError||cleanupErrors.length){
+  const primary=operationError?{code:operationError.code??'EPA_ECHO_APPLICATION_FAILED',message:operationError.message}:null;
+  journal.lastError={code:primary?.code??'EPA_ECHO_APPLICATION_CLEANUP_FAILED',message:primary?.message??'The original application resources did not all close.',primary,cleanupErrors,at:new Date().toISOString()};
+  const failure=operationError??Object.assign(new Error(journal.lastError.message),{code:journal.lastError.code});
+  failure.cleanupErrors=cleanupErrors;
+  try{await save();}catch(error){failure.journalSaveError={code:error.code,message:error.message};}
+  throw failure;
+ }
+ completedResult.completedAt=new Date().toISOString();
+ completedResult.cleanup={state:'CLOSED',resources:['browser context','browser','runtime workspace']};
+ delete journal.lastError;await save();
+ await saved(resultFile,completedResult);return completedResult;
 }
