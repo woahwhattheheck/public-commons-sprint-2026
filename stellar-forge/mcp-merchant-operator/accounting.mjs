@@ -8,6 +8,7 @@ import { dirname, resolve } from 'node:path';
 import { merchantQuickBooksRecoverySources } from './accounting-quickbooks-oauth.mjs';
 import { RetainedFileReads } from './retained-file-reads.mjs';
 import { MerchantCryptoworth, cryptoworthFileSelectors } from './accounting-cryptoworth.mjs';
+import { MerchantRunbooks, runbookFileSelectors } from './accounting-runbooks.mjs';
 import { adjustmentDefinitions, MerchantAdjustments } from './accounting-adjustments.mjs';
 import { statementDefinitions, statementFileNames, statementFileSelectors, MerchantCustomerStatements } from './accounting-statements.mjs';
 import { platformDefinitions, platformFileNames, normalizePlatformConfig, platformSourceView, platformPathReferences, MerchantPlatforms } from './accounting-platforms.mjs';
@@ -42,11 +43,11 @@ const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 
 
 
-const sourceKinds = ['recoveredSources', 'recoveryRequests', 'proofFiles', 'termsFiles', 'pricingReports', 'accountantReturns', 'platformInputs', 'statementUsageInputs', 'cryptoworthInputs'];
+const sourceKinds = ['recoveredSources', 'recoveryRequests', 'proofFiles', 'termsFiles', 'pricingReports', 'accountantReturns', 'platformInputs', 'statementUsageInputs', 'cryptoworthInputs', 'runbookInputs'];
 
 
 
-const fileSelections = ['runId', 'recoveryId', 'exportId', 'collectionId', 'sourceId', 'reviewId', 'closeId', 'handoffId', 'revisionId', 'adjustmentId', 'jobId', 'planId', 'responseId', 'nativePost', 'attemptId', 'file', ...statementFileSelectors, ...cryptoworthFileSelectors];
+const fileSelections = ['runId', 'recoveryId', 'exportId', 'collectionId', 'sourceId', 'reviewId', 'closeId', 'handoffId', 'revisionId', 'adjustmentId', 'jobId', 'planId', 'responseId', 'nativePost', 'attemptId', 'file', ...statementFileSelectors, ...cryptoworthFileSelectors, ...runbookFileSelectors];
 
 
 
@@ -226,9 +227,9 @@ export class MerchantAccounting {
       fileReads: this.#files.status(key) };
   }
   #result(key, value, operation) {
-    // Cryptoworth projects host metadata in its provider; its reviewed user text
-    // and sealed native records must cross the wire without substitutions.
-    if (operation.startsWith('merchant_accounting_cryptoworth_')) return value;
+    // These providers project host metadata themselves. Reviewed operator text
+    // and hash-bound native requests must cross the wire without substitutions.
+    if (operation.startsWith('merchant_accounting_cryptoworth_') || operation.startsWith('merchant_accounting_runbooks_')) return value;
     if (value?.record?.revisions) value = { ...value, record: handoffBrief(value.record) };
     if (value?.definition?.versions) value = { ...value, definition: periodBrief(value.definition) };
     return this.#safe(value?.state ? { ...value, state: this.#state(key, value.state) } : value);
@@ -270,7 +271,7 @@ export class MerchantAccounting {
   async #openRuntime(key, record) {
     const definition = this.#definition(key), { directory, outboxDir, proofDir, termsFile } = definition;
     const workspace = await openAccountingWorkspace({ directory, outboxDir, proofDir, termsFile });
-    const runtime = { workspace, collection: null, accountant: null, bitwave: null, adjustments: null, statements: null, platforms: null, cryptoworth: null };
+    const runtime = { workspace, collection: null, accountant: null, bitwave: null, adjustments: null, statements: null, platforms: null, cryptoworth: null, runbooks: null };
     try {
       const recovered = workspace.view().sources.recoveredDir;
       if (recovered && !Object.values(definition.recoveredSources).includes(recovered))
@@ -278,6 +279,7 @@ export class MerchantAccounting {
       runtime.collection = await openCollectionWorkspace(workspace, { httpsProxyEnv: definition.collectionHttpsProxyEnv });
       runtime.accountant = new AccountantWorkspace(workspace);
       runtime.cryptoworth = new MerchantCryptoworth(workspace, runtime.accountant, { readSource: (source, maximum) => sourceBytes(this.#source(key, 'cryptoworthInputs', source), maximum) });
+      runtime.runbooks = new MerchantRunbooks(workspace, runtime.accountant, { readSource: (source, maximum) => sourceBytes(this.#source(key, 'runbookInputs', source), maximum) });
       runtime.adjustments = new MerchantAdjustments(workspace, { httpsProxyEnv: definition.adjustmentHttpsProxyEnv });
       runtime.statements = new MerchantCustomerStatements(workspace, { readSource: (source, maximum) => sourceBytes(this.#source(key, 'statementUsageInputs', source), maximum) });
       await runtime.statements.init();
@@ -294,12 +296,12 @@ export class MerchantAccounting {
   async #closeRuntime(key, record, runtime) {
     let problem;
     try { await this.#files.closeScope(key); } catch (error) { problem = error; }
-    for (const owner of [runtime.cryptoworth, runtime.platforms, runtime.bitwave, runtime.collection, runtime.workspace]) {
+    for (const owner of [runtime.runbooks, runtime.cryptoworth, runtime.platforms, runtime.bitwave, runtime.collection, runtime.workspace]) {
       if (!owner) continue;
       try { await owner.close(); } catch (error) { problem ??= error; }
       finally { if (owner.tasks) await Promise.allSettled([...owner.tasks]); }
     }
-    if (record.workspace === runtime.workspace) Object.assign(record, { workspace: null, collection: null, accountant: null, bitwave: null, adjustments: null, statements: null, platforms: null, cryptoworth: null });
+    if (record.workspace === runtime.workspace) Object.assign(record, { workspace: null, collection: null, accountant: null, bitwave: null, adjustments: null, statements: null, platforms: null, cryptoworth: null, runbooks: null });
     if (problem) throw problem;
   }
   async #open(key) {
@@ -307,7 +309,7 @@ export class MerchantAccounting {
     const existing = this.#sessions.get(key);
     if (existing?.closing) throw fail('ACCOUNTING_CLOSING', 'This accounting workspace is closing.');
     if (existing) { await existing.opening; return this.#safe(this.#sessionState(key, existing)); }
-    const definition = this.#definition(key), record = { workspace: null, collection: null, accountant: null, bitwave: null, adjustments: null, statements: null, platforms: null, cryptoworth: null, maintenance: null, closing: false, calls: new Set() };
+    const definition = this.#definition(key), record = { workspace: null, collection: null, accountant: null, bitwave: null, adjustments: null, statements: null, platforms: null, cryptoworth: null, runbooks: null, maintenance: null, closing: false, calls: new Set() };
     this.#sessions.set(key, record);
     record.opening = (async () => {
       const oauth = definition.platforms?.qbo?.oauth;
@@ -351,10 +353,12 @@ export class MerchantAccounting {
       pricing: ['reviewId', 'runId', 'file'], period: ['closeId', 'file'], accountant: ['handoffId', 'revisionId', 'file'], adjustment: ['adjustmentId', 'jobId', 'file'], qbo: ['planId', 'responseId', 'nativePost', 'attemptId', 'file'], xero: ['planId', 'file'],
       'customer-statement': ['statementId', 'file'],
       cryptoworth: ['profileId', 'planId', 'captureId', 'returnId', 'rollbackId', 'scope', 'file'],
+      runbooks: ['cycleId', 'fileId', 'file'],
       'customer-statement-preview': ['customerId', 'runId', 'usageId', 'replacesId', 'from', 'until', 'file'] }[kind];
     if (fileSelections.some(key => args[key] !== undefined && !selectors.includes(key))) throw fail('ACCOUNTING_INVALID_ARGUMENTS', 'Use only the original source selectors for this file kind.');
     const session = this.#sessions.get(args.workspace);
     if (kind === 'cryptoworth') return session.cryptoworth.file(args);
+    if (kind === 'runbooks') return session.runbooks.file(args);
     if (kind === 'qbo' || kind === 'xero') return session.platforms.file(args);
     if (kind === 'customer-statement' || kind === 'customer-statement-preview') return session.statements.file(args);
     if (kind === 'response') {
@@ -398,6 +402,7 @@ export class MerchantAccounting {
   async #execute(operation, args, workspace) {
     const key = args.workspace, session = this.#sessions.get(key);
     if (operation.startsWith('merchant_accounting_cryptoworth_')) return session.cryptoworth.call(operation, args);
+    if (operation.startsWith('merchant_accounting_runbooks_')) return session.runbooks.call(operation, args);
     if (operation.startsWith('merchant_accounting_qbo_') || operation.startsWith('merchant_accounting_xero_')) return session.platforms.call(operation, args);
     if (operation.startsWith('merchant_accounting_customer_')) return session.statements.call(operation, args);
     if (operation === 'merchant_accounting_adjustment' || operation.startsWith('merchant_accounting_adjustment_'))
@@ -533,7 +538,9 @@ export class MerchantAccounting {
       const message = ['ENOENT', 'EACCES', 'ENOTDIR', 'EISDIR', 'ELOOP'].includes(error.code)
         ? 'An original configured accounting source is unavailable. Check its host-side file and permissions.'
         : this.#safe(String(error.message ?? error));
-      throw fail(error.code ?? 'ACCOUNTING_ERROR', message);
+      const exposed = fail(error.code ?? 'ACCOUNTING_ERROR', message);
+      if (error.applied === false) exposed.applied = false;
+      throw exposed;
     }
   }
   close() {

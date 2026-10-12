@@ -1,0 +1,13 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "accounting-runbooks",
+  "description": "Client runbook preparation, review, portable receiving, original MCP tools and typed client in the maintained accounting workspace.",
+  "exports": {
+    "./merchant/accounting-runbooks": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/accounting-runbooks-client.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/accounting-runbooks-client.mjs"
+    },
+    "./merchant/accounting-runbooks/operations": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/runbooks-cli.mjs",
+    "./merchant/accounting-runbooks/workspace": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/runbooks-workspace.mjs"
+  }
+}
