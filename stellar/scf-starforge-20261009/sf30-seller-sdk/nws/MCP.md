@@ -31,7 +31,7 @@ host's private session reference.
 
 Use the private original startup JSON or Applications URL record to construct
 a connection. The following script creates a private connection beside a
-selected original record. Its optional third argument is an original exported
+selected original record. Its optional third argument is an original source capture or exported
 source package to make available as the `weather_source` alias.
 
 ```sh
@@ -73,20 +73,47 @@ PY
 ```
 
 The private files must be owned regular files. Choose a new private destination
-for the connection, then initialize the original merchant server:
+for the merchant, then save its original setup selection:
+
+```json
+{
+  "directory": "/absolute/private-nws-merchant",
+  "connection": "/absolute/private-nws-agent/connection.json",
+  "name": "Site weather operations"
+}
+```
+
+Save that JSON as `/absolute/private-nws-setup.json` with mode 0600. The installed
+source contribution declares the complete `nws-workspaces` merchant provider:
 
 ```sh
-starforge merchant-mcp init-nws-workspaces \
-  --dir /absolute/private-nws-merchant \
-  --connection /absolute/private-nws-agent/connection.json
+starforge merchant-providers inspect nws-workspaces
+starforge merchant-providers init nws-workspaces --options /absolute/private-nws-setup.json
 starforge merchant-mcp serve \
   --config /absolute/private-nws-merchant/merchant-mcp.json \
   --token-env MCP_ACCESS_TOKEN --port 3211
 ```
 
-An existing merchant initialization can attach the same connection with
-`--nws-workspaces CONNECTION_JSON`. Incoming MCP authentication uses the
-original merchant bearer or OAuth configuration.
+The provider's setup calls the original merchant configuration reader and
+SF82 release-store initializer. It attaches the declared running NWS workspace.
+The source API is `initializeNwsWorkspaceMerchant(options)` from
+`./merchant-mcp/nws/setup`; the same options are accepted by
+`merchant-mcp init-provider nws-workspaces --options FILE`.
+
+An existing merchant configuration can declare
+`"nwsWorkspaceConnection": "/absolute/private-nws-agent/connection.json"`
+alongside its existing sources and provider connections, then restart its
+original server. Incoming MCP authentication uses the original merchant bearer
+or OAuth configuration.
+
+The NWS contribution owns its descriptor, pure metadata, original connection
+reader, setup, request limit and instructions. Catalog inspection imports the
+metadata only. The native adapter loads when selected; it shares the original
+workspace HTTP actions and operation journal with the browser. Its own
+concurrency keeps pause and read operations available during native work, while
+the journal retains revision and operation identity. Shutdown drains accepted
+calls before closing retained files. An unsuccessful file close leaves the
+adapter closed to new calls and permits another close on the same instance.
 
 ## Operate the original domain
 
