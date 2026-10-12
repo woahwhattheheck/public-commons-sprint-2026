@@ -80,7 +80,7 @@ for(const [name,pin]of Object.entries(input.deliveryFiles)){
  check(bytes.length===pin.bytes&&hash(bytes)===pin.sha256,'Original delivered file changed: '+name);
  originalFiles[name]=pin;
 }
-let browser=null,context=null,page=null,app=null;
+let browser=null,context=null,page=null,app=null,appEpoch=null;
 async function api(path,value,{url=app.url,header='X-Dataset-Workspace-Token',raw=false}={}){
  const u=new URL(url),response=await fetch(new URL(path,u.origin),{
   method:value===undefined?'GET':'POST',headers:{[header]:u.hash.slice(1),
@@ -101,6 +101,7 @@ async function uiResponse(path,action){
 async function start(){
  app=await startDatasetWorkspace({stateDirectory:input.stateDirectory,profilePath:profileFile,port:0,
   analysis:{python:input.python,checkout:sourceRoot,directory:input.analysisDirectory}});
+ appEpoch=hash(new URL(app.url).hash).slice(0,12);
  if(!browser)browser=await chromium.launch({executablePath:input.chromium,headless:true,
   args:['--no-sandbox','--disable-dev-shm-usage'],downloadsPath:join(root,'downloads')});
  context=await browser.newContext({viewport:{width:1280,height:900},acceptDownloads:true});
@@ -108,8 +109,11 @@ async function start(){
  await page.goto(app.url);await page.locator('#open-operator').waitFor();
 }
 async function close(){
- await context?.close();context=null;page=null;
- if(app){const current=app;app=null;await current.close()}
+ const failures=[],ownedContext=context,ownedApp=app;
+ context=null;page=null;app=null;
+ try{await ownedContext?.close()}catch(error){failures.push(error)}
+ try{await ownedApp?.close()}catch(error){failures.push(error)}
+ if(failures.length)throw new AggregateError(failures,'The original customer close did not finish');
 }
 async function fillSettings(value,note){
  await page.locator('#open-operator').click();await page.locator('#operator-form').waitFor();
@@ -194,7 +198,9 @@ async function action(kind,id,extra={}){
  return job;
 }
 async function originalAnalysis(id){
- const job=await action('analysis',id,{alias:'received_inventory'});
+ // Analysis owns a process for this particular application open. A previously
+ // completed start remains retained while the new host starts its own service.
+ const job=await action('analysis',id+'-'+appEpoch,{alias:'received_inventory'});
  check(job.result.workspaceId===input.analysisWorkspaceId,'The original analysis workspace changed');
  const state=await api('/api/state');
  check(state.analysis.running&&state.analysis.alias==='received_inventory','Original analysis is not open');
