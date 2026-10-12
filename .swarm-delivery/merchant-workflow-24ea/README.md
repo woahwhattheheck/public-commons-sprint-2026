@@ -79,11 +79,12 @@ It runs the merged recurring merchant product from
 `woahwhattheheck/tjlabs-stellar-merchant-workspace` at
 `264a1022ce890f2356a2e3e5501a95b6ce121bdd`, with the native receiving entry and
 operating chapter selected from commit
-`7cfe93bd78c747c66d64f413824d534cf7567f8c`. PR 240 integrated that complete
-native continuation at `1316a5cebdfbcdfc3b23a2d39881d4a58abd07d0`.
+`fcbbbb9d4ad45162fc61186121226a9b25e4c143`. PR 240 integrated the original native
+continuation at `1316a5cebdfbcdfc3b23a2d39881d4a58abd07d0`; the selected source adds
+the complete workspace archive and customer restoration path in PR 306.
 
 Keep `run-series-native.py` and `series-source-map.json` together. The packet
-contains the full bodies and Git blob identities of all 692 selected source
+contains the full bodies and Git blob identities of all 693 selected source
 files, including the existing merchant programmes, current provider and
 distribution declarations, browser assets and complete customer receivers.
 Each source file is checked against its original Git blob before execution.
@@ -120,7 +121,7 @@ archive lengths and npm SHA-512 integrity, extracts only these two complete
 packages, and retains their original archives and metadata. Existing different
 package bytes remain protected.
 
-A held receiver may omit `payload.files` when all 692 selected source files
+A held receiver may omit `payload.files` when all 693 selected source files
 already exist on that same worker. The runner verifies each existing file
 against the complete `file_blobs` selection. After materializing or reading the
 source, it releases the full source-body packet before starting the native
@@ -158,18 +159,62 @@ directory. The runner prints `ORIGINAL_NATIVE_DISPATCH` only after it creates
 the actual native child, including that child's PID and source selection.
 It streams the complete child output and retains the log in the same directory.
 
-After the native child exits, the runner streams the archive and its SHA-256
-without loading the complete output bundle into memory. It packages the operation
-reports, customer files, profile exports and both Console states into
-`merchant-original-native-artifacts.tar.gz` under the work directory.
-`ORIGINAL_NATIVE_OUTPUT_READY` reports the exact bundle size, SHA-256 and
-native exit code. The foreground receiver stays available for complete output
-transfer. Each newline-delimited command
+After the native child exits, the runner creates
+`merchant-original-native-artifacts.tar.gz` under the work directory. It retains the
+required reports, original frozen requests, complete customer files and profile
+exports, both Console stores, merchant configuration, merchant release and
+customer-export stores, and the original configured source inputs. The native
+artifact selection and archive manifest record each complete file. Archive
+creation, transfer and hashing stream file bodies.
+
+Browser inspection images have their own transient selection. Completed legacy
+reports retain their bytes; only their exact named QA inspection images become
+optional. Customer files remain required regardless of their extension. The
+private local access token and browser profile stay with the execution host.
+
+### Reopen the shipped customer workspace
+
+After a complete native case, the runner keeps the original receiving directory
+as a private sibling backup, extracts the exact shipped archive at its recorded
+receiving path, restores the original configured source inputs, and invokes the
+same completed native entry. Both Console workspaces start through the real
+merchant launchers on fresh loopback ports. A fresh private local token is
+created when the restored directory has no token.
+
+The restored operation reads all 31 original merchant, recipe and recurring
+calls, the same two completed periods and installation editions, all four
+six-file customer deliveries and the thirteen-file recurring handover. The
+original completed reports remain unchanged. The separate
+`workflow-series-reopened.json` and full reopen output are retained in the readable
+customer delivery summary beside the exact archive that was reopened.
+
+To receive a previously delivered archive on an equipped worker, select the
+source packet and original paths recorded by its manifest:
+
+```sh
+python3 run-series-native.py \
+  --source-packet series-source-map.json \
+  --restore-archive merchant-original-native-artifacts.tar.gz \
+  --directory ORIGINAL_RECEIVING_DIRECTORY \
+  --work-dir ORIGINAL_WORK_DIRECTORY \
+  --node ACTUAL_NODE --node-modules ACTUAL_INSTALLED_NODE_MODULES \
+  --chromium ACTUAL_CHROMIUM --playwright-module ACTUAL_PLAYWRIGHT_MODULE
+```
+
+The work directory and receiving directory have separate locations. The runner
+preserves an existing receiving directory before extraction and resumes the same
+saved archive phase after interruption. Original operation locks remain with the
+controller and its child throughout the archive exchange and reopen.
+
+`ORIGINAL_NATIVE_OUTPUT_READY` reports the exact bundle size, SHA-256, native
+exit code and archive restoration phase. The readable
+`merchant-native-customer-delivery.md` is produced on every receiving host.
+The foreground receiver remains available for complete output transfer. Each
+newline-delimited command
 `{"op":"read-bundle","offset":0,"length":8192}` returns a base64 chunk at the
-requested byte offset; advance by the returned byte count until the whole
+requested byte offset; advance by the returned byte count until the complete
 bundle is preserved and its reported digest matches. Send
-`{"op":"close"}` after transfer. Keep the complete receiving state with its
-original owner so further customer periods continue the same operation.
+`{"op":"close"}` after transfer.
 
 A managed receiving session can include the complete current Library upload helper
 and its two companion modules as `payload.libraryHelpers`, or pass their existing
