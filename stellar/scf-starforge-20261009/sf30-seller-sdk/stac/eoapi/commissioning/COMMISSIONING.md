@@ -178,7 +178,7 @@ Use the installed Node runtime from the maintained project root:
 node sf30-seller-sdk/stac/eoapi/commissioning/cli.mjs help
 ```
 
-All commands return JSON on stdout and controlled error codes on stderr.
+All commands return JSON on stdout and controlled error codes on stderr. A live `run` that retains status `INTERRUPTED` emits its complete original run JSON and exits 2, so the native supervisor can continue that same run. Normal command errors exit 1. Completed runs exit 0 and retain their separate per-case pass/finding results.
 
 | Command | Required flags |
 | --- | --- |
@@ -229,7 +229,7 @@ The original host authenticates the operator, enforces its existing CSRF/body li
 
 The receiving route accepts a host-resolved saved-file ID; the HTTP request cannot choose an arbitrary filesystem path. Bind the package writer to the complete package digest for its original saved-file retry/reconciliation.
 
-The browser module exports `commissioningMarkup()` and `mountCommissioning(element,{dispatch,principals,intentStore})`. Supply the host's authenticated dispatch function. The panel uses its original connection labels and a monochrome industrial layout, and exposes actual retained source attachment, continuation, comparison, export and receiving.
+The browser module exports `commissioningMarkup()` and `mountCommissioning(element,{dispatch,principals,intentStore})`. Supply the host's authenticated dispatch function. When joining `createEoapiSourceRuntime`, map commissioning's `anonymous` principal to the runtime's uncredentialed `public` profile: `input => source.sourceRuntimeFor({...input, principal: input.principal === 'anonymous' ? 'public' : input.principal})`. Keep named private principals unchanged. The panel uses its original connection labels and a monochrome industrial layout, and exposes actual retained source attachment, continuation, comparison, export and receiving.
 
 Before plan, run or receiving dispatch, the panel retains the exact operation binding in workspace-keyed session storage. A reload restores the admitted plan draft, selected plan/file and operation IDs, so retry reaches the same original record after a lost reply. The host may provide its own synchronous `intentStore` with `getItem`/`setItem`; successful exact readback is required before dispatch. The selected plan retains its own current run operation. Explicit New plan operation, New run operation and New receiving operation actions create a separate intended record while keeping prior admitted identities in the retained journal.
 

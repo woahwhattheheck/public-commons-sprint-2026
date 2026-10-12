@@ -251,6 +251,7 @@ export async function openCommissioningWorkspace({directory,policyWorkspace,sour
           let failure=null;
           try{await provider.captureJson(entry.request,{directory:join(runDirectory(run.id),attempt.path),signal:controller.signal});}
           catch(error){failure=error;}
+          finally{await provider.close?.();}
           const captured=await readResponse(join(runDirectory(run.id),attempt.path),entry);
           if(captured){await finishObservation(run,entry,attempt,captured);}
           else {

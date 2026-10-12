@@ -83,6 +83,7 @@ export function mountCommissioning(element,{dispatch,principals=['anonymous'],in
     const planId=one('[data-plan-select]').value;
     if(!planId)throw new Error('Select the saved plan first.');
     const entered=one('[data-operation]').value;
+    if(!fresh&&entered&&!/^[A-Za-z0-9._:-]{1,128}$/.test(entered))throw new Error('Use 1–128 letters, digits, dots, underscores, colons or hyphens for the operation ID.');
     let row=fresh?null:latest(intents.runs,value=>value.planId===planId&&(!entered||value.operationId===entered));
     if(!row){row={planId,operationId:fresh||!entered?operation('commissioning'):entered};intents.runs.push(row);}
     rememberForm();retain();one('[data-operation]').value=row.operationId;return row;
