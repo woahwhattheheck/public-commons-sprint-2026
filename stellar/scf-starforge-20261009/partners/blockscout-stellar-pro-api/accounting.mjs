@@ -6,6 +6,7 @@ import { open, mkdir, lstat, realpath, unlink } from 'node:fs/promises';
 import { isAbsolute, resolve, dirname, join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { error, planSha, QUOTA_HEADERS, plain } from './product.mjs';
+import { connectionIdentity, connectionForPlan } from './connection.mjs';
 
 const SCHEMA = 'stellar-forge.blockscout-provider-accounting.v1';
 const fail = (code, status = 503) => { throw error(code, status); };
@@ -106,9 +107,15 @@ export async function openProviderAccounting({ directory, plan, now = () => Date
     if (schema !== undefined && schema !== SCHEMA) fail('BLOCKSCOUT_ACCOUNTING_SCHEMA_INVALID');
     const alias = saved.get('accountAlias')?.value;
     if (alias !== undefined && alias !== plan.accountAlias) fail('BLOCKSCOUT_ACCOUNT_ALIAS_MISMATCH');
+    const identity = JSON.stringify(connectionIdentity(plan));
+    const oldIdentity = saved.get('connectionIdentity')?.value;
+    const firstPlan = db.prepare('SELECT json FROM plans ORDER BY created_at,sha LIMIT 1').get();
+    const priorIdentity = oldIdentity ?? (firstPlan ? JSON.stringify(connectionIdentity(JSON.parse(firstPlan.json))) : null);
+    if (priorIdentity !== null && priorIdentity !== identity) fail('BLOCKSCOUT_CONNECTION_ACCOUNT_MISMATCH');
     db.exec('BEGIN IMMEDIATE');
     try {
       const insert = db.prepare('INSERT OR IGNORE INTO meta(key,value) VALUES(?,?)');
+      insert.run('connectionIdentity', identity);
       insert.run('schema', SCHEMA); insert.run('accountAlias', plan.accountAlias);
       db.prepare('INSERT OR IGNORE INTO plans(sha,json,created_at) VALUES(?,?,?)')
         .run(planId, JSON.stringify(plan), new Date(now()).toISOString());
@@ -334,7 +341,8 @@ export async function openProviderAccounting({ directory, plan, now = () => Date
       "COALESCE((SELECT action FROM reconciliations WHERE attempt_id=a.id ORDER BY revision DESC LIMIT 1),'reopen')<>'confirm_finished'").get().n;
     const unknown = states.find(row => row.state === 'outcome_unknown')?.count ?? 0;
     return { schema: SCHEMA, accountAlias: plan.accountAlias, planSha256: planId, capturedAt: new Date(time).toISOString(),
-      contract: 'blockscout-pro-token-detail-2026-10-11', limits: { ...limits }, day: usage.day,
+      contract: connectionForPlan(plan).mode === 'pro' ? 'blockscout-pro-token-detail-2026-10-11' : 'blockscout-instance-token-detail-v1',
+      budgetUnit: connectionForPlan(plan).mode === 'pro' ? 'credits' : 'requests', limits: { ...limits }, day: usage.day,
       localUsage: { attempts: usage.today.attempts, configuredCredits: usage.today.credits, lastSecondAttempts: usage.second },
       retention: { records: usage.stored.records, bodyBytes: usage.stored.bytes, inProgress: usage.stored.pending },
       states: Object.fromEntries(states.map(row => [row.state, row.count])), admission: admission(time),
