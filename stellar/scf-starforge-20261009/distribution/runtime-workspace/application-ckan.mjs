@@ -78,12 +78,13 @@ export async function ckanAgentStartup(request, text, context = {}) {
   need(plain(startup) && plain(selection) && plain(selection.source) && plain(selection.binding) &&
     selection.binding.configFile === absolute(option(request, '--config')) &&
     selection.binding.workspace === option(request, '--workspace'), 'APPLICATION_CKAN_STARTUP_CHANGED');
-  const native = await import(pathToFileURL(join(absolute(selection.source.root),
+  const launchSourceRoot = join(absolute(request.releaseDirectory), 'source');
+  const native = await import(pathToFileURL(join(launchSourceRoot,
     ROOT + 'ckan-workspace-launcher.mjs')).href);
   const rawPort = option(request, '--port', true) ?? '0';
   need(/^(0|[1-9]\d*)$/.test(rawPort), 'APPLICATION_CKAN_STARTUP_CHANGED');
   return native.verifyCkanAgentStartup(startup, {
-    selection, launchSourceRoot: join(absolute(request.releaseDirectory), 'source'),
+    selection, launchSourceRoot,
     port: Number(rawPort), ...(context.pid ? { pid: context.pid } : {}),
   });
 }
