@@ -562,3 +562,11 @@ complete customer package. See the [paid-output operating guide](../../sf30-sell
 and [merchant MCP commerce guide](../../../../stellar-forge/mcp-merchant-operator/PMTILES_COMMERCE.md).
 Keep the existing source/runtime selections and original native payment profiles;
 each download catalog binds its original release, complete bytes and price.
+
+The [native environment and accounting guide](../../sf30-seller-sdk/pmtiles/commerce/NATIVE_ENVIRONMENT.md)
+composes the original funded testnet operator and facilitator with the selected
+HTTPS/CONNECT transport for the same complete receiving operation. The original
+purchase accounting is available through three paginated MCP/CLI actions,
+including retained-command recovery. Select the original operator workspace
+before the receiving input is frozen; the complete map and package retain
+separate exact download budgets and original financial receipts.
