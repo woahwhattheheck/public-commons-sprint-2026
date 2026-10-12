@@ -39,6 +39,7 @@ const HELP=`Retained Directus collections
   buyer prepare --package PRIVATE_DIRECTORY --seller http://127.0.0.1:PORT [--query QUERY.json]
        --intent ID --accept-index N --offer-sha SHA --out PRIVATE_BUYER.json [--workspace PRIVATE_DIRECTORY]
   buyer receive --package PRIVATE_DIRECTORY --session ORIGINAL_SESSION --out PRIVATE_DIRECTORY [--include-source-captures --workspace PRIVATE_DIRECTORY]
+  buyer retain-session --workspace PRIVATE_DIRECTORY --buyer SAVED_BUYER_ID --session ORIGINAL_SESSION
   buyer inspect-delivery --directory PRIVATE_DIRECTORY
   buyer init|status|run|recover|export|deliver|accounting|finalize ORIGINAL_SF88_OPTIONS
 
@@ -116,10 +117,13 @@ async function buyer(args){
     offer:['--package','--seller','--query'],
     prepare:['--package','--seller','--query','--intent','--accept-index','--offer-sha','--out','--workspace'],
     receive:['--package','--session','--out','--include-source-captures','--workspace'],
+    'retain-session':['--workspace','--buyer','--session'],
     'inspect-delivery':['--directory']
   }[action];if(!allowed)throw new TypeError(HELP);
   const f=flags(tokens,allowed,['--include-source-captures']);
   if(action==='inspect-delivery')return print(await inspectDirectusDelivery(location(f,'--directory')));
+  if(action==='retain-session')return print(await withWorkspace(f,workspace=>workspace.retainBuyerSession({
+    buyerId:required(f,'--buyer'),directory:location(f,'--session')})));
   const withProject=run=>f['--workspace']?withWorkspace(f,run):run(undefined);
   if(action==='receive')return print(await withProject(workspace=>receiveDirectusBuyer({workspace,directory:location(f,'--package'),
     sessionDirectory:location(f,'--session'),destination:location(f,'--out'),includeSourceCaptures:!!f['--include-source-captures']})));

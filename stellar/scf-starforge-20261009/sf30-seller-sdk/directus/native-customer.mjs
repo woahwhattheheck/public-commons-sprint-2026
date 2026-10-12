@@ -18,6 +18,7 @@ import {prepareBuyerResponseFile} from '../../sf31-buyer-client/response-file.mj
 import {executeWithEvidence} from '../../sf82-checkout-evidence/evidence.mjs';
 import {createDatasetSession,runDatasetSession,inspectDatasetSession} from '../../sf88-operator-buyer-cli/dataset-session.mjs';
 import {createAttemptWireRecorder} from '../../sf88-operator-buyer-cli/attempt-wire.mjs';
+import {resolveDatasetSessionPath} from '../../sf88-operator-buyer-cli/dataset-location.mjs';
 import {saveExact,copyExact,exists,digest,identity,privateDirectory,readJson,acquireWorkspace} from '../dspace/merchant-files.mjs';
 
 export async function runDirectusCustomer({input,directory,token=process.env.DIRECTUS_TOKEN}={}){
@@ -177,6 +178,7 @@ export async function runDirectusCustomer({input,directory,token=process.env.DIR
     const session=join(directory,'buyer-session');
     if(!await exists(join(session,'session.json')))await createDatasetSession({directory:session,configPath:join(directory,'native-buyer-config.json'),
       maxPages:Math.ceil(initial.edition.row_count/2)+2,maxTotalAtomic:input.maxTotalAtomic??'1000000',expectedSnapshot:initial.edition.snapshot});
+    const registeredSession=await workspace.retainBuyerSession({buyerId:buyer.projectBuyerId,directory:session});
     const initialSession=await inspectDatasetSession(session);
     if(!initialSession.completedPages){
       const controller=new AbortController();
@@ -221,9 +223,9 @@ export async function runDirectusCustomer({input,directory,token=process.env.DIR
     await copyExact(project.path,join(directory,'Directus_Complete_Project.sqlite3'),project);
     const originalState=workspace.state(),receivedDirectory=join(directory,'received-workspace');
     let received,receivedMerchant,advancedProject;
-    const projectCounts=Object.fromEntries(['merchant-packages','buyer-configurations','customer-deliveries']
+    const projectCounts=Object.fromEntries(['merchant-packages','buyer-configurations','customer-deliveries','buyer-sessions']
       .map(kind=>[kind,originalState[kind].length]));
-    assert.equal(projectCounts['merchant-packages'],2);assert.equal(projectCounts['buyer-configurations'],1);assert.equal(projectCounts['customer-deliveries'],1);
+    assert.equal(projectCounts['merchant-packages'],2);assert.equal(projectCounts['buyer-configurations'],1);assert.equal(projectCounts['customer-deliveries'],1);assert.equal(projectCounts['buyer-sessions'],1);
     try{
       received=await receiveDirectusWorkspace({file:project.path,directory:receivedDirectory});
       const transferred=received.state();
@@ -235,10 +237,29 @@ export async function runDirectusCustomer({input,directory,token=process.env.DIR
       const successorPublisher=transferred.project_runtime.merchants.find(item=>item.edition.snapshot===successor.edition.snapshot);
       assert.ok(originalPublisher&&successorPublisher);assert.equal(originalPublisher.versionDirectory,successorPublisher.versionDirectory);
       assert.notEqual(originalPublisher.directory,prepared.directory);assert.notEqual(originalPublisher.versionDirectory,packageInput.versionDirectory);
+      const preparedAgain=await prepareDirectusMerchant({...packageInput,workspace:received,
+        directory:originalPublisher.directory,versionDirectory:originalPublisher.versionDirectory});
+      assert.equal(preparedAgain.projectMerchantId,originalPublisher.id);assert.equal(received.revision(),originalState.revision);
+      assert.equal(received.state()['merchant-packages'].length,projectCounts['merchant-packages']);
+      const movedBuyer=transferred.project_runtime.buyers[0],retainedBuyer=await received.retainBuyer({configuration:movedBuyer.configuration});
+      assert.equal(retainedBuyer.id,movedBuyer.id);assert.equal(received.revision(),originalState.revision);
       const movedDelivery=transferred.project_runtime.deliveries.find(item=>item.deliverySha256===delivery.manifest.sha256);
       assert.ok(movedDelivery);assert.notEqual(movedDelivery.directory,delivery.directory);
       const inspected=await inspectDirectusDelivery(movedDelivery.directory);
       assert.equal(inspected.manifest.sha256,delivery.manifest.sha256);assert.equal(inspected.native.rows,rows.length);
+      const movedSession=transferred.project_runtime.sessions.find(item=>item.id===registeredSession.id);
+      assert.ok(movedSession);assert.notEqual(movedSession.directory,session);
+      const receivedSession=await inspectDatasetSession(movedSession.directory);
+      assert.equal(receivedSession.sessionId,acquired.sessionId);assert.equal(receivedSession.status,'COMPLETE');
+      assert.equal(receivedSession.completedPages,acquired.completedPages);assert.equal(receivedSession.acquiredRows,rows.length);
+      assert.deepEqual(await readFile(await resolveDatasetSessionPath(movedSession.directory,receivedSession.pages[0].responsePath)),firstBytes);
+      const resumedSession=await runDatasetSession(movedSession.directory,{emitPageSummaries:false,
+        executePage:async()=>{throw new Error('The received completed acquisition already contains every original page.');}});
+      assert.equal(resumedSession.status,'COMPLETE');assert.equal(resumedSession.completedPages,acquired.completedPages);
+      const receivedAcquisitionDelivery=await receiveDirectusBuyer({directory:originalPublisher.directory,
+        sessionDirectory:movedSession.directory,destination:join(directory,'received-session-delivery'),includeSourceCaptures:true});
+      assert.equal(receivedAcquisitionDelivery.manifest.sha256,delivery.manifest.sha256);
+      assert.deepEqual(await readFile(join(receivedAcquisitionDelivery.directory,'dataset/dataset.jsonl'),'utf8'),text);
       receivedMerchant=await startDirectusMerchant({directory:originalPublisher.directory,
         stageDirectory:originalPublisher.stageDirectory,runtime:{port:0}});
       const changed=await selectRetainedEdition({file:join(directory,'received-selection-intent.json'),
@@ -257,6 +278,10 @@ export async function runDirectusCustomer({input,directory,token=process.env.DIR
       const reopenedVersions=await openDatasetVersions({directory:reopenedPublisher.versionDirectory,collectOnOpen:false});
       try{assert.equal(reopenedVersions.status().current,changed.selected.current);assert.equal(reopenedVersions.status().revision,changed.selected.revision);}
       finally{await reopenedVersions.close();}
+      const reopenedSession=received.state().project_runtime.sessions.find(item=>item.id===registeredSession.id);
+      assert.equal(reopenedSession.directory,movedSession.directory);
+      const reopenedAcquisition=await inspectDatasetSession(reopenedSession.directory);
+      assert.equal(reopenedAcquisition.status,'COMPLETE');assert.equal(reopenedAcquisition.completedPages,acquired.completedPages);
       await received.close();received=null;
 
       // The changed project is itself a complete new transfer with the original generation history.
@@ -266,9 +291,17 @@ export async function runDirectusCustomer({input,directory,token=process.env.DIR
       try{
         assert.equal(advancedVersions.status().current,initial.edition.snapshot);assert.equal(advancedVersions.status().revision,changed.selected.revision);
       }finally{await advancedVersions.close();}
+      const advancedSession=received.state().project_runtime.sessions.find(item=>item.id===registeredSession.id);
+      assert.ok(advancedSession);assert.notEqual(advancedSession.directory,movedSession.directory);
+      const advancedAcquisition=await inspectDatasetSession(advancedSession.directory);
+      assert.equal(advancedAcquisition.sessionId,acquired.sessionId);assert.equal(advancedAcquisition.status,'COMPLETE');
+      assert.equal(advancedAcquisition.completedPages,acquired.completedPages);
+      assert.deepEqual(await readFile(await resolveDatasetSessionPath(advancedSession.directory,advancedAcquisition.pages[0].responsePath)),firstBytes);
       await record('complete-editable-project-receiving',{workspace_id:originalState.id,revision:originalState.revision,
         native_events:originalState['native-events'].length,project_sha256:project.sha256,project_bytes:project.bytes,
         retained_artifacts:projectCounts,received_delivery_sha256:inspected.manifest.sha256,
+        acquired_session_id:registeredSession.id,acquired_pages:acquired.completedPages,
+        received_session_delivery_sha256:receivedAcquisitionDelivery.manifest.sha256,
         received_selected_snapshot:changed.selected.current,received_native_revision:changed.selected.revision,
         advanced_project_sha256:advancedProject.sha256,advanced_project_bytes:advancedProject.bytes});
     }finally{try{await receivedMerchant?.close();}finally{await received?.close();}}
