@@ -276,3 +276,8 @@ starforge stac-qgis native-open --workspace RECEIVER_WORKSPACE --project-id RETA
 
 Use the exact archive SHA from the export result. Receiving reconstructs the same source editions, analyst state, events, request results, saved maps and styles, together with the complete maintained plugin source and guides. A retry of the same archive in the same receiving directory reuses the original receiving identity. Opening the retained project at that destination verifies its own complete local closure and native layer bindings.
 
+
+
+## Accepted PostGIS database projects
+
+The same workspace now receives complete `postgis-receiving.json` exports through the native PostgreSQL provider. Use the **PostGIS receiving** tab for the actual local service/authentication reference, selected-role verification and complete accepted relation checks. Keep the existing layer/style/project/history and receiving controls. Read the complete PostGIS operator workflow for installation, successor review, editing, saved project recovery and complete receiving. It is `stac/postgis/qgis/OPERATIONS.md` in the source checkout and `postgis/OPERATIONS.md` beside this guide in the installed plugin.

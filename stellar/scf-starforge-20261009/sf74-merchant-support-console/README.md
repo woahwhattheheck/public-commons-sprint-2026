@@ -85,3 +85,9 @@ node --test stellar/scf-starforge-20261009/sf74-merchant-support-console/test/wo
 It exercises the actual local HTTP API and original source modules with explicitly illustrative HTTPS observations: baseline export, GET repair review, paired POST preflight binding, legacy uncertainty, escaped HTML, original renderers, missing approvals and prohibited path input. It makes no merchant request and is not evidence of a live seller repair.
 
 Existing `comparison.test.mjs`, `credentialed.test.mjs` and `post-preflight.test.mjs` cover the earlier native loopback diagnostic integrations. They are separate from this offline export check. Rendered browser click/download QA was not run in the delivery environment because its browser executable was unavailable.
+
+## Complete implementation sources and receiving
+
+The existing implementation screen now includes [Source delivery and receiving](SOURCE_BUNDLES.md). Prepare a native source edition from the saved case, stream its original attachments, review and attach the original workorder, and download exact retained members from any edition. The same case includes [service commitments and reports](SERVICE_OPERATIONS.md) and the [commercial quotation application](COMMERCIAL.md).
+
+Use the installed [complete case source package](CASE_SOURCE_PACKAGE.md) workflow to transfer the selected case, its captured immutable history and all referenced native source archives. Native source files stay outside the 64 MiB implementation record, including files that have never been linked to an implementation task. The receiver uses the existing Support Handoffs and SF49 native archive operations, then opens the full case in its original saved-case store.

@@ -1,4 +1,5 @@
 // MIT — Reports contain retained source material and the analyst's own work.
+import {eligibilityMarkdown,eligibilityHtml} from './eligibility-review.mjs';
 import {hasOriginalFiles,reportSourceRecord,originalFilesMarkdown,originalFilesHtml} from './source-file-reports.mjs';
 const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const md = value => String(value ?? '').replace(/[\\\x60*_{}\[\]<>#+!|]/g, '\\$&');
@@ -121,6 +122,7 @@ export function markdownReport(view) {
       (note.note ? '\n\n' + note.note : ''), '');
   }
   lines.push(...citationReviewMarkdown(view));
+  lines.push(...eligibilityMarkdown(view.eligibility));
   lines.push('## Editions and source usage', '',
     '| Edition | Provider | Storage | Status | Source observations |',
     '| --- | --- | --- | --- | --- |');
@@ -183,7 +185,7 @@ export function htmlReport(view) {
     ' · ' + escape(view.updatedAt) + '</p></header>' + questions + '<section><h2>Selected sources</h2>' +
     (sourceHtml || '<p>No retained sources selected for this report.</p>') + '</section>' +
     (notes ? '<section><h2>Notes attached to original edition references</h2>' + notes + '</section>' : '') +
-    citationReviewHtml(view) +
+    citationReviewHtml(view) + eligibilityHtml(view.eligibility) +
     '<section><h2>Editions and source usage</h2><div class="table"><table><thead><tr><th>Edition</th><th>Provider</th><th>Storage</th><th>Status</th><th>Source observations</th></tr></thead><tbody>' +
     editions + '</tbody></table></div></section><section><h2>Source terms and original operations</h2>' + origins +
     '</section><footer>' + escape(view.id) + ' · Revision ' + view.revision +

@@ -6,7 +6,7 @@ export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "grpc-workspaces", family: "grpcWorkspaces",
   title: "grpc workspaces merchant", order: 420, catalogOrder: 400,
   configKey: "grpcWorkspaces", summary: true, dependencies: [],
-  concurrentTools: Object.freeze(['merchant_grpc_cancel_call', 'merchant_grpc_stop', 'merchant_grpc_release_stop', 'merchant_grpc_release_close']), shutdown: 'provider',
+  concurrentTools: Object.freeze(['merchant_grpc_cancel_call', 'merchant_grpc_stop', 'merchant_grpc_release_stop', 'merchant_grpc_release_close', 'merchant_grpc_health_stop']), shutdown: 'provider',
   maxRequestBytes: 2097152,
   configuration: { input: "grpcWorkspaceConnection", privateExports: true,
     read: async (value, { base, config, hostPath }) => await (await import("../grpc-workspace.mjs")).readGrpcWorkspaceConfiguration(hostPath(value)) },

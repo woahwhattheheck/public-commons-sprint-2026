@@ -1,0 +1,47 @@
+{
+  "_illustration": "Generic documentation example only; replace with the actual installed export. This is not a KCF HTTP response contract.",
+  "configuration": {
+    "branch": "MAIN",
+    "currency": "USD"
+  },
+  "products": [
+    {
+      "inventory_id": "00017",
+      "unit": "EA",
+      "tax_category": "TAXABLE",
+      "warehouse": "MAIN",
+      "active": true,
+      "price": "2.50"
+    },
+    {
+      "inventory_id": "00018",
+      "unit": "EA",
+      "tax_category": "EXEMPT",
+      "warehouse": "MAIN",
+      "active": false,
+      "price": "4.25"
+    }
+  ],
+  "countries": [
+    {
+      "connector_country": "US",
+      "acumatica_country": "USA"
+    }
+  ],
+  "states": [
+    {
+      "connector_country": "US",
+      "acumatica_country": "USA",
+      "connector_state": "CA",
+      "acumatica_state": "CAL"
+    }
+  ],
+  "exactness": {
+    "missing_example": "The absent key is absent.",
+    "explicit_null": null,
+    "zero": 0,
+    "disabled": false,
+    "leading_zero_id": "00017",
+    "decimal_as_text": "1.20"
+  }
+}

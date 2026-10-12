@@ -87,13 +87,59 @@ export async function replace(path, value) {
   try { await rename(next, path); await syncDirectory(dirname(path)); }
   finally { await unlink(next).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
 }
+// A terminated publisher can leave its committed final name linked to its own
+// staging inode. Reconcile that publication only while the original owner holds
+// this directory's lease; private input reads keep their one-link requirement.
+export async function reconcileMssqlPublications(directory) {
+  await privateDirectory(directory);
+  const entries = await readdir(directory, {withFileTypes:true});
+  const snapshots = new Map();
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    const path = join(directory, entry.name), value = await lstat(path, {bigint:true});
+    if (value.isFile() && !value.isSymbolicLink() && !(value.mode & 0o077n) &&
+        (typeof process.getuid !== 'function' || value.uid === BigInt(process.getuid())))
+      snapshots.set(entry.name, value);
+  }
+  let recovered = 0;
+  const temporaryName = /^\.mssql-[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}\.next$/;
+  for (const [name, original] of snapshots) {
+    if (!temporaryName.test(name) || original.nlink !== 2n) continue;
+    const matches = [...snapshots].filter(([other, value]) => !temporaryName.test(other) &&
+      value.dev === original.dev && value.ino === original.ino && value.nlink === 2n);
+    if (matches.length !== 1) continue;
+    const stage = join(directory, name), final = join(directory, matches[0][0]);
+    const before = await lstat(stage, {bigint:true}), committed = await lstat(final, {bigint:true});
+    need(['dev','ino','size','mode','uid','nlink','mtimeNs','ctimeNs'].every(key =>
+      before[key] === original[key] && committed[key] === original[key]),
+      'MSSQL_OPERATOR_PUBLICATION_CHANGED', undefined, 409);
+    await unlink(stage);
+    const after = await lstat(final, {bigint:true});
+    need(after.isFile() && after.dev === original.dev && after.ino === original.ino &&
+      after.size === original.size && after.mtimeNs === original.mtimeNs && after.nlink === 1n,
+      'MSSQL_OPERATOR_PUBLICATION_CHANGED', undefined, 409);
+    recovered++;
+  }
+  if (recovered) await syncDirectory(directory);
+  for (const entry of entries) {
+    if (!entry.isDirectory() || entry.isSymbolicLink()) continue;
+    const path = join(directory, entry.name), value = await lstat(path);
+    if (!value.isDirectory() || value.isSymbolicLink() || (value.mode & 0o077) ||
+        (typeof process.getuid === 'function' && value.uid !== process.getuid())) continue;
+    recovered += await reconcileMssqlPublications(path);
+  }
+  return recovered;
+}
 export async function operatorLease(directory) {
-  try { return await acquireStateLease(directory); }
+  let lease;
+  try { lease = await acquireStateLease(directory); }
   catch (error) {
     throw failure(error.message === 'FLEET_STATE_ALREADY_OWNED' ? 'MSSQL_WORKSPACE_ALREADY_OWNED' : 'MSSQL_WORKSPACE_FLOCK_REQUIRED',
       error.message === 'FLEET_STATE_ALREADY_OWNED' ? 'Use the existing SQL Server workspace listener.' :
         'The original SQL Server authoring owner requires Linux with util-linux flock.', 503);
   }
+  try { lease.assertHeld(); await reconcileMssqlPublications(directory); return lease; }
+  catch (error) { await lease.close(); throw error; }
 }
 export async function readMssqlOperatorIdentity(stateDirectory) {
   const root = await privateDirectory(absolute(stateDirectory));

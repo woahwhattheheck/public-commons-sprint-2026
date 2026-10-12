@@ -24,6 +24,7 @@ OPERATION = "SCF-DURABLE-PAID-JOBS-0B8D-20261011"
 MAXIMUM = 256 * 1024 * 1024
 HASH = re.compile(r"[a-f0-9]{64}")
 JOBS = ("report:2026.10", "recovery:2026.10")
+PLACEMENT_SCHEMA = "stellar-forge.paid-job-native-placement.v1"
 
 
 def require(value, message):
@@ -141,15 +142,26 @@ def core_result(raw, retained):
 def state_binding(files, application, retained):
     source = json.loads(files["merchant-state/source.json"])["source"]
     config = json.loads(files["merchant.json"])
+    marker_bytes = files.get("merchant-state/source-binding.json")
+    marker = json.loads(marker_bytes) if marker_bytes is not None else None
+    if marker is not None:
+        require(marker.get("schema") == "stellar-forge.job-source-binding.v1" and
+                marker.get("source") == source and
+                marker.get("directory") == str(retained / "merchant-state") and
+                marker.get("configPath") == str(retained / "merchant.json") and
+                marker.get("applicationPath") == application["path"],
+                "COMPLETED_CORE_PHYSICAL_SOURCE_BINDING_CHANGED")
     require(source.get("configSha256") == digest(files["merchant.json"]) and
             files["merchant-state/config-source.json"] == files["merchant.json"] and
-            source.get("application") == application["path"] and
+            (source.get("application") == application["path"] or marker is not None) and
             source.get("applicationSha256") == application["sha256"] and
             digest(files["merchant-state/application-source.mjs"]) == application["sha256"] and
             source.get("publicOrigin") == config.get("publicOrigin"),
             "COMPLETED_CORE_SOURCE_CHANGED")
     lexical = os.path.normpath(os.path.join(str(retained), config["application"]))
-    require(lexical == application["entryPath"], "ORIGINAL_APPLICATION_ENTRY_CHANGED")
+    require((marker is None and lexical == application["entryPath"]) or
+            (marker is not None and application["entryPath"] == marker["applicationPath"]),
+            "ORIGINAL_APPLICATION_ENTRY_CHANGED")
     jobs = []
     for job_id in JOBS:
         row = json.loads(files["merchant-state/records/" + job_id + ".json"])
@@ -165,7 +177,8 @@ def state_binding(files, application, retained):
         jobs.append({"jobId": job_id, "state": row["state"], "revision": row["revision"],
                      "inputSha256": row["inputSha256"], "resultSha256": result["sha256"],
                      "resultBytes": result["bytes"], "nativeSettlementId": row["settlement"]["id"]})
-    return {"source": source, "jobs": jobs}
+    return {"source": source, "jobs": jobs,
+            **({"sourceBindingSha256": digest(marker_bytes)} if marker_bytes is not None else {})}
 
 
 def capture_completed_core(*, retained, result_path, result_sha256, output, native_record):
@@ -175,7 +188,8 @@ def capture_completed_core(*, retained, result_path, result_sha256, output, nati
     require(HASH.fullmatch(result_sha256), "EXACT_ORIGINAL_CORE_RESULT_HASH_REQUIRED")
     raw_result = regular(result_path, 1048576)
     require(digest(raw_result) == result_sha256, "COMPLETED_CORE_RESULT_HASH_CHANGED")
-    core_result(raw_result, retained)
+    original_core_directory = canonical_path(json.loads(raw_result)["retainedWorkDirectory"])
+    core_result(raw_result, original_core_directory)
     output = Path(output)
     require(output.is_absolute() and output.parent.resolve() == output.parent and
             not output.is_relative_to(retained), "CAPSULE_OUTPUT_OUTSIDE_RETAINED_STATE_REQUIRED")
@@ -184,7 +198,12 @@ def capture_completed_core(*, retained, result_path, result_sha256, output, nati
     try:
         fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
         config = json.loads(regular(retained / "merchant.json", 1048576))
-        entry_path = Path(os.path.normpath(os.path.join(str(retained), config["application"])))
+        source_marker = retained / "merchant-state/source-binding.json"
+        marker = json.loads(regular(source_marker, 65536)) if source_marker.exists() else None
+        if original_core_directory != retained:
+            require(marker is not None, "ORIGINAL_CORE_RELOCATION_BINDING_REQUIRED")
+        entry_path = (Path(marker["applicationPath"]) if marker is not None else
+                      Path(os.path.normpath(os.path.join(str(retained), config["application"]))))
         application_path = entry_path.resolve(strict=True)
         application_bytes = regular(application_path, 4194304)
         application = {"path": str(application_path), "entryPath": str(entry_path),
@@ -212,7 +231,9 @@ def capture_completed_core(*, retained, result_path, result_sha256, output, nati
         manifest = {"schema": SCHEMA, "operation": OPERATION, "retainedDirectory": str(retained),
                     "application": application, "links": links, **binding,
                     "coreResult": {"sourcePath": str(result_path), "nativeRecordDirectory": str(native_record),
-                                   "bytes": len(raw_result), "sha256": result_sha256},
+                                   "bytes": len(raw_result), "sha256": result_sha256,
+                                   **({"retainedDirectory": str(original_core_directory)}
+                                      if original_core_directory != retained else {})},
                     "files": [descriptor(name, value) for name, value in files.items()]}
         entries = {"retained/" + name: value for name, value in files.items()}
         entries["core/native-result.json"] = raw_result
@@ -248,7 +269,9 @@ def read_completed_capsule(path, expected):
                 "capsule.json" in names, "COMPLETED_CAPSULE_MEMBERS_INVALID")
         require(archive.getmember("capsule.json").size <= 4 * 1024 * 1024,
                 "COMPLETED_CAPSULE_MANIFEST_LIMIT")
-        manifest = json.load(archive.extractfile("capsule.json"))
+        manifest_bytes = archive.extractfile("capsule.json").read(4 * 1024 * 1024 + 1)
+        require(len(manifest_bytes) <= 4 * 1024 * 1024, "COMPLETED_CAPSULE_MANIFEST_LIMIT")
+        manifest = json.loads(manifest_bytes)
         require(manifest.get("schema") == SCHEMA and manifest.get("operation") == OPERATION,
                 "COMPLETED_CAPSULE_IDENTITY_CHANGED")
         retained = canonical_path(manifest["retainedDirectory"])
@@ -295,9 +318,12 @@ def read_completed_capsule(path, expected):
         require(digest(application_bytes) == application["sha256"] and
                 digest(raw_result) == manifest["coreResult"]["sha256"], "COMPLETED_CORE_SOURCE_HASH_CHANGED")
         require(total + len(application_bytes) + len(raw_result) <= MAXIMUM, "COMPLETED_CAPSULE_SIZE_LIMIT")
-        core_result(raw_result, retained)
+        original_core_directory = canonical_path(manifest["coreResult"].get("retainedDirectory", str(retained)))
+        core_result(raw_result, original_core_directory)
         binding = state_binding(files, application, retained)
-        require(binding["source"] == manifest["source"] and binding["jobs"] == manifest["jobs"],
+        require((original_core_directory == retained or "sourceBindingSha256" in binding) and
+                binding["source"] == manifest["source"] and binding["jobs"] == manifest["jobs"] and
+                binding.get("sourceBindingSha256") == manifest.get("sourceBindingSha256"),
                 "COMPLETED_CORE_STATE_BINDING_CHANGED")
         canonical_path(manifest["coreResult"]["sourcePath"])
         canonical_path(manifest["coreResult"]["nativeRecordDirectory"])
@@ -306,11 +332,14 @@ def read_completed_capsule(path, expected):
             require(files.get(relative) == application_bytes, "ORIGINAL_INTERNAL_APPLICATION_CHANGED")
         elif entry_path != Path(application["path"]):
             require(len(links) == 1, "ORIGINAL_EXTERNAL_APPLICATION_LINK_REQUIRED")
-        return {"manifest": manifest, "files": files, "applicationBytes": application_bytes,
+        return {"manifest": manifest, "manifestSha256": digest(manifest_bytes),
+                "files": files, "applicationBytes": application_bytes,
                 "coreResultBytes": raw_result, "archiveSha256": expected}
 
 
-def restore_completed_capsule(capsule, workspace):
+def restore_completed_capsule(capsule, workspace, *, retained_directory=None):
+    if retained_directory is not None and canonical_path(retained_directory) != Path(capsule["manifest"]["retainedDirectory"]):
+        return restore_completed_placement(capsule, workspace, retained_directory)
     manifest = capsule["manifest"]
     retained = canonical_path(manifest["retainedDirectory"])
     workspace = private_directory(workspace)
@@ -346,6 +375,93 @@ def restore_completed_capsule(capsule, workspace):
     require(actual == expected, "EXISTING_COMPLETED_RETAINED_DIRECTORY_DIFFERS")
     immutable(binding_path, encoded(binding))
     return manifest
+
+
+
+def restore_completed_placement(capsule, workspace, retained_directory):
+    """Receive exact completed bytes at a selected physical root.
+
+    Publication uses the original Node source-binding adapter after this copy.
+    Historical configuration, jobs, capabilities and settlement bytes are never
+    rewritten to contain the destination path.
+    """
+    manifest = capsule["manifest"]
+    original = canonical_path(manifest["retainedDirectory"])
+    retained = canonical_path(retained_directory)
+    workspace = private_directory(workspace)
+    require(retained != workspace and retained.is_relative_to(workspace) and
+            retained.name == original.name and retained != original and
+            not retained.is_relative_to(original) and not original.is_relative_to(retained),
+            "COMPLETED_PLACEMENT_ROOTS_REQUIRED")
+    config_path = retained / "merchant.json"
+    source_entry = Path(manifest["application"]["entryPath"])
+    # Native configuration can retain an absolute old path. Its original source
+    # adapter selects the copied executable explicitly without editing those bytes.
+    application_relative = (source_entry.relative_to(original).as_posix()
+                            if source_entry.is_relative_to(original) else "native-application.mjs")
+    require(application_relative not in ("merchant.json", "merchant-state/source.json") and
+            not application_relative.startswith("merchant-state/"),
+            "COMPLETED_PLACEMENT_APPLICATION_COLLISION")
+    values = dict(capsule["files"])
+    if application_relative in values:
+        require(values[application_relative] == capsule["applicationBytes"],
+                "COMPLETED_PLACEMENT_APPLICATION_CHANGED")
+    values[application_relative] = capsule["applicationBytes"]
+    # The original carrier permits only its application alias. Receive those
+    # exact source bytes as a real file; new merchant execution has no alias.
+    for link in manifest["links"]:
+        require(link["path"] == application_relative,
+                "COMPLETED_PLACEMENT_APPLICATION_ALIAS_CHANGED")
+    profile = {
+        "schema": PLACEMENT_SCHEMA, "operation": OPERATION,
+        "archiveSha256": capsule["archiveSha256"],
+        "bundleManifestSha256": capsule["manifestSha256"],
+        "originalRetainedDirectory": str(original),
+        "originalCoreDirectory": manifest["coreResult"].get("retainedDirectory", str(original)),
+        "retainedDirectory": str(retained),
+        "directory": str(retained / "merchant-state"),
+        "configPath": str(config_path),
+        "applicationPath": str(retained / application_relative),
+        "source": manifest["source"], "jobs": manifest["jobs"],
+        "files": [descriptor(name, value) for name, value in sorted(values.items())],
+    }
+    binding = {"archiveSha256": capsule["archiveSha256"], "manifest": manifest,
+               "placement": profile}
+    profile_path = workspace / "input-placement.json"
+    binding_path = workspace / "input-capsule.json"
+    guard = os.open(workspace / "input-placement.lock", os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    try:
+        fcntl.flock(guard, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        if binding_path.exists():
+            require(json.loads(regular(binding_path)) == binding and
+                    json.loads(regular(profile_path)) == profile,
+                    "ORIGINAL_COMPLETED_PLACEMENT_CHANGED")
+            # A completed receive may already have advanced the original
+            # customer and job state. Reopen it; do not restore older rows.
+            require(retained.is_dir() and
+                    regular(config_path, 1048576) == capsule["files"]["merchant.json"] and
+                    regular(Path(profile["applicationPath"]), 4194304) == capsule["applicationBytes"],
+                    "ORIGINAL_COMPLETED_PLACEMENT_SOURCE_CHANGED")
+            return {**manifest, "placement": profile}
+        if profile_path.exists():
+            require(json.loads(regular(profile_path)) == profile,
+                    "ORIGINAL_COMPLETED_PLACEMENT_CHANGED")
+        else:
+            require(not retained.exists() and not retained.is_symlink(),
+                    "PRESERVE_EXISTING_PLACEMENT_DIRECTORY")
+            immutable(profile_path, encoded(profile))
+        private_directory(retained)
+        for relative, value in values.items():
+            immutable(retained / relative, value)
+        actual = {path.relative_to(retained).as_posix() for path in retained.rglob("*")
+                  if path.is_file() or path.is_symlink()}
+        require(actual == set(values) and
+                all(not (retained / name).is_symlink() for name in actual),
+                "EXISTING_COMPLETED_PLACEMENT_DIFFERS")
+        immutable(binding_path, encoded(binding))
+        return {**manifest, "placement": profile}
+    finally:
+        os.close(guard)
 
 
 def main():

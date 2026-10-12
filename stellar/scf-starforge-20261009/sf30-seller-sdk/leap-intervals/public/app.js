@@ -4,7 +4,7 @@ const pretty=value=>JSON.stringify(value,null,2);
 const own=(object,key)=>Object.prototype.hasOwnProperty.call(object??{},key);
 const SHA=/^[0-9a-f]{64}$/;
 const names={overview:'Overview',sources:'Source files',mappings:'Device mappings',batches:'Batch review',jobs:'Upload jobs',missing:'Missing intervals',delivery:'Export & receiving'};
-const headings={overview:'Make each interval accountable.',sources:'Keep the complete original.',mappings:'Connect source and device identity.',batches:'Review the exact load.',jobs:'Follow the original upload.',missing:'Resolve the missing intervals.',delivery:'Hand over a complete record.'};
+const headings={overview:'Interval operations',sources:'Source files',mappings:'Device mappings',batches:'Batch review',jobs:'Upload jobs',missing:'Missing intervals',delivery:'Export and receiving'};
 const collections=['imports','mappings','batches','missing_snapshots','api_receipts','meters','original_files'];
 const model={state:null,token:decodeURIComponent(location.hash.slice(1)),section:'overview',providerKind:'api_receipts',pending:null,pendingFile:null,pendingObserved:null,busy:false,selection:{},pages:Object.fromEntries(collections.map(k=>[k,{offset:0,limit:25}])),batchRecords:{kind:'rows',offset:0,limit:50},missingRecords:{offset:0,limit:50},lastOperation:null,requestEpoch:0,renderEpoch:0,inspectEpoch:{}};
 const templates={

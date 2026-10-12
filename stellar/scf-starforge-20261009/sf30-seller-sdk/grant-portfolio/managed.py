@@ -1,6 +1,7 @@
 """MIT. Bind the original portfolio source, Python and saved workspace for Applications."""
 from __future__ import annotations
 import datetime as dt
+import fcntl
 import hashlib
 import json
 import os
@@ -8,6 +9,7 @@ from pathlib import Path, PurePosixPath
 import re
 import stat
 import sys
+from urllib.parse import urlsplit
 
 SCHEMA = "stellar-forge.grant-portfolio-managed-binding.v1"
 STARTUP = "stellar-forge.grant-portfolio-workspace-launch.v1"
@@ -147,6 +149,88 @@ def require_binding(directory, expected=None):
             not re.fullmatch(r"[0-9a-f]{64}", expected) or expected != value["sha256"]):
         raise BindingError("The selected workspace, Python or original source changed; review this application again")
     return value
+
+
+
+def connection_record(filename, binding):
+    """Inspect an owned original launch without removing it or exposing its token."""
+    selected = Path(filename).expanduser().absolute()
+    if selected.parent.resolve(strict=True) != selected.parent:
+        raise BindingError("Use the original private connection directory")
+    parent = selected.parent.stat()
+    if not stat.S_ISDIR(parent.st_mode) or parent.st_uid != os.getuid() or parent.st_mode & 0o077:
+        raise BindingError("Keep the original connection in a private operator-owned directory")
+    try:
+        data, info = _read(selected, private=True, limit=32768)
+    except FileNotFoundError:
+        return {"exists": False, "path": str(selected)}
+    try:
+        value = json.loads(data)
+    except (ValueError, UnicodeError) as error:
+        raise BindingError("The retained connection is not an original complete launch") from error
+    keys = {"schema", "status", "workspace", "workspaceId", "bindingSha256", "sourceRoot",
+            "python", "pid", "console", "connectionFile"}
+    if not isinstance(value, dict) or set(value) != keys or value["schema"] != STARTUP or (
+            value["status"] != "GRANT_PORTFOLIO_WORKSPACE_READY"
+            or value["workspace"] != binding["workspace"]
+            or value["workspaceId"] != binding["workspaceId"]
+            or value["connectionFile"] != str(selected)
+            or not isinstance(value["bindingSha256"], str)
+            or not re.fullmatch(r"[0-9a-f]{64}", value["bindingSha256"])
+            or not isinstance(value["sourceRoot"], str)
+            or not Path(value["sourceRoot"]).is_absolute()
+            or not isinstance(value["python"], dict)
+            or not isinstance(value["pid"], int) or isinstance(value["pid"], bool) or value["pid"] <= 0
+            or not isinstance(value["console"], str) or info.st_nlink != 1):
+        raise BindingError("The existing connection belongs to a different original workspace or launch")
+    try:
+        url = urlsplit(value["console"])
+        valid = (url.scheme == "http" and url.hostname == "127.0.0.1" and
+                 isinstance(url.port, int) and 1 <= url.port <= 65535 and
+                 not url.username and not url.password and url.path == "/" and not url.query and
+                 re.fullmatch(r"[A-Za-z0-9_-]{43}", url.fragment))
+    except ValueError:
+        valid = False
+    if not valid:
+        raise BindingError("The retained original console link is invalid")
+    # A stopped launch may belong to the previous reviewed source release. The
+    # unchanged native workspace path and UUID, private file and kernel lease
+    # determine custody; its old binding stays visible in the returned record.
+    return {"exists": True, "path": str(selected), "bytes": len(data), "sha256": digest(data),
+            "device": str(info.st_dev), "inode": str(info.st_ino),
+            "workspace": binding["workspace"], "workspaceId": binding["workspaceId"],
+            "originalBindingSha256": value["bindingSha256"]}
+
+
+def inspect_connection(directory, filename):
+    """Read the actual original writer lease; PID reuse never selects an owner."""
+    binding = require_binding(directory)
+    record = connection_record(filename, binding)
+    lock = Path(binding["workspace"]) / ".workspace.lock"
+    info = _regular(lock, private=True)
+    descriptor = os.open(lock, os.O_RDWR | getattr(os, "O_NOFOLLOW", 0))
+    try:
+        opened = os.fstat(descriptor)
+        if (opened.st_dev, opened.st_ino) != (info.st_dev, info.st_ino):
+            raise BindingError("The original workspace writer lease changed")
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            active = True
+        else:
+            active = False
+            fcntl.flock(descriptor, fcntl.LOCK_UN)
+        attached = lock.lstat()
+        if (attached.st_dev, attached.st_ino) != (info.st_dev, info.st_ino):
+            raise BindingError("The original workspace writer lease changed during inspection")
+    finally:
+        os.close(descriptor)
+    after = connection_record(filename, binding)
+    if after != record:
+        raise BindingError("The original connection changed during writer inspection")
+    return {"schema": "stellar-forge.grant-portfolio-connection-state.v1",
+            "workspace": binding["workspace"], "workspaceId": binding["workspaceId"],
+            "bindingSha256": binding["sha256"], "writerActive": active, **record}
 
 
 def startup(server, binding, connection_file=None):

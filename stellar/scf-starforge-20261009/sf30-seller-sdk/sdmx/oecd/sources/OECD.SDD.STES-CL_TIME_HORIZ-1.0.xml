@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--NSI Web Service v10.11.8.0-->
+<message:Structure xmlns:message="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message" xmlns:structure="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/structure" xmlns:common="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/common">
+  <message:Header>
+    <message:ID>IDREF10241</message:ID>
+    <message:Test>false</message:Test>
+    <message:Prepared>2026-10-12T13:47:46.965181+02:00</message:Prepared>
+    <message:Sender id="Unknown" />
+    <message:Receiver id="Unknown" />
+  </message:Header>
+  <message:Structures>
+    <structure:Codelists>
+      <structure:Codelist id="CL_TIME_HORIZ" agencyID="OECD.SDD.STES" version="1.0" isFinal="true">
+        <common:Name xml:lang="en">Time horizon</common:Name>
+        <structure:Code id="FT">
+          <common:Name xml:lang="en">Future tendency</common:Name>
+          <common:Name xml:lang="fr">Tendance future</common:Name>
+        </structure:Code>
+        <structure:Code id="T">
+          <common:Name xml:lang="en">Tendency</common:Name>
+          <common:Name xml:lang="fr">Tendance</common:Name>
+        </structure:Code>
+        <structure:Code id="C">
+          <common:Name xml:lang="en">Current</common:Name>
+          <common:Name xml:lang="fr">Actuel</common:Name>
+        </structure:Code>
+        <structure:Code id="_Z">
+          <common:Name xml:lang="en">Not applicable</common:Name>
+          <common:Name xml:lang="fr">Non applicable</common:Name>
+        </structure:Code>
+      </structure:Codelist>
+    </structure:Codelists>
+  </message:Structures>
+</message:Structure>

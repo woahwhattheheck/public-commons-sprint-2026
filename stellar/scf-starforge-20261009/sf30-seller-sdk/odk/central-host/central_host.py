@@ -27,6 +27,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 
 SCHEMA = "stellar-forge.odk-central-host.v1"
 SOURCE = {
@@ -48,7 +49,7 @@ NAME = re.compile(r"^[a-z][a-z0-9_-]{1,47}$")
 KNOWN_CONFIG = {"schema", "operation_id", "directory", "checkout", "compose_project",
                 "mode", "domain", "url", "http_port", "https_port", "bind_address",
                 "sysadmin_email", "auth_env", "admin", "tls", "environment",
-                "secret_environment", "backup_passphrase_env", "connection_name"}
+                "secret_environment", "backup_passphrase_env", "connection_name", "restore_settings"}
 
 def now():
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
@@ -208,6 +209,9 @@ def validate_config(raw):
             raise ValueError("Select existing absolute fullchain and private_key paths.")
     elif tls and (c["mode"] != "upstream" or set(tls) != {"ca"} or not Path(tls["ca"]).is_absolute()):
         raise ValueError("Only a private upstream-proxy CA may be selected here.")
+    c.setdefault("restore_settings", "preserve")
+    if c["restore_settings"] not in ("preserve", "reconfigure"):
+        raise ValueError("restore_settings must explicitly preserve or reconfigure native runtime settings.")
     c.setdefault("tls", {})
     c.setdefault("connection_name", "Central " + c["compose_project"])
     return c
@@ -407,18 +411,67 @@ class Host:
                            "files": {p.name: file_identity(p) for p in folder.iterdir() if p.is_file()}}, exact=True)
         return folder
 
+    @staticmethod
+    def base_runtime_values(config):
+        return {"DOMAIN": config["domain"], "SYSADMIN_EMAIL": config["sysadmin_email"],
+                "SSL_TYPE": "customssl" if config["mode"] == "local" else config["mode"],
+                "HTTP_PORT": str(config["http_port"]), "HTTPS_PORT": str(config["https_port"]),
+                "FRONTEND_BUILD_MODE": "fetch",
+                **{key: str(value) for key, value in config["environment"].items()}}
+
+    @staticmethod
+    def encode_runtime_values(values):
+        # This is the wrapper's own complete literal format, not a general dotenv parser.
+        return "".join(key + "=" + json.dumps(str(value).replace("$", "$$"), ensure_ascii=False) + "\n"
+                       for key, value in sorted(values.items())).encode()
+
     def runtime_env(self):
-        c = self.c
-        values = {"DOMAIN": c["domain"], "SYSADMIN_EMAIL": c["sysadmin_email"],
-                  "SSL_TYPE": "customssl" if c["mode"] == "local" else c["mode"],
-                  "HTTP_PORT": str(c["http_port"]), "HTTPS_PORT": str(c["https_port"]),
-                  "FRONTEND_BUILD_MODE": "fetch"}
-        values.update({k: str(v) for k, v in c["environment"].items()})
-        values.update({k: secret(ref) for k, ref in c["secret_environment"].items()})
-        # Compose double quotes use JSON-compatible escapes; $$ retains a literal dollar.
-        def quote(value):
-            return json.dumps(value.replace("$", "$$"), ensure_ascii=False)
-        return "".join(k + "=" + quote(v) + "\n" for k, v in sorted(values.items())).encode()
+        values = self.base_runtime_values(self.c)
+        values.update({key: secret(ref) for key, ref in self.c["secret_environment"].items()})
+        return self.encode_runtime_values(values)
+
+    def restore_configuration(self, folder, origin):
+        if self.c["restore_settings"] == "reconfigure":
+            return
+        # An explicit new origin/port/TLS selection is independent of the retained
+        # native application settings and private mail credentials.
+        if self.c["environment"] != origin["environment"] or self.c["secret_environment"] != origin["secret_environment"]:
+            raise ValueError("Preserve original environment selections or explicitly choose restore_settings=reconfigure.")
+        raw = (folder / "runtime.env").read_bytes()
+        values = {}
+        for line in raw.decode("utf-8").splitlines():
+            key, sep, encoded = line.partition("=")
+            if not sep or not ENV_NAME.fullmatch(key) or key in values:
+                raise ValueError("The retained native environment is not the original literal file.")
+            value = json.loads(encoded)
+            if not isinstance(value, str):
+                raise ValueError("The retained native environment has a non-string value.")
+            values[key] = value.replace("$$", "$")
+        source_public = self.base_runtime_values(origin)
+        if set(values) != set(source_public) | set(origin["secret_environment"]):
+            raise ValueError("The original runtime environment field roster changed.")
+        if any(values[key] != value for key, value in source_public.items()) or self.encode_runtime_values(values) != raw:
+            raise ValueError("The retained native runtime settings differ from their original source selection.")
+        values.update(self.base_runtime_values(self.c))
+        atomic_bytes(self.root / "runtime.env", self.encode_runtime_values(values), exact=True)
+        restored_tls = {}
+        same_tls = self.c["mode"] == origin["mode"] and self.c["domain"] == origin["domain"]
+        if same_tls and (self.c["mode"] in ("local", "customssl") or (self.c["mode"] == "upstream" and self.c["tls"].get("ca"))):
+            for entry in load_json(folder / "snapshot.json")["files"]:
+                name = entry["filename"]
+                if not name.startswith(("tls-", "pki-")):
+                    continue
+                prefix, basename = name.split("-", 1)
+                target = private_dir(self.root / prefix) / basename
+                atomic_bytes(target, (folder / name).read_bytes(), exact=True)
+                restored_tls[prefix + "/" + basename] = file_identity(target)
+            required_tls = ("tls/ca.pem",) if self.c["mode"] == "upstream" else ("tls/fullchain.pem", "tls/privkey.pem")
+            if not all(key in restored_tls for key in required_tls):
+                raise ValueError("The same-origin snapshot lacks the original TLS identity.")
+        self.save(runtime_env_file=file_identity(self.root / "runtime.env"),
+                  restored_tls_files=restored_tls,
+                  restored_configuration={"snapshot": file_identity(folder / "snapshot.json"),
+                                          "settings": "preserve", "same_tls_identity": same_tls})
 
     def override(self, images=None):
         c = self.c
@@ -460,6 +513,23 @@ class Host:
             lines = result
         return ("\n".join(lines) + "\n").encode()
 
+    def sync_override(self, images=None):
+        path = self.root / "host.override.yml"
+        wanted = self.override(images)
+        if path.exists() and path.read_bytes() != wanted:
+            # Reconcile only a complete known preimage/postimage of this same
+            # source-owned transition, including a killed journal/rename boundary.
+            known = [self.override()]
+            for selected in (self.s.get("override_images"), self.s.get("images"), self.s.get("restored_images")):
+                if selected:
+                    known.append(self.override(selected))
+            if path.read_bytes() not in known:
+                raise ValueError("Preserve the changed original Compose override for inspection.")
+            atomic_bytes(path, wanted)
+        else:
+            atomic_bytes(path, wanted, exact=True)
+        self.save(override_images=images, override_file=file_identity(path))
+
     def prepare(self):
         runtime = self.versions()
         source = self.acquire_source()
@@ -467,9 +537,22 @@ class Host:
             self.local_tls()
         elif self.c["mode"] == "customssl":
             private_dir(self.root / "tls")
-            for source_key, output in (("fullchain", "fullchain.pem"), ("private_key", "privkey.pem")):
-                atomic_bytes(self.root / "tls" / output, Path(self.c["tls"][source_key]).read_bytes(), exact=True)
-            if self.c["tls"].get("ca"):
+            if self.s.get("restored_tls_files"):
+                for name, expected in self.s["restored_tls_files"].items():
+                    if file_identity(self.root / name) != expected:
+                        raise ValueError("The retained restore TLS identity changed.")
+            else:
+                for source_key, output in (("fullchain", "fullchain.pem"), ("private_key", "privkey.pem")):
+                    atomic_bytes(self.root / "tls" / output, Path(self.c["tls"][source_key]).read_bytes(), exact=True)
+                if self.c["tls"].get("ca"):
+                    atomic_bytes(self.root / "tls" / "ca.pem", Path(self.c["tls"]["ca"]).read_bytes(), exact=True)
+        elif self.c["mode"] == "upstream" and self.c["tls"].get("ca"):
+            private_dir(self.root / "tls")
+            if self.s.get("restored_tls_files"):
+                for name, expected in self.s["restored_tls_files"].items():
+                    if file_identity(self.root / name) != expected:
+                        raise ValueError("The restored original proxy CA changed.")
+            else:
                 atomic_bytes(self.root / "tls" / "ca.pem", Path(self.c["tls"]["ca"]).read_bytes(), exact=True)
         env_path = self.root / "runtime.env"
         if self.s.get("runtime_env_file"):
@@ -478,7 +561,7 @@ class Host:
         else:
             atomic_bytes(env_path, self.runtime_env(), exact=True)
             self.save(runtime_env_file=file_identity(env_path))
-        atomic_bytes(self.root / "host.override.yml", self.override(self.s.get("restored_images")), exact=True)
+        self.sync_override(self.s.get("restored_images") or self.s.get("images"))
         atomic_json(self.root / "selection.json", self.c, exact=True)
         # Expanded config is private command output; only service/volume names enter the handover.
         config = json.loads(self.compose("config", "--format", "json"))
@@ -527,6 +610,7 @@ class Host:
         self.compose("create", "--no-build")
         images = self.image_selection()
         self.save(phase="IMAGES_READY", images=images)
+        self.sync_override(images)
         return {"images": images, "reused": False}
 
     def ssl_context(self):
@@ -549,12 +633,14 @@ class Host:
             return "Basic " + base64.b64encode((admin["email"] + ":" + secret(admin["password_env"])).encode()).decode()
         raise ValueError("Set the original Central authorization environment reference.")
 
-    def http(self, path, *, auth=False, body=None, target=None, timeout=120):
+    def http(self, path, *, auth=False, extended=False, body=None, target=None, timeout=120):
         origin = self.c["url"]
         url = urllib.parse.urljoin(origin, path)
         if urllib.parse.urlsplit(url).netloc != urllib.parse.urlsplit(origin).netloc:
             raise ValueError("The request left the selected Central origin.")
         headers = {"Accept": "application/json"}
+        if extended:
+            headers["X-Extended-Metadata"] = "true"
         if auth:
             headers["Authorization"] = self.auth_value()
         data = None if body is None else canonical(body)
@@ -589,41 +675,91 @@ class Host:
                 raise ValueError("The original response ended before its full Content-Length.")
             return content, {**receipt, "bytes": count, "sha256": h.hexdigest()}
 
+    def verify_container_images(self, containers):
+        expected = self.s.get("restored_images") or self.s.get("images")
+        if not expected:
+            return
+        if set(item["service"] for item in containers) != set(SERVICE_KEYS):
+            raise RuntimeError("The original native service container roster changed.")
+        details = json.loads(self.run(["docker", "inspect", *[item["id"] for item in containers]]))
+        actual = {item["Id"]: item["Image"] for item in details}
+        for container in containers:
+            matches = [image for key, image in actual.items() if key.startswith(container["id"])]
+            if matches != [expected[container["service"]]]:
+                raise RuntimeError("A selected native container uses a different original image: " + container["service"])
+
     def check(self, authenticated=False):
         data, version_receipt = self.http("version.txt")
         text = data.decode("utf-8")
         if SOURCE["commit"] not in text or SOURCE["backend_commit"] not in text:
             raise RuntimeError("The running Central version does not match the selected source.")
+        # This original anonymous endpoint actually reads Configs from PostgreSQL.
+        raw, backend_receipt = self.http("v1/config/public")
+        if not isinstance(json.loads(raw), dict):
+            raise RuntimeError("The selected original Central backend returned invalid public configuration.")
+        containers = self.containers()
+        self.verify_container_images(containers)
         record = {"url": self.c["url"], "version": text, "version_receipt": version_receipt,
-                  "containers": self.containers(), "checked_at": now()}
+                  "backend_receipt": backend_receipt, "containers": containers, "checked_at": now()}
         if authenticated:
-            raw, receipt = self.http("v1/users/current", auth=True)
+            raw, receipt = self.http("v1/users/current", auth=True, extended=True)
             user = json.loads(raw)
             raw, project_receipt = self.http("v1/projects", auth=True)
             projects = json.loads(raw)
             if not isinstance(projects, list):
                 raise ValueError("Central returned an invalid original project collection.")
-            record.update(user={"id": user.get("id"), "email": user.get("email")},
+            record.update(user={"id": user.get("id"), "email": user.get("email"), "verbs": user.get("verbs", [])},
                           user_receipt=receipt, project_receipt=project_receipt,
                           project_count=len(projects), project_ids=[x["id"] for x in projects])
         return record
+
+    def wait_ready(self, authenticated=False, seconds=600):
+        deadline = time.monotonic() + seconds
+        last_error = None
+        while time.monotonic() < deadline:
+            delay = 2.0
+            try:
+                return self.check(authenticated=authenticated)
+            except urllib.error.HTTPError as exc:
+                # Wrong credentials/route/version are material; transient gateway
+                # and unavailable-backend responses are normal startup boundaries.
+                if exc.code not in (408, 425, 429, 500, 502, 503, 504):
+                    raise
+                last_error = "HTTP " + str(exc.code)
+                retry = exc.headers.get("Retry-After") if exc.headers else None
+                if retry:
+                    try:
+                        delay = max(delay, float(retry))
+                    except ValueError:
+                        try:
+                            until = parsedate_to_datetime(retry)
+                            if until.tzinfo is None:
+                                until = until.replace(tzinfo=timezone.utc)
+                            delay = max(delay, (until - datetime.now(timezone.utc)).total_seconds())
+                        except (TypeError, ValueError, OverflowError):
+                            pass
+                    last_error += " Retry-After=" + retry
+                exc.close()
+            except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
+                last_error = type(exc).__name__
+            remaining = deadline - time.monotonic()
+            if delay > remaining:
+                raise TimeoutError("The selected Central readiness response requires a later continuation: " + str(last_error))
+            # Preserve the native cooldown while leaving ordinary process signals responsive.
+            resume_at = time.monotonic() + delay
+            while time.monotonic() < resume_at:
+                time.sleep(max(0.0, min(60.0, resume_at - time.monotonic())))
+        raise TimeoutError("Central did not return its original backend and selected identity within ten minutes: " + str(last_error))
 
     def start(self):
         self.prepare()
         if not self.s.get("images"):
             self.build()
+        self.sync_override(self.s.get("restored_images") or self.s["images"])
         self.compose("up", "--detach", "--no-build")
-        deadline = time.monotonic() + 600
-        error = None
-        while time.monotonic() < deadline:
-            try:
-                record = self.check()
-                self.save(phase="RUNNING", running=record)
-                return record
-            except (OSError, ValueError, urllib.error.URLError) as exc:
-                error = type(exc).__name__
-                time.sleep(2)
-        raise TimeoutError("Central did not return its original version within ten minutes: " + str(error))
+        record = self.wait_ready()
+        self.save(phase="RUNNING", running=record)
+        return record
 
     def bootstrap(self):
         self.start()
@@ -645,14 +781,12 @@ class Host:
             admin = self.c["admin"]
             if result["user"]["email"] != admin["email"]:
                 raise ValueError("The authenticated identity differs from the selected bootstrap administrator.")
-            try:
-                self.http("v1/users", auth=True)
-            except urllib.error.HTTPError as exc:
-                if exc.code != 403:
-                    raise
+            required = {"user.list", "project.create"}
+            if not required.issubset(set(result["user"]["verbs"])):
                 self.compose("exec", "-T", "service", "odk-cmd", "--email", admin["email"], "user-promote")
-                self.http("v1/users", auth=True)
-                result = self.check(authenticated=True)
+                result = self.wait_ready(authenticated=True)
+                if not required.issubset(set(result["user"]["verbs"])):
+                    raise RuntimeError("The selected native bootstrap administrator lacks the original required verbs.")
         atomic_json(self.root / "connection-secret.json", {self.c["auth_env"]: self.auth_value()}, exact=True)
         connection = {"id": self.c["compose_project"], "name": self.c["connection_name"],
                       "url": self.c["url"], "authEnv": self.c["auth_env"], "allowLoopback": False}
@@ -728,7 +862,7 @@ class Host:
                         raise ValueError("The complete original snapshot changed.")
                 if record["running_services"]:
                     self.compose("up", "--detach", "--no-build", *record["running_services"])
-                reopened = self.check(authenticated=True)
+                reopened = self.wait_ready(authenticated=True)
                 self.save(phase="AUTHENTICATED", authenticated=reopened)
                 return record
             raise ValueError("Retain and inspect the incomplete snapshot directory.")
@@ -752,8 +886,8 @@ class Host:
         stopped = False
         record = None
         try:
-            self.compose("stop", "--timeout", "60")
             stopped = True
+            self.compose("stop", "--timeout", "60")
             if any(x["state"] == "running" for x in self.containers()):
                 raise ValueError("A selected service still writes to the snapshot volumes.")
             for key, info in volumes.items():
@@ -792,7 +926,7 @@ class Host:
             if stopped and running:
                 self.compose("up", "--detach", "--no-build", *running)
         if record:
-            reopened = self.check(authenticated=True)
+            reopened = self.wait_ready(authenticated=True)
             atomic_json(folder / "source-reopened.json", reopened, exact=True)
             self.save(phase="AUTHENTICATED", authenticated=reopened)
         return record
@@ -803,7 +937,7 @@ class Host:
         record = load_json(folder / "snapshot.json")
         if record.get("schema") != SCHEMA + ".snapshot" or record.get("source") != SOURCE:
             raise ValueError("Use a complete original snapshot for this released Central source.")
-        origin = load_json(folder / "host-selection.json")
+        origin = validate_config(load_json(folder / "host-selection.json"))
         if self.c["compose_project"] == origin["compose_project"] or Path(self.c["directory"]).resolve() == Path(origin["directory"]).resolve():
             raise ValueError("Restore into a separately selected new project and runtime directory.")
         for entry in record["files"]:
@@ -814,8 +948,7 @@ class Host:
             expected = file_identity(folder / "snapshot.json")
             if self.s["restored_from"] != expected:
                 raise ValueError("This receiver already holds another snapshot.")
-            self.start()
-            return self.check(authenticated=True)
+            return self.finalize_restore(folder, record)
         ids = self.run(["docker", "ps", "-aq", "--filter",
                         "label=com.docker.compose.project=" + self.c["compose_project"]]).decode().split()
         vols = self.run(["docker", "volume", "ls", "-q", "--filter",
@@ -829,15 +962,19 @@ class Host:
             self.save(restore_intent=intent)
         elif intent["snapshot"] != expected_snapshot:
             raise ValueError("Continue the same original snapshot selection in this receiver.")
-        elif any(x["state"] == "running" for x in self.containers()):
-            raise ValueError("An incomplete restore destination has running services; preserve its state for inspection.")
+        elif ids:
+            # This check remains valid before the Compose override has been written.
+            existing = json.loads(self.run(["docker", "inspect", *ids]))
+            if any(item["State"]["Running"] for item in existing):
+                raise ValueError("An incomplete restore destination has running services; preserve its state for inspection.")
+        self.restore_configuration(folder, origin)
         self.prepare()
         if (folder / "native-images.tar").exists():
             self.run(["docker", "image", "load", "--input", str(folder / "native-images.tar")], timeout=7200)
         for iid in set(record["images"].values()):
             self.run(["docker", "image", "inspect", "--format", "{{.Id}}", iid])
         self.save(restored_images=record["images"])
-        atomic_bytes(self.root / "host.override.yml", self.override(record["images"]))
+        self.sync_override(record["images"])
         self.compose("create", "--no-build")
         destination = self.volume_selection()
         if set(destination) != set(record["volumes"]):
@@ -872,18 +1009,35 @@ class Host:
         self.save(phase="RESTORED", images=record["images"],
                   restored_from=file_identity(folder / "snapshot.json"),
                   restored_source_operation=record["operation_id"])
+        return self.finalize_restore(folder, record)
+
+    def finalize_restore(self, folder, record):
         self.start()
-        received = self.check(authenticated=True)
+        received = self.wait_ready(authenticated=True)
         if sorted(received["project_ids"], key=str) != sorted(record["service_at_backup"]["project_ids"], key=str):
             raise ValueError("The restored native project roster differs; inspect the retained source and target.")
-        atomic_json(self.root / "restore-result.json",
-                    {"schema": SCHEMA + ".restore", "source": file_identity(folder / "snapshot.json"),
-                     "destination": self.c["compose_project"], "received": received, "at": now()}, exact=True)
         connection = {"id": self.c["compose_project"], "name": self.c["connection_name"],
                       "url": self.c["url"], "authEnv": self.c["auth_env"], "allowLoopback": False}
         atomic_json(self.root / "connection.json", connection, exact=True)
-        self.save(phase="AUTHENTICATED", authenticated=received, connection=connection)
-        return received
+        ca = self.root / "tls" / "ca.pem"
+        selected_ca = str(ca) if ca.exists() else self.c["tls"].get("ca")
+        output = self.root / "restore-result.json"
+        source = file_identity(folder / "snapshot.json")
+        if output.exists():
+            saved = load_json(output)
+            if saved.get("schema") != SCHEMA + ".restore" or saved.get("source") != source or saved.get("destination") != self.c["compose_project"] or saved.get("connection") != connection:
+                raise ValueError("The original complete restore result changed.")
+            if sorted(saved["received"]["project_ids"], key=str) != sorted(record["service_at_backup"]["project_ids"], key=str):
+                raise ValueError("The original restore result refers to a different project population.")
+        else:
+            atomic_json(output, {"schema": SCHEMA + ".restore", "source": source,
+                                 "destination": self.c["compose_project"], "received": received,
+                                 "connection": connection, "node_extra_ca_certs": selected_ca, "at": now()}, exact=True)
+        self.save(phase="AUTHENTICATED", authenticated=received, connection=connection,
+                  restore_result=file_identity(output))
+        return {"connection": connection, "service": received,
+                "private_environment_file": str(self.root / "connection-secret.json"),
+                "node_extra_ca_certs": selected_ca, "restore_result": file_identity(output)}
 
     def handover(self):
         received = self.check(authenticated=True)
