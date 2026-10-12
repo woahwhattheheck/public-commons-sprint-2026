@@ -107,6 +107,7 @@ export function createConsoleCustomers({operator,store,definitions,releaseStore,
       finally{await original.close();}
     },
     pause(id){const pending=active.get(id);if(pending)pending.controller.abort(fail('CONSOLE_DOWNLOAD_PAUSED','Receiving paused at the original durable checkpoint.'));return view(store.delivery(id));},
-    async close(){closing=true;await Promise.allSettled([...active.values()].map(value=>value.task));}
+    beginClose(){closing=true;for(const value of active.values())value.controller.abort(fail('CONSOLE_DOWNLOAD_PAUSED','The host is closing; the original customer checkpoint is retained.'));},
+    async close(){this.beginClose();await Promise.allSettled([...active.values()].map(value=>value.task));}
   };
 }

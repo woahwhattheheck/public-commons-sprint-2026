@@ -25,8 +25,9 @@ export function selectedCrossrefDois(view,{questionId,selectedOnly=true}={}){
   need(values.length>0,'CROSSREF_SELECTED_DOIS_REQUIRED');return doiList(values);
 }
 export async function receiveCrossrefEdition(dossiers,id,{questionId,label='Crossref DOI enrichment',captures,dois,
-  expectedRevision,sourceReference='',origin=null,acquisition}={}){
+  expectedRevision,sourceReference='',origin=null,acquisition,projection='full'}={}){
   need(Number.isSafeInteger(expectedRevision)&&expectedRevision>=0,'EXPECTED_REVISION_REQUIRED');
+  need(['full','metadata'].includes(projection),'RESEARCH_PROJECTION_INVALID');
   const metadataAvailable=typeof dossiers.getMetadata==='function';
   const before=dois&&metadataAvailable?await dossiers.getMetadata(id):await dossiers.get(id);
   need(before.revision===expectedRevision,'REVISION_CONFLICT');
@@ -36,7 +37,7 @@ export async function receiveCrossrefEdition(dossiers,id,{questionId,label='Cros
   const raw=jsonBytes(envelope);need(raw.length<=64*1024*1024,'RESEARCH_RESPONSE_TOO_LARGE');
   const received=await dossiers.receive(id,{questionId,label,provider:'crossref',rawBytes:raw,sourceReference,
     expectedRevision,origin,...(metadataAvailable?{projection:'metadata'}:{})});
-  const dossier=Array.isArray(received.sources)?received:await dossiers.get(id,{revision:received.revision});
+  const dossier=projection==='metadata'||Array.isArray(received.sources)?received:await dossiers.get(id,{revision:received.revision});
   return {schema:CROSSREF_RECEIVING_CONTRACT,dossierId:id,questionId,revision:dossier.revision,
     originalRevision:before.revision,duplicate:dossier.revision===before.revision,sourceSha256:digest(raw),
     requestedDois:selected,coverage:envelope.usage.coverage,metadataRecords:envelope.results.length,

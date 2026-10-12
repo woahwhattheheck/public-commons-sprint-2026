@@ -146,7 +146,8 @@ function disconnect(){
   clearTimeout(state.poll);state.token='';state.host=null;state.profile=null;state.details=null;state.call=null;state.customer=null;
   $('connected').hidden=true;$('connect-panel').hidden=false;$('disconnect').hidden=true;text($('connection-state'),'Disconnected');
   $('connection-state').removeAttribute('data-state');notice('');$('access-token').value='';
-  for(const id of ['call-result','call-arguments','native-arguments','customer-json'])$(id).textContent='';
+  for(const id of ['call-result','call-arguments','customer-json'])$(id).textContent='';
+  $('native-arguments').value='';
 }
 function profileForm(mode){
   state.profileMode=mode;$('profile-form').hidden=false;$('profile-name').value=mode==='rename'?requireProfile().name:'';$('profile-name').focus();
@@ -356,6 +357,6 @@ $('customer-form').addEventListener('submit',event=>{event.preventDefault();busy
 action($('refresh-customers'),()=>loadProfile());
 action($('resume-customer'),()=>receiveCustomer(state.customer.identity));
 action($('pause-customer'),async()=>{await api('customer-pause',{method:'POST',body:{id:state.customer.id}});await loadProfile();notice('Pause requested at the original receiving checkpoint.');});
-action($('download-customer'),()=>download('customer-archive/'+encodeURIComponent(state.customer.id),state.customer.identity.exportId+'.zip'));
+action($('download-customer'),()=>download('customer-archive/'+encodeURIComponent(state.customer.id),state.customer.identity.exportId+'.tar.gz'));
 const bootstrap=new URLSearchParams(location.hash.slice(1)).get('token');
 if(bootstrap){history.replaceState(null,'',location.pathname+location.search);$('access-token').value=bootstrap;busy($('connect-form').querySelector('button'),connect);}

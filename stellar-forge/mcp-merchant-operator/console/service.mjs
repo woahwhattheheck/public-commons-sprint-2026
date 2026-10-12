@@ -249,6 +249,7 @@ export async function createMerchantConsole({operator,configPath,directory,autho
   }
   return {
     store,handler,snapshot,startCall,
-    close(){if(!closed){closing=true;closed=(async()=>{await Promise.allSettled([...active.values(),customers.close()]);store.close();})();}return closed;}
+    beginClose(){closing=true;customers.beginClose();},
+    close(){if(!closed){closing=true;customers.beginClose();closed=(async()=>{await Promise.allSettled([...active.values(),customers.close()]);store.close();})();}return closed;}
   };
 }
