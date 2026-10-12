@@ -1,0 +1,34 @@
+{
+  "schema": "stellar-forge.browser-assets.v1",
+  "root": "./",
+  "routes": [
+    [
+      "/cache-operations",
+      [
+        "index.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/cache-operations/",
+      [
+        "index.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/cache-operations/app.mjs",
+      [
+        "app.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/cache-operations/style.css",
+      [
+        "style.css",
+        "text/css; charset=utf-8"
+      ]
+    ]
+  ]
+}
