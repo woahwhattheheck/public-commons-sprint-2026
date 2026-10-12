@@ -73,7 +73,7 @@ export async function receiveConsole({directory,chromiumPath,playwrightModule,so
   const connect=async(url)=>{
     await page.goto(url,{waitUntil:'networkidle'});
     await page.locator('#access-token').fill(token);
-    await observedResponse('host',()=>page.locator('#connect-form button[type=submit]').click(),'GET');
+    await observedResponse('profiles',()=>page.locator('#connect-form button[type=submit]').click(),'GET');
     await page.locator('#connected').waitFor({state:'visible'});
     assert.equal(await page.evaluate(()=>localStorage.length+sessionStorage.length),0);
   };
@@ -113,7 +113,8 @@ export async function receiveConsole({directory,chromiumPath,playwrightModule,so
     assert.equal(download.headers.get('x-content-sha256'),retained.resultSha256);
     calls.push({id:retained.id,tool,draftId:draft.id,draftRevision:draft.revision,
       argumentsSha256:retained.argumentsSha256,resultSha256:retained.resultSha256,result});
-    await page.locator('#refresh-requests').click();
+    await observedResponse('call/'+encodeURIComponent(retained.id),()=>page.locator('#refresh-requests').click(),'GET');
+    await page.waitForFunction(()=>document.getElementById('call-state').textContent==='RETURNED');
     return {draft,accepted,retained,result};
   };
   const screenshot=async(name,viewport)=>{
@@ -166,7 +167,7 @@ export async function receiveConsole({directory,chromiumPath,playwrightModule,so
     const replay=await api('calls',{method:'POST',expected:202,body:{id:described.retained.id,profileId:profile.id,
       draftId:described.draft.id,draftRevision:1,expectedHostFingerprint:initial.configurationFingerprint}});
     assert.equal(replay.reused,true);assert.equal(replay.call.resultSha256,described.retained.resultSha256);
-    await page.locator('#favorite-tool').click();
+    await observedResponse('profiles',()=>page.locator('#favorite-tool').click());
     const favorite=(await api('profile/'+profile.id)).profile;
     assert.ok(favorite.favorites.includes('merchant_sources'));
     const recovery=await api('recovery/'+described.retained.id);
