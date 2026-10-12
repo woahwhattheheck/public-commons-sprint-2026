@@ -143,12 +143,22 @@ export async function runFlowableNativeJourney(configPath,outputDirectory,{fetch
       const prepared=await call(method,input);
       need(prepared.value.phase==='PREPARED'||prepared.value.dispatchedAt,
         label+' native preparation did not complete: '+JSON.stringify(prepared.value.failure??prepared.value.summary));
-      const original=await freeze(label+':original-prepared',reference(prepared));
+      const first=await freeze(label+':original-prepared',reference(prepared));
+      const original=prepared.value.dispatchedAt?first:reference(prepared);
       await retainReview(await call('getRecord',{kind,id:original.id,revision:original.revision}));
       return{record:prepared,original};
     }
     async function dispatch(label,kind,prepared){
-      const input=await freeze(label+':dispatch',{requestId:requestId(label+':dispatch'),id:prepared.record.id,
+      if(prepared.record.value.dispatchedAt){
+        const input=Object.values(state.inputs).find(value=>value?.requestId===prepared.record.value.dispatchRequestId&&
+          value.id===prepared.record.id);
+        need(input,'Retain the original saved native dispatch input for '+label);
+        const record=await current(prepared.record);await retainReview(record);return{record,input};
+      }
+      const previous=state.inputs[label+':dispatch'];
+      const dispatchLabel=previous&&previous.expectedRevision!==prepared.original.revision?
+        label+':dispatch:review:'+prepared.original.revision:label+':dispatch';
+      const input=await freeze(dispatchLabel,{requestId:requestId(dispatchLabel),id:prepared.record.id,
         expectedRevision:prepared.original.revision,planSha256:prepared.record.value.planSha256});
       const record=await call('dispatch'+kind[0].toUpperCase()+kind.slice(1),input);
       need(!['STALE','PREPARE_FAILED','INVALID'].includes(record.value.state),

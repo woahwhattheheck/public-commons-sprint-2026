@@ -103,6 +103,8 @@ source-release-result.json identifies the complete source ZIP, source manifest, 
 
 ## Complete receiving outputs
 
+The native programme resumes interrupted portfolio captures and preparation with their original frozen inputs. After a pre-dispatch interruption, it retains the refreshed prepared revision and saves a dispatch input for that review. When a native request was already dispatched, continuation uses its original saved input and native readback. The installed SDK, CLI and MCP hooks likewise reopen current preparation records instead of caching an interrupted result. Interrupted readback can continue with the same reconciliation request.
+
 A completed original native run produces delivery.json, journey/journey.json, native-receiving-manifest.json and flowable-complete-native-receiving.zip. The completed scope is complete-native-process-history-and-cold-receiving. The archive contains the closed original journey workspaces, source downloads, two full workspace exports, native operation reports, installed product receiving results and browser images.
 
 The source receiver's final nativeWorkspace identifies the later complete NDJSON export, its exact saved export and receiving records, and the original journey step complete-native-process-history-export-and-cold-receiving. These paths and exact bytes are the inputs to the original company case receiving workflow.
