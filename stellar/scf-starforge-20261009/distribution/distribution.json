@@ -96,10 +96,6 @@
     {
       "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/server.mjs",
       "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/browser-assets.json"
-    },
-    {
-      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/kafka/httpd.py",
-      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/kafka/browser-assets.json"
     }
   ],
   "supportFiles": [
@@ -349,7 +345,7 @@
     "baserow-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/cli.mjs",
     "stac": "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/cli.mjs",
     "grant-demo": "stellar/scf_2026/presentation/reviewer/cli.mjs",
-    "dataset-kafka": "stellar/scf-starforge-20261009/sf30-seller-sdk/kafka/cli.mjs"
+    "merchant-api-pass": "stellar-forge/mcp-merchant-operator/api-pass-cli.mjs"
   },
   "exports": {
     "./seller/opencage": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opencage/index.mjs",
@@ -776,7 +772,21 @@
     "./grant/demo": {
       "types": "./source/stellar/scf_2026/presentation/reviewer/workspace.d.mts",
       "import": "./source/stellar/scf_2026/presentation/reviewer/workspace.mjs"
-    }
+    },
+    "./merchant/mcp/api-pass": "./source/stellar-forge/mcp-merchant-operator/api-pass-workspace.mjs",
+    "./merchant/mcp/api-pass/client": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/api-pass-client.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/api-pass-client.mjs"
+    },
+    "./merchant/mcp/api-pass/operations": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/api-pass-cli.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/api-pass-cli.mjs"
+    },
+    "./merchant/mcp/api-pass/setup": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/api-pass-setup.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/api-pass-setup.mjs"
+    },
+    "./merchant/api-pass-workspace/agent-setup": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/agent-setup.mjs"
   },
   "nativePeers": {
     "@x402/core": {
