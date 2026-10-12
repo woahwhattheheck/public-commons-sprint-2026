@@ -84,9 +84,11 @@ export function mountCasePackageDesk({root,caseContext=()=>null,saveCase=null,on
   function link(label,url) {const node=document.createElement('a');node.textContent=label;node.href=url;node.setAttribute('download','');return node;}
   function controls() {
     panel.dataset.busy=String(busy);
-    for(const node of panel.querySelectorAll('button[data-cp-mutation]'))node.disabled=busy||!catalog;
+    for(const node of panel.querySelectorAll('button[data-cp-mutation]'))node.disabled=busy||!catalog||
+      Boolean(pending&&!['cp-resume-pending','cp-pause-operation'].includes(node.id));
+    for(const node of panel.querySelectorAll('input,select,textarea'))node.disabled=busy||!catalog;
     refreshButton.disabled=busy;
-    remoteReceive.disabled=busy||!catalog||!remoteSelection;
+    remoteReceive.disabled=busy||!catalog||!remoteSelection||Boolean(pending);
     pauseOperation.disabled=busy||!catalog||!currentOperation?.runningHere;
     openReceived.disabled=busy||!catalog||currentOperation?.state!=='COMPLETE'||!['receive','remote'].includes(currentOperation?.request?.kind);
     previous.disabled=busy||inventoryOffset===0;next.disabled=busy||inventoryNext===null;
@@ -206,12 +208,78 @@ export function mountCasePackageDesk({root,caseContext=()=>null,saveCase=null,on
       if(value?.request?.id&&value.directory===catalog.directory)savePending(value);}
     catch{}
   }
+  const canonical=value=>Array.isArray(value)?'['+value.map(canonical).join(',')+']':
+    value&&typeof value==='object'?'{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonical(value[key])).join(',')+'}':JSON.stringify(value);
+  function confirmOriginalStatus(value,submitted) {
+    if(!value||value.id!==submitted.id||!value.request||typeof value.runningHere!=='boolean'||
+      !['PREPARED','RUNNING','PAUSED','NEEDS_CONTINUATION','COMPLETE'].includes(value.state))
+      throw Error('The original operation response is incomplete. Resume the retained request to reconcile it.');
+    const expected={schema:'stellar-forge.merchant-case-package-operation.v1',id:submitted.id,
+      kind:submitted.kind,actor:submitted.actor.trim()};
+    if(submitted.kind==='export')Object.assign(expected,{caseId:submitted.caseId,revision:submitted.revision,exportId:submitted.id});
+    else if(submitted.kind==='remote')Object.assign(expected,{profile:submitted.profile,exportId:submitted.exportId,
+      manifestSha256:submitted.expectedManifestSha256});
+    else Object.assign(expected,{source:submitted.source,manifestSha256:submitted.expectedManifestSha256});
+    const actual={...value.request};delete actual.createdAt;
+    if(submitted.kind==='remote') {
+      if(typeof actual.endpoint!=='string'||!actual.endpoint)throw Error('The original remote endpoint binding is missing. Resume the retained request.');
+      delete actual.endpoint;
+    }
+    if(canonical(actual)!==canonical(expected))
+      throw Error('The response belongs to another request or source. The original input is retained for reconciliation.');
+    return value;
+  }
+  function validateSubmitted(value) {
+    const id=value=>typeof value==='string'&&/^[a-z0-9][a-z0-9_-]{0,63}$/.test(value);
+    const sha=value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value);
+    if(!id(value.id))throw Error('Use 1–64 lowercase letters, digits, underscores or hyphens for the operation ID.');
+    if(typeof value.actor!=='string'||!value.actor.trim()||new TextEncoder().encode(value.actor).length>200||/[\x00-\x1f\x7f]/.test(value.actor))
+      throw Error('Use an operator name of at most 200 UTF-8 bytes without control characters.');
+    if(value.kind==='export') {
+      if(!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(value.caseId??'')||!sha(value.revision))
+        throw Error('Choose the original saved case and its complete revision.');
+    } else if(value.kind==='remote') {
+      if(!id(value.profile)||!id(value.exportId)||!sha(value.expectedManifestSha256))
+        throw Error('Inspect the configured source and original export before receiving.');
+    } else if(['inspect','receive'].includes(value.kind)) {
+      if(!value.source||!['input','operation'].includes(value.source.kind)||!id(value.source.id)||!sha(value.expectedManifestSha256))
+        throw Error('Select the exact original package input and manifest.');
+    } else throw Error('Choose an original export, inspection or receiving operation.');
+  }
+  function retainRejectedPreparation(value,problem,evidence) {
+    const record={directory:catalog.directory,request:JSON.parse(JSON.stringify(value)),
+      preparedAt:pending?.preparedAt??null,rejectedAt:new Date().toISOString(),
+      error:{status:problem.status??null,code:problem.error??null,message:errorMessage(problem)},evidence};
+    try{sessionStorage.setItem(originKey()+':rejected:'+value.id+':'+record.rejectedAt,JSON.stringify(record));}catch{}
+    savePending(null);
+  }
+  async function reconcileRejectedPreparation(problem,value) {
+    const codes=['CASE_PACKAGE_OPERATION_ID','CASE_PACKAGE_OPERATION_DIGEST','CASE_PACKAGE_OPERATOR',
+      'CASE_PACKAGE_OPERATION_KIND','CASE_PACKAGE_OPERATION_CASE','CASE_PACKAGE_OPERATION_INPUT',
+      'CASE_PACKAGE_SELECTION','CASE_PACKAGE_OPERATION_NOT_FOUND'];
+    if(![404,422].includes(problem.status)||!codes.includes(problem.error))return;
+    try {await request('/operations/'+encodeURIComponent(value.id));}
+    catch(observed) {
+      if(observed.status===404&&observed.error==='CASE_PACKAGE_OPERATION_NOT_FOUND')
+        retainRejectedPreparation(value,problem,{kind:'native-rejection-and-original-operation-absent',
+          observedAt:new Date().toISOString(),lookupCode:observed.error});
+    }
+  }
   async function submit(value) {
     if(!catalog)throw Error('Open the original package storage first.');
-    if(!value.actor?.trim())throw Error('Name the operator for this original transfer.');
-    savePending({directory:catalog.directory,request:value,preparedAt:pending?.request?.id===value.id?pending.preparedAt:new Date().toISOString()});
+    try{validateSubmitted(value);}catch(problem){
+      if(pending&&canonical(pending.request)===canonical(value))
+        retainRejectedPreparation(value,problem,{kind:'original-preparation-input-validation'});
+      throw problem;
+    }
+    if(pending&&canonical(pending.request)!==canonical(value))
+      throw Error('Resume original request '+pending.request.id+' before preparing another package operation.');
+    if(!pending)savePending({directory:catalog.directory,request:JSON.parse(JSON.stringify(value)),preparedAt:new Date().toISOString()});
     say('Opening original operation '+value.id+'…');
-    const result=await request('/operations',value);
+    let response;
+    try{response=await request('/operations',pending.request);}
+    catch(problem){await reconcileRejectedPreparation(problem,pending.request);throw problem;}
+    const result=confirmOriginalStatus(response,pending.request);
     savePending(null);currentOperation=result;renderOperation();switchTab(1);
     if(value.kind==='export'&&exportId.value===value.id)exportId.value=operationId('case-export');
     if(value.kind==='remote'&&remoteId.value===value.id)remoteId.value=operationId('package-remote');
