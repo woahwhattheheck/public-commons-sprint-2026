@@ -250,8 +250,14 @@ export function createBatchWorkbench({api,download,readBytes,notify,action,perfo
     syncButtons();
   }
   function rowStatus(){
-    if(S.row?.source)return S.row.row.status;
-    return S.rowSummary?.status??(S.row?.row.error?'INVALID':S.row?.result?.state.outcome??S.row?.result?.state.state??'READY');
+    if(!S.row)return null;
+    if(S.row.source)return S.row.row.status;
+    if(S.row.status)return S.row.status;
+    if(S.row.row.error)return 'INVALID';
+    const value=S.row.result;
+    if(!value)return 'READY';
+    if(!value.captureIdentity)return value.state.state==='PREPARED'?'READY':'NEEDS_RECONCILIATION';
+    return value.state.providerStatus===200?(value.candidates.length?'CANDIDATES':'NO_RESULTS'):'EXCEPTION';
   }
   async function loadRow(ordinal){
     const epoch=++S.rowEpoch,id=S.mode==='delivery'?S.exportId:S.batchId,mode=S.mode;
@@ -264,6 +270,8 @@ export function createBatchWorkbench({api,download,readBytes,notify,action,perfo
   function renderRow(){
     const selected=currentRow(),source=S.row?.source??S.row?.row,review=currentReview();
     if(!source)return;
+    S.rowSummary={requestId:S.row.requestId??S.row.row.requestId??null,status:rowStatus(),
+      result:selected?{responseSha256:selected.responseSha256,decisionRevision:selected.decision.revision}:null};
     $('batch-row-empty').hidden=true;$('batch-row-content').hidden=false;
     $('batch-row-id').textContent='Source row '+source.ordinal+' · ID '+source.sourceId;
     $('batch-row-query').textContent=source.query?.q??'Source row requires correction';
