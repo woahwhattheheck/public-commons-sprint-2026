@@ -185,12 +185,19 @@ function normalizeResponse(row, root) {
   if (lengthText !== null && /^\d+$/.test(lengthText)) {
     const n = BigInt(lengthText); if (n <= BigInt(Number.MAX_SAFE_INTEGER)) contentLength = Number(n);
   } else if (lengthText !== null) issues.push({ code: 'WEBDAV_CONTENT_LENGTH', message: 'The reported length is not an integer.' });
-  let etag = null;
-  try { etag = opaqueEtag(get(DAV + 'getetag')?.trim()); }
-  catch (error) { issues.push({ code: error.code, message: error.message }); }
+  const reportedEtag = get(DAV + 'getetag'), propertyEtag = reportedEtag?.trim();
+  let etag = null, etagEncoding = null;
+  try {
+    // WsgiDAV's DAV property is the bare opaque value; its HTTP header quotes it.
+    // Keep the reported property unchanged and require the response to match.
+    const bare = typeof propertyEtag === 'string' && propertyEtag.length > 0 &&
+      !propertyEtag.startsWith('W/') && /^[\x21\x23-\x7e\x80-\xff]+$/.test(propertyEtag);
+    etag = opaqueEtag(bare ? '"' + propertyEtag + '"' : propertyEtag);
+    if (etag !== null) etagEncoding = bare ? 'quoted-bare-property' : 'quoted-property';
+  } catch (error) { issues.push({ code: error.code, message: error.message }); }
   const name = get(DAV + 'displayname') ?? (href ? decodeURIComponent(new URL(href).pathname.replace(/\/$/, '').split('/').at(-1) ?? '') : '');
   return { href, originalHref: row.hrefs[0] ?? null, relativeHref: href ? relativeHref(root, href) : null,
-    name, kind, etag, contentLength, contentLengthText: lengthText,
+    name, kind, etag, reportedEtag, etagEncoding, contentLength, contentLengthText: lengthText,
     lastModified: get(DAV + 'getlastmodified')?.trim() ?? null, contentType: get(DAV + 'getcontenttype'),
     fileId: get(OC + 'fileid'), instanceFileId: get(OC + 'id'), propertyStatus, properties, issues,
     accessible: href !== null && issues.length === 0 && (row.status === null || row.status >= 200 && row.status < 300) };
