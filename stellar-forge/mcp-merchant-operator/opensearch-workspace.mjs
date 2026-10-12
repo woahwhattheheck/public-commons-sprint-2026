@@ -122,7 +122,7 @@ export function openSearchWorkspaceTools(tool) {
     tool('merchant_opensearch_relevance_set','Read an exact evaluation-set revision, with frozen query variants, native metric settings, case inputs and paged judgments. Use caseId to page one case’s original documents.',fields({...saved,caseId:caseSchema,offset:offsetSchema,limit:limitSchema}),['workspace','id'],read),
     tool('merchant_opensearch_relevance_save','Import or save a complete evaluation set with original variant declarations and judgment identities. Updates require expectedRevision. This is the original relevance journal and revision history.',fields({requestId:idSchema,setId:idSchema,expectedRevision:revisionSchema,set:objectSchema}),['workspace','requestId','set'],write),
     tool('merchant_opensearch_relevance_seed','Seed a judgment case from a retained actual query edition. Original IDs and capture provenance are retained; all new ratings are null until explicitly judged.',fields({editionId:idSchema,caseId:caseSchema,title:{type:'string',minLength:1,maxLength:120},limit:{type:'integer',minimum:1,maximum:1000}}),['workspace','editionId','caseId'],read),
-    tool('merchant_opensearch_relevance_judge','Merge or replace one saved case’s judgments by exact [_index,_id], retaining original hit provenance and unchanged notes. Rating null means unjudged; zero is an explicit grade. Original revision CAS and request replay apply.',fields({requestId:idSchema,setId:idSchema,expectedRevision:revisionSchema,caseId:caseSchema,mode:{type:'string',enum:['merge','replace']},judgments:{type:'array',minItems:1,maxItems:5000,items:{type:'object',properties:{_index:{type:'string',minLength:1},_id:{type:'string',minLength:1},rating:{type:['integer','null'],minimum:0,maximum:2147483647},note:{type:'string',maxLength:2000}},required:['_index','_id','rating'],additionalProperties:false}}}),['workspace','requestId','setId','expectedRevision','caseId','judgments'],write),
+    tool('merchant_opensearch_relevance_judge','Merge or replace one saved case’s judgments by exact [_index,_id], retaining original hit provenance and unchanged notes. Rating null means unjudged; zero is an explicit grade. Original revision CAS and request replay apply.',fields({requestId:idSchema,setId:idSchema,expectedRevision:revisionSchema,caseId:caseSchema,mode:{type:'string',enum:['merge','replace']},judgments:{type:'array',minItems:0,maxItems:5000,items:{type:'object',properties:{_index:{type:'string',minLength:1},_id:{type:'string',minLength:1},rating:{type:['integer','null'],minimum:0,maximum:2147483647},note:{type:'string',maxLength:2000}},required:['_index','_id','rating'],additionalProperties:false}}}),['workspace','requestId','setId','expectedRevision','caseId','judgments'],write),
     tool('merchant_opensearch_relevance_evaluate','Evaluate the exact saved relevance revision with the original native rank_eval adapter and strict same-PIT windows. Retain native aggregate denominators, failures, judgment coverage and original response bytes. Reuse requestId after a lost response.',fields({requestId:idSchema,setId:idSchema,expectedRevision:revisionSchema}),['workspace','requestId','setId','expectedRevision'],{...write,openWorld:true}),
     tool('merchant_opensearch_relevance_case','Page a retained native relevance case: original rated hit entries or strict-window hits, exact integer paths, failures and matched-window state. Does not search again.',fields({editionId:idSchema,variantId:caseSchema,caseId:caseSchema,view:{type:'string',enum:['native','strict']},offset:offsetSchema,limit:limitSchema}),['workspace','editionId','variantId','caseId'],read),
     tool('merchant_opensearch_relevance_promote','Promote one evaluated variant and case into the original merchant draft with exact query/input/plan and evaluation provenance. Continue with the original prepare tool.',fields({requestId:idSchema,editionId:idSchema,variantId:caseSchema,caseId:caseSchema,title:{type:'string',minLength:1,maxLength:120}}),['workspace','requestId','editionId','variantId','caseId'],write),
@@ -273,7 +273,7 @@ function relevanceCase(model,args) {
   const selected = page(values,args);
   const base = {editionId:edition.id,resultSha256:edition.resultSha256,source:edition.result.source,
     metric:edition.result.metric,variant:pick(variant,['id','label','queryName','indices','concreteIndices','effectiveSort','snapshot']),
-    caseId:id,view,coverage:variant.cases?.find(item => item.id === id) ?? null,
+    caseId:id,view,exactIntegerPathsRelativeTo:view === 'native' ? 'variant.native' : 'strictWindow.hits',coverage:variant.cases?.find(item => item.id === id) ?? null,
     nativeFailure:variant.native?.failures?.[id] ?? null,
     strict:strict ? omit(strict,['hits','exactIntegerPaths']) : null,
     nativeDetail:detail ? omit(detail,['hits']) : null,numberEncoding:edition.result.numberEncoding};
@@ -284,7 +284,9 @@ function relevanceCase(model,args) {
       return {position:index,originalPointer,entry,exactIntegerPaths:(variant.exactIntegerPaths ?? [])
         .filter(path => path === originalPointer || path.startsWith(originalPointer+'/'))};
     }
-    return {position:index,entry,exactIntegerPaths:strict?.exactIntegerPaths ?? []};
+    const originalPointer = '/'+index;
+    return {position:index,originalPointer,entry,exactIntegerPaths:(strict?.exactIntegerPaths ?? [])
+      .filter(path => path === originalPointer || path.startsWith(originalPointer+'/'))};
   })};
 }
 function previous(model,id) {
@@ -295,8 +297,8 @@ function judge(model,args) {
   const request = omit(args,['workspace']);
   recordId(request.requestId); recordId(request.setId); integer(request.expectedRevision,'Expected revision'); caseId(request.caseId);
   request.mode = enumValue(request.mode ?? 'merge',['merge','replace'],'judgment mode');
-  if (!Array.isArray(request.judgments) || !request.judgments.length || request.judgments.length > 5000)
-    throw failure('INVALID_PARAMS','Supply 1–5,000 explicit document judgments.');
+  if (!Array.isArray(request.judgments) || request.judgments.length > 5000 || !request.judgments.length && request.mode !== 'replace')
+    throw failure('INVALID_PARAMS','Supply up to 5,000 explicit judgments; an empty replacement clears this case.');
   const identities = new Set();
   for (const item of request.judgments) {
     exact(item,['_index','_id','rating','note'],['_index','_id','rating']);
@@ -357,9 +359,12 @@ async function retainedOriginal(model,args) {
 }
 
 export class MerchantOpenSearchWorkspaces {
-  #config; #handles = new Map(); #pending = new Map(); #closingAliases = new Map();
+  #config; #environment; #handles = new Map(); #pending = new Map(); #closingAliases = new Map();
   #files = new RetainedFileReads({errorPrefix:'OPENSEARCH'}); #closing = false; #close;
-  constructor(config) { this.#config = config; }
+  constructor(config, {environment = process.env} = {}) {
+    if (!plain(environment)) throw failure('CONFIGURATION_ERROR','The original source environment must be a host-selected object.');
+    this.#config = config; this.#environment = environment;
+  }
   get summary() {
     const aliases = this.#config.opensearchWorkspaces?.workspaces ?? {};
     return {configured:Object.keys(aliases).length > 0,count:Object.keys(aliases).length,
@@ -388,7 +393,7 @@ export class MerchantOpenSearchWorkspaces {
     if (!this.#handles.has(alias)) {
       const pending = (async () => {
         const {createOpenSearchWorkspace} = await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/workspace/service.mjs');
-        return createOpenSearchWorkspace({directory:entry.directory,sourceFile:entry.sourceFile,planFile:entry.planFile});
+        return createOpenSearchWorkspace({directory:entry.directory,sourceFile:entry.sourceFile,planFile:entry.planFile,env:this.#environment});
       })();
       this.#handles.set(alias,pending);
       try { await pending; } catch (error) { if (this.#handles.get(alias) === pending) this.#handles.delete(alias); throw error; }
@@ -421,9 +426,10 @@ export class MerchantOpenSearchWorkspaces {
     try {
       switch (name) {
         case 'merchant_opensearch_catalog': {
+          const {describeRelevanceMetrics} = await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/relevance/native.mjs');
           const catalog = page(Object.entries(model.config.queries).map(([name,query]) => ({name,query})),args);
           return {...catalog,sourceSchema:model.config.schema,sourceProfileSha256:model.store.profileHash,
-            templatePlan:model.templatePlan,metrics:model.relevance.state().metrics};
+            templatePlan:model.templatePlan,metrics:describeRelevanceMetrics()};
         }
         case 'merchant_opensearch_list': return collectionPage(model,args.collection,args);
         case 'merchant_opensearch_history': return historyPage(model,args);

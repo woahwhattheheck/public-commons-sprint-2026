@@ -32,7 +32,7 @@ The referenced connection file declares existing host-owned directories and sour
 
 Paths resolve relative to the connection file. Create each workspace directory with mode 0700 and the connection file with mode 0600 under the operator user. The source and optional plan must be existing regular JSON files. There are 1–32 configured aliases, and each original workspace directory has one alias.
 
-The source file uses the original `stellar-forge.opensearch-source.v1` declaration. Its endpoint and authentication fields contain environment variable names. Credentials stay in the host environment. Arguments to these MCP tools select an alias and original record IDs; they do not select filesystem paths or executable modules.
+The source file uses the original `stellar-forge.opensearch-source.v1` declaration. Its endpoint and authentication fields contain environment variable names. Credentials stay in the host environment. The maintained host may pass its own environment object through `new MerchantOpenSearchWorkspaces(config, {environment})`; the module passes it to the original source without changing the process environment. Arguments to these MCP tools select an alias and original record IDs; they do not select filesystem paths or executable modules.
 
 Reading configuration only resolves and checks the declared host files. `merchant_opensearch_open` opens the original database and source declaration. Provider connection begins when an agent explicitly inspects, captures or evaluates a saved definition.
 
@@ -92,7 +92,7 @@ Use `relevance_seed` to obtain a case from an actual retained query edition. Its
 }
 ~~~
 
-The merge key is the exact native index and document ID. Merge retains unmentioned judgments, original hit provenance and existing notes unless a new note is supplied. Replace selects exactly the supplied document identities for that case while retaining matching original hit provenance. An explicit null removes a grade while keeping the document unjudged; grade zero remains a real judgment. The original native metric validator enforces metric-specific grade limits.
+The merge key is the exact native index and document ID. Merge retains unmentioned judgments, original hit provenance and existing notes unless a new note is supplied. Replace selects exactly the supplied document identities for that case while retaining matching original hit provenance. An empty replacement clears that case’s judgment list. An explicit null removes a grade while keeping the document unjudged; grade zero remains a real judgment. The original native metric validator enforces metric-specific grade limits.
 
 The judgment update is saved as one normal full-set revision in the original journal. Its exact patch is retained beside that complete save request, so reusing the same `requestId` returns the same original operation even if the set has since advanced. A reused ID with different input is rejected.
 
