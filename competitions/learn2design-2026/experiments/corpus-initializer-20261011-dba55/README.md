@@ -7,11 +7,33 @@ physics evaluation, gradient, trust update, noise draw, restart and stopping
 decision. The original 096, 099, Hessian candidates and accepted runner are not
 edited by this experiment.
 
-The source pipeline is complete. Its learned bank is produced by the command
-below from the actual pinned organizer input; an empty or invented bank is not
-included. The original Muse transfer operation owns that input acquisition and
-the same preprocessing handoff. This source publication makes that operation
-executable on its existing equipped runtime while the final bank returns.
+The compiled donor bank is included in this directory. On 12 October 2026 the
+original cloud operation downloaded the complete pinned organizer corpus and
+ran the unchanged compiler in the existing native environment. The bank supplies
+512 complete donors for size three and 512 for size four. Its full source
+identity, counts and runtime are retained in `corpus-compile.json` and in the bank.
+
+## Completed corpus and runtime candidate
+
+The 74,920,439-byte original dataset has SHA-256
+`149f6aac17aff2e33750b4e1b6cebd3cef1c39d47ae49a3a7ed77315cb7838a7`.
+Compilation read the 29,650-entry index, inspected 1,024 complete saved power
+records, selected all 1,024 donors and skipped 71 duplicate selected topologies.
+The bank contains 646 semantic parameter keys and 33 role priors. Native
+compilation completed in 13.762996420999116 seconds with empty stderr, using
+Python 3.12.14, dfbench 0.3.3, differometor 0.0.5, h5py 3.15.1 and NumPy 2.5.4.
+
+`warmstart_bank.npz` is 2,170,687 bytes, SHA-256
+`609a69e08ef1c9ec3460e3f012e7f1b52bb6a29c232c198a63415409d2ab7d39`,
+Git blob `79919340f40c600bf2f3537a67a47f6c4abd20b9`. Use the checked-in bank
+directly with the existing candidate, or reproduce it through the command below.
+
+The original packager produced the complete five-file `corpus-seeded096.zip`,
+2,175,528 bytes, SHA-256
+`2ccf5d2baa331ef3cbc74a7e85426ff227da504b679cca5304b873befbd7adb6`.
+`candidate-package.json` retains the actual archive and member identities.
+Native optimizer comparisons use the original Objective and measured run
+budgets described below; these compilation counts describe the released donors.
 
 ## Data and physical meaning
 
