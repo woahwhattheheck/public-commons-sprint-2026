@@ -1,0 +1,63 @@
+{
+  "schema": "starforge.original-managed-customer-handoff.v1",
+  "operationId": "SCF-MANAGED-CUSTOMERS-INSTALL-8F43-DB4D-20261012-C287-CHECKPOINT-CONTINUATION",
+  "sourceCommit": "75dd7badd76f6cd1a3cad97866184c5a1e4922d2",
+  "sourceBootstrap": {
+    "gitBlob": "7a7ed936b78b85e236d6ca6ae06a3fc08b90c78d",
+    "bytes": 225565
+  },
+  "launcher": {
+    "gitBlob": "6e319e4214d0ca6adddca99be677195f09504cea",
+    "bytes": 16718
+  },
+  "inputs": {
+    "phase.mjs": {
+      "sha": "af020aa10ecdc735167d2b78d998ed07595b8e5a",
+      "bytes": 5965
+    },
+    "run-customers-checkpoint.py": {
+      "sha": "b5195498e582ccaa084520a4a95f2b9c5e36ef34",
+      "bytes": 14077
+    },
+    "receiving-source/managed-rss-atom-receiving.mjs": {
+      "sha": "3d74f3ade9204478f75ddb1a6a244607934a11fb",
+      "bytes": 20939
+    },
+    "receiving-source/applications-receiving.mjs": {
+      "sha": "bc357be6dc23b7185c8989c058ddde3ed7fa191a",
+      "bytes": 17466
+    },
+    "receiving-source/browser-receiving.mjs": {
+      "sha": "5d607b3bfdd8a903fdfa1f5d979e886383bee721",
+      "bytes": 5016
+    },
+    "receiving-source/feed-config-template.json": {
+      "sha": "4995333c9e83bcb0b9523acfc13e0f3dc95cd10c",
+      "bytes": 1116
+    },
+    "launch-checkpoint-native.py": {
+      "sha": "6e319e4214d0ca6adddca99be677195f09504cea",
+      "bytes": 16718
+    }
+  },
+  "host": {
+    "directory": "/workspace/scratch/d76c9c89fb9e/native-prepared-stop-20261012/host",
+    "sourceBundle": "9e5d792d3ed1d819b7ed78422ca591c31223a280",
+    "files": 71,
+    "nativeGitBlob": "d73a913a0cedcb39fb8ebdef325c67962240bf39",
+    "nativeSha256": "b93dcc336452c70124f49c62d67c0cd2385295d4d9659254936cc07cad46453e",
+    "checkpointGitBlob": "6234a05effb3fc69776c889fa00529b5a8936abd"
+  },
+  "recordsRoot": "/workspace/scratch/8f4370a17e6f/managed-native-records",
+  "project": "/dev/commons-8f43-managed-db4d",
+  "capacity": {
+    "memoryMiB": 896,
+    "memoryReserveMiB": 128,
+    "projectMiB": 512,
+    "projectInodes": 65536,
+    "recordsMiB": 128,
+    "recordInodes": 1024,
+    "diskReserveMiB": 4,
+    "diskReserveInodes": 128
+  }
+}

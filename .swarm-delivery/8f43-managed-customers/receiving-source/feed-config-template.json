@@ -1,0 +1,22 @@
+{
+  "operationId": "SCF-RSS-ATOM-APPLICATIONS-8F43-20261012",
+  "runtimeDirectory": "/absolute/original-ready-runtime",
+  "expectedSourceCommit": "SELECT_CURRENT_ORIGINAL_SOURCE_COMMIT",
+  "expectedManifest": "SELECT_ORIGINAL_SOURCE_MANIFEST_SHA256",
+  "applicationWorkspace": "/absolute/existing-applications-workspace",
+  "feedDirectory": "/dev/shm/commons-8f43-opml-native/result/customer",
+  "pythonExecutable": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+  "receptionDirectory": "/dev/shm/commons-8f43-feed-managed-reception",
+  "label": "Retained research library",
+  "expected": {
+    "collectionId": "research-library",
+    "collectionRevision": 3,
+    "runId": "64834c4f427fc7c083e69ff7e8c7e2774501c12ccb0ff0f6addb69f1bf770b3e",
+    "editionId": "a81bd55f31377a2e7f94356cc31c2c35f5f9bd5ac202da9659172894f7c78673",
+    "originalOPMLSha256": "a52101e6e1051bdd2b841bab879b07a4c8086f3afe273d51a7dd8a7f29cbdf93",
+    "snapshot": "5d6a28b54ffb8e35f1bef7a62ca6eb549b5d5254ef04a6741d28a764bfd9cb77",
+    "feedId": "feed-a",
+    "note": "Retained operator note",
+    "rows": 2
+  }
+}
