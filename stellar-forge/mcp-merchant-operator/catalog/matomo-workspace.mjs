@@ -36,6 +36,7 @@ function mutation(native,description,properties,required,annotations={}) {
     annotations:Object.freeze({idempotent:true,...annotations})});
 }
 export const MATOMO_MUTATIONS=Object.freeze({
+  merchant_adopt_original:mutation('adopt-original-merchant','Adopt one explicitly selected saved merchant draft from this received original archive into a new editable local merchant. The original compiler validates its exact query and payment terms against the local edition; no release, publication, source request or payment is replayed.',{originalMerchantId:id},['originalMerchantId']),
   discover:mutation('discover','Discover the original report/segment/site metadata for one literal native period. This contacts only the configured Matomo source. Retain the resulting catalog ID and its actual outcomes.',{scope},['scope'],{openWorld:true}),
   discover_resume:mutation('resume-catalog','Continue the same retained incomplete catalog. Accepted responses remain authoritative; only unresolved native source reads continue.',{catalogId:id},['catalogId'],{openWorld:true}),
   capture_start:mutation('capture','Capture the explicitly selected retained catalog variant and actual native subtables. Keep source limits, unresolved child mappings and archive truncation visible; a complete archive is not a complete raw-event population.',{selection},['selection'],{openWorld:true}),
@@ -67,12 +68,15 @@ export const MATOMO_MUTATIONS=Object.freeze({
   receiving_reopen:mutation('reopen-receiving','Reopen and verify the existing native customer delivery and exact retained source population. It does not acquire the data again.',{receivingId:id},['receivingId'])
 });
 const read={readOnly:true,idempotent:true};
-export const MATOMO_ARTIFACTS=Object.freeze(['capture','edition','database','comparison','delivery','handover','source']);
+export const MATOMO_ARTIFACTS=Object.freeze(['capture','edition','database','comparison','delivery','handover','source','workspace-origin','workspace-archive','workspace-original']);
 export function matomoWorkspaceTools(tool) {
   return [
     tool('merchant_matomo_workspaces','List host-declared Matomo aliases and exact current workspace ownership. Does not open a model or contact the provider.',{},[],read),
     tool('merchant_matomo_open','Open the original configured Matomo model and its same authenticated browser. Native workspace identity/lease is checked; no capture, publication or seller start occurs.',selected,['workspace'],{idempotent:true}),
     tool('merchant_matomo_close','Close this exact current owned Matomo workspace/browser. Original source cancellation, merchant drain and retained file readers remain together; saved records are preserved.',{...selected,instanceId:uuid},['workspace','instanceId'],{idempotent:true,destructive:true}),
+    tool('merchant_matomo_original_records','Read a bounded page of the retained original authoring workspace history and records. These are provenance, not active local merchant or payment attempts.',{...selected,table:{enum:['actions','history','merchants','merchant_packages','deliveries','handovers','receivings','catalogs','captures','editions','comparisons','edition_reviews','comparison_reviews']},offset:revision,limit:{type:'integer',minimum:1,maximum:50}},['workspace'],read),
+    tool('merchant_matomo_original_files','List the exact received workspace inventory. Each returned opaque id selects that original file through artifact_read with artifact workspace-original.',{...selected,offset:revision,limit:{type:'integer',minimum:1,maximum:50}},['workspace'],read),
+    tool('merchant_matomo_original_merchant','Review a saved original merchant configuration and full draft, with original archive and file hashes, before explicit local adoption.',{...selected,originalMerchantId:id},['workspace','originalMerchantId'],read),
     tool('merchant_matomo_status','Read original workspace revision, active operation, retained catalogs/captures/editions/reviews and customer/merchant records. Native source numbers and statuses are preserved.',selected,['workspace'],read),
     tool('merchant_matomo_operation','Read the exact original action, immutable input and outcome alongside the current active operation. Inspect this after a lost response before selecting a native recovery command.',{...selected,operationId:id},['workspace','operationId'],read),
     tool('merchant_matomo_cancel','Request cancellation of the exact active original operation in this current workspace instance. Read the original action afterward; cancellation is not an assertion that an external effect never occurred.',{...selected,workspaceInstanceId:uuid,operationId:id},['workspace','workspaceInstanceId','operationId'],{idempotent:true,destructive:true}),
@@ -91,7 +95,7 @@ export function matomoWorkspaceTools(tool) {
     tool('merchant_matomo_receiving','Read the original customer receiving/reopen result and exact source population.',{...selected,receivingId:id},['workspace','receivingId'],read),
     tool('merchant_matomo_receiving_rows','Read native customer rows from the verified reopened source delivery, without acquiring it again.',{...selected,receivingId:id,...page,limit:{type:'integer',minimum:1,maximum:100}},['workspace','receivingId'],read),
     tool('merchant_matomo_source_read','Inspect one exact original source request, accepted attempt and retained response identity. Does not dispatch it.',{...selected,sourceRequestId:id},['workspace','sourceRequestId'],read),
-    tool('merchant_matomo_artifact_read','Read an exact native capture/edition/database/comparison/publication/handover/source artifact through the original immutable retained-file reader. No client path. Reuse hash/readId/offset; after restart omit readId and bind the same hash/offset.',{
+    tool('merchant_matomo_artifact_read','Read an exact native capture/edition/database/comparison/publication/handover/source artifact through the original immutable retained-file reader. No client path. workspace-original uses its inventory opaque id; workspace-origin/archive use id original. The shared remote immutable-file ceiling is 8 GiB; larger full archives use the streaming local/browser route. Reuse hash/readId/offset; after restart omit readId and bind the same hash/offset.',{
       ...selected,artifact:{enum:MATOMO_ARTIFACTS},id,kind:{enum:['csv','config','manifest','archive','scan']},
       readId:uuid,expectedSha256:hash,offset:revision,limit:{type:'integer',minimum:1,maximum:MAX_RETAINED_CHUNK_BYTES}
     },['workspace','artifact','id'],read),

@@ -213,6 +213,28 @@ def _remove_stage(path, policy):
     path.unlink()
 
 
+def _reconcile_published_stage(path, temporary, policy):
+    """Retire only the verified destination's own surviving hard-link stage.
+
+    The caller has already verified the final file against its expected bytes.
+    A different inode is independent custody and remains untouched.
+    """
+    try:
+        final, staged = path.lstat(), temporary.lstat()
+    except FileNotFoundError:
+        return
+    if (final.st_dev, final.st_ino) != (staged.st_dev, staged.st_ino):
+        return
+    if (not stat.S_ISREG(final.st_mode) or not stat.S_ISREG(staged.st_mode) or
+            final.st_nlink != 2 or staged.st_nlink != 2 or
+            final.st_mode & 0o077 or staged.st_mode & 0o077):
+        policy.fail("HANDOVER_PATH_INVALID")
+    # Make the final name durable before removing its verified original stage.
+    _sync(path.parent)
+    temporary.unlink()
+    _sync(temporary.parent)
+
+
 def _publish(path, temporary, pin, policy):
     try:
         os.link(temporary, path, follow_symlinks=False)
@@ -227,11 +249,12 @@ def _publish(path, temporary, pin, policy):
 
 def _retain_metadata(path, raw, policy):
     pin = {"bytes": str(len(raw)), "sha256": hashlib.sha256(raw).hexdigest()}
+    temporary = _stage(path, pin["sha256"])
     if path.exists():
         if file_hash(path, policy, maximum=policy.max_manifest_bytes) != pin:
             policy.fail("HANDOVER_SNAPSHOT_CONFLICT")
+        _reconcile_published_stage(path, temporary, policy)
         return
-    temporary = _stage(path, pin["sha256"])
     if temporary.exists():
         try:
             ready = file_hash(temporary, policy, maximum=policy.max_manifest_bytes) == pin
@@ -318,10 +341,11 @@ def archive(input, *, policy):
     with _owner(root, output.name, policy):
         _retain_metadata(root / (".source-archive-" + hashlib.sha256(output.name.encode()).hexdigest() + ".request.json"),
                          (encoded({"manifestSha256": key, "schema": policy.schema}) + "\n").encode(), policy)
+        temporary = _stage(output, key)
         if output.exists():
             result, _manifest_value = _verify_zip(output, policy, manifest)
+            _reconcile_published_stage(output, temporary, policy)
             return {**result, "reused": True}
-        temporary = _stage(output, key)
         if temporary.exists():
             try:
                 result, _manifest_value = _verify_zip(temporary, policy, manifest)
@@ -390,14 +414,15 @@ def extract(input, *, policy):
                 target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
                 _path(destination, file["path"], policy)
                 expected = _pin(file, policy)
+                temporary = _stage(target, file["sha256"], root=destination)
                 if target.exists():
                     # Reusing a correct output is not evidence that this ZIP
                     # carries those bytes. Read it through CRC and SHA checks.
                     _verify_member(bundle, file, policy)
                     if file_hash(target, policy) != expected:
                         policy.fail("RECEIVED_FILE_CONFLICT")
+                    _reconcile_published_stage(target, temporary, policy)
                     continue
-                temporary = _stage(target, file["sha256"], root=destination)
                 if temporary.exists():
                     try:
                         ready = file_hash(temporary, policy) == expected
