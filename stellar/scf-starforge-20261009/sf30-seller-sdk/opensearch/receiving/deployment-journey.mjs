@@ -39,7 +39,7 @@ catch (error) { if (error.code !== 'ENOENT') throw error; }
 if (report && report.operation !== operation) throw new Error('The retained receiving report belongs to another operation.');
 report ??= { schema: 'stellar-forge.opensearch-deployment-journey.v1', operation, startedAt: now(),
   originalJourneySha256: hash(await readFile(originalPath)), originalResultSha256, stages: [], attempts: [], artifacts: [] };
-report.state = 'RUNNING'; delete report.error; delete report.completedAt;
+report.state = 'RUNNING'; delete report.error; delete report.completedAt; delete report.cleanupError;
 report.attempts.push({ startedAt: now(), runtime: process.version, nativeDirectory });
 async function save() {
   const temporary = reportPath + '.tmp';

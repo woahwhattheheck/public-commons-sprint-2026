@@ -233,3 +233,7 @@ merchant_odata_close takes the workspace's instanceId, drains accepted operation
 The OData product retains the public Northwind service document, CSDL and five provider pages for 830 Orders. The original source operator completed two editions, reviewed/compared them, queried the typed dataset and restored the complete package. The selected live-source operation also retains its merchant restart after page one, unchanged continuation and all 830 received rows. This MCP arm consumes those same source and customer records.
 
 Source pins and current installed receiving adoption remain in the [original OData product thread](https://tokenjunkielabs.slack.com/archives/C0BTB4SUCP9/p1791764617053699).
+
+## Pause an awaited import or close its host
+
+The default capture returns while the original import continues. With wait:true, the call stays open until its selected page budget completes. An explicit capture pause or exact-instance workspace close can interrupt that awaited import through the original AbortSignal path. The committed source prefix and original next link remain available for resume. Closing the enclosing merchant host requests the same pause before draining its active call, then closes its owned browsers, merchants and files.

@@ -280,7 +280,7 @@ export class MerchantODataWorkspaces {
         const { openODataWorkspace } = await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/odata/workspace.mjs');
         const workspace = await openODataWorkspace({ directory: configuration.directory });
         return { configuration, workspace, instanceId: randomUUID(), browser: null, live: null, publisher: null,
-          publisherRun: null, captures: new Map(), tail: Promise.resolve(), closing: false };
+          publisherRun: null, captures: new Map(), captureControl: new AbortController(), tail: Promise.resolve(), closing: false };
       })();
       this.#handles.set(name, opening);
       try { await opening; } catch (error) { if (this.#handles.get(name) === opening) this.#handles.delete(name); throw error; }
@@ -309,8 +309,15 @@ export class MerchantODataWorkspaces {
     return run ? { instanceId: run.observation.instanceId, releaseId: run.release.id, digest: run.release.digest,
       state: run.observation.phase, url: run.url, mode: run.mode, operations: run.operations?.url ?? null } : null;
   }
+  #pauseCaptures(handle) {
+    handle.captureControl.abort(failure('ODATA_CAPTURE_PAUSED', 'Import paused while the original operator closes.'));
+  }
+  async cancelCaptures() {
+    await Promise.allSettled([...this.#handles.values()].map(async opening => this.#pauseCaptures(await opening)));
+  }
   async #stop(name, handle) {
     handle.closing = true;
+    this.#pauseCaptures(handle);
     await handle.tail.catch(() => {});
     const results = [];
     if (handle.browser) {
@@ -320,7 +327,6 @@ export class MerchantODataWorkspaces {
     results.push(...await Promise.allSettled([handle.live?.close(), handle.publisherRun?.close(),
       handle.workspace.close(), this.#reads.closeScope(name)]));
     if (results.some(item => item.status === 'rejected')) {
-      handle.closing = false;
       throw failure('ODATA_CLOSE_FAILED', 'An owned original OData runtime reported an incomplete shutdown.');
     }
     this.#handles.delete(name);
@@ -512,7 +518,7 @@ export class MerchantODataWorkspaces {
         if (record.status === 'COMPLETE') return editionView(record);
         let operation = handle.captures.get(id);
         if (!operation && !(await original.state()).running.includes(id)) {
-          operation = original.capture(id, { pageBudget });
+          operation = original.capture(id, { pageBudget, signal: handle.captureControl.signal });
           handle.captures.set(id, operation);
           void operation.then(() => { if (handle.captures.get(id) === operation) handle.captures.delete(id); },
             () => { if (handle.captures.get(id) === operation) handle.captures.delete(id); });
@@ -699,6 +705,7 @@ export class MerchantODataWorkspaces {
       return this.#stop(args.workspace, handle);
     }
     if (handle.closing) throw failure('ODATA_WORKSPACE_CLOSING', 'This original workspace is closing.');
+    if (name === 'merchant_odata_capture' && args.action === 'pause') return this.#execute(name, handle, args);
     const operation = handle.tail.then(() => this.#execute(name, handle, args));
     handle.tail = operation.then(() => {}, () => {});
     return operation;
@@ -713,6 +720,7 @@ export class MerchantODataWorkspaces {
     if (this.#close) return this.#close;
     this.#closing = true;
     this.#close = (async () => {
+      await this.cancelCaptures();
       await Promise.allSettled([...this.#pending]);
       const outcomes = await Promise.allSettled([...this.#handles].map(async ([name, opening]) => this.#stop(name, await opening)));
       await this.#reads.close();

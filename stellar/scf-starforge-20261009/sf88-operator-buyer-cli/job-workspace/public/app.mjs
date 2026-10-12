@@ -44,7 +44,7 @@ function node(tag, text, className) {
   return value;
 }
 function links() {
-  for (const [id, path] of [['checkoutLink','/jobs/checkout/'],['jobsLink','/jobs/'],['libraryLink','/'],['collectionsLink','/collections'],['resultLibraryLink','/']])
+  for (const [id, path] of [['requestLink','/jobs/request/'],['checkoutLink','/jobs/checkout/'],['jobsLink','/jobs/'],['libraryLink','/'],['collectionsLink','/collections'],['resultLibraryLink','/']])
     byId(id).href = path + '#' + token;
 }
 function renderList() {
