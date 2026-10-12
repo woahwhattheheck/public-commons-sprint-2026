@@ -89,6 +89,63 @@ A draft export can retain unfinished Set values or reasons. Preview and Save val
 
 Tables support up to 200,000 target rows, 64 MiB of UTF-8 text, and 4 MiB per cell. Native receiving options retain their original field and mapping constraints. Large tables can be downloaded by kind or field while retaining all marked decisions.
 
+## Installed command and SDK
+
+Use the supplied, source-pinned `@tokenjunkielabs/starforge-merchant` distribution containing this complete receiving application. Its existing command registry exposes the same original CLI as `starforge water-quality-decisions`. The source commands below also work directly from a checkout.
+
+```sh
+starforge water-quality-decisions source \
+  --project /private/water-project --plan original-plan
+
+starforge water-quality-decisions draft \
+  --project /private/water-project --plan original-plan \
+  --format tsv --out /private/review-work/decisions.tsv
+
+starforge water-quality-decisions preview \
+  --project /private/water-project \
+  --document /private/review-work/decisions.tsv \
+  --new-plan reviewed-plan --out /private/review-work/preview.json
+
+starforge water-quality-decisions save \
+  --project /private/water-project \
+  --document /private/review-work/decisions.tsv \
+  --new-plan reviewed-plan --review receiving-review-01 \
+  --preview /private/review-work/preview.json
+```
+
+The installed SDK exports the original project and the same model, editable-table codec and retained workflow. For example, after editing the complete exported TSV:
+
+```js
+import { readFile } from 'node:fs/promises';
+import { openWaterQualityProject } from '@tokenjunkielabs/starforge-merchant/seller/water-quality/project';
+import { reviewSheetSource, listReviewSheetTargets } from '@tokenjunkielabs/starforge-merchant/seller/water-quality/decisions/model';
+import { reviewSheetTsv, parseReviewSheetTsv } from '@tokenjunkielabs/starforge-merchant/seller/water-quality/decisions/table';
+import { previewReviewSheet, saveReviewSheet, exportReviewSheet } from '@tokenjunkielabs/starforge-merchant/seller/water-quality/decisions';
+
+const project = await openWaterQualityProject('/private/water-project');
+try {
+  const original = await project.readOpenWaters('original-plan');
+  const source = reviewSheetSource(original);
+  const page = listReviewSheetTargets(original, {
+    kind: 'result', attentionOnly: false, offset: 0, limit: 1000,
+  });
+  const document = parseReviewSheetTsv(
+    await readFile('/private/review-work/decisions.tsv', 'utf8'));
+  const completeEditableTable = reviewSheetTsv(original, document);
+  const preview = await previewReviewSheet({ project, document, newPlanId: 'reviewed-plan' });
+  // Inspect the complete preview, impact and remaining issues before this save.
+  const review = await saveReviewSheet({ project, document, newPlanId: 'reviewed-plan',
+    reviewId: 'receiving-review-01', expectedPreviewSha256: preview.previewSha256 });
+  const fullProject = await exportReviewSheet({ project, reviewId: review.reviewId, format: 'bundle' });
+  console.log({ source, targets: page.total, tableCharacters: completeEditableTable.length,
+    reviewId: review.reviewId, filename: fullProject.filename, bytes: fullProject.bytes.length });
+} finally {
+  await project.close();
+}
+```
+
+`./seller/water-quality/decisions` exposes the functions in `workflow.mjs`; `/decisions/model` and `/decisions/table` expose the corresponding domain and codec modules. The installed browser workspace serves the same five assets and uses these same retained records.
+
 ## Command line
 
 The CLI uses the same domain and original private project as the operator page. Node and the original WQX application's existing dependencies are required; the decision-sheet modules add no package dependency.
@@ -195,3 +252,41 @@ receiveReviewSheet({ project, bundle })
 The project argument is the original `openWaterQualityProject` instance. The existing workspace server owns HTTP/UI integration and managed Applications use the same project and browser assets. The source inventory must include `model.mjs`, `csv.mjs`, `workflow.mjs` and the integrated browser module; the standalone command uses `cli.mjs`.
 
 Complete HTTP bundle receiving needs the existing 128 MiB native receiving allowance. Table imports and large decision documents support up to 64 MiB. These are executable input limits, separate from native scientific interpretation and original receiving field constraints.
+
+## Complete native browser receiving
+
+[browser-receiving.mjs](browser-receiving.mjs) is one maintained operator receiving journey. [browser-receiving.example.json](browser-receiving.example.json) selects the original saved Potomac project and its exact source identities. Change the project, output and installed-runtime paths for the selected host; keep the source identities and original operation identifiers when resuming that same work.
+
+The original source plan is `potomac-quarter-open-waters-01`, SHA-256 `4f9b1f612d1f9cb5bf3c90720d67cc37b5bd8fcd0c51476e669a340cde514610`. Its retained 1,035 result rows all have the exact native receiving value `RESULT_STATUS = Accepted`. The receiving journey derives the full target set from that original plan, adds that same value as an explicit receiving choice, and retains one explicit Keep reason for the existing project identifier `32UFDQN00`. It compares all original location, activity and result records, receiving fields, limits, references and summary values before and after the choices.
+
+The complete journey performs the following connected operation:
+
+1. Bind the exact original plan, scientific review, capture, current managed source inventory and driver source to one immutable `request.json`.
+2. Open the real browser workspace, verify the five served assets, page the original targets and select all matching rows through the supported 1,000-row requests.
+3. Set the exact current status and reason across all 1,035 results. Download the full editable CSV, parse that original download, add the explicit Keep reason, and import a complete TSV through the operator interface.
+4. Preview the full native plan, inspect that preview in the Open Waters tab, return to the decision sheet, and save or reopen the same original decision review. A prepared save resumes its original review name, plan name and preview.
+5. Download all eleven visible decision/native exports and compare their byte counts and SHA-256 values with the original export functions. Inspect saved read-only controls, revise into fresh names, and reopen the original saved review.
+6. Close the original server and browser context, start the same project afresh, and reopen its unchanged decision review and resulting plan.
+7. Receive the full portable bundle through the browser into the independent project. Reopen it, download all eleven files again, compare each against both the received native model and its retained original export, then close and freshly reopen the receiving project.
+
+Run the driver from the seller SDK source directory:
+
+```sh
+node --expose-gc --max-old-space-size=768 \
+  wqx-water-quality/review-sheet/browser-receiving.mjs \
+  --config /absolute/browser-receiving.json
+```
+
+An embedding application can import `runReviewSheetBrowserReceiving(configuration)` from the same source module. `--help` prints the exact standalone entrypoint. The regular installed `starforge water-quality-decisions` command remains the operator's domain CLI; the receiving driver uses its own explicit browser-runtime configuration.
+
+The configuration takes absolute canonical paths for the original project, output directory and independent receiving project. `playwrightModule` and `browserExecutable` select existing installations; `browserArgs`, `browserLibraryPaths` and `browserTempDirectory` carry the selected host's actual Chromium runtime requirements. The supplied example records the existing Chromium 153 launch arguments used by the same original console receiver. On a different installed browser, select that browser's supported arguments and library paths. Node and the original application dependencies must already be present.
+
+The original plan file is 5,562,523 bytes; its complete native Open Waters bundle is 31,495,178 bytes. Full decision tables and eleven exports are additional retained outputs. Start the whole operation through the existing native resource controller with its complete source, input and runtime paths declared. A starting allocation for this full browser workflow is 1,536 MiB memory plus 256 MiB reserve and 512 MiB new ordinary-disk space plus 64 MiB reserve. Those are execution declarations, not measured peaks. The driver streams file verification, releases large export buffers between files, and retains one exact set of complete exports; received downloads are compared and removed after their exact result is recorded. Keep the browser's ordinary temporary directory within the admitted allocation.
+
+### Retained output and continuation
+
+`request.json` binds the logical source, all exact decisions and code identities. `progress.json` records the current connected stage, original downloaded members, native receive and cold-reopen outcomes. A partial operation uses those same identifiers and verifies retained files before continuing. A completed call verifies its original files and both native projects, then returns the original result with `reused: true` without another browser run.
+
+`result.json` contains the completed review/plan/source identities, all eleven retained export hashes, all eleven receiving-download comparisons, actual browser and Node versions, original target-page requests, served assets, mobile viewport result and closed-workspace state. `exports/` contains the complete deliverable files. `draft/` contains the actual editable CSV, imported TSV and reopened decision JSON. `screenshots/` contains four focused viewport images covering the complete native preview, saved exports, mobile view and received project. `received-project/` is the independent original project, ready to reopen through the ordinary workspace or managed Applications.
+
+If a source or decision identity differs, select the intended original operation or begin a separately named receiving operation. An unfinished stage keeps its original request and records the concrete failure in `failure.json`; completed records and downloads remain available for the same operation's continuation.
