@@ -94,8 +94,9 @@ export async function openGeoServerPublisher({directory,profile:input,verifyRece
     need(receipt.projectId===request.projectId,'POSTGIS_PROJECT_CHANGED');
     // This host-owned function is the original database authority. It must reject
     // stale editions, changed relations/roles, or changed receiving bytes.
+    const layerIds=request.layers.map(layer=>layer.layerId);
     const native=await verifyReceiving({directory:receiptDirectory,expectedManifestSha256:request.manifestSha256,
-      role:profile.database.role,requireUnchangedRows:true,signal});
+      role:profile.database.role,requireUnchangedRows:true,layerIds,signal});
     signal.throwIfAborted();
     need(native?.verified === true && native.manifestFile?.sha256 === request.manifestSha256 &&
       native.current?.projectId === receipt.projectId && native.current.editionId === receipt.editionId &&
@@ -103,6 +104,12 @@ export async function openGeoServerPublisher({directory,profile:input,verifyRece
       native.current.role === profile.database.role && native.current.sessionRole === profile.database.role &&
       native.current.readOnly === true && native.observations?.allAcceptedRowsMatch === true,
       'POSTGIS_NATIVE_VERIFICATION_CHANGED', 'Use the original current edition and its verified reader session.', 409);
+    const observedLayers=native.observations.layers;
+    need(Array.isArray(native.selection?.layerIds)&&same([...native.selection.layerIds].sort(),[...layerIds].sort())&&
+      Array.isArray(observedLayers)&&observedLayers.length===layerIds.length&&
+      new Set(observedLayers.map(layer=>layer.layerId)).size===layerIds.length&&
+      observedLayers.every(layer=>layerIds.includes(layer.layerId)&&layer.role===profile.database.role&&layer.matchesAcceptedRows===true),
+      'POSTGIS_NATIVE_LAYER_SELECTION_CHANGED','Receive every selected original layer through the actual datastore reader.',409);
     const observation=await journal.object(nativeBytes(native),{contentType:'application/json'});
     const response=await service.request({path:paths(profile).datastore+'.json',signal});
     await journal.response(response,{private:true});
