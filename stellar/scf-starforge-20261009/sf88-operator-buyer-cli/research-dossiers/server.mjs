@@ -6,6 +6,8 @@ import { isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { openDossierStore } from './dossier.mjs';
+import { openClinicalTrialsWorkspace } from './clinical-trials-workspace.mjs';
+import { handleClinicalTrialsRoute } from './clinical-trials-routes.mjs';
 import { receiveOpenAlexEdition } from './openalex.mjs';
 import { openSavedOpenAlexWorkspace } from './openalex-workspace.mjs';
 import { openUnstructuredWorkspace, openSavedDocumentBuyerSource } from './unstructured-workspace.mjs';
@@ -21,6 +23,8 @@ const TYPES = Object.freeze({
   'unstructured.css': 'text/css; charset=utf-8',
   'unstructured-pipelines.js': 'text/javascript; charset=utf-8',
   'unstructured-pipelines.css': 'text/css; charset=utf-8',
+  'clinical-trials.js': 'text/javascript; charset=utf-8',
+  'clinical-trials.css': 'text/css; charset=utf-8',
 });
 const MAX_RESEARCH_BODY = 96 * 1024 * 1024 + 65536; // 16 MiB raw UTF-8, worst-case JSON escaping plus envelope.
 const MAX_PORTABLE_BODY = 256 * 1024 * 1024 + 65536; // Engine caps the serialized portable record at 256 MiB.
@@ -97,7 +101,7 @@ export async function loadEditionAdapters(modulePath) {
 
 /** Reuses the existing SF88 loopback / fragment-token operator convention. */
 export async function startDossierWorkspace({directory, port = 0, providers = {}, openalexWorkspace = null,
-  crossrefSource = null, crossrefIdentity = null, documentSource = null, pipelineSource = null} = {}) {
+  crossrefSource = null, crossrefIdentity = null, documentSource = null, pipelineSource = null, clinicalTrialsInputs = null, clinicalTrialsPython = 'python3'} = {}) {
   requireValue(typeof directory === 'string' && isAbsolute(directory) && resolve(directory) === directory,
     'WORKSPACE_ABSOLUTE_PATH_REQUIRED');
   requireValue(Number.isInteger(port) && port >= 0 && port <= 65535, 'WORKSPACE_PORT_INVALID');
@@ -120,6 +124,11 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       source:crossrefSource,identity:crossrefIdentity});
   }
   const pipelines = await openUnstructuredPipelineWorkspace({dossiers:store,source:pipelineSource});
+  let clinicalTrials;
+  try {
+    clinicalTrials = await openClinicalTrialsWorkspace({directory:join(directory,'clinical-trials'),
+      dossiers:store,inputs:clinicalTrialsInputs,python:clinicalTrialsPython});
+  } catch (error) {unstructured.clear(); await pipelines.close(); await crossref?.close(); throw error;}
   const token = randomBytes(32).toString('hex');
   const expectedAuthorization = Buffer.from('Bearer ' + token);
   let origin;
@@ -157,7 +166,8 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
           openalex: {configured:openalexWorkspace !== null},
           crossref: {configured:crossref !== null,identity:crossrefIdentity},
           unstructured: {configured:unstructured.configured,workspaceId:unstructured.workspaceId},
-          pipelines: await pipelines.configured()}); return;
+          pipelines: await pipelines.configured(),
+          clinicalTrials: {configured:true,inputFormat:'stellar-forge.clinicaltrials-packet.v1'}}); return;
       }
       if (req.method === 'GET' && path === '/api/openalex/editions') {
         requireValue(openalexWorkspace !== null, 'OPENALEX_WORKSPACE_NOT_CONFIGURED');
@@ -192,6 +202,8 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
         const options = url.searchParams.has('revision') ? {revision: revisionQuery(url.searchParams.get('revision'))} : {};
         send(200, await store.get(id, options)); return;
       }
+      if (await handleClinicalTrialsRoute({workspace:clinicalTrials,dossierId:id,action,req,url,
+        readBody:()=>readJson(req,MAX_CONTROL_BODY),send})) return;
       if (req.method === 'GET' && action === 'unstructured') {
         send(200, await unstructured.list(id, {
           after:url.searchParams.get('after') ?? '',
@@ -359,7 +371,7 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       if (res.headersSent) {res.destroy(); return;}
       const code = safeCode(error);
       const status = code === 'AUTH_REQUIRED' ? 401 : ['HOST_REFUSED', 'ORIGIN_REFUSED'].includes(code) ? 403 :
-        ['REVISION_CONFLICT','PORTABLE_HISTORY_CONFLICT','ROUTESCAN_RECORD_BUSY','CROSSREF_OPERATION_RUNNING_ELSEWHERE','UNSTRUCTURED_REVIEWED_EDITION_CHANGED','UNSTRUCTURED_RECEIVING_LABEL_CONFLICT','PIPELINE_REVISION_CHANGED','PIPELINE_REVIEWED_EDITION_CHANGED',
+        ['REVISION_CONFLICT','PORTABLE_HISTORY_CONFLICT','ROUTESCAN_RECORD_BUSY','CROSSREF_OPERATION_RUNNING_ELSEWHERE','UNSTRUCTURED_REVIEWED_EDITION_CHANGED','UNSTRUCTURED_RECEIVING_LABEL_CONFLICT','CLINICALTRIALS_REVIEW_CHANGED','CLINICALTRIALS_PLAN_CHANGED','CLINICALTRIALS_QUESTION_CHANGED','CLINICALTRIALS_SOURCE_CONFIGURATION_CHANGED','PIPELINE_REVISION_CHANGED','PIPELINE_REVIEWED_EDITION_CHANGED',
           'PIPELINE_PREPARATION_REQUEST_CHANGED','PIPELINE_RECEIVING_REQUEST_CHANGED','PIPELINE_REVIEWED_PLAN_CHANGED',
           'PIPELINE_ACTION_REQUEST_REUSED','PIPELINE_OPERATION_RUNNING_ELSEWHERE'].includes(code) ? 409 : code === 'ENOENT' || code === 'DOSSIER_NOT_FOUND' ? 404 :
           ['UPLOAD_SIZE_LIMIT','PORTABLE_SIZE_LIMIT','PORTABLE_RECORD_SIZE_LIMIT','PIPELINE_UPLOAD_TOO_LARGE'].includes(code) ? 413 : 400;
@@ -374,13 +386,14 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       server.once('error', reject);
       server.listen(port, '127.0.0.1', accept);
     });
-  } catch (error) {unstructured.clear(); await pipelines.close(); await crossref?.close(); throw error;}
+  } catch (error) {unstructured.clear(); await clinicalTrials.close(); await pipelines.close(); await crossref?.close(); throw error;}
   origin = 'http://127.0.0.1:' + server.address().port;
   let closing;
-  return {server, origin, url: origin + '/#token=' + token, token, crossref, unstructured, pipelines,
+  return {server, origin, url: origin + '/#token=' + token, token, crossref, unstructured, pipelines, clinicalTrials,
     close: () => closing ??= (async () => {
       unstructured.clear();
       await pipelines.close();
+      await clinicalTrials.close();
       await crossref?.close();
       await new Promise((accept, reject) => {
         server.close(error => error ? reject(error) : accept()); server.closeIdleConnections();
@@ -393,7 +406,7 @@ function parseOptions(args) {
   const options = {};
   for (let index = 0; index < args.length; index += 2) {
     const key = args[index];
-    requireValue(['--dir', '--port', '--edition-adapter', '--openalex-workspace', '--openalex-module', '--crossref-config', '--crossref-state', '--document-source', '--pipeline-source'].includes(key) && !Object.hasOwn(options, key) &&
+    requireValue(['--dir', '--port', '--edition-adapter', '--openalex-workspace', '--openalex-module', '--crossref-config', '--crossref-state', '--document-source', '--pipeline-source', '--clinical-trials-python'].includes(key) && !Object.hasOwn(options, key) &&
       typeof args[index + 1] === 'string' && args[index + 1].length > 0, 'ARGUMENT_INVALID_OR_REPEATED');
     options[key] = args[index + 1];
   }
@@ -404,11 +417,11 @@ function parseOptions(args) {
   return {directory: options['--dir'], port: Number(rawPort), adapter: options['--edition-adapter'],
     openalexDirectory:options['--openalex-workspace'], openalexModule:options['--openalex-module'],
     crossrefConfig:options['--crossref-config'],crossrefDirectory:options['--crossref-state'],
-    documentSourceConfig:options['--document-source'],pipelineSourceConfig:options['--pipeline-source']};
+    documentSourceConfig:options['--document-source'],pipelineSourceConfig:options['--pipeline-source'],clinicalTrialsPython:options['--clinical-trials-python']??'python3'};
 }
 async function main(args) {
   if (args.length === 0 || args.length === 1 && ['--help', '-h'].includes(args[0])) {
-    process.stdout.write('Usage: node server.mjs --dir /absolute/private/workspace [--port 8846] [--edition-adapter /absolute/provider-adapters.mjs] [--openalex-workspace /absolute/original/workspace] [--openalex-module /absolute/original/research/workspace.mjs] [--crossref-state /absolute/private/crossref-source] [--crossref-config /absolute/crossref-merchant.json] [--document-source /absolute/private/document-source.json] [--pipeline-source /absolute/private/pipeline-source.json]\n');
+    process.stdout.write('Usage: node server.mjs --dir /absolute/private/workspace [--port 8846] [--edition-adapter /absolute/provider-adapters.mjs] [--openalex-workspace /absolute/original/workspace] [--openalex-module /absolute/original/research/workspace.mjs] [--crossref-state /absolute/private/crossref-source] [--crossref-config /absolute/crossref-merchant.json] [--document-source /absolute/private/document-source.json] [--pipeline-source /absolute/private/pipeline-source.json] [--clinical-trials-python /absolute/python3]\n');
     return;
   }
   const options = parseOptions(args);
@@ -444,7 +457,7 @@ async function main(args) {
   process.stdout.write(JSON.stringify({mode: 'RESEARCH_DOSSIER_WORKSPACE', directory: options.directory,
     url: app.url, providers: Object.keys(providers), openalexConfigured:openalexWorkspace !== null,
     crossrefConfigured:crossrefSource !== null, documentSourceConfigured:documentSource !== null,
-    documentWorkspaceId:documentSource?.workspaceId ?? null,
+    documentWorkspaceId:documentSource?.workspaceId ?? null,clinicalTrialsConfigured:true,
     pipelineSourceConfigured:pipelineSource !== null,pipelineWorkspaceId:pipelineSource?.workspaceId ?? null}) + '\n');
   let closing;
   const stop = () => closing ??= (async () => {
