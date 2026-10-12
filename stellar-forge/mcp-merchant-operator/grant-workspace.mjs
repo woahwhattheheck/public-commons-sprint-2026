@@ -238,7 +238,7 @@ export class MerchantGrantWorkspaces {
       'The selected input differs from the exact reviewed SHA256 or byte count.');
     return {bytes, metadata, sourceWorkspace:source};
   }
-  async #modelInputs(alias, args, label) {
+  async #modelInputs(alias, args, label, maximum = GRANT_MAX_SOURCE_BYTES) {
     need((args.inputs !== undefined) !== (args.input !== undefined), 'GRANT_INPUT_SELECTION_INVALID',
       'Supply original ' + label.toLowerCase() + ' inputs inline or one verified input reference.');
     if (args.inputs !== undefined) {
@@ -252,8 +252,8 @@ export class MerchantGrantWorkspaces {
     need(plain(inputs), 'GRANT_INVALID_INPUT',
       label + ' input must select its original JSON object. Use inputPointer for an original response wrapper.');
     const selectedBytes = args.inputPointer ? Buffer.byteLength(JSON.stringify(inputs)) : original.bytes.length;
-    need(selectedBytes <= GRANT_MAX_SOURCE_BYTES, 'GRANT_INPUT_TOO_LARGE',
-      label + ' input JSON fits the native 8 MiB source bound.');
+    need(selectedBytes <= maximum, 'GRANT_INPUT_TOO_LARGE',
+      label + ' input JSON fits the native ' + (maximum / (1024 * 1024)) + ' MiB source bound.');
     return inputs;
   }
   async #transfer(alias, selected) {
@@ -413,10 +413,10 @@ export class MerchantGrantWorkspaces {
     else if (verb === 'case_command') { const {caseId, ...body} = rest; original = await client.command(caseId, body); }
     else if (verb === 'cohort_seed') original=await client.cohortSeed(args.caseId,args.expectedVersion,args.tranche);
     else if (verb === 'cohort_preview') original=await client.cohortPreview(args.caseId,args.expectedVersion,
-      await this.#modelInputs(alias,args,'Cohort'));
+      await this.#modelInputs(alias,args,'Cohort',GRANT_MAX_BUNDLE_BYTES));
     else if (verb === 'cohort_prepare') {
       const {caseId,input,inputPointer,expectedInputSha256,...body}=rest;
-      original=await client.cohortPrepare(caseId,{...body,inputs:await this.#modelInputs(alias,args,'Cohort')});
+      original=await client.cohortPrepare(caseId,{...body,inputs:await this.#modelInputs(alias,args,'Cohort',GRANT_MAX_BUNDLE_BYTES)});
     }
     else if (verb === 'completion_seed') original=await client.completionSeed(args.caseId,args.expectedVersion,args.tranche);
     else if (verb === 'completion_preview') {
