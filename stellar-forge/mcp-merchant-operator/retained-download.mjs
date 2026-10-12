@@ -63,9 +63,9 @@ export async function openMerchantFileClient({ url, tokenEnv = 'MCP_ACCESS_TOKEN
 
 /** Owner adapters supply the original manifest parser, names and identity schema. */
 export function createRetainedDownload({ manifestName, parseManifest, maximumBytes, stateSchema,
-  resultSchema, toolPrefix, errorPrefix, clientName, describe = () => ({}) }) {
+  resultSchema, toolPrefix, errorPrefix, clientName, describe = () => ({}), connect: openClient = openMerchantFileClient }) {
   async function connect(provided, options) {
-    if (provided === undefined) return openMerchantFileClient({ ...options, errorPrefix, clientName });
+    if (provided === undefined) return openClient({ ...options, errorPrefix, clientName });
     if (!provided || typeof provided !== 'object' || Array.isArray(provided) ||
         typeof provided.call !== 'function' || typeof provided.endpoint !== 'string' ||
         !provided.endpoint.trim() || provided.endpoint.length > 4096 || /[\0\r\n]/.test(provided.endpoint) ||

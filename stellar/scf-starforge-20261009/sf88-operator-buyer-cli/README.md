@@ -1,5 +1,9 @@
 # SF88: One-command approved Stellar buyer pilot
 
+For Java and JVM applications, use the [Java customer SDK](java/README.md) for
+native requests, inboxes, object and dataset acquisition, verified delivery and
+original-attempt recovery. It reopens the same maintained buyer state.
+
 For research questions, source notes, cited findings and portable reports, use
 [research dossiers](research-dossiers/README.md). The same local operator can
 receive the original buyer's saved research results and open provider editions.

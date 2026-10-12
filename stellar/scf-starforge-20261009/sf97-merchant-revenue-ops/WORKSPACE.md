@@ -241,6 +241,16 @@ source hashes, monthly targets, fixed costs and challenge costs are retained.
 The accounting run uses its selected native journals and verification sources;
 the pricing assumptions provide its unit valuations.
 
+## Compare demand, price and cost scenarios
+
+Open **Scenario planning** from the workspace header to start with a saved
+review. Enter alternative volumes, USD quotes and costs; compare contribution
+and margins; review exact break-even or target suggestions; then save and export
+the comparison. **Use selected scenario in pricing review** opens its commercial
+assumptions in the existing pricing form for calculation and save against the
+current operations source. The [scenario planning guide](PLANNING.md) covers
+the complete workflow, exact arithmetic, saved comparisons and application API.
+
 ## Prepare a seller price change
 
 **Prepare price change** on a saved review opens that review's original seller
