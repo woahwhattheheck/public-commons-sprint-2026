@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Commons Audit Operator</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<a class="skip" href="#main">Skip to workspace</a>
+<section id="login" class="login" hidden><form id="login-form">
+<p class="eyebrow">COMMONS / AUDIT</p><h1>Open your workspace</h1>
+<p>Your access link selects the records and reports available to you.</p>
+<label for="access-key">Workspace access key</label><input id="access-key" type="password" autocomplete="off" required>
+<button type="submit" class="primary">Open workspace</button><p id="login-error" role="alert"></p>
+</form></section>
+<div id="shell" hidden>
+<aside><div class="brand"><strong>COMMONS</strong><span>AUDIT OPERATOR</span></div>
+<button id="menu-toggle" aria-expanded="false" aria-controls="navigation">Workspace menu</button>
+<nav id="navigation" aria-label="Workspace"></nav>
+<div class="aside-footer"><span id="workspace-short"></span><span>Private local workspace</span></div>
+</aside>
+<div class="workspace"><header><div><span id="actor-name"></span><span id="actor-role" class="muted"></span></div>
+<div class="header-actions"><button id="refresh" title="Refresh current workspace">Refresh</button><button id="sign-out">Sign out</button></div></header>
+<div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+<main id="main" tabindex="-1"><div id="page"></div></main>
+<footer>Commons Audit Operator <span id="workspace-id"></span></footer></div>
+</div>
+<dialog id="editor" aria-labelledby="dialog-title"><div class="dialog-header"><h2 id="dialog-title"></h2><button id="close-dialog" aria-label="Close dialog">Close</button></div><div id="dialog-body"></div></dialog>
+<script src="/app.js" defer></script></body></html>

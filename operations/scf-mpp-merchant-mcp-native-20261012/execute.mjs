@@ -139,7 +139,7 @@ try {
  const preview=await call('preview',{console:'research',profileId:selected.profileId,offerId:'report',
   inputs:{query:options.query,json:options.json}});
  assert.equal(preview.request.url,origin+'/report?edition=2026-10&hold=1&tag=north&tag=south');
- assert.equal(preview.binding.bodySha256,bindingFacts(api.buildCustomerRequest(contract,'report',options)).bodySha256);
+ assert.equal(preview.binding.bodySha256,bindingFacts(api.buildCustomerRequest(contract,'report',{query:options.query,json:options.json})).bodySha256);
  const queued=await call('prepare',{console:'research',profileId:selected.profileId,offerId:'report',...options});
  await holdSeen;
  const pending=await call('status',{console:'research'});
@@ -157,7 +157,7 @@ try {
  const firstChallenge=first.challenge.id;
  assert.equal(received.filter(row=>row.url===preview.request.url.slice(origin.length)).length,1);
  await assert.rejects(call('response_preview',{console:'research',purchaseId:options.purchaseId}),
-  error=>error.code==='MPP_CUSTOMER_RESPONSE_NOT_READY');
+  error=>error.code==='MPP_CUSTOMER_RESPONSE_PENDING');
  failNext=true;
  const interruptedId='mpp-mcp-retry-001';
  const interrupted=await call('prepare',{console:'research',profileId:selected.profileId,offerId:'report',

@@ -4,9 +4,15 @@ import { constants } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { blockscoutApplication, prepareBlockscoutApplication } from './application-blockscout.mjs';
+import { redisApplication, prepareRedisApplication } from './application-redis.mjs';
+import { jobCheckoutApplication, validateJobCheckoutSelection, prepareJobCheckoutApplication } from './application-job-checkout.mjs';
+import { datasetBuyerApplication, prepareDatasetBuyerApplication } from './application-dataset-buyer.mjs';
+import { eventFeedApplications, prepareEventFeedApplication } from './application-event-feed.mjs';
+import { tenderlyApplication, prepareTenderlyApplication } from './application-tenderly.mjs';
 import { inspectMerchantRuntime } from '../../sf46-release/runtime-package.mjs';
 import { managedState, openManagedHome, reviewManagedAdoption } from './managed-workspace.mjs';
 import { applicationEnvironment, readApplicationTerminal, sendApplicationTerminal } from './application-command.mjs';
+import { PYTHON_APPLICATION_CATALOG, pythonApplicationCommand, pythonApplicationResource } from '../python-runtime/application-lifecycle.mjs';
 import { absolute, privateDirectory, makePrivate, regular, readJSON, saveJSON, recordId, operationId,
   operationLease, operationRunning, tailFile, plain, need, digest, json, canonical, now } from './storage.mjs';
 
@@ -29,7 +35,13 @@ const common = [
   field('environmentFile', 'Private environment JSON', 'path', false, 'Optional private file containing environment names and string values. Values stay on this host.'),
 ];
 export const APPLICATION_CATALOG = Object.freeze([
+  ...PYTHON_APPLICATION_CATALOG,
+  ...eventFeedApplications(common),
   blockscoutApplication(common),
+  redisApplication(common),
+  jobCheckoutApplication(common),
+  datasetBuyerApplication(common),
+  tenderlyApplication(common),
   { id: 'xml', command: 'dataset', requiredSource: 'stellar/scf-starforge-20261009/sf30-seller-sdk/xml/cli.mjs',
     title: 'XML dataset onboarding', terminal: false,
     description: 'Reopen an initialized XML workspace with its original sources, mappings, native datasets, comparison and portable editions.',
@@ -163,6 +175,7 @@ function normalizeSettings(type, input) {
   }
   if (type.id === 'dataset') need(Boolean(settings.datasetFile) !== Boolean(settings.stateDirectory),
     'APPLICATION_DATASET_SELECTION_REQUIRED', 'Choose exactly one original dataset file or retained state');
+  if (type.id === 'job-checkout') validateJobCheckoutSelection(settings);
   if (type.id.endsWith('-publisher')) {
     need(!settings.create || settings.sourceFile && settings.stateDirectory, 'APPLICATION_PUBLISHER_SOURCE_REQUIRED');
     need(Boolean(settings.seller) === Boolean(settings.resource), 'APPLICATION_BUYER_ENDPOINT_PAIR_REQUIRED');
@@ -171,16 +184,36 @@ function normalizeSettings(type, input) {
     'APPLICATION_OPENALEX_WORKSPACE_REQUIRED', 'Choose the original saved OpenAlex workspace with its module');
   return settings;
 }
-async function applicationCommand(type, settings, runtimeDirectory) {
+async function applicationCommand(type, settings, runtimeDirectory, context = {}) {
+  if (type.python) return pythonApplicationCommand(context.root, type, settings, {
+    ...context, runtimeDirectory, inputPath, selectedExecutable, applicationEnvironment,
+  });
   const inputs = [], createDirectories = [], args = [];
-  let terminalPython;
+  let terminalPython, eventFeed;
   const path = async (name, kind = 'directory', missing = false, privateOnly = false) => {
     if (!settings[name]) return;
     const value = await inputPath(settings[name], kind, missing, privateOnly); inputs.push(value); return value;
   };
   const option = (name, value) => { if (value !== undefined && value !== '') args.push(name, String(value)); };
-  if (type.id === 'blockscout') {
+  if (['mercury-feed', 'buyer-event-feed'].includes(type.id)) {
+    const selected = await prepareEventFeedApplication(type.id, settings, {
+      ...context, runtime: { directory: runtimeDirectory }, inputPath, selectedExecutable,
+    });
+    args.push(...selected.args); inputs.push(...selected.inputs); eventFeed = selected.identity;
+  } else if (type.id === 'blockscout') {
     const original = await prepareBlockscoutApplication(settings, inputPath);
+    args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'redis') {
+    const original = await prepareRedisApplication(settings, inputPath, runtimeDirectory);
+    args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'job-checkout') {
+    const original = await prepareJobCheckoutApplication(settings, runtimeDirectory, inputPath);
+    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'dataset-buyer') {
+    const prepared = await prepareDatasetBuyerApplication(settings, { inputPath, selectedExecutable, runtimeDirectory });
+    args.push(...prepared.args); inputs.push(...prepared.inputs); createDirectories.push(...prepared.createDirectories);
+  } else if (type.id === 'tenderly') {
+    const original = await prepareTenderlyApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
   } else if (type.id === 'xml') {
     await path('workspaceDirectory', 'directory', false, true);
@@ -309,10 +342,12 @@ async function applicationCommand(type, settings, runtimeDirectory) {
   if (settings.environmentFile) inputs.push(await inputPath(settings.environmentFile, 'file'));
   const environment = await applicationEnvironment(settings.environmentFile);
   return { command: type.command, args, inputs, createDirectories, terminal: type.terminal,
+    ...(eventFeed ? { eventFeed } : {}),
     ...(type.terminal ? { terminalPython } : {}),
     ...(settings.environmentFile ? { environmentFile: settings.environmentFile, environmentSha256: environment.sha256 } : {}) };
 }
 function resourceKey(type, settings) {
+  if (type.python) return pythonApplicationResource(type, settings);
   const value = settings.outputParent ?? settings.workspaceDirectory ?? settings.directory ??
     settings.outputDirectory ?? settings.stateDirectory ?? settings.datasetFile;
   return hash({ family: type.id.endsWith('-publisher') ? 'publisher' : type.id, directory: value });
@@ -369,7 +404,8 @@ async function view(root, saved) {
     const observed = cancelled ? { id: run.id, phase: 'CANCELLED', active: false, result: cancelled } : await operationView(root, run.id);
     return { id: run.id, createdAt: run.createdAt, revision: run.revision, command: run.request.command,
       args: run.request.args, terminal: run.request.terminal === true, ...observed,
-      request: undefined, privateUrl: observed.active && !observed.stop ? observed.url?.url ?? null : null };
+      request: undefined, privateUrl: observed.active && !observed.stop ? observed.url?.url ?? null : null,
+      privateLinks: observed.active && !observed.stop && Array.isArray(observed.url?.links) ? observed.url.links : [] };
   }));
   const current = rows[0] ?? null;
   const adoption = !release && saved.adoption ? await operationView(root, saved.adoption.requestId) : null;
@@ -404,7 +440,7 @@ export async function reviewApplication(root, { runtimeId, runtimeDirectory, kin
   need(typeof label === 'string' && label.trim() && label.length <= 120, 'APPLICATION_LABEL_REQUIRED');
   const runtime = await inspectMerchantRuntime(absolute(runtimeDirectory), { load: false });
   const spec = await readJSON(join(runtime.sourceRoot, 'stellar/scf-starforge-20261009/distribution/distribution.json'));
-  need(Object.hasOwn(spec.commands ?? {}, type.command), 'APPLICATION_NOT_IN_RUNTIME',
+  need(type.python || Object.hasOwn(spec.commands ?? {}, type.command), 'APPLICATION_NOT_IN_RUNTIME',
     'This selected runtime does not include ' + type.command + '. Choose a runtime containing that original command.');
   if (type.requiredSource) await regular(join(runtime.sourceRoot, type.requiredSource), 4 * 1024 * 1024).catch(() =>
     need(false, 'APPLICATION_NOT_IN_RUNTIME', 'Choose a runtime containing the original ' + type.title + ' source'));
@@ -413,7 +449,7 @@ export async function reviewApplication(root, { runtimeId, runtimeDirectory, kin
       'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/workspace.mjs'), 4 * 1024 * 1024).catch(() =>
       need(false, 'APPLICATION_NOT_IN_RUNTIME',
         'Choose a runtime containing the original OpenAlex workspace or select its explicit original module'));
-  const command = await applicationCommand(type, settings, runtime.directory);
+  const command = await applicationCommand(type, settings, runtime.directory, { root, runtimeId });
   const homes = (await managedState(root)).homes;
   let home = homeId ? homes.find(item => item.id === recordId(homeId)) : homes.find(item => item.releases.some(release =>
     release.runtime && bindingKeys.every(key => release.runtime[key] === runtime[key])));
@@ -452,7 +488,9 @@ export async function saveApplication(root, { requestId, reviewId, applicationId
     }
     need((previous?.revision ?? null) === reviewed.previousRevision, 'APPLICATION_REVIEW_CHANGED');
     if (previous) need(!await busyApplication(root, id), 'APPLICATION_RUNNING');
-    const current = await applicationCommand(applicationType(reviewed.kind), reviewed.settings, reviewed.runtime.directory);
+    const current = await applicationCommand(applicationType(reviewed.kind), reviewed.settings, reviewed.runtime.directory, {
+      root, runtimeId: reviewed.runtimeId,
+    });
     need(hash(current) === hash(reviewed.command), 'APPLICATION_INPUTS_CHANGED', 'Review the current application files before saving', 409);
     for (const path of reviewed.command.createDirectories) {
       try { await makePrivate(path); } catch (error) { if (error.code !== 'EEXIST') throw error; await privateDirectory(path); }
@@ -478,8 +516,10 @@ export async function reviewApplicationStart(root, id) {
   const runtime = await inspectMerchantRuntime(saved.runtime.directory, { expectedManifest: saved.runtime.sourceManifestSha256, load: false });
   need(hash(binding(runtime)) === hash(saved.runtime), 'APPLICATION_RUNTIME_CHANGED');
   const { home, release } = await selectedRelease(root, saved);
-  need(release && Object.hasOwn(release.commands, applicationType(saved.kind).command), 'APPLICATION_CONNECTION_REQUIRED');
-  const command = await applicationCommand(applicationType(saved.kind), saved.settings, saved.runtime.directory);
+  need(release && (applicationType(saved.kind).python || Object.hasOwn(release.commands, applicationType(saved.kind).command)), 'APPLICATION_CONNECTION_REQUIRED');
+  const command = await applicationCommand(applicationType(saved.kind), saved.settings, saved.runtime.directory, {
+    root, runtimeId: saved.runtimeId,
+  });
   const value = { schema: 'stellar-forge.application-start-review.v1', applicationId: id,
     applicationRevision: saved.revision, runtime: saved.runtime, homeId: home.id, homeRevision: home.revision,
     releaseId: release.id, releaseDigest: release.digest, resourceKey: saved.resourceKey, command };
@@ -508,7 +548,9 @@ export async function prepareApplicationStart(root, { applicationId, requestId, 
         need(!await busyApplication(root, other), 'APPLICATION_WORKSPACE_BUSY',
           'The original application for this data directory already has a retained operation. Reopen or stop that operation.', 409);
     }
-    const current = await applicationCommand(applicationType(saved.kind), saved.settings, saved.runtime.directory);
+    const current = await applicationCommand(applicationType(saved.kind), saved.settings, saved.runtime.directory, {
+      root, runtimeId: saved.runtimeId,
+    });
     need(hash(current) === hash(reviewed.command), 'APPLICATION_INPUTS_CHANGED', 'Review the original current inputs again', 409);
     const { home, release } = await selectedRelease(root, saved);
     need(home?.revision === reviewed.homeRevision && release?.id === reviewed.releaseId &&
@@ -516,6 +558,7 @@ export async function prepareApplicationStart(root, { applicationId, requestId, 
     const request = { requestId, operation: 'managed-run', homeId: home.id, releaseId: release.id,
       expectedRevision: home.revision, applicationId: id, command: current.command, args: current.args,
       terminal: current.terminal, ...(current.terminalPython ? { terminalPython: current.terminalPython } : {}),
+      ...(current.pythonCommand ? { pythonCommand: current.pythonCommand } : {}),
       ...(current.environmentFile ? { environmentFile: current.environmentFile, environmentSha256: current.environmentSha256 } : {}) };
     const value = { schema: 'stellar-forge.application-run.v1', id: requestId, applicationId: id,
       createdAt: now(), revision: saved.revision, reviewId, requestHash, request };
