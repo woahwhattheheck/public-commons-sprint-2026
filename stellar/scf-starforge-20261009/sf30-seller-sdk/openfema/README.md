@@ -189,3 +189,9 @@ Source capture is asynchronous through the action/UI interface. The dedicated ca
 `capture.mjs` owns acquisition and source receiving. `domain.mjs` owns exact financial aggregation, joins, reviews and comparisons. `core.mjs` owns saved operations and portfolio versions. `dataset.mjs` composes native publication and buyer delivery. `exports.mjs` and `relocation.mjs` compose complete workspace receiving with the maintained native publisher. The browser and CLI use the same core.
 
 This product uses the FEMA OpenFEMA API. FEMA does not endorse this product.
+
+## Complete recorded DR-4724 portfolio
+
+The [complete retained source example](examples/recorded-dr4724/README.md) includes all 195 projects, 43 applicant registrations, two declaration areas, the standalone report, all six full CSV tables and complete original-row portfolio JSON. The original domain/report functions generate the exact-cent totals from the twelve retained official responses. Its manifest identifies the original source and implementation.
+
+[Open the complete report](https://chatgpt.com/space/page_3e4298551d048191a72a621dabdf9ace). The complete native source, MCP, merchant, buyer and portable-workspace journey is documented above.
