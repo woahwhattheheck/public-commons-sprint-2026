@@ -127,7 +127,8 @@ def group_amounts(lines, dimensions=()):
 def period_view(period, items, sources, centers, dispositions, closed_transfers=None):
     """Dates are operator recognition dates; native days never become settlement dates."""
     start, through = period["from_day"], period["through_day"]
-    source_views = [{k: s.get(k) for k in ("id", "name", "kind", "path", "current_capture", "capture_time", "projection_sha256", "journal_events", "last_sequence", "record_kind", "source_basis", "date_basis", "data_context", "immutable_intake")}
+    source_views = [{**{k: s.get(k) for k in ("id", "name", "kind", "path", "current_capture", "capture_time", "projection_sha256", "journal_events", "last_sequence", "record_kind", "source_basis", "date_basis", "data_context", "immutable_intake")},
+                     **({k:s.get(k) for k in ("spending_owner","ledger_state","source_issues","source_notes")} if s.get("kind") == "governed_mcp" else {})}
                     for s in sources]
     issues, candidates, exposures, native_outcomes = [], [], [], []
     disposition_by_key = {(d["item_id"], d["code"]): d for d in dispositions}
@@ -151,6 +152,10 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
         return result
 
     for source in sources:
+        if source.get("source_issues"):
+            issue("GOVERNED_SOURCE_" + source["id"], None,
+                  source["name"] + " retains original native bindings that need source recovery before financial attribution",
+                  group={"source_id":source["id"],"issues":source["source_issues"]}, kinds=[])
         if source.get("pending"):
             issue("SOURCE_REVIEW_" + source["id"], None, source["name"] + " has captured source awaiting acceptance or rejection",
                   group={"source_id": source["id"], "captures": source["pending"]}, kinds=[])
@@ -185,7 +190,7 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
         detail = row.get("native_detail")
         if isinstance(detail, dict):
             native_outcomes.append({"item_id":item["id"], "request_id":row["request_id"], "source_name":item["source_name"],
-                "source_capture":item["capture_id"], "quote_day":row["day"], "native_status":detail["native_status"],
+                "source_capture":item["capture_id"], "quote_day":detail.get("quote_created_day",row["day"]), "native_status":detail["native_status"],
                 "payment_classification":detail["classification"], "network":row["network"], "asset":row["asset"],
                 "quoted_amount":detail.get("quoted_amount"), "settled_actual":row["settled_base_units"],
                 "receipt_ref":row["receipt_ref"], "observation_sha256":detail.get("observation_sha256"),
@@ -199,14 +204,23 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
                 "result_preview_bytes":(detail.get("result_preview") or {}).get("bodyBytes"),
                 "missing":item["missing"], "source_kind":row.get("source_kind", "sf36_ledger"),
                 "data_context":detail.get("data_context", "operational"),
-                "store_currency":detail.get("store_currency"), "store_amount":detail.get("store_amount")})
-        if row["state"] == "reserved":
+                "store_currency":detail.get("store_currency"), "store_amount":detail.get("store_amount"),
+                **({key:detail.get(key) for key in ("spending_link","spending_state","spending_maximum","spending_actual",
+                    "spending_reserved_base_units","spending_reservation_day","spending_request_sha256",
+                    "spending_binding_sha256","spending_receipt_ref","spending_proof_sha256","finality_record_sha256",
+                    "observed_settled_actual","spending_problems","spending_notes")} if row.get("source_kind") == "governed_mcp" else {})})
+        if row["state"] == "reserved" or (row.get("source_kind") == "governed_mcp" and int(row.get("reserved_base_units") or "0") > 0):
             exposures.append({"item_id": item["id"], "request_id": row["request_id"], "source_name": item["source_name"],
                               "network": row["network"], "asset": row["asset"], "amount": row["reserved_base_units"],
                               "native_reservation_day": row["day"], "missing": item["missing"],
                               "source_capture": item["capture_id"], "request_digest": row["request_digest"]})
         if item["missing"]:
             issue("ABSENT_FROM_CURRENT_SOURCE", item, "This original row is absent from the accepted source capture; its previous bytes remain retained")
+            continue
+        if row["state"] == "spending_review":
+            issue("GOVERNED_SPENDING_BINDING", item,
+                  "The retained quote, native approval or original ledger/finality disagree. Inspect the original buyer and refresh this source.",
+                  group={"problems":row.get("native_detail", {}).get("spending_problems", [])}, kinds=[])
             continue
         if row["state"] == "reserved":
             issue("UNRESOLVED_RESERVATION", item, "The original maximum remains reserved. Carry it for native finalization; it is not settled expense")
@@ -250,13 +264,13 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
                 raise Problem("COST_CENTER_MISSING", "A retained allocation references a missing cost center", 409)
             selected_lines.append({"item_id": item["id"], "source_id": item["source_id"], "source_name": item["source_name"],
                                    "request_id": row["request_id"], "request_digest": row["request_digest"],
-                                   "native_reservation_day": row["day"] if row.get("source_kind", "sf36_ledger") == "sf36_ledger" else None,
+                                   "native_reservation_day": row["day"] if row.get("source_kind", "sf36_ledger") == "sf36_ledger" else row.get("native_detail", {}).get("spending_reservation_day"),
                                    "native_source_day":row["day"], "native_date_basis":row.get("native_date_basis", "SF36 reservation day"),
                                    "source_kind":row.get("source_kind", "sf36_ledger"), "recognition_date": coding["recognition_date"],
                                    "network": row["network"], "asset": row["asset"], "scheme": row["scheme"],
                                    "settled_actual": row["settled_base_units"],
-                                   "reserved_maximum":row["amount"] if row.get("source_kind", "sf36_ledger") == "sf36_ledger" else None,
-                                   "quoted_amount":row["amount"] if row.get("source_kind") == "mcp_quote" else None,
+                                   "reserved_maximum":row["amount"] if row.get("source_kind", "sf36_ledger") == "sf36_ledger" else row.get("native_detail", {}).get("spending_maximum"),
+                                   "quoted_amount":row.get("native_detail", {}).get("quoted_amount") if row.get("source_kind") in ("mcp_quote","governed_mcp") else None,
                                    "receipt_ref": row["receipt_ref"], "proof_sha256": row["proof_sha256"],
                                    "center_id": center["id"], "center_code": center["code"], "center_name": center["name"],
                                    "project": line["project"], "account_code": line["account_code"], "amount": line["amount"],
