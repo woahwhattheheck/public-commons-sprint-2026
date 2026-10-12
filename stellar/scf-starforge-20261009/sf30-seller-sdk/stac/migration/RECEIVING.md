@@ -153,6 +153,8 @@ The resulting output directory contains:
 | File or directory | Use |
 | --- | --- |
 | `operation-input.json` and `actions/` | Original configuration and pre-dispatch revision/request bindings |
+| `workspace-input.json` and `workspace-input-snapshot.json` | Original workspace, exact edition documents, source snapshot and committed history |
+| `host-bindings/` | Explicit physical locations for the same operation on each receiving host |
 | `builds/` | Original committed project delivery results |
 | `comparisons/` | Complete original source/native edition comparisons |
 | `complete-migration.zip` | Full source, mapping, native data, maps, styles, resources, history and application |
@@ -164,7 +166,36 @@ The resulting output directory contains:
 
 Keep the original configuration and output directory when resuming. Each build's start event binds its initial revision; each following subrequest uses the preceding committed revision. If another editor changes the workspace between unfinished steps, the original CAS check reports that change. Review the current workspace before choosing a new build request.
 
-The input paths may be remapped when the same complete source/workspace carrier moves to another machine; retain the original source, edition, request and operation identities in that receiving plan. A completed operation's existing archive and result are reconciled before continuation.
+### Move the same operation to another host
+
+Keep the original configuration file unchanged. Move the complete workspace and its complete receiving output directory, including saved actions, source bindings, archives, independent results and received workspaces. Paths for the new host are a separate explicit input:
+
+```json
+{
+  "schema": "starforge.migration-receiving-host.v1",
+  "operationId": "ORIGINAL_MIGRATION_RECEIVING_OPERATION",
+  "expectedWorkspaceId": "ORIGINAL_WORKSPACE_ID",
+  "expectedSnapshotSha256": "ORIGINAL_WORKSPACE_INPUT_SNAPSHOT_SHA256",
+  "workspace": "/new-host/existing-migration",
+  "outputRoot": "/new-host/migration-delivery"
+}
+```
+
+Use the exact `workspaceId` and `snapshotSha256` from the retained `workspace-input.json`. This is the workspace snapshot bound when this operation first opened. It remains the reference after the operation has committed further work. The displayed values are input-shape examples; copy the full original identities.
+
+```sh
+"$STARFORGE_QGIS_PYTHON" migration/examples/receiving_journey.py \
+  --config /new-host/original-migration-receiving.json \
+  --remap /new-host/migration-host-paths.json
+```
+
+The helper verifies that the selected workspace has the same identity, original edition documents, event prefix and committed requests. Every retained source, project and migration record must remain present unchanged. A workspace at the same revision must match the complete retained snapshot exactly. A later revision must continue that history; unfinished build steps still use their original saved CAS revisions. The move also verifies all declared migration files.
+
+The original configuration, snapshot, action inputs and completed result remain unchanged. Each explicit host mapping has a small saved binding in `host-bindings/`. Reusing that mapping after further committed progress verifies the original history without requiring the current revision to stay frozen.
+
+Completed archives are read from the new output directory and verified against the saved byte counts, hashes, workspace IDs, manifest IDs and revisions. Their original receipt paths remain historical metadata. The helper returns current paths separately in `locations`; it uses those selected paths for receiving and onward receiving. Move each completed ZIP with its receipt. If a completed ZIP is missing, recover those original bytes from the previous carrier before continuing.
+
+For an operation created by an earlier helper that has no `workspace-input.json`, select the moved workspace's exact current ID and canonical snapshot SHA-256 for the first explicit mapping. The helper retains that snapshot as the original binding before dispatch. All existing operation inputs and saved build actions still have to agree.
 
 ## Source and format references
 
