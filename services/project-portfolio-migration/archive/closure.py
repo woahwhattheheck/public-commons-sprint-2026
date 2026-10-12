@@ -32,6 +32,22 @@ class SourceClosure:
         self.objects[key] = name
         return name
 
+    def operator_file(self, identity, expected_bytes=None):
+        """Stream a complete original binary/capture object into this package."""
+        identity = checked_id(identity)
+        require(self.operator is not None, "archive_capture_store",
+                "Open the original operator store for this native calculation.")
+        key = ("operator", identity)
+        path = self.operator.root / "objects" / identity
+        actual = file_identity(path)
+        require(actual["sha256"] == identity and (expected_bytes is None or actual["bytes"] == expected_bytes),
+                "archive_capture_bytes", "The complete original native calculation changed.")
+        if key not in self.objects:
+            name = "source/operator-objects/" + identity
+            self.sink.add_file(name, path, actual, role="operator_object", object_id=identity)
+            self.objects[key] = name
+        return self.objects[key]
+
     def operator_object(self, identity):
         identity = checked_id(identity)
         key = ("operator", identity)

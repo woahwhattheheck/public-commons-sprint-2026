@@ -1,6 +1,6 @@
 # GridKind household scheduling workspace
 
-GridKind turns a household's flexible loads and 24-hour price assumptions into a feasible schedule. It keeps named household inputs, original plans, tariff comparisons, approvals, and labeled simulated receipts in one retained workspace.
+GridKind turns a household's flexible loads and 24-hour price assumptions into a feasible schedule. It keeps named household inputs, seven-day schedules, original daily plans, tariff comparisons, approvals, and labeled simulated receipts in one retained workspace.
 
 The original joint optimizer respects each load's duration and deadline, 22:00–07:00 quiet hours, and the shared circuit cap. The original agent proposes a schedule, accepts approval for its exact plan ID, and executes the simulated schedule with an idempotent receipt. The household workspace makes those decisions available across server restarts and portable handoffs.
 
@@ -36,9 +36,17 @@ The same directory and browser cookie reopen the same households. `GRIDKIND_WORK
 
 Opening another household or restoring a saved record first retains a valid edited draft. A draft with incomplete values remains in the editor so its fields can be corrected. **Reopen saved inputs** returns the editor to the current saved scenario. A stale tab cannot apply its previous household's approval to the newly selected household; its draft stays available to create a separate household.
 
+## Plan the whole week
+
+Choose **Plan a week** to open seven independently editable days from the selected household. Set each day's 24 prices, circuit cap, and flexible loads; copy a routine to weekdays or the weekend; and mark rest days. **Plan and save this week** uses the original optimizer for each enabled day and retains the complete result in household history.
+
+Feasible days remain usable when another date needs attention. The result explains the affected day and labels which days contribute to the cost and energy totals. Open a saved planned day directly in the original daily workspace to plan, approve, and simulate it. CSV and tentative local-time calendar downloads carry the saved schedule, while the normal household backup carries its entire history.
+
+The [complete weekly operator guide](WEEK_PLANNING.md) covers the routine editor, per-day repair, saved revisions, daily continuation, export formats, and model boundaries.
+
 ## What survives reopening
 
-The SQLite workspace retains named households, input revisions, original proposal views, tariff comparisons, approvals, simulated receipts, and their record relationships. Each record includes the original scenario and source hashes for the optimizer, agent, and analyzer used to produce it.
+The SQLite workspace retains named households, input revisions, original proposal views, dated weekly schedules, tariff comparisons, approvals, simulated receipts, and their record relationships. Each record includes the original scenario and source hashes for the optimizer, agent, analyzer, and weekly planner used to produce it.
 
 Reloading a page in the same live server session keeps its active proposal. Opening a saved household, restarting the server, restoring inputs, or importing a backup starts with the saved scenario and a fresh active approval flow. Historical approvals and receipts remain readable in the decision history. The next proposal receives a new revision and plan ID. Household and live-session identity also scope server-issued proposal IDs, so identical inputs in two households cannot exchange approval IDs.
 
@@ -74,6 +82,8 @@ Household routes:
 | `GET /api/workspace/record` | Exact saved record and digest |
 | `GET /api/workspace/export` | Complete household backup |
 | `POST /api/workspace` | Create, select, rename, save, restore, adopt tariff, preview import, or import |
+| `POST /api/week` | Plan and retain a week, or restore one of its planned days |
+| `GET /api/week/export` | Download the saved weekly schedule as CSV or calendar |
 
 The service retains strict same-origin static assets and mutation checks. All imported names and historical results are rendered as text. The workspace directory is created with private permissions; the database uses mode 0600. Local APIs continue to use the original application controls.
 

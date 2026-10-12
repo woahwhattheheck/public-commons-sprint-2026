@@ -12,6 +12,7 @@ import json
 import re
 
 from portfolio.storage import canonical, digest, require
+from .timephased_contract import HEADERS as TIMEPHASED_HEADERS
 
 FAMILIES = ("project", "tasks", "resources", "assignments", "dependencies", "calendars")
 TABLES = ("projects", "tasks", "resources", "assignments", "dependencies", "calendars",
@@ -165,6 +166,8 @@ def table_headers(profile):
             current += [col, col + "__type", col + "__units", col + "__elapsed"]
         headers[table] = current
     headers.update({table: list(names) for table, names in FIXED.items()})
+    if profile.get("timephased") is not None:
+        headers.update({table: list(names) for table, names in TIMEPHASED_HEADERS.items()})
     return headers
 
 
@@ -194,6 +197,49 @@ def data_dictionary(profile, headers):
                   {"from": "relationships.target_entity_id", "to": "entity table.entity_id", "scope": "target_family; unique only"},
                   {"from": "entity table.project_key", "to": "projects.project_key", "scope": "this one selected cohort"},
               ]}
+    if profile.get("timephased") is not None:
+        descriptions.update({
+            "capture_id": "Exact retained MPXJ calculation for this source edition, recipe and selected period profile.",
+            "period_id": "Source-edition/profile-local requested bounds; native overlap and endpoint-accrual semantics are explicit in each period/series.",
+            "assignment_entity_id": "Original assignments.entity_id; task and resource joins remain within that edition.",
+            "source_set_id": "Original assignment RAW_TIMEPHASED field; spans retain the original amount-per-hour and total.",
+            "calendar_entity_id": "Original calendars.entity_id when the effective native calendar is a retained source object.",
+            "effective_calendar_json": "Complete actual assignment effective calendar, including derived calendars; baseline series use the separately retained project baseline calendar.",
+            "baseline_calendar_json": "Actual ProjectFile.getBaselineCalendar definition and source resolution used by native baseline series.",
+            "calendar_basis": "Selects assignment_effective_calendar or project_baseline_calendar for this actual native series.",
+            "boundary_semantics": "Native duration overlap and inclusive endpoint/first-match instant cost rules remain unchanged.",
+            "native_range_admission_json": "Exact positive whole-minute equal-width contiguous grid admitted for native pro-rata COST-resource actual amounts, when that path applies.",
+            "state": "native_value, native_null, not_applicable, native_error or unsupported_native_value; null is distinct from zero.",
+            "value_text": "Exact native numeric lexical text. Currency, work unit, elapsed flag and material resource remain separate.",
+            "source_pointer": "Original model JSON Pointer, or the named complete JSONL calculation with 1-based line and selected period.",
+            "total_text": "Exact decimal sum of original native assignment values for one project, series, period and dimension.",
+            "material_resource_entity_id": "Material quantities aggregate only for this exact original resource; labels alone never join resources.",
+            "native_data_type": "Original MPXJ field catalogue data type used to bind work, currency and material series.",
+            "definition_sha256": "Content identity of the complete original native field definition.",
+            "completeness": "Native values/nulls/applicability/errors are counted separately; an all-null group has no numeric total.",
+        })
+        result["timephased"] = {
+            "profile": profile["timephased"], "grain": "original_resource_assignments",
+            "calculation": "Original ResourceAssignment period getters from the selected retained edition/recipe.",
+            "storage": "Complete UTF-8 JSONL under source/operator-objects; source identity appears in timephased_captures.",
+            "scope": "Assignment-period values. Task fixed cost, unsourced allocations and cross-project currency conversion are not added.",
+            "totals": "Group by project, edition, series, period, currency, work units/elapsed and exact material resource.",
+            "nulls": "Native null is preserved; a reported zero remains a numeric value. Error rows remain in the complete fact table.",
+            "receiving": "Recomputes relational rows from original models and retained native calculation bytes without starting MPXJ.",
+        }
+        result["relationships"].extend([
+            {"from": "timephased_values.assignment_entity_id", "to": "assignments.entity_id"},
+            {"from": "timephased_values.period_id", "to": "timephased_periods.period_id"},
+            {"from": "timephased_values.series_id", "to": "timephased_series.series_id"},
+            {"from": "timephased_values.basis_id", "to": "timephased_assignment_basis.basis_id"},
+            {"from": "timephased_assignment_basis.calendar_entity_id", "to": "calendars.entity_id", "scope": "original native object only"},
+            {"from": "timephased_assignment_basis.resource_entity_id", "to": "resources.entity_id"},
+            {"from": "timephased_assignment_basis.task_entity_id", "to": "tasks.entity_id"},
+            {"from": "timephased_spans.source_set_id", "to": "timephased_source_sets.source_set_id"},
+            {"from": "resource_rate_values.rate_entry_id", "to": "resource_rate_entries.rate_entry_id"},
+            {"from": "timephased_values.capture_id", "to": "timephased_captures.capture_id"},
+            {"from": "timephased_captures.baseline_calendar_entity_id", "to": "calendars.entity_id", "scope": "actual original baseline calendar; derived definitions retained in JSON"},
+        ])
     for table, names in headers.items():
         family = "project" if table == "projects" else table
         generated = {}

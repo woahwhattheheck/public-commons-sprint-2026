@@ -1,9 +1,41 @@
 /** Continue the original migration desk receiving operation with its archive workflow. */
 import {join} from "node:path";
+const canonical=value=>JSON.stringify(value,(_,v)=>v&&typeof v==="object"&&!Array.isArray(v)?
+  Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v);
 
 export async function receiveArchiveDesk(H) {
   const {entry,out,progress,api,page,action,downloadArtifact,screenshot,waitFor,requireValue,errors,hello}=H;
   const artifacts=[];
+  const withPeriods=entry.profile?.timephased!==undefined;
+  const queryTable=withPeriods?"timephased_totals":"tasks";
+  const querySql=withPeriods?
+    "SELECT project_key, period_key, series, kind, currency, units, elapsed, material_resource_entity_id, total_text, value_rows, null_rows, not_applicable_rows, error_rows FROM timephased_totals ORDER BY project_key, period_key, series, currency, units, material_resource_entity_id":
+    "SELECT project_key, source_key, name FROM tasks ORDER BY project_key, source_key";
+  async function selectNativePeriods(){
+    const selected=entry.profile.timephased;
+    await page.locator("#archive-timephased-enabled").check();
+    await page.locator("#archive-timephased-fields").click();
+    await waitFor(async()=>(await page.locator("#archive-timephased-editor").innerText()).includes("field choices use"),
+      "The actual assignment field definitions did not reach the original period controls.");
+    for(const [i,period] of selected.periods.entries()){
+      await page.locator("#archive-period-add").click();
+      const row=page.locator("#archive-periods tbody tr").last();
+      for(const [index,key] of ["key","label","start","finish"].entries())
+        await row.locator("input").nth(index).fill(period[key]);
+    }
+    for(const [i,series] of selected.series.entries()){
+      await page.locator("#archive-timephased-add-series").click();
+      let row=page.locator("#archive-timephased-series tbody tr").nth(i);
+      await row.locator("select").nth(0).selectOption(series.kind);
+      row=page.locator("#archive-timephased-series tbody tr").nth(i);
+      await row.locator("input").fill(series.name);
+      await row.locator("select").nth(1).selectOption(series.field);
+      if(series.kind==="work")await row.locator("select").nth(2).selectOption(series.units);
+    }
+    const actual=JSON.parse(await page.locator("#archive-profile").inputValue());
+    requireValue(canonical(actual.timephased)===canonical(selected),
+      "The original editable period controls changed the selected complete native profile.");
+  }
   const openArchive=async()=>page.locator('[data-tab="archive"]').click();
   const readCohort=async id=>api("/api/cohorts/"+id);
   const selectCohort=async id=>{
@@ -26,17 +58,30 @@ export async function receiveArchiveDesk(H) {
     await page.locator("#archive-publication").selectOption(publicationId);
     const saved=await readCohort(cohortId),publication=saved.publications.find(x=>x.id===publicationId);
     requireValue(publication,"The exact original publication is absent.");
-    await page.locator("#archive-table").selectOption("tasks");
+    await page.locator("#archive-table").selectOption(queryTable);
     await page.locator("#archive-filter-column").selectOption("");
     await page.locator("#archive-filter-text").fill("");
     await page.locator("#archive-read-table").click();
-    await waitFor(async()=>(await page.locator("#archive-range").innerText()).includes(String(publication.dataset.tables.tasks)+" original rows"),
-      "The retained native task table did not load.");
-    await page.locator("#archive-sql").fill("SELECT project_key, source_key, name FROM tasks ORDER BY project_key, source_key");
+    await waitFor(async()=>(await page.locator("#archive-range").innerText()).includes(String(publication.dataset.tables[queryTable])+" original rows"),
+      "The retained original reporting table did not load.");
+    await page.locator("#archive-sql").fill(querySql);
     await page.locator("#archive-parameters").fill("[]");
     await page.locator("#archive-query").click();
     await waitFor(async()=>(await page.locator("#archive-query-status").innerText()).includes("preview rows"),
       "The original reporting SQL did not return.");
+    if(withPeriods){
+      const nativeReview=await api("/api/objects/"+publication.review_sha256);
+      requireValue(nativeReview.timephased &&
+        nativeReview.timephased.captures.every(x=>x.native_errors===0) &&
+        nativeReview.timephased.captures.some(x=>x.fact_count>0),
+        "The original native fixture did not complete its source-bound period calculation.");
+      requireValue(publication.dataset.tables.timephased_values===
+        nativeReview.timephased.captures.reduce((n,x)=>n+x.fact_count,0),
+        "The complete native fact table differs from the retained calculation count.");
+      await waitFor(async()=>await page.locator("#archive-timephased-review").isVisible(),
+        "The original saved native calculation did not reopen in its publication review.");
+      await page.locator("#archive-timephased-review").scrollIntoViewIfNeeded();
+    }
     return publication;
   };
   const retainDownloads=async publication=>{
@@ -120,7 +165,10 @@ export async function receiveArchiveDesk(H) {
       if(member.currency){await row.locator("input").nth(2).fill(member.currency.code);await row.locator("input").nth(3).fill(member.currency.note);}
     }
     await page.getByText("Complete column and measure profile",{exact:true}).click();
-    await page.locator("#archive-profile").fill(JSON.stringify(entry.profile,null,2));
+    const baseProfile=structuredClone(entry.profile);delete baseProfile.timephased;
+    await page.locator("#archive-profile").fill(JSON.stringify(baseProfile,null,2));
+    await page.locator("#archive-profile").dispatchEvent("change");
+    if(withPeriods)await selectNativePeriods();
     await page.locator("#archive-save").click();
   },{discardReply:true});
   const cohortId=saved.result.cohort_id;
@@ -136,8 +184,8 @@ export async function receiveArchiveDesk(H) {
   const exported=await action("04-export-complete-query","archive_query_export",async()=>{
     await openArchive();await page.locator("#archive-query-export").click();
   });
-  requireValue(exported.result.rows===Number(publication.dataset.tables.tasks),
-    "The full native task query export differs from the selected reporting table count.");
+  requireValue(exported.result.rows===Number(publication.dataset.tables[queryTable]),
+    "The full original query export differs from the selected reporting table count.");
   await retainDownloads(publication);
   await page.locator("#archive-query-exports details").filter({has:page.locator('button[title="'+exported.result.artifact.sha256+'"]')}).locator("summary").click();
   artifacts.push(await downloadArtifact(exported.result.artifact,"#archive-query-exports"));

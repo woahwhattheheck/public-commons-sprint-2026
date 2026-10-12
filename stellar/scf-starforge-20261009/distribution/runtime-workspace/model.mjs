@@ -35,7 +35,7 @@ import { pythonOperationFields, initializePythonWorkspace, reviewPythonRuntime, 
 import { bindPythonApplicationCommand } from '../python-runtime/command-binding.mjs';
 import { openApiConnectionSetupAction } from './openapi-connection-setup.mjs';
 import { sourceBuildOperationFields, initializeSourceBuildWorkspace, sourceBuildWorkspaceState,
-  sourceBuildCatalog, reviewSourceBuild, readSourceBuildReview, normalizeSourceBuildOperation, initializeSourceBuildRequest,
+  sourceBuildCatalog, sourceBuildProduct, reviewSourceBuild, readSourceBuildReview, normalizeSourceBuildOperation, initializeSourceBuildRequest,
   executeSourceBuildOperation, recoverSourceBuildOperation, openSourceBuildArchive } from './source-build-workspace.mjs';
 
 export const WORKSPACE_SCHEMA = 'stellar-forge.runtime-workspace.v1';
@@ -192,6 +192,7 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
     directory: root,
     async sourceBuildsState() { return sourceBuildWorkspaceState(root); },
     async sourceBuildsCatalog(input) { return sourceBuildCatalog(input); },
+    async sourceBuildsProduct(input) { return sourceBuildProduct(input); },
     async sourceBuildsReview(input) { return reviewSourceBuild(root, input); },
     async sourceBuildsReadReview(id) { return readSourceBuildReview(root, id); },
     async sourceBuildsDownload(id) { return openSourceBuildArchive(root, id); },

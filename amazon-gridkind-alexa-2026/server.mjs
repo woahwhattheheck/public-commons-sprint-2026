@@ -8,6 +8,7 @@ import {randomUUID,createHash} from 'node:crypto';
 import {makeAgent} from './agent.mjs';
 import {DEMO,inputs} from './engine.mjs';
 import {analyze} from './robustness/compare.mjs';
+import {planWeek,inspectWeek,weekCsv,weekCalendar} from './weekly.mjs';
 import {openHouseholdWorkspace,digest,WorkspaceError} from './workspace.mjs';
 const ROOT=dirname(fileURLToPath(import.meta.url));
 const LIMIT=100;
@@ -30,7 +31,7 @@ function acceptsHost(req,boundHost){
 }
 export function start({port=Number(process.env.PORT||'4181'),host=process.env.HOST||'127.0.0.1',
   workspace=process.env.GRIDKIND_WORKSPACE||join(homedir(),'.local','share','gridkind')}={}){
-  const sourcePins=Object.fromEntries(['engine.mjs','agent.mjs','robustness/compare.mjs'].map(name=>
+  const sourcePins=Object.fromEntries(['engine.mjs','agent.mjs','robustness/compare.mjs','weekly.mjs'].map(name=>
     [name,createHash('sha256').update(readFileSync(join(ROOT,name))).digest('hex')]));
   const store=openHouseholdWorkspace({directory:workspace,sourcePins});
   const clients=new Map();
@@ -93,6 +94,32 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
     committed(id,live);
     return {proposalId:state.proposal.id,report,recordId:record.id,workspace:view(id).workspace};
   }
+  function weekAction(id,body){
+    const live=check(id,body,true);
+    if(body.action==='plan'){
+      const report=planWeek(body.input);
+      const record=store.mutate(id,body.context.revision,ctx=>ctx.record({kind:'week',
+        scenario:live.agent.view().scenario,name:report.input.name,detail:{report}}));
+      committed(id,live);
+      return {record,state:view(id)};
+    }
+    if(body.action==='adopt-day'){
+      const original=store.record(id,live.householdId,body.recordId);
+      if(original.kind!=='week'||!Number.isInteger(body.dayIndex)||body.dayIndex<0||body.dayIndex>6)throw Error('Choose a saved day.');
+      const report=inspectWeek(original.detail.report),day=report.days[body.dayIndex];
+      if(day.status!=='planned')throw Error('Plan this day successfully before opening it in the daily workspace.');
+      const scenario=inputs(report.input.days[body.dayIndex].scenario);
+      const candidate=makeAgent({scenario,initialRevision:store.current(id).initialRevision,namespace:live.householdId+':'+live.generation});
+      const record=store.mutate(id,body.context.revision,ctx=>{
+        ctx.setScenario(scenario);
+        return ctx.record({kind:'restore',scenario,state:candidate.view(),parentId:original.id,
+          name:'Weekly inputs · '+day.date,detail:{fromRecordId:original.id,dayIndex:body.dayIndex,date:day.date}});
+      });
+      live.agent=candidate;live.planRecordId=null;committed(id,live);
+      return {record,state:view(id)};
+    }
+    throw Error('Unknown weekly operation.');
+  }
   function workspaceAction(id,body){
     let live=check(id,body,true);
     if(body.action==='preview-import')return {preview:store.inspectImport(body.bundle)};
@@ -142,9 +169,9 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
     try{
       if(!acceptsHost(req,host))return respond(res,403,{error:'Loopback demo Host mismatch'});
       const url=new URL(req.url,'http://localhost'),path=url.pathname;
-      if(req.method==='GET'&&['/','/app.js','/exact-inputs.js','/households.js','/robustness-ui.js','/scenario-handoff.js','/style.css'].includes(path)){
-        const file=path==='/'?'index.html':path.slice(1);
-        const mime=path==='/'?'text/html; charset=utf-8':path==='/style.css'?'text/css; charset=utf-8':'text/javascript; charset=utf-8';
+      if(req.method==='GET'&&['/','/week','/week-ui.js','/week.css','/app.js','/exact-inputs.js','/households.js','/robustness-ui.js','/scenario-handoff.js','/style.css'].includes(path)){
+        const file=path==='/'?'index.html':path==='/week'?'week.html':path.slice(1);
+        const mime=path==='/'||path==='/week'?'text/html; charset=utf-8':path.endsWith('.css')?'text/css; charset=utf-8':'text/javascript; charset=utf-8';
         res.writeHead(200,{'content-type':mime,'cache-control':'no-store','x-content-type-options':'nosniff','content-security-policy':"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'"});
         return res.end(await readFile(join(ROOT,file)));
       }
@@ -154,17 +181,29 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
         if(path==='/api/state')return respond(res,200,view(id));
         if(path==='/api/workspace/history')return respond(res,200,store.history(id,{householdId:url.searchParams.get('householdId')||undefined,offset:Number(url.searchParams.get('offset')||0)}));
         if(path==='/api/workspace/record')return respond(res,200,store.record(id,url.searchParams.get('householdId')||store.current(id).id,url.searchParams.get('id')));
+        if(path==='/api/week/export'){
+          const record=store.record(id,url.searchParams.get('householdId')||store.current(id).id,url.searchParams.get('recordId'));
+          if(record.kind!=='week')throw Error('Choose a saved weekly plan.');
+          const format=url.searchParams.get('format');
+          if(!['csv','ics'].includes(format))throw Error('Choose CSV or calendar export.');
+          const report=inspectWeek(record.detail.report);
+          const text=format==='csv'?weekCsv(report):weekCalendar(report,{recordId:record.id,createdAt:record.createdAt});
+          res.writeHead(200,{'content-type':format==='csv'?'text/csv; charset=utf-8':'text/calendar; charset=utf-8',
+            'cache-control':'no-store','x-content-type-options':'nosniff','x-frame-options':'DENY','referrer-policy':'no-referrer',
+            'content-disposition':'attachment; filename="gridkind-week-'+report.input.startDate+'-'+record.id.slice(0,8)+'.'+format+'"'});
+          return res.end(text);
+        }
         if(path==='/api/workspace/export'){
           const bundle=store.exportHousehold(id,url.searchParams.get('householdId')||undefined);
           return respond(res,200,bundle,{'content-disposition':`attachment; filename="gridkind-household-${bundle.payload.household.id.slice(0,8)}.json"`});
         }
       }
-      if(req.method!=='POST'||!['/api/action','/api/robustness','/api/workspace'].includes(path))return respond(res,405,{error:'Unsupported operation'});
+      if(req.method!=='POST'||!['/api/action','/api/robustness','/api/workspace','/api/week'].includes(path))return respond(res,405,{error:'Unsupported operation'});
       if(req.headers.origin&&new URL(req.headers.origin).host!==req.headers.host)return respond(res,403,{error:'Cross-origin disabled'});
       const body=await readBody(req,path==='/api/workspace'?8*1024*1024:40000);
       // Resolve current selection after the complete request is read. Every UI
       // mutation carries its saved revision, active household and live generation.
-      const result=path==='/api/action'?action(id,body):path==='/api/robustness'?compare(id,body):workspaceAction(id,body);
+      const result=path==='/api/action'?action(id,body):path==='/api/robustness'?compare(id,body):path==='/api/week'?weekAction(id,body):workspaceAction(id,body);
       return respond(res,200,result);
     }catch(error){
       const status=error instanceof WorkspaceError?error.status:400;
