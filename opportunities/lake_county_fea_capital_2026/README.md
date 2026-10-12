@@ -1,0 +1,128 @@
+# Lake County Capital Program
+
+A complete local engineering workspace for the original Lake County, Colorado capital-asset workshare. It retains original source files, explicit record mappings, professional findings, selected-model exchanges, 15-year capital scenarios, staff decisions, full reports and an independently reopenable application.
+
+This application supports the proposed FEA delivery. It does not establish a County contract, an accepted supplier appointment, a grant award, a professional appraisal or a completed client capital plan.
+
+## Start with the received application
+
+The complete handover contains:
+
+- `application/`: every required Python, browser and documentation file.
+- `workspace/`: the original SQLite database, all retained source objects, prior versions and exact mutation requests.
+- `delivery/`: the selected frozen publication, a full readable report and complete editable register CSVs.
+- `manifest.json`: each member's byte count and SHA-256, the native workspace identity, the selected publication and the full application inventory.
+
+Use Python 3.10 or later on Linux. The application uses the Python standard library. It requires Linux `renameat2` for publishing a new received directory without replacing an existing destination. The optional automated browser review additionally uses an explicitly selected installed Node, Playwright module and Chromium executable; it never installs dependencies or downloads a browser.
+
+From the received folder:
+
+```sh
+python3 -B application/cli.py status --root workspace
+python3 -B application/cli.py serve --root workspace --startup-file private-startup.json
+```
+
+Open the private loopback link printed by the server. The token stays in the local startup file and browser session. Keep that startup file private. The complete archive does not include a provider token or browser session.
+
+The server listens only on `127.0.0.1`. It checks the Bearer token, Host and browser Origin for every workspace API call. It does not expose a public service, connect to My Facility Plan or PubWorks, or call a financial model.
+
+## The operator workflow
+
+### 1. Retain original sources
+
+In **Sources & editions**, select the complete original file and enter its authority, source type, source URL and original publication date. Retrieval time is recorded separately.
+
+PDFs and other documents may remain documents. For a CSV or JSON register, inspect the actual columns, select the original record identifier and map only known columns. An omitted value is not filled from a similarly named property. A public directory observation is not an authoritative client asset record.
+
+The workspace retains the original bytes and their SHA-256 before parsing. CSV parsing is strict UTF-8, permits a UTF-8 BOM, and records malformed widths, missing columns and duplicate identities. JSON uses an explicit array pointer. The supported input bound is 32 MiB per original file and 200,000 rows per register input. See **INPUTS.md** for the complete contracts.
+
+### 2. Review an immutable source edition
+
+An edition selects complete originals and their mappings. A following edition can name its predecessor. Every source row carries its original file, source-row position, physical CSV line when applicable, raw values, mapped values and issues.
+
+Duplicate identifiers are never resolved by choosing the first row. An absent or ambiguous asset reference remains unresolved. The **Registers** screen provides pages for inspection; the full native export and register downloads are not truncated to those pages.
+
+Record actual reviews in **Review decisions**. A review is bound to the exact source edition or object version. Crosswalk decisions preserve room/building/site granularity and ownership or maintenance distinctions. They do not rewrite source rows or silently clear original errors.
+
+### 3. Exchange with the selected existing model
+
+Retain the actual model and export files. In **Model exchange**, name the model and its version, document the agreed exchange/recalculation method, and select original key, editable and guard fields.
+
+The prepared JSON includes the original model-file identities and all selected register values. Return a complete original CSV or JSON export as a new edition. The workspace compares all returned records: missing, additional, duplicate, changed, invalid and guarded values remain in the result.
+
+An explicit decision accepts the exact comparison, keeps the original or rejects the return. A return with unresolved identities, guard changes or structural errors cannot be accepted. Recalculation stays with the selected original model and its authorized environment. The application does not guess private workbook ranges, formulas, My Facility Plan APIs or vendor import formats.
+
+### 4. Save source-bound scenarios
+
+A scenario uses supplied actions or an explicitly accepted model return. It selects one currency, one supplied price basis and one 15-year horizon. Five- and ten-year views use the same selection.
+
+A blank start creates an explicitly incomplete draft. Unknown timing, currency, operating impact and amount basis remain unresolved. Supplied zero is retained as zero.
+
+Capital need, planned expenditure, operating impact, authorized funding, contingent funding, actual cash receipt, cash payment and closing cash are separate metrics. Stated funding totals and contextual study-programme figures are not additive asset-capital funding. A valid actual receipt uses its own receipt year even when its authorization predates the horizon. Conflicting closing-cash outputs leave that year's balance unavailable.
+
+No escalation, discount rate, exchange rate, financing, maintenance recurrence, replacement interval, future appraisal or cash balance is inferred. Exact decimal arithmetic uses a private precision context of 320 digits for the declared input bounds.
+
+### 5. Freeze a full handover
+
+An **internal working** publication can preserve public evidence while client inputs remain unavailable. A **reviewed handover** requires a supplied client or prime asset register, actual source acceptance, complete selected scenarios and their explicit reviews. Neither mode records client approval.
+
+Choose the baseline and up to two alternatives. The publication freezes exact source/scenario versions. Later working changes do not change that publication.
+
+Download the full HTML report and complete workspace archive. The export takes one locked native SQLite snapshot and includes every retained original, source version, decision, original request, editable register and required application file.
+
+## Native requests and interruption recovery
+
+The CLI and browser use the same native action API. Every mutation has an original operation ID, actor, native workspace ID, expected workspace revision, action and full payload.
+
+The native workspace first checks whether that exact operation is already complete. A completed original request returns its original result even after later edits. A different payload under the same operation ID is rejected. Only unfinished requests compare the selected current revision.
+
+The browser persists the complete pending request before dispatch. If a reply is lost, use **Reconcile original request**. A different or stale draft is not silently rebased. A definitive rejected request can be retained and reopened only after confirming that no completed native result exists. Selecting a new current basis is an explicit operator action.
+
+CLI example:
+
+```sh
+python3 -B application/cli.py prepare --root workspace \
+  --operation original-source-review-01 --actor your-operator \
+  --action review.save --payload review-payload.json \
+  --request original-review-request.json
+python3 -B application/cli.py apply --root workspace \
+  --request original-review-request.json --result original-review-result.json
+python3 -B application/cli.py operation --root workspace --id original-source-review-01
+```
+
+Keep the same prepared request on resume. Do not edit its original revision, payload or operation ID to force a replay.
+
+## Receive into another selected directory
+
+Use the exact delivered ZIP identity:
+
+```sh
+python3 -B application/cli.py receive \
+  --archive Lake_County_Capital_Program_Complete.zip \
+  --destination received-capital-program \
+  --sha256 EXACT_DELIVERED_SHA256 --bytes EXACT_DELIVERED_BYTE_COUNT
+python3 -B received-capital-program/application/cli.py status \
+  --root received-capital-program/workspace
+```
+
+Receiving rejects unsafe paths, duplicate or undeclared members, missing application files, changed member hashes and incomplete source/native selections. Its original receiving receipt and staging directory survive interruption. A completed stage is published using no-replace rename. A later destination edit is preserved and requires an explicit source decision; receiving never overwrites an existing unrelated workspace.
+
+The received application is executed independently; it does not depend on the author's source checkout. The original native workspace identity remains the same. The receiving receipt has its own actual receiving identity.
+
+## Whole operating selection
+
+`operate.py` consumes one exact local selection, creates or reopens the actual internal workspace, retains the complete source, imports selected editions, runs explicitly selected exchanges/scenarios/reviews, freezes the publication and executes the received source in two fresh Python processes.
+
+```sh
+python3 -B application/operate.py --selection actual-operating-selection.json
+```
+
+A selection includes the original case ID and workshare-source hash, actual local source paths and hashes, explicit mappings, actual operator and original operation ID. Every step persists its request before invocation. Complete result replay reopens the original result/archive; it does not create another publication or receiving workspace.
+
+Public source acquisition is handled by the separately selected source collector in the same native execution session when applicable. The application itself consumes the retained originals. It does not fetch substitute data during a replay.
+
+## Administration and limits
+
+Keep the workspace directory private and writable by the actual operator. Back up through the native complete export while the application holds its workspace lock. Do not copy a live SQLite file without its native snapshot procedure or delete unknown initialization/receiving stages.
+
+Archive size is bounded at 512 MiB, compressed and uncompressed. The current implementation is a single local workspace with serialized mutations, not a multi-tenant hosted service. Public URLs and evidence metadata are preserved; production integration, licensed systems, professional judgments and client data access remain explicitly selected work.
