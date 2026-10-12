@@ -12,6 +12,7 @@ import signal
 import sys
 
 from application import Workspace, OperatorServer, InputError, load_json
+from managed import inspect_binding, require_binding, startup
 
 
 @contextmanager
@@ -53,6 +54,7 @@ def main(argv=None):
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("init")
     sub.add_parser("list")
+    sub.add_parser("binding", help="Inspect the saved workspace, selected Python and original source without taking its writer")
     source = sub.add_parser("source", help="Retain and inventory every NDJSON record")
     source.add_argument("--file", required=True)
     source.add_argument("--label", default="NDJSON source")
@@ -88,8 +90,19 @@ def main(argv=None):
     serve = sub.add_parser("serve", help="Open the private industrial source console")
     serve.add_argument("--port", type=int, default=0)
     serve.add_argument("--connection-file", help="Atomically create a private one-line console URL for the merchant MCP")
+    serve.add_argument("--expected-binding", help="Require the exact reviewed original workspace, Python and source")
+    serve.add_argument("--startup-format", choices=["legacy", "json"], default="legacy")
     args = parser.parse_args(argv)
+    if args.command == "binding":
+        print(json.dumps(inspect_binding(args.workspace), ensure_ascii=False,
+                         separators=(",", ":"), allow_nan=False), flush=True)
+        return
+    managed = args.command == "serve" and (
+        args.startup_format == "json" or args.expected_binding is not None)
+    binding = require_binding(args.workspace, args.expected_binding) if managed else None
     with Workspace(args.workspace, create=args.command == "init") as ws:
+        if binding is not None:
+            binding = require_binding(str(ws.root), binding["sha256"])
         c = args.command
         if c in {"init", "list"}:
             result = ws.state()
@@ -122,16 +135,24 @@ def main(argv=None):
                 raise InputError("Port must be from 0 to 65535")
             server = OperatorServer(ws, args.port)
             def terminate(_signal, _frame):
+                server.launch = None
                 raise KeyboardInterrupt
             previous = signal.signal(signal.SIGTERM, terminate)
             try:
                 with published_connection(args.connection_file, server.url) as connection:
-                    print(json.dumps({"console": server.url, "workspace": str(ws.root),
-                                      **({"connectionFile": connection} if connection else {})}), flush=True)
+                    if binding is not None:
+                        server.launch = startup(server, binding, connection)
+                    if args.startup_format == "json":
+                        print(json.dumps(server.launch, ensure_ascii=False,
+                                         separators=(",", ":"), allow_nan=False), flush=True)
+                    else:
+                        print(json.dumps({"console": server.url, "workspace": str(ws.root),
+                                          **({"connectionFile": connection} if connection else {})}), flush=True)
                     server.serve_forever(poll_interval=0.2)
             except KeyboardInterrupt:
                 pass
             finally:
+                server.launch = None
                 signal.signal(signal.SIGTERM, signal.SIG_IGN)
                 signal.signal(signal.SIGINT, signal.SIG_IGN)
                 try:
