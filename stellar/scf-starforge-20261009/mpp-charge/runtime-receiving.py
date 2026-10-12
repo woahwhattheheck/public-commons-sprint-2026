@@ -5,6 +5,7 @@ import argparse
 import base64
 import contextlib
 import email.utils
+import errno
 import fcntl
 import hashlib
 import http.client
@@ -288,6 +289,88 @@ def receive_archive(meta, cache, offline, relative):
             time.sleep(delay)
     raise AssertionError("archive receiving exhausted without a result")
 
+def cached_archive(meta, cache):
+    archive = child_path(cache, meta["archiveSha512"] + ".tgz")
+    if not archive.exists():
+        return None
+    require(archive.is_file() and not archive.is_symlink() and archive.stat().st_size <= MAX_ARCHIVE
+            and digest_file(archive, "sha512") == meta["archiveSha512"],
+            "MPP_RUNTIME_ARCHIVE_CONFLICT", str(archive))
+    return archive
+
+def cache_snapshot(cache, limit):
+    if not cache.is_dir():
+        return {"directory": str(cache), "mode": "partial" if limit is not None else "complete",
+                "limitBytes": limit, "available": False, "archiveFiles": 0, "archiveBytes": 0}
+    count, size = 0, 0
+    for item in cache.iterdir():
+        if re.fullmatch(r"[a-f0-9]{128}[.]tgz", item.name):
+            require(item.is_file() and not item.is_symlink(), "MPP_RUNTIME_ARCHIVE_CONFLICT", str(item))
+            count += 1
+            size += item.stat().st_size
+    return {"directory": str(cache), "mode": "partial" if limit is not None else "complete",
+            "limitBytes": limit, "available": True, "archiveFiles": count, "archiveBytes": size,
+            "availableBytes": shutil.disk_usage(cache).free}
+
+def retain_archive(archive, meta, cache, limit, relative):
+    size = archive.stat().st_size
+    lease_path = child_path(cache, ".mpp-runtime-cache.lock")
+    temporary, descriptor = None, None
+    try:
+        with lease_path.open("a+b") as lease:
+            fcntl.flock(lease, fcntl.LOCK_EX)
+            existing = cached_archive(meta, cache)
+            if existing:
+                return {"state": "REUSED", "bytes": size}
+            for abandoned in cache.glob(".mpp-cache-download-*.part"):
+                require(abandoned.is_file() and not abandoned.is_symlink(),
+                        "MPP_RUNTIME_ARCHIVE_CONFLICT", str(abandoned))
+                abandoned.unlink()
+            snapshot = cache_snapshot(cache, limit)
+            reason = None
+            if limit is not None:
+                if snapshot["archiveBytes"] + size > limit:
+                    reason = "byte_budget"
+                elif snapshot["availableBytes"] < size + 65536:
+                    reason = "filesystem_capacity"
+            if reason:
+                result = {"state": "ARCHIVE_CACHE_SKIPPED", "path": relative, "reason": reason,
+                          "archiveBytes": size, "cache": snapshot}
+                print(json.dumps(result, separators=(",", ":")), file=sys.stderr, flush=True)
+                return result
+            descriptor, temporary = tempfile.mkstemp(prefix=".mpp-cache-download-", suffix=".part", dir=cache)
+            digest = hashlib.sha512()
+            with archive.open("rb") as source, os.fdopen(descriptor, "wb") as destination:
+                for block in iter(lambda: source.read(CHUNK), b""):
+                    digest.update(block)
+                    destination.write(block)
+                destination.flush()
+                os.fsync(destination.fileno())
+            descriptor = None
+            require(digest.hexdigest() == meta["archiveSha512"],
+                    "MPP_RUNTIME_ARCHIVE_INTEGRITY_MISMATCH", str(archive))
+            target = child_path(cache, meta["archiveSha512"] + ".tgz")
+            try:
+                os.link(temporary, target)
+            except FileExistsError:
+                cached_archive(meta, cache)
+                return {"state": "REUSED", "bytes": size}
+            return {"state": "RETAINED", "bytes": size}
+    except OSError as error:
+        if limit is None or error.errno not in (errno.ENOSPC, errno.EDQUOT):
+            raise
+        result = {"state": "ARCHIVE_CACHE_SKIPPED", "path": relative, "reason": "filesystem_capacity",
+                  "archiveBytes": size, "cache": str(cache), "detail": str(error)}
+        print(json.dumps(result, separators=(",", ":")), file=sys.stderr, flush=True)
+        return result
+    finally:
+        if descriptor is not None:
+            with contextlib.suppress(OSError):
+                os.close(descriptor)
+        if temporary is not None:
+            with contextlib.suppress(FileNotFoundError):
+                os.unlink(temporary)
+
 def package_files(directory, nested):
     files = {}
     for current, dirs, names in os.walk(directory, followlinks=False):
@@ -449,8 +532,10 @@ def clear_abandoned_staging(metadata, selected):
             removed += 1
     return removed
 
-def receive(directory, source, cache=None, offline=False, inspect=False):
+def receive(directory, source, cache=None, offline=False, inspect=False, cache_limit=None):
     started = time.monotonic()
+    require(cache_limit is None or (cache is not None and isinstance(cache_limit, int) and cache_limit >= 0),
+            "MPP_RUNTIME_CACHE_POLICY_INVALID", "--cache-limit-bytes requires --cache and a nonnegative byte budget")
     manifest_bytes, lock_bytes, selected, skipped = load_selection(source)
     root = directory.resolve()
     if not inspect:
@@ -485,18 +570,24 @@ def receive(directory, source, cache=None, offline=False, inspect=False):
             else:
                 preserve(original_path, original)
         cleared_staging = 0 if inspect else clear_abandoned_staging(metadata, selected)
-        cache_root = (cache.resolve() if cache else child_path(metadata, "archives"))
+        archive_root = child_path(metadata, "archives")
+        cache_root = cache.resolve() if cache else None
         if not inspect:
-            cache_root.mkdir(parents=True, exist_ok=True, mode=0o700)
-        if not inspect and not cache:
-            for partial in cache_root.glob(".download-*.part"):
+            archive_root.mkdir(parents=True, exist_ok=True, mode=0o700)
+            if cache_root:
+                require(not cache_root.is_relative_to(root), "MPP_RUNTIME_CACHE_DIRECTORY_INVALID",
+                        "Choose a retained archive directory outside this installation")
+                cache_root.mkdir(parents=True, exist_ok=True, mode=0o700)
+            for partial in archive_root.glob(".download-*.part"):
                 require(partial.is_file() and not partial.is_symlink(), "MPP_RUNTIME_ARCHIVE_CONFLICT", str(partial))
                 partial.unlink()
         records_dir = child_path(metadata, "packages")
         if not inspect:
             records_dir.mkdir(exist_ok=True, mode=0o700)
-        counts = {"packages": 0, "files": 0, "bytes": 0, "downloadedBytes": 0, "reusedPackages": 0, "registryRetries": 0}
-        package_summaries = []
+        counts = {"packages": 0, "files": 0, "bytes": 0, "downloadedBytes": 0, "reusedPackages": 0, "registryRetries": 0,
+                  "cachedArchivesReused": 0, "archivesRetained": 0, "cacheRetainedBytes": 0, "cacheSkippedArchives": 0,
+                  "knownArchiveBytes": 0, "packagesWithArchiveSize": 0}
+        package_summaries, archive_sizes = [], {}
         for relative, meta in selected.items():
             key = hashlib.sha256(relative.encode()).hexdigest()
             record_path = records_dir / (key + ".json")
@@ -511,14 +602,26 @@ def receive(directory, source, cache=None, offline=False, inspect=False):
                 counts["reusedPackages"] += 1
             else:
                 require(not inspect, "MPP_RUNTIME_PACKAGE_RECEIPT_REQUIRED", relative)
-                archive, downloaded, retries = receive_archive(meta, cache_root, offline, relative)
-                counts["downloadedBytes"] += downloaded
-                counts["registryRetries"] += retries
+                archive = cached_archive(meta, cache_root) if cache_root else None
+                if archive:
+                    counts["cachedArchivesReused"] += 1
+                else:
+                    archive, downloaded, retries = receive_archive(meta, archive_root, offline, relative)
+                    counts["downloadedBytes"] += downloaded
+                    counts["registryRetries"] += retries
+                    if cache_root:
+                        retention = retain_archive(archive, meta, cache_root, cache_limit, relative)
+                        if retention["state"] == "RETAINED":
+                            counts["archivesRetained"] += 1
+                            counts["cacheRetainedBytes"] += retention["bytes"]
+                        elif retention["state"] == "ARCHIVE_CACHE_SKIPPED":
+                            counts["cacheSkippedArchives"] += 1
                 stage_parent = child_path(metadata, "staging")
                 stage_parent.mkdir(exist_ok=True, mode=0o700)
                 staging = Path(tempfile.mkdtemp(prefix=key[:16] + "-", dir=stage_parent))
                 try:
                     record = extract_package(archive, staging, relative, meta)
+                    record["archiveBytes"] = archive.stat().st_size
                     target.parent.mkdir(parents=True, exist_ok=True, mode=0o755)
                     if target.exists():
                         missing = verify_package(target, record, nested, allow_missing=True)
@@ -532,17 +635,21 @@ def receive(directory, source, cache=None, offline=False, inspect=False):
                 finally:
                     if staging.exists():
                         shutil.rmtree(staging)
-                if not cache:
+                if archive.parent == archive_root:
                     archive.unlink()
             bind_bins(root, relative, record, inspect)
-            if not inspect and not cache:
-                cached_archive = child_path(cache_root, meta["archiveSha512"] + ".tgz")
-                if cached_archive.exists():
-                    require(cached_archive.is_file(), "MPP_RUNTIME_ARCHIVE_CONFLICT", str(cached_archive))
-                    cached_archive.unlink()
+            if not inspect:
+                temporary_archive = child_path(archive_root, meta["archiveSha512"] + ".tgz")
+                if temporary_archive.exists():
+                    require(temporary_archive.is_file(), "MPP_RUNTIME_ARCHIVE_CONFLICT", str(temporary_archive))
+                    temporary_archive.unlink()
             counts["packages"] += 1
             counts["files"] += len(record["files"])
             counts["bytes"] += record["bytes"]
+            if isinstance(record.get("archiveBytes"), int):
+                archive_sizes[meta["archiveSha512"]] = record["archiveBytes"]
+                counts["knownArchiveBytes"] = sum(archive_sizes.values())
+                counts["packagesWithArchiveSize"] += 1
             package_summaries.append({key: record[key] for key in ("path", "name", "version", "integrity", "bytes")})
             if not inspect:
                 print(json.dumps({"state": "PACKAGE_RECEIVED", "path": relative, "version": meta["version"],
@@ -553,7 +660,10 @@ def receive(directory, source, cache=None, offline=False, inspect=False):
                       package_summaries, sort_keys=True, separators=(",", ":")).encode()).hexdigest(),
                   "seconds": round(time.monotonic() - started, 3),
                   "maximumResidentKiB": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
-                  "clearedStagingDirectories": cleared_staging}
+                  "clearedStagingDirectories": cleared_staging,
+                  "originalArchiveBytes": counts["knownArchiveBytes"] if counts["packagesWithArchiveSize"] == len(selected) else None,
+                  "originalArchiveCount": len(archive_sizes) if counts["packagesWithArchiveSize"] == len(selected) else None,
+                  "cache": cache_snapshot(cache_root, cache_limit) if cache_root else None}
         if not inspect:
             atomic_json(metadata / "ready.json", result)
         return result
@@ -563,11 +673,12 @@ def main():
     parser.add_argument("directory", type=Path)
     parser.add_argument("--source", type=Path, default=Path(__file__).resolve().parent)
     parser.add_argument("--cache", type=Path, help="Retain and reuse original SHA512-addressed npm archives.")
+    parser.add_argument("--cache-limit-bytes", type=int, help="Retain a partial cache within this byte budget; finish receiving on the installation filesystem.")
     parser.add_argument("--offline", action="store_true")
     parser.add_argument("--inspect", action="store_true", help="Verify the complete received runtime without registry reads.")
     args = parser.parse_args()
     try:
-        result = receive(args.directory, args.source.resolve(), args.cache, args.offline, args.inspect)
+        result = receive(args.directory, args.source.resolve(), args.cache, args.offline, args.inspect, args.cache_limit_bytes)
         print(json.dumps(result, separators=(",", ":")))
         return 0
     except (ReceivingError, OSError, ValueError, tarfile.TarError, urllib.error.URLError) as error:

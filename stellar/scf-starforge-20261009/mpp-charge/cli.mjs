@@ -15,7 +15,7 @@ import { createCustomerWorkbench, customerWorkbenchProfile } from './customer/wo
 
 const HELP='Native Stellar MPP Charge\n\n'+
   'node mpp-charge/cli.mjs runtime-template DEPENDENCY_DIRECTORY\n'+
-  'node mpp-charge/cli.mjs runtime-receive DEPENDENCY_DIRECTORY [--cache ARCHIVE_DIRECTORY] [--offline] [--inspect]\n'+
+  'node mpp-charge/cli.mjs runtime-receive DEPENDENCY_DIRECTORY [--cache ARCHIVE_DIRECTORY] [--cache-limit-bytes BYTES] [--offline] [--inspect]\n'+
   'node mpp-charge/cli.mjs init WORKSPACE\n'+
   'node mpp-charge/cli.mjs customer-contract|customer-openapi WORKSPACE\n'+
   'node mpp-charge/cli.mjs customer-export WORKSPACE NEW_CUSTOMER_DIRECTORY\n'+
@@ -54,11 +54,17 @@ export async function main(argv=process.argv.slice(2)) {
           requireValue(!options.includes(option) && typeof rest[index+1]==='string' &&
             !rest[index+1].startsWith('--'),'MPP_CLI_ARGUMENTS_INVALID');
           options.push(option,resolve(rest[++index]));
+        } else if(option==='--cache-limit-bytes') {
+          const value=rest[++index];
+          requireValue(!options.includes(option) && typeof value==='string' && /^\d+$/.test(value) &&
+            Number.isSafeInteger(Number(value)),'MPP_CLI_ARGUMENTS_INVALID');
+          options.push(option,value);
         } else {
           requireValue(['--offline','--inspect'].includes(option) && !options.includes(option),'MPP_CLI_ARGUMENTS_INVALID');
           options.push(option);
         }
       }
+      requireValue(!options.includes('--cache-limit-bytes') || options.includes('--cache'),'MPP_CLI_ARGUMENTS_INVALID');
       return await receiveRuntime(resolve(directory),options);
     }
     if(command==='customer-receive') {
