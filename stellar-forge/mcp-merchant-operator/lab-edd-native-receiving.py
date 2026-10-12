@@ -165,11 +165,18 @@ def main() -> int:
             nonlocal cancelled
             cancelled = True
 
-        previous = {kind: signal.signal(kind, interrupted) for kind in (signal.SIGINT, signal.SIGTERM)}
-        pid, descriptor = pty.fork()
-        if pid == 0:
-            os.execve(str(node), [str(node), "--expose-gc", str(native_script)], env)
+        previous = {}
+        pid = None
+        descriptor = None
         try:
+            for kind in (signal.SIGINT, signal.SIGTERM):
+                previous[kind] = signal.signal(kind, interrupted)
+            pid, descriptor = pty.fork()
+            if pid == 0:
+                try:
+                    os.execve(str(node), [str(node), "--expose-gc", str(native_script)], env)
+                except BaseException:
+                    os._exit(127)
             deadline = time.monotonic() + args.timeout_seconds
             while time.monotonic() < deadline:
                 original.require(not cancelled, "LAB_NATIVE_RECEIVING_INTERRUPTED")
@@ -192,11 +199,14 @@ def main() -> int:
             original.require(os.waitstatus_to_exitcode(status) == 0, "LAB_NATIVE_RECEIVING_FAILED")
         finally:
             try:
-                status = original.stop_group(pid, status)
+                if pid is not None and pid > 0:
+                    status = original.stop_group(pid, status)
             finally:
                 try:
-                    os.close(descriptor)
-                    original.immutable(fixture / ("native-terminal-" + attempt + ".log"), bytes(transcript))
+                    if descriptor is not None:
+                        os.close(descriptor)
+                    if pid is not None and pid > 0:
+                        original.immutable(fixture / ("native-terminal-" + attempt + ".log"), bytes(transcript))
                 finally:
                     for kind, handler in previous.items():
                         signal.signal(kind, handler)
