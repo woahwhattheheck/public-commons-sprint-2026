@@ -87,7 +87,31 @@ The UI retains the capture UUID and submitted input. Reconnect and continue that
 
 For an already saved selection, use **Receive selection** with its absolute original directory. This validates and copies the original three-file selection into the workspace catalog.
 
-The [public Safe receiving guide](../receiving/PUBLIC_SAFE_RECEIVING.md) contains a recorded real Gnosis owner-replacement transaction and its original source. Its helper obtains the outer transaction and receipt through the caller's actual Protocol Kit, checks the complete encoded input and Safe hash, and returns the observed block position, caller, gas limit and value. Use that exact helper and caller-owned runtime when preparing the public receiving case.
+The [public Safe receiving guide](../receiving/PUBLIC_SAFE_RECEIVING.md) contains a recorded real Gnosis owner-replacement transaction and its original source. Its helper obtains the outer transaction and receipt through the caller's actual Protocol Kit, checks the complete encoded input and Safe hash, and returns the observed block position, caller, gas limit and value.
+
+The installed commands retain that complete source and the original three-file selection. Use the application's existing caller root, with its original Palmera 1.0.0-beta.1 and Protocol Kit 4.1.0 dependency, and set `GNOSIS_RPC_URL` through the host's usual private environment:
+
+```sh
+starforge safe-review public-read \
+  --caller-root /srv/palmera/application \
+  --rpc-env GNOSIS_RPC_URL \
+  --out /srv/starforge/safe-review/public-owner-change
+
+starforge safe-review public-open \
+  --directory /srv/starforge/safe-review/public-owner-change
+
+starforge safe-review public-caller \
+  --directory /srv/starforge/safe-review/public-owner-change \
+  --out /srv/starforge/private/public-safe-transaction.mjs \
+  --caller-root /srv/palmera/application \
+  --rpc-env GNOSIS_RPC_URL
+```
+
+Choose **Receive selection** with `/srv/starforge/safe-review/public-owner-change/selection` to bring this exact original selection into the operator. `public-open` checks the saved record, source, observed SDK response objects, context and selection without another RPC read. It displays the complete retained hashes and six context values. The observed response representation is canonical JSON of the SDK's external-provider result objects.
+
+To use the same case through **Capture**, select the generated `public-safe-transaction.mjs` as the application's caller module and use those same six context values. The module reopens the retained source, initializes the original selected SDK, and verifies the Safe hash and encoded transaction before returning it. The source and generated module remain separately bound; repeating the same `public-caller` arguments reopens the identical module bytes. The module is saved outside the immutable receiving directory, and its RPC credential stays in the named environment variable.
+
+Continue with the merchant's plan and body-bound operation ticket for network 100, then the same original buyer intent below. The public source is a recorded Safe transaction on Gnosis; its original SDK selection uses `prepareSafeSelection`.
 
 ## 2. Prepare one original purchase
 

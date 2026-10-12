@@ -1,5 +1,6 @@
-// Read the original public Safe execution through Protocol Kit 4.1.0.
+// Read or reopen the original public Safe execution through Protocol Kit 4.1.0.
 import {createRequire} from 'node:module';
+import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 
@@ -11,29 +12,56 @@ function integer(hex,name){
   return number;
 }
 const same=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.toLowerCase()===b.toLowerCase();
+const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 
-export async function readPublicSafe({callerRoot,rpc,sourceFile}){
-  const source=JSON.parse(await readFile(resolve(sourceFile),'utf8'));
-  need(source.schema==='stellar-forge.public-safe-receiving-source.v1','Original receiving source required');
+export async function resolvePublicSafeRuntime(callerRoot){
   const caller=createRequire(resolve(callerRoot,'package.json'));
   const palmeraPackage=caller.resolve('@keyper-labs/palmera-module-sdk/package.json');
   const palmeraRequire=createRequire(palmeraPackage);
-  const palmeraMetadata=JSON.parse(await readFile(palmeraPackage,'utf8'));
+  const palmeraBytes=await readFile(palmeraPackage);
+  const palmeraMetadata=JSON.parse(palmeraBytes);
   const protocolPath=palmeraRequire.resolve('@safe-global/protocol-kit/package.json');
-  const protocolMetadata=JSON.parse(await readFile(protocolPath,'utf8'));
+  const protocolBytes=await readFile(protocolPath);
+  const protocolMetadata=JSON.parse(protocolBytes);
   need(palmeraMetadata.version==='1.0.0-beta.1'&&protocolMetadata.version==='4.1.0','Original SDK version pair required');
   const sdk=palmeraRequire('@safe-global/protocol-kit');
+  return {sdk,runtime:{callerRoot:resolve(callerRoot),palmeraPackage,protocolPackage:protocolPath,
+    palmeraVersion:palmeraMetadata.version,protocolVersion:protocolMetadata.version,
+    palmeraMetadataSha256:sha(palmeraBytes),protocolMetadataSha256:sha(protocolBytes)}};
+}
+
+function exactContext(actual,retained){
+  const fields=['networkId','blockNumber','transactionIndex','from','gas','value'];
+  need(retained&&typeof retained==='object'&&!Array.isArray(retained)&&
+    Object.keys(retained).length===fields.length&&fields.every(key=>Object.hasOwn(retained,key)),
+    'Original six-field observed context required');
+  need(fields.every(key=>key==='from'?same(actual[key],retained[key]):actual[key]===retained[key]),
+    'Original observed context changed');
+}
+
+async function loadPublicSafe({callerRoot,rpc,sourceFile,observed}){
+  const source=JSON.parse(await readFile(resolve(sourceFile),'utf8'));
+  need(source.schema==='stellar-forge.public-safe-receiving-source.v1','Original receiving source required');
+  const {sdk,runtime}=await resolvePublicSafeRuntime(callerRoot);
   const Safe=sdk.default;
   need(typeof rpc==='string'&&new URL(rpc).protocol==='https:','Selected public HTTPS RPC required');
   const safe=await Safe.init({provider:rpc,safeAddress:source.safe});
   const provider=safe.getSafeProvider().getExternalProvider();
+  let closed=false;
+  const close=async()=>{if(!closed){closed=true;if(typeof provider.destroy==='function')await provider.destroy();}};
   try {
     const chainId=await safe.getChainId();
     need(chainId.toString()===source.networkId,'Original chain mismatch');
-    const [outer,receipt]=await Promise.all([
-      provider.send('eth_getTransactionByHash',[source.outerTransactionHash]),
-      provider.send('eth_getTransactionReceipt',[source.outerTransactionHash])
-    ]);
+    let outer,receipt;
+    if(observed){
+      need(observed.outer&&observed.receipt&&observed.context,'Retained original transaction, receipt and context required');
+      ({outer,receipt}=observed);
+    }else{
+      [outer,receipt]=await Promise.all([
+        provider.send('eth_getTransactionByHash',[source.outerTransactionHash]),
+        provider.send('eth_getTransactionReceipt',[source.outerTransactionHash])
+      ]);
+    }
     need(outer&&receipt,'Original mined transaction and receipt required');
     need(same(outer.hash,source.outerTransactionHash)&&same(receipt.transactionHash,outer.hash),'Outer transaction changed');
     need(same(outer.to,source.safe)&&same(outer.from,source.executor),'Original Safe or executor mismatch');
@@ -51,13 +79,20 @@ export async function readPublicSafe({callerRoot,rpc,sourceFile}){
     const context={networkId:chainId.toString(),blockNumber:integer(outer.blockNumber,'block'),
       transactionIndex:integer(outer.transactionIndex,'position'),from:outer.from,
       gas:integer(outer.gas,'outer gas limit'),value:BigInt(outer.value).toString()};
-    const close=async()=>{if(typeof provider.destroy==='function')provider.destroy();};
-    return {safe,transaction,context,source,outer,receipt,close,
-      runtime:{palmeraPackage,protocolPackage:protocolPath,palmeraVersion:palmeraMetadata.version,protocolVersion:protocolMetadata.version},
+    if(observed)exactContext(context,observed.context);
+    return {safe,transaction,context,source,outer,receipt,close,runtime,
       label:'Original Gnosis Safe owner replacement, nonce 5',
       origin:{application:'Safe public transaction source',operation:'swapOwner',reference:source.source.url}};
-  } catch(error) {
-    if(typeof provider.destroy==='function')provider.destroy();
-    throw error;
-  }
+  }catch(error){await close();throw error;}
+}
+
+export async function readPublicSafe(options){
+  return loadPublicSafe({...options,observed:undefined});
+}
+
+// Reuse the saved RPC result objects and observed six-field context. The same
+// SDK still checks its live chain/Safe identity, transaction hash and calldata;
+// reopening does not fetch or replace the saved outer transaction or receipt.
+export async function reopenPublicSafe({outer,receipt,context,...options}){
+  return loadPublicSafe({...options,observed:{outer,receipt,context}});
 }

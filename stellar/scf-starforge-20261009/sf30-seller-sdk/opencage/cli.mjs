@@ -28,6 +28,9 @@ read --delivery DELIVERY_DIR
 package --workspace DIR [--terms TERMS.json]
 package --plan PLAN.json --terms TERMS.json --out NEW_DIRECTORY
 package-inspect --package PACKAGE_DIR
+host-review --package PACKAGE_DIR --host-plan HOST_SETTINGS.json --out PRIVATE_DIRECTORY
+host-bundle --deployment PRIVATE_DIRECTORY --review-sha256 SHA
+host-check --deployment PRIVATE_DIRECTORY
 stage --workspace DIR --release ID [--package-id ID | --package PACKAGE_DIR] [--label TEXT] [--facilitator HTTPS_URL]
 release-status --workspace DIR
 release-diff --workspace DIR --after ID [--before ID]
@@ -62,6 +65,8 @@ The original seller release and original buyer operation own commerce and recove
 `;
 const CSV_OPTIONS=['workspace','source','product','mapping','reuse','label','supersedes'];
 const OPTIONS={
+  'host-review':['package','host-plan','out'],
+  'host-bundle':['deployment','review-sha256'],'host-check':['deployment'],
   'batch-source':['source'],
   'batch-review':CSV_OPTIONS,'batch-prepare':[...CSV_OPTIONS,'review-sha256'],
   'batch-list':['workspace'],'batch-status':['workspace','batch','offset','limit','status'],
@@ -110,7 +115,14 @@ function signals(close){
 export async function main(argv=process.argv.slice(2)){
   if(!argv.length||argv.includes('--help')){process.stdout.write(HELP);return;}
   const options=parse(argv),command=options.command;let result;
-  if(command==='batch-source'){
+  if(command==='host-review'||command==='host-bundle'||command==='host-check'){
+    const host=await import('./deployment.mjs');
+    result=command==='host-review'?await host.prepareGeocodeDeployment({
+      packageDirectory:resolve(required(options,'package')),hostPlanFile:resolve(required(options,'host-plan')),
+      directory:resolve(required(options,'out'))}):command==='host-bundle'?await host.generateGeocodeDeployment({
+        directory:resolve(required(options,'deployment')),expectedReviewSha256:required(options,'review-sha256')}):
+      await host.checkGeocodeDeployment(resolve(required(options,'deployment')));
+  }else if(command==='batch-source'){
     result=inspectCsvSource(await readBytes(resolve(required(options,'source')),MAX_CSV_BYTES));
   }else if(command==='batch-read'||command==='batch-serve'){
     const delivery=await GeocodeBatchDelivery.open(resolve(required(options,'delivery')));

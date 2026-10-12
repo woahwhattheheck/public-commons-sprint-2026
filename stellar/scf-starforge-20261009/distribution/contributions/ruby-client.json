@@ -1,11 +1,33 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "ruby-client",
-  "description": "Generate and deliver complete Ruby and Rails customer packages over the original seller and buyer",
+  "description": "Complete Ruby and Rails customer packages with original acquisition, direct finalized SF100 receiving, and portable transactional application editions",
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/seller_client.rb",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/rails_receiving.rb",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/customer.rb"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/customer.rb",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/export.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/request-bridge.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/buyer-bridge.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/RUBY.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/dataset-bridge.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/dataset_delivery.rb",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/dataset_receiving.rb",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/dataset_customer.rb",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/rails_dataset.rb",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/DATASETS.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/dataset_lifecycle.rb",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/rails_dataset/create_dataset_import_tables.rb",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/rails_dataset/models.rb",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/rails_dataset/import_dataset_job.rb",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/rails_dataset/commission.rb",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/rails_dataset/mapping.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/rails_dataset/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/native_dataset.rb",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/native_dataset_receiving.rb",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/native_dataset_customer.rb",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/NATIVE_DATASETS.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/native_dataset_lifecycle.rb"
   ],
   "exports": {
     "./seller/client-ruby": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/export.mjs"

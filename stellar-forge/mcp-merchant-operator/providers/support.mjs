@@ -23,5 +23,5 @@ export default defineMerchantProvider({
     }
   ],
   load: () => import("../support.mjs"),
-  create: (module, config, options, dependencies) => new module.MerchantSupport(config)
+  create: (module, config, options, dependencies) => new module.MerchantSupport(config, { environment: options?.environment })
 });

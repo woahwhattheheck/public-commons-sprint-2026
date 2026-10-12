@@ -27,10 +27,19 @@ const selected = { id: uuid, expectedRevision: digest };
 const page = { offset: { type: 'integer', minimum: 0 }, limit: { type: 'integer', minimum: 1, maximum: 100 } };
 
 const notificationStatuses = ['PENDING', 'RETRY', 'IN_FLIGHT', 'PAUSED', 'EXHAUSTED', 'DELIVERED', 'CANCELLED'];
+const incidentSource = { ...alias, description: 'Original host-declared incident source ID. Required when multiple sources have no host default.' };
+const sourceTools = new Set(['merchant_support_profiles', 'merchant_support_configure', 'merchant_support_watch_status',
+  'merchant_support_watch_start', 'merchant_support_watch_stop', 'merchant_notifications', 'merchant_incident_notify',
+  'merchant_notification_update', 'merchant_incidents', 'merchant_incident_ack', 'merchant_incident_case']);
 
 function supportTools(tool) {
   const read = { readOnly: true, idempotent: true };
   return [
+    tool('merchant_support_incident_sources', 'Inspect the original support connection mode, configured incident source IDs/labels, bound source-file digest and host default. Reads no arbitrary path and starts no watcher.', {}, [], read),
+    tool('merchant_support_destination', 'Inspect the currently selected source notification configuration at its exact revision. Slack resolves the original host token and reads the actual authenticated workspace/channel; webhook reports configuration resolution. Sends no notification.',
+      { incidentSource, expectedConfigRevision: { type: 'integer', minimum: 1 } }, ['expectedConfigRevision'], { ...read, openWorld: true }),
+    tool('merchant_incident_view', 'Open one retained original incident with its current revision, last notification ID, sanitized events and actual advertised routes from before/after capture files. Returns capture issues without replacing the original files or observing a seller.',
+      { incidentSource, id: uuid }, ['id'], read),
     tool('merchant_support_profiles', 'List host-declared SF93 registration profiles, or inspect one original compiled configuration, its file digest, current configuration revision and actual changes. Notification values remain environment references.',
       { profile: alias }, [], read),
     tool('merchant_support_configure', 'Apply an inspected host profile through the original SF93 configuration transaction. Requires its exact source digest and current configuration revision. After a lost reply, inspect the current configuration before another change.',
@@ -42,8 +51,8 @@ function supportTools(tool) {
       { instanceId: uuid }, ['instanceId'], { idempotent: true }),
     tool('merchant_notifications', 'Page through original incident notification records without message bodies, destination URLs or signing keys. Includes actual attempt counts, state and retry reason for recovery.',
       { id: uuid, incidentId: uuid, status: { enum: notificationStatuses }, ...page }, [], read),
-    tool('merchant_incident_notify', 'Queue a NEW original metadata-only reminder for the exact incident revision. This explicitly selects the currently configured notification destination; inspect current notification records after an interrupted reply.',
-      { id: uuid, expectedRevision: { type: 'integer', minimum: 1 } }, ['id', 'expectedRevision']),
+    tool('merchant_incident_notify', 'Queue a NEW original reminder for the exact incident revision and current destination. Pass the latest expectedNotificationId from merchant_incident_view, or null when none exists, to atomically reject duplicate reminders after a lost response. Source-file mode requires that guard; legacy single-store callers may omit it.',
+      { id: uuid, expectedRevision: { type: 'integer', minimum: 1 }, expectedNotificationId: { anyOf: [uuid, { type: 'null' }] } }, ['id', 'expectedRevision']),
     tool('merchant_notification_update', 'Retry an original paused/exhausted notification or cancel an unfinished one, using its exact attempt count and named operator. Existing destination, in-flight and completed-event checks remain authoritative.',
       { id: uuid, expectedAttempts: { type: 'integer', minimum: 0 }, action: { enum: ['retry', 'cancel'] }, by: text(160) }, ['id', 'expectedAttempts', 'action', 'by']),
     tool('merchant_support_sources', 'List host-configured original handoffs/workspace templates, or inspect one with its exact file digest, saved mapping and retained runtime findings. Reads no arbitrary path and starts no observation.',
@@ -52,7 +61,7 @@ function supportTools(tool) {
       { id: uuid, status: { enum: ['OPEN', 'ACKNOWLEDGED', 'RECOVERED', 'RETIRED'] }, ...page }, [], read),
     tool('merchant_incident_ack', 'Acknowledge an original OPEN incident with its exact revision and named operator. The existing watcher may deliver its configured acknowledgment notification. Recovery remains based on original observations.',
       { id: uuid, expectedRevision: { type: 'integer', minimum: 1 }, by: text(160), notes: text(2000) }, ['id', 'expectedRevision', 'by']),
-    tool('merchant_incident_case', 'Export one exact original incident through SF93 using a host-configured SF74 workspace template and explicit route, then retain it as a new original support case. Supply a new UUID; an identical retry reuses its case version.',
+    tool('merchant_incident_case', 'Save one exact original incident using its host-configured SF74 workspace template and retained route. Supply a new case UUID. An identical retry reuses the initial case version while the incident selection is current. After an interrupted reply, read that original case ID and history first, especially if the incident or saved case has advanced.',
       { id: uuid, incidentId: uuid, expectedIncidentRevision: { type: 'integer', minimum: 1 }, template: alias,
         expectedTemplateSha256: digest, routeId: text(160) }, ['id', 'incidentId', 'expectedIncidentRevision', 'template', 'expectedTemplateSha256', 'routeId']),
     tool('merchant_cases', 'Search original saved cases by text, work status or follow-up date, with their actual current revisions.',
@@ -81,7 +90,9 @@ function supportTools(tool) {
       ['exportId', 'file', 'expectedManifestSha256'], read),
     tool('merchant_support_export_file_release', 'Release this operator\'s unfinished verified support-file read. Its original export and case remain retained.',
       { exportId: alias, readId: uuid }, ['exportId', 'readId'], { idempotent: true }),
-  ];
+  ].map(value => sourceTools.has(value.name) ? { ...value, inputSchema: {
+    ...value.inputSchema, properties: { ...value.inputSchema.properties, incidentSource }
+  } } : value);
 }
 
 const exportNames = ['case.json', 'merchant-workspace.json', 'merchant-support.json', 'support.html',

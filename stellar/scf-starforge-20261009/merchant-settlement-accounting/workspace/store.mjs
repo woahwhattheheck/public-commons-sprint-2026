@@ -13,6 +13,7 @@ import {AdjustmentWorkspace} from './adjustments-workspace.mjs';
 import {renderAdjustmentCsv,renderAdjustmentHtml} from '../adjustments.mjs';
 
 import {assertAccountingWorkspaceBinding} from './binding.mjs';
+import {accountingSourceMode,initializeBuyerStartup,readBuyerStartup,buyerStartupView} from './buyer-startup.mjs';
 const SCHEMA='stellar-forge.merchant-accounting-workspace.v1';
 const now=()=>new Date().toISOString();
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
@@ -81,7 +82,7 @@ function proofDescription(bytes){
 const exceptionId=row=>hash(row.eventId+'\n'+row.reason);
 const noteFor=(state,row)=>state.notes[exceptionId(row)]??{status:'open',note:'',assignee:'',actor:'',version:0,updatedAt:null};
 
-export async function openAccountingWorkspace({directory,outboxDir,proofDir,termsFile,recoveredDir,expectedWorkspaceId,expectedSourcesSha256}){
+export async function openAccountingWorkspace({directory,outboxDir,proofDir,termsFile,recoveredDir,buyerSourceFile,buyerSourceSha256,buyerSourceName,buyerOperator,expectedWorkspaceId,expectedSourcesSha256}){
   await privateDir(directory,{create:true});
   const lease=await acquireStateLease(directory);
   try{
@@ -94,17 +95,30 @@ export async function openAccountingWorkspace({directory,outboxDir,proofDir,term
     if(existing){
       state=parse(existing,'workspace');
       check(state.schema===SCHEMA&&Number.isSafeInteger(state.revision)&&object(state.sources)&&Array.isArray(state.runs)&&Array.isArray(state.proofs)&&object(state.notes),'INVALID_WORKSPACE','This directory is not a supported accounting workspace.');
+      const mode=accountingSourceMode(state);
+      if(mode==='buyer'){
+        check([outboxDir,proofDir,termsFile,recoveredDir].every(value=>value===undefined),'ACCOUNTING_SOURCE_AMBIGUOUS','This buyer workspace retains its issued source. Merchant sources belong to their original configured workspace.');
+        await readBuyerStartup(directory,state,{buyerSourceFile,buyerSourceSha256});
+      }else check([buyerSourceFile,buyerSourceSha256,buyerSourceName,buyerOperator].every(value=>value===undefined),'ACCOUNTING_SOURCE_AMBIGUOUS','Import an issued buyer handoff through this existing merchant workspace, or initialize a separate buyer workspace.');
       assertAccountingWorkspaceBinding(directory,state,{expectedWorkspaceId,expectedSourcesSha256});
       if(expectedSourcesSha256!==undefined&&recoveredDir!==undefined)check(recoveredDir===state.sources.recoveredDir,'ACCOUNTING_WORKSPACE_CHANGED','Use the reviewed original recovered-source connection when reopening this managed application.');
       for(const [name,value] of Object.entries({outboxDir,proofDir,termsFile}))if(value!==undefined)check(value===state.sources[name],'SOURCE_CONFIGURATION_CHANGED','Reopen this workspace with its original source paths, or use a new directory.');
     }else{
       check(expectedWorkspaceId===undefined&&expectedSourcesSha256===undefined,'ACCOUNTING_WORKSPACE_MISSING','Reopen the reviewed original workspace before starting this managed application.');
+      if(buyerSourceFile!==undefined){
+        check([outboxDir,proofDir,termsFile,recoveredDir].every(value=>value===undefined),'ACCOUNTING_SOURCE_AMBIGUOUS','Choose the issued buyer source or the original merchant source configuration.');
+        const original=await initializeBuyerStartup(directory,{buyerSourceFile,buyerSourceSha256,buyerSourceName,buyerOperator});
+        state={schema:SCHEMA,revision:1,createdAt:now(),...original,termsSelection:null,termsImports:[],proofs:[],runs:[],notes:{},exports:[],
+          history:[{at:now(),actor:original.buyerStartup.actor,action:'buyer_issued_source_retained',sourceSha256:original.buyerStartup.sha256,sourceCloseId:original.buyerStartup.source.buyer.closeId}]};
+      }else{
+        check([buyerSourceSha256,buyerSourceName,buyerOperator].every(value=>value===undefined),'BUYER_SOURCE_REQUIRED','Choose the original buyer source file when initializing buyer accounting.');
       for(const path of [outboxDir,proofDir,termsFile])absolute(path);
       for(const path of [outboxDir,proofDir])check(directory!==path&&!directory.startsWith(path+'/')&&!path.startsWith(directory+'/'),'OVERLAPPING_DIRECTORIES','Keep the workspace separate from its native input directories.');
       check(!termsFile.startsWith(directory+'/'),'OVERLAPPING_DIRECTORIES','Keep the original terms file outside the workspace.');
       await privateDir(outboxDir);await privateDir(proofDir);
       compileTerms(parse(await readBytes(termsFile,200_000),'merchant terms'));
       state={schema:SCHEMA,revision:1,createdAt:now(),sources:{outboxDir,proofDir,termsFile},termsSelection:'source',termsImports:[],proofs:[],runs:[],notes:{},exports:[],history:[]};
+      }
     }
     let upgraded=false;
     for(const name of ['recoveredEntries','recoveryPreviews','recoveryJobs','periodDefinitions','periodCloses','adjustments','adjustmentJobs'])if(!Array.isArray(state[name])){state[name]=[];upgraded=true;}
@@ -123,6 +137,7 @@ export async function openAccountingWorkspace({directory,outboxDir,proofDir,term
     const interruptedJobs=state.recoveryJobs.filter(job=>['queued','running'].includes(job.status));
     for(const job of interruptedJobs){job.status='interrupted';job.completedAt=now();job.error='The process stopped during original transfer verification/import. Retry the retained review to recover an already imported entry or continue its original read-only verification.';}
     if(interruptedJobs.length){state.revision++;state.history.push({at:now(),actor:'workspace',action:'recovery_imports_interrupted',jobIds:interruptedJobs.map(job=>job.id)});}
+    check(Buffer.byteLength(json(state))<=32_000_000,'HISTORY_LIMIT','The retained accounting workspace exceeds its 32 MB operating-state limit.');
     if(!existing||upgraded||interrupted.length||interruptedJobs.length)await durableJson(statePath,state);
     const workspace=new AccountingWorkspace(directory,state,lease);
     await workspace.adjustments.init();return workspace;
@@ -139,14 +154,16 @@ class AccountingWorkspace{
   async report(id){const run=this.runRow(id);check(run.status==='complete','RUN_NOT_COMPLETE','Wait for a completed reconciliation.',409);if(this.cache.has(id))return this.cache.get(id);const bytes=await readBytes(join(this.runPath(id),'report','report.json'),128_000_000);check(hash(bytes)===run.reportSha256,'REPORT_CHANGED','The retained reconciliation report changed.',409);const report=parse(bytes,'retained report');if(this.cache.size>=3)this.cache.delete(this.cache.keys().next().value);this.cache.set(id,report);return report;}
   view(){
     this.lease.assertHeld();
-    return structuredClone({schema:SCHEMA,revision:this.state.revision,sources:this.state.sources,termsSelection:this.state.termsSelection,termsImports:this.state.termsImports,
+    return structuredClone({schema:SCHEMA,revision:this.state.revision,sourceMode:accountingSourceMode(this.state),buyerStartup:buyerStartupView(this.directory,this.state),sources:this.state.sources,termsSelection:this.state.termsSelection,termsImports:this.state.termsImports,
       proofs:this.state.proofs,runs:this.state.runs,exports:this.state.exports,history:this.state.history.slice(-100).reverse(),
       recovery:{directory:this.state.sources.recoveredDir??null,capturedAt:this.state.recoveryCapturedAt,entries:this.state.recoveredEntries},
       recoveryPreviews:this.state.recoveryPreviews,recoveryJobs:this.state.recoveryJobs,
       pricingImports:this.state.pricingImports??[],periods:this.periods.view(),accountantHandoffs:this.state.accountantHandoffs??[],adjustments:this.adjustments.view(),
       reviewCounts:Object.values(this.state.notes).reduce((result,note)=>{result[note.status]++;return result;},{open:0,investigating:0,reviewed:0})});
   }
+  merchantSources(){check(accountingSourceMode(this.state)==='merchant','MERCHANT_SOURCES_REQUIRED','This workspace retains an issued buyer period. Use its accountant handoff and Xero workflow; merchant collection requires its original configured sources.',409);}
   async connectRecovered({revision,directory,actor}){return this.serial(async()=>{
+    this.merchantSources();
     this.expected(revision);actor=text(actor,'operator');
     if(directory===null){delete this.state.sources.recoveredDir;this.state.recoveredEntries=[];this.state.recoveryCapturedAt=null;await this.commit('recovered_source_disconnected',actor);return this.view();}
     await recoveredDirectory(this.directory,this.state.sources,directory);
@@ -155,6 +172,7 @@ class AccountingWorkspace{
     await this.commit('recovered_source_connected',actor,{directory,entries:collection.entries.length});return this.view();
   });}
   async refreshRecovered({revision,actor}){return this.serial(async()=>{
+    this.merchantSources();
     this.expected(revision);actor=text(actor,'operator');const directory=this.state.sources.recoveredDir;
     check(directory,'RECOVERED_SOURCE_REQUIRED','Connect the original recovered collection first.');
     const {readRecoveredSettlements}=await recoveryApi(),collection=await readRecoveredSettlements(directory);
@@ -162,6 +180,7 @@ class AccountingWorkspace{
     await this.commit('recovered_source_refreshed',actor,{directory,entries:collection.entries.length});return this.view();
   });}
   async reviewRecovery({revision,name,content,actor}){return this.serial(async()=>{
+    this.merchantSources();
     this.expected(revision);actor=text(actor,'operator');name=text(name,'review name',160);
     check(typeof content==='string'&&Buffer.byteLength(content)<=200_000,'RECOVERY_CONFIG_TOO_LARGE','Select an original merchant recovery request JSON up to 200 KB.');
     check(this.state.recoveryPreviews.length<2000,'RECOVERY_REVIEW_LIMIT','This workspace retains 2,000 original recovery reviews.');
@@ -174,6 +193,7 @@ class AccountingWorkspace{
     return {preview,state:this.view()};
   });}
   async importRecovery({revision,previewId,actor}){return this.serial(async()=>{
+    this.merchantSources();
     this.expected(revision);actor=text(actor,'operator');const preview=this.state.recoveryPreviews.find(item=>item.id===previewId);
     check(preview,'RECOVERY_REVIEW_NOT_FOUND','Review the original recovery request first.');
     const recoveredDir=this.state.sources.recoveredDir;check(recoveredDir,'RECOVERED_SOURCE_REQUIRED','Connect the original recovered collection first.');
@@ -207,6 +227,7 @@ class AccountingWorkspace{
     return this.view();
   });}
   async importProof({revision,name,content,actor}){return this.serial(async()=>{
+    this.merchantSources();
     this.expected(revision);actor=text(actor,'operator');name=text(name,'filename',150);
     check(typeof content==='string'&&Buffer.byteLength(content)<=80_000,'PROOF_TOO_LARGE','Select an original SF86 JSON result up to 80 KB.');
     const bytes=Buffer.from(content),data=parse(bytes,'verification file');
@@ -220,12 +241,14 @@ class AccountingWorkspace{
     return {proof:record,duplicate:false,state:this.view()};
   });}
   async selectProof(id,{revision,included,actor}){return this.serial(async()=>{
+    this.merchantSources();
     this.expected(revision);actor=text(actor,'operator');check(typeof included==='boolean','INVALID_SELECTION','Choose whether to include this verification file.');
     const proof=this.state.proofs.find(item=>item.id===id);check(proof,'PROOF_NOT_FOUND','This imported verification file was not found.',404);
     if(proof.included!==included){proof.included=included;await this.commit('proof_selection_changed',actor,{proofId:id,included});}
     return this.view();
   });}
   async retainTerms({name,bytes,actor}){
+    this.merchantSources();
     name=text(name,'filename',150);
     check(Buffer.isBuffer(bytes)&&bytes.length<=200_000,'TERMS_TOO_LARGE','Select merchant accounting terms up to 200 KB.');
     const data=parse(bytes,'merchant terms'),compiled=compileTerms(data),sha256=hash(bytes);
@@ -234,16 +257,19 @@ class AccountingWorkspace{
     return record;
   }
   async importTerms({revision,name,content,actor}){return this.serial(async()=>{
+    this.merchantSources();
     this.expected(revision);actor=text(actor,'operator');
     check(typeof content==='string','TERMS_REQUIRED','Select merchant accounting terms JSON.');
     const record=await this.retainTerms({name,bytes:Buffer.from(content),actor});
     this.state.termsSelection=record.id;await this.commit('terms_selected',actor,{termsId:record.id,sha256:record.sha256});return this.view();
   });}
   async selectTerms({revision,selection,actor}){return this.serial(async()=>{
+    this.merchantSources();
     this.expected(revision);actor=text(actor,'operator');check(selection==='source'||this.state.termsImports.some(item=>item.id===selection),'TERMS_NOT_FOUND','Choose original source terms or a retained terms file.');
     this.state.termsSelection=selection;await this.commit('terms_selected',actor,{termsId:selection});return this.view();
   });}
   async begin({revision,name,actor,expectedTermsSelection,expectedPeriodSelection,requestId,expectedNativeEvent}){return this.serial(async()=>{
+    this.merchantSources();
     let requestSha256;
     if(requestId!==undefined){
       check(typeof requestId==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(requestId),

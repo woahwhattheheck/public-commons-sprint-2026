@@ -1,0 +1,819 @@
+{
+  "schema": "dpsa.diso.module.v1",
+  "id": "M11",
+  "title": "Security monitoring, metrics and reporting",
+  "rfpSection": "Terms of Reference §8, Module 11",
+  "summary": "Turn operational observations into useful management decisions by defining measures, preserving their scope and uncertainty, and reporting service consequences with accountable actions.",
+  "outcomes": [
+    "Define measures that answer a specific control or service question.",
+    "Interpret coverage, denominators, sampling and uncertainty correctly.",
+    "Explain trends without concealing changes in definitions or populations.",
+    "Prepare an executive report that connects evidence to decisions and owners."
+  ],
+  "realExample": {
+    "title": "Estonia combines service monitoring and operational coordination",
+    "sourceIds": [
+      "CASE-RIA-SOC"
+    ],
+    "documentedOutcome": "RIA launched its operations centre on 1 June 2025. Its official account describes monitoring, service observability, customer experience and management processes as connected parts of the operating service.",
+    "discussion": "Use the established centre to examine how technical observations, user experience and decision responsibilities can support one view of public-service performance.",
+    "scope": "A documented operating model. It does not supply a numerical performance benchmark for a South African department, and the source says institutions retain responsibility for their own services."
+  },
+  "units": [
+    {
+      "id": "M11-U01",
+      "title": "Define a measure before reading its number",
+      "estimatedMinutes": 150,
+      "objectives": [
+        "Distinguish activity, coverage, control performance and service outcomes.",
+        "Calculate and explain rates using the relevant population.",
+        "Treat unknown or invalid observations explicitly."
+      ],
+      "chapters": [
+        {
+          "id": "M11-U01-C01",
+          "title": "Start with the decision",
+          "bodyHtml": "<p>A dashboard is useful when it helps someone decide what to do. Before selecting a chart, state the management question: Are privileged accounts still justified? Can the critical service recover within its approved objective? Which supplier connections create an overdue exposure? Name the person who can act on the answer. A number without a decision context can consume attention without changing the service.</p>\n<p>Define a measure in ordinary language and then specify its numerator, denominator, time window, scope, data source, exclusions and refresh frequency. Identify the owner of the measure and the owner of the underlying control; they may differ. Set out what will happen when a threshold is crossed, including who reviews false signals and who accepts a temporary exception. The threshold should reflect departmental priorities and authority, not a value copied from an unrelated dashboard.</p>\n<p>Use several kinds of evidence. Activity shows that work happened, such as reviews performed. Coverage shows how much of the relevant population was reached. Performance shows whether the control achieved its intended result under stated conditions. Service outcomes show consequences for people or departmental obligations. None is universally superior: a combination can reveal why a service outcome changed.</p>",
+          "sourceIds": [
+            "CGICT-2022",
+            "DPSA-MONITOR"
+          ]
+        },
+        {
+          "id": "M11-U01-C02",
+          "title": "Denominators and unknowns change the meaning",
+          "bodyHtml": "<p>The fictional department has 1,000 registered endpoints. Current observations cover 900, and 810 of those meet the defined update requirement. The observed compliance rate is 810 divided by 900, or 90%. The department has verified compliance for 81% of the registered estate, and 10% has no current observation. All three facts matter. Calling the whole estate 90% compliant conceals the unobserved devices.</p>\n<p>An unknown is not automatically a failure, but it is not verified success either. Report why the observation is absent, how old the last information is and how the owner will resolve the gap. If the inventory itself is incomplete, disclose that the registered population may understate the estate. A precise percentage does not make an incomplete population complete.</p>\n<p>Use the relevant unit. An account review can measure accounts, people or review decisions; these are different populations. One person with five privileged accounts must not silently count as one reviewed account. For backup recovery, 'tests run' differs from 'tests that restored the required service and data within the objective'. Keep a stable definition so the measure can be reproduced and acted upon.</p>",
+          "sourceIds": []
+        },
+        {
+          "id": "M11-U01-C03",
+          "title": "Choose summaries that reveal the problem",
+          "bodyHtml": "<p>Averages can hide an unacceptable tail. If most incidents are resolved quickly but a few critical services remain unavailable for days, a falling average resolution time can coexist with serious harm. Show the distribution or meaningful bands, and separate criticality where it changes the decision. A median is the middle observation, not a guarantee about the slowest cases.</p>\n<p>Samples support bounded conclusions. If nine of twelve selected recovery tests meet their objectives, report the tested services, selection method and any limits on generalisation. A sample chosen only from the easiest systems cannot establish the recoverability of the most critical service. Invalid tests should remain visible with a reason, rather than being removed from the denominator simply to improve the reported rate.</p>\n<p>Define dates consistently. A ticket can have detection, acknowledgement, containment and recovery times. Measuring from ticket creation rather than the first known disruption answers a different question. Record time zones and missing timestamps where relevant. Reconcile duplicate tickets for one incident without deleting the underlying records. Useful monitoring depends on the meaning of the observations, not merely on calculating them.</p>",
+          "sourceIds": []
+        }
+      ],
+      "application": {
+        "title": "Repair the monthly control dashboard",
+        "instructionsHtml": "<p>Allow about 60 minutes. In this fictional month, 1,000 endpoints are in the registered scope; 900 have current observations and 810 of those meet the update requirement. Twelve recovery tests were planned and run: nine met their service and data objectives, two exceeded the time objective and one used an invalid dataset. Of 120 active privileged accounts, 108 were reviewed; six of the reviewed accounts lack a recorded justification and 12 accounts remain unreviewed.</p>\n<p>The draft dashboard says 'Updates 90% green; recovery 100% green; privileged access 90% green'. Replace it with three precise entries. Explain each denominator, the unknown or unresolved population and the action required. Do not invent a departmental risk threshold or mark every unknown as a confirmed compromise.</p>",
+        "deliverable": "Three corrected metric definitions and a short decision note for the control owners.",
+        "suggestedAnswerHtml": "<p>Updates: 810 of 900 currently observed endpoints meet the requirement, or 90% of observations; verified compliance is 810 of 1,000 registered endpoints, or 81%, with 100 unobserved. The endpoint owner should investigate the observation gap and the 90 observed non-compliant devices, prioritised by service risk.</p>\n<p>Recovery: 12 of 12 planned tests ran, but only nine of 12 demonstrated the stated recovery objectives, or 75%. Keep the two late recoveries and one invalid test visible. Assign remediation and a valid rerun to the affected service owners. The execution rate is useful activity information, not the effectiveness result.</p>\n<p>Privileged access: 108 of 120 accounts were reviewed, or 90% coverage. Six reviewed accounts still lack justification, so review completion is not the same as justified access. The account owner should resolve those six decisions and the 12 unreviewed accounts, using the department's approved access process. Colour or severity should follow the relevant approved threshold and impact assessment.</p>",
+        "rubric": [
+          {
+            "criterion": "Correctly separates observed and whole-estate update rates",
+            "points": 3
+          },
+          {
+            "criterion": "Distinguishes recovery activity from achieved objectives",
+            "points": 3
+          },
+          {
+            "criterion": "Separates access-review coverage from unresolved access",
+            "points": 2
+          },
+          {
+            "criterion": "Assigns useful actions without inventing findings or thresholds",
+            "points": 2
+          }
+        ]
+      },
+      "reflection": {
+        "prompt": "Which familiar dashboard number changes meaning when you ask what is missing from its denominator?",
+        "guidanceHtml": "<p>State the number, its actual population and the unobserved or excluded group. Explain the decision that could change when the gap is made visible.</p>"
+      },
+      "quiz": {
+        "id": "M11-U01-QUIZ",
+        "title": "Define a measure before reading its number — knowledge check",
+        "passPercent": 75,
+        "attempts": 0,
+        "questions": [
+          {
+            "id": "M11-U01-Q01",
+            "type": "multichoice",
+            "name": "M11-U01-Q01",
+            "promptHtml": "<p>What should be specified first when designing a security metric?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "The management question and the decision owner who can act on the result.",
+                "fraction": 100,
+                "feedbackHtml": "A useful metric is designed around an actionable question."
+              },
+              {
+                "textHtml": "The chart type that fits the existing dashboard template.",
+                "fraction": 0,
+                "feedbackHtml": "Presentation follows the meaning and purpose of the measure."
+              },
+              {
+                "textHtml": "The largest number available from the monitoring tool.",
+                "fraction": 0,
+                "feedbackHtml": "Availability of data does not establish its decision value."
+              },
+              {
+                "textHtml": "The target used by a similar department, without checking local scope.",
+                "fraction": 0,
+                "feedbackHtml": "Targets depend on obligations, risk and the actual measure definition."
+              }
+            ],
+            "generalFeedbackHtml": "<p>A useful metric is designed around an actionable question.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M11-U01-Q02",
+            "type": "multichoice",
+            "name": "M11-U01-Q02",
+            "promptHtml": "<p>There are 1,000 registered endpoints, 900 current observations and 810 compliant observations. What is verified compliance across the registered estate?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "81%, with 10% of the estate currently unobserved.",
+                "fraction": 100,
+                "feedbackHtml": "Report both the observed rate and coverage so the denominator remains clear."
+              },
+              {
+                "textHtml": "90%, with the remaining 10% all confirmed non-compliant.",
+                "fraction": 0,
+                "feedbackHtml": "Ninety percent describes the observed population, and missing observations are not a confirmed result."
+              },
+              {
+                "textHtml": "100%, because unobserved devices can be excluded.",
+                "fraction": 0,
+                "feedbackHtml": "Excluding unknowns does not verify the whole registered estate."
+              },
+              {
+                "textHtml": "10%, because only the unknown population affects the result.",
+                "fraction": 0,
+                "feedbackHtml": "The verified compliant population is 810 of 1,000."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Report both the observed rate and coverage so the denominator remains clear.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M11-U01-Q03",
+            "type": "multichoice",
+            "name": "M11-U01-Q03",
+            "promptHtml": "<p>All twelve planned recovery tests ran, but only nine met their objectives. What does the 100% figure describe?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Test execution against the plan.",
+                "fraction": 100,
+                "feedbackHtml": "Keep activity and demonstrated control performance separate."
+              },
+              {
+                "textHtml": "The ability of every service to recover within its approved objective.",
+                "fraction": 0,
+                "feedbackHtml": "Running a test does not establish that it succeeded."
+              },
+              {
+                "textHtml": "The rate of successful recovery across the entire department.",
+                "fraction": 0,
+                "feedbackHtml": "The figure does not measure success or necessarily cover the whole department."
+              },
+              {
+                "textHtml": "The percentage of failed tests that were remediated.",
+                "fraction": 0,
+                "feedbackHtml": "No remediation outcome is supplied."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Keep activity and demonstrated control performance separate.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M11-U01-Q04",
+            "type": "multichoice",
+            "name": "M11-U01-Q04",
+            "promptHtml": "<p>A dashboard has no current data for a critical supplier connection. How should it be reported?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "As an explicit observation gap with its age, potential significance and an owner to resolve it.",
+                "fraction": 100,
+                "feedbackHtml": "Unknown status needs attention without being relabelled as a known outcome."
+              },
+              {
+                "textHtml": "As healthy because no alert was received.",
+                "fraction": 0,
+                "feedbackHtml": "Absence of an observation is not evidence of healthy operation."
+              },
+              {
+                "textHtml": "As a confirmed compromise because the data is missing.",
+                "fraction": 0,
+                "feedbackHtml": "Missing telemetry may have several causes; compromise is not established."
+              },
+              {
+                "textHtml": "Exclude it permanently so the trend remains stable.",
+                "fraction": 0,
+                "feedbackHtml": "The omission conceals an important part of the service scope."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Unknown status needs attention without being relabelled as a known outcome.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M11-U01-Q05",
+            "type": "multichoice",
+            "name": "M11-U01-Q05",
+            "promptHtml": "<p>Average recovery time improved, but two critical services still take several days to recover. What is the best additional view?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Show recovery by service criticality and the slowest relevant cases or distribution.",
+                "fraction": 100,
+                "feedbackHtml": "A summary should reveal material tails rather than conceal them."
+              },
+              {
+                "textHtml": "Remove the two cases because they distort the average.",
+                "fraction": 0,
+                "feedbackHtml": "They may be the most important cases for the decision."
+              },
+              {
+                "textHtml": "Replace all recovery measures with the number of tickets closed.",
+                "fraction": 0,
+                "feedbackHtml": "Ticket activity does not explain the service delay."
+              },
+              {
+                "textHtml": "Conclude that every service improved because the average improved.",
+                "fraction": 0,
+                "feedbackHtml": "An aggregate can hide divergent individual outcomes."
+              }
+            ],
+            "generalFeedbackHtml": "<p>A summary should reveal material tails rather than conceal them.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M11-U01-Q06",
+            "type": "multichoice",
+            "name": "M11-U01-Q06",
+            "promptHtml": "<p>A recovery sample contains only the easiest systems to restore. Which conclusion is justified?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "The result describes those tested systems, with limited support for wider conclusions.",
+                "fraction": 100,
+                "feedbackHtml": "Explain the sample's scope and why it was selected."
+              },
+              {
+                "textHtml": "The same success rate is proven for all critical services.",
+                "fraction": 0,
+                "feedbackHtml": "The selection method does not support that generalisation."
+              },
+              {
+                "textHtml": "The sample has no value for any purpose.",
+                "fraction": 0,
+                "feedbackHtml": "It can still provide evidence about the selected systems."
+              },
+              {
+                "textHtml": "The result can be made representative by reporting more decimal places.",
+                "fraction": 0,
+                "feedbackHtml": "Numerical precision does not repair selection bias."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Explain the sample's scope and why it was selected.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M11-U01-Q07",
+            "type": "multichoice",
+            "name": "M11-U01-Q07",
+            "promptHtml": "<p>Which details belong in a reproducible metric definition? Select all correct answers.</p>",
+            "single": false,
+            "answers": [
+              {
+                "textHtml": "Numerator, denominator, period and scope.",
+                "fraction": 50,
+                "feedbackHtml": "These define what the number means."
+              },
+              {
+                "textHtml": "Source, exclusions and the action owner.",
+                "fraction": 50,
+                "feedbackHtml": "These support interpretation and follow-through."
+              },
+              {
+                "textHtml": "A threshold copied from another service without recording its different population",
+                "fraction": -50,
+                "feedbackHtml": "A borrowed threshold does not define this measure's meaning or applicability."
+              },
+              {
+                "textHtml": "An instruction to omit missing observations without reporting the coverage gap",
+                "fraction": -50,
+                "feedbackHtml": "That changes the interpretation of the measured population."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Definitions make measures comparable, interpretable and actionable.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M11-U01-Q08",
+            "type": "multichoice",
+            "name": "M11-U01-Q08",
+            "promptHtml": "<p>Which statements about access-review reporting are correct? Select all correct answers.</p>",
+            "single": false,
+            "answers": [
+              {
+                "textHtml": "Review completion and justified access are distinct results.",
+                "fraction": 50,
+                "feedbackHtml": "A review can identify an unresolved or unjustified permission."
+              },
+              {
+                "textHtml": "The unit of measurement should be explicit, such as accounts rather than people.",
+                "fraction": 50,
+                "feedbackHtml": "Different units can produce different denominators."
+              },
+              {
+                "textHtml": "A completed review proves that all reviewed access is appropriate.",
+                "fraction": -50,
+                "feedbackHtml": "Completion alone does not establish the review's conclusion."
+              },
+              {
+                "textHtml": "Multiple privileged accounts for one person can always be counted as one account.",
+                "fraction": -50,
+                "feedbackHtml": "That changes the declared unit and may hide unreviewed permissions."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Keep coverage, decisions and account populations distinct.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M11-U01-Q09",
+            "type": "truefalse",
+            "name": "M11-U01-Q09",
+            "promptHtml": "<p>An invalid recovery test should be silently removed from the planned-test population to improve the reported success rate.</p>",
+            "correct": false,
+            "trueFeedbackHtml": "This is incorrect. Retain the invalid observation and reason; distinguish a valid rerun from the original result.",
+            "falseFeedbackHtml": "Retain the invalid observation and reason; distinguish a valid rerun from the original result.",
+            "generalFeedbackHtml": "<p>Retain the invalid observation and reason; distinguish a valid rerun from the original result.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M11-U01-Q10",
+            "type": "truefalse",
+            "name": "M11-U01-Q10",
+            "promptHtml": "<p>Detection, acknowledgement, containment and recovery timestamps answer different operational questions.</p>",
+            "correct": true,
+            "trueFeedbackHtml": "Define the start and end of each interval rather than treating every duration as resolution time.",
+            "falseFeedbackHtml": "This is incorrect. Define the start and end of each interval rather than treating every duration as resolution time.",
+            "generalFeedbackHtml": "<p>Define the start and end of each interval rather than treating every duration as resolution time.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M11-U01-Q11",
+            "type": "matching",
+            "name": "M11-U01-Q11",
+            "promptHtml": "<p>Match each example to its measure category.</p>",
+            "pairs": [
+              {
+                "promptHtml": "Reviews completed this month",
+                "answer": "Activity"
+              },
+              {
+                "promptHtml": "Observed devices divided by registered devices",
+                "answer": "Coverage"
+              },
+              {
+                "promptHtml": "Recovery tests meeting the approved objective",
+                "answer": "Control performance"
+              },
+              {
+                "promptHtml": "Residents unable to receive a time-critical service",
+                "answer": "Service outcome"
+              }
+            ],
+            "generalFeedbackHtml": "<p>Each category answers a different management question.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M11-U01-Q12",
+            "type": "gapselect",
+            "name": "M11-U01-Q12",
+            "promptHtml": "<p>A percentage needs a defined [[1]], and absent observations should remain visible as [[2]].</p>",
+            "choices": [
+              {
+                "text": "denominator",
+                "group": 1
+              },
+              {
+                "text": "unknowns",
+                "group": 1
+              },
+              {
+                "text": "target colour",
+                "group": 1
+              },
+              {
+                "text": "verified successes",
+                "group": 1
+              }
+            ],
+            "correctChoices": [
+              1,
+              2
+            ],
+            "generalFeedbackHtml": "<p>A clear population and explicit uncertainty prevent misleading interpretation.</p>",
+            "sourceIds": []
+          }
+        ]
+      }
+    },
+    {
+      "id": "M11-U02",
+      "title": "Report so that management can decide",
+      "estimatedMinutes": 150,
+      "objectives": [
+        "Prepare a concise executive report with evidence, implications and choices.",
+        "Preserve comparability when definitions or populations change.",
+        "Connect monitoring, escalation and corrective action to service ownership."
+      ],
+      "chapters": [
+        {
+          "id": "M11-U02-C01",
+          "title": "Connect the signal to a service and an owner",
+          "bodyHtml": "<p>RIA's operations-centre example connects technical monitoring with service visibility and user experience. For a department, the practical lesson is to explain what an observation means for the service and who can act. A server warning may affect no current service, one office's queue or a national deadline. The same technical severity label can therefore require different management decisions.</p>\n<p>Prepare a short exception-led report. State the affected service, the material observation, the source and period, the consequence or exposure, the options, the recommended action, the owner and the required decision date. Include what remains uncertain when it affects the choice. Routine healthy operation can be summarised, while significant unresolved issues receive enough detail for a decision.</p>\n<p>Keep operational and executive views connected. The service team needs event details and working records. The executive needs the service effect and authority required. Provide a traceable reference to the underlying observation rather than copying unnecessary personal or secret information into a widely distributed report. A concise report can still support follow-up questions.</p>",
+          "sourceIds": [
+            "CASE-RIA-SOC",
+            "CGICT-2022"
+          ]
+        },
+        {
+          "id": "M11-U02-C02",
+          "title": "Preserve the meaning of trends",
+          "bodyHtml": "<p>A changed denominator can reverse the apparent story. A programme may improve from 80 of 100 services to 90 of 100 on the original cohort, while its current estate grows to 140 services and only 90 are verified. Report both the comparable cohort trend and current whole-estate coverage. Neither is a substitute for the other, and neither should be hidden because it is less favourable.</p>\n<p>Version material definition changes. Keep the prior value and its definition, state when the new method starts, and provide a bridge where the data permits. If a sensor was offline for a week, mark the gap rather than drawing an uninterrupted trend through it. If a correction changes last month's figure, retain the corrected value and explain the reason without rewriting the historical decision as though management knew it then.</p>\n<p>Review unusual movements before attributing them. An increase in detected incidents may reflect improved detection, a wider service scope or more attacks. A decline may reflect successful prevention or failed logging. Ask the control owner to explain the mechanism and evidence. The objective is an accurate decision, not an automatically favourable trend.</p>",
+          "sourceIds": []
+        },
+        {
+          "id": "M11-U02-C03",
+          "title": "Make the report lead to a decision",
+          "bodyHtml": "<p>An executive report should state the choice. For example: fund an additional recovery route, approve a time-limited exception within delegated authority, change a delivery date, or escalate an exposure beyond current tolerance. Describe the service and resource trade-offs. The DISO can recommend and challenge, while the authorised owner makes the management decision and retains accountability.</p>\n<p>Record the decision, conditions, owner and review date in the department's established mechanism. The next report should show whether the action happened and whether it changed the relevant result. 'Discussed at EXCO' is not the same as 'approved', and 'approved' is not the same as 'implemented'. Avoid repeatedly carrying an old action forward without explaining the consequence of delay or seeking a new decision.</p>\n<p>Use reporting to learn. Ask recipients which decisions the report helped them make and which information was missing. Remove measures that consume effort without supporting a relevant decision, while preserving required reporting obligations. Align the departmental view with existing governance and monitoring arrangements rather than building a separate reporting hierarchy around the DISO.</p>",
+          "sourceIds": [
+            "CGICT-2022",
+            "DPSA-IS-2022"
+          ]
+        }
+      ],
+      "application": {
+        "title": "Write the executive decision brief",
+        "instructionsHtml": "<p>Allow about 60 minutes. The fictional Umfula permit service must issue 2,000 time-sensitive renewals next month. Its original 100-service control cohort improved from 80 verified services to 90. The registered estate now contains 140 services, of which 90 are verified. A shared identity-recovery dependency was excluded from the latest recovery test. The service owner proposes a two-week remediation and a monitored manual fallback, costing R180,000; the alternative is to delay a new non-critical feature and use the same staff. Neither option has been approved.</p>\n<p>Prepare a one-page executive brief. Show the comparable trend and current coverage, explain the excluded dependency, give two choices and a recommendation, and specify the decision owner and follow-up. Use the numbers supplied; do not promise that either option guarantees uninterrupted delivery.</p>",
+        "deliverable": "An executive brief with a small comparison table and a decision record template.",
+        "suggestedAnswerHtml": "<p>Report that the original cohort improved from 80% to 90%, while current whole-estate verified coverage is 90 of 140, about 64.3%. Forty newly registered services and ten original services remain unverified. These are different views of the same programme, not contradictory results.</p>\n<p>Explain that the recovery result does not demonstrate the excluded identity dependency. Describe the permit deadline and the need to test the complete route. Compare the R180,000 remediation/fallback option with deferring the non-critical feature and reallocating staff, including delivery implications and dependencies. Recommend the option best supported by the department's actual authority and available capacity; a reasonable answer can choose either if the trade-offs are explicit.</p>\n<p>Ask the authorised management forum for a decision by a specified planning date, name the service and control owners, and require a complete recovery demonstration and fallback readiness review before the renewal peak. Record approval conditions, the accountable owner and the next review date. Preserve the original unapproved proposal as such until a decision exists.</p>",
+        "rubric": [
+          {
+            "criterion": "Presents both trend and current coverage accurately",
+            "points": 3
+          },
+          {
+            "criterion": "Explains the missing recovery dependency and service effect",
+            "points": 2
+          },
+          {
+            "criterion": "Compares feasible choices and makes a reasoned recommendation",
+            "points": 3
+          },
+          {
+            "criterion": "Defines actual decision authority and follow-through",
+            "points": 2
+          }
+        ]
+      },
+      "reflection": {
+        "prompt": "Which sentence in your next report will ask for a real decision rather than merely describe a problem?",
+        "guidanceHtml": "<p>Write the decision, the person or forum with authority, the date needed and the consequence of delay. Keep the request within the evidence you have.</p>"
+      },
+      "quiz": {
+        "id": "M11-U02-QUIZ",
+        "title": "Report so that management can decide — knowledge check",
+        "passPercent": 75,
+        "attempts": 0,
+        "questions": [
+          {
+            "id": "M11-U02-Q01",
+            "type": "multichoice",
+            "name": "M11-U02-Q01",
+            "promptHtml": "<p>What is the most useful executive description of an unresolved technical warning?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "The affected service, evidence and uncertainty, practical consequence, choices and required decision.",
+                "fraction": 100,
+                "feedbackHtml": "Connect operational evidence to a management choice."
+              },
+              {
+                "textHtml": "The full raw log with no explanation of the service impact.",
+                "fraction": 0,
+                "feedbackHtml": "Technical detail alone makes the executive reconstruct the management issue."
+              },
+              {
+                "textHtml": "A red status with no owner or decision date.",
+                "fraction": 0,
+                "feedbackHtml": "A status signal without an action path is incomplete."
+              },
+              {
+                "textHtml": "A guarantee of service failure to make the issue receive attention.",
+                "fraction": 0,
+                "feedbackHtml": "Exaggeration weakens the quality of the decision."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Connect operational evidence to a management choice.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M11-U02-Q02",
+            "type": "multichoice",
+            "name": "M11-U02-Q02",
+            "promptHtml": "<p>A stable cohort improves from 80/100 to 90/100, while the estate grows to 140 with 90 verified. Which report is accurate?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "The original cohort improved to 90%; current whole-estate verified coverage is about 64.3%.",
+                "fraction": 100,
+                "feedbackHtml": "Separate comparable performance from current coverage."
+              },
+              {
+                "textHtml": "The whole estate is 90% verified because the original cohort improved.",
+                "fraction": 0,
+                "feedbackHtml": "That uses an outdated denominator for the current estate."
+              },
+              {
+                "textHtml": "The original cohort deteriorated to 64.3%.",
+                "fraction": 0,
+                "feedbackHtml": "The wider-estate rate does not describe change within the stable cohort."
+              },
+              {
+                "textHtml": "Only the more favourable of the two figures should be reported.",
+                "fraction": 0,
+                "feedbackHtml": "Both answer relevant but different questions."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Separate comparable performance from current coverage.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M11-U02-Q03",
+            "type": "multichoice",
+            "name": "M11-U02-Q03",
+            "promptHtml": "<p>A new metric definition materially changes the reported rate. What should happen?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Version the definition, retain the prior result and explain the change with a comparison where possible.",
+                "fraction": 100,
+                "feedbackHtml": "Preserve the historical meaning while improving the current measure."
+              },
+              {
+                "textHtml": "Replace the old values without explanation so the chart remains smooth.",
+                "fraction": 0,
+                "feedbackHtml": "That obscures what earlier reports meant."
+              },
+              {
+                "textHtml": "Never change a metric even when the old one is misleading.",
+                "fraction": 0,
+                "feedbackHtml": "Definitions can improve if the transition is transparent."
+              },
+              {
+                "textHtml": "Apply a manual adjustment without retaining its basis.",
+                "fraction": 0,
+                "feedbackHtml": "Unexplained adjustments prevent interpretation and reproduction."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Preserve the historical meaning while improving the current measure.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M11-U02-Q04",
+            "type": "multichoice",
+            "name": "M11-U02-Q04",
+            "promptHtml": "<p>A remediation was discussed at EXCO but no decision was recorded. What is its status?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "A proposal or discussion awaiting a confirmed decision.",
+                "fraction": 100,
+                "feedbackHtml": "Use the actual decision state and obtain the required follow-through."
+              },
+              {
+                "textHtml": "Approved, because it appeared on the agenda.",
+                "fraction": 0,
+                "feedbackHtml": "Discussion does not establish approval."
+              },
+              {
+                "textHtml": "Implemented, because the issue was escalated.",
+                "fraction": 0,
+                "feedbackHtml": "Escalation does not perform the remediation."
+              },
+              {
+                "textHtml": "Rejected, because the meeting ended.",
+                "fraction": 0,
+                "feedbackHtml": "Absence of a recorded decision does not prove rejection."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Use the actual decision state and obtain the required follow-through.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M11-U02-Q05",
+            "type": "multichoice",
+            "name": "M11-U02-Q05",
+            "promptHtml": "<p>A monitoring system detects fewer incidents this month. Which follow-up is most useful?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Check changes in threat activity, scope, detection coverage and control operation before explaining the decline.",
+                "fraction": 100,
+                "feedbackHtml": "Interpret trends through evidence about how they were produced."
+              },
+              {
+                "textHtml": "Declare prevention successful from the count alone.",
+                "fraction": 0,
+                "feedbackHtml": "Several mechanisms can produce fewer detections."
+              },
+              {
+                "textHtml": "Assume the monitoring tool failed without checking its health.",
+                "fraction": 0,
+                "feedbackHtml": "A tool failure is one possibility, not an established cause."
+              },
+              {
+                "textHtml": "Stop collecting the measure because it is ambiguous.",
+                "fraction": 0,
+                "feedbackHtml": "The measure can be useful when combined with context."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Interpret trends through evidence about how they were produced.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M11-U02-Q06",
+            "type": "multichoice",
+            "name": "M11-U02-Q06",
+            "promptHtml": "<p>An overdue action appears unchanged in five monthly reports. What should the DISO do?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Explain the effect of delay and seek a clear revised decision, owner or escalation through existing governance.",
+                "fraction": 100,
+                "feedbackHtml": "An unresolved action needs an actionable decision, not perpetual restatement."
+              },
+              {
+                "textHtml": "Keep copying it indefinitely because repetition demonstrates oversight.",
+                "fraction": 0,
+                "feedbackHtml": "Repeated reporting without a decision does not resolve the exposure."
+              },
+              {
+                "textHtml": "Mark it complete to prevent the report becoming too long.",
+                "fraction": 0,
+                "feedbackHtml": "That would misstate implementation."
+              },
+              {
+                "textHtml": "Personally assume the business owner's delegated authority.",
+                "fraction": 0,
+                "feedbackHtml": "The DISO should use the proper decision route."
+              }
+            ],
+            "generalFeedbackHtml": "<p>An unresolved action needs an actionable decision, not perpetual restatement.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M11-U02-Q07",
+            "type": "multichoice",
+            "name": "M11-U02-Q07",
+            "promptHtml": "<p>Which elements make an executive recommendation decision-ready? Select all correct answers.</p>",
+            "single": false,
+            "answers": [
+              {
+                "textHtml": "Feasible options with service, cost and timing implications.",
+                "fraction": 50,
+                "feedbackHtml": "Management needs the consequences of the available choices."
+              },
+              {
+                "textHtml": "A named authority, required date and follow-up conditions.",
+                "fraction": 50,
+                "feedbackHtml": "These make the decision and implementation accountable."
+              },
+              {
+                "textHtml": "Only a preferred technology name with no service purpose.",
+                "fraction": -50,
+                "feedbackHtml": "A product choice alone does not explain the management case."
+              },
+              {
+                "textHtml": "Removal of uncertainties that might make approval harder.",
+                "fraction": -50,
+                "feedbackHtml": "Material uncertainty belongs in the decision."
+              }
+            ],
+            "generalFeedbackHtml": "<p>A clear recommendation combines evidence, choices and authority.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M11-U02-Q08",
+            "type": "multichoice",
+            "name": "M11-U02-Q08",
+            "promptHtml": "<p>Which reporting practices preserve useful source meaning? Select all correct answers.</p>",
+            "single": false,
+            "answers": [
+              {
+                "textHtml": "Mark a period with missing sensor data as a gap.",
+                "fraction": 50,
+                "feedbackHtml": "The graph should not imply observations that do not exist."
+              },
+              {
+                "textHtml": "Explain a correction to an earlier figure and retain its original context.",
+                "fraction": 50,
+                "feedbackHtml": "This distinguishes updated knowledge from the historical decision."
+              },
+              {
+                "textHtml": "Treat every change in a raw count as a proven causal effect.",
+                "fraction": -50,
+                "feedbackHtml": "Counts require context and competing explanations."
+              },
+              {
+                "textHtml": "Copy all sensitive incident details into every executive distribution.",
+                "fraction": -50,
+                "feedbackHtml": "Recipients need relevant information, not unrestricted raw content."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Traceability and appropriate detail support both accurate and responsible reporting.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M11-U02-Q09",
+            "type": "truefalse",
+            "name": "M11-U02-Q09",
+            "promptHtml": "<p>An approved action is necessarily an implemented and effective action.</p>",
+            "correct": false,
+            "trueFeedbackHtml": "This is incorrect. Approval, implementation and demonstrated effect are different states.",
+            "falseFeedbackHtml": "Approval, implementation and demonstrated effect are different states.",
+            "generalFeedbackHtml": "<p>Approval, implementation and demonstrated effect are different states.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M11-U02-Q10",
+            "type": "truefalse",
+            "name": "M11-U02-Q10",
+            "promptHtml": "<p>A central monitoring service can improve the overall view while individual institutions remain responsible for their own services.</p>",
+            "correct": true,
+            "trueFeedbackHtml": "The RIA account explicitly preserves institutional responsibility within the shared operating model.",
+            "falseFeedbackHtml": "This is incorrect. The RIA account explicitly preserves institutional responsibility within the shared operating model.",
+            "generalFeedbackHtml": "<p>The RIA account explicitly preserves institutional responsibility within the shared operating model.</p>",
+            "sourceIds": [
+              "CASE-RIA-SOC"
+            ]
+          },
+          {
+            "id": "M11-U02-Q11",
+            "type": "matching",
+            "name": "M11-U02-Q11",
+            "promptHtml": "<p>Match each report element to its purpose.</p>",
+            "pairs": [
+              {
+                "promptHtml": "Stable-cohort trend",
+                "answer": "Compare like with like over time"
+              },
+              {
+                "promptHtml": "Current-estate coverage",
+                "answer": "Show the present population reached"
+              },
+              {
+                "promptHtml": "Decision and conditions",
+                "answer": "Record the authorised management choice"
+              },
+              {
+                "promptHtml": "Follow-up evidence",
+                "answer": "Show whether the action changed the relevant result"
+              }
+            ],
+            "generalFeedbackHtml": "<p>A complete report separates observation, decision and subsequent effect.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M11-U02-Q12",
+            "type": "ddwtos",
+            "name": "M11-U02-Q12",
+            "promptHtml": "<p>A report should connect a material [[1]] to an authorised [[2]], then track the resulting action.</p>",
+            "choices": [
+              {
+                "text": "observation",
+                "group": 1
+              },
+              {
+                "text": "decision",
+                "group": 1
+              },
+              {
+                "text": "assumption presented as fact",
+                "group": 1
+              },
+              {
+                "text": "unowned task",
+                "group": 1
+              }
+            ],
+            "correctChoices": [
+              1,
+              2
+            ],
+            "generalFeedbackHtml": "<p>Monitoring becomes useful when it supports a decision and accountable follow-through.</p>",
+            "sourceIds": []
+          }
+        ]
+      }
+    }
+  ]
+}

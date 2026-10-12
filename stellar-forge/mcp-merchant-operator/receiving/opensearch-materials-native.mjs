@@ -13,9 +13,12 @@ import { startMerchantMcp } from '../serve.mjs';
 import { openMerchantFileClient } from '../retained-download.mjs';
 import { createOpenSearchMaterialClient } from '../opensearch-material-client.mjs';
 import { runOpenSearchMaterialCLI } from '../opensearch-material-cli.mjs';
-import { openSearchMaterialTools, MATERIAL_EXPORT_FORMATS, SUPPLIER_EXPORT_FORMATS } from '../catalog/opensearch-materials.mjs';
+import { openSearchMaterialTools, MATERIAL_EXPORT_FORMATS } from '../catalog/opensearch-materials.mjs';
 
 const HERE=dirname(fileURLToPath(import.meta.url));
+// This original BMEcat journey retains its four applicable delivery formats.
+// xChange recipient-state coverage belongs to xchange-materials-native.mjs.
+const SUPPLIER_EXPORT_FORMATS=Object.freeze(['review.json','issues.csv','products.jsonl','bmecat.xml']);
 const SCHEMA='stellar-forge.opensearch-materials-native-receiving.v1';
 const PRIMARY='etim-original',CUSTOMER='etim-received';
 const SOURCE_INPUT='etim-original-source',OLDER_INPUT='etim-original-delivery',CURRENT_INPUT='etim-mcp-delivery';
@@ -97,6 +100,14 @@ async function fileIdentity(path,expected) {
     return result;
   }finally{await file.close();}
 }
+function retainedExportFile(selected,format){
+  const formats=selected?.manifest?.selection?.formats;
+  assert.ok(Array.isArray(formats),'Use the original export selection.');
+  const index=formats.indexOf(format);
+  assert.ok(index>=0&&formats.lastIndexOf(format)===index,'The original export omitted or repeated '+format+'.');
+  assert.equal(selected.manifest.files.length,formats.length);
+  return selected.manifest.files[index];
+}
 function phaseOf(report,name) {
   const item=report.phases.find(value=>value.phase===name);
   assert.ok(item,'The original supplier report omitted '+name+'.');return item;
@@ -122,7 +133,8 @@ function assertOriginalProduct(value,expected) {
 }
 async function sourceReport() {
   const paths=['opensearch-material-client.mjs','opensearch-material-client.d.mts','opensearch-material-cli.mjs',
-    'opensearch-material-contracts.mjs','opensearch-materials.mjs','opensearch-workspace.mjs','catalog/opensearch-materials.mjs'];
+    'opensearch-material-contracts.mjs','opensearch-materials.mjs','opensearch-workspace.mjs','catalog/opensearch-materials.mjs',
+    'receiving/opensearch-materials-native.mjs'];
   const values={};
   for(const path of paths){
     const bytes=await readBytes(join(HERE,'..',path),4*1024*1024);
@@ -131,6 +143,10 @@ async function sourceReport() {
   }
   return values;
 }
+
+// The following xChange receiving journey shares the original complete-file custody helpers.
+export const materialReceivingIO=Object.freeze({privateDirectory,readBytes,readJson,maybeJson,
+  atomicBytes,retainedBytes,fileIdentity,digest,allPages,operationResult,sourceReport,retainedExportFile});
 
 /**
  * One original supplier producer followed by one MCP receiving operation.
@@ -522,7 +538,7 @@ export async function runOpenSearchMaterialsReceiving({
       let interrupted=false;
       try{
         await download(primary,retained.material,downloadDirectory,{onProgress:async progress=>{
-          if(progress.file.endsWith('catalog-bundle.jsonl')&&progress.bytes>0&&progress.bytes<progress.total){
+          if(progress.file===retainedExportFile(retained.material,'catalog-bundle.jsonl').name&&progress.bytes>0&&progress.bytes<progress.total){
             state.downloadInterruption={armed:false,observed:true,exportId:progress.exportId,
               file:progress.file,bytes:progress.bytes,total:progress.total};
             await save();
@@ -543,7 +559,7 @@ export async function runOpenSearchMaterialsReceiving({
       const supplierExport=await download(primary,retained.supplier,supplierDownloadDirectory);
       const again=await download(primary,retained.material,downloadDirectory);
       assert.equal(again.bytes,material.bytes);assert.ok(again.resumed);
-      const xml=supplierExport.artifacts.find(file=>file.name?.endsWith('bmecat.xml'));
+      const xml=retainedExportFile(retained.supplier,'bmecat.xml');
       const originalXml=supplier.exports.find(item=>item.name==='etim-original-delivery.xml');
       assert.ok(xml);assert.equal(xml.sha256,originalXml.sha256,'The full MCP XML changed the original published supplier product.');
       return {material,supplier:supplierExport,repeatedOriginalBytes:true};
@@ -551,7 +567,7 @@ export async function runOpenSearchMaterialsReceiving({
     // Reconcile these complete local originals on every resumed receiving path.
     for(const group of Object.values(receivedFiles))if(group?.artifacts)
       for(const artifact of group.artifacts)await fileIdentity(artifact.path,artifact);
-    const portable=retained.material.manifest.files.find(file=>file.name.endsWith('catalog-bundle.jsonl'));
+    const portable=retainedExportFile(retained.material,'catalog-bundle.jsonl');
     assert.ok(portable);
     const bundleInput={path:join(downloadDirectory,portable.name),name:portable.name,bytes:portable.bytes,sha256:portable.sha256};
     if(!state.bundleInput){state.bundleInput=bundleInput;await save();}
@@ -651,8 +667,8 @@ export async function runOpenSearchMaterialsReceiving({
       assert.deepEqual(JSON.parse(chunks.join('')),cli);
       const artifacts=[await fileIdentity(join(supplierDirectory,'manifest.json'),supplierResult.manifestFile)];
       for(const file of supplierResult.manifest.files)artifacts.push({...file,...await fileIdentity(join(supplierDirectory,file.name),file)});
-      const xml=artifacts.find(item=>item.name?.endsWith('bmecat.xml'));
-      assert.equal(xml.sha256,receivedFiles.supplier.artifacts.find(item=>item.name?.endsWith('bmecat.xml')).sha256);
+      const xml=retainedExportFile(supplierResult,'bmecat.xml');
+      assert.equal(xml.sha256,retainedExportFile(retained.supplier,'bmecat.xml').sha256);
       const inputPath=join(control,'customer-correction-history.json');
       await retainedBytes(inputPath,json({kind:'correction',id:customerWork.correction.id,limit:1}));
       chunks.length=0;
@@ -714,7 +730,7 @@ export async function runOpenSearchMaterialsReceiving({
     const currentRow=await customer.supplierRow({reviewId:customerWork.review.id,materialKey:mapped.material.key});
     assertOriginalProduct(currentRow.product,product);
     await save();
-    const required=openSearchMaterialTools(name=>name);
+    const required=openSearchMaterialTools(name=>name).filter(name=>name!=='merchant_opensearch_supplier_recipient_rows');
     for(const name of required)assert.ok(state.observedTools[name]>0,'The complete receiving workflow has not used '+name+'.');
     const source=await sourceReport();await closeHost();
     state.state='COMPLETE';state.completedAt??=new Date().toISOString();state.artifacts=artifacts;await save();

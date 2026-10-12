@@ -112,12 +112,12 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
     need(bytes.length === metadata.bytes && digest(bytes) === metadata.sha256, 'RESEARCH_BLOB_CHANGED');
     return bytes;
   }
-  /** Open a current retained edition through this store's original verified blob reader. */
-  async function readRetainedEdition(id, editionId) {
-    const {state} = await head(id);
+  /** Open an edition from the selected saved revision through the original verified blob reader. */
+  async function readRetainedEdition(id, editionId, {revision} = {}) {
+    const {state} = await head(id, revision);
     const edition = state.editions.find(value => value.id === editionId);
     need(edition?.mode === 'retained', 'RETAINED_EDITION_REQUIRED');
-    return {edition: clone(edition), bytes: await blob(edition.raw)};
+    return {edition: clone(edition), revision: state.revision, bytes: await blob(edition.raw)};
   }
   const metadata = state => ({ ...summary(state), schema: DOCUMENT,
     questions: clone(state.questions), editions: clone(state.editions),

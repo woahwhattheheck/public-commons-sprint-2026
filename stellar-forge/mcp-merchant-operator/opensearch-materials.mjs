@@ -477,7 +477,7 @@ const REPLY_BYTES = 1048576;
 const PAGE_PAYLOAD_BYTES = REPLY_BYTES - 8192;
 function originalTooLarge() {
   fail('OPENSEARCH_MATERIAL_RECORD_TOO_LARGE',
-    'This complete original record exceeds the 1 MiB tool reply budget. Retain catalog.jsonl or catalog-bundle.jsonl, or supplier products.jsonl/review.json, and download the complete file through material_export_file.',413);
+    'This complete original record exceeds the 1 MiB tool reply budget. Retain catalog.jsonl or catalog-bundle.jsonl, or supplier products.jsonl/review.json/recipient.jsonl, and download the complete file through material_export_file.',413);
 }
 function boundedRecord(value) {
   if(Buffer.byteLength(JSON.stringify(value))>PAGE_PAYLOAD_BYTES)originalTooLarge();
@@ -839,7 +839,7 @@ export class MerchantOpenSearchMaterials {
             inputBytes(input,this.#owner(scope)));
         }
         case 'merchant_opensearch_material_export':return await this.#export(scope,model,'material',args);
-        case 'merchant_opensearch_supplier_templates':return boundedRecord(model.catalog.supplier.templates());
+        case 'merchant_opensearch_supplier_templates':return boundedRecord(model.catalog.supplier.templates(request));
         case 'merchant_opensearch_supplier_list':return collectionPage(model,'supplier',request);
         case 'merchant_opensearch_supplier_plan':
           return boundedRecord(recordAt(model,'plan',args.planId,args.revision));
@@ -854,6 +854,9 @@ export class MerchantOpenSearchMaterials {
         case 'merchant_opensearch_supplier_rows':
           identifier(args.reviewId,'review ID');checkReadPaging(args);
           return await readSnapshot(catalog=>boundedOriginalPage(input=>catalog.supplier.rows(input),request));
+        case 'merchant_opensearch_supplier_recipient_rows':
+          identifier(args.reviewId,'review ID');checkReadPaging(args);
+          return await readSnapshot(catalog=>boundedOriginalPage(input=>catalog.supplier.recipientRows(input),request));
         case 'merchant_opensearch_supplier_row':
           identifier(args.reviewId,'review ID');hash(args.materialKey,'material key');
           return boundedRecord(model.catalog.supplier.reviewRow(request));

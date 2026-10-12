@@ -8,7 +8,7 @@ export type MaterialIdentifier = string;
 /** Plain nonnegative decimal text; up to40 whole and18 fractional digits. */
 export type ExactDecimal = string;
 export type MaterialExportFormat = 'catalog.csv'|'catalog.jsonl'|'approved-matches.csv'|'index.json'|'bulk.ndjson'|'delta.ndjson'|'facets.json'|'search-client.ts'|'source.json'|'catalog-bundle.jsonl';
-export type SupplierExportFormat = 'review.json'|'issues.csv'|'products.jsonl'|'bmecat.xml';
+export type SupplierExportFormat = 'review.json'|'issues.csv'|'products.jsonl'|'bmecat.xml'|'xchange.json'|'recipient.jsonl'|'impact.csv'|'parameters.xml'|'2ba.zip';
 export interface CallOptions { requestSignal?: AbortSignal|null; timeoutMs?: number }
 export interface NativeMerchantClient {
   endpoint:string;
@@ -37,7 +37,7 @@ export interface NativeOperation<T=Record<string,unknown>> {
   result?:NativeOperationResult<T>; error?:{code?:string;message?:string;[key:string]:unknown}; [key:string]:unknown;
 }
 export interface InputFormat {
-  kind?:'csv'|'tsv'|'jsonl'|'json'; delimiter?:string; hasHeader?:boolean; columns?:string[]; rowsPath?:string;
+  kind?:'csv'|'tsv'|'jsonl'|'json'|'xchange-json'; delimiter?:string; hasHeader?:boolean; columns?:string[]; rowsPath?:string;
 }
 export interface Provenance { url?:string; revision?:string; publisher?:string; kind?:string; note?:string }
 export interface HostMaterialInput { inputId:string; name:string; bytes:number; sha256:Sha256; [key:string]:unknown }
@@ -133,8 +133,71 @@ export interface MaterialExportRequest {
 export type SupplierBinding=string|{constant:JsonValue;reason:string};
 export type SupplierBindings=Record<string,SupplierBinding>;
 export interface SupplierPatch { path:string;value:JsonValue;reason:string }
-/** The full original profile schema is returned by supplierTemplates(). */
-export type SupplierProfile=JsonObject;
+export type XChangeTarget='xchange-2.0'|'2ba-xchange-2.0';
+/** Keys are JSON Pointers relative to the selected native value; values retain exact original number lexemes. */
+export type XChangeNumberTokens=Record<string,string>;
+export type XChangeSource={url:string;sha256:Sha256;revision:string};
+export type XChangeHeaderOverride={value:JsonObject;numberTokens:XChangeNumberTokens;reason:string};
+export type XChangeSupplierHeaderOverride=XChangeHeaderOverride&{supplierKey:string};
+export interface TwoBaProcessingParameters {
+  GeneratedBy?:string;PackageDescription?:string;SendReportToEmail?:string;ReportLanguage?:'EN'|'NL';
+  SkipLoadProducts?:boolean;SkipLoadArticlesAndPrices?:boolean;SkipLoadPrices?:boolean;SkipLoadAttachments?:boolean;
+  InteractiveChecks?:Array<{Code:'7000160';SolutionId:'106'|'108'}|{Code:'7000161';SolutionId:'165'|'166'}>;
+  OverrulePackageMutationCode?:boolean;PackageMutationCode?:'ReplaceExistingCatalog'|'UpdateExistingCatalog';
+  /** Original xChange MDX codes separated by semicolons, or *. */
+  KeepMimeURL?:string;AutoConvertToMasterGLN?:boolean;
+}
+export interface TwoBaProcessingSelection {
+  schema:'stellar-forge.2ba-processing.v1';reason:string;parameters:TwoBaProcessingParameters;source?:JsonObject;
+}
+export interface TwoBaProcessingEffects {
+  schema:'stellar-forge.2ba-processing-effects.v1';reason:string;source:JsonObject;parameters:TwoBaProcessingParameters;
+  nativeCatalogueType:JsonValue;effectiveCatalogueType:JsonValue;
+  skipProducts:boolean;skipTradeItems:boolean;skipPrices:boolean;
+  attachments:{mode:'skip'|'keep-omitted'|'delete-omitted'|'recipient-interactive';
+    checkCode:'7000160'|'7000161'|null;solutionId:'106'|'108'|'165'|'166'|null;
+    keepMimeURL:string|null;referenceIdentity:string};
+  masterGln:'recipient-account-mapping'|'original-supplier';reportLanguage:'EN'|'NL';reportDestination:string|null;
+}
+export type XChangeProfile={
+  schema:'stellar-forge.supplier-xchange-profile.v1';id:string;target:XChangeTarget;
+  header:XChangeHeaderOverride|null;supplierHeaders:XChangeSupplierHeaderOverride[];
+  statusMapping:null|{source:XChangeSource;product:Record<string,string>;tradeItem:Record<string,string>};
+  releasedModellingClasses:Array<{code:string;version:string;source:XChangeSource}>;
+  attachmentPolicy:{keepMimeUrlCodes:string[]};
+  processing?:TwoBaProcessingSelection;
+  source?:JsonObject;
+};
+/** The complete original Sonepar/BMEcat or native xChange profile is returned by supplierTemplates(). */
+export type SupplierProfile=JsonObject|XChangeProfile;
+export type XChangeRecipientKind='product'|'tradeItem';
+export type XChangeRecipientAction='added'|'changed'|'unchanged'|'expired'|'deleted'|'skipped';
+export interface XChangeRecipientReview {
+  schema:'stellar-forge.xchange-recipient-review.v1';target:XChangeTarget;catalogueType:JsonValue;
+  previousReviewId:RecordId|null;previousReviewSha256:Sha256|null;
+  counts:{productsAdded:number;productsChanged:number;productsUnchanged:number;productsExpired:number;
+    tradeItemsAdded:number;tradeItemsChanged:number;tradeItemsUnchanged:number;tradeItemsDeleted:number;
+    productsTotal:number;tradeItemsTotal:number;productsSkipped?:number;tradeItemsSkipped?:number};
+  rowsRootSha256:Sha256;supplierCount:number;sourceProductCount:number;
+  header:JsonObject;headerNumberTokens:XChangeNumberTokens;headerSha256:Sha256;
+  materialization:Record<string,string>;processing?:TwoBaProcessingEffects;
+}
+export interface XChangeRecipientPage extends RowsPage<XChangeRecipientRow> {
+  reviewId:RecordId;reviewSha256:Sha256;recipient:XChangeRecipientReview;
+}
+export interface XChangeRecipientRow {
+  schema:'stellar-forge.xchange-recipient-record.v1';kind:XChangeRecipientKind;key:string;
+  reviewId:RecordId;planId:RecordId;catalogId:RecordId;tenantId:string;
+  supplierKey:string;productKey:string;materialKey:Sha256|null;identifier:string;action:XChangeRecipientAction;
+  beforeSha256:Sha256|null;afterSha256:Sha256|null;before:JsonObject|null;after:JsonObject|null;sha256:Sha256;
+  processing?:{applied:boolean;parameter?:string;action?:string;supplied?:boolean;sourceSupplier?:JsonObject;
+    retainedFields?:{prices:'retained-previous'|'supplied';attachments:TwoBaProcessingEffects['attachments']['mode']}};
+  [key:string]:unknown;
+}
+export interface SupplierTemplate {
+  schema:'stellar-forge.supplier-templates.v1';profileId:string;source:unknown;
+  profile:SupplierProfile;product:JsonObject;bindings:SupplierBindings;catalogMapping?:CatalogMapping;
+}
 export interface SupplierPlan {
   schema:string;id:RecordId;revision:number;catalogId:RecordId;tenantId:string;title:string;
   editionId:RecordId;editionReviewSha256:Sha256;profile:SupplierProfile;bindings:SupplierBindings;
@@ -159,7 +222,7 @@ export interface SupplierProduct {
 export interface SupplierReview {
   schema:string;id:RecordId;planId:RecordId;planRevision:number;catalogId:RecordId;tenantId:string;
   editionId:RecordId;editionReviewSha256:Sha256;source:CatalogSourceReference;plan:SupplierPlan;
-  correctionsRootSha256:Sha256;rowsRootSha256:Sha256;createdAt:string;
+  correctionsRootSha256:Sha256;rowsRootSha256:Sha256;createdAt:string;recipient?:XChangeRecipientReview;
   globalFindings:SupplierFinding[];counts:{total:number;readyProducts:number;errorProducts:number;errors:number;warnings:number};
   findings:Array<{severity:string;code:string;count:number}>;sha256:Sha256;
 }
@@ -239,7 +302,7 @@ export interface MaterialClientRequests {
   materialDraft:MaterialDraftRequest;
   materialReceive:{requestId:RecordId;inputId:string};
   materialExport:MaterialExportRequest;
-  supplierTemplates:Record<string,never>;
+  supplierTemplates:{target?:XChangeTarget};
   supplierList:CursorArgs&{collection:'plans'|'reviews'|'corrections';catalogId?:RecordId;planId?:RecordId};
   supplierPlan:{planId:RecordId;revision?:number};
   supplierHistory:HistoryArgs&{kind:'plan'|'correction'};
@@ -247,6 +310,7 @@ export interface MaterialClientRequests {
   supplierCorrectionGet:{correctionId:RecordId;revision?:number};
   supplierReviewGet:{reviewId:RecordId};
   supplierRows:PageArgs&{reviewId:RecordId;status?:'all'|'errors'|'warnings'|'ready';search?:string};
+  supplierRecipientRows:PageArgs&{reviewId:RecordId;kind?:'all'|XChangeRecipientKind;change?:'all'|XChangeRecipientAction;search?:string};
   supplierRow:{reviewId:RecordId;materialKey:Sha256};
   supplierSave:SupplierSaveRequest;
   supplierCorrection:SupplierCorrectionRequest;
@@ -282,7 +346,7 @@ export interface MaterialClientResults {
   materialDraft:NativeOperation<{draftId:RecordId;revision:number;draft:Record<string,unknown>}>;
   materialReceive:NativeOperation;
   materialExport:NativeOperation<RetainedExport>;
-  supplierTemplates:{schema:string;profileId:string;source:unknown;profile:SupplierProfile;product:JsonObject;bindings:SupplierBindings};
+  supplierTemplates:SupplierTemplate;
   supplierList:CursorPage<SupplierPlanSummary|SupplierReviewSummary|SupplierCorrectionSummary>;
   supplierPlan:SupplierPlan;
   supplierHistory:HistoryPage<SupplierPlanSummary|SupplierCorrectionSummary>;
@@ -290,6 +354,7 @@ export interface MaterialClientResults {
   supplierCorrectionGet:SupplierCorrection;
   supplierReviewGet:SupplierReview;
   supplierRows:RowsPage<SupplierReviewRow>;
+  supplierRecipientRows:XChangeRecipientPage;
   supplierRow:SupplierReviewRow;
   supplierSave:NativeOperation<{supplierPlan:SupplierPlan}>;
   supplierCorrection:NativeOperation<{supplierCorrection:SupplierCorrection}>;
@@ -299,7 +364,7 @@ export interface MaterialClientResults {
   exportFile:ExportFileChunk;
   exportFileRelease:Record<string,unknown>;
 }
-export type PagedMaterialMethod='materialList'|'materialHistory'|'materialRows'|'materialChanges'|'materialFacets'|'materialSuggest'|'supplierList'|'supplierHistory'|'supplierRows';
+export type PagedMaterialMethod='materialList'|'materialHistory'|'materialRows'|'materialChanges'|'materialFacets'|'materialSuggest'|'supplierList'|'supplierHistory'|'supplierRows'|'supplierRecipientRows';
 export declare const OPENSEARCH_MATERIAL_CLIENT_METHODS:Readonly<{
   status:'status';
   open:'open';
@@ -334,6 +399,7 @@ export declare const OPENSEARCH_MATERIAL_CLIENT_METHODS:Readonly<{
   supplierCorrectionGet:'supplier_correction_get';
   supplierReviewGet:'supplier_review_get';
   supplierRows:'supplier_rows';
+  supplierRecipientRows:'supplier_recipient_rows';
   supplierRow:'supplier_row';
   supplierSave:'supplier_save';
   supplierCorrection:'supplier_correction';
@@ -381,6 +447,7 @@ export declare class OpenSearchMaterialClient {
   supplierCorrectionGet(args:MaterialClientRequests['supplierCorrectionGet'],options?:CallOptions):Promise<MaterialClientResults['supplierCorrectionGet']>;
   supplierReviewGet(args:MaterialClientRequests['supplierReviewGet'],options?:CallOptions):Promise<MaterialClientResults['supplierReviewGet']>;
   supplierRows(args:MaterialClientRequests['supplierRows'],options?:CallOptions):Promise<MaterialClientResults['supplierRows']>;
+  supplierRecipientRows(args:MaterialClientRequests['supplierRecipientRows'],options?:CallOptions):Promise<MaterialClientResults['supplierRecipientRows']>;
   supplierRow(args:MaterialClientRequests['supplierRow'],options?:CallOptions):Promise<MaterialClientResults['supplierRow']>;
   supplierSave(args:MaterialClientRequests['supplierSave'],options?:CallOptions):Promise<MaterialClientResults['supplierSave']>;
   supplierCorrection(args:MaterialClientRequests['supplierCorrection'],options?:CallOptions):Promise<MaterialClientResults['supplierCorrection']>;

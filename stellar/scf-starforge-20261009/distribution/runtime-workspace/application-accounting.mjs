@@ -23,11 +23,11 @@ const options = [
 export function accountingApplication(common) {
   return {
     id: 'merchant-accounting', command: 'merchant-accounting-workspace',
-    title: 'Merchant accounting', terminal: false, requiredSource: ROOT + 'managed-launch.mjs',
-    description: 'Review merchant reconciliation, connect QuickBooks companies or Xero tenants, post the original journals and return them to the same accounting records. Saved company choices take effect on the next reviewed start.',
+    title: 'Accounting workspace', terminal: false, requiredSource: ROOT + 'managed-launch.mjs',
+    description: 'Open retained merchant reconciliation or an issued buyer period, review the original native accounting target, and return its bookkeeping to the same source records. Saved company choices take effect on the next reviewed start.',
     fields: [
       field('directory', 'Private accounting workspace', 'path', true,
-        'The existing original accounting folder, or a new folder in an existing private parent.'),
+        'An initialized buyer or merchant accounting folder. A new merchant folder uses the original source paths below.'),
       field('oauthConnectionsFile', 'Original OAuth host configuration', 'path', false,
         'Use the reviewed provider setup edition or an existing initialized registry of native accounting connections.'),
       field('selectionDirectory', 'Private company selections', 'path', false,
@@ -55,6 +55,21 @@ function sameDirectory(actual, expected) {
     actual.exists === expected.exists &&
     (!actual.exists || String(actual.dev) === expected.device && String(actual.ino) === expected.inode),
   'APPLICATION_ACCOUNTING_INPUT_CHANGED', 'The reviewed original private directory changed.');
+}
+
+function buyerWorkspaceBinding(value, directory) {
+  if (value === undefined || value === null) return null;
+  const source = value.sources;
+  need(plain(value) && value.schema === 'stellar-forge.accounting-workspace-binding.v1' &&
+    value.directory === directory && HASH.test(value.workspaceId ?? '') && HASH.test(value.sourcesSha256 ?? '') &&
+    plain(source) && Object.keys(source).length === 4 && source.sourceMode === 'buyer' &&
+    HASH.test(source.buyerSourceSha256 ?? '') && Number.isSafeInteger(source.buyerSourceBytes) &&
+    source.buyerSourceBytes > 0 && source.buyerSourceBytes <= 64 * 1024 * 1024 &&
+    source.buyerSourceFile === join(directory, 'inputs', source.buyerSourceSha256 + '.buyer-source.json'),
+  'APPLICATION_ACCOUNTING_BINDING_CHANGED', 'Retain the original initialized buyer workspace and issued-source identity.');
+  return { schema: value.schema, directory, workspaceId: value.workspaceId, sourcesSha256: value.sourcesSha256,
+    sources: { sourceMode: 'buyer', buyerSourceFile: source.buyerSourceFile,
+      buyerSourceSha256: source.buyerSourceSha256, buyerSourceBytes: source.buyerSourceBytes } };
 }
 
 function nativeSettings(settings) {
@@ -98,6 +113,15 @@ export async function prepareAccountingApplication(settings, {
     plain(binding.selections) && plain(selected.review) &&
     selected.review.bindingSha256 === selected.bindingSha256,
   'APPLICATION_ACCOUNTING_BINDING_CHANGED', 'Review the original native accounting launch and company selections.');
+
+  const buyer = buyerWorkspaceBinding(binding.workspaceBinding, raw.directory);
+  if (buyer) {
+    need(selected.review.sourceMode === 'buyer' &&
+      JSON.stringify(buyerWorkspaceBinding(selected.review.workspaceBinding, raw.directory)) === JSON.stringify(buyer),
+    'APPLICATION_ACCOUNTING_BINDING_CHANGED', 'The buyer source review must match its native launch binding.');
+    inputs.push(await inputPath(join(runtime.sourceRoot, ROOT + 'binding.mjs'), 'file'),
+      await inputPath(join(runtime.sourceRoot, ROOT + 'buyer-startup.mjs'), 'file'));
+  } else need(selected.review.sourceMode !== 'buyer', 'APPLICATION_ACCOUNTING_BINDING_CHANGED');
 
   const createDirectories = [];
   const workspace = await inputPath(raw.directory, 'directory', true, true);
@@ -208,12 +232,14 @@ export function accountingStartup(request, operationDirectory, text, context = {
       !connectionsUrl.username && !connectionsUrl.password && !connectionsUrl.search && !connectionsUrl.hash :
       value.connectionsUrl === null),
   'APPLICATION_ACCOUNTING_STARTUP_CHANGED', 'Open the original private accounting listener.');
+  const buyer = buyerWorkspaceBinding(value.workspaceBinding, directory);
   return { url: url.href, original: {
     schema: STARTUP, status: value.status, instanceId: value.instanceId, pid: value.pid, startedAt: value.startedAt,
     directory, selectionDirectory: connectionsFile ? selectionRoot : null, bindingSha256,
     connectionsFile, connectionsSha256: value.connectionsSha256, profileCount: value.profileCount,
     selections: { quickbooks: value.selections.quickbooks, xero: value.selections.xero },
     requestedPort: Number(requested), port, connectionsUrl: connectionsUrl?.href ?? null,
+    ...(buyer ? { workspaceBinding: buyer } : {}),
   } };
 }
 

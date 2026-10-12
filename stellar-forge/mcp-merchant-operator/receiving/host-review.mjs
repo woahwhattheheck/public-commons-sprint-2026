@@ -358,6 +358,47 @@ export async function receiveHostReview({consoleReceiving,directory,chromiumPath
       reused:imported.reused,duplicateReused:duplicate.reused,bindingDigests:importedView.bindings.map(value=>value.bindingSha256)};
     await phase('portableHistory',{bindings:importedView.bindings.length,calls:importedView.calls.length,
       customers:importedView.deliveries.length,duplicateReused:true});
+    await importedHost.close();importedHost=null;
+
+    importedHost=await openHost(changedPath,join(directory,'extended-console'));
+    await api('import',{selected:importedHost,method:'POST',
+      body:{archive:archived.value,expectedContentSha256:archived.value.contentSha256}});
+    const extended=await api('import',{selected:importedHost,method:'POST',
+      body:{archive:exported.value,expectedContentSha256:exported.value.contentSha256}});
+    assert.ok(extended.merged||extended.reused,'The same original profile receives the following immutable history.');
+    const extendedView=await api('profile/'+profileId,{selected:importedHost});
+    assert.deepEqual(extendedView.profile.host,archived.value.profile.host,'Receiving history preserves the local selected host.');
+    assert.equal(extendedView.profile.name,archived.value.profile.name);
+    assert.deepEqual(extendedView.profile.favorites,archived.value.profile.favorites);
+    assert.ok(extendedView.profile.revision>exported.value.profile.revision,'The receiving revision advances beyond incoming binding revisions.');
+    assert.deepEqual(extendedView.bindings.map(value=>value.bindingSha256),reopened.bindings.map(value=>value.bindingSha256));
+    const extendedArchive=await api('export/'+profileId,{selected:importedHost,raw:true});
+    const extendedPacket=JSON.parse(extendedArchive.bytes);content(extendedPacket);
+    assert.deepEqual(collections(extendedPacket),collections(archived.value));
+    assert.deepEqual(extendedPacket.bindings,exported.value.bindings);
+    const selectedBinding=extendedPacket.bindings.find(value=>value.revision===extendedPacket.profile.bindingRevision);
+    assert.ok(selectedBinding);assert.deepEqual(selectedBinding.host,archived.value.profile.host);
+    const repeatedExtension=await api('import',{selected:importedHost,method:'POST',
+      body:{archive:exported.value,expectedContentSha256:exported.value.contentSha256}});
+    assert.equal(repeatedExtension.reused,true);
+    await writeFile(join(directory,'host-review-returned-profile.json'),extendedArchive.bytes,{mode:0o600});
+    await importedHost.close();importedHost=null;
+    importedHost=await openHost(changedPath,join(directory,'extended-console'));
+    const returnedView=await api('profile/'+profileId,{selected:importedHost});
+    assert.deepEqual(returnedView.profile,extendedView.profile);
+    assert.deepEqual(returnedView.bindings,extendedView.bindings);
+    assert.ok((await api('host',{selected:importedHost})).providers.every(value=>value.state==='UNLOADED'));
+    await connect(importedHost);
+    await observe('host-review/'+profileId,()=>page.locator('#review-host').click(),'GET');
+    if(!await page.locator('#binding-history-count').evaluate(element=>element.parentElement.open))
+      await page.locator('#binding-history-count').click();
+    await screenshot('host-review-returned-history.png');
+    report.returnedProfile={name:'host-review-returned-profile.json',bytes:extendedArchive.bytes.length,
+      sha256:sha(extendedArchive.bytes),contentSha256:extendedPacket.contentSha256,
+      profileRevision:returnedView.profile.revision,bindingRevision:returnedView.profile.bindingRevision,
+      retainedBindings:returnedView.bindings.length,localHostFingerprint:returnedView.profile.hostFingerprint};
+    await phase('returnedHistory',{profileRevision:returnedView.profile.revision,bindings:returnedView.bindings.length,
+      selectedOriginalHost:true,duplicateReused:true});
     await importedHost.close();importedHost=null;await browser.close();browser=null;
     assert.deepEqual(report.browserErrors,[]);
     report.originalNativeWork={callIds:archived.value.calls.map(value=>value.id),

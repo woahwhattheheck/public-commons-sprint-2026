@@ -78,6 +78,30 @@
         <p id="client-download-progress" role="status" aria-live="polite"></p>
       </section>
     </section>
+    <section class="delivery-operations" aria-labelledby="delivery-title">
+      <div class="section-heading"><div><h2 id="delivery-title">Settlement delivery</h2><p id="delivery-state">Loading this release store’s original delivery source.</p></div><button id="delivery-refresh" type="button">Refresh delivery</button></div>
+      <dl id="delivery-producer" class="discovery-fields"></dl>
+      <div class="actions"><a id="delivery-controls" target="_blank" rel="noopener" hidden>Open destination controls</a><button id="delivery-drain" type="button">Deliver one cycle</button><button id="delivery-start" type="button">Start delivery worker</button><button id="delivery-stop" type="button">Stop delivery worker</button></div>
+      <p class="section-note">The original controls enroll HTTPS accounting or fulfillment receivers, review selected history and signing references, and manage retries. Delivery uses this store’s retained settlement journal.</p>
+      <div class="table-scroll"><table><thead><tr><th>Destination</th><th>Endpoint / signing reference</th><th>State</th><th>Source cursor</th><th>Delivery outcomes</th><th>Revision</th></tr></thead><tbody id="delivery-destinations"></tbody></table></div>
+      <h3>Retained receiving exchange</h3>
+      <p>Capture the displayed source fingerprint with its destination history. An existing transfer ID reopens its saved exchange. Saved requests remain available after a lost response or browser restart.</p>
+      <form id="delivery-transfer-form"><div class="fields"><div><label for="delivery-transfer-id">Transfer ID</label><input id="delivery-transfer-id" list="delivery-pending-ids" maxlength="64" pattern="[a-z0-9][a-z0-9_-]{0,63}" required autocomplete="off" spellcheck="false" placeholder="accounting-handover-v1"><datalist id="delivery-pending-ids"></datalist></div></div>
+        <div class="actions"><button id="delivery-create-transfer" type="submit">Capture reviewed source</button><button id="delivery-inspect" type="button">Inspect retained ID</button><button id="delivery-save-draft" type="button">Download capture draft</button><button id="delivery-open-draft" type="button">Open capture draft</button></div>
+      </form>
+      <input id="delivery-draft-file" type="file" accept="application/json,.json" hidden>
+      <p id="delivery-pending" class="section-note"></p><p id="delivery-notice" role="status" aria-live="polite"></p>
+      <div class="table-scroll"><table><thead><tr><th>Transfer</th><th>Captured</th><th>Source receipts</th><th>Destinations</th><th>Fingerprint</th><th>Review</th></tr></thead><tbody id="delivery-transfer-list"></tbody></table></div>
+      <div class="actions"><button id="delivery-first" type="button">First page</button><button id="delivery-next" type="button">Next page</button></div>
+      <section id="delivery-review" hidden>
+        <h3 id="delivery-review-title">Original exchange</h3><dl id="delivery-transfer-identity" class="discovery-fields"></dl>
+        <div class="table-scroll"><table><thead><tr><th>Original file</th><th>Bytes</th><th>SHA-256</th></tr></thead><tbody id="delivery-files"></tbody></table></div>
+        <div class="actions"><button id="delivery-download" type="button">Download original exchange</button><button id="delivery-download-stop" type="button" hidden>Stop download</button></div>
+        <p id="delivery-download-progress" role="status" aria-live="polite"></p>
+        <details><summary>Receive the browser download</summary><p>Extract into a new private directory, inspect the original exchange, then receive its reviewed fingerprint.</p><pre id="delivery-receiving-command"></pre></details>
+        <details><summary>Resumable native download</summary><p>The original downloader verifies each file and resumes the same transfer and output directory. It retains the receiver’s exact files inside <code>exchange/</code>.</p><pre id="delivery-native-command"></pre></details>
+      </section>
+    </section>
     <section class="cache-operations" aria-labelledby="cache-title">
       <div class="section-heading"><div><h2 id="cache-title">Running source cache</h2><p id="cache-state">Start a release with a shared read policy to inspect its source cache.</p></div><div class="actions"><button id="cache-refresh">Refresh cache</button><button id="cache-invalidate-all">Invalidate all cached routes</button></div></div>
       <div class="table-scroll"><table><thead><tr><th>Route / binding</th><th>Sharing policy</th><th>Source activity</th><th>Action</th></tr></thead><tbody id="cache-routes"></tbody></table></div>
