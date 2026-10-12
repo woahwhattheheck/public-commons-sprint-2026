@@ -39,7 +39,7 @@ async function completeFile(source,destination,mode=0o600){
 async function fileDigest(path){let bytes=0;const hash=createHash('sha256');for await(const chunk of createReadStream(path)){hash.update(chunk);bytes+=chunk.length;}return {bytes,sha256:hash.digest('hex')};}
 await fs.mkdir(directory,{recursive:true,mode:0o700});await fs.mkdir(steps,{recursive:true,mode:0o700});
 const packetBody=await fs.readFile(resolve(packetArgument));need(digest(packetBody)===expectedPacketSha256,'The complete selected source packet differs.');
-const packet=JSON.parse(packetBody);need(packet.schema==='stellar-forge.complete-source.v1'&&Array.isArray(packet.files)&&packet.files.length>=50,'Select the complete native application source cohort.');
+const packet=JSON.parse(packetBody);need(['stellar-forge.complete-source.v1','tjlabs.original-source-packet.v1'].includes(packet.schema)&&Array.isArray(packet.files)&&packet.files.length>=50,'Select the complete native application source cohort.');
 let sourceBytes=0;
 for(const file of packet.files){
   need(typeof file.path==='string'&&!isAbsolute(file.path)&&!file.path.split('/').some(part=>!part||part==='.'||part==='..'),'Invalid original source member path.');
