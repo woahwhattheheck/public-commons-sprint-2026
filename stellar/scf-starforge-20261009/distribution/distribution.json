@@ -336,7 +336,8 @@
     "water-quality": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/cli.mjs",
     "usaspending-research": "stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/cli.mjs",
     "usaspending-dossier": "stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/dossier-cli.mjs",
-    "merchant-accounting-platforms": "stellar-forge/mcp-merchant-operator/accounting-platform-cli.mjs"
+    "merchant-accounting-platforms": "stellar-forge/mcp-merchant-operator/accounting-platform-cli.mjs",
+    "linkup-research": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/examples/linkup-dossier-cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -422,6 +423,10 @@
     "./seller/oauth-connections/host": {
       "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/host.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/host.mjs"
+    },
+    "./seller/oauth-connections/quickbooks": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/quickbooks.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/quickbooks.mjs"
     },
     "./seller/client": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-generator.mjs",
     "./seller/client-export": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-export.mjs",
@@ -745,10 +750,8 @@
     "./buyer/usaspending/dossier": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/dossier.mjs",
     "./merchant/accounting-platforms": "./source/stellar-forge/mcp-merchant-operator/accounting-platform-client.mjs",
     "./merchant/accounting-platforms/operations": "./source/stellar-forge/mcp-merchant-operator/accounting-platform-cli.mjs",
-    "./seller/oauth-connections/quickbooks": {
-      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/quickbooks.d.mts",
-      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/quickbooks.mjs"
-    }
+    "./buyer/linkup": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/examples/linkup-search.mjs",
+    "./buyer/linkup-dossier": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/examples/linkup-dossier.mjs"
   },
   "nativePeers": {
     "@x402/core": {

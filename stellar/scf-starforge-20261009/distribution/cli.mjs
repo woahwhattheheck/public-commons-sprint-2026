@@ -91,6 +91,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   goldrush                                  Open wallet research, prepare requests and recover saved purchases
   research-dossiers                         Retain research questions, evidence, findings and portable reports
   research-workspace                        Open the private research dossier operator workspace
+  linkup-research                           Receive saved Linkup purchases, analyse sources and deliver research dossiers
   dataset-delivery Export a saved buyer dataset
   merchant    Seller + fulfillment journal   delivery    Deliver original merchant events
   delivery-workspace                         Configure receivers and operate retained delivery recovery
