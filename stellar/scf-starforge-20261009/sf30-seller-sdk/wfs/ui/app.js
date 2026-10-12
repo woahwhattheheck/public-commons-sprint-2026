@@ -1,4 +1,6 @@
 // MIT. WFS operations browser; all source and customer work uses the original application.
+import { initializeVectorPanel } from './vector.mjs';
+let nativeVectors=null;
 const $=id=>document.getElementById(id), all=selector=>[...document.querySelectorAll(selector)];
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
 const stringify=value=>JSON.stringify(value,null,2), short=value=>String(value??'').slice(0,12);
@@ -104,7 +106,7 @@ function renderState(){
   const ready=project.orders.filter(row=>row.state==='READY').map(row=>({id:row.id,label:row.name+' · '+short(row.id)}));
   for(const target of['compare-before','compare-after','publication-order'])options(target,ready);
   options('customer-publication',project.publications.filter(row=>row.merchantConfigured).map(row=>({id:row.id,label:(project.orders.find(x=>x.id===row.orderId)?.name??'Edition')+' · '+short(row.id)})));
-  restoreDraft();renderPending();
+  restoreDraft();renderPending();nativeVectors?.updateState(state);
   table('history-body',[...project.operations].reverse().map(row=>[row.id,row.kind,row.completedAt,button('Inspect',async()=>row)]),4,'Completed operations will appear here.');
 }
 function renderPending(){
@@ -365,4 +367,6 @@ $('pending-abandon').addEventListener('click',()=>perform(async()=>{
 },{message:'Operation abandoned and original progress retained.'}));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refresh().catch(error=>notice(error.message,true));});
 setInterval(()=>{if(!document.hidden)void refresh().catch(error=>notice(error.message,true));},2500);
+nativeVectors=initializeVectorPanel({getState:()=>state,isWorking:()=>working,query,action,api,download,perform,
+  options,table,facts,toolbar});
 void refresh().then(()=>notice('Project ready.')).catch(error=>notice(error.message,true));

@@ -12,7 +12,7 @@ const STARTUP='stellar-forge.wfs-workspace-startup.v1';
 export function wfsApplication(common=[]) {
   return {id:'wfs-geoserver',command:'wfs',title:'WFS feature workspace',terminal:true,
     requiredSource:ROOT+'launch.mjs',
-    description:'Discover WFS2 services, save source selections, acquire complete feature orders, compare editions and reopen customer datasets.',
+    description:'Discover WFS2 services, acquire complete feature orders, review native GIS mappings, export or receive GeoPackage/Shapefile deliveries, compare source editions and reopen customer datasets.',
     fields:[
       field('workspaceDirectory','Original feature project','path',true,'Select an initialized WFS project or a received customer project.'),
       field('sourceAuthConfig','Private source credential references','path',false,'Existing source origins and environment references for Basic, Bearer or API key authorization.'),
@@ -20,7 +20,7 @@ export function wfsApplication(common=[]) {
       field('facilitator','Configured facilitator URL','text',false,'Original HTTPS facilitator; leave empty for challenge-only merchant serving.'),
       field('allowLocalFacilitator','Allow configured local facilitator','boolean',false,'Explicitly allow the original http://127.0.0.1 service.'),
       field('merchantPort','Routed merchant port','port',false,'Use the loopback port routed by the publication HTTPS origin. Zero chooses an available port.'),
-      field('sourcePython','Source Python executable','path',false,'Python 3.11+ with the installed buyer package; defaults to the selected terminal Python.'),
+      field('sourcePython','Source Python executable','path',false,'Python 3.11+ with the installed buyer package. Native vector work uses Fiona/GDAL in this same executable; defaults to the selected terminal Python.'),
       field('terminalPython','Terminal Python executable','path',false,'Defaults to /usr/bin/python3; carries the original native buyer approval.'),
       ...common]};
 }

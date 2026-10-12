@@ -64,6 +64,60 @@ The report contains the source-linked findings and citation-review history. Reop
 
 The review endpoint accepts a complete UTF-8 JSON request up to 16 MiB. The maintained dossier engine applies its original saved-revision size limit. A size or validation error leaves the complete browser draft and request available for correction or download.
 
+## Use the existing Merchant tools
+
+The same review is available through an attached Research workspace. The host's existing Research configuration selects its original listener connection file, workspace directory and private exports directory. Attach with `merchant_research_attach`; all citation operations use that attachment's `workspace` alias.
+
+| Tool | Complete operation |
+| --- | --- |
+| `merchant_research_citation_updates` | Page notices, counts and source coverage at a selected dossier revision |
+| `merchant_research_citation_update` | Open the complete notice, original assertions, affected evidence and findings, citation options and review history |
+| `merchant_research_citation_review` | Save one explicit atomic review or recover that exact original request |
+| `merchant_research_export` | Retain HTML, Markdown or a portable dossier at the selected prior or reviewed revision |
+| `merchant_research_file_read` | Read the original complete retained export in byte-verified chunks |
+| `merchant_research_detach` | Drain this attachment and its export reads |
+
+For a list, supply `workspace` and `dossierId`, with optional `status` (`all`, `pending`, `reviewed`), `revision`, `offset` and `limit`. Continue the returned `nextOffset` using the same returned dossier revision. The pending filter includes notices requiring review again and saved follow-up decisions.
+
+Read a selected `noticeId` at that same revision. Its detail returns the full finding text and permitted citation occurrences, plus the original source-document or HTTP-capture bindings described above. Record its exact fingerprint and revision before preparing a decision.
+
+The review tool takes the same complete request as the browser:
+
+- `workspace`, `dossierId`, a stable `requestId`, and the original `noticeId`.
+- `expectedRevision`, `expectedFingerprint`, `actor`, `decision` and a complete `reason`.
+- `evidenceChanges`, with each occurrence's ID, selection, classification and full note.
+- `findingChanges`, with each finding's ID, complete title and text, and the selected same-question `occurrenceIds`.
+- `findingDispositions`, with each affected finding's ID, explicit disposition and complete reason.
+
+Keep the entire prepared request in the caller's original operation record. A lost reply is recovered by resending the same values, including its original request ID, revision and fingerprint. The response returns the saved review with `duplicate: true` when it was already committed. Its dossier metadata can describe a later current revision; `review.originalRevision` and `review.revision` remain the two exact report selections.
+
+Export both report editions with the original export tool:
+
+```js
+await merchant.call('merchant_research_export', {
+  workspace,
+  dossierId,
+  kind: 'html',
+  revision: saved.review.originalRevision
+});
+
+await merchant.call('merchant_research_export', {
+  workspace,
+  dossierId,
+  kind: 'markdown',
+  revision: saved.review.revision
+});
+
+await merchant.call('merchant_research_export', {
+  workspace,
+  dossierId,
+  kind: 'portable-gzip',
+  revision: saved.review.revision
+});
+```
+
+Each receipt retains the actual revision, complete byte count and content-addressed export ID. Read it with `merchant_research_file_read` using its same `kind` and `exportId`, then continue the returned read ID and offset. Reopen a portable artifact through the existing `merchant_research_reopen` route in the receiving workspace. The original listener remains owned by the Research application when the Merchant attachment is detached.
+
 ## Original native customer operation
 
 The exported function in [citation-review-browser.mjs](citation-review-browser.mjs) joins the existing native customer workflow:
@@ -84,3 +138,30 @@ Pass the original listener address and the actual seeded dossier and notice. The
 Re-enter with the same run directory to reconcile that operation's saved request and completed output. The parent preserves its listener port so the browser can reopen the same origin's IndexedDB.
 
 The Chromium profile is private runtime state under `citation-browser-profile`. Deliver the explicit `nativeOutputs`, the maintained product source, and the parent's complete portable dossier and reports. The source inspector, original dossier engine and full source-edition readers remain the authorities for retained bytes and revision replay.
+
+## Native Merchant receiving phase
+
+The same parent workflow calls the completed Merchant phase while its original Research listener is still open:
+
+```js
+await runCitationReviewMerchant({
+  url,
+  workspaceDirectory,
+  runDirectory,
+  dossierId,
+  noticeId,
+  selection: {
+    reviewId,
+    originalRevision,
+    reviewedRevision,
+    currentRevision
+  },
+  reviewRequest
+});
+```
+
+The function lives in [citation-review-merchant.mjs](citation-review-merchant.mjs). Pass the exact already-saved browser request, without the Merchant workspace/dossier wrapper fields. The phase first verifies that saved review in the selected revision history. Its replay returns the original review with `duplicate: true`.
+
+This phase pages the complete original notice list and source coverage, opens the prior, reviewed and current notice details, and receives each revision's HTML, Markdown and portable gzip through the existing Merchant retainer and byte-verified file reader. Existing export receipts are reconciled before another export is requested. An interrupted partial file is compared to the same original export chunks before continuation; the complete file must match its recorded length and SHA-256.
+
+The private `citation-merchant` runtime directory keeps the original request, export inventory and actual attachment lifetimes. A reopened process borrows the same original Research workspace and retains the prior attachment receipts. The returned `nativeOutputs` selects the complete downloaded reports, dossiers, source-review records and operation receipt. The session connection file and internal retainer storage stay outside that output selection.

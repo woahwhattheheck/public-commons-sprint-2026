@@ -281,6 +281,27 @@
         "../../../sf61-openapi-seller-import/workspace/oauth-browser.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/source-changes.html",
+      [
+        "source-changes.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/source-changes.mjs",
+      [
+        "source-changes.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/source-changes.css",
+      [
+        "source-changes.css",
+        "text/css; charset=utf-8"
+      ]
     ]
   ]
 }
