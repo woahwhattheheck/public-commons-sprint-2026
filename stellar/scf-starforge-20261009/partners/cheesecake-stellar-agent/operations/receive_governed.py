@@ -15,7 +15,7 @@ import time
 import urllib.request
 import zipfile
 
-MANIFEST_SHA256 = "6514e216ea5cd3e4aba0c4d9f4b6434c3bed32889b3e184ba68001637ed3fa34"
+MANIFEST_SHA256 = "074936d48609f8b6720f0dbd5582e10ef4ecf2982b63092b518b8f818df9a5d4"
 KIT_SHA256 = "dd547ddde2bcab285a8b44990bdd184d69665702aae287d7c8289e9df89ff8de"
 KIT_BYTES = 4653289
 KIT_PREFIX = "reference/buyer-handoff/"

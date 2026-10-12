@@ -2,7 +2,7 @@
 
 This launcher prepares the original SCF application receiving operation on a Linux machine with Node24 and Python3. It fetches the exact 110 source files selected by the manifest, checks their immutable refs, lengths and SHA256 hashes, prepares MCP SDK 1.32.1, and invokes the existing `governed_receiving.mjs` once. The original runtime remains pinned at `0d58eaa67daef611146944ebc35613d78d206cb5`; three explicit source entries select the retained-schema receiving correction.
 
-The source closure includes the application and its browser, HTTP and MCP surfaces, SF36 spending state, encrypted project capture and receiving, and the native spending recovery operation. It also includes the original SF36 `expired_resume.py` module imported by the approval console, using the same pinned source revision. All 110 selected files total 1,354,972 bytes. The launcher preserves the original receiving workflow. Its provider and payment responses remain the local integration fixtures defined in that source.
+The source closure includes the application and its browser, HTTP and MCP surfaces, SF36 spending state, encrypted project capture and receiving, and the native spending recovery operation. It also includes the original SF36 `expired_resume.py` module imported by the approval console, using the same pinned source revision. All 110 selected files total 1,355,011 bytes. The launcher preserves the original receiving workflow. Its provider and payment responses remain the local integration fixtures defined in that source.
 
 ## Inputs and one command
 
@@ -62,7 +62,7 @@ The case can contain private native state and scoped keys. The launcher uses pri
 
 ## Retained tool schemas and a saved project continuation
 
-The source closure keeps the original 0d58eaa67daef611146944ebc35613d78d206cb5 application and native engines, with the three request-receiving postimages selected explicitly at a73286127ffdf712a187c7b552c97a809a3433d5. Each changed entry carries its own immutable `ref`, byte length and SHA-256. The launcher fetches that exact ref and verifies every selected byte; a supplied local source root must match the same complete manifest.
+The source closure keeps the original 0d58eaa67daef611146944ebc35613d78d206cb5 application and native engines, with the three request-receiving postimages selected explicitly at 7f4fb651757cbcf8a061d27b62e9c967bc1879e5. Each changed entry carries its own immutable `ref`, byte length and SHA-256. The launcher fetches that exact ref and verifies every selected byte; a supplied local source root must match the same complete manifest.
 
 An unpinned remote tool schema is learned during original discovery. The encrypted project verifier now checks that learned hash against the captured native request, quote UUID, original ticket digest, complete invocation and accepted payment terms. It then checks the full retained request and review. A configured schema hash remains an exact selection constraint.
 
