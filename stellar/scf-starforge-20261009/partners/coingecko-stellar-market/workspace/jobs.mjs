@@ -12,6 +12,27 @@ import {retainCapture} from './capture.mjs';
 const attempted=item=>item.originalQueue?.attempt!=null;
 const terminalItem=item=>['completed','failed','cancelled','interrupted'].includes(item.status);
 const nativeError=q=>q?.lastError??q?.outcome?.error??q?.outcome?.evidenceError??null;
+function nativeBinding(item,original){
+  need(plain(original)&&original.operation?.intentId===item.intentId,'NATIVE_INTENT_MISMATCH',
+    'The original inbox record must belong to this exact retained intent');
+  need(original.sourceConfigSha256===sha(jsonBytes(item.nativeConfiguration)),'NATIVE_CONFIG_CHANGED',
+    'The original inbox source configuration differs from this retained operation');
+  need(original.responseDestination===(item.nativeConfiguration.responseFile?.destination??null),
+    'NATIVE_RESPONSE_DESTINATION_CHANGED');
+  const previous=item.originalQueue;
+  if(previous){
+    need(['configSha256','sourceConfigSha256','bodySha256','bodyBytes','responseDestination','evidencePath']
+      .every(key=>previous[key]===original[key])&&
+      (previous.operationTicket?.sha256??null)===(original.operationTicket?.sha256??null)&&
+      JSON.stringify(previous.dependencies)===JSON.stringify(original.dependencies),
+      'NATIVE_INTAKE_BINDING_CHANGED','The original configuration, request body, ticket or dependencies changed');
+    if(previous.attempt)need(previous.attempt.id===original.attempt?.id&&
+      previous.attempt.kind===original.attempt?.kind,'NATIVE_ATTEMPT_CHANGED');
+    if(previous.outcome)need(JSON.stringify(previous.outcome)===JSON.stringify(original.outcome),
+      'NATIVE_OUTCOME_CHANGED','The original completed outcome is immutable');
+  }
+  return original;
+}
 async function exactPrivateFile(path,bytes){
   let handle;
   try{handle=await open(path,'wx',0o600);await handle.writeFile(bytes);await handle.sync()}
@@ -48,8 +69,8 @@ export class MarketJobs {
     const running=this.active.has(job.id),remaining=job.items.some(item=>!item.resultCaptureId&&!attempted(item)&&
       (!native||item.status!=='completed'));
     const canRecover=native&&!historical&&!running&&job.items.some(item=>
-      item.originalQueue?.attempt?.kind==='EXECUTE'&&(!item.originalQueue.recovery||
-        item.originalQueue.outcome?.responseFile?.status==='SAVED'&&!item.resultCaptureId));
+      item.originalQueue?.attempt?.kind==='EXECUTE'&&!item.resultCaptureId&&
+      (!item.originalQueue.recovery||item.originalQueue.outcome?.responseFile?.status==='SAVED'));
     const visible=clone(job);
     visible.items=visible.items.map(({nativeConfiguration,...item})=>item);
     return{...visible,canExecute:native&&!historical&&!running&&job.status==='prepared',
@@ -184,11 +205,30 @@ export class MarketJobs {
         attempts:current.attempts.map(a=>a.id===attempt.id?{...a,status,error:detail,completedAt:now()}:a)}));
     }
   }
+  async inspectNativeItem(item,{allowMissing=false}={}){
+    try{
+      const{openQueue}=await import('../../../sf88-operator-buyer-cli/queue.mjs');
+      const queue=await openQueue(this.queueRoot);
+      return nativeBinding(item,await queue.show(item.intentId));
+    }catch(error){
+      // A known published record may never be replaced after storage loss.
+      if(error.code==='ENOENT'&&allowMissing&&!item.originalQueue)return null;
+      throw error;
+    }
+  }
   async nativeWorker(jobId,item,mode,signal){
     const directory=join(this.store.directory,'native-jobs',jobId,item.id);
     await mkdir(directory,{recursive:true,mode:0o700});
     const configPath=join(directory,'configuration.json');
     await exactPrivateFile(configPath,jsonBytes(item.nativeConfiguration));
+    const existing=await this.inspectNativeItem(item,{allowMissing:true});
+    // Reopening an attempted intent receives its original outcome. It never
+    // re-enqueues current body/ticket files or starts another paid attempt.
+    if(existing?.attempt&&(mode!=='recover'||existing.attempt.kind!=='EXECUTE'||
+      existing.recovery||existing.outcome?.responseFile?.status==='SAVED')){
+      return{value:existing,error:null,mode,process:null,reception:{
+        basis:'original_inbox_read',observedAt:now(),workerResultReceived:false}};
+    }
     const args=[mode,this.queueRoot,item.intentId,configPath,item.workspacePath??'-'];
     return new Promise((resolvePromise,reject)=>{
       const child=fork(fileURLToPath(new URL('./native-worker.mjs',import.meta.url)),args,
@@ -203,39 +243,77 @@ export class MarketJobs {
         if(message?.type==='queue')this.updateItem(jobId,item.id,current=>({...current,originalQueue:message.value}));
         if(message?.type==='result')result=message;
       });
-      child.once('error',error=>{cleanup();reject(error)});
-      child.once('exit',(code,exitSignal)=>{
+      child.once('error',error=>{
+        cleanup();error.nativeExit={exitCode:null,signal:null,stderr,stdout,spawnError:errorView(error)};reject(error);
+      });
+      child.once('exit',async(code,exitSignal)=>{
         cleanup();
-        if(!result){const error=new Error('Native worker exited before returning its original queue state');error.code='NATIVE_WORKER_INTERRUPTED';
-          error.nativeExit={code,signal:exitSignal,stderr,stdout};reject(error);return}
-        resolvePromise({...result,process:{exitCode:code,signal:exitSignal,stderr,stdout}});
+        const processResult={exitCode:code,signal:exitSignal,stderr,stdout};
+        if(result){
+          resolvePromise({...result,mode,process:processResult,reception:{
+            basis:'worker_result',observedAt:now(),workerResultReceived:true}});
+          return;
+        }
+        const interruption={code:'NATIVE_WORKER_INTERRUPTED',
+          message:'Native worker exited before returning its original queue state'};
+        try{
+          // The child has ended. Read the original durable inbox, without any
+          // new native operation, before deciding that its result was lost.
+          const original=await this.inspectNativeItem(item);
+          const observedTerminal=original.state==='CANCELLED'||original.outcome||
+            original.lastError||original.recovery;
+          resolvePromise({value:original,mode,process:processResult,
+            error:observedTerminal||mode==='prepare'&&original.state==='QUEUED'?null:interruption,
+            reception:{basis:'original_inbox_after_worker_exit',observedAt:now(),
+              workerResultReceived:false,interruption}});
+        }catch(observationError){
+          const error=new Error(interruption.message);error.code=interruption.code;
+          error.nativeExit=processResult;error.observationError=errorView(observationError);reject(error);
+        }
       });
     });
   }
   async nativeFiles(queue){
     const files=[],directory=join(this.queueRoot,'jobs',sha(Buffer.from(queue.operation.intentId)));
-    for(const name of ['request.json','source-config.json','execution.json','attempt.json','terminal.json','recovery.json','finalization.json']){
-      try{files.push({name,bytes:await trustedBytes(join(directory,name),2*1024*1024)})}
+    for(const name of ['request.json','source-config.json','execution.json','operation-ticket.json',
+      'attempt.json','terminal.json','recovery.json','finalization.json']){
+      try{files.push({name,mimeType:'application/json',bytes:await trustedBytes(join(directory,name),2*1024*1024)})}
       catch(error){if(error.code!=='ENOENT')throw error}
     }
-    if(queue.evidencePath)try{files.push({name:'original-checkout-evidence.json',bytes:await trustedBytes(queue.evidencePath,2*1024*1024)})}
+    if(queue.bodySha256!==null&&queue.bodySha256!==undefined){
+      const{MAX_REQUEST_BODY_BYTES}=await import('../../../sf88-operator-buyer-cli/request-body.mjs');
+      const bytes=await trustedBytes(join(directory,'request-body.bin'),MAX_REQUEST_BODY_BYTES);
+      need(bytes.length===queue.bodyBytes&&sha(bytes)===queue.bodySha256,'ORIGINAL_REQUEST_BODY_HASH_MISMATCH');
+      files.push({name:'request-body.bin',mimeType:'application/octet-stream',bytes});
+    }
+    if(queue.evidencePath)try{files.push({name:'original-checkout-evidence.json',mimeType:'application/json',
+      bytes:await trustedBytes(queue.evidencePath,2*1024*1024)})}
       catch(error){if(error.code!=='ENOENT')throw error}
     return files;
   }
   async acceptNativeResult(jobId,itemId,result){
-    const original=result.value??null;
+    const before=this.store.get('jobs',jobId),selected=before.items.find(item=>item.id===itemId);
+    need(selected,'NATIVE_ITEM_NOT_FOUND');
+    const original=result.value==null?null:nativeBinding(selected,result.value);
     const retained=original?await this.nativeFiles(original):[];
     let responseBytes=null,delivery=original?.outcome?.responseFile;
     if(delivery?.status==='SAVED'){
       need(typeof delivery.destination==='string'&&typeof delivery.sha256==='string'&&Number.isSafeInteger(delivery.bytes),'ORIGINAL_DOWNLOAD_SUMMARY_REQUIRED');
+      need(delivery.destination===original.responseDestination,'NATIVE_RESPONSE_DESTINATION_CHANGED');
       responseBytes=await trustedBytes(delivery.destination,LIMITS.responseBytes);
       need(sha(responseBytes)===delivery.sha256&&responseBytes.length===delivery.bytes,'ORIGINAL_DOWNLOAD_HASH_MISMATCH');
     }
     return this.store.transaction(()=>{
       const job=this.store.get('jobs',jobId),item=job.items.find(i=>i.id===itemId);
       const nativeSourceFiles=retained.map(source=>this.store.file(job.projectId,
-        item.intentId+' — '+source.name,'application/json',source.bytes));
+        item.intentId+' — '+source.name,source.mimeType,source.bytes));
       let captureId=item.resultCaptureId;
+      if(responseBytes&&captureId){
+        const saved=this.store.owned('captures',captureId,job.projectId);
+        need(saved.originalQueue?.operation?.intentId===item.intentId&&
+          saved.rawBodyReference?.sha256===delivery.sha256&&saved.rawBodyReference?.bytes===delivery.bytes,
+          'ORIGINAL_CAPTURE_CHANGED','The saved response capture differs from its original delivery');
+      }
       if(responseBytes&&!captureId){
         const capture=retainCapture(this.store,{projectId:job.projectId,request:item.request,name:job.name+' — '+item.request.name,
           basis:'native_buyer',httpStatus:original.outcome.httpStatus,requestUrl:item.requestUrl,
@@ -247,13 +325,21 @@ export class MarketJobs {
       const error=result.error??nativeError(original);
       const status=original?.state==='CANCELLED'?'cancelled':captureId?'completed':
         original?.outcome||original?.lastError?'failed':original?.attempt?'interrupted':error?'failed':'queued';
+      const reception={id:uuid(),mode:result.mode??null,
+        basis:result.reception?.basis??'worker_result',observedAt:result.reception?.observedAt??now(),
+        workerResultReceived:result.reception?.workerResultReceived??true,
+        process:result.process??null,interruption:result.reception?.interruption??null,
+        state:original?.state??null,configSha256:original?.configSha256??null,
+        sourceConfigSha256:original?.sourceConfigSha256??null,error};
       const replacement={...item,originalQueue:original??item.originalQueue,status,
         ...(captureId?{resultCaptureId:captureId}:{}),nativeSourceFileIds:[...(item.nativeSourceFileIds??[]),...nativeSourceFiles.map(f=>f.id)],
-        error,workerProcess:result.process,completedAt:terminalItem({status})?now():null};
+        nativeReceptions:[...(item.nativeReceptions??[]),reception],nativeReceptionId:reception.id,
+        error,workerProcess:result.process??item.workerProcess??null,completedAt:terminalItem({status})?now():null};
       const items=job.items.map(i=>i.id===itemId?replacement:i);
       const updated=this.store.put('jobs',{...job,items,completed:items.filter(terminalItem).length},{history:false});
       this.store.event(job.projectId,'original-sf88','native.queue.observed',job.id,{intentId:item.intentId,
-        state:original?.state??null,responseCaptureId:captureId??null,workerExit:result.process.exitCode});
+        state:original?.state??null,responseCaptureId:captureId??null,workerExit:result.process?.exitCode??null,
+        receptionId:reception.id,receptionBasis:reception.basis});
       return updated;
     });
   }
@@ -276,8 +362,8 @@ export class MarketJobs {
       if(nativeMode==='recover'){
         if(item.originalQueue?.attempt?.kind!=='EXECUTE')continue;
       }else if(nativeMode==='prepare'){
-        if(item.originalQueue)continue;
-      }else if(attempted(item)||item.resultCaptureId)continue;
+        if(item.resultCaptureId||item.originalQueue?.state==='QUEUED'&&item.status==='queued'&&!item.error)continue;
+      }else if(item.resultCaptureId)continue;
       this.updateItem(jobId,item.id,current=>({...current,status:'running',startedAt:current.startedAt??now(),error:null}));
       try{
         const result=await this.nativeWorker(jobId,item,nativeMode,controller.signal);
@@ -301,7 +387,7 @@ export class MarketJobs {
       const errors=items.filter(item=>item.error).map(item=>({itemId:item.id,intentId:item.intentId??null,...item.error}));
       const successes=items.filter(item=>item.status==='completed').length;
       const prepared=preparing&&!cancelled&&!errors.length&&items.every(item=>item.originalQueue?.state==='QUEUED');
-      const unfinished=items.some(item=>!terminalItem(item));
+      const unfinished=items.some(item=>!['completed','cancelled'].includes(item.status));
       return{...current,items,errors,status:prepared?'prepared':cancelled?'cancelled':errors.length||unfinished?
         (successes?'partial':'failed'):'completed',completedAt:prepared?null:now(),phase:prepared?'review':preparing?'intake_failed':'retained'};
     },{history:true});
