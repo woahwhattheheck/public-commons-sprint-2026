@@ -1,6 +1,6 @@
 # Native NetBox customer inventory migration
 
-Move a selected CSV inventory into the customer's existing NetBox, review its actual native effects, commit that reviewed edition, and hand the operator a recoverable workspace. The product includes a CSV mapping/preparation CLI, a NetBox custom script, a retained Scripts/Jobs/Journal API client, a searchable printable report and a complete customer restore archive.
+Move a selected CSV inventory into the customer's existing NetBox, review its actual native effects, commit that reviewed edition, and hand the operator a recoverable workspace. The product includes a CSV mapping/preparation CLI, a NetBox custom script, a retained Scripts/Jobs/Journal API client, searchable printable inventory and network commissioning reports, and a complete customer restore archive.
 
 The native contract is NetBox **v4.7.2**, commit **251458b89a5eb2f5fe0d20ecd1140ba08f141a9c**. Each actual review also records the server's own NetBox version, database schema, tenant and origin. The contract pin identifies the implementation used to build this integration; it does not substitute for the version returned by a running customer instance.
 
@@ -28,6 +28,7 @@ This is a selected inventory migration. Existing NetBox catalogues, templates, p
 | --- | --- |
 | inventory_migration.py | Original NetBox custom script and shared standard-library data contract |
 | prepare_inventory.py | CSV mapping, exact source retention, row corrections and workspace creation |
+| network_report.py | Retained network objects, VRF-aware prefix membership, full CSV and printable commissioning report |
 | operate_inventory.py | Native API review, apply, receipt recovery, report, archive and restore |
 | examples/ | Five joined CSV tables plus mapping and private connection templates |
 | native/native_fixture.py | Creates the dedicated receiving inventory inside a real NetBox instance |
@@ -96,8 +97,13 @@ The source key is stable within its kind. Use match_id when an object is renamed
 | sites | name, slug, status, description; selected tenant |
 | racks | name, status, u_height, width, starting_unit, desc_units, description, facility_id; site and existing Location |
 | devices | name, status, serial, asset_tag, position, face, description; site, optional rack, DeviceType, DeviceRole, optional Platform and Location |
-| interfaces | name, type, enabled, mgmt_only, description, mtu, speed, duplex; original physical device |
-| ip_addresses | address with prefix, status, role, dns_name, description; physical interface, optional existing VRF; optional primary flag |
+| route_targets | name, description; selected tenant |
+| vrfs | name, optional rd, enforce_unique, description; import/export route-target memberships |
+| vlans | name, vid, status, description; optional site, existing VLANGroup and IPAM Role |
+| prefixes | prefix, status, is_pool, mark_utilized, description; optional VRF, VLAN, Site scope and existing IPAM Role |
+| interfaces | name, type, enabled, mgmt_only, description, mtu, speed, duplex, mode; physical device, optional VRF, untagged VLAN and complete tagged VLAN membership |
+| ip_addresses | address with prefix, status, role, dns_name, description; physical interface, optional source/native VRF; optional primary flag |
+| cables | label, type, status, color, exact decimal length, length_unit, description; selected A/B Interfaces and optional existing CableBundle |
 
 A primary address updates the native device's primary IPv4 or IPv6 after the interface/IP is validated. One selected address per device/family may request primary status.
 
@@ -106,6 +112,79 @@ A located rack determines the native device location. The script derives that or
 Existing installed child devices follow the original Device.save propagation. The review shows affected child site/rack/location changes and checks their original permissions. Mapped parents precede mapped children, and final validation detects any native side effect that overwrote an explicit source value.
 
 Supported input limits are 5,000 mapped objects, 32 CSV source mappings, 32 MiB per source, 64 MiB of combined unique source bytes and an 8 MiB normalized request. These are implementation limits; the priced customer scope is separately agreed.
+
+## Commission routing, addressing and cable connections
+
+The complete [network example](examples/network-mapping.json) extends the same CSV compiler, ScriptJob, review digest and transaction journal. It includes two route targets, two VRFs, three VLANs, four scoped prefixes, four interfaces, four addresses and an interface-to-interface cable. The two VRFs deliberately use the same IPv4 prefix and address so the operator can inspect their separate routing contexts.
+
+Keep the original sites.csv, racks.csv and devices.csv beside the network-*.csv files. Replace the example origin, tenant, DeviceType, DeviceRole, Location and existing object IDs with the selected customer inventory before preparation:
+
+~~~bash
+python3 prepare_inventory.py \
+  --mapping examples/network-mapping.json \
+  --source-root examples \
+  --workspace /private/customer-inventory/network-001 \
+  --operation-id customer-network-20261012-001
+~~~
+
+The browser supports the same fields. Add the network CSVs, choose the native object kinds and retain the exact mapping before preparing an edition. The original small inventory example remains available in examples/mapping.json.
+
+### Source keys and native selection
+
+Objects are prepared in dependency order: sites, route targets, VRFs, VLANs, prefixes, racks, devices, interfaces, IP addresses and cables. A relationship uses either an imported source key or an existing native ID. Prefix scope_site selects a native Site through NetBox's original scoped-object field.
+
+Use match_id for an existing object's rename, move or intentional reassignment. Native matching follows the original model's identity rules: route-target name; VRF route distinguisher when supplied, otherwise tenant/name; VLAN group/VID, or tenant/site/VID without a group; prefix or IP address in its explicitly selected VRF; and the actual pair of Interface cable terminations. An ambiguous native match requires the original ID. Cable labels are descriptive and are not used as identity.
+
+A new or existing prefix is normalized to its network address before native validation. NetBox's own prefix, address, VLAN, site/group and uniqueness validation still determines the accepted inventory. Interface VRF and address VRF are independently selected native fields: the compiler does not copy one into the other.
+
+Legacy IP mapping through catalog.vrf remains accepted. A row may select VRF through links.vrf or catalog.vrf; choosing both produces a source correction.
+
+### Complete memberships
+
+VRF import_targets/export_targets and Interface tagged_vlans live in the mapping's many object:
+
+~~~json
+{
+  "many": {
+    "tagged_vlans": {
+      "column": "tagged_vlans_keys",
+      "by": "key",
+      "separator": ";",
+      "blank": "null"
+    }
+  }
+}
+~~~
+
+The CSV value apps;guest selects those two imported VLANs. Set by to id for existing native IDs, such as 110;120. A fixed JSON list can also select the complete membership; value:[] or value:null clears it. The default blank behavior is omit, which preserves an existing membership. The example explicitly uses blank:null to clear an empty cell.
+
+The desk provides column and fixed-value modes, native catalogue selection for IDs, the one-character separator, and JSON-list value replacements. Values become the original NetBox many-to-many relationships after the model is saved.
+
+Tagged VLAN membership requires native tagged mode, and a VLAN must be unscoped to a site or belong to the Interface's device site. NetBox's own save behavior clears tagged membership when mode changes away from tagged, and clears an untagged VLAN when mode becomes empty. Every Interface review includes the resulting mode and both VLAN membership fields, including changes produced by that native behavior.
+
+### Native connectivity
+
+A cable source maps one actual Interface at each A/B end. Use the original cable's match_id to move an existing connection. NetBox validates endpoint compatibility, channel restrictions, occupied interfaces, mark_connected and the original cable fields; the migration calls Cable.save inside the same original transaction.
+
+The review also reads the actual CableTermination rows, affected endpoint caches, channel interfaces and stored CablePaths. It retains ordered path hops, origins, destinations and complete/active/split flags. Existing passthrough/circuit path nodes remain part of that native observation. Endpoint/path changes appear with the mapped inventory; generated database cache IDs are normalized to source/component identities before comparing review and apply.
+
+An interrupted apply is recovered through the same operation's original job and journal. All mapped inventory, memberships, native cable effects and the journal commit together.
+
+### Review, deliver and reopen
+
+The desk's **Network commissioning** panel shows each network family, source row, native object link, complete before/after change and the selected prefix for each address. Prefix membership uses the most specific selected prefix in that address's explicitly reviewed VRF. It describes the selected migration inventory; the full original native result remains alongside it.
+
+Create report or Build handover writes:
+
+| File | Contents |
+| --- | --- |
+| exports/network-commissioning.html | Searchable, printable network tables and native endpoint/path effects |
+| exports/network-commissioning.csv | Every selected network object/effect, full before/after JSON, source file hash and data-row reference |
+| exports/network-commissioning.json | Typed objects, exact prefix address counts, routing context and selected-prefix groups |
+
+The complete handover retains these exports, the original native result, all input CSVs, mapping and network_report.py with the operator/desk source. Restoring that archive reopens the same edition and report. Start a corrected draft to carry applied native IDs into the next reviewed edition, change membership or a cable endpoint, and preserve the earlier applied result.
+
+The same-host receiving continuation is documented in [the native guide](native/README.md).
 
 ## Review the actual NetBox result
 
