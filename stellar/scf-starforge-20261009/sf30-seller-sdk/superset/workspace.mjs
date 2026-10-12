@@ -7,6 +7,7 @@ import {gzipSync,gunzipSync} from 'node:zlib';
 import {SupersetClient,sourceOptions} from './client.mjs';
 import {readCapture,buildEdition,compareEditions} from './source.mjs';
 import {stringifyExact} from './exact-json.mjs';
+import {captureSupersetVersionStores,validateSupersetVersionStores,restoreSupersetVersionStores} from './native-custody.mjs';
 import {loadDatasetConfig} from '../dataset-handler.mjs';
 import {absolute,object,bytes,digest,identity,readPrivate,hashPrivate,privateDirectory,
   syncDirectory,fault,acquireWorkspace,saveExact,MiB} from './files.mjs';
@@ -393,6 +394,7 @@ export class SupersetWorkspace{
     return this.serial(async()=>{
       const root=join(this.directory,'downloads');await privateDirectory(root,true);
       if(kind==='workspace'){
+        this.setMeta('version_custody',await captureSupersetVersionStores(this));
         const temporary=join(root,'workspace.partial-'+randomUUID());
         try{
           this.db.exec("VACUUM INTO '"+temporary.replaceAll("'","''")+"'");
@@ -545,7 +547,8 @@ export async function receiveSupersetWorkspace({file,directory}={}){
             if(delivery.relative!=='deliveries/'+delivery.id||!Array.isArray(delivery.files)||delivery.snapshot!==buyer.snapshot||delivery.editionId!==buyer.editionId)
               throw fault('SUPERSET_RECEIVING_DELIVERY','An original delivery differs from its buyer.');
           }
-          target.setMeta('receiving_source',receiving);target.db.exec('COMMIT');
+          validateSupersetVersionStores(target,target.meta('version_custody'));
+          target.setMeta('receiving_source',receiving);target.setMeta('receiving_version_stores',null);target.db.exec('COMMIT');
         }catch(e){target.db.exec('ROLLBACK');throw e;}
       }
       await target.close();target=null;
@@ -561,6 +564,11 @@ export async function receiveSupersetWorkspace({file,directory}={}){
       const edition=workspace.get('editions',summary.id),staged=await workspace.materialize(edition.id,edition.csv.sha256,edition.config.sha256);
       const native=await loadDatasetConfig(staged.datasetPath);
       if(native.describe().snapshot!==edition.snapshot)throw fault('SUPERSET_RECEIVING_SNAPSHOT','The original dataset snapshot differs.',409);
+    }
+    const versionCustody=workspace.meta('version_custody'),restored=workspace.meta('receiving_version_stores');
+    if(versionCustody&&restored?.sourceCustodySha256!==versionCustody.sha256){
+      const stores=await restoreSupersetVersionStores(workspace,versionCustody);
+      workspace.setMeta('receiving_version_stores',{sourceCustodySha256:versionCustody.sha256,stores,restoredAt:new Date().toISOString()});
     }
     for(const item of workspace.list('buyers')){
       const buyer=workspace.get('buyers',item.id);
