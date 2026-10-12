@@ -62,7 +62,10 @@ Repeat the same receive command after interruption. Each already materialized
 file must still match its original bytes, mode and digest; only missing files
 are written. Partial member writes remain in the operation's separate control
 directory. A completed receive reopens current native state and preserves later
-customer changes. The original operation and archive digest must still match.
+customer changes. The original operation and archive digest must still match. If native inspection
+was interrupted, receiving uses the original host/PID/nonce check to recover its
+dead same-host run lease, then removes that lease through the original normal
+release before final publication.
 
 ## Inspect, deliver and reopen
 

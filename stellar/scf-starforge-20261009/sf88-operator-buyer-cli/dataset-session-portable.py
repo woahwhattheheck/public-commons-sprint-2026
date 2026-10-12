@@ -497,7 +497,7 @@ def stage_location(package, operation):
             "archiveSha256": package["sha256"], "manifestSha256": package["manifestSha256"],
             "operation": operation}
 
-def selected_tree(stage, manifest, archive_sha, *, complete=False):
+def selected_tree(stage, manifest, archive_sha, *, complete=False, allow_run_lock=False):
     wanted_files = {item["path"]: item for item in manifest["files"]}
     wanted_dirs = {item["path"]: item for item in manifest["directories"]}
     found = set()
@@ -513,6 +513,11 @@ def selected_tree(stage, manifest, archive_sha, *, complete=False):
         for name in files:
             path = root / name
             key = path.relative_to(stage).as_posix()
+            if key == "run.lock" and allow_run_lock:
+                lease = ordinary(path)
+                need(lease.st_size <= 4096 and not lease.st_mode & 0o077,
+                     "DATASET_ARCHIVE_NATIVE_LEASE_INVALID")
+                continue
             if key == LOCATION or key == HISTORY + "/" + archive_sha + ".json":
                 continue
             need(key in wanted_files, "DATASET_ARCHIVE_UNEXPECTED_STAGE_MEMBER")
@@ -581,7 +586,7 @@ def receive_session(request, publish=False):
             else:
                 target.mkdir(mode=0o700)
                 sync_directory(target.parent)
-        selected_tree(stage, manifest, package["sha256"])
+        selected_tree(stage, manifest, package["sha256"], allow_run_lock=not publish)
         if not publish:
             with zipfile.ZipFile(archive) as source:
                 for item in manifest["files"]:
@@ -620,7 +625,7 @@ def receive_session(request, publish=False):
             private_root(history)
             create_exact(history / (package["sha256"] + ".json"), manifest_raw, temporary_directory=control)
             create_exact(stage / LOCATION, location_raw, temporary_directory=control)
-            selected_tree(stage, manifest, package["sha256"], complete=True)
+            selected_tree(stage, manifest, package["sha256"], complete=True, allow_run_lock=True)
             record["state"] = "PREPARED"
             replace_json(record_path, record)
             return summary(package, operation=operation, directory=str(stage), destination=str(destination),

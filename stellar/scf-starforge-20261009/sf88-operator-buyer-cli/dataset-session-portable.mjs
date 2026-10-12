@@ -2,7 +2,8 @@
 import {spawn} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {isAbsolute,resolve} from 'node:path';
-import {withLockedDatasetSession,inspectDatasetSession} from './dataset-session.mjs';
+import {withLockedDatasetSession} from './dataset-session.mjs';
+import {datasetLocatedResult} from './dataset-location.mjs';
 import {canonical,object} from './dataset-page.mjs';
 import {InputError,need} from './config.mjs';
 
@@ -89,6 +90,12 @@ async function worker(input,selected) {
     if(selected.signal?.aborted)abort();
   });
 }
+async function inspectReceivingSession(directory) {
+  // A killed original native inspector can retain its own run.lock. Reuse the
+  // original host/PID/nonce recovery, then release the lease before publication.
+  return withLockedDatasetSession(directory,async source=>
+    datasetLocatedResult(await source.inspect()),{recoverDead:true});
+}
 function sameInspection(actual,retained) {
   need(object(actual)&&object(retained),'DATASET_ARCHIVE_NATIVE_INSPECTION_REQUIRED');
   for(const key of ['schema','directory','sessionId','configurationSha256','status',
@@ -139,14 +146,14 @@ export async function receiveDatasetSessionArchive({archive,directory,expectedSh
   operation(operationId);
   const selected=options(settings),input={archive,destination:directory,expectedSha256,operation:operationId};
   const prepared=await worker({...input,action:'receive'},selected);
-  const inspection=await inspectDatasetSession(prepared.directory);
+  const inspection=await inspectReceivingSession(prepared.directory);
   need(inspection.status!=='RUNNING','DATASET_ARCHIVE_ORIGINAL_SESSION_RUNNING');
   if(prepared.state==='RECEIVED')return {...prepared,session:inspection};
   need(prepared.state==='PREPARED','DATASET_ARCHIVE_RECEIVE_PREPARATION_REQUIRED');
   sameInspection(inspection,prepared.inspection);
   const received=await worker({...input,action:'publish'},selected);
   // Reopen the published path: staging paths never become the session identity.
-  const session=await inspectDatasetSession(directory);
+  const session=await inspectReceivingSession(directory);
   sameInspection(session,prepared.inspection);
   return {...received,session};
 }
