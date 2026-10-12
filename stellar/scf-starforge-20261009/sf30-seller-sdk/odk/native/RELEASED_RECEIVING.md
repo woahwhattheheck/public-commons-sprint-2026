@@ -87,3 +87,145 @@ The resulting full archive is restored into `restored-workspace-commissioned/`. 
 `warehouse-selections.json` is the native caller’s exact input selection. The maintained same-Store warehouse bridge creates its original approval documents from those selections; it retains the accepted CSV projection and all original export receipts. Its PostgreSQL connection remains the selected existing receiving profile. The receiving source does not infer a database or credentials from the Central deployment.
 
 The full API and recovery behavior are in [RELEASED_PERIODS.md](RELEASED_PERIODS.md).
+
+## Complete approved PostgreSQL receiving and customer handover
+
+The original launcher also carries this same complete programme through the
+approved-period warehouse receiver from PR2260, then assembles the actual
+customer handover. Supply the existing receiving host's four warehouse
+arguments together:
+
+~~~sh
+python3 stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/run-released-fixtures.py \
+  --host-config /private/central-host.json \
+  --work-directory /srv/central-cb57/receiving \
+  --warehouse-profiles /private/central-warehouse-profiles.json \
+  --warehouse-profile approved-periods \
+  --warehouse-reviewer "Original receiving operator" \
+  --warehouse-note "Receive the complete approved native columns with their original row keys."
+~~~
+
+The installed receiving entry forwards this same original command:
+
+~~~sh
+starforge odk-central-receive released \
+  --host-config /private/central-host.json \
+  --work-directory /srv/central-cb57/receiving \
+  --warehouse-profiles /private/central-warehouse-profiles.json \
+  --warehouse-profile approved-periods \
+  --warehouse-reviewer "Original receiving operator" \
+  --warehouse-note "Receive the complete approved native columns with their original row keys."
+~~~
+
+Use the host's actual canonical paths and original selected profile ID.
+The profile is the existing private
+**stellar-forge.central-warehouse-profiles.v1** document (or its direct profile
+array). Its connectionEnv names the original PostgreSQL connection already
+available to the receiving process. The complete original Python package and
+its maintained postgres extra must be installed on that host. The native
+warehouse status action binds the actual warehouse UUID and schema.
+
+If the connection is held in a private JSON file, add:
+
+~~~text
+--warehouse-environment-file /private/central-warehouse-environment.json
+~~~
+
+That file must contain only the profile's exact connectionEnv key and its
+complete original connection value. The launcher loads it into its owned
+child environment before Node starts. Keep the file private. Configuration
+arguments and progress output contain paths, profile references and native
+operation IDs; credential values stay on the host.
+
+The default invocation without the warehouse arguments remains the complete
+released-provider and two-period receiving programme described above.
+
+### One retained native programme
+
+The launcher runs these existing owners in order:
+
+1. The original released Central creator and whole source receiver complete
+   forms, published versions, original XML/media, capture, review, datasets,
+   reports and the original independent archive reopen.
+2. The original commissioner completes both native reporting periods, accepted
+   reviews, approved datasets, source reports and its independent archive
+   reopen. It writes the complete warehouse-selections.json.
+3. The original approved-period warehouse receiver consumes that exact
+   selection, including every original approval/review/import/report request ID.
+   It receives the full approved CSVs and dictionaries into the original
+   PostgreSQL warehouse, creates the full period report, receives the final
+   complete Central archive, restores it into warehouse-reopened and reads
+   the same editions and complete reports from that received workspace.
+4. After the receiver closes its listeners, the launcher joins those actual
+   results and packages the complete handover. It checks the original operation,
+   workspace, capture, dataset, delivery, profile and request identities
+   across the whole programme.
+
+The warehouse implementation and full mapping/recovery contract are in
+[warehouse/RECEIVING.md](../warehouse/RECEIVING.md). Its original private output
+and independently reopened paths are:
+
+~~~text
+<work-directory>/warehouse-receiving/
+<work-directory>/warehouse-reopened/
+~~~
+
+The full provider and commissioning directories keep the original paths
+documented above. Each native module retains its own original request and
+operation journal. Repeating the same full command recovers those existing
+operations. A failed stage returns its native exit code before a later stage
+can start. Termination closes only the launcher's current owned process group.
+
+The existing direct warehouse receiving entry remains available for continuing
+only that original saved selection. It uses warehouse-selections.json and the
+same profile, output, restored directory and reviewer/note.
+
+### Complete delivery files
+
+The final product is:
+
+~~~text
+<work-directory>/customer-handover/Central_Complete_Reporting_Handover.zip
+~~~
+
+The same directory contains handover.json, READ_ME.md and result.json.
+The result gives the complete ZIP byte count, SHA-256, member count, original
+workspace and delivery IDs, dataset/report counts and actual listener closure.
+
+| ZIP member | Complete original content |
+| --- | --- |
+| READ_ME.md | Native result, report and archive reopening instructions |
+| handover.json | Joined source/commissioning/warehouse identities and complete member hashes |
+| native/programme-result.json | Original released-provider and both-period result |
+| native/fixture-result.json | Native Central project, forms, versions and source identity |
+| native/source-receiving-result.json | Complete original capture, review, source coverage and receiving |
+| native/commissioning-result.json | Both actual reporting periods, source reports and portable delivery |
+| native/source-report-agreement.json | Full original source/report agreement |
+| native/native-period-boundary.json | Actual retained submission timestamps and selected cohort boundary |
+| native/commissioning-delivery.json | Complete commissioned dataset and report delivery |
+| native/warehouse-selections.json | Original approved datasets, accepted capture/review pairs and SQL request IDs |
+| warehouse/result.json | Original SQL editions, complete report receipts, archive restore and reopen result |
+| warehouse/downloads/dataset-…/ | Full approved CSV, source descriptor, semantics, schema and saved approval |
+| warehouse/downloads/reports/…zip | Complete original period report and both original/typed editions |
+| warehouse/received-reports/…zip | Same complete report received after independent restore |
+| warehouse/central-workspace.tar.gz | Final complete Central workspace, including original source and all commissioned/warehouse records |
+| warehouse/original-warehouse-state.json | Original warehouse state retained before backup |
+| warehouse/received-warehouse-state.json | Same warehouse state after relocation and native receiving |
+
+The archive includes the final full workspace once. All prior complete result
+documents are preserved; their original producing archives remain in the
+private work directory.
+
+Packaging streams the exact original files and compares their full receipts.
+Already-compressed workspace/report archives are stored without another
+compression pass. A complete existing ZIP is reused only after all its member
+names, full bytes and SHA-256 values match. An interrupted partial ZIP is
+removed by its active owner; a different completed handover is preserved.
+The handover's completion time comes from the original completed warehouse
+result, so repeating a completed command preserves the same delivery.
+
+Keep the complete customer archive in the original private delivery route.
+The Central host configuration, Authorization header, PostgreSQL connection
+value, host recovery passphrase and native service recovery snapshots remain
+with the existing host operator. The original request/response directories
+remain available for continuing the provider and SQL operations.

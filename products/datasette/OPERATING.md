@@ -13,7 +13,7 @@ starforge datasette serve \
   --port 0
 ~~~
 
-Normal reopening uses the same directory without changing the workspace declaration. CLI reads through the live connection avoid opening another owner:
+Normal reopening uses the same directory without changing the workspace declaration. To keep the browser's saved operation history available after restart, select and retain one explicit local port, such as 53173, in both the datasette serve --port command and the managed application's Local port field. Browser storage belongs to the listener origin; port 0 may choose a different origin on each start. The connection file and native workspace retain their original identities when the port changes. CLI reads through the live connection avoid opening another owner:
 
 ~~~sh
 starforge datasette status \

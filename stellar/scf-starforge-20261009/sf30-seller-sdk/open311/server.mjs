@@ -79,6 +79,7 @@ export async function startOpen311Server({ workspace, host = '127.0.0.1', port =
         if (request.method === 'GET' && url.pathname === '/api/services') return json(response, 200, store.services(query));
         if (request.method === 'GET' && url.pathname === '/api/requests') return json(response, 200, store.requests(query));
         if (request.method === 'GET' && url.pathname === '/api/request') return json(response, 200, store.request(query));
+        if (request.method === 'GET' && url.pathname === '/api/collection') return json(response, 200, store.collectionInfo(query));
         if (request.method === 'GET' && url.pathname === '/api/capture') return json(response, 200, store.captureInfo(query));
         if (request.method === 'GET' && url.pathname === '/api/diff') return json(response, 200, store.diff(query));
         if (request.method === 'GET' && url.pathname === '/api/operation') return json(response, 200, store.operation(query.requestId));
@@ -87,7 +88,7 @@ export async function startOpen311Server({ workspace, host = '127.0.0.1', port =
           response.setHeader('Content-Disposition', 'attachment; filename="' + exported.filename.replace(/[^A-Za-z0-9._-]/g, '_') + '"');
           response.writeHead(200, { 'Content-Type': exported.contentType, 'Content-Length': data.length }); return response.end(data);
         }
-        if (request.method === 'POST' && ['/api/connections', '/api/capture', '/api/reviews', '/api/receive'].includes(url.pathname)) {
+        if (request.method === 'POST' && ['/api/connections', '/api/capture', '/api/reviews', '/api/receive', '/api/collections', '/api/collection-run', '/api/collection-pause'].includes(url.pathname)) {
           if (!/^application\/json(?:\s*;|$)/i.test(request.headers['content-type'] || '')) throw new WorkspaceError('JSON_REQUIRED', 'Send application/json for this action.', 415);
           if (request.headers['x-open311-workspace'] !== store.state().workspaceId) throw new WorkspaceError('WORKSPACE_ID_REQUIRED', 'This action must identify the currently open workspace.', 409);
           const input = await readBody(request, url.pathname === '/api/receive' ? maxBodyBytes : Math.min(maxBodyBytes, 2 * 1024 * 1024));
@@ -95,6 +96,9 @@ export async function startOpen311Server({ workspace, host = '127.0.0.1', port =
           if (url.pathname === '/api/connections') result = store.putConnection(input);
           else if (url.pathname === '/api/capture') result = await store.capture(input);
           else if (url.pathname === '/api/reviews') result = store.putReview(input);
+          else if (url.pathname === '/api/collections') result = store.createCollection(input);
+          else if (url.pathname === '/api/collection-run') result = await store.runCollection(input);
+          else if (url.pathname === '/api/collection-pause') result = store.pauseCollection(input);
           else result = store.receive(input);
           return json(response, 200, result);
         }

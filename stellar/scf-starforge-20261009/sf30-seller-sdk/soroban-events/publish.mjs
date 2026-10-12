@@ -86,7 +86,7 @@ async function writeNew(filename, bytes, { identical = true } = {}) {
   }
 }
 function scopeOf(workspaceId, edition) {
-  workspaceId = edition?.receivedFrom?.workspaceId ?? workspaceId;
+  workspaceId = edition?.sourceOriginWorkspaceId ?? edition?.receivedFrom?.workspaceId ?? workspaceId;
   text(workspaceId, 'workspaceId'); text(edition?.planId, 'planId');
   need(edition.network !== undefined && edition.network !== null &&
     (typeof edition.network === 'string' || isRecord(edition.network)), 'SOROBAN_PUBLICATION_NETWORK_REQUIRED');
@@ -127,10 +127,17 @@ function checkEvents(events, scope, source) {
   return { eventCount: events.length, uniqueEvents: seen.size };
 }
 
-async function selectEdition({ workspaceDirectory, editionId }) {
-  need(workspaceDirectory, 'SOROBAN_SOURCE_WORKSPACE_REQUIRED');
+async function selectEdition({ workspaceDirectory, editionId, workspace: suppliedWorkspace }) {
+  need(workspaceDirectory || suppliedWorkspace, 'SOROBAN_SOURCE_WORKSPACE_REQUIRED');
   text(editionId, 'editionId');
-  const workspace = await openSorobanEventsWorkspace({ directory: resolve(workspaceDirectory) });
+  if (suppliedWorkspace) {
+    need(typeof suppliedWorkspace.edition === 'function' && typeof suppliedWorkspace.publisherSource === 'function' &&
+      typeof suppliedWorkspace.captureStatus === 'function' && isAbsolute(suppliedWorkspace.directory ?? ''),
+      'SOROBAN_SOURCE_WORKSPACE_INVALID');
+    if (workspaceDirectory) need(resolve(workspaceDirectory) === suppliedWorkspace.directory,
+      'SOROBAN_SOURCE_WORKSPACE_DIRECTORY_MISMATCH');
+  }
+  const workspace = suppliedWorkspace ?? await openSorobanEventsWorkspace({ directory: resolve(workspaceDirectory) });
   try {
     const selected = await workspace.edition({ editionId });
     const publisher = await workspace.publisherSource({ editionId });
@@ -152,7 +159,7 @@ async function selectEdition({ workspaceDirectory, editionId }) {
         publisherRevision: publisher.revision, publisherSource: {
           editionId, sha256: publisher.sha256, bytes: publisher.bytes, format: publisher.format },
         capture } };
-  } finally { await workspace.close(); }
+  } finally { if (!suppliedWorkspace) await workspace.close(); }
 }
 
 async function readPublication(directory) {
@@ -266,10 +273,10 @@ async function ingestRetained(state, retained, signal) {
 }
 
 /** One stable workspace/network/plan namespace supports overlapping successive editions. */
-export async function prepareSorobanPublication({ workspaceDirectory, editionId, directory,
+export async function prepareSorobanPublication({ workspaceDirectory, workspace, editionId, directory,
   feedId, sourceId, label, description, signal } = {}) {
   need(directory, 'SOROBAN_PUBLICATION_NEW_DIRECTORY_REQUIRED');
-  const selected = await selectEdition({ workspaceDirectory, editionId });
+  const selected = await selectEdition({ workspaceDirectory, workspace, editionId });
   const scopeKey = sha(canonical(selected.scope)).slice(0, 24);
   sourceId ??= 'soroban-' + scopeKey; feedId ??= 'soroban-events-' + scopeKey;
   requireId(sourceId); requireId(feedId);
@@ -300,8 +307,8 @@ export async function prepareSorobanPublication({ workspaceDirectory, editionId,
   } finally { store?.close(); }
 }
 
-export async function appendSorobanEdition({ workspaceDirectory, editionId, directory, signal } = {}) {
-  const selected = await selectEdition({ workspaceDirectory, editionId });
+export async function appendSorobanEdition({ workspaceDirectory, workspace, editionId, directory, signal } = {}) {
+  const selected = await selectEdition({ workspaceDirectory, workspace, editionId });
   const state = await openPublicationStore(directory);
   try {
     const retained = await retainEdition(state, selected);

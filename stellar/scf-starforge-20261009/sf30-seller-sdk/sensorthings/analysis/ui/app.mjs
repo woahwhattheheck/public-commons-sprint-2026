@@ -325,6 +325,45 @@ async function showTab(tab){
   }catch(e){if(generation!==state.paneGeneration)return;$('pane').replaceChildren(node('div',{class:'empty'},p(e.message),button('Read this view again',()=>guard(()=>showTab(tab)))));issue(e);}
 }
 
+function componentSummaryPanel(summary){
+  if(summary?.analysisKind!=='explicit-multidatastream-components')return null;
+  const section=node('section',{class:'component-summary'},node('h3',{},'Selected original components'),
+    p('Exact sample arithmetic counts retained numeric occurrences. Browser plotting uses separate finite-number checks. Equal timestamps remain separate observations; adjacent gaps describe observed separation, not missing-duration estimates.','flow-note'));
+  for(const stream of summary.streams){
+    const numeric=stream.numericSummary??{},timeline=stream.timeline??{},
+      article=node('article',{class:'card'},node('h4',{},(stream.componentName??stream.name)+' · position '+stream.componentIndex),
+        kv([['Original source stream',code(stream.sourceStreamKey)],['Selected unit',format(stream.unit)],
+          ['Original observation declaration',code(stream.observationType)],['Interpretation',stream.interpretation?.mode],
+          ['Exact arithmetic samples',count(stream.exactNumericEligibleRows)],['Browser plot points',count(stream.browserNumericEligibleRows)],
+          ['Exact sample total',code(numeric.sumExact)],['Sample mean (half-even, 12 places)',code(numeric.mean?.decimal??null)],
+          ['Exact mean fraction',numeric.mean?code(numeric.mean.exactNumerator+' / '+numeric.mean.exactDenominator):'Not calculated'],
+          ['Minimum / maximum',numeric.minimum&&numeric.maximum?code(numeric.minimum.lexeme+' / '+numeric.maximum.lexeme):'Not calculated'],
+          ['Distinct instants',count(timeline.distinctInstantTimes)],['Repeated instants',count(timeline.duplicateInstantTimes)],
+          ['Duration / time-weighted mean','Not calculated; source events do not establish support intervals']]),
+        details('Exact binding, original property/unit and attributed interpretation',{component:stream.component,interpretation:stream.interpretation,nativeViewer:stream.nativeViewer}),
+        details('Numeric eligibility and original quality',{exact:{count:stream.exactNumericEligibleRows,excluded:stream.exactNumericExcludedRows,reasons:stream.exactNumericExclusionReasons},
+          browser:{count:stream.browserNumericEligibleRows,excluded:stream.browserNumericExcludedRows,reasons:stream.browserNumericExclusionReasons},qualityStates:stream.qualityStates,qualityValues:stream.qualityValues}),
+        table(['Observed adjacent separation (seconds)','Count'],(timeline.adjacentGapSeconds??[]).map(x=>[code(x.seconds),count(x.count)])));
+    function pagedDetails(label,rows,headers,cells,omitted=0){
+      const host=node('div',{});let offset=0;
+      const render=()=>host.replaceChildren(table(headers,rows.slice(offset,offset+50).map(cells)),
+        node('div',{class:'pagination'},small((rows.length?offset+1:0)+'–'+Math.min(rows.length,offset+50)+' of '+rows.length+' retained summary details'+(omitted?'; '+omitted+' additional positions remain in the complete publication/source rows':'')),
+          node('div',{class:'actions'},button('Previous',()=>{offset=Math.max(0,offset-50);render();},{disabled:offset===0}),
+            button('Next',()=>{offset+=50;render();},{disabled:offset+50>=rows.length}))));
+      render();return details(label,host);
+    }
+    article.append(pagedDetails('Repeated original timestamps',timeline.duplicateInstants??[],['Normalized original UTC instant','Distinct retained occurrences'],
+      x=>[code(x.utc),count(x.count)],timeline.omittedDuplicateInstants??0),
+      pagedDetails('Adjacent observed instants and gaps',timeline.adjacentGaps??[],['From UTC','To UTC','Separation (seconds)','Endpoint occurrences'],
+        x=>[code(x.fromUtc),code(x.toUtc),code(x.seconds),count(x.leftOccurrences)+' / '+count(x.rightOccurrences)],timeline.omittedAdjacentGaps??0),
+      details('UTC-day sample arithmetic',table(['UTC day','Original instant occurrences','Exact samples','Exact total','Sample mean','Quality-field presence'],
+        (stream.days??[]).map(d=>[d.day,count(d.events),count(d.numericSummary.count),code(d.numericSummary.sumExact),code(d.numericSummary.mean?.decimal??null),pre(d.qualityStates)]))),
+      button('Review all original rows and component citations',()=>guard(()=>showTab('rows'))));
+    section.append(article);
+  }
+  return section;
+}
+
 async function overviewPane(){
   const v=state.version,s=state.summary,e=state.edition,pj=state.project,latest=[...(state.view.reviews??[])].reverse().find(r=>r.editionId===e.id);
   return [...pageHeading(v.title,'Review the saved source, original-time meaning and publication history before changing this project.'),
@@ -341,8 +380,8 @@ async function overviewPane(){
         button('Receive / export project',()=>guard(()=>showTab('transfer'))))),
     p(s.meaning?.time??'An instant remains an event; only explicit original intervals have duration.','flow-note'),
     table(['Original stream','Observation type','Unit','Occurrences','Eligible numeric instants'],s.streams.map(x=>[
-      node('div',{},p(x.name??x.key),code(x.key)),code(x.observationType),pre(x.unit),count(x.rows),count(x.numericEligibleRows)])),
-    details('Complete saved selection',v),details('Exact saved summary',s),
+      node('div',{},p(x.name??x.key),code(x.sourceStreamKey??x.key),x.componentIndex!==undefined?small('Original position '+x.componentIndex+' · derived series '+x.key):null),code(x.observationType),pre(x.unit),count(x.rows),count(x.numericEligibleRows)])),
+    componentSummaryPanel(s),details('Complete saved selection',v),details('Exact saved summary',s),
     node('h3',{},'Recent saved versions'),table(['Version','Recorded','Actor / source','Open'],[...pj.versions].reverse().slice(0,20).map(x=>[
       code(x.id),x.createdAt,code(x.editionId),button(x.id===pj.project.headVersionId?'Open current':'Open historical version',()=>guard(()=>loadProject(pj.project.id,x.id,'overview')))]))];
 }
@@ -354,11 +393,34 @@ async function selectionPane(){
   const headNote=v&&!current?node('div',{class:'flow-note'},p('This is a historical saved version. Open the current project head before editing.'),
     button('Open current head',()=>guard(()=>loadProject(project.project.id,null,'selection')))):null;
   const form=await formCache('selection',async()=>{
+    let displayedEdition=null,componentControls=[];
     const form=formShell(v?'Save a new version':'Create the first saved analysis',async(f,revision)=>{
-      const selectedStreams=[...f.querySelectorAll('input[name="streamKeys"]:checked')].map(x=>x.value),
-        full=f.elements.namedItem('fullPeriod').checked,
-        selection={streamKeys:selectedStreams,period:full?null:{start:value(f,'start').trim(),end:value(f,'end').trim()},view:value(f,'view'),viewerId:value(f,'viewerId')||null};
-      if(!selectedStreams.length||selectedStreams.length>20)throw new Error('Select between one and twenty original scalar streams.');
+      const full=f.elements.namedItem('fullPeriod').checked,kind=value(f,'selectionKind'),
+        common={period:full?null:{start:value(f,'start').trim(),end:value(f,'end').trim()},view:value(f,'view'),viewerId:value(f,'viewerId')||null};
+      let selection;
+      if(kind==='components'){
+        if(displayedEdition!==value(f,'editionId'))throw new Error('Read the exact selected source catalogue before saving its component bindings.');
+        const selected=componentControls.filter(x=>x.selected.el.checked);
+        if(!selected.length||selected.length>80)throw new Error('Select one to eighty explicit original positions.');
+        const streamKeys=[...new Set(selected.map(x=>x.stream.streamKey))];
+        if(streamKeys.length>20)throw new Error('Select components from at most twenty retained MultiDatastreams.');
+        selection={...common,streamKeys,componentSelections:selected.map(x=>{
+          const mode=x.mode.value,acknowledgedIssues=x.acknowledgments.filter(a=>a.el.checked).map(a=>a.el.value),note=x.note.value;
+          if(mode==='numeric-json'){
+            if(!x.descriptor.metadataAligned||!x.descriptor.property||x.descriptor.unitState==='missing')
+              throw new Error('Position '+x.descriptor.index+' has missing or unaligned source metadata; numeric interpretation cannot repair it.');
+            if(!note.trim())throw new Error('Record the numeric interpretation for position '+x.descriptor.index+'.');
+            const missing=x.descriptor.issues.filter(code=>!acknowledgedIssues.includes(code));
+            if(missing.length)throw new Error('Acknowledge the exact positional findings: '+missing.join(', '));
+          }
+          return {streamKey:x.stream.streamKey,index:x.descriptor.index,bindingId:x.descriptor.bindingId,
+            interpretation:{mode,acknowledgedIssues,note}};
+        })};
+      }else{
+        const streamKeys=[...f.querySelectorAll('input[name="streamKeys"]:checked')].map(x=>x.value);
+        if(!streamKeys.length||streamKeys.length>20)throw new Error('Select between one and twenty original scalar streams.');
+        selection={...common,streamKeys};
+      }
       const payload={title:value(f,'title').trim(),editionId:value(f,'editionId'),selection,actor:requireActor()};
       if(v){if(!currentHead()||state.version.id!==v.id)throw new Error('Reopen the current saved version before revising this project.');
         Object.assign(payload,{projectId:v.projectId,baseVersionId:v.id,reason:value(f,'reason').trim()});}
@@ -367,50 +429,88 @@ async function selectionPane(){
     });
     const chosenEdition=v?.editionId??state.newEditionId??state.overview.sourceEditionIds?.[0]??'',
       editionChoice=select('editionId',[{value:'',label:'Select a retained source edition'},...editionOptions()],chosenEdition,{required:true}),
-      streamHost=node('div',{}),viewChoice=select('view',[{value:'events',label:'Literal events / intervals'},{value:'map',label:'Native map selection'},{value:'numeric',label:'Original numeric instants'}],v?.selection.view??'events'),
+      kindChoice=select('selectionKind',[{value:'scalar',label:'Original scalar Datastreams'},{value:'components',label:'Explicit MultiDatastream positions'}],v?.selection.componentSelections?'components':'scalar'),
+      streamHost=node('div',{}),viewChoice=select('view',[{value:'events',label:'Literal events / intervals'},{value:'map',label:'Native map selection'},{value:'numeric',label:'Explicit numeric instants'}],v?.selection.view??'events'),
       viewerChoice=select('viewerId',[{value:'',label:'No native viewer selected'},...(state.overview.viewers??[]).map(x=>({value:x.id,label:(x.upstream?.tag??'Installed viewer')+' · '+short(x.id,18)}))],v?.selection.viewerId??''),
       full=check('Use the full retained source period',{name:'fullPeriod',checked:!v?.selection.period}),
-      start=input('start',v?.selection.period?.start??'',{placeholder:'2026-06-01T00:00:00Z'}),
-      end=input('end',v?.selection.period?.end??'',{placeholder:'2026-06-02T00:00:00Z'}),
+      start=input('start',v?.selection.period?.start??'',{placeholder:'2016-06-20T00:00:00Z'}),
+      end=input('end',v?.selection.period?.end??'',{placeholder:'2016-06-27T00:00:00Z'}),
       period=node('div',{class:'grid'},field('Inclusive start with explicit UTC offset',start),field('Exclusive end with explicit UTC offset',end));
     const periodState=()=>{start.disabled=end.disabled=full.el.checked;start.required=end.required=!full.el.checked;};
     full.el.addEventListener('change',periodState);periodState();
     form.append(field('Saved analysis title',input('title',v?.title??'',{required:true,maxLength:200})),
-      field('Original retained source edition',editionChoice,'A source change preserves prior annotations with their original cited editions.'),
+      field('Original retained source edition',editionChoice,'New source editions require their own positional bindings and explicit interpretation. Prior versions and citations remain unchanged.'),
+      field('Selection type',kindChoice,'Scalar streams and component positions use their own original selection contracts.'),
       streamHost,node('fieldset',{},node('legend',{},'Period and view'),full.wrap,period,
         node('div',{class:'grid'},field('Saved view',viewChoice),field('Installed original viewer edition',viewerChoice,'The viewer archive must first be received through the original host inbox.'))),
       field(v?'Reason for the new version':'Purpose / selection note',textarea('reason','',{required:true,maxLength:12000})),
       node('div',{class:'actions'},submitButton(v?'Save new version':'Create analysis')));
     if(v&&!current)form.querySelector('button[type=submit]').dataset.readonly='true';
     let streamGeneration=0;
-    async function populate(editionId,preserve){
-      const generation=++streamGeneration;streamHost.replaceChildren(p('Reading original stream metadata…','muted'));
+    async function populate(editionId,preserveScalar=[],preserveComponents=[]){
+      const generation=++streamGeneration;displayedEdition=null;componentControls=[];
+      streamHost.replaceChildren(p('Reading original stream metadata…','muted'));
       if(!editionId){streamHost.replaceChildren(p('Select a retained source edition.','empty'));return;}
       const [data,e]=await Promise.all([catalog(editionId),loadEdition(editionId)]);
-      if(generation!==streamGeneration)return;state.newEditionId=editionId;
-      const selected=new Set(preserve),list=node('div',{class:'check-list'});
+      if(generation!==streamGeneration)return;state.newEditionId=editionId;displayedEdition=editionId;
+      const selected=new Set(preserveScalar),scalarList=node('div',{class:'check-list'}),scalarPane=node('section',{}),componentPane=node('section',{});
       for(const stream of data.streams){
         const c=check(stream.name??stream.key,{name:'streamKeys',value:stream.key,checked:selected.has(stream.key),
           help:stream.observationType+' · unit '+format(stream.unit)+' · '+count(stream.rows)+' occurrences · '+count(stream.numericEligibleRows)+' numeric instants'});
-        c.wrap.append(button('Inspect source',()=>detail('Original stream metadata',pre(stream))));
-        list.append(c.wrap);
+        c.wrap.append(button('Inspect source',()=>detail('Original stream metadata',pre(stream))));scalarList.append(c.wrap);
       }
-      const tools=node('div',{class:'actions'},
-        button('Select up to 20 displayed streams',()=>{[...list.querySelectorAll('input')].forEach((c,i)=>{c.checked=i<20;});}),
-        button('Clear stream selection',()=>{list.querySelectorAll('input').forEach(c=>{c.checked=false;});}));
-      streamHost.replaceChildren(node('h3',{},e.source.label),code(editionId),p(data.streams.length+' retained scalar stream(s). Select at most twenty.','small'),tools,
-        data.streams.length?list:p('This edition has no supported scalar Datastreams. Original MultiDatastream source remains preserved.','empty'),
+      scalarPane.append(p(data.streams.length+' retained scalar stream(s). Select at most twenty.','small'),
+        node('div',{class:'actions'},
+          button('Select up to 20 displayed streams',()=>{[...scalarList.querySelectorAll('input')].forEach((c,i)=>{c.checked=i<20;});}),
+          button('Clear scalar selection',()=>{scalarList.querySelectorAll('input').forEach(c=>{c.checked=false;});})),
+        data.streams.length?scalarList:p('This edition contains no original scalar Datastreams.','empty'));
+      const catalogue=data.componentCatalogue,streams=catalogue?.streams??[];
+      componentPane.append(p('Select each original zero-based position. Inspect the property, unit and declaration together. No component, numeric meaning or issue acknowledgement is selected automatically.','flow-note'));
+      if(!streams.length)componentPane.append(p('This edition contains no retained MultiDatastream component catalogue.','empty'));
+      for(const stream of streams){
+        const group=node('fieldset',{},node('legend',{},stream.name??stream.streamKey),
+          kv([['Original stream key',code(stream.streamKey)],['Typed ID',code(stream.streamId)],['Declared array sizes',format(stream.metadataCounts)],
+            ['Aligned source metadata',stream.metadataAligned?'Yes':'Unresolved']]),
+          details('Complete original stream and source references',stream),originalSourceButton(editionId,stream.sourceRef.sha256));
+        for(const descriptor of stream.components){
+          const previous=preserveComponents.find(x=>x.streamKey===stream.streamKey&&x.index===descriptor.index&&x.bindingId===descriptor.bindingId),
+            selected=check('Position '+descriptor.index+' · '+descriptor.name,{name:'componentSelectionChoice',value:stream.streamKey+':'+descriptor.index,checked:!!previous}),
+            mode=select('componentMode-'+descriptor.seriesKey,[{value:'source-declared',label:'Preserve the original declared result meaning'},{value:'numeric-json',label:'Explicitly interpret original JSON numbers'}],previous?.interpretation.mode??'source-declared'),
+            note=textarea('componentNote-'+descriptor.seriesKey,previous?.interpretation.note??'',{maxLength:8000,placeholder:'Explain the interpretation of this exact original position and its source findings.'}),
+            acknowledgments=descriptor.issues.map(value=>check(value,{name:'componentIssue-'+descriptor.seriesKey,value,checked:previous?.interpretation.acknowledgedIssues.includes(value)??false})),
+            controls=node('div',{class:'component-controls'},
+              kv([['Property',descriptor.property?.entity?.name??descriptor.name],['Original unit',format(descriptor.unit)],
+                ['Original observation declaration',code(descriptor.declaredType)],['Binding',code(descriptor.bindingId)],
+                ['Metadata alignment',descriptor.metadataAligned?'Aligned':'Unresolved']]),
+              field('Interpretation',mode,'Numeric JSON is an operator interpretation. The original declaration remains unchanged.'),
+              descriptor.issues.length?node('div',{class:'check-list'},node('h4',{},'Exact positional findings'),acknowledgments.map(x=>x.wrap)):p('No positional declaration findings.','small'),
+              field('Interpretation note',note),details('Complete original component binding and citations',descriptor)),
+            card=node('section',{class:'card component-choice'},selected.wrap,controls);
+          const update=()=>{const active=selected.el.checked&&kindChoice.value==='components';controls.hidden=!selected.el.checked;
+            mode.disabled=note.disabled=!active;note.required=active&&mode.value==='numeric-json';
+            for(const c of acknowledgments)c.el.disabled=!active;};
+          selected.el.addEventListener('change',update);mode.addEventListener('change',update);
+          componentControls.push({selected,mode,note,acknowledgments,descriptor,stream,update});group.append(card);update();
+        }
+        componentPane.append(group);
+      }
+      const updateKind=()=>{const component=kindChoice.value==='components';scalarPane.hidden=component;componentPane.hidden=!component;
+        scalarList.querySelectorAll('input').forEach(x=>{x.disabled=component;});for(const x of componentControls)x.update();};
+      kindChoice.onchange=updateKind;
+      streamHost.replaceChildren(node('h3',{},e.source.label),code(editionId),scalarPane,componentPane,
         details('Original scope and retained issues',{scope:data.scope,issues:data.issues,license:data.license}));
+      updateKind();
     }
-    editionChoice.addEventListener('change',()=>guard(()=>populate(editionChoice.value,[...form.querySelectorAll('input[name=streamKeys]:checked')].map(x=>x.value))));
-    await populate(chosenEdition,v?.selection.streamKeys??[]);return form;
+    editionChoice.addEventListener('change',()=>guard(()=>populate(editionChoice.value,[],[])));
+    await populate(chosenEdition,v?.selection.streamKeys??[],v?.editionId===chosenEdition?v?.selection.componentSelections??[]:[]);
+    return form;
   });
   const viewerChoice=form.elements.namedItem('viewerId'),editionChoice=form.elements.namedItem('editionId');
   for(const viewer of state.overview.viewers??[])if(![...viewerChoice.options].some(o=>o.value===viewer.id))
     viewerChoice.append(node('option',{value:viewer.id},(viewer.upstream?.tag??'Installed viewer')+' · '+short(viewer.id,18)));
   for(const option of editionOptions())if(![...editionChoice.options].some(o=>o.value===option.value))
     editionChoice.append(node('option',{value:option.value},option.label));
-  return [...pageHeading('Source and saved selection','A save records a new immutable analysis version. Original source records, typed IDs, decimal lexemes and earlier selections remain unchanged.'),headNote,form];
+  return [...pageHeading('Source and saved selection','A save records an immutable scalar or explicit-position component selection. Exact original arrays, units, typed IDs, decimal lexemes and earlier decisions remain unchanged.'),headNote,form];
 }
 async function sourcePane(){
   const selectedId=state.version?.editionId??state.newEditionId??state.overview.sourceEditionIds?.[0];
@@ -477,15 +577,25 @@ async function rowsPane(){
   return [...pageHeading('Literal events and original rows','Phenomenon, result and valid times remain separate. Source intervals are shown only when explicitly supplied; missing or unresolved times remain visible.'),
     details('Complete category and numeric summaries',state.summary.streams.map(s=>({key:s.key,name:s.name,categories:s.categories,resultTypes:s.resultTypes,
       timeKinds:s.timeKinds,numericEligibleRows:s.numericEligibleRows,numericExclusionReasons:s.numericExclusionReasons}))),
-    pageTimeline(page.rows),pager(),
+    componentSummaryPanel(state.summary),pageTimeline(page.rows),pager(),
     table(['Original observation / stream','Original times','Result','Source quality / numeric eligibility','Source / annotation'],page.rows.map(r=>[
       node('div',{},code({type:r.observation_id_type,value:r.observation_id}),node('br'),small(r.stream_name),node('br'),code(r.stream_key)),
       node('div',{},p(r.phenomenon_time||'[not supplied]'),small(r.phenomenon_time_kind),details('Result and valid times',{resultTime:r.result_time,resultTimeState:r.result_time_state,
         validTime:r.valid_time,validTimeState:r.valid_time_state})),
-      node('div',{},p(r.result_state==='value'?r.result:r.result_state==='null'?'null':'[missing]'),small(r.result_type+' / '+r.result_state)),
-      node('div',{},small(r.result_quality_state),p(r.result_quality),small(r.numeric?.eligible?'Eligible original numeric instant':r.numeric?.reason??'Not evaluated')),
+      node('div',{},p(r.result_state==='value'?r.result:r.result_state==='null'?'null':'[missing]'),small(r.result_type+' / '+r.result_state),
+        r.component_index!==undefined?details('Selected original component and full result vector',{
+          position:r.component_index,property:r.component_property,unit:r.component_unit,declaredType:r.component_observation_type,
+          interpretation:r.component_interpretation,note:r.component_interpretation_note,acknowledgedIssues:r.component_acknowledged_issues,
+          sourceVector:r.source_result,sourceResultState:r.source_result_state,alignment:r.component_alignment,
+          selectedPointer:r.component_result_pointer,actualSourcePointer:r.component_source_pointer,pointerState:r.component_pointer_state}):null),
+      node('div',{},small(r.result_quality_state),p(r.result_quality),small(r.numeric?.eligible?'Eligible browser numeric instant':r.numeric?.reason??'Not evaluated'),
+        r.exactNumeric?small(r.exactNumeric.eligible?'Eligible for exact decimal sample arithmetic':r.exactNumeric.reason):null),
       node('div',{},code(r.source_page_sha256),node('br'),code(r.source_pointer),node('div',{class:'actions'},
         button('Inspect original row',()=>detail('Complete original observation',r)),originalSourceButton(v.editionId,r.source_page_sha256),
+        r.componentSource?button(r.component_pointer_state==='present'?'Cite selected original value':'Cite original component finding',()=>guard(async()=>{
+          state.citationDraft=[{editionId:v.editionId,sha256:r.componentSource.sha256,jsonPointer:r.componentSource.jsonPointer}];
+          state.annotationEdit=null;await showTab('annotations');
+        }),{disabled:!currentHead()}):null,
         button('Cite this occurrence',()=>guard(async()=>{
           state.citationDraft=[{editionId:v.editionId,sha256:r.source_page_sha256,jsonPointer:r.source_pointer,occurrenceId:r.occurrence_id}];
           state.annotationEdit=null;await showTab('annotations');
@@ -498,7 +608,9 @@ async function viewerPane(){
   const chosenMode=v.selection.view==='numeric'?'numeric':'map',
     mode=select('nativeMode',[{value:'map',label:'Original native map'},{value:'numeric',label:'Original native numeric diagram'}],chosenMode),
     metadataHost=node('div',{}),frameHost=node('div',{}),controls=node('div',{class:'actions'}),
-    section=node('section',{},...pageHeading('Original Helgoland viewer','The installed original static viewer reads this exact saved edition through the retained SensorThings endpoint.'),
+    section=node('section',{},...pageHeading('Original Helgoland viewer',v.selection.componentSelections?
+      'The original viewer reads explicitly derived component entities from this saved selection. Original vectors, units, declarations, IDs and citations remain alongside each derived entity.':
+      'The installed original static viewer reads this exact saved edition through the retained SensorThings endpoint.'),
       kv([['Saved analysis version',code(v.id)],['Original viewer edition',code(v.selection.viewerId)],['Saved source period',v.selection.period??'All retained source times']]),
       field('Native view mode',mode),metadataHost,controls,frameHost);
   let metadata=null,readGeneration=0;
@@ -620,7 +732,9 @@ async function openComparison(id){
       node('div',{class:'pagination'},small('Changes '+(c.changes.length?offset+1:0)+'–'+Math.min(c.changes.length,offset+50)+' of '+c.changes.length),
         node('div',{class:'actions'},button('Previous changes',()=>{offset=Math.max(0,offset-50);render();},{disabled:offset===0}),
           button('Next changes',()=>{offset+=50;render();},{disabled:offset+50>=c.changes.length}))),
-      details('Unkeyed original occurrences',c.unkeyed));
+      details('Unkeyed original occurrences',c.unkeyed),
+      c.analysisKind==='explicit-multidatastream-components'?details('Original positional metadata differences',c.componentMetadata):null,
+      c.analysisKind==='explicit-multidatastream-components'?details('Parent-vector context changed while the selected component was unchanged',c.parentContextChanges):null);
   };render();detail('Retained edition comparison',content);
 }
 async function inbox(){
@@ -740,7 +854,13 @@ function pythonSourcePane(){
     const prepareForm=formShell('Prepare the complete analysis source',async(form,revision)=>{
       const receipt=usable.find(x=>x.id===value(form,'pythonExportId'));
       if(!receipt)throw new Error('Select a complete original export of this exact source edition.');
-      await beginAction('analysis.python.prepare',{editionId,exportId:receipt.id,actor:requireActor()},revision);
+      const analysisVersionId=value(form,'pythonComponentVersionId');
+      if(analysisVersionId){
+        const selected=state.version;
+        if(selected?.id!==analysisVersionId||selected.editionId!==editionId||!Array.isArray(selected.selection?.componentSelections))
+          throw new Error('Open the exact saved component analysis version and review its source edition before preparing this selection.');
+        await beginAction('analysis.python.components.prepare',{editionId,exportId:receipt.id,analysisVersionId,actor:requireActor()},revision);
+      }else await beginAction('analysis.python.prepare',{editionId,exportId:receipt.id,actor:requireActor()},revision);
     }),choice=select('pythonExportId',[{value:'',label:'Select a retained original export'},...usable.map(x=>({
       value:x.id,label:x.createdAt+' · '+short(x.id,22)+' · '+humanBytes(x.file.bytes)
     }))],'',{required:true}),identityArea=node('div',{});
@@ -751,7 +871,16 @@ function pythonSourcePane(){
         p('Choose the completed source-export result; its ID is separate from the action that created it.','small muted'));
     };
     choice.addEventListener('change',showIdentity);showIdentity();
+    const currentComponent=state.schema.actions?.['analysis.python.components.prepare']&&state.version?.editionId===editionId&&
+      Array.isArray(state.version?.selection?.componentSelections)?state.version:null,
+      analysisChoice=select('pythonComponentVersionId',[
+        {value:'',label:'Complete source tables without a selected component analysis'},
+        ...(currentComponent?[{value:currentComponent.id,label:'Opened saved component version · '+short(currentComponent.id,22)}]:[])
+      ],'');
     prepareForm.append(field('Original source export',choice),identityArea,
+      field('Explicit analysis selection',analysisChoice),
+      currentComponent?p('The optional component handover retains this exact saved version, '+count(currentComponent.selection.componentSelections.length)+' selected positions, their ordered metadata and both exact-number and browser classifications. All complete original source tables remain included.','small muted'):
+        p('To include components, first open a saved component analysis version of this edition. No position, property, unit or interpretation is selected automatically.','small muted'),
       p('This prepares source files. The Python application records its actual import, calculations, reports, workbooks and receiving results when that programme runs.','small muted'),
       node('div',{class:'actions'},submitButton('Prepare Python analysis handover')));
     if(!usable.length)prepareForm.querySelector('button[type=submit]').dataset.readonly='true';
@@ -760,8 +889,8 @@ function pythonSourcePane(){
         code(x.id),x.createdAt,humanBytes(x.file.bytes),readFileButtons({kind:'transfer',id:x.id})
       ])):p('No complete original source export is recorded for this edition.','empty'),
       node('h4',{},'Prepared analysis handovers'),
-      records.length?table(['Preparation','Recorded','Provider traversal','Source archive','Complete handover'],records.map(x=>[
-        code(x.id),x.createdAt,x.sourceComplete?'Selected query traversed':'Incomplete traversal retained',
+      records.length?table(['Preparation','Recorded','Analysis selection','Provider traversal','Source archive','Complete handover'],records.map(x=>[
+        code(x.id),x.createdAt,x.componentAnalysis?code(x.componentAnalysis.analysisVersionId):'Complete source tables',x.sourceComplete?'Selected query traversed':'Incomplete traversal retained',
         (Number.isSafeInteger(x.sourceArchive?.bytes)?humanBytes(x.sourceArchive.bytes):'Not supplied'),button('Inspect source and files',()=>guard(()=>openPythonSource(x.id)))
       ])):p('No Python source handover has been prepared for this edition.','empty'));
   };
@@ -789,6 +918,8 @@ async function openPythonSource(id){
     kv([['Preparation',code(record.id)],['Original source edition',code(record.editionId)],['Original source export',code(record.exportId)],
       ['Source document',code(record.documentId)],['Provider traversal',record.sourceComplete?'Selected query traversed':'Incomplete traversal retained'],
       ['Complete source archive',humanBytes(record.sourceArchive.bytes)],['Archive SHA256',code(record.sourceArchive.sha256)]]),
+    ...(record.componentAnalysis?[p('This handover includes an explicitly selected immutable component analysis. Python receiving verifies every selected value and pointer against its retained original parent vector before import.'),
+      details('Saved component version and complete binding identity',record.componentAnalysis)]:[]),
     table(['Complete table','Rows','Columns'],Object.entries(record.tables).map(([name,t])=>[name,count(t.rows),count(t.columns.length)])),
     p('Receive the whole selection with the maintained file client for the Python programme. Its download manifest preserves the original source paths even when local filenames are numbered. Individual files below retain their exact bytes and selectors.','flow-note'),
     details('Complete-file receiving selection',selection),

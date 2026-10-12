@@ -1,7 +1,8 @@
 # OpenLineage operations workspace
 
 A private, editable operations workspace for original OpenLineage events.
-Import a producer's JSON or NDJSON, inspect its jobs, runs and datasets, follow
+Receive a producer's HTTP events or import original JSON, NDJSON or gzip files,
+inspect their jobs, runs and datasets, follow
 the reported dependencies, save an edition, record an operator decision and
 attach a complete result to the event context that explains it. Deliver that
 whole workspace, including the original files and editable application, to
@@ -60,18 +61,35 @@ not fetch it. Source downloads return the exact retained bytes.
 
 ### Producer HTTP transport
 
-A producer can send an original event or event batch to:
+Native Python, Java, Airflow and other OpenLineage HTTP clients can send their
+original bodies to:
 
     POST http://127.0.0.1:8767/api/v1/lineage
 
-The body is the original JSON/NDJSON bytes. The optional Idempotency-Key header
-sets the import operation ID. If-Match can select the current numeric revision.
-When omitted, the intake uses a content-derived operation ID and the revision
-read immediately before the mutation. A concurrent import may return 409 or
-423; retry the same original request after reading the current outcome.
+The receiver accepts uncompressed or gzip JSON/NDJSON. It retains compressed
+wire bytes unchanged and verifies their decoded byte identity. Native producer
+arrivals use the original workspace writer through a serial append queue.
+A response acknowledges the source only after its original operation is saved.
 
-The same endpoint is available at /api/sources?name=events.ndjson&source=URL.
-When a token is configured, send Authorization: Bearer followed by that token.
+The optional Idempotency-Key header selects the original operation ID. By
+default it is derived from the unchanged wire body. Repeat the exact body,
+name, reference and encoding after a lost response. An explicitly supplied
+If-Match retains its numeric revision check. Queue or writer backpressure
+returns 503 with Retry-After: 1.
+
+Use the browser's **Producer intake** control to inspect the actual endpoint,
+current queue and server counters and download complete Python or Java client
+settings. The CLI's producer-config command creates the same private
+configuration from the actual connection.json. A separate producer token can
+admit events while the operator token controls the whole workspace.
+
+[PRODUCERS.md](PRODUCERS.md) covers complete client setup, authentication, gzip,
+source inspection, retries, capacity and the native producer receiving journey.
+
+The explicit operator import route, /api/sources?name=events.ndjson&source=URL,
+keeps its normal revision checks. It also accepts Content-Encoding: gzip.
+To import a compressed original directly through the CLI, add
+--content-encoding gzip to the import command and retain the .gz filename.
 
 ## Operate the project
 
@@ -217,8 +235,9 @@ writer.lock. Read that original record and use:
 The recovery command checks that the exact original lock remains and that its
 process no longer exists.
 
-The default HTTP body limit is 64 MiB. Larger retained sources can be imported
-through the direct CLI, subject to available memory and disk. This first
+The default HTTP body limit is 64 MiB. The native producer queue has separate
+wire and decoded capacity settings described in PRODUCERS.md. Direct source
+imports have a 256 MiB wire/decoded ceiling, subject to available memory and disk. This first
 implementation keeps the saved event index in memory for projection and writes
 its JSON state atomically. Use a workspace per operational scope when the full
 event history outgrows the available host.

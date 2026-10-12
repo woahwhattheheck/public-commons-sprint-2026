@@ -1,3 +1,4 @@
+import { concentrationUnit } from './concentration-units.mjs';
 /**
  * Scientific review of retained WQX 3.0 sample results.
  * Inputs are the original samples.mjs joinCapture() model.
@@ -275,6 +276,7 @@ function measurementScale(dimensions) {
   if (characteristic==='ph' || unit==='ph') return {kind:'logarithmic',reason:'pH differences are expressed on the reported logarithmic scale.'};
   if (['degc','degf','°c','°f','celsius','fahrenheit','degreescelsius','degreesfahrenheit'].includes(unit))
     return {kind:'interval',reason:'Temperature on an offset scale is compared by an absolute difference.'};
+  if (concentrationUnit(dimensions.unit)) return {kind:'ratio',reason:null};
   const ratioUnits=new Set(['mg/l','ug/l','µg/l','μg/l','ng/l','pg/l','g/l','mg/kg','ug/kg','µg/kg','μg/kg','ng/kg','g/kg',
     'mol/l','mmol/l','umol/l','µmol/l','μmol/l','%','cfu/100ml','mpn/100ml','cells/ml','1/ml',
     'm3/s','m^3/s','ft3/s','ft^3/s','cfs','k','kelvin']);
@@ -431,4 +433,16 @@ export function renderWaterQualityReport(report,{title='Water quality review',no
   for (const item of report.sourceNotes) parts.push('<li>'+html(item)+'</li>');
   parts.push('</ul><p>'+report.sources.map(source=>sourceLink(source.url,source.title)).join(' · ')+'</p></body></html>');
   return parts.join('\n');
+}
+
+/** Original result semantics used by capture comparison, exposed for source-bound derived reviews. */
+export function waterQualityResultSourceParts(row) {
+  if (!row || typeof row !== 'object' || Array.isArray(row)) throw new TypeError('Expected an original WQX result.');
+  return semantic(row);
+}
+/** Compare existing scientific summaries without another numeric implementation. */
+export function compareWaterQualityReports(current, previous) {
+  for (const report of [current, previous]) if (report?.schema !== 'wqx-water-quality-analysis/v1' || !Array.isArray(report.groups))
+    throw new TypeError('Expected two original water-quality analysis summaries.');
+  return periodComparisons(current, previous);
 }

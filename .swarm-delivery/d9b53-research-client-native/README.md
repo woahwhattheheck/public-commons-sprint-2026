@@ -92,3 +92,22 @@ The owner then calls `hosted-artifact-retention.py` on the sealed archive. The o
 
 
 The maintained keeper also accepts a complete observed normal host-create receipt for the same sealed path. Its `reconcile` command applies the original metadata handler without another transfer/finalization, preserves an already started prepared file identity, and returns only after the same artifact's local metadata is applied. See the complete receipt-reconciliation contract in `HOSTED_RETENTION.md`.
+
+
+## Following source-bundle receiving
+
+The completed native case can continue through the maintained source-bundle receiver using `receive-reviewed-source-bundle.mjs` and `hosted-ottawa-receiving.py`. The complete current 19-module engine is retained separately in `ottawa-runtime-source.json`, with each original path and Git/source identity, so this following stage preserves the frozen client journey and receives the reviewed study through the current atomic API.
+
+The receiving operation preserves the original dossier, question, revision history, selections, findings and review models. It receives the original source groups and full findings together, exports every original study file with readable reports, and independently reopens the complete portable history. The producing owner retains the actual application outcome and one sealed archive through the existing artifact keeper. It can also restore the preceding operation's exact completed saved return into the original private case paths before continuing this stage.
+
+See [OTTAWA_RECEIVING.md](OTTAWA_RECEIVING.md) for the complete reviewed-input contract, current source pins, saved-case restoration, selected output and same-file continuation. The private case input and original source-bundle data remain with their existing receiving operation.
+
+
+## Continue the original case on its receiving host
+The complete [native host-placement guide](HOST_PLACEMENT.md), [linked continuation producer](hosted-linked-native-continuation.py) and [serial file-input launcher](run-host-receiving.py) run the original case on the receiving host's actual filesystem. The launcher verifies its complete private receiving packet and both original Library files, selects the actual Node, case directory, original native-control root and upload helper, then runs Research and Ottawa consecutively.
+
+The checkpoint's original input and setup stay byte-exact. A sibling host input changes only runtime paths and the Node/control selection; both the original launcher and its unchanged run helper consume that same selected directory. The host binding, original historical paths, current journal and measured resource selection are retained in the full return. The original controller performs actual journal writes and admission, with its existing exact-failure recovery.
+
+The [following Ottawa producer](hosted-ottawa-receiving.py) accepts the full local bundle, checks the explicit runtime-only mapping from its original input, uses the preceding native case binding, and receives the reviewed sources into the same dossier. Each producer retains its actual application result and sealed archive through the merged artifact keeper.
+
+This remains `SCF-RESEARCH-CLIENT-NCC-D9B53-20261012-CONTINUATION-01`, its frozen 162-file product cohort, the same master29 and all six original Crossref captures. The complete private source/input packet belongs to the original receiving operation; this directory provides its reusable producer source.

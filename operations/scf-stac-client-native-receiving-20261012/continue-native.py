@@ -64,6 +64,24 @@ def main():
       sync_directory(path.parent)
      finally:
       if os.path.exists(temporary): os.unlink(temporary)
+    def restore_private_files(root,files):
+     # Recursive mkdir uses default permissions for intermediate parents.
+     directories={root}
+     for name in files:
+      relative=pathlib.PurePosixPath(name)
+      if relative.is_absolute() or '..' in relative.parts:
+       raise RuntimeError('Restored workspace path escapes its original receiving root')
+      current=root
+      for part in relative.parts[:-1]:
+       current=current/part;directories.add(current)
+     for directory in sorted(directories,key=lambda value:(len(value.parts),str(value))):
+      try: directory.mkdir(mode=0o700)
+      except FileExistsError: pass
+      info=directory.lstat()
+      if ((info.st_mode&0o170000)!=0o040000 or info.st_uid!=os.geteuid()
+          or info.st_mode&0o077):
+       raise RuntimeError('Original receiving directory is not private: '+str(directory))
+     for name,raw in files.items(): exact_file(root/name,raw)
     def restore_completed_archive(path,expected_sha256):
      if not isinstance(expected_sha256,str) or len(expected_sha256)!=64 or any(c not in '0123456789abcdef' for c in expected_sha256):
       raise RuntimeError('Select the exact retained result SHA256')
@@ -260,7 +278,7 @@ def main():
      raise SystemExit(75)
     if restored_receiving:
      receiving_root=pathlib.Path(materialized['bindings']['run'])
-     for name,raw in restored_receiving.items(): exact_file(receiving_root/name,raw)
+     restore_private_files(receiving_root,restored_receiving)
      emit('original-receiving-restored',{'files':len(restored_receiving),'bytes':sum(len(raw) for raw in restored_receiving.values())})
     args=placement.native_args(plans,operation,native=native)
     new_record=native.run_path(args.operation_id,args.records_root)
@@ -325,13 +343,18 @@ def main():
     private=pathlib.Path(materialized['directory'])/'SCF_STAC_Node_Receiving_20261012.zip'
     private.write_bytes(body)
     preserved=pathlib.Path('/dev/shm/c79f-stac-receiving-preserved-20261012')
+    copied_archive=None
     try:
      preserved.mkdir(mode=0o700,exist_ok=True)
      target=preserved/('SCF_STAC_Node_Receiving_'+digest[:12]+'.zip')
      with target.open('xb') as stream:
+      copied_archive=target
       stream.write(body);stream.flush();os.fsync(stream.fileno())
      emit('artifact-preserved',{'path':str(target),'bytes':len(body),'sha256':digest,'status':progress.get('status')})
     except OSError as error:
+     if copied_archive is not None:
+      try: copied_archive.unlink(missing_ok=True)
+      except OSError as cleanup_error: emit('partial-preservation-cleanup',{'path':str(copied_archive),'error':str(cleanup_error)})
      emit('artifact-retained-in-originating-namespace',{'path':str(private),'bytes':len(body),'sha256':digest,'error':str(error),'originating_pid':os.getpid()})
      target=private
     helper=pathlib.Path('/workspace/scratch/c79fd06aedf2/cocart-commissioning/library-final-20261012')

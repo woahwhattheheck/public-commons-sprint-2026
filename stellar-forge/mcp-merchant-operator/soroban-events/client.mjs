@@ -2,7 +2,7 @@
 import {join,resolve} from 'node:path';
 import {openMerchantFileClient,createRetainedDownload} from '../retained-download.mjs';
 import {sorobanEventsDefinitions,validateSorobanEventsArguments} from '../catalog/soroban-events.mjs';
-import {TOOL_PREFIX,MANIFEST_NAME,MAX_FILE_BYTES,MAX_MANIFEST_BYTES,MAX_JSON_BYTES,ALIAS,SHA,
+import {TOOL_PREFIX,MANIFEST_NAME,WATCH_MANIFEST_SCHEMA,MAX_FILE_BYTES,MAX_MANIFEST_BYTES,MAX_JSON_BYTES,ALIAS,SHA,
   need,text,checked,digest,decode,parseSorobanEventsManifest} from './contracts.mjs';
 export {sorobanEventsDefinitions} from '../catalog/soroban-events.mjs';
 const camel=name=>name.replace(/_([a-z])/g,(_,letter)=>letter.toUpperCase());
@@ -56,7 +56,8 @@ const transfers=createRetainedDownload({
   clientName:'starforge-soroban-events-file-receiver',nestedFiles:true,
   maximumManifestBytes:MAX_MANIFEST_BYTES,maximumCheckpointBytes:128*1024*1024,
   validateExportId:value=>checked(value,SHA,'export ID'),
-  describe:manifest=>({editionId:manifest.editionId,sourceSchema:manifest.schema})
+  describe:manifest=>({...(manifest.schema===WATCH_MANIFEST_SCHEMA?{watchId:manifest.watchId}:{editionId:manifest.editionId}),
+    sourceSchema:manifest.schema})
 });
 export async function downloadSorobanEventsExport(options={}){
   const {selected,client}=await bound(options);
@@ -82,7 +83,8 @@ export async function reopenSorobanEventsExport(options={}){
     await transfers.loadContext(context,bytes,selected.exportId);
     for(const file of manifest.files)await transfers.verifiedFile(join(context.root,file.name),file,options.signal);
     return {schema:'stellar-forge.soroban-events.file-receipt.v1',state:'REOPENED',
-      workspace:selected.workspace,exportId:selected.exportId,manifestSha256,editionId:manifest.editionId,
+      workspace:selected.workspace,exportId:selected.exportId,manifestSha256,sourceSchema:manifest.schema,
+      ...(manifest.schema===WATCH_MANIFEST_SCHEMA?{watchId:manifest.watchId}:{editionId:manifest.editionId}),
       directory:context.root,files:manifest.files.length,bytes:manifest.bytes};
   });
 }
@@ -131,9 +133,18 @@ export async function receiveSorobanEventsExport(options={}){
     client,exportId:selected.exportId,signal:options.signal});
   need(selected.expectedManifestSha256===undefined||selected.expectedManifestSha256===inspected.manifestSha256,
     'SOROBAN_EVENTS_MANIFEST_CHANGED');
-  return client.call(TOOL_PREFIX+'receive',{exportId:selected.exportId,receiver:options.receiver,
+  const isWatch=inspected.manifest.schema===WATCH_MANIFEST_SCHEMA;
+  const input={exportId:selected.exportId,receiver:options.receiver,
     requestId:options.requestId,expectedRevision:options.expectedRevision,
-    expectedManifestSha256:inspected.manifestSha256},options.signal?{requestSignal:options.signal}:undefined);
+    expectedManifestSha256:inspected.manifestSha256};
+  for(const key of ['connectionAlias','recoveryConnectionAlias','publication']){
+    if(options[key]!==undefined){
+      need(isWatch,'SOROBAN_EVENTS_EXPORT_KIND','Watch destination aliases require an original watch export.');
+      input[key]=options[key];
+    }
+  }
+  return client.call(TOOL_PREFIX+(isWatch?'watch_receive':'receive'),input,
+    options.signal?{requestSignal:options.signal}:undefined);
 }
 
 /** Configure the maintained host without opening a capture or remote connection. */

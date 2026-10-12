@@ -1,4 +1,5 @@
 import {commercialTools} from './commercial.mjs';
+import {serviceAdjustmentTools} from './service-adjustments.mjs';
 import {casePackageTools} from './case-packages.mjs';
 // MIT. Original tool metadata; provider runtimes load only when selected.
 import { CASE_STATUSES } from '../../../stellar/scf-starforge-20261009/sf74-merchant-support-console/case-statuses.mjs';
@@ -39,6 +40,7 @@ function supportTools(tool) {
   const read = { readOnly: true, idempotent: true };
   return [
     ...serviceTools(tool),
+    ...serviceAdjustmentTools(tool),
     ...casePackageTools(tool),
     ...commercialTools(tool),
     tool('merchant_support_incident_sources', 'Inspect the original support connection mode, configured incident source IDs/labels, bound source-file digest and host default. Reads no arbitrary path and starts no watcher.', {}, [], read),

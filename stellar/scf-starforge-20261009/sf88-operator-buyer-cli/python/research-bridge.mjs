@@ -4,9 +4,11 @@ import {fileURLToPath} from 'node:url';
 import {readResearchHostFile} from '../research-dossiers/workspace-files.mjs';
 import {ResearchWorkspaceClient} from '../research-dossiers/workspace-client.mjs';
 import {need,object,parseJson} from '../node/store.mjs';
+import {isResearchCustomerCall,runResearchCustomerCall} from './research-customer-delivery.mjs';
 import {createResearchDocumentSource} from './research-document-source.mjs';
 import {citationReviewInput,citationDigest} from '../research-dossiers/citation-updates.mjs';
 import {exportCitationFile,receiveCitationFile} from './research-citation-delivery.mjs';
+import {readResearchExtraction,reviewResearchExtraction} from '../research-dossiers/research-extraction-transport.mjs';
 import {eligibilityConsumerInput,readEligibility,submitEligibility,exportEligibility} from '../research-dossiers/eligibility-consumer.mjs';
 import {exportEligibilityDeliveryFile,receiveEligibilityFile} from './research-eligibility-delivery.mjs';
 
@@ -43,6 +45,13 @@ async function dispatch(client,action,input,signal){
     case 'citation-updates':return client.citationUpdates(dossierId,options);
     case 'citation-review':return client.reviewCitationUpdate(dossierId,body);
     case 'citation-export':return exportCitationFile(client,input);
+    case 'extraction':return readResearchExtraction(client,dossierId,options,{signal});
+    case 'extraction-source-values':return readResearchExtraction(client,dossierId,options,{sourceValues:true,signal});
+    case 'extraction-publications':return readResearchExtraction(client,dossierId,options,{publication:true,signal});
+    case 'extraction-review':return reviewResearchExtraction(client,dossierId,body,{signal});
+    case 'extraction-publication-review':return reviewResearchExtraction(client,dossierId,body,{publication:true,signal});
+    case 'extraction-export':return client.exportExtraction(dossierId,requestOptions);
+    case 'extraction-publication-export':return client.exportExtractionPublication(dossierId,requestOptions);
     case 'export-dossier':return client.exportDossier(dossierId,requestOptions);
     case 'export-edition':return client.exportRetainedEdition(dossierId,input.editionId,requestOptions);
     case 'export-comparison':return client.exportComparison(dossierId,requestOptions);
@@ -71,9 +80,22 @@ async function dispatch(client,action,input,signal){
     default:need(false,'RESEARCH_PYTHON_ACTION_INVALID');
   }
 }
+function originalResearchClient(request,{signal}={}){
+  need(typeof request.connectionFile==='string','RESEARCH_CONNECTION_FILE_REQUIRED');
+  need(request.expectedWorkspaceId===undefined||/^research_[a-f0-9]{64}$/.test(request.expectedWorkspaceId),
+    'RESEARCH_WORKSPACE_ID_INVALID');
+  return new ResearchWorkspaceClient({connectionFile:resolve(request.connectionFile),
+    ...(request.expectedWorkspaceId?{expectedWorkspaceId:request.expectedWorkspaceId}:{})},
+    {timeoutMs:request.timeoutMs??120000,...(signal?{
+      fetch:(url,options={})=>globalThis.fetch(url,{...options,
+        signal:AbortSignal.any([signal,...(options.signal?[options.signal]:[])])})}:{})});
+}
+
 export async function runResearchCall(request,{signal}={}){
   need(object(request)&&request.schema===SCHEMA&&typeof request.action==='string'&&object(request.input),
     'RESEARCH_PYTHON_REQUEST_INVALID');
+  if(isResearchCustomerCall(request.action))return runResearchCustomerCall(request,{signal,
+    openClient:options=>originalResearchClient({...request,...options},{signal})});
   if(request.action==='eligibility-input')
     return {mode:MODE,ok:true,workspaceId:null,result:eligibilityConsumerInput(request.input.request)};
   if(request.action==='eligibility-receive')
@@ -89,12 +111,7 @@ export async function runResearchCall(request,{signal}={}){
     return {mode:MODE,ok:true,workspaceId:null,
       result:await createResearchDocumentSource(request.input)};
   }
-  need(typeof request.connectionFile==='string','RESEARCH_CONNECTION_FILE_REQUIRED');
-  need(request.expectedWorkspaceId===undefined||/^research_[a-f0-9]{64}$/.test(request.expectedWorkspaceId),
-    'RESEARCH_WORKSPACE_ID_INVALID');
-  const client=new ResearchWorkspaceClient({connectionFile:resolve(request.connectionFile),
-    ...(request.expectedWorkspaceId?{expectedWorkspaceId:request.expectedWorkspaceId}:{})},
-    {timeoutMs:request.timeoutMs??120000});
+  const client=originalResearchClient(request);
   let result;
   try{
     // Bind the original server/workspace before any selected write. Connection

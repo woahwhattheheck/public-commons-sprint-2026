@@ -1,4 +1,5 @@
 import { mountFredBriefing } from './briefing.js';
+import { mountFredRecurring } from './recurring.js';
 // MIT. Original economic project controls; source text is rendered as text.
 const $ = id => document.getElementById(id);
 let token = location.hash.slice(1);
@@ -62,6 +63,12 @@ const briefing = mountFredBriefing({ api, download, event, table, select, getSta
   getCaptureId: () => $('capture-select').value, chooseCapture: async captureId => {
     $('capture-select').value = captureId; rowOffset = 0; select('row-series', [['','All original series']]); await showRows();
   }, message });
+const recurring = mountFredRecurring({ api, download, event, table, select, getState: () => state,
+  refresh, message, openBriefing: async reviewId => {
+    document.querySelector('[data-tab="editions"]').click();
+    $('briefing-saved').value = reviewId; $('briefing-open').click();
+    $('briefing-report-panel').scrollIntoView({ block: 'start' });
+  } });
 const labelCapture = item => (item.sourceMode === 'PUBLIC_TABLE' ? item.retrievalWindow ? 'Collected through ' : 'Captured ' : 'Vintage ') + item.selection.asOf + ' · ' + item.selection.series.join(', ') + ' · ' + item.rowCount + ' rows · ' + item.id.slice(0, 10);
 function renderState(value) {
   state = value.project; $('project-title').textContent = state.title + ' · revision ' + state.revision;
@@ -97,6 +104,7 @@ function renderState(value) {
   $('buy').disabled = !value.buyerConfigured; $('recover').disabled = !value.buyerConfigured; $('download-customer').disabled = !value.buyerConfigured;
   table('history', [...state.operations].reverse(), ['id','kind','completedAt','result']);
   briefing.onState();
+  recurring.onState();
 }
 async function refresh() { renderState(await api('/api/state')); }
 async function action(actionName, payload = {}) {

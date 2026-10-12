@@ -7,6 +7,7 @@ import {writeBytes,privateDirectory} from '../sf88-operator-buyer-cli/node/store
 import {openCaseStore} from './case-store.mjs';
 import {commissioningCli} from './commissioning-cli.mjs';
 import {commercialReceivingCli} from './commercial/receiving-cli.mjs';
+import {commercialTariffCli} from './commercial/tariff-cli.mjs';
 import {openCaseCommercial,commercialWorkspaceId} from './case-commercial.mjs';
 import {captureCommercialPricingSource,jsonBytes,sha256} from './commercial-pricing.mjs';
 import {emptyCommercialDraft} from './commercial-quote.mjs';
@@ -15,7 +16,7 @@ import {MAX_MATERIAL_BYTES} from './commissioning.mjs';
 const stringNames=['cases-dir','case','revision','request-id','actor','draft','review-sha','parent','source',
   'quote','quote-sha','status','observed-at','reference','note','before','after','kind','out','export-id',
   'pricing-config','pricing-directory','pricing-snapshot','pricing-history','plan-id','scenario-id',
-  'source-dir','generated-at','python','from','sha256'];
+  'source-dir','generated-at','python','from','sha256','acceptance','resolutions'];
 const required=(values,name)=>{if(typeof values[name]!=='string'||!values[name])throw new Error('Supply --'+name);return values[name];};
 function absolute(value){if(!isAbsolute(value)||resolve(value)!==value)throw new Error('Use an absolute normalized private path.');return value;}
 async function originalJson(path){return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(await readPrivateFile(absolute(path),MAX_MATERIAL_BYTES)));}
@@ -26,21 +27,26 @@ async function outputFile(path,bytes) {
   return {path,bytes:bytes.length,sha256:sha256(bytes)};
 }
 export async function commercialCli(argv=process.argv.slice(2),{environment=process.env,signal}={}) {
+  if(argv[0]==='tariffs')return commercialTariffCli(argv.slice(1));
   if(argv[0]==='receiving')return commercialReceivingCli(argv.slice(1),{environment,signal});
   const {values,positionals}=parseArgs({args:argv,allowPositionals:true,strict:true,
     options:{...Object.fromEntries(stringNames.map(n=>[n,{type:'string'}])),help:{type:'boolean'}}});
   if(values.help){if(positionals.length||Object.keys(values).length!==1)throw new Error('Use --help on its own.');return {
     command:'merchant-commercial',usage:'starforge merchant-commercial ACTION [options]',
-    actions:['template','source','read','preview','save-draft','publish','receive-pricing','receive','compare','quote','handoff','export','inspect-package','receive-package','receiving'],
+    actions:['template','source','read','preview','save-draft','publish','receive-pricing','receive','preview-implementation','adopt-implementation','compare','quote','handoff','export','inspect-package','receive-package','receiving','tariffs'],
     source:'--pricing-config FILE --pricing-directory DIR (--pricing-snapshot FILE | --pricing-history FILE) --plan-id UUID [--scenario-id ID] --out FILE',
     case:'--cases-dir DIR --case UUID',
     mutation:'--revision SHA256 --request-id UUID --actor NAME',
     preview:'--draft FILE [--out FILE]',publish:'--draft FILE --review-sha SHA256 [--parent UUID]',
     receive:'--quote UUID --quote-sha SHA256 --status ACCEPTED|REVISION_REQUESTED|DECLINED --observed-at UTC --reference TEXT [--note TEXT]',
+    'preview-implementation':'--revision SHA256 --quote UUID --quote-sha SHA256 [--acceptance UUID] [--resolutions FILE] [--out FILE]',
+    'adopt-implementation':'--revision SHA256 --request-id UUID --actor NAME --quote UUID --quote-sha SHA256 --acceptance UUID --review-sha SHA256 [--resolutions FILE] [--note TEXT]',
+    resolutions:'A JSON object mapping conflict keys from preview-implementation to accepted or current. Use the identical map for adoption.',
     quote:'--quote UUID --quote-sha SHA256 --out FILE [--kind QUOTE|QUOTE_JSON]',
     export:'--revision SHA256 --out DIR [--export-id ID] [--source-dir DIR] [--generated-at UTC] [--python PATH] uses the original complete case/source exporter',
     'inspect-package':'--from DIR [--sha256 SHA256] [--python PATH]',
     'receive-package':'--from DIR --out DIR --cases-dir DIR --source-dir DIR --request-id UUID --actor NAME [--sha256 SHA256] [--python PATH]',
+    tariffs:'merchant-commercial tariffs --help opens the complete original tariff selection, quotation, backup and restored recipient workflow',
     receiving:'merchant-commercial receiving --help uses the complete original selected plan, workspace backup, case export and independent restore workflow',
     guide:'sf74-merchant-support-console/COMMERCIAL.md'};}
   if(positionals.length!==1)throw new Error('Select one merchant-commercial action.');
@@ -51,6 +57,8 @@ export async function commercialCli(argv=process.argv.slice(2),{environment=proc
     read:[...common,'revision'],preview:[...common,'revision','draft','out'],
     'save-draft':[...mutation,'draft'],publish:[...mutation,'draft','review-sha','parent'],
     'receive-pricing':[...mutation,'source'],receive:[...mutation,'quote','quote-sha','status','observed-at','reference','note'],
+    'preview-implementation':[...common,'revision','quote','quote-sha','acceptance','resolutions','out'],
+    'adopt-implementation':[...mutation,'quote','quote-sha','acceptance','review-sha','resolutions','note'],
     compare:[...common,'revision','before','after'],quote:[...common,'revision','quote','quote-sha','kind','out'],
     handoff:[...common,'revision','quote','quote-sha','out'],export:[...common,'revision','out','export-id','source-dir','generated-at','python'],
     'inspect-package':['from','sha256','python'],
@@ -83,6 +91,18 @@ export async function commercialCli(argv=process.argv.slice(2),{environment=proc
   if(action==='preview') {
     const result=await model.preview({...base,draft:await originalJson(required(values,'draft'))});
     return values.out?{...result,file:await outputFile(values.out,jsonBytes(result))}:result;
+  }
+  if(action==='preview-implementation'||action==='adopt-implementation') {
+    const selection={...base,quoteId:required(values,'quote'),quoteSha256:required(values,'quote-sha'),
+      ...(values.acceptance!==undefined?{acceptanceId:values.acceptance}:{}),
+      ...(values.resolutions!==undefined?{resolutions:await originalJson(required(values,'resolutions'))}:{})};
+    if(action==='preview-implementation') {
+      const result=await model.previewImplementation(selection);
+      return values.out?{...result,file:await outputFile(values.out,jsonBytes(result))}:result;
+    }
+    return model.adoptImplementation({...selection,acceptanceId:required(values,'acceptance'),
+      requestId:required(values,'request-id'),actor:required(values,'actor'),
+      reviewSha256:required(values,'review-sha'),...(values.note!==undefined?{note:values.note}:{})});
   }
   if(action==='compare')return model.compare({...base,beforeId:required(values,'before'),afterId:required(values,'after')});
   if(action==='quote'||action==='handoff') {

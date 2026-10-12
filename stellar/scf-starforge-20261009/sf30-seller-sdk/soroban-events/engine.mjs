@@ -1,7 +1,7 @@
 import { promises as fs, constants } from 'node:fs';
 import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import { hostname } from 'node:os';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import {
   NETWORK_PASSPHRASES, SorobanEventsError, requireValue, normalizedConnection,
   normalizePlan, createRPCTransport, rpcResult, requestParameters, validateEvent,
@@ -97,8 +97,8 @@ async function replaceJSON(directory, relative, value) {
     await fs.unlink(source).catch((error) => { if (error.code !== 'ENOENT') throw error; });
   }
 }
-async function acquireLock(directory) {
-  const filename = join(directory, 'writer.lock');
+async function acquireLock(directory, name = 'writer.lock') {
+  const filename = join(directory, relativeFile(name));
   const token = randomUUID();
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
@@ -126,6 +126,247 @@ async function acquireLock(directory) {
     }
   }
   throw new SorobanEventsError('WORKSPACE_BUSY', 'Workspace writer could not be acquired');
+}
+const isUUID = (value) => typeof value === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(value);
+function normalizeSelection(input) {
+  requireValue(input && typeof input === 'object' && !Array.isArray(input) &&
+    Object.keys(input).every((key) => ['startLedger', 'endLedger', 'maxLedgers'].includes(key)),
+    'INVALID_ARGUMENT', 'Capture selection accepts startLedger, endLedger and maxLedgers');
+  const startLedger = input.startLedger ?? null, endLedger = input.endLedger ?? null;
+  if (startLedger !== null) integer(startLedger, 'selection.startLedger');
+  if (endLedger !== null) integer(endLedger, 'selection.endLedger', 2, 4294967296);
+  if (startLedger !== null && endLedger !== null) requireValue(endLedger > startLedger, 'INVALID_RANGE', 'Selected endLedger must follow startLedger');
+  return { startLedger, endLedger, maxLedgers: integer(input.maxLedgers ?? 5000, 'selection.maxLedgers', 1, 1000000) };
+}
+function validateCaptureSelection(capture) {
+  if (capture.selection != null) {
+    const selection = normalizeSelection(capture.selection);
+    requireValue(stableJSON(selection) === stableJSON(capture.selection), 'SOURCE_SELECTION_MISMATCH', 'Capture selection differs from its normalized original request');
+    if (capture.startLedger !== null) {
+      requireValue((selection.startLedger === null || selection.startLedger === capture.startLedger) &&
+        (selection.endLedger === null || capture.endLedger <= selection.endLedger) &&
+        capture.endLedger - capture.startLedger <= selection.maxLedgers,
+        'SOURCE_SELECTION_MISMATCH', 'Captured bounds differ from the retained selected ledger window');
+    }
+  }
+  if (capture.sourceOriginWorkspaceId !== undefined) requireValue(isUUID(capture.sourceOriginWorkspaceId), 'SOURCE_ORIGIN_MISMATCH', 'Logical source origin must be an original workspace UUID');
+}
+export const sorobanWorkspaceFiles = { privateDirectory, filePath, readFile, readJSON, writeNew, replaceJSON, acquireLock, relativeFile, sourceFileRange };
+const CAPTURE_EXPORT_SCHEMA = 'stellar-forge.soroban-events.capture-export.v1';
+function validateSavedPlan(plan) {
+  requireValue(isUUID(plan?.id) && Number.isSafeInteger(plan.version) && plan.version > 0,
+    'SOURCE_PLAN_MISMATCH', 'Saved plan identity or version is invalid');
+  normalizePlan(plan);
+  const original = clone(plan); delete original.sha256;
+  requireValue(digest(stableJSON(original)) === plan.sha256, 'SOURCE_PLAN_MISMATCH', 'The saved plan hash differs from its original fields');
+  return plan;
+}
+function captureContinuation(previous, incoming) {
+  for (const key of ['id','planId','planVersion','plan','connection','connectionAlias','selection','sourceOriginWorkspaceId','createdAt'])
+    requireValue(stableJSON(previous[key] ?? null) === stableJSON(incoming[key] ?? null),
+      'SOURCE_CONFLICT', 'The original capture selection or identity differs', { field: key });
+  if (previous.startLedger !== null && incoming.startLedger !== null)
+    requireValue(previous.startLedger === incoming.startLedger && previous.endLedger === incoming.endLedger,
+      'SOURCE_CONFLICT', 'The original frozen capture interval differs');
+  for (const key of ['pages','exchanges']) {
+    const common = Math.min(previous[key].length, incoming[key].length);
+    requireValue(stableJSON(previous[key].slice(0,common)) === stableJSON(incoming[key].slice(0,common)),
+      'SOURCE_CONFLICT', 'Original capture progression diverges', { field: key });
+  }
+  const attempts = Math.min(previous.attempts.length, incoming.attempts.length);
+  for (let index=0; index<attempts; index+=1) {
+    const left = previous.attempts[index], right = incoming.attempts[index];
+    for (const key of new Set([...Object.keys(left),...Object.keys(right)])) {
+      if (left[key] !== undefined && right[key] !== undefined)
+        requireValue(stableJSON(left[key]) === stableJSON(right[key]), 'SOURCE_CONFLICT', 'Original native attempt progression diverges', { attempt: index+1, field: key });
+    }
+  }
+  const progression = (capture) => [capture.status === 'COMPLETE' ? 1 : 0, capture.pages.length, capture.exchanges.length,
+    capture.attempts.length, capture.startLedger !== null ? 1 : 0,
+    capture.attempts.reduce((sum,attempt) => sum+Object.keys(attempt).length,0),
+    Date.parse(capture.updatedAt ?? capture.lastError?.at ?? capture.createdAt) || 0];
+  const a=progression(previous), b=progression(incoming);
+  for (let i=0;i<a.length;i+=1) if(a[i]!==b[i]) return b[i]>a[i] ? incoming : previous;
+  return previous;
+}
+function installPlan(state, original) {
+  validateSavedPlan(original);
+  let plan = own(state.plans, original.id) ? state.plans[original.id] : null;
+  if (!plan) {
+    plan = { id: original.id, name: original.name, currentVersion: original.version, versions: [clone(original)] };
+    state.plans[original.id] = plan;
+  } else {
+    const version = plan.versions.find((entry) => entry.version === original.version);
+    if (version) requireValue(stableJSON(version) === stableJSON(original), 'SOURCE_CONFLICT', 'The saved plan version has different original fields');
+    else { plan.versions.push(clone(original)); plan.versions.sort((a,b) => a.version-b.version); }
+  }
+  return plan;
+}
+async function readManifestFiles(directory, expectedManifestSha256, schema) {
+  requireValue(typeof directory === 'string' && isAbsolute(directory) && resolve(directory) === directory &&
+    await fs.realpath(directory) === directory, 'INVALID_DIRECTORY', 'Select the original source export directory');
+  const manifestBytes = await readFile(directory, 'manifest.json');
+  if (expectedManifestSha256 !== undefined) {
+    requireValue(typeof expectedManifestSha256 === 'string' && /^[a-f0-9]{64}$/.test(expectedManifestSha256), 'INVALID_ARGUMENT', 'expectedManifestSha256 must be a lowercase SHA-256');
+    requireValue(digest(manifestBytes) === expectedManifestSha256, 'SOURCE_MISMATCH', 'The original source manifest changed before receiving');
+  }
+  const manifest = JSON.parse(manifestBytes), files = new Map();
+  requireValue(manifest.schema === schema && /^[a-f0-9]{64}$/.test(manifest.exportId) &&
+    Array.isArray(manifest.files) && manifest.files.length > 0 && manifest.files.length <= 100000 &&
+    manifest.fileCount === manifest.files.length, 'SOURCE_MANIFEST', 'Unsupported or incomplete original source manifest');
+  for (const descriptor of manifest.files) {
+    relativeFile(descriptor.path);
+    requireValue(descriptor.path !== 'manifest.json' && !files.has(descriptor.path) &&
+      /^[a-f0-9]{64}$/.test(descriptor.sha256) && Number.isSafeInteger(descriptor.bytes) && descriptor.bytes >= 0,
+      'SOURCE_MANIFEST', 'Source manifest contains an invalid or repeated native file');
+    const bytes = await readFile(directory, descriptor.path);
+    requireValue(bytes.length === descriptor.bytes && digest(bytes) === descriptor.sha256,
+      'SOURCE_MISMATCH', 'Received native file differs from its manifest', { path: descriptor.path });
+    files.set(descriptor.path, { descriptor, bytes });
+  }
+  requireValue(Number.isSafeInteger(manifest.bytes) && manifest.bytes === [...files.values()].reduce((sum, file) => sum + file.descriptor.bytes, 0),
+    'SOURCE_MANIFEST', 'Source manifest byte total differs from its native files');
+  return { manifest, manifestBytes, files };
+}
+function validateAttemptSources(capture, files) {
+  requireValue(Array.isArray(capture.attempts),'SOURCE_SCHEMA','Capture must retain its original native attempts');
+  const attempts=new Map();
+  for(let index=0;index<capture.attempts.length;index+=1) {
+    const attempt=capture.attempts[index],connection=attempt.connection??capture.connection;
+    requireValue(attempt.id===index+1&&typeof attempt.requestId==='string'&&
+      connection.network===capture.connection.network&&
+      digest(stableJSON({network:connection.network,rpcOrigin:connection.rpcOrigin}))===connection.id,
+      'SOURCE_NETWORK','Retained native attempt connection differs from its original network or identity');
+    attempts.set(attempt.id,attempt);
+  }
+  for(const page of capture.pages) {
+    const match=/-attempt-([0-9]+)\.json$/.exec(page.path),attempt=match?attempts.get(Number(match[1])):null;
+    requireValue(attempt,'SOURCE_NETWORK','Original event page has no retained native connection attempt');
+    const prefix='captures/'+capture.id+'/exchanges/attempt-'+attempt.id;
+    const networkFile=files.get(prefix+'-network.json'),healthFile=files.get(prefix+'-health.json');
+    requireValue(networkFile&&healthFile,'SOURCE_NETWORK','Original native attempt lacks its retained network or health exchange');
+    requireValue(rpcResult(JSON.parse(networkFile.bytes)).passphrase===NETWORK_PASSPHRASES[capture.connection.network],
+      'SOURCE_NETWORK','Original native attempt reports a different network passphrase');
+    const health=rpcResult(JSON.parse(healthFile.bytes));
+    requireValue(health.status==='healthy'&&health.oldestLedger===attempt.oldestLedger&&health.latestLedger===attempt.latestLedger,
+      'SOURCE_NETWORK','Original native attempt health differs from its retained ledger observations');
+  }
+}
+function validateCaptureBundle(manifest, files) {
+  requireValue(files.has('source.json'), 'SOURCE_MANIFEST', 'Original capture metadata is missing');
+  const source = JSON.parse(files.get('source.json').bytes), capture = source.capture;
+  requireValue(source.schema === 'stellar-forge.soroban-events.capture-source.v1' && source.exportId === manifest.exportId &&
+    isUUID(source.origin?.workspaceId) && isUUID(capture?.id) && capture.id === manifest.captureId &&
+    Array.isArray(capture.pages) && Array.isArray(capture.exchanges) && Array.isArray(capture.attempts) &&
+    ['PENDING','CAPTURING','INTERRUPTED','WAITING_FOR_LEDGER','COMPLETE'].includes(capture.status),
+    'SOURCE_SCHEMA', 'Original capture source identity or state is invalid');
+  validateSavedPlan(source.plan); validateCaptureSelection(capture);
+  requireValue(capture.planId === source.plan.id && capture.planVersion === source.plan.version &&
+    stableJSON(capture.plan) === stableJSON(source.plan), 'SOURCE_PLAN_MISMATCH', 'Capture differs from its original saved plan version');
+  requireValue(NETWORK_PASSPHRASES[capture.connection?.network] &&
+    digest(stableJSON({ network: capture.connection.network, rpcOrigin: capture.connection.rpcOrigin })) === capture.connection.id,
+    'SOURCE_NETWORK', 'Capture connection descriptor is invalid');
+  const selected = capture.startLedger !== null;
+  requireValue(selected === (capture.endLedger !== null), 'SOURCE_RANGE_MISMATCH', 'Capture bounds must be selected together');
+  if (selected) {
+    integer(capture.startLedger, 'startLedger'); integer(capture.endLedger, 'endLedger', 2, 4294967296);
+    requireValue(capture.endLedger > capture.startLedger, 'SOURCE_RANGE_MISMATCH', 'Capture endLedger must follow startLedger');
+  } else requireValue(capture.pages.length === 0 && capture.cursor === null, 'SOURCE_RANGE_MISMATCH', 'Unselected capture cannot contain original pages');
+  const expected = new Set(['source.json', ...capture.exchanges.map((entry) => entry.path)]);
+  requireValue(expected.size === files.size && expected.size === capture.exchanges.length + 1 &&
+    [...expected].every((path) => files.has(path)), 'SOURCE_MANIFEST', 'Capture has missing, repeated or undeclared native files');
+  let matchingNetwork = false;
+  for (const entry of capture.exchanges) {
+    requireValue(entry.path.startsWith('captures/' + capture.id + '/exchanges/') &&
+      /^[A-Za-z0-9-]+\.json$/.test(entry.path.split('/').at(-1)), 'SOURCE_PATH', 'Native exchange is outside its original capture');
+    const file = files.get(entry.path);
+    requireValue(file.descriptor.sha256 === entry.sha256 && file.descriptor.bytes === entry.bytes,
+      'SOURCE_MISMATCH', 'Capture exchange descriptor changed');
+    const exchange = JSON.parse(file.bytes);
+    requireValue(exchange.schema === 'stellar-forge.soroban-events.rpc-exchange.v1' &&
+      ['getNetwork','getHealth','getEvents'].includes(exchange.request?.method) && exchange.request.method === entry.method,
+      'SOURCE_REQUEST_MISMATCH', 'Capture contains an unsupported original exchange');
+    const requestBytes = Buffer.from(exchange.request.bodyBase64, 'base64');
+    const responseBytes = Buffer.from(exchange.response?.bodyBase64 ?? '', 'base64');
+    requireValue(requestBytes.length === exchange.request.bytes && digest(requestBytes) === exchange.request.sha256 &&
+      responseBytes.length === exchange.response.bytes && digest(responseBytes) === exchange.response.sha256,
+      'SOURCE_MISMATCH', 'Original exchange request or response bytes changed');
+    const request = JSON.parse(requestBytes);
+    requireValue(request.jsonrpc === '2.0' && request.id === capture.id + ':' + entry.path.split('/').at(-1) &&
+      request.id === exchange.request.id && request.method === entry.method,
+      'SOURCE_REQUEST_MISMATCH', 'Original exchange request identity changed');
+    if (entry.method === 'getNetwork') {
+      requireValue(stableJSON(request.params) === '{}', 'SOURCE_REQUEST_MISMATCH', 'Original getNetwork parameters changed');
+      try { if (rpcResult(exchange).passphrase === NETWORK_PASSPHRASES[capture.connection.network]) matchingNetwork = true; } catch {}
+    }
+    if (entry.method === 'getHealth') requireValue(stableJSON(request.params) === '{}', 'SOURCE_REQUEST_MISMATCH', 'Original getHealth parameters changed');
+  }
+  validateAttemptSources(capture, files);
+  if (capture.pages.length) requireValue(matchingNetwork, 'SOURCE_NETWORK', 'Capture pages have no original matching network response');
+  const seen = new Map(); let cursor = null, completion = false, duplicates = 0;
+  for (const page of capture.pages) {
+    requireValue(page.inputCursor === cursor && capture.exchanges.some((entry) => entry.path === page.path && entry.sha256 === page.sha256),
+      'SOURCE_CURSOR_GAP', 'Capture pages omit or reorder the original native cursor chain');
+    const exchange = JSON.parse(files.get(page.path).bytes), request = JSON.parse(Buffer.from(exchange.request.bodyBase64, 'base64'));
+    const parameters = { filters: clone(capture.plan.filters), pagination: { limit: capture.plan.pageSize }, xdrFormat: 'base64' };
+    if (cursor === null) { parameters.startLedger = capture.startLedger; parameters.endLedger = capture.endLedger; }
+    else parameters.pagination.cursor = cursor;
+    requireValue(request.method === 'getEvents' && stableJSON(request.params) === stableJSON(parameters),
+      'SOURCE_REQUEST_MISMATCH', 'Original page differs from the saved plan and selected window');
+    const result = rpcResult(exchange), values = pageRows(result, capture, seen), frontier = cursorPosition(result.cursor);
+    requireValue(result.cursor === page.cursor && typeof result.cursor === 'string', 'SOURCE_CURSOR_GAP', 'Saved cursor differs from the original response');
+    if (cursor && frontier && cursorPosition(cursor)) requireValue(compareIDs(result.cursor, cursor) >= 0, 'SOURCE_CURSOR_GAP', 'Native source cursor moved backwards');
+    cursor = result.cursor; duplicates += values.duplicates;
+    completion ||= values.beyondEnd || cursorCompletesRange(frontier, capture.endLedger);
+  }
+  requireValue(cursor === capture.cursor && seen.size === capture.eventCount && duplicates === capture.duplicateCount,
+    'SOURCE_CAPTURE_MISMATCH', 'Capture checkpoint differs from the retained original pages');
+  if (capture.status === 'COMPLETE') {
+    const last = capture.pages.at(-1);
+    requireValue(completion && last && capture.completion?.sourcePath === last.path &&
+      capture.completion?.sourceSha256 === last.sha256 && capture.completion?.cursor === cursor &&
+      capture.completion?.endLedger === capture.endLedger, 'SOURCE_INCOMPLETE', 'Capture completion lacks its original native upper-bound proof');
+  } else requireValue(!completion, 'SOURCE_CAPTURE_MISMATCH', 'A partial checkpoint omits the established native completion');
+  requireValue(digest(stableJSON(capture)) === source.captureSha256 &&
+    manifest.exportId === digest(stableJSON({ schema: CAPTURE_EXPORT_SCHEMA, workspaceId: source.origin.workspaceId,
+      captureId: capture.id, captureSha256: source.captureSha256 })), 'SOURCE_MISMATCH', 'Capture source metadata identity changed');
+  return { source, capture };
+}
+const sourceFileCache = new Map();
+function fileSignature(info) { return [info.dev,info.ino,info.size,info.mtimeNs,info.ctimeNs].join(':'); }
+async function sourceFileRange(directory, descriptor, offset = 0, length = null) {
+  const target = await filePath(directory, descriptor.path);
+  const handle = await fs.open(target, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    const info = await handle.stat({ bigint: true }), signature = fileSignature(info), size = Number(info.size);
+    requireValue(info.isFile() && Number.isSafeInteger(size) && (descriptor.bytes === undefined || descriptor.bytes === size),
+      'SOURCE_MISMATCH', 'Original source file size differs from its immutable descriptor');
+    const cacheKey = target + ':' + signature;
+    if (sourceFileCache.get(cacheKey) !== descriptor.sha256) {
+      const hash = createHash('sha256'), buffer = Buffer.alloc(Math.min(1024*1024, Math.max(size,1)));
+      let position = 0;
+      while (position < size) {
+        const { bytesRead } = await handle.read(buffer,0,Math.min(buffer.length,size-position),position);
+        requireValue(bytesRead > 0,'SOURCE_MISMATCH','Original source file ended before its retained size');
+        hash.update(buffer.subarray(0,bytesRead)); position += bytesRead;
+      }
+      requireValue(hash.digest('hex') === descriptor.sha256 && fileSignature(await handle.stat({bigint:true})) === signature,
+        'SOURCE_MISMATCH', 'Original source file differs from its immutable manifest');
+      sourceFileCache.set(cacheKey,descriptor.sha256);
+      if(sourceFileCache.size>256)sourceFileCache.delete(sourceFileCache.keys().next().value);
+    }
+    integer(offset,'offset',0,size);
+    if(length !== null)integer(length,'length',1,4*1024*1024);
+    const count=length===null?size-offset:Math.min(length,size-offset),content=Buffer.alloc(count);
+    let copied=0;
+    while(copied<count) {
+      const {bytesRead}=await handle.read(content,copied,count-copied,offset+copied);
+      requireValue(bytesRead>0,'SOURCE_MISMATCH','Original source range ended before its retained size');copied+=bytesRead;
+    }
+    requireValue(fileSignature(await handle.stat({bigint:true}))===signature,'SOURCE_MISMATCH','Original source file changed during receiving');
+    return {path:descriptor.path,bytes:size,totalBytes:size,sha256:descriptor.sha256,contentType:descriptor.contentType,
+      offset,complete:offset+content.length>=size,content};
+  } finally {await handle.close();}
 }
 function newState() {
   return { schema: WORKSPACE_SCHEMA, id: randomUUID(), revision: 0, createdAt: now(),
@@ -155,7 +396,7 @@ function publicError(error) {
 function describeState(state) {
   return { workspaceId: state.id, revision: state.revision, connection: clone(state.connection),
     plans: Object.values(state.plans).map(clone), captures: Object.values(state.captures).map(clone),
-    editions: Object.values(state.editions).map(clone), exports: Object.values(state.exports).map(clone) };
+    editions: Object.values(state.editions).map(clone), exports: Object.values(state.exports).filter((entry) => entry.manifest.schema === EXPORT_SCHEMA).map(clone) };
 }
 function pageRows(result, capture, seen) {
   requireValue(Array.isArray(result.events), 'RPC_INVALID_RESULT', 'getEvents did not return an events array');
@@ -184,11 +425,27 @@ function pageRows(result, capture, seen) {
 }
 
 class SorobanEventsWorkspace {
-  #directory; #connection; #rpc; #tail = Promise.resolve(); #closing = false;
-  constructor(directory, connection, rpcRequest) {
+  #directory; #connection; #connections = new Map(); #tail = Promise.resolve(); #closing = false;
+  constructor(directory, connection, rpcRequest, connections = {}) {
     this.#directory = directory;
-    this.#connection = connection ? normalizedConnection(connection) : null;
-    this.#rpc = this.#connection ? createRPCTransport(this.#connection, rpcRequest) : null;
+    requireValue(connections && typeof connections === 'object' && !Array.isArray(connections), 'INVALID_CONNECTION', 'connections must be a trusted host alias map');
+    const configured = { ...connections };
+    if (connection) {
+      requireValue(!own(configured, 'default'), 'INVALID_CONNECTION', 'Configure the default connection once');
+      configured.default = connection;
+    }
+    for (const [alias, input] of Object.entries(configured)) {
+      requireValue(/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(alias), 'INVALID_CONNECTION', 'Connection alias is invalid');
+      const normalized = normalizedConnection(input);
+      this.#connections.set(alias, { connection: normalized, rpc: createRPCTransport(normalized, rpcRequest) });
+    }
+    this.#connection = this.#connections.get('default')?.connection ?? null;
+  }
+  get directory() { return this.#directory; }
+  #transport(capture) {
+    const chosen = this.#connections.get(capture.connectionAlias ?? 'default');
+    if (chosen?.connection.public.id === capture.connection.id) return chosen;
+    return [...this.#connections.values()].find((entry) => entry.connection.public.id === capture.connection.id) ?? null;
   }
   async initialize() {
     await privateDirectory(this.#directory);
@@ -244,7 +501,7 @@ class SorobanEventsWorkspace {
     this.#tail = run.catch(() => {});
     return run;
   }
-  async describe() { return describeState(await this.#state()); }
+  async describe() { return { ...describeState(await this.#state()), connections: [...this.#connections].map(([alias, entry]) => ({ alias, ...clone(entry.connection.public) })) }; }
   async planSave(input) {
     const normalized = normalizePlan(input);
     return this.#mutate('plan-save', input, async (state, args, request) => {
@@ -268,14 +525,15 @@ class SorobanEventsWorkspace {
       return { plan };
     });
   }
-  async #exchange(state, capture, relative, method, params) {
+  async #exchange(state, capture, relative, method, params, selectedTransport = null) {
     const id = capture.id + ':' + relative.split('/').at(-1);
     let exchange, raw;
     try { raw = await readFile(this.#directory, relative); exchange = JSON.parse(raw); }
     catch (error) {
       if (error.code !== 'ENOENT') throw error;
-      requireValue(this.#rpc, 'CONNECTION_REQUIRED', 'Configure this workspace original RPC connection to capture events');
-      exchange = await this.#rpc(method, params, id);
+      const transport = selectedTransport ?? this.#transport(capture);
+      requireValue(transport, 'CONNECTION_REQUIRED', 'Configure this capture original RPC connection alias to continue');
+      exchange = await transport.rpc(method, params, id);
       raw = jsonBytes(exchange);
       await writeNew(this.#directory, relative, raw);
     }
@@ -296,41 +554,59 @@ class SorobanEventsWorkspace {
     }
     return seen;
   }
-  async #collect(state, capture, request) {
+  async #collect(state, capture, request, connectionAlias = null) {
     if (capture.status === 'COMPLETE') return capture;
-    requireValue(this.#connection && this.#rpc, 'CONNECTION_REQUIRED', 'Open with the original host RPC connection before continuing this capture');
-    requireValue(capture.connection.id === this.#connection.public.id, 'CONNECTION_MISMATCH', 'The capture belongs to its original RPC endpoint and network');
     capture.status = 'CAPTURING'; capture.lastError = null;
     let attempt = capture.attempts.find((entry) => entry.requestId === request.id);
-    if (!attempt) { attempt = { requestId: request.id, id: capture.attempts.length + 1, startedAt: now() }; capture.attempts.push(attempt); }
+    if (!attempt) {
+      const configured = connectionAlias === null ? this.#transport(capture) : this.#connections.get(connectionAlias);
+      requireValue(configured, 'CONNECTION_REQUIRED', 'Select a configured compatible RPC connection to continue the original native cursor');
+      requireValue(configured.connection.network === capture.connection.network, 'RPC_NETWORK_MISMATCH', 'The continuation connection must select the original capture network');
+      attempt = { requestId: request.id, id: capture.attempts.length + 1, startedAt: now(),
+        connection: clone(configured.connection.public), connectionAlias: connectionAlias ?? capture.connectionAlias ?? 'default' };
+      capture.attempts.push(attempt);
+    }
+    const transport = this.#transport({ connection: attempt.connection ?? capture.connection, connectionAlias: attempt.connectionAlias ?? capture.connectionAlias });
+    requireValue(transport, 'CONNECTION_REQUIRED', 'Configure this retained attempt original connection, or select a new compatible continuation request');
     await this.#save(state);
     try {
       const attemptPrefix = 'captures/' + capture.id + '/exchanges/attempt-' + attempt.id;
-      const network = await this.#exchange(state, capture, attemptPrefix + '-network.json', 'getNetwork', {});
+      const network = await this.#exchange(state, capture, attemptPrefix + '-network.json', 'getNetwork', {}, transport);
       requireValue(network.result.passphrase === NETWORK_PASSPHRASES[capture.connection.network], 'RPC_NETWORK_MISMATCH', 'The RPC network passphrase differs from the selected network');
-      const health = await this.#exchange(state, capture, attemptPrefix + '-health.json', 'getHealth', {});
+      const health = await this.#exchange(state, capture, attemptPrefix + '-health.json', 'getHealth', {}, transport);
       requireValue(health.result.status === 'healthy', 'RPC_UNHEALTHY', 'The original RPC reports that it is not healthy');
       integer(health.result.oldestLedger, 'oldestLedger');
       integer(health.result.latestLedger, 'latestLedger');
       requireValue(health.result.oldestLedger <= health.result.latestLedger, 'RPC_INVALID_RESULT', 'RPC retention bounds are inconsistent');
       attempt.oldestLedger = health.result.oldestLedger; attempt.latestLedger = health.result.latestLedger;
       if (capture.startLedger === null) {
-        const selectedStart = capture.plan.startLedger ?? health.result.latestLedger;
-        const selectedEnd = capture.plan.endLedger ?? health.result.latestLedger + 1;
+        const selectedStart = capture.selection?.startLedger ?? capture.plan.startLedger ?? health.result.latestLedger;
+        if (capture.selection && selectedStart > health.result.latestLedger) {
+          capture.status = 'WAITING_FOR_LEDGER'; capture.latestLedger = health.result.latestLedger;
+          capture.lastError = { code: 'LEDGER_NOT_AVAILABLE', message: 'The next required ledger has not closed at this provider yet.', details: { startLedger: selectedStart, latestLedger: health.result.latestLedger }, at: now() };
+          await this.#save(state); return capture;
+        }
+        const selectedEnd = capture.selection
+          ? Math.min(capture.selection.endLedger ?? 4294967296, selectedStart + capture.selection.maxLedgers, health.result.latestLedger + 1)
+          : capture.plan.endLedger ?? health.result.latestLedger + 1;
         requireValue(selectedEnd > selectedStart, 'INVALID_RANGE', 'The selected endLedger must be after startLedger');
         requireValue(selectedEnd <= health.result.latestLedger + 1, 'FUTURE_LEDGER_RANGE', 'The selected range extends beyond the RPC current ledger', { latestLedger: health.result.latestLedger });
         requireValue(selectedStart >= health.result.oldestLedger, 'RETENTION_GAP', 'The original RPC no longer retains the requested first ledger', { oldestLedger: health.result.oldestLedger, startLedger: selectedStart });
         capture.startLedger = selectedStart; capture.endLedger = selectedEnd;
         capture.rangeSelectedAt = health.exchange.capturedAt;
       }
-      if (capture.pages.length === 0) requireValue(capture.startLedger >= health.result.oldestLedger, 'RETENTION_GAP', 'The requested first ledger is outside current RPC retention', { oldestLedger: health.result.oldestLedger });
+      const position = cursorPosition(capture.cursor);
+      const nextRequiredLedger = position
+        ? position.ledger + ((position.toid & 4294967295n) === 4294967295n && position.event === 4294967295n ? 1 : 0)
+        : capture.startLedger;
+      requireValue(nextRequiredLedger >= health.result.oldestLedger, 'RETENTION_GAP', 'The next required source ledger is outside this RPC retention', { oldestLedger: health.result.oldestLedger, latestLedger: health.result.latestLedger, nextRequiredLedger, startLedger: capture.startLedger, endLedger: capture.endLedger });
       await this.#save(state);
       const seen = await this.#seen(capture);
       while (capture.status === 'CAPTURING') {
         const oldCursor = capture.cursor;
         const params = requestParameters(capture);
         const relative = 'captures/' + capture.id + '/exchanges/page-' + String(capture.pages.length + 1).padStart(8, '0') + '-attempt-' + attempt.id + '.json';
-        const fetched = await this.#exchange(state, capture, relative, 'getEvents', params);
+        const fetched = await this.#exchange(state, capture, relative, 'getEvents', params, transport);
         const result = fetched.result;
         textValue(result.cursor, 'RPC cursor', 300);
         integer(result.latestLedger, 'RPC latestLedger');
@@ -367,18 +643,29 @@ class SorobanEventsWorkspace {
   async captureStart(input) {
     return this.#mutate('capture-start', input, async (state, args, request) => {
       if (!request.context.captureId) {
-        requireValue(this.#connection, 'CONNECTION_REQUIRED', 'Configure the original RPC connection before capture');
+        const alias = args.connectionAlias ?? 'default';
+        const configured = this.#connections.get(alias);
+        requireValue(configured, 'CONNECTION_REQUIRED', 'Select a configured host RPC connection alias', { alias });
         const original = item(state.plans, args.planId, 'Plan');
+        const version = args.planVersion ?? original.currentVersion;
+        const selected = original.versions.find((entry) => entry.version === version);
+        requireValue(selected, 'PLAN_VERSION_NOT_FOUND', 'The selected saved plan version was not found');
         request.context.captureId = randomUUID();
-        request.context.plan = clone(original.versions.find((entry) => entry.version === original.currentVersion));
+        request.context.plan = clone(selected);
+        request.context.connectionAlias = alias;
+        request.context.connection = clone(configured.connection.public);
+        request.context.selection = args.selection === undefined ? null : normalizeSelection(args.selection);
+        request.context.sourceOriginWorkspaceId = args.sourceOriginWorkspaceId ?? state.id;
+        requireValue(isUUID(request.context.sourceOriginWorkspaceId), 'INVALID_ARGUMENT', 'sourceOriginWorkspaceId must be a UUID');
         await this.#save(state);
       }
       const id = request.context.captureId;
       if (!own(state.captures, id)) {
-        requireValue(this.#connection, 'CONNECTION_REQUIRED', 'Configure the original RPC connection before capture');
         const selected = request.context.plan;
         state.captures[id] = { id, planId: selected.id, planVersion: selected.version, plan: clone(selected),
-          connection: clone(this.#connection.public), status: 'PENDING', createdAt: request.startedAt,
+          connection: clone(request.context.connection), connectionAlias: request.context.connectionAlias,
+          selection: clone(request.context.selection), sourceOriginWorkspaceId: request.context.sourceOriginWorkspaceId,
+          status: 'PENDING', createdAt: request.startedAt, createdByRequestId: request.id,
           startLedger: null, endLedger: null, cursor: null, frontierLedger: null, latestLedger: null,
           eventCount: 0, duplicateCount: 0, pages: [], exchanges: [], attempts: [], lastError: null };
         await this.#save(state);
@@ -388,7 +675,7 @@ class SorobanEventsWorkspace {
   }
   async captureResume(input) {
     return this.#mutate('capture-resume', input, async (state, args, request) =>
-      ({ capture: await this.#collect(state, item(state.captures, args.captureId, 'Capture'), request) }));
+      ({ capture: await this.#collect(state, item(state.captures, args.captureId, 'Capture'), request, args.connectionAlias ?? null) }));
   }
   async captureStatus({ captureId }) {
     const state = await this.#state();
@@ -422,6 +709,7 @@ class SorobanEventsWorkspace {
           planVersion: capture.planVersion, createdAt: request.startedAt, network: capture.connection.network,
           startLedger: capture.startLedger, endLedger: capture.endLedger, eventCount: events.length,
           source: file, format: 'json-array', completion: clone(capture.completion) };
+        if (capture.sourceOriginWorkspaceId) edition.sourceOriginWorkspaceId = capture.sourceOriginWorkspaceId;
         edition.sha256 = digest(stableJSON(edition));
         state.editions[id] = edition;
         await this.#save(state);
@@ -475,13 +763,57 @@ class SorobanEventsWorkspace {
       ? { path, sha256: exported.manifestSha256, contentType: 'application/json' }
       : exported.manifest.files.find((entry) => entry.path === path);
     requireValue(file, 'NOT_FOUND', 'File is not part of the selected source export');
-    const bytes = await readFile(exported.directory, file.path);
-    requireValue(digest(bytes) === file.sha256 && (file.bytes === undefined || bytes.length === file.bytes), 'SOURCE_MISMATCH', 'Export file differs from its source manifest');
-    integer(offset, 'offset', 0, bytes.length);
-    if (length !== null) integer(length, 'length', 1, 4 * 1024 * 1024);
-    const content = bytes.subarray(offset, length === null ? bytes.length : offset + length);
-    return { path, bytes: bytes.length, totalBytes: bytes.length, sha256: file.sha256,
-      contentType: file.contentType, offset, complete: offset + content.length >= bytes.length, content };
+    return sourceFileRange(exported.directory, file, offset, length);
+  }
+  async planReceive(input) {
+    validateSavedPlan(input.plan);
+    return this.#mutate('plan-receive', input, async (state, args) => ({ plan: installPlan(state, args.plan), received: true }));
+  }
+  async captureSourceExport(input) {
+    return this.#mutate('capture-source-export', input, async (state, args, request) => {
+      if (!request.context.capture) {
+        request.context.capture = clone(item(state.captures, args.captureId, 'Capture'));
+        request.context.originRevision = state.revision;
+        await this.#save(state);
+      }
+      const capture = request.context.capture, captureSha256 = digest(stableJSON(capture));
+      const exportId = digest(stableJSON({ schema: CAPTURE_EXPORT_SCHEMA, workspaceId: state.id, captureId: capture.id, captureSha256 }));
+      if (own(state.exports, exportId)) return { export: state.exports[exportId] };
+      const directory = join(this.#directory, 'exports', exportId); await privateDirectory(directory);
+      const descriptors = [await writeNew(directory, 'source.json', jsonBytes({
+        schema: 'stellar-forge.soroban-events.capture-source.v1', exportId,
+        origin: { workspaceId: state.id, revision: request.context.originRevision },
+        plan: clone(capture.plan), capture, captureSha256,
+      }))];
+      for (const descriptor of capture.exchanges) {
+        const bytes = await readFile(this.#directory, descriptor.path);
+        requireValue(bytes.length === descriptor.bytes && digest(bytes) === descriptor.sha256,
+          'SOURCE_MISMATCH', 'Original capture file changed before export', { path: descriptor.path });
+        descriptors.push(await writeNew(directory, descriptor.path, bytes));
+      }
+      const manifest = { schema: CAPTURE_EXPORT_SCHEMA, exportId, captureId: capture.id,
+        files: descriptors.sort((a,b) => a.path.localeCompare(b.path)), fileCount: descriptors.length,
+        bytes: descriptors.reduce((sum,file) => sum + file.bytes, 0) };
+      const manifestBytes = jsonBytes(manifest);
+      await writeNew(directory, 'manifest.json', manifestBytes);
+      const exported = { id: exportId, directory, captureId: capture.id, manifest, manifestSha256: digest(manifestBytes), createdAt: request.startedAt };
+      state.exports[exportId] = exported; await this.#save(state);
+      return { export: exported };
+    });
+  }
+  async captureSourceReceive(input) {
+    return this.#mutate('capture-source-receive', input, async (state, args) => {
+      const { manifest, manifestBytes, files } = await readManifestFiles(args.sourceDirectory, args.expectedManifestSha256, CAPTURE_EXPORT_SCHEMA);
+      const { source, capture } = validateCaptureBundle(manifest, files);
+      const previous = own(state.captures, capture.id) ? state.captures[capture.id] : null;
+      const retainedCapture = previous ? captureContinuation(previous, capture) : capture;
+      for (const [path,file] of files) if (path !== 'source.json') await writeNew(this.#directory, path, file.bytes);
+      installPlan(state, source.plan);
+      state.captures[capture.id] = clone(retainedCapture);
+      await this.#save(state);
+      return { capture: state.captures[capture.id], received: true,
+        source: { workspaceId: source.origin.workspaceId, exportId: manifest.exportId, manifestSha256: digest(manifestBytes) } };
+    });
   }
   async sourceReceive(input) {
     return this.#mutate('source-receive', input, async (state, args) => {
@@ -522,6 +854,8 @@ class SorobanEventsWorkspace {
       requireValue(capture.planId === capture.plan?.id && capture.planVersion === capture.plan?.version &&
         edition.planId === capture.plan?.id && edition.planVersion === capture.plan?.version,
         'SOURCE_PLAN_MISMATCH', 'Capture and edition must select the same original saved plan version');
+      validateCaptureSelection(capture);
+      if (edition.sourceOriginWorkspaceId !== undefined || capture.sourceOriginWorkspaceId !== undefined) requireValue(isUUID(edition.sourceOriginWorkspaceId) && edition.sourceOriginWorkspaceId === capture.sourceOriginWorkspaceId, 'SOURCE_ORIGIN_MISMATCH', 'Edition logical source origin differs from its retained capture');
       normalizePlan(capture.plan);
       const planCore = clone(capture.plan); delete planCore.sha256;
       requireValue(digest(stableJSON(planCore)) === capture.plan.sha256 && Number.isSafeInteger(capture.plan.version) && capture.plan.version > 0,
@@ -547,6 +881,7 @@ class SorobanEventsWorkspace {
         }
       }
       requireValue(matchingNetwork, 'SOURCE_NETWORK', 'Received capture lacks its original matching network response');
+      validateAttemptSources(capture, files);
       for (const page of capture.pages) {
         requireValue(page.inputCursor === originalCursor, 'SOURCE_CURSOR_GAP', 'Source pages omit or reorder the original cursor chain');
         requireValue(capture.exchanges.some((entry) => entry.path === page.path && entry.sha256 === page.sha256), 'SOURCE_MANIFEST', 'Page is not an original declared exchange');
@@ -580,13 +915,13 @@ class SorobanEventsWorkspace {
       const expectedId = digest(stableJSON({ schema: EXPORT_SCHEMA, workspaceId: source.origin.workspaceId, editionId: edition.id, editionSha256: edition.sha256 }));
       requireValue(expectedId === manifest.exportId, 'SOURCE_MISMATCH', 'Source export identity differs from its original edition');
       if (own(state.editions, edition.id)) requireValue(state.editions[edition.id].sha256 === edition.sha256, 'SOURCE_CONFLICT', 'A different edition already uses this original identifier');
-      if (own(state.captures, capture.id)) requireValue(stableJSON(state.captures[capture.id].pages) === stableJSON(capture.pages), 'SOURCE_CONFLICT', 'A different capture already uses this original identifier');
+      const retainedCapture = own(state.captures, capture.id) ? captureContinuation(state.captures[capture.id], capture) : capture;
       for (const [path, file] of files) if (path !== 'source.json') await writeNew(this.#directory, path, file.bytes);
       const retained = clone(edition);
-      const originalWorkspaceId = edition.receivedFrom?.workspaceId ?? source.origin.workspaceId;
+      const originalWorkspaceId = edition.sourceOriginWorkspaceId ?? edition.receivedFrom?.workspaceId ?? source.origin.workspaceId;
       requireValue(uuid(originalWorkspaceId), 'SOURCE_SCHEMA', 'The earliest retained source workspace must be an original UUID');
       retained.receivedFrom = { workspaceId: originalWorkspaceId, fromWorkspaceId: source.origin.workspaceId, exportId: manifest.exportId, manifestSha256: digest(manifestBytes) };
-      state.captures[capture.id] ??= clone(capture);
+      state.captures[capture.id] = clone(retainedCapture);
       state.editions[edition.id] ??= retained;
       let plan = own(state.plans, source.plan.id) ? state.plans[source.plan.id] : null;
       if (!plan) { plan = { id: source.plan.id, name: source.plan.name, currentVersion: source.plan.version, versions: [clone(source.plan)] }; state.plans[plan.id] = plan; }
@@ -603,7 +938,7 @@ class SorobanEventsWorkspace {
 }
 export async function openSorobanEventsWorkspace(options) {
   requireValue(options && typeof options === 'object', 'INVALID_ARGUMENT', 'Workspace options are required');
-  return new SorobanEventsWorkspace(options.directory, options.connection, options.rpcRequest).initialize();
+  return new SorobanEventsWorkspace(options.directory, options.connection, options.rpcRequest, options.connections).initialize();
 }
 
 export async function inspectSorobanEventsWorkspace(directory, { allowMissing = false } = {}) {

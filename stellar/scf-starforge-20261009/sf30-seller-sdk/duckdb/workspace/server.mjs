@@ -2,10 +2,11 @@
 import { createServer } from 'node:http';
 import { readFile, open } from 'node:fs/promises';
 import { constants } from 'node:fs';
-import { once } from 'node:events';
+import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { LIMITS } from '../cloud-delivery/contract.mjs';
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { CLOUD_UPLOAD_CHUNK_BYTES } from '../cloud-delivery/uploads.mjs';
+import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createDuckdbWorkspace, WorkspaceError, publicIssue } from './model.mjs';
 
 const ASSETS = new Map([
@@ -57,11 +58,17 @@ function query(url, required, optional = []) {
       keys.some(key => ![...required, ...optional].includes(key))) throw new WorkspaceError('CLOUD_QUERY_INVALID');
   return Object.fromEntries(url.searchParams);
 }
-async function download(res, descriptor, waiting) {
-  const handle = await open(descriptor.path, constants.O_RDONLY | constants.O_NOFOLLOW);
-  let stream;
+async function download(res, descriptor, waiting, signal) {
+  signal.throwIfAborted();
+  // Own the response before the first filesystem await, so shutdown also sees
+  // a download whose descriptor or stream has not finished opening yet.
+  waiting.add(res);
+  let handle, stream, source;
   try {
+    handle = await open(descriptor.path, constants.O_RDONLY | constants.O_NOFOLLOW);
+    signal.throwIfAborted();
     const stat = await handle.stat({ bigint: true });
+    signal.throwIfAborted();
     const prefix = Buffer.from(descriptor.prefix ?? '');
     if (!stat.isFile()) throw new WorkspaceError('CLOUD_DOWNLOAD_INVALID');
     const length = stat.size + BigInt(prefix.length);
@@ -70,17 +77,30 @@ async function download(res, descriptor, waiting) {
     const filename = String(descriptor.filename).replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 200);
     res.writeHead(200, { ...HEADERS, 'content-type': descriptor.type,
       'content-length': String(length), 'content-disposition': 'attachment; filename="' + filename + '"' });
-    if (prefix.length && !res.write(prefix)) await once(res, 'drain');
-    stream = handle.createReadStream({ autoClose: false }); waiting.add(stream);
-    await pipeline(stream, res);
-  } finally { if (stream) waiting.delete(stream); await handle.close(); }
+    stream = handle.createReadStream({ autoClose: false });
+    // Prefix and original bytes share the same backpressure and cancellation.
+    // There is no separate drain waiter outside the owned download lifecycle.
+    source = prefix.length ? Readable.from((async function* () {
+      yield prefix;
+      yield* stream;
+    })(), { objectMode: false }) : stream;
+    waiting.add(source);
+    await pipeline(source, res, { signal });
+  } finally {
+    source?.destroy();
+    if (stream !== source) stream?.destroy();
+    waiting.delete(source);
+    waiting.delete(res);
+    await handle?.close();
+  }
 }
 
 export async function startDuckdbWorkspace({ port = 8437, ...options } = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new WorkspaceError('INVALID_LISTENER_PORT');
   const assets = new Map(await Promise.all([...ASSETS].map(async ([path, [name, type]]) =>
     [path, { bytes: await readFile(new URL('./public/' + name, import.meta.url)), type }])));
-  const token = randomBytes(32).toString('hex'), waiting = new Set();
+  const token = randomBytes(32).toString('hex'), waiting = new Set(),instanceId=randomUUID();
+  const lifetime = new AbortController();
   let origin, model, closing = false, closePromise;
   const server = createServer((req, res) => {
     Promise.resolve().then(async () => {
@@ -97,6 +117,8 @@ export async function startDuckdbWorkspace({ port = 8437, ...options } = {}) {
         'Open the private workspace URL printed by its launcher.');
       if (['cross-site', 'same-site'].includes(req.headers['sec-fetch-site']))
         throw new WorkspaceError('WORKSPACE_ORIGIN_REQUIRED', 403);
+      if(req.method==='GET'&&url.pathname==='/api/identity'&&!url.search)
+        return send(res,200,{schema:'stellar-forge.duckdb-workspace-listener.v1',workspaceId:model.workspaceId,instanceId,pid:process.pid});
       if (req.method === 'GET' && url.pathname === '/api/state' && !url.search)
         return send(res, 200, await model.state());
       if (req.method === 'GET' && url.pathname === '/api/runtime' && !url.search)
@@ -121,6 +143,16 @@ export async function startDuckdbWorkspace({ port = 8437, ...options } = {}) {
         if (['/api/cloud/edition', '/api/cloud/intake'].includes(url.pathname)) {
           const { id } = query(url, ['id']); return send(res, 200, await model.cloud.edition(id));
         }
+        if(url.pathname==='/api/cloud/operation'){
+          const {operationId}=query(url,['operationId']);return send(res,200,await model.cloud.operation({operationId}));
+        }
+        if(url.pathname==='/api/cloud/upload-status'){
+          const {edition,file}=query(url,['edition','file']);
+          return send(res,200,await model.cloud.uploadStatus({editionId:edition,fileId:file}));
+        }
+        if(url.pathname==='/api/cloud/received-draft'){
+          const {receivingId}=query(url,['receivingId']);return send(res,200,await model.cloud.receivedDraft({receivingId}));
+        }
         if (url.pathname === '/api/cloud/comparison') {
           const input = query(url, ['id'], ['offset', 'limit']);
           for (const key of ['offset', 'limit']) if (input[key] !== undefined) {
@@ -131,12 +163,12 @@ export async function startDuckdbWorkspace({ port = 8437, ...options } = {}) {
         }
         if (url.pathname === '/api/cloud/file') {
           const { edition, file } = query(url, ['edition', 'file']);
-          return download(res, await model.cloud.file({ editionId: edition, fileId: file }), waiting);
+          return download(res, await model.cloud.file({ editionId: edition, fileId: file }), waiting, lifetime.signal);
         }
         if (url.pathname === '/api/cloud/report') {
           const input = query(url, ['id'], ['kind']);
           if (input.kind !== undefined && input.kind !== 'summary') throw new WorkspaceError('CLOUD_REPORT_KIND_INVALID');
-          return download(res, await model.cloud.report(input), waiting);
+          return download(res, await model.cloud.report(input), waiting, lifetime.signal);
         }
         if (url.pathname === '/api/cloud/delivery') {
           const input = query(url, ['id'], ['kind']);
@@ -146,8 +178,23 @@ export async function startDuckdbWorkspace({ port = 8437, ...options } = {}) {
             return send(res, 200, { delivery });
           }
           if (input.kind !== undefined) throw new WorkspaceError('CLOUD_REPORT_KIND_INVALID');
-          return download(res, await model.cloud.delivery(input), waiting);
+          return download(res, await model.cloud.delivery(input), waiting, lifetime.signal);
         }
+      }
+      if(req.method==='PUT'&&url.pathname==='/api/cloud/upload-chunk'){
+        const {edition,file,offset,sha256}=query(url,['edition','file','offset','sha256']);
+        const length=req.headers['content-length'];
+        if(!/^(0|[1-9][0-9]{0,10})$/.test(length??'')||Number(length)>CLOUD_UPLOAD_CHUNK_BYTES)
+          throw new WorkspaceError('CLOUD_UPLOAD_CHUNK_LENGTH_REQUIRED',411);
+        if(!/^application\/octet-stream(?:\s*;|$)/i.test(req.headers['content-type']??''))
+          throw new WorkspaceError('CLOUD_UPLOAD_BINARY_REQUIRED',415);
+        const chunks=[];let size=0;waiting.add(req);
+        const timer=setTimeout(()=>req.destroy(),120000);
+        try{
+          for await(const chunk of req){size+=chunk.length;if(size>Number(length))throw new WorkspaceError('CLOUD_UPLOAD_LENGTH_MISMATCH');chunks.push(chunk);}
+          if(size!==Number(length))throw new WorkspaceError('CLOUD_UPLOAD_LENGTH_MISMATCH');
+          return send(res,200,await model.cloud.uploadChunk({editionId:edition,fileId:file,offset,sha256,data:Buffer.concat(chunks,size)}));
+        }finally{clearTimeout(timer);waiting.delete(req);}
       }
       if (req.method === 'PUT' && url.pathname === '/api/cloud/upload') {
         const { edition, file } = query(url, ['edition', 'file']);
@@ -161,12 +208,13 @@ export async function startDuckdbWorkspace({ port = 8437, ...options } = {}) {
           stream: req, signal: controller.signal })); }
         finally { clearTimeout(timer); req.removeListener('aborted', abort); waiting.delete(req); }
       }
-      const cloudActions = new Map(['intake', 'import', 'commit', 'compare', 'review', 'select', 'export', 'receive']
+      const cloudActions = new Map(['intake', 'import', 'commit', 'compare', 'review', 'select', 'export', 'receive', 'uploadChunk']
         .map(name => ['/api/cloud/' + name, input => model.cloud[name](input)]));
       if (req.method === 'POST' && cloudActions.has(url.pathname) && !url.search)
         return send(res, 200, await cloudActions.get(url.pathname)(await body(req, waiting, LIMITS.manifestBytes)));
       const actions = new Map([
         ['/api/draft', input => model.save(input)], ['/api/review', input => model.review(input)],
+        ['/api/cloud/adopt-draft',input=>model.adoptReceivedDraft(input)],
         ['/api/prepare', input => model.prepare(input)], ['/api/inspect', input => model.inspect(input)],
         ['/api/start', input => model.start(input)], ['/api/stop', input => model.stop(input)],
         ['/api/preview', input => model.preview(input)],
@@ -190,17 +238,20 @@ export async function startDuckdbWorkspace({ port = 8437, ...options } = {}) {
   origin = 'http://127.0.0.1:' + server.address().port;
   try { model = await createDuckdbWorkspace({ ...options, navigationOrigin: origin }); }
   catch (error) {
+    lifetime.abort();
     server.closeAllConnections(); await new Promise(done => server.close(done)); throw error;
   }
   return {
-    origin, url: origin + '/#key=' + token, model,
+    origin, url: origin + '/#key=' + token, model, instanceId,
     close() {
       if (closePromise) return closePromise;
       closing = true;
-      for (const req of waiting) req.destroy();
+      lifetime.abort();
+      for (const resource of waiting) resource.destroy();
       const listenerClosed = new Promise(done => server.close(done));
       server.closeIdleConnections();
-      closePromise = model.close().finally(() => listenerClosed);
+      const pending=Promise.all([model.close(),listenerClosed]).then(()=>undefined);
+      closePromise=pending;void pending.catch(()=>{if(closePromise===pending)closePromise=null;});
       return closePromise;
     },
   };

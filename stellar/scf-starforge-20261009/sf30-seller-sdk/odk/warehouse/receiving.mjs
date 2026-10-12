@@ -231,6 +231,8 @@ export async function receiveApprovedCentralPeriods({specification:input,directo
         'CENTRAL_WAREHOUSE_RECEIVING_CHANGED','Keep the completed original receiving result.');
       for(const file of prior.files)need(inside(root,resolve(file.path))&&same(await fileDigest(file.path),{bytes:file.bytes,sha256:file.sha256}),
         'CENTRAL_WAREHOUSE_RECEIVING_CHANGED','A complete retained receiving artifact changed.');
+      if(journal.status!=='COMPLETE')
+        await checkpoint('complete',{status:'COMPLETE',completedAt:prior.completedAt,resultPath});
       completed=true;return prior;
     }
     owner=await serveCentralWarehouse({directory:original,profiles:selectedProfiles});

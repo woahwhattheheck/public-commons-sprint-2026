@@ -107,7 +107,7 @@ function requireBackup(result,pricing){
   return {pricing:inspected,costOrigin:copy(origin),snapshot:copy(result.descriptor.snapshot)};
 }
 /** Read-only verification of the four immutable files written by capture below. */
-export async function inspectCommercialReceivingSource({directory,expectedSourceSha256}={}){
+export async function inspectCommercialReceivingSource({directory,expectedSourceSha256,includeBackupManifest=false}={}){
   const root=await privateDirectory(absolute(directory,'source'),{create:false});
   const bytes=await readPrivateFile(join(root,SOURCE_NAME),SOURCE_LIMIT),value=JSON.parse(decode(bytes));
   if(expectedSourceSha256!==undefined&&sha256(bytes)!==hash(expectedSourceSha256,'receiving source'))
@@ -148,7 +148,8 @@ export async function inspectCommercialReceivingSource({directory,expectedSource
   return {schema:COMMERCIAL_RECEIVING_SOURCE_SCHEMA,state:'SOURCE_READY',directory:root,
     sourceSha256:sha256(bytes),source:value,pricingSource:pricing,pricingText:decode(pricingBytes),
     pricingFile:byName.get(PRICING_NAME),backupFile:backupPin,backupReceipt:receipt,
-    pricing:inspected.pricing,costOrigin:inspected.costOrigin};
+    pricing:inspected.pricing,costOrigin:inspected.costOrigin,
+    ...(includeBackupManifest?{backupManifest:copy(backup.manifest)}:{})};
 }
 /** Capture an existing saved plan and original full backup. No source request or pricing save occurs. */
 export async function captureCommercialReceivingSource({model,planning,planId,scenarioId,backupRequestId,directory}={}){

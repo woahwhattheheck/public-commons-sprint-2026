@@ -66,7 +66,7 @@ async function sourceIdentity() {
 
 /** Selection excludes incident progress and case contents so ordinary work survives reopening. */
 export async function inspectSupportSelection({casesDir,incidentSources,allowLoopback=false,allowMissingCases=false,
-  incidentSelection=null,sourceDir=null,packageDir=null}={}) {
+  incidentSelection=null,sourceDir=null,packageDir=null,accountingConfig=null,buyerExpenseConnection=null,serviceConnectionSelection=null}={}) {
   need(typeof allowLoopback==='boolean'&&typeof allowMissingCases==='boolean',
     'SUPPORT_APPLICATION_SELECTION_INVALID');
   const casesPath=pathValue(casesDir,'private case directory');
@@ -90,7 +90,10 @@ export async function inspectSupportSelection({casesDir,incidentSources,allowLoo
     sources.push({id:source.id,label:source.label,store,
       configuration:{revision:source.configuration.revision,sha256:source.configuration.sha256}});
   }
+  const connections=serviceConnectionSelection??(accountingConfig!==null||buyerExpenseConnection!==null
+    ?(await (await import('./service-connections.mjs')).inspectServiceConnections({accountingConfig,buyerExpenseConnection})).selected:null);
   return {schema:SUPPORT_SELECTION_SCHEMA,source:await sourceIdentity(),cases,sourceDirectory,packagesDirectory,
+    ...(connections?.accounting||connections?.buyer?{serviceConnections:connections}:{}),
     incidents:{path:incidentPath,sha256:original.sha256,sources},allowLoopback};
 }
 function consoleUrl(value,port=0) {

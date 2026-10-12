@@ -593,7 +593,7 @@ class SourcePart:
                 "objects": count, "phase": "OBJECTS_RECEIVED"}
 
 class SourceTransfer:
-    def __init__(self, filename):
+    def __init__(self, filename, *, commit_text=None):
         self.stack = ExitStack()
         try:
             index_path = Path(filename)
@@ -646,8 +646,14 @@ class SourceTransfer:
                  all(type(row.get("size")) is int and 0 <= row["size"] <= FILE_LIMIT for row in regular_rows) and
                  sum(row["size"] for row in regular_rows) == source["sourceBytes"],
                  "Complete original source totals differ from the transfer")
+            commit_authority = authority["SOURCE-COMMIT.json"]
+            if commit_text is not None:
+                need(isinstance(commit_authority, dict) and isinstance(commit_text, str) and
+                     object_id("commit", commit_text.encode("utf-8")) == source["commit"],
+                     "The supplied original commit bytes differ from the selected source")
+                commit_authority = {**commit_authority, "commitText": commit_text}
             self.metadata = {"schema": SCHEMA, "source": source, "tree": tree,
-                             "commitText": github_commit_text(authority["SOURCE-COMMIT.json"], source),
+                             "commitText": github_commit_text(commit_authority, source),
                              "requiredPaths": [row["path"] for row in regular_rows]}
             _, entries, _, _ = validate_metadata(self.metadata)
             declared = set()
@@ -834,8 +840,15 @@ def receive_metadata(args, metadata, transfer=None):
         os.close(lock)
 
 def receive(args):
+    commit_text = None
+    if getattr(args, "commit_text", None):
+        need(args.source_transfer, "Use --commit-text with the original --source-transfer index")
+        commit_path = Path(args.commit_text)
+        need(commit_path.is_absolute() and commit_path.resolve(strict=True) == commit_path,
+             "Use the original absolute exact-commit file path")
+        commit_text = regular(commit_path, METADATA_LIMIT).decode("utf-8")
     if args.source_transfer:
-        with SourceTransfer(args.source_transfer) as transfer:
+        with SourceTransfer(args.source_transfer, commit_text=commit_text) as transfer:
             return receive_metadata(args, transfer.metadata, transfer)
     return receive_metadata(args, json_file(Path(args.metadata)))
 
@@ -845,6 +858,7 @@ def main():
     original_source.add_argument("--metadata", help="Complete captured GitData tree and exact commitText")
     original_source.add_argument("--source-transfer", help="Original complete source-part index beside its ZIP files")
     parser.add_argument("--commit", required=True, help="Explicit immutable original Git commit")
+    parser.add_argument("--commit-text", help="Exact original commit bytes for the same source-transfer authority")
     parser.add_argument("--directory", required=True, help="New or original owned source-cache directory")
     parser.add_argument("--git", default="git", help="Existing Git executable with --no-lazy-fetch support")
     parser.add_argument("--donor-repository", action="append", default=[], help="Existing Git database, read only")

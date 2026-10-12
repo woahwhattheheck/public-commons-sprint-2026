@@ -10,6 +10,7 @@ const selection = {
   operation_id: string, capture_id: identity, countries: { type: 'array', items: string, minItems: 1 },
   start_period: string, end_period: { type: ['string', 'null'] }, title: string, notes: string,
   project_id: { type: ['string', 'null'] }, expected_revision: { type: ['integer', 'null'], minimum: 0 },
+  report_version: { type: 'integer', enum: [1, 2], description: 'New reports default to 2 with retained source citation; 1 preserves legacy report bytes.' },
 };
 function tool(name, description, properties, required = [], readOnly = false) {
   return { name, description, inputSchema: { type: 'object', properties, required, additionalProperties: false },
@@ -41,8 +42,8 @@ export const OECD_TOOLS = [
   tool('oecd_export_dataset', 'Materialize the original SDMX native dataset and lineage for the maintained merchant.', { briefing_id: identity }, ['briefing_id']),
   tool('oecd_export_customer', 'Save a complete original Macrobond customer source/catalog packet.', { briefing_id: identity, destination: string }, ['briefing_id', 'destination']),
   tool('oecd_export_project', 'Save the entire source/customer/report packet for exact reopening in an original project.', { briefing_id: identity, destination: string }, ['briefing_id', 'destination']),
-  tool('oecd_report_file', 'Save a standalone original HTML, JSON or CSV report file.', { briefing_id: identity,
-    name: { enum: ['briefing.html', 'briefing.json', 'observations.csv'] }, destination: string }, ['briefing_id', 'name', 'destination']),
+  tool('oecd_report_file', 'Save a complete report or its original source-rights acknowledgment file.', { briefing_id: identity,
+    name: { enum: ['briefing.html', 'briefing.json', 'observations.csv', 'SOURCE_RIGHTS.json', 'SOURCE_RIGHTS.md'] }, destination: string }, ['briefing_id', 'name', 'destination']),
   tool('oecd_import_project', 'Reopen a complete original OECD project packet through the maintained catalog engine.', { path: string }, ['path']),
   tool('oecd_provider', 'Read the maintained original Macrobond provider using the current customer edition.', {
     command: { enum: ['getcapabilities', 'loadseries', 'loadmeta', 'searchseries', 'loadtree', 'listseries'] },

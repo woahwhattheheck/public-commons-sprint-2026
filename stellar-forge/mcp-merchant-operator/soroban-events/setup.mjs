@@ -43,7 +43,10 @@ export async function initializeSorobanEventsMerchant(options={}){
     return {schema:CONFIG_SCHEMA,state:'INITIALIZED',configuration,
       source:'original-soroban-events-workspace',
       workspaces:Object.entries(selected.workspaces).map(([workspace,item])=>({
-        workspace,label:item.label,captureConfigured:Boolean(item.connection),network:item.connection?.network??null
+        workspace,label:item.label,captureConfigured:Boolean(item.connection||Object.keys(item.connections??{}).length),
+        network:item.connection?.network??item.connections?.default?.network??null,
+        connections:[...(item.connection?['default']:[]),...Object.keys(item.connections??{})],
+        publications:Object.keys(item.publications??{})
       })),receivers:{...selected.receivers}};
   }finally{await release();}
 }

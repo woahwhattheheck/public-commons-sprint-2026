@@ -54,7 +54,7 @@ function convertedRow(plan, row, before, targetUnit) {
     if (values[field].length > maximum) issues.push({scope: 'native-field', field, code: 'WQX_CONCENTRATION_FIELD_LENGTH',
       message: 'The exact converted ' + field + ' needs ' + values[field].length + ' characters; the native receiver accepts ' + maximum + '.'});
   }
-  return {sourceRecordId: row.sourceRecordId, nativeResultId: row.nativeResultId, source: binding(plan, row),
+  return {sourceRecordId: row.sourceRecordId, nativeResultId: row.nativeResultId, targetUnit, source: binding(plan, row),
     characteristic: row.fields.CHAR_NAME ?? '', sampleFraction: row.fields.RESULT_SAMP_FRACTION ?? '',
     methodSpeciation: row.fields.METHOD_SPECIATION_NAME ?? '', qualifier: row.fields.RESULT_MSR_QUAL ?? '',
     detectionCondition: row.fields.RESULT_DETECT_CONDITION ?? '', valueType: row.fields.RESULT_VALUE_TYPE ?? '',

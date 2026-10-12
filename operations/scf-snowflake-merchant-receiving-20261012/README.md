@@ -32,3 +32,23 @@ The fixture preserves integer `9007199254740993`, decimal `12345678901234567890.
 Return `result.json`, the selected `source-<SHA>.json`, `input-selection.json`, `merchant-case/merchant-receiving.json` and every file under `merchant-case/complete-download/`. That complete customer directory contains original response partitions, receiving manifest, edition/review, original merchant files and native SF82 SQLite snapshot. Keep the private operation directory on the accepting host for the same receiving continuation.
 
 The distinct full Merchant operation is `C94-SNOWFLAKE-MERCHANT-MCP-20261012`, with publication `94c00000-0000-4000-8000-000000000002`. The earlier native HTTP/browser operation keeps its own workspace and publication. Source fixes after an interrupted native result continue this same receiving directory and record their actual new source selection.
+
+## Complete browser and native release receiving
+
+The full `receive-browser.mjs` programme carries the same retained SQL API fixture through the operator browser and native release console. Select the existing complete source, installed Playwright module and Chromium executable:
+
+```sh
+EXISTING_NODE operations/scf-snowflake-merchant-receiving-20261012/receive-browser.mjs \
+  --source-root EXISTING_COMPLETE_SOURCE \
+  --directory SAME_PRIVATE_BROWSER_OPERATION \
+  --playwright-module EXISTING_PLAYWRIGHT_MODULE \
+  --browser-executable EXISTING_CHROMIUM
+```
+
+It uses this directory's original `receiving.json` and both complete partition files. Pass `--original EXISTING_ORIGINAL_EXPORT` when continuing the earlier saved export. Keep the same private operation directory, including both SQLite workspaces, receipt, release store and source selections, across an interrupted attempt.
+
+This is the original `C94-SNOWFLAKE-MERCHANT-20261012` HTTP/browser case, with its original publication ending `0001`. The distinct Merchant-tool programme above keeps its publication ending `0002`. The browser programme opens the full folder through the real file picker, receives both original bodies, checks all exact rows, downloads and hashes the original partition, saves the named review, prepares the merchant, reloads and resumes that same publication, renders desktop and 390px layouts, and activates/opens the existing SF82 release console. It retains the exact source selection and selected browser-file paths and sizes with the original operation.
+
+The earlier browser failure was caused by subtracting a filename string from the folder-path length. The corrected application subtracts `selected.name.length`, retaining the selected folder prefix when finding its original partitions.
+
+A completed run prints `BROWSER_PASSED` in `operation.json`. Deliver the entire operation directory: both workspaces, native release and snapshot, original source records, downloaded partition, browser network record, receipt and four JPEG captures. The operating programme preserves a failed attempt's full state for continuation.

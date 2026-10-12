@@ -54,6 +54,145 @@ function stableSelection(selection) {
     scenarioPlanInput:selection.scenarioPlanInput, pricingInput:selection.pricingInput};
 }
 
+/** The original complete receiving preflight, callable with retained read-only source providers. */
+export async function inspectTariffPortfolio(raw,{pricingSource,scenarioPlan,pricingManifest,retainedTariffPlan}={}) {
+    if(typeof pricingSource!=='function'||typeof scenarioPlan!=='function'||typeof pricingManifest!=='function')
+      throw fault('TARIFF_PORTFOLIO_SOURCE_REQUIRED','Use the original saved pricing, scenario and manifest readers.');
+    const input = copy(raw);
+    if (!object(input) || input.schema !== BUNDLE || !Array.isArray(input.plans) || !Array.isArray(input.selections) ||
+        !HASH.test(input.sha256 ?? '') || encode(input).length > MAX_BUNDLE ||
+        fingerprint({schema:input.schema,plans:input.plans,selections:input.selections}) !== input.sha256)
+      throw fault('TARIFF_PORTFOLIO_INVALID','Use the complete exported tariff portfolio.');
+
+    const timestamp = value => typeof value === 'string' && Number.isFinite(Date.parse(value)) &&
+      new Date(value).toISOString() === value;
+    const invalid = message => fault('TARIFF_PORTFOLIO_INVALID', message);
+    const sourceChanged = message => fault('TARIFF_PORTFOLIO_SOURCE_CHANGED', message, 409);
+    const plans = new Map(), journals = [], requestBodies = new Map();
+
+    async function inspectPlan(record) {
+      id(record?.planId); id(record?.version, 'pricing review');
+      if (record.schema !== PLAN || !object(record.inputs) ||
+          Object.keys(record.inputs).some(key => !['tariffs','volumes'].includes(key)) ||
+          typeof record.label !== 'string' || !record.label.trim() ||
+          record.label !== record.label.trim() || record.label.length > 100 ||
+          !timestamp(record.savedAt) || !timestamp(record.review?.generatedAt) ||
+          !HASH.test(record.requestSha256 ?? '') || !HASH.test(record.review?.tariffReviewSha256 ?? ''))
+        throw invalid('A tariff plan is incomplete or its saved request identity is invalid.');
+      const request = {version:record.version,tariffs:record.inputs.tariffs,volumes:record.inputs.volumes,
+        label:record.label,tariffReviewSha256:record.review.tariffReviewSha256};
+      if (fingerprint(request) !== record.requestSha256)
+        throw invalid('A tariff plan no longer matches its original save request.');
+      const value = await pricingSource(record.version);
+      const review = createTariffReview({seller:value.seller,observation:value.observation,terms:value.terms,
+        tariffs:record.inputs.tariffs,volumes:record.inputs.volumes,provenance:value.provenance});
+      if (record.sourceLabel !== value.label || fingerprint(value.provenance) !== fingerprint(record.provenance) ||
+          fingerprint(stableReview(review)) !== fingerprint(stableReview(record.review)))
+        throw sourceChanged('Restore the matching original pricing backup before receiving these tariffs.');
+      return {record,value};
+    }
+
+    // Preflight the complete incoming portfolio before registering any new plan
+    // or resumable intent. Source reads use its immutable saved pricing versions.
+    for (const record of input.plans) {
+      id(record?.planId);
+      if (plans.has(record.planId)) throw invalid('A tariff plan ID occurs more than once in this portfolio.');
+      plans.set(record.planId, await inspectPlan(record));
+    }
+
+    async function originalPlan(planId) {
+      id(planId);
+      if (!plans.has(planId)) {
+        if(typeof retainedTariffPlan!=='function')throw invalid('The portfolio omits its original tariff plan.');
+        plans.set(planId, await inspectPlan(await retainedTariffPlan(planId)));
+      }
+      const found = plans.get(planId);
+      if (!found.manifest) found.manifest = JSON.parse((await pricingManifest(found.record.version)).toString('utf8'));
+      return found;
+    }
+
+    const selectionIds = new Set();
+    for (const item of input.selections) {
+      id(item?.id, 'pricing request');
+      if (selectionIds.has(item.id)) throw invalid('A pricing request ID occurs more than once in this portfolio.');
+      selectionIds.add(item.id);
+      const intent = item.intent, request = intent?.request;
+      if (!object(intent) || intent.schema !== 'stellar-forge.merchant-tariff-selection-intent.v1' ||
+          !timestamp(intent.createdAt) || !object(request) || !object(intent.selection) ||
+          !object(intent.scenarioRequest) || !object(intent.pricingRequest) ||
+          (item.result !== null && !object(item.result)))
+        throw invalid('A selection journal is incomplete.');
+      id(request.planRequestId, 'scenario request'); id(request.pricingRequestId, 'pricing request');
+      const core = stableSelection(request.selection);
+      if (core.schema !== SELECTION || !object(core.scenarioPlanInput) || !object(core.pricingInput) ||
+          !HASH.test(request.selection.selectionSha256 ?? '') ||
+          fingerprint(core) !== request.selection.selectionSha256 ||
+          !HASH.test(intent.requestSha256 ?? '') || fingerprint(request) !== intent.requestSha256 ||
+          request.pricingRequestId !== item.id || fingerprint(intent.selection) !== fingerprint(core))
+        throw invalid('A selection journal differs from its original selection and request IDs.');
+      const normalizedRequest = {selection:{...core,selectionSha256:request.selection.selectionSha256},
+        planRequestId:request.planRequestId,pricingRequestId:request.pricingRequestId};
+      const scenarioRequest = {...core.scenarioPlanInput,requestId:request.planRequestId};
+      const pricingRequest = {...core.pricingInput,requestId:request.pricingRequestId};
+      if (fingerprint(request) !== fingerprint(normalizedRequest) ||
+          fingerprint(intent.scenarioRequest) !== fingerprint(scenarioRequest) ||
+          fingerprint(intent.pricingRequest) !== fingerprint(pricingRequest))
+        throw invalid('The retained native request bodies do not belong to this tariff selection.');
+      if (!(core.pricingInput.expectedRevision === null || HASH.test(core.pricingInput.expectedRevision ?? '')) ||
+          !HASH.test(core.pricingInput.snapshotSha256 ?? '') || !HASH.test(core.pricingInput.sellerSha256 ?? ''))
+        throw invalid('The selected native pricing revision or source capture is invalid.');
+
+      const {record,value,manifest} = await originalPlan(core.planId);
+      const row = record.review.comparisons.find(comparison => comparison.id === core.comparisonId);
+      if (!row?.scenario) throw invalid('A selection journal does not identify an adoptable tariff comparison.');
+      // Historical completed operations remain recoverable when today's seller
+      // differs. These equations use the saved seller, terms and observations.
+      const review = createScenarioReview({seller:value.seller,observation:value.observation,terms:value.terms,
+        scenarios:[row.scenario],provenance:value.provenance,includeReports:false});
+      const label = (record.label + ' / ' + row.quantity + ' requests').slice(0,100);
+      const expectedPlan = {version:record.version,scenarios:[row.scenario],label,
+        selectedScenarioId:row.scenario.id,reviewSha256:review.reviewSha256};
+      const expectedPricing = {expectedRevision:core.pricingInput.expectedRevision,label,
+        sellerSha256:record.provenance.seller,snapshotSha256:core.pricingInput.snapshotSha256,
+        commercial:copy(review.scenarios[0].commercial)};
+      const sourceSelection = manifest.sourceSelection ??
+        {kind:manifest.observationKind ?? 'SESSION',from:null,to:null,routeId:null};
+      if (core.tariffReviewSha256 !== record.review.tariffReviewSha256 ||
+          fingerprint(core.sourceSelection) !== fingerprint(sourceSelection) ||
+          fingerprint(core.scenarioPlanInput) !== fingerprint(expectedPlan) ||
+          fingerprint(core.pricingInput) !== fingerprint(expectedPricing))
+        throw invalid('A retained selection does not match its original tariff, scenario or merchant quote.');
+      const normalizedScenarioRequest = {version:scenarioRequest.version,scenarios:scenarioRequest.scenarios,
+        label:scenarioRequest.label.trim(),selectedScenarioId:scenarioRequest.selectedScenarioId ?? null,
+        reviewSha256:scenarioRequest.reviewSha256};
+      const scenarioRequestSha256 = fingerprint(normalizedScenarioRequest);
+      if (requestBodies.has(request.planRequestId) && requestBodies.get(request.planRequestId) !== scenarioRequestSha256)
+        throw invalid('One scenario request ID identifies different native scenario inputs.');
+      requestBodies.set(request.planRequestId, scenarioRequestSha256);
+
+      if (item.result !== null) {
+        const result = item.result, actualPlan = await scenarioPlan(request.planRequestId);
+        const version = id(result.pricing?.version, 'pricing review');
+        const nativeManifestBytes = await pricingManifest(version);
+        const nativeManifest = JSON.parse(nativeManifestBytes.toString('utf8'));
+        if (result.status !== 'TARIFF_SELECTION_SAVED' || result.planId !== core.planId ||
+            result.comparisonId !== core.comparisonId || actualPlan.planId !== request.planRequestId ||
+            result.scenarioPlan?.planId !== actualPlan.planId ||
+            actualPlan.requestSha256 !== scenarioRequestSha256 ||
+            result.scenarioPlan?.reviewSha256 !== actualPlan.review.reviewSha256 ||
+            result.scenarioPlan?.version !== actualPlan.version ||
+            nativeManifest.version !== version || nativeManifest.requestId !== request.pricingRequestId ||
+            nativeManifest.requestSha256 !== fingerprint(pricingRequest) ||
+            result.pricing.revision !== hash(nativeManifestBytes))
+          throw sourceChanged('Restore the exact original scenario and saved quote before receiving its completed selection.');
+      }
+      journals.push(item);
+    }
+
+    return {schema:'stellar-forge.merchant-tariff-portfolio-review.v1',sha256:input.sha256,
+      plans:input.plans,selections:journals};
+}
+
 export async function openTariffWorkspace({model, directory} = {}) {
   if (!model || !isAbsolute(directory ?? '') || resolve(directory) !== directory || directory === '/')
     throw fault('PRIVATE_TARIFF_DIRECTORY_REQUIRED', 'Supply the original pricing model and absolute private workspace.');
@@ -298,151 +437,46 @@ export async function openTariffWorkspace({model, directory} = {}) {
       row.quote.totalUsd,row.quote.chosenUniformQuoteUsd,row.quote.uniformGrossUsd,row.quote.roundingDeltaUsd,record.version]);
     return Buffer.from('\uFEFF'+rows.map(row=>row.map(cell).join(',')).join('\r\n')+'\r\n');
   }
-  async function bundle() {
-    const records = await allPlans(), selections = [];
-    for (const name of (await readdir(intents)).filter(name=>name.endsWith('.json')&&UUID.test(name.slice(0,-5))).sort())
-      selections.push({id:name.slice(0,-5),intent:await read(join(intents,name)),result:await maybe(join(results,name))});
-    const content = {schema:BUNDLE,plans:records,selections};
-    const value = {...content,sha256:fingerprint(content)};
-    if (encode(value).length > MAX_BUNDLE) throw fault('TARIFF_PORTFOLIO_TOO_LARGE','Export selected tariff plans separately.');
+  async function bundle(options = {}) {
+    if(!object(options)||Object.keys(options).some(key=>key!=='selectionRequestId'))
+      throw fault('TARIFF_PORTFOLIO_SELECTION_REQUIRED','Choose the complete portfolio or one original selection request.');
+    const selections=[],records=[];
+    if(options.selectionRequestId!==undefined) {
+      const selectedId=id(options.selectionRequestId,'pricing request'),name=selectedId+'.json';
+      const intent=await read(join(intents,name));
+      records.push(await load(intent.selection.planId));
+      selections.push({id:selectedId,intent,result:await maybe(join(results,name))});
+    } else {
+      records.push(...await allPlans());
+      for(const name of (await readdir(intents)).filter(name=>name.endsWith('.json')&&UUID.test(name.slice(0,-5))).sort())
+        selections.push({id:name.slice(0,-5),intent:await read(join(intents,name)),result:await maybe(join(results,name))});
+    }
+    const content={schema:BUNDLE,plans:records,selections},value={...content,sha256:fingerprint(content)};
+    if(encode(value).length>MAX_BUNDLE)
+      throw fault('TARIFF_PORTFOLIO_TOO_LARGE','Export a selected original tariff comparison and its request.');
     return value;
   }
+  async function inspectPortfolio(raw) {
+    return inspectTariffPortfolio(raw,{pricingSource:context,scenarioPlan:planId=>planning.load(planId),
+      pricingManifest:version=>model.download(version,'manifest.json'),retainedTariffPlan:load});
+  }
   async function receive(raw) {
-    const input = copy(raw);
-    if (!object(input) || input.schema !== BUNDLE || !Array.isArray(input.plans) || !Array.isArray(input.selections) ||
-        !HASH.test(input.sha256 ?? '') || encode(input).length > MAX_BUNDLE ||
-        fingerprint({schema:input.schema,plans:input.plans,selections:input.selections}) !== input.sha256)
-      throw fault('TARIFF_PORTFOLIO_INVALID','Use the complete exported tariff portfolio.');
-
-    const timestamp = value => typeof value === 'string' && Number.isFinite(Date.parse(value)) &&
-      new Date(value).toISOString() === value;
-    const invalid = message => fault('TARIFF_PORTFOLIO_INVALID', message);
-    const sourceChanged = message => fault('TARIFF_PORTFOLIO_SOURCE_CHANGED', message, 409);
-    const plans = new Map(), journals = [], requestBodies = new Map();
-
-    async function inspectPlan(record) {
-      id(record?.planId); id(record?.version, 'pricing review');
-      if (record.schema !== PLAN || !object(record.inputs) ||
-          Object.keys(record.inputs).some(key => !['tariffs','volumes'].includes(key)) ||
-          typeof record.label !== 'string' || !record.label.trim() ||
-          record.label !== record.label.trim() || record.label.length > 100 ||
-          !timestamp(record.savedAt) || !timestamp(record.review?.generatedAt) ||
-          !HASH.test(record.requestSha256 ?? '') || !HASH.test(record.review?.tariffReviewSha256 ?? ''))
-        throw invalid('A tariff plan is incomplete or its saved request identity is invalid.');
-      const request = {version:record.version,tariffs:record.inputs.tariffs,volumes:record.inputs.volumes,
-        label:record.label,tariffReviewSha256:record.review.tariffReviewSha256};
-      if (fingerprint(request) !== record.requestSha256)
-        throw invalid('A tariff plan no longer matches its original save request.');
-      const {value,review} = await prepare({version:record.version,...record.inputs});
-      if (record.sourceLabel !== value.label || fingerprint(value.provenance) !== fingerprint(record.provenance) ||
-          fingerprint(stableReview(review)) !== fingerprint(stableReview(record.review)))
-        throw sourceChanged('Restore the matching original pricing backup before receiving these tariffs.');
-      return {record,value};
-    }
-
-    // Preflight the complete incoming portfolio before registering any new plan
-    // or resumable intent. Source reads use its immutable saved pricing versions.
-    for (const record of input.plans) {
-      id(record?.planId);
-      if (plans.has(record.planId)) throw invalid('A tariff plan ID occurs more than once in this portfolio.');
-      plans.set(record.planId, await inspectPlan(record));
+    const checked=await inspectPortfolio(raw),input={plans:checked.plans},journals=checked.selections;
+    // Keep every destination-conflict check ahead of the original first write.
+    for(const record of input.plans) {
       const previous = await maybe(join(root, record.planId + '.json'));
       if (previous && fingerprint(previous) !== fingerprint(record))
         throw fault('TARIFF_REQUEST_CHANGED','This plan ID already identifies another retained plan.',409);
     }
-
-    async function originalPlan(planId) {
-      id(planId);
-      if (!plans.has(planId)) plans.set(planId, await inspectPlan(await load(planId)));
-      const found = plans.get(planId);
-      if (!found.manifest) found.manifest = JSON.parse((await model.download(found.record.version, 'manifest.json')).toString('utf8'));
-      return found;
-    }
-
-    const selectionIds = new Set();
-    for (const item of input.selections) {
-      id(item?.id, 'pricing request');
-      if (selectionIds.has(item.id)) throw invalid('A pricing request ID occurs more than once in this portfolio.');
-      selectionIds.add(item.id);
-      const intent = item.intent, request = intent?.request;
-      if (!object(intent) || intent.schema !== 'stellar-forge.merchant-tariff-selection-intent.v1' ||
-          !timestamp(intent.createdAt) || !object(request) || !object(intent.selection) ||
-          !object(intent.scenarioRequest) || !object(intent.pricingRequest) ||
-          (item.result !== null && !object(item.result)))
-        throw invalid('A selection journal is incomplete.');
-      id(request.planRequestId, 'scenario request'); id(request.pricingRequestId, 'pricing request');
-      const core = stableSelection(request.selection);
-      if (core.schema !== SELECTION || !object(core.scenarioPlanInput) || !object(core.pricingInput) ||
-          !HASH.test(request.selection.selectionSha256 ?? '') ||
-          fingerprint(core) !== request.selection.selectionSha256 ||
-          !HASH.test(intent.requestSha256 ?? '') || fingerprint(request) !== intent.requestSha256 ||
-          request.pricingRequestId !== item.id || fingerprint(intent.selection) !== fingerprint(core))
-        throw invalid('A selection journal differs from its original selection and request IDs.');
-      const normalizedRequest = {selection:{...core,selectionSha256:request.selection.selectionSha256},
-        planRequestId:request.planRequestId,pricingRequestId:request.pricingRequestId};
-      const scenarioRequest = {...core.scenarioPlanInput,requestId:request.planRequestId};
-      const pricingRequest = {...core.pricingInput,requestId:request.pricingRequestId};
-      if (fingerprint(request) !== fingerprint(normalizedRequest) ||
-          fingerprint(intent.scenarioRequest) !== fingerprint(scenarioRequest) ||
-          fingerprint(intent.pricingRequest) !== fingerprint(pricingRequest))
-        throw invalid('The retained native request bodies do not belong to this tariff selection.');
-      if (!(core.pricingInput.expectedRevision === null || HASH.test(core.pricingInput.expectedRevision ?? '')) ||
-          !HASH.test(core.pricingInput.snapshotSha256 ?? '') || !HASH.test(core.pricingInput.sellerSha256 ?? ''))
-        throw invalid('The selected native pricing revision or source capture is invalid.');
-
-      const {record,value,manifest} = await originalPlan(core.planId);
-      const row = record.review.comparisons.find(comparison => comparison.id === core.comparisonId);
-      if (!row?.scenario) throw invalid('A selection journal does not identify an adoptable tariff comparison.');
-      // Historical completed operations remain recoverable when today's seller
-      // differs. These equations use the saved seller, terms and observations.
-      const review = createScenarioReview({seller:value.seller,observation:value.observation,terms:value.terms,
-        scenarios:[row.scenario],provenance:value.provenance,includeReports:false});
-      const label = (record.label + ' / ' + row.quantity + ' requests').slice(0,100);
-      const expectedPlan = {version:record.version,scenarios:[row.scenario],label,
-        selectedScenarioId:row.scenario.id,reviewSha256:review.reviewSha256};
-      const expectedPricing = {expectedRevision:core.pricingInput.expectedRevision,label,
-        sellerSha256:record.provenance.seller,snapshotSha256:core.pricingInput.snapshotSha256,
-        commercial:copy(review.scenarios[0].commercial)};
-      const sourceSelection = manifest.sourceSelection ??
-        {kind:manifest.observationKind ?? 'SESSION',from:null,to:null,routeId:null};
-      if (core.tariffReviewSha256 !== record.review.tariffReviewSha256 ||
-          fingerprint(core.sourceSelection) !== fingerprint(sourceSelection) ||
-          fingerprint(core.scenarioPlanInput) !== fingerprint(expectedPlan) ||
-          fingerprint(core.pricingInput) !== fingerprint(expectedPricing))
-        throw invalid('A retained selection does not match its original tariff, scenario or merchant quote.');
-      const normalizedScenarioRequest = {version:scenarioRequest.version,scenarios:scenarioRequest.scenarios,
-        label:scenarioRequest.label.trim(),selectedScenarioId:scenarioRequest.selectedScenarioId ?? null,
-        reviewSha256:scenarioRequest.reviewSha256};
-      const scenarioRequestSha256 = fingerprint(normalizedScenarioRequest);
-      if (requestBodies.has(request.planRequestId) && requestBodies.get(request.planRequestId) !== scenarioRequestSha256)
-        throw invalid('One scenario request ID identifies different native scenario inputs.');
-      requestBodies.set(request.planRequestId, scenarioRequestSha256);
-
-      if (item.result !== null) {
-        const result = item.result, actualPlan = await planning.load(request.planRequestId);
-        const version = id(result.pricing?.version, 'pricing review');
-        const nativeManifestBytes = await model.download(version, 'manifest.json');
-        const nativeManifest = JSON.parse(nativeManifestBytes.toString('utf8'));
-        if (result.status !== 'TARIFF_SELECTION_SAVED' || result.planId !== core.planId ||
-            result.comparisonId !== core.comparisonId || actualPlan.planId !== request.planRequestId ||
-            result.scenarioPlan?.planId !== actualPlan.planId ||
-            actualPlan.requestSha256 !== scenarioRequestSha256 ||
-            result.scenarioPlan?.reviewSha256 !== actualPlan.review.reviewSha256 ||
-            result.scenarioPlan?.version !== actualPlan.version ||
-            nativeManifest.version !== version || nativeManifest.requestId !== request.pricingRequestId ||
-            nativeManifest.requestSha256 !== fingerprint(pricingRequest) ||
-            result.pricing.revision !== hash(nativeManifestBytes))
-          throw sourceChanged('Restore the exact original scenario and saved quote before receiving its completed selection.');
-      }
+    for(const item of journals) {
+      const intent=item.intent;
       const previousIntent = await maybe(join(intents, item.id + '.json'));
       const previousResult = await maybe(join(results, item.id + '.json'));
       if (previousIntent && fingerprint(previousIntent) !== fingerprint(intent))
         throw fault('TARIFF_REQUEST_CHANGED','This pricing request already identifies another retained selection.',409);
       if (item.result !== null && previousResult && fingerprint(previousResult) !== fingerprint(item.result))
         throw fault('TARIFF_REQUEST_CHANGED','This pricing request already has a different retained result.',409);
-      journals.push(item);
     }
-
     const received = [];
     for (const record of input.plans) {
       const result = await writeOnce(join(root,record.planId+'.json'),record);
@@ -454,7 +488,7 @@ export async function openTariffWorkspace({model, directory} = {}) {
     }
     return {status:'TARIFF_PORTFOLIO_RECEIVED',plans:received,selections:journals.length};
   }
-  return {state,source,preview,save,list,load,selection,commitSelection,download,bundle,receive,
+  return {state,source,preview,save,list,load,selection,commitSelection,download,bundle,inspectPortfolio,receive,
     repricingSource:version=>model.repricingSource(version),
     downloadRepricing:(decision,name)=>model.downloadRepricing(decision,name),
     downloadPricing:(version,name)=>model.download(version,name),

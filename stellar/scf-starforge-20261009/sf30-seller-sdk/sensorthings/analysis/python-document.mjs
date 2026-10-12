@@ -6,6 +6,7 @@ import {readOwned,privateDirectory,syncDir} from '../../stellar-expert/store.mjs
 import {identity,json,stable,fault} from '../contract.mjs';
 import {tableColumns,tableRows} from '../domain.mjs';
 import {numericEligibility} from './model.mjs';
+import {prepareComponentProjection,PYTHON_COMPONENT_INTAKE_SCHEMA} from './python-components.mjs';
 import {exportEdition,validateSourceEdition,openPrivateFile,hashHeldFile,inspectRetainedFile} from '../portable.mjs';
 
 export const PYTHON_INTAKE_SCHEMA='stellar-forge.sensorthings-python-intake.v1';
@@ -73,7 +74,7 @@ async function immutableBody(store,directory,body,extension='json',contentType='
   const record={path:'files/'+sha(body)+'.'+extension,bytes:body.length,sha256:sha(body),contentType};
   await store.immutable(join(directory,record.path),body);await retained(directory,record);return record;
 }
-async function prepareTables(store,edition,directory){
+async function prepareTables(store,edition,directory,component=null){
   const temporary=join(directory,'tables-'+randomUUID()+'.partial'),file=await open(temporary,'wx',0o600),
     digest=createHash('sha256');let bytes=0,total=0;const tables={};
   const write=async value=>{
@@ -84,11 +85,12 @@ async function prepareTables(store,edition,directory){
   };
   try {
     await write('{');
-    for(let index=0;index<TABLES.length;index++){
-      const table=TABLES[index],columns=projectedColumns(table);let count=0;
+    const selectedTables=[...TABLES,...Object.keys(component?.tableColumns??{})];
+    for(let index=0;index<selectedTables.length;index++){
+      const table=selectedTables[index],columns=component?.tableColumns[table]??projectedColumns(table);let count=0;
       if(!Array.isArray(columns)||!columns.length)throw error('TABLE_CONTRACT','The original SensorThings table columns are unavailable.');
       await write((index?',':'')+JSON.stringify(table)+':[');
-      for await(const item of projectedRows(store,edition,table)){
+      for await(const item of component?.tableColumns[table]?component.rows(table):projectedRows(store,edition,table)){
         if(++total>PYTHON_DOCUMENT_LIMITS.rows)throw error('ROW_CAPACITY','The complete source projection exceeds the original Analysis row capacity.');
         const row={};
         for(const column of columns){
@@ -141,7 +143,9 @@ async function readCompleted(directory,expected){
   const record=JSON.parse(raw.toString('utf8'));
   for(const [key,value] of Object.entries(expected))
     if(stable(record[key])!==stable(value))throw error('REQUEST_REUSED','This prepared Python source belongs to another original selection.');
-  if(record.schema!==PYTHON_SOURCE_SCHEMA||!Array.isArray(record.files))throw error('RECEIPT','The prepared source receipt differs.');
+  if(record.schema!==PYTHON_SOURCE_SCHEMA||!Array.isArray(record.files)||
+      Object.hasOwn(record,'componentAnalysis')!==Object.hasOwn(expected,'componentAnalysis'))
+    throw error('RECEIPT','The prepared source receipt differs from the selected scalar/component preparation.');
   for(const file of record.files){
     if(!/^(?:source\.json|intake\.json|files\/[a-f0-9]{64}\.(?:json|bin))$/.test(file.file??''))
       throw error('FILE_SELECTION','The prepared source contains an unexpected selected file.');
@@ -155,7 +159,7 @@ async function readCompleted(directory,expected){
  * the caller's operationId. Every provider body and connector receipt remains
  * in that complete original archive. This function never captures or pays.
  */
-export async function preparePythonSource(store,{edition,exportReceipt,id,createdAt}){
+export async function preparePythonSource(store,{edition,exportReceipt,id,createdAt,analysisVersion=null}){
   if(!OP.test(id??'')||typeof createdAt!=='string'||!Number.isFinite(Date.parse(createdAt)))
     throw error('OPERATION','Use the retained original preparation identity and creation time.');
   validateSourceEdition(edition);
@@ -168,10 +172,12 @@ export async function preparePythonSource(store,{edition,exportReceipt,id,create
   if(stable(reopened)!==stable(exportReceipt))throw error('ORIGINAL_EXPORT_CHANGED','The original source export did not reopen unchanged.');
   const relativeDirectory='analysis-python/'+id,directory=join(store.root,relativeDirectory);
   await privateDirectory(directory,{create:true});await privateDirectory(join(directory,'files'),{create:true});
+  const component=analysisVersion===null?null:await prepareComponentProjection(store,edition,analysisVersion);
   const expected={id,createdAt,editionId:edition.id,exportId:exportReceipt.id,
-    exportSha256:exportReceipt.file.sha256,originalWorkspaceId:exportReceipt.originalWorkspaceId};
+    exportSha256:exportReceipt.file.sha256,originalWorkspaceId:exportReceipt.originalWorkspaceId,
+    ...(component?{componentAnalysis:component.metadata}:{})};
   const completed=await readCompleted(directory,expected);if(completed)return completed;
-  const {document,tables}=await prepareTables(store,edition,directory),
+  const {document,tables}=await prepareTables(store,edition,directory,component),
     archive=await retainArchive(store,directory,exportReceipt),
     editionFile=await immutableBody(store,directory,json(edition)),
     exportFile=await immutableBody(store,directory,json(exportReceipt));
@@ -188,13 +194,23 @@ export async function preparePythonSource(store,{edition,exportReceipt,id,create
     complete:'The complete retained edition/export closure is present. The document completion flag separately records whether the selected provider traversal finished; an atomic provider snapshot is not asserted.',
     sourceArchive:{...archive,parts:archive.parts.map(({offset,bytes,sha256,path})=>({offset,bytes,sha256,path}))}
   };
+  if(component){
+    meaning.components='Four additional source-bound collections retain each explicitly selected component, its parent/selected identity, separate exact/browser eligibility, and complete ordered metadata bindings. The immutable saved analysis version and the binding manifest are retained as originals. No original vector, unit, property, declaration, quality label or timestamp is rewritten.';
+    meaning.componentMeaning=component.manifest.meaning;
+    meaning.componentSelection=component.metadata;
+  }
   const meaningFile=await immutableBody(store,directory,json(meaning));
+  const componentOriginals=component?[
+    {...await immutableBody(store,directory,json(component.version)),role:'original-component-analysis-version'},
+    {...await immutableBody(store,directory,json(component.manifest)),role:'original-component-binding-manifest'}
+  ]:[];
   const originals=[
     ...archive.parts.map(({offset,...part})=>part),
     {...editionFile,role:'original-source-edition'},
     {...exportFile,role:'original-source-export-receipt'},
-    {...meaningFile,role:'projection-and-source-interpretation'}
+    {...meaningFile,role:'projection-and-source-interpretation'},...componentOriginals
   ];
+  for(const original of originals)counted(original,PYTHON_DOCUMENT_LIMITS.originalBytes);
   const unique=new Map([document,...originals].map(r=>[r.path,r]));
   if(originals.length>PYTHON_DOCUMENT_LIMITS.originals||[...unique.values()].reduce((n,r)=>n+r.bytes,0)>PYTHON_DOCUMENT_LIMITS.totalBytes)
     throw error('TOTAL_CAPACITY','The complete source document and every original exceed the existing Analysis source capacity.');
@@ -204,12 +220,12 @@ export async function preparePythonSource(store,{edition,exportReceipt,id,create
     format:'json',document,originals,complete:edition.scope.traversalCompleted===true&&edition.scope.status==='SELECTED_QUERY_TRAVERSED',
     provenance:{kind:sourceUrl?'public-source':'operator-file',publisher:String(edition.source.label||'SensorThings source').slice(0,200),
       capturedAt:edition.createdAt,scope:('Original source edition '+edition.id+'; '+edition.scope.status).slice(0,500),
-      description:'Complete immutable source edition '+edition.id+' from capture '+edition.captureId+'. The original query, request URLs, raw response bodies, connector receipts, metadata and source-license terms are retained in the complete source archive. All three original lossless table projections and two explicitly derived identity/classification tables are present. '+meaning.numbers+' '+meaning.categories,
+      description:'Complete immutable source edition '+edition.id+' from capture '+edition.captureId+'. The original query, request URLs, raw response bodies, connector receipts, metadata and source-license terms are retained in the complete source archive. All three original lossless table projections and two explicitly derived identity/classification tables are present. '+(component?'The explicit saved component selection and four complete component tables are also retained. ':'')+meaning.numbers+' '+meaning.categories,
       ...(sourceUrl?{sourceUrl}:{})}
   };
   const sourceBytes=json(source),sourceRecord={file:'source.json',bytes:sourceBytes.length,sha256:sha(sourceBytes),contentType:'application/json'};
   await store.immutable(join(directory,'source.json'),sourceBytes);
-  const intake={schema:PYTHON_INTAKE_SCHEMA,...expected,source:sourceRecord,document,tables,archive,
+  const intake={schema:component?PYTHON_COMPONENT_INTAKE_SCHEMA:PYTHON_INTAKE_SCHEMA,...expected,source:sourceRecord,document,tables,archive,
     scope:edition.scope,comparisonScope:{source:edition.source.serviceUrl,streams:edition.plan.streams.map(x=>({kind:x.kind,url:x.url})),query:edition.plan.observationQuery},sourceLicense:edition.source.license,meaning:meaningFile,
     files:[sourceRecord,...[...unique.values()].map(({path,bytes,sha256,contentType})=>({file:path,bytes,sha256,contentType}))]};
   const intakeBytes=json(intake),intakeRecord={file:'intake.json',bytes:intakeBytes.length,sha256:sha(intakeBytes),contentType:'application/json'};

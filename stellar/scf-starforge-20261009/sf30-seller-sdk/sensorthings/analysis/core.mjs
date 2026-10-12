@@ -11,6 +11,7 @@ import {importEvidence,safeFile} from './artifacts.mjs';
 import {preparePublication} from './publication.mjs';
 import {exportProject,importProject} from './transfer.mjs';
 import {preparePythonSource} from './python-document.mjs';
+import {componentCatalog} from './components.mjs';
 
 const clone=v=>structuredClone(v),find=(rows,id,label)=>{const v=(rows??[]).find(x=>x.id===id);if(!v)throw fault('ANALYSIS_SELECTION','Select an existing '+label+'.',404);return v;};
 const collections=['analysisProjects','analysisVersions','analysisComparisons','analysisEvidence','analysisViewers','analysisPublications','analysisExports','analysisImports','analysisReceipts','analysisPythonSources'];
@@ -30,10 +31,15 @@ export function analysisContext(state,op,{inboxDirectory=null}={}){
     if(!inboxDirectory)throw fault('ANALYSIS_INBOX','Bind the existing host source inbox before receiving this original file.',409);
     c.inboxDirectory=inboxDirectory;
   }
-  if(op.action==='analysis.python.prepare'){
+  if(['analysis.python.prepare','analysis.python.components.prepare'].includes(op.action)){
     if(!state.editionIds.includes(hash(p.editionId,'source edition')))throw fault('ANALYSIS_EDITION','Select an immutable local source edition.',404);
     c.pythonExport=clone(find(state.exports,p.exportId,'completed original source export'));
     if(c.pythonExport.editionId!==p.editionId)throw fault('ANALYSIS_PYTHON_SOURCE','The selected source export belongs to another immutable edition.',409);
+    if(op.action==='analysis.python.components.prepare'){
+      const selected=versionRecord(state,hash(p.analysisVersionId,'saved component analysis version'));
+      if(selected.editionId!==p.editionId)throw fault('ANALYSIS_PYTHON_SOURCE','The saved analysis version belongs to another original source edition.',409);
+      c.pythonAnalysisVersionId=selected.id;
+    }
   }
   if(op.action==='analysis.create'){
     if(!state.editionIds.includes(hash(p.editionId,'source edition')))throw fault('ANALYSIS_EDITION','Select an immutable local source edition.',404);
@@ -112,14 +118,14 @@ export function createAnalysisManager({store,edition,inboxDirectory=null}){
   }
   async function streams(editionId){
     const e=await edition(editionId),scalar=e.plan.streams.filter(s=>s.kind==='Datastreams');
-    if(!scalar.length)return {editionId,streams:[],scope:e.scope,issues:e.issues};
+    const componentCatalogue=await componentCatalog(store,e);
     // The full source profile is the original stream catalogue, not a new capture.
     const all=[];
     for(let offset=0;offset<scalar.length;offset+=ANALYSIS_LIMITS.streams){
       const selection=normalizeSelection({streamKeys:scalar.slice(offset,offset+ANALYSIS_LIMITS.streams).map(s=>s.key),period:null,view:'events'},e);
       all.push(...(await describeSelection(store,e,selection)).streams);
     }
-    return {editionId,streams:all,scope:e.scope,issues:e.issues,license:e.source.license};
+    return {editionId,streams:all,componentCatalogue,scope:e.scope,issues:e.issues,license:e.source.license};
   }
   async function rows(id,options){const v=await version(id);return rowsPage(store,await edition(v.editionId),v.selection,options);}
   async function sta(id,mode,request){
@@ -170,8 +176,12 @@ export function createAnalysisManager({store,edition,inboxDirectory=null}){
         if(p.editionId!==undefined)editionId=hash(p.editionId,'source edition');
         const e=await edition(editionId);
         if(p.selection!==undefined)selection=normalizeSelection(p.selection,e);
-        else if(editionId!==prior.editionId)selection=normalizeSelection({streamKeys:prior.selection.streamKeys,period:prior.selection.period?
-          {start:prior.selection.period.start,end:prior.selection.period.end}:null,view:prior.selection.view,viewerId:prior.selection.viewerId},e);
+        else if(editionId!==prior.editionId){
+          if(Array.isArray(prior.selection.componentSelections))
+            throw fault('ANALYSIS_COMPONENT_REBIND','Choose and review each exact positional binding in the new source edition before saving a revised component selection.',409);
+          selection=normalizeSelection({streamKeys:prior.selection.streamKeys,period:prior.selection.period?
+            {start:prior.selection.period.start,end:prior.selection.period.end}:null,view:prior.selection.view,viewerId:prior.selection.viewerId},e);
+        }
         if(p.title!==undefined)title=text(p.title,'the analysis title',200);
         // Prior annotations retain their original cited edition. They remain
         // visible history, never relabeled as evidence for this later edition.
@@ -191,11 +201,14 @@ export function createAnalysisManager({store,edition,inboxDirectory=null}){
         record={id:value.id,projectId:v.projectId,versionId:v.id,leftEditionId:left.id,rightEditionId:right.id,sha256:saved.sha256,createdAt:op.createdAt,counts:compared.counts};
       return finish(value,state=>uniquePush(state,'analysisComparisons',record));
     }
-    if(op.action==='analysis.python.prepare'){
+    if(['analysis.python.prepare','analysis.python.components.prepare'].includes(op.action)){
       const selected=await edition(hash(p.editionId,'source edition')),
-        value=await preparePythonSource(store,{edition:selected,exportReceipt:c.pythonExport,id:op.operationId,createdAt:op.createdAt});
+        analysisVersion=op.action==='analysis.python.components.prepare'?await version(c.pythonAnalysisVersionId):null,
+        value=await preparePythonSource(store,{edition:selected,exportReceipt:c.pythonExport,id:op.operationId,createdAt:op.createdAt,analysisVersion});
       if(value.schema!=='stellar-forge.sensorthings-python-source.v1'||value.id!==op.operationId||value.editionId!==selected.id||
-         value.exportId!==c.pythonExport.id||value.originalWorkspaceId!==c.workspaceId||!Array.isArray(value.files))
+         value.exportId!==c.pythonExport.id||value.originalWorkspaceId!==c.workspaceId||!Array.isArray(value.files)||
+         (analysisVersion&&value.componentAnalysis?.analysisVersionId!==analysisVersion.id)||
+         (!analysisVersion&&Object.hasOwn(value,'componentAnalysis')))
         throw fault('ANALYSIS_PYTHON_SOURCE','The Python document preparer returned another original source selection.',409);
       return finish(value,state=>uniquePush(state,'analysisPythonSources',value));
     }
