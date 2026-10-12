@@ -386,3 +386,7 @@ Native payment verification remains in the original seller and facilitator.
 ## Cache operating history and live policy control
 
 Save or reopen an API package and use **Open cache operations** in its run section. The page retains operating snapshots and change history in that saved package, uses its managed seller for live inspection and changes, and remains available for review when the seller is stopped. It supports policy comparisons, explicit apply, restoring prior retention, recovery by operation ID, notes and complete receiving/export. [Cache operations guide](../../sf30-seller-sdk/response-cache/workspace/README.md) covers the same browser, command-line and agent workflow.
+
+## Retained HAR captures and later editions
+
+Open **Captured API sources** in the source section to retain a HAR capture, download its original offline reviewer, save the completed immutable decisions and use the approved source in this merchant. The same panel can adopt an existing private HAR workspace, compare a later capture against a saved review, retain unchanged merchant route settings, copy a complete receiving source and reopen its reviews. The original merchant configuration, transport, authorization, package and seller lifecycle follow that source selection. See [Capture workspace](../har/WORKSPACE.md) for the complete operator and receiving workflow.
