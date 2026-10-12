@@ -167,6 +167,7 @@ export function bindFleetDiscoveryControls({ request, getReleases, isBusy, setBu
   }
   function filename(kind) { return selected + '-discovery-' + kind + '.json'; }
   async function call(path = '', body, query = {}) {
+    if (stopped) return null;
     const target = selected, version = scopeVersion;
     if (!target) throw new Error('Select a merchant.');
     const controller = body === undefined ? new AbortController() : null;
@@ -397,6 +398,7 @@ export function bindFleetDiscoveryControls({ request, getReleases, isBusy, setBu
     renderState();
   }
   async function readCatalog() {
+    if (stopped) return;
     const slot = get('source-slot').value, target = selected, version = scopeVersion;
     if (!slot) return;
     const controller = new AbortController(); controllers.add(controller);
@@ -423,6 +425,7 @@ export function bindFleetDiscoveryControls({ request, getReleases, isBusy, setBu
     retainedSource = value; offersPage = 0; renderSource();
   }
   async function refreshInside() {
+    if (stopped) return;
     await readStatus();
     if (stopped || !fresh()) return;
     if (get('source-mode').value === 'retained') { await readCatalog(); if (running()) await readRetainedSource(); }
@@ -515,7 +518,7 @@ export function bindFleetDiscoveryControls({ request, getReleases, isBusy, setBu
     const value = await call('/consume', undefined, query);
     if (!value) return;
     if (!Array.isArray(value.page?.resources)) throw new Error('The original buyer explorer did not return a resource page.');
-    consumer = value; navigation = nav; renderConsumer(); syncButtons();
+    consumer = value; navigation = { ...nav, request: Object.fromEntries(new URLSearchParams(query)) }; renderConsumer(); syncButtons();
   }
   function renderConsumer() {
     get('public-page').replaceChildren();
@@ -659,7 +662,17 @@ export function bindFleetDiscoveryControls({ request, getReleases, isBusy, setBu
       { ...nav, offset: Math.max(0, nav.offset - nav.filters.limit), page: nav.page - 1 };
     void execute(() => readPage(next));
   });
-  on(get('download-page'), 'click', () => download(filename('public-page'), consumer?.page));
+  on(get('download-page'), 'click', () => {
+    if (!consumer?.page || !navigation?.request) return;
+    const report = consumer.page;
+    // Original SF61 observed-page envelope consumed by the existing SF88 buyer.
+    download(filename('public-page'), {
+      schema: 'scf61-observed-native-page-v1', observedAt: report.observedAt,
+      sourceMode: report.mode, sourceUrl: report.sourceUrl ?? undefined,
+      view: report.view, filterRequest: navigation.request, readOnly: true,
+      nativeProviderRows: report.resources, pagination: report.pagination, paidOrSettled: false,
+    });
+  });
   return { update, refresh,
     async close() {
       if (stopped) return pending;

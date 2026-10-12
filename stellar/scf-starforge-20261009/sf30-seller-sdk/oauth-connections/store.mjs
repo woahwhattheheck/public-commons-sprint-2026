@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { absolute, privateDirectory, readJson, atomicJson, identity, fault, stamp } from '../postgres/publisher/files.mjs';
 import { withConnectionLock as originalConnectionLock } from '../sheets/auth/store.mjs';
-import { normalizeOAuthProfile, oauthProfileIdentity, oauthCallbackPath, plain, hex, opaque, bearer, identifier } from './profile.mjs';
+import { normalizeOAuthProfile, oauthProfileIdentity, oauthCallbackPath, plain, hex, opaque, bearer, identifier, intuitQboProfile, qboRealm } from './profile.mjs';
 
 export const STATE_SCHEMA = 'stellar-forge.oauth-authorization-connection.v1';
 export const MAX_STATE_BYTES = 2 * 1024 * 1024;
@@ -23,7 +23,9 @@ const revocationMetadata = value => keys(value,['grantId','state','requestedAt',
   identifier(value.grantId) && identifier(value.requestId) && ['requested','confirmed','unknown','failed'].includes(value.state) &&
   moment(value.requestedAt) && date(value.lastAttemptAt) && lastError(value.lastError);
 const grantMetadata = grant => keys(grant,['id','state','scopes','issuedAt','expiresAt','refreshExpiresAt',
-  'hasRefreshToken','generation','review','lastError','retryAfter','remoteRevocation']) &&
+  'hasRefreshToken','generation','review','lastError','retryAfter','remoteRevocation','realmId','refreshHardExpiresAt']) &&
+  (grant.realmId === undefined || grant.realmId === null || qboRealm(grant.realmId)) &&
+  (grant.refreshHardExpiresAt === undefined || date(grant.refreshHardExpiresAt)) &&
   (grant.id===null || identifier(grant.id)) && ['disconnected','connected','refreshing','reconnect_required'].includes(grant.state) &&
   Array.isArray(grant.scopes) && grant.scopes.every(item=>typeof item==='string') &&
   [grant.issuedAt,grant.expiresAt,grant.refreshExpiresAt,grant.retryAfter].every(date) &&
@@ -74,6 +76,14 @@ function validState(state, { allowLoopback = false } = {}) {
         grant.refreshPending.requestId!==null && !identifier(grant.refreshPending.requestId)) ||
       (grant.state==='refreshing') !== (grant.refreshPending!==null))
     throw fault('OAUTH_CONNECTION_STATE_INVALID');
+  if (intuitQboProfile(profile) ?
+      !Object.hasOwn(grant, 'realmId') || !Object.hasOwn(grant, 'refreshHardExpiresAt') ||
+      !(grant.realmId === null || qboRealm(grant.realmId)) || !date(grant.refreshHardExpiresAt) ||
+      ['connected', 'refreshing'].includes(grant.state) && !qboRealm(grant.realmId) ||
+      grant.refreshHardExpiresAt !== null && grant.refreshExpiresAt !== null &&
+        Date.parse(grant.refreshExpiresAt) > Date.parse(grant.refreshHardExpiresAt) :
+      grant.realmId !== undefined || grant.refreshHardExpiresAt !== undefined)
+    throw fault('OAUTH_CONNECTION_STATE_INVALID');
   const grants=new Set();
   for(const item of state.revocations){
     const {token,type,...metadata}=item;
@@ -100,6 +110,7 @@ export function publicOAuthStatus(state) {
     callbackPath: oauthCallbackPath(state.profileSha256), updatedAt: state.updatedAt,
     grant: { id: grant.id, state: grant.state, scopes: [...grant.scopes],
       issuedAt: grant.issuedAt, expiresAt: grant.expiresAt, refreshExpiresAt: grant.refreshExpiresAt,
+      ...(intuitQboProfile(state.profile) ? { realmId: grant.realmId, refreshHardExpiresAt: grant.refreshHardExpiresAt } : {}),
       hasRefreshToken: Boolean(grant.refreshToken), generation: grant.generation,
       review: grant.review ? { actor: grant.review.actor, reference: grant.review.reference, at: grant.review.at } : null,
       lastError: grant.lastError ? { code: grant.lastError.code, at: grant.lastError.at } : null,
@@ -156,6 +167,7 @@ export async function initializeOAuthConnection(directory, { profile, allowLoopb
       profile: normalized, profileSha256: oauthProfileIdentity(normalized),
       grant: { id: null, state: 'disconnected', accessToken: null, refreshToken: null, scopes: [],
         issuedAt: null, expiresAt: null, refreshExpiresAt: null, generation: 0, review: null,
+        ...(intuitQboProfile(normalized) ? { realmId: null, refreshHardExpiresAt: null } : {}),
         refreshPending: null, lastError: null, retryAfter: null, remoteRevocation: 'not_requested' },
       commands: {}, history: [{ at: now, operation: 'initialized' }], revocations: [], lastDisconnectedGrantId: null };
     await atomicJson(directory, 'connection.json', validState(state, { allowLoopback }));

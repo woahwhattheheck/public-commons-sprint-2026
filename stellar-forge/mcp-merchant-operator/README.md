@@ -1,5 +1,13 @@
 # Starforge merchant operations through MCP
 
+Federal award research is available through the same merchant interface. Open
+host-declared USAspending workspaces, operate the original provider capture jobs,
+review award and recipient data, prepare the native merchant dataset, receive
+original buyer deliveries, and complete cited research dossiers. Both original
+browsers and exact resumable exports remain available. See
+[USAspending research workspaces](USASPENDING-WORKSPACE.md) for setup and the
+complete research, receiving and dossier workflow.
+
 Operate the existing Starforge merchant release system from an MCP client. This
 interface takes a prepared merchant API through staging, exact price and route
 comparison, activation, original seller startup, customer SDK export, rollback
@@ -539,3 +547,31 @@ tools, host configuration, replay, comparison, export and browser handoff.
 
 The same provider now operates original PostgreSQL, SQLite and MySQL publisher workspaces: approved saved query and typed candidate, native review/publication, recurring maintenance, retained buyer configuration and restart recovery. Use `init-publishers --dir NEW_DIRECTORY --connection PUBLISHER_CONNECTION.json` or add the host `publisherConnection` to an existing merchant. [PUBLISHERS.md](PUBLISHERS.md) gives complete setup, agent operations, seller/customer handoff and shutdown.
 
+
+
+## Author CKAN data products
+
+Attach an existing CKAN project with `init-ckan-workspaces --dir NEW_HOST
+--connection CKAN_CONNECTION.json`; select `--workspace ALIAS` when the connection
+contains multiple projects. Initialization binds the original project's
+`seller-releases` to this merchant operator. Agents use the same capture, typed
+projection, edition comparison, original publisher and portable merchant model as
+the CKAN workbench, then activate and run its release with the normal merchant
+tools. Each change returns the original operation identity for status and
+lost-response recovery. The original buyer configuration and merchant archives
+are available through SHA-pinned file reads. Both HTTP and stdio expose the same
+source tools and release lifecycle. The [complete CKAN agent and operator guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/MCP_WORKFLOW.md)
+covers host configuration, the joined source-to-customer workflow and reopening.
+
+## Socrata source and customer workspaces
+
+[SOCRATA_WORKSPACES.md](./SOCRATA_WORKSPACES.md) connects this same merchant MCP to
+the original Socrata source application. Host-declared aliases cover real
+provider capture, typed editions, native queries, complete portable exports,
+dataset publication, release operation and customer acquisition.
+
+Use `init-socrata-workspaces --dir NEW_DIRECTORY --connection CONNECTION_JSON`,
+or add `socrataWorkspaceConnection` to the existing merchant configuration.
+The `merchant_socrata_*` tools use the original source and publisher objects.
+Their industrial browser borrows that same operator, and complete customer files
+use the existing verified retained-file reader.
