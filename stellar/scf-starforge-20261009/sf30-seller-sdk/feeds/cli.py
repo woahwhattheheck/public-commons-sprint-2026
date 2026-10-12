@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 import shutil
+import signal
 import sys
 import threading
 
@@ -27,7 +28,11 @@ def options():
     from subscriptions_cli import add_arguments
     add_arguments(sub)
     sub.add_parser("init")
+    sub.add_parser("binding", help="Inspect the original private workspace, selected Python and complete console source")
     s = sub.add_parser("serve"); s.add_argument("--port", type=int, default=0)
+    s.add_argument("--expected-binding", help="Reviewed original managed binding SHA-256")
+    s.add_argument("--startup-format", choices=("legacy","json"), default="legacy")
+    s.add_argument("--landing", choices=("feeds","subscriptions"), default="feeds")
     sub.add_parser("state")
     s = sub.add_parser("register")
     s.add_argument("--feed", required=True); s.add_argument("--config", required=True)
@@ -70,15 +75,37 @@ def options():
 
 def main():
     a = options()
+    if a.command == "binding":
+        from managed import inspect_binding
+        output(inspect_binding(a.workspace)); return
+    if a.command == "serve" and a.expected_binding is not None:
+        from managed import require_binding
+        require_binding(a.workspace, a.expected_binding)
     with FeedWorkspace(a.workspace, create=a.command == "init") as ws:
         c = a.command
         if c == "serve":
             from server import OperatorServer
             if not 0 <= a.port <= 65535:
                 raise InputError("Choose a port from 0 to 65535")
+            binding = None
+            if a.startup_format == "json" or a.expected_binding is not None:
+                from managed import require_binding
+                binding = require_binding(ws.root, a.expected_binding)
             server = OperatorServer(ws, a.port)
-            output({"console": server.url, "workspace": str(ws.root)})
+            previous = {}
+            def stop(signum, frame):
+                ws.cancel_capture()
+                raise KeyboardInterrupt()
             try:
+                for signum in (signal.SIGINT, signal.SIGTERM):
+                    previous[signum] = signal.signal(signum, stop)
+                if a.startup_format == "json":
+                    from managed import startup
+                    server.launch = startup(server, binding, a.landing)
+                    output(server.launch)
+                else:
+                    url = server.url if a.landing == "feeds" else server.origin + "/subscriptions#" + server.token
+                    output({"console": url, "workspace": str(ws.root)})
                 server.serve_forever(poll_interval=0.25)
             except KeyboardInterrupt:
                 pass
@@ -86,6 +113,8 @@ def main():
                 ws.cancel_capture()
                 server.server_close()
                 server.join_worker()
+                for signum, handler in previous.items():
+                    signal.signal(signum, handler)
             return
         if c == "subscriptions":
             from subscriptions_cli import run_command
