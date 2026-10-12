@@ -1,0 +1,21 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "redis",
+  "description": "Redis and Valkey read products",
+  "commands": {
+    "redis": "stellar/scf-starforge-20261009/sf30-seller-sdk/redis/cli.mjs"
+  },
+  "commandDescriptions": {
+    "redis": "Inspect, prepare and operate Redis/Valkey read products"
+  },
+  "exports": {
+    "./seller/redis": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/redis/merchant.mjs",
+    "./seller/redis/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/redis/source.mjs",
+    "./seller/redis/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/redis/config.mjs",
+    "./seller/redis/declaration": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/redis/declaration.mjs",
+    "./seller/redis/prepare": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/redis/prepare.mjs"
+  },
+  "runtimePackageManifests": {
+    "redis": "stellar/scf-starforge-20261009/sf30-seller-sdk/redis/package.json"
+  }
+}
