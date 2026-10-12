@@ -1,7 +1,7 @@
 'use strict';
 (()=>{
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)],esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),json=v=>esc(JSON.stringify(v,null,2)),clone=v=>JSON.parse(JSON.stringify(v)),canonical=v=>JSON.stringify(v);
-const A={view:null,schema:null,db:null,key:null,drafts:{},pending:null,history:[],busy:false,tab:'overview',edition:null,rows:null,rowOffset:0,table:'observations',allEditions:[],preview:null,lastResult:null,polling:false};
+const A={view:null,schema:null,db:null,key:null,drafts:{},draftTokens:{},draftBases:{},draftConflict:null,pending:null,history:[],busy:false,tab:'overview',edition:null,rows:null,rowOffset:0,table:'observations',allEditions:[],preview:null,lastResult:null,polling:false};
 let selectionEpoch=0;
 let token=sessionStorage.getItem('coops-session')||'',epoch=0;
 const fragment=location.hash.slice(1);if(/^[A-Za-z0-9_-]{43}$/.test(fragment)){token=fragment;sessionStorage.setItem('coops-session',token);history.replaceState(null,'',location.pathname);}
@@ -12,14 +12,102 @@ function options(rows,selected,value='id',label='label'){return rows.map(r=>'<op
 function field(form,key,label,value='',type='text',extra=''){return'<label>'+esc(label)+'<input data-form="'+form+'" data-field="'+key+'" name="'+key+'" type="'+type+'" value="'+esc(value)+'" '+extra+'></label>';}
 function area(form,key,label,value='',extra=''){return'<label '+extra+'>'+esc(label)+'<textarea data-form="'+form+'" data-field="'+key+'" name="'+key+'">'+esc(value)+'</textarea></label>';}
 function select(form,key,label,items,value,extra=''){return'<label>'+esc(label)+'<select data-form="'+form+'" data-field="'+key+'" name="'+key+'" '+extra+'>'+items.map(x=>{const v=typeof x==='string'?x:x.value,l=typeof x==='string'?x:x.label;return'<option value="'+esc(v)+'"'+(v===value?' selected':'')+'>'+esc(l)+'</option>';}).join('')+'</select></label>';}
-function draft(key,defaults){return A.drafts[key]??=(clone(defaults));}
+function subjectBinding(key,value=A.drafts[key]){
+ if(key==='station')return{type:'station',id:value?.profileId||null};
+ if(key==='mapping')return{type:'mapping',id:value?.mappingId||null};
+ if(key.startsWith('review:'))return{type:'review',editionId:key.slice(7),subject:String(value?.subject??'').trim()};
+ return null;
+}
+function recordKey(value){if(value===null||typeof value!=='object')return JSON.stringify(value);if(Array.isArray(value))return'['+value.map(recordKey).join(',')+']';return'{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+recordKey(value[k])).join(',')+'}';}
+function savedSubject(binding,view=A.view){
+ if(binding.type==='station')return view.stations.find(p=>p.id===binding.id)??null;
+ if(binding.type==='mapping')return view.mappings.find(m=>m.id===binding.id)??null;
+ return view.annotations.find(a=>a.editionId===binding.editionId&&a.subject===binding.subject)??null;
+}
+function nativeDraft(binding,record,current){
+ if(!record){const value=clone(current);if(binding.type==='station')value.profileId='';if(binding.type==='mapping')value.mappingId='';return value;}
+ if(binding.type==='station')return{profileId:record.id,stationId:record.stationId,label:record.label,owner:record.owner,note:record.note,active:record.active};
+ if(binding.type==='mapping')return{mappingId:record.id,name:record.name,table:record.table,columns:clone(record.columns),note:record.note};
+ return{subject:record.subject,note:record.note,status:record.status};
+}
+function setDraft(key,value,{known=true}={}){
+ A.drafts[key]=clone(value);A.draftTokens[key]=crypto.randomUUID();
+ const binding=subjectBinding(key);if(binding)A.draftBases[key]={binding,known,record:clone(savedSubject(binding))};
+ if(A.draftConflict?.key===key)A.draftConflict=null;
+ return A.drafts[key];
+}
+function clearDraft(key){delete A.drafts[key];delete A.draftTokens[key];delete A.draftBases[key];if(A.draftConflict?.key===key)A.draftConflict=null;}
+function draft(key,defaults){
+ if(!Object.hasOwn(A.drafts,key)){
+  const binding=subjectBinding(key,defaults),saved=binding?savedSubject(binding):null;
+  return setDraft(key,binding?.type==='review'&&saved?nativeDraft(binding,saved,defaults):defaults);
+ }
+ A.draftTokens[key]??=crypto.randomUUID();
+ const binding=subjectBinding(key);
+ if(binding&&!A.draftBases[key]){
+  const saved=savedSubject(binding),unsaved=(binding.type==='station'||binding.type==='mapping')&&!binding.id;
+  A.draftBases[key]={binding,known:unsaved,record:clone(saved)};
+ }
+ return A.drafts[key];
+}
+function showDraftConflict(key,binding,current){
+ const base=A.draftBases[key];A.draftConflict={key,token:A.draftTokens[key],binding:clone(binding),current:clone(current)};
+ modal('Review the changed saved record',
+  '<p>The draft stays as entered. Its original saved record has changed, or its earlier baseline is unavailable. Review these versions before choosing which fields to keep. Saving remains a separate action.</p>'+
+  details('Draft inputs',A.drafts[key])+details(base?.known?'Original saved version':'Earlier baseline was not retained',base?.known?base.record:null)+details('Current saved version',current)+
+  '<div class="actions">'+(current?button('draft-use-current','Use current saved fields'):button('draft-use-current','Keep this as a distinct new record'))+
+  button('draft-keep','Keep draft against this reviewed version')+'</div>');
+}
+function checkDraftSave(key){
+ const value=draft(key,{}),binding=subjectBinding(key,value),base=A.draftBases[key],current=savedSubject(binding);
+ if(base?.known&&recordKey(base.binding)!==recordKey(binding)&&current===null){
+  A.draftBases[key]={binding:clone(binding),known:true,record:null};
+ }else if(!base?.known||recordKey(base.binding)!==recordKey(binding)||recordKey(base.record)!==recordKey(current)){
+  showDraftConflict(key,binding,current);throw new Error('Review the current saved record before saving this retained draft.');
+ }
+ return{key,token:A.draftTokens[key],binding:clone(binding)};
+}
+async function resolveDraftConflict(useCurrent){
+ const conflict=A.draftConflict;if(!conflict)throw new Error('Open the current draft comparison first.');
+ await refresh(false);
+ if(A.draftTokens[conflict.key]!==conflict.token)throw new Error('A different draft is open. Its fields were kept.');
+ const binding=subjectBinding(conflict.key),current=savedSubject(binding);
+ if(recordKey(binding)!==recordKey(conflict.binding)||recordKey(current)!==recordKey(conflict.current)){
+  showDraftConflict(conflict.key,binding,current);throw new Error('The record changed again. Review this current version before continuing.');
+ }
+ if(useCurrent){
+  A.drafts[conflict.key]=nativeDraft(binding,current,A.drafts[conflict.key]);
+  A.draftTokens[conflict.key]=crypto.randomUUID();
+ }
+ const selected=subjectBinding(conflict.key);
+ A.draftBases[conflict.key]={binding:clone(selected),known:true,record:clone(savedSubject(selected))};
+ A.draftConflict=null;await persist();$('#dialog').close();renderPage();
+ notice(useCurrent?'Current saved fields are open. Review and save any intended changes.':'The entered draft is retained against the version you reviewed. Save when ready.');
+}
+function applyDraftEffect(pending,response){
+ const effect=pending.draftEffect;if(!effect)return;
+ if(!A.drafts[effect.key]||A.draftTokens[effect.key]!==effect.token){effect.outcome='different_draft_preserved';return;}
+ const record=response.result,binding=effect.binding;
+ if(!record||typeof record.id!=='string')throw Object.assign(new Error('The saved record identity is missing from the original reply.'),{uncertain:true});
+ if(binding.type==='station'||binding.type==='mapping'){
+  const field=binding.type==='station'?'profileId':'mappingId',current=A.drafts[effect.key][field]||null;
+  if(binding.id&&record.id!==binding.id)throw Object.assign(new Error('The original reply refers to another saved record.'),{uncertain:true});
+  if(current&&current!==binding.id&&current!==record.id){effect.outcome='different_record_preserved';return;}
+  A.drafts[effect.key][field]=record.id;
+ }else if(record.editionId!==binding.editionId||record.subject!==binding.subject){
+  throw Object.assign(new Error('The original review reply refers to another edition or subject.'),{uncertain:true});
+ }
+ const selected=subjectBinding(effect.key);
+ if(binding.type!=='review'||recordKey(selected)===recordKey(binding))A.draftBases[effect.key]={binding:clone(selected),known:true,record:clone(record)};
+ effect.outcome='saved_identity_applied';effect.savedId=record.id;
+}
 function details(title,value){return'<details><summary>'+esc(title)+'</summary><pre>'+json(value)+'</pre></details>';}
 function table(headers,rows){return'<div class="scroll"><table><thead><tr>'+headers.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';}
 function modal(title,body){$('#dialog-content').innerHTML='<h2>'+esc(title)+'</h2>'+body;if(!$('#dialog').open)$('#dialog').showModal();}
 function heading(title,description){return'<h1>'+esc(title)+'</h1><p class="muted">'+esc(description)+'</p>';}
 async function database(){return new Promise((resolve,reject)=>{const r=indexedDB.open('coops-original-operations',1);r.onupgradeneeded=()=>r.result.createObjectStore('state');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
 async function stored(value){return new Promise((resolve,reject)=>{const t=A.db.transaction('state',value===undefined?'readonly':'readwrite'),o=t.objectStore('state'),r=value===undefined?o.get(A.key):o.put(value,A.key);let data;r.onsuccess=()=>data=r.result;t.oncomplete=()=>resolve(data);t.onerror=()=>reject(t.error);t.onabort=()=>reject(t.error);});}
-async function persist(){await stored({workspaceId:A.view.workspaceId,drafts:A.drafts,pending:A.pending,history:A.history.slice(-100),tab:A.tab,edition:A.edition?.id??null,table:A.table});}
+async function persist(){await stored({workspaceId:A.view.workspaceId,drafts:A.drafts,draftTokens:A.draftTokens,draftBases:A.draftBases,pending:A.pending,history:A.history.slice(-100),tab:A.tab,edition:A.edition?.id??null,table:A.table});}
 async function api(path,{body}={}){
  const response=await fetch(path,{method:body===undefined?'GET':'POST',headers:{Authorization:'Bearer '+token,...(body===undefined?{}:{'Content-Type':'application/json'})},...(body===undefined?{}:{body:JSON.stringify(body)})});
  let value;try{value=await response.json();}catch{throw Object.assign(new Error('The original response is incomplete. Its pending request remains retained.'),{uncertain:true,status:response.status});}
@@ -31,10 +119,11 @@ function renderPending(){
  const p=A.pending;if(!p){$('#pending').innerHTML='';return;}
  $('#pending').innerHTML='<strong>Original request retained</strong><p>'+esc(p.request.action)+' · <span class="pin">'+esc(p.request.operationId)+'</span> · '+esc(p.state)+'</p>'+(p.error?'<p>'+esc(p.error)+'</p>':'')+'<div class="actions">'+button('retry','Retry this exact request')+button('inspect-pending','Inspect native outcome')+(p.state==='rejected'?button('return-draft','Keep inputs and close this rejected request'):'')+'</div>'+details('Original request',p.request);
 }
-async function perform(action,payload){
+async function perform(action,payload,{draftKey}={}){
  if(A.pending)throw new Error('Resolve the retained original request before issuing another action.');
  if(A.busy)throw new Error('The current original request is still in progress.');
- A.pending={request:{action,payload:clone(payload),operationId:crypto.randomUUID(),expectedRevision:A.view.revision},createdAt:new Date().toISOString(),state:'prepared'};
+ const draftEffect=draftKey?checkDraftSave(draftKey):null;
+ A.pending={request:{action,payload:clone(payload),operationId:crypto.randomUUID(),expectedRevision:A.view.revision},draftEffect,createdAt:new Date().toISOString(),state:'prepared'};
  await persist();renderPending();return dispatch();
 }
 async function dispatch(){
@@ -42,11 +131,11 @@ async function dispatch(){
  try{
   const response=await api('/api/action',{body:pending.request});
   if(response.operationId!==pending.request.operationId||!response.view)throw Object.assign(new Error('The original action reply did not retain its request identity.'),{uncertain:true});
-  adoptView(response.view);pending.response=response;pending.state=response.state==='RUNNING'?'running':'complete';await persist();
+  adoptView(response.view);pending.response=response;pending.state=response.state==='RUNNING'?'running':'complete';if(pending.state==='complete')applyDraftEffect(pending,response);await persist();
   if(pending.state==='running'){notice('The original operation is running. Inspect its native outcome before continuing.');return response;}
-  A.history.push({request:pending.request,response,completedAt:new Date().toISOString()});A.pending=null;A.lastResult=response.result;await persist();renderPending();notice('Saved '+pending.request.action+' at revision '+A.view.revision+(response.reused?' · original request replayed.':'.'));
+  A.history.push({request:pending.request,response,draftEffect:pending.draftEffect??null,completedAt:new Date().toISOString()});A.pending=null;A.lastResult=response.result;await persist();renderPending();notice('Saved '+pending.request.action+' at revision '+A.view.revision+(response.reused?' · original request replayed.':'.'));
   return response;
- }catch(error){pending.state=error.uncertain?'uncertain':'rejected';pending.error=error.message;pending.status=error.status??null;await persist();renderPending();if([401,403].includes(error.status))notice('Open the current private session URL printed by the original workspace, then retry this retained request.',true);throw error;}
+ }catch(error){A.pending??=pending;pending.state=error.uncertain?'uncertain':'rejected';pending.error=error.message;pending.status=error.status??null;await persist();renderPending();if([401,403].includes(error.status))notice('Open the current private session URL printed by the original workspace, then retry this retained request.',true);throw error;}
  finally{A.busy=false;}
 }
 async function refresh(render=true){const view=await api('/api/view');adoptView(view);for(const e of view.editions)if(!A.allEditions.some(x=>x.id===e.id))A.allEditions.push(e);if(render)renderPage();else updateProgress();}
@@ -175,7 +264,7 @@ async function inspectOperation(id){
  const record=await api('/api/operation?operationId='+encodeURIComponent(id));modal('Original native operation',details('Exact native disposition',record));
  return record;
 }
-function pendingDescription(p){return{request:p.request,state:p.state,createdAt:p.createdAt,error:p.error??null};}
+function pendingDescription(p){return{request:p.request,draftEffect:p.draftEffect??null,state:p.state,createdAt:p.createdAt,error:p.error??null};}
 async function reconcilePending(){
  const p=A.pending;if(!p)return;const record=await inspectOperation(p.request.operationId);
  if(record.state==='COMPLETE'){notice('The original request is complete. Retry its exact retained request to receive the original result.');}
@@ -195,7 +284,7 @@ document.addEventListener('submit',event=>{
  const form=event.target;if(!(form instanceof HTMLFormElement))return;event.preventDefault();
  void (async()=>{
   if(form.id==='station-form'){
-   const original=A.drafts.station,d=clone(original);if(!d.profileId)delete d.profileId;const saved=await perform('station.save',d);if(A.drafts.station===original)A.drafts.station.profileId=saved.result.id;await persist();await refresh();return;
+   const d=clone(draft('station',{}));if(!d.profileId)delete d.profileId;await perform('station.save',d,{draftKey:'station'});await refresh();return;
   }
   if(form.id==='capture-form'){
    const payload=capturePayload(),kind=A.drafts.capture.mode,profile=profilePin(payload.profileId),r=await perform(kind==='backfill'?'backfill.preview':'capture.preview',payload);
@@ -205,9 +294,9 @@ document.addEventListener('submit',event=>{
    const file=$('#source-package').files[0];if(!file||file.size>64*1024*1024)throw new Error('Choose a complete source package up to 64 MiB.');
    const payload={profileId:A.drafts.capture.profileId,label:A.drafts.capture.label||file.name,bundle:await file.text()};await perform('capture.import',payload);await refresh();return;
   }
-  if(form.id==='review-form'){await perform('annotation.save',{editionId:A.edition.id,...clone(A.drafts['review:'+A.edition.id])});renderPage();return;}
+  if(form.id==='review-form'){const key='review:'+A.edition.id;await perform('annotation.save',{editionId:A.edition.id,...clone(draft(key,{}))},{draftKey:key});renderPage();return;}
   if(form.id==='compare-form'){await perform('edition.compare',clone(A.drafts.compare));renderPage();return;}
-  if(form.id==='mapping-form'){const original=A.drafts.mapping,d=clone(original);if(!d.mappingId)delete d.mappingId;const saved=await perform('mapping.save',d);if(A.drafts.mapping===original)A.drafts.mapping.mappingId=saved.result.id;await persist();renderPage();return;}
+  if(form.id==='mapping-form'){const d=clone(draft('mapping',{}));if(!d.mappingId)delete d.mappingId;await perform('mapping.save',d,{draftKey:'mapping'});renderPage();return;}
   if(form.id==='dataset-form'){
    const p=clone(A.drafts.dataset);for(const k of ['beginDate','endDate'])if(!p[k])delete p[k];if(p.products.trim())p.products=p.products.split(',').map(x=>x.trim());else delete p.products;
    await perform('dataset.prepare',p);renderPage();return;
@@ -233,15 +322,16 @@ document.addEventListener('click',event=>{
  if(!cmd)return;
  void(async()=>{
   if(cmd==='navigate')return navigate(id);
+  if(cmd==='draft-use-current'||cmd==='draft-keep')return resolveDraftConflict(cmd==='draft-use-current');
   if(cmd==='retry'){await dispatch();await refresh();return;}
   if(cmd==='inspect-pending')return reconcilePending();
   if(cmd==='return-draft'){
    if(A.pending?.state!=='rejected')throw new Error('Keep an uncertain request until its native disposition is known.');
    A.history.push({...pendingDescription(A.pending),closedAt:new Date().toISOString()});A.pending=null;await persist();renderPending();return;
   }
-  if(cmd==='new-station'){delete A.drafts.station;renderPage();return;}
-  if(cmd==='reference-station'){A.drafts.station={profileId:'',stationId:'9410230',label:'La Jolla (Scripps Pier) public reference',owner:'',note:'Selected regional public-source reference: January 1–7, 2025, water_level, MLLW, metric, GMT. Station metadata and observations will come from the original NOAA capture.',active:true};await persist();renderPage();return;}
-  if(cmd==='edit-station'){const p=A.view.stations.find(p=>p.id===id);A.drafts.station={profileId:p.id,stationId:p.stationId,label:p.label,owner:p.owner,note:p.note,active:p.active};await persist();renderPage();return;}
+  if(cmd==='new-station'){clearDraft('station');renderPage();await persist();return;}
+  if(cmd==='reference-station'){setDraft('station',{profileId:'',stationId:'9410230',label:'La Jolla (Scripps Pier) public reference',owner:'',note:'Selected regional public-source reference: January 1–7, 2025, water_level, MLLW, metric, GMT. Station metadata and observations will come from the original NOAA capture.',active:true});await persist();renderPage();return;}
+  if(cmd==='edit-station'){const p=A.view.stations.find(p=>p.id===id);if(!p)throw new Error('The selected station profile is no longer saved.');setDraft('station',{profileId:p.id,stationId:p.stationId,label:p.label,owner:p.owner,note:p.note,active:p.active});await persist();renderPage();return;}
   if(cmd==='reference-dates'){Object.assign(A.drafts.capture,{beginDate:'2025-01-01',endDate:'2025-01-07',label:'La Jolla public source reference · January 1–7, 2025',products:['water_level'],units:'metric',timeZone:'gmt',datum:'MLLW',predictionInterval:'6',mode:'capture'});A.preview=null;await persist();renderPage();return;}
   if(cmd==='start-capture'){
    const p=capturePayload();if(!A.preview||A.preview.payload!==canonical(p)||A.preview.profile!==profilePin(p.profileId)||A.preview.kind!==A.drafts.capture.mode)throw new Error('Review the exact current request plan before starting it.');
@@ -266,8 +356,8 @@ document.addEventListener('click',event=>{
   if(cmd==='source-download')return download({kind:'source',id:A.edition.id,page:Number(id)});
   if(cmd==='export-edition'){exportDialog('edition',id);return;}
   if(cmd==='new-dataset'){A.drafts.dataset={editionId:id,table:A.table,name:A.edition.profile.label+' · '+A.table,beginDate:'',endDate:'',products:''};return navigate('datasets');}
-  if(cmd==='new-mapping'){delete A.drafts.mapping;renderPage();return;}
-  if(cmd==='edit-mapping'){const m=A.view.mappings.find(m=>m.id===id);A.drafts.mapping={mappingId:m.id,name:m.name,table:m.table,columns:clone(m.columns),note:m.note};await persist();renderPage();return;}
+  if(cmd==='new-mapping'){clearDraft('mapping');renderPage();await persist();return;}
+  if(cmd==='edit-mapping'){const m=A.view.mappings.find(m=>m.id===id);if(!m)throw new Error('The selected mapping is no longer saved.');setDraft('mapping',{mappingId:m.id,name:m.name,table:m.table,columns:clone(m.columns),note:m.note});await persist();renderPage();return;}
   if(cmd==='add-column'){A.drafts.mapping.columns.push({source:'value',heading:'value'});await persist();renderPage();return;}
   if(cmd==='remove-column'){A.drafts.mapping.columns.splice(Number(id),1);await persist();renderPage();return;}
   if(cmd==='mapping-json'){downloadJSON('coastal-model-input-mapping.json',A.drafts.mapping);return;}
@@ -298,7 +388,7 @@ window.addEventListener('beforeunload',event=>{if(A.pending){event.preventDefaul
 async function initialize(){
  try{
   A.schema=await api('/api/schema');A.db=await database();A.key=A.schema.workspaceId;adoptView(await api('/api/view'));
-  const saved=await stored();if(saved){if(saved.workspaceId!==A.view.workspaceId)throw new Error('The retained browser journal belongs to another workspace.');A.drafts=saved.drafts??{};A.pending=saved.pending??null;A.history=saved.history??[];A.tab=saved.tab??'overview';A.table=saved.table??'observations';if(saved.edition){A.edition=await api('/api/edition?editionId='+encodeURIComponent(saved.edition));}}
+  const saved=await stored();if(saved){if(saved.workspaceId!==A.view.workspaceId)throw new Error('The retained browser journal belongs to another workspace.');A.drafts=saved.drafts??{};A.draftTokens=saved.draftTokens??{};A.draftBases=saved.draftBases??{};A.pending=saved.pending??null;A.history=saved.history??[];A.tab=saved.tab??'overview';A.table=saved.table??'observations';if(saved.edition){A.edition=await api('/api/edition?editionId='+encodeURIComponent(saved.edition));}}
   A.allEditions=[...A.view.editions];renderPage();if(A.edition){await loadRows();renderPage();}
   if(A.pending)notice('An original request is retained. Inspect its native outcome, then retry the same request if needed.');
   setInterval(()=>{if(A.polling||A.busy||document.hidden)return;A.polling=true;void refresh(false).catch(e=>notice(e.message,true)).finally(()=>A.polling=false);},2500);
