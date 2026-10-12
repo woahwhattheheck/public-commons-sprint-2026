@@ -22,6 +22,8 @@ import { requirePostmanHeaderReferences } from '../postman/collection.mjs';
 import { merchantTransportPlan, merchantTransportSummary } from './transport-plan.mjs';
 import { queryParameterShape } from '../../sf30-seller-sdk/query-parameters.mjs';
 import { operationLease } from '../../distribution/runtime-workspace/storage.mjs';
+import { MERCHANT_OPERATION_FIELDS } from './operation-contract.mjs';
+import { verifyOperationPolicyRecord, operationPolicyRecordText } from './operation-policy-record.mjs';
 
 const LIMIT = 4 * 1024 * 1024;
 const MANIFEST_LIMIT = 1024 * 1024;
@@ -154,7 +156,7 @@ export function prepareMerchant(specText, plan) {
     ...(Object.keys(transportPlan.transports).length?{transports:transportPlan.transports}:{}), bindings:{}};
   const transformations = [], ids = new Set(), routes = [], envNames = new Set(transportPlan.environment), seen = new Set(), materialized = new Set();
   for (const row of plan.operations) {
-    exactKeys(row, ['method','path','id','serverIndex','amountAtomic','headerEnv','securityAlternative','responseMode','responseValidation','publicDescription','requestExample','querySerialization','timeoutMs','maxResponseBytes','maxRequestBytes','maxInFlight','requestHeaders','cache','availability','enforceResponseContract','oauth2','oauthConnection','oauthProfile','oauthAlias','idempotency','stream','transport'], 'operation');
+    exactKeys(row, MERCHANT_OPERATION_FIELDS, 'operation');
     const method = String(row.method).toUpperCase(), key = method + ' ' + row.path;
     if (!supportsSellerMethod(method)) fail(key + ': choose a method supported by the original seller');
     const stream = merchantStreamPolicy(row, method);
@@ -308,8 +310,18 @@ export async function readPackage(parent, name) {
     if (sha(bytes)!==manifest.files['source-revision.json']) fail('Saved source revision changed. Reopen the original candidate.');
     sourceRevision=sourceRevisionRecord(JSON.parse(bytes),manifest.files[sourceFile],manifest.files['merchant-plan.json']);
   }
-  return {folder, name, manifest, specText:(await regular(join(folder,sourceFile))).toString('utf8'),
-    plan:JSON.parse(await regular(join(folder,'merchant-plan.json'))),...(sourceRevision?{sourceRevision}:{})};
+  const specText=(await regular(join(folder,sourceFile))).toString('utf8'),
+    plan=JSON.parse(await regular(join(folder,'merchant-plan.json')));
+  let operationPolicy;
+  if (own(manifest.files,'operation-policy.json')) {
+    const bytes=await regular(join(folder,'operation-policy.json'),LIMIT);
+    if (sha(bytes)!==manifest.files['operation-policy.json']) fail('Saved operation policy review changed. Reopen the original package.');
+    operationPolicy=verifyOperationPolicyRecord(JSON.parse(bytes),{
+      specText,plan,inspection:inspectOpenApi(specText),preview:prepareMerchant(specText,plan).preview
+    });
+  }
+  return {folder,name,manifest,specText,plan,command:merchantPackageCommand(folder,plan),
+    ...(sourceRevision?{sourceRevision}:{}),...(operationPolicy?{operationPolicy}:{})};
 }
 
 /** Download the exact retained upstream declarations through the existing package reader. */
@@ -365,16 +377,28 @@ export async function publishPackage({parent,name}, build) {
   }
 }
 
+/** The original launch command, shared by first save and exact package reopening. */
+export function merchantPackageCommand(folder,plan) {
+  const args = ['node',join(sourceRoot,'sf96-seller-pilot-ops/pilot-ops.mjs'),'start','--ops-port','0','--support-parent',join(folder,'support'),'--',
+    '--resume',join(folder,'compiled'),'--upstreams',join(folder,'upstreams.json'),'--port','0','--challenge-only'];
+  if (plan.allowLoopbackUpstream) args.push('--allow-loopback-upstream');
+  return args.map(shell).join(' ');
+}
+
 /** Create a portable private package and the actual original compiler output. */
-export async function savePackage({specText, plan, parent, name, sourceRevision}) {
+export async function savePackage({specText, plan, parent, name, sourceRevision, operationPolicy}) {
   const prepared = prepareMerchant(specText, plan), base = await privateParent(parent);
   const folder = join(base, packageName(name));
   const sourceFile='original-openapi.'+parseOpenApiSource(specText).format;
+  const policyRecord=operationPolicy===undefined?undefined:verifyOperationPolicyRecord(operationPolicy,{
+    specText,plan,inspection:inspectOpenApi(specText),preview:prepared.preview
+  });
   const files = {
     [sourceFile]:specText, 'merchant-plan.json':json(plan),
     'facade-openapi.json':json(prepared.facade), 'selections.json':json(prepared.selections),
     'route-bindings.json':json(prepared.bindings), 'upstreams.json':json(prepared.upstreams),
     'operator-cases.json':json(prepared.cases),
+    ...(policyRecord===undefined?{}:{'operation-policy.json':operationPolicyRecordText(policyRecord)}),
     ...(sourceRevision===undefined?{}:{'source-revision.json':json(sourceRevisionRecord(sourceRevision,sha(specText),sha(json(plan))))}),
   };
   for (const [file,content] of Object.entries(files)) {
@@ -387,14 +411,12 @@ export async function savePackage({specText, plan, parent, name, sourceRevision}
     transformations:prepared.transformations, preview:prepared.preview};
   const manifestBytes=json(manifest);
   if (Buffer.byteLength(manifestBytes)>MANIFEST_LIMIT) fail('Package manifest exceeds 1 MiB. Select fewer routes.');
-  const args = ['node',join(sourceRoot,'sf96-seller-pilot-ops/pilot-ops.mjs'),'start','--ops-port','0','--support-parent',join(folder,'support'),'--',
-    '--resume',join(folder,'compiled'),'--upstreams',join(folder,'upstreams.json'),'--port','0','--challenge-only'];
-  if (plan.allowLoopbackUpstream) args.push('--allow-loopback-upstream');
-  const command = args.map(shell).join(' ');
+  const command = merchantPackageCommand(folder,plan);
   const guide = [
     '# API merchant package', '', 'Created from the original API description with an explicit public paid facade.',
     'Source and transformation hashes are in merchant-package.json. Prices are atomic-unit strings.',
     ...(sourceRevision===undefined?[]:['The reviewed source revision is retained in source-revision.json, including the original package, exact source/plan pins and explicit route decisions.']),
+    ...(policyRecord===undefined?[]:['The complete reusable policy edition, prior merchant plan, route choices, overrides and exact native review are retained in operation-policy.json. Package receiving verifies the same candidate through the original source and planner.']),
     '', '## Start the original seller and operations dashboard', '', 'Node 22+ and the full current source checkout are required.',
     '', '~~~sh', command, '~~~', '',
     'For native facilitator mode, replace --challenge-only with --facilitator YOUR_AUTHORIZED_HTTPS_FACILITATOR.',
@@ -461,6 +483,6 @@ export async function savePackage({specText, plan, parent, name, sourceRevision}
     await writeFile(join(staging,'merchant-package.json'), manifestBytes, {flag:'wx',mode:0o600});
     // Commands refer to the published name, never the private compiler staging.
     await writeFile(join(staging,'RUN.md'), guide, {flag:'wx',mode:0o600});
-    return {name, folder, manifest, command, preview:prepared.preview};
+    return {name, folder, manifest, command, preview:prepared.preview,...(policyRecord?{operationPolicy:policyRecord}:{})};
   });
 }
