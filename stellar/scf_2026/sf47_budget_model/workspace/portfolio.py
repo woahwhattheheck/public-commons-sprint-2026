@@ -113,7 +113,8 @@ def source_tasks(saved):
                 "startDate": row["startDate"], "endDate": row["endDate"], "tranche": None,
                 "remainingCostUsd": row["remainingUninvoicedCostUsd"], "scope": row["scope"],
                 "sourceIds": row["sourceIds"], "caseRef": row["caseRef"], "sourceUrl": row["sourceUrl"],
-                "stage": row["stage"]})
+                "stage": row["stage"],
+                **({"timing": deepcopy(row["timing"])} if "timing" in row else {})})
     return result
 
 
@@ -255,8 +256,10 @@ def seed(context, saved):
         effort = deepcopy(assigned.get(source["sourceId"], {})) if source["sourceKind"] == "package" else {}
         exact = all(role in {r["id"] for r in resources} for role in effort) and sum((Decimal(v) for v in effort.values()), ZERO) == Decimal(source["remainingHours"])
         tasks.append({"id": source["id"], "effortHours": effort if exact else {}, "dependsOn": [],
-            "releaseDate": source["startDate"], "dueDate": source["endDate"], "minBusinessDays": 0, "priority": 100,
-            "note": "Exact original pinned contributor assignments retained; their sum matches remaining hours." if exact and effort else ""})
+            "releaseDate": source["startDate"], "dueDate": source["endDate"],
+            "minBusinessDays": 0, "priority": 100,
+            "note": ("Original start condition: " + source["timing"]["startCondition"]) if "timing" in source
+                else ("Exact original pinned contributor assignments retained; their sum matches remaining hours." if exact and effort else "")})
     inputs = {"schema": SCHEMA, "name": "Delivery allocation — " + saved["inputs"]["name"],
         "forecastId": saved["id"], "forecastSha256": saved["sha256"],
         "calendar": {"startDate": saved["report"]["firstForecastDate"], "horizonDays": min(730, MAX_DAYS),
@@ -275,11 +278,12 @@ def cash_summary(report):
     current = report["scenarios"]["commercial"]
     return {key: current[key] for key in ("additionalCashNeededUsd", "gapAfterOpeningCashUsd", "peakNeedDate", "endDeltaUsd")} | {
         "remainingCashOutflowUsd": report["totals"]["remainingCashOutflowWithCommercialUsd"],
-        "cashScenarios": deepcopy(report["scenarios"])}
+        "cashScenarios": deepcopy(report["scenarios"]),
+        **({"eventTiming": deepcopy(report["eventTiming"])} if "eventTiming" in report else {})}
 
 
 def date_delta(new, old):
-    return (date.fromisoformat(new) - date.fromisoformat(old)).days
+    return None if new is None or old is None else (date.fromisoformat(new) - date.fromisoformat(old)).days
 
 
 def date_inputs(saved, chosen, name):
@@ -310,6 +314,11 @@ def calculate(context, saved, sources, fields, ident, name, note):
             findings.append(finding("CAPACITY_REQUIRED", "resources." + resource["id"],
                 "Enter all seven daily availability values for " + resource["name"] + "."))
     for task in fields["tasks"]:
+        source = index[task["id"]]
+        if "timing" in source:
+            if source["startDate"] is None and task["releaseDate"] is None:
+                findings.append(finding("EVENT_RELEASE_DATE_REQUIRED", "tasks." + task["id"] + ".releaseDate",
+                    "Retain the original start condition and choose its reviewed release date before allocating this work: " + source["timing"]["startCondition"]))
         values = task["effortHours"]
         if any(value is None for value in values.values()):
             findings.append(finding("EFFORT_REQUIRED", "tasks." + task["id"], "Enter every selected resource's remaining effort."))
@@ -335,6 +344,32 @@ def calculate(context, saved, sources, fields, ident, name, note):
                    "due_date": r["dueDate"], "minimum_business_days": r["minBusinessDays"], "priority": r["priority"],
                    "source_dates": {"startDate": index[r["id"]]["startDate"], "endDate": index[r["id"]]["endDate"]}} for r in fields["tasks"]]}
     try:
+        timed = [task for task in pure["tasks"] if "timing" in index[task["id"]]]
+        if timed:
+            # Use the same native calendar for the contract's working-day clock.
+            # Include an observed release before the forecast horizon without moving any work date.
+            first = min([date.fromisoformat(calendar["startDate"])] + [date.fromisoformat(task["release_date"]) for task in timed])
+            last = date.fromisoformat(calendar["startDate"]) + timedelta(days=calendar["horizonDays"])
+            working = allocation.calendar_dates(first.isoformat(), (last - first).days, pure["calendar"])["days"]
+            deadlines = []
+            for task in timed:
+                terms = index[task["id"]]["timing"]
+                available = [stamp for stamp in working if stamp >= date.fromisoformat(task["release_date"])]
+                duration = terms["deliveryBusinessDays"]
+                if len(available) < duration:
+                    return {**common, "status": "HORIZON_EXCEEDED",
+                        "findings": [finding("EVENT_DEADLINE_OUTSIDE_HORIZON", "tasks." + task["id"],
+                            "Extend the calendar to retain all " + str(duration) + " original delivery working days after the release date.")]}
+                deadline = available[duration - 1].isoformat()
+                if task["due_date"] is not None and task["due_date"] > deadline:
+                    return {**common, "status": "INCOMPLETE",
+                        "findings": [finding("ORIGINAL_EVENT_DEADLINE", "tasks." + task["id"] + ".dueDate",
+                            "The original " + str(duration) + "-working-day term ends on " + deadline + ". Retain that deadline or an earlier one.")]}
+                task["due_date"] = task["due_date"] or deadline
+                deadlines.append({"taskId": task["id"], "releaseDate": task["release_date"],
+                    "deliveryBusinessDays": duration, "contractDueDate": deadline, "selectedDueDate": task["due_date"],
+                    "startCondition": terms["startCondition"]})
+            common["eventDeadlines"] = deadlines
         schedule = allocation.plan_programme(pure)
     except allocation.PlanningError as exc:
         return {**common, "status": "INCOMPLETE", "findings": [finding(exc.code, exc.field, str(exc))]}
@@ -376,7 +411,7 @@ def calculate(context, saved, sources, fields, ident, name, note):
             if stamp < window["startDate"]:
                 findings.append(finding("COLLECTION_BEFORE_ALLOCATED_START", "commercial." + quote["id"] + ".receipts." + receipt["id"],
                     receipt["label"] + " remains on " + stamp + ", before allocated work starts on " + window["startDate"] + ". Review collection timing in the original forecast."))
-            elif stamp >= window["oldEndDate"] and stamp < window["endDate"]:
+            elif window["oldEndDate"] is not None and stamp >= window["oldEndDate"] and stamp < window["endDate"]:
                 findings.append(finding("COLLECTION_BEFORE_REPLANNED_FINISH", "commercial." + quote["id"] + ".receipts." + receipt["id"],
                     receipt["label"] + " remains on " + stamp + "; the work now finishes on " + window["endDate"] + ". Review its collection basis in the original forecast."))
     for grant in saved["report"]["grants"]:
@@ -399,7 +434,7 @@ def build(context, saved, inputs):
     for row in inputs["alternatives"]:
         fields = {key: row.get(key, base[key]) for key in FIELDS}
         alternatives.append(calculate(context, saved, sources, fields, row["id"], row["name"], row["note"]))
-    original_end = max((row["endDate"] for row in sources), default=saved["inputs"]["asOfDate"])
+    original_end = max((row["endDate"] for row in sources if row["endDate"] is not None), default=saved["inputs"]["asOfDate"])
     baseline = {"name": saved["inputs"]["name"], "finishDate": original_end,
         "totalHours": forecasts.hours(sum((Decimal(r["remainingHours"]) for r in sources), ZERO)),
         "overloadedDays": saved["report"]["capacity"]["overloadedDays"],
@@ -473,7 +508,7 @@ def select(context, value, alternative_id):
     if row is None:
         fail("The selected saved alternative is unavailable.", "PORTFOLIO_ALTERNATIVE_NOT_FOUND", 404)
     if row["status"] != "READY":
-        fail("Complete this alternative's availability and effort before selecting its dates.")
+        fail("Complete this alternative's availability, effort and event release dates before selecting its dates.")
     candidate = forecasts.preview(context, row["forecast"]["inputs"])
     return {"inputs": candidate["inputs"], "selection": {"portfolioId": value["id"], "portfolioSha256": value["sha256"],
         "alternativeId": row["id"], "baseForecast": value["baseForecast"], "source": forecasts.source_identity(context),
@@ -503,6 +538,14 @@ def report_html(value):
                 ("due_date","Due"),("late_calendar_days","Late days"),("effort_hours","Hours"),
                 ("capacity_delay_business_days","Capacity delay")], row["schedule"]["tasks"]))
             parts.append("<p><a href='alternatives/" + escape(row["id"], quote=True) + "/resource-days.csv'>Resource calendar CSV</a> · <a href='alternatives/" + escape(row["id"], quote=True) + "/allocations.csv'>Task allocations CSV</a></p>")
+    if any("timing" in row for row in report["sourceTasks"]):
+        timing_rows = [{"title": row["title"], "startCondition": row["timing"]["startCondition"],
+            "deliveryBusinessDays": row["timing"]["deliveryBusinessDays"],
+            "collectionConditions": "; ".join(item["receiptId"] + ": " + item["condition"] for item in row["timing"]["receiptConditions"])}
+            for row in report["sourceTasks"] if "timing" in row]
+        parts.append("<h2>Original event-dependent terms</h2>" + table([("title","Work"),("startCondition","Start condition"),
+            ("deliveryBusinessDays","Quoted delivery working days"),("collectionConditions","Original collections")], timing_rows))
+        parts.append("<p>Undated work stays in the complete source scope. The original forecast lists its undated cash and hours separately until a reviewed release and work window are selected.</p>")
     parts.append("<h2>Original remaining scope</h2>" + table([("title","Work"),("sourceKind","Source"),("remainingHours","Hours"),("remainingCostUsd","Remaining cash USD"),("scope","Scope")], report["sourceTasks"]))
     parts.append("<p>Complete inputs, original forecast snapshot, dated cash calculations and source identities are in portfolio.json. Receive the complete original operations ZIP to reopen this allocation in the workspace.</p></body></html>")
     return "\n".join(parts).encode()
@@ -521,6 +564,9 @@ def export(value):
             "Use the original operations case ZIP for full workspace receiving, original attachments, source forecasts and saved portfolios. "
             "The selected alternative returns a new draft to the original Forecast screen; review and save through its existing command.\n\n"
             + value["report"]["paymentTimingBasis"] + "\n").encode()}
+    timed_sources = [row for row in value["report"]["sourceTasks"] if "timing" in row]
+    if timed_sources:
+        files["event-dependent-work.json"] = (canonical(timed_sources) + "\n").encode()
     for row in value["report"]["alternatives"]:
         prefix = "alternatives/" + row["id"] + "/"
         files[prefix + "findings.csv"] = csv_bytes(["code","field","message"], row["findings"])

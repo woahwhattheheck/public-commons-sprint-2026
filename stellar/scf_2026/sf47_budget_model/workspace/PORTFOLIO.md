@@ -129,3 +129,19 @@ The original received case used nine remaining tasks:400 grant hours and144 cond
 These are the saved example's explicit assumptions and outputs. The example's original remaining cash outflow is USD51,680 and eventual change is USD7,520 in all four alternatives; changes in dated funding need follow the original expense and collection rules. The higher-capacity option still has one six-day deadline exception.
 
 The native receiving journey previewed all four alternatives, saved and replayed the same request, selected dates into the original cash forecast, saved that forecast, exported the complete portfolio and operations case, cold-reopened the workspace, imported the whole original case and selected the retained alternative again. It preserved original record, source, price, cost and receipt values. The receiving example and current source references accompany the shared product handoff.
+
+## Original event-dependent commercial work
+
+An original Forecast can retain a quoted project whose work begins after a deposit or another recorded prerequisite. Its `timing` object carries the start condition, quoted delivery window in business days and original milestone collection conditions. The quote's complete cost and hours remain in its source totals while the work and receipts can be undated.
+
+Portfolio takes that whole selected source task. Its seed preserves the original condition, exact remaining effort and receipt terms, leaving the release and due dates empty. Save the entered allocation and assignments while the release is unresolved; its result identifies the exact task and condition that need a date.
+
+Once the original triggering events are ready, select the reviewed release date. The relative delivery deadline uses the existing programme calendar, including its closed and extra working dates. The first working date on or after release is day one. A source release earlier than the future forecast window retains its original deadline, so delayed work remains visibly late.
+
+The derived deadline appears in the native schedule and `eventDeadlines` result, with the source condition, release date, quoted business-day count and exact contract due date. An earlier manually entered due date is retained. A later one is returned as `ORIGINAL_EVENT_DEADLINE`; a calendar too short to locate the original deadline is returned as `EVENT_DEADLINE_OUTSIDE_HORIZON`. Availability and predecessor constraints can still produce a late finish, which the existing native allocator reports.
+
+The quoted delivery window sets the promised deadline. The separate **Minimum working duration** field continues to describe the remaining task's minimum effort duration. Review both against the actual remaining scope.
+
+Select a ready alternative through the original Forecast handoff to enter its chosen work window. Original milestone receipt dates remain their entered values, and the relative collection conditions stay attached to their original IDs. Undated customer collections remain outside the cash curve until those dates are known.
+
+The operating analysis displays the retained event conditions and the source forecast's undated cost, hours and collection amounts. A complete Portfolio ZIP adds `event-dependent-work.json` for these source tasks. The full operations case remains the portable source for reopening all original quotes, attachments, forecasts and allocations. Previously saved dated forecasts and portfolios retain their complete original calculations and identities.
