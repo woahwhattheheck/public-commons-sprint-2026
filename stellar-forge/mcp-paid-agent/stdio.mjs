@@ -5,8 +5,14 @@ import { request } from 'node:http';
 import { Console } from 'node:console';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { MCP_VERSION } from './agent-server.mjs';
-import { startMcpWorkspace } from './serve.mjs';
+import { MCP_VERSION } from './http-tools.mjs';
+
+// A merchant-supplied workspace owns its runtime. Load the paid buyer only when
+// the default buyer transport is actually selected.
+async function startDefaultWorkspace(options) {
+  const { startMcpWorkspace } = await import('./serve.mjs');
+  return startMcpWorkspace(options);
+}
 
 const MAX_FRAME_BYTES = 128 * 1024;
 const MAX_REPLY_BYTES = 8 * 1024 * 1024;
@@ -61,7 +67,7 @@ function forward(endpoint, token, rpc, signal) {
  */
 export async function startMcpStdio({
   environment = process.env, input = process.stdin, output = process.stdout,
-  startWorkspace = startMcpWorkspace, cancelRequest = null, maxConcurrent = 32,
+  startWorkspace = startDefaultWorkspace, cancelRequest = null, maxConcurrent = 32,
   diagnostic = code => process.stderr.write(`Stellar MCP stdio: ${code}\n`),
 } = {}) {
   if (!Number.isSafeInteger(maxConcurrent) || maxConcurrent < 1 || maxConcurrent > 256)
