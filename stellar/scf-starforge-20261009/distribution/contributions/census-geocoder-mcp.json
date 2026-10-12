@@ -19,5 +19,8 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/census-geocoder/public/app.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/census-geocoder/public/style.css",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/census-geocoder/example-addresses.csv"
-  ]
+  ],
+  "applicationProviders": {
+    "census-geocoder": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/census-geocoder.mjs"
+  }
 }
