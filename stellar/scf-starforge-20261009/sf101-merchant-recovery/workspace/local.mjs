@@ -1,6 +1,6 @@
 // MIT. Local capture and verification through the original SF101 recovery engine.
 import { constants } from 'node:fs';
-import { lstat, open, readdir, rename, realpath } from 'node:fs/promises';
+import { lstat, open, rename, realpath } from 'node:fs/promises';
 import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { CAPTURE_MARKER, inspectSnapshotPlan, run as recover } from '../recover.mjs';
@@ -93,23 +93,20 @@ export async function readCapturedBundle(options) {
     Array.isArray(manifest.roots), 'WORKSPACE_CAPTURE_MANIFEST_INVALID');
   return { raw, manifest, snapshotId: hash(raw) };
 }
-async function ownedPartial(path, options, state) {
+async function ownedPartial(path, options) {
   await privateDirectory(path);
   const marker = join(path, CAPTURE_MARKER);
-  if (await exists(marker)) {
-    let value;
-    try { value = JSON.parse((await privateBytes(marker, 4096)).toString('utf8')); }
-    catch { throw fail('WORKSPACE_CAPTURE_OWNER_INVALID', 'Preserve the interrupted capture marker'); }
-    need(sameBinding(value, binding(options)), 'WORKSPACE_CAPTURE_OWNER_DIFFERENT',
-      'The interrupted directory belongs to another capture');
-    return;
-  }
-  need(state.creationIntent === true && (await readdir(path)).length === 0,
-    'WORKSPACE_CAPTURE_OWNER_MISSING', 'Preserve this existing directory and select another capture destination');
+  need(await exists(marker), 'WORKSPACE_CAPTURE_OWNER_MISSING',
+    'Preserve this unmarked directory and select a new capture ID and destination');
+  let value;
+  try { value = JSON.parse((await privateBytes(marker, 4096)).toString('utf8')); }
+  catch { throw fail('WORKSPACE_CAPTURE_OWNER_INVALID', 'Preserve the interrupted capture marker'); }
+  need(sameBinding(value, binding(options)), 'WORKSPACE_CAPTURE_OWNER_DIFFERENT',
+    'The interrupted directory belongs to another capture');
 }
 async function retainInterrupted(options, state, save) {
   if (!state.pendingRetirement) {
-    await ownedPartial(options.out, options, state);
+    await ownedPartial(options.out, options);
     const retained = join(dirname(options.out), RETIRED_CAPTURE_PREFIX +
       options.captureId.slice(0, 12) + '-' + randomUUID());
     need(!await exists(retained), 'WORKSPACE_CAPTURE_RETENTION_EXISTS');
@@ -128,12 +125,12 @@ async function retainInterrupted(options, state, save) {
   need(!(sourcePresent && retainedPresent), 'WORKSPACE_CAPTURE_RETENTION_AMBIGUOUS',
     'Both original and retained capture directories exist; preserve their original paths');
   if (sourcePresent) {
-    await ownedPartial(options.out, options, state);
+    await ownedPartial(options.out, options);
     await rename(options.out, transition.directory);
     await syncDirectory(dirname(options.out));
   } else {
     need(retainedPresent, 'WORKSPACE_CAPTURE_RETENTION_MISSING', 'Preserve the selected interrupted capture');
-    await ownedPartial(transition.directory, options, state);
+    await ownedPartial(transition.directory, options);
   }
   state.retainedCaptures ??= [];
   if (!state.retainedCaptures.some(item => item.directory === transition.directory))

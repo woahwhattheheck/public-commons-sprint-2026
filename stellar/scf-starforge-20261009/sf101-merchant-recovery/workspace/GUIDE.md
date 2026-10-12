@@ -1,13 +1,15 @@
 # SF101 recovery workspace operating guide
 
-Use this workspace to publish an existing original encrypted merchant snapshot,
-find a completed recovery point on the selected storage service, download and
-authenticate it, and restore its original named roots on a receiving host.
+Use this workspace to capture declared merchant sources after their writers are
+stopped, authenticate an original encrypted bundle, publish that snapshot, find
+a completed recovery point on the selected storage service, and restore its
+original named roots on a receiving host.
 
 The workspace operates the maintained `runRemote` facade and `recover.mjs`.
 Its original transfer journal remains the saved record of the upload, download,
-or restore. The browser adds profile selection, a review of the exact operation,
-progress, and reopening that retained work.
+or restore. Local capture and verification retain their original engine results
+and capture attempts in the same workspace. The browser adds profile selection,
+a review of the exact operation, progress, and reopening that retained work.
 
 ## Prepare the recovery host
 
@@ -25,7 +27,8 @@ The host administrator chooses these separate locations:
 | Workspace state directory | Retains this operator workspace's local work. Reopen this same directory when continuing it. |
 | A profile's `storeConfig` | The existing private S3 configuration used by the original adapter. |
 | A profile's `operations` | The original transfer journals and provider acknowledgements for that merchant. |
-| A profile's `bundleRoots` | Named collections containing existing original encrypted snapshots. |
+| A profile's `bundleRoots` | Named collections containing original encrypted snapshots and configured parents for new captures. |
+| A profile's optional `capturePlans` | Named original recovery plan files, each bound to one declared encrypted-bundle parent. |
 | A profile's `downloadRoot` | The parent for encrypted bundles received from the selected storage service. |
 | A profile's `restoreRoot` | The parent for new plaintext cold-restore destinations. |
 
@@ -85,6 +88,67 @@ For multiple merchants, use clear profile labels and the actual original
 operations directory for each merchant. The original transfer facade serializes
 writers within an operations directory. Preserve that directory when moving
 between the browser and headless commands.
+
+## Enable capture from declared sources
+
+An existing host profile can continue with its original encrypted bundles.
+To add source capture, prepare the original SF101 plan on the host and declare
+it in that profile's optional `capturePlans` list.
+
+For example, save a private original plan at
+`/private/merchant-recovery/capture-plan.json`:
+
+```json
+{
+  "schema": "stellar-forge.merchant-recovery-plan.v1",
+  "roots": [
+    { "name": "merchant-state", "path": "/srv/merchant/state" },
+    { "name": "merchant-config", "path": "/srv/merchant/config" }
+  ]
+}
+```
+
+Replace these roots with the actual original paths required by the merchant's
+recovery procedure. Each logical root name identifies that root again in the
+restored layout. Keep the capture plan, recovery workspace, transfer journals,
+and encrypted output outside the source roots. The source path and its
+declared root must resolve to the original real location.
+
+Add this field to the intended profile in `workspace.json`:
+
+```json
+"capturePlans": [
+  {
+    "id": "stopped-merchant",
+    "label": "Stopped merchant state and configuration",
+    "planFile": "/private/merchant-recovery/capture-plan.json",
+    "bundleRootId": "accepted-backups"
+  }
+]
+```
+
+The `bundleRootId` refers to that same profile's existing `bundleRoots` entry.
+In the configuration above, new encrypted captures are created under
+`/private/backups`. The browser chooses a plan and one new directory name under
+that parent. The host configuration supplies the source paths and output
+parent.
+
+Keep the plan private:
+
+```sh
+chmod 600 /private/merchant-recovery/capture-plan.json
+```
+
+Open the workspace with the revised configuration and the same state directory.
+The selected profile now offers its declared plans under **Create encrypted
+snapshot**. The profile's passphrase environment variable serves the original
+capture and verification engine as well as its remote transfers.
+
+A capture plan identifies what to read. Quiescence comes from the merchant's
+actual service or application procedure. For a running SF99 merchant, use its
+original maintenance backup to quiesce the service group and delivery outbox
+together, or stop the complete source group through that maintained procedure
+before using a declared source capture.
 
 ## Start the installed operator
 
@@ -233,6 +297,112 @@ that operation reuses matching immutable remote objects through the original
 transfer logic. The existing merchant backup remains the source of that
 continuation.
 
+## Capture a stopped merchant source
+
+Choose the intended profile and **Create encrypted snapshot**. Select its
+original capture plan. The form shows the plan file and the configured parent
+for the new encrypted bundle.
+
+1. Stop every writer to the declared roots through the merchant's existing
+   maintenance or shutdown procedure. Keep that source group stopped during
+   capture.
+2. Choose an operation ID and one new destination name. An empty destination
+   name uses the operation ID under the plan's configured bundle root.
+3. Explicitly check **I have stopped every writer to the declared sources and
+   will keep them quiesced through this capture**. The checkbox starts unchecked,
+   including when reopening an interrupted capture for a new review.
+4. Select **Review capture**. Inspect each original root's logical name, kind,
+   and actual path, the complete plan SHA-256, destination, directory count,
+   file count, and plaintext byte total.
+5. Select **Start capture** for that exact reviewed selection. The server reads
+   the original plan again and uses the maintained `recover.mjs` snapshot
+   operation, followed by original full verification.
+6. Follow the saved operation until its original result is `COMPLETE` with
+   `verified: true`. The completed result identifies the encrypted bundle,
+   snapshot ID, files, plaintext bytes, native capture identity, plan digest,
+   and original capture and verification results.
+7. Continue the source application's existing restart procedure. The completed
+   encrypted bundle remains available for verification and upload.
+
+The reviewed plan is read from the actual host sources. Reviewing it leaves
+the service's start and stop decisions with its original operating procedure.
+If the sources or selected plan change, review the resulting current selection
+after the source group is stopped.
+
+The original manifest binds the generated capture identity and the exact plan
+digest. This lets the same workspace operation recognize its completed native
+bundle after an interrupted response. The snapshot ID is assigned from the
+completed original manifest; the review displays that it will be available
+after creation.
+
+A completed capture appears in **Available bundles**. Select **Verify** to
+review another explicit local authentication, or **Upload** to review
+publication through the profile's original remote store. Each selected upload
+has its own retained operation ID, while its snapshot ID continues to identify
+the same encrypted bundle.
+
+## Verify an original local bundle
+
+Choose **Verify local encrypted bundle**, or use **Verify** beside a bundle in
+the selected profile's local collection. Inspect its exact original manifest
+identity and bundle location, then select **Review verification** and
+**Start verification**.
+
+The original `recover.mjs verify` operation authenticates the manifest and
+encrypted objects with the passphrase supplied by the host environment.
+Its completed result retains `command: local-verify`, `verified: true`,
+`snapshotId`, bundle location, original file count, plaintext byte count, and
+the original verification result.
+
+This local result is available under **Workspace operations** and through
+`workspace show`. The **Original remote operations** table continues to read
+the original remote transfer journal. Use **Upload** beside the verified bundle
+to review its exact selected store and publication operation.
+
+## Continue an interrupted local operation
+
+**Stop transfer** requests a stop for the selected workspace execution. An
+already running original capture or verification phase finishes before the
+controller reads back its result. Follow the saved phase and original result
+under **Workspace operations**.
+
+| Retained local state | Continue the original work |
+| --- | --- |
+| Capture is complete and its encrypted bundle exists | **Continue operation** authenticates that original bundle. Source writers may have legitimately resumed after capture. |
+| Original capture stopped before producing its complete bundle | The interface reopens the saved plan, ID, and destination with quiescence unchecked. Stop the current source writers, confirm their state, and select **Review capture** again. |
+| Local verification is interrupted | **Continue operation** verifies the same original manifest and bundle. |
+| Original operation is complete | Inspect its retained completed result and choose the resulting bundle for the following upload or restore work. |
+
+`WORKSPACE_CAPTURE_REVIEW_REQUIRED` identifies the fresh-source review path.
+The interface restores the original saved intent, clears the quiescence
+confirmation, and asks for that explicit new review. An unavailable original
+plan or bundle remains identified in the form so the operator can resolve
+that exact selection.
+
+A partially generated directory is retained under the same configured bundle
+parent when the original operation needs another capture attempt. Its
+`.sf101-interrupted-capture-…` directory, capture identity, plan digest, and
+attempt transition remain in the saved request's `retainedCaptures`. Inspect
+**retained capture attempts** or **View selection** to follow those paths.
+Preserve them with the original operation while resolving the interruption.
+
+An existing directory without the exact native capture marker is retained as
+`WORKSPACE_CAPTURE_OWNER_MISSING`, even when it is empty. Choose **New capture
+selection** to prepare a new operation ID and destination while preserving that
+original directory. Confirm current source quiescence and review the new
+capture. A marker or completed bundle that belongs to another capture likewise
+stays with its original identity.
+
+The original local phases include `CAPTURING`, `CAPTURED`, `VERIFYING`,
+`VERIFIED`, and `INTERRUPTED_CAPTURE_RETAINED`. They describe the actual saved
+capture and verification stages. **Refresh progress** reads that saved work,
+and **Reopen saved selection** returns its plan or original bundle to the form.
+
+If a start response is lost, refresh the retained workspace operations and
+inspect the same operation ID before continuing. A changed source plan,
+snapshot, or output destination is a new reviewed selection; **New selection**
+creates a new operation ID.
+
 ## Find and download a recovery point
 
 Choose the intended profile and select **Refresh inventory**. Inventory is read
@@ -299,7 +469,7 @@ event identities, and complete the deployment's existing transition procedure.
 
 ## Follow progress, cancel, and continue
 
-The original journal's `status` is the last saved transfer phase.
+For remote transfers, the original journal's `status` is the last saved transfer phase.
 `progress.nextObject`, `written`, `reused`, and `bytesWritten` describe
 encrypted-file progress. The manifest and completion descriptor are separate
 metadata objects. Use the retained status and error together:
@@ -317,9 +487,9 @@ retry timing, and any uncertain-write information accompany the original
 failure when available. Correct the reported input, host, or provider cause,
 then continue the retained operation.
 
-**Stop transfer** closes only the S3 client owned by the selected workspace
-execution and retains its original journal. An in-progress local verification
-or cold restore may finish after that request. Use **Refresh progress** to read
+For a remote transfer, **Stop transfer** closes the S3 client owned by the
+selected workspace execution and retains its original journal. An in-progress
+local verification or cold restore may finish after that request. Use **Refresh progress** to read
 the resulting saved phase. When the original journal records `COMPLETE`, that
 completed result is the operation's outcome.
 
@@ -338,7 +508,9 @@ starforge merchant-recovery-remote status \
 ```
 
 It needs the operations directory and ID. It can read saved progress while the
-transfer is active and while storage access is being restored.
+transfer is active and while storage access is being restored. Read local capture
+and verification results with the existing `workspace show` command and the
+same workspace state directory.
 
 ## Reopen and hand over the operating workspace
 
@@ -359,6 +531,8 @@ Retain these items for the receiving operator:
 | --- | --- |
 | Source release and installed runtime identity | Launch the same maintained commands with their selected dependency closure. |
 | Workspace host configuration and workspace state | Reopen the permitted profiles and retained operator work. |
+| Declared capture plans and original stop/restart procedure | Review the exact roots and plan digest before a subsequent source capture. |
+| Captured bundle and retained capture-attempt paths | Continue original verification and preserve interrupted generated outputs with their capture identities. |
 | Original S3 configuration | Identify the existing bucket, prefix, endpoint, and credential provider. |
 | Original operations directory | Reopen exact transfer bindings, progress, completion, and provider acknowledgements. |
 | Snapshot ID and completion key | Select the same completed recovery point. |
