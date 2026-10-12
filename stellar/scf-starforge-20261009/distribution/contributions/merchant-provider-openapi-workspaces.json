@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-openapi-workspaces",
+  "description": "Original openapi workspaces MCP provider",
+  "merchantProviders": {
+    "openapi-workspaces": "stellar-forge/mcp-merchant-operator/providers/openapi-workspaces.mjs"
+  }
+}

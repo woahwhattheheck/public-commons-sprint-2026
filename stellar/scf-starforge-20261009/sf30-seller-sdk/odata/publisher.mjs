@@ -3,7 +3,7 @@ import { mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadDatasetConfig } from '../dataset-handler.mjs';
 import { openDatasetVersions, DATASET_SNAPSHOT_PARAMETER } from '../dataset-refresh/versions.mjs';
-import { DATASET_BINDING_SCHEMA, datasetContractSha256, prepareDatasetRelease } from '../../sf82-seller-pilot/release-dataset.mjs';
+import { DATASET_BINDING_SCHEMA, datasetContractSha256, prepareDatasetRelease, readDatasetSourceFiles } from '../../sf82-seller-pilot/release-dataset.mjs';
 import { initReleaseStore, readReleaseState, stageRelease, releaseStatus, activateRelease, rollbackRelease, runActiveRelease } from '../../sf82-seller-pilot/releases.mjs';
 import { digest, formatted, writeNew, identifier, fault } from './state.mjs';
 
@@ -27,11 +27,18 @@ export async function openODataPublisher({ workspace }) {
       baselineSnapshot:description.snapshot,sourceSha256:digest(source)};
     const files={'dataset.csv':await readFile(join(sourceDirectory,'dataset.csv')),'dataset.json':await readFile(join(sourceDirectory,'dataset.json')),
       'source.json':source,'seller.json':formatted(seller),'binding.json':formatted(binding)};
+    const sourceFiles=await readDatasetSourceFiles(sourceDirectory,JSON.parse(source));
+    for(const file of sourceFiles)files[file.path]=await readFile(join(sourceDirectory,file.path));
     for(const [name,body]of Object.entries(files)){
+      await mkdir(join(packageDirectory,name,'..'),{recursive:true,mode:0o700});
       try{await writeNew(join(packageDirectory,name),body);}catch(error){if(error.code!=='EEXIST')throw error;
         if(digest(await readFile(join(packageDirectory,name)))!==digest(body))throw fault('ODATA_PACKAGE_CHANGED','A retained merchant package differs.',409);}
     }
-    const versions=await openDatasetVersions({directory:datasetDirectory,initialConfig:join(packageDirectory,'dataset.json')});
+    let initialConfig;
+    try{await readFile(join(datasetDirectory,'state.json'));}catch(error){
+      if(error.code!=='ENOENT')throw error;initialConfig=join(packageDirectory,'dataset.json');
+    }
+    const versions=await openDatasetVersions({directory:datasetDirectory,...(initialConfig?{initialConfig}:{})});
     try{if(versions.describe().snapshot!==description.snapshot)throw fault('ODATA_VERSION_CHANGED','The retained dataset version differs from this edition.',409);}finally{await versions.close();}
     const prepared=await prepareDatasetRelease(packageDirectory);
     const staged=await stageRelease(releases,{id:releaseId,label:label||description.name,datasetPackage:packageDirectory,runtime});

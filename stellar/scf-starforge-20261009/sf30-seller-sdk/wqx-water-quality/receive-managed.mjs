@@ -126,11 +126,28 @@ export async function receiveManagedWaterQuality(configFile) {
       need(launch.reviewSha256 === review.reviewSha256 && launch.planSha256 === plan.planSha256,
         'The original launch and project decisions differ.');
       const origin = new URL(value.current.privateUrl).origin;
-      for (const path of ['/', '/app.mjs', '/style.css', '/openwaters.mjs', '/api/workspace']) {
+      const sourceRoot = join(runtime.sourceRoot, PREFIX, 'sf30-seller-sdk/wqx-water-quality');
+      const assetManifest = JSON.parse(await readFile(join(sourceRoot, 'browser-assets.json'), 'utf8'));
+      need(assetManifest.schema === 'stellar-forge.browser-assets.v1' && assetManifest.root === './' &&
+        Array.isArray(assetManifest.routes), 'Read the original browser asset manifest from this installed source.');
+      const routes = new Map();
+      for (const [path, selected] of assetManifest.routes) {
+        need((path === '/' || /^\/[A-Za-z0-9_.-]+$/.test(path)) && Array.isArray(selected) &&
+          /^ui\/[A-Za-z0-9_.-]+$/.test(selected[0]) && !routes.has(path),
+          'The original browser source has an invalid or duplicate asset route.');
+        routes.set(path, selected[0]);
+      }
+      need(routes.has('/') && routes.has('/app.mjs') && routes.has('/openwaters.mjs') && routes.has('/style.css'),
+        'The original complete browser application is required.');
+      for (const path of [...routes.keys(), '/api/workspace']) {
         const response = await fetch(origin + path, { signal: AbortSignal.timeout(60000) });
         need(response.ok, 'The original water-quality application did not serve ' + path + '.');
         const bytes = Buffer.from(await response.arrayBuffer());
         need(bytes.length > 0, 'The original application returned an empty ' + path + '.');
+        if (routes.has(path)) {
+          const expected = await readFile(join(sourceRoot, routes.get(path)));
+          need(bytes.length === expected.length && hash(bytes) === hash(expected), 'The served browser asset differs from its installed original source: ' + path);
+        }
         reads.push({ path, status: response.status, bytes: bytes.length, sha256: hash(bytes) });
       }
       const links = value.current.privateLinks;

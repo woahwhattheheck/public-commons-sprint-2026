@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-buyer-expenses",
+  "description": "Original buyer expenses MCP provider",
+  "merchantProviders": {
+    "buyer-expenses": "stellar-forge/mcp-merchant-operator/providers/buyer-expenses.mjs"
+  }
+}

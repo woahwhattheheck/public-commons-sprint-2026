@@ -284,7 +284,7 @@ function privateUrl(value, tokenRequired = false) {
   try { url = new URL(value); } catch { need(false, 'APPLICATION_SFTP_STARTUP_INVALID'); }
   need(url.protocol === 'http:' && url.hostname === '127.0.0.1' &&
     !url.username && !url.password && !url.search && url.pathname === '/' &&
-    Number(url.port) >= 1 && Number(url.port) <= 65535 &&
+    Number(url.port || 80) >= 1 && Number(url.port || 80) <= 65535 &&
     (!tokenRequired || /^#[A-Za-z0-9_-]{43}$/.test(url.hash)), 'APPLICATION_SFTP_STARTUP_INVALID');
   return url;
 }
@@ -300,7 +300,7 @@ export async function sftpApplicationStartup(request, text, directory, context =
   const url = privateUrl(announcement.sftpWorkspace, true);
   const ports = request.args.flatMap((value, index) => value === '--port' ? [index] : []);
   need(ports.length === 1 && /^(0|[1-9]\d{0,4})$/.test(request.args[ports[0] + 1] ?? '') &&
-    (request.args[ports[0] + 1] === '0' || Number(request.args[ports[0] + 1]) === Number(url.port)),
+    (request.args[ports[0] + 1] === '0' || Number(request.args[ports[0] + 1]) === Number(url.port || 80)),
   'APPLICATION_SFTP_STARTUP_CHANGED');
   const state = await liveState(url);
   need(plain(state) && state.schema === WORKSPACE && state.directory === binding.directory &&

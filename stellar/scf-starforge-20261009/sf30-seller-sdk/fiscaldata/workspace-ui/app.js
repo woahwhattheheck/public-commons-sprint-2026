@@ -62,7 +62,7 @@ function select(id,options,preferred){
 }
 const ui={sourceId:null,sourceRevision:null,sourceDirty:false,sourceDrafts:new Map(),capture:null,captureOffset:0,
   edition:null,editionDirty:false,editionDrafts:new Map(),editionOffset:0,comparison:null,comparisonOffset:0,
-  buyerReview:null,detailRequests:{capture:0,edition:0,comparison:0}};
+  briefingComparisonId:null,briefingDrafts:new Map(),buyerReview:null,detailRequests:{capture:0,edition:0,comparison:0}};
 let state=null,sessionToken='',mutation=null,refreshPromise=null,pollTimer=null;
 function adopt(next){
   if(!next)return;
@@ -127,7 +127,7 @@ function render(){
   $('warnings').hidden=!state.recoveryWarnings.length;
   if(state.recoveryWarnings.length)$('warnings').replaceChildren(...state.recoveryWarnings.map(item=>el('p',{},typeof item==='string'?item:
     [item.code,item.message].filter(Boolean).join(' · ')||JSON.stringify(item))));
-  renderSources();renderCaptures();renderEditions();renderComparisons();renderExports();renderPublisher();renderAvailability();
+  renderSources();renderCaptures();renderEditions();renderComparisons();renderExports();renderBriefing();renderPublisher();renderAvailability();
 }
 function renderSources(){
   update('sources-list',[state.sources,ui.sourceId],()=>state.sources.length?state.sources.map(source=>el('button',{
@@ -187,6 +187,8 @@ function renderAvailability(){
   $('edition-export').disabled=ui.edition?.status!=='READY'||!!mutation;
   $('edition-query-form').querySelector('button').disabled=ui.edition?.status!=='READY'||!!mutation;
   $('merchant-form').querySelector('button').disabled=!$('merchant-edition').value||!!mutation;
+  $('briefing-create').disabled=ui.comparison?.status!=='READY'||!$('briefing-source').value||!!mutation;
+  $('briefing-source-create').disabled=ui.comparison?.status!=='READY'||!!mutation;
 }
 function showRows(prefix,result,load){
   const rawFields=Array.isArray(result.fields)?result.fields:Object.keys(result.fields??{});
@@ -401,20 +403,52 @@ async function openComparison(id,offset=0){
   $('comparison-rows').replaceChildren(comparisonRows(detail.rows,summary.measureTotals));
   paginate('comparison-pagination',detail,next=>openComparison(id,next));
   $('comparison-files').replaceChildren(files('comparison',id,detail.files));
+  renderBriefing();renderAvailability();
+}
+function rememberBriefingDraft(){
+  if(!ui.briefingComparisonId)return;
+  ui.briefingDrafts.set(ui.briefingComparisonId,{exportId:$('briefing-source').value,
+    title:$('briefing-title').value,audience:$('briefing-audience').value,notes:$('briefing-notes').value});
+}
+function renderBriefing(){
+  const comparison=ui.comparison;if(!state||!comparison)return;
+  if(ui.briefingComparisonId!==comparison.id){
+    rememberBriefingDraft();ui.briefingComparisonId=comparison.id;
+    const saved=ui.briefingDrafts.get(comparison.id);
+    $('briefing-title').value=saved?.title??(comparison.name+' briefing').slice(0,240);
+    $('briefing-audience').value=saved?.audience??'';$('briefing-notes').value=saved?.notes??'';
+    // A different comparison gets only its own retained source selection.
+    $('briefing-source').dataset.options='';
+    $('briefing-source').replaceChildren();
+  }
+  const available=state.exports.filter(item=>item.kind==='comparison'&&item.status==='READY'&&
+    item.sourceId===comparison.id&&item.sourceSha256===comparison.sha256);
+  select('briefing-source',available.length?available.map(item=>({value:item.id,
+    label:stamp(item.createdAt)+' · '+short(item.id)+' · SHA '+short(item.sha256)})):
+    [{value:'',label:'Create a complete comparison delivery first'}],
+    ui.briefingDrafts.get(comparison.id)?.exportId);
+  const reports=state.exports.filter(item=>item.kind==='briefing'&&item.sourceId===comparison.id);
+  update('briefing-results',reports,()=>reports.length?reports.map(item=>exportCard(item)):
+    empty('The complete report and its downloads will appear here.'));
 }
 function exportCard(item,merchant=false){
   const ready=item.status==='READY';
   return el('article',{class:'export-item'},el('div',{class:'export-heading'},
-    el('div',{},el('strong',{},item.kind[0].toUpperCase()+item.kind.slice(1)+' export'),' ',badge(item.status),
+    el('div',{},el('strong',{},item.kind==='briefing'?item.briefing?.title||'Customer briefing':item.kind[0].toUpperCase()+item.kind.slice(1)+' export'),' ',badge(item.status),
       el('p',{class:'muted'},stamp(item.createdAt)+' · source '+short(item.sourceId)),
       ready?el('p',{class:'mono muted'},'SHA256 '+item.sha256):null,
       item.error?el('p',{class:'muted small'},item.error.message):null),
     el('div',{class:'downloads'},merchant?btn('Prepare publisher','publisher-prepare',item.id,!ready):null,creationRetry(item,'export'))),
-    ready?files('export',item.id,item.files):null);
+    ready&&item.kind==='briefing'?el('div',{},
+      el('p',{class:'muted small'},'Extract briefing.tar.gz and open index.html for the full offline report and all original row pages.'),
+      files('export',item.id,arr(item.files).filter(file=>file.name==='briefing.tar.gz')),
+      el('details',{class:'details'},el('summary',{},'Report data, manifest and complete workspace delivery'),
+        files('export',item.id,arr(item.files).filter(file=>file.name!=='briefing.tar.gz')))):
+      ready?files('export',item.id,item.files):null);
 }
 function renderExports(){
   update('exports-list',state.exports,()=>state.exports.length?[...state.exports].reverse().map(item=>exportCard(item)):
-    empty('Capture, edition, comparison, and merchant exports appear here.'));
+    empty('Capture, edition, comparison, briefing, and merchant exports appear here.'));
   update('merchant-exports',state.exports.filter(item=>item.kind==='merchant'),()=>
     state.exports.filter(item=>item.kind==='merchant').reverse().map(item=>exportCard(item,true)));
 }
@@ -502,6 +536,30 @@ bind('comparison-form','submit',event=>task('Comparing reviewed editions',async(
 },event.submitter));
 bind('changes-only','change',()=>ui.comparison&&openComparison(ui.comparison.id));
 bind('comparison-export','click',event=>task('Exporting complete comparison',()=>makeExport('comparison',ui.comparison.id),event.target));
+bind('briefing-form','input',()=>{rememberBriefingDraft();renderAvailability();});
+bind('briefing-source','change',()=>{rememberBriefingDraft();renderAvailability();});
+bind('briefing-source-create','click',event=>task('Retaining complete comparison delivery',async()=>{
+  const selected=ui.comparison,prior=$('briefing-source').value;
+  const result=await action('exports.create',{kind:'comparison',id:selected.id},true);
+  // State adoption already exposes the new export. Keep any newer navigation or choice.
+  if(ui.comparison===selected&&($('briefing-source').value===prior||!prior)){
+    $('briefing-source').value=result.id;rememberBriefingDraft();renderAvailability();
+  }
+  return result;
+},event.target));
+bind('briefing-form','submit',event=>task('Creating complete customer briefing',async()=>{
+  const selected=ui.comparison;rememberBriefingDraft();
+  const result=await action('briefings.create',{comparisonId:selected.id,expectedComparisonSha256:selected.sha256,
+    exportId:$('briefing-source').value,title:$('briefing-title').value,
+    audience:$('briefing-audience').value,notes:$('briefing-notes').value},true);
+  if(ui.comparison===selected){
+    renderBriefing();
+    if(location.hash.split('/')[0]==='#compare')
+      $('briefing-results').scrollIntoView({block:'nearest',behavior:'smooth'});
+  }
+  return result;
+},event.submitter));
+
 
 
 function initPublisherControls(){
