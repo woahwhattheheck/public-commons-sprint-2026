@@ -38,3 +38,25 @@ export function htmlReport(edition,profile,rows,{sources=[],dispatches=[]}={}){
     '<h2>Coverage and original capture windows</h2><pre>'+esc(JSON.stringify(edition.coverage,null,2))+'</pre><p><small>Complete source files, reviewer decisions, prior editions and original operations travel in the editable workspace package.</small></p></html>';
 }
 export function fileResult(filename,contentType,body){return {filename,contentType,body,bytes:Buffer.byteLength(body),sha256:digest(body)};}
+
+export function dispatchReport(dispatch){
+  const count=dispatch.rows.length,located=dispatch.rows.filter(row=>row.geometry).length;
+  const mappedColumns=dispatch.definition.columns.map(column=>({label:column.name,value:row=>row.mapped[column.name]}));
+  return '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(dispatch.name)+'</title><style>'+
+    'body{font:14px/1.5 system-ui,sans-serif;color:#171717;background:#fff;max-width:1500px;margin:auto;padding:32px}h1{font-size:28px}h2{font-size:20px;margin-top:32px}h3{font-size:16px}table{border-collapse:collapse;width:100%;margin:16px 0;font-size:12px}th,td{text-align:left;vertical-align:top;border:1px solid #bbb;padding:7px;overflow-wrap:anywhere;white-space:pre-wrap}th{background:#eee}pre{white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #bbb;padding:12px;font-size:11px}dl{display:grid;grid-template-columns:170px 1fr;gap:6px 16px}dt{font-weight:600}dd{margin:0;overflow-wrap:anywhere}section{break-inside:avoid}@media print{body{padding:0;max-width:none}thead{display:table-header-group}tr{break-inside:avoid}h2,h3{break-after:avoid}}'+
+    '</style><h1>'+esc(dispatch.name)+'</h1><p>Reviewed municipal follow-up dispatch</p><dl><dt>Saved dispatch</dt><dd>'+esc(dispatch.id)+'</dd><dt>Saved at</dt><dd>'+esc(dispatch.createdAt)+
+    '</dd><dt>Source edition</dt><dd>'+esc(dispatch.editionId)+'</dd><dt>Source edition SHA-256</dt><dd>'+esc(dispatch.editionSha256)+'</dd><dt>Dispatch SHA-256</dt><dd>'+esc(dispatch.sha256)+
+    '</dd><dt>Selected actions</dt><dd>'+count+'</dd><dt>Located / unlocated</dt><dd>'+located+' / '+(count-located)+'</dd></dl><p>'+esc(dispatch.definition.note)+
+    '</p><p>Each row is an explicitly selected action approved against the source editions saved in this dispatch. The source status, original dates and relationship records retain their meanings alongside the internal assignment and reviewer decision.</p>'+
+    '<h2>Selected destination columns</h2>'+table(mappedColumns,dispatch.rows)+
+    '<h2>Assigned work and source references</h2>'+table([
+      {label:'Service request',value:row=>row.serviceRequestId},{label:'Original title and description',value:row=>row.request.title+'\n'+row.request.description},
+      {label:'Source status',value:row=>row.request.sourceStatus},{label:'Source dates',value:row=>({createdAt:row.request.createdAt,updatedAt:row.request.updatedAt,closedAt:row.request.closedAt})},
+      {label:'Assignment',value:row=>({assignee:row.work.assignee,status:row.work.status,priority:row.work.priority,dueAt:row.work.dueAt})},
+      {label:'Approved follow-up',value:row=>({action:row.work.action,note:row.work.actionNote,reviewer:row.work.reviewer,approval:row.work.approval})},
+      {label:'Selected related work orders',value:row=>row.orders.map(order=>({workOrderId:order.workOrderId,sourceSha256:order.sourceSha256}))},
+      {label:'Location',value:row=>row.geometry??{unlocated:true,originalGeometry:row.request.originalGeometry,spatialReference:row.request.spatialReference}},
+      {label:'Source version',value:row=>row.sourceSha256}
+    ],dispatch.rows)+dispatch.rows.map(row=>'<section><h3>Original selected source: '+esc(row.serviceRequestId)+'</h3><pre>'+esc(JSON.stringify({request:row.request.source,orders:row.orders.map(order=>({workOrderId:order.workOrderId,source:order.source})),work:row.work},null,2))+'</pre></section>').join('')+
+    '<h2>Saved source population</h2><pre>'+esc(JSON.stringify(dispatch.coverage,null,2))+'</pre></html>';
+}
