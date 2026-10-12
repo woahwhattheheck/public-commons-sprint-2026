@@ -13,7 +13,8 @@ const clone = value => JSON.parse(canonicalJson(value));
 const requireValue = (ok, message, code = 'INVALID_PARAMS') => { if (!ok) throw failure(code, message); };
 const connectionFields = ['id', 'name', 'baseUrl', 'jurisdictionId', 'discoveryUrl', 'apiKeyEnv',
   'apiKeyParameter', 'allowHttp', 'pagination', 'extendedAttributes', 'responseLimit',
-  'statusValues', 'queryExtensions', 'timeoutMs', 'maxResponseBytes', 'attribution', 'responseLimitParameter'];
+  'statusValues', 'queryExtensions', 'timeoutMs', 'maxResponseBytes', 'attribution', 'responseLimitParameter',
+  'apiKeyTransport', 'minimumRequestIntervalMs', 'queryDateRanges'];
 function pathText(value, label) {
   requireValue(typeof value === 'string' && value.length > 0 && value.length <= 8192 &&
     !/[\x00-\x1f\x7f]/.test(value), 'Select the host ' + label + '.');

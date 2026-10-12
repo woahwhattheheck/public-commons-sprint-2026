@@ -49,10 +49,10 @@ async function body(request,maximum){
   if(expected!==undefined&&Number(expected)!==bytes)fail('ORDER_HTTP_BODY_INCOMPLETE','The complete original request body was interrupted.',400);
   return Buffer.concat(parts,bytes);
 }
-async function jsonBody(request){
+async function jsonBody(request,maximum=MAX_JSON_BYTES){
   const mime=String(request.headers['content-type']??'').split(';')[0].trim().toLowerCase();
   if(mime!=='application/json')fail('ORDER_HTTP_JSON_REQUIRED','Use application/json for this workspace action.',415);
-  let value;try{value=JSON.parse((await body(request,MAX_JSON_BYTES)).toString('utf8'));}catch(error){if(error.code)throw error;fail('ORDER_HTTP_JSON_INVALID','Supply complete JSON for this workspace action.',400);}
+  let value;try{value=JSON.parse((await body(request,maximum)).toString('utf8'));}catch(error){if(error.code)throw error;fail('ORDER_HTTP_JSON_INVALID','Supply complete JSON for this workspace action.',400);}
   data(value);if(!value||typeof value!=='object'||Array.isArray(value))fail('ORDER_HTTP_JSON_OBJECT_REQUIRED','Supply a complete JSON object.',400);return value;
 }
 function metadata(request){
@@ -123,6 +123,13 @@ export async function serveSupplierOrderWorkspace({directory,workspace,transport
       if(!url.pathname.startsWith(API+'/'))fail('ORDER_HTTP_NOT_FOUND','Workspace route not found.',404);
       if(!safeEqual(request.headers.authorization,'Bearer '+secret))fail('ORDER_SERVER_AUTH_REQUIRED','Open the original private workspace URL.',401);
       const parts=routePath(url.pathname.slice(API.length)),method=request.method;
+      if(parts[0]==='profile'){
+        if(method==='GET'&&parts.length===1)return json(response,current.profile());
+        if(method==='GET'&&parts.length===2&&parts[1]==='template')return json(response,current.profileTemplate({base:url.searchParams.get('base')??'standard'}));
+        if(method==='GET'&&parts.length===2&&parts[1]==='history')return json(response,current.profileHistory(query(url)));
+        if(method==='POST'&&parts.length===1)return json(response,current.selectProfile(await jsonBody(request,65536)));
+        fail('ORDER_HTTP_NOT_FOUND','Supplier profile route not found.',404);
+      }
       if(parts[0]==='transport'){
         if(method==='GET'&&parts[1]==='channels'&&parts.length===2)return json(response,current.transport.channels());
         if(method==='GET'&&parts[1]==='transmissions'){

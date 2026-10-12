@@ -306,7 +306,11 @@ def verify_workspace(directory):
     manifest = json_file(directory / "manifest.json")
     need(manifest.get("schema") == FORMAT, "Unsupported publisher receiving manifest")
     expected = manifest["files"]
-    actual = artifact_files(directory)
+    need(isinstance(expected, list) and all(isinstance(row, dict) and isinstance(row.get("path"), str)
+                                          for row in expected), "Invalid publisher receiving file inventory")
+    # Original archives and filesystem traversal can order the same members differently.
+    expected = sorted(expected, key=lambda row: row["path"])
+    actual = sorted(artifact_files(directory), key=lambda row: row["path"])
     need(exact(expected) == exact(actual), "Receiving file inventory or bytes differ from the original manifest")
     return manifest
 

@@ -82,8 +82,174 @@ Review validates the complete existing archive, selection closure and report che
 
 `createMerchantWorkflowReports({ store, requireTool, requireOpen, isActiveCall })` exposes `view`, `review` and `receive`. The existing Console service supplies its current dispatcher predicate as `isActiveCall: call => active.has(call.id)`.
 
-The store exports `validateConsoleArchive(packet)` so report review and original profile import share one validator. Existing schema checks, host-binding history and the import transaction remain the source of receiving behavior.
+`archive-contract.mjs` owns `validateConsoleArchive(packet)`. Report review and the original profile store import that same validator; the store also retains its original validation and schema exports for existing callers. The shared contract reads the retained records without opening a database. Existing schema checks, host-binding history, recurring-series validation and the import transaction remain the source of receiving behavior.
 
 `public/workflow-report-format.mjs` provides the HTML, steps CSV and changes CSV formatters. `public/workflow-reports.mjs` supplies the report and receiving interface within the existing Workflows page. The page forwards its existing `loadProfiles` callback to reopen the received selection.
 
 Recurring customer periods use their original workflow run IDs, so a cycle can be compared with another period of the same saved workflow through this report view.
+
+## Command-line reporting and receiving
+
+The installed command is `starforge merchant-workflow-reports`. It uses the same authenticated loopback Console as the existing OpenAPI workflow and recurring-series clients. Keep the existing Console running, with its bearer token in the selected environment variable. The default variable is `MCP_ACCESS_TOKEN`. `--token-env` selects another existing variable.
+
+The example IDs and port below are placeholders. Read the current saved profiles and workflow history, then use their original identifiers:
+
+```sh
+starforge merchant-workflow-reports profiles \
+  --url http://127.0.0.1:7788/operator/
+starforge merchant-workflow-reports list \
+  --url http://127.0.0.1:7788/operator/ \
+  --profile original-profile-id
+starforge merchant-workflow-reports run \
+  --url http://127.0.0.1:7788/operator/ \
+  --run original-current-run
+```
+
+`list` returns the original authorized workflow definitions and saved runs. Select a baseline with the same workflow ID. A single-run report omits `--baseline`.
+
+### Capture every format
+
+```sh
+starforge merchant-workflow-reports capture \
+  --url http://127.0.0.1:7788/operator/ \
+  --run original-current-run \
+  --baseline original-baseline-run \
+  --directory ./private-reports/october-period
+```
+
+Capture creates a private directory and retains four complete files:
+
+| File | Contents |
+|---|---|
+| `report.json` | Exact selected archive, computed report, selection and original content digest |
+| `report.html` | Standalone readable report with the complete retained request, result and recovery context |
+| `steps.csv` | Every compared step, outcome, duration and original identity |
+| `changes.csv` | Every changed value, including explicit presence information |
+
+The JSON packet is published first through the existing Console atomic file writer. Repeating the same capture reopens that first packet and finishes any missing formats. It does not fetch a newer report after the original JSON has been saved. A different run selection, later snapshot, or different existing output bytes requires another directory. The returned file records contain the actual saved path, byte length and SHA-256.
+
+To build only the original JSON, use `build --run … --baseline … --output /private/path/report.json`. Output files use existing private parent directories, matching the original Console clients.
+
+### Work with the saved report offline
+
+The browser's report JSON and the client packet use the same schema. They can be inspected and rendered without a running Console or bearer token:
+
+```sh
+starforge merchant-workflow-reports inspect \
+  --input ./received/report.json
+starforge merchant-workflow-reports export \
+  --input ./received/report.json \
+  --directory ./private-reports/received-period
+starforge merchant-workflow-reports reopen \
+  --directory ./private-reports/received-period
+```
+
+`inspect` validates the whole packet and recomputes its report from the original history. `export` writes all four formats through the existing immutable writer. `reopen` checks every complete export against its retained report and returns the original selection and exact file identities. It leaves the saved output bytes in place.
+
+### Review, receive and reopen the original history
+
+Use the receiving workstation's original Console URL and token environment:
+
+```sh
+starforge merchant-workflow-reports review \
+  --url http://127.0.0.1:8899/operator/ \
+  --directory ./private-reports/received-period
+
+starforge merchant-workflow-reports receive \
+  --url http://127.0.0.1:8899/operator/ \
+  --directory ./private-reports/received-period
+
+starforge merchant-workflow-reports history \
+  --url http://127.0.0.1:8899/operator/ \
+  --run original-current-run \
+  --baseline original-baseline-run
+```
+
+Both review and receive accept exactly one of `--input` for a complete JSON packet or `--directory` for all four saved report exports. Receiving reviews that same packet through the existing authorization engine, imports it using its original content digest, and reads back its original profile and selected runs. The optional `--expected-sha256` binds a script to a previously selected report digest.
+
+A lost receiving response is continued by submitting the same saved packet. The original archive import is idempotent. If import completes and a later history read fails, the client error carries `receivingCompleted: true` and the received record; the CLI includes that record in its error result. `history` can reopen those same original run IDs. Existing longer local history is retained, so the reopened revision can be later than the report's frozen revision.
+
+`--output` can retain the full result of a command using the existing atomic writer. The terminal output for capture, offline export, reopening and receiving summarizes the saved selection and files; the complete JSON result is available through an explicit output file.
+
+## Typed operator client
+
+The maintained distribution exports `./merchant/console/reports`, with adjacent TypeScript declarations. From a source checkout, import the original module:
+
+```js
+import {
+  MerchantWorkflowReportClient,
+  writeWorkflowReportExports,
+  reopenWorkflowReportExports,
+  readWorkflowReportFile
+} from './stellar-forge/mcp-merchant-operator/console/workflow-report-client.mjs';
+
+const source = new MerchantWorkflowReportClient({
+  url: 'http://127.0.0.1:7788/operator/',
+  tokenEnv: 'MCP_ACCESS_TOKEN'
+});
+try {
+  const available = await source.workflows('original-profile-id');
+  const captured = await source.capture({
+    runId: 'original-current-run',
+    baselineRunId: 'original-baseline-run',
+    directory: './private-reports/october-period'
+  });
+  const reopened = await reopenWorkflowReportExports({
+    directory: captured.directory
+  });
+  console.log(available.runs.length, reopened.contentSha256);
+} finally {
+  source.close();
+}
+
+const receiver = new MerchantWorkflowReportClient({
+  url: 'http://127.0.0.1:8899/operator/',
+  tokenEnv: 'MCP_ACCESS_TOKEN'
+});
+try {
+  const packet = await readWorkflowReportFile(
+    './private-reports/october-period/report.json'
+  );
+  const reviewed = await receiver.review(packet);
+  const result = await receiver.receive(packet, {
+    expectedContentSha256: reviewed.contentSha256
+  });
+  console.log(result.received.reportSha256, result.history.run.id);
+} finally {
+  receiver.close();
+}
+```
+
+The client exposes host/profile reads, workflow/run listing, report construction, review, receiving, current history and resumed capture. Offline helpers reopen original report files and render all export formats. The typed interfaces preserve selected run IDs, revisions, complete native request/result records, changed-value presence, receiving results and file identities.
+
+The client reuses `OpenApiWorkflowClient` for connection pinning, bearer transport, origin handling, cancellation and failed-write outcome reporting. The report backend remains the existing `workflow-reports.mjs` service; all control and receiving pass through its existing authorization and import engine. Recurring periods use their original run IDs, and installed series behavior stays in the maintained series-aware Console store and service.
+
+## Direct offline report integration
+
+The installed distribution also exports `./merchant/console/report-files`, with adjacent TypeScript declarations. This entry reads, validates, renders and reopens complete saved reports independently of the online client. A source checkout can import the same module directly:
+
+```js
+import {
+  readWorkflowReportFile,
+  writeWorkflowReportExports,
+  reopenWorkflowReportExports
+} from './stellar-forge/mcp-merchant-operator/console/workflow-report-files.mjs';
+
+const packet = await readWorkflowReportFile('./received/report.json');
+const written = await writeWorkflowReportExports({
+  directory: './private-reports/received-period',
+  packet
+});
+const original = await reopenWorkflowReportExports({
+  directory: written.directory
+});
+console.log(original.selection, original.contentSha256, original.files);
+```
+
+The offline module loads the original archive and workflow contracts, portable formatters, and local file operations. It does not open SQLite, register merchant providers, start a Console, or load the package download transport. The command-line `inspect`, `export` and `reopen` paths use this same entry; the online client loads when an online command is selected.
+
+`client-files.mjs` owns the existing atomic file implementation. Its `writeConsoleWorkflowFile` function writes a complete string, buffer or JSON value; the existing OpenAPI `writeOpenApiWorkflowFile` export remains an alias to that function. Streaming publication and completed-file inspection keep their existing exports. File modes, private-directory checks, exact-byte conflict handling, synchronization and interrupted-link recovery follow the same implementation.
+
+`OpenApiWorkflowClient.downloadPackage` loads its existing package download module when that method is called. All package selection, digest checks, download/resume behavior and error handling continue through the original package downloader. The authenticated report and recurring-series clients retain their original Console transport.
+
+The native merchant server still owns SQLite, provider registration and execution. The report file entry can therefore be embedded in a local report receiver without importing the server's storage implementation. Existing report imports, commands, file names, report packets, digests and receiving routes remain compatible.

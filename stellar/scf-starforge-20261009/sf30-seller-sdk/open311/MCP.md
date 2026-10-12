@@ -77,7 +77,7 @@ Create a private host connection file, for example /private/open311-host.json, w
 }
 ~~~
 
-Source profiles contain the complete original connection. A profile can specify apiKeyEnv for a host environment variable. The profile's ID becomes the stable connection ID; profile alias is used when applying it through the merchant. Credential values remain on the selected host. Changing an endpoint or jurisdiction after captures exist requires a distinct connection ID so its original source history retains its identity.
+Source profiles contain the complete original connection. A profile can specify apiKeyEnv for a host environment variable. The profile's ID becomes the stable connection ID; profile alias is used when applying it through the merchant. Credential values remain on the selected host. Changing an endpoint or jurisdiction after captures or saved collection plans exist requires a distinct connection ID so the original source selection retains its identity.
 
 The Helsinki profile follows the city's [October 2025 API description](https://www.hel.fi/static/avoindata/kanslia/Open311_API_description_011025.pdf), including native READY/PROCESSING status values and its 200-response cap. The city's text describes the returned set as the last 90 days or at most 200 first responses. Its [HRI catalog](https://hri.fi/data/en_GB/dataset/helsingin-kaupungin-palauterajapinta) provides attribution and CC BY 4.0 licensing. The [source-client guide](README.md) also covers GeoReport v2 and FixMyStreet differences.
 
@@ -253,7 +253,7 @@ File selections are exact:
 | --- | --- |
 | workspace | expectedRevision |
 | source | capture |
-| json, csv, report | capture and expectedRevision |
+| json, csv, report | capture or collection, plus expectedRevision |
 | comparison | before and after |
 | operation | operationId |
 
@@ -319,3 +319,153 @@ npx --no-install starforge open311 serve --workspace /private/municipal-received
 ~~~
 
 The browser startup reports the received workspace identity. Source queries, complete bytes, service cases, review history and saved operation results reopen together. Receive before the first Applications Review/Save of this directory. If an Applications entry was saved against the empty destination, stop its managed process and Review/Save the received directory before Start/Open so the saved binding uses the restored original workspace UUID.
+
+## Operate complete source collections through the same merchant
+
+A collection saves a fixed requested-time interval, the exact source filters and the original connection before its first request. The provider retains capped parent responses, refines their windows with the configured boundary policy, and consolidates all observed source versions. See [Source collections](COLLECTIONS.md) for provider-specific limits, overlap, pause/recovery, source-version review and complete receiving.
+
+The merchant exposes four collection tools in addition to the original tools above:
+
+| Tool | Operating purpose |
+| --- | --- |
+| merchant_open311_collection_create | Save the fixed source plan, original connection and refinement policy |
+| merchant_open311_collection_run | Run or resume the saved plan using a durable original request |
+| merchant_open311_collection_pause | Save an independent request to pause after the in-flight source response is retained |
+| merchant_open311_collection_info | Page original plan windows, progress and retained member captures |
+
+Use the same Open311MerchantClient and host-selected workspace alias. The following example selects an explicit operating interval; retain its original run intent before the first call.
+
+~~~js
+import { writeFile } from 'node:fs/promises';
+
+const initial = await desk.status();
+const plan = await desk.createCollection({
+  requestId: 'helsinki-collection-october-01',
+  expectedRevision: initial.revision,
+  connectionId: 'helsinki',
+  name: 'Helsinki original October service requests',
+  query: {
+    start_date: '2026-10-01T00:00:00Z',
+    end_date: '2026-10-12T00:00:00Z',
+    extensions: true,
+  },
+  policy: {
+    maxWindowDays: 90,
+    queryQuantumMs: 1000,
+    minimumWindowMs: 1000,
+    boundaryOverlapMs: 1000,
+  },
+});
+const runIntent = {
+  requestId: 'helsinki-collection-october-run-01',
+  expectedRevision: plan.revision,
+  collectionId: plan.collection.id,
+};
+await writeFile('/private/municipal-collection-run.json',
+  JSON.stringify(runIntent, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
+await desk.runCollection(runIntent);
+
+let offset = 0;
+do {
+  const page = await desk.collectionInfo({
+    id: plan.collection.id,
+    offset,
+    limit: 100,
+  });
+  console.log(page.collection, page.items);
+  offset = page.nextOffset;
+} while (offset !== null);
+~~~
+
+The merchant's collection-info page limit is 100. Follow nextOffset until null to inspect every original and refined window. A capped unsplittable leaf remains LIMITED with its actual source records and interval visible. The completed traversal retains the exact source population and observation times in its coverage metadata.
+
+After an uncertain run response, inspect desk.operation(runIntent.requestId) and repeat that exact saved run intent to recover its original result or resume its admitted work. When the original run is still active, a new run request returns its pending operation identity. A separate pause command uses the currently observed workspace revision and its own stable request ID; the admitted source response is saved before the pause takes effect. Resume a completed PAUSED or INTERRUPTED run with a fresh run intent at the current revision.
+
+Search the consolidated collection and pin the selected source edition when assigning a review:
+
+~~~js
+const worklist = await desk.requests({
+  collection: plan.collection.id,
+  limit: 25,
+});
+if (worklist.items.length) {
+  const selected = worklist.items[0];
+  const current = await desk.status();
+  await desk.review({
+    requestId: 'helsinki-collection-assignment-01',
+    expectedRevision: current.revision,
+    connectionId: selected.connectionId,
+    serviceRequestId: selected.serviceRequestId,
+    captureId: selected.captureId,
+    expectedSourceSha256: selected.sourceSha256,
+    review: {
+      status: 'assigned',
+      assignee: 'Operations',
+      note: 'Review this retained source edition and its service routing.',
+    },
+  });
+}
+~~~
+
+Internal assignment and status remain attached to that exact retained source version. The original civic status, missing service code and every changed source object remain available through desk.request({ collection, id }) with its history and versions. A changed edition exposes its previous review for explicit reconsideration.
+
+Collection file selections use collection instead of capture. Keep expectedRevision on the complete json, csv and report selections. The json file contains the original collection plan, consolidated requests, all source versions and observations, complete parent/leaf source responses, operation history and provider attribution.
+
+~~~js
+const selectedRevision = await desk.status();
+const complete = await desk.downloadFile({
+  kind: 'json',
+  collection: plan.collection.id,
+  expectedRevision: selectedRevision.revision,
+});
+await writeFile('/private/municipal-complete-collection.json', complete.bytes,
+  { flag: 'wx', mode: 0o600 });
+console.log(complete.file);
+~~~
+
+Use kind: source with an individual capture ID for its unchanged original response body. Collection comparisons use kind: comparison, comparisonKind: collection, before and after. The whole workspace export also carries all collection plans and retained run intents. It uses the v2 workspace envelope when collections exist; receiving accepts both the original v1 and complete v2 formats.
+
+## Hand the collection to service-performance reporting
+
+The combined open311-reporting distribution selection includes both the municipal operations desk and the service-performance workbench. Prepare that selected archive with the same maintained runtime installer described above. The complete [reporting installation guide](reporting/INSTALL.md) supplies source packaging, runtime setup, managed Applications and receiving commands.
+
+Import the complete collection JSON into a separate private reporting workspace. The file exported above contains the original provider response bytes and the selected internal reviews required by reporting. Initialize the reporting desk, then import that original file using one saved request ID and revision:
+
+~~~sh
+npx --no-install starforge runtime-install run \
+  --dir /private/municipal-runtime -- \
+  open311-reporting init --workspace /private/municipal-reporting
+
+npx --no-install starforge runtime-install run \
+  --dir /private/municipal-runtime -- \
+  open311-reporting import \
+  --workspace /private/municipal-reporting \
+  --file /private/municipal-complete-collection.json \
+  --request-id reporting-original-october-import \
+  --expected-revision 0
+~~~
+
+Open **Open311 service performance** in the maintained Applications launcher, select that initialized reporting directory, and Review/Save before Start/Open. The launcher binds the original directory, workspace identity and live server instance. The reporting browser then carries the complete operator workflow:
+
+1. Inspect the imported source selection, all original windows and any unresolved source limits.
+2. Save a named profile with explicit service/status mappings, target policies, working calendars, time zones and date overrides. Calendar and target rules record who supplied those choices.
+3. Build a fixed creation-period report with an explicit observation cutoff, display time zone and selected target basis.
+4. Inspect each case's original source version, review, target calculation and issues; compare saved reports and export HTML, CSV or a complete editable report package.
+5. Export a reviewer template, import its completed return, select individual source-linked comments and save the reviewed report edition.
+6. Export the complete reporting workspace and receive it into an independently initialized empty reporting desk.
+
+Helsinki's READY and PROCESSING values retain their published processing meanings. The profile keeps the original expected_datetime field separate from operator-defined target dates. A saved reporting period and observation cutoff select the actual retained source editions; the calculation retains unresolved coverage and source-version review issues with the result.
+
+The collection workspace and reporting workspace each retain their own exact mutation history and complete portable exports. Keep the original complete collection beside the reporting handoff so another operator can continue municipal review as well as reopen its service-performance reports.
+
+## Collect updated records through native source pages
+
+The same merchant tools operate created-time or updated-time collections. Set `policy.timeBasis` to `updated` for a query containing the provider's declared `updated_after` and `updated_before`; an optional `start_date` / `end_date` pair remains a fixed creation filter. Set `policy.strategy` to `pages` only for a connection with declared pagination. Omitted choices preserve the original created-time/window behavior of earlier workspaces.
+
+The supplied Boston profile uses `per_page`, a maximum of 300, Bearer credential transport and 6000-millisecond source request spacing. Its saved date-range declarations constrain creation/update filters to the documented intervals. Configure its profile through the same host-owned `connectionProfiles` object and `client.configure()` operation. The host profile reader retains `apiKeyTransport`, `minimumRequestIntervalMs` and `queryDateRanges` together with the existing endpoint, source fields and environment-variable name.
+
+`client.createCollection()` accepts the complete query and optional policy choices. The collector owns page numbering from 1. A full page is retained as `PAGED` with one next-page child; a short page completes the sequence. `client.collectionInfo()` exposes each original `page`, query/capture, attempt and continuation using the existing limit-100 merchant pagination. A repeated complete source page is retained as `LIMITED` with `REPEATED_SOURCE_PAGE`.
+
+The CLI exposes `capture --updated-after ... --updated-before ... --per-page 40 --page 1` for a single original Boston response, and `collection-plan --file ...` / `collection-create --file ...` for the complete saved traversal. Use the actual profile and operating selections in [BOSTON.md](./BOSTON.md). The browser's **Date basis**, **Source traversal**, additional date filter and native response-size controls prepare that same complete collection intent.
+
+All original pages and distinct request editions remain in collection exports and full workspace receiving. The request view presents original status notes and public notes beside the separately saved internal review. Its complete collection JSON continues into the installed service-performance desk through the existing original-file download and reporting import workflow.
