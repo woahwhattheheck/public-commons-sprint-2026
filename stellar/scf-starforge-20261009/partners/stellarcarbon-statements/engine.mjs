@@ -193,29 +193,72 @@ export function prepareStatement(state,input) {
     projectSnapshot:copy(state.projects.filter(row=>projectIds.has(row.id))),
     assignmentSnapshot:copy(state.assignments.filter(row=>assignmentIds.has(row.id)))};
 }
+function comparisonFields(table,before,after){
+  const fields=[],representationChanges=[],fieldAvailabilityChanges=[];
+  const carbonFields=new Set(['carbon_amount','amount_filled']);
+  const assetFields=new Set(['source_asset_amount','dest_asset_amount']);
+  const civilFields=new Set(table==='retirements'?['retirement_date','issuance_date','vintage_start','vintage_end']:table==='minted_blocks'?['vintage_start','vintage_end']:[]);
+  const available=(row,name)=>Object.hasOwn(row,name)&&!(table==='sinking_txs'&&name==='contract_id'&&row.contract_id_reported===false);
+  const comparable=(name,value)=>{
+    if(value===null||value===undefined)return value;
+    if(TABLES[table].includes(name)&&carbonFields.has(name))return units(String(value),3).toString();
+    if(TABLES[table].includes(name)&&assetFields.has(name))return units(String(value),7).toString();
+    if(civilFields.has(name)&&/^\d{4}-\d{2}-\d{2}(?:T00:00:00(?:\.0+)?)?$/.test(String(value)))return String(value).slice(0,10);
+    return value;
+  };
+  for(const name of new Set([...Object.keys(before),...Object.keys(after)])){
+    const left=available(before,name),right=available(after,name);
+    const field={name,before:copy(before[name]??null),after:copy(after[name]??null)};
+    if(left!==right){fieldAvailabilityChanges.push({...field,beforeAvailable:left,afterAvailable:right});continue;}
+    if(!left||canonical(before[name])===canonical(after[name]))continue;
+    if(canonical(comparable(name,before[name]))===canonical(comparable(name,after[name]))){representationChanges.push(field);continue;}
+    if(table==='retirements'&&(name==='issuance_date'||name==='total_vintage_quantity')){
+      field.category='instrument-metadata';
+      field.sourcePlaceholder=name==='issuance_date'?dayOf(String(after[name]))==='0001-01-01':String(after[name])==='0';
+      field.note=field.sourcePlaceholder?'The source reports a placeholder for this instrument field. Retired VCUs and allocation amounts retain their separate original values.':
+        'The source reports changed instrument metadata. Retired VCUs and allocation amounts retain their separate original values.';
+    }
+    fields.push(field);
+  }
+  return {fields,representationChanges,fieldAvailabilityChanges};
+}
 export function compareEditions(state,beforeId,afterId) {
   const before = editionFor(state,beforeId), after = editionFor(state,afterId), tables = {};
+  const coverageFor=(source,table)=>{
+    const available=source.format==='native-backup'?Object.keys(TABLES):
+      Array.isArray(source.metadata?.availableTables)?source.metadata.availableTables:
+      source.format==='api-capture'?['sinking_txs','sink_status','retirements','retirement_from_block','vcs_projects']:Object.keys(source.tables);
+    return {available:available.includes(table),scope:source.metadata?.viewScope||source.format};
+  };
   for(const table of Object.keys(TABLES)) {
     const left = new Map(before.tables[table].map(row=>[rowKey(table,row),row]));
     const right = new Map(after.tables[table].map(row=>[rowKey(table,row),row]));
-    const added = [], removed = [], changed = [];
+    const coverage={before:coverageFor(before,table),after:coverageFor(after,table)};
+    const added = [], removed = [], changed = [], sourceDifferences=[];
+    if(!coverage.before.available||!coverage.after.available){
+      tables[table]={comparisonStatus:'unavailable',coverage,
+        note:!coverage.before.available&&!coverage.after.available?'Neither source acquired this table.':!coverage.before.available?'The earlier source did not acquire this table.':'The later source did not acquire this table.',
+        added,removed,changed,sourceDifferences,counts:{before:left.size,after:right.size,added:null,removed:null,changed:null,sourceDifferences:null}};
+      continue;
+    }
     for(const [key,row] of right) {
       if(!left.has(key)) added.push({key,after:copy(row)});
       else if(canonical(left.get(key)) !== canonical(row)) {
-        const old = left.get(key), fields = [...new Set([...Object.keys(old),...Object.keys(row)])]
-          .filter(name=>canonical(old[name])!==canonical(row[name]))
-          .map(name=>({name,before:copy(old[name] ?? null),after:copy(row[name] ?? null)}));
-        changed.push({key,before:copy(old),after:copy(row),fields});
+        const old=left.get(key),difference=comparisonFields(table,old,row);
+        if(difference.fields.length)changed.push({key,before:copy(old),after:copy(row),fields:difference.fields});
+        if(difference.representationChanges.length||difference.fieldAvailabilityChanges.length)
+          sourceDifferences.push({key,before:copy(old),after:copy(row),representationChanges:difference.representationChanges,fieldAvailabilityChanges:difference.fieldAvailabilityChanges});
       }
     }
     for(const [key,row] of left) if(!right.has(key)) removed.push({key,before:copy(row)});
-    tables[table] = {added,removed,changed,counts:{before:left.size,after:right.size,added:added.length,removed:removed.length,changed:changed.length}};
+    tables[table] = {comparisonStatus:'available',coverage,note:'Typed values are compared within retained table populations. Original formatting and field availability changes remain in sourceDifferences.',added,removed,changed,sourceDifferences,counts:{before:left.size,after:right.size,added:added.length,removed:removed.length,changed:changed.length,sourceDifferences:sourceDifferences.length}};
   }
   const previous = sourceSummary(before), current = sourceSummary(after);
+  const deltaAvailable=['sinking_txs','sink_status'].every(table=>tables[table].comparisonStatus==='available');
   return {schema:'stellar-forge.stellarcarbon-comparison.v1',beforeId,afterId,previous,current,
-    delta:{carbon:decimal(units(current.carbon)-units(previous.carbon)),
-      allocated:decimal(units(current.allocated)-units(previous.allocated)),
-      remaining:decimal(units(current.remaining)-units(previous.remaining))},tables};
+    deltaAvailable,delta:{carbon:deltaAvailable?decimal(units(current.carbon)-units(previous.carbon)):null,
+      allocated:deltaAvailable?decimal(units(current.allocated)-units(previous.allocated)):null,
+      remaining:deltaAvailable?decimal(units(current.remaining)-units(previous.remaining)):null},tables};
 }
 function saveRecord(rows,input,context,normalize) {
   const recordId = input.id ? id(input.id) : context.recordId, existing = rows.find(row=>row.id===recordId);

@@ -220,7 +220,7 @@ The receiving result contains the received workspace, application and runtime pa
 
 ## Original runtime and source
 
-The original Stellar SDK is built from its retained publisher source using Bun 1.3.12 and TypeScript 5.9.3, then packed and installed into a private Node consumer. Its package graph includes the original SDK 0.3.0 and Stellar SDK 17.2.1.
+The original Fuul SDK is built from its retained publisher source using Bun 1.3.12 and TypeScript 5.9.3, then packed and installed into a private Node consumer. Its package graph includes the original SDK 0.3.0 and Stellar SDK 17.2.1.
 
 ~~~sh
 stellar-fuul-programmes runtime-build \
@@ -229,6 +229,8 @@ stellar-fuul-programmes runtime-build \
   --bun-executable /absolute/bin/bun \
   --npm-executable /absolute/bin/npm
 ~~~
+
+Use --node-heap-mb 512 when the original compiler needs a bounded Node heap. Repeat the same runtime-build command to recover completed work: the runtime records every emitted file and packages that exact output with native npm pack --ignore-scripts. If an interrupted earlier prepack removed output, the same original build runs again before packaging.
 
 Omitting --source-directory materializes the unchanged retained publisher source. An explicitly supplied source directory must match the selected original source. Build, retain, verify, restore and bind commands preserve the complete installed package graph and original build inputs. See [APPLICATIONS.md](APPLICATIONS.md) for the full sequence and receiving layout.
 

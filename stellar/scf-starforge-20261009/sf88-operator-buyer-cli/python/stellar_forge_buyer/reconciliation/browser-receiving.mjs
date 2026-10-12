@@ -257,6 +257,98 @@ export async function runReconciliationBrowserReceiving({url,input,outputDirecto
   await fs.chmod(file,0o600);
   const bytes=await fs.readFile(file);return{name:path.basename(file),bytes:bytes.length,sha256:hash(bytes)};
  }
+
+ function normalizedCell(value){
+  return plain(value)&&Object.hasOwn(value,'text')&&Object.hasOwn(value,'type')?(value.type==='null'?null:value.text):value;
+ }
+ function normalizedDisplay(value){
+  const raw=normalizedCell(value);return raw===null||raw===undefined?'NULL':raw===''?'EMPTY STRING':typeof raw==='object'?JSON.stringify(raw):String(raw);
+ }
+ function normalizedObjects(native,visibleColumns){
+  need(Array.isArray(native.columns)&&Array.isArray(native.rows),'Read the complete native conversion page.');
+  const names=native.columns.map(column=>typeof column==='string'?column:column.name);
+  need(visibleColumns.every(name=>names.includes(name)),'The original conversion page lacks a displayed field.');
+  return native.rows.map(row=>Array.isArray(row)?Object.fromEntries(names.map((name,index)=>[name,row[index]])):row);
+ }
+ async function assertNormalizedGrid(locator,native,visibleColumns){
+  const objects=normalizedObjects(native,visibleColumns);
+  const visible=await locator.locator('tbody tr').evaluateAll(lines=>lines.map(line=>Array.from(line.querySelectorAll('td.value')).map(cell=>cell.textContent)).filter(cells=>cells.length));
+  need(stable(visible)===stable(objects.map(row=>visibleColumns.map(name=>normalizedDisplay(row[name])))),
+   'The visible conversion page differs from its complete native original and canonical values.');
+  return objects;
+ }
+ async function conversionPreviewAction(locator,column,side,offset){
+  const pending=page.waitForResponse(response=>{
+   try{
+    if(new URL(response.url()).pathname!==API+'/normalization-preview'||response.request().method()!=='POST')return false;
+    const body=response.request().postDataJSON();
+    return body.side===side&&body.column_name===column.name&&(body.offset??0)===offset;
+   }catch{return false;}
+  },{timeout:300000});
+  pending.catch(()=>{});
+  await visibleAction(locator);
+  const response=await pending;
+  need(response.ok(),'The original conversion preview returned '+response.status()+'.');
+  const result=await response.json();
+  need(result.workspace_id===input.workspace_id&&result.side===side&&result.column_name===column.name&&
+   result.offset===offset&&ID.test(result.review_sha256??''),'The conversion preview changed its original definition binding.');
+  return result;
+ }
+ async function observeDraftNormalizationsUI(){
+  const observed=[],previews=[];let reviewId=null;
+  const visibleColumns=['side','row','column_name','original_value_text','original_unit','canonical_value_text','canonical_unit','state','reason'];
+  for(const [index,column] of input.definition.columns.entries()){
+   const policy=column.normalization;if(policy===undefined)continue;
+   need(plain(policy)&&['numeric-affine','time-utc'].includes(policy.mode),'The original normalization policy must be complete before receiving.');
+   const controls=page.locator('[data-normalization-column="'+index+'"]');
+   need(await controls.count()===1,'The complete original normalization controls are absent from the definition.');
+   const value=name=>controls.locator('[data-normalization-path="'+name+'"]').inputValue();
+   const actual={mode:await value('mode'),canonical_type:await value('canonical_type'),source:{},target:{},basis:await value('basis')};
+   if(policy.mode==='numeric-affine'){
+    actual.canonical_unit=await value('canonical_unit');
+    for(const side of ['source','target'])actual[side]={unit:await value(side+'.unit'),scale:await value(side+'.scale'),offset:await value(side+'.offset')};
+   }else{
+    for(const side of ['source','target'])actual[side]={format:await value(side+'.format'),offset:await value(side+'.offset')};
+   }
+   need(stable(actual)===stable(policy),'The visible normalization changed its original literal policy.');
+   observed.push({column_index:index,column_name:column.name,normalization:actual});
+   for(const side of ['source','target']){
+    let offset=0,total=null,rows=0,pages=0,last=null;const digest=createHash('sha256'),states={};
+    for(;;){
+     const action=offset===0?controls.locator('[data-normalization-preview-action="'+side+'"]'):
+      controls.locator('[data-normalization-preview="'+side+'"]').getByRole('button',{name:'Next',exact:true});
+     const native=await conversionPreviewAction(action,column,side,offset);
+     if(reviewId===null)reviewId=native.review_sha256;
+     need(native.review_sha256===reviewId,'The original definition changed between conversion preview pages.');
+     const preview=controls.locator('[data-normalization-preview="'+side+'"]');
+     const objects=await assertNormalizedGrid(preview.locator(':scope > .table-scroll'),native,visibleColumns);
+     if(total===null)total=native.total;
+     need(Number.isSafeInteger(total)&&total>=0&&native.total===total,'The immutable original conversion-preview total changed.');
+     digest.update(stable(native.rows)+'\n');pages++;rows+=objects.length;
+     if(objects.length)last=objects[0];
+     for(const row of objects){const state=String(normalizedCell(row.state));states[state]=(states[state]||0)+1;}
+     if(native.next_offset===null||native.next_offset===undefined)break;
+     need(Number.isSafeInteger(native.next_offset)&&native.next_offset>offset,'The original conversion preview continuation did not advance.');
+     offset=native.next_offset;
+    }
+    need(rows===total,'The conversion preview did not include every original observation for its side and field.');
+    if(last){
+     const preview=controls.locator('[data-normalization-preview="'+side+'"]');
+     await visibleAction(preview.getByRole('button',{name:'Inspect conversion',exact:true}).first());
+     const inspected=await detail('Complete recorded normalization',preview);
+     need(stable(inspected)===stable(last),'The visible preview inspection changed its exact original conversion record.');
+    }
+    previews.push({column_index:index,column_name:column.name,side,total,rows,pages,states,
+     ordered_page_rows_sha256:digest.digest('hex'),inspected_original_conversion:last});
+   }
+  }
+  if(observed.length){
+   record.observed_normalization_previews={complete:true,review_sha256:reviewId,controls:observed,pages:previews,completed_at:new Date().toISOString()};
+   await save();
+  }
+  return reviewId;
+ }
+
  async function preparePairUI(){
   await screen('pairs');await visibleAction(page.getByRole('button',{name:'New pair',exact:true}));
   await page.locator('#screen-editor input[type="file"]').setInputFiles({
@@ -273,7 +365,7 @@ export async function runReconciliationBrowserReceiving({url,input,outputDirecto
     mode:await controls.getByLabel(/^Comparison mode(?:\s|$)/).inputValue(),
     absolute:await controls.getByLabel(/^Absolute allowance(?:\s|$)/).inputValue(),
     relative:await controls.getByLabel(/^Relative fraction(?:\s|$)/).inputValue(),
-    unit:await controls.getByLabel(/^Source unit(?:\s|$)/).inputValue(),
+    unit:await controls.getByLabel(/^Comparison unit(?:\s|$)/).inputValue(),
     nulls:await controls.getByLabel('Two SQL NULL values',{exact:true}).inputValue(),
     basis:await controls.getByLabel(/^Review basis(?:\s|$)/).inputValue()
    };
@@ -281,19 +373,22 @@ export async function runReconciliationBrowserReceiving({url,input,outputDirecto
    observedRules.push({column_index:index,column_name:column.name,comparison:values});
   }
   if(observedRules.length){record.observed_rule_controls=observedRules;await save();}
+  const normalizationReview=await observeDraftNormalizationsUI();
   await visibleAction(page.getByRole('button',{name:'Review mapping',exact:true}));
   const review=await detail('Complete native mapping review',page.locator('#mapping-review'));
   need(review.workspace_id===input.workspace_id&&review.definition.source_edition===input.definition.source_edition&&
    review.definition.target_edition===input.definition.target_edition&&ID.test(review.review_sha256??''),
    'The visible mapping review changed its original source editions.');
+  if(normalizationReview)need(review.review_sha256===normalizationReview,'The saved mapping review differs from the complete original conversion previews.');
   return {workspace_id:input.workspace_id,expected_revision:0,definition:review.definition,review_sha256:review.review_sha256};
  }
  async function observeFieldsUI(run){
-  if(!run.comparison_rules)return;
-  if(record.observed_fields?.complete){
+  if(!run.comparison_rules&&!run.normalizations)return;
+  if(record.observed_fields?.complete&&(!run.normalizations||record.observed_fields.normalizations)){
    need(record.observed_fields.run_id===run.run_id&&
-    stable(record.observed_fields.comparison_rules)===stable(run.comparison_rules),
-    'The original recorded field observation belongs to another run or rule set.');
+    stable(record.observed_fields.comparison_rules??null)===stable(run.comparison_rules??null)&&
+    stable(record.observed_fields.normalizations??null)===stable(run.normalizations??null),
+    'The original recorded field observation belongs to another run, normalization or rule set.');
    return;
   }
   record.phase='FIELDS';await save();
@@ -338,11 +433,64 @@ export async function runReconciliationBrowserReceiving({url,input,outputDirecto
    need(await page.getByRole('tab',{name:'Original rows',exact:true}).getAttribute('aria-selected')==='true',
     'The recorded field did not reopen its original group observations.');
   }
-  record.observed_fields={complete:true,run_id:run.run_id,comparison_rules:run.comparison_rules,
+  record.observed_fields={complete:true,run_id:run.run_id,comparison_rules:run.comparison_rules??null,normalizations:run.normalizations??null,
    total,rows,pages,states,ordered_page_rows_sha256:digest.digest('hex'),
    inspected_original_field:first,completed_at:new Date().toISOString()};
   await save();
  }
+
+ async function observeNormalizationsUI(run){
+  if(!run.normalizations)return;
+  if(record.observed_normalizations?.complete){
+   need(record.observed_normalizations.run_id===run.run_id&&
+    stable(record.observed_normalizations.normalizations)===stable(run.normalizations),
+    'The original recorded conversion observation belongs to another run or normalization policy.');
+   return;
+  }
+  record.phase='NORMALIZATIONS';await save();
+  await reopen(record.steps.run,'reconciliation');
+  await visibleAction(page.getByRole('tab',{name:'Normalizations',exact:true}));
+  const visibleColumns=['group_id','side','row','column_name','original_value_text','original_unit','canonical_value_text','canonical_unit','state','reason'];
+  const digest=createHash('sha256'),states={};let offset=0,rows=0,pages=0,total=null,first=null;
+  for(;;){
+   const native=await get(API+'/runs/'+run.run_id+'/normalizations?offset='+offset+'&limit=50');
+   need(native.run_id===run.run_id,'The original conversion page belongs to another run.');
+   const objects=await assertNormalizedGrid(page.locator('#run-grid'),native,visibleColumns);
+   if(total===null)total=native.total;
+   need(Number.isSafeInteger(total)&&total>=0&&native.total===total,'The immutable original conversion total changed while reading.');
+   digest.update(stable(native.rows)+'\n');pages++;rows+=objects.length;
+   if(!first&&objects.length)first=objects[0];
+   for(const row of objects){const state=String(normalizedCell(row.state));states[state]=(states[state]||0)+1;}
+   if(native.next_offset===null||native.next_offset===undefined)break;
+   need(Number.isSafeInteger(native.next_offset)&&native.next_offset>offset,'The original conversion continuation did not advance.');
+   await visibleAction(page.locator('#run-grid-pager').getByRole('button',{name:'Next',exact:true}));
+   offset=native.next_offset;
+  }
+  need(rows===total,'The saved conversion observation did not include every original native record.');
+  let original=null;
+  if(first){
+   const group=normalizedCell(first.group_id),side=String(normalizedCell(first.side)),row=String(normalizedCell(first.row));
+   await page.getByLabel('Normalization side',{exact:true}).selectOption(side);
+   await page.getByLabel('Normalized field',{exact:true}).fill(String(normalizedCell(first.column_name)));
+   await page.getByLabel('Conversion result',{exact:true}).selectOption(String(normalizedCell(first.state)));
+   await page.getByLabel('Normalization group identifier',{exact:true}).fill(group===null||group===undefined?'':String(group));
+   await visibleAction(page.getByRole('button',{name:'Apply normalization filters',exact:true}));
+   const inspect=page.locator('#run-grid').getByRole('button',{name:'Inspect conversion',exact:true});
+   need(await inspect.count()>0,'The original normalization filters lost their complete conversion record.');
+   await visibleAction(inspect.first());
+   const inspected=await detail('Complete recorded normalization',page.locator('#selected-subject'));
+   need(stable(inspected)===stable(first),'The complete visible conversion changed its original values, policy or result.');
+   original=await detail('Complete original and canonical row',page.locator('#selected-subject'));
+   const nativeOriginal=await get(API+'/runs/'+run.run_id+'/row?side='+encodeURIComponent(side)+'&row='+encodeURIComponent(row));
+   need(stable(original)===stable(nativeOriginal)&&original.side===side&&String(original.row)===row&&
+    plain(original.original)&&plain(original.canonical),'The conversion did not reopen every field in its exact original row.');
+  }
+  record.observed_normalizations={complete:true,run_id:run.run_id,normalizations:run.normalizations,
+   total,rows,pages,states,ordered_page_rows_sha256:digest.digest('hex'),
+   inspected_original_conversion:first,inspected_original_row:original,completed_at:new Date().toISOString()};
+  await save();
+ }
+
  async function prepareDecisionUI(runId){
   await reopen(record.steps.run,'reconciliation');
   await visibleAction(page.getByRole('tab',{name:'Original rows',exact:true}));
@@ -398,6 +546,7 @@ export async function runReconciliationBrowserReceiving({url,input,outputDirecto
   need(ID.test(run.run_id??'')&&run.pair_id===pair.pair_id&&run.summary?.accounting_balanced===true,
    'The native run did not account for all original rows.');
   await observeFieldsUI(run);
+  await observeNormalizationsUI(run);
   // OPEN records an actual observation without inventing a correction.
   let preparedDecision=null;
   if(!record.steps.decision)preparedDecision=await prepareDecisionUI(run.run_id);
@@ -415,6 +564,9 @@ export async function runReconciliationBrowserReceiving({url,input,outputDirecto
     await visibleAction(page.getByRole('button',{name:'Create complete report',exact:true}));
    });
   need(ID.test(report.report_id??'')&&report.run_id===run.run_id,'The browser report belongs to another run.');
+  if(run.normalizations)need(stable(report.review?.normalizations??null)===stable(run.normalizations)&&
+   Array.isArray(report.queries)&&['fields','normalizations'].every(kind=>report.queries.some(query=>query.kind===kind)),
+   'The complete report lost its frozen normalization policies or original saved conversion queries.');
   const exported=await step('export',API+'/exports',{report_id:report.report_id},async()=>{
    await reopen(record.steps.report,'reconciliation');
    await visibleAction(page.getByRole('button',{name:'Prepare complete handover',exact:true}));
@@ -464,6 +616,8 @@ export async function runReconciliationBrowserReceiving({url,input,outputDirecto
    source_edition:input.definition.source_edition,target_edition:input.definition.target_edition,
    browser_errors:errors,screenshots,directory:root,
    ...(record.observed_fields?{observed_fields:record.observed_fields}:{}),
+   ...(record.observed_normalization_previews?{observed_normalization_previews:record.observed_normalization_previews}:{}),
+   ...(record.observed_normalizations?{observed_normalizations:record.observed_normalizations}:{}),
    continuation:'Receive every original export file through the same native typed client, then reopen the original report from the separate sparse working warehouse.'};
   await save();return record.result;
  }catch(error){

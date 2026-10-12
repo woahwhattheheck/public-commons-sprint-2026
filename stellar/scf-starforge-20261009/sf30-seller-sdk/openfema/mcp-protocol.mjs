@@ -2,7 +2,7 @@
 import { MAX_RETAINED_CHUNK_BYTES } from '../../../../stellar-forge/mcp-merchant-operator/retained-file-contracts.mjs';
 
 export const OPENFEMA_TABLES = Object.freeze(['projects','applicants','disasters','declarations','categories','issues']);
-export const OPENFEMA_FILE_KINDS = Object.freeze(['source','portfolio','export','receipt']);
+export const OPENFEMA_FILE_KINDS = Object.freeze(['source','portfolio','export','receipt','mapping','delivery','reconciliation','delivery-comparison','workspace']);
 export const OPENFEMA_OPERATION_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
 const ALIAS=/^[a-z0-9][a-z0-9_-]{0,63}$/, SHA=/^[a-f0-9]{64}$/;
 const UUID=/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
@@ -41,6 +41,8 @@ const payment=object({
   asset:text(100,1),amount:matching(/^[1-9][0-9]*$/),payTo:text(100,1),maxTimeoutSeconds:integer(1,86400)
 },['scheme','network','asset','amount','payTo','maxTimeoutSeconds']);
 const intentIds=array(text(128,1),4096,1);
+const mapping=matching(/^mapping-[a-f0-9]{24}$/), delivery=matching(/^delivery-[a-f0-9]{24}$/), reconciliation=matching(/^reconciliation-[a-f0-9]{24}$/);
+const reviewRows={...array(integer(2,250001),10000,1),uniqueItems:true};
 const actions=[
  ['source.capture','Acquire the complete selected declaration/applicant/project cohort and retain each original response and continuation.',{scope:sourceScope,label:text(200)},['scope'],{openWorld:true}],
  ['source.resume','Resume the original retained capture and accepted response checkpoints.',{captureId:id},['captureId'],{openWorld:true}],
@@ -62,14 +64,20 @@ const actions=[
  ['release.rollback','Restore the preceding native release generation and retain the original publication history.',{releaseId:release,expectedGeneration:integer()},['releaseId','expectedGeneration'],{openWorld:true}],
  ['buyer.inspect','Inspect the selected completed native buyer intents in the configured original inbox.',{intentIds},['intentIds']],
  ['buyer.receive','Receive those original completed buyer intents through the existing native customer engine.',{intentIds},['intentIds']],
+ ['delivery.mapping.save','Save the complete host-declared destination mapping and schema specification in the original workspace.',{mappingPackage:matching(ALIAS),previousMappingId:mapping},['mappingPackage']],
+ ['delivery.mapping.review','Record the named operator review of the exact retained mapping SHA256 before customer export.',{mappingId:mapping,expectedMappingSha256:digest,reviewer:text(200,1),note:text(12000,1)},['mappingId','expectedMappingSha256','reviewer','note']],
+ ['delivery.export','Create a complete project delivery against the reviewed mapping and immutable portfolio; retain a selected customer base when supplied.',{mappingId:mapping,versionId:digest,customerReconciliationId:reconciliation},['mappingId','versionId']],
+ ['delivery.reconcile','Receive the complete host-declared customer CSV and preserve its original bytes, all rows, source differences and proposed analyst changes.',{deliveryId:delivery,customerFilePackage:matching(ALIAS)},['deliveryId','customerFilePackage']],
+ ['delivery.review.apply','Apply explicitly selected valid customer-file analyst rows to the current portfolio version, preserving official source and unrelated reviews.',{reconciliationId:reconciliation,versionId:digest,rowNumbers:reviewRows,reviewer:text(200,1),note:text(12000,1)},['reconciliationId','versionId','rowNumbers','reviewer','note']],
+ ['delivery.compare','Retain complete source, mapping, amount and analyst-review comparisons between two original project deliveries.',{beforeDeliveryId:delivery,afterDeliveryId:delivery},['beforeDeliveryId','afterDeliveryId']],
  ['export.create','Freeze complete portfolio JSON, table CSV or the native HTML report for exact-file receiving.',{versionId:digest,table,format:choice(['json','csv','html'])},['versionId']],
  ['source.export','Freeze the complete source bundle with every original metadata/field/page response.',{editionId:digest},['editionId']],
- ['workspace.export','Request the original complete-workspace download descriptor after any running capture is paused. Preserve the actual received archive through native workspace receiving.',{},[]]
+ ['workspace.export','Prepare the original complete-workspace archive after source capture is paused, retain its exact complete bytes in the existing merchant receiving directory, and return a stable workspace file selector.',{},[]]
 ];
 export const openFemaActionNames=new Map(actions.map(row=>['merchant_openfema_'+row[0].replaceAll('.','_'),row]));
 const scope={workspace:matching(ALIAS)}, readOnly={readOnly:true,idempotent:true};
 const selection={kind:choice(OPENFEMA_FILE_KINDS),id:text(100,1),file:matching(FILE)};
-const archiveCollections=['editions','portfolios','versions','reviews','acceptances','comparisons','datasets','releases','receipts','exports','captures'];
+const archiveCollections=['editions','portfolios','versions','reviews','acceptances','comparisons','datasets','releases','receipts','exports','captures','deliveryMappings','deliveryMappingReviews','projectDeliveries','deliveryReconciliations','deliveryReviewImports','deliveryComparisons'];
 export function openFemaWorkspaceTools(tool){
   return [
     tool('merchant_openfema_workspaces','List configured OpenFEMA workspace aliases, original UUIDs and available retained reads.',{},[],readOnly),
@@ -81,7 +89,7 @@ export function openFemaWorkspaceTools(tool){
     tool('merchant_openfema_version','Read the immutable portfolio-version identity and summary. Its complete JSON is available through files.',{...scope,versionId:digest},['workspace','versionId'],readOnly),
     tool('merchant_openfema_rows','Page one immutable portfolio table. Preserve exact decimal strings, source IDs, missing/null distinctions and returned nextOffset.',{...scope,versionId:digest,table,search:text(500),sort:text(100),direction:choice(['asc','desc']),offset:integer(),limit:integer(1,1000)},['workspace','versionId','table'],readOnly),
     tool('merchant_openfema_detail','Read one complete original portfolio row, analytical fields, original source and review. Pass its exact returned ID, including composite IDs.',{...scope,versionId:digest,table,id:text(2048,1)},['workspace','versionId','table','id'],readOnly),
-    tool('merchant_openfema_files','List exact original source, portfolio JSON, retained export or native customer files and their stable selectors.',{...scope,kind:selection.kind,id:selection.id},['workspace','kind','id'],readOnly),
+    tool('merchant_openfema_files','List exact original source, portfolio, mapped-exchange document, retained ZIP, workspace archive or native customer files and their stable selectors.',{...scope,kind:selection.kind,id:selection.id},['workspace','kind','id'],readOnly),
     tool('merchant_openfema_file_read','Read a SHA-verified original file in bounded base64 chunks. Retain selector, readId, expectedSha256 and nextOffset across continuation.',{...scope,...selection,readId:matching(UUID),expectedSha256:digest,offset:integer(),limit:integer(1,MAX_RETAINED_CHUNK_BYTES)},['workspace','kind','id'],readOnly),
     tool('merchant_openfema_file_release','Close this temporary retained read while keeping all original workspace and completed customer files.',{...scope,readId:matching(UUID)},['workspace','readId'],{idempotent:true}),
     ...actions.map(([action,description,properties,required,annotations={}])=>

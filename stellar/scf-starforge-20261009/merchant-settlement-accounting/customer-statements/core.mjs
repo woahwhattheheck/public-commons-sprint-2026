@@ -3,6 +3,7 @@ import {createHash} from 'node:crypto';
 import {compileAccountingPeriod} from '../reconcile.mjs';
 import {indexAdjustments,summarizeAdjustments,adjustmentEventKey} from '../adjustments.mjs';
 import {projectApiPassExport} from './native-usage.mjs';
+import {compileServicePeriod,renderServicePeriodHtml} from './period-usage.mjs';
 
 export const STATEMENT_SCHEMA='stellar-forge.merchant-customer-statement.v1';
 export const USAGE_SCHEMA='stellar-forge.sf101.service-usage-export.v1';
@@ -87,7 +88,7 @@ const microUsd=value=>{
 };
 const formatUsd=value=>(value/1000000n).toString()+'.'+(value%1000000n).toString().padStart(6,'0');
 
-export function compileCustomerStatement({report,run,customer,bindings,usage=null,usageSource=null,from,until,adjustments=[]}){
+export function compileCustomerStatement({report,run,customer,bindings,usage=null,usageSource=null,usageOpening=null,usageOpeningSource=null,from,until,adjustments=[]}){
   need(object(report)&&report.schema==='stellar-forge.merchant-reconciliation.v1'&&Array.isArray(report.ledger),
     'ORIGINAL_ACCOUNTING_REQUIRED','Choose a completed original merchant accounting run.',409);
   need(object(run)&&HEX.test(run.reportSha256??''),'ORIGINAL_REPORT_HASH_REQUIRED','The original report needs its retained file hash.',409);
@@ -95,6 +96,9 @@ export function compileCustomerStatement({report,run,customer,bindings,usage=nul
   if(from!==undefined||until!==undefined){try{period=compileAccountingPeriod({from,until});}catch{need(false,'INVALID_STATEMENT_PERIOD','Use exact UTC period bounds with the end after the start.');}}
   const selected=bindings.filter(row=>row.customerId===customer.id).sort((a,b)=>a.orderRef.localeCompare(b.orderRef));
   need(selected.length>0,'CUSTOMER_HAS_NO_ORDERS','Assign original order references to this customer before preparing a statement.');
+  const servicePeriod=usageOpening?compileServicePeriod({opening:usageOpening,closing:usage,openingSource:usageOpeningSource,closingSource:usageSource}):null;
+  if(servicePeriod)need(selected.some(row=>row.orderRef===servicePeriod.orderRef),'SERVICE_PERIOD_CUSTOMER_MISMATCH',
+    'Assign the original service order to this customer before preparing its period statement.');
   const ledger=new Map(),usageOrders=new Map((usage?.orders??[]).map(row=>[row.orderRef,row])),adjustmentIndex=indexAdjustments(adjustments);
   for(const row of report.ledger){
     if(row.orderReferenceDigest){const rows=ledger.get(row.orderReferenceDigest)??[];rows.push(row);ledger.set(row.orderReferenceDigest,rows);}
@@ -140,13 +144,17 @@ export function compileCustomerStatement({report,run,customer,bindings,usage=nul
     const quote=microUsd(row.merchantQuoteUsd);if(quote!==null){quoted+=quote;quotedCount++;}
   }
   items.sort((a,b)=>a.recordedAt.localeCompare(b.recordedAt)||a.orderRef.localeCompare(b.orderRef));
+  if(servicePeriod)need(items.some(row=>row.orderRef===servicePeriod.orderRef&&row.service),'SERVICE_PERIOD_PURCHASE_REQUIRED',
+    'Choose an accounting report and purchase range containing the service period’s original purchase. Service dates are selected separately.');
   const totals=[...groups.values()].map(group=>Object.fromEntries(Object.entries(group).map(([key,value])=>[key,typeof value==='bigint'?value.toString():value])))
     .sort((a,b)=>a.network.localeCompare(b.network)||a.assetDigest.localeCompare(b.assetDigest)||String(a.recipientDigest).localeCompare(String(b.recipientDigest)));
   return {schema:STATEMENT_SCHEMA,customer:safeCustomer(customer),
     source:{runId:run.id,reportSha256:run.reportSha256,inputManifestSha256:run.inputManifestSha256??null,reportCreatedAt:report.createdAt,
-      originalPeriod:report.period??null,usage:usage?{id:usageSource?.id??null,sha256:usageSource?.sha256??null,sourceSchema:usage.sourceSchema,createdAt:usage.createdAt,revision:usage.revision}:null},
+      originalPeriod:report.period??null,usage:usage?{id:usageSource?.id??null,sha256:usageSource?.sha256??null,sourceSchema:usage.sourceSchema,createdAt:usage.createdAt,revision:usage.revision}:null,
+      ...(servicePeriod?{usageOpening:servicePeriod.openingSource}:{})},
     selection:{from:period?.from??null,until:period?.until??null,timeBasis:'NATIVE_SETTLEMENT_CAPTURED_AT',
-      usageBasis:usage?'CUMULATIVE_AS_OF_SERVICE_SNAPSHOT':null},
+      usageBasis:servicePeriod?'COMPLETE_NATIVE_SNAPSHOT_COMPARISON':usage?'CUMULATIVE_AS_OF_SERVICE_SNAPSHOT':null},
+    ...(servicePeriod?{servicePeriod}:{}),
     items,excluded,totals:{orders:items.length,excludedOrders:excluded.length,serviceOrders:items.filter(row=>row.service).length,
       requiringReconciliation:items.filter(row=>row.transfer!=='OFFICIAL_TRANSFER_MATCHED').length,byAsset:totals,
       merchantQuotedUsd:{knownOrders:quotedCount,unknownOrders:items.length-quotedCount,knownTotal:formatUsd(quoted)}}};
@@ -214,7 +222,8 @@ export function renderStatementHtml(statement){
     '<p>Payments are recorded once per original order. Amounts remain in each original asset’s atomic units. Merchant USD quotes retain their stated valuation basis.</p>'+
     '<table><thead><tr><th>Network / asset / selected recipient</th><th>Orders</th><th>Original amount</th><th>Officially matched</th><th>Verified refunds</th><th>Pending refunds</th></tr></thead><tbody>'+assetRows+'</tbody></table>'+
     '<p>Known merchant USD quotes total '+e(statement.totals.merchantQuotedUsd.knownTotal)+' across '+statement.totals.merchantQuotedUsd.knownOrders+' orders; '+statement.totals.merchantQuotedUsd.unknownOrders+' orders have no quote.</p>'+
-    (statement.source.usage?'<p>Service units are cumulative as of '+e(statement.source.usage.createdAt)+' (source revision '+e(statement.source.usage.revision)+'). The selected purchase period does not change that usage snapshot.</p>':'')+'</section>'+
-    orderRows+excluded+'<footer>Original accounting run '+e(statement.source.runId)+'<br>Report SHA-256: <code>'+e(statement.source.reportSha256)+'</code>'+
+    (statement.source.usage?'<p>Service allowance balances are cumulative as of '+e(statement.source.usage.createdAt)+' (source revision '+e(statement.source.usage.revision)+').'+(statement.servicePeriod?' The service activity section compares this closing snapshot to its retained opening snapshot.':' The selected purchase period does not change that usage snapshot.')+'</p>':'')+'</section>'+
+    renderServicePeriodHtml(statement.servicePeriod)+orderRows+excluded+'<footer>Original accounting run '+e(statement.source.runId)+'<br>Report SHA-256: <code>'+e(statement.source.reportSha256)+'</code>'+
+    (statement.source.usageOpening?'<br>Opening service usage SHA-256: <code>'+e(statement.source.usageOpening.sha256)+'</code>':'')+
     (statement.source.usage?'<br>Service usage SHA-256: <code>'+e(statement.source.usage.sha256)+'</code>':'')+'</footer></main></body></html>\n';
 }

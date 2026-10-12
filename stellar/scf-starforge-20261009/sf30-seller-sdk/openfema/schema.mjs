@@ -17,6 +17,8 @@ export const ACTIONS={
   'delivery.review.apply':['reconciliationId','versionId','rowNumbers','reviewer','note'],'delivery.compare':['beforeDeliveryId','afterDeliveryId'],
   'export.create':['versionId','table','format'],'source.export':['editionId'],'workspace.export':[]
 };
+export const ACTION_REQUEST_BYTE_LIMITS=Object.freeze({'source.import':256*1024*1024,'delivery.mapping.save':16*1024*1024,'delivery.reconcile':100*1024*1024});
+export const actionRequestByteLimit=action=>Object.hasOwn(ACTION_REQUEST_BYTE_LIMITS,action)?ACTION_REQUEST_BYTE_LIMITS[action]:128*1024;
 export const SOURCE_NOTES={
   declarations:'DisasterDeclarationsSummaries v2 describes designated areas. The natural declaration-area key is disasterNumber and placeCode; county 000 can designate an entire state.',
   applicants:'PublicAssistanceApplicants v1 is joined by disasterNumber and applicantId. Its UUID is an instance identifier and is not a cross-dataset key.',
@@ -27,7 +29,7 @@ export const SOURCE_NOTES={
   migration:'Current funded-project metadata explains that a system migration restored previously omitted records. Edition comparisons retain that source context.'
 };
 export function workspaceSchema({workspaceId,inboxConfigured,releaseRuntime,userAgent}={}){
-  return {schema:'stellar-forge.openfema-workspace-schema.v1',workspaceId,userAgent,actions:ACTIONS,sourceNotes:SOURCE_NOTES,
+  return {schema:'stellar-forge.openfema-workspace-schema.v1',workspaceId,userAgent,actions:ACTIONS,actionRequestByteLimits:ACTION_REQUEST_BYTE_LIMITS,sourceNotes:SOURCE_NOTES,
     tableColumns:TABLE_COLUMNS,fieldMap:FIELD_MAP,reviewStates:REVIEW_STATES,reviewPriorities:['low','normal','high'],
     sourceScope:{disasterNumbers:'Positive integer array',states:'Uppercase two-letter state codes',declarationDateFrom:'YYYY-MM-DD',declarationDateTo:'YYYY-MM-DD',pageSize:'1–10000, default 1000'},
     portfolioFields:['name','states','disasters','applicants','categories','counties','declarationFrom','declarationTo','minimumFederal','maximumFederal','includeUnjoined','note'],

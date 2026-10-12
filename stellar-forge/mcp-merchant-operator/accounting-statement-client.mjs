@@ -4,7 +4,8 @@ import {openMerchantFileClient} from './retained-download.mjs';
 import {createAccountingMaintenanceClient} from './accounting-maintenance-client.mjs';
 
 const PREFIX='merchant_accounting_customer_',UUID=/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/,SHA=/^[a-f0-9]{64}$/;
-const SELECTION=['customerId','runId','usageId','replacesId','from','until'];
+const SELECTION=['customerId','runId','usageId','replacesId','from','until','usageOpeningId'];
+const PERIOD_SELECTION=['usageOpeningId','usageId'];
 const PROFILE=['reference','name','email','address','note'];
 const plain=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
 const json=value=>JSON.stringify(value,null,2)+'\n';
@@ -26,7 +27,18 @@ function selection(value){
     for(const key of ['from','until'])need(typeof value[key]==='string'&&value[key].length<=80&&Number.isFinite(Date.parse(value[key])),'Use both original explicit period timestamps.');
     result.from=value.from;result.until=value.until;
   }
+  // Append only an actual opening selection, in the native intent's original key order.
+  if(value.usageOpeningId!==undefined&&value.usageOpeningId!==null&&value.usageOpeningId!==''){
+    result.usageOpeningId=id(value.usageOpeningId,UUID,'opening usage import UUID');
+    need(result.usageId!==null,'Choose the original closing usage import for this service period.');
+  }
   return result;
+}
+/** The original native selection normalization shared by durable customer cycles. */
+export const accountingStatementSelection=selection;
+function periodSelection(value){
+  exact(value,PERIOD_SELECTION);
+  return {usageOpeningId:id(value.usageOpeningId,UUID,'opening usage import UUID'),usageId:id(value.usageId,UUID,'closing usage import UUID')};
 }
 function nativeProfile(value){
   const profile={reference:text(value.reference,80,'customer reference'),name:text(value.name,200,'customer name'),
@@ -48,6 +60,10 @@ export function accountingStatementPreview(preview){
   const intent=selection(preview.intent);revision(preview.revision);
   need(JSON.stringify(intent)===JSON.stringify(preview.intent)&&preview.draft.customer?.id===intent.customerId&&preview.draft.source?.runId===intent.runId,
     'The reviewed customer, original run or normalized selection changed.','PREVIEW_BINDING');
+  if(intent.usageOpeningId)need(preview.draft.servicePeriod?.openingSource?.id===intent.usageOpeningId&&
+    preview.draft.servicePeriod?.closingSource?.id===intent.usageId&&preview.draft.source.usageOpening?.id===intent.usageOpeningId&&
+    preview.draft.source.usage?.id===intent.usageId,'The reviewed service period differs from its original selected captures.','PREVIEW_BINDING');
+  else need(!preview.draft.servicePeriod,'Select the original opening capture for a service-period statement.','PREVIEW_BINDING');
   return preview;
 }
 export function accountingStatementRetentionArguments(preview,{requestId,actor}={}){
@@ -128,8 +144,8 @@ export function createAccountingStatementClient({workspace,call}={}){
       need(page.nextOffset===offset+page.items.length&&page.nextOffset>offset&&page.nextOffset<total,'The original inventory page did not advance.','PAGE');offset=page.nextOffset;
     }
   }
-  async function previewBytes(descriptor,options){
-    need(plain(descriptor)&&descriptor.kind==='customer-statement-preview'&&descriptor.file==='preview.json'&&SHA.test(descriptor.sha256??'')&&
+  async function previewBytes(descriptor,options,kind='customer-statement-preview',file='preview.json'){
+    need(plain(descriptor)&&descriptor.kind===kind&&descriptor.file===file&&SHA.test(descriptor.sha256??'')&&
       Number.isSafeInteger(descriptor.bytes)&&descriptor.bytes>0&&descriptor.bytes<=128_000_000,'The native preview has no exact complete-file descriptor.','PREVIEW');
     const {sha256,bytes,...selectors}=descriptor,parts=[];let length=0;
     for await(const chunk of client.fileChunks(selectors,{expectedSha256:sha256,signal:options?.requestSignal})){
@@ -149,6 +165,8 @@ export function createAccountingStatementClient({workspace,call}={}){
     lookup:(requestId,options)=>invoke(PREFIX+'statement_lookup',{requestId:id(requestId,/^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/,'retained request ID')},options),
     allCustomers:options=>all(offset=>client.status({view:'customers',offset,limit:200},options),'customers'),
     allUsage:options=>all(offset=>client.status({view:'usage',offset,limit:200},options),'usage'),
+    usageCaptures:(args={},options)=>invoke(PREFIX+'usage_captures',args,options),
+    allUsageCaptures:options=>all(offset=>client.usageCaptures({offset,limit:200},options),'usage-captures'),
     allBindings:(args={},options)=>all(offset=>client.bindings({...args,offset,limit:200},options),'bindings'),
     allStatements:(args={},options)=>all(offset=>client.statements({...args,offset,limit:200},options),'statements'),
     async saveCustomer(value,options){
@@ -164,6 +182,28 @@ export function createAccountingStatementClient({workspace,call}={}){
     async importUsage(value,options){
       const args=accountingStatementArguments('usage_import',value),result=await invoke(PREFIX+'usage_import',args,options);
       need(result.import?.sha256===args.expectedSha256&&UUID.test(result.import.id??''),'The imported original usage source changed.','REQUEST_BINDING');return result;
+    },
+    async usagePeriodSummary(args,options){
+      exact(args,[...PERIOD_SELECTION,'view','offset','limit']);
+      const selected=periodSelection(Object.fromEntries(PERIOD_SELECTION.map(key=>[key,args[key]])));
+      const result=await invoke(PREFIX+'usage_period',{...args,...selected},options);
+      need(result.period?.schema==='stellar-forge.merchant-service-period.v1'&&
+        result.period.openingSource?.id===selected.usageOpeningId&&result.period.closingSource?.id===selected.usageId&&
+        result.reportFile?.usageOpeningId===selected.usageOpeningId&&result.reportFile?.usageId===selected.usageId&&
+        SHA.test(result.periodSha256??''),'The original period report belongs to different usage captures.','REQUEST_BINDING');
+      revision(result.revision);return result;
+    },
+    async usagePeriod(args,options){
+      const selected=periodSelection(args),summary=await client.usagePeriodSummary(selected,options);
+      const bytes=await previewBytes(summary.reportFile,options,'customer-usage-period-preview','usage-period.json');
+      let report;try{report=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}
+      catch{throw fail('PREVIEW','The complete native service-period report is invalid UTF-8 JSON.');}
+      need(plain(report)&&plain(report.period)&&report.period.schema==='stellar-forge.merchant-service-period.v1'&&
+        Array.isArray(report.period.routes)&&Array.isArray(report.period.calls)&&
+        report.period.openingSource?.id===selected.usageOpeningId&&report.period.closingSource?.id===selected.usageId&&
+        report.revision===summary.revision&&digest(report.period)===summary.periodSha256,
+        'The complete period report and its selected original source summary changed between reads.','OBSERVATION_CHANGED');
+      return report;
     },
     previewSummary:(args,options)=>invoke(PREFIX+'statement_preview',args,options),
     async preview(args,options){

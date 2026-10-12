@@ -2,10 +2,13 @@
 import { constants } from 'node:fs';
 import { open, lstat, mkdir, unlink } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { RetainedFileReads } from '../../../../stellar-forge/mcp-merchant-operator/retained-file-reads.mjs';
 import { openFemaActionNames, openFemaToolDefinitions, validateOpenFemaToolField } from './mcp-protocol.mjs';
 export { openFemaWorkspaceTools } from './mcp-protocol.mjs';
+import {validateMapping} from './delivery.mjs';
+import {actionRequestByteLimit} from './schema.mjs';
+import {workspaceArchiveId,retainWorkspaceArchive,readRetainedWorkspaceArchive,openRetainedWorkspaceArchive} from './mcp-archive.mjs';
 
 export const OPENFEMA_CONNECTION_SCHEMA='stellar-forge.openfema-workspace-connection.v1';
 const SCHEMA='stellar-forge.openfema-workspace-schema.v1';
@@ -19,7 +22,8 @@ const FILE=/^[A-Za-z0-9][A-Za-z0-9._-]{0,239}$/;
 const EXPORT_ID=/^export-[a-f0-9]{24}$/, RECEIPT_ID=/^buyer-[a-f0-9]{24}$/;
 const RECEIPT_FILES=['dataset.csv','dataset.jsonl','review.html','delivery.json','manifest.json'];
 const KINDS=['declarations','applicants','projects'];
-const MAX_IMPORT=64*1024*1024, MAX_JSON=16*1024*1024, MAX_FILE=1024*1024*1024;
+const MAX_IMPORT=64*1024*1024, MAX_JSON=32*1024*1024, MAX_FILE=1024*1024*1024;
+const DOCUMENTS=Object.freeze({mapping:{pattern:/^mapping-[a-f0-9]{24}$/,collection:'deliveryMappings',sha:'objectSha256',bytes:'bytes'},delivery:{pattern:/^delivery-[a-f0-9]{24}$/,collection:'projectDeliveries',sha:'documentSha256',bytes:'documentBytes'},reconciliation:{pattern:/^reconciliation-[a-f0-9]{24}$/,collection:'deliveryReconciliations',sha:'documentSha256',bytes:'documentBytes'},'delivery-comparison':{pattern:/^delivery-comparison-[a-f0-9]{24}$/,collection:'deliveryComparisons',sha:'documentSha256',bytes:'documentBytes'}});
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const fail=(code,message)=>Object.assign(new Error(message),{code});
 const plain=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
@@ -76,7 +80,7 @@ export async function readOpenFemaWorkspaceConfiguration(path){
   const workspaces=Object.create(null),base=dirname(path);
   for(const [alias,value]of Object.entries(raw.workspaces)){
     checked(alias,ALIAS,'workspace alias');
-    exact(value,['label','workspaceId','consoleUrlEnv','consoleUrlFile','applicationUrlFile','sourcePackages'],['workspaceId']);
+    exact(value,['label','workspaceId','consoleUrlEnv','consoleUrlFile','applicationUrlFile','sourcePackages','deliveryInputs'],['workspaceId']);
     const references=['consoleUrlEnv','consoleUrlFile','applicationUrlFile'].filter(k=>Object.hasOwn(value,k));
     if(references.length!==1)throw fail('CONFIGURATION_ERROR','Choose exactly one original console URL environment/file or Applications URL record.');
     const reference=references[0],sourcePackages=Object.create(null);
@@ -88,7 +92,17 @@ export async function readOpenFemaWorkspaceConfiguration(path){
         sourcePackages[name]={path:hostPath(entry.path,base),sha256:checked(entry.sha256,SHA,'source-package SHA256'),label:label(entry.label??name)};
       }
     }
-    workspaces[alias]={label:label(value.label??alias),sourcePackages,
+    const deliveryInputs=Object.create(null);
+    if(value.deliveryInputs!==undefined){
+      if(!plain(value.deliveryInputs)||Object.keys(value.deliveryInputs).length>128)throw fail('CONFIGURATION_ERROR','Declare at most 128 complete mapping or customer-file inputs per workspace.');
+      for(const [name,entry]of Object.entries(value.deliveryInputs)){
+        checked(name,ALIAS,'delivery-input alias');exact(entry,['path','sha256','label','kind','name'],['path','sha256','kind']);
+        if(!['mapping','customer_csv'].includes(entry.kind))throw fail('CONFIGURATION_ERROR','Choose mapping or customer_csv for this complete original input.');
+        const path=hostPath(entry.path,base);
+        deliveryInputs[name]={path,sha256:checked(entry.sha256,SHA,'delivery-input SHA256'),kind:entry.kind,label:label(entry.label??name),name:label(entry.name??basename(path))};
+      }
+    }
+    workspaces[alias]={label:label(value.label??alias),sourcePackages,deliveryInputs,
       workspaceId:checked(value.workspaceId,UUID,'original workspace UUID'),
       [reference]:reference==='consoleUrlEnv'?checked(value[reference],/^[A-Za-z_][A-Za-z0-9_]*$/,'session environment name'):hostPath(value[reference],base)};
   }
@@ -128,7 +142,9 @@ function selectionKey(input){
   if(['source','portfolio'].includes(kind))checked(id,SHA,'original source or portfolio version SHA256');
   else if(kind==='export')checked(id,EXPORT_ID,'original export identity');
   else if(kind==='receipt')checked(id,RECEIPT_ID,'original customer receipt identity');
-  else throw fail('INVALID_PARAMS','Choose source, portfolio, export or receipt.');
+  else if(DOCUMENTS[kind])checked(id,DOCUMENTS[kind].pattern,'original mapped-exchange identity');
+  else if(kind==='workspace')checked(id,/^workspace-[a-f0-9]{24}$/,'retained workspace archive identity');
+  else throw fail('INVALID_PARAMS','Choose an original source, portfolio, export, receipt, mapped-exchange document or completed workspace archive.');
   if(file!==undefined)checked(file,FILE,'original manifest filename');
   return JSON.stringify([kind,id,file??null]);
 }
@@ -141,7 +157,7 @@ function selectedVersion(view,id){
   return item;
 }
 export class MerchantOpenFemaWorkspaces{
-  #config;#environment;#fetch;#pending=new Set();#closing=false;#close;
+  #config;#environment;#fetch;#pending=new Set();#closing=false;#close;#archivePending=new Map();
   #reads=new RetainedFileReads({errorPrefix:'OPENFEMA_MCP_FILE'});
   constructor(config,{environment=process.env,fetchImpl=fetch}={}){
     this.#config=config;this.#environment=environment;this.#fetch=fetchImpl;
@@ -152,7 +168,8 @@ export class MerchantOpenFemaWorkspaces{
         workspace,label:item.label,workspaceId:item.workspaceId,ownership:'EXISTING_OPENFEMA_WORKSPACE',
         connection:item.applicationUrlFile?'ORIGINAL_APPLICATIONS_RECORD':item.consoleUrlFile?'ORIGINAL_CONSOLE_URL_FILE':'ORIGINAL_CONSOLE_URL_ENV',
         fileReads:this.#reads.status(workspace),
-        sourcePackages:Object.entries(item.sourcePackages??{}).map(([alias,p])=>({alias,label:p.label,sha256:p.sha256}))
+        sourcePackages:Object.entries(item.sourcePackages??{}).map(([alias,p])=>({alias,label:p.label,sha256:p.sha256})),
+        deliveryInputs:Object.entries(item.deliveryInputs??{}).map(([alias,p])=>({alias,label:p.label,kind:p.kind,name:p.name,sha256:p.sha256}))
       }))};
   }
   #definition(workspace){
@@ -222,6 +239,32 @@ export class MerchantOpenFemaWorkspaces{
     const root=await privateDirectory(join(this.#config.exportsDirectory,'openfema-workspaces'),true);
     return privateDirectory(join(root,workspace),true);
   }
+  async #archiveFiles(workspace,definition,id){
+    const record=await readRetainedWorkspaceArchive({directory:await this.#directory(workspace),workspaceId:definition.workspaceId,id});
+    return {ok:true,httpStatus:200,native:{kind:'workspace',id,archive:record,
+      files:[metadata(record.file,{kind:'workspace',id,file:record.file.name})]}};
+  }
+  async #retainArchive(workspace,definition,session,request,revision){
+    const id=workspaceArchiveId(definition.workspaceId,request.operationId);
+    let pending=this.#archivePending.get(id);
+    if(!pending){
+      pending=(async()=>retainWorkspaceArchive({directory:await this.#directory(workspace),workspaceId:definition.workspaceId,
+        operationId:request.operationId,revision,
+        prepare:async expectedRevision=>{
+          const response=await this.#request(session,'/api/download-ticket',{body:{path:'/api/workspace.zip',expectedRevision}});
+          if(!response.ok)throw fail('OPENFEMA_MCP_ARCHIVE_SOURCE',response.native?.message??'The original archive could not be prepared.');
+          return response.native;
+        },
+        fetchArchive:route=>this.#fetch(session.origin+route,{redirect:'error',signal:AbortSignal.timeout(120000),
+          headers:{Authorization:'Bearer '+session.token}})
+      }))();
+      this.#archivePending.set(id,pending);
+    }
+    try{
+      const record=await pending;
+      return {...record,selection:{kind:'workspace',id,file:record.file.name}};
+    }finally{if(this.#archivePending.get(id)===pending)this.#archivePending.delete(id);}
+  }
   async #files(session,{kind,id}){
     selectionKey({kind,id});
     if(kind==='source'){
@@ -248,6 +291,12 @@ export class MerchantOpenFemaWorkspaces{
       const item=selectedVersion(response.native,id),name='OpenFEMA_Portfolio_'+id+'.json';
       return {ok:true,httpStatus:200,native:{kind,id,version:item,files:[metadata({...item,name,type:'application/json; charset=utf-8'},{kind,id,file:name})]}};
     }
+    if(DOCUMENTS[kind]){
+      const document=DOCUMENTS[kind],item=response.native[document.collection]?.find(x=>x.id===id);
+      if(!item)return {ok:false,httpStatus:404,native:{error:'OPENFEMA_SELECTION',message:'Select an original retained '+kind+' document.'}};
+      const name='OpenFEMA_'+id+'.json',file=metadata({name,type:'application/json; charset=utf-8',sha256:item[document.sha],bytes:item[document.bytes]},{kind,id,file:name});
+      return {ok:true,httpStatus:200,native:{kind,id,record:item,files:[file],...(item.export?{completeZip:{kind:'export',id:item.export.id,file:item.export.name}}:{})}};
+    }
     const item=(kind==='export'?response.native.exports:response.native.receipts).find(x=>x.id===id);
     if(!item)return {ok:false,httpStatus:404,native:{error:'OPENFEMA_SELECTION',message:'Select an existing original '+kind+'.'}};
     if(kind==='export')return {ok:true,httpStatus:200,native:{kind,id,export:item,files:[metadata(item,{kind,id,file:item.name})]}};
@@ -263,6 +312,16 @@ export class MerchantOpenFemaWorkspaces{
       throw fail('INVALID_PARAMS','Repeat the original file SHA256 when resuming at a later byte offset.');
     if(input.readId)return this.#reads.read({scope,key,kind:'openfema-'+input.kind,readId:input.readId,
       expectedSha256:input.expectedSha256,offset:input.offset??0,limit:input.limit??65536});
+    if(input.kind==='workspace'){
+      const response=await this.#archiveFiles(workspace,definition,input.id),selected=response.native.files[0];
+      if(input.file!==undefined&&input.file!==selected.name)throw fail('INVALID_PARAMS','Use the original complete workspace archive filename.');
+      if(input.expectedSha256!==undefined&&input.expectedSha256!==selected.sha256)throw fail('OPENFEMA_MCP_FILE_CHANGED','Keep this completed archive’s original digest.');
+      if((input.offset??0)>selected.bytes)throw fail('INVALID_PARAMS','This byte offset exceeds the selected complete archive.');
+      const directory=await this.#directory(workspace);
+      return this.#reads.read({scope,key,kind:'openfema-workspace',directory,expectedSha256:selected.sha256,
+        offset:input.offset??0,limit:input.limit??65536,load:()=>openRetainedWorkspaceArchive({
+          directory,workspaceId:definition.workspaceId,id:input.id,expectedSha256:selected.sha256})});
+    }
     const session=await this.#session(definition),response=await this.#files(session,input);
     if(!response.ok)return response;
     const files=response.native.files,selected=input.file===undefined&&files.length===1?files[0]:files.find(x=>x.name===input.file);
@@ -270,7 +329,7 @@ export class MerchantOpenFemaWorkspaces{
     if(input.expectedSha256!==undefined&&input.expectedSha256!==selected.sha256)
       throw fail('OPENFEMA_MCP_FILE_CHANGED','The selected original file differs from the requested SHA256.');
     if((input.offset??0)>selected.bytes)throw fail('INVALID_PARAMS','The requested byte offset exceeds the original file.');
-    const route=['source','portfolio'].includes(input.kind)?'/api/objects/'+selected.sha256:
+    const route=(['source','portfolio'].includes(input.kind)||DOCUMENTS[input.kind])?'/api/objects/'+selected.sha256:
       input.kind==='export'?'/api/exports/'+input.id:'/api/receipts/'+input.id+'/'+encodeURIComponent(selected.name);
     const directory=await this.#directory(workspace);
     return this.#reads.read({scope,key,kind:'openfema-'+input.kind,directory,expectedSha256:selected.sha256,
@@ -324,6 +383,7 @@ export class MerchantOpenFemaWorkspaces{
       return result.ok===false?this.#wrap(workspace,definition,result):
         {workspace,workspaceId:definition.workspaceId,ok:true,native:result};
     }
+    if(name==='merchant_openfema_files'&&input.kind==='workspace')return this.#wrap(workspace,definition,await this.#archiveFiles(workspace,definition,input.id));
     const session=await this.#session(definition);
     if(name==='merchant_openfema_schema')return this.#wrap(workspace,definition,{ok:true,httpStatus:200,native:session.schema});
     if(name==='merchant_openfema_view')return this.#wrap(workspace,definition,await this.#view(session));
@@ -376,12 +436,12 @@ export class MerchantOpenFemaWorkspaces{
     const action=openFemaActionNames.get(name);
     if(!action)throw fail('TOOL_NOT_FOUND','Choose a declared original OpenFEMA operation.');
     const [actionId,,properties]=action,declared=session.schema.actions?.[actionId];
-    const nativeFields=actionId==='source.import'?['bundle']:Object.keys(properties);
+    const nativeFields=actionId==='source.import'?['bundle']:actionId==='delivery.mapping.save'?['mapping','previousMappingId']:actionId==='delivery.reconcile'?['deliveryId','customerFile']:Object.keys(properties);
     if(!Array.isArray(declared)||nativeFields.some(key=>!declared.includes(key)))
       throw fail('OPENFEMA_MCP_ACTION_CHANGED','The installed original action contract differs from this adapter. Reconcile the selected source version.');
     const {operationId,expectedRevision,...payload}=input;
     const request={action:actionId,payload,operationId,expectedRevision};
-    let body=request,selectedSource=null;
+    let body=request,selectedSource=null,selectedDelivery=null;
     if(actionId==='source.import'){
       const selected=definition.sourcePackages?.[payload.sourcePackage];
       if(!selected)throw fail('OPENFEMA_MCP_SOURCE_PACKAGE','Choose an original source-package alias declared by this host.');
@@ -393,14 +453,40 @@ export class MerchantOpenFemaWorkspaces{
       body={...request,payload:{bundle}};
       selectedSource={alias:payload.sourcePackage,label:selected.label,sha256:selected.sha256,bytes:bytes.length};
     }
-    if(Buffer.byteLength(JSON.stringify(body))>(actionId==='source.import'?MAX_IMPORT:128*1024))
+    if(['delivery.mapping.save','delivery.reconcile'].includes(actionId)){
+      const alias=actionId==='delivery.mapping.save'?payload.mappingPackage:payload.customerFilePackage;
+      const selected=definition.deliveryInputs?.[alias],kind=actionId==='delivery.mapping.save'?'mapping':'customer_csv';
+      if(!selected||selected.kind!==kind)throw fail('OPENFEMA_MCP_DELIVERY_INPUT','Choose the host-declared complete '+kind+' input.');
+      const bytes=await privateBytes(selected.path,16*1024*1024);
+      if(hash(bytes)!==selected.sha256)throw fail('OPENFEMA_MCP_DELIVERY_INPUT_CHANGED','The original delivery input differs from its declared complete-file digest.');
+      if(kind==='mapping'){
+        let mapping;try{mapping=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}
+        catch{throw fail('OPENFEMA_MCP_DELIVERY_INPUT_INVALID','Receive the complete UTF-8 destination mapping JSON.');}
+        validateMapping(mapping);
+        body={...request,payload:{mapping,...(payload.previousMappingId===undefined?{}:{previousMappingId:payload.previousMappingId})}};
+      }else{
+        let content;try{content=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);}
+        catch{throw fail('OPENFEMA_MCP_DELIVERY_INPUT_INVALID','Receive the complete original customer CSV as UTF-8.');}
+        body={...request,payload:{deliveryId:payload.deliveryId,customerFile:{name:selected.name,content}}};
+      }
+      selectedDelivery={alias,label:selected.label,kind,name:selected.name,sha256:selected.sha256,bytes:bytes.length};
+    }
+    if(Buffer.byteLength(JSON.stringify(body))>(actionId==='source.import'?MAX_IMPORT:actionRequestByteLimit(actionId)))
       throw fail('INVALID_PARAMS','The original action exceeds its declared request byte limit.');
     try{
       const response=await this.#request(session,'/api/action',{body});
-      return this.#wrap(workspace,definition,{...response,request,...(selectedSource?{sourcePackage:selectedSource}:{})});
+      let workspaceArchive;
+      if(response.ok&&actionId==='workspace.export'){
+        try{workspaceArchive=await this.#retainArchive(workspace,definition,session,request,response.native?.view?.revision);}
+        catch(error){workspaceArchive={state:'RECEIVING',id:workspaceArchiveId(definition.workspaceId,operationId),
+          operationId,error:error.code??'OPENFEMA_MCP_ARCHIVE_INTERRUPTED',message:error.message,
+          recovery:'The native action remains completed. Repeat this exact workspace.export request to finish receiving its retained archive; preserve the original archive operation if the source revision changed.'};}
+      }
+      return this.#wrap(workspace,definition,{...response,request,...(selectedSource?{sourcePackage:selectedSource}:{}),
+        ...(selectedDelivery?{deliveryInput:selectedDelivery}:{}),...(workspaceArchive?{workspaceArchive}:{})});
     }catch(error){
       if(!['OPENFEMA_MCP_SESSION_INTERRUPTED','OPENFEMA_MCP_RESPONSE_LIMIT','OPENFEMA_MCP_RESPONSE_INVALID'].includes(error.code))throw error;
-      return this.#wrap(workspace,definition,{ok:false,state:'OUTCOME_UNCERTAIN',request,...(selectedSource?{sourcePackage:selectedSource}:{}),
+      return this.#wrap(workspace,definition,{ok:false,state:'OUTCOME_UNCERTAIN',request,...(selectedSource?{sourcePackage:selectedSource}:{}),...(selectedDelivery?{deliveryInput:selectedDelivery}:{}),
         native:{error:error.code,message:error.message,operationId},
         recovery:'Read the original operation and repeat this exact request with the same operationId. Its native journal reconciles identity before revision.'});
     }

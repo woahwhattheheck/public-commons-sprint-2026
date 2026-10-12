@@ -121,12 +121,13 @@ export interface MutationOptions {revision:number;requestId?:string;actor?:strin
 export interface Operation {action:'import'|'customer'|'project'|'assignment'|'statement'|'invoice-link'|'settings';value:Record<string,unknown>;
  revision:number;requestId:string;actor:string;recordId?:string;at?:string;intentSha256?:string}
 export interface MutationResult {revision:number;replayed:boolean;requestId:string;workspaceId:string;[key:string]:unknown}
-export interface ComparisonChange {key:string;before:Record<string,unknown>;after:Record<string,unknown>;fields:{name:string;before:unknown;after:unknown}[]}
+export interface ComparisonChange {key:string;before:Record<string,unknown>;after:Record<string,unknown>;fields:{name:string;before:unknown;after:unknown;category?:'instrument-metadata';sourcePlaceholder?:boolean;note?:string}[]}
 export interface EditionComparison {
  schema:'stellar-forge.stellarcarbon-comparison.v1';beforeId:string;afterId:string;previous:SourceSummary;current:SourceSummary;
- delta:{carbon:DecimalString;allocated:DecimalString;remaining:DecimalString};
- tables:Record<TableName,{added:{key:string;after:NativeRow}[];removed:{key:string;before:NativeRow}[];changed:ComparisonChange[];
- counts:{before:number;after:number;added:number;removed:number;changed:number}}>;
+ deltaAvailable:boolean;delta:{carbon:DecimalString|null;allocated:DecimalString|null;remaining:DecimalString|null};
+ tables:Record<TableName,{comparisonStatus:'available'|'unavailable';coverage:{before:{available:boolean;scope:Json};after:{available:boolean;scope:Json}};note:string;
+ added:{key:string;after:NativeRow}[];removed:{key:string;before:NativeRow}[];changed:ComparisonChange[];sourceDifferences:{key:string;before:NativeRow;after:NativeRow;representationChanges:{name:string;before:Json;after:Json}[];fieldAvailabilityChanges:{name:string;before:Json;after:Json;beforeAvailable:boolean;afterAvailable:boolean}[]}[];
+ counts:{before:number;after:number;added:number|null;removed:number|null;changed:number|null;sourceDifferences:number|null}}>;
 }
 export interface CaptureQuery extends Period {baseUrl:'https://api.stellarcarbon.io'|'https://testnet-api.stellarcarbon.io';pageSize:number}
 export interface CaptureCheckpoint {schema:'stellar-forge.stellarcarbon-api-capture.v1';query:CaptureQuery;startedAt:string;responses:SourceResponse[]}

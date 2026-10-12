@@ -205,3 +205,11 @@ A recurring run captures one fresh source edition, compares the originals, carri
 Edits include the original record ID and current expectedVersion. Statement edits use the current saved-version count. The CLI reads the current workspace revision and accepts an original stable request ID for replay.
 
 The complete native command help and typed interfaces expose every intake, paged record, allocation, comparison, export and receiving operation.
+
+## Comparing source coverage
+
+The comparison retains each edition’s observed row counts and acquisition scope. A table is compared only when both source editions acquired it. Complete native Stellarcarbon backups cover all seven tables; native API captures cover the five declared tables. Distribution transactions and minted blocks remain unavailable in an API-only edition. Their comparison change counts are `null`, their change arrays are empty, and the operator screen and CSV label the comparison unavailable. This avoids interpreting an unacquired table as deleted records. Registry imports likewise preserve their explicitly supplied table coverage. Added, removed and changed rows describe differences within the retained source populations.
+
+The HTTP and CLI comparison JSON expose `comparisonStatus`, `coverage.before`, `coverage.after` and `note` for each table. CSV exports include coverage columns and an unavailable row where a table could not be compared. Complete native receiving retains the original source editions and all saved statement versions.
+
+Typed carbon amounts compare by their exact scaled values, and civil dates compare by their original day. Equivalent source formatting and changes in which fields are reported remain in `sourceDifferences`, with all raw before/after values retained. An API-omitted contract identifier is an unavailable field. Instrument metadata updates remain explicit; source-reported year 0001 and zero total-vintage placeholders carry a source note, while the separate retired VCU and allocation amounts retain their original values.

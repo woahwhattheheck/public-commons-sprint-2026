@@ -88,3 +88,41 @@ export async function authorizedJob(root, peer, { jobId, bundleId }) {
   need(binding.schema === BINDING_SCHEMA && binding.peer === peer && binding.jobId === jobId && binding.bundleId === bundleId, 'JOB_INPUT_CONFLICT');
   return selected.service;
 }
+
+
+// Authorize an already retained browser/operator job for its existing AGX peer.
+// The original bundle and retained engine stay unchanged when a report is shared.
+export async function bindRetainedJob(root, peer, { jobId, bundleId, requestOut }) {
+  identity(peer, jobId);
+  need(typeof jobId === 'string' && JOB.test(jobId), 'INVALID_JOB_ID');
+  need(typeof bundleId === 'string' && SHA.test(bundleId), 'INVALID_BUNDLE_ID');
+  if (requestOut) await privateDirectory(dirname(requestOut));
+  const { service, directory } = await openPeer(root, peer);
+  const job = await service.getJob(jobId);
+  need(job.bundleId === bundleId, 'JOB_INPUT_CONFLICT');
+  await service.getBundle(bundleId);
+  const path = join(directory, 'bindings', jobId + '.json');
+  const value = { schema: BINDING_SCHEMA, peer, jobId, bundleId, createdAt: new Date().toISOString() };
+  let reused = false, requestReused = false;
+  try { await atomic(path, value, true); }
+  catch (error) {
+    if (error.code !== 'EEXIST') throw error;
+    const retained = JSON.parse(await readPrivate(path, 4096));
+    need(retained.schema === BINDING_SCHEMA && retained.peer === peer &&
+      retained.jobId === jobId && retained.bundleId === bundleId, 'JOB_INPUT_CONFLICT');
+    reused = true;
+  }
+  const request = { jobId, bundleId };
+  if (requestOut) {
+    try { await atomic(requestOut, request, true); }
+    catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+      const retained = JSON.parse(await readPrivate(requestOut, 4096));
+      need(retained.jobId === jobId && retained.bundleId === bundleId &&
+        Object.keys(retained).length === 2, 'REQUEST_INPUT_CONFLICT');
+      requestReused = true;
+    }
+  }
+  return { schema: BINDING_SCHEMA, peer, reused, requestReused, request,
+    state: job.state, directory: peerDirectory(root, peer) };
+}

@@ -74,6 +74,36 @@ export function createFacilitatorController(store, {environment = process.env} =
     try { return {observation:await readiness.probe(), ...view()}; }
     finally { await readiness.close(); }
   });
+  function readCatalog({runtimeId, query = '', expectedVersion = null}) {
+    const current = sameRuntime(runtimeId);
+    requireValue(!current.stopping, 'FACILITATOR_DRAINING', 409);
+    requireValue(current.native.catalog, 'FACILITATOR_CATALOG_DISABLED', 409);
+    requireValue(typeof query === 'string' && query.length <= 4096,
+      'FACILITATOR_CATALOG_QUERY_INVALID');
+    const params = new URLSearchParams(query);
+    const allowed = new Set(['query','type','payTo','network','scheme','asset','extensions',
+      'limit','offset','cursor']);
+    requireValue([...params.keys()].every(key => allowed.has(key) && params.getAll(key).length === 1),
+      'FACILITATOR_CATALOG_QUERY_INVALID');
+    const mode = params.has('query') ? 'search' : 'list';
+    requireValue(mode === 'search' ? !params.has('offset') : !params.has('cursor'),
+      'FACILITATOR_CATALOG_QUERY_INVALID');
+    requireValue(expectedVersion === null || Number.isSafeInteger(expectedVersion) && expectedVersion >= 0,
+      'FACILITATOR_CATALOG_VERSION_INVALID');
+    const catalog = current.native.catalog.status();
+    requireValue(catalog.state === 'READY', 'FACILITATOR_CATALOG_UNAVAILABLE', 503);
+    requireValue(expectedVersion === null || catalog.version === expectedVersion,
+      'FACILITATOR_CATALOG_VERSION_CHANGED', 409);
+    let page;
+    try {page = current.native.catalog[mode](params);}
+    catch (error) {
+      if (error instanceof RangeError) fail('FACILITATOR_CATALOG_QUERY_INVALID');
+      throw error;
+    }
+    return {schema:'stellar-forge.native-catalog-page.v1', runtimeId:current.id,
+      profile:{name:current.name,sha256:current.sha256}, network:current.native.network,
+      observedAt:new Date().toISOString(), catalog, mode, query:params.toString(), page};
+  }
   async function close() {
     closing = true;
     await actionDone;
@@ -83,5 +113,5 @@ export function createFacilitatorController(store, {environment = process.env} =
       await current.idle;
     }
   }
-  return Object.freeze({view, start, stop, probe, close});
+  return Object.freeze({view, start, stop, probe, catalog:readCatalog, close});
 }

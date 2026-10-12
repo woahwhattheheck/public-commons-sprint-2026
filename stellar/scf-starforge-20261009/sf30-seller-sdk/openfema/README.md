@@ -122,7 +122,7 @@ Preparation stages a native dataset release. Inspect it, select the current rele
 
 In **Customers**, use the original configured buyer inbox. Inspect the selected existing intent IDs, then receive them through the native SF88/SF100 path. The receiving result includes the original five-file customer delivery and its hashes. Once retained in this workspace, those files remain downloadable offline.
 
-MCP and Applications clients use the same native actions and workspace identity. A large retained output can be received through the maintained byte-range download path, resumed after interruption and reopened offline. See [MCP.md](MCP.md) and [MANAGED.md](MANAGED.md) for the complete 35-tool contract, host-declared workspace/source aliases, typed client, launcher and customer download flow.
+MCP and Applications clients use the same native actions and workspace identity. A large retained output can be received through the maintained byte-range download path, resumed after interruption and reopened offline. See [MCP.md](MCP.md) and [MANAGED.md](MANAGED.md) for the complete 41-tool contract, host-declared workspace/source/mapping/CSV aliases, typed client, launcher and complete customer receiving. The `openfema-merchant-exchange` command carries a reviewed destination mapping, complete customer CSV, selected analyst decisions and original workspace ZIP through that same merchant; its saved requests and receiving journals reopen together after interruption.
 
 ## 6. Export and hand over the complete workspace
 

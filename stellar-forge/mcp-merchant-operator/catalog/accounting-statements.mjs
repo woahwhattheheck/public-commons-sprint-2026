@@ -27,13 +27,13 @@ const change={...base,revision,actor};
 
 const page={offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:200}};
 
-const selection={customerId:uuid,runId:uuid,usageId:nullableId,replacesId:nullableId,from:stamp,until:stamp};
+const selection={customerId:uuid,runId:uuid,usageId:nullableId,replacesId:nullableId,from:stamp,until:stamp,usageOpeningId:nullableId};
 
 const profile={reference:text(80,1),name:text(200,1),email:text(320),address:text(2000),note:text(2000)};
 
 const readOnly={readOnly:true,idempotent:true};
 
-const statementFileNames=Object.freeze(['statement.json','statement.csv','usage.csv','statement.html','manifest.json','status.json','preview.json']);
+const statementFileNames=Object.freeze(['statement.json','statement.csv','usage.csv','statement.html','manifest.json','period.csv','period-summary.csv','usage-opening.json','usage-closing.json','status.json','preview.json','usage-period.json']);
 
 const statementDefinitions=[
  [PREFIX+'status','Read the original customer statement inventory. Select a paged customers, runs, usage or history view; summary returns counts and the original workspace revision.',
@@ -51,8 +51,12 @@ const statementDefinitions=[
   {...base,source:alias},['workspace','source'],readOnly],
  [PREFIX+'usage_import','Import the reviewed host-declared usage source into the original workspace. The exact input SHA is required; native byte-identical imports retain the original identity.',
   {...change,source:alias,expectedSha256:hash,name:text(200,1)},['workspace','revision','actor','source','expectedSha256'],{idempotent:true}],
+ [PREFIX+'usage_captures','Page retained usage captures with their exact original pass, entitlement, purchased plan and balances. Complete native API captures include the immutable identity used by the original period compiler; other captures remain visible with their source type and eligibility reason. This reads the retained original files without changing merchant records.',
+  {...base,...page},['workspace'],readOnly],
+ [PREFIX+'usage_period','Inspect the complete original service activity between two retained native API-pass captures. Returns opening/closing balances, activity counts, optional route/call pages and a complete usage-period.json file selector.',
+  {...base,usageOpeningId:uuid,usageId:uuid,view:{type:'string',enum:['summary','routes','calls']},...page},['workspace','usageOpeningId','usageId'],readOnly],
  [PREFIX+'statement_preview','Prepare the original statement or correction. Returns the native preview digest and a complete preview.json file selector for the existing chunk reader.',
-  {...base,...selection,view:{type:'string',enum:['summary','items','excluded','assets','calls','adjustments']},orderRef:{type:'string',pattern:'^[A-Za-z0-9._:-]{1,80}$'},...page},['workspace','customerId','runId'],readOnly],
+  {...base,...selection,view:{type:'string',enum:['summary','items','excluded','assets','calls','adjustments','period-routes','period-calls']},orderRef:{type:'string',pattern:'^[A-Za-z0-9._:-]{1,80}$'},...page},['workspace','customerId','runId'],readOnly],
  [PREFIX+'statement_retain','Retain the exact reviewed original statement or correction. Keep requestId and previewSha256; changed reuse of that request identity is rejected by the native engine.',
   {...change,...selection,requestId,previewSha256:hash},['workspace','revision','actor','customerId','runId','requestId','previewSha256'],{idempotent:true}],
  [PREFIX+'statements','Page all retained, withdrawn or superseded original statements, optionally for one customer.',
@@ -60,8 +64,8 @@ const statementDefinitions=[
  [PREFIX+'statement_lookup','Find the original statement by its stable retention requestId, including its current status and immutable file identities.',
   {...base,requestId},['workspace','requestId'],readOnly],
  [PREFIX+'statement','Read one original statement, its source/totals, or a page of orders, calls, adjustments, exclusions, assets or lifecycle history. Full source uses the existing file reader.',
-  {...base,statementId:uuid,view:{type:'string',enum:['summary','items','excluded','assets','calls','adjustments','history']},orderRef:{type:'string',pattern:'^[A-Za-z0-9._:-]{1,80}$'},...page},['workspace','statementId'],readOnly],
- [PREFIX+'statement_withdraw','Withdraw the current retained statement with the original actor and reason. Its five original artifacts remain downloadable; reconcile an uncertain reply from the retained withdrawal history.',
+  {...base,statementId:uuid,view:{type:'string',enum:['summary','items','excluded','assets','calls','adjustments','period-routes','period-calls','history']},orderRef:{type:'string',pattern:'^[A-Za-z0-9._:-]{1,80}$'},...page},['workspace','statementId'],readOnly],
+ [PREFIX+'statement_withdraw','Withdraw the current retained statement with the original actor and reason. Its original statement and service-period artifacts remain downloadable; reconcile an uncertain reply from the retained withdrawal history.',
   {...change,statementId:uuid,reason:text(2000,1)},['workspace','revision','actor','statementId','reason'],{}]
 ];
 

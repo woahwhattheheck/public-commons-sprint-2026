@@ -49,7 +49,7 @@ The source capsule at source/sdk-stellar.json contains all 74 original publisher
 - Original Bun lock SHA256: 4629b81191558d99c4f9fa758be47cf0a96242b03967cbeb4c7c472b56d7f0fc
 - Full public source capsule SHA256: 1d99414917744d68c2e01373c3b73d3e163200b8c767993be8a68619791c48c3
 
-This includes the original license, package metadata, frozen Bun lock, TypeScript build script, generated factory/manager/project bindings, contracts.json and original documentation. The original build verifies the committed binding hashes before compiling ESM and CommonJS outputs.
+This includes the original license, package metadata, frozen Bun lock, TypeScript build script, generated factory/manager/project bindings, contracts.json and original documentation. The original build compiles both ESM and CommonJS outputs and verifies the committed binding hashes before completing.
 
 Build into a dedicated private consumer project and retain its complete runtime:
 
@@ -76,7 +76,7 @@ The native build follows the publisher's sequence:
 1. Materialize and verify the complete original source.
 2. Run Bun install with the original frozen lock.
 3. Run the publisher's build script through Bun.
-4. Run npm pack, including its original prepack build.
+4. Record the complete compiled file selection, including every original export, and run native npm pack --ignore-scripts against those verified outputs. The original prepack repeats the same build, which has already completed.
 5. Install that exact retained archive in the selected private consumer.
 6. Capture the complete installed SDK, Stellar and source/compiler dependency graph before importing the SDK.
 
@@ -87,6 +87,10 @@ The source-build package is linked to the same retained publisher source root. I
 ### Continue an interrupted build
 
 Repeat runtime-build with the same installation directory, runtime destination and original source selection. The operation retains each native child command, private stdout/stderr, exact process identity and completed result. An existing completed child is recovered; an active original child remains the executing operation. A failed native command returns its retained output paths, so the underlying installation or compiler error can be corrected before repeating the same build.
+
+For a memory-constrained host, supply --node-heap-mb 512. This sets the original Node child's heap ceiling in MB; valid values are 128 through 65536. The selected ceiling is recorded with each new native command. A later retry can select a different ceiling while preserving completed work and earlier failures.
+
+The original compiler removes dist before emitting ESM and CommonJS files. If an earlier interrupted prepack removed or changed those files, recovery runs that same complete original build under a retained recovery request before creating a compiled-output checkpoint. Subsequent packaging verifies every selected file, mode and export and reuses the completed output. A changed or missing output creates another original build recovery; existing failed attempts and completed output selections remain available in the same operation.
 
 The build's private work is under the installation's sibling .fuul-build directory. The installed project has its original .fuul-sdk-build.json selection. Keep these together until the complete runtime has been retained.
 
