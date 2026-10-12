@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // MIT. Real browser + retained console + original seller/customer receiving.
 import assert from 'node:assert/strict';
+import { request as httpRequest } from 'node:http';
 import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
@@ -229,7 +230,26 @@ export async function receiveConsole({directory,chromiumPath,playwrightModule,so
     await run('merchant_stop',{instanceId},'Stop owned seller');instanceId=null;
     const beforeClose=await api('host');assert.equal(beforeClose.operator.managesRunningSeller,false);
     const workspaceId=beforeClose.console.workspaceId,oldPort=new URL(merchant.url).port;
-    await merchant.close();merchant=null;
+    const savedDraftCount=(await api('profile/'+profile.id)).drafts.length;
+    const incomplete=httpRequest(merchant.url+'/operator/api/drafts',{method:'POST',headers:{
+      authorization:'Bearer '+token,'content-type':'application/json'}});
+    const incompleteReturn=new Promise(done=>{
+      incomplete.once('error',error=>done({code:error.code??error.name}));
+      incomplete.once('response',response=>{response.resume();response.once('end',()=>done({status:response.statusCode}));});
+    });
+    incomplete.write('{"profileId":');
+    let closingView,bodyDeadline=Date.now()+10000;
+    do{closingView=await api('host');if(closingView.console.pendingBodies===1)break;await sleep(20);}while(Date.now()<bodyDeadline);
+    assert.equal(closingView.console.pendingBodies,1,'The original console owns the incomplete HTTP body.');
+    const closeStarted=Date.now();let closeDeadline;
+    try{await Promise.race([merchant.close(),new Promise((_,reject)=>{
+      closeDeadline=setTimeout(()=>reject(new Error('Original host did not finish closing its pending body.')),15000);
+      closeDeadline.unref?.();
+    })]);}finally{clearTimeout(closeDeadline);incomplete.destroy();}
+    report.requestShutdown={pendingBodies:closingView.console.pendingBodies,
+      closeDurationMs:Date.now()-closeStarted,originalClientReturn:await incompleteReturn};
+    assert.notEqual(report.requestShutdown.originalClientReturn.status,200);
+    merchant=null;
     merchant=await open(initialized.configuration);
     const reopened=await api('host');
     assert.equal(reopened.console.workspaceId,workspaceId);
@@ -237,6 +257,7 @@ export async function receiveConsole({directory,chromiumPath,playwrightModule,so
     assert.ok(reopened.providers.every(value=>value.state==='UNLOADED'));
     const reopenedProfile=await api('profile/'+profile.id);
     assert.equal(reopenedProfile.calls.length,calls.length);
+    assert.equal(reopenedProfile.drafts.length,savedDraftCount,'Closing an incomplete body preserves the original saved revisions.');
     assert.ok(reopenedProfile.calls.every(value=>value.state==='COMPLETE'&&value.receiving==='RETAINED'&&value.custody==='LOCAL'));
     const retainedCustomer=await api('customer-archive/'+delivered.id,{raw:true});
     assert.equal(sha(retainedCustomer.bytes),report.customer.archiveSha256);
@@ -244,7 +265,7 @@ export async function receiveConsole({directory,chromiumPath,playwrightModule,so
     await page.locator('#profiles').selectOption(profile.id);
     await page.locator('[data-page=requests]').click();
     await screenshot('console-reopened-requests.png');
-    await emit('closed original seller and cold host reopen with retained requests/customer',{workspaceId,oldPort,newPort:new URL(merchant.url).port});
+    await emit('closed original seller and cold host reopen with retained requests/customer',{workspaceId,oldPort,newPort:new URL(merchant.url).port,requestShutdown:report.requestShutdown});
 
     const exportedProfile=await api('export/'+profile.id,{raw:true}),packet=JSON.parse(exportedProfile.bytes);
     assert.equal(packet.calls.length,calls.length);assert.equal(packet.deliveries.length,1);

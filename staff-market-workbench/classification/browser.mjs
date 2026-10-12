@@ -8,7 +8,7 @@ const fields = {
   roster:[['id','Workforce row ID'],['role_id','Role ID'],['fte','FTE'],['annual_base_rate','Current annual full-time base rate'],['annual_incentive_rate','Current annual full-time incentive rate'],['credited_years','Credited prior experience in years'],['proposed_annual_base_rate','Explicit proposed full-time base rate'],['current_grade_id','Current grade ID'],['manager_id','Supervisor workforce row ID'],['source_ref','Source row / reference'],['placement_rationale','Explicit placement basis','textarea']]
 };
 
-function losslessJSON(text) {
+export function losslessJSON(text) {
   // Source numeric lexemes stay strings, including decimals beyond browser precision.
   let out='', quoted=false, escaped=false;
   for(let i=0;i<text.length;) {
@@ -347,8 +347,12 @@ export function mountClassificationBridge(target, api) {
     draft.supersedes=id;retained.drafts[kind]=draft;retained.tab=kind;retained.opened=null;opened=null;
     if(kind==='roles')await getDoc('method',draft.method_id);await persist();render();
   }
-  async function openDocument(kind,id){
-    opened=await getDoc(kind,id,true);retained.opened={kind,id};inspectionPage=0;retained.reviewNotes='';retained.tab='history';await persist();render();
+  async function openDocument(kind,id,expectedSha=null){
+    if(!Object.hasOwn(labels,kind))throw new Error('Choose an original classification document kind.');
+    const value=await getDoc(kind,id,true);
+    if(disposed||api.getState().workspace.id!==workspaceId)throw new Error('The workspace changed while opening the original edition.');
+    if(expectedSha&&value.sha256!==expectedSha)throw new Error('The classification edition differs from the expected original identity.');
+    opened=value;retained.opened={kind,id};inspectionPage=0;retained.reviewNotes='';retained.tab='history';await persist();render();
   }
 
   function scenarioPayload(){
@@ -501,5 +505,5 @@ export function mountClassificationBridge(target, api) {
     contents.replaceChildren(header,tabs,body);if(busy)lock();
   }
   const ready=(async()=>{await readDraft();await reload();if(retained.drafts.roles.method_id)await getDoc('method',retained.drafts.roles.method_id);if(!disposed)render();})();
-  return {ready,refresh:reload,destroy(){disposed=true;loadSequence++;writeChain.catch(()=>{}).then(()=>dbPromise?.then(db=>db.close()).catch(()=>{}));target.replaceChildren();}};
+  return {ready,refresh:reload,open:async(kind,id,expectedSha=null)=>{await ready;return perform(()=>openDocument(kind,id,expectedSha));},destroy(){disposed=true;loadSequence++;writeChain.catch(()=>{}).then(()=>dbPromise?.then(db=>db.close()).catch(()=>{}));target.replaceChildren();}};
 }

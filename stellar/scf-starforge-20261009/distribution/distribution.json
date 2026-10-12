@@ -500,6 +500,7 @@
     "./merchant/scenario-planning": "./source/stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/planning/scenarios.mjs",
     "./merchant/scenario-workspace": "./source/stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/planning/workspace.mjs",
     "./merchant/repricing": "./source/stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/workspace/repricing.mjs",
+    "./merchant/quote-prices": "./source/stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/workspace/quote-prices.mjs",
     "./merchant/repricing-source": "./source/stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/workspace/repricing-source.mjs",
     "./merchant/revenue-report": "./source/stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/analyze.mjs",
     "./seller/openapi/workspace": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.mjs",

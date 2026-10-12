@@ -33,6 +33,13 @@ export interface CensusEditionFile {
   bytes: number;
   sha256: string;
 }
+export interface CensusCustomerResults {
+  schema: 'stellar-forge.census-customer-results.v1';
+  sourceId: string; sourceSha256: string; mappingId: string; mappingSha256: string; bindingSha256: string;
+  batchId: string; reviewId: string; editionReviewSha256: string; reviewSha256: string; responseSha256: string;
+  originalRows: number; submittedRows: number; excludedRows: number; outputPrefix: string;
+  files: { input: string; mapping: string; binding: string; csv: string; json: string };
+}
 export interface CensusEditionManifest {
   schema: 'stellar-forge.census-geocoder-edition.v1';
   operationId: string;
@@ -42,6 +49,7 @@ export interface CensusEditionManifest {
   reviewId: string;
   dataset: CensusDatasetDescription;
   source: Record<string, unknown>;
+  customer?: CensusCustomerResults;
   files: CensusEditionFile[];
 }
 export interface CensusNativeEdition extends CensusEditionManifest {

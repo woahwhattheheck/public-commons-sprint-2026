@@ -1,0 +1,32 @@
+{
+  "schema": "stellar-forge.fred-briefing-files.v1",
+  "captureId": "4c7fc88552da69b9448054334bad10b72afee056ed93bcd2fb741d698dde042c",
+  "reviewId": "af00af636c9397ac146966fed06588ef531594c65bc1ec289eada76b4af97802",
+  "reportId": "fred-briefing-61435076ab2af2ad3314aba092e95cbfd38d3597dcddb6e1995623d331ef7245",
+  "calculationVersion": "FRED_EXACT_PERIOD_V1",
+  "rendererVersion": "FRED_OFFLINE_REPORT_V1",
+  "files": [
+    {
+      "path": "briefing.json",
+      "contentType": "application/json",
+      "role": "BRIEFING_DATA",
+      "bytes": 79423,
+      "sha256": "3c2eb6d2f97879500aca97c56acf15773d354b1cf82014bd8f6cea78bdc63302"
+    },
+    {
+      "path": "briefing-measures.csv",
+      "contentType": "text/csv",
+      "role": "BRIEFING_MEASURES",
+      "bytes": 37608,
+      "sha256": "2a3b211b515fcfde9ca50141196dce6952c39c3497566eba1f7b990f6541c089"
+    },
+    {
+      "path": "briefing.html",
+      "contentType": "text/html",
+      "role": "BRIEFING_REPORT",
+      "bytes": 94259,
+      "sha256": "4f688eaec0bff842d86a92bcb8274224eb0ee39fc88c728b71d49ac827668a3d"
+    }
+  ],
+  "manifestSha256": "1a6e6432255a9851870e4c48b1d2ea3bf1458355c4dc5f424f5f1884e15218f7"
+}

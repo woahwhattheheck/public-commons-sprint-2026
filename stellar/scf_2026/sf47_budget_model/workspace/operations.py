@@ -16,6 +16,7 @@ import operations_domain as domain
 import forecast as forecasts
 import portfolio as portfolios
 import operations_support as support
+import operations_buyer as buyer
 import operations_completion as completion
 
 SCHEMA = "stellar-forge.sf47-operations.v1"
@@ -258,6 +259,15 @@ class Operations:
                 if result["unchanged"]:
                     return {"id": program_id, "version": expected, "action": command, "kind": kind,
                             "recordId": record_id, **extra_receipt}
+            elif command == "buyer.receive":
+                result = buyer.receive(self, context, data, actor, next_version)
+                before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
+                source_change = result.get("sourceChange")
+                extra_receipt = {key: value for key, value in result.items()
+                                 if key not in ("before", "after", "kind", "recordId", "sourceChange")}
+                if result["unchanged"]:
+                    return {"id": program_id, "version": expected, "action": command, "kind": kind,
+                            "recordId": record_id, **extra_receipt}
             elif command.startswith("completion."):
                 if command == "completion.submit" and self.db.execute("SELECT COUNT(*) FROM ops_records WHERE program_id=?", (program_id,)).fetchone()[0] >= MAX_RECORDS:
                     domain.fail("This operations case has reached its retained-record bound.", status=413)
@@ -396,6 +406,11 @@ class Operations:
         with self.workspace.mutex:
             review = self.review(program_id, review_id)
             return completion.review_files(review, lambda source_id: self.source(program_id, source_id))
+
+    def preview_buyer(self, program_id, body):
+        with self.workspace.mutex:
+            context = deepcopy(self._context(identifier(program_id, "operation")))
+        return buyer.preview(context, body)
 
     def preview_support(self, program_id, body):
         with self.workspace.mutex:
@@ -621,6 +636,10 @@ class Operations:
         source_ids = {row["id"] for row in document["sources"]}
         expected = {"planning.zip", "operations.json", "summary.json", "recorded-cash.csv", "invoice-balances.csv",
                     "recorded-work.csv", "plan-versus-actual.csv", "README.txt"} | {"sources/" + ident for ident in source_ids}
+        # This derived view was added with Completion; older complete cases omit it.
+        # Original completion plans and source records retain their native validation below.
+        if "completion-calendar.json" in files:
+            expected.add("completion-calendar.json")
         if set(files) != expected or len(source_ids) != len(document["sources"]):
             domain.fail("The operations source set is not exact.")
         for item in document["sources"]:

@@ -1,0 +1,21 @@
+/* MIT. Original Timescale operator: restrained assigned-work controls. */
+.ts-remediation{border-top:2px solid #444;margin-top:32px;padding-top:20px}
+.ts-remediation h3{font-size:21px}.ts-remediation h4{margin-top:24px}
+.ts-remediation .ts-work-field{display:grid;gap:5px;min-width:0}
+.ts-remediation label{display:block;font-weight:600}
+.ts-remediation input,.ts-remediation select,.ts-remediation textarea{box-sizing:border-box;width:100%;max-width:100%;font:inherit}
+.ts-remediation input,.ts-remediation select{min-height:38px}
+.ts-remediation textarea{resize:vertical}
+.ts-work-grid,.ts-work-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.ts-work-filters{grid-template-columns:1fr 1fr 1fr auto;align-items:end}
+.ts-remediation section{margin-top:18px}
+.ts-remediation form{display:grid;gap:14px}
+.ts-remediation details{margin:18px 0;padding:12px;border:1px solid #bbb}
+.ts-remediation summary{cursor:pointer;font-weight:600}
+.ts-remediation button{margin:8px 8px 8px 0}
+.ts-remediation pre{max-height:420px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;padding:12px;background:#f4f4f4;border:1px solid #ccc}
+.ts-remediation .table-wrap{max-width:100%;overflow:auto}
+.ts-remediation td{max-width:460px;overflow-wrap:anywhere}
+.ts-remediation a{display:inline-block;margin:8px 18px 8px 0}
+.ts-remediation .pagination{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+@media(max-width:720px){.ts-work-grid,.ts-work-filters{grid-template-columns:1fr}.ts-remediation pre{max-height:300px}.ts-remediation button{width:100%;margin-right:0}}

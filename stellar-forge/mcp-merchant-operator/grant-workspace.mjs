@@ -438,13 +438,18 @@ export class MerchantGrantWorkspaces {
     } else if (verb === 'portfolio_selection') original = await client.portfolioSelection(args.caseId, args.expectedVersion,
       args.portfolioId, args.alternativeId);
     else if (verb === 'export') original = await client.download(args.kind, rest);
-    else if (['plan_import','case_import','source_attach','intake','support_preview','support_receive'].includes(verb)) {
+    else if (['plan_import','case_import','source_attach','intake','support_preview','support_receive','buyer_preview','buyer_receive'].includes(verb)) {
       const {input, expectedInputSha256, ...body} = rest, selected = await this.#input(alias, input, expectedInputSha256);
       if (verb === 'support_preview') {
         original = await client.supportPreview(body.caseId, body.expectedVersion, selected.bytes, body.filename);
       } else if (verb === 'support_receive') {
         const {caseId, ...fields} = body;
         original = await client.supportReceive(caseId, selected.bytes, fields);
+      } else if (verb === 'buyer_preview') {
+        original = await client.buyerPreview(body.caseId, body.expectedVersion, selected.bytes, body.filename);
+      } else if (verb === 'buyer_receive') {
+        const {caseId, ...fields} = body;
+        original = await client.buyerReceive(caseId, selected.bytes, fields);
       } else if (verb === 'plan_import') {
         const {kind, ...fields} = body;
         if (kind === 'plan') need(!['note','planning','filename'].some(key => Object.hasOwn(fields,key)),

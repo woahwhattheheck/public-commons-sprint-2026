@@ -13,6 +13,16 @@ export default defineMerchantProvider({
   tools: openSearchWorkspaceTools,
   instructions: [
     {
+      "order": 440,
+      "prefix": "merchant_opensearch_material_",
+      "text": "Material and supplier tools use this original OpenSearch catalog, revisions and request journal. Read configured material_inputs aliases and full original mapping/profile before saving. Upload only a host-selected input; preview and review complete editions, then select with the exact catalog revision and review SHA-256. Read current material and supplier product hashes before saving customer matches or reasoned correction patches. Keep each original requestId; inspect operation after an interrupted mutation. Supplier plans bind an exact edition and recipient profile; review it before BMEcat export. Export selected complete material/bundle or supplier formats, inspect the original manifest, then download all files with their original SHA-256 values. Resume the same download directory and manifest after interruption. Follow every nextCursor, nextRevision or nextOffset until null; list/history rows are summaries, and full records use direct reads or complete retained exports."
+    },
+    {
+      "order": 441,
+      "prefix": "merchant_opensearch_supplier_",
+      "text": "Material and supplier tools use this original OpenSearch catalog, revisions and request journal. Read configured material_inputs aliases and full original mapping/profile before saving. Upload only a host-selected input; preview and review complete editions, then select with the exact catalog revision and review SHA-256. Read current material and supplier product hashes before saving customer matches or reasoned correction patches. Keep each original requestId; inspect operation after an interrupted mutation. Supplier plans bind an exact edition and recipient profile; review it before BMEcat export. Export selected complete material/bundle or supplier formats, inspect the original manifest, then download all files with their original SHA-256 values. Resume the same download directory and manifest after interruption. Follow every nextCursor, nextRevision or nextOffset until null; list/history rows are summaries, and full records use direct reads or complete retained exports."
+    },
+    {
       "prefix": "merchant_opensearch_",
       "text": "For OpenSearch, inspect merchant_opensearch_status and open only a host-declared workspace. Read the original draft or relevance-set revision before saving or judging, and retain its original requestId. Capture, preparation and native relevance evaluation use that same operation journal. After an interrupted response inspect merchant_opensearch_operation with the original request ID. Read the saved edition, compare actual query scope and judgments, then promote the selected evaluated variant into an original merchant draft for preparation. Full native results, reports, CSV and customer files use original SHA-pinned retained reads; resume with the same readId, file hash and byte offset. Close releases this process-owned workspace and temporary reads.",
       "order": 420

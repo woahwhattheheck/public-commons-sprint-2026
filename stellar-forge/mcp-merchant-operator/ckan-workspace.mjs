@@ -2,34 +2,17 @@ import { ckanWorkspaceTools, definitions, read, selected, uuid, offset, field, a
 export { ckanWorkspaceTools } from './catalog/ckan-workspace.mjs';
 // MIT. Agent and browser authoring over the one original CKAN workbench.
 import { constants } from 'node:fs';
-import { lstat, open, realpath } from 'node:fs/promises';
+import { open } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
-import { exact, failure, identifier, line, plain, privateSupportDirectory } from './config.mjs';
+import { exact, failure, identifier, line, plain } from './config.mjs';
 import { RetainedFileReads, MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
+import { checkCkanProjectDeclaration, CkanWorkspaceTransferInspections, ckanTransferDescriptor,
+  ckanTransferPage, CKAN_TRANSFER_MAX_BYTES, CKAN_TRANSFER_MAX_ARCHIVE_BYTES } from './ckan-workspace-transfers.mjs';
 import { ExactCkanNumber } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/capture.mjs';
 
 export const CKAN_WORKSPACE_CONNECTION_SCHEMA = 'stellar-forge.ckan-workbench-connection.v1';
 const NATIVE_SCHEMA = 'stellar-forge.ckan-workbench.v1';
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 const definitionsByName = new Map(definitions.map(definition => [definition[0], definition]));
 
@@ -102,25 +85,26 @@ export async function readCkanWorkspaceConfiguration(path) {
   exact(raw, ['schema', 'workspaces'], ['schema', 'workspaces']);
   if (raw.schema !== CKAN_WORKSPACE_CONNECTION_SCHEMA || !plain(raw.workspaces) ||
       !Object.keys(raw.workspaces).length || Object.keys(raw.workspaces).length > 32)
-    throw failure('CONFIGURATION_ERROR', 'Declare between 1 and 32 existing original CKAN projects.');
+    throw failure('CONFIGURATION_ERROR', 'Declare between 1 and 32 original CKAN projects or receiving aliases.');
   const base = dirname(path), directories = new Set(), workspaces = Object.create(null);
   for (const [alias, input] of Object.entries(raw.workspaces)) {
     identifier(alias, 'CKAN workspace alias');
-    exact(input, ['label', 'directory', 'inputs', 'merchant', 'seller'], ['directory']);
+    exact(input, ['label', 'directory', 'inputs', 'merchant', 'seller', 'receiveTarget'], ['directory']);
     const directory = hostPath(input.directory, base);
-    await privateSupportDirectory(directory);
-    const canonical = await realpath(directory), state = await lstat(join(directory, 'workbench.json'));
-    if (canonical !== directory || directories.has(canonical) || !state.isFile() || state.isSymbolicLink() ||
-        state.nlink !== 1 || state.mode & 0o077)
-      throw failure('CONFIGURATION_ERROR', 'Bind each existing private original CKAN project through one canonical alias.');
+    const canonical = await checkCkanProjectDeclaration(directory, input.receiveTarget ?? false);
+    if (directories.has(canonical))
+      throw failure('CONFIGURATION_ERROR', 'Bind each original or receiving project through one canonical alias.');
     directories.add(canonical);
     if (input.inputs !== undefined && (!plain(input.inputs) || Object.keys(input.inputs).length > 64))
-      throw failure('CONFIGURATION_ERROR', 'Declare at most 64 named original capture inputs.');
+      throw failure('CONFIGURATION_ERROR', 'Declare at most 64 named capture or whole-workspace inputs.');
     const inputs = Object.create(null);
     for (const [key, item] of Object.entries(input.inputs ?? {})) {
       identifier(key, 'CKAN input alias');
-      exact(item, ['file', 'label'], ['file']);
-      inputs[key] = { file: hostPath(item.file, base), label: line(item.label ?? key, 'CKAN input label') };
+      exact(item, ['file', 'label', 'kind'], ['file']);
+      const kind = item.kind ?? 'capture';
+      if (!['capture', 'workspace-archive'].includes(kind))
+        throw failure('CONFIGURATION_ERROR', 'Declare capture or workspace-archive as the original input kind.');
+      inputs[key] = { file: hostPath(item.file, base), label: line(item.label ?? key, 'CKAN input label'), kind };
     }
     let merchant = null;
     if (input.merchant !== undefined) {
@@ -136,6 +120,7 @@ export async function readCkanWorkspaceConfiguration(path) {
         payment: structuredClone(input.merchant.payment), runtime: structuredClone(input.merchant.runtime ?? {}) };
     }
     workspaces[alias] = { directory, label: line(input.label ?? alias, 'CKAN workspace label'), inputs, merchant,
+      receiveTarget: input.receiveTarget ?? false,
       seller: input.seller === undefined ? null : hostOrigin(input.seller, 'seller') };
   }
   return { schema: CKAN_WORKSPACE_CONNECTION_SCHEMA, workspaces };
@@ -182,6 +167,8 @@ const collectionNames = ['editions', 'sources', 'publications', 'exports', 'buye
 export class MerchantCkanWorkspaces {
   #config; #entries = new Map(); #opening = new Map(); #closing = false; #close;
   #reads = new RetainedFileReads({ errorPrefix: 'CKAN_FILE' });
+  #transferInspections = new CkanWorkspaceTransferInspections();
+  #receiving = new Map();
   constructor(config) { this.#config = config; }
   #storeMatches(definition) {
     return typeof this.#config.releaseStore === 'string' &&
@@ -194,6 +181,7 @@ export class MerchantCkanWorkspaces {
         return { workspace, label: definition.label, open: Boolean(entry), opening: this.#opening.has(workspace),
           closing: Boolean(entry?.closing), instanceId: entry?.instanceId ?? null,
           browserUrl: entry?.service.url ?? null, inputAliases: Object.keys(definition.inputs),
+          receiveTarget: Boolean(definition.receiveTarget), receivingOperationId: this.#receiving.get(workspace)?.operationId ?? null,
           merchantConfigured: Boolean(definition.merchant), buyerConfigured: Boolean(definition.seller),
           releaseStoreMatches: this.#storeMatches(definition) };
       }) };
@@ -234,6 +222,8 @@ export class MerchantCkanWorkspaces {
   }
   async #open(alias) {
     const definition = this.#definition(alias);
+    if (this.#receiving.has(alias))
+      throw failure('CKAN_WORKSPACE_RECEIVING', 'Wait for the original receive operation before opening its configured destination.');
     if (this.#entries.has(alias)) return this.#state(this.#entry(alias));
     if (this.#opening.has(alias)) return this.#opening.get(alias);
     const opening = (async () => {
@@ -292,9 +282,10 @@ export class MerchantCkanWorkspaces {
   async #inputs(alias, selectedInput) {
     const configured = this.#definition(alias).inputs;
     if (selectedInput === undefined) return { workspace: alias,
-      inputs: Object.entries(configured).map(([input, item]) => ({ input, label: item.label })) };
-    const input = this.#input(alias, selectedInput), current = await privateFile(input.file, 16777216);
-    return { workspace: alias, input: selectedInput, label: input.label,
+      inputs: Object.entries(configured).map(([input, item]) => ({ input, label: item.label, kind: item.kind ?? 'capture' })) };
+    const input = this.#input(alias, selectedInput);
+    const current = await privateFile(input.file, input.kind === 'workspace-archive' ? CKAN_TRANSFER_MAX_ARCHIVE_BYTES : 16777216);
+    return { workspace: alias, input: selectedInput, label: input.label, kind: input.kind ?? 'capture',
       file: { name: basename(input.file), bytes: current.bytes, sha256: current.sha256 } };
   }
   #item(entry, kind, itemId) {
@@ -353,11 +344,63 @@ export class MerchantCkanWorkspaces {
     const launch = start => this.#launch(entry, expectedOperationId, start);
     switch (name) {
       case 'merchant_ckan_status': return this.#state(entry, input);
+      case 'merchant_ckan_workspace_archives': {
+        const all = (await original.workspaceArchives()).map(ckanTransferDescriptor);
+        return { workspace, browserUrl: entry.service.url, ...ckanTransferPage(all, input.offset, input.limit) };
+      }
+      case 'merchant_ckan_workspace_archive': {
+        const maxBytes = input.maxBytes ?? CKAN_TRANSFER_MAX_BYTES, maxFiles = input.maxFiles ?? 100000;
+        if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > CKAN_TRANSFER_MAX_BYTES ||
+            !Number.isSafeInteger(maxFiles) || maxFiles < 1 || maxFiles > 100000)
+          throw failure('INVALID_PARAMS', `Use a positive workspace payload budget up to ${CKAN_TRANSFER_MAX_BYTES} bytes and 100000 files.`);
+        return launch(() => original.archiveWorkspace({ maxBytes, maxFiles }));
+      }
+      case 'merchant_ckan_workspace_inspect': {
+        const checked = await this.#transferInspections.inspect(original, this.#definition(workspace), input);
+        const { files, ...summary } = checked;
+        return { workspace, ...(input.archiveId ? { archiveId: input.archiveId } : { input: input.input }),
+          ...summary, files: ckanTransferPage(files, input.offset, input.limit) };
+      }
+      case 'merchant_ckan_workspace_read': {
+        const selected = await this.#transferInspections.select(original, this.#definition(workspace), input);
+        const chunk = await this.#reads.read({ scope: this.#scope(workspace),
+          key: 'workspace:' + (selected.archiveId ? 'archive:' + selected.archiveId : 'input:' + selected.input) + ':' + selected.expectedSha256,
+          kind: 'ckan-workspace', directory: this.#definition(workspace).directory,
+          readId: input.readId, expectedSha256: selected.expectedSha256, offset: input.offset, limit: input.limit,
+          load: () => this.#transferInspections.openFile(original, this.#definition(workspace), input) });
+        return { workspace, ...(selected.archiveId ? { archiveId: selected.archiveId } : { input: selected.input }), ...chunk };
+      }
+      case 'merchant_ckan_workspace_receive': {
+        const target = this.#definition(input.targetWorkspace), origin = this.#definition(workspace);
+        if (!target.receiveTarget || input.targetWorkspace === workspace ||
+            dirname(target.directory) !== dirname(origin.directory))
+          throw failure('CKAN_RECEIVE_TARGET_INVALID', 'Choose a declared receiveTarget alias beside this original project.');
+        const selected = await this.#transferInspections.select(original, origin, input);
+        // The native receive checks every archive byte and owns its retained
+        // resume marker. No new archive parser, file store or project engine.
+        let marker;
+        const started = launch(() => {
+          if (this.#entries.has(input.targetWorkspace) || this.#opening.has(input.targetWorkspace) ||
+              this.#receiving.has(input.targetWorkspace))
+            throw failure('CKAN_RECEIVE_TARGET_BUSY', 'The selected destination already has an original owner or receive operation.');
+          const operation = original.receiveWorkspace({ file: selected.file, name: basename(target.directory),
+            expectedSha256: selected.expectedSha256 });
+          marker = { operationId: operation.id, sourceWorkspace: workspace };
+          this.#receiving.set(input.targetWorkspace, marker);
+          operation.completion.finally(() => {
+            if (this.#receiving.get(input.targetWorkspace) === marker) this.#receiving.delete(input.targetWorkspace);
+          }).catch(() => {});
+          return operation;
+        });
+        return { ...started, targetWorkspace: input.targetWorkspace, expectedSha256: selected.expectedSha256 };
+      }
       case 'merchant_ckan_search': return { workspace, native: view(await original.search(input)) };
       case 'merchant_ckan_package': return { workspace, native: view(await original.package(input.packageId)) };
       case 'merchant_ckan_inputs': return this.#inputs(workspace, input.input);
       case 'merchant_ckan_import': {
         const configured = this.#input(workspace, input.input), expected = expectedDigest(input.expectedSha256);
+        if ((configured.kind ?? 'capture') !== 'capture')
+          throw failure('CKAN_INPUT_KIND_CHANGED', 'Use merchant_ckan_workspace_receive for a complete workspace archive.');
         // The original importer rechecks the exact digest after its own read.
         const current = await privateFile(configured.file, 16777216);
         if (current.sha256 !== expected) throw failure('CKAN_INPUT_CHANGED', 'Inspect the current original capture manifest before importing it.');
@@ -492,6 +535,7 @@ export class MerchantCkanWorkspaces {
         await Promise.allSettled([...this.#opening.values()]);
         const results = await Promise.allSettled([...this.#entries.values()].map(entry => this.#closeEntry(entry)));
         await this.#reads.close();
+        this.#transferInspections.clear();
         if (results.some(result => result.status === 'rejected'))
           throw failure('CKAN_SHUTDOWN_INCOMPLETE', 'An original owned CKAN workbench reported incomplete shutdown.');
       })();

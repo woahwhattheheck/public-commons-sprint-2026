@@ -226,6 +226,7 @@ export function createMerchantWorkflows({store,definitions,getHost,startCall,wai
     async start(input,context){
       need(!closing,'CONSOLE_CLOSING','The original operator interface is closing.');
       const definition=records.definition(input.workflowId,input.workflowRevision);await authorizeDefinition(definition,context);
+      need(!closing,'CONSOLE_CLOSING','The original operator interface is closing.');
       const reserved=records.reserve(input,getHost());
       // A repeated start only reopens its original run; continuing is a distinct visible action.
       if(!reserved.reused)launch(reserved.run.id,context);
@@ -234,6 +235,7 @@ export function createMerchantWorkflows({store,definitions,getHost,startCall,wai
     async resume(input,context){
       need(!closing,'CONSOLE_CLOSING','The original operator interface is closing.');
       requireRevision(input);const run=records.run(input.id);await authorizeRun(run,context);requireOwner(run);
+      need(!closing,'CONSOLE_CLOSING','The original operator interface is closing.');
       const updated=updateOwned(run.id,'CONTINUED',value=>{
         if(value.state==='COMPLETE')return;
         value.pauseRequested=false;value.state='READY';value.error=null;
