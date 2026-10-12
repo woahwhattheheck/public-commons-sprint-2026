@@ -46,6 +46,27 @@ the browser session. The HTTP listener binds to 127.0.0.1 and requires the
 original capability on API requests. Keep the state directory outside the
 source checkout and installed software directory.
 
+## Open from installed Applications
+
+In the original Runtime workspace, select the installed runtime with the gRPC
+transport and add a **gRPC merchant workspace** application. Choose its private
+workspace directory, listener port and, when needed, the original private
+environment file. Review the saved selection, then Start and open the private
+workspace URL shown by the managed application.
+
+Applications opens this same operator workspace. Source capture, typed request
+editing, explicit native calls, payment terms, merchant preparation and SF82
+release control stay in their original screens and retained files. Start checks
+the reviewed workspace identity, current source revision and selected native
+launcher bytes before announcing a live authenticated session.
+
+Use the original application's Stop action to drain its merchant and native
+calls. Reopen uses the same private state and shows prior outcomes; it does not
+repeat an earlier application RPC or silently restart a seller. A changed current
+revision needs a fresh Start review. The complete field, startup, recovery and
+installation instructions are in
+[Managed gRPC Applications](../../distribution/runtime-workspace/GRPC_APPLICATIONS.md).
+
 ## Operate the included native example
 
 The included example is a real gRPC server with three clearly labelled local
@@ -285,3 +306,4 @@ results identify their actual source/runtime selection separately.
 ### Working editor changes
 
 Typed request fields and the exact JSON editor share the same request. Invalid visible input prevents a call or route application. A working request can be called without adding it to the saved merchant plan; Apply route retains it as the route example. Complete plan JSON is explicitly applied or discarded before Save, channel review or Prepare. Opening another method, route, revision or the included example asks before discarding current work. A later inventory refresh keeps the exact opened revision as the editor's save base.
+
