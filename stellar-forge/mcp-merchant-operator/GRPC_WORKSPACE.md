@@ -362,6 +362,21 @@ file hashes, original operation and release IDs, completed phases and received
 file hashes, then closes every process-owned server. Its customer/ directory
 contains the usable original seven-file customer package.
 
+If the original calls and both receiving phases completed before a later runtime
+failure, continue that same private workspace with its saved operation IDs:
+
+~~~sh
+node experiments/grpc-merchant-agent-20261012-9b23.mjs \
+  --source-root /selected/complete/source \
+  --source-commit REVIEWED_40_CHARACTER_COMMIT \
+  --resume /private/grpc-agent-native-journey
+~~~
+
+The continuation reopens the original service target and native stores, reads the
+saved calls, and finishes the remaining merchant/release phases. Completed RPCs
+and customer transfers remain retained. It records the prior source and failure,
+refreshes the changed schema assertions, and closes every owned server again.
+
 ## Native method schemas and merchant admission
 
 The original methods.json retains every protobuf descriptor annotation, including
@@ -369,5 +384,9 @@ field numbers, scalar kinds, enum names, oneof groups and map key types. The
 merchant projection removes those metadata annotations and contentEncoding while
 preserving their executable assertions, including exact integer and base64 patterns.
 The original Bazaar validator evaluates not and propertyNames so native oneof
-presence and canonical map keys stay enforced. The complete source/typed method
-export remains available beside the generated customer package.
+presence and canonical map keys stay enforced. All local reference targets are
+inspected before admission, including alternatives the input does not select.
+Finite recursive message values remain supported; same-instance reference cycles,
+excessive depth and a shared 100,000-evaluation budget produce explicit schema
+errors. A malformed schema cannot become a successful negation. The complete
+source/typed method export remains available beside the generated customer package.
