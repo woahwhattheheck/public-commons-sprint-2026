@@ -16,10 +16,34 @@ original object session and inbox retain the durable work.
 A customer can prepare a complete download in this browser using the merchant's
 public product description and offers. The original private operator initializer
 creates the buyer's signer reference, policy, SQLite spending ledger and evidence
-directory from a locally declared preset.
+directory from this host's reviewed settings.
 
-Use the same private operator preset as the original
-[receiving runbook](../../buyer-runbook/WORKSPACE.md). Its schema is unchanged:
+Start the Object Buyer without an operator file:
+
+```sh
+stellar-forge buyer-object-workspace --state /absolute/private/object-buyer --port 8438
+```
+
+For a source checkout, use `node sf88-operator-buyer-cli/object-workspace/server.mjs`
+from the SCF directory with the same flags. Open the printed private URL and
+choose **Local buyer setup**. Enter the actor and service, the public Stellar
+payer, an absolute Python executable, exact integer spending ceilings, and
+either an existing signing environment name or the original trusted provider
+configuration path. An optional RPC override and proxy environment name use
+the same native validation as the receiving runbook. Set secret values in the
+launching process.
+
+**Review host settings** compares the proposed fields with the selected version,
+shows local reference availability and the effect on saved object plans.
+**Save host settings** requires that exact reviewed state. You can then choose
+**New → Receive a merchant object**. Preparing the native buyer and starting
+the original purchase remain separate operations.
+
+Existing deployments can still declare `--operator-settings` on first launch.
+**Local buyer setup** can adopt its exact bytes into this workspace; the external
+file remains intact. The original [receiving runbook](../../buyer-runbook/WORKSPACE.md)
+and [host setup](../../buyer-runbook/OPERATOR_SETUP.md) engine owns validation,
+revision history and selection. The preset schema is unchanged:
 
 ```json
 {
@@ -40,7 +64,7 @@ of the selected asset. The example amounts are limits to replace, not a product
 price. Keep this preset mode `0600` outside the installation. It supports the
 same optional `signerProvider`, `rpc` and `httpsProxyEnv` as the original runbook;
 choose either `secretEnv` or `signerProvider`. Values are read on the host.
-The receiving form does not accept a signer module, credential, executable or private path.
+The merchant receiving form selects only public files and saved reviews. Host paths and signing references are edited separately in authenticated Local buyer setup.
 
 ```sh
 node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-workspace/server.mjs \
@@ -81,9 +105,11 @@ format without altering their offer rows; both the uploaded-file hash and native
 preparation hash are retained. These are saved metadata for review. The original
 buyer obtains and binds each actual quote during execution.
 
-Reopen the same `--state` to find received sources, prepared products and saved
-downloads. The preset's original path is retained, so it need only be declared
-on the first launch; editing it requires a fresh review for new preparation.
+Reopen the same `--state` to find received sources, prepared products, saved
+downloads and the selected host revision. A declared preset path is retained;
+a workspace revision reopens independently after its external preset is removed.
+A host change requires a fresh review for plans whose native preparation has
+not started.
 Previously prepared products retain their original native limits and signer
 reference. Their policy, signer and workspace files are checked against the
 saved preparation before they are offered as new-download inputs.
@@ -91,14 +117,69 @@ saved preparation before they are offered as new-download inputs.
 Repeating a successful create after a lost response resolves to the same
 private operator and original session. If the host stops after the native
 operator manifest is complete, preparation reopens that same workspace. An
-unfinished operator generation remains unexecutable; the next preparation uses
-the original initializer in a new owned generation. Original metadata leases
-serialize receiving mutations across processes. Existing object-session rules
+unfinished operator generation remains unexecutable until the original
+initializer resumes that exact generation. Its attempt-local copy retains
+the complete original preset before initialization, preserving keys, policy,
+configuration and the SQLite inode across host changes. Legacy attempts use
+the original exact-hash preset matcher when their earlier bytes are available.
+Original metadata leases serialize receiving mutations across processes. Existing object-session rules
 handle a session interrupted during its own initial construction; an incomplete
 session name is not overwritten.
 
 The trusted product profile below remains useful for installations that already
 have reviewed native operator workspaces.
+
+## Change, restore and export this host
+
+**Local buyer setup** retains each immutable settings revision and its exact
+preset bytes. **Use as draft** loads a prior version without changing the selected
+host. Review it against the current selection, then save. A successful save
+whose response was lost resolves to its same original revision.
+
+The impact view distinguishes unstarted reviews, interrupted preparations and
+prepared buyers. In **New → Saved object preparations**, choose a saved row:
+
+- **Review with current host** reloads that object's original selection and
+  requested limits for a fresh review. It does not silently raise the new host's
+  ceilings or approve a different offer.
+- **Review original preparation** displays the retained payer, merchant route,
+  terms, snapshot and limits. **Resume original preparation** continues its
+  original native generation and journal, even after a later host is selected.
+- **Open saved preparation** reopens the existing buyer and the same download
+  plan. Purchase records, completed files and analytical work keep their
+  original identities.
+
+**Download settings** returns that revision's original private preset bytes.
+The Object Buyer fetches the attachment with its existing header capability;
+the shared host view does not put the capability into a file URL. All settings
+and history routes require the same local authentication and origin checks.
+Availability reports only whether a referenced executable, provider or
+environment name is present; it does not expose environment values.
+
+The original Object CLI manages the same host store:
+
+```sh
+stellar-forge buyer-object operator status --state /absolute/private/object-buyer
+stellar-forge buyer-object operator review --state /absolute/private/object-buyer \
+  --file /absolute/private/proposed-host.json --note 'Local buyer host'
+stellar-forge buyer-object operator save --state /absolute/private/object-buyer \
+  --file /absolute/private/proposed-host.json --note 'Local buyer host' \
+  --expect RETURNED_STATE_SHA256 --review RETURNED_REVIEW_SHA256
+stellar-forge buyer-object operator revision --state /absolute/private/object-buyer \
+  --id RETURNED_PRESET_ID
+stellar-forge buyer-object operator export --state /absolute/private/object-buyer \
+  --id RETURNED_PRESET_ID
+```
+
+Use `--from-revision RETURNED_PRESET_ID` instead of `--file` to review and restore
+the original saved bytes. With neither option, review/save adopts the currently
+selected declared preset. Export writes the exact JSON to stdout; save it as a
+private file when transferring to another host. The receiving host reviews its
+own paths and environment references before preparing new work.
+
+Host settings govern new native buyers. Existing native operators retain their
+own Python, signer, transport and limits. The separately launched Analysis
+application continues to use its selected `--analysis-python` and saved database.
 
 ## Back up and restore the complete buyer workspace
 
@@ -106,7 +187,10 @@ have reviewed native operator workspaces.
 application through original SF88 collection recovery and SF101 authenticated
 encryption. It retains merchant inputs, prepared products and native operator
 generations, committed SQLite journals, original object plans, inbox history,
-response parts and completed files. Empty whole files keep their zero-byte
+response parts, completed files and every saved host revision. The backup review
+binds the selected host revision and settings hash; restore checks that same
+selection before reporting a successful application reopen. Older backups without
+a host revision retain their original declared-preset behavior. Empty whole files keep their zero-byte
 contents and one original request. Queued chunked downloads keep their untouched
 jobs; restoring state does not start them.
 
@@ -133,8 +217,9 @@ node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-workspace/ser
 1. Open **Backup and recovery**, enter the common state root, and choose
    **Review backup contents**. Review the original sessions, whole/chunk plans,
    native operators, merchant sources, selected paths, missing optional outputs
-   and runtime requirements. A changed startup profile or preset-path reference
-   requires reopening the workspace before review.
+   and runtime requirements. A changed startup profile requires reopening the
+   workspace before review. A later host selection requires a new backup review
+   so the encrypted copy binds that selected revision.
 2. Choose a new encrypted bundle directory outside that root, for example
    `/private/backups/buyer-20261011`, with an existing private parent. Stop other
    programs that write the selected state, acknowledge that condition, then
@@ -559,8 +644,10 @@ await workspace.close();
 
 The workspace has no additional third-party runtime dependency. Its package closure is the
 original SF88 object modules and their existing imports, `intake.mjs`, the
-original `buyer-runbook/handoff-intake.mjs` preset reader and `runbook.mjs`
-metadata lease, shared `dataset-workspace/analysis.mjs`, the original Python
+original `buyer-runbook/handoff-intake.mjs` preset reader, unchanged
+`buyer-runbook/operator-preset.mjs` revision engine, `runbook.mjs` metadata lease,
+and shared `buyer-runbook/workspace-ui/operator.mjs` served as `/operator.mjs`.
+It also includes shared `dataset-workspace/analysis.mjs`, the original Python
 analytical application and object reader, plus the three static files in `public/`.
 Native signing and transport use the existing original buyer
 dependencies. Distribution owners can expose `server.mjs` as a command and its
@@ -571,8 +658,9 @@ capability protects API access; mutations require the exact local Origin. A
 short-lived, single-use local download link permits native browser streaming
 after an authenticated request. The server accepts product and session IDs,
 review revisions, operation IDs and the two explicitly received public files.
-Private paths, modules, operator credentials and signer settings come from the
-local launcher and original operator preset. Browser creation requests name the
+Host executable/provider paths and signing references come from the local launcher
+or the host's authenticated reviewed settings. Merchant inputs cannot select them.
+Secret values stay in the launching process. Browser creation requests name the
 exact saved review; they cannot replace its resource or payment terms.
 
 ## Source integration
@@ -583,3 +671,4 @@ review, dispatch, retained-session and download workflow over that engine.
 The narrow `buyerTransport` allowed-field addition in `object-session.mjs` lets
 the original normalizer and inbox carry a configured native proxy through the
 same saved object plan.
+
