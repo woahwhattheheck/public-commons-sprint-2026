@@ -53,6 +53,7 @@ the original `0.1.0-source.g0123456789ab` version form.
 | `redis-applications` | Redis/Valkey commissioning, native products, customer clients, complete exports and cutover comparison | Redis, Buyer, merchant console | [Operating guide](selections/REDIS_APPLICATIONS.md) |
 | `safe-review` | Original Safe transaction intake, simulation purchase, retained result comparison and portable receiving | Safe simulation buyer, Tenderly, Buyer | [Operating guide](selections/SAFE_REVIEW.md) |
 | `study-research` | Source editions, property research, reports, PostgreSQL publishing and complete customer receiving | Study Source Refresh, PostgreSQL workspace and publisher, Buyer, merchant console | [Operating guide](selections/STUDY_RESEARCH.md) |
+| `publisher-360giving` | Complete 360Giving publisher source/reviews, native grant datasets, typed SDK/merchant operation and complete customer receiving | 360Giving publisher workspace; Runtime management | [Operating guide](../../../products/360giving-publisher/OPERATING.md) |
 | `all` or no flag on a new build | Complete maintained toolkit | All registered applications | [Runtime installation](RUNTIME_INSTALL.md) |
 
 The [API merchant installation and handover guide](selections/OPENAPI_MERCHANT.md)
@@ -99,6 +100,7 @@ its dependency profile from the complete installed workflow linked above:
 | `redis-applications` | `--native --feature redis --feature schema --feature openapi --feature mcp --operator` |
 | `study-research` | `--native --feature schema --feature openapi --feature mcp --feature postgres --operator` |
 | `grant-reviewer` | `--native --feature mcp --operator` |
+| `publisher-360giving` | `--feature mcp --operator` |
 | `iati-operator` | `--operator` |
 
 The following example uses the common merchant profile. Substitute the flags
