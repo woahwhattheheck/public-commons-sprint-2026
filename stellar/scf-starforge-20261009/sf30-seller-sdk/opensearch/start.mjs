@@ -13,7 +13,7 @@ export const startOpenSearchMerchant = options => startPostgresMerchant(options)
 export const createOpenSearchNativeFactory = createMysqlNativeFactory;
 export async function startOpenSearchSeller({
   directory, env = process.env, port = 8423, operationsPort = 8424,
-  nativeFactory = null, maxInFlight = 64, drainGraceMs = 60000, availabilityDirectory,
+  nativeFactory = null, maxInFlight = 64, drainGraceMs = 60000, availabilityDirectory, navigationOrigin = null,
 } = {}) {
   const target = resolve(directory);
   await assertPrepared(target);
@@ -23,7 +23,7 @@ export async function startOpenSearchSeller({
   try {
     const session = await startOpenSearchMerchant({
       source, config, bindings: declaration.bindings, port, operationsPort, nativeFactory,
-      maxInFlight, drainGraceMs, availabilityDirectory,
+      maxInFlight, drainGraceMs, availabilityDirectory, navigationOrigin,
     });
     return { ...session, source };
   } catch (issue) { await source.close(); throw issue; }

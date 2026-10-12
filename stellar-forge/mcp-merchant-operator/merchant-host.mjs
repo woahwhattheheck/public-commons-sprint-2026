@@ -25,7 +25,7 @@ export async function startMerchantStdioHost({ configPath, environment = process
     child.once('exit', () => reject(failure('MCP_MERCHANT_HOST_EXITED')));
     child.on('message', message => {
       if (message?.type === 'merchant-mcp-ready' && /^http:\/\/127\.0\.0\.1:\d+$/.test(message.url))
-        done(message.url);
+        done({ address: message.url, maxRequestBytes: message.maxRequestBytes ?? 128 * 1024 });
       else if (message?.type === 'merchant-mcp-error') reject(failure('MCP_MERCHANT_HOST_CONFIGURATION'));
     });
   });
@@ -50,8 +50,10 @@ export async function startMerchantStdioHost({ configPath, environment = process
     return closing;
   };
   try {
-    const address = await ready; clearTimeout(startupTimer);
-    return { address, close, closed, durable: true, paymentAdapterConnected: false };
+    const readyHost = await ready; clearTimeout(startupTimer);
+    if (!Number.isSafeInteger(readyHost.maxRequestBytes) || readyHost.maxRequestBytes < 1 || readyHost.maxRequestBytes > 2 * 1024 * 1024)
+      throw failure('MCP_MERCHANT_HOST_REQUEST_LIMIT_INVALID');
+    return { ...readyHost, close, closed, durable: true, paymentAdapterConnected: false };
   } catch (error) {
     await close().catch(() => {}); throw error;
   }
@@ -76,7 +78,7 @@ async function host(configPath) {
     session = await startMerchantMcp({ configPath, port: 0, tokenEnv: 'MCP_ACCESS_TOKEN',
       environment: { ...process.env, MCP_CLIENT_ORIGINS: '' } });
     if (stopped || !process.connected) { await close(); return; }
-    process.send({ type: 'merchant-mcp-ready', url: session.url });
+    process.send({ type: 'merchant-mcp-ready', url: session.url, maxRequestBytes: session.maxRequestBytes });
   } catch (error) {
     if (process.connected) process.send({ type: 'merchant-mcp-error' });
     process.stderr.write('Merchant MCP host: ' + (error.code ?? 'CONFIGURATION_ERROR') + '\n');
