@@ -77,7 +77,31 @@ starforge mpp runtime-receive /private/second-mpp-runtime \
 
 The default per-install archive is released after that package is retained.
 An explicit cache keeps the original SHA512-addressed archives for another
-worker or installation. The final READY result includes the original lock and
+worker or installation. Download and extraction work always stays on the
+installation filesystem; verified originals are copied into the retained cache.
+
+When persistent capacity is small, select a partial cache explicitly:
+
+~~~sh
+starforge mpp runtime-receive /dev/mpp-runtime \
+  --cache /retained/mpp-archives --cache-limit-bytes 4194304
+~~~
+
+This example retains up to 4 MiB of original archives. The receiver reuses
+matching retained archives, copies new ones while the budget and current free
+space allow, and completes the runtime on the installation filesystem when the
+cache fills. It reports every capacity skip and leaves existing retained files
+in place. An interrupted worker can receive a new runtime using that same
+partial cache. Offline receiving requires every unfinished package's archive to
+be available; a partial cache alone may need further original registry reads.
+Without --cache-limit-bytes, the explicit cache keeps the full-retention policy.
+
+A separate private cache lease coordinates copies and enforces the selected
+budget. Copies are checked against the original SHA512 and published only after
+they are complete. The result reports the cache's measured available bytes and
+archive footprint, cache reuse/retention/skips, and the complete footprint of
+unique original archives when every selected archive size has been observed.
+The final READY result includes the original lock and
 manifest hashes, received package/file counts, downloaded and installed byte
 counts, registry retry count, elapsed time and this receiver process's measured
 maximum resident memory.
