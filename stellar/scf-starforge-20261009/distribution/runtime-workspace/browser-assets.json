@@ -127,6 +127,13 @@
         "../../discovery/product-requirements.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/product-plan-briefing.css",
+      [
+        "product-plan-briefing.css",
+        "text/css; charset=utf-8"
+      ]
     ]
   ]
 }
