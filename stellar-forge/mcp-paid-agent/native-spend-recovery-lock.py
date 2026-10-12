@@ -78,6 +78,15 @@ def run():
         if governor.db.execute("PRAGMA quick_check").fetchone()[0] != "ok":
             raise ValueError("snapshot integrity")
         checkpoint = relay.checkpoint(governor)
+        prefix = values.get("expected_checkpoint")
+        if prefix is not None:
+            sequence, mac = prefix.get("sequence"), prefix.get("journalMac")
+            if type(sequence) is not int or sequence < 0 or type(mac) is not str or not original.HASH.fullmatch(mac):
+                raise ValueError("archive checkpoint invalid")
+            observed = governor.db.execute("SELECT mac FROM journal WHERE sequence=?", (sequence,)).fetchone()
+            if (sequence == 0 and mac != "0" * 64) or \
+                    (sequence > 0 and (observed is None or observed[0] != mac)) or checkpoint["sequence"] < sequence:
+                raise ValueError("archive is not a prefix of current history")
         bindings, finals, pending = {}, 0, 0
         for entry in sorted(state.iterdir()):
             if entry.name.endswith(".json") and original.UUID.fullmatch(entry.name[:-5]):
@@ -113,7 +122,7 @@ def run():
             finals += 1
         print(json.dumps({"status": "NATIVE_STATE_VERIFIED", "checkpoint": checkpoint,
                           "boundRequests": len(bindings), "reservedRequests": pending,
-                          "finalityRecords": finals}, sort_keys=True), flush=True)
+                          "finalityRecords": finals, **({"archivePrefix": prefix} if prefix is not None else {})}, sort_keys=True), flush=True)
     finally:
         governor.close()
 
