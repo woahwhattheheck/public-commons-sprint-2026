@@ -335,15 +335,17 @@ export async function main(argv=process.argv.slice(2)) {
       directory:join(options.directory,'customer-files'),environment};
     const checkpointFile=join(options.directory,'download-interruption.json');
     if(!await exists(checkpointFile)){
+      const resumingCheckpoint=await exists(join(downloadOptions.directory,'download-state','checkpoint.json'));
       let checkpoint;
       try{
         await downloadBaserowExport({...downloadOptions,chunkSize:1,onProgress:async progress=>{
-          if(progress.bytes>0){checkpoint=progress;await retain(checkpointFile,{...progress,kind:'ORIGINAL_DURABLE_FIRST_BYTE'});
+          if(progress.bytes>0){checkpoint=progress;await retain(checkpointFile,{...progress,
+            kind:resumingCheckpoint?'ORIGINAL_DURABLE_RESUMED_CHECKPOINT':'ORIGINAL_DURABLE_FIRST_BYTE'});
             throw fault('BASEROW_MCP_EXAMPLE_CHECKPOINT_REOPEN');}
         }});
         need(false,'BASEROW_MCP_EXAMPLE_CHECKPOINT_MISSING');
       }catch(issue){if(issue.code!=='BASEROW_MCP_EXAMPLE_CHECKPOINT_REOPEN')throw issue;}
-      need(checkpoint?.bytes===1,'BASEROW_MCP_EXAMPLE_CHECKPOINT_CHANGED');
+      need(checkpoint?.bytes>0&&(resumingCheckpoint||checkpoint.bytes===1),'BASEROW_MCP_EXAMPLE_CHECKPOINT_CHANGED');
     }
     await closeMcp();await startMcp();
     const download=await downloadBaserowExport({...downloadOptions,url:mcp.url+'/mcp'});
