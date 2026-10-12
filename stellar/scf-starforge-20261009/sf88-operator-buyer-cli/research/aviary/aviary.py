@@ -949,11 +949,12 @@ def meta_from_workspace(root, key):
 def _receiving_metadata_temporaries(directory, prefix, expected_prefix):
     """Retire only this receive's interrupted atomic metadata writes."""
     retired = False
+    prefixes = (expected_prefix,) if isinstance(expected_prefix, bytes) else expected_prefix
     for path in directory.glob(prefix + "*"):
         if path.is_symlink() or not path.is_file():
             raise Problem("RECEIVE_METADATA", "Receiving metadata temporary is not a regular file.", str(path))
         value = path.read_bytes()
-        if not (expected_prefix.startswith(value) or value.startswith(expected_prefix)):
+        if not any(original.startswith(value) or value.startswith(original) for original in prefixes):
             raise Problem("RECEIVE_METADATA", "Receiving metadata temporary differs from this handoff.", str(path))
         path.unlink()
         retired = True
@@ -1074,7 +1075,8 @@ def receive(source, output):
                    "manifestSha256": hashlib.sha256(manifest_bytes).hexdigest(),
                    "workspaceId": manifest["workspaceId"]}
         expected = {item["path"]: item for item in declared}
-        completion_prefix = encoded({"binding": binding})[:-2] + b","
+        completion_prefix = (encoded({"binding": binding})[:-2] + b",",
+                             encoded({"adoptedExisting": True, "binding": binding})[:-2] + b",")
         output.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         prefix = ".aviary-receive-" + hashlib.sha256(os.fsencode(output)).hexdigest()[:24]
         lock_path = output.parent / (prefix + ".lock")
