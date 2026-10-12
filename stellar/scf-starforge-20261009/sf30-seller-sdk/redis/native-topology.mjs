@@ -4,9 +4,9 @@
 import assert from 'node:assert/strict';
 import { createServer, createConnection } from 'node:net';
 import { spawn } from 'node:child_process';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile, chmod, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, createHash } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { createClient, createCluster, createSentinel } from '@redis/client';
 import { createRedisConnectionFactory } from './connection.mjs';
@@ -33,10 +33,11 @@ async function reservePort() {
   await new Promise(resolve => server.close(resolve));
   return port;
 }
-function nodeOptions(port, password, database = 0) {
+function nodeOptions(port, password, database = 0, ca) {
   return { RESP: 2, username: 'default', password, database, disableClientInfo: true,
     disableOfflineQueue: true, commandOptions: { timeout: commandTimeout }, pingInterval: 1000,
-    socket: { host: HOST, port, connectTimeout: 1000, socketTimeout: commandTimeout, reconnectStrategy: false } };
+    socket: { host: HOST, port, connectTimeout: 1000, socketTimeout: commandTimeout, reconnectStrategy: false,
+      ...(ca ? { tls: true, rejectUnauthorized: true, ca } : {}) } };
 }
 function adminFacade(native, topology) {
   const send = args => topology === 'cluster'
@@ -48,6 +49,54 @@ function adminFacade(native, topology) {
     hSet: (key, value) => send(['HSET', key, ...Object.entries(value).flat()]),
     zAdd: (key, rows) => send(['ZADD', key, ...rows.flatMap(row => [String(row.score), row.value])]),
   };
+}
+
+
+async function runOpenSsl(binary, args) {
+  const child = spawn(binary, args, { stdio: ['ignore', 'ignore', 'pipe'] });
+  let diagnostic = '';
+  child.stderr.on('data', bytes => { diagnostic = (diagnostic + bytes).slice(-4096); });
+  await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => child.kill('SIGKILL'), 15000); timer.unref();
+    child.once('error', error => { clearTimeout(timer); reject(error); });
+    child.once('exit', (code, signal) => {
+      clearTimeout(timer);
+      if (code === 0) resolve();
+      else reject(new Error('REDIS_TLS_CERTIFICATE_GENERATION_FAILED:' + (signal ?? code) + ':' + diagnostic));
+    });
+  });
+}
+async function createTlsAuthorities(directory) {
+  const root = join(directory, 'certificates'), sourceDirectory = join(root, 'merchant-source');
+  await mkdir(root); await mkdir(sourceDirectory);
+  const binary = process.env.OPENSSL ?? 'openssl';
+  const output = {};
+  for (const plane of ['data', 'monitor']) {
+    const caFile = join(root, plane + '-ca.pem'), caKey = join(root, plane + '-ca.key');
+    const certificateFile = join(root, plane + '-server.pem'), keyFile = join(root, plane + '-server.key');
+    const requestFile = join(root, plane + '.csr'), extensionFile = join(root, plane + '.ext');
+    await runOpenSsl(binary, ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-sha256', '-days', '2',
+      '-subj', '/CN=SF30-' + plane + '-authority', '-addext', 'basicConstraints=critical,CA:TRUE',
+      '-addext', 'keyUsage=critical,keyCertSign,cRLSign', '-keyout', caKey, '-out', caFile]);
+    await runOpenSsl(binary, ['req', '-new', '-newkey', 'rsa:2048', '-nodes', '-sha256',
+      '-subj', '/CN=localhost', '-keyout', keyFile, '-out', requestFile]);
+    await writeFile(extensionFile, 'basicConstraints=critical,CA:FALSE\nkeyUsage=critical,digitalSignature,keyEncipherment\n' +
+      'extendedKeyUsage=serverAuth,clientAuth\nsubjectAltName=DNS:localhost,IP:127.0.0.1\n', { mode: 0o600 });
+    await runOpenSsl(binary, ['x509', '-req', '-sha256', '-days', '2', '-in', requestFile,
+      '-CA', caFile, '-CAkey', caKey, '-CAcreateserial', '-extfile', extensionFile, '-out', certificateFile]);
+    for (const path of [caFile, caKey, certificateFile, keyFile, requestFile]) await chmod(path, 0o600);
+    const ca = await readFile(caFile), sourceName = plane === 'data' ? 'database-ca.pem' : 'sentinel-ca.pem';
+    const sourceFile = join(sourceDirectory, sourceName);
+    await writeFile(sourceFile, ca, { mode: 0o600 });
+    output[plane] = { ca, caFile, certificateFile, keyFile, sourceFile, sourceName,
+      sha256: createHash('sha256').update(ca).digest('hex') };
+  }
+  assert.notEqual(output.data.sha256, output.monitor.sha256);
+  // Sentinel connects to both the data plane and its peer monitors. Its server
+  // process trusts both authorities; each merchant client trusts only its plane.
+  const monitorTrustFile = join(root, 'monitor-trust.pem');
+  await writeFile(monitorTrustFile, Buffer.concat([output.data.ca, output.monitor.ca]), { mode: 0o600 });
+  return { ...output, monitorTrustFile, sourceDirectory };
 }
 
 // Whichever seed the native driver chooses first accepts TCP and never replies.
@@ -83,12 +132,14 @@ async function seedTransport(target, { fallback = true } = {}) {
 
 export async function startNativeRedisTopology({ topology, directory, password, passwordEnv, binary = process.env.REDIS_SERVER ?? 'redis-server' }) {
   if (!['cluster', 'sentinel'].includes(topology)) throw new Error('REDIS_TOPOLOGY_FIXTURE_INVALID');
+  const tlsEnabled = process.env.SF30_REDIS_JOURNEY_TLS === '1';
+  if (tlsEnabled && topology !== 'sentinel') throw new Error('REDIS_TLS_FIXTURE_REQUIRES_SENTINEL');
   const engines = [], clients = new Set(), transports = new Set(), stages = [];
   const adminPassword = randomBytes(24).toString('hex'), monitorAdminPassword = randomBytes(24).toString('hex');
   const monitorPassword = randomBytes(24).toString('hex');
   const sentinelPasswordEnv = 'SF30_REDIS_JOURNEY_SENTINEL_PASSWORD';
   const priorMonitor = process.env[sentinelPasswordEnv];
-  let database, closing;
+  let database, closing, certificates, authoritiesRemoved = false;
   if (topology === 'sentinel') process.env[sentinelPasswordEnv] = monitorPassword;
   await mkdir(directory, { recursive: true });
   async function close() {
@@ -115,12 +166,19 @@ export async function startNativeRedisTopology({ topology, directory, password, 
     const port = await reservePort(), busPort = topology === 'cluster' ? await reservePort() : undefined;
     const root = join(directory, label); await mkdir(root);
     const settings = [
-      'bind ' + HOST, 'protected-mode yes', 'port ' + port, 'daemonize no',
+      'bind ' + HOST, 'protected-mode yes', 'port ' + (certificates ? 0 : port), 'daemonize no',
       'dir ' + JSON.stringify(root), 'logfile ""', 'save ""', 'appendonly no',
       'requirepass ' + (sentinel ? monitorAdminPassword : adminPassword),
     ];
+    if (certificates) {
+      const identity = sentinel ? certificates.monitor : certificates.data;
+      settings.push('tls-port ' + port, 'tls-cert-file ' + JSON.stringify(identity.certificateFile),
+        'tls-key-file ' + JSON.stringify(identity.keyFile),
+        'tls-ca-cert-file ' + JSON.stringify(sentinel ? certificates.monitorTrustFile : certificates.data.caFile),
+        'tls-auth-clients no', 'tls-replication yes');
+    }
     if (!sentinel) {
-      settings.push('masterauth ' + adminPassword);
+      settings.push('masteruser default', 'masterauth ' + adminPassword);
       if (replicaOf) settings.push('replicaof ' + HOST + ' ' + replicaOf.port);
       if (topology === 'cluster') settings.push(
         'cluster-enabled yes', 'cluster-config-file nodes.conf', 'cluster-node-timeout 1000',
@@ -150,7 +208,8 @@ export async function startNativeRedisTopology({ topology, directory, password, 
       if (record.error) throw record.error;
       if (child.exitCode !== null || child.signalCode !== null)
         throw new Error('REDIS_NODE_EXIT:' + label + ':' + record.log);
-      const client = createClient(nodeOptions(port, sentinel ? monitorAdminPassword : adminPassword));
+      const client = createClient(nodeOptions(port, sentinel ? monitorAdminPassword : adminPassword, 0,
+        certificates ? (sentinel ? certificates.monitor.ca : certificates.data.ca) : undefined));
       client.on('error', () => {});
       try { await client.connect(); await client.ping(); clients.add(client); return client; }
       catch { if (client.isOpen) client.destroy(); return false; }
@@ -158,6 +217,7 @@ export async function startNativeRedisTopology({ topology, directory, password, 
     return record;
   }
   try {
+    if (tlsEnabled) certificates = await createTlsAuthorities(directory);
     const nodes = [await startNode('data-0')];
     if (topology === 'cluster') {
       nodes.push(await startNode('data-1'), await startNode('data-2'));
@@ -168,7 +228,7 @@ export async function startNativeRedisTopology({ topology, directory, password, 
         await nodes[i].client.sendCommand(['CLUSTER', 'SET-CONFIG-EPOCH', String(i + 1)]);
         await nodes[i].client.sendCommand(['CLUSTER', 'ADDSLOTSRANGE', ...ranges[i].map(String)]);
       }
-      for (const node of nodes.slice(1)) await nodes[0].client.sendCommand(['CLUSTER', 'MEET', HOST, String(node.port)]);
+      for (const node of nodes.slice(1)) await nodes[0].client.sendCommand(['CLUSTER', 'MEET', HOST, String(node.port), String(node.busPort)]);
       await until(async () => (await Promise.all(nodes.map(node => node.client.sendCommand(['CLUSTER', 'INFO']))))
         .every(info => /cluster_state:ok/.test(info)), 'REDIS_CLUSTER_QUORUM_FAILED');
     } else nodes.push(await startNode('data-1', { replicaOf: nodes[0] }));
@@ -207,13 +267,17 @@ export async function startNativeRedisTopology({ topology, directory, password, 
     } else {
       const sentinelRootNodes = monitors.map(monitor => ({ host: HOST, port: monitor.port }));
       connection = { topology, name: NAME, sentinelRootNodes,
-        nodeClientOptions: { username: 'merchant', password, database: 2, socket: {} },
-        sentinelClientOptions: { username: 'sentinel_reader', password: monitorPassword, socket: {} } };
+        nodeClientOptions: { username: 'merchant', password, database: 2,
+          socket: certificates ? { tls: true, rejectUnauthorized: true, ca: certificates.data.ca } : {} },
+        sentinelClientOptions: { username: 'sentinel_reader', password: monitorPassword,
+          socket: certificates ? { tls: true, rejectUnauthorized: true, ca: certificates.monitor.ca } : {} } };
       profile = { topology, name: NAME, sentinelRootNodes, database: 2, username: 'merchant', passwordEnv,
-        tls: 'local-plaintext', sentinelUsername: 'sentinel_reader', sentinelPasswordEnv, sentinelTls: 'local-plaintext' };
+        tls: certificates ? 'verify-full' : 'local-plaintext', sentinelUsername: 'sentinel_reader', sentinelPasswordEnv,
+        sentinelTls: certificates ? 'verify-full' : 'local-plaintext',
+        ...(certificates ? { caFile: certificates.data.sourceFile, sentinelCaFile: certificates.monitor.sourceFile } : {}) };
       const native = createSentinel({ RESP: 2, name: NAME, sentinelRootNodes,
-        nodeClientOptions: nodeOptions(nodes[0].port, adminPassword, 2),
-        sentinelClientOptions: nodeOptions(monitors[0].port, monitorAdminPassword),
+        nodeClientOptions: nodeOptions(nodes[0].port, adminPassword, 2, certificates?.data.ca),
+        sentinelClientOptions: nodeOptions(monitors[0].port, monitorAdminPassword, 0, certificates?.monitor.ca),
         commandOptions: { timeout: commandTimeout }, masterPoolSize: 1, replicaPoolSize: 0, scanInterval: 500 });
       native.on('error', () => {}); await native.connect(); database = adminFacade(native, topology);
     }
@@ -349,10 +413,20 @@ export async function startNativeRedisTopology({ topology, directory, password, 
       assert.equal(closed.state, 'CLOSED'); assert.equal(closed.active, 0); assert.equal(closed.connections, 0); assert.equal(closed.retiring, 0);
       stages.push({ stage: 'active-read-cancel-and-close', elapsedMs: Date.now() - start, status: closed });
       return { result: 'PASS', topology, dataProcesses: nodes.length, monitorProcesses: monitors.length,
+        ...(certificates ? { tls: { mode: 'verify-full', dataCaSha256: certificates.data.sha256,
+          sentinelCaSha256: certificates.monitor.sha256, independentAuthorities: true, subjectAltNames: ['localhost', '127.0.0.1'] } } : {}),
         dataAuthentication: 'generated-reader-and-admin', ...(monitors.length ? { monitorAuthentication: 'independent-generated-reader-and-admin' } : {}), stages };
     }
     stages.push({ stage: 'native-topology-ready', topology, dataProcesses: nodes.length, monitorProcesses: monitors.length });
+    const authorityFiles = certificates ? Object.fromEntries([certificates.data, certificates.monitor]
+      .map(certificate => [certificate.sourceName, certificate.sha256])) : {};
+    async function removeOriginalAuthorities() {
+      if (!certificates) return [];
+      if (!authoritiesRemoved) { await rm(certificates.sourceDirectory, { recursive: true }); authoritiesRemoved = true; }
+      return Object.entries(authorityFiles).map(([name, sha256]) => ({ name, sha256, originalRemoved: true }));
+    }
     return { topology, database, databaseIndex: topology === 'cluster' ? 0 : 2, connection, profile, key, close, exercise, readerAcl,
+      authorityFiles, removeOriginalAuthorities,
       requiredEnvironment: topology === 'sentinel' ? [passwordEnv, sentinelPasswordEnv].sort() : [passwordEnv],
       badConnection: () => topology === 'cluster'
         ? { ...connection, defaults: { ...connection.defaults, password: 'wrong' } }

@@ -2,6 +2,7 @@
 // Native TCP mode requires redis-server 7+. Optional upstash-rest uses an owned ephemeral database.
 // SF30_REDIS_JOURNEY_TOPOLOGY=cluster|sentinel adds native topology/failover fixtures
 // while preserving the same authoring workspace, generated buyer and release flow.
+// Add SF30_REDIS_JOURNEY_TLS=1 to the Sentinel mode for independent data/monitor CAs.
 // Both modes use the existing local x402 facilitator fixture.
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
@@ -177,6 +178,10 @@ try {
   const requiredEnvironment = fixture?.requiredEnvironment ?? [envName];
   assert.deepEqual(firstPackage.requiredEnvironment, requiredEnvironment);
   assert.deepEqual(verifiedFirst.requiredEnvironment, requiredEnvironment);
+  for (const [name, sha256] of Object.entries(fixture?.authorityFiles ?? {})) {
+    assert.equal(firstPackage.files[name]?.sha256, sha256);
+    assert.equal(verifiedFirst.files[name]?.sha256, sha256);
+  }
   const root = join(work, 'releases'); await initReleaseStore(root);
   const runtime = { port: 0, allowLocalFacilitator: true, facilitator: `http://127.0.0.1:${facilitator.address().port}` };
   await stageRelease(root, { id: 'first', redisPackage: firstPackage.directory, runtime });
@@ -187,6 +192,7 @@ try {
   const comparison = await compareReleases(root, 'first', 'second'); assert.equal(comparison.summary.paymentChanged, 4);
   assert.ok(comparison.runtimeChanges.some(change => change.field === 'redis'));
   await rm(authoring, { recursive: true });
+  if (fixture) topologyJourney.retainedAuthorities = await fixture.removeOriginalAuthorities();
   const retained = await inspectRelease(root, 'first'); assert.equal(retained.redis.queries.leaderboard.maxRows, 2);
   assert.deepEqual(retained.redis.credentialReferences, requiredEnvironment);
   const clientDirectory = join(root, 'releases', 'first', 'redis', 'package', 'client');
