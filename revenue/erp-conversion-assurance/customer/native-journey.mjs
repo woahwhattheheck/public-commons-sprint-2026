@@ -76,7 +76,7 @@ async function command(file, args, { home = originalHome, allowed = [0], extra =
       if (!allowed.includes(code)) return no(Object.assign(new Error('NATIVE_COMMAND_FAILED'), {
         code: 'NATIVE_COMMAND_FAILED', details: { executable: file, command: args.slice(0, 2), exit: code, stderr },
       }));
-      try { yes({ code, value: stdout.trim() ? JSON.parse(stdout) : null }); }
+      try { yes({ code, value: stdout.trim() ? JSON.parse(stdout) : null, stderr }); }
       catch { no(new Error('NATIVE_COMMAND_JSON_REQUIRED')); }
     });
   });
@@ -135,7 +135,8 @@ async function identity(profile) {
     need(current.pubkey === state.checkpoints['identity-' + profile].pubkey, 'ORIGINAL_AGX_IDENTITY_CHANGED');
     return current;
   }
-  const shown = await command(native, ['identity', 'show', '--profile', profile, '--json'], { allowed: [0, 1] });
+  const shown = await command(native, ['identity', 'show', '--profile', profile, '--json'], { allowed: [0, 3] });
+  need(shown.code === 0 || /has no identity/.test(shown.stderr), 'ORIGINAL_AGX_IDENTITY_READ_FAILED');
   const value = shown.code === 0 ? shown.value :
     (await command(native, ['identity', 'new', '--profile', profile, '--json'])).value;
   need(/^[a-f0-9]{64}$/.test(value.pubkey ?? '') && typeof value.npub === 'string', 'AGX_PUBLIC_IDENTITY_REQUIRED');

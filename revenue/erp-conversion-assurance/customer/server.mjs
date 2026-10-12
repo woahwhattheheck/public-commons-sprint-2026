@@ -60,11 +60,21 @@ export async function startCustomerWorkspace({ directory, port = 0 } = {}) {
   const transferDirectory = id => join(transferRoot, tokenId(id));
   const recordPath = id => join(transferDirectory(id), 'operation.json');
   async function saved(id) {
-    const value = JSON.parse(await readPrivate(recordPath(id), 4 * 1024 * 1024));
-    need(value.schema === 'erp-reconciliation.customer-transfer.v1' &&
-      value.id === id && value.customerId === customer.configuration.customerId,
-      'CUSTOMER_TRANSFER_INVALID');
-    return value;
+    // Atomic replacement can unlink an already-open previous operation record,
+    // changing that inode's ctime. Retry this mutable status read through the
+    // original strict private-file reader; immutable archives retain its checks.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const value = JSON.parse(await readPrivate(recordPath(id), 4 * 1024 * 1024));
+        need(value.schema === 'erp-reconciliation.customer-transfer.v1' &&
+          value.id === id && value.customerId === customer.configuration.customerId,
+          'CUSTOMER_TRANSFER_INVALID');
+        return value;
+      } catch (error) {
+        if (error.code !== 'FILE_CHANGED' || attempt === 3) throw error;
+        await new Promise(resolve => setImmediate(resolve));
+      }
+    }
   }
   async function write(value) {
     await atomic(recordPath(value.id), value);
