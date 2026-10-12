@@ -10,6 +10,7 @@ const LIMIT=16*1024*1024;
 const schema='sf88-study-extraction-eligibility-receiving/v1';
 const checkout=resolve(fileURLToPath(new URL('../../../../',import.meta.url)));
 const entry=fileURLToPath(new URL('./study-extraction-eligibility.py',import.meta.url));
+const ownerWrapper=fileURLToPath(new URL('./study-extraction-owned-child.py',import.meta.url));
 const absolute=value=>typeof value==='string'&&isAbsolute(value)&&resolve(value)===value;
 async function originalInput(file,input){
   try{
@@ -25,7 +26,7 @@ async function ownedPython({python,inputFile,resultFile,signal,timeoutMs}){
     'STUDY_ELIGIBILITY_RUNTIME_REQUIRED');
   if(signal?.aborted)throw signal.reason??new Error('STUDY_ELIGIBILITY_CANCELLED');
   const group=process.platform!=='win32';
-  const child=spawn(python,[entry,'--input',inputFile,'--output',resultFile],{
+  const child=spawn(python,[ownerWrapper,python,entry,'--input',inputFile,'--output',resultFile],{
     cwd:checkout,env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'},detached:group,stdio:['ignore','pipe','pipe']});
   let failure=null,ended=false,escalation=null,stdoutBytes=0,stderrBytes=0;
   const stdout=[],stderr=[];

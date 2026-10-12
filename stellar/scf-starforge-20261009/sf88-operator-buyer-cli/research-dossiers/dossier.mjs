@@ -17,6 +17,9 @@ import {eligibilityDigest,eligibilityInput,eligibilityModel,eligibilityPage,elig
 import {extractionDigest,extractionInput,studyExtractionModel,extractionPublicationContext,extractionPage,extractionReport,
   extractionSourcePointers,recordStudyExtractionOperation,validateStudyExtractionState,validateStudyExtractionTransition} from './study-extraction.mjs';
 import {extractionMarkdown,extractionHtml} from './study-extraction-report.mjs';
+import {riskOfBiasDigest,riskOfBiasInput,riskOfBiasModel,riskOfBiasPage,riskOfBiasReport,riskOfBiasExport,
+  recordRiskOfBiasOperation,validateRiskOfBiasState,validateRiskOfBiasTransition} from './risk-of-bias/index.mjs';
+import {riskOfBiasRegistry} from './risk-of-bias/registry.mjs';
 import {publicationDigest,publicationInput,extractionPublicationModel,extractionPublicationPage,extractionPublicationReport,
   extractionPublicationExport,recordExtractionPublication,validateExtractionPublicationState,validateExtractionPublicationTransition} from './extraction-publication.mjs';
 
@@ -41,6 +44,7 @@ const summary = state => ({
   selectedCount: state.selections.filter(selection => selection.selected).length,
   findingCount: state.findings.length, citationReviewCount:(state.citationReviews??[]).length,
   eligibilityReviewCount:(state.eligibilityEvents??[]).filter(value=>value.action==='create-review').length,
+  riskOfBiasReviewCount:(state.riskOfBiasEvents??[]).filter(value=>value.action==='create-review').length,
   extractionFormCount:(state.extractionEvents??[]).filter(value=>value.action==='create-form').length,
   extractionPublicationCount:(state.extractionPublicationEvents??[]).filter(value=>value.action==='publish-table').length,
 });
@@ -235,7 +239,7 @@ export async function openDossierStore(directory, { providers = {}, extractionOp
     const id = newId('d'), now = timestamp();
     const state = { schema: DOCUMENT, id, title, description, revision: 1,
       previous: null, createdAt: now, updatedAt: now, change: 'Created dossier',
-      questions: [], editions: [], selections: [], findings: [], citationReviews: [], eligibilityEvents: [], extractionEvents: [], extractionPublicationEvents: [] };
+      questions: [], editions: [], selections: [], findings: [], citationReviews: [], eligibilityEvents: [], extractionEvents: [], extractionPublicationEvents: [], riskOfBiasEvents: [] };
     await writeJson(join(await revisionsDirectory(id, true), filename(1)),
       { sha256: digest(jsonBytes(state)), state }, { exclusive: true });
     return projection === 'metadata' ? getMetadata(id) : get(id);
@@ -503,6 +507,41 @@ export async function openDossierStore(directory, { providers = {}, extractionOp
   }
 
 
+  async function riskOfBias(id,{revision,...options}={}){
+    need((options.offset??0)===0||revision!==undefined,'RESEARCH_PAGE_REVISION_REQUIRED');
+    const {state}=await head(id,revision),projected=await projections(state,{references:false});
+    return riskOfBiasPage(state,riskOfBiasModel(state,projected,riskOfBiasRegistry(state,projected)),{...options,revision});
+  }
+  async function reviewRiskOfBias(id,{projection='metadata',...value}={}){
+    need(['metadata','full'].includes(projection),'RESEARCH_PROJECTION_INVALID');
+    const request=riskOfBiasInput(value),requestSha256=riskOfBiasDigest(request);
+    async function recovered(state){
+      const existing=(state.riskOfBiasEvents??[]).find(item=>item.requestId===request.requestId);
+      if(!existing)return null;
+      need(existing.requestSha256===requestSha256,'RISK_OF_BIAS_REQUEST_CHANGED');
+      return {dossier:projection==='metadata'?metadata(state):await get(id),operation:clone(existing),duplicate:true};
+    }
+    const prior=await recovered((await head(id)).state);if(prior)return prior;
+    let operation;
+    try{
+      const dossier=await commit(id,request.expectedRevision,'Appraisal: '+request.action,async(state,previous)=>{
+        const projected=await projections(previous,{references:false});
+        operation=await recordRiskOfBiasOperation(state,projected,request,timestamp(),
+          riskOfBiasRegistry(previous,projected),extractionOptions);
+      },{projection});
+      return {dossier,operation:clone(operation),duplicate:false};
+    }catch(error){
+      if(error.code==='REVISION_CONFLICT'){
+        const saved=await recovered((await head(id)).state);if(saved)return saved;
+      }
+      throw error;
+    }
+  }
+  async function exportRiskOfBias(id,{revision,...options}={}){
+    const {state}=await head(id,revision),projected=await projections(state,{references:false});
+    return riskOfBiasExport(state,riskOfBiasModel(state,projected,riskOfBiasRegistry(state,projected)),options);
+  }
+
   async function extraction(id,{revision,...options}={}){
     need((options.offset??0)===0||revision!==undefined,'RESEARCH_PAGE_REVISION_REQUIRED');
     const {state}=await head(id,revision),projected=await projections(state,{references:false});
@@ -613,6 +652,8 @@ export async function openDossierStore(directory, { providers = {}, extractionOp
     report.eligibility=eligibilityReport(current,eligibilityModel(current,reportProjected));
     const extractionModel=studyExtractionModel(current,reportProjected);
     report.extraction=extractionReport(current,extractionModel);
+    report.riskOfBias=riskOfBiasReport(current,riskOfBiasModel(current,reportProjected,
+      riskOfBiasRegistry(current,reportProjected)));
     report.extractionPublications=extractionPublicationReport(current,
       extractionPublicationModel(current,extractionPublicationContext(current,extractionModel)));
     report.citationUpdates=citationModel.notices.map(({noticeId,noticeDoi,targetDoi,title,type,date,status,lastReview})=>
@@ -685,6 +726,7 @@ export async function openDossierStore(directory, { providers = {}, extractionOp
       validateEligibilityState(state,editions,knownOccurrences);
       validateStudyExtractionState(state);
       validateExtractionPublicationState(state);
+      validateRiskOfBiasState(state,editions,knownOccurrences);
       const findings = new Set();
       for (const finding of state.findings) {
         need(object(finding) && typeof finding.id === 'string' && /^f_[a-f0-9-]{36}$/.test(finding.id) &&
@@ -708,13 +750,16 @@ export async function openDossierStore(directory, { providers = {}, extractionOp
     const hasEligibility=(state.eligibilityEvents?.length??0)>(previous?.eligibilityEvents?.length??0);
     const hasExtraction=(state.extractionEvents?.length??0)>(previous?.extractionEvents?.length??0);
     const hasPublication=(state.extractionPublicationEvents?.length??0)>(previous?.extractionPublicationEvents?.length??0);
-    const projected=(hasCitation||hasEligibility||hasExtraction||hasPublication)&&previous?
+    const hasRiskOfBias=(state.riskOfBiasEvents?.length??0)>(previous?.riskOfBiasEvents?.length??0);
+    const projected=(hasCitation||hasEligibility||hasExtraction||hasPublication||hasRiskOfBias)&&previous?
       await projections(previous,{references:false,readContent}):undefined;
     validateCitationReviewTransition(previous,state,projected);
     validateEligibilityTransition(previous,state,projected);
     await validateStudyExtractionTransition(previous,state,projected,extractionOptions);
     const context=hasPublication&&previous?extractionPublicationContext(previous,studyExtractionModel(previous,projected)):undefined;
     await validateExtractionPublicationTransition(previous,state,context);
+    const riskRegistry=hasRiskOfBias&&previous?riskOfBiasRegistry(previous,projected):undefined;
+    await validateRiskOfBiasTransition(previous,state,projected,riskRegistry,extractionOptions);
   }
 
   async function reopen(portable) {
@@ -886,6 +931,7 @@ export async function openDossierStore(directory, { providers = {}, extractionOp
   return Object.freeze({ directory, list, create, get, getMetadata, readRetainedEdition, listRevisions, update, addQuestion, updateQuestion,
     receive, previewSourceBundle, receiveSourceBundle, receiveBuyerResult, receiveReference, selectEvidence, updateSelection, addFinding, updateFinding,
     citationUpdates,reviewCitationUpdate,eligibility,reviewEligibility,exportEligibility,
+    riskOfBias,reviewRiskOfBias,exportRiskOfBias,
     extraction,extractionSourceValues,reviewExtraction,exportExtraction,
     extractionPublications,reviewExtractionPublication,exportExtractionPublication,
     compare, exportDossier, exportStream, reopen, reopenStream });
