@@ -5,6 +5,7 @@ import {readResearchHostFile} from '../research-dossiers/workspace-files.mjs';
 import {ResearchWorkspaceClient} from '../research-dossiers/workspace-client.mjs';
 import {need,object,parseJson} from '../node/store.mjs';
 import {isResearchCustomerCall,runResearchCustomerCall} from './research-customer-delivery.mjs';
+import {isResearchCommerceCall,runResearchCommerceCall} from './research-commerce-delivery.mjs';
 import {createResearchDocumentSource} from './research-document-source.mjs';
 import {citationReviewInput,citationDigest} from '../research-dossiers/citation-updates.mjs';
 import {exportCitationFile,receiveCitationFile} from './research-citation-delivery.mjs';
@@ -17,7 +18,7 @@ const safeCode=value=>typeof value==='string'&&/^[A-Z0-9_]{1,120}$/.test(value)?
 function errorRecord(error){
   const record={error:safeCode(error?.code)};
   for(const key of ['status','outcomeUnknown','method','route','recovery','requestId','operationId',
-    'destinationPublished','file','sourceCleanupFailed','clientWarnings','openAlexImport'])
+    'destinationPublished','file','sourceCleanupFailed','clientWarnings','openAlexImport','researchCommerce','closeError'])
     if(error?.[key]!==undefined)record[key]=error[key];
   return record;
 }
@@ -94,6 +95,8 @@ function originalResearchClient(request,{signal}={}){
 export async function runResearchCall(request,{signal}={}){
   need(object(request)&&request.schema===SCHEMA&&typeof request.action==='string'&&object(request.input),
     'RESEARCH_PYTHON_REQUEST_INVALID');
+  if(isResearchCommerceCall(request.action))return runResearchCommerceCall(request,{signal,
+    openClient:()=>originalResearchClient(request,{signal})});
   if(isResearchCustomerCall(request.action))return runResearchCustomerCall(request,{signal,
     openClient:options=>originalResearchClient({...request,...options},{signal})});
   if(request.action==='eligibility-input')
@@ -124,22 +127,85 @@ export async function runResearchCall(request,{signal}={}){
   }finally{
     try{await client.close();}
     catch(error){
-      if(result)result.sourceCleanupFailed=safeCode(error?.code);
-      else throw error;
+      if(result){
+        result.sourceCleanupFailed=safeCode(error?.code);
+        Object.defineProperty(result,'close',{configurable:true,enumerable:false,value:()=>client.close()});
+      }else throw error;
     }
   }
   return result;
 }
+function writeResearchOutput(stream,text){
+ return new Promise((resolve,reject)=>{
+  let settled=false;
+  const finish=error=>{
+   if(settled)return;settled=true;stream.removeListener('error',onError);
+   error?reject(error):resolve();
+  },onError=error=>finish(error);
+  stream.once('error',onError);
+  try{stream.write(text,finish);}catch(error){finish(error);}
+ });
+}
+async function researchMain(){
+ const controller=new AbortController();
+ const owners=new Set();
+ let result,acquiring=true,finished=false,closing=null,keepAlive=null,primary=null;
+ const releaseSignals=()=>{
+  if(finished&&!acquiring&&!owners.size&&!closing){
+   if(keepAlive!==null){clearInterval(keepAlive);keepAlive=null;}
+   process.removeListener('SIGTERM',cancel);process.removeListener('SIGINT',cancel);
+  }
+ };
+ const retainFailure=()=>{if(owners.size&&keepAlive===null)keepAlive=setInterval(()=>{},1000);};
+ const closeOwners=()=>{
+  if(closing)return closing;
+  if(acquiring)return Promise.resolve();
+  closing=(async()=>{
+   let first;
+   for(const owner of [...owners]){
+    try{await owner.close();owners.delete(owner);}
+    catch(error){first??=error;}
+   }
+   if(first){retainFailure();throw first;}
+  })().finally(()=>{closing=null;releaseSignals();});
+  return closing;
+ };
+ const report=async error=>{
+  process.exitCode=1;
+  try{await writeResearchOutput(process.stderr,JSON.stringify({error:safeCode(error?.code)})+'\n');}
+  catch{process.exitCode=1;}
+ };
+ const cancel=()=>{
+  controller.abort();
+  if(!acquiring)void closeOwners().catch(report);
+ };
+ process.on('SIGTERM',cancel);process.on('SIGINT',cancel);
+ try{
+  need(process.argv.length===4&&process.argv[2]==='--request','RESEARCH_PYTHON_REQUEST_FILE_REQUIRED');
+  const request=parseJson(await readResearchHostFile(resolve(process.argv[3]),32*1024*1024,{privateFile:true}));
+  result=await runResearchCall(request,{signal:controller.signal});
+  if(typeof result?.close==='function')owners.add(result);
+ }catch(error){
+  primary=error;
+  if(typeof error?.close==='function')owners.add(error);
+  result={mode:MODE,ok:false,...errorRecord(error)};
+ }finally{acquiring=false;}
+ // All acquired handles remain owned through native JSON publication. Repeated
+ // signals retry only unfinished close operations; the existing Python Runtime
+ // still owns its original subprocess cancellation and attempt journal.
+ try{await closeOwners();}
+ catch(error){
+  primary??=error;result.sourceCleanupFailed=safeCode(error?.code);
+  retainFailure();
+ }
+ try{await writeResearchOutput(process.stdout,JSON.stringify(result)+'\n');}
+ catch(error){
+  primary??=error;process.exitCode=1;
+  try{await closeOwners();}catch(closeError){primary.closeError=safeCode(closeError?.code);retainFailure();}
+ }
+ if(!result.ok||primary)await report(primary??{code:result.error});
+ finished=true;releaseSignals();
+}
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
-  let result,controller=new AbortController();
-  const cancel=()=>controller.abort();
-  process.once('SIGTERM',cancel);process.once('SIGINT',cancel);
-  try{
-    need(process.argv.length===4&&process.argv[2]==='--request','RESEARCH_PYTHON_REQUEST_FILE_REQUIRED');
-    const request=parseJson(await readResearchHostFile(resolve(process.argv[3]),32*1024*1024,{privateFile:true}));
-    result=await runResearchCall(request,{signal:controller.signal});
-  }catch(error){result={mode:MODE,ok:false,...errorRecord(error)};}
-  finally{process.removeListener('SIGTERM',cancel);process.removeListener('SIGINT',cancel);}
-  process.stdout.write(JSON.stringify(result)+'\n');
-  if(!result.ok){process.stderr.write(JSON.stringify({error:result.error})+'\n');process.exitCode=1;}
+ await researchMain();
 }

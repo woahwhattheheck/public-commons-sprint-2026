@@ -364,3 +364,7 @@ The complete operating progression is:
 | Reopen | Retained completed archive and original request/results after later work and donor relocation |
 
 The first actual native merchant, payment and receiving results belong with that existing programme's source and operation record. Their exact IDs, bytes and source selections are carried forward into the ordinary customer and grant delivery.
+
+## Scientific Python customer workflow
+
+The same paid publication, original Buyer approval and retrieval, complete archive and editable receiving are available through the installed Python Research client. Its [full operating guide](../../python/RESEARCH-COMMERCE.md) includes typed original inputs, complete retained calls and exports, local archive receiving, explicit native replay and the runnable [two-workspace programme](../../python/examples/research_paid_delivery.py). The programme continues an actual saved delivery through later customer correction and original receiving replay using the existing merchant, Buyer and Research owners.
