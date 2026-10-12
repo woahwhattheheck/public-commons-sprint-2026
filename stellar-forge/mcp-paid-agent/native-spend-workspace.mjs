@@ -109,6 +109,7 @@ export async function configureMcpSpendingModule(configPath, modulePath) {
   const source = [
     'import {openMcpSpendingHost, readMcpSpendingHost} from ' + JSON.stringify(import.meta.url) + ';',
     'const configPath = ' + JSON.stringify(resolve(configPath)) + ';',
+    'export const spendingConfigurationFile = configPath;',
     'const configured = await readMcpSpendingHost(configPath);',
     'export const openOperator = ({environment = process.env} = {}) => openMcpSpendingHost(configPath,{environment});',
     '// Declarative host metadata is available before a signing operator is needed.',

@@ -78,6 +78,10 @@ def run():
         if governor.db.execute("PRAGMA quick_check").fetchone()[0] != "ok":
             raise ValueError("snapshot integrity")
         checkpoint = relay.checkpoint(governor)
+        # The original reservation() method opens its own transaction. Reuse the
+        # original audited projection inside this immutable snapshot transaction,
+        # then apply the same exact original request-digest comparison.
+        audited = governor._audit()
         prefix = values.get("expected_checkpoint")
         if prefix is not None:
             sequence, mac = prefix.get("sequence"), prefix.get("journalMac")
@@ -91,7 +95,9 @@ def run():
         for entry in sorted(state.iterdir()):
             if entry.name.endswith(".json") and original.UUID.fullmatch(entry.name[:-5]):
                 binding, request, request_sha = original.record_at(state, entry.name[:-5], args)
-                row = original.native_reservation(governor, request)
+                row = audited.get(request["request_id"])
+                if row is not None and not original.hmac.compare_digest(row["request_digest"], request_sha):
+                    raise ValueError("original reservation binding changed")
                 bindings[request["request_id"]] = (binding, request, request_sha, row)
                 if row and row["state"] == "reserved":
                     pending += 1
@@ -120,9 +126,13 @@ def run():
                     row["actual"] != request["max_amount"]):
                 raise ValueError("settled finality changed")
             finals += 1
+        references = [{"request_id": request_id, "request_sha256": value[2],
+            "actor": value[1]["actor"], "service": value[1]["service"],
+            "reservationState": value[3]["state"] if value[3] else None}
+            for request_id, value in sorted(bindings.items())]
         print(json.dumps({"status": "NATIVE_STATE_VERIFIED", "checkpoint": checkpoint,
                           "boundRequests": len(bindings), "reservedRequests": pending,
-                          "finalityRecords": finals, **({"archivePrefix": prefix} if prefix is not None else {})}, sort_keys=True), flush=True)
+                          "finalityRecords": finals, "boundRequestReferences": references, **({"archivePrefix": prefix} if prefix is not None else {})}, sort_keys=True), flush=True)
     finally:
         governor.close()
 

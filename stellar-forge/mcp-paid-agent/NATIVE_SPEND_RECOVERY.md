@@ -34,7 +34,9 @@ node stellar-forge/mcp-paid-agent/native-spend-recovery.mjs snapshot \
 
 The result returns `manifestSha256`, `recordSha256`, the full original
 `checkpoint`, `ledgerIdentity`, the original canonical `owner` paths, and native
-request/finality counts. Save these values with the original application export
+request/finality counts. Its \`boundRequestReferences\` contain each original
+request UUID/digest, actor, service, and reservation state for the private
+application export's exact operation join. Save these values with the original application export
 receipt. A completed capture also preserves reserved requests that have not yet
 received finality.
 
@@ -151,5 +153,7 @@ await withNativeMcpSpendingRecoveryEnvironment(selectedBundle, async ({environme
 The callback receives a new environment containing only the three recovered
 SF36 additions. The wallet and provider environment still comes from the
 trusted receiving host. An existing supplied SF36 value must match the encrypted
-original. The generated native host factory accepts this explicit environment,
+original. The generated module also exports \`spendingConfigurationFile\` so the
+private application exporter can compare the selected module's actual owner to
+its requested native host configuration. The native host factory accepts this explicit environment,
 while its existing zero-argument and lazy module interfaces continue to work.
