@@ -71,7 +71,7 @@ installation instructions are in
 
 The included example is a real gRPC server with three clearly labelled local
 demonstration rows. It exposes Summary and a visible streaming Watch method.
-Only Summary can become a paid unary route.
+Summary is a unary route. A captured server-streaming method can become a paid NDJSON route after explicit stream limits are saved; the complete runnable server-stream example and workflow are in [Streaming](STREAMING.md).
 
 In one terminal, choose an example-only authorization value and start the server:
 
@@ -99,8 +99,11 @@ external account.
    credentials. Set the merchant-host protobuf directory and one or more entry
    files, then capture. Imported local files and required standard descriptors
    are retained with their source identities.
-2. On **Methods & terms**, choose a captured unary method. Streaming methods
-   remain visible but cannot be selected for these request/response HTTP routes.
+2. On **Methods & terms**, choose a captured unary or server-streaming method.
+   For server streams, first enable explicit byte, record and deadline limits on
+   Source. Client-streaming and bidirectional application methods remain visible
+   for inspection. [Streaming](STREAMING.md) covers exact NDJSON capture, payment,
+   customer delivery and retained release/recovery.
 3. Edit the exact request JSON or the generated fields. Inclusion checkboxes
    distinguish absent fields from explicit false, zero and empty values. Nested
    messages, maps and repeated values use JSON. The complete request and response
@@ -181,6 +184,15 @@ The original seller still applies its own route, schema and payment-envelope
 limits. A valid large protobuf closure may need a smaller selected public method
 set to fit the advertised buyer contract. The compiler reports that concrete
 limit before publishing a prepared merchant.
+
+## Server-streaming methods
+
+The same operator and merchant can retain a single-request native server stream
+as exact typed NDJSON. Complete and partial captures keep their original call
+IDs, bytes, SHA-256 and native terminal status. The browser downloads the retained
+file without buffering the whole stream, and the original SF88 Node/Python buyer
+consumes its existing response-file contract. See the complete
+[server-streaming workflow](STREAMING.md).
 
 ## Retained operations and recovery
 
