@@ -49,7 +49,7 @@ The source package supports ordinary Python inspection and receiving:
 
 A provider, style or resource error from an installed QGIS runtime is returned by the native operation. Only a missing QGIS module is treated as unavailable in auto mode.
 
-The migration workspace retains complete application editions in `state.migration.software`. Each original `{id, path, source, files}` record identifies its complete file inventory under `migration/software/<closure SHA>/stac/`. This source includes the migration operator, original vector engine, paired QGIS engine, guides and the independent receiving entrypoint. The QGIS writer also carries its own original `software/starforge_stac/` files; both sets remain in the same complete archive. Open the received workspace through the selected migration application, then choose any original saved map. All retained source data and style resources resolve inside the received workspace. The complete received workspace can itself be exported and received onward with the same source, mapping, project and operation identities.
+The migration workspace retains complete application editions in `state.migration.software`. Each original `{id, path, source, files}` record identifies its complete file inventory under `migration/software/<closure SHA>/stac/`. `path` names that `stac` directory; the original ordered `source.files` descriptors determine the software ID and exactly map to the retained workspace-relative files. This source includes the migration operator, original vector engine, paired QGIS engine, guides and the independent receiving entrypoint. The QGIS writer also carries its own original `software/starforge_stac/` files; both sets remain in the same complete archive. Open the received workspace through the selected migration application, then choose any original saved map. All retained source data and style resources resolve inside the received workspace. The complete received workspace can itself be exported and received onward with the same source, mapping, project and operation identities.
 
 ## Python interface
 
@@ -155,7 +155,7 @@ This one operation builds the complete selected edition sequence, verifies each 
 
 It then starts a separate selected-QGIS process using the **received application's own source** to reopen every saved map. It exports that received workspace onward and repeats the independent native reopen at the onward location. The helper resolves the entrypoint from the chosen `state.migration.software` record and verifies every declared file before starting the child. It then checks that the child's migration, vector and QGIS modules, including the entrypoint and publication receiver, are exact declared members of that independently received application. The output retains the selected software ID, metadata identity, entrypoint descriptor and loaded source-file descriptors. The onward receiver uses the same software ID.
 
-If the workspace retains several application editions, the helper selects the one whose complete source matches its running installation. Set `softwareId` in the original configuration when choosing another retained edition or when no single edition matches. This is an original software identity, not a filesystem path. A direct independent reopen accepts `--software-id` with that same retained ID. All application bytes and recorded source paths remain relative to the workspace.
+The journey follows the exact `softwareId` recorded by its final selected project delivery. It retains every selected delivery's original software reference and carries the chosen ID through independent and onward receiving. Set `softwareId` in the original configuration when explicitly selecting another retained application edition. A direct independent reopen with several retained editions also needs that explicit ID. This is an original software identity, not a filesystem path. A direct independent reopen accepts `--software-id` with that same retained ID. All application bytes and recorded source paths remain relative to the workspace.
 
 The resulting output directory contains:
 
@@ -198,7 +198,7 @@ Use the exact `workspaceId` and `snapshotSha256` from the retained `workspace-in
   --remap /new-host/migration-host-paths.json
 ```
 
-The helper verifies that the selected workspace has the same identity, original edition documents, event prefix and committed requests. Every retained source, project and migration record must remain present unchanged. A workspace at the same revision must match the complete retained snapshot exactly. A later revision must continue that history; unfinished build steps still use their original saved CAS revisions. The move also verifies all declared migration files.
+The helper verifies that the selected workspace has the same identity, original edition documents, event prefix and committed requests. Every retained source, project and immutable migration capture, plan, edition, delivery, comparison, input and software record must remain present unchanged. A workspace at the same revision must match the complete retained snapshot exactly. A later revision must continue that history; unfinished build steps still use their original saved CAS revisions. The move also verifies all declared migration files.
 
 The original configuration, snapshot, action inputs and completed result remain unchanged. Each explicit host mapping has a small saved binding in `host-bindings/`. Reusing that mapping after further committed progress verifies the original history without requiring the current revision to stay frozen.
 
@@ -218,3 +218,5 @@ For an operation created by an earlier helper that has no `workspace-input.json`
 - [GDAL GeoPackage driver](https://gdal.org/en/stable/drivers/vector/gpkg.html).
 
 QGZ retains the native QGIS project and auxiliary project data. The maintained workspace additionally carries each referenced source, style and local resource file. Physical native field representations retain the original vector producer's complete field codecs and exact-value/source-row sidecars.
+
+Historical software editions keep their original file contracts. The receiving process first resolves the selected `softwareId`, then verifies that edition’s complete manifest, original file bytes and receiving entrypoint. Older, unselected editions remain in the workspace and archive without being required to contain newer application files.

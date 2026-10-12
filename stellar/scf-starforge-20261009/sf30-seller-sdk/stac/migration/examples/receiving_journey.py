@@ -60,7 +60,7 @@ def _same_history(before, current):
                 "JOURNEY_SOURCE_CHANGED", "Preserve the original retained sources and projects.", collection=name)
     old_migration = before["state"].get("migration", {})
     migration = current["state"].get("migration", {})
-    for name in ("captures", "plans", "editions", "projectDeliveries", "reviews", "inputs", "software"):
+    for name in ("captures", "plans", "editions", "projectDeliveries", "reviews", "inputs", "software", "comparisons"):
         retained = {row["id"]: row for row in migration.get(name, [])}
         require(all(retained.get(row["id"]) == row for row in old_migration.get(name, [])),
                 "JOURNEY_MIGRATION_CHANGED", "Preserve the original migration records.", collection=name)
@@ -178,17 +178,30 @@ def _current_locations(root, workspace):
     }
 
 
-def _software_candidates(workspace):
-    """Resolve the complete application only through retained software metadata."""
+def _software_candidates(workspace, software_id=None):
+    """Resolve the selected application without upgrading historical source contracts."""
     rows = workspace.read().get("migration", {}).get("software", [])
     require(isinstance(rows, list) and rows, "COMPLETE_MIGRATION_SOFTWARE",
             "Retain the complete migration application in the original workspace software records.")
-    candidates, identities = [], set()
+    identities = set()
     for row in rows:
         require(isinstance(row, dict) and isinstance(row.get("id"), str) and row["id"]
-                and row["id"] not in identities and isinstance(row.get("files"), list),
-                "MIGRATION_SOFTWARE_RECORD", "Keep each original software record and complete file inventory.")
+                and row["id"] not in identities, "MIGRATION_SOFTWARE_RECORD",
+                "Keep each original software record under its unique original identity.")
         identities.add(row["id"])
+    if software_id is not None:
+        require(isinstance(software_id, str) and software_id, "MIGRATION_SOFTWARE_SELECTION",
+                "Use an original retained software ID.")
+        selected = [row for row in rows if row["id"] == software_id]
+    else:
+        selected = rows
+    require(len(selected) == 1, "MIGRATION_SOFTWARE_SELECTION",
+            "Select the original application edition explicitly when several retained editions are available.",
+            softwareIds=[row["id"] for row in rows])
+    candidates = []
+    for row in selected:
+        require(isinstance(row.get("files"), list), "MIGRATION_SOFTWARE_RECORD",
+                "Keep the selected software's complete original file inventory.")
         prefix = original_model.relative_name(row.get("path"))
         require(prefix.startswith("migration/software/"), "MIGRATION_SOFTWARE_PATH",
                 "Use the declared original migration software location.")
@@ -198,6 +211,20 @@ def _software_candidates(workspace):
             require(record["path"].startswith(prefix + "/") and record["path"] not in records,
                     "MIGRATION_SOFTWARE_CLOSURE", "Keep the selected software's complete original file closure.")
             records[record["path"]] = record
+        source = row.get("source")
+        require(isinstance(source, dict) and source.get("schema") == "starforge.gis-migration-native-source.v1"
+                and isinstance(source.get("files"), list)
+                and native_files.digest(source["files"]) == row["id"],
+                "MIGRATION_SOFTWARE_IDENTITY", "Bind the selected source to its original software closure identity.")
+        expected = {}
+        for item in source["files"]:
+            declared = original_model.descriptor(item)
+            name = prefix + "/" + declared["path"]
+            require(name not in expected, "MIGRATION_SOFTWARE_CLOSURE",
+                    "Declare each complete original application source file once.")
+            expected[name] = {**declared, "path": name}
+        require(records == expected, "MIGRATION_SOFTWARE_CLOSURE",
+                "Retain the complete file set identified by the original software source manifest.")
         entries = [record for name, record in records.items()
                    if name.endswith("/stac/migration/examples/receiving_journey.py")]
         require(len(entries) == 1, "COMPLETE_MIGRATION_SOFTWARE",
@@ -215,35 +242,8 @@ def _software_candidates(workspace):
     return candidates
 
 
-def _matches_running_source(candidate):
-    """Choose a retained edition only when its complete source matches this installation."""
-    current = _COMPONENT.parent
-    selected = candidate["stac"] + "/"
-    for name, record in candidate["records"].items():
-        if not name.startswith(selected):
-            continue
-        try:
-            path = original_model.member(current, name[len(selected):])
-            file_digest(path, expected=record)
-        except (OSError, ValueError):
-            return False
-    return True
-
-
 def _select_software(workspace, software_id=None):
-    candidates = _software_candidates(workspace)
-    if software_id is not None:
-        require(isinstance(software_id, str) and software_id, "MIGRATION_SOFTWARE_SELECTION",
-                "Use an original retained software ID.")
-        selected = [row for row in candidates if row["id"] == software_id]
-    elif len(candidates) == 1:
-        selected = candidates
-    else:
-        selected = [row for row in candidates if _matches_running_source(row)]
-    require(len(selected) == 1, "MIGRATION_SOFTWARE_SELECTION",
-            "Select the original application edition explicitly when several retained editions are available.",
-            softwareIds=[row["id"] for row in candidates])
-    choice = selected[0]
+    choice = _software_candidates(workspace, software_id)[0]
     for record in choice["records"].values():
         file_digest(original_model.member(workspace.root, record["path"]), expected=record)
     return choice
@@ -380,7 +380,7 @@ def perform(config_file, remap=None):
         return {**result, "locations": locations}
 
     requests = set()
-    source_ids, built_projects = [], []
+    source_ids, built_projects, delivery_software = [], [], []
     for index, selected in enumerate(config["editions"], 1):
         require(isinstance(selected, dict) and isinstance(selected.get("editionId"), str),
                 "JOURNEY_EDITION", "Use the original retained migration edition IDs.")
@@ -412,7 +412,14 @@ def perform(config_file, remap=None):
         _keep(root, "builds/" + value_sha(request_id) + ".json", original)
         source_ids.append(result["projectBuild"]["sourceId"])
         built_projects.extend(result["projectBuild"]["projects"])
+        delivered = result["delivery"]
+        require(isinstance(delivered.get("softwareId"), str) and delivered["softwareId"],
+                "MIGRATION_SOFTWARE_SELECTION", "Retain the complete software edition used by this original project delivery.")
+        delivery_software.append({"editionId": selected["editionId"], "requestId": request_id,
+                                  "deliveryId": delivered["id"], "softwareId": delivered["softwareId"]})
 
+    selected_software_id = config.get("softwareId", delivery_software[-1]["softwareId"])
+    _select_software(workspace, selected_software_id)
     comparisons = []
     for index in range(1, len(source_ids)):
         if source_ids[index - 1] == source_ids[index]:
@@ -441,7 +448,7 @@ def perform(config_file, remap=None):
     receiver = incoming["workspace"]
     require(again["replayed"] and value_sha(receiver.snapshot()) == inspected["snapshotSha256"],
             "JOURNEY_SNAPSHOT", "The independent receiving must retain the exact full original snapshot.")
-    independent = _independent_receiver(receiver, root / "independent-reopen.json", config.get("softwareId"))
+    independent = _independent_receiver(receiver, root / "independent-reopen.json", selected_software_id)
     onward = _archive(root, "onward-archive.json", receiver, "onward-migration.zip", receiver.read()["revision"])
     onward_received = receive(root / "onward-migration.zip", root / "onward-workspace",
                               expected_sha256=onward["sha256"], native_reopen="required", progress=_progress)
@@ -454,6 +461,7 @@ def perform(config_file, remap=None):
         "workspaceId": inspected["workspaceId"], "revision": inspected["revision"],
         "editionIds": [row["editionId"] for row in config["editions"]], "sourceIds": source_ids,
         "builtProjects": built_projects, "comparisons": comparisons, "archive": archive,
+        "receivingSoftware": {"selectedId": selected_software_id, "projectDeliveries": delivery_software},
         "snapshotSha256": inspected["snapshotSha256"], "files": inspected["fileCount"],
         "receiving": incoming["receipt"], "reopened": reopened, "independent": independent,
         "onwardArchive": onward, "onwardReceiving": onward_received["receipt"],
