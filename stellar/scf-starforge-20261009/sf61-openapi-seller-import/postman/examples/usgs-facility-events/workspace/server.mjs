@@ -21,8 +21,9 @@ function download(res,bytes,type,name){
   res.writeHead(200,{'Content-Type':type,'Content-Disposition':'attachment; filename="'+filename(name,'')+'"','Content-Length':bytes.byteLength});
   res.end(bytes);
 }
-export async function startFacilityServer({workspace,port=0,sourceIdentity=null,fetch:transport=globalThis.fetch}={}){
+export async function startFacilityServer({workspace,port=0,sourceIdentity=null,fetch:transport=globalThis.fetch,beforeStoreClose}={}){
   need(Number.isInteger(port)&&port>=0&&port<=65535,'Choose a valid local port.');
+  need(beforeStoreClose===undefined||typeof beforeStoreClose==='function','The launch cleanup must be a function.');
   const store=await openFacilityStore(workspace),captures=new SourceCaptures(store,{fetch:transport});
   const token=randomBytes(32).toString('base64url');let origin,closing=false;
   const server=createServer(async(req,res)=>{
@@ -136,8 +137,12 @@ export async function startFacilityServer({workspace,port=0,sourceIdentity=null,
   });
   try{
     await new Promise((resolve,reject)=>{server.once('error',reject);server.listen({host:'127.0.0.1',port},()=>{server.off('error',reject);resolve();});});
-    origin='http://127.0.0.1:'+server.address().port;
-  }catch(error){await captures.close();store.close();throw error;}
+    origin=new URL('http://127.0.0.1:'+server.address().port).origin;
+  }catch(error){
+    try{await captures.close();}catch{}
+    try{store.close();}catch{}
+    throw error;
+  }
   let closePromise;
   async function close(){
     if(closePromise)return closePromise;
@@ -146,6 +151,8 @@ export async function startFacilityServer({workspace,port=0,sourceIdentity=null,
       let failure;
       try{await captures.close();}catch(error){failure=error;}
       try{await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));}catch(error){failure??=error;}
+      // The original writer still owns its lease while the managed launch is retired.
+      try{await beforeStoreClose?.();}catch(error){failure??=error;}
       try{store.close();}catch(error){failure??=error;}
       if(failure)throw failure;
     })();
