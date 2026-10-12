@@ -88,7 +88,7 @@ export function createOecdClient({ baseUrl, token, fetchImpl = globalThis.fetch,
     exportProject: briefingId => request('/api/oecd/export-project', { body: { briefing_id: id(briefingId) }, raw: true }),
     importProject: body => request('/api/oecd/import', { body, binary: true }),
     reportFile: (briefingId, name) => {
-      if (!['briefing.html', 'briefing.json', 'observations.csv'].includes(name)) throw new Error('Unknown report filename');
+      if (!['briefing.html', 'briefing.json', 'observations.csv', 'SOURCE_RIGHTS.json', 'SOURCE_RIGHTS.md'].includes(name)) throw new Error('Unknown report filename');
       return request('/api/oecd/briefings/' + id(briefingId) + '/files/' + name, { raw: true });
     },
     provider: (command, parameters = {}) => {

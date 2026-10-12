@@ -8,6 +8,7 @@ import io
 import re
 
 from bootstrap import InputError, projected_number, qualified
+from rights import credited_sources, dataset_citation
 
 METHOD = {
     "title": "Composite leading indicators: amplitude-adjusted monthly index",
@@ -90,7 +91,7 @@ def point_summary(by_period, period):
             "attributes": row["attributes"]}
 
 
-def build_briefing(catalog, edition, capture, request):
+def build_briefing(catalog, edition, capture, request, retained_document=None):
     source_view = catalog.source.project(edition["series"][0]["source_project"],
                                          edition["series"][0]["source_revision"])
     metadata = source_view["metadata"]
@@ -146,7 +147,7 @@ def build_briefing(catalog, edition, capture, request):
     if common_period:
         for item in result:
             item["common"] = point_summary({r["time_period"]: r for r in item["observations"]}, common_period)
-    return {"schema": "stellar-forge.oecd-briefing-document.v1",
+    report = {"schema": "stellar-forge.oecd-briefing-document.v1",
         "title": request["title"], "notes": request["notes"], "request": request,
         "catalog_edition_id": edition["edition"]["id"], "catalog_created_at": edition["edition"]["created_at"],
         "source_capture_id": capture["id"], "source_capture_label": capture["label"],
@@ -164,6 +165,12 @@ def build_briefing(catalog, edition, capture, request):
         "scope": ("The report window selects original observations for this briefing. "
                   "The attached native customer edition preserves all captured observations "
                   "for the same selected country series.")}
+    if request.get("report_version", 1) == 2:
+        report["schema"] = "stellar-forge.oecd-briefing-document.v2"
+        report["sources"] = credited_sources(catalog, capture,
+            retained_document.get("sources") if retained_document is not None else None)
+        report["citation"] = dataset_citation(report["sources"])
+    return report
 
 
 def render_csv(report):
@@ -172,7 +179,8 @@ def render_csv(report):
     writer.writerow(["country", "country_name", "time_period", "original_value", "value_present", "value_kind",
                      "unit_measure", "unit_multiplier", "adjustment", "transformation", "methodology",
                      "observation_status", "declared_decimals", "source_action", "series_key",
-                     "capture_id", "catalog_edition_id"])
+                     "capture_id", "catalog_edition_id"] +
+                    (["source_url", "source_accessed_date", "source_citation", "source_terms"] if "citation" in report else []))
     for item in report["series"]:
         for row in item["observations"]:
             writer.writerow([item["country"], item["country_name"], row["time_period"],
@@ -181,7 +189,9 @@ def render_csv(report):
                 row["dimensions"]["ADJUSTMENT"], row["dimensions"]["TRANSFORMATION"],
                 row["dimensions"]["METHODOLOGY"], row["attributes"].get("OBS_STATUS", ""),
                 row["attributes"].get("DECIMALS", ""), row["action"], item["series_key"],
-                report["source_capture_id"], report["catalog_edition_id"]])
+                report["source_capture_id"], report["catalog_edition_id"]] +
+                ([report["citation"]["source_url"], report["citation"]["accessed_date"],
+                  report["citation"]["text"], report["citation"]["terms"]["url"]] if "citation" in report else []))
     return buffer.getvalue()
 
 
@@ -262,6 +272,14 @@ def render_html(report):
                       for s in report["sources"])
     methods = "".join("<li><a href='" + escaped(s["url"]) + "'>" + escaped(s["title"]) + "</a></li>"
                       for s in report["methodology"]["sources"])
+    credit = ""
+    if "citation" in report:
+        citation = report["citation"]
+        credit = ("<section><h2>Dataset citation and customer acknowledgment</h2><p>" +
+                  escaped(citation["text"]) + "</p><p><a href='" + escaped(citation["terms"]["url"]) +
+                  "'>" + escaped(citation["terms"]["title"]) + "</a></p><p>" +
+                  escaped(citation["downstream_acknowledgment"]) + "</p><p>" +
+                  escaped(citation["analysis_credit"]) + "</p></section>")
     return ("<!doctype html><html lang=en><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
         "<title>" + escaped(report["title"]) + "</title><style>"
         "body{font:15px/1.55 system-ui,sans-serif;color:#242424;background:#fff;max-width:1100px;margin:36px auto;padding:0 24px}"
@@ -282,7 +300,7 @@ def render_html(report):
         escaped(report["source_capture_id"]) + "</code><br>Native snapshot <code>" +
         escaped(report["native_snapshot"]) + "</code><br>Customer edition <code>" +
         escaped(report["catalog_edition_id"]) + "</code></p><ul>" + sources +
-        "</ul><h2>Methodology</h2><ul>" + methods + "</ul></section><footer>"
+        "</ul><h2>Methodology</h2><ul>" + methods + "</ul></section>" + credit + "<footer>"
         "Original data and metadata: OECD and referenced SDMX code-list agencies. "
         "Report selection, index-point calculations and presentation: Stellar Forge. "
         "Original decimal strings, source codes and retained acquisition scope accompany this report.</footer></html>\n")
