@@ -5,7 +5,6 @@ import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { mkdir, readFile, writeFile, chmod, stat, open, rename, unlink } from 'node:fs/promises';
 import { spawn, execFile } from 'node:child_process';
-import { once } from 'node:events';
 import { promisify } from 'node:util';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -72,7 +71,36 @@ async function findPorts(){
 }
 const publicHost='delivery.fleet.example',scope={tenant:'python',slot:'blue'};
 let workspace,accounting,receiver,browser,mcp,operator,sessionKey,wireId=0;
-let closed=false,facilitator;
+let closed=false,facilitator,receiverSpawnError;
+function receiverExited(child){
+ return child.exitCode!==null||child.signalCode!==null;
+}
+async function waitForReceiverExit(child,milliseconds){
+ if(receiverExited(child))return true;
+ return new Promise(done=>{
+  let timer;
+  const finish=value=>{clearTimeout(timer);child.removeListener('exit',onExit);done(value);};
+  const onExit=()=>finish(true);
+  child.once('exit',onExit);
+  timer=setTimeout(()=>finish(receiverExited(child)),milliseconds);
+  if(receiverExited(child))finish(true);
+ });
+}
+async function stopReceiver(){
+ const child=receiver;if(!child)return;
+ // A failed spawn has no operating-system child. A successfully spawned child
+ // remains owned until its actual exit is observed, including after escalation.
+ if(receiverSpawnError&&child.pid===undefined){receiver=null;return;}
+ if(!receiverExited(child)){
+  child.kill('SIGTERM');
+  if(!await waitForReceiverExit(child,3000)){
+   child.kill('SIGKILL');
+   if(!await waitForReceiverExit(child,3000))throw Error('Owned SF101 receiver did not exit after SIGKILL');
+  }
+ }
+ assert(receiverExited(child),'Owned SF101 receiver exit was not observed');
+ receiver=null;
+}
 async function loadSecrets(){
  const path=join(base,'private-environment.json');let values;
  try{values=JSON.parse(await readFile(path,'utf8'));}
@@ -203,11 +231,17 @@ async function startReceivers(){
    '--network','stellar:testnet','--amount','20000','--asset-digest',sha(receipt.payment.asset),
    '--recipient-digest',sha(receipt.payment.payTo),'--file',join(base,'fulfilled.txt'),'--claim-env','E49_SF98_CLAIM']);
  }
+ receiverSpawnError=null;
  receiver=spawn(python,['-B',join(sdk,'sf101-merchant-receiver/receiver.py'),'serve','--state',receiveState,
   '--port',String(receipt.portStart+5),'--secret-env','E49_SF98_FULFILLMENT_SECRET'],
-  {env:{...process.env},stdio:['ignore','pipe','pipe']});
+  {env:{...process.env},stdio:['ignore','ignore','pipe']});
+ receiver.on('error',error=>{receiverSpawnError=error;});
  receiver.stderr.setEncoding('utf8');receiver.stderr.on('data',value=>{receipt.receiverLog=(receipt.receiverLog??'')+value.slice(0,4000);});
- await until(async()=>{try{return(await fetch('http://127.0.0.1:'+(receipt.portStart+5)+'/health')).ok;}catch{return false;}},Boolean,'Original SF101 receiver did not start');
+ await until(async()=>{
+  if(receiverSpawnError)throw receiverSpawnError;
+  if(receiverExited(receiver))throw Error('Original SF101 receiver exited before readiness: '+String(receipt.receiverLog??'').slice(-4000));
+  try{return(await fetch('http://127.0.0.1:'+(receipt.portStart+5)+'/health')).ok;}catch{return false;}
+ },Boolean,'Original SF101 receiver did not start');
  await mkdir(join(base,'proofs'),{recursive:true,mode:0o700});
  const terms={schema:'stellar-forge.merchant-accounting-terms.v1',routes:[{
   routeId:'summarize',method:'POST',network:'stellar:testnet',amountAtomic:'20000',
@@ -330,7 +364,7 @@ async function nativePhase(){
  await mark('Original release upgrade, retired child and rollback preserved per-store source identity, exact prices and two completed receiver histories',
   {prices:['20000','25000','20000'],revision:3,blueEvents:2,greenEvents:1,fulfilledFile:receipt.fulfilledFile});
  await accounting.close();accounting=null;
- receiver.kill('SIGTERM');await once(receiver,'exit');receiver=null;
+ await stopReceiver();
  await workspace.close();workspace=null;
  receipt.nativeComplete=true;await save(receiptFile,receipt);
 }
@@ -517,9 +551,10 @@ async function mcpPhase(){
 async function cleanup(){
  if(closed)return;closed=true;const errors=[];
  for(const handle of [browser,workspace,mcp,operator,accounting])try{await handle?.close();}catch(e){errors.push(e.message);}
- if(receiver&&receiver.exitCode===null){receiver.kill('SIGTERM');await Promise.race([once(receiver,'exit'),nap(3000)]);}
+ try{await stopReceiver();}catch(e){errors.push(e.message);}
  try{await closeServer(facilitator);}catch(e){errors.push(e.message);}
  receipt.ownedProcessesClosed=errors.length===0;receipt.cleanupErrors=errors;
+ if(errors.length){receipt.state='FAILED';process.exitCode=1;}
  const paths=[
  'sf30-seller-sdk/native-delivery.mjs','sf30-seller-sdk/resource-server.mjs','sf98-merchant-delivery/outbox.mjs',
  'sf98-merchant-delivery/destinations/server.mjs','sf82-seller-pilot/release-delivery.mjs','sf82-seller-pilot/release-child.mjs',
