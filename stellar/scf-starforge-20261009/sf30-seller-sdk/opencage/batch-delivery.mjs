@@ -6,12 +6,13 @@ import { createHash, randomUUID } from 'node:crypto';
 import { csvCell } from './customer.mjs';
 import { CAPTURE, WORKSPACE, requestFor, decodeGeocodeCapture, deliveryForCapture } from './workspace.mjs';
 import { compileGeocodeSeller } from './merchant.mjs';
-import { BATCH, BATCH_REVIEW, MAX_CSV_ROWS, captureSummary, decodeBatchIntake } from './batch.mjs';
+import { BATCH, BATCH_REVIEW, MAX_CSV_ROWS, captureSummary, decodeBatchIntake, decodeBatchAttempt } from './batch.mjs';
 import { fail, object, identifier } from './config.mjs';
 import { privateDirectory, readBytes, readJson, writeBytes, writeJson, jsonBytes, digest, exists, relativeFile, syncDirectory } from '../twelvedata/files.mjs';
 
 export const BATCH_DELIVERY='stellar-forge.opencage-csv-delivery.v1';
 const HASH=/^[a-f0-9]{64}$/;
+const requestIdFor=(batchId,ordinal,attempt)=>'gb-'+batchId.slice(4)+'-'+ordinal.toString(36)+'-a'+attempt;
 const MAX_EXPORT_BYTES=536870912;
 const same=(a,b)=>digest(jsonBytes(a))===digest(jsonBytes(b));
 const jsonLine=value=>JSON.stringify(value)+'\n';
@@ -69,7 +70,7 @@ function joinedValues(source,record,selected){
   const values=source.values.slice(0,source.headerCount);
   while(values.length<source.headerCount)values.push('');
   return [...values,...[
-    source.ordinal,source.sourceId,source.values.length>source.headerCount?JSON.stringify(source.values.slice(source.headerCount)):'',record.requestId??'',record.status,source.error??record.outcome??'',
+    source.ordinal,source.sourceId,source.values.length>source.headerCount?JSON.stringify(source.values.slice(source.headerCount)):'',record.requestId??'',record.status,source.error??(['EXCEPTION','NEEDS_RECONCILIATION'].includes(record.status)?record.outcome??'':''),
     record.selectedIndex,selected?.geometry.lat,selected?.geometry.lng,selected?.formatted,selected?.confidence,
     record.responseSha256,record.captureIdentity,record.decisionRevision,
   ]];
@@ -81,6 +82,61 @@ function feature(source,record,selected){
       requestId:record.requestId,candidateIndex:record.selectedIndex,formatted:selected.formatted,
       confidence:selected.confidence,confidenceMeaning:'SPATIAL_PRECISION_NOT_CORRECTNESS',
       responseSha256:record.responseSha256,captureIdentity:record.captureIdentity,decisionRevision:record.decisionRevision}};
+}
+
+async function projectRows(review,{csv,exceptions,geo,licenses}){
+  const counts={rows:0,selected:0,exceptions:0,invalid:0,unexecuted:0},licensed=new Set();
+  const columns=generatedColumns(review.headers);
+  await csv.add(csvLine(columns.columns));await exceptions.add(csvLine(columns.columns));
+  await geo.add('{"type":"FeatureCollection","features":[');
+  return {counts,columns,async add(row,record,result){
+    const selected=record.selectedIndex===null?null:result?.candidates?.[record.selectedIndex];
+    need(record.selectedIndex===null||selected&&result?.state.providerStatus===200,'GEOCODE_CSV_ROW_PROJECTION_CHANGED');
+    if(result?.semantics&&result.state.providerStatus===200&&!licensed.has(record.responseSha256)){
+      licensed.add(record.responseSha256);
+      await licenses.add(jsonLine({responseSha256:record.responseSha256,licenses:result.semantics.licenses,
+        semantics:result.semantics}));
+    }
+    const source={...row,headerCount:review.headers.length};
+    const line=csvLine(joinedValues(source,record,selected));
+    await csv.add(line);counts.rows++;
+    if(selected){
+      if(counts.selected)await geo.add(',');
+      await geo.add(JSON.stringify(feature(source,record,selected)));counts.selected++;
+    }else{await exceptions.add(line);counts.exceptions++;}
+    if(row.error)counts.invalid++;
+    if(!record.captureIdentity&&!row.error)counts.unexecuted++;
+  },async finish(){await geo.add(']}\n');return {counts,columns};}};
+}
+function deliverySummary(review,{snapshotIdentity,revision},counts,columns,objects){
+  return {schema:BATCH_DELIVERY,batchId:review.batchId,sourceSha256:review.sourceSha256,
+    reviewSha256:review.reviewSha256,snapshotIdentity,revision,counts,columns,
+    coordinateReferenceSystem:'EPSG:4326',confidenceMeaning:'SPATIAL_PRECISION_NOT_CORRECTNESS',
+    rowPolicy:'EVERY_ORIGINAL_SOURCE_ROW',sourceValues:'Original source.csv bytes are preserved. Spreadsheet projections escape formula-like text.',
+    candidatePolicy:'Candidates remain in original provider order. Each receiving row has its own saved decision.',
+    objects};
+}
+function projectionDigest(name){
+  const hash=createHash('sha256');let bytes=0;
+  return {async add(value){value=Buffer.isBuffer(value)?value:Buffer.from(value);hash.update(value);bytes+=value.length;},
+    finish(){return {name,bytes,sha256:hash.digest('hex')};}};
+}
+
+async function retainRequestObjects(original,objectOf){
+  const refs={requestObject:await objectOf(await readBytes(join(original.directory,'request.json'),1048576)),
+    stateObject:null,captureManifestObject:null};
+  if(original.capture){
+    const manifest=await readBytes(join(original.directory,'capture','manifest.json'),1048576);
+    need(digest(manifest)===original.capture.manifestSha256);
+    refs.captureManifestObject=await objectOf(manifest);
+    for(const bytes of original.capture.files.values())await objectOf(bytes);
+  }else if(await exists(join(original.directory,'state.json')))
+    refs.stateObject=await objectOf(await readBytes(join(original.directory,'state.json'),65536));
+  return refs;
+}
+function nativeResult(value){
+  return {request:value.request,state:value.state,responseSha256:value.state.responseSha256??null,
+    captureIdentity:value.capture?.manifest.identity??null,candidates:value.parsed?.candidates??[]};
 }
 
 function snapshotOf(reviewSha256,rows){
@@ -104,8 +160,6 @@ export async function exportGeocodeBatch(workspace,manager,entry,{expectedRevisi
   const budget={bytes:0,add(count){if((this.bytes+=count)>limit)fail('GEOCODE_CSV_EXPORT_SIZE_LIMIT',
     'The selected complete output exceeds maxBytes. Increase the reviewed export budget or export a smaller source selection.');}};
   const files=[],objects=new Map(),streams=[];
-  const counts={rows:0,selected:0,exceptions:0,invalid:0,unexecuted:0};
-  const columns=generatedColumns(entry.review.headers);
   try{
     await mkdir(join(temporary,'objects'),{mode:0o700});
     async function keep(name,bytes){
@@ -128,9 +182,7 @@ export async function exportGeocodeBatch(workspace,manager,entry,{expectedRevisi
     const exceptionsOut=await writer(temporary,'exceptions.csv',budget);streams.push(exceptionsOut);
     const geoOut=await writer(temporary,'selected.geojson',budget);streams.push(geoOut);
     const licensesOut=await writer(temporary,'licenses.jsonl',budget);streams.push(licensesOut);
-    await csvOut.add(csvLine(columns.columns));await exceptionsOut.add(csvLine(columns.columns));
-    await geoOut.add('{"type":"FeatureCollection","features":[');
-    const licensed=new Set();
+    const projection=await projectRows(entry.review,{csv:csvOut,exceptions:exceptionsOut,geo:geoOut,licenses:licensesOut});
     for(const row of entry.rows){
       workspace.lease.assertHeld();
       const current=await manager._readCurrent(entry,row.ordinal),value=current.value;
@@ -140,51 +192,30 @@ export async function exportGeocodeBatch(workspace,manager,entry,{expectedRevisi
         captureIdentity:value?.captureIdentity??null,decisionRevision:value?.decision.revision??0,
         selectedIndex:value?.decision.current?.index??null,candidateCount:value?.candidates.length??0,
         decision:value?.decision??{revision:0,current:null,history:[]},
-        requestObject:null,stateObject:null,captureManifestObject:null};
-      let selected=null;
+        requestObject:null,stateObject:null,captureManifestObject:null,retryHistory:[]};
       if(value){
         const original=await workspace._read(value.request.id);
         need(original.request.id===record.requestId&&original.state.responseSha256===value.state.responseSha256);
-        record.requestObject=await objectOf(await readBytes(join(original.directory,'request.json'),1048576));
-        if(original.capture){
-          const manifest=await readBytes(join(original.directory,'capture','manifest.json'),1048576);
-          need(digest(manifest)===original.capture.manifestSha256);
-          record.captureManifestObject=await objectOf(manifest);
-          for(const bytes of original.capture.files.values())await objectOf(bytes);
-          if(original.parsed&&original.state.providerStatus===200){
-            const delivery=deliveryForCapture(original);
-            record.deliveryIdentity=delivery.identity;
-            selected=original.decision.current?.index==null?null:original.parsed.candidates[original.decision.current.index];
-            if(!licensed.has(record.responseSha256)){
-              licensed.add(record.responseSha256);
-              await licensesOut.add(jsonLine({responseSha256:record.responseSha256,licenses:original.parsed.semantics.licenses,
-                semantics:original.parsed.semantics}));
-            }
-          }
-        }else if(await exists(join(original.directory,'state.json')))
-          record.stateObject=await objectOf(await readBytes(join(original.directory,'state.json'),65536));
+        Object.assign(record,await retainRequestObjects(original,objectOf));
+        if(original.parsed&&original.state.providerStatus===200)
+          record.deliveryIdentity=deliveryForCapture(original).identity;
       }
-      const source={...row,headerCount:entry.review.headers.length};
-      const line=csvLine(joinedValues(source,record,selected));
-      await rowsOut.add(jsonLine(record));await csvOut.add(line);counts.rows++;
-      if(selected){
-        if(counts.selected)await geoOut.add(',');
-        await geoOut.add(JSON.stringify(feature(source,record,selected)));counts.selected++;
-      }else{await exceptionsOut.add(line);counts.exceptions++;}
-      if(row.error)counts.invalid++;
-      if(!record.captureIdentity&&!row.error)counts.unexecuted++;
+      for(let attempt=2;attempt<=record.attempt;attempt++){
+        const receiptBytes=await readBytes(join(entry.root,'attempts',requestIdFor(entry.id,row.ordinal,attempt)+'.json'),65536);
+        const receipt=JSON.parse(receiptBytes.toString('utf8')),previous=await workspace._read(receipt.previousRequestId);
+        decodeBatchAttempt(entry.review,row,attempt,receipt,previous.request,nativeResult(previous));
+        record.retryHistory.push({attempt,receiptObject:await objectOf(receiptBytes),
+          previous:await retainRequestObjects(previous,objectOf)});
+      }
+      await rowsOut.add(jsonLine(record));await projection.add(row,record,value);
     }
-    await geoOut.add(']}\n');
+    const {counts,columns}=await projection.finish();
     for(const stream of streams)files.push(await stream.finish());
     const objectsOut=await writer(temporary,'objects.jsonl',budget);streams.push(objectsOut);
     for(const item of objects.values())await objectsOut.add(jsonLine(item));
     files.push(await objectsOut.finish());
-    const summary={schema:BATCH_DELIVERY,batchId:entry.id,sourceSha256:entry.review.sourceSha256,
-      reviewSha256:entry.review.reviewSha256,snapshotIdentity,revision:expectedRevision,counts,columns,
-      coordinateReferenceSystem:'EPSG:4326',confidenceMeaning:'SPATIAL_PRECISION_NOT_CORRECTNESS',
-      rowPolicy:'EVERY_ORIGINAL_SOURCE_ROW',sourceValues:'Original source.csv bytes are preserved. Spreadsheet projections escape formula-like text.',
-      candidatePolicy:'Candidates remain in original provider order. Each receiving row has its own saved decision.',
-      objects:{count:objects.size,bytes:[...objects.values()].reduce((n,item)=>n+item.bytes,0)}};
+    const summary=deliverySummary(entry.review,{snapshotIdentity,revision:expectedRevision},counts,columns,
+      {count:objects.size,bytes:[...objects.values()].reduce((n,item)=>n+item.bytes,0)});
     await keep('delivery.json',jsonBytes(summary));
     await keep('README.md',Buffer.from('# Geocoding CSV delivery\n\n'+
       'source.csv contains the exact original bytes; review.json retains the reviewed column mapping and query rules. '+
@@ -255,14 +286,26 @@ export class GeocodeBatchDelivery {
         Number.isSafeInteger(item.bytes)&&item.bytes>=0&&item.bytes<=33554432);
       objects.set(item.sha256,item);
     }
-    need([...objects.values()].reduce((n,item)=>n+item.bytes,0)===manifest.objects.bytes);
+    need([...objects.values()].reduce((n,item)=>n+item.bytes,0)===manifest.objects.bytes&&
+      Number.isSafeInteger(manifest.bytes)&&manifest.bytes===manifest.objects.bytes+[...files.values()].reduce((n,item)=>n+item.bytes,0)&&
+      manifest.bytes+manifestBytes.length<=MAX_EXPORT_BYTES);
     for(let index=0;index<rows.length;index++){
       const row=rows[index],source=intake[index];
       need(row.ordinal===index+1&&source.ordinal===row.ordinal&&row.sourceId===source.sourceId&&
         Number.isSafeInteger(row.attempt)&&row.attempt>=1&&row.attempt<=100&&
         (source.error?row.requestId===null:row.requestId==='gb-'+batchId.slice(4)+'-'+row.ordinal.toString(36)+'-a'+row.attempt));
-      for(const key of ['requestObject','stateObject','captureManifestObject'])
-        need(row[key]===null||HASH.test(row[key])&&objects.has(row[key]));
+      const refs=value=>{
+        need(object(value));
+        for(const key of ['requestObject','stateObject','captureManifestObject'])
+          need(value[key]===null||HASH.test(value[key])&&objects.has(value[key]));
+        need(value.captureManifestObject===null||value.stateObject===null);
+      };
+      refs(row);
+      need(Array.isArray(row.retryHistory)&&row.retryHistory.length===row.attempt-1);
+      for(const [index,item] of row.retryHistory.entries()){
+        need(object(item)&&item.attempt===index+2&&HASH.test(item.receiptObject)&&objects.has(item.receiptObject));
+        refs(item.previous);need(item.previous.requestObject!==null);
+      }
     }
     const result=new GeocodeBatchDelivery(directory,manifest,files,objects,review,intake,rows,configuration);
     result.manifestFile=descriptor('manifest.json',manifestBytes);return result;
@@ -281,12 +324,39 @@ export class GeocodeBatchDelivery {
     const expected=this.objects.get(sha256);need(expected,'GEOCODE_CSV_OBJECT_UNKNOWN');
     return exactBytes(join(this.directory,expected.name),expected);
   }
+  async _capture(request,manifestSha256,decision){
+    const manifestBytes=await this._object(manifestSha256),manifest=JSON.parse(manifestBytes.toString('utf8'));
+    need(manifest.schema===CAPTURE&&Array.isArray(manifest.files)&&manifest.files.length<=128);
+    const files=new Map();let total=0;
+    for(const file of manifest.files){
+      relativeFile(file.name);need(!files.has(file.name)&&Number.isSafeInteger(file.bytes)&&file.bytes>=0&&HASH.test(file.sha256));
+      const bytes=await this._object(file.sha256);total+=bytes.length;
+      need(bytes.length===file.bytes&&total<=33554432);files.set(file.name,bytes);
+    }
+    return decodeGeocodeCapture(request,{manifest,manifestSha256:digest(manifestBytes),files},decision);
+  }
+  async _retryHistory(source,row){
+    for(const item of row.retryHistory){
+      const receipt=JSON.parse((await this._object(item.receiptObject)).toString('utf8'));
+      const request=JSON.parse((await this._object(item.previous.requestObject)).toString('utf8'));
+      const expected=requestFor(this.configuration,requestIdFor(this.review.batchId,source.ordinal,item.attempt-1),
+        this.review.productId,source.query);
+      need(same(request,expected),'GEOCODE_CSV_ATTEMPT_PREDECESSOR_CHANGED');
+      const native=item.previous.captureManifestObject
+        ?await this._capture(request,item.previous.captureManifestObject)
+        :{request,state:item.previous.stateObject?JSON.parse((await this._object(item.previous.stateObject)).toString('utf8')):
+          {state:'PREPARED',dispatched:false},capture:null,parsed:null};
+      decodeBatchAttempt(this.review,source,item.attempt,receipt,request,nativeResult(native));
+    }
+  }
   async row(ordinal){
     need(Number.isSafeInteger(ordinal)&&ordinal>=1&&ordinal<=this.rows.length,'GEOCODE_BATCH_ROW_INVALID');
     const row=this.rows[ordinal-1],source=this.intake[ordinal-1];
+    await this._retryHistory(source,row);
     if(row.requestObject===null){
       need(row.captureManifestObject===null&&row.stateObject===null&&row.summary===null&&
         row.status===(source.error?'INVALID':'READY')&&row.responseSha256===null&&row.captureIdentity===null&&
+        row.decisionRevision===0&&row.selectedIndex===null&&row.candidateCount===0&&row.outcome===null&&
         same(row.decision,{revision:0,current:null,history:[]}));
       return {source,row,result:null};
     }
@@ -296,18 +366,11 @@ export class GeocodeBatchDelivery {
       const state=row.stateObject?JSON.parse((await this._object(row.stateObject)).toString('utf8')):{state:'PREPARED',dispatched:false};
       const result={request,state,decision:row.decision,responseSha256:null,captureIdentity:null,candidates:[]};
       need(same(row.decision,{revision:0,current:null,history:[]})&&same(captureSummary(result),row.summary)&&
-        row.status===row.summary.status&&row.responseSha256===null&&row.captureIdentity===null&&
+        row.status===row.summary.status&&row.outcome===row.summary.outcome&&row.responseSha256===null&&row.captureIdentity===null&&
         row.decisionRevision===0&&row.selectedIndex===null&&row.candidateCount===0);
       return {source,row,result};
     }
-    const manifestBytes=await this._object(row.captureManifestObject),manifest=JSON.parse(manifestBytes.toString('utf8'));
-    need(manifest.schema===CAPTURE&&Array.isArray(manifest.files)&&manifest.files.length<=128);
-    const files=new Map();let total=0;
-    for(const file of manifest.files){
-      relativeFile(file.name);need(!files.has(file.name)&&Number.isSafeInteger(file.bytes)&&file.bytes>=0&&HASH.test(file.sha256));
-      const bytes=await this._object(file.sha256);total+=bytes.length;need(bytes.length===file.bytes&&total<=33554432);files.set(file.name,bytes);
-    }
-    const value=decodeGeocodeCapture(request,{manifest,manifestSha256:digest(manifestBytes),files},row.decision);
+    const value=await this._capture(request,row.captureManifestObject,row.decision),manifest=value.capture.manifest;
     need(value.state.responseSha256===row.responseSha256&&manifest.identity===row.captureIdentity&&
       value.decision.revision===row.decisionRevision&&(value.decision.current?.index??null)===row.selectedIndex);
     const result={request,state:value.state,decision:value.decision,responseSha256:row.responseSha256,
@@ -333,8 +396,22 @@ export class GeocodeBatchDelivery {
   async verify(){
     for(const name of this.files.keys()){const {handle}=await this.openFile(name);await handle.close();}
     for(const item of this.objects.values())await this._object(item.sha256);
-    for(let ordinal=1;ordinal<=this.rows.length;ordinal++)await this.row(ordinal);
-    return {identity:this.manifest.identity,rows:this.rows.length,objects:this.objects.size,files:this.files.size,verified:true};
+    const csv=projectionDigest('results.csv'),exceptions=projectionDigest('exceptions.csv'),
+      geo=projectionDigest('selected.geojson'),licenses=projectionDigest('licenses.jsonl');
+    const projection=await projectRows(this.review,{csv,exceptions,geo,licenses});
+    for(let ordinal=1;ordinal<=this.rows.length;ordinal++){
+      const {source,row,result}=await this.row(ordinal);await projection.add(source,row,result);
+    }
+    const {counts,columns}=await projection.finish();
+    for(const sink of [csv,exceptions,geo,licenses]){
+      const expected=sink.finish();need(same(expected,this.files.get(expected.name)),'GEOCODE_CSV_ROW_PROJECTION_CHANGED');
+    }
+    const summary=deliverySummary(this.review,this.manifest,counts,columns,
+      {count:this.objects.size,bytes:[...this.objects.values()].reduce((n,item)=>n+item.bytes,0)});
+    need(same(counts,this.manifest.counts)&&
+      same(descriptor('delivery.json',jsonBytes(summary)),this.files.get('delivery.json')),'GEOCODE_CSV_SUMMARY_CHANGED');
+    return {identity:this.manifest.identity,rows:this.rows.length,objects:this.objects.size,files:this.files.size,
+      projections:['results.csv','exceptions.csv','selected.geojson','licenses.jsonl','delivery.json'],counts,verified:true};
   }
   async close(){}
 }

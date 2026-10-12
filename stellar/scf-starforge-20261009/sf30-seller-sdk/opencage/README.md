@@ -307,3 +307,7 @@ The component composes these existing maintained surfaces:
 - Existing public Twelve Data `files.mjs` for atomic, verified portable bundles.
 
 The provider implementation is authored from the public API contract. Public source and examples contain no private commercial product implementation.
+
+## CSV source work and joined customer delivery
+
+[The CSV workbench guide](BATCH.md) covers raw CSV intake, exact mapping review, paced original captures, retained result reuse, independent row decisions, progress reconciliation and complete customer exports. The same operator browser, CLI, managed Application and merchant MCP workspace expose this workflow. Each joined delivery preserves every input row and original source/response/decision bytes, including empty and exception outcomes.
