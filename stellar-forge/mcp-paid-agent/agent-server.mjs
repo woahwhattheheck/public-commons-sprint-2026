@@ -97,7 +97,7 @@ export class McpPaidToolBroker {
   #catalogUrl;#trustedOrigins;#approve;#sign;#fetch;#records=new Map();#quotes=new Map();
   #timeLimit;#quoteTTL;#maxRecords;#agentCommerce;
   #store;#scope;#closing=false;#storeClosed=false;#closePromise;#active=new Set();#shutdown=new AbortController();
-  #mcpPolicies;#remoteControllers=new Map();#results;#reconcilePaymentAdapter;#reconciliations=new Map();#spendingStatusAdapter;
+  #mcpPolicies;#approvalControllers=new Map();#remoteControllers=new Map();#results;#reconcilePaymentAdapter;#reconciliations=new Map();#spendingStatusAdapter;
   constructor({discoveryUrl,allowedResourceOrigins=[],approve=()=>false,signPayment=null,
     fetchImpl=defaultFetch,timeoutMs=8000,quoteTTL=10*60*1000,maxRecords=500,
     agentCommerce=null,quoteStore=null,remoteMcpPolicies=[],resultStore=null,reconcilePayment=null,spendingStatus=null}={}){
@@ -366,7 +366,10 @@ export class McpPaidToolBroker {
   cancel({quoteId}={}){
     const q=this.#quotes.get(quoteId);if(!q)fail('QUOTE_UNKNOWN','Unknown quote');
     if(q.status==='PREVIEWED'||q.status==='APPROVAL_PENDING'){
-      q.status='CANCELLED';this.#persist(q);return statOf(q);
+      q.status='CANCELLED';
+      // End this quote's host prompt even when its cancellation cannot persist.
+      try{this.#persist(q);}finally{this.#approvalControllers.get(quoteId)?.abort();}
+      return statOf(q);
     }
     if(q.status==='EXECUTING'){
       q.status=q.signedRequestDispatched?'INDETERMINATE':'CANCEL_REQUESTED';
@@ -392,15 +395,20 @@ export class McpPaidToolBroker {
     // Reserve the quote synchronously before the first await: concurrent MCP
     // calls must not independently authorize/sign/dispatch the same payment.
     q.status='APPROVAL_PENDING';q.phase='APPROVAL';this.#persist(q);
+    const approvalController=new AbortController();
+    this.#approvalControllers.set(quoteId,approvalController);
     let permission;
     try {
       permission=await this.#approve(Object.freeze({quoteId:q.quoteId,resource:q.resource,requestUrl:q.url,method:q.method,
-        accepted:structuredClone(q.accepted),...(q.invocation?{invocation:structuredClone(q.invocation)}:{}),signal:this.#shutdown.signal}));
+        accepted:structuredClone(q.accepted),...(q.invocation?{invocation:structuredClone(q.invocation)}:{}),
+        signal:AbortSignal.any([this.#shutdown.signal,approvalController.signal])}));
     }catch(e){
       if(this.#closing||q.status!=='APPROVAL_PENDING')return statOf(q);
       q.status='PREVIEWED'; // approval errors retain the original retry semantics
       this.#persist(q);
       throw e;
+    }finally{
+      this.#approvalControllers.delete(quoteId);approvalController.abort();
     }
     // Cancellation/expiration during asynchronous human approval must win.
     if(this.#closing||q.status!=='APPROVAL_PENDING')return statOf(q);
