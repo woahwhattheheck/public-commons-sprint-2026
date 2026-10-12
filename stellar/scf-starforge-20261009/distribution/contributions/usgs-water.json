@@ -1,0 +1,18 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "usgs-water",
+  "description": "USGS water observations",
+  "commands": {
+    "usgs-water": "stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/cli.mjs"
+  },
+  "commandDescriptions": {
+    "usgs-water": "Acquire USGS observations, review hydrology and operate paid editions"
+  },
+  "exports": {
+    "./seller/usgs-water": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/merchant.mjs",
+    "./seller/usgs-water/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/provider.mjs",
+    "./seller/usgs-water/analysis": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/analysis.mjs",
+    "./seller/usgs-water/project": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/project.mjs",
+    "./seller/usgs-water/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/workspace.mjs"
+  }
+}

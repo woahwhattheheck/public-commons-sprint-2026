@@ -1,7 +1,8 @@
 // MIT. Agent operation of the same retained Baserow source browser and publisher.
 import { constants } from 'node:fs';
-import { open, lstat, realpath } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { open, lstat, realpath, mkdtemp, unlink, rmdir } from 'node:fs/promises';
+import { dirname, resolve, join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { BaserowRetainedExports, BASEROW_EXPORT_MAX_BYTES, BASEROW_DEPLOYMENT_NAMES,
   baserowExportSelection } from './baserow-workspace-files.mjs';
@@ -60,6 +61,52 @@ async function fingerprint(handle,info) {
   if(size!==info.size||after.size!==info.size||after.mtimeMs!==info.mtimeMs||after.ctimeMs!==info.ctimeMs)
     throw fail('BASEROW_MCP_INPUT_CHANGED');
   return {bytes:size,sha256:digest.digest('hex')};
+}
+// A host-selected input may still have an active writer. Freeze its exact bytes
+// before the original receiving operation can make any change.
+async function snapshotInput(file,expectedSha256,maximum) {
+  const {handle:source}=await sourceHandle(file.path,maximum);
+  let snapshot,temporary,snapshotPath,retained=false;
+  try {
+    const before=await source.stat({bigint:true});
+    if(!before.isFile()||before.nlink!==1n||before.size>BigInt(maximum)||
+        process.platform!=='win32'&&((before.mode&0o077n)!==0n||
+          typeof process.getuid==='function'&&before.uid!==BigInt(process.getuid())))
+      throw fail('BASEROW_MCP_PRIVATE_FILE_REQUIRED','Use the original owned private regular source file.');
+    const bytes=Number(before.size);
+    if(file.bytes!==undefined&&file.bytes!==bytes||file.sha256&&file.sha256!==expectedSha256)
+      throw fail('BASEROW_MCP_INPUT_CHANGED');
+    temporary=await mkdtemp(join(tmpdir(),'sf-baserow-input-'));
+    snapshotPath=join(temporary,'snapshot');
+    snapshot=await open(snapshotPath,'wx+',0o600);
+    await unlink(snapshotPath);snapshotPath=null;
+    await rmdir(temporary);temporary=null;
+    const digest=createHash('sha256'),block=Buffer.alloc(Math.min(1048576,Math.max(bytes,1)));
+    let position=0;
+    while(position<bytes) {
+      const {bytesRead}=await source.read(block,0,Math.min(block.length,bytes-position),position);
+      if(!bytesRead)throw fail('BASEROW_MCP_INPUT_CHANGED');
+      const chunk=block.subarray(0,bytesRead);digest.update(chunk);
+      let written=0;
+      while(written<bytesRead) {
+        const result=await snapshot.write(chunk,written,bytesRead-written,position+written);
+        if(!result.bytesWritten)throw fail('BASEROW_MCP_INPUT_SNAPSHOT_FAILED');
+        written+=result.bytesWritten;
+      }
+      position+=bytesRead;
+    }
+    const extra=await source.read(block,0,1,bytes),after=await source.stat({bigint:true});
+    if(extra.bytesRead||['dev','ino','size','mtimeNs','ctimeNs','mode','uid','nlink'].some(key=>before[key]!==after[key])||
+        digest.digest('hex')!==expectedSha256)
+      throw fail('BASEROW_MCP_INPUT_CHANGED','The selected packet changed before receiving. Inspect the same source input.');
+    await snapshot.sync();await source.close();retained=true;
+    return {handle:snapshot,bytes};
+  } finally {
+    await source.close().catch(()=>{});
+    if(!retained)await snapshot?.close().catch(()=>{});
+    if(snapshotPath)await unlink(snapshotPath).catch(()=>{});
+    if(temporary)await rmdir(temporary).catch(()=>{});
+  }
 }
 export async function readBaserowWorkspaceConfiguration(path) {
   path=resolve(path);const raw=JSON.parse(decode(await fileBytes(path,1048576))),base=dirname(path);
@@ -140,16 +187,37 @@ async function responseBytes(response,maximum=67108864) {
   for await(const block of response.body??[]){length+=block.length;if(length>maximum)throw fail('BASEROW_MCP_REPLY_TOO_LARGE','Use the complete retained export for this native result.');blocks.push(block);}
   return Buffer.concat(blocks,length);
 }
-function safeView(value) {
-  if(Array.isArray(value))return value.map(safeView);
+// Strip only native control-envelope credentials. Query columns and source
+// records may legitimately be named token, operatorUrl or url.
+function controlView(value) {
   if(!plain(value))return value;
-  const result={};
-  for(const [key,item] of Object.entries(value)){
-    if(['token','operatorUrl'].includes(key))continue;
-    if(key==='url'&&typeof item==='string'&&/^http:\/\/127\.0\.0\.1(?::[0-9]+)?(?:\/|$)/.test(item))continue;
-    result[key]=safeView(item);
-  }
+  const {url,operatorUrl,token,...result}=value;
   return result;
+}
+function operationResult(kind,value) {
+  if(!plain(value))return value;
+  if(['PUBLISHER','STOP_PUBLISHER','DEPLOYMENT_CONSOLE_OPEN','DEPLOYMENT_CONSOLE_CLOSE'].includes(kind))
+    return controlView(value);
+  if(kind==='DEPLOYMENT_COMMAND'&&Object.hasOwn(value,'currentConsole'))
+    return {...value,currentConsole:controlView(value.currentConsole)};
+  return value;
+}
+function operationView(value) {
+  return plain(value)?{...value,result:operationResult(value.kind,value.result)}:value;
+}
+function safeView(value,tool,input) {
+  if(!plain(value))return value;
+  if(tool==='merchant_baserow_status')
+    return {...value,publisher:controlView(value.publisher),deployment:controlView(value.deployment)};
+  if(tool==='merchant_baserow_publisher'&&['open','close'].includes(input.action))return controlView(value);
+  if(tool==='merchant_baserow_operation')return operationView(value);
+  if(tool==='merchant_baserow_deployment') {
+    if(['open','close'].includes(input.action))return controlView(value);
+    if(input.action==='status')return {...value,console:controlView(value.console),
+      operations:value.operations.map(operationView)};
+    if(input.action==='command')return operationResult('DEPLOYMENT_COMMAND',value);
+  }
+  return value;
 }
 export class MerchantBaserowWorkspaces {
   #config;#exports;#sessions=new Map();#pending=new Set();#closing=false;#close;
@@ -226,19 +294,15 @@ export class MerchantBaserowWorkspaces {
     checked(expectedSha256,HASH,'original packet SHA256');checked(requestId,UUID,'request UUID');
     line(title,'source title',128);
     if(!Number.isSafeInteger(expectedDraftRevision)||expectedDraftRevision<0)throw fail('BASEROW_MCP_INVALID_PARAMS');
-    const {handle,info}=await sourceHandle(file.path);let stream;
+    const before=Buffer.from('{"packet":'),after=Buffer.from(','+JSON.stringify({title,expectedDraftRevision,requestId}).slice(1));
+    const {handle,bytes}=await snapshotInput(file,expectedSha256,BASEROW_EXPORT_MAX_BYTES-before.length-after.length);
+    let stream;
     try {
-      const checkedFile=await fingerprint(handle,info);
-      if(checkedFile.sha256!==expectedSha256||file.sha256&&file.sha256!==expectedSha256)throw fail('BASEROW_MCP_INPUT_CHANGED');
-      const before=Buffer.from('{"packet":'),after=Buffer.from(','+JSON.stringify({title,expectedDraftRevision,requestId}).slice(1));
-      if(info.size+before.length+after.length>BASEROW_EXPORT_MAX_BYTES)throw fail('BASEROW_MCP_INPUT_TOO_LARGE');
       stream=handle.createReadStream({autoClose:false,start:0});
       async function* original(){yield before;for await(const chunk of stream)yield chunk;yield after;}
       const response=await this.#request(connection,'/api/import-package',{body:original(),headers:{
-        'content-type':'application/json','content-length':String(info.size+before.length+after.length)}});
-      const result=JSON.parse(decode(await responseBytes(response))),final=await handle.stat();
-      if(final.size!==info.size||final.mtimeMs!==info.mtimeMs||final.ctimeMs!==info.ctimeMs)throw fail('BASEROW_MCP_INPUT_CHANGED');
-      return result;
+        'content-type':'application/json','content-length':String(bytes+before.length+after.length)}});
+      return JSON.parse(decode(await responseBytes(response)));
     }finally{stream?.destroy();await handle.close();}
   }
   async #export(workspace,connection,exportId,input) {
@@ -310,7 +374,7 @@ export class MerchantBaserowWorkspaces {
     }
     const connection=await this.#connection(workspace);
     const get=(path,query={})=>this.#json(connection,path+(Object.keys(query).length?'?'+new URLSearchParams(Object.entries(query).map(([k,v])=>[k,String(v)])):'')); 
-    const post=(path,body)=>this.#json(connection,path,body),result=native=>({workspace,native:safeView(native)});
+    const post=(path,body)=>this.#json(connection,path,body),result=native=>({workspace,native:safeView(native,name,input)});
     switch(name) {
       case 'merchant_baserow_status':return result(await get('/api/status',input));
       case 'merchant_baserow_discover':return result(await post('/api/discover',input.input));
@@ -337,10 +401,14 @@ export class MerchantBaserowWorkspaces {
         if(!['save','select'].includes(input.action)||input.id!==undefined||!plain(input.input))throw fail('BASEROW_MCP_INVALID_PARAMS');
         return result(await post(input.action==='save'?'/api/version':'/api/select',input.input));
       case 'merchant_baserow_compare':return result(await get('/api/compare',input));
-      case 'merchant_baserow_operation':
+      case 'merchant_baserow_operation': {
         checked(input.requestId,UUID,'source request UUID');
         if(input.resume!==undefined&&typeof input.resume!=='boolean')throw fail('BASEROW_MCP_INVALID_PARAMS');
-        return result(await (input.resume?post('/api/resume',{requestId:input.requestId}):get('/api/operation',{id:input.requestId})));
+        const original=await get('/api/operation',{id:input.requestId});
+        if(!input.resume)return result(original);
+        const resumed=await post('/api/resume',{requestId:input.requestId});
+        return {workspace,native:operationResult(original?.kind,resumed)};
+      }
       case 'merchant_baserow_publisher': {
         if(!publisherActions.includes(input.action)||input.input!==undefined&&!plain(input.input))throw fail('BASEROW_MCP_INVALID_PARAMS');
         if(input.action==='open'||input.action==='close') {
