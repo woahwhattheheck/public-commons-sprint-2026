@@ -211,7 +211,7 @@ export class MerchantGrantReviewers {
       const original=await client.request('GET',query('/api/document',{id:args.selectionId,index:String(args.index)}));
       need(original.bytes.length===expected.bytes && digest(original.bytes)===expected.sha256,'GRANT_REVIEWER_DOCUMENT_CHANGED');
       let name=expected.path.split('/').at(-1).replace(/[^A-Za-z0-9._-]/g,'_').slice(0,230);
-      if(!/^[A-Za-z0-9]/.test(name))name='source-'+name;
+      if(!/^[A-Za-z0-9]/.test(name) || name===MANIFEST_NAME)name='source-'+name;
       return this.#capture(alias,original,{action,selectionId:args.selectionId,index:args.index,
         originalPath:expected.path,sha256:expected.sha256},{kind:'source-document',name});
     }
@@ -236,9 +236,12 @@ export class MerchantGrantReviewers {
   close(){
     if(this.#close)return this.#close;this.#closing=true;
     this.#close=(async()=>{
-      await Promise.allSettled([...this.#pending]);await this.#readers.close();
-      const results=await Promise.allSettled([...this.#clients.values()].map(client=>client.close()));
-      const failed=results.find(value=>value.status==='rejected');if(failed)throw failed.reason;
+      await Promise.allSettled([...this.#pending]);
+      const results=await Promise.allSettled([this.#readers.close(),
+        ...[...this.#clients.values()].map(client=>client.close())]);
+      const failed=results.filter(value=>value.status==='rejected').map(value=>value.reason);
+      if(failed.length)throw failed.length===1?failed[0]:Object.assign(
+        new AggregateError(failed,'Original reviewer cleanup is incomplete.'),{code:'GRANT_REVIEWER_CLOSE_INCOMPLETE'});
     })().catch(error=>{this.#close=null;throw error;});
     return this.#close;
   }

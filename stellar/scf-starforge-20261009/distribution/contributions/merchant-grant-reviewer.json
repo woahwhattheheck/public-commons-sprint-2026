@@ -29,6 +29,7 @@
     "stellar/scf_2026/presentation/reviewer/merchant/client.mjs",
     "stellar/scf_2026/presentation/reviewer/merchant/cli.mjs",
     "stellar/scf_2026/presentation/reviewer/merchant/client.d.mts",
-    "stellar/scf_2026/presentation/reviewer/merchant/README.md"
+    "stellar/scf_2026/presentation/reviewer/merchant/README.md",
+    "stellar/scf_2026/presentation/reviewer/merchant/RECEIVING.mjs"
   ]
 }

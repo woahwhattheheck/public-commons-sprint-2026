@@ -118,8 +118,10 @@ export interface DownloadReceipt extends ExportSelection {
   workbenchId:UUID;directory:string;manifestSha256:SHA256;files:number;bytes:number;
   kind:ExportManifest['kind'];source:Record<string,Json>;resumed?:boolean;resumedBytes?:number;
 }
-export type ReadValueOptions=RemoteSelection & {workspace?:string;result?:RetainedResult;
-  exportId?:SHA256;file?:string;expectedManifestSha256?:SHA256};
+export type ReadValueOptions=RemoteSelection & {file?:string} & (
+  {result:RetainedResult;workspace?:string;exportId?:never;expectedManifestSha256?:never} |
+  {result?:never;workspace:string;exportId:SHA256;expectedManifestSha256:SHA256}
+);
 export const reviewerActions:Readonly<Record<keyof ToolArguments,Readonly<{
   name:string;description:string;inputSchema:Json;annotations:Record<string,boolean>
 }>>>;

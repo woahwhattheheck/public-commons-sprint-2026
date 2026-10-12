@@ -1,5 +1,5 @@
 // MIT. Restartable host setup using the original merchant configuration and release store.
-import {mkdir,readdir} from 'node:fs/promises';
+import {mkdir,mkdtemp,readdir} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {readSourceFile,writeSourceFile} from '../workspace.mjs';
 import {readReviewerConfiguration} from './connection.mjs';
@@ -30,10 +30,30 @@ export async function initializeReviewerMerchant(options={}){
     selectionSha256:digest(Buffer.from(JSON.stringify(canonical(stableSelection))))};
   await retain(intentFile,encode(intent));
   const native=await import('../../../../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs');
-  try{await native.readReleaseState(join(root,'releases'));}
-  catch(error){if(error.code!=='ENOENT')throw error;await native.initReleaseStore(join(root,'releases'));}
+  const selectionFile=join(root,'reviewer-release-store.json');
+  let release;
+  try{release=decode(await readSourceFile(selectionFile,{privateFile:true,maxBytes:65536}));}
+  catch(error){
+    if(error.code!=='ENOENT')throw error;
+    const candidates=join(root,'release-candidates');await directory(candidates);
+    const stage=await mkdtemp(join(candidates,'native-'));
+    // Original initialization receives an absent directory. Only a complete
+    // native store is selected; an interrupted unselected candidate is retained.
+    await native.initReleaseStore(join(stage,'store'));
+    const proposal={schema:'stellar-forge.grant-reviewer-release-selection.v1',
+      directory:'./release-candidates/'+stage.split('/').at(-1)+'/store',
+      setupSha256:digest(encode(intent))};
+    try{await writeSourceFile(selectionFile,encode(proposal));}
+    catch(error){if(error.code!=='EEXIST')throw error;}
+    release=decode(await readSourceFile(selectionFile,{privateFile:true,maxBytes:65536}));
+  }
+  need(release.schema==='stellar-forge.grant-reviewer-release-selection.v1' &&
+    release.setupSha256===digest(encode(intent)) &&
+    /^\.\/release-candidates\/native-[A-Za-z0-9]+\/store$/.test(release.directory??''),
+  'GRANT_REVIEWER_SETUP_CHANGED','Use the original completed native release-store selection.');
+  await native.readReleaseState(resolve(root,release.directory));
   await directory(join(root,'customer-exports'));
-  const config={schema:'stellar-forge.merchant-mcp.v1',name,releaseStore:'./releases',
+  const config={schema:'stellar-forge.merchant-mcp.v1',name,releaseStore:release.directory,
     exportsDirectory:'./customer-exports',sources:{},grantReviewerConnection:connection},
     configuration=join(root,'merchant-mcp.json');
   // The normal reader validates this selected provider and every existing host field.
