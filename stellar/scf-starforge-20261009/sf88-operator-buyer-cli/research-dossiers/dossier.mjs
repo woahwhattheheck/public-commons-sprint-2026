@@ -21,6 +21,7 @@ import {riskOfBiasDigest,riskOfBiasInput,riskOfBiasModel,riskOfBiasPage,riskOfBi
   recordRiskOfBiasOperation,validateRiskOfBiasState,validateRiskOfBiasTransition} from './risk-of-bias/index.mjs';
 import {riskOfBiasRegistry} from './risk-of-bias/registry.mjs';
 import {createCustomerUpdateStore,validateCustomerUpdateTransition} from './customer-updates/store.mjs';
+import {createRisSourceStore,validateRisState,validateRisTransition} from './ris-source/store.mjs';
 import {validateCustomerUpdateState,customerUpdateBlobMetadata} from './customer-updates/model.mjs';
 import {createTemplateExchange,validateTemplateExchangeState,
   validateTemplateExchangeTransition,templateExchangeBlobs} from './template-exchange/engine.mjs';
@@ -275,12 +276,14 @@ export async function openDossierStore(directory, { providers = {}, extractionOp
     need(['full', 'metadata'].includes(projection), 'RESEARCH_PROJECTION_INVALID');
     label = text(label, 'EDITION_LABEL_REQUIRED', 240);
     provider = text(provider, 'EDITION_PROVIDER_REQUIRED', 80);
+    need(provider.toLowerCase()!=='ris-document','RIS_ATOMIC_REVIEW_REQUIRED');
     need(origin === null || object(origin), 'RESEARCH_ORIGIN_INVALID');
     sourceReference = text(sourceReference, 'SOURCE_REFERENCE_INVALID', 4000, true);
     need([rawBytes !== undefined, rawText !== undefined, response !== undefined].filter(Boolean).length === 1, 'ONE_RESEARCH_INPUT_REQUIRED');
     const bytes = rawBytes !== undefined ? Buffer.from(rawBytes) :
       rawText !== undefined ? Buffer.from(text(rawText, 'RESEARCH_JSON_REQUIRED', MAX_RESPONSE), 'utf8') : jsonBytes(response);
     const parsed = normalizeResponse(bytes, provider);
+    need(parsed.provider!=='ris-document','RIS_ATOMIC_REVIEW_REQUIRED');
     return commit(id, expectedRevision, 'Received research edition', async state => {
       need(state.questions.some(question => question.id === questionId), 'QUESTION_NOT_FOUND');
       const raw = await putBlob(bytes);
@@ -365,6 +368,7 @@ export async function openDossierStore(directory, { providers = {}, extractionOp
     commit(id, expectedRevision, 'Attached original research edition', state => {
       need(state.questions.some(question => question.id === questionId), 'QUESTION_NOT_FOUND');
       provider = text(provider, 'EDITION_PROVIDER_REQUIRED', 80);
+    need(provider.toLowerCase()!=='ris-document','RIS_ATOMIC_REVIEW_REQUIRED');
       need(/^[a-z0-9-]+$/.test(provider), 'EDITION_PROVIDER_INVALID');
       reference = referenceValue(reference);
       label = text(label, 'EDITION_LABEL_REQUIRED', 240);
@@ -747,6 +751,7 @@ export async function openDossierStore(directory, { providers = {}, extractionOp
       validateRiskOfBiasState(state,editions,knownOccurrences);
       validateCustomerUpdateState(state,editions);
       validateTemplateExchangeState(state);
+      await validateRisState(state,readContent,occurrenceCache);
       const findings = new Set();
       for (const finding of state.findings) {
         need(object(finding) && typeof finding.id === 'string' && /^f_[a-f0-9-]{36}$/.test(finding.id) &&
@@ -765,7 +770,8 @@ export async function openDossierStore(directory, { providers = {}, extractionOp
       }
   }
 
-  async function validateReviewTransitions(previous,state,readContent){
+  async function validateReviewTransitions(previous,state,readContent,occurrenceCache){
+    await validateRisTransition(previous,state,readContent,occurrenceCache);
     const hasCitation=(state.citationReviews?.length??0)>(previous?.citationReviews?.length??0);
     const hasEligibility=(state.eligibilityEvents?.length??0)>(previous?.eligibilityEvents?.length??0);
     const hasExtraction=(state.extractionEvents?.length??0)>(previous?.extractionEvents?.length??0);
@@ -815,7 +821,7 @@ export async function openDossierStore(directory, { providers = {}, extractionOp
     for (let index=0;index<incoming.length;index++){
       const state=incoming[index].state,prior=index?incoming[index-1].state:null;
       await validatePortableState(state,readContent,occurrenceCache);
-      await validateReviewTransitions(prior,state,readContent);
+      await validateReviewTransitions(prior,state,readContent,occurrenceCache);
     }
     let existing = [];
     try { existing = await history(id); }
@@ -926,7 +932,7 @@ export async function openDossierStore(directory, { providers = {}, extractionOp
         need(envelope.state.previous === previous, 'PORTABLE_HISTORY_CHANGED');
         previous = envelope.sha256;
         await validatePortableState(envelope.state, readContent, occurrenceCache);
-        await validateReviewTransitions(previousState,envelope.state,readContent);previousState=envelope.state;
+        await validateReviewTransitions(previousState,envelope.state,readContent,occurrenceCache);previousState=envelope.state;
         if (revision <= existing.length)
           need((await readRevision(id, revision)).sha256 === envelope.sha256, 'PORTABLE_HISTORY_CONFLICT');
       }
@@ -947,11 +953,12 @@ export async function openDossierStore(directory, { providers = {}, extractionOp
     } finally { await rm(staging, {recursive: true, force: true}); }
   }
 
+  const risSourceStore=createRisSourceStore({head,commit,metadata,blob,putBlob});
   const customerUpdateStore=createCustomerUpdateStore({head,commit,metadata,get,projections,blob,putBlob,exportStream});
   const templateExchange=createTemplateExchange({head,commit,blob,putBlob,reviewExtraction,
     workbookOptions:{python:extractionOptions.python??'python3',signal:extractionOptions.signal}});
   return Object.freeze({ directory, list, create, get, getMetadata, readRetainedEdition, listRevisions, update, addQuestion, updateQuestion,
-    ...customerUpdateStore,templateExchange,
+    ...customerUpdateStore,...risSourceStore,templateExchange,
     receive, previewSourceBundle, receiveSourceBundle, receiveBuyerResult, receiveReference, selectEvidence, updateSelection, addFinding, updateFinding,
     citationUpdates,reviewCitationUpdate,eligibility,reviewEligibility,exportEligibility,
     riskOfBias,reviewRiskOfBias,exportRiskOfBias,
