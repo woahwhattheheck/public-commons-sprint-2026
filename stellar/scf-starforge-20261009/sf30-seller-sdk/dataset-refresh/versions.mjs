@@ -156,9 +156,10 @@ function selectedQuery(query = {}) {
  * All datasets are loaded by the original SF30 loader, never by a second parser. */
 export async function openDatasetVersions({ directory: suppliedDirectory, initialConfig,
   retentionMs, maxVersions, maxRetainedBytes, maxCachedVersions = 2,
-  maxResidentRows = 1000000, now = Date.now } = {}) {
+  maxResidentRows = 1000000, collectOnOpen = true, now = Date.now } = {}) {
   if (typeof suppliedDirectory !== 'string' || !suppliedDirectory || typeof now !== 'function')
     throw new TypeError('A private directory and clock are required');
+  if (typeof collectOnOpen !== 'boolean') throw new TypeError('collectOnOpen must be boolean');
   integer(maxCachedVersions, 'maxCachedVersions', 1, 16);
   integer(maxResidentRows, 'maxResidentRows', 1, 16000000);
   const root = resolve(suppliedDirectory), generations = join(root, 'versions');
@@ -347,7 +348,8 @@ export async function openDatasetVersions({ directory: suppliedDirectory, initia
     } else {
       if (initialConfig || retentionMs !== undefined || maxVersions !== undefined || maxRetainedBytes !== undefined)
         throw new TypeError('Existing stores retain their initialized settings; reopen without initialization options');
-      await collectInternal();
+      // Portable capture keeps every stored generation; live reopen still collects by default.
+      if (collectOnOpen) await collectInternal();
       // Preserve the original full restart validation, one generation at a time.
       // Only compact descriptions survive for cold generations; current is last.
       for (const record of [...state.versions.filter(v => v.snapshot !== state.current),
