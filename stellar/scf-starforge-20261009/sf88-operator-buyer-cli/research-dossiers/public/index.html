@@ -6,6 +6,7 @@
   <meta name="color-scheme" content="light">
   <title>Research dossiers</title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/unstructured.css">
   <script src="/app.js" type="module"></script>
 </head>
 <body>
@@ -48,6 +49,7 @@
           <button class="tab" data-tab="findings">Findings</button>
           <button class="tab" data-tab="revisions">Revisions</button>
           <button class="tab" data-tab="crossref" id="crossref-tab" hidden>DOI metadata</button>
+          <button class="tab" data-tab="documents" id="documents-tab">Documents</button>
         </nav>
         <section id="view-sources">
           <div class="source-toolbar">
@@ -75,6 +77,7 @@
           </div>
         </section>
         <section id="view-crossref" hidden></section>
+        <section id="view-documents" hidden></section>
         <section id="view-questions" hidden>
           <div class="view-heading"><div><h2>Research questions</h2><p class="muted">Keep each result edition attached to the question it answers.</p></div><button id="add-question" class="primary">Add question</button></div>
           <div id="question-list" class="question-list"></div>

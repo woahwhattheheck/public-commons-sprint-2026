@@ -1,0 +1,56 @@
+{
+  "name": "Starforge example · Invoice line summary",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "example-invoice-trigger",
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Example invoice arithmetic. Amounts are integer minor units of the supplied currency.\nconst incoming = $input.all();\nif (incoming.length !== 1) throw new Error('INVOICE_ONE_INPUT_REQUIRED');\nconst input = incoming[0].json;\nconst object = value => value !== null && typeof value === 'object' && !Array.isArray(value);\nconst allowed = new Set(['invoiceId', 'currency', 'lines', 'discountMinor', 'taxBasisPoints']);\nif (!object(input) || Object.keys(input).some(key => !allowed.has(key))) throw new Error('INVOICE_INPUT_INVALID');\nif (typeof input.invoiceId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$/.test(input.invoiceId)) throw new Error('INVOICE_ID_INVALID');\nif (typeof input.currency !== 'string' || !/^[A-Z]{3}$/.test(input.currency)) throw new Error('INVOICE_CURRENCY_INVALID');\nif (!Array.isArray(input.lines) || input.lines.length < 1 || input.lines.length > 200) throw new Error('INVOICE_LINES_INVALID');\nconst integer = (value, name, minimum = 0, maximum = Number.MAX_SAFE_INTEGER) => {\n  if (!Number.isSafeInteger(value) || value < minimum || value > maximum) throw new Error('INVOICE_' + name + '_INVALID');\n  return value;\n};\nconst publicInteger = (value, name) => {\n  if (value < 0n || value > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error('INVOICE_' + name + '_OVERFLOW');\n  return Number(value);\n};\nlet subtotal = 0n, quantityTotal = 0n;\nconst lines = input.lines.map((line, index) => {\n  if (!object(line) || Object.keys(line).some(key => !['description', 'quantity', 'unitPriceMinor'].includes(key))) throw new Error('INVOICE_LINE_INVALID_' + index);\n  if (typeof line.description !== 'string' || !line.description.trim() || line.description.length > 200 || /[\\x00-\\x1f\\x7f]/.test(line.description)) throw new Error('INVOICE_DESCRIPTION_INVALID_' + index);\n  const quantity = integer(line.quantity, 'QUANTITY', 1, 10000);\n  const unitPriceMinor = integer(line.unitPriceMinor, 'UNIT_PRICE');\n  const lineTotal = BigInt(quantity) * BigInt(unitPriceMinor);\n  subtotal += lineTotal; quantityTotal += BigInt(quantity);\n  return { description: line.description, quantity, unitPriceMinor, lineTotalMinor: publicInteger(lineTotal, 'LINE_TOTAL') };\n});\nconst discountMinor = integer(input.discountMinor ?? 0, 'DISCOUNT');\nconst taxBasisPoints = integer(input.taxBasisPoints ?? 0, 'TAX_RATE', 0, 10000);\nconst discount = BigInt(discountMinor);\nif (discount > subtotal) throw new Error('INVOICE_DISCOUNT_EXCEEDS_SUBTOTAL');\nconst taxable = subtotal - discount;\n// Round the single invoice-level tax to the nearest minor unit; halves round up.\nconst tax = (taxable * BigInt(taxBasisPoints) + 5000n) / 10000n;\nconst total = taxable + tax;\nreturn [{ json: {\n  invoiceId: input.invoiceId, currency: input.currency,\n  lineCount: lines.length, totalQuantity: publicInteger(quantityTotal, 'QUANTITY_TOTAL'),\n  subtotalMinor: publicInteger(subtotal, 'SUBTOTAL'), discountMinor,\n  taxableMinor: publicInteger(taxable, 'TAXABLE'), taxBasisPoints,\n  taxMinor: publicInteger(tax, 'TAX'), totalMinor: publicInteger(total, 'TOTAL'),\n  rounding: 'invoice-tax-half-up', lines\n} }];"
+      },
+      "id": "example-invoice-summary",
+      "name": "Summarize Invoice",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Summarize Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true
+  },
+  "active": false,
+  "pinData": {},
+  "tags": []
+}
+

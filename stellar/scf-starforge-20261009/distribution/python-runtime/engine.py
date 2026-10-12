@@ -451,6 +451,15 @@ def resolve(root, python, source_path, extras, release_id, release_digest):
     return candidate_view(root, candidate_id)
 
 
+def application_modules(source):
+    modules = {"analysis": "stellar_forge_buyer.analysis_workspace",
+               "workbooks": "stellar_forge_buyer.analysis_workbooks",
+               "workbookDelivery": "stellar_forge_buyer.workbook_client"}
+    if source.get("scripts", {}).get("stellar-forge-duckdb") == "stellar_forge_buyer.duckdb_cli:main":
+        modules["duckdb"] = "stellar_forge_buyer.duckdb_cli"
+    return modules
+
+
 def verify_installation(root, directory, lock):
     python = directory / "venv/bin/python"
     checks = [item for item in lock["source"]["files"]
@@ -461,9 +470,9 @@ def verify_installation(root, directory, lock):
             "'files':[{'path':c['path'],'bytes':len(d.locate_file(c['path']).read_bytes()),"
             "'sha256':hashlib.sha256(d.locate_file(c['path']).read_bytes()).hexdigest()} for c in checks],"
             "'entrypoints':{e.name:e.value for e in d.entry_points if e.group=='console_scripts'},"
-            "'modules':{n:bool(importlib.util.find_spec(n)) for n in ['stellar_forge_buyer.analysis_workspace',"
-            "'stellar_forge_buyer.analysis_workbooks','stellar_forge_buyer.workbook_client']}}))")
-    inventory = json.loads(run(root, "installed-source", [python, "-I", "-c", code, lock["source"]["name"], json.dumps(checks)], True))
+            "'modules':{n:bool(importlib.util.find_spec(n)) for n in json.loads(sys.argv[3])}}))")
+    inventory = json.loads(run(root, "installed-source", [python, "-I", "-c", code,
+        lock["source"]["name"], json.dumps(checks), json.dumps(list(application_modules(lock["source"]).values()))], True))
     actual = {normalized(item["name"]): item["version"] for item in inventory["packages"]}
     need(actual == {item["name"]: item["version"] for item in lock["packages"]} and len(actual) == len(inventory["packages"]),
          "Installed packages differ from the complete selected wheel cohort")
@@ -495,9 +504,7 @@ def install(root, candidate_id, python):
                 "directory": str(directory), "python": str(executable), "source": lock["source"],
                 "extras": lock["extras"], "packages": lock["packages"], "interpreter": lock["interpreter"],
                 "capabilities": {"analysis": True, **{name: name in lock["extras"] for name in lock["source"]["extras"]}},
-                "modules": {"analysis": "stellar_forge_buyer.analysis_workspace",
-                            "workbooks": "stellar_forge_buyer.analysis_workbooks",
-                            "workbookDelivery": "stellar_forge_buyer.workbook_client"},
+                "modules": application_modules(lock["source"]),
                 "entrypoints": {name: {"target": target, "path": str(directory / "venv/bin" / name),
                                       "sha256": digest(directory / "venv/bin" / name)}
                                 for name, target in lock["source"]["scripts"].items()}}

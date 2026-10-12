@@ -12,6 +12,7 @@ import {OPERATION_HANDOFF_MAX_BYTES,inspectOperationHandoff,importOperationHando
   readOperationHandoffBody} from '../sf88-operator-buyer-cli/operation-handoff.mjs';
 import {acquireRunbookMetadataLease} from './runbook.mjs';
 import {createSellerClientIntake} from './client-intake.mjs';
+import {openBuyerOperatorSetup} from './operator-preset.mjs';
 
 const SCHEMA='stellar-forge.buyer-request-intake.v1';
 const PRESET='stellar-forge.buyer-runbook-operator.v1';
@@ -71,12 +72,8 @@ async function publish(path,value,{same=false,raw=false}={}) {
 }
 
 /** Read the ORIGINAL host-owned operator preset for receiving applications. */
-export async function readBuyerOperatorPreset(settingsFile, {directory} = {}) {
+export function validateBuyerOperatorPreset(value, {directory} = {}) {
   canonical(directory);
-  check(settingsFile!==null,'REQUEST_OPERATOR_PRESET_REQUIRED');
-  const raw=await bytes(canonical(settingsFile),16384);let value;
-  try{value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(raw));}
-  catch{throw new InputError('REQUEST_OPERATOR_PRESET_INVALID');}
   const required=['schema','actor','service','payer','python','maxTotalAtomic','maxDailyAtomic'];
   fields(value,[...required,'secretEnv','signerProvider','rpc','httpsProxyEnv'],required);
   check(value.schema===PRESET,'REQUEST_OPERATOR_PRESET_INVALID');
@@ -89,7 +86,17 @@ export async function readBuyerOperatorPreset(settingsFile, {directory} = {}) {
   for(const name of ['secretEnv','httpsProxyEnv'])if(value[name]!==undefined)
     check(/^[A-Z][A-Z0-9_]{0,127}$/.test(value[name])&&!value[name].startsWith('SF36_'),'REQUEST_ENVIRONMENT_NAME_INVALID');
   if(value.rpc!==undefined)check(typeof value.rpc==='string'&&value.rpc.length<=2048,'REQUEST_RPC_INVALID');
-  return {value,sha256:hash(raw),view:{actor:value.actor,service:value.service,payer:value.payer,
+  return value;
+}
+
+export async function readBuyerOperatorPreset(settingsFile, {directory} = {}) {
+  canonical(directory);
+  check(settingsFile!==null,'REQUEST_OPERATOR_PRESET_REQUIRED');
+  const raw=await bytes(canonical(settingsFile),16384);let value;
+  try{value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(raw));}
+  catch{throw new InputError('REQUEST_OPERATOR_PRESET_INVALID');}
+  validateBuyerOperatorPreset(value,{directory});
+  return {value,raw,sha256:hash(raw),view:{actor:value.actor,service:value.service,payer:value.payer,
     maxTotalAtomic:value.maxTotalAtomic,maxDailyAtomic:value.maxDailyAtomic,
     signerSource:value.signerProvider===undefined?'ENVIRONMENT':'TRUSTED_SEP43_PROVIDER',
     walletKeyEnvironment:value.signerProvider===undefined?value.secretEnv??'STELLAR_SECRET':null}};
@@ -112,14 +119,18 @@ export async function openHandoffIntake({directory,configsDirectory,operatorSett
     await publish(join(directory,'operator-settings.json'),{path:operatorSettings},{same:true});
   }
   const declared=await optional(join(directory,'operator-settings.json'));
-  const settingsFile=saved.operatorSettings??declared?.path??null;
-  check(operatorSettings===undefined||operatorSettings===settingsFile,'REQUEST_OPERATOR_PRESET_PATH_CHANGED');
+  const declaredSettingsFile=saved.operatorSettings??declared?.path??null;
+  check(operatorSettings===undefined||operatorSettings===declaredSettingsFile,'REQUEST_OPERATOR_PRESET_PATH_CHANGED');
   const root=id=>{check(typeof id==='string'&&ID.test(id),'REQUEST_ID_INVALID');return join(directory,id);};
   const source=id=>join(root(id),'request.handoff');
   const configuration=id=>'received-'+id.slice(8)+'.json';
   async function lease(action){const release=await acquireRunbookMetadataLease(directory);
     try{return await action();}finally{await release();}}
-  const preset = () => readBuyerOperatorPreset(settingsFile, {directory});
+  const operatorSetup=await openBuyerOperatorSetup({directory,declaredSettingsFile,
+    readPreset:file=>readBuyerOperatorPreset(file,{directory}),
+    validatePreset:value=>validateBuyerOperatorPreset(value,{directory}),
+    storage:{privateDirectory,bytes,publish,json,optional,readdir,lease}});
+  const preset=operatorSetup.read;
   async function record(id){const value=await json(join(root(id),'request.json'));
     check(value.schema===SCHEMA&&value.id===id&&value.handoffSha256===id.slice(8),'REQUEST_RECORD_CHANGED');return value;}
   async function verifiedSource(id){const item=await record(id),raw=await bytes(source(id),OPERATION_HANDOFF_MAX_BYTES);
@@ -146,6 +157,38 @@ export async function openHandoffIntake({directory,configsDirectory,operatorSett
       'REQUEST_ATTEMPT_BINDING_CHANGED',409);
     return value;
   }
+  async function attemptForReview(id,review) {
+    if(!review)return null;
+    const parent=join(root(id),'attempts'),names=(await readdir(parent)).filter(name=>/^a[1-9][0-9]*\.json$/.test(name))
+      .sort((a,b)=>Number(b.slice(1,-5))-Number(a.slice(1,-5)));
+    for(const name of names) {
+      const item=attemptRecord(id,Number(name.slice(1,-5)),await json(join(parent,name)));
+      if(item.reviewSha256===review.reviewSha256)return item;
+    }
+    return null;
+  }
+  function attemptSettingsPath(attempt) {return join(root(attempt.id),'attempts','a'+attempt.generation+'.'+attempt.reviewSha256+'.settings.json');}
+  async function attemptPreset(attempt,review) {
+    const file=attemptSettingsPath(attempt);
+    const verified=settings=>{
+      check(settings.sha256===review.settingsSha256&&JSON.stringify(settings.view)===JSON.stringify(review.operator),
+        'REQUEST_ATTEMPT_SETTINGS_CHANGED',409);
+      return settings;
+    };
+    try {return verified(await readBuyerOperatorPreset(file,{directory}));}
+    catch(error) {if(error.code!=='ENOENT')throw error;}
+    // Earlier retained attempts used one sidecar per generation. Adopt those
+    // exact bytes only after their saved review identity is verified.
+    let settings;
+    try {settings=await readBuyerOperatorPreset(join(root(attempt.id),'attempts','a'+attempt.generation+'.settings.json'),{directory});}
+    catch(error) {
+      if(error.code!=='ENOENT')throw error;
+      settings=await operatorSetup.readMatching(review.settingsSha256);
+    }
+    verified(settings);
+    await publish(file,settings.raw,{same:true,raw:true});
+    return settings;
+  }
   async function ready(id) {
     const result=await optional(join(root(id),'ready.json'));
     if(result){
@@ -163,7 +206,8 @@ export async function openHandoffIntake({directory,configsDirectory,operatorSett
     const item=await verifiedSource(id);
     const view=await inspectOperationHandoff({file:source(id),directory:join(root(id),'review-input'),requireCurrent:false});
     const [review,prepared]=await Promise.all([reviews(id),ready(id)]);
-    return {...item,view,review,prepared,expired:view.operationTicket!==null&&view.operationTicket.expiresAt<=Date.now()};
+    return {...item,view,review,prepared,preparing:!prepared&&Boolean(await attemptForReview(id,review)),
+      expired:view.operationTicket!==null&&view.operationTicket.expiresAt<=Date.now()};
   }
   async function receive(input) {
     fields(input,['filename','base64']);
@@ -263,8 +307,10 @@ export async function openHandoffIntake({directory,configsDirectory,operatorSett
     fields(input,['id','reviewSha256']);
     const item=await verifiedSource(input.id),existing=await ready(input.id);
     if(existing){check(existing.reviewSha256===input.reviewSha256,'REQUEST_ALREADY_PREPARED',409);return existing;}
-    const selected=await reviews(input.id),operator=await preset();
+    const selected=await reviews(input.id);
     check(selected&&selected.reviewSha256===input.reviewSha256,'REQUEST_REVIEW_CHANGED',409);
+    const retainedAttempt=await attemptForReview(input.id,selected);
+    const operator=retainedAttempt?await attemptPreset(retainedAttempt,selected):await preset();
     check(selected.settingsSha256===operator.sha256,'REQUEST_OPERATOR_SETTINGS_CHANGED',409);
     const current=await inspectOperationHandoff({file:source(input.id),directory:join(root(input.id),'review-input'),acceptIndex:selected.acceptIndex});
     check(JSON.stringify(selected.acceptedTerms)===JSON.stringify(current.acceptedTerms)&&
@@ -276,32 +322,35 @@ export async function openHandoffIntake({directory,configsDirectory,operatorSett
     const attemptsDirectory=join(root(input.id),'attempts');
     const names=(await readdir(attemptsDirectory)).filter(name=>/^a[1-9][0-9]*\.json$/.test(name))
       .sort((a,b)=>Number(b.slice(1,-5))-Number(a.slice(1,-5)));
-    for(const name of names) {
-      const previous=attemptRecord(input.id,Number(name.slice(1,-5)),await json(join(attemptsDirectory,name)));
-      if(previous.reviewSha256!==selected.reviewSha256)continue;
-      // Resume this exact reviewed generation, including keys/ledger written
-      // before workspace.json. The original import and initializer verify pins.
-      const manifest=await optional(join(previous.operatorDirectory,'workspace.json'));
-      if(manifest)return finish(previous,selected,operator.value);
-      return prepareAttempt(previous,selected,operator.value);
+    if(retainedAttempt) {
+      // Resume the original generation with its retained complete settings even
+      // when a later host selection is active. Its native keys/ledger stay owned
+      // by the same importer and initializer.
+      const manifest=await optional(join(retainedAttempt.operatorDirectory,'workspace.json'));
+      if(manifest)return finish(retainedAttempt,selected,operator.value);
+      return prepareAttempt(retainedAttempt,selected,operator.value);
     }
     const generation=names.length?Number(names[0].slice(1,-5))+1:1;
     check(Number.isSafeInteger(generation)&&generation<=10000,'REQUEST_ATTEMPT_LIMIT');
     const attempt={schema:SCHEMA,id:input.id,generation,reviewSha256:selected.reviewSha256,
       inputDirectory:join(root(input.id),'input-'+generation),operatorDirectory:join(root(input.id),'operator-'+generation)};
+    await publish(attemptSettingsPath(attempt),operator.raw,{same:true,raw:true});
     await publish(join(attemptsDirectory,'a'+generation+'.json'),attempt);
     return prepareAttempt(attempt,selected,operator.value);
   }
   async function state() {
-    const requests=[],errors=[];let operator=null,presetError=null;
-    if(settingsFile!==null){try{operator=(await preset()).view;}catch(error){presetError=codeOf(error);}}
+    const requests=[],errors=[],operatorSetupState=await operatorSetup.state();
+    const operator=operatorSetupState.operator,presetError=operatorSetupState.error,settingsFile=operatorSetupState.settingsFile;
     for(const id of (await readdir(directory)).filter(name=>ID.test(name))){
-      try{const item=await record(id);requests.push({...item,prepared:await ready(id)});}
+      try{const item=await record(id),review=await reviews(id),prepared=await ready(id);
+        requests.push({...item,prepared,preparing:!prepared&&Boolean(await attemptForReview(id,review)),
+          reviewSettingsSha256:review?.settingsSha256??null,reviewRevision:review?.revision??null});}
       catch(error){errors.push({id,code:codeOf(error)});}
     }
     requests.sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
     const customerClients=await clients.state();
     return {requests,errors:[...errors,...customerClients.errors],operator,presetError,settingsFile,
+      operatorSettingsSha256:operatorSetupState.settingsSha256,operatorSetup:operatorSetupState,
       maxHandoffBytes:OPERATION_HANDOFF_MAX_BYTES,clients:customerClients};
   }
   async function originalOperatorForOperation(op,accounting=false) {
@@ -330,6 +379,6 @@ export async function openHandoffIntake({directory,configsDirectory,operatorSett
   }
   const clients=await createSellerClientIntake({directory:join(directory,'clients'),request:get,receiveRequest:receive,
     storage:{privateDirectory,bytes,publish,json,optional,lease,lstat,readdir}});
-  return {state,get,attachment,environmentForOperation,workspaceForOperation,clients,
+  return {state,get,attachment,environmentForOperation,workspaceForOperation,clients,operatorSetup,
     receive:input=>lease(()=>receive(input)),review:input=>lease(()=>review(input)),provision:input=>lease(()=>provision(input))};
 }

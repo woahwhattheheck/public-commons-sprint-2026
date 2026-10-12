@@ -67,6 +67,25 @@ def offset_limit(offset, limit):
         raise InputError("Use a nonnegative offset and limit from 1 to 250")
 
 
+def normalize_config(feed_id, config):
+    identifier(feed_id)
+    if not isinstance(config, dict) or set(config) - {"url", "label", "rssIdentity", "allowedOrigins"}:
+        raise InputError("Feed configuration accepts url, label, rssIdentity and allowedOrigins")
+    value = {"url": validate_url(config.get("url")), "label": config.get("label", feed_id),
+             "rssIdentity": config.get("rssIdentity", "guid-or-link")}
+    if not isinstance(value["label"], str) or not 1 <= len(value["label"]) <= 160:
+        raise InputError("Feed label must have 1–160 characters")
+    if value["rssIdentity"] not in ("guid", "guid-or-link"):
+        raise InputError("RSS identity must be guid or guid-or-link")
+    choices = config.get("allowedOrigins", [origin(value["url"])])
+    if not isinstance(choices, list) or not 1 <= len(choices) <= 32:
+        raise InputError("Choose 1–32 origins for source paging and redirects")
+    value["allowedOrigins"] = sorted(set(origin(x) for x in choices))
+    if origin(value["url"]) not in value["allowedOrigins"]:
+        raise InputError("The source origin must be included in allowedOrigins")
+    return value
+
+
 class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None
@@ -105,6 +124,8 @@ class FeedWorkspace(Workspace):
             revision INTEGER NOT NULL,body TEXT NOT NULL,created REAL NOT NULL,
             PRIMARY KEY(feed_id,identity,revision));
         """)
+        from subscriptions import SubscriptionWorkspace
+        self.subscriptions = SubscriptionWorkspace(self)
 
     def _begin(self, operation_id, payload):
         identifier(operation_id)
@@ -132,21 +153,7 @@ class FeedWorkspace(Workspace):
                 "atomId": row["atom_id"], "created": row["created"]}
 
     def register(self, feed_id, config, expected_revision, operation_id):
-        identifier(feed_id)
-        if not isinstance(config, dict) or set(config) - {"url", "label", "rssIdentity", "allowedOrigins"}:
-            raise InputError("Feed configuration accepts url, label, rssIdentity and allowedOrigins")
-        value = {"url": validate_url(config.get("url")), "label": config.get("label", feed_id),
-                 "rssIdentity": config.get("rssIdentity", "guid-or-link")}
-        if not isinstance(value["label"], str) or not 1 <= len(value["label"]) <= 160:
-            raise InputError("Feed label must have 1–160 characters")
-        if value["rssIdentity"] not in ("guid", "guid-or-link"):
-            raise InputError("RSS identity must be guid or guid-or-link")
-        choices = config.get("allowedOrigins", [origin(value["url"])])
-        if not isinstance(choices, list) or not 1 <= len(choices) <= 32:
-            raise InputError("Choose 1–32 origins for source paging and redirects")
-        value["allowedOrigins"] = sorted(set(origin(x) for x in choices))
-        if origin(value["url"]) not in value["allowedOrigins"]:
-            raise InputError("The source origin must be included in allowedOrigins")
+        value = normalize_config(feed_id, config)
         if type(expected_revision) is not int or expected_revision < 0:
             raise InputError("Supply the current nonnegative revision")
         with self.mutex:
@@ -651,6 +658,7 @@ class FeedWorkspace(Workspace):
 
     def cancel_capture(self):
         self.cancel_event.set()
+        self.subscriptions.request_cancel()
         return {"cancellationRequested": True}
 
     @staticmethod
