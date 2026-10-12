@@ -123,6 +123,7 @@ const HELP = `Starforge merchant MCP
        [--name NAME] [--seller-port PORT] [--facilitator URL] [--allow-local-facilitator]
        [--catalog CATALOG_CONNECTION_JSON] [--support SUPPORT_CONNECTION_JSON] [--fleet-plan ORIGINAL_FLEET_PLAN.json]
   serve --config MERCHANT_MCP.json [--port PORT] [--token-env ENVIRONMENT_NAME | --oauth-config OAUTH_RESOURCE.json]
+       [--operator-console-dir PRIVATE_OPERATOR_WORKSPACE]
   pricing status|open|capture|source|preview|save|list|load|selection|apply|manifest|download|close ...
   maintenance open|close|status|job|prepare|execute|reconcile|download ...
   adjustments open|status|events|event|detail|job|preview|prepare|execute|reconcile|download|close ...
@@ -231,12 +232,12 @@ function portNumber(value, fallback) {
   return Number(value);
 }
 export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MCP_ACCESS_TOKEN',
-  environment = process.env, stellarExpertFetchImpl, woocommerceFetchImpl, mppFetchImpl, oauthConfigPath, oauthFetchImpl, accounting } = {}) {
+  environment = process.env, stellarExpertFetchImpl, woocommerceFetchImpl, mppFetchImpl, oauthConfigPath, oauthFetchImpl, accounting, consoleDirectory, consoleBinding } = {}) {
   if (!configPath || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(tokenEnv)) throw failure('CONFIGURATION_ERROR', 'Supply a merchant configuration and token environment-variable name.');
   port = portNumber(port, 3211);
   const operator = await openMerchantOperator(configPath,
     { stellarExpert: { environment, fetchImpl: stellarExpertFetchImpl }, woocommerce: { environment, fetchImpl: woocommerceFetchImpl }, mpp: { environment, fetchImpl: mppFetchImpl }, opensearch: { environment }, opencage: { env: environment }, grpc: { environment }, openapi: { environment }, arcgis: { environment }, accounting: { ...accounting, environment } });
-  let server, access;
+  let server, access, operatorConsole, draining=false;
   try {
     access = await loadOAuthResourceHost({configPath:oauthConfigPath ?? environment.MCP_OAUTH_CONFIG,
       bearerToken:environment[tokenEnv],fetchImpl:oauthFetchImpl});
@@ -244,7 +245,28 @@ export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MC
       allowedClientOrigins: String(environment.MCP_CLIENT_ORIGINS ?? '').split(',').map(value => value.trim()).filter(Boolean),
       serverName: 'starforge-merchant-operator', serverVersion: '0.1.0',
       instructions: merchantInstructions(operator.tools) });
-    server = createServer(access.wrap(handler));
+    if (consoleBinding !== undefined && consoleDirectory === undefined)
+      throw failure('CONFIGURATION_ERROR', 'A managed console binding requires its original console directory.');
+    if(consoleDirectory!==undefined){
+      if(typeof consoleDirectory!=='string'||!consoleDirectory)throw failure('CONFIGURATION_ERROR','Supply a private operator console directory.');
+      operatorConsole=await (await import('./console/service.mjs')).createMerchantConsole({
+        operator,configPath,directory:consoleDirectory,...access.transportOptions,binding:consoleBinding});
+    }
+    const routed=operatorConsole?async(req,res)=>{
+      try{
+        if(draining){
+          res.writeHead(503,{'content-type':'application/json','cache-control':'no-store'});
+          res.end(JSON.stringify({error:{code:'OPERATOR_CLOSING',message:'The original merchant host is closing.'}}));return;
+        }
+        if(await operatorConsole.handler(req,res))return;
+        await handler(req,res);
+      }catch(error){
+        if(res.headersSent){res.destroy(error);return;}
+        res.writeHead(500,{'content-type':'application/json','cache-control':'no-store'});
+        res.end(JSON.stringify({error:{code:error.code??'CONSOLE_ERROR',message:'The original operator could not return this response.'}}));
+      }
+    }:handler;
+    server = createServer(access.wrap(routed));
     server.requestTimeout = 150000; server.headersTimeout = 10000; server.keepAliveTimeout = 2000;
     await new Promise((done, reject) => {
       server.once('error', reject);
@@ -252,28 +274,33 @@ export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MC
     });
   } catch (error) {
     server?.close();
-    try { await operator.close(); } finally { await access?.close(); }
+    try { await operatorConsole?.close(); } finally { try { await operator.close(); } finally { await access?.close(); } }
     throw error;
   }
-  let closing;
+  let closing, stopped;
   const close = () => {
     if (closing) return closing;
-    const disposing = (async () => {
-      const stopped = new Promise((done, reject) => server.close(error =>
-        error && error.code !== 'ERR_SERVER_NOT_RUNNING' ? reject(error) : done()));
-      // Finish an accepted change before draining the owned original seller.
-      // New calls now receive OPERATOR_CLOSING, and new sockets are refused.
-      try { await access.close(); }
-      finally {
-        try { await operator.close(); }
+    draining=true;
+    closing = (async () => {
+      stopped??=new Promise((done, reject) => server.close(error => error&&error.code!=='ERR_SERVER_NOT_RUNNING' ? reject(error) : done()));
+      // Preserve the original customer checkpoints, then let the native owners
+      // cancel/drain accepted provider work before waiting for their returns.
+      try {
+        operatorConsole?.beginClose();
+        const results=await Promise.allSettled([operatorConsole?.close(),operator.close()]);
+        const errors=results.filter(value=>value.status==='rejected').map(value=>value.reason);
+        if(errors.length)throw errors.length===1?errors[0]:Object.assign(new AggregateError(errors,'Original merchant shutdown is incomplete.'),{code:'OPERATOR_SHUTDOWN_INCOMPLETE'});
+      } finally {
+        try { await access.close(); }
         finally { server.closeAllConnections(); await stopped; }
       }
     })();
-    closing = disposing;
-    void disposing.catch(() => { if (closing === disposing) closing = null; });
-    return disposing;
+    closing.catch(()=>{closing=undefined;});
+    return closing;
   };
-  return { operator, server, url: 'http://127.0.0.1:' + server.address().port, maxRequestBytes: operator.maxRequestBytes, authorization:access.describe(), close };
+  const url=new URL('http://127.0.0.1:' + server.address().port).origin;
+  return { operator, server, url, maxRequestBytes: operator.maxRequestBytes, authorization:access.describe(),
+    ...(operatorConsole?{consoleUrl:url+'/operator/',operatorConsole}:{}),close };
 }
 export async function main(args = process.argv.slice(2)) {
   if (!args.length || args.length === 1 && ['--help', 'help'].includes(args[0])) { process.stdout.write(HELP); return; }
@@ -927,17 +954,25 @@ export async function main(args = process.argv.slice(2)) {
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
   if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init, init-paid-job-workspaces, jobs, init-fred-workspaces, init-stac-workspaces, init-n8n-workspaces, inspect-n8n, download-n8n, reopen-n8n, init-mpp, inspect-mpp, download-mpp, init-buyer-expenses, expenses, init-woocommerce, init-cocart-workspaces, inspect-cocart, download-cocart, reopen-cocart, init-fleet, init-pricing, init-grant-workspaces, init-accounting, init-receiving, init-python-workspaces, init-graphql-workspaces, init-sheets-workspaces, init-nocodb-workspaces, init-ckan-workspaces, init-tenderly-workspaces, init-opencage-workspaces, init-stellar-expert-workspaces, init-coingecko-workspaces, init-redis-workspaces, init-usaspending-workspaces, init-research-workspaces, init-grants-workspaces, grants-download, init-source-workspaces, init-clinicaltrials-workspaces, clinicaltrials, init-baserow-workspaces, inspect-baserow, download-baserow, reopen-baserow, receive-baserow, init-usgs-workspaces, usgs, init-feeds-workspaces, download-feeds, inspect-feeds, init-dspace-operators, inspect-dspace, download-dspace, init-grpc-workspaces, inspect-grpc, download-grpc, init-openapi-workspaces, download-openapi, inspect-openapi, reopen-openapi, init-har-workspaces, inspect-har, download-har, init-s3-workspaces, init-opensearch-workspaces, init-publishers, init-arcgis-workspaces, serve, maintenance, adjustments, cryptoworth, platforms, statements, inspect-support, inspect-client, inspect-graphql, inspect-s3, download-support, download-client, download-graphql, download-s3, reopen-support, download-python or reopen-python.');
-  const options = pairs(rest, ['--config', '--port', '--token-env', '--oauth-config']);
+  const options = pairs(rest, ['--config', '--port', '--token-env', '--oauth-config', '--operator-console-dir', '--managed-console-selection']);
   if (!options.has('--config')) throw failure('CONFIGURATION_ERROR', 'Supply --config.');
-  const session = await startMerchantMcp({ configPath: options.get('--config'), port: portNumber(options.get('--port'), 3211),
-    tokenEnv: options.get('--token-env') ?? 'MCP_ACCESS_TOKEN', oauthConfigPath:options.get('--oauth-config') });
-  process.stdout.write(JSON.stringify({ schema: 'stellar-forge.merchant-mcp-listener.v1', url: session.url,
-    tools: session.operator.tools.map(tool => tool.name), seller: 'STARTED_ONLY_BY_EXPLICIT_TOOL' }) + '\n');
+  let selection;
+  if (options.has('--managed-console-selection')) {
+    try { selection = JSON.parse(options.get('--managed-console-selection')); }
+    catch { throw failure('CONFIGURATION_ERROR', 'Use the complete managed console selection from Applications.'); }
+  }
+  const start = options.has('--managed-console-selection')
+    ? (await import('./console/managed.mjs')).startManagedMerchantConsole : startMerchantMcp;
+  const session = await start({ configPath: options.get('--config'), port: portNumber(options.get('--port'), 3211),
+    tokenEnv: options.get('--token-env') ?? 'MCP_ACCESS_TOKEN', oauthConfigPath:options.get('--oauth-config'),
+    consoleDirectory:options.get('--operator-console-dir'), ...(selection === undefined ? {} : { selection }) });
+  process.stdout.write(JSON.stringify(session.startup ?? { schema: 'stellar-forge.merchant-mcp-listener.v1', url: session.url,
+    tools: session.operator.tools.map(tool => tool.name), ...(session.consoleUrl?{consoleUrl:session.consoleUrl}:{}), seller: 'STARTED_ONLY_BY_EXPLICIT_TOOL' }) + '\n');
   let stopping = false;
   const stop = async () => {
     if (stopping) return; stopping = true;
     try { await session.close(); }
-    catch (error) { process.stderr.write('Merchant shutdown failed: ' + (error.code ?? 'OPERATOR_ERROR') + '\n'); process.exitCode = 2; }
+    catch (error) { stopping = false; process.stderr.write('Merchant shutdown failed: ' + (error.code ?? 'OPERATOR_ERROR') + '\n'); process.exitCode = 2; }
   };
   process.once('SIGINT', stop); process.once('SIGTERM', stop);
   return session;
