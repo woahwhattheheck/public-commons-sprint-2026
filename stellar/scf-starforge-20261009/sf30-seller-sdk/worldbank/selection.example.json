@@ -1,0 +1,19 @@
+{
+  "id": "wdi-north-america",
+  "title": "North America · GDP and population",
+  "expectedRevision": 0,
+  "spec": {
+    "sourceId": "2",
+    "countries": [
+      "CAN",
+      "MEX",
+      "USA"
+    ],
+    "indicators": [
+      "NY.GDP.MKTP.CD",
+      "SP.POP.TOTL"
+    ],
+    "date": "2018:2024",
+    "perPage": 20
+  }
+}
