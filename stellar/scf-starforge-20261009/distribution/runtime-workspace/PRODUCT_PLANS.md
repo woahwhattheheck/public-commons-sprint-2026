@@ -92,6 +92,52 @@ The refreshed manifest inspection becomes another retained origin for the same
 native review. Runtime installation still follows its own original source,
 dependency cache, package lock and recovery options.
 
+## Readable product briefings
+
+Open a saved plan and choose **View / print briefing**. The original Runtime
+screen shows a document with the team's purpose, complete required capability
+basket, immutable product recipe, actual manifest and committed-lock versions,
+and the selected native review and package state. **Print / save PDF** uses the
+browser's printer; **Download HTML** saves a self-contained document.
+
+Technical sections contain the full command/export inventory, transitive package
+instances, source declarations and retained build history. Expand the sections
+needed for the review before printing. The ordinary preview and printed pages
+lead with the purpose, required capabilities, direct dependency declarations and
+current native package information. **Export Markdown briefing** includes the
+complete technical appendices in readable text.
+
+Every briefing records its generation time, saved plan, immutable commit and
+selected review. Package state comes from that original local build. The source
+projection uses the stored manifest inspection; the original inspection-refresh
+action updates it explicitly. Source paths, package IDs and build references make
+the delivery traceable, while host bindings remain in the complete plan document
+used by the receiving workflow.
+
+```bash
+starforge runtime-workspace source-plan-briefing --workspace /absolute/existing/runtime-workspace --plan-id PLAN_ID --format html --output product-briefing.html
+starforge runtime-workspace source-plan-briefing --workspace /absolute/existing/runtime-workspace --plan-id PLAN_ID --format markdown --output product-briefing.md
+starforge runtime-workspace source-plan-briefing --workspace /absolute/existing/runtime-workspace --plan-id PLAN_ID --format json --output product-briefing.json
+```
+
+Omit `--output` to write the complete selected format to stdout. Each supplied
+output path must be new. The CLI publishes the full UTF-8 file atomically with
+private permissions and preserves existing destinations. `--binding-id` selects
+one exact local source review; the default uses the saved plan's deterministic
+local binding.
+
+`GET /api/source-builds/plan-briefing` accepts `planId`, optional `bindingId`
+and `format` (`markdown`, `html` or `json`). The existing workspace capability
+protects the request. The response contains the complete `content`, `filename`,
+`mimeType`, `planId`, `bindingId`, `sourceCommit`, `generatedAt` and `format`.
+The source-owned `./operator/product-plan-briefing` export supplies the typed
+projection and formatters for applications using the same opened plan view.
+
+The browser document uses the Runtime's declared local stylesheet and original
+content policy. Standalone HTML embeds that same stylesheet. The saved-plan
+receiving journey can therefore finish with a readable customer export from the
+actual reopened plan and its original native package.
+
 ## CLI
 
 Use `starforge runtime-workspace`, or invoke the same
@@ -105,6 +151,7 @@ Every workspace path identifies an existing private Runtime workspace.
 | `source-plan-save --workspace DIRECTORY --request COMPLETE_JSON` | Save purpose, exact product source and full capability basket |
 | `source-plan-open --workspace DIRECTORY --plan-id ID [--binding-id ID]` | Reopen its native local review and stored inspection |
 | `source-plan-refresh --workspace DIRECTORY --plan-id ID [--binding-id ID]` | Refresh actual immutable source manifests with the saved reader options |
+| `source-plan-briefing --workspace DIRECTORY --plan-id ID [--binding-id ID --format markdown\|html\|json --output NEW_FILE]` | Preview, print or export the readable saved product and actual native package state |
 | `source-plan-export --workspace DIRECTORY --plan-id ID [--output NEW_JSON]` | Export the complete plan, origins and actual observed build history |
 | `source-plan-receive --workspace DIRECTORY --document COMPLETE_JSON --repository ABSOLUTE_GIT [--offline true\|false --python PROGRAM]` | Retain the complete input and establish or reuse a local native binding |
 | `source-plan-receiving --workspace DIRECTORY --receipt-id ID [--output NEW_JSON]` | Read the entire original receiving input and its current result |
@@ -236,3 +283,8 @@ history is retained and that its local build request comes from that workspace's
 normal native review. Reimport the same document to resume that binding. The
 existing source-build and Grant application receiving operations retain their
 own original sources and operation identities throughout this extension.
+
+Open the reopened plan's readable briefing, review its native package and actual
+dependency versions at desktop and mobile widths, then save the standalone HTML
+and Markdown. Use the original browser's print preview for the customer PDF and
+check that the generated document names the same source, review and build.

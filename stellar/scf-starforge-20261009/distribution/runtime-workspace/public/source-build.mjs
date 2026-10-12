@@ -38,6 +38,7 @@ export function createSourceBuildWorkspaceView({ root, api, getState, operation,
   let receiving = [], activePlan = null, selectedPlanId = null, selectedBindingId = null, pendingPlanSaves = [];
   let importedPlan = null, importedFilename = '', plansLoaded = false;
   let receivingQuery = '', receivingStatus = 'all', receivingTotal = 0, receivingCursor = null, receivingNextCursor = null, receivingPages = [];
+  let briefingDialog = null;
   const productDetails = new Map();
   const key = () => 'starforge-source-builds-' + workspaceId;
   const snapshot = () => ({ repository: nodes.repository.value.trim(), ref: nodes.ref.value.trim() || 'HEAD',
@@ -91,6 +92,7 @@ export function createSourceBuildWorkspaceView({ root, api, getState, operation,
     node.addEventListener('click', () => perform(action)); return node;
   }
   function reset() {
+    briefingDialog?.close(); briefingDialog?.remove(); briefingDialog = null;
     epoch++; workspaceId = null; pending = false; reading = false; readAgain = false;
     catalog = null; review = null; selectedReviewId = null; builds = []; savedSelection = '';
     productPreview = null; comparison = null; comparedSelections = [];
@@ -107,7 +109,7 @@ export function createSourceBuildWorkspaceView({ root, api, getState, operation,
     if (!id) throw new Error('Open the runtime workspace before choosing source.');
     if (workspaceId === id) return;
     reset(); workspaceId = id;
-    root.innerHTML = '<link rel="stylesheet" href="/source-catalog.css">' + '<div class="section-title"><div><p class="eyebrow">PRODUCT SOURCE</p><h2>Build a product from source</h2></div></div>' +
+    root.innerHTML = '<link rel="stylesheet" href="/source-catalog.css"><link rel="stylesheet" href="/product-plan-briefing.css">' + '<div class="section-title"><div><p class="eyebrow">PRODUCT SOURCE</p><h2>Build a product from source</h2></div></div>' +
       '<p class="muted">Choose a committed product from a Git repository on this machine. Review its contents, build its package, then select adapters for installation.</p>' +
       '<section class="panel"><div class="section-title"><div><p class="eyebrow">PRODUCT PLANS</p><h3>Save and continue a product</h3></div><span data-plan-count class="count">0</span></div>' +
       '<p class="muted">Keep the requested capabilities, exact source, dependency inspection and original build together. Reopen a plan here or receive its complete document in another workspace.</p>' +
@@ -421,6 +423,7 @@ export function createSourceBuildWorkspaceView({ root, api, getState, operation,
         const bundle = await api(query('/api/source-builds/plan-export', { planId: plan.planId }));
         if (alive()) await receivePlan(bundle, alive);
       }, !nodes.repository.value.trim()));
+      if (plan.bindings.length) actions.append(button('View briefing', alive => showBriefing(plan.planId, null, alive)));
       actions.append(button('Export complete plan', async alive => {
         const bundle = await api(query('/api/source-builds/plan-export', { planId: plan.planId }));
         if (alive()) exportValue('product-plan-' + plan.planId, bundle);
@@ -477,6 +480,42 @@ export function createSourceBuildWorkspaceView({ root, api, getState, operation,
     }));
     availability();
   }
+  function downloadBriefing(value) {
+    const url = URL.createObjectURL(new Blob([value.content], { type: value.mimeType })), link = make('a');
+    link.href = url; link.download = value.filename; root.append(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  async function readBriefing(planId, bindingId, format, alive) {
+    const value = await api(query('/api/source-builds/plan-briefing', { planId, format,
+      ...(bindingId ? { bindingId } : {}) }));
+    if (!alive()) return null;
+    if (value.planId !== planId || value.format !== format || typeof value.content !== 'string')
+      throw new Error('Reopen this saved plan before exporting its briefing.');
+    return value;
+  }
+  async function showBriefing(planId, bindingId, alive) {
+    const value = await readBriefing(planId, bindingId, 'html', alive);
+    if (!value) return;
+    const source = new DOMParser().parseFromString(value.content, 'text/html').body;
+    const main = source.firstElementChild;
+    if (source.children.length !== 1 || main?.tagName !== 'MAIN' || !main.classList.contains('product-briefing') ||
+      main.querySelector('script,iframe,object,embed,form,img,link,style'))
+      throw new Error('Reopen this saved plan to prepare its complete briefing.');
+    briefingDialog?.close(); briefingDialog?.remove();
+    const dialog = make('dialog'), header = make('div', undefined, 'briefing-toolbar'), actions = make('div', undefined, 'actions');
+    briefingDialog = dialog; dialog.dataset.productBriefing = 'true';
+    dialog.setAttribute('aria-label', 'Product briefing');
+    const print = make('button', 'Print / save PDF'), download = make('button', 'Download HTML'), close = make('button', 'Close briefing');
+    for (const node of [print, download, close]) node.type = 'button';
+    const sheet = root.querySelector('link[href="/product-plan-briefing.css"]');
+    if (!sheet?.sheet) { print.disabled = true; sheet?.addEventListener('load', () => { print.disabled = false; }, { once: true }); }
+    print.addEventListener('click', () => window.print());
+    download.addEventListener('click', () => downloadBriefing(value));
+    close.addEventListener('click', () => dialog.close());
+    dialog.addEventListener('close', () => { dialog.remove(); if (briefingDialog === dialog) briefingDialog = null; }, { once: true });
+    actions.append(print, download, close); header.append(make('h3', 'Product briefing'), actions);
+    dialog.append(header, document.importNode(main, true)); document.body.append(dialog); dialog.showModal(); close.focus();
+  }
   function renderPlanDetails() {
     if (!nodes) return;
     const panel = nodes.planDetails; panel.hidden = !activePlan; panel.replaceChildren();
@@ -489,6 +528,11 @@ export function createSourceBuildWorkspaceView({ root, api, getState, operation,
       ['Original review', value.review.reviewId], ['Original build operation', value.review.requestId],
       ['Source mode', value.review.offline ? 'Local Git objects only' : 'Existing Git reader may retrieve missing objects']]));
     const actions = make('div', undefined, 'actions');
+    actions.append(button('View / print briefing', alive => showBriefing(value.plan.planId, value.bindingId, alive)),
+      button('Export Markdown briefing', async alive => {
+        const briefing = await readBriefing(value.plan.planId, value.bindingId, 'markdown', alive);
+        if (briefing) downloadBriefing(briefing);
+      }));
     actions.append(button('Export complete plan', async alive => {
       const bundle = await api(query('/api/source-builds/plan-export', { planId: value.plan.planId }));
       if (alive()) exportValue('product-plan-' + value.plan.planId, bundle);
