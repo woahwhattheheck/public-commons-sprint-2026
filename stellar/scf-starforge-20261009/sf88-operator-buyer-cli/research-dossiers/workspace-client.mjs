@@ -2,6 +2,7 @@
 import {isAbsolute,resolve} from 'node:path';
 import {Readable} from 'node:stream';
 import {createEuropePmcClient} from './europe-pmc-client.mjs';
+import {createRisSourceClient} from './ris-source/client.mjs';
 import {createCustomerUpdatesClient} from './customer-updates/client.mjs';
 import {createResearchCommerceClient} from './customer-commerce/client.mjs';
 import {createClinicalTrialsClient} from './clinical-trials-client.mjs';
@@ -137,7 +138,7 @@ export class ResearchWorkspaceClient{
         ?128*1024*1024+65536:96*1024*1024+65536;
       need(bytes===undefined||Buffer.byteLength(bytes)<=maximum,'RESEARCH_REQUEST_TOO_LARGE');
       return this.#request(route,{...options,body:bytes,headers:{...(options.headers??{}),
-        ...(bytes===undefined?{}:{'Content-Type':'application/json'})}},async response=>parseJson(await readResponse(response,templateRoute?PORTABLE_LIMIT:(route.startsWith('/api/europe-pmc')||route.startsWith('/api/customer-commerce/')||/^\/api\/dossiers\/[^/]+\/customer-updates(?:\/|\?|$)/.test(route))?64*1024*1024:RESEARCH_CONTROL_LIMIT)));
+        ...(bytes===undefined?{}:{'Content-Type':'application/json'})}},async response=>parseJson(await readResponse(response,templateRoute?PORTABLE_LIMIT:(route.startsWith('/api/europe-pmc')||route.startsWith('/api/customer-commerce/')||/^\/api\/dossiers\/[^/]+\/(?:customer-updates|ris-sources)(?:\/|\?|$)/.test(route))?64*1024*1024:RESEARCH_CONTROL_LIMIT)));
     });
   }
   async status(options={}){
@@ -217,6 +218,8 @@ export class ResearchWorkspaceClient{
       },id,input,options)),
     });
   }
+  risSources(){return createRisSourceClient({request:(route,body,options)=>this.#json(route,body,options),
+    download:(route,file,options)=>this.#download(route,file,options)});}
   customerCommerce(){
     return createResearchCommerceClient({
       request:(route,body,options)=>this.#json(route,body,options),

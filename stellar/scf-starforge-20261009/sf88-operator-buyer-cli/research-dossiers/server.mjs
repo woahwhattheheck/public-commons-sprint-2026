@@ -27,6 +27,7 @@ import { openUnstructuredWorkspace, openSavedDocumentBuyerSource } from './unstr
 import { openUnstructuredPipelineWorkspace, openSavedPipelineSource, PIPELINE_UPLOAD_BODY_BYTES } from './unstructured-pipelines-workspace.mjs';
 
 import {openEuropePmcController,handleEuropePmcRoute} from './europe-pmc-routes.mjs';
+import {handleRisRoute} from './ris-source/routes.mjs';
 import {openResearchObjectSource} from './object-inputs.mjs';
 import {inspectStudyProtocolBundle} from './study-protocol-inspection.mjs';
 
@@ -40,6 +41,9 @@ const TYPES = Object.freeze({
   'europe-pmc.js': 'text/javascript; charset=utf-8',
   'europe-pmc.css': 'text/css; charset=utf-8',
   'app.js': 'text/javascript; charset=utf-8',
+  'ris-sources.js':'text/javascript; charset=utf-8',
+  'ris-sources.css':'text/css; charset=utf-8',
+  'ris-drafts.js':'text/javascript; charset=utf-8',
   'study-extraction.js': 'text/javascript; charset=utf-8',
   'study-extraction-drafts.js': 'text/javascript; charset=utf-8',
   'study-extraction.css': 'text/css; charset=utf-8',
@@ -441,6 +445,8 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       const match = path.match(/^\/api\/dossiers\/([^/]+)(?:\/(.*))?$/);
       if (!match) {send(404, {error: 'ROUTE_NOT_FOUND'}); return;}
       const id = pathId(match[1]), action = match[2] || '';
+      if(await handleRisRoute({store,dossierId:id,action,req,url,readBody:readJson,send,
+        setHeader:(name,value)=>res.setHeader(name,value)}))return;
       if(await handleStudyExtractionRoute({store,dossierId:id,action,req,url,projection,
         readBody:(request,limit)=>readJson(request,limit),send,
         setHeader:(name,value)=>res.setHeader(name,value)}))return;

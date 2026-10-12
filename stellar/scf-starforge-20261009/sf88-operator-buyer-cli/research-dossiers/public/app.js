@@ -7,6 +7,7 @@ import {createSourceBundlePanel,renderSourceBundleFiles} from './source-bundles.
 import {createStudyProtocolPanel} from './study-protocol.js';
 import {renderInspectedSource,renderOriginalRecordControl} from './source-inspection.js';
 import {createCitationReviewPanel} from './citation-review.js';
+import {createRisSourcesPanel} from './ris-sources.js';
 import {createEligibilityPanel} from './eligibility.js';
 import {createStudyExtractionPanel} from './study-extraction.js';
 import {createRiskOfBiasPanel} from '/risk-of-bias/browser.mjs';
@@ -18,7 +19,7 @@ import {installZoteroResearchControl} from './zotero-browser.mjs';
   const MAX_RESEARCH_FILE_BYTES = 16 * 1024 * 1024;
   const MAX_PORTABLE_FILE_BYTES = 256 * 1024 * 1024;
   const tokenKey = 'research-dossiers-session:' + location.origin;
-  const state = {token: '', workspaceId: null, instanceId: null, dossiers: [], dossier: null, activeTab: ['pipelines','citation-review','eligibility','study-extraction','risk-of-bias','zotero'].includes(new URLSearchParams(location.hash.slice(1)).get('view'))?new URLSearchParams(location.hash.slice(1)).get('view'):'sources', sourceId: null, variantDigest: null,
+  const state = {token: '', workspaceId: null, instanceId: null, dossiers: [], dossier: null, activeTab: ['pipelines','citation-review','ris-sources','eligibility','study-extraction','risk-of-bias','zotero'].includes(new URLSearchParams(location.hash.slice(1)).get('view'))?new URLSearchParams(location.hash.slice(1)).get('view'):'sources', sourceId: null, variantDigest: null,
     page: 0, busy: false, openalexConfigured: false, openalexEditions: [], editingDossier: false, editingQuestion: null, editingFinding: null, editingSelection: null, importCompleted: new Set(), noteDrafts: new Map(), noteEditVersions: new Map()};
   const safeStorage = {
     get() { try { return sessionStorage.getItem(tokenKey) || ''; } catch { return ''; } },
@@ -104,6 +105,7 @@ import {installZoteroResearchControl} from './zotero-browser.mjs';
     sourceBundlePanel.updateBusy();
     studyProtocolPanel.updateBusy();
     citationReviewPanel.updateBusy();
+    risSourcesPanel.updateBusy();
     eligibilityPanel.updateBusy();
     studyExtractionPanel.updateBusy();
     riskOfBiasPanel.updateBusy();
@@ -178,14 +180,14 @@ import {installZoteroResearchControl} from './zotero-browser.mjs';
     $('question-filter').value = '';
     $('selected-only').checked = false;
     const params = new URLSearchParams(); params.set('dossier', state.dossier.id);
-    if(['citation-review','eligibility','study-extraction','risk-of-bias','zotero'].includes(state.activeTab))params.set('view',state.activeTab);
+    if(['citation-review','ris-sources','eligibility','study-extraction','risk-of-bias','zotero'].includes(state.activeTab))params.set('view',state.activeTab);
     history.replaceState(null, '', '#' + params.toString());
     render();
   }
   function applyDossier(view) {
     state.dossier = view; state.page = 0; state.sourceId = null;
     const params = new URLSearchParams(); params.set('dossier', view.id);
-    if(['citation-review','eligibility','study-extraction','risk-of-bias','zotero'].includes(state.activeTab))params.set('view',state.activeTab);
+    if(['citation-review','ris-sources','eligibility','study-extraction','risk-of-bias','zotero'].includes(state.activeTab))params.set('view',state.activeTab);
     history.replaceState(null, '', '#' + params.toString());
     render();
   }
@@ -215,6 +217,7 @@ import {installZoteroResearchControl} from './zotero-browser.mjs';
     sourceBundlePanel.setDossier(view);
     studyProtocolPanel.setDossier(view);
     citationReviewPanel.setDossier(view);
+    risSourcesPanel.setDossier(view);
     eligibilityPanel.setDossier(view);
     studyExtractionPanel.setDossier(view);
     riskOfBiasPanel.setDossier(view);
@@ -587,7 +590,7 @@ import {installZoteroResearchControl} from './zotero-browser.mjs';
     if (tab === 'clinical-trials' && $('clinical-trials-tab').hidden) tab = 'sources';
     if (tab === 'zotero' && $('zotero-tab').hidden) tab = 'sources';
     state.activeTab = tab;
-    ['sources', 'questions', 'findings', 'revisions', 'citation-review', 'eligibility', 'study-extraction', 'risk-of-bias', 'zotero', 'crossref', 'documents', 'pipelines', 'clinical-trials'].forEach(name => {
+    ['sources', 'questions', 'findings', 'revisions', 'citation-review', 'ris-sources', 'eligibility', 'study-extraction', 'risk-of-bias', 'zotero', 'crossref', 'documents', 'pipelines', 'clinical-trials'].forEach(name => {
       $('view-' + name).hidden = name !== tab;
       const button = document.querySelector('[data-tab="' + name + '"]');
       button.classList.toggle('active', name === tab);
@@ -598,12 +601,13 @@ import {installZoteroResearchControl} from './zotero-browser.mjs';
     pipelinePanel.show(tab === 'pipelines');
     clinicalTrialsPanel.show(tab === 'clinical-trials');
     citationReviewPanel.show(tab === 'citation-review');
+    risSourcesPanel.show(tab === 'ris-sources');
     eligibilityPanel.show(tab === 'eligibility');
     studyExtractionPanel.show(tab === 'study-extraction');
     riskOfBiasPanel.show(tab === 'risk-of-bias');
     const params=new URLSearchParams(location.hash.slice(1));
-    if(['citation-review','eligibility','study-extraction','risk-of-bias','zotero'].includes(tab))params.set('view',tab);
-    else if(['citation-review','eligibility','study-extraction','risk-of-bias','zotero'].includes(params.get('view')))params.delete('view');
+    if(['citation-review','ris-sources','eligibility','study-extraction','risk-of-bias','zotero'].includes(tab))params.set('view',tab);
+    else if(['citation-review','ris-sources','eligibility','study-extraction','risk-of-bias','zotero'].includes(params.get('view')))params.delete('view');
     if(state.dossier)params.set('dossier',state.dossier.id);
     history.replaceState(null,'',params.toString()?'#'+params.toString():location.pathname);
   }
@@ -738,6 +742,11 @@ import {installZoteroResearchControl} from './zotero-browser.mjs';
     onReceived:async view=>{applyDossier(view);await refreshList();}});
   const citationReviewPanel=createCitationReviewPanel({root:$('view-citation-review'),tab:$('citation-review-tab'),
     api,task,notify,getDossier:()=>state.dossier,isBusy:()=>state.busy,
+    onReceived:async view=>{applyDossier(view);await refreshList();}});
+  const risSourcesPanel=createRisSourcesPanel({root:$('view-ris-sources'),tab:$('ris-sources-tab'),
+    api:(path,options={})=>api(path,{sourceProjection:'full',workspaceId:state.workspaceId,...options}),
+    task,notify,getDossier:()=>state.dossier,
+    getWorkspace:()=>({workspaceId:state.workspaceId,instanceId:state.instanceId}),isBusy:()=>state.busy,
     onReceived:async view=>{applyDossier(view);await refreshList();}});
   const eligibilityPanel=createEligibilityPanel({root:$('view-eligibility'),tab:$('eligibility-tab'),
     api,task,notify,getDossier:()=>state.dossier,isBusy:()=>state.busy,
@@ -948,10 +957,10 @@ import {installZoteroResearchControl} from './zotero-browser.mjs';
     }, form);
   });
   window.addEventListener('beforeunload', event => {
-    if (state.noteDrafts.size > 0 || studyProtocolPanel.hasUnsaved() || citationReviewPanel.hasUnsaved() || eligibilityPanel.hasUnsaved() || studyExtractionPanel.hasUnsaved() || riskOfBiasPanel.hasUnsaved()) {event.preventDefault(); event.returnValue = '';}
+    if (state.noteDrafts.size > 0 || studyProtocolPanel.hasUnsaved() || citationReviewPanel.hasUnsaved() || risSourcesPanel.hasUnsaved() || eligibilityPanel.hasUnsaved() || studyExtractionPanel.hasUnsaved() || riskOfBiasPanel.hasUnsaved()) {event.preventDefault(); event.returnValue = '';}
   });
   window.addEventListener('pagehide', event => {
-    if (!event.persisted) riskOfBiasPanel.close();
+    if (!event.persisted) {riskOfBiasPanel.close();risSourcesPanel.close();}
   });
   async function start() {
     const params = new URLSearchParams(location.hash.slice(1));
