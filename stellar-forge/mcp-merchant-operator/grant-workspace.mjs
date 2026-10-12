@@ -425,9 +425,14 @@ export class MerchantGrantWorkspaces {
     } else if (verb === 'portfolio_selection') original = await client.portfolioSelection(args.caseId, args.expectedVersion,
       args.portfolioId, args.alternativeId);
     else if (verb === 'export') original = await client.download(args.kind, rest);
-    else if (['plan_import','case_import','source_attach','intake'].includes(verb)) {
+    else if (['plan_import','case_import','source_attach','intake','support_preview','support_receive'].includes(verb)) {
       const {input, expectedInputSha256, ...body} = rest, selected = await this.#input(alias, input, expectedInputSha256);
-      if (verb === 'plan_import') {
+      if (verb === 'support_preview') {
+        original = await client.supportPreview(body.caseId, body.expectedVersion, selected.bytes, body.filename);
+      } else if (verb === 'support_receive') {
+        const {caseId, ...fields} = body;
+        original = await client.supportReceive(caseId, selected.bytes, fields);
+      } else if (verb === 'plan_import') {
         const {kind, ...fields} = body;
         if (kind === 'plan') need(!['note','planning','filename'].some(key => Object.hasOwn(fields,key)),
           'GRANT_INVALID_INPUT', 'A complete planning ZIP retains its own note, planning and filename. Supply only the received name and original request ID.');
@@ -441,7 +446,8 @@ export class MerchantGrantWorkspaces {
     } else throw failure('GRANT_TOOL_UNKNOWN', 'Choose an original grant operation.');
     return this.#snapshot(alias, original, {tool:name, ...Object.fromEntries(Object.entries(rest).filter(([key]) =>
       ['planId','caseId','forecastId','portfolioId','alternativeId','sourceId','reviewId','revision','after','limit','kind',
-        'requestId','expectedRevision','expectedVersion','input','inputPointer','expectedInputSha256'].includes(key)))});
+        'requestId','expectedRevision','expectedVersion','input','inputPointer','expectedInputSha256',
+        'filename','expectedPreviewSha256','deploymentId'].includes(key)))});
   }
   async call(name, args = {}) {
     need(!this.#closing, 'GRANT_CLOSING', 'The original grant client is closing.');

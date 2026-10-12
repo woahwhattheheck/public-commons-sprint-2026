@@ -207,6 +207,78 @@ The original service validates each record, source reference, lifecycle transiti
 
 Use merchant_grant_source_attach for exact source bytes. It calls the original source.add operation and retains filename, MIME, source URL, observation date and source hash. Individual sources have the native 8 MiB limit; the case retains its original aggregate source bound. merchant_grant_intake consumes the existing original source-intake packet through its maintained importer.
 
+## Receive merchant support into the original delivery case
+
+The two Support operations join the original [Merchant Support receiving workflow](../../stellar/scf_2026/sf47_budget_model/workspace/SUPPORT_DELIVERY.md). Export the intended saved case from Merchant Support with **Export portable handoff**. Use that complete original JSON file; the grant service invokes its installed SF74 reader and preserves the captured source, route and runtime identities.
+
+| Tool | Original result |
+| --- | --- |
+| merchant_grant_support_preview | Read-only native review of the exact handoff and current case version, including source/reader identities, full report, rendered HTML, existing source matches, deployment choices and previewSha256. |
+| merchant_grant_support_receive | Original support.receive transaction: retain the handoff and native rendered review, associate an existing or new deployment, and commit the case event and original request receipt together. |
+
+1. Read merchant_grant_case for the current case version and retained deployments.
+2. Inspect the declared original support input with merchant_grant_inputs, or finish its original receive_begin/chunk/commit transfer. Keep the exact whole-file SHA and original filename.
+3. Call support_preview with caseId, expectedVersion, input, expectedInputSha256 and filename.
+4. Read the complete original source, installed reader, captured comparison and follow-up work. Use snapshot/rows to inspect native objects and arrays; file_read returns the full preview JSON, including its original html string.
+5. Select the original deploymentId from that case. To record a new deployment, use null or omit deploymentId and provide the native deployment fields instead.
+6. Call support_receive with the same file selection, whole-file SHA, filename and case version, the reviewed expectedPreviewSha256, actor, note and one stable requestId.
+7. Read its original recordId, sourceIds, sourceSha256, version and unchanged result. Reopen the case, export each original source through kind source, or export and import the complete case.
+
+A declared host input is selected exactly like other native files:
+
+~~~json
+{
+  "workspace": "grant",
+  "caseId": "operation-<original 32 hex characters>",
+  "expectedVersion": 32,
+  "input": {"hostInput": "merchant-support"},
+  "expectedInputSha256": "<exact original support file SHA256>",
+  "filename": "merchant-support.json"
+}
+~~~
+
+Pass those fields to merchant_grant_support_preview. For support_receive retain every selection field and add the original preview hash, deployment selection and request fields. The host declares merchant-support in its connection inputs with the actual file path. A completed transfer or a retained source export can also supply the exact same original bytes. Support tools consume the whole file; they do not accept inputPointer or reconstructed review JSON.
+
+### Existing and newly recorded deployments
+
+An existing deploymentId preserves its original accountable operator, business fields and source associations, then adds this original handoff/report relationship. Omit deployment, or pass null/an empty object. A nonempty competing replacement object is rejected.
+
+A new deployment uses the original fields below. Read pinned work-package IDs from the original case plan; a HANDED_OVER state needs its named receiver and actual receiving date.
+
+~~~json
+{
+  "name": "Merchant runtime",
+  "operator": "Accountable operator",
+  "operatorId": "retained-operator-identity",
+  "role": "MERCHANT",
+  "participantClass": "TEAM_OPERATED",
+  "environment": "TESTNET",
+  "state": "OPERATING",
+  "costIds": [],
+  "tranche": null,
+  "endpoint": "https://merchant.example/data",
+  "releaseRef": "Original installed source",
+  "caseRef": "Original merchant case or work order",
+  "acceptedBy": "",
+  "acceptedAt": null,
+  "sourceNote": ""
+}
+~~~
+
+For a new record use deploymentId: null and put those fields in deployment. Native generated IDs, version, recordedBy and sourceIds belong to the original service. Role, environment, participant class, lifecycle state and pinned work references retain the original deployment rules.
+
+### Exact source, recovery and complete handoff
+
+The native preview binds the current case version, original filename and bytes, installed reader and factual review. The receive operation recalculates that review in the original case transaction and checks its preview hash. It retains the raw handoff, rendered report, source association, deployment change, event and request receipt atomically.
+
+A repeated identical original request returns its accepted result. A file/report already associated with the selected deployment can return unchanged without incrementing the case version. Reused original bytes keep any existing source name and metadata; the support-to-report association remains part of the original case and history.
+
+If the native version or preview has changed, read the current case and preview the same intended file again before submitting a deliberate updated request. If the receive response is interrupted, recover the identical original requestId and payload. The client issues no automatic write replay. SUPPORT_REVIEW_BUSY means another original review is running; retain the selection and retry when that review completes.
+
+The original handoff and retained rendered report each fit 8 MiB. The case retains its original 24 MiB aggregate and 200-file limit. Preview can contain a complete native reader report up to its 16 MiB output bound; large snapshots remain available through byte paging. For an oversized handoff choose a shorter original capture period in Merchant Support and export that source.
+
+The maintained grant launcher passes its running Node executable to the original Python support reader. Borrowed Applications and MCP-started instances use that same lifecycle. Download sourceIds through merchant_grant_export with kind source; the original handoff reopens in Merchant Support, and the saved HTML opens as the receiving-time report. Complete case export/import preserves both files, their deployment association and original event history.
+
 ## Export, transfer and receive the complete work
 
 merchant_grant_export supports original plan ZIP, operating-case ZIP, forecast ZIP, portfolio ZIP, source file, scenario JSON and original daily/cost CSVs. It preserves the complete native response. A case ZIP includes all original source attachments, reviews, forecasts and portfolios.
@@ -257,6 +329,8 @@ The original planning database stores the request fingerprint and result in the 
 | REQUEST_CONFLICT | The request ID belongs to a different payload. Recover that original operation; a deliberate new action needs a new request ID. |
 | OPERATIONS_CONFLICT or plan revision conflict | Read current source and reconcile the concurrent operator's saved work. |
 | FORECAST_PREVIEW_CONFLICT | Preview the exact revised inputs against current original records before saving. |
+| SUPPORT_PREVIEW_CONFLICT | Re-preview the exact support file and filename against current case and installed reader before a deliberate receiving request. |
+| SUPPORT_REVIEW_BUSY | Keep the same source selection and retry after the original active review completes. |
 | GRANT_RESULT_UNCERTAIN | The HTTP response was lost or failed after dispatch. Read the original case/plan, then repeat the identical original request ID and payload to recover its retained result. |
 | retention.state FAILED | The original response was received successfully, but its complete local snapshot was not retained. Restore storage and repeat the identical native operation or original read. |
 | GRANT_SELECTION_CHANGED | Reconcile the selected workspace, scenario, Python and installed source edition in the host connection. |

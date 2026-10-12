@@ -44,7 +44,7 @@ function elements(file,index,{intermediate=false}={}) {
     element_id:'fixture-'+index+'-'+position+(intermediate?'-partition':''),
     text,
     metadata:{filename:file.filename,page_number:position<2?1:2,
-      languages:['eng'],filetype:'text/plain',
+      languages:['eng'],filetype:file.contentType,
       ...(intermediate?{pipeline_stage:'partition'}:{})},
   }));
 }
@@ -66,11 +66,31 @@ async function requestBytes(req,maximum) {
  * complete()/confirmStop() are explicit provider state advances; HTTP getters do not
  * manufacture progress merely because an operator repeats a refresh.
  */
-export function createPipelineJobFixture({apiKey,pathPrefix='/enterprise/',stateFile=null}={}) {
+export function createPipelineJobFixture({apiKey,pathPrefix='/enterprise/',stateFile=null,inputs=null}={}) {
   assert(typeof apiKey==='string'&&apiKey.length>=24);
   assert(/^\/[A-Za-z0-9/_-]*\/$/.test(pathPrefix));
   assert(stateFile===null||isAbsolute(stateFile));
-  const scenarioSha256=digest(Buffer.from(JSON.stringify(PIPELINE_NATIVE_SCENARIO)));
+  // A receiving consumer may select a retained UTF-8 file from its completed
+  // acquisition. Default callers keep the original two-file scenario unchanged.
+  let scenario=PIPELINE_NATIVE_SCENARIO;
+  if(inputs!==null) {
+    assert(Array.isArray(inputs)&&inputs.length>=1&&inputs.length<=10);
+    let bytes=0;
+    const received=inputs.map(file=>{
+      assert(file&&Object.keys(file).length===3&&
+        Object.keys(file).every(key=>['filename','contentType','text'].includes(key)));
+      assert(typeof file.filename==='string'&&file.filename.length>0&&file.filename.length<=512&&
+        !/[\\/\0-\x1f\x7f]/.test(file.filename));
+      assert(typeof file.contentType==='string'&&file.contentType.length<=256&&
+        /^[A-Za-z0-9!#$&^_.+-]+\/[A-Za-z0-9!#$&^_.+-]+(?:;[ -~]+)?$/.test(file.contentType));
+      assert(typeof file.text==='string'&&file.text.isWellFormed()&&Buffer.byteLength(file.text)>0);
+      bytes+=Buffer.byteLength(file.text);
+      assert(bytes<=65536,'The retained manual fixture uses small reviewed source files');
+      return clone(file);
+    });
+    scenario={...clone(PIPELINE_NATIVE_SCENARIO),inputs:received};
+  }
+  const scenarioSha256=digest(Buffer.from(JSON.stringify(scenario)));
   let restored=null;
   if(stateFile&&existsSync(stateFile)){
     const bytes=readFileSync(stateFile);assert(bytes.length<2*1024*1024);
@@ -81,7 +101,7 @@ export function createPipelineJobFixture({apiKey,pathPrefix='/enterprise/',state
     for(const [index,record] of restored.jobs.entries()){
       assert.equal(typeof record.id,'string');
       assert(['SCHEDULED','IN_PROGRESS','COMPLETED','STOPPED'].includes(record.status));
-      assert.deepEqual(record.inputs,index===0?PIPELINE_NATIVE_SCENARIO.inputs:PIPELINE_NATIVE_SCENARIO.inputs.slice(0,1));
+      assert.deepEqual(record.inputs,index===0?scenario.inputs:scenario.inputs.slice(0,1));
       assert.equal(record.inputIds.length,record.inputs.length);
     }
   }
@@ -156,12 +176,12 @@ export function createPipelineJobFixture({apiKey,pathPrefix='/enterprise/',state
       const data=form.getAll('request_data');
       assert.equal(data.length,1);assert.equal(typeof data[0],'string');
       const requestData=JSON.parse(data[0]);
-      assert.deepEqual(requestData,PIPELINE_NATIVE_SCENARIO.profile.requestData);
+      assert.deepEqual(requestData,scenario.profile.requestData);
       const files=form.getAll('input_files');
       assert(files.length>=1&&files.length<=10);
       const current=counters.create;
       assert(current<2,'This one native journey prepares exactly two original provider jobs');
-      const expected=current===0?PIPELINE_NATIVE_SCENARIO.inputs:PIPELINE_NATIVE_SCENARIO.inputs.slice(0,1);
+      const expected=current===0?scenario.inputs:scenario.inputs.slice(0,1);
       assert.equal(files.length,expected.length);
       const captured=[];
       for(let index=0;index<files.length;index++){
@@ -235,14 +255,15 @@ export function createPipelineJobFixture({apiKey,pathPrefix='/enterprise/',state
       if(!res.headersSent)json(res,500,{detail:'Retained fixture contract mismatch'});
       else res.destroy();
     }).finally(()=>{try{persist();}catch(error){errors.push({code:error.code??'FIXTURE_STATE_WRITE_FAILED',message:error.message});}});},
-    inputs(){return PIPELINE_NATIVE_SCENARIO.inputs.map(file=>({...metadata(file),body:Buffer.from(file.text,'utf8')}));},
+    inputs(){return scenario.inputs.map(file=>({...metadata(file),body:Buffer.from(file.text,'utf8')}));},
     jobs(){return [...jobs.values()].map(information);},
     job(id){const value=jobs.get(id);assert(value);return information(value);},
     complete(id){const value=jobs.get(id);assert(value);assert.equal(value.status,'SCHEDULED');value.status='COMPLETED';persist();return information(value);},
     confirmStop(id){const value=jobs.get(id);assert(value?.cancelAcknowledged);assert.equal(value.status,'IN_PROGRESS');value.status='STOPPED';persist();return information(value);},
     output(id,fileId,nodeId=null){const value=jobs.get(id);assert(value);return output(value,fileId,nodeId);},
     summary(){return {schema:'stellar-forge.managed-pipelines-fixture-result.v1',
-      providerMode:PIPELINE_NATIVE_SCENARIO.providerMode,providerContract:clone(PIPELINE_NATIVE_SCENARIO.providerContract),
+      providerMode:scenario.providerMode,providerContract:clone(scenario.providerContract),
+      scenarioSha256,inputs:scenario.inputs.map(metadata),
       counters:clone(counters),jobs:[...jobs.values()].map(information),requests:clone(records),
       launchIntervalsMs:creates.slice(1).map(value=>value.intervalMs),errors:clone(errors)};},
     close(){persist();closed=true;},

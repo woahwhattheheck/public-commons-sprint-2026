@@ -10,7 +10,7 @@ import {createClinicalTrialsPanel} from './clinical-trials.js';
   const MAX_RESEARCH_FILE_BYTES = 16 * 1024 * 1024;
   const MAX_PORTABLE_FILE_BYTES = 256 * 1024 * 1024;
   const tokenKey = 'research-dossiers-session:' + location.origin;
-  const state = {token: '', dossiers: [], dossier: null, activeTab: 'sources', sourceId: null, variantDigest: null,
+  const state = {token: '', dossiers: [], dossier: null, activeTab: new URLSearchParams(location.hash.slice(1)).get('view')==='pipelines'?'pipelines':'sources', sourceId: null, variantDigest: null,
     page: 0, busy: false, openalexConfigured: false, openalexEditions: [], editingDossier: false, editingQuestion: null, editingFinding: null, editingSelection: null, importCompleted: new Set(), noteDrafts: new Map(), noteEditVersions: new Map()};
   const safeStorage = {
     get() { try { return sessionStorage.getItem(tokenKey) || ''; } catch { return ''; } },

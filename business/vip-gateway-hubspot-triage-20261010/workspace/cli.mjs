@@ -19,10 +19,18 @@ export async function main(argv) {
     import: '--project ID --file NATIVE_JSON --name CAPTURE [--complete]', schema: '--project ID --kind properties|pipelines --file NATIVE_JSON',
     config: '--project ID --file CONFIG_JSON', sync: '--project ID --name CAPTURE', resume: '--job ID',
     run: '--project ID --snapshot ID --as-of ISO_TIME --name NAME', retry: '--run ID',
+    'monitor-status': '--project ID', 'monitor-cycle': '--cycle ID',
+    'monitor-configure': '--project ID --request-file SAVED_JSON',
+    'monitor-pause': '--project ID --request-file SAVED_JSON', 'monitor-resume': '--project ID --request-file SAVED_JSON',
+    'monitor-trigger': '--project ID --request-file SAVED_JSON',
+    'monitor-retry': '--cycle ID --request-file SAVED_JSON', 'monitor-abandon': '--cycle ID --request-file SAVED_JSON',
+    'digest-create': '--project ID --request-file SAVED_JSON', 'digest-status': '--digest ID',
+    'digest-review': '--digest ID --request-file SAVED_JSON',
+    'digest-download': '--digest ID --format json|markdown --out NEW_FILE',
     review: '--run ID --deal ID --file REVIEW_JSON', propose: '--run ID --file ACTION_JSON',
     prepare: '--action ID', approve: '--action ID --note TEXT', execute: '--action ID', reconcile: '--action ID [--native-id ID]', revoke: '--action ID --note TEXT',
     export: '--project ID --name NAME --out NEW_FILE [--run ID]', restore: '--file PROJECT_JSON_GZ --name NAME', report: '--run ID --out NEW_FILE', compare: '--run ID --baseline ID'
-  }, note: 'CLI mutations use the same retained model. Stop the browser process before opening its directory from the CLI. Add --actor and --request-id for named, idempotent commands. Sync/execute/reconcile await their retained operation.' };
+  }, note: 'CLI mutations use the same retained model. Stop the browser process before opening its directory from the CLI. Add --actor and --request-id for named, idempotent commands. Sync/execute/reconcile await their retained operation. Monitoring runs continuously in serve, including when no browser is open. Monitoring mutations read exact actor/requestId/revision/version fields from --request-file; keep that original JSON to retrieve the same committed request after an interruption.' };
   requireThat(o['--state'], 'STATE', 'Provide --state with the private workspace directory');
   const settings = { directory: resolve(o['--state']), port: Number(o['--port'] ?? 0), tokenEnv: o['--token-env'] ?? null, providerOrigin: o['--provider-origin'] ?? 'https://api.hubapi.com', development: Boolean(o['--development']) };
   if (command === 'serve') {
@@ -34,8 +42,30 @@ export async function main(argv) {
     const actor = o['--actor'] ?? 'Local operator', requestId = o['--request-id'] ?? id(), projectId = o['--project'];
     const input = { actor, requestId, ...(projectId ? { revision: model.store.project(projectId).revision } : {}) };
     const contents = async () => { requireThat(o['--file'], 'FILE', 'Provide --file'); return readFile(resolve(o['--file'])); };
+    const monitoringRequest = async () => {
+      requireThat(o['--request-file'], 'REQUEST_FILE', 'Provide the complete saved request JSON with actor, requestId and the current revision/version');
+      const value = parse(await readFile(resolve(o['--request-file'])));
+      requireThat(value && typeof value === 'object' && !Array.isArray(value), 'REQUEST_FILE', 'Use one request object');
+      requireThat(!o['--actor'] || o['--actor'] === value.actor, 'REQUEST_FILE', 'The saved request owns its exact actor');
+      requireThat(!o['--request-id'] || o['--request-id'] === value.requestId, 'REQUEST_FILE', 'The saved request owns its exact request identifier');
+      return value;
+    };
     let result;
-    if (command === 'init') result = model.createProject({ ...input, name: o['--name'] });
+    if (command === 'monitor-status') result = model.automationState(projectId);
+    else if (command === 'monitor-cycle') result = model.automationCycle(o['--cycle']);
+    else if (['monitor-configure', 'monitor-pause', 'monitor-resume', 'monitor-trigger', 'digest-create'].includes(command)) {
+      const method = { 'monitor-configure': 'configureAutomation', 'monitor-pause': 'pauseAutomation', 'monitor-resume': 'resumeAutomation', 'monitor-trigger': 'triggerAutomation', 'digest-create': 'createManagerDigest' }[command];
+      result = await model[method](projectId, await monitoringRequest());
+    } else if (command === 'monitor-retry' || command === 'monitor-abandon') result = await model[command === 'monitor-retry' ? 'retryAutomationCycle' : 'abandonAutomationCycle'](o['--cycle'], await monitoringRequest());
+    else if (command === 'digest-status') result = model.managerDigest(o['--digest']);
+    else if (command === 'digest-review') result = model.reviewManagerDigest(o['--digest'], await monitoringRequest());
+    else if (command === 'digest-download') {
+      requireThat(o['--out'] && ['json', 'markdown'].includes(o['--format']), 'OUTPUT', 'Provide a new --out file and --format json or markdown');
+      const { digest } = model.managerDigest(o['--digest']), file = model.store.readFile(o['--format'] === 'markdown' ? digest.markdownFileId : digest.fileId);
+      await writeFile(resolve(o['--out']), file.data, { flag: 'wx', mode: 0o600 });
+      result = { out: resolve(o['--out']), digestId: digest.id, fileId: file.id, sha256: file.sha256 };
+    }
+    else if (command === 'init') result = model.createProject({ ...input, name: o['--name'] });
     else if (command === 'status') result = projectId ? model.project(projectId) : model.state();
     else if (command === 'config') result = model.saveConfig(projectId, { ...input, config: parse(await contents()) });
     else if (command === 'schema') result = model.importSchema(projectId, { ...input, kind: o['--kind'], filename: o['--file'].split('/').at(-1), contentBase64: (await contents()).toString('base64') });
