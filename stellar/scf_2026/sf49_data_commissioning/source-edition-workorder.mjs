@@ -13,6 +13,12 @@ export const REQUEST_SCHEMA='stellar-forge.sf49.source-edition-workorder-request
 export const BUNDLE_SCHEMA='stellar-forge.sf49.source-edition-workorder.v1';
 export const ATTACHMENT_SCHEMA='stellar-forge.sf49.source-edition-attachments.v1';
 const MAX_META=2*1024*1024,MAX_TERMS=1024*1024,MAX_ATTACHMENT=8*1024**3,MAX_TOTAL=16*1024**3;
+// The original runtime owns its handoff allowance. All transfer and archive
+// admission derives from these same original carrier boundaries.
+export const SOURCE_EDITION_LIMITS=Object.freeze({
+  metadataBytes:MAX_META,termsBytes:MAX_TERMS,fileBytes:MAX_ATTACHMENT,sourceBytes:MAX_TOTAL,
+  handoffBytes:MAX_HANDOFF_BYTES,bundleBytes:MAX_TOTAL+MAX_HANDOFF_BYTES+2*MAX_META
+});
 const nativePaths={
   workorder:'../../scf-starforge-20261009/sf77-merchant-workorder/workorder.mjs',
   runtimeSupport:'../../scf-starforge-20261009/sf74-merchant-support-console/runtime-support.mjs',
