@@ -5,6 +5,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { merchantToolFamily } from '../catalog.mjs';
 import { createConsoleCustomers } from './customers.mjs';
 import { createMerchantWorkflows } from './workflows.mjs';
+import { createMerchantWorkflowRecipes, MAX_WORKFLOW_RECIPE_REQUEST_BYTES } from './workflow-recipes.mjs';
 import { MerchantConsoleStore, CONSOLE_SCHEMA, canonical, digest, fail } from './store.mjs';
 
 const ROOT = new URL('./public/', import.meta.url);
@@ -12,6 +13,7 @@ const assets = new Map([
   ['/operator/', ['index.html', 'text/html; charset=utf-8']],
   ['/operator/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']],
   ['/operator/workflows.mjs', ['workflows.mjs', 'text/javascript; charset=utf-8']],
+  ['/operator/workflow-recipes.mjs', ['workflow-recipes.mjs', 'text/javascript; charset=utf-8']],
   ['/operator/style.css', ['style.css', 'text/css; charset=utf-8']]
 ]);
 const equal = (a,b) => typeof a === 'string' && typeof b === 'string' &&
@@ -149,6 +151,7 @@ export async function createMerchantConsole({operator,configPath,directory,autho
     releaseStore:resolve(dirname(configPath),sourceConfiguration.releaseStore)});
   const workflows=createMerchantWorkflows({store,definitions,getHost:snapshot,startCall,requireTool,
     isCallActive:id=>active.has(id),waitCall:async id=>{await active.get(id);return store.call(id);}});
+  const recipes=createMerchantWorkflowRecipes({store,definitions,getHost:snapshot,requireTool,requireOpen});
   function handler(req,res) {
     let url;try{url=new URL(req.url,'http://127.0.0.1');}catch{return Promise.resolve(false);}
     if(url.pathname!=='/operator'&&!url.pathname.startsWith('/operator/'))return Promise.resolve(false);
@@ -205,6 +208,12 @@ export async function createMerchantConsole({operator,configPath,directory,autho
         const value=definitions.get(decodeURIComponent(route.slice(5)));
         if(!value)throw fail('CONSOLE_TOOL_UNAVAILABLE','Choose a configured native tool.',404);
         send(res,200,{definition:value,family:merchantToolFamily(value.name)??'core',schemaSha256:digest(canonical(value))});return true;
+      }
+      if(req.method==='GET'&&route==='workflow-recipes'){
+        send(res,200,await recipes.list(url.searchParams.get('profile'),context));return true;
+      }
+      if(req.method==='GET'&&route.startsWith('workflow-recipe-install/')){
+        send(res,200,await recipes.installation(decodeURIComponent(route.slice('workflow-recipe-install/'.length)),context));return true;
       }
       if(req.method==='GET'&&route==='workflows'){
         send(res,200,await workflows.list(url.searchParams.get('profile'),context));return true;
@@ -268,7 +277,7 @@ export async function createMerchantConsole({operator,configPath,directory,autho
       // The console's draft metadata must fit around a full original native packet.
       // Dispatch still checks the exact original MCP envelope against maxRequestBytes.
       let input;entry.reading=true;
-      try{input=await body(req,route==='import'?128*1024*1024:operator.maxRequestBytes+8192);}
+      try{input=await body(req,route==='import'?128*1024*1024:route.startsWith('workflow-recipe-')?MAX_WORKFLOW_RECIPE_REQUEST_BYTES:operator.maxRequestBytes+8192);}
       finally{entry.reading=false;}
       requireOpen();
       if(!input||typeof input!=='object'||Array.isArray(input))throw fail('CONSOLE_JSON','Supply an operator request object.',400);
@@ -280,6 +289,9 @@ export async function createMerchantConsole({operator,configPath,directory,autho
         requireOpen();
         send(res,200,{delivery:customers.pause(input.id)});return true;
       }
+      if(route==='workflow-recipe-export'){send(res,200,await recipes.export(input,context));return true;}
+      if(route==='workflow-recipe-review'){send(res,200,await recipes.review(input,context));return true;}
+      if(route==='workflow-recipe-install'){send(res,200,await recipes.install(input,context));return true;}
       if(route==='workflows'){send(res,200,await workflows.save(input,context));return true;}
       if(route==='workflow-runs'){send(res,202,await workflows.start(input,context));return true;}
       if(route==='workflow-resume'){send(res,202,await workflows.resume(input,context));return true;}
@@ -311,7 +323,7 @@ export async function createMerchantConsole({operator,configPath,directory,autho
     }
   }
   return {
-    store,handler,snapshot,startCall,workflows,
+    store,handler,snapshot,startCall,workflows,recipes,
     beginClose,
     close(){
       if(!closed){
