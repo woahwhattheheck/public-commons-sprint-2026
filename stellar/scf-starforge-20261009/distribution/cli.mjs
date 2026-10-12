@@ -23,8 +23,16 @@ const help = `Starforge merchant toolkit
   starforge runtime-transfer --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  sdmx                                      Retain SDMX sources, publish exact editions and receive original buyer pages
+  buyer-collections                         Review, retain and operate original paid request collections
+  buyer-collections-workspace               Review collections, original queue states and result exports in a private browser
+  census-publisher                         Publish Census ACS observations and complete original source deliveries
+  usaspending-research                      Capture federal awards, review prime workshares and operate saved editions
+  usaspending-dossier                       Receive award editions, write research findings and recover source packets
   weather-operations                        Operate weather sources, decisions, frozen reports and original recovery
   usgs-water                                Acquire USGS observations, review hydrology and operate paid editions
+  water-quality                             Review WQX samples, detection limits and complete paid data editions
+  fred                                      Acquire, review and operate retained economic data editions
   webhook-feed                              Receive signed webhooks and sell reviewed event feeds
   buyer-event-feed                          Collect, recover and export original paid event pages
   mercury-feed                              Operate original Mercury events, paid feeds and joined recovery
@@ -53,7 +61,9 @@ Native commands (arguments pass unchanged to the maintained implementation):
   jobs                                      Prepare and operate durable paid application jobs
   jobs-buyer                                Receive accepted jobs, follow execution and retrieve saved results
   job-workspace                             Receive paid jobs, retrieve results and organize research collections
+  upstream-tls                               Review supplier certificate references and inspect local TLS credentials
   supplier-quotas                            Review supplier account configuration and inspect retained call allowances
+  cache-operations                          Review cache activity, change retention and recover saved operations
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
   import-headers  Import original operator HTTP headers
@@ -81,11 +91,15 @@ Native commands (arguments pass unchanged to the maintained implementation):
   buyer-n8n-workflows Generate six original customer workflows for the selected n8n credential
   buyer-agent Operate the original buyer through LangGraph checkpoints and LangChain tools
   tomorrow                                  Plan weather work, review forecasts, recover resources and deliver licensed files
+  coingecko                                 Operate CoinGecko sources, market research and original purchases
   tenderly / tenderly-workspace              Prepare and operate the Tenderly simulation merchant
   tenderly-customer                          Receive, recover and export the original simulation purchase
   tenderly-analysis                          Receive, compare and review completed Tenderly simulations
+  goldrush-merchant                          Prepare the provider's original Stellar wallet-data merchant
+  goldrush                                  Open wallet research, prepare requests and recover saved purchases
   research-dossiers                         Retain research questions, evidence, findings and portable reports
   research-workspace                        Open the private research dossier operator workspace
+  linkup-research                           Receive saved Linkup purchases, analyse sources and deliver research dossiers
   dataset-delivery Export a saved buyer dataset
   merchant    Seller + fulfillment journal   delivery    Deliver original merchant events
   delivery-workspace                         Configure receivers and operate retained delivery recovery
@@ -114,9 +128,12 @@ Native commands (arguments pass unchanged to the maintained implementation):
   clickhouse                                 Preflight and run a retained ClickHouse merchant
   clickhouse-prepare                         Prepare approved analytical queries and the original customer client
   clickhouse-workspace                       Author, review and operate retained ClickHouse merchants
+  opensearch                                 Preflight and run a native OpenSearch merchant
+  opensearch-prepare                         Prepare named search routes and the original customer client
+  opensearch-workspace                       Save drafts, capture and compare search editions, and prepare merchants
   cube-workspace / cube-onboard              Author, review and export paid Cube reports
   openapi-workspace                          Import an API contract or Postman collection and operate its merchant
-  oauth-connection                           Authorize, review, renew and disconnect an existing provider grant
+  oauth-connection                           Authorize, renew and select a QuickBooks company or API grant
   openapi postman                            Review collections, retain source and create merchant packages
   openapi weather                            Operate the original OpenWeather customer application
   duckdb / duckdb-inspect                     Run or inspect an approved DuckDB/Parquet source
@@ -128,6 +145,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   commerce-console                           Browser workspace for a prepared commerce session
   dataset-refresh                            Publish and select retained dataset versions
   dataset-publisher                          Publish retained CSV/workbook selections and prepare buyer acquisition
+  hud-income-limits                          Retain published HUD limits, review selections and operate customer releases
   workbook                                   Inspect sources, review mappings and adopt complete workbook editions
   workbook-customer                          Receive published workbooks through the original buyer and Analysis
   workbook-receive                            Complete retained workbook receiving and full SQL export
@@ -136,6 +154,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   catalog-serve / catalog                     Host and operate live seller discovery
   catalog-withdrawal                         Prepare, sign and apply seller withdrawals
   catalog-workspace                          Review signed declarations and retained catalog operations
+  atlas                                     Browse retained catalog offers and prepare buyer requests
+  atlas-workspace                           Export, inspect and receive retained Atlas workspaces
   checkout / purchase                        Enroll, purchase and retrieve a merchant file
   buyer-object                               Acquire, resume and assemble an existing object
   buyer-runbook                              Plan, run and recover multi-resource acquisitions
@@ -156,9 +176,12 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-accounting-recovery               Review, import and reopen an original completed purchase
   merchant-accounting-maintenance            Back up, recover and reopen the same merchant MCP accounting workspace
   merchant-accounting-adjustments            Review, retain and reconcile original merchant cancellations and refunds
+  merchant-accounting-platforms              Review, retain and reconcile original QuickBooks and Xero operations
   s3                                         Inspect and configure selected object-store resources
   python-merchant                            Inspect, diagnose and serve a Python application
   python-workspace                           Author Python sources, run private previews and operate native releases
+  diffbot-workspace                          Review retained web data, publish customer editions and reopen handoffs
+  diffbot-acquire                            Retain original Diffbot Account, Extract and Bulk results
   merchant-readiness                         Review every configured Stellar receiving account
   availability                              Review, pause and resume a running seller's selected routes
   cube-onboarding                            Capture and prepare reviewed Cube reports as a merchant

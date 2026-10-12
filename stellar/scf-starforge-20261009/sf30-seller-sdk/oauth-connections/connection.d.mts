@@ -1,7 +1,11 @@
 // MIT. Declarations for the original private grant owner and its public projections.
+import type { Agent as NodeHttpAgent } from 'node:http';
 import type { OAuthProfile, OAuthProfileOptions } from './profile.mjs';
 
 export type OAuthEnvironment = Readonly<Record<string, string | undefined>>;
+
+/** Borrowed host-owned HTTP(S) Agent. Its protocol must match the selected endpoint. */
+export type OAuthAgent = NodeHttpAgent;
 
 /** The original transport validates every returned address before using one. */
 export interface OAuthLookupAddress { address: string; family: number }
@@ -14,6 +18,8 @@ export interface OAuthConnectionOptions extends OAuthProfileOptions {
   /** Host-owned values only; never send this object to a browser or saved package. */
   env?: OAuthEnvironment;
   lookup?: OAuthLookup;
+  /** Runtime only. Close the connection/provider before its owner destroys this Agent. */
+  agent?: OAuthAgent;
 }
 
 export type OAuthGrantState = 'disconnected' | 'connected' | 'refreshing' | 'reconnect_required';
@@ -50,6 +56,10 @@ export interface OAuthGrantStatus {
   issuedAt: string | null;
   expiresAt: string | null;
   refreshExpiresAt: string | null;
+  /** QuickBooks company from the state-validated callback; present only for the Intuit dialect. */
+  realmId?: string | null;
+  /** Previously observed hard deadline survives refresh-token rotation. */
+  refreshHardExpiresAt?: string | null;
   hasRefreshToken: boolean;
   generation: number;
   review: OAuthRecordedReview | null;
@@ -90,6 +100,9 @@ export interface OAuthFlow {
   scopes?: string[];
   refreshable?: boolean;
   tokenExpiresAt?: string | null;
+  realmId?: string | null;
+  refreshExpiresAt?: string | null;
+  refreshHardExpiresAt?: string | null;
   lastError?: OAuthFlowError;
 }
 
@@ -105,7 +118,7 @@ export interface OAuthRevisionCommand {
   requestId: string;
 }
 export interface OAuthBeginRequest extends OAuthRevisionCommand {
-  /** Exact registered http://127.0.0.1:PORT plus this profile's callbackPath. */
+  /** Exact original loopback or profile-configured callback origin plus its callbackPath. */
   redirectUri: string;
 }
 export interface OAuthAuthorizationStart {

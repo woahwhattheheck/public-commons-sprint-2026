@@ -10,10 +10,17 @@ The API merchant workspace keeps source intake, public request review, merchant 
 | Split OpenAPI files | `starforge openapi source --help` | Explicit local source bundle and the original referenced file bytes. |
 | Postman Collection v2.1 and selected environment | The workspace's **Import an existing Postman collection** panel, or `starforge openapi postman --help` | Collection, environment, request pointers and reviewed source decisions in one private packet. |
 | Existing OpenWeather customer project | `starforge openapi weather --help` | The original weather application's account references, source, acquisitions, merchant integration and release state. |
+| Existing Messari or Blockworks integration | The workspace's **Migrations** application | The provider contracts, customer request inventory, complete original captures, reviewed mappings, full comparisons and merchant release history. |
 
 The installed `starforge` command forwards to these original implementations. The same checkout entry is `node stellar/scf-starforge-20261009/sf61-openapi-seller-import/cli.mjs`, followed by the same arguments. For the workspace, use `workspace/server.mjs` instead.
 
 Use a private parent for saved merchant projects. Reopen that same parent to continue a project. Each saved package preserves its original source, plan, public request examples and backend environment-variable references.
+
+## Migrate an existing provider integration
+
+Open **Migrations** in the same API merchant workspace. Retain the original and current provider contracts, import the customer's actual request inventory, and use the native acquisition or receiving workflow to retain complete responses. Review entity identities, field meaning, units, time windows and coverage before comparing the selected source editions. The complete result remains downloadable while the browser displays paged records and their original source locations.
+
+The [Blockworks migration guide](blockworks/README.md) covers project intake, source and capture provenance, native acquisition and recovery, mapping decisions, original merchant source refresh, release selection and rollback, customer receiving, and a portable handover that reopens in the complete merchant application.
 
 ## Collection to merchant
 

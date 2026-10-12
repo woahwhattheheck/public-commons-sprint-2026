@@ -32,10 +32,12 @@ class OperatorServer(ThreadingHTTPServer):
     daemon_threads = False
     block_on_close = True
 
-    def __init__(self, workspace: Workspace, port: int = 0):
+    def __init__(self, workspace: Workspace, port: int = 0, *, assets_directory: Path | None = None,
+                 handler_class=None):
         self.workspace, self.token = workspace, secrets.token_urlsafe(32)
+        self.assets_directory = assets_directory or HERE / "public"
         self.slots = threading.BoundedSemaphore(8)
-        super().__init__(("127.0.0.1", port), Handler)
+        super().__init__(("127.0.0.1", port), handler_class or Handler)
         self.origin = f"http://127.0.0.1:{self.server_port}"
         self.url = self.origin + "/#" + self.token
 
@@ -137,7 +139,7 @@ class Handler(BaseHTTPRequestHandler):
                   "/style.css": ("style.css", "text/css; charset=utf-8")}
         if target.path in assets:
             name, media = assets[target.path]
-            body = (HERE / "public" / name).read_bytes()
+            body = (self.server.assets_directory / name).read_bytes()
             self._headers(200, media, len(body)); self.wfile.write(body)
             return
         self._gate()
@@ -155,18 +157,18 @@ class Handler(BaseHTTPRequestHandler):
         elif target.path == "/api/changes":
             self._json(ws.comparison_page(q["id"], int(q.get("offset", "0")), int(q.get("limit", "50"))))
         elif target.path == "/api/changes/download":
-            self._download(ws.comparison_file(q["id"]), "xml-edition-changes.jsonl", "application/x-ndjson")
+            self._download(ws.comparison_file(q["id"]), ws.kind + "-edition-changes.jsonl", "application/x-ndjson")
         elif target.path in {"/api/export", "/api/dataset-export"}:
             with ws.mutex, ws.scratch() as temp:
                 if target.path == "/api/export":
-                    archive = temp / "xml-project.zip"
+                    archive = temp / (ws.kind + "-project.zip")
                     ws.export_packet(q["build"], archive)
                 else:
                     folder = temp / "dataset"
                     ws.export_dataset(q["build"], folder)
                     archive = temp / "sf30-dataset.zip"
                     with zipfile.ZipFile(archive, "x", compression=zipfile.ZIP_DEFLATED) as out:
-                        for name in ["data.csv", "dataset.json", "xml-lineage.json"]:
+                        for name in ["data.csv", "dataset.json", ws.lineage_name]:
                             out.write(folder / name, name)
                     archive.chmod(0o600)
                 self._download(archive, archive.name, "application/zip")
@@ -180,8 +182,8 @@ class Handler(BaseHTTPRequestHandler):
         target = self._gate()
         ws = self.server.workspace
         if target.path == "/api/source":
-            name = unquote(self.headers.get("X-XML-Name", "source.xml"))
-            label = unquote(self.headers.get("X-XML-Label", name))
+            name = unquote(self.headers.get("X-" + ws.kind.upper() + "-Name", ws.source_name))
+            label = unquote(self.headers.get("X-" + ws.kind.upper() + "-Label", name))
             self._json(ws.add_source(self._body(MAX_SOURCE), label, name), 201)
             return
         if target.path == "/api/import":
