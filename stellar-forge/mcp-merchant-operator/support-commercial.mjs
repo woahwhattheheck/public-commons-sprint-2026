@@ -2,7 +2,7 @@ import {merchantCommercialReceiving} from './support-commercial-receiving.mjs';
 import {merchantCommercialTariffs} from './support-commercial-tariffs.mjs';
 // MIT. Original saved merchant quotation through the configured support owner.
 import {openCaseCommercial,commercialWorkspaceId} from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/case-commercial.mjs';
-import {failure,exact,privateSupportDirectory} from './config.mjs';
+import {failure,exact,privateSupportDirectory} from './host-files.mjs';
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 const HASH=/^[a-f0-9]{64}$/;
 export function merchantCommercial({cases,casesDirectory,exportsDirectory,reads,environment=process.env}) {
