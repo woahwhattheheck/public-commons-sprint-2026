@@ -116,16 +116,64 @@ function restorable(name){
     new RegExp('^economics/books/successors/'+hash+'\\.json$').test(name)||
     new RegExp('^economics/pricing-links/'+uuid+'\\.json$').test(name);
 }
-export async function restoreCostWorkspace({archive,directory}) {
+function requireWorkspaceBackup(descriptor) {
+  if(descriptor?.schema!=='stellar-forge.merchant-cost-backup.v1'||descriptor.kind!=='WORKSPACE_BACKUP')
+    throw fault('WORKSPACE_BACKUP_REQUIRED','Select a complete private workspace backup, not a single cost edition.');
+}
+function requirePricingBackup(result) {
+  if(!result.manifest.files.some(entry=>entry.name.startsWith('successors/')))
+    throw fault('PRICING_BACKUP_INCOMPLETE','The backup contains no committed original pricing source.');
+}
+async function restoreDestination(directory,sourceArchiveSha256) {
+  await privateDir(dirname(directory));
+  try{await lstat(directory);}catch(error){if(error.code==='ENOENT')return 'NEW';throw error;}
+  await privateDir(directory);
+  let pending;
+  try{pending=JSON.parse((await readPrivate(join(directory,'.cost-restore-pending.json'))).toString('utf8'));}
+  catch{throw fault('RESTORE_NEW_DIRECTORY','Choose a new directory, or resume this exact original restoration.');}
+  if(pending.sourceArchiveSha256!==sourceArchiveSha256)
+    throw fault('RESTORE_SOURCE_CHANGED','This directory belongs to another restoration.',409);
+  try{
+    const complete=JSON.parse((await readPrivate(join(directory,'.cost-restore-complete.json'))).toString('utf8'));
+    if(complete.sourceArchiveSha256!==sourceArchiveSha256)
+      throw fault('RESTORE_SOURCE_CHANGED','Completed restoration source differs.',409);
+    return 'COMPLETE';
+  }catch(error){if(error.code==='ENOENT')return 'INCOMPLETE';throw error;}
+}
+/** Inspect the complete original archive and its receiving target without writing either. */
+export async function inspectCostWorkspaceRestore({archive,directory}) {
+  archive=resolve(archive);directory=resolve(directory);
+  const result=await inspectBundle(archive,{onStart:requireWorkspaceBackup,onFile:entry=>{
+    if(!restorable(entry.name))
+      throw fault('RESTORE_PATH_INVALID','Package member is outside the original pricing and cost workspace.');
+  }});
+  requirePricingBackup(result);
+  const restoreState=await restoreDestination(directory,result.sha256);
+  const distinct=prefix=>new Set(result.manifest.files.filter(entry=>entry.name.startsWith(prefix))
+    .map(entry=>entry.name.slice(prefix.length).split('/')[0])).size;
+  return {
+    schema:'stellar-forge.merchant-cost-restore-review.v1',
+    archive,directory,sourceArchiveSha256:result.sha256,bytes:result.bytes,fileCount:result.fileCount,restoreState,
+    contents:{
+      supplierOriginals:distinct('economics/sources/records/'),
+      costEditions:distinct('economics/books/editions/'),
+      pricingReviews:distinct('versions/'),
+      priceChanges:distinct('decisions/'),
+      scenarioPlans:distinct('scenario-plans/'),
+      pricingLinks:distinct('economics/pricing-links/'),
+    },
+  };
+}
+export async function restoreCostWorkspace({archive,directory,expectedArchiveSha256}) {
   directory=resolve(directory);archive=resolve(archive);
+  if(expectedArchiveSha256!==undefined&&
+      (typeof expectedArchiveSha256!=='string'||!/^[a-f0-9]{64}$/.test(expectedArchiveSha256)))
+    throw fault('INVALID_BACKUP_SHA256','Use the reviewed complete workspace backup SHA-256.');
   await privateDir(dirname(directory));
   const temporary=join(dirname(directory),'.cost-restore-'+randomUUID());await privateDir(temporary,true);
   let restored=false;
   try {
-    const result=await inspectBundle(archive,{onStart:descriptor=>{
-      if(descriptor.schema!=='stellar-forge.merchant-cost-backup.v1'||descriptor.kind!=='WORKSPACE_BACKUP')
-        throw fault('WORKSPACE_BACKUP_REQUIRED','Select a complete private workspace backup, not a single cost edition.');
-    },onFile:async entry=>{
+    const result=await inspectBundle(archive,{onStart:requireWorkspaceBackup,onFile:async entry=>{
       if(!restorable(entry.name))throw fault('RESTORE_PATH_INVALID','Package member is outside the original pricing and cost workspace.');
       const parts=entry.name.split('/');let parent=temporary;
       for(const part of parts.slice(0,-1)){parent=join(parent,part);await privateDir(parent,true);}
@@ -133,8 +181,9 @@ export async function restoreCostWorkspace({archive,directory}) {
       return {write:bytes=>handle.writeFile(bytes),close:async()=>{await handle.sync();await handle.close();closed=true;},
         abort:async()=>{if(!closed)await handle.close().catch(()=>{});}};
     }});
-    if(!result.manifest.files.some(x=>x.name.startsWith('successors/')))
-      throw fault('PRICING_BACKUP_INCOMPLETE','The backup contains no committed original pricing source.');
+    requirePricingBackup(result);
+    if(expectedArchiveSha256!==undefined&&result.sha256!==expectedArchiveSha256)
+      throw fault('RESTORE_SOURCE_CHANGED','Workspace backup changed after review. Inspect the current original archive before restoring.',409);
     await syncDir(temporary);
     const pendingName='.cost-restore-pending.json',completeName='.cost-restore-complete.json';
     let created=false;
