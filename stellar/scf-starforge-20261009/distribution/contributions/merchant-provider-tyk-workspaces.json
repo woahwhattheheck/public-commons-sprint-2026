@@ -1,0 +1,18 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-tyk-workspaces",
+  "description": "Original Tyk workspace MCP actions and complete retained file delivery",
+  "merchantProviders": {
+    "tyk-workspaces": "stellar-forge/mcp-merchant-operator/providers/tyk-workspaces.mjs"
+  },
+  "exports": {
+    "./merchant/mcp/tyk": "./source/stellar-forge/mcp-merchant-operator/tyk-workspace.mjs",
+    "./merchant/mcp/tyk-setup": "./source/stellar-forge/mcp-merchant-operator/tyk-setup.mjs"
+  },
+  "supportFiles": [
+    "stellar-forge/mcp-merchant-operator/TYK_WORKSPACES.md"
+  ],
+  "commands": {
+    "tyk-agent-init": "stellar-forge/mcp-merchant-operator/tyk-setup.mjs"
+  }
+}

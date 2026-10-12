@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tyk workspace</title><link rel="stylesheet" href="/style.css"><script type="module" src="/browser.mjs"></script>
+</head>
+<body>
+<header class="top"><div><h1>Tyk workspace</h1><p>API portfolios, native migration and rollout</p></div><button id="refresh">Refresh</button></header>
+<div class="shell">
+<aside><nav aria-label="Workspace sections">
+<button data-tab="targets" aria-current="page">Targets</button><button data-tab="portfolio">Portfolio</button>
+<button data-tab="cohorts">Cohorts</button><button data-tab="rollouts">Rollouts</button><button data-tab="handover">Handover</button>
+</nav><dl id="workspace-identity"></dl></aside>
+<main>
+<div id="notice" role="status" aria-live="polite"></div>
+<div id="pending" class="panel" hidden><h2>Original request</h2><p id="pending-description"></p><div class="row"><button id="resume-request">Recover original request</button><button id="dismiss-request">Clear local notice</button></div></div>
+<section id="targets" class="section"><div class="section-heading"><div><h2>Targets</h2><p>Connect a Gateway or Dashboard with an existing credential environment variable.</p></div><button id="new-target">New target</button></div>
+<div id="target-list" class="table-wrap"></div>
+<form id="target-form" class="panel"><h3 id="target-form-title">New target</h3><div class="fields">
+<label>Alias<input name="alias" required maxlength="128" autocomplete="off" placeholder="gateway-development"></label>
+<label>Label<input name="label" required maxlength="300" placeholder="Development Gateway"></label>
+<label>Service<select name="kind"><option value="gateway">Gateway</option><option value="dashboard">Dashboard</option></select></label>
+<label>Base URL<input name="baseUrl" required type="url" placeholder="http://127.0.0.1:8080/"></label>
+<label>Credential environment variable<input name="authEnv" required autocomplete="off" placeholder="TYK_GATEWAY_SECRET"></label>
+</div><p class="hint">The workspace reads the credential from its host environment. Target records retain the variable name.</p><button type="submit">Save target</button></form>
+</section>
+<section id="portfolio" class="section" hidden><div class="section-heading"><div><h2>Portfolio</h2><p>Capture every API definition and its original native response.</p></div></div>
+<form id="capture-form" class="panel"><div class="fields"><label>Target<select name="connectionId" class="target-select" required></select></label><label>Capture label<input name="label" value="Portfolio capture" maxlength="300" required></label></div>
+<div class="row"><button type="submit">Capture portfolio</button><label class="file-button">Import capture JSON<input id="capture-file" type="file" accept=".json,application/json"></label></div></form>
+<div class="toolbar"><label>Saved capture<select id="capture-select"></select></label><button id="select-all">Select all present APIs</button><button id="clear-selection">Clear selection</button><span id="selection-count"></span></div>
+<div id="capture-summary"></div><div id="api-table" class="table-wrap"></div><div id="api-pages" class="pager"></div>
+<form id="cohort-form" class="panel"><h3>Save selected APIs as a cohort</h3><div class="fields"><label>Cohort label<input name="label" maxlength="300" required placeholder="Customer APIs, first migration"></label><label>Review note<textarea name="note" rows="2" maxlength="20000"></textarea></label></div><button type="submit">Save cohort</button></form>
+<details id="definition-details" class="panel" hidden><summary>Original selected definition</summary><div id="definition-meta"></div><textarea id="definition-text" readonly rows="16" spellcheck="false"></textarea><div class="row"><label>Request target<select id="definition-target" class="target-select"></select></label><button id="use-definition">Prepare definition for target</button><a id="download-definition">Download original capture</a></div></details>
+</section>
+<section id="cohorts" class="section" hidden><div class="section-heading"><div><h2>Cohorts</h2><p>Saved API selections retain their exact portfolio capture.</p></div></div><div id="cohort-list" class="table-wrap"></div><div id="cohort-pages" class="pager"></div><div id="cohort-details"></div></section>
+<section id="rollouts" class="section" hidden><div class="section-heading"><div><h2>Rollouts</h2><p>Prepare a native request, review it, then execute that saved request.</p></div></div>
+<form id="rollout-form" class="panel"><h3>Prepare a request</h3><div class="fields">
+<label>Label<input name="label" maxlength="300" required value="Tyk rollout"></label><label>Target<select name="connectionId" class="target-select" required></select></label>
+<label>Operation<select name="operation"><option value="migrate">Migrate Classic APIs</option><option value="import">Import OpenAPI</option><option value="create">Create native definition</option><option value="update">Update native definition</option><option value="hotReload">Reload Gateway</option></select></label>
+<label data-operation="migrate">Saved cohort<select name="cohortId" id="rollout-cohort"></select></label>
+<label data-operation="migrate">Migration mode<select name="mode"><option value="dryRun">Dry run</option><option value="stage">Stage OAS APIs</option><option value="promote">Promote staged OAS APIs</option><option value="direct">Direct replacement</option></select></label>
+<label data-operation="definition">Definition format<select name="kind"><option value="oas">Tyk OAS / OpenAPI</option><option value="classic">Tyk Classic</option></select></label>
+<label data-operation="definition">API ID<input name="apiId" maxlength="1000" placeholder="Required for update; expected identity for create/import"></label>
+<label data-operation="definition">Content type<select name="contentType"><option value="application/json">JSON</option><option value="application/x-yaml">YAML (Dashboard OAS)</option></select></label>
+<label data-operation="hotReload">Reload scope<select name="scope"><option value="node">This node</option><option value="group">Gateway group</option></select></label>
+</div>
+<div data-operation="migrate" class="row"><label class="checkbox"><input name="abortOnFailure" type="checkbox">Stop native batch on failure</label><label class="checkbox"><input name="overrideStaged" type="checkbox">Replace existing staged copies (stage mode)</label></div>
+<div data-operation="hotReload"><label class="checkbox"><input name="block" type="checkbox" checked>Wait for node reload</label></div>
+<p id="operation-explanation" class="hint"></p>
+<label data-operation="definition">Complete native document<textarea name="definitionText" rows="14" spellcheck="false" placeholder="Paste or load the complete native JSON or OpenAPI document."></textarea></label>
+<div data-operation="definition" class="row"><label class="file-button">Load definition file<input id="definition-file" type="file" accept=".json,.yaml,.yml,application/json,application/x-yaml"></label></div>
+<label data-operation="definition">Native query options<textarea name="query" rows="2" spellcheck="false" placeholder='{"listenPath":"/customer/","upstreamURL":"https://api.example.com"}'></textarea></label>
+<label>Review note<textarea name="note" rows="2" maxlength="20000"></textarea></label><button type="submit">Prepare saved review</button>
+</form>
+<div id="rollout-review" class="panel" hidden></div><h3>Saved rollout history</h3><div id="rollout-list" class="table-wrap"></div><div id="rollout-pages" class="pager"></div>
+</section>
+<section id="handover" class="section" hidden><div class="section-heading"><div><h2>Handover</h2><p>Move the complete portfolio, original source and saved history between installations.</p></div></div>
+<div class="panel"><h3>Export this workspace</h3><p>Includes every saved revision, original definition, native response and retained journal at the export snapshot.</p><form id="export-form" class="row"><label>Delivery label<input name="label" maxlength="300" value="Complete workspace handover" required></label><button type="submit">Create complete delivery</button></form></div>
+<div id="delivery-list" class="table-wrap"></div><div id="delivery-pages" class="pager"></div>
+<div class="panel"><h3>Receive a workspace</h3><p>Inspect the complete original handover, review its inventory, then receive the selected history and source.</p><label class="file-button">Inspect original NDJSON file<input id="delivery-file" type="file" accept=".ndjson,application/x-ndjson"></label><div id="receiving-review"></div></div>
+<h3>Receiving history</h3><div id="receiving-list" class="table-wrap"></div><div id="receiving-pages" class="pager"></div>
+</section>
+</main></div>
+</body></html>
