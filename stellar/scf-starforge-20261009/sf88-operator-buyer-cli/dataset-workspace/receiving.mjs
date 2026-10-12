@@ -1,6 +1,6 @@
 // MIT. Original public seller offers -> original private SF88 dataset session.
 import { randomUUID } from 'node:crypto';
-import { lstat, link, unlink } from 'node:fs/promises';
+import { lstat, link, unlink, readdir } from 'node:fs/promises';
 import { join, dirname, basename } from 'node:path';
 import { prepareReview } from '../prepare.mjs';
 import { buyerTransport } from '../config.mjs';
@@ -8,7 +8,9 @@ import { validateDatasetQuery, canonical as nativeCanonical } from '../dataset-p
 import { createDatasetSession } from '../dataset-session.mjs';
 import { initializeWorkspace, openWorkspace } from '../workspace.mjs';
 import { validateNativeSignerConfiguration } from '../native-signer.mjs';
-import { readBuyerOperatorPreset } from '../../buyer-runbook/handoff-intake.mjs';
+import { readBuyerOperatorPreset, validateBuyerOperatorPreset } from '../../buyer-runbook/handoff-intake.mjs';
+import { openBuyerOperatorSetup } from '../../buyer-runbook/operator-preset.mjs';
+import { acquireRunbookMetadataLease } from '../../buyer-runbook/runbook.mjs';
 import { absolute, privateDirectory, readPrivate, readJson, createFile, atomicJson,
   syncDirectory, bytes, digest, identity, object, fault } from '../../sf30-seller-sdk/postgres/publisher/files.mjs';
 
@@ -97,14 +99,26 @@ const count = (value, minimum, maximum, label) => {
 export async function openDatasetReceiving({ directory, operatorSettings = null }) {
   await privateDirectory(absolute(directory), true);
   for (const name of ['sources', 'reviews', 'products']) await privateDirectory(join(directory, name), true);
-  if (operatorSettings !== null) absolute(operatorSettings, 'operator settings file');
-  const preset = async () => {
-    check(operatorSettings !== null, 'DATASET_OPERATOR_SETTINGS_REQUIRED', 'Open this workspace with the operator’s existing settings file.');
-    return readBuyerOperatorPreset(operatorSettings, { directory });
-  };
+  const declaredPath = join(directory, 'operator-settings.json');
+  if (operatorSettings !== null) await immutableFile(declaredPath,
+    bytes({ path: absolute(operatorSettings, 'operator settings file') }));
+  const declared = await optionalJson(declaredPath), declaredSettingsFile = declared?.path ?? null;
+  if (declaredSettingsFile !== null) absolute(declaredSettingsFile, 'operator settings file');
+  async function lease(action) {
+    const release = await acquireRunbookMetadataLease(directory);
+    try { return await action(); } finally { await release(); }
+  }
+  const operatorSetup = await openBuyerOperatorSetup({
+    directory, declaredSettingsFile,
+    readPreset: file => readBuyerOperatorPreset(file, { directory }),
+    validatePreset: value => validateBuyerOperatorPreset(value, { directory }),
+    storage: { privateDirectory, bytes: readPrivate, json: readJson, optional: optionalJson, readdir, lease,
+      publish: (path, value, { raw = false } = {}) => immutableFile(path, raw ? value : bytes(value)) },
+  });
+  const preset = operatorSetup.read;
   async function operatorView() {
-    try { return { operator: (await preset()).view, error: null }; }
-    catch (error) { return { operator: null, error: safeCode(error) }; }
+    try { const value = await preset(); return { operator: value.view, settingsSha256: value.sha256, error: null }; }
+    catch (error) { return { operator: null, settingsSha256: null, error: safeCode(error) }; }
   }
   async function source(id) {
     check(HASH.test(id ?? ''), 'DATASET_SOURCE_INVALID');
@@ -181,8 +195,12 @@ export async function openDatasetReceiving({ directory, operatorSettings = null 
   async function prepared(reviewId, proof, ready) {
     const root = join(directory, 'products', reviewId);
     check(ready?.schema === SCHEMA && ready.reviewId === reviewId && Number.isSafeInteger(ready.generation) &&
-      ready.generation >= 1 && ready.generation <= 64 && ready.session === join(root, 'session-' + ready.generation) &&
-      ready.workspace === join(root, 'operator-' + ready.generation) && ready.room === join(root, 'data-room-' + ready.generation),
+      ready.generation >= 1 && ready.generation <= 64 &&
+      Number.isSafeInteger(ready.sessionGeneration ?? ready.generation) &&
+      (ready.sessionGeneration ?? ready.generation) >= 1 && (ready.sessionGeneration ?? ready.generation) <= 64 &&
+      ready.session === join(root, 'session-' + (ready.sessionGeneration ?? ready.generation)) &&
+      ready.workspace === join(root, 'operator-' + ready.generation) &&
+      ready.room === join(root, 'data-room-' + (ready.sessionGeneration ?? ready.generation)),
     'DATASET_PREPARATION_CHANGED');
     for (const name of ['operator.json', 'workspace.json', 'policy.json', 'signer.mjs'])
       check(digest(await readPrivate(join(ready.workspace, name))) === ready.files?.[name], 'DATASET_PREPARED_WORKSPACE_CHANGED', 'The original operator configuration changed.', 409);
@@ -193,29 +211,64 @@ export async function openDatasetReceiving({ directory, operatorSettings = null 
     'DATASET_SESSION_CHANGED', 'The original session identity changed.', 409);
     return { ...ready, proof, reopened: true };
   }
+  function checkedAttempt(reviewId, attempt) {
+    const root = join(directory, 'products', reviewId), sessionGeneration = attempt?.sessionGeneration ?? attempt?.generation;
+    check(attempt?.reviewId === reviewId && Number.isSafeInteger(attempt.generation) &&
+      attempt.generation >= 1 && attempt.generation <= 64 &&
+      Number.isSafeInteger(sessionGeneration) && sessionGeneration >= 1 && sessionGeneration <= 64 &&
+      attempt.workspace === join(root, 'operator-' + attempt.generation) &&
+      attempt.session === join(root, 'session-' + sessionGeneration), 'DATASET_PREPARATION_CHANGED', undefined, 409);
+    return { ...attempt, sessionGeneration };
+  }
+  async function attemptPreset(attempt, proof) {
+    const file = join(directory, 'products', attempt.reviewId, 'attempt-' + attempt.generation + '.settings.json');
+    const verified = value => {
+      check(value.sha256 === proof.settingsSha256 &&
+        nativeCanonical(value.view) === nativeCanonical(proof.operator),
+        'DATASET_PREPARATION_SETTINGS_CHANGED', 'Restore the original reviewed host settings for this preparation.', 409);
+      return value;
+    };
+    try { return verified(await readBuyerOperatorPreset(file, { directory })); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+    // Older prepared sessions can adopt only their actual original preset bytes.
+    const retained = verified(await operatorSetup.readMatching(proof.settingsSha256));
+    await immutableFile(file, retained.raw); return retained;
+  }
   async function preflight(reviewId) {
-    const proof = await reviewed(reviewId), built = await build(proof, await preset());
-    check(built.reviewId === reviewId, 'DATASET_REVIEW_CHANGED', 'The reviewed source or operator settings changed.', 409);
-    return prepared(reviewId, proof, await optionalJson(join(directory, 'products', reviewId, 'ready.json')));
+    const proof = await reviewed(reviewId), ready = await optionalJson(join(directory, 'products', reviewId, 'ready.json'));
+    const opened = await prepared(reviewId, proof, ready);
+    const operator = await attemptPreset(checkedAttempt(reviewId, ready), proof);
+    const built = await build(proof, operator);
+    check(built.reviewId === reviewId, 'DATASET_REVIEW_CHANGED', 'The original reviewed source or retained host settings changed.', 409);
+    return opened;
   }
   async function provision(reviewId) {
-    const proof = await reviewed(reviewId);
-    const operator = await preset(), built = await build(proof, operator);
-    check(built.reviewId === reviewId, 'DATASET_REVIEW_CHANGED', 'The offer, selected input or operator settings changed. Review again.', 409);
-    const root = join(directory, 'products', reviewId); await privateDirectory(root, true);
+    const proof = await reviewed(reviewId), root = join(directory, 'products', reviewId);
+    await privateDirectory(root, true);
     const ready = await optionalJson(join(root, 'ready.json'));
-    if (ready) return prepared(reviewId, proof, ready);
-    let attempt = await optionalJson(join(root, 'attempt.json'));
-    if (!attempt || (await present(attempt.session) && !await present(join(attempt.session, 'session.json'))) ||
-      (await present(attempt.workspace) && !await present(join(attempt.workspace, 'workspace.json')))) {
-      const generation = (attempt?.generation ?? 0) + 1;
-      check(generation <= 64, 'DATASET_PREPARATION_ATTEMPT_LIMIT');
-      attempt = { reviewId, generation, workspace: join(root, 'operator-' + generation), session: join(root, 'session-' + generation) };
+    if (ready) return preflight(reviewId);
+    const savedAttempt = await optionalJson(join(root, 'attempt.json'));
+    let attempt = savedAttempt ? checkedAttempt(reviewId, savedAttempt) : null;
+    const operator = attempt ? await attemptPreset(attempt, proof) : await preset();
+    const built = await build(proof, operator);
+    check(built.reviewId === reviewId, 'DATASET_REVIEW_CHANGED', 'The offer, selected input or operator settings changed. Review again.', 409);
+    if (!attempt) {
+      attempt = { reviewId, generation: 1, sessionGeneration: 1,
+        workspace: join(root, 'operator-1'), session: join(root, 'session-1') };
+      // Retain the exact host before publishing a recoverable native preparation.
+      await immutableFile(join(root, 'attempt-1.settings.json'), operator.raw);
       await atomicJson(root, 'attempt.json', attempt);
     }
-    check(attempt.reviewId === reviewId && Number.isSafeInteger(attempt.generation) && attempt.generation >= 1 && attempt.generation <= 64 &&
-      attempt.workspace === join(root, 'operator-' + attempt.generation) && attempt.session === join(root, 'session-' + attempt.generation),
-    'DATASET_PREPARATION_CHANGED');
+    if (await present(attempt.session) && !await present(join(attempt.session, 'session.json'))) {
+      // The native creator has no partial-session resume entry. Preserve that
+      // incomplete directory and the ORIGINAL operator keys/ledger; only the
+      // uncreated session gets another path, through its original creator.
+      await immutableFile(join(root, 'attempt-' + attempt.generation + '.session-' + attempt.sessionGeneration + '.json'), bytes(attempt));
+      const sessionGeneration = attempt.sessionGeneration + 1;
+      check(sessionGeneration <= 64, 'DATASET_PREPARATION_ATTEMPT_LIMIT');
+      attempt = { ...attempt, sessionGeneration, session: join(root, 'session-' + sessionGeneration) };
+      await atomicJson(root, 'attempt.json', attempt);
+    }
     const input = join(root, 'review.json'); await immutableFile(input, built.prepared.data);
     if (!await present(join(attempt.workspace, 'workspace.json'))) {
       const value = operator.value, args = ['--config', input, '--dir', attempt.workspace,
@@ -223,7 +276,7 @@ export async function openDatasetReceiving({ directory, operatorSettings = null 
         '--total-atomic', proof.maxTotalAtomic, '--daily-atomic', proof.dailyAtomic];
       for (const [key, flag] of [['secretEnv', '--secret-env'], ['signerProvider', '--signer-provider'], ['rpc', '--rpc'], ['httpsProxyEnv', '--https-proxy-env']])
         if (value[key] !== undefined) args.push(flag, value[key]);
-      await initializeWorkspace(args);
+      await initializeWorkspace(args, { resume: true });
     }
     const native = await openWorkspace(['--dir', attempt.workspace]), settings = operator.value, files = {};
     check(native.config.operation.url === proof.sourceUrl && native.config.operation.method === 'GET' &&
@@ -255,12 +308,52 @@ export async function openDatasetReceiving({ directory, operatorSettings = null 
       definition.configurationSha256 === digest(nativeCanonical(native.config)) && definition.expectedSnapshot === proof.expectedSnapshot &&
       ['maxPages', 'maxTotalAtomic', 'maxRows', 'maxPageBytes'].every(key => definition.limits[key] === proof[key]), 'DATASET_SESSION_CHANGED');
     const result = { schema: SCHEMA, reviewId, name: proof.name, session: attempt.session,
-      workspace: attempt.workspace, room: join(root, 'data-room-' + attempt.generation),
+      workspace: attempt.workspace, room: join(root, 'data-room-' + attempt.sessionGeneration),
       sessionId: definition.config.operation.intentId, configurationSha256: definition.configurationSha256,
-      generation: attempt.generation, definitionSha256: digest(definitionRaw), files,
+      generation: attempt.generation, sessionGeneration: attempt.sessionGeneration, definitionSha256: digest(definitionRaw), files,
       createdAt: new Date().toISOString() };
     await atomicJson(root, 'ready.json', result);
     return { ...result, proof, reopened: false };
   }
-  return { operatorView, receive, describe, review, reviewed, provision, preflight };
+  async function operatorImpact(settingsSha256) {
+    const rows = [], errors = [], names = (await readdir(join(directory, 'reviews')))
+      .filter(name => /^[a-f0-9]{64}\.json$/.test(name));
+    check(names.length <= 10000, 'DATASET_REVIEW_LIMIT');
+    for (const name of names) {
+      const id = name.slice(0, -5);
+      try {
+        const proof = await reviewed(id), root = join(directory, 'products', id);
+        const ready = await optionalJson(join(root, 'ready.json'));
+        if (ready) await prepared(id, proof, ready);
+        const retained = ready ? null : await optionalJson(join(root, 'attempt.json'));
+        const attempt = retained ? checkedAttempt(id, retained) : null;
+        const phase = ready ? 'PREPARED' : attempt ? 'PREPARING' : 'REVIEWED';
+        rows.push({ id, label: proof.name, kind: 'DATASET', phase, sourceId: proof.sourceId,
+          sourceUrl: proof.sourceUrl, settingsSha256: proof.settingsSha256, operator: proof.operator,
+          generation: ready?.generation ?? attempt?.generation ?? null,
+          sessionGeneration: ready?.sessionGeneration ?? ready?.generation ?? attempt?.sessionGeneration ?? null,
+          needsReview: phase === 'REVIEWED' && proof.settingsSha256 !== settingsSha256 });
+      } catch (error) { errors.push({ id, code: safeCode(error) }); }
+    }
+    rows.sort((a, b) => a.label.localeCompare(b.label) || a.id.localeCompare(b.id));
+    return { prepared: rows.filter(row => row.phase === 'PREPARED').length,
+      preparing: rows.filter(row => row.phase === 'PREPARING').length,
+      needsReview: rows.filter(row => row.needsReview).length, rows, errors };
+  }
+  async function operatorState() {
+    const current = await operatorSetup.state();
+    return { ...current, impact: await operatorImpact(current.settingsSha256) };
+  }
+  async function reviewOperatorSettings(input) {
+    const result = await operatorSetup.review(input);
+    return { ...result, impact: await operatorImpact(result.settingsSha256) };
+  }
+  async function saveOperatorSettings(input) {
+    const result = await operatorSetup.save(input);
+    return { ...result, impact: await operatorImpact(result.settingsSha256) };
+  }
+  return { operatorView, operatorState, reviewOperatorSettings, saveOperatorSettings,
+    operatorRevision: operatorSetup.revision, operatorAttachment: operatorSetup.attachment,
+    receive, describe, review, reviewed,
+    provision: id => lease(() => provision(id)), preflight: id => lease(() => preflight(id)) };
 }

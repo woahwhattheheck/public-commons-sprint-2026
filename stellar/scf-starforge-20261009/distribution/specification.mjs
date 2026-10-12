@@ -10,9 +10,9 @@ export const contributionSchema = 'stellar-forge.merchant-distribution-contribut
 const ownRoot = fileURLToPath(new URL('../../../', import.meta.url));
 const baseSchema = 'stellar-forge.merchant-distribution.v1';
 const fields = ['components', 'supportFiles', 'excludeFiles', 'commands', 'commandDescriptions',
-  'exports', 'nativePeers', 'featurePeers', 'runtimePackageManifests', 'browserAssets'];
+  'exports', 'nativePeers', 'featurePeers', 'runtimePackageManifests', 'browserAssets', 'applicationProviders'];
 const lists = ['components', 'supportFiles', 'excludeFiles'];
-const maps = ['commands', 'commandDescriptions', 'exports', 'nativePeers', 'runtimePackageManifests'];
+const maps = ['commands', 'commandDescriptions', 'exports', 'nativePeers', 'runtimePackageManifests', 'applicationProviders'];
 const idPattern = /^[a-z][a-z0-9-]{0,63}$/;
 const packagePattern = /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/;
 const reservedCommands = new Set(['init', 'run', 'doctor', 'source', 'help', 'registrations']);
@@ -94,7 +94,11 @@ function validateRegistrations(data, owner) {
         if (key !== '.') filePath(key.slice(2), key);
         exportTarget(value, key);
       } else if (field === 'nativePeers') peer(key, value);
-      else {
+      else if (field === 'applicationProviders') {
+        if (!idPattern.test(key)) throw new TypeError('Invalid Applications provider ID: ' + key);
+        filePath(value, key);
+        if (!value.endsWith('.mjs')) throw new TypeError('Applications provider must select an original Node .mjs module: ' + key);
+      } else {
         featureName(key); filePath(value, key);
         if (!value.endsWith('.json')) throw new TypeError('Runtime feature must select its original JSON package manifest: ' + key);
       }

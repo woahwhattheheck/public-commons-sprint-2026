@@ -773,3 +773,6 @@ and dataset files through the host's existing durable file receiver.
 [World Bank setup, source operation, release and customer receiving](WORLDBANK-WORKSPACES.md)
 documents the complete workflow and its original IDs, revisions and file hashes.
 
+## STAC imagery and Cirrus processing workspaces
+
+[STAC.md](STAC.md) connects the existing authenticated imagery and processing host to the typed Node client, `starforge stac-workspace` customer CLI and 29 `merchant_stac_*` tools. The complete flow covers saved source/query review, original capture and continuation, full item and comparison views, analyst decisions, original asset bytes, reports and portable receiving/reopen. Host configuration supplies private connection and input aliases; browser and agents keep the same original workspace, revision and operation IDs. `init-stac-workspaces --dir NEW_DIRECTORY --connection STAC_WORKSPACE_CONNECTION.json` adds that original host to this merchant without starting another imagery server.

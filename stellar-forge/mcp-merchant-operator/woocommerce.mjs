@@ -2,6 +2,8 @@ import { woocommerceTools, definitions, base, read, page, orderId, alias, review
 export { woocommerceTools } from './catalog/woocommerce.mjs';
 // MIT. Native Woo merchant operations through the existing merchant MCP provider.
 import { constants } from 'node:fs';
+import { MerchantWooErp } from './woo-erp.mjs';
+import { readWooErpInputDefinitions } from './woo-erp-artifacts.mjs';
 import { open, realpath } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -80,7 +82,7 @@ export async function readWooCommerceConfiguration(path) {
   const stores = Object.create(null), workspaces = new Set();
   for (const [name, entry] of Object.entries(raw.stores)) {
     identifier(name, 'Woo store alias');
-    exact(entry, ['label', 'operator', 'records', 'adjustments'], ['operator']);
+    exact(entry, ['label', 'operator', 'records', 'adjustments', 'erpInputs'], ['operator']);
     const operatorPath = hostPath(entry.operator, baseDirectory);
     const operator = compileOperator(await privateJson(operatorPath, 65536));
     assert(!workspaces.has(operator.workspace), 'CONFIGURATION_ERROR', 'Use one alias per original Woo operator workspace.');
@@ -107,7 +109,8 @@ export async function readWooCommerceConfiguration(path) {
       exact(item, ['label', 'directory'], ['directory']);
       adjustments[source] = { label: line(item.label ?? source), directory: hostPath(item.directory, baseDirectory) };
     }
-    stores[name] = { label: line(entry.label ?? name), operator, records, adjustments };
+    stores[name] = { label: line(entry.label ?? name), operator, records, adjustments,
+      erpInputs: readWooErpInputDefinitions(entry.erpInputs, baseDirectory) };
   }
   return { stores };
 }
@@ -155,7 +158,7 @@ function adjustmentView(record) {
 /** Stateless original operations plus process-owned verified file snapshots. */
 export class MerchantWooCommerce {
   #config; #stores; #files; #closing = false; #close; #pending = new Set();
-  #environment; #fetchImpl;
+  #environment; #fetchImpl; #erp;
   constructor(config, { environment = process.env, fetchImpl } = {}) {
     assert(environment && typeof environment === 'object' && !Array.isArray(environment) &&
       (fetchImpl === undefined || typeof fetchImpl === 'function'),
@@ -163,6 +166,7 @@ export class MerchantWooCommerce {
     this.#config = config; this.#stores = config.woocommerce?.stores ?? {};
     this.#environment = environment; this.#fetchImpl = fetchImpl;
     this.#files = new RetainedFileReads({ errorPrefix: 'WOO_MCP' });
+    this.#erp = new MerchantWooErp(config, { environment, fetchImpl });
   }
   #client(config) {
     // Reopening a completed review retains its original offline behavior.
@@ -174,7 +178,7 @@ export class MerchantWooCommerce {
         { env: this.#environment, fetchImpl: this.#fetchImpl }))[name](...args)]));
   }
   get summary() { return { configured: Object.keys(this.#stores).length > 0, stores: Object.keys(this.#stores).length,
-    pendingOperations: this.#pending.size, ...this.#files.summary }; }
+    pendingOperations: this.#pending.size, ...this.#files.summary, erp: this.#erp.summary }; }
   #store(name) {
     const store = this.#stores[name];
     assert(store, 'STORE_NOT_FOUND', 'Choose a host-declared Woo store alias.');
@@ -231,6 +235,7 @@ export class MerchantWooCommerce {
         entries: entries.map(([alias, store]) => ({ alias, label: store.label, siteUrl: store.operator.siteUrl,
           receipts: Object.entries(store.records).map(([source, item]) => ({ source, label: item.label, payer: item.payer })),
           accountingExports: Object.entries(store.adjustments).map(([source, item]) => ({ source, label: item.label })),
+          erpInputs: Object.entries(store.erpInputs ?? {}).map(([input, item]) => ({ input, label: item.label, kind: item.kind })),
           fileReads: this.#files.status(alias) })) };
     }
     const store = this.#store(args.store), config = store.operator;
@@ -342,6 +347,7 @@ export class MerchantWooCommerce {
   }
   async call(name, args = {}) {
     assert(!this.#closing, 'CLOSING', 'Woo merchant operations are closing.');
+    if (name.startsWith('merchant_woo_erp_')) return this.#erp.call(name, args);
     const schema = schemas.get(name);
     assert(schema && check(schema, args), 'INPUT_INVALID', 'Use the published Woo tool schema and original IDs.');
     if (args.kind === 'refund' && args.id !== undefined)
@@ -356,7 +362,8 @@ export class MerchantWooCommerce {
   close() {
     if (!this.#close) {
       this.#closing = true;
-      this.#close = (async () => { await Promise.allSettled([...this.#pending]); await this.#files.close(); })();
+      this.#close = (async () => { await Promise.allSettled([...this.#pending]);
+        await Promise.all([this.#files.close(), this.#erp.close()]); })();
     }
     return this.#close;
   }
