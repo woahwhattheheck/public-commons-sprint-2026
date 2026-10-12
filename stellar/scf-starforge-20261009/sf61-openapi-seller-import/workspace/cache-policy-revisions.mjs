@@ -176,10 +176,18 @@ export async function saveCachePolicyRevision({ parent, baseName, workspace, id,
   const recomputed = decisionsFor(project, snapshot, record.routeIds);
   need(canonical(recomputed.decisions) === canonical(record.decisions),
     'The original package settings changed. Prepare a fresh policy review.', 409);
-  const saved = await saveMerchantRevision({ parent, baseName: record.base.name, name: record.name,
-    specText: project.specText, decisions: record.decisions, expectedReviewSha256: record.merchantReviewSha256,
-    expectedRefreshReviewId: record.refreshReviewId, validatePlan,
-    operatingDecision: () => operatingDecision(record) });
+  let saved;
+  try {
+    saved = await saveMerchantRevision({ parent, baseName: record.base.name, name: record.name,
+      specText: project.specText, decisions: record.decisions, expectedReviewSha256: record.merchantReviewSha256,
+      expectedRefreshReviewId: record.refreshReviewId, validatePlan,
+      operatingDecision: () => operatingDecision(record) });
+  } catch (error) {
+    if (error.code !== 'EEXIST') throw error;
+    const completed = await savedCandidate(parent, record);
+    if (!completed) throw error;
+    return { record, state: 'SAVED', saved: completed, recovered: true };
+  }
   return { record, state: 'SAVED', saved, recovered: false };
 }
 /** The embedded host supplies the parent, package and authorization callback. */
