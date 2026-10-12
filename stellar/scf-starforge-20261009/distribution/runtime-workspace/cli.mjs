@@ -5,7 +5,9 @@ import { pathToFileURL } from 'node:url';
 import { createRuntimeWorkspace, openRuntimeWorkspace } from './model.mjs';
 import { startRuntimeWorkspace } from './server.mjs';
 import { readJSON } from './storage.mjs';
-import { fail, json } from './storage.mjs';
+import { fail, json, saveJSON } from './storage.mjs';
+
+import { inspectProductPlanBundle, readProductPlanDocument } from './source-product-plans.mjs';
 
 const HELP = `Starforge customer runtime workspace
 
@@ -13,6 +15,16 @@ const HELP = `Starforge customer runtime workspace
   runtime-workspace attach --workspace DIRECTORY --runtime EXISTING_RUNTIME [--label NAME]
   runtime-workspace serve --workspace DIRECTORY [--port 8465]
   runtime-workspace status --workspace DIRECTORY [--runtime-id ID]
+  runtime-workspace source-plans --workspace DIRECTORY [--query TEXT --limit 30 --cursor ID] [--receiving-query TEXT --receiving-status all --receiving-limit 30 --receiving-cursor ID]
+  runtime-workspace source-plan-inspect --document COMPLETE_JSON
+  runtime-workspace source-plan-save --workspace DIRECTORY --request COMPLETE_JSON
+  runtime-workspace source-plan-open --workspace DIRECTORY --plan-id ID [--binding-id ID]
+  runtime-workspace source-plan-refresh --workspace DIRECTORY --plan-id ID [--binding-id ID]
+  runtime-workspace source-plan-export --workspace DIRECTORY --plan-id ID [--output NEW_JSON]
+  runtime-workspace source-plan-receive --workspace DIRECTORY --document COMPLETE_JSON --repository ABSOLUTE_GIT [--offline true --python python3]
+  runtime-workspace source-plan-receiving --workspace DIRECTORY --receipt-id ID [--output NEW_JSON]
+  runtime-workspace source-plan-continue --workspace DIRECTORY --receipt-id ID
+  runtime-workspace source-plan-build --workspace DIRECTORY --plan-id ID [--binding-id ID]
   runtime-workspace source-builds --workspace DIRECTORY
   runtime-workspace source-build-catalog --workspace DIRECTORY --request ABSOLUTE_JSON_FILE
   runtime-workspace source-build-review --workspace DIRECTORY --request ABSOLUTE_JSON_FILE
@@ -56,6 +68,16 @@ Install workers retain progress and continue across browser/server restarts.
 Linux, Node22.16+, Python3.11+, npm and flock are the original installer requirements.
 `;
 const allowed = {
+  'source-plans': ['--workspace', '--query', '--limit', '--cursor', '--receiving-query', '--receiving-status', '--receiving-limit', '--receiving-cursor'],
+  'source-plan-inspect': ['--document'],
+  'source-plan-save': ['--workspace', '--request'],
+  'source-plan-open': ['--workspace', '--plan-id', '--binding-id'],
+  'source-plan-build': ['--workspace', '--plan-id', '--binding-id'],
+  'source-plan-refresh': ['--workspace', '--plan-id', '--binding-id'],
+  'source-plan-export': ['--workspace', '--plan-id', '--output'],
+  'source-plan-receive': ['--workspace', '--document', '--repository', '--offline', '--python'],
+  'source-plan-receiving': ['--workspace', '--receipt-id', '--output'],
+  'source-plan-continue': ['--workspace', '--receipt-id'],
   'source-builds': ['--workspace'],
   'source-build-catalog': ['--workspace', '--request'], 'source-build-review': ['--workspace', '--request'],
   'source-build-review-show': ['--workspace', '--review-id'],
@@ -92,6 +114,10 @@ export async function main(argv = process.argv.slice(2)) {
       fail('RUNTIME_WORKSPACE_ARGUMENTS_INVALID');
     options[key] = rest[i + 1];
   }
+  if (command === 'source-plan-inspect') {
+    if (!options['--document']) fail('PRODUCT_PLAN_DOCUMENT_REQUIRED');
+    process.stdout.write(json(inspectProductPlanBundle(await readProductPlanDocument(resolve(options['--document']))))); return;
+  }
   if (!options['--workspace']) fail('RUNTIME_WORKSPACE_DIRECTORY_REQUIRED');
   const directory = resolve(options['--workspace']);
   if (command === 'init') {
@@ -115,7 +141,55 @@ export async function main(argv = process.argv.slice(2)) {
   }
   const model = await openRuntimeWorkspace({ directory });
   let result;
-  if (command === 'source-builds') result = await model.sourceBuildsState();
+  if (command === 'source-plans') result = await model.sourcePlansState({
+    ...(options['--query'] !== undefined ? { query: options['--query'] } : {}),
+    ...(options['--limit'] !== undefined ? { limit: Number(options['--limit']) } : {}),
+    ...(options['--cursor'] !== undefined ? { cursor: options['--cursor'] } : {}),
+    ...(options['--receiving-query'] !== undefined ? { receivingQuery: options['--receiving-query'] } : {}),
+    ...(options['--receiving-status'] !== undefined ? { receivingStatus: options['--receiving-status'] } : {}),
+    ...(options['--receiving-limit'] !== undefined ? { receivingLimit: Number(options['--receiving-limit']) } : {}),
+    ...(options['--receiving-cursor'] !== undefined ? { receivingCursor: options['--receiving-cursor'] } : {}),
+  });
+  else if (command === 'source-plan-build') {
+    if (!options['--plan-id']) fail('PRODUCT_PLAN_ID_REQUIRED');
+    const value = await model.sourcePlanRead({ planId: options['--plan-id'],
+      ...(options['--binding-id'] ? { bindingId: options['--binding-id'] } : {}) });
+    result = { planId: value.plan.planId, bindingId: value.bindingId, operation: await model.begin(value.buildRequest) };
+  }
+  else if (command === 'source-plan-save') {
+    if (!options['--request']) fail('PRODUCT_PLAN_REQUEST_REQUIRED');
+    result = await model.sourcePlanSave(await readProductPlanDocument(resolve(options['--request'])));
+  }
+  else if (['source-plan-open', 'source-plan-refresh', 'source-plan-export'].includes(command)) {
+    if (!options['--plan-id']) fail('PRODUCT_PLAN_ID_REQUIRED');
+    const method = { 'source-plan-open': 'sourcePlanRead', 'source-plan-refresh': 'sourcePlanRefresh',
+      'source-plan-export': 'sourcePlanExport' }[command];
+    result = await model[method]({ planId: options['--plan-id'],
+      ...(options['--binding-id'] ? { bindingId: options['--binding-id'] } : {}) });
+    if (options['--output']) {
+      await saveJSON(resolve(options['--output']), result);
+      result = { output: resolve(options['--output']), planId: result.plan.planId, sha256: result.sha256 };
+    }
+  }
+  else if (command === 'source-plan-receive') {
+    if (!options['--document'] || !options['--repository']) fail('PRODUCT_PLAN_DOCUMENT_REPOSITORY_REQUIRED');
+    if (options['--offline'] !== undefined && !['true', 'false'].includes(options['--offline']))
+      fail('PRODUCT_PLAN_OFFLINE_BOOLEAN_REQUIRED');
+    result = await model.sourcePlanReceive({ bundle: await readProductPlanDocument(resolve(options['--document'])),
+      repository: resolve(options['--repository']),
+      ...(options['--offline'] !== undefined ? { offline: options['--offline'] === 'true' } : {}),
+      ...(options['--python'] ? { python: options['--python'] } : {}) });
+  }
+  else if (['source-plan-receiving', 'source-plan-continue'].includes(command)) {
+    if (!options['--receipt-id']) fail('PRODUCT_PLAN_RECEIPT_REQUIRED');
+    result = await model[command === 'source-plan-continue' ? 'sourcePlanContinue' : 'sourcePlanReceiving']({
+      receiptId: options['--receipt-id'] });
+    if (options['--output']) {
+      await saveJSON(resolve(options['--output']), result);
+      result = { output: resolve(options['--output']), receiptId: result.input.receiptId, status: result.state.status };
+    }
+  }
+  else if (command === 'source-builds') result = await model.sourceBuildsState();
   else if (command === 'source-build-review-show') result = await model.sourceBuildsReadReview(options['--review-id']);
   else if (command === 'source-build-continue') result = await model.recoverSourceBuildOperation(options['--operation-id']);
   else if (['source-build-catalog', 'source-build-review', 'source-build-operation'].includes(command)) {
