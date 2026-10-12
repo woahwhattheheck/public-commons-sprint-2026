@@ -10,8 +10,10 @@ export function createPropertyPanel({getState,perform,request,downloadFile,handl
   const root=document.getElementById('property-root'),controls=[],selectors=[],forms=[];
   let state=null,locked=true,working=false,pending=null,retainedRequests=[],cacheKey=null,storageError='',identity=null,loadGeneration=0,loadedRecord=null;
   const p=()=>getState()?.property??{id:null,revision:0};
+  const workspaceCacheKey=()=>{const createdAt=getState()?.createdAt;return typeof createdAt==='string'&&createdAt?'starforge-property-request:'+createdAt:null;};
+  function requireRecoveryWorkspace(key){if(!key||cacheKey!==key||workspaceCacheKey()!==key)throw Error('The opened workspace differs from this retained request. Reopen its original workspace before recovering it.');}
   const recordRows=group=>p()[group]||[];
-  const button=(text,callback,{read=false}={})=>{const b=node('button',text);b.type='button';b.dataset.propertyControl=read?'read':'write';controls.push(b);b.addEventListener('click',()=>handle(callback));return b;};
+  const button=(text,callback,{read=false,recovery=false}={})=>{const b=node('button',text);b.type='button';b.dataset.propertyControl=read?'read':'write';if(recovery)b.dataset.propertyRecovery='true';controls.push(b);b.addEventListener('click',()=>handle(callback));return b;};
   const status=node('p','Load the original workspace.','help'),pendingArea=node('section',undefined,'panel property-pending'),metrics=node('div',undefined,'metrics');
   root.append(metrics,pendingArea);
   const common=node('div',undefined,'panel form-grid');
@@ -69,7 +71,7 @@ export function createPropertyPanel({getState,perform,request,downloadFile,handl
   }
   function cache(){
     if(!getState())return;
-    const next='starforge-property-request:'+getState().createdAt;
+    const next=workspaceCacheKey();if(!next){storageError='Load the original saved workspace before recovering a property request.';return;}
     if(cacheKey&&cacheKey!==next&&pending){storageError='The opened workspace changed while an original request is retained. Reopen that workspace before recovering it.';return;}
     if(cacheKey!==next){cacheKey=next;retainedRequests=[];}
     if(working)return;
@@ -121,32 +123,37 @@ export function createPropertyPanel({getState,perform,request,downloadFile,handl
     retainedRequests=retainedRequests.filter(r=>r.input.key!==source.input.key);
     if(!saved.browser_completed)retainedRequests.push(saved);
   }
-  async function peek(){
+  async function peek(selectedCacheKey){
+    requireRecoveryWorkspace(selectedCacheKey);
     const response=await request('/api/action',{method:'POST',body:JSON.stringify({action:'property.operation',payload:{key:pending.input.key}})});
+    requireRecoveryWorkspace(selectedCacheKey);
     return response.result;
   }
   async function settle(){
     if(!pending||working) return;
     working=true;renderControls();
     try{
+      const selectedCacheKey=cacheKey;requireRecoveryWorkspace(selectedCacheKey);
       const retainedRaw=localStorage.getItem(requestSlot(pending.input.key));
       if(retainedRaw){const retained=parsedRequest(retainedRaw);
         if(!sameRequest(retained,pending))throw Error('The retained request changed before recovery.');
         if(retained.accepted!==null){if(pending.accepted!==null&&canonical(retained.accepted)!==canonical(pending.accepted))throw Error('The retained accepted response changed before recovery.');pending.accepted=retained.accepted;}
       }
       if(await sha(pending.input)!==pending.input_sha256)throw Error('The complete retained property request changed.');
-      const observed=await peek(),operation=observed.operation;
+      const observed=await peek(selectedCacheKey),operation=observed.operation;
       if(operation&&(operation.action!==pending.action||operation.input_sha256!==pending.input_sha256))throw Error('The retained native key belongs to different input.');
       if(pending.accepted!==null){
         if(!operation||operation.state!=='DONE'||canonical(operation.result)!==canonical(pending.accepted))throw Error('An accepted response survives without its matching native operation. Keep it and reopen the original complete workspace; this page will not resubmit it.');
       }else if(operation?.state==='DONE'){
         pending.accepted=operation.result;persist(pending);
       }else{
+        requireRecoveryWorkspace(selectedCacheKey);
         const result=await perform(pending.action,pending.input,{quiet:true});
         pending.accepted=result;persist(pending);
-        const final=await peek();
+        const final=await peek(selectedCacheKey);
         if(final.operation?.state!=='DONE'||canonical(final.operation.result)!==canonical(result))throw Error('Save returned, but its exact native commitment is not available. Keep this request for the original recovery.');
       }
+      requireRecoveryWorkspace(selectedCacheKey);
       const completed=pending;persist(null);pending=null;storageError='';
       notice(completed.action+' saved in the original property workspace.');
       render(getState());return completed.accepted;
@@ -306,7 +313,7 @@ export function createPropertyPanel({getState,perform,request,downloadFile,handl
   function renderPending(){
     pendingArea.replaceChildren();pendingArea.hidden=!pending&&!storageError&&!retainedRequests.length;
     if(pending){pendingArea.append(node('h3',pending.accepted!==null?'Save acknowledged · retained receipt':'Original request retained'),node('p',pending.action+' · '+pending.input.key),node('p','The same request and exact inputs remain available through refresh or restart. Accepted replies are checked against the native operation before being cleared.','help'),
-      button('Recover this same request',settle,{read:true}),button('Download retained request and receipt',()=>downloadJSON('property-original-request.json',pending),{read:true}));}
+      button('Recover this same request',settle,{read:true,recovery:true}),button('Download retained request and receipt',()=>downloadJSON('property-original-request.json',pending),{read:true}));}
     const others=retainedRequests.filter(r=>r.input.key!==pending?.input.key);
     if(others.length){
       pendingArea.append(node('p','Other original requests retained by this browser:','help'));
@@ -331,9 +338,10 @@ export function createPropertyPanel({getState,perform,request,downloadFile,handl
   function renderControls(external=locked){
     locked=external;
     const unavailable=locked||working||!!pending||!!storageError;
-    for(const e of controls){if(!e.isConnected)continue;e.disabled=e.dataset.propertyControl==='read'?locked||working:unavailable;}
+    const recoveryMismatch=!cacheKey||workspaceCacheKey()!==cacheKey;
+    for(const e of controls){if(!e.isConnected)continue;e.disabled=e.dataset.propertyControl==='read'?locked||working||e.dataset.propertyRecovery==='true'&&recoveryMismatch:unavailable;}
     identitySave.disabled=unavailable||!identity||identity.workspace_id!==p().id||identity.revision!==p().revision;
-    for(const b of pendingArea.querySelectorAll('button'))b.disabled=locked||working;
+    for(const b of pendingArea.querySelectorAll('button'))b.disabled=locked||working||b.dataset.propertyRecovery==='true'&&recoveryMismatch;
     for(const form of forms)for(const e of form.querySelectorAll('input,textarea,select'))e.disabled=unavailable;
   }
   function render(value){
