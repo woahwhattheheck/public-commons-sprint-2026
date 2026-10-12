@@ -28,6 +28,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | NocoDB source authoring | nocodb-source workspace serve | Original database observations, complete captures, public projections, dataset publisher and retained workspace recovery |
 | Stellar asset investigation | dataset-workspace --stellar-expert | Original asset observations, exact editions, reviewed findings, native dataset and merchant releases, purchased page receiving |
 | ArcGIS merchant workspace | arcgis-agent serve | One original browser and MCP service for source capture, field mapping, publication, staged deployments and complete customer files |
+| World Bank economic data | worldbank-agent serve | Original indicator captures, exact editions and comparisons, reviewed merchant publication, browser and agent operations, complete customer receiving |
 | S3 object merchant | s3 workspace | Object source and complete prices, retained HEAD reviews and packages, original release controls, customer files and saved-workspace reopening |
 | DuckDB customer and agent | mcp-native serve | Original running customer warehouse, reviewed source reports, saved SQL, complete CSV/Parquet and portable receiving through the same browser and agent connection |
 | Dataset preview | dataset-workspace | A dataset configuration file or retained dataset state, native query and preview |
@@ -638,3 +639,9 @@ The retained workspace provides source captures, exact decimal editions, compari
 Choose **Databento migration** with the initialized or received workbench directory containing its original `operation.json` and `workspace/` directory. Review and Save retain that operation marker, stable native workspace identity and selected source; Review Start and Start bind the same source in the adopted release. The application uses the original authenticated Python workspace server with the Databento operator assets, and Open selects the migration workspace after its live identity matches.
 
 Complete historical source editions, inspect field mappings, perform the named review, preserve results and export the customer handover from the original workbench. Stop closes its native server and model; reopen retains the same work and history. The complete [Databento Applications guide](DATABENTO_APPLICATIONS.md) covers initial setup or receiving, source/runtime selection, original producer and review actions, customer export, Stop and recovery.
+
+## World Bank economic data
+
+Choose **World Bank economic data** with the original private merchant configuration and a declared World Bank workspace alias. Review and Save retain both connection files, the workspace directory and the installed launcher. Start opens one original merchant MCP host and its World Bank model; the same model serves the authenticated browser. Open checks the running model and browser identities against the saved request and original configuration binding.
+
+Use the browser or agent to capture complete indicator pages, compare editions, record the review, publish the native dataset, operate the merchant and export the customer handover. Closing and reopening the Applications console reconnects to the same running operation. A saved start request can resume through the original recovery action; Stop closes the owned host and browser while retaining the workspace. The complete [World Bank Applications guide](WORLDBANK_APPLICATIONS.md) covers configuration, installed receiving, source and merchant operations, recovery, customer download and reopening.
