@@ -112,7 +112,7 @@ function launch(value){
 }
 function publicProfile(name,value){
   return {name,sha256:value.sha256,bytes:value.bytes,label:value.value.label,kinds:value.value.kinds,
-    passphraseConfiguredByHost:true,afterRestoreCollection:value.value.afterRestore?.name??null};
+    passphraseSource:'original-listener-environment',afterRestoreCollection:value.value.afterRestore?.name??null};
 }
 function compactResult(value){
   if(!object(value))return null;
@@ -185,7 +185,7 @@ export function createNativeCollectionRecovery({manifest,registerCollections,isC
     need((await json(join(root,'format.json'))).schema===SCHEMA,'MCP_COLLECTION_RECOVERY_FORMAT_CHANGED');
     return true;
   }
-  async function request(connection,path,body,signal){
+  async function request(connection,path,body,signal,{readOnly=body===undefined}={}){
     available();signal?.throwIfAborted();
     const options={method:body===undefined?'GET':'POST',redirect:'error',cache:'no-store',
       headers:{Authorization:'Bearer '+connection.token,Origin:connection.url.origin},
@@ -209,7 +209,7 @@ export function createNativeCollectionRecovery({manifest,registerCollections,isC
     }catch(error){
       signal?.throwIfAborted();
       if(/^MCP_COLLECTION_RECOVERY_RESPONSE_/.test(error.code??''))throw error;
-      fail(body===undefined?'MCP_COLLECTION_RECOVERY_SERVICE_UNAVAILABLE':
+      fail(readOnly?'MCP_COLLECTION_RECOVERY_SERVICE_UNAVAILABLE':
         'MCP_COLLECTION_RECOVERY_REPLY_UNCERTAIN_USE_ORIGINAL_REQUEST_ID');
     }
     const value=parse(raw);
@@ -437,7 +437,7 @@ export function createNativeCollectionRecovery({manifest,registerCollections,isC
     need(args.action==='collection-recovery'&&object(context)&&
       (context.signal===undefined||context.signal instanceof AbortSignal),'MCP_COLLECTION_RECOVERY_ARGUMENTS_INVALID');
     const operation=args.recoveryOperation,spec=nativeCollectionRecoveryOperations[operation],body=args.recoveryRequest??{};
-    need(spec,'MCP_COLLECTION_RECOVERY_OPERATION_REQUIRED');fields(body,Object.keys(spec.properties));
+    need(Object.hasOwn(nativeCollectionRecoveryOperations,operation)&&spec,'MCP_COLLECTION_RECOVERY_OPERATION_REQUIRED');fields(body,Object.keys(spec.properties));
     need(spec.required.every(key=>Object.hasOwn(body,key)),'MCP_COLLECTION_RECOVERY_OPERATION_FIELDS_REQUIRED');
     if(operation==='workspaces'){
       if(!await roots())return {schema:SCHEMA,operation,...page([],body)};
@@ -458,7 +458,7 @@ export function createNativeCollectionRecovery({manifest,registerCollections,isC
     if(operation==='history'){
       let rows,source,total,nextOffset;
       try{
-        const c=await connect(record,context.signal),view=await request(c,'/api/recovery/history',body,context.signal);
+        const c=await connect(record,context.signal),view=await request(c,'/api/recovery/history',body,context.signal,{readOnly:true});
         need(view.schema===JOURNAL&&Array.isArray(view.rows),'MCP_COLLECTION_RECOVERY_ORIGINAL_JOURNAL_CHANGED');
         rows=view.rows;source='original-listener';total=view.total;nextOffset=view.hasMore?view.offset+rows.length:null;
       }catch(error){
@@ -490,7 +490,7 @@ export function createNativeCollectionRecovery({manifest,registerCollections,isC
     if(operation==='review'){
       need(profile.value.kinds.includes('SNAPSHOT'),'MCP_COLLECTION_RECOVERY_CAPTURE_PROFILE_REQUIRED');
       const c=await connect(record,context.signal),value=await request(c,'/api/recovery/review',
-        {stateRoot:profile.value.stateRoot},context.signal),p=value.profile;
+        {stateRoot:profile.value.stateRoot},context.signal,{readOnly:true}),p=value.profile;
       need(p?.stateRoot===profile.value.stateRoot&&HASH.test(p.reviewSha256??''),
         'MCP_COLLECTION_RECOVERY_SOURCE_REVIEW_CHANGED');
       return result({profile:profile.name,profileSha256:profile.sha256,reviewSha256:p.reviewSha256,
