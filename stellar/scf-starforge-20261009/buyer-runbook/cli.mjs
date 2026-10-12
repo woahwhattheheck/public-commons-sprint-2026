@@ -23,7 +23,15 @@ const USAGE = `Buyer runbook — compose original SF88 operations
                             [--pass-env NAME] [--python /absolute/current-python]
   node cli.mjs backup-restore --bundle /absolute/backup [--expect RECORD_SHA256]
                              [--pass-env NAME] [--python /absolute/current-python]
-  node cli.mjs workspace --state /absolute/private-workspace --configs /absolute/buyer-configs
+  node cli.mjs operator status --state /absolute/private-workspace
+  node cli.mjs operator review --state /absolute/private-workspace [--file /absolute/draft.json]
+                              [--from-revision PRESET_ID] [--note REASON] [--expect STATE_SHA256]
+  node cli.mjs operator save --state /absolute/private-workspace [--file /absolute/draft.json]
+                            [--from-revision PRESET_ID] [--note REASON]
+                            --expect STATE_SHA256 --review REVIEW_SHA256
+  node cli.mjs operator revision --state /absolute/private-workspace --id PRESET_ID
+  node cli.mjs operator export --state /absolute/private-workspace --id PRESET_ID
+  node cli.mjs workspace --state /absolute/private-workspace [--configs /absolute/buyer-configs]
                         [--operator-settings /absolute/private-operator.json]
                         [--claim-envs SF101_CLAIM_TOKEN,OTHER_ORDER_TOKEN]
                         [--run /absolute/existing-run] [--port 8460]
@@ -41,13 +49,19 @@ status rewrites only derived status.json/report.html, not plans or attempts.
 unlock releases an exact dead local process lease; it preserves every attempt.
 workspace opens the private browser planner and original run controls. Start it
 in the same controlling terminal used for SF81 approval. Existing workspaces can
-omit --configs to reuse their saved source directory.
+omit --configs to reuse their saved source directory. New workspaces can omit it
+to create a private configs directory inside their state directory.
 backup-review resolves every original operator and retained acquisition under one
 private state root. backup requires the exact reviewed selection and stopped
 external writers. Its encrypted archive checkpoints every native ledger.
 backup-verify authenticates all files and original journals. backup-restore uses
 the original absent-or-empty state root and reopens saved acquisitions without
 executing purchases. Set the passphrase environment variable before launching.
+operator status/review/save manage the same private host settings as the console.
+Review compares exact selected state; save requires both returned hashes. Omit
+--file/--from-revision to adopt the current declared settings; use --from-revision
+to restore original retained bytes. operator export writes one original-format
+preset to stdout. Signing and proxy environment values are never returned.
 --operator-settings declares this machine's payer, signer source and maximum
 budgets for receiving private merchant requests. Its path is retained for reopen.
 --claim-envs declares existing environment names available for paid-file delivery.
@@ -109,6 +123,41 @@ export async function main(args = process.argv.slice(2)) {
       process.off('SIGINT',interrupt);process.off('SIGTERM',terminate);
       if(interruptedCode)process.exitCode=interruptedCode;
     }
+    return;
+  }
+  if(command==='operator') {
+    const [action,...rest]=tail;
+    if(!action||action==='--help'||action==='help'){process.stdout.write(USAGE);return;}
+    need(['status','review','save','revision','export'].includes(action),'UNKNOWN_OPERATOR_COMMAND');
+    const common=['--state','--configs','--operator-settings'];
+    const opts=options(rest,[...common,...(action==='review'||action==='save'?
+      ['--file','--from-revision','--note','--expect',...(action==='save'?['--review']:[])]:
+      action==='revision'||action==='export'?['--id']:[])]);
+    need(opts['--state'],'WORKSPACE_STATE_DIRECTORY_REQUIRED');
+    need(!(opts['--file']&&opts['--from-revision']),'OPERATOR_ONE_DRAFT_SOURCE_REQUIRED');
+    if(action==='save')need(opts['--expect']&&opts['--review'],'OPERATOR_EXACT_REVIEW_REQUIRED');
+    if(action==='revision'||action==='export')need(opts['--id'],'OPERATOR_REVISION_REQUIRED');
+    const {openRunbookWorkspace}=await import('./workspace-model.mjs');
+    const model=await openRunbookWorkspace({directory:opts['--state'],configsDirectory:opts['--configs'],
+      operatorSettings:opts['--operator-settings']});
+    try {
+      if(action==='status')print(await model.operatorState());
+      else if(action==='revision')print(await model.operatorRevision(opts['--id']));
+      else if(action==='export')process.stdout.write((await model.operatorAttachment(opts['--id'])).bytes);
+      else {
+        const current=await model.operatorState();let settings=current.settings;
+        if(opts['--file']) {
+          const {readBuyerOperatorPreset}=await import('./handoff-intake.mjs');
+          const {join}=await import('node:path');
+          settings=(await readBuyerOperatorPreset(opts['--file'],{directory:join(model.directory,'handoffs')})).value;
+        } else if(opts['--from-revision'])settings=(await model.operatorRevision(opts['--from-revision'])).settings;
+        need(settings,'REQUEST_OPERATOR_PRESET_REQUIRED');
+        const input={settings,expectedStateSha256:opts['--expect']??current.stateSha256,note:opts['--note']??'',
+          ...(opts['--from-revision']?{sourceRevision:opts['--from-revision']}:{})};
+        print(action==='review'?await model.reviewOperatorSettings(input):
+          await model.saveOperatorSettings({...input,expectedReviewSha256:opts['--review']}));
+      }
+    } finally {await model.close();}
     return;
   }
   if (command === 'workspace') {
