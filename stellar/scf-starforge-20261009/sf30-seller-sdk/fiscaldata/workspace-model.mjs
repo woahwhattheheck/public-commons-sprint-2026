@@ -1068,6 +1068,26 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
       'Complete '+input.kind+' '+source.id+'. '+(group==='captures'&&source.status!=='COMPLETE'?
         'This is the retained partial interval with status '+source.status+'.':'The original source selection and complete immutable interpretation are included.'));
   }
+  async function merchantSources(edition,sourceClosureVersion) {
+    const sources=await exportSources('editions',edition.id);
+    if(sourceClosureVersion!==1)return sources; // Resume an original pre-closure export unchanged.
+    const original=sources.find(item=>item.target==='source.json');
+    if(!original?.source)throw fault('EDITION_SOURCE_MISSING','The original edition provenance is required for publication.',409);
+    const sourceBytes=await readPrivate(original.source.path,Math.max(original.source.size+1,MiB));
+    const provenance=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(sourceBytes));
+    if(!object(provenance)||provenance.schema!=='stellar-forge.fiscaldata-edition-source.v1'||
+        provenance.editionId!==edition.id||provenance.captureSha256!==edition.captureSha256)
+      throw fault('EDITION_SOURCE_CHANGED','The merchant provenance must bind this exact retained edition.',409);
+    sources.push({...original,target:'original-edition/source.json'});
+    const nativeFiles=new Set(['dataset.csv','dataset.json','seller.json','source.json','binding.json','original-seller.json']);
+    const sourceFiles=sources.filter(item=>!nativeFiles.has(item.target)).map(item=>({
+      path:item.target,bytes:item.data?item.data.length:item.source.size,
+      sha256:item.data?digest(item.data):item.source.sha256
+    })).sort((left,right)=>left.path<right.path?-1:left.path>right.path?1:0);
+    // The original edition metadata stays byte-exact beside the publisher declaration.
+    // Every raw response/review member is explicit; manifests do not imply nested files.
+    return sources.map(item=>item===original?{target:'source.json',data:bytes({...provenance,sourceFiles}),mime:'application/json'}:item);
+  }
   async function configureMerchant(input) {
     only(input,['editionId','origin','path','payment','requestId']);
     const edition=get('editions',input.editionId),found=requestExisting('exports','merchant.configure',input);
@@ -1076,10 +1096,10 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
     const native=await nativeDataset(edition),{buildDatasetSellerConfig}=await import('../dataset-cli.mjs');
     const seller=await buildDatasetSellerConfig(native,{origin:input.origin,path:input.path,payment:input.payment});
     let record=found.record??{id:randomUUID(),kind:'exports',exportKind:'merchant',revision:1,...found.pin,
-      sourceId:edition.id,sourceSha256:edition.sha256,creation:{action:'merchant.configure',payload:clone(input)},createdAt:now(),updatedAt:now(),status:'BUILDING',
+      sourceId:edition.id,sourceSha256:edition.sha256,sourceClosureVersion:1,creation:{action:'merchant.configure',payload:clone(input)},createdAt:now(),updatedAt:now(),status:'BUILDING',
       origin:input.origin,path:input.path,payment:clone(input.payment),sha256:null,files:[]};
     if(!found.record)await save('exports',record);
-    const sources=await exportSources('editions',edition.id);sources.push({target:'seller.json',data:bytes(seller),mime:'application/json'});
+    const sources=await merchantSources(edition,record.sourceClosureVersion);sources.push({target:'seller.json',data:bytes(seller),mime:'application/json'});
     const output=await finishExport(record,sources,'Original SF30 merchant dataset '+edition.id+
       ' with the operator’s explicit public payment terms. The adjacent dataset.csv, dataset.json, source.json and seller.json are the native publisher inputs. Full captured Treasury responses and reviewed units are included.');
     edition.merchant={id:output.id,sha256:output.sha256,origin:input.origin,path:input.path,configuredAt:record.createdAt};
