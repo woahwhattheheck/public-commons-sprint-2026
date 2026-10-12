@@ -1,0 +1,21 @@
+{
+  "schema": "tjlabs.source-field-record.v1",
+  "sourceId": "mcc-notice",
+  "sourceUrl": "https://sam.gov/workspace/contract/opp/ec4254f4fdf24f8998bd4e10d5b58050/view",
+  "sourceType": "official SAM.gov notice fields observed through web search",
+  "capturedAt": "2026-10-12T01:38:56Z",
+  "noticeId": "95332427K0001",
+  "noticeUuid": "ec4254f4fdf24f8998bd4e10d5b58050",
+  "title": "MCC Software Development Recompete",
+  "status": "Active",
+  "contractOpportunityType": "Sources Sought",
+  "publishedDateText": "Oct 06, 2026 5:17 PM EDT",
+  "responseDateText": "Oct 29, 2026 6:00 PM EDT",
+  "inactiveDateText": "Nov 13, 2026",
+  "inactivePolicy": "15 days after response date",
+  "agency": "MILLENNIUM CHALLENGE CORPORATION",
+  "originalSetAside": "No Set aside used",
+  "psc": "DD01",
+  "naics": "541512",
+  "transcription": "SAM.gov (https://sam.gov/workspace/contract/opp/ec4254f4fdf24f8998bd4e10d5b58050/view)\n【turn119search0】 [wordlim: 200] Published: 6 days ago; Crawled: 5 days ago; ##### 95332427K0001 ... RFI_Notice of Intent.docx  | 40.27 KB  | Public  | Oct 6, 2026\n\n  * Pre-Award\n    * Solicitation Details\n      * Classification\n      * Description\n      * Contact Information\n      * Attachments/Links\n\n# MCC Software Development Recompete\n\nActive\n\nOpportunity\n\n# MCC Software Development Recompete\n\nActive\n\nNotice ID\n\n##### 95332427K0001\n\nRelated Notice\n\n##### (blank)\n\nContract Opportunity Type\n\n##### Sources Sought\n\nContract Line Item Number\n\n##### (blank)\n\nInactive Dates\n\n##### Nov 13, 2026\n\nInactive Policy\n\n##### 15 days after response date\n\nResponse Date\n\n##### Oct 29, 2026 6:00 PM EDT\n\nPublished Date\n\n##### Oct 06, 2026 5:17 PM EDT\n\nDepartment/Ind. Agency\n\n##### MILLENNIUM CHALLENGE CORPORATION\n\nSub-tier\n\n##### MILLENNIUM CHALLENGE CORPORATION\n\nOffice\n\n##### MILLENNIUM CHALLENGE CORPORATION\n\n## Classification\n\n* * *\n\nOriginal Set Aside\n\n##### No Set aside used\n\nProduct Service Code\n\n##### DD01 - IT AND TELECOM - SERVICE DELIVERY SUPPORT SERVICES: ITSM, OPERATIONS CENTER, PROJECT/PM (LABOR)\n\nNAICS Code\n\n##### 541512 - Computer Systems Design Services\n\nPlace of Performance\n"
+}
