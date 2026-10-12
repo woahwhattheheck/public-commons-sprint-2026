@@ -1,6 +1,6 @@
 // MIT. Original versioned CSV datasets in the existing SF82 release lifecycle.
 import { constants } from 'node:fs';
-import { open, mkdir, realpath, lstat, rename, unlink, rm } from 'node:fs/promises';
+import { open, mkdir, realpath, lstat, rename, unlink, rm, rmdir } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -61,6 +61,108 @@ async function atomic(path, value) {
   try { await writeNew(temporary, formatted(value)); await rename(temporary, path); await syncDirectory(dirname(path)); }
   finally { await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
 }
+
+/** Optional provider provenance travels with the same original dataset release.
+ * These descriptors add files; none may replace a native dataset/controller input. */
+export const DATASET_SOURCE_FILE_LIMITS = Object.freeze({
+  sourceBytes: 2 * 1024 * 1024, descriptorBytes: 1024 * 1024,
+  files: 20000, fileBytes: 512 * 1024 * 1024, totalBytes: 2 * 1024 * 1024 * 1024,
+});
+const reservedSourcePaths = new Set([...SOURCE_FILES, 'original-seller.json']);
+function sourceFileDescriptors(source) {
+  if (!source || typeof source !== 'object' || Array.isArray(source) || !Object.hasOwn(source, 'sourceFiles')) return [];
+  if (!Array.isArray(source.sourceFiles) || source.sourceFiles.length > DATASET_SOURCE_FILE_LIMITS.files)
+    fail('Source provenance must contain a bounded sourceFiles array.');
+  const names = new Set(); let total = 0;
+  const files = source.sourceFiles.map(item => {
+    if (!item || typeof item !== 'object' || Array.isArray(item) ||
+        Object.keys(item).some(key => !['path', 'bytes', 'sha256'].includes(key)) ||
+        typeof item.path !== 'string' || !item.path || item.path.length > 1024 ||
+        /[\x00-\x1f\x7f\\]/.test(item.path) || isAbsolute(item.path) ||
+        item.path.split('/').some(part => !part || part === '.' || part === '..') ||
+        reservedSourcePaths.has(item.path.split('/')[0]) || names.has(item.path) ||
+        !Number.isSafeInteger(item.bytes) || item.bytes < 0 || item.bytes > DATASET_SOURCE_FILE_LIMITS.fileBytes ||
+        !/^[a-f0-9]{64}$/.test(item.sha256 ?? ''))
+      fail('Every source provenance member needs a distinct canonical relative path, length and SHA-256.');
+    names.add(item.path); total += item.bytes;
+    if (!Number.isSafeInteger(total) || total > DATASET_SOURCE_FILE_LIMITS.totalBytes)
+      fail('The complete source provenance exceeds its retained release size limit.');
+    return { path: item.path, bytes: item.bytes, sha256: item.sha256 };
+  });
+  for (const name of names) {
+    const parts = name.split('/');
+    for (let index = 1; index < parts.length; index++)
+      if (names.has(parts.slice(0, index).join('/'))) fail('A source provenance file cannot also be a parent directory.');
+  }
+  files.sort((left, right) => left.path < right.path ? -1 : left.path > right.path ? 1 : 0);
+  // The original SF82 source manifest is limited to 2 MiB. Reserve its remaining
+  // space for the original service, controller binding and dataset description.
+  if (formatted(files.map(item => ({ file: 'dataset/' + item.path, bytes: item.bytes, sha256: item.sha256 }))).length >
+      DATASET_SOURCE_FILE_LIMITS.descriptorBytes) fail('Source provenance descriptors exceed the original release manifest budget.');
+  return files;
+}
+async function sourceFile(path, expected, destination, created) {
+  if (await realpath(path) !== resolve(path)) fail('Source provenance paths cannot contain symlinks.');
+  const input = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  let output;
+  try {
+    const before = await input.stat({ bigint: true });
+    if (!before.isFile() || before.size !== BigInt(expected.bytes)) fail('Source provenance length changed.');
+    if (destination) { output = await open(destination, 'wx', 0o600); created?.(); }
+    const hashValue = createHash('sha256'); let count = 0;
+    for await (const chunk of input.createReadStream({ autoClose: false, highWaterMark: 65536 })) {
+      count += chunk.length;
+      if (count > expected.bytes) fail('Source provenance grew while being retained.');
+      hashValue.update(chunk);
+      if (output) await output.writeFile(chunk);
+    }
+    const after = await input.stat({ bigint: true });
+    if (count !== expected.bytes || hashValue.digest('hex') !== expected.sha256 ||
+        before.size !== after.size || before.mtimeNs !== after.mtimeNs || before.ctimeNs !== after.ctimeNs)
+      fail('Source provenance bytes differ from their original descriptor.');
+    if (output) await output.sync();
+  } finally { await output?.close(); await input.close(); }
+}
+export async function readDatasetSourceFiles(directory, source) {
+  const root = resolve(directory), files = sourceFileDescriptors(source);
+  if (await realpath(root) !== root || !(await lstat(root)).isDirectory()) fail('Choose the canonical source package directory.');
+  for (const file of files) await sourceFile(join(root, file.path), file);
+  return files;
+}
+export async function copyDatasetSourceFiles(sourceDirectory, targetDirectory, source) {
+  const from = resolve(sourceDirectory), to = resolve(targetDirectory), files = sourceFileDescriptors(source);
+  if (await realpath(from) !== from || await realpath(to) !== to ||
+      !(await lstat(from)).isDirectory() || !(await lstat(to)).isDirectory() || from === to)
+    fail('Copy source provenance between two canonical package directories.');
+  const createdFiles = [], createdDirectories = [];
+  try {
+    for (const file of files) {
+      const parts = file.path.split('/').slice(0, -1); let parent = to;
+      for (const part of parts) {
+        parent = join(parent, part);
+        try { await mkdir(parent, { mode: 0o700 }); createdDirectories.push(parent); }
+        catch (error) { if (error.code !== 'EEXIST') throw error; }
+        if (!(await lstat(parent)).isDirectory() || await realpath(parent) !== parent)
+          fail('A provenance destination parent changed.');
+      }
+      const target = join(to, file.path);
+      // Register ownership only after open('wx') succeeds. A racing existing file
+      // must never become part of this operation's failure cleanup.
+      await sourceFile(join(from, file.path), file, target, () => createdFiles.push(target));
+    }
+    const parents = [...new Set([...createdDirectories, ...files.map(file => dirname(join(to, file.path)))])]
+      .sort((left, right) => right.length - left.length);
+    for (const directory of parents) await syncDirectory(directory);
+    await syncDirectory(to);
+    return files;
+  } catch (error) {
+    for (const file of createdFiles.reverse()) await unlink(file).catch(issue => { if (issue.code !== 'ENOENT') throw issue; });
+    for (const directory of createdDirectories.reverse())
+      await rmdir(directory).catch(issue => { if (!['ENOENT', 'ENOTEMPTY'].includes(issue.code)) throw issue; });
+    throw error;
+  }
+}
+
 function bindService(service, description) {
   if (service.routes.length !== 1 || Object.keys(service).some(key => !['schema', 'publicOrigin', 'routes'].includes(key)))
     fail('Use one original dataset seller route for this release.');
@@ -83,7 +185,8 @@ export async function prepareDatasetRelease(packageDirectory) {
   if (!(await lstat(directory)).isDirectory() || await realpath(directory) !== directory)
     fail('Choose the canonical directory containing the prepared dataset release.');
   const retained = {};
-  for (const file of SOURCE_FILES) retained[file] = await bytes(join(directory, file), file.endsWith('.csv') ? 256 * MiB : MiB);
+  for (const file of SOURCE_FILES) retained[file] = await bytes(join(directory, file),
+    file.endsWith('.csv') ? 256 * MiB : file === 'source.json' ? DATASET_SOURCE_FILE_LIMITS.sourceBytes : MiB);
   const config = parse(retained['dataset.json']), binding = parse(retained['binding.json']);
   if (config.file !== 'dataset.csv' || binding.schema !== DATASET_BINDING_SCHEMA ||
       typeof binding.datasetDirectory !== 'string' || !isAbsolute(binding.datasetDirectory) ||
@@ -99,7 +202,12 @@ export async function prepareDatasetRelease(packageDirectory) {
       binding.contractSha256 !== datasetContractSha256(description) || binding.baselineSnapshot !== description.snapshot ||
       binding.sourceSha256 !== hash(retained['source.json']))
     fail('The dataset edition or its provenance differs from the reviewed release.');
-  parse(retained['source.json']);
+  const source = parse(retained['source.json']);
+  if (!Object.hasOwn(source ?? {}, 'sourceFiles') && retained['source.json'].length > MiB)
+    fail('The original source provenance exceeds 1 MiB.');
+  const sourceFiles = await readDatasetSourceFiles(directory, source);
+  const sourceClosure = sourceFiles.length ? { files: sourceFiles.length,
+    bytes: sourceFiles.reduce((total, file) => total + file.bytes, 0), sha256: hash(stable(sourceFiles)) } : null;
   const original = await readSellerConfig(join(directory, 'seller.json'));
   if (original.routes.length !== 1 || Object.keys(original).some(key => !['schema','publicOrigin','routes'].includes(key)) ||
       original.routes.some(route => Object.keys(route).some(key => !['id','path','definition','offer','handler','admit'].includes(key))))
@@ -121,9 +229,11 @@ export async function prepareDatasetRelease(packageDirectory) {
     contractSha256: binding.contractSha256, rowCount: description.rowCount,
     sourceConfigSha256: hash(retained['dataset.json']), csvSha256: hash(retained['dataset.csv']),
     sourceSha256: hash(retained['source.json']), bindingSha256: hash(retained['binding.json']),
-    executionSha256: hash(stable({ binding, service, config })), description };
-  return { directory, config, binding, description, service, serviceBytes, offers, offersBytes, dataset, retained,
-    files: ordered(SOURCE_FILES.map(file => descriptor('dataset/' + file, retained[file]))) };
+    executionSha256: hash(stable({ binding, service, config, ...(sourceClosure ? { sourceClosure } : {}) })),
+    ...(sourceClosure ? { sourceClosure } : {}), description };
+  return { directory, config, binding, description, service, serviceBytes, offers, offersBytes, dataset, retained, sourceFiles,
+    files: ordered([...SOURCE_FILES.map(file => descriptor('dataset/' + file, retained[file])),
+      ...sourceFiles.map(file => ({ file: 'dataset/' + file.path, bytes: file.bytes, sha256: file.sha256 }))]) };
 }
 export async function stageDatasetRelease(directory, packageDirectory) {
   const target = resolve(directory), prepared = await prepareDatasetRelease(packageDirectory);
@@ -137,6 +247,7 @@ export async function stageDatasetRelease(directory, packageDirectory) {
     await mkdir(target, { mode: 0o700 }); created = true;
     await mkdir(join(target, 'dataset'), { mode: 0o700 });
     for (const file of SOURCE_FILES) await writeNew(join(target, 'dataset', file), prepared.retained[file]);
+    await copyDatasetSourceFiles(prepared.directory, join(target, 'dataset'), parse(prepared.retained['source.json']));
     await writeNew(join(target, 'offers.json'), prepared.offersBytes);
     await writeNew(join(target, 'seller-service.json'), prepared.serviceBytes);
     const manifest = { schema: DATASET_SOURCE_SCHEMA, packagePath: 'dataset', dataset: prepared.dataset,

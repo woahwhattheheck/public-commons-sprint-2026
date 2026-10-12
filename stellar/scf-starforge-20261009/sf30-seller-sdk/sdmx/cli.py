@@ -5,9 +5,12 @@ from __future__ import annotations
 import argparse
 from contextlib import nullcontext
 import json
+import os
 from pathlib import Path
+import stat
 import signal
 import sys
+import tempfile
 import threading
 
 from sdmx_workspace import Workspace, load_json
@@ -136,10 +139,43 @@ def serve_workspace(workspace, port, directory):
             signal.signal(selected, handler)
 
 
+def configure_runtime_temporary_directory(directory):
+    """Keep native stderr and child SQLite spill in the selected private runtime."""
+    def usable(value):
+        if not value:
+            return None
+        candidate = Path(value).expanduser()
+        if not candidate.is_absolute():
+            return None
+        try:
+            info = candidate.lstat()
+        except OSError:
+            return None
+        if not stat.S_ISDIR(info.st_mode) or not os.access(candidate, os.W_OK | os.X_OK):
+            return None
+        if os.name == "posix" and (info.st_uid != os.geteuid() or info.st_mode & 0o077):
+            return None
+        return candidate.resolve()
+
+    selected = next((value for name in ("TMPDIR", "TEMP", "TMP")
+                     if (value := usable(os.environ.get(name))) is not None), None)
+    if selected is None:
+        fallback = Path(directory).resolve() / "tmp"
+        fallback.mkdir(mode=0o700, exist_ok=True)
+        selected = usable(str(fallback))
+        if selected is None:
+            raise ValueError("The workspace tmp directory must be private and writable")
+    tempfile.tempdir = str(selected)
+    os.environ["TMPDIR"] = str(selected)
+    sqlite = usable(os.environ.get("SQLITE_TMPDIR")) or selected
+    os.environ["SQLITE_TMPDIR"] = str(sqlite)
+
+
 def main(argv=None):
     args = parser().parse_args(argv)
     try:
         with Workspace(args.workspace, create=args.command == "init") as workspace:
+            configure_runtime_temporary_directory(args.workspace)
             action = args.command
             if action == "serve":
                 serve_workspace(workspace, args.port, args.workspace)

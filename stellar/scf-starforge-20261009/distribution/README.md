@@ -638,6 +638,27 @@ by the CLI and browser. Full source, pipeline, package, buyer and operating guid
 are included under `source/stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/`.
 The optional driver pin is derived from that component's own `package.json`.
 
+## Operate retained web intelligence
+
+The [Diffbot workspace](../sf30-seller-sdk/diffbot/README.md) retains original
+Extract/Bulk results, source editions, exact numeric tokens, object reviews,
+recurring watchlists and mapped customer files. It uses the existing native
+Python workspace, release publisher and buyer recovery.
+
+```sh
+npx --no-install starforge diffbot-workspace create \
+  --dir /private/web-intelligence --dataset /private/prepared/workspace.json
+npx --no-install starforge diffbot-workspace serve \
+  --dir /private/web-intelligence --port 8431
+npx --no-install starforge diffbot-acquire --help
+```
+
+Open the printed operator URL. The complete operating guide covers original
+acquisition and credit estimates, reviewed customer-only publication, separate
+customer/operator handoff directories and portable reopen. Provider credentials
+stay in the existing private transport store. The installed acquisition command
+forwards to the original included Python client.
+
 ## Operate a retained Allium data product
 
 The Allium commands package the original Explorer acquisition and the same
@@ -4775,6 +4796,50 @@ applications' stores.
 See the [award research operating guide](../sf30-seller-sdk/usaspending/README.md)
 and [complete dossier receiving guide](../sf30-seller-sdk/usaspending/DOSSIER.md)
 for configuration, original acquisition, operator use and portable handover.
+
+## Federal award research for agents
+
+The existing `merchant-mcp` command includes `init-usaspending-workspaces`.
+Agents can operate the original award capture, enrichment, analyst workshare,
+merchant preparation, buyer delivery receiving and cited dossier applications,
+with their original browser jobs and complete resumable exports. Setup and the
+full workflow are in [USAspending research through MCP](../../../stellar-forge/mcp-merchant-operator/USASPENDING-WORKSPACE.md).
+
+## CoinGecko provider and market operator
+
+The same archive includes the complete CoinGecko provider adapter, research
+workspace, source intake, collections, market comparisons, native purchase
+recovery and portable handover. Use **Node.js 24 or later** for this command.
+From the directory containing the installed toolkit:
+
+```sh
+npx --no-install starforge coingecko --help
+npx --no-install starforge coingecko serve \
+  --state /absolute/private/coingecko-market --port 0
+```
+
+Open the loopback URL printed at startup. The workspace can author requests,
+import original responses, discover offers and organize research immediately.
+To use an existing native buyer, pass `--config /absolute/private/operator-config.json`
+to the same `serve` command. That file names the original buyer configuration
+and workspace; preserve their existing signer, budget and transport bindings.
+The [complete operator guide](../partners/coingecko-stellar-market/README.md)
+describes the configuration and all five endpoint families.
+
+Keep the private state outside the installation directory so a toolkit upgrade
+retains its projects. One server owns that state; multiple browser operators
+share its revision checks. Stop the server before using a mutating CLI command
+against the same state. Read-only `status` and `list` can inspect it while running.
+
+The provider uses the same command entry:
+`starforge coingecko provider compile --plan PLAN.json --out NEW_DEPLOYMENT.json`.
+Its original seller service and paid buyer use the installed native runtime.
+The package also exposes `@tokenjunkielabs/starforge-merchant/partners/coingecko`,
+`/partners/coingecko/contracts`, `/partners/coingecko/market` and
+`/partners/coingecko/workspace` for application imports. The workspace export
+provides `startMarketWorkspace`. Original source collection and browser
+continuation instructions travel with the component in
+`workspace/acceptance/README.md`.
 
 
 ## SDMX sources, exact editions and customer receiving
