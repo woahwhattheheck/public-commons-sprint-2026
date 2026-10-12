@@ -7,7 +7,7 @@
   <script type="module" src="/xero.mjs"></script>
 </head>
 <body>
-  <header class="topbar"><div><p class="eyebrow">Merchant accounting</p><h1>Xero journals</h1></div><a href="/">Accounting workspace</a></header>
+  <header class="topbar"><div><p class="eyebrow">Merchant accounting</p><h1>Xero journals</h1></div><a href="/connections.html">Connections</a><a href="/">Accounting workspace</a></header>
   <main class="xero-shell">
     <aside class="xero-sidebar">
       <label>Operator <input id="actor" autocomplete="name" maxlength="120" placeholder="Name for the accounting record"></label>
@@ -15,7 +15,7 @@
       <details id="managed-connection" hidden><summary>Selected connection</summary><div id="managed-connection-content"></div></details>
       <button id="refresh" type="button">Refresh workspace</button>
       <nav aria-label="Xero workflow"><a href="#organization">Organization</a><a href="#prepare">Prepare journals</a><a href="#saved">Saved journals</a></nav>
-      <p class="muted">Payments and verified refunds keep their original source. Enter each accounting value in the selected organization's base currency.</p>
+      <p class="muted">Merchant payments and buyer allocations keep their original source. Enter each accounting value in the selected organization's base currency.</p>
       <p id="workspace-revision" class="muted"></p>
     </aside>
     <div class="xero-content">
@@ -34,10 +34,10 @@
         <h2>2. Prepare a journal plan</h2>
         <form id="source-form">
           <div class="xero-grid"><label>Original accountant handoff <select id="handoff" name="handoffId" required></select></label><label>Xero organization <select id="context" name="contextId" required></select></label></div>
-          <button type="submit">Load payment and refund source</button>
+          <button type="submit">Load original accounting source</button>
         </form>
         <form id="plan-form" hidden>
-          <div class="xero-grid"><label>Plan name <input name="name" maxlength="160" required></label><label>Purpose <select name="purpose"><option value="demo">Xero demo organization</option><option value="books">Merchant books</option></select></label></div>
+          <div class="xero-grid"><label>Plan name <input name="name" maxlength="160" required></label><label>Purpose <select name="purpose"><option value="demo">Xero demo organization</option><option value="books">Organization books</option></select></label></div>
           <label>Valuation and tax treatment <textarea name="valuationBasis" maxlength="2000" rows="3" required placeholder="Describe the base-currency valuation source, recognition policy, and why this journal uses no tax."></textarea></label>
           <label class="xero-check"><input name="cashBasis" type="checkbox"> Show these journals on cash basis reports</label>
           <p id="source-summary"></p><div id="components"></div>

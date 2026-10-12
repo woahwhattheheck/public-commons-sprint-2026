@@ -14,6 +14,7 @@ import threading
 from domain import Problem, SCHEMA, now, canonical, identifier, text, day, digest, row_key, basis, native_changes, validate_coding, period_view
 from native import capture_source, parse_labels
 from credit_store import CreditStore, CREDIT_DDL
+from accountant_store import AccountantStore, ACCOUNTANT_DDL
 
 DDL = """
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -31,7 +32,7 @@ CREATE TABLE IF NOT EXISTS reviews(id TEXT PRIMARY KEY, period_id TEXT NOT NULL,
 CREATE TABLE IF NOT EXISTS closes(id TEXT PRIMARY KEY, period_id TEXT NOT NULL, sequence INTEGER NOT NULL, created_at TEXT NOT NULL, body TEXT NOT NULL,UNIQUE(period_id,sequence));
 CREATE TABLE IF NOT EXISTS events(sequence INTEGER PRIMARY KEY, created_at TEXT NOT NULL, action TEXT NOT NULL, body TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS api_requests(id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, operation TEXT NOT NULL, created_at TEXT NOT NULL, body TEXT NOT NULL);
-""" + CREDIT_DDL
+""" + CREDIT_DDL + ACCOUNTANT_DDL
 
 
 def private_directory(path):
@@ -53,7 +54,7 @@ def page(values, offset=0, limit=50):
             "next": offset + limit if offset + limit < len(values) else None}
 
 
-class Store(CreditStore):
+class Store(CreditStore, AccountantStore):
     def __init__(self, directory, node_executable=None):
         self.root = Path(directory).expanduser().resolve()
         self.root.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -253,6 +254,7 @@ class Store(CreditStore):
                     "revision": self.revision(), "sources": self._source_views(), "periods": periods,
                     "data_context": self._data_context(),
                     "credit_count": self.connection.execute("SELECT COUNT(*) FROM credits").fetchone()[0],
+                    "accountant_return_count": self.connection.execute("SELECT COUNT(*) FROM accountant_returns").fetchone()[0],
                     "pending_refund_packets": self.connection.execute("SELECT COUNT(*) FROM refund_packets WHERE status='PENDING'").fetchone()[0],
                     "centers": self._bodies("centers"), "labels": json.loads(self.connection.execute("SELECT value FROM meta WHERE key='labels'").fetchone()[0])}
 

@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-stellar-expert-workspaces",
+  "description": "Original stellar expert workspaces MCP provider",
+  "merchantProviders": {
+    "stellar-expert-workspaces": "stellar-forge/mcp-merchant-operator/providers/stellar-expert-workspaces.mjs"
+  }
+}

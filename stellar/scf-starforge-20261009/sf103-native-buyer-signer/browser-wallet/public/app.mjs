@@ -210,6 +210,7 @@ async function ownTab() {
 async function refresh() {
   const generation=++refreshStarted,value=await call('/api/state');
   if(generation<refreshApplied)return;
+  const firstState=state===null;
   refreshApplied=generation;state=value;
   if(draft&&draft.walletId===state.walletId) {
     const row=state.requests.find(r=>r.id===draft.id&&r.details.payloadSha256===draft.payloadSha256);
@@ -218,6 +219,7 @@ async function refresh() {
     }
   }
   render();
+  if(firstState&&tabOwned&&storageReady)notice('The retained operation is open.');
 }
 async function connect() {
   if(busy||!tabOwned||!storageReady)return;busy=true;render();

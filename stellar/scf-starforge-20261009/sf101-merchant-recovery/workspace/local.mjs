@@ -302,6 +302,13 @@ export async function runLocalVerification({ options, state, save, cancelled = (
     verified: true, original: { verification: verified } };
 }
 
+function publisherSourceIdentity(options) {
+  const key = options.sourcePublisherRestoreId !== undefined ? 'sourcePublisherRestoreId' : 'sourceRestoreId';
+  need((options.sourceRestoreId !== undefined) !== (options.sourcePublisherRestoreId !== undefined) &&
+    typeof options[key] === 'string' && /^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$/.test(options[key]),
+    'WORKSPACE_PUBLISHER_RESTORE_SELECTION_INVALID');
+  return { [key]: options[key] };
+}
 function publisherInput(options) {
   need(object(options) && HEX.test(options.snapshotId ?? ''),
     'WORKSPACE_PUBLISHER_RESTORE_SELECTION_INVALID');
@@ -344,10 +351,10 @@ export async function runLocalPublisherPreparation({ options, state, save,
   need(object(state) && typeof save === 'function' &&
     HEX.test(options?.expectedReviewSha256 ?? '') && HEX.test(options?.publisherOperationId ?? ''),
     'WORKSPACE_PUBLISHER_PREPARATION_INVALID');
-  const input = publisherInput(options);
+  const input = publisherInput(options), sourceIdentity = publisherSourceIdentity(options);
   const interrupted = () => ({ status: 'INTERRUPTED', command: 'publisher-prepare',
     snapshotId: options.snapshotId, bundle: options.bundle, destination: options.out,
-    sourceRestoreId: options.sourceRestoreId, publisherOperationId: options.publisherOperationId });
+    ...sourceIdentity, publisherOperationId: options.publisherOperationId });
   if (cancelled()) return interrupted();
   state.progress = 'VERIFYING_RESTORED_PUBLISHER'; await save();
   const reviewed = await inspectLocalPublisherRestore(options);
@@ -376,6 +383,6 @@ export async function runLocalPublisherPreparation({ options, state, save,
   state.progress = 'PUBLISHER_PREPARED'; state.publisherPreparation.phase = 'COMPLETE';
   state.publisherPreparation.preparedAt = prepared.preparedAt; await save();
   return { status: 'COMPLETE', command: 'publisher-prepare', snapshotId: options.snapshotId,
-    bundle: options.bundle, destination: options.out, sourceRestoreId: options.sourceRestoreId,
+    bundle: options.bundle, destination: options.out, ...sourceIdentity,
     publisherOperationId: options.publisherOperationId, prepared };
 }

@@ -4,10 +4,23 @@ Applications opens the original merchant and buyer tools from a selected READY r
 
 Buyer receiving: [complete setup, acquisition, Stop and reopen guide](BUYER_RECEIVING_APPLICATIONS.md).
 
+## Source-owned application inventory
+
+The catalog and original startup adapters are discovered from the same maintained
+source contributions as merchant commands. Each product owns its registration;
+Review, Save, Start, Open, Stop and recovery remain the original shared lifecycle.
+The [Applications provider guide](APPLICATION_PROVIDERS.md) explains source
+selection, the provider inventory, exact original adapters and installed receiving.
+
+Imagery receiving: [STAC, eoAPI and Prescient setup, agent connection, Stop and reopen](STAC_APPLICATIONS.md).
+
 ## Available original tools
 
 | Application | Maintained command | Original workflow |
 | --- | --- | --- |
+| Satellite imagery and processing | stac serve | Original scene editions, selected files, source comparisons, native processing history and complete receiving |
+| Imagery customer operations | stac eoapi-serve | Original source authorization, deployment policy, commissioning, customer files and complete receiving |
+| Prescient imagery operations | stac prescient-serve | Original selected profile, SDK source and file operations, managed stop/reopen and complete receiving |
 | CoinGecko market research | coingecko serve | Original market sources, request collections, comparisons, notes, provider plans, native buyer recovery and complete handover |
 | Repository metadata editions | oai serve | Original OAI-PMH capture, retained metadata editions, mapping, publisher and complete customer handover |
 | Fiscal Data operations | fiscaldata managed | Named Treasury operator, exact source and decimal editions, comparisons, original merchant and buyer, complete package receiving |
@@ -26,9 +39,11 @@ Buyer receiving: [complete setup, acquisition, Stop and reopen guide](BUYER_RECE
 | Stellar agent application | stellar-application serve | Original HTTP and governed MCP requests, current subject authorization, retained results and aggregate spending |
 | OData source and live merchant | dataset odata | Saved source metadata, typed queries, retained editions, live paid pages, buyer handoffs and received records |
 | SEC EDGAR source operator | sec-edgar workspace | Original company facts and filings, retained source editions, merchant drafts and complete customer exports |
+| USGS water and native DSS | usgs-water managed | Original source selection, scientific review, saved editions, native HEC-DSS mapping and complete project receiving |
 | Google Sheets source authoring | sheets-source workspace serve | Retained workbook observations, typed source projections, original dataset publisher and merchant receiving |
 | NocoDB source authoring | nocodb-source workspace serve | Original database observations, complete captures, public projections, dataset publisher and retained workspace recovery |
 | Stellar asset investigation | dataset-workspace --stellar-expert | Original asset observations, exact editions, reviewed findings, native dataset and merchant releases, purchased page receiving |
+| Census address operations | census-geocoder-agent serve | One original browser and MCP owner for official address capture, match review, typed editions, native publishing and approved customer receiving |
 | ArcGIS merchant workspace | arcgis-agent serve | One original browser and MCP service for source capture, field mapping, publication, staged deployments and complete customer files |
 | World Bank economic data | worldbank-agent serve | Original indicator captures, exact editions and comparisons, reviewed merchant publication, browser and agent operations, complete customer receiving |
 | S3 object merchant | s3 workspace | Object source and complete prices, retained HEAD reviews and packages, original release controls, customer files and saved-workspace reopening |
@@ -146,6 +161,12 @@ commercial exports, reviewed price changes and managed stop/reopen.
 ## Catalog Atlas
 
 The complete [managed Atlas workflow](../../sf61-bazaar-explorer/APPLICATIONS.md) covers new and retained directories, reviewed installed source, original private launch, stop/reopen, native buyer continuation and whole-workspace receiving.
+
+## Census address operations
+
+Select the original merchant configuration and its initialized Census geocoder workspace alias. Review pins the merchant and connection files, stable native workspace UUID and installed launcher. Start opens one original MCP owner and its borrowed browser; the saved operation records their actual private listeners. The standard terminal carries the original SF88 approval, and Stop drains publication/customer work and cancels source HTTP through the original workspace. A later start reopens the same capture, edition and buyer records.
+
+Follow [Census agent and browser operations](../../../../stellar-forge/mcp-merchant-operator/CENSUS_GEOCODER_WORKSPACE.md) for complete configuration, exact source review, merchant publication, customer file receiving and lifecycle commands.
 
 ## ArcGIS merchant workspace
 
@@ -643,8 +664,25 @@ Choose **Databento migration** with the initialized or received workbench direct
 
 Complete historical source editions, inspect field mappings, perform the named review, preserve results and export the customer handover from the original workbench. Stop closes its native server and model; reopen retains the same work and history. The complete [Databento Applications guide](DATABENTO_APPLICATIONS.md) covers initial setup or receiving, source/runtime selection, original producer and review actions, customer export, Stop and recovery.
 
+
+## WooCommerce merchant
+
+**WooCommerce merchant** starts the original SF104 native seller and the original SF98 notice worker together over the selected merchant configuration and same private outbox. Review retains the actual store, notice endpoint, source/configuration identities and named secret environment binding. First start binds the outbox to its original store under the existing exclusive delivery lease; subsequent launches reuse that binding and journal. Open uses the original Operations dashboard, and the WordPress order-console link keeps order, frozen-term, release and refund work in the actual configured store. Stop drains the original seller before awaiting delivery termination; a delivery failure also drains the seller. See the [complete managed Woo operating guide](../../sf104-woocommerce-merchant-bridge/MANAGED.md) for setup, original CLI, same-request recovery and same-outbox receiving. The installed command is `woo-managed`; no independent process manager or payment engine is added.
+
 ## World Bank economic data
 
 Choose **World Bank economic data** with the original private merchant configuration and a declared World Bank workspace alias. Review and Save retain both connection files, the workspace directory and the installed launcher. Start opens one original merchant MCP host and its World Bank model; the same model serves the authenticated browser. Open checks the running model and browser identities against the saved request and original configuration binding.
 
 Use the browser or agent to capture complete indicator pages, compare editions, record the review, publish the native dataset, operate the merchant and export the customer handover. Closing and reopening the Applications console reconnects to the same running operation. A saved start request can resume through the original recovery action; Stop closes the owned host and browser while retaining the workspace. The complete [World Bank Applications guide](WORLDBANK_APPLICATIONS.md) covers configuration, installed receiving, source and merchant operations, recovery, customer download and reopening.
+
+## DSpace repository data
+
+**DSpace repository data** reopens the original private repository operator with its complete sources, metadata, editions, reviews, comparisons and received projects. Select the private operator folder and, for a new operator, an optional existing repository workspace; Review, Save, Start and Open use the ordinary Applications lifecycle.
+
+The agent host attaches to that same original listener through its private launch file. Explicit operator, process, project and workspace scope prevents a stale agent request from following a browser project switch. Stop releases the original writer; Start reopens the saved project with a fresh process instance.
+
+See [the complete DSpace Applications guide](APPLICATION_DSPACE.md) for setup, source selection, agent attachment, full-project receiving and saved-workspace reopening.
+
+## USGS Water and native DSS
+
+Choose **USGS water and native DSS** to review and save the original project, optional buyer and official HEC-DSS interpreter. Start opens the original Water workspace; Open uses its verified local listener, and Stop drains its original source/edition/native work before releasing the project. A received project can reopen its existing source edition and DSS export without a saved project selection or another native write. Changes to a saved selection or other reviewed inputs require reviewing the current application before the next Start. The existing managed-home adoption, operation history and restart behavior apply. See [the complete Water Applications guide](../../sf30-seller-sdk/usgs-water/MANAGED.md) for setup, received-project operation, command-line use and recovery.
