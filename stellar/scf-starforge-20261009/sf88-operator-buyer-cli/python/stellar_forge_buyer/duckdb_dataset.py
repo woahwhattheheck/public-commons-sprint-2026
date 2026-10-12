@@ -687,7 +687,8 @@ class DuckDBWorkspace:
                 db.rollback()
                 raise
 
-    def save_query(self, name, sql, parameters=None, expected_revision=0):
+    def _save_query_on(self, db, name, sql, parameters=None, expected_revision=0):
+        """Original query writer borrowed by an already owned native transaction."""
         name = _name(name)
         parameters = [] if parameters is None else parameters
         sql = self._sql(sql, parameters)
@@ -696,25 +697,28 @@ class DuckDBWorkspace:
         if type(expected_revision) is not int or expected_revision < 0:
             raise StateError("DUCKDB_QUERY_REVISION_REQUIRED")
         query_id = digest(name.casefold().encode())
+        current = db.execute("SELECT revision,record FROM sf_queries WHERE id=?", [query_id]).fetchone()
+        revision = current[0] if current else 0
+        if revision != expected_revision:
+            raise StateError("DUCKDB_SAVED_QUERY_CHANGED")
+        if current:
+            prior = parse(current[1].encode())
+            if prior["sql"] == sql and prior["parameters"] == parameters:
+                return {**prior, "parameters_text": _json(prior["parameters"])}
+            name = prior["name"]
+        record = {"query_id": query_id, "name": name, "revision": revision + 1, "sql": sql,
+                  "parameters": parameters, "saved_at": _now()}
+        db.execute("INSERT INTO sf_queries VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET revision=excluded.revision,record=excluded.record", [query_id, name, revision + 1, _json(record)])
+        db.execute("INSERT INTO sf_query_history VALUES(?,?,?)", [query_id, revision + 1, _json(record)])
+        return {**record, "parameters_text": _json(record["parameters"])}
+
+    def save_query(self, name, sql, parameters=None, expected_revision=0):
         with self._guard(), self._connection(writeable=True) as db:
             db.execute("BEGIN")
             try:
-                current = db.execute("SELECT revision,record FROM sf_queries WHERE id=?", [query_id]).fetchone()
-                revision = current[0] if current else 0
-                if revision != expected_revision:
-                    raise StateError("DUCKDB_SAVED_QUERY_CHANGED")
-                if current:
-                    prior = parse(current[1].encode())
-                    if prior["sql"] == sql and prior["parameters"] == parameters:
-                        db.commit()
-                        return {**prior, "parameters_text": _json(prior["parameters"])}
-                    name = prior["name"]
-                record = {"query_id": query_id, "name": name, "revision": revision + 1, "sql": sql,
-                          "parameters": parameters, "saved_at": _now()}
-                db.execute("INSERT INTO sf_queries VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET revision=excluded.revision,record=excluded.record", [query_id, name, revision + 1, _json(record)])
-                db.execute("INSERT INTO sf_query_history VALUES(?,?,?)", [query_id, revision + 1, _json(record)])
+                result = self._save_query_on(db, name, sql, parameters, expected_revision)
                 db.commit()
-                return {**record, "parameters_text": _json(record["parameters"])}
+                return result
             except BaseException:
                 db.rollback()
                 raise
@@ -728,11 +732,24 @@ class DuckDBWorkspace:
         with self._guard(), self._connection() as db:
             return {"exports": [parse(row[0].encode()) for row in db.execute("SELECT record FROM sf_exports ORDER BY id").fetchall()]}
 
-    def export_query(self, query_id, destination, expected_revision, expected_views=None):
+    def export_query(self, query_id, destination, expected_revision, expected_views=None, *, retained_query=None):
         query_id = _hex(query_id)
         if type(expected_revision) is not int or expected_revision < 1:
             raise StateError("DUCKDB_QUERY_REVISION_REQUIRED")
         with self._guard():
+            if retained_query is not None:
+                # Trusted report exporters may bind an immutable historical
+                # recipe. Validate it against the original query history, not
+                # caller-supplied SQL, while ordinary callers keep current CAS.
+                with self._connection() as db:
+                    historical = db.execute("SELECT record FROM sf_query_history WHERE id=? AND revision=?",
+                                            [query_id, expected_revision]).fetchone()
+                if historical is None:
+                    raise StateError("DUCKDB_RETAINED_QUERY_MISSING")
+                historical = parse(historical[0].encode())
+                historical["parameters_text"] = _json(historical["parameters"])
+                if _json(retained_query) != _json(historical):
+                    raise StateError("DUCKDB_RETAINED_QUERY_CHANGED")
             target = _new_destination(destination, self.directory)
             request_file = target / "request.json"
             if request_file.exists():
@@ -748,11 +765,13 @@ class DuckDBWorkspace:
                 # The retained original revision owns this export even when
                 # the operator has since saved a newer version of the recipe.
                 views = request["views"]
+                if retained_query is not None and _json(query) != _json(retained_query):
+                    raise StateError("DUCKDB_RETAINED_QUERY_CHANGED")
             else:
                 if any(target.iterdir()):
                     raise StateError("DUCKDB_EXPORT_DESTINATION_NOT_EMPTY")
                 with self._connection() as db:
-                    query = self._record(db, "sf_queries", query_id)
+                    query = historical if retained_query is not None else self._record(db, "sf_queries", query_id)
                     views = self._views(db)
                 if query["revision"] != expected_revision:
                     raise StateError("DUCKDB_SAVED_QUERY_CHANGED")

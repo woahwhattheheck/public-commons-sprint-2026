@@ -75,6 +75,7 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/europe-pmc"
   ],
   "supportFiles": [
+    "LICENSE",
     "stellar-forge/mcp-merchant-operator/EUROPE_PMC.md",
     "stellar-forge/mcp-merchant-operator/catalog/research-customer-updates.mjs",
     "stellar-forge/mcp-merchant-operator/catalog/research-europe-pmc.mjs",
@@ -137,6 +138,7 @@
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-updates/source-plans.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-updates/store.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/dossier.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/eligibility-cli.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/extraction-publication-contracts.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/extraction-publication-render.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/extraction-publication.d.mts",
@@ -148,6 +150,7 @@
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/public/customer-updates.css",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/public/customer-updates.html",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/public/customer-updates.js",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/public/eligibility.js",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/public/index.html",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/public/study-extraction-drafts.js",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/public/study-extraction.css",

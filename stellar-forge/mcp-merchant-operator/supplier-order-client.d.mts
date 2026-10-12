@@ -6,7 +6,7 @@ export type ExactQuantity=string;
 export type Sha256=string;
 export type WorkspaceAlias=string;
 export type RecordId=string;
-/** The original business identifier; punctuation and up to 21 characters are supported. */
+/** Exact original business identifier. The retained profile declares its limit (Unite: 21; customer: at most 250). */
 export type OrderId=string;
 export type DocumentKind='ORDER'|'ORDERRESPONSE'|'DISPATCHNOTIFICATION'|'INVOICE';
 export type DraftKind=Exclude<DocumentKind,'ORDER'>;
@@ -17,6 +17,55 @@ export interface NativeSupplierOrderClient {
   endpoint:string;
   call(name:string,args:Record<string,unknown>,options?:CallOptions):Promise<Record<string,unknown>>;
 }
+
+/** Complete reviewed declaration for the existing openTRANS 1.0 adapter. */
+export interface SupplierOrderProfile {
+  schema:'stellar-forge.supplier-order-profile.v1';
+  id:string;revision:number;title:string;format:'openTRANS';version:'1.0';
+  declaration:{reference:string;url:string|null;sourceSha256:Sha256|null;notes:string};
+  orderIdMaximum:number;
+  supplierIdentity:{partyIdTypes:string[];allowUniqueFallback:boolean;inheritOrderResponse:boolean};
+  confirmation:{negativeQuantity:'cancel'|'reject';omittedLines:'retain'|'require-complete'};
+  serials:{remarks:'unite-number'|'opaque'};
+  validation:{
+    currencies:string[];units:string[];invoiceTaxRate:boolean;invoiceDeliveryReference:boolean;
+    invoiceParties:Array<'buyer'|'supplier'|'invoice'>;confirmationDeliveryWarning:boolean;dispatchTrackingWarning:boolean;
+    requiredFields:Array<{kinds:DocumentKind[];path:string;when:'always'|'output';severity:'error'|'warning';message:string;reference:string}>;
+  };
+}
+export interface RetainedProfileSelection {
+  schema:'stellar-forge.supplier-order-profile-selection.v1';profile:SupplierOrderProfile;
+  profileSha256:Sha256;revision:number;implicit:boolean;selectedAt:string|null;
+  requestId:RecordId|null;reason:string;sha256?:Sha256;previousProfileSha256?:Sha256;
+  sourceWorkspaceId?:string;sourceSelection?:RetainedProfileSelection|null;
+}
+export interface ProfileSelection extends RetainedProfileSelection {
+  workspaceId:string;canSelect:boolean;
+}
+export interface SelectProfileArguments {
+  requestId:RecordId;expectedProfileSha256:Sha256;expectedSelectionRevision:number;
+  profile:SupplierOrderProfile;reason:string;
+}
+export interface SelectProfileResult extends OperationResult {profileSelection:RetainedProfileSelection}
+export interface ProfileHistoryPage extends Page<OperationReply> {revision:number;profileSha256:Sha256}
+export interface PackageProfileInspection {
+  incoming:SupplierOrderProfile;incomingSha256:Sha256;current:SupplierOrderProfile;currentSha256:Sha256;
+  currentSelectionRevision:number;matches:boolean;adoptionRequired:boolean;canAdopt:boolean;
+  sourceSelection:RetainedProfileSelection|null;
+}
+export interface ReceiveWorkspaceArguments {
+  requestId:RecordId;inputId:string;mode:'inspect'|'merge';adoptProfile?:boolean;
+  /** Supply both current profile pins for an explicit different-profile adoption into an empty workspace. */
+  expectedProfileSha256?:Sha256;expectedSelectionRevision?:number;
+}
+export interface ReceiveWorkspaceResult extends OperationResult {
+  schema:'stellar-forge.supplier-orders-receiving.v1';mode:'inspect'|'merge';
+  sourceWorkspaceId:string;workspaceId:string;packageSha256:Sha256;profile:PackageProfileInspection;
+  supplierMatches:boolean;canMerge:boolean;rows:number;files:number;
+  tableCounts:Record<string,number>;added:Record<string,number>;preserved:Record<string,number>;foreign:Record<string,number>;
+  foreignRecordIds?:RecordId[];id?:RecordId;receivedAt?:string;currentState?:string;
+}
+
 export interface XmlComment { comment:string }
 export interface XmlInstruction { pi:string;value?:string }
 export interface XmlElement {
@@ -81,7 +130,9 @@ export interface DocumentLine {
 }
 export interface NativeDocument {
   schema:'stellar-forge.supplier-order-document.v1';
-  profileId:'unite-opentrans-1.0';kind:DocumentKind;version:'1.0';
+  profileId:string;kind:DocumentKind;version:'1.0';
+  /** Required with the exact SHA for every customer profile; legacy Unite source records retain their original shape. */
+  profile?:SupplierOrderProfile;profileSha256?:Sha256;
   documentId:string;orderId:OrderId|null;header:DocumentHeader;items:DocumentLine[];
   summary:{totalItems?:DecimalString|null;totalAmount?:DecimalString|null;totalTaxAmount?:DecimalString|null;[key:string]:unknown};
   raw:Json|null;source:SourceIdentity;validation?:Json;[originalField:string]:unknown;
@@ -91,11 +142,11 @@ export interface Finding {
   kind?:DocumentKind;[originalField:string]:unknown;
 }
 export interface Review {
-  schema?:string;errors:number;warnings:number;findings:Finding[];
+  schema?:string;profileId?:string;profileSha256?:Sha256;errors:number;warnings:number;findings:Finding[];
   net?:ExactQuantity|null;tax?:ExactQuantity|null;gross?:ExactQuantity|null;[originalField:string]:unknown;
 }
 export interface ReviewSummary {
-  schema?:string;errors?:number;warnings?:number;valid?:boolean;
+  schema?:string;profileId?:string;profileSha256?:Sha256;errors?:number;warnings?:number;valid?:boolean;
   net?:ExactQuantity|null;tax?:ExactQuantity|null;gross?:ExactQuantity|null;
   findingsCount:number;fullFindingsRetained?:true;
 }
@@ -184,7 +235,7 @@ export interface RetainedOperationSummary extends Pick<Operation,'id'|'kind'|'st
 }
 export type OperationReply<T=OperationResult>=Operation<T>|RetainedOperationSummary;
 export interface WorkspaceState {
-  schema?:string;workspaceId:string;profileId?:string;supplierIdentity?:SupplierIdentity|null;
+  schema?:string;workspaceId:string;profileId?:string;profile?:ProfileSelection;supplierIdentity?:SupplierIdentity|null;
   counts?:Record<string,number>;orderRevisions?:Record<OrderId,number>;orderStateSha256?:Record<OrderId,Sha256>;
   drafts?:DraftSummary[];operations?:OperationReply[];summary?:boolean;
   originalCollectionsRetained?:true;collections?:Record<string,string>;[originalField:string]:unknown;
@@ -215,7 +266,7 @@ export interface SaveDraftArguments {
   document:NativeDocument;reason:string;title?:string;roundingPolicy?:RoundingPolicy|null;
 }
 export interface ReceiveArguments {
-  requestId:RecordId;inputId:string;selection:'current'|'history';
+  requestId:RecordId;inputId:string;selection:'current'|'history';expectedProfileSha256?:Sha256;
   expectedOrderRevisions?:Record<OrderId,number>;expectedOrderRevision?:number;
 }
 export interface PrepareArguments {requestId:RecordId;draftId:RecordId;expectedRevision:number}
@@ -230,6 +281,8 @@ export interface TransportAuthentication {
 }
 export interface TransportChannel {
   id:RecordId;title:string;mode:'test'|'live';supplierId:string;sha256:Sha256;
+  /** Host-declared pin required for a customer-profile channel. */
+  profileSha256?:Sha256;
   agreement:{reference:string};
   incoming?:{
     url:string;authentication:TransportAuthentication;messageIdHeader?:string;
@@ -241,7 +294,7 @@ export interface TransportChannel {
     timeoutMs:number;maxResponseBytes:number;
   };
 }
-export interface TransportChannels {schema:string;configured:boolean;channels:TransportChannel[]}
+export interface TransportChannels {schema:string;configured:boolean;profileId:string;profileSha256:Sha256;channels:TransportChannel[]}
 export interface TransmissionSource {fileId:RecordId;name:string;bytes:number;sha256:Sha256}
 export interface TransmissionHttp {
   statusCode:number|null;complete:boolean;headers:Record<string,string|string[]>;observedBytes?:number;
@@ -250,7 +303,8 @@ export interface TransmissionHttp {
 export interface Transmission {
   schema:'stellar-forge.supplier-order-transmission.v1';id:RecordId;revision:number;
   direction:TransmissionDirection;workspaceId:string;foreign:boolean;
-  channel:Pick<TransportChannel,'id'|'title'|'mode'|'supplierId'|'sha256'|'agreement'>;
+  channel:Pick<TransportChannel,'id'|'title'|'mode'|'supplierId'|'sha256'|'agreement'|'profileSha256'>;
+  profileId?:string;profileSha256?:Sha256;
   kind:DocumentKind;documentId:RecordId|null;orderIds:OrderId[];source:TransmissionSource;
   state:TransmissionState;requestId:RecordId;createdAt:string;updatedAt:string;attemptCount:number;
   lastAttempt?:Record<string,unknown>;http?:TransmissionHttp;providerReceipt?:string|null;
@@ -322,6 +376,10 @@ export interface SupplierOrderClientMethods {
   close(args?:Record<string,never>,options?:CallOptions):Promise<{workspace:WorkspaceAlias;state:'CLOSED'}>;
   inputs(args?:Record<string,never>,options?:CallOptions):Promise<{workspace:WorkspaceAlias;inputs:HostInput[]}>;
   state(args?:Record<string,never>,options?:CallOptions):Promise<WorkspaceState>;
+  profile(args?:Record<string,never>,options?:CallOptions):Promise<ProfileSelection>;
+  profileTemplate(args?:{base?:'standard'|'unite'},options?:CallOptions):Promise<SupplierOrderProfile>;
+  profileHistory(args?:PageArguments,options?:CallOptions):Promise<ProfileHistoryPage>;
+  selectProfile(args:SelectProfileArguments,options?:CallOptions):Promise<OperationReply<SelectProfileResult>>;
   orders(args?:OrdersArguments,options?:CallOptions):Promise<Page<OrderSummary>>;
   order(args:{orderId:OrderId},options?:CallOptions):Promise<SupplierOrder>;
   orderItems(args:{orderId:OrderId}&PageArguments,options?:CallOptions):Promise<OrderPage<ReconciledLine>>;
@@ -338,7 +396,7 @@ export interface SupplierOrderClientMethods {
   prepare(args:PrepareArguments,options?:CallOptions):Promise<OperationReply>;
   select(args:SelectArguments,options?:CallOptions):Promise<OperationReply>;
   receive(args:ReceiveArguments,options?:CallOptions):Promise<OperationReply>;
-  receiveWorkspace(args:{requestId:RecordId;inputId:string;mode:'inspect'|'merge'},options?:CallOptions):Promise<OperationReply>;
+  receiveWorkspace(args:ReceiveWorkspaceArguments,options?:CallOptions):Promise<OperationReply<ReceiveWorkspaceResult>>;
   exportWorkspace(args:{requestId:RecordId},options?:CallOptions):Promise<OperationReply>;
   transportChannels(args?:Record<string,never>,options?:CallOptions):Promise<TransportChannels>;
   transmissions(args?:TransmissionsArguments,options?:CallOptions):Promise<Page<Transmission>>;
@@ -359,6 +417,7 @@ export declare class SupplierOrderClient {
   readonly workspace:WorkspaceAlias;readonly endpoint:string;
   constructor(client:NativeSupplierOrderClient,workspace:WorkspaceAlias,callOptions?:CallOptions);
   call(name:string,args?:Record<string,unknown>,options?:CallOptions):Promise<Record<string,unknown>>;
+  pages(method:'profileHistory',args?:PageArguments,options?:CallOptions):AsyncGenerator<ProfileHistoryPage>;
   pages(method:'orders',args?:OrdersArguments,options?:CallOptions):AsyncGenerator<Page<OrderSummary>>;
   pages(method:'orderItems',args:{orderId:OrderId}&PageArguments,options?:CallOptions):AsyncGenerator<OrderPage<ReconciledLine>>;
   pages(method:'orderHistory',args:{orderId:OrderId}&PageArguments,options?:CallOptions):AsyncGenerator<OrderPage<OrderHistory>>;

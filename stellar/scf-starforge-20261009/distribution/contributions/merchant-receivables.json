@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "merchant-receivables",
-  "description": "Customer invoicing, service quotation import, payment allocation, credit notes and dated receivables",
+  "description": "Customer invoicing, service quotation import, payment allocation, credit notes, installment schedules and dated receivables",
   "commands": {
     "receivables": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/cli.mjs"
   },
@@ -25,6 +25,10 @@
     {
       "server": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/server.mjs",
       "manifest": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/browser-assets.json"
+    },
+    {
+      "server": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/payment-plans/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/payment-plans/browser-assets.json"
     }
   ],
   "applicationProviders": {

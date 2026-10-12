@@ -4,6 +4,50 @@ This desk receives complete openTRANS 1.0 orders and carries their original line
 
 A saved draft is an editable working document. **Prepare** validates and retains the complete XML for one saved revision. **Select for this order** makes that immutable document contribute to current quantities. Each step remains independently inspectable and recoverable by its original request ID.
 
+
+## Retained customer profiles
+
+The provider now has 40 tools. The original Unite profile remains implicit for
+existing workspaces. A complete declared openTRANS 1.0 customer profile can be
+selected before first business intake through the same workspace and operation
+journal. Original source XML, document identities and saved history keep their
+selected profile; a different profile uses another empty workspace.
+
+Use `profile` to read the current complete declaration, SHA, selection revision
+and `canSelect`. `profile_template` returns a full editable `standard` or
+`unite` template, with a deliberately empty customer source reference.
+`select_profile` accepts `requestId`, `profile`, `reason`,
+`expectedProfileSha256` and `expectedSelectionRevision`. Reuse the same request
+after a lost response. `profile_history` pages actual selections and completed
+package adoptions; read-only package inspections remain ordinary operation records.
+
+The corresponding typed methods are `profile`, `profileTemplate`,
+`selectProfile` and `profileHistory`. `client.pages('profileHistory', args)`
+follows the original byte-limited `nextOffset` and pins the current selection
+revision/SHA. Customer declarations are limited to 32 KiB and carry exact source
+references for additional required-field rules. The CLI and browser expose the
+same complete declaration and recovery path.
+
+For customer packages, call `receiveWorkspace` with `mode:'inspect'` first.
+A different profile requires deliberate `adoptProfile:true` plus the inspected
+current `expectedProfileSha256` and `expectedSelectionRevision` during merge
+into an empty workspace. Incoming new immutable documents are parsed again from
+their original XML under that profile. Profile adoption and business merge share
+one original transaction; matching later customer work and old-package replay remain
+unchanged.
+
+A configured customer HTTPS channel must declare the same `profileSha256` in
+its host-owned channel settings. Endpoints, authentication and live/test routing
+remain outside tool/browser arguments. Original transmission UNKNOWN/retry and
+provider-response rules are unchanged.
+
+The complete field contract, browser selection/adoption, installed CLI examples,
+native source lineage and customer return are in:
+`stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/PROFILES.md`.
+The selected package also contains `examples/customer-profile.json`, an explicitly
+authored original-source demonstration rather than a live partner contract.
+This profile release adds no ORDERS05 or cXML parser.
+
 ## Installed entry points
 
 The selected distribution includes both contributions, `supplier-orders` and `merchant-provider-supplier-orders`, together with the original merchant MCP host.
@@ -40,7 +84,7 @@ The startup JSON gives the actual workspace ID, URL, origin and process ID. The 
 
 In **Original XML**, select the entire received file. The browser hashes it in bounded chunks, preserves the complete filename and chosen provenance, and sends its exact byte length and SHA-256 with one request ID. It streams the original file to the authenticated source endpoint.
 
-The first original ORDER establishes its order. Further documents default to retained history unless the operator explicitly chooses current selection with the reviewed order revision pins. Inspect the actual original business ID in the source; IDs can contain punctuation and have up to 21 characters.
+The first original ORDER establishes its order. Further documents default to retained history unless the operator explicitly chooses current selection with the reviewed order revision pins. Inspect the actual original business ID in the source; IDs can contain punctuation and use the selected profile limit (the unchanged Unite default is 21 characters).
 
 Every retained source remains downloadable as its complete original XML. Parsed values are additional working structure. Empty optional original fields remain present when the selected DTD permits them.
 
@@ -48,7 +92,7 @@ Every retained source remains downloadable as its complete original XML. Parsed 
 
 The order view shows each original line's ordered, confirmed, cancelled, dispatched and invoiced quantity, together with what remains to confirm, dispatch and invoice. It also exposes the complete source article, original prices, delivery periods, packages, typed serial remarks and selected document references.
 
-A confirmation reports the current line state:
+For the unchanged Unite profile, a confirmation reports the current line state:
 
 - A nonnegative confirmed quantity replaces the previous confirmation for that line.
 - A negative quantity states the current absolute cancelled quantity.

@@ -23,12 +23,12 @@ const equal = (left, right, message) => { if (JSON.stringify(left) !== JSON.stri
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const SOURCE_SCHEMA = 'starforge.wqx-open-waters-bundle.v1';
 const RESULT_SCHEMA = 'starforge.wqx-scientific-job-receiving.v1';
-async function metadata(path) {
+export async function metadata(path) {
   const digest = createHash('sha256'); let bytes = 0;
   for await (const part of createReadStream(path, { highWaterMark: CHUNK_BYTES })) { digest.update(part); bytes += part.length; }
   return { bytes, sha256: digest.digest('hex') };
 }
-async function immutable(path, bytes) {
+export async function immutable(path, bytes) {
   try { await writeBytes(path, bytes, { exclusive: true }); }
   catch (error) {
     if (error.code !== 'EEXIST') throw error;
@@ -39,7 +39,7 @@ async function immutable(path, bytes) {
 async function existing(path) {
   try { return await readPrivateJson(path); } catch (error) { if (error.code === 'ENOENT') return null; throw error; }
 }
-async function stageFile(store, definition, origin, reference, slot, path, token, signal) {
+export async function stageFile(store, definition, origin, reference, slot, path, token, signal) {
   const whole = createHash('sha256'), chunks = []; let bytes = 0;
   for await (const part of createReadStream(path, { highWaterMark: CHUNK_BYTES })) {
     signal.throwIfAborted(); whole.update(part); bytes += part.length; chunks.push(hash(part));
@@ -65,7 +65,7 @@ async function stageFile(store, definition, origin, reference, slot, path, token
   if (status.state !== 'SEALED') fail('The original input was not sealed');
   return { file, id: status.id, chunks: chunks.length, status: status.state };
 }
-async function verifyArchive(path, output, python, kinds, extractionDirectory) {
+export async function verifyArchive(path, output, python, kinds, extractionDirectory) {
   const args = [join(ROOT, 'verify-result.py'), path, '--out', output, '--extraction-directory', extractionDirectory];
   for (const name of kinds) args.push('--extract', name);
   const result = await run(python, args, { maxBuffer: 1048576 });
