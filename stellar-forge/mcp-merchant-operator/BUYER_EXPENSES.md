@@ -174,4 +174,12 @@ The trusted `receive.py` checks the reviewed whole-archive SHA256, complete memb
 
 The received package includes the original Python application, source statement reader, public UI, instructions and consistent workspace database. Opening it needs no repository checkout. It retains captured statement snapshots and accountant history; the original buyer ledger, wallet and signing material remain outside it. No source capture or payment is replayed during receiving. Existing local ledger locators can be rebound through the original source workflow if a later deliberate refresh is required.
 
-The new machine surface should be exercised through the same retained original case before its operating completion is claimed. Its source implementation does not itself establish a new customer acceptance, purchase or accountant signoff.
+## Completed original operating continuation
+
+The 2026-10-12 internal operating journey continued the original D173 Stellar testnet case from revision 15 to 22 through this MCP host, customer SDK and command line. It retained the original statement projection (three journal events and two reservations), with 10,000 settled atomic units and the separate 10,000-unit unsent reservation. The reviewed allocation successor was 8,000 / 2,000; the earlier issued editions remain available.
+
+The capture and period-close responses were deliberately discarded after successful native HTTP headers. Their exact committed results were recovered through the original request IDs, then recovered again after the host restarted. The consistent project export retained seven successful requests. A customer download interrupted after 4,096 bytes resumed those same pinned bytes.
+
+The trusted receiver reopened all 14 native tables and 18 project members with the included Python application. It recovered the same capture and close without changing revision 22, adding a capture, or creating a payment. This was an internal continuation of the existing purchase and operator review.
+
+The retained complete project is 87,394 bytes, SHA256 `9156505408514205f52caa6dcd2b5c57a1b20f79a321b3ff7bdd7a43cd3018bb`. The native workflow ran the reviewed expense source at `dccba68845a93420f409d76ce7f28cb40e02717a`; subsequent shared-host composition preserves the current Redis and source-workspace integrations. All owned services closed on completion.
