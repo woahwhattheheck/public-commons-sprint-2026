@@ -14,7 +14,8 @@ if (forwarded[0] === '--python') {
 }
 if (process.exitCode === undefined) {
   const entry = fileURLToPath(new URL('./cli.py', import.meta.url));
-  const child = spawn(executable, ['-B', entry, ...forwarded], { stdio:'inherit', shell:false });
+  const child = spawn(executable, ['-B', entry, ...forwarded], { stdio:'inherit', shell:false,
+    env:{...process.env,SF47_SUPPORT_NODE:process.env.SF47_SUPPORT_NODE||process.execPath} });
   const forward = signal => { if (!child.killed) child.kill(signal); };
   const sigint = () => forward('SIGINT');
   const sigterm = () => forward('SIGTERM');

@@ -353,9 +353,14 @@ class Billing:
             warnings.append("The source has no billing-period field; the selected month is the operator's explicit import scope.")
         if invoice_status == "provisional":
             warnings.append("Supplier period is provisional; a later export may add charges, refunds or rounding adjustments.")
-        fingerprint = digest(encoded({"file": original_hash, "period": period, "basis": basis, "view": view,
+        identity = {"file": original_hash, "period": period, "basis": basis, "view": view,
             "invoice_status": invoice_status, "invoice_id": text(request.get("invoice_id"), 200),
-            "parts": parts, "date_format": date_format}).encode())
+            "parts": parts, "date_format": date_format}
+        azure_origin = (self.service.azure.billing_origin(request["azure_origin"], data, request)
+                        if "azure_origin" in request else None)
+        if azure_origin is not None:
+            identity["azure_origin"] = azure_origin
+        fingerprint = digest(encoded(identity).encode())
         entity_id = "cost_" + fingerprint[:40]
         previous = self.existing("billing_import", entity_id)
         if previous:
@@ -368,7 +373,8 @@ class Billing:
             "records": self.json_blob({"schema": "commons-bi-cost-input/1", "rows": rows}, entity_id + ".json"),
             "parts": parts, "columns": parts[0]["columns"], "row_count": len(rows),
             "included_rows": len(rows) - excluded, "excluded_rows": excluded,
-            "total": number(total), "warnings": warnings, "imported": now()}, entity_id)
+            "total": number(total), "warnings": warnings, "imported": now(),
+            **({"azure_origin": azure_origin} if azure_origin is not None else {})}, entity_id)
 
     def usage_import(self, request):
         try:

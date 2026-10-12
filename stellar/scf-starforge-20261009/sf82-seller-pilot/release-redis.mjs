@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import { verifyPreparedRedisSeller, compileRedisMerchantPlan } from '../sf30-seller-sdk/redis/prepare.mjs';
 import { readRedisSourceFile } from '../sf30-seller-sdk/redis/config.mjs';
+import { REDIS_CERTIFICATE_FILES } from '../sf30-seller-sdk/redis/connection-profile.mjs';
 import { startRedisSeller, createRedisNativeFactory } from '../sf30-seller-sdk/redis/merchant.mjs';
 
 import { REDIS_SOURCE_SCHEMA } from './release-source-contracts.mjs';
@@ -117,8 +118,13 @@ async function readPreparedRedisRelease(packageDirectory) {
   if (!isDeepStrictEqual(service, compiled.service) || stable(source.bindings) !== stable(compiled.bindings))
     fail('The retained Redis plan, public terms and original query bindings differ. Prepare the merchant again.');
   const hasCa = Object.hasOwn(manifest.files, 'database-ca.pem');
-  if (hasCa !== Boolean(source.connection.caFile) || hasCa && source.connection.caFile !== 'database-ca.pem')
-    fail('Retain the original package-local database CA alongside the Redis source.');
+  const hasSentinelCa = Object.hasOwn(manifest.files, 'sentinel-ca.pem');
+  for (const certificate of REDIS_CERTIFICATE_FILES) {
+    const present = Object.hasOwn(manifest.files, certificate.file);
+    if (present !== Boolean(source.connection[certificate.profile]) ||
+        present && source.connection[certificate.profile] !== certificate.file)
+      fail('Retain the original package-local Redis certificates alongside the source.');
+  }
   const routes = service.routes.map(route => ({ id: route.id, method: route.offer.extensions.bazaar.info.input.method,
     url: route.offer.resource.url, paymentOptions: route.offer.accepts.length }));
   if (manifest.sourceSemantics !== 'live-named-read-commands' || manifest.client !== 'original-sf30' ||
@@ -127,6 +133,8 @@ async function readPreparedRedisRelease(packageDirectory) {
     sourceConfigSha256: manifest.files['source.json'].sha256, planSha256: manifest.files['merchant-plan.json'].sha256,
     queryDefinitionSha256: hash(stable(source.queries)), connectionProfileSha256: hash(stable(source.connection)),
     databaseCaSha256: hasCa ? manifest.files['database-ca.pem'].sha256 : null,
+    ...(source.connection.topology ? {topology:source.connection.topology} : {}),
+    ...(source.connection.topology === 'sentinel' ? {sentinelCaSha256:hasSentinelCa ? manifest.files['sentinel-ca.pem'].sha256 : null} : {}),
     credentialReferences: [...manifest.requiredEnvironment],
     sourceSemantics: manifest.sourceSemantics, queries: declaration.description };
   const redis = { ...content, executionSha256: hash(stable(content)) };

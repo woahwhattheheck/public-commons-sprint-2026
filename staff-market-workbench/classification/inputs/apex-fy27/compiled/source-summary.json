@@ -1,0 +1,30 @@
+{
+  "all_town_authorized_fte": "742.5",
+  "authorized_groups": 38,
+  "department_authorized_fte": {
+    "Fire & Rescue": "122",
+    "Police": "153"
+  },
+  "original_pay_rows_all_town": 318,
+  "public_safety_grades": 27,
+  "public_safety_pay_rows": 47,
+  "rfp_listed_authorized_fte": {
+    "Fire & Rescue": "118",
+    "Police": "120"
+  },
+  "rfp_mapped_pay_rows": 26,
+  "rfp_narrative_counts": {
+    "fire": "112",
+    "sworn_police": "121"
+  },
+  "rfp_position_list_items": 19,
+  "schema": "apex.public-safety-inputs/v1",
+  "scope_notes": [
+    "The RFP's 19 printed position-list bullets map to 26 pay-table rows. Several pay-table rows contain multiple career levels sharing one published grade.",
+    "The FY27 authorization identifies 122 Fire & Rescue and 153 Police FTE. The RFP narrative separately states 112 fire personnel and 121 sworn police officers; its printed position list also includes communications and a civilian investigator.",
+    "Police Chief and Police Sergeant appear in the published authorization but are absent from the RFP's printed covered-position list. Preserve them as context and clarify study coverage through the prime's single Town inquiry.",
+    "The Fire & Rescue pay table includes Emergency Management Coordinator I, II, while the authorization places this position under Administration. It is retained as pay-table context and excluded from the Fire & Rescue authorized-position cohort.",
+    "Police Senior Program Support Specialist has a PT 30 pay-title annotation but 1 FT / 1 FTE in the authorization. The original conflict remains visible in its mapping note.",
+    "The 86-officer, 54-firefighter, 24-captain and 10-telecommunicator buckets do not disclose their allocation among grades. Editable allocations must sum to the original group total before they can become a planning cohort."
+  ]
+}
