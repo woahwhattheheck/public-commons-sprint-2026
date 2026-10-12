@@ -99,3 +99,7 @@ New tables use the `ops_` prefix. Existing planner tables and `budget.py` are un
 Archive receiving validates the operations source set and history, then checks its selected immutable revision against the nested original planning history before a native plan is created. The existing request receipt is checked before the original importer mutates. The original planner owns its complete archive validation and source-byte restoration. A receiving plan gets a new ID; retained business records and original history remain intact.
 
 Aggregate export holds the original mutex and one SQLite read snapshot, borrowing a transaction when one is already active. The original OS lease still governs the single workspace owner. Backup/export, source intake and case reopening use this existing product's lifecycle.
+
+## Operating cash and remaining-work forecasts
+
+The **Operating forecast** tab calculates dated remaining obligations from this same case. It retains original paid allocations, uninvoiced work, conditional grant receipts and selected customer delivery scenarios, then saves the complete reviewed snapshot through the existing case transaction. Reopen saved forecasts or receive them with the complete case archive. See [FORECAST.md](FORECAST.md) for the operating workflow, cash calculations, exact sources and customer/capacity assumptions.
