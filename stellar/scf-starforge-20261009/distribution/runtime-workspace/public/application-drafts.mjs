@@ -200,7 +200,9 @@ export function createApplicationDrafts({
     const contextId = app ? 'application:' + app.id : 'new:' + crypto.randomUUID();
     const original = baseline(app, selectedKind);
     if (!app) original.runtimeId = runtimeId ?? selectedRuntime() ?? getRuntimes().find(value => value.phase === 'READY')?.id ?? '';
-    const retained = restore && app ? owner.entries.get(contextId + '/' + selectedKind) : null;
+    const retained = restore && app ? [...owner.entries.values()]
+      .filter(entry => entry.applicationId === app.id && entry.kind === selectedKind)
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0] : null;
     if (retained) return mount(copy(retained), retained.form, true);
     const meta = newMeta(app, selectedKind, contextId, original), form = copy(original);
     form.kind = selectedKind;
@@ -308,14 +310,33 @@ export function createApplicationDrafts({
     return !!ticket && !!current && ticket.workspaceId === current.workspaceId && ticket.id === current.id &&
       ticket.baseRevision === current.baseRevision && same(ticket.form, readForm());
   }
-  function saved(ticket) {
+  function saved(ticket, result) {
     if (!ticket) return false;
     if (current) capture();
-    const value = cache(ticket.workspaceId), retained = value?.entries.get(ticket.id);
-    if (retained && retained.baseRevision === ticket.baseRevision && same(retained.form, ticket.form)) {
-      value.entries.delete(ticket.id); if (value.active === ticket.id) value.active = null; persist(value);
+    const selected = matches(ticket), value = cache(ticket.workspaceId);
+    const accepted = result && string(result.applicationId) && string(result.revision) &&
+      (!ticket.applicationId || result.applicationId === ticket.applicationId);
+    const submitted = accepted ? { id: result.applicationId, revision: result.revision,
+      label: ticket.form.label, runtimeId: ticket.form.runtimeId, kind: ticket.kind } : null;
+    for (const [id, retained] of value?.entries ?? []) {
+      if (retained.contextId !== ticket.contextId || retained.applicationId !== ticket.applicationId ||
+          retained.baseRevision !== ticket.baseRevision) continue;
+      if (id === ticket.id && same(retained.form, ticket.form)) {
+        value.entries.delete(id); if (value.active === id) value.active = null;
+      } else if (submitted) {
+        // The returned native revision belongs to this save. Later typed fields
+        // continue the same application, including its first successful save.
+        const next = { ...copy(retained), applicationId: submitted.id, baseRevision: submitted.revision,
+          baseline: retained.kind === ticket.kind ? copy(ticket.form) : { ...copy(retained.baseline),
+            label: submitted.label, runtimeId: submitted.runtimeId, kind: submitted.kind } };
+        value.entries.set(id, next);
+        if (current?.workspaceId === ticket.workspaceId && current.id === id &&
+            current.baseRevision === ticket.baseRevision) {
+          current = copy(next); onContext(submitted.id, { select: false }); onChange();
+        }
+      }
     }
-    const selected = matches(ticket);
+    persist(value);
     if (selected) {
       current = null; label.value = ''; onContext(null);
     }

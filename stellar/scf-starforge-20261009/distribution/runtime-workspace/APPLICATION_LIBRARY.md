@@ -80,11 +80,18 @@ Select **Review application** to inspect the original command, runtime, input
 locations and managed release. Saving uses the exact returned review and original
 application identity. If the form changes while review is running, review the
 current fields again. If newer typing arrives while the save is completing, the
-saved result and the newer draft both remain available.
+saved result and the newer draft both remain available. The native returned
+revision attaches those later fields to the same saved application, including
+its first save. Starting a separate new setup keeps that setup's own context.
+A later save or recovered response also preserves any newer application or
+history selection.
 
 The existing **Recover last application request** resumes a missing save/start
 response with its original request ID and body. A recovered save clears only the
-matching setup snapshot. A later draft is retained. The existing server's explicit
+matching setup snapshot. A later draft is retained. Save and Start require the
+original request to be retained successfully in this tab before dispatch. If
+browser storage is unavailable, the reviewed action remains available for retry.
+The existing server's explicit
 pre-write revision, running-application and changed-input rejections retain their
 returned outcome and reopen setup for a new review.
 
