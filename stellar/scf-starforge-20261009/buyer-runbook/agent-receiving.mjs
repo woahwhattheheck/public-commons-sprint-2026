@@ -42,18 +42,6 @@ const at=(root,path)=>import(pathToFileURL(join(root,path)).href);
 export async function receiveBuyerAgentManagedApplication(config,{onProgress=()=>{}}={}){
  let originalAgentRecord=null;
  const root=join(config.receptionDirectory,'agent'),journalPath=join(root,'agent-reception.json');
- const completed=await json(journalPath);
- if(completed?.completedAt){
-  const native=await json(join(config.receptionDirectory,'buyer-managed-reception.json'));
-  requireValue(completed.identity.sourceCommit===config.expectedSourceCommit&&completed.identity.manifestSha256===config.expectedManifest&&
-   native?.completedAt===completed.originalCompletedAt&&native.originalResult?.nativeResultSha256===completed.passes.reopen.nativeResultSha256,
-   'BUYER_AGENT_RECEIVING_COMPLETED_SELECTION_CHANGED');
-  const destination=completed.passes.reopen.delivery.directory;
-  const manifest=await json(join(destination,'buyer-agent-export.json'));
-  requireValue(manifest&&hash(encode(manifest))===completed.passes.reopen.delivery.manifestSha256,'BUYER_AGENT_RECEIVING_DELIVERY_CHANGED');
-  for(const file of manifest.files)requireValue(hash(await readFile(join(destination,file.name)))===file.sha256,'BUYER_AGENT_RECEIVING_DELIVERY_CHANGED');
-  return completed;
- }
  const sessions=new Set();
  const openWorkspaceClient=async context=>{
   const {api,announcement,pass,installed,original,journal:buyer,selection}=context;
@@ -220,11 +208,49 @@ export async function receiveBuyerAgentManagedApplication(config,{onProgress=()=
  };
  try{
   const result=await receiveBuyerManagedApplication(config,{onProgress,openWorkspaceClient});
-  requireValue(originalAgentRecord&&originalAgentRecord.passes['first-open']?.receivedAt&&originalAgentRecord.passes.reopen?.receivedAt,
+  // The original driver's completed path still verifies the installed edition,
+  // all complete inputs and the exact retained selection. Its completed return
+  // may precede this wrapper's final save after a crash, so reopen our same record.
+  originalAgentRecord=await json(journalPath);
+  const first=originalAgentRecord?.passes?.['first-open'],reopened=originalAgentRecord?.passes?.reopen;
+  requireValue(result.completedAt&&first?.receivedAt&&reopened?.receivedAt,
    'BUYER_AGENT_RECEIVING_ORIGINAL_PASSES_REQUIRED');
-  requireValue(originalAgentRecord.passes['first-open'].instanceId!==originalAgentRecord.passes.reopen.instanceId&&
-   originalAgentRecord.passes['first-open'].nativeResultSha256===originalAgentRecord.passes.reopen.nativeResultSha256&&
-   originalAgentRecord.passes.reopen.delivery.resumed===true,'BUYER_AGENT_RECEIVING_REOPEN_CHANGED');
+  const originalFirst=result.passes.find(pass=>pass.name==='first-open'),originalReopen=result.passes.find(pass=>pass.name==='reopen');
+  const identity={schema:SCHEMA,sourceCommit:result.selection.sourceCommit,manifestSha256:result.selection.sourceManifestSha256,
+   nativeDirectory:result.selection.buyerDirectory,nativeApplication:result.applicationId,
+   selectionSha256:originalFirst?.observed?.selectionSha256,sdkManifestSha256:config.expectedSDKManifestSha256,
+   handoffSha256:result.selection.inputs.handoff.sha256,customerSha256:result.selection.inputs.customer.sha256};
+  requireValue(originalAgentRecord.schema===SCHEMA&&isDeepStrictEqual(originalAgentRecord.identity,identity)&&
+   originalFirst?.stoppedAt&&originalReopen?.stoppedAt&&
+   first.instanceId===originalFirst.observed.instanceId&&reopened.instanceId===originalReopen.observed.instanceId&&
+   first.selectionSha256===identity.selectionSha256&&reopened.selectionSha256===identity.selectionSha256&&
+   first.instanceId!==reopened.instanceId&&first.nativeResultSha256===result.originalResult.nativeResultSha256&&
+   reopened.nativeResultSha256===result.originalResult.nativeResultSha256&&reopened.delivery?.resumed===true,
+   'BUYER_AGENT_RECEIVING_REOPEN_CHANGED');
+  const destination=join(root,'complete-delivery');
+  requireValue(first.delivery?.state==='COMPLETE'&&reopened.delivery.state==='COMPLETE'&&
+   first.delivery.directory===destination&&reopened.delivery.directory===destination&&
+   first.delivery.exportId===originalAgentRecord.exportId&&reopened.delivery.exportId===originalAgentRecord.exportId&&
+   first.delivery.manifestSha256===reopened.delivery.manifestSha256,
+   'BUYER_AGENT_RECEIVING_DELIVERY_CHANGED');
+  const manifestBytes=await readFile(join(destination,'buyer-agent-export.json')),manifest=JSON.parse(manifestBytes);
+  requireValue(hash(manifestBytes)===reopened.delivery.manifestSha256&&manifest.schema==='stellar-forge.buyer-runbook.agent-export.v1'&&
+   manifest.exportId===originalAgentRecord.exportId&&manifest.directory===identity.nativeDirectory&&
+   manifest.selectionSha256===identity.selectionSha256&&Array.isArray(manifest.files)&&manifest.files.length===10&&
+   first.delivery.files===10&&reopened.delivery.files===10,'BUYER_AGENT_RECEIVING_DELIVERY_CHANGED');
+  const names=new Set();
+  for(const file of manifest.files){
+   requireValue(typeof file.name==='string'&&/^[0-9]{3}-[A-Za-z0-9_.-]{1,250}$/.test(file.name)&&!names.has(file.name)&&
+    Number.isSafeInteger(file.bytes)&&file.bytes>=0&&/^[a-f0-9]{64}$/.test(file.sha256??''),'BUYER_AGENT_RECEIVING_DELIVERY_CHANGED');
+   names.add(file.name);const bytes=await readFile(join(destination,file.name));
+   requireValue(bytes.length===file.bytes&&hash(bytes)===file.sha256,'BUYER_AGENT_RECEIVING_DELIVERY_CHANGED');
+  }
+  requireValue(manifest.files.reduce((sum,file)=>sum+file.bytes,0)===reopened.delivery.bytes&&
+   first.delivery.bytes===reopened.delivery.bytes,'BUYER_AGENT_RECEIVING_DELIVERY_CHANGED');
+  if(originalAgentRecord.completedAt){
+   requireValue(originalAgentRecord.originalCompletedAt===result.completedAt,'BUYER_AGENT_RECEIVING_COMPLETED_SELECTION_CHANGED');
+   return originalAgentRecord;
+  }
   originalAgentRecord.completedAt=new Date().toISOString();originalAgentRecord.originalCompletedAt=result.completedAt;
   await replace(journalPath,encode(originalAgentRecord));return originalAgentRecord;
  }finally{
