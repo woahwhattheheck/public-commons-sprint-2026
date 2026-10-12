@@ -1,0 +1,21 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "release-delivery-console",
+  "description": "Direct release-store delivery console, foreground controls and complete receiving",
+  "commands": {
+    "release-delivery": "stellar/scf-starforge-20261009/sf82-seller-pilot/release-delivery-cli.mjs"
+  },
+  "commandDescriptions": {
+    "release-delivery": "Operate original settlement destinations, capture exchanges, resume verified downloads and receive them"
+  },
+  "exports": {
+    "./seller/releases/delivery/console": "./source/stellar/scf-starforge-20261009/sf82-seller-pilot/release-delivery-console.mjs",
+    "./seller/releases/delivery/cli": "./source/stellar/scf-starforge-20261009/sf82-seller-pilot/release-delivery-cli.mjs"
+  },
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/sf82-seller-pilot/release-console.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf82-seller-pilot/release-ui/browser-assets.json"
+    }
+  ]
+}

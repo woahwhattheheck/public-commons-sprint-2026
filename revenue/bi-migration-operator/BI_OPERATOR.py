@@ -20,6 +20,7 @@ def main():
     action.add_argument("request", help="JSON request file, or - for stdin; use a stable operation_id for replay")
     commands.add_parser("state", help="Read current migration and support state")
     commands.add_parser("billing-example", help="Load the complete authored 12-agency cost allocation example")
+    commands.add_parser("tourism-example", help="Open the actual Overland Park collections and budget example for review")
     recover = commands.add_parser("restore", help="Authenticate and restore an encrypted workspace to a new path")
     recover.add_argument("backup")
     recover.add_argument("destination")
@@ -47,6 +48,9 @@ def main():
                 elif args.command == "billing-example":
                     from bi_operator.billing_example import load_billing_example
                     result = load_billing_example(service)
+                elif args.command == "tourism-example":
+                    from bi_operator.tourism_example import load_tourism_example
+                    result = load_tourism_example(service)
                 elif args.command == "state":
                     result = service.state()
                 elif args.command == "backup":

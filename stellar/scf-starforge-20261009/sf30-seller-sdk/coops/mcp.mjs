@@ -141,6 +141,7 @@ function selectionKey(input) {
     if(file!==undefined)throw fail('INVALID_PARAMS','Original source reads select a page, not a customer filename.');
     return kind+':'+id+':'+(page ?? 0)+':body';
   }
+  if(kind==='mapping-source'){checked(id,/^mapping-[0-9a-f]{24}$/,'saved mapping identity');integer(page,1);if(file!==undefined)throw fail('INVALID_PARAMS','Mapping source reads select an exact revision.');return kind+':'+id+':'+page+':body';}
   if(kind==='export'){
     checked(id,EXPORT_ID,'retained export identity');
     if(page!==undefined||file!==undefined)throw fail('INVALID_PARAMS','An export read selects its original export identity only.');
@@ -256,6 +257,13 @@ export class MerchantCoopsWorkspaces {
       });
       return {ok:true,httpStatus:200,native:{kind,id,edition:kind==='source'?captured:null,capture:kind==='capture-source'?captured:null,files}};
     }
+    if(kind==='mapping-source'){
+      checked(id,/^mapping-[0-9a-f]{24}$/,'saved mapping identity');
+      const response=await this.#view(session);if(!response.ok)return response;
+      const mapping=response.native.mappings.find(m=>m.id===id);if(!mapping)return{ok:false,httpStatus:404,native:{error:'COOPS_MAPPING_MISSING'}};
+      const files=[mapping,...(mapping.history??[])].filter(m=>m.sourceFile).map(m=>({...metadata({name:'coops-mapping-source-'+m.sourceFile.sha256+'.json',type:'application/json; charset=utf-8',bytes:m.sourceFile.bytes,sha256:m.sourceFile.sha256},{kind,id,page:m.revision}),source:structuredClone(m.sourceFile),mappingRevision:m.revision}));
+      return{ok:true,httpStatus:200,native:{kind,id,mapping,files}};
+    }
     if(kind==='export')checked(id,EXPORT_ID,'retained export identity');
     else if(kind==='receipt')checked(id,RECEIPT_ID,'customer receipt identity');
     else throw fail('INVALID_PARAMS','Choose source, export or receipt.');
@@ -283,7 +291,7 @@ export class MerchantCoopsWorkspaces {
     if(input.expectedSha256!==undefined&&input.expectedSha256!==selection.sha256)
       throw fail('COOPS_MCP_FILE_CHANGED','The selected original file differs from the requested SHA256.');
     const route=input.kind==='source'?'/api/raw?editionId='+input.id+'&page='+(input.page ?? 0):input.kind==='capture-source'?'/api/capture-source?captureId='+input.id+'&page='+(input.page ?? 0):
-      input.kind==='export'?'/api/exports/'+input.id:'/api/receipts/'+input.id+'/'+input.file;
+      input.kind==='mapping-source'?'/api/mapping-source?mappingId='+input.id+'&revision='+input.page:input.kind==='export'?'/api/exports/'+input.id:'/api/receipts/'+input.id+'/'+input.file;
     const directory=await this.#directory(workspace);
     return this.#reads.read({scope,key,kind:'coops-'+input.kind,directory,
       expectedSha256:selection.sha256,offset:input.offset ?? 0,limit:input.limit ?? 65536,
@@ -317,6 +325,9 @@ export class MerchantCoopsWorkspaces {
     }
     const session=await this.#session(definition);
     if(name==='merchant_coops_schema')return this.#wrap(workspace,definition,{ok:true,httpStatus:200,native:session.schema});
+    if(name==='merchant_coops_mapping_file')return this.#wrap(workspace,definition,await this.#request(session,'/api/mapping-file',{body:input}));
+    if(name==='merchant_coops_study_preview')return this.#wrap(workspace,definition,await this.#request(session,'/api/study-preview',{body:input}));
+    if(name==='merchant_coops_study_rows')return this.#wrap(workspace,definition,await this.#request(session,'/api/study-rows?'+new URLSearchParams(Object.entries(input).map(([k,v])=>[k,String(v)]))));
     if(name==='merchant_coops_view')return this.#wrap(workspace,definition,await this.#view(session));
     if(name==='merchant_coops_operation')return this.#wrap(workspace,definition,await this.#request(session,'/api/operation?operationId='+encodeURIComponent(input.operationId)));
     if(name==='merchant_coops_edition')return this.#wrap(workspace,definition,await this.#edition(session,input.editionId));
@@ -375,7 +386,7 @@ export class MerchantCoopsWorkspaces {
       body={...request,payload:{...nativePayload,bundle:new TextDecoder('utf-8',{fatal:true}).decode(bytes)}};
       selectedSource={alias:sourcePackage,label:selected.label,sha256:selected.sha256,bytes:bytes.length};
     }
-    if(Buffer.byteLength(JSON.stringify(body))>(actionId==='capture.import'?MAX_IMPORT:128*1024))
+    if(Buffer.byteLength(JSON.stringify(body))>(actionId==='capture.import'?MAX_IMPORT:actionId==='study.return.chunk'?2*1024*1024:actionId==='mapping.save'?512*1024:128*1024))
       throw fail('INVALID_PARAMS','The original action exceeds its declared request size.');
     try{
       const response=await this.#request(session,'/api/action',{body});

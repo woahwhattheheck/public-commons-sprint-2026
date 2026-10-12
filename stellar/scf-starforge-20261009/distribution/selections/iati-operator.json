@@ -1,0 +1,84 @@
+{
+  "schema": "stellar-forge.distribution-source-selection.v1",
+  "id": "iati-operator",
+  "title": "IATI aid-finance operator",
+  "description": "Original IATI publisher sources, native XML editions, reviewed aid-finance portfolios, complete customer handovers and managed Applications.",
+  "base": {
+    "commands": [
+      "installation",
+      "runtime-profile",
+      "runtime-install",
+      "runtime-workspace",
+      "runtime-transfer"
+    ],
+    "exports": [
+      "./runtime-profile",
+      "./installation",
+      "./installation/cli",
+      "./installation/product",
+      "./installation/runtime",
+      "./runtime-install",
+      "./runtime-transfer",
+      "./runtime-workspace",
+      "./runtime-workspace/server",
+      "./merchant/mcp/source-workspaces",
+      "./package.json",
+      "./manifest.json"
+    ],
+    "features": [],
+    "applicationProviders": [],
+    "merchantProviders": [],
+    "browserAssets": []
+  },
+  "contributions": [
+    "iati",
+    "merchant-provider-source-workspaces"
+  ],
+  "components": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/iati",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/xml",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/public",
+    "stellar/scf-starforge-20261009/distribution/python-runtime",
+    "stellar/scf-starforge-20261009/sf46-release"
+  ],
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/distribution/build.mjs",
+    "stellar/scf-starforge-20261009/distribution/git-object-receiving.py",
+    "stellar/scf-starforge-20261009/distribution/runtime-unpack.py",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/worker.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-terminal.py",
+    "stellar/scf-starforge-20261009/distribution/BUILDING.md",
+    "stellar/scf-starforge-20261009/distribution/GIT_OBJECT_RECEIVING.md",
+    "stellar/scf-starforge-20261009/distribution/SOURCE_SELECTIONS.md",
+    "stellar/scf-starforge-20261009/distribution/RUNTIME_INSTALL.md",
+    "stellar/scf-starforge-20261009/distribution/RUNTIME_TRANSFER.md",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/README.md",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/APPLICATIONS.md",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/APPLICATION_PROVIDERS.md",
+    "stellar-forge/mcp-merchant-operator/SOURCE_WORKSPACES.md",
+    "stellar-forge/mcp-paid-agent/http-tools.mjs",
+    "stellar/scf-starforge-20261009/merchant-fleet-gateway/state-lease.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/service.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/upstream-service.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/application.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/upstreams.json",
+    "stellar/scf-starforge-20261009/sf43-agent-commerce/mcp-buyer-acceptance.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/managed-command.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/package.json",
+    "stellar/scf-starforge-20261009/sf99-merchant-deploy/container-image/runtime.mjs",
+    "stellar/scf-starforge-20261009/sf86-rpc-transfer-reconcile/networks.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/index.html",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/browser.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/request.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/style.css",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-runtime.mjs"
+  ],
+  "product": {
+    "schema": "stellar-forge.merchant-product-package.v1",
+    "description": "IATI publisher sources and reviewed aid-finance portfolios in the original Starforge operator.",
+    "readme": "stellar/scf-starforge-20261009/distribution/selections/IATI_OPERATOR.md"
+  },
+  "excludeFiles": [
+    "stellar/scf-starforge-20261009/distribution/index.mjs"
+  ]
+}

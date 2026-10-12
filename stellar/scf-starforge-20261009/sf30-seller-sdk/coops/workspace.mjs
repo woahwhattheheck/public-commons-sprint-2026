@@ -19,7 +19,7 @@ export async function startCoopsWorkspace({directory,inboxDirectory,port=0,relea
   if(expectedWorkspaceId!==undefined&&app.schema().workspaceId!==expectedWorkspaceId){
     await app.close();throw fault('COOPS_WORKSPACE_IDENTITY_CHANGED','Reopen the originally selected workspace.',409);
   }
-  let files;try{files=await Promise.all(['index.html','app.js','style.css'].map(p=>readFile(new URL('./web/'+p,import.meta.url))));}
+  let files;try{files=await Promise.all(['index.html','app.js','style.css','study.js'].map(p=>readFile(new URL('./web/'+p,import.meta.url))));}
   catch(e){await app.close();throw e;}
   const token=randomBytes(32).toString('base64url'),authorization=Buffer.from('Bearer '+token);
   let origin,closing=false;const downloads=new Map();
@@ -36,6 +36,7 @@ export async function startCoopsWorkspace({directory,inboxDirectory,port=0,relea
       if(req.method==='GET'&&req.url==='/')return reply(200,files[0],'text/html; charset=utf-8');
       if(req.method==='GET'&&req.url==='/workspace.js')return reply(200,files[1],'text/javascript; charset=utf-8');
       if(req.method==='GET'&&req.url==='/workspace.css')return reply(200,files[2],'text/css; charset=utf-8');
+      if(req.method==='GET'&&req.url==='/study.js')return reply(200,files[3],'text/javascript; charset=utf-8');
       const downloadMatch=/^\/api\/download\/([a-f0-9]{48})$/.exec(req.url??'');
       if(req.method==='GET'&&downloadMatch){
         const ticket=downloads.get(downloadMatch[1]);downloads.delete(downloadMatch[1]);
@@ -58,6 +59,8 @@ export async function startCoopsWorkspace({directory,inboxDirectory,port=0,relea
           if(!Number.isInteger(limit)||limit<1||limit>500)throw fault('COOPS_ROWS_RANGE','Display from one to 500 rows per page.');
           return reply(200,await app.rows(url.searchParams.get('editionId'),{offset,limit,table:url.searchParams.get('table')??'observations',beginDate:url.searchParams.get('beginDate')??undefined,endDate:url.searchParams.get('endDate')??undefined,products:url.searchParams.has('products')?url.searchParams.get('products').split(','):undefined}));
         }
+        if(url.pathname==='/api/study-rows')return reply(200,await app.studyRows(url.searchParams.get('studyId'),url.searchParams.has('revision')?Number(url.searchParams.get('revision')):undefined,{offset:Number(url.searchParams.get('offset')??0),limit:Number(url.searchParams.get('limit')??100)}));
+        if(url.pathname==='/api/mapping-source')return deliver(await app.mappingRaw(url.searchParams.get('mappingId'),url.searchParams.has('revision')?Number(url.searchParams.get('revision')):undefined),res,reply);
         if(url.pathname==='/api/capture-source'){
           const selected=await app.captureRaw(url.searchParams.get('captureId'),Number(url.searchParams.get('page')??0));return reply(200,selected.bytes,selected.type,{'content-disposition':'attachment; filename="coops-source-'+selected.receipt.sha256.slice(0,12)+'.response"'});
         }
@@ -75,10 +78,16 @@ export async function startCoopsWorkspace({directory,inboxDirectory,port=0,relea
           return deliver(selected,res,reply);
         }
       }
+      if(req.method==='POST'&&['/api/mapping-file','/api/study-preview'].includes(url.pathname)&&!url.search){
+        if(!/^application\/json(?:; *charset=utf-8)?$/i.test(req.headers['content-type']??''))return reply(415,{error:'JSON_REQUIRED'});
+        let count=0;const parts=[];for await(const part of req){count+=part.length;if(count>128*1024)return reply(413,{error:'MAPPING_FILE_TOO_LARGE'});parts.push(part);}
+        let value;try{value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(parts)));}catch{return reply(400,{error:'INVALID_JSON'});}
+        return reply(200,url.pathname==='/api/study-preview'?await app.studyPreview(value):app.inspectMappingFile(value));
+      }
       if(req.method==='POST'&&url.pathname==='/api/download-ticket'&&!url.search){
         let bytes=0,parts=[];for await(const part of req){bytes+=part.length;if(bytes>8192)return reply(413,{error:'DOWNLOAD_SELECTION_TOO_LARGE'});parts.push(part);}
         let selector;try{selector=JSON.parse(Buffer.concat(parts).toString('utf8'));}catch{return reply(400,{error:'INVALID_JSON'});}
-        if(!selector||typeof selector!=='object'||Array.isArray(selector)||Object.keys(selector).some(k=>!['kind','id','page','file'].includes(k))||!['source','capture-source','export','receipt'].includes(selector.kind)||typeof selector.id!=='string')throw fault('COOPS_DOWNLOAD_SELECTION','Choose an original retained file.');
+        if(!selector||typeof selector!=='object'||Array.isArray(selector)||Object.keys(selector).some(k=>!['kind','id','page','file'].includes(k))||!['source','capture-source','mapping-source','export','receipt'].includes(selector.kind)||typeof selector.id!=='string')throw fault('COOPS_DOWNLOAD_SELECTION','Choose an original retained file.');
         await fileSelection(selector);
         for(const [id,ticket]of downloads)if(ticket.expiresAt<Date.now())downloads.delete(id);
         if(downloads.size>=100)throw fault('COOPS_DOWNLOAD_CAPACITY','Finish or let existing download preparations expire.',429);
@@ -95,7 +104,7 @@ export async function startCoopsWorkspace({directory,inboxDirectory,port=0,relea
       if(!request||typeof request!=='object'||Array.isArray(request)||
         Object.keys(request).some(k=>!['action','payload','expectedRevision','operationId'].includes(k)))
         return reply(400,{error:'ACTION_FIELDS_REQUIRED'});
-      if(request.action!=='capture.import'&&size>128*1024)return reply(413,{error:'ACTION_TOO_LARGE'});
+      if(request.action!=='capture.import'&&size>(request.action==='study.return.chunk'?2*1024*1024:request.action==='mapping.save'?512*1024:128*1024))return reply(413,{error:'ACTION_TOO_LARGE'});
       return reply(200,await app.action(request));
     }catch(error){
       const known=typeof error.code==='string'&&(/^(COOPS_|STELLAR_|DATASET_|SOCRATA_|SELLER_|RELEASE_)/.test(error.code)||error.code==='INVALID_DATASET_QUERY');
@@ -110,6 +119,7 @@ export async function startCoopsWorkspace({directory,inboxDirectory,port=0,relea
   async function fileSelection(selector){
     if(selector.kind==='export')return app.exported(selector.id);
     if(selector.kind==='receipt')return app.received(selector.id,selector.file);
+    if(selector.kind==='mapping-source'){if(!Number.isSafeInteger(selector.page)||selector.page<1)throw fault('COOPS_MAPPING_SOURCE','Choose an exact saved mapping revision.');return app.mappingRaw(selector.id,selector.page);}
     const value=selector.kind==='capture-source'?await app.captureRaw(selector.id,Number(selector.page)):await app.raw(selector.id,Number(selector.page));
     return{...value,item:{name:'coops-source-'+value.receipt.sha256+'.response',type:value.type,bytes:value.bytes.length}};
   }

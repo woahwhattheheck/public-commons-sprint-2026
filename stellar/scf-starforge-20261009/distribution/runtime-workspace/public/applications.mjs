@@ -25,6 +25,14 @@ function facts(rows) {
   }
   return node;
 }
+function providerReviewRows(value) {
+  if (!value) return [];
+  return [
+    ['Selected provider', value.id + ' · ' + value.kind],
+    ['Provider source', value.path],
+    ['Reviewed provider SHA-256', value.sha256],
+  ];
+}
 function mppReviewRows(command) {
   const workspace = command?.mppBinding;
   if (!workspace) return [];
@@ -366,6 +374,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       else if (node.value !== '') values[item.name] = item.type === 'port' ? Number(node.value) : node.value.trim();
     }
     return { runtimeId: runtime.value, kind: kind.value, label: label.value.trim(), settings: values,
+      ...(currentType()?.providerId ? { providerId: currentType().providerId } : {}),
       applicationId: editingId, expectedRevision: drafts.baseRevision() };
   }
   function edit(app, options = {}) {
@@ -408,6 +417,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
           reviewed.command.pythonCommand.argv.map(value => JSON.stringify(value)).join(' ') :
           'starforge ' + reviewed.command.command + ' ' + reviewed.command.args.map(value => JSON.stringify(value)).join(' ')],
         ['Runtime', reviewed.runtime.directory], ['Source commit', reviewed.runtime.sourceCommit],
+        ...providerReviewRows(reviewed.applicationProvider),
         ['Managed home', reviewed.homeDirectory], ['Connection', reviewed.releaseId ? 'Existing original release ' + reviewed.releaseId : 'Adopt this original ready runtime'],
         ['Input', reviewed.command.terminal ? 'Connected original terminal, explicit operator responses' : 'Original application output'],
         ['Environment file', reviewed.settings.environmentFile ?? 'Inherited operator environment'],
@@ -458,6 +468,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
         reviewed.command.pythonCommand.argv.map(value => JSON.stringify(value)).join(' ') :
         reviewed.command.command + ' ' + reviewed.command.args.map(value => JSON.stringify(value)).join(' ')],
       ['Release', reviewed.releaseId], ['Source', reviewed.runtime.sourceCommit],
+      ...providerReviewRows(reviewed.applicationProvider),
       ['Inputs', reviewed.command.inputs.map(item => item.path).join('\n')],
       ['Terminal', reviewed.command.terminal ? 'Explicit operator input through the original controlling terminal' : 'Retained original output'],
       ...mppReviewRows(reviewed.command),
@@ -479,6 +490,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       ['Release', app.release?.id ?? 'Original runtime connection pending'], ['Managed home', app.homeDirectory],
       ['Runtime connection', app.release ? 'CONNECTED' : app.adoption?.phase ?? 'PENDING'],
       ['Application revision', app.revision], ['Current operation', app.current?.id ?? 'No launch yet'],
+      ...(app.current?.applicationProvider ? [['Run provider', app.current.applicationProvider.id + ' · ' + app.current.applicationProvider.sha256]] : []),
     ]));
     if (!app.release && app.adoption?.state?.error?.message)
       details.append(element('p', app.adoption.state.error.message, 'note'));

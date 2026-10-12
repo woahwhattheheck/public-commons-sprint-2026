@@ -33,12 +33,15 @@ const TYPES = Object.freeze({
   'clinical-trials.css': 'text/css; charset=utf-8',
   'source-bundles.js': 'text/javascript; charset=utf-8',
   'source-inspection.js': 'text/javascript; charset=utf-8',
+  'citation-review.js': 'text/javascript; charset=utf-8',
+  'citation-review.css': 'text/css; charset=utf-8',
   'source-bundles.css': 'text/css; charset=utf-8',
 });
 const MAX_SOURCE_BUNDLE_BODY = 128 * 1024 * 1024 + 65536; // A 64 MiB bundle inside the rawText JSON string.
 const MAX_RESEARCH_BODY = 96 * 1024 * 1024 + 65536; // 16 MiB raw UTF-8, worst-case JSON escaping plus envelope.
 const MAX_PORTABLE_BODY = 256 * 1024 * 1024 + 65536; // Engine caps the serialized portable record at 256 MiB.
 const MAX_CONTROL_BODY = 1024 * 1024;
+const MAX_CITATION_REVIEW_BODY = 16 * 1024 * 1024;
 const jsonBytes = value => Buffer.from(JSON.stringify(value) + '\n');
 const fail = code => { throw Object.assign(new Error(code), {code}); };
 const requireValue = (condition, code) => { if (!condition) fail(code); };
@@ -123,7 +126,7 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
   const store = await openDossierStore(directory, {providers});
   const workspaceId = researchWorkspaceId(store.directory), instanceId = randomUUID();
   const api = {schema:RESEARCH_WORKSPACE_API,metadata:true,revisionPages:true,streamedPortable:true,sourceBundles:true,sourceInspection:true,
-    savedCrossrefOperations:crossrefSource!==null,originalObjectInputs:objectStateDirectory!==null};
+    citationUpdateReview:true,citationReviewRequestLimit:MAX_CITATION_REVIEW_BODY,revisionReports:true,savedCrossrefOperations:crossrefSource!==null,originalObjectInputs:objectStateDirectory!==null};
   await store.list();
   const unstructured = await openUnstructuredWorkspace({dossiers:store,...(documentSource ?? {})});
   if (unstructured.provider) {
@@ -315,6 +318,13 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
           send(200,original.bytes,original.contentType,original.filename); return;
         }
       }
+      if(req.method==='GET'&&action==='citation-updates'){
+        send(200,await store.citationUpdates(id,{
+          revision:url.searchParams.has('revision')?revisionQuery(url.searchParams.get('revision')):undefined,
+          noticeId:url.searchParams.get('noticeId')??undefined,status:url.searchParams.get('status')??'all',
+          offset:url.searchParams.has('offset')?revisionQuery(url.searchParams.get('offset')):0,
+          limit:url.searchParams.has('limit')?revisionQuery(url.searchParams.get('limit')):30}));return;
+      }
       if (req.method === 'GET' && action === 'crossref/operations') {
         requireValue(crossref !== null, 'CROSSREF_WORKSPACE_NOT_CONFIGURED');
         send(200, await crossref.list(id, {after:url.searchParams.get('after')??'',
@@ -347,15 +357,16 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       }
       if (req.method === 'GET' && action === 'export') {
         const format = url.searchParams.get('format');
+        const selectedRevision=url.searchParams.has('revision')?revisionQuery(url.searchParams.get('revision')):undefined;
         requireValue(['json', 'json.gz', 'md', 'html'].includes(format), 'EXPORT_FORMAT_INVALID');
         if (format === 'json' || format === 'json.gz') {
-          const result = await store.exportStream(id, {compression: format === 'json.gz' ? 'gzip' : 'none'});
+          const result = await store.exportStream(id, {compression: format === 'json.gz' ? 'gzip' : 'none',revision:selectedRevision});
           res.writeHead(200, {...headers, 'Content-Type': result.contentType,
             'X-Research-Dossier-Revision':String(result.revision),
             'Content-Disposition': 'attachment; filename="' + safeFilename(result.filename) + '"'});
           await pipeline(result.body, res); return;
         }
-        const result = await store.exportDossier(id, {format});
+        const result = await store.exportDossier(id, {format,revision:selectedRevision});
         requireValue(typeof result.body === 'string' || result.body instanceof Uint8Array, 'EXPORT_BODY_INVALID');
         const type = {'json': 'application/json; charset=utf-8', md: 'text/markdown; charset=utf-8',
           html: 'text/html; charset=utf-8'}[format];
@@ -363,7 +374,8 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
         send(200, Buffer.from(result.body), type, result.filename); return;
       }
       if (req.method !== 'POST') {send(405, {error: 'METHOD_NOT_ALLOWED'}); return;}
-      const data = await readJson(req, action === 'pipelines/prepare' ? PIPELINE_UPLOAD_BODY_BYTES :
+      const data = await readJson(req, action === 'citation-updates/reviews' ? MAX_CITATION_REVIEW_BODY :
+        action === 'pipelines/prepare' ? PIPELINE_UPLOAD_BODY_BYTES :
         ['source-bundles/preview', 'source-bundles/receive'].includes(action) ? MAX_SOURCE_BUNDLE_BODY :
         ['receive', 'reference'].includes(action) ? MAX_RESEARCH_BODY : MAX_CONTROL_BODY);
       if(action==='pipelines/objects/review'||action==='pipelines/objects/prepare') {
@@ -410,7 +422,9 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
         send(200,original.bytes,original.contentType,original.filename); return;
       }
       if (action === 'pipelines/receive') {
-        send(200,await pipelines.receive(id,data)); return;
+        const received=await pipelines.receive(id,data);
+        send(200,projection==='metadata'?{...received,
+          dossier:researchSummary(await store.getMetadata(id,{revision:received.dossier.revision}))}:received); return;
       }
       if (action === 'unstructured/review') {
         send(200, await unstructured.review(id, data.selection)); return;
@@ -425,8 +439,13 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
         send(200, result.bytes, result.contentType, result.filename); return;
       }
       if (action === 'unstructured/receive') {
-        send(200, await unstructured.receive(id, selectedFields(data,
-          ['selection','expectedEditionSha256','questionId','label','expectedRevision']))); return;
+        const received=await unstructured.receive(id, selectedFields(data,
+          ['selection','expectedEditionSha256','questionId','label','expectedRevision']));
+        send(200,projection==='metadata'?{...received,
+          dossier:researchSummary(await store.getMetadata(id,{revision:received.dossier.revision}))}:received); return;
+      }
+      if(action==='citation-updates/reviews'){
+        send(200,await store.reviewCitationUpdate(id,{...data,projection}));return;
       }
       if (action === 'crossref/prepare') {
         requireValue(crossref !== null, 'CROSSREF_WORKSPACE_NOT_CONFIGURED');
@@ -498,7 +517,7 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       if (res.headersSent) {res.destroy(); return;}
       const code = safeCode(error);
       const status = code === 'AUTH_REQUIRED' ? 401 : ['HOST_REFUSED', 'ORIGIN_REFUSED'].includes(code) ? 403 :
-        ['REVISION_CONFLICT','PORTABLE_HISTORY_CONFLICT','ROUTESCAN_RECORD_BUSY','CROSSREF_OPERATION_RUNNING_ELSEWHERE','UNSTRUCTURED_REVIEWED_EDITION_CHANGED','UNSTRUCTURED_RECEIVING_LABEL_CONFLICT','CLINICALTRIALS_REVIEW_CHANGED','CLINICALTRIALS_PLAN_CHANGED','CLINICALTRIALS_QUESTION_CHANGED','CLINICALTRIALS_SOURCE_CONFIGURATION_CHANGED','PIPELINE_REVISION_CHANGED','PIPELINE_REVIEWED_EDITION_CHANGED',
+        ['REVISION_CONFLICT','CITATION_REVIEW_CHANGED','CITATION_REVIEW_REQUEST_CHANGED','PORTABLE_HISTORY_CONFLICT','ROUTESCAN_RECORD_BUSY','CROSSREF_OPERATION_RUNNING_ELSEWHERE','UNSTRUCTURED_REVIEWED_EDITION_CHANGED','UNSTRUCTURED_RECEIVING_LABEL_CONFLICT','CLINICALTRIALS_REVIEW_CHANGED','CLINICALTRIALS_PLAN_CHANGED','CLINICALTRIALS_QUESTION_CHANGED','CLINICALTRIALS_SOURCE_CONFIGURATION_CHANGED','PIPELINE_REVISION_CHANGED','PIPELINE_REVIEWED_EDITION_CHANGED',
           'PIPELINE_PREPARATION_REQUEST_CHANGED','PIPELINE_RECEIVING_REQUEST_CHANGED','PIPELINE_REVIEWED_PLAN_CHANGED',
           'PIPELINE_ACTION_REQUEST_REUSED','PIPELINE_OPERATION_RUNNING_ELSEWHERE',
           'RESEARCH_OBJECT_SESSION_CHANGED','RESEARCH_OBJECT_REVIEW_CHANGED','RESEARCH_OBJECT_REVIEW_SOURCE_CHANGED',

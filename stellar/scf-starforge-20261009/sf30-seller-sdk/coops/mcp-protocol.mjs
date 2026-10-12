@@ -45,6 +45,13 @@ const payment = object({
 const nativeQuery = string(8192);
 const id = matching(SHORT_ID), edition = matching(SHA), dataset = matching(DATASET_ID), release = matching(RELEASE_ID);
 const actions = [
+["study.save","Save the exact previewed source windows and pinned receiving mapping as a versioned coastal study.",{"studyId":{"type":"string","pattern":"^study-[a-f0-9]{24}$"},"expectedStudyRevision":{"type":"integer","minimum":1,"maximum":9007199254740991},"name":{"type":"string","maxLength":200},"project":{"type":"string","maxLength":500},"question":{"type":"string","maxLength":6000},"owner":{"type":"string","maxLength":300},"table":{"type":"string","enum":["observations","predictions"]},"mappingId":{"type":"string","pattern":"^mapping-[a-f0-9]{24}$"},"basisPolicy":{"type":"string","enum":["uniform_requests","mixed_native"]},"members":{"type":"array","items":{"type":"object","properties":{"editionId":{"type":"string","pattern":"^[a-f0-9]{64}$"},"beginDate":{"type":"string","maxLength":10},"endDate":{"type":"string","maxLength":10},"products":{"type":"array","items":{"type":"string","enum":["water_level","hourly_height","predictions"]},"minItems":1,"maxItems":3,"uniqueItems":true}},"required":["editionId"],"additionalProperties":false},"minItems":1,"maxItems":64},"note":{"type":"string","maxLength":12000},"expectedPreviewSha256":{"type":"string","pattern":"^[a-f0-9]{64}$"}},["name","question","owner","table","mappingId","members","expectedPreviewSha256"]],
+["study.review","Record the actual source/basis review for one exact study revision; all generated warnings must be acknowledged for reviewed status.",{"studyId":{"type":"string","pattern":"^study-[a-f0-9]{24}$"},"studyRevision":{"type":"integer","minimum":1,"maximum":9007199254740991},"studySha256":{"type":"string","pattern":"^[a-f0-9]{64}$"},"expectedReviewId":{"type":"string","maxLength":100},"actor":{"type":"string","maxLength":200},"status":{"type":"string","enum":["reviewed","follow_up"]},"note":{"type":"string","maxLength":12000},"acknowledgedWarnings":{"type":"array","items":{"type":"string","pattern":"^[a-f0-9]{24}$"},"minItems":0,"maxItems":512,"uniqueItems":true}},["studyId","studyRevision","studySha256","actor","status","note","acknowledgedWarnings"]],
+["study.export","Stream a reviewed study delivery: complete mapped CSV and JSONL, report, exact manifest, original edition and response TAR.",{"studyId":{"type":"string","pattern":"^study-[a-f0-9]{24}$"},"studyRevision":{"type":"integer","minimum":1,"maximum":9007199254740991},"studySha256":{"type":"string","pattern":"^[a-f0-9]{64}$"},"reviewId":{"type":"string","pattern":"^study-review-[a-f0-9]{24}$"}},["studyId","studyRevision","studySha256","reviewId"]],
+["study.return.start","Retain a returned file selection for an exact immutable study delivery; upload original bytes with bounded chunks.",{"releaseId":{"type":"string","pattern":"^study-release-[a-f0-9]{24}$"},"format":{"type":"string","enum":["csv","jsonl"]},"filename":{"type":"string","maxLength":255},"bytes":{"type":"integer","minimum":0,"maximum":1073741824},"note":{"type":"string","maxLength":12000}},["releaseId","format","filename","bytes"]],
+["study.return.chunk","Retain one exact sequential original file chunk; repeat only the same offset and bytes after an uncertain response.",{"uploadId":{"type":"string","pattern":"^study-upload-[a-f0-9]{24}$"},"offset":{"type":"integer","minimum":0,"maximum":1073741824},"base64":{"type":"string","maxLength":1398104}},["uploadId","offset","base64"]],
+["study.return.finish","Seal and compare all original returned bytes against the exact released file. Reordering is allowed; unknown/duplicate source identities remain explicit.",{"uploadId":{"type":"string","pattern":"^study-upload-[a-f0-9]{24}$"}},["uploadId"]],
+["study.receive","Record the actual operator decision on the exact returned comparison, preserving all original source and release files.",{"returnId":{"type":"string","pattern":"^study-return-[a-f0-9]{24}$"},"comparisonSha256":{"type":"string","pattern":"^[a-f0-9]{64}$"},"expectedDecisionId":{"type":"string","maxLength":100},"actor":{"type":"string","maxLength":200},"status":{"type":"string","enum":["accepted","follow_up"]},"note":{"type":"string","maxLength":12000}},["returnId","comparisonSha256","actor","status","note"]],
   [
     "station.save",
     "Save an original NOAA station profile and responsible team; retain prior profile values.",
@@ -597,6 +604,30 @@ const actions = [
       "note": {
         "type": "string",
         "maxLength": 12000
+      },
+      "mappingSource": {
+        "type": "object",
+        "properties": {
+          "filename": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "base64": {
+            "type": "string",
+            "maxLength": 87384
+          },
+          "decision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 12000
+          }
+        },
+        "required": [
+          "filename",
+          "base64",
+          "decision"
+        ],
+        "additionalProperties": false
       }
     },
     [
@@ -681,7 +712,7 @@ const actions = [
   ],
   [
     "dataset.prepare",
-    "Prepare a selected original source table/window through native SF30.",
+    "Prepare an original source table/window with an optional pinned saved model-input mapping through native SF30.",
     {
       "editionId": {
         "type": "string",
@@ -699,6 +730,10 @@ const actions = [
       "name": {
         "type": "string",
         "maxLength": 128
+      },
+      "mappingId": {
+        "type": "string",
+        "pattern": "^mapping-[0-9a-f]{24}$"
       },
       "beginDate": {
         "type": "string",
@@ -980,13 +1015,29 @@ const actions = [
       "editionId",
       "format"
     ]
+  ],
+  [
+    'analysis.export',
+    'Build and retain the complete coastal residual workbook from two original GMT editions. The full offline HTML, editable workbook, all analysis rows, source responses and delivery manifest remain available through the original export file tools.',
+    {
+      observationsEditionId:edition,predictionsEditionId:edition,
+      options:object({
+        begin:string(64),end:string(64),quality:choice(['all','verified','preliminary']),
+        excludeInferred:boolean,excludeToleranceFlags:boolean,
+        maxSigma:decimal(0,Number.MAX_VALUE),
+        upperThreshold:decimal(-Number.MAX_VALUE,Number.MAX_VALUE),
+        lowerThreshold:decimal(-Number.MAX_VALUE,Number.MAX_VALUE)
+      }),
+      analyst:object(Object.fromEntries(['name','project','question','interpretation','followUp'].map(key=>[key,string(32768)])))
+    },
+    ['observationsEditionId','predictionsEditionId']
   ]
 ];
 const actionNames = new Map(actions.map(value => ['merchant_coops_' + value[0].replaceAll('.','_'), value]));
 const scope = {workspace:matching(ALIAS)};
 const readOnly = {readOnly:true,idempotent:true};
 const selectFile = {
-  kind:choice(['source','capture-source','export','receipt']), id:string(100), page:number(0), file:choice(RECEIPT_FILES)
+  kind:choice(['source','capture-source','mapping-source','export','receipt']), id:string(100), page:number(0), file:choice(RECEIPT_FILES)
 };
 const chunks = {
   readId:matching(UUID), expectedSha256:matching(SHA), offset:number(0),
@@ -996,13 +1047,16 @@ export function coopsWorkspaceTools(tool) {
   return [
     tool('merchant_coops_workspaces','List host-declared COOPS aliases and their original workspace UUIDs; report only this adapter’s retained download sessions.',{},[],readOnly),
     tool('merchant_coops_schema','Read the running original workspace schema, actual source contract, station/product/table declarations, payment fields and capabilities.',scope,['workspace'],readOnly),
+    tool('merchant_coops_mapping_file','Inspect one original UTF-8 JSON mapping convention without saving. Uploaded IDs are source declarations; explicitly choose a new mapping or a reviewed saved target for mapping.save.',{...scope,filename:string(255),base64:string(87384)},['workspace','filename','base64'],readOnly),
+    tool('merchant_coops_study_preview','Inspect exact ordered retained source windows, station bases, overlap and the selected saved receiving mapping. This does not save a study.',{...scope,...{"studyId":{"type":"string","pattern":"^study-[a-f0-9]{24}$"},"expectedStudyRevision":{"type":"integer","minimum":1,"maximum":9007199254740991},"name":{"type":"string","maxLength":200},"project":{"type":"string","maxLength":500},"question":{"type":"string","maxLength":6000},"owner":{"type":"string","maxLength":300},"table":{"type":"string","enum":["observations","predictions"]},"mappingId":{"type":"string","pattern":"^mapping-[a-f0-9]{24}$"},"basisPolicy":{"type":"string","enum":["uniform_requests","mixed_native"]},"members":{"type":"array","items":{"type":"object","properties":{"editionId":{"type":"string","pattern":"^[a-f0-9]{64}$"},"beginDate":{"type":"string","maxLength":10},"endDate":{"type":"string","maxLength":10},"products":{"type":"array","items":{"type":"string","enum":["water_level","hourly_height","predictions"]},"minItems":1,"maxItems":3,"uniqueItems":true}},"required":["editionId"],"additionalProperties":false},"minItems":1,"maxItems":64},"note":{"type":"string","maxLength":12000}}},['workspace',...["name","question","owner","table","mappingId","members"]],readOnly),
+    tool('merchant_coops_study_rows','Page original rows from the exact retained study revision; source member order and native lexical values are preserved.',{...scope,studyId:{"type":"string","pattern":"^study-[a-f0-9]{24}$"},revision:number(1),offset:number(0),limit:number(1,500)},['workspace','studyId','revision'],readOnly),
     tool('merchant_coops_view','Read the same browser workspace and its current revision, captures, latest editions, all releases/receipts/exports and recent operation outcomes.',scope,['workspace'],readOnly),
     tool('merchant_coops_operation','Read one original operation by its retained operationId, including its recorded state and complete saved result. This does not redispatch it.',{...scope,operationId:matching(OPERATION)},['workspace','operationId'],readOnly),
     tool('merchant_coops_editions','Page the complete original edition archive. Retain the returned revision for every following page; a concurrent change returns REVISION_CHANGED.',{...scope,offset:number(0),limit:number(1,500),profileId:matching(PROFILE_ID),expectedRevision:number(0)},['workspace'],readOnly),
     tool('merchant_coops_edition','Read one complete immutable original edition, including every response receipt and exact source SHA256.',{...scope,editionId:edition},['workspace','editionId'],readOnly),
     tool('merchant_coops_rows','Page normalized original rows from one immutable edition. Original nulls, datum, units, quality flags and source times are retained; nextOffset continues the same edition and table.',{...scope,editionId:edition,table,offset:number(0),limit:number(1,500),beginDate:string(10),endDate:string(10),products},['workspace','editionId','table'],readOnly),
-    tool('merchant_coops_files','Read exact file metadata and selectors for an original edition’s source responses, one retained export, or one complete five-file customer receipt.',{...scope,kind:selectFile.kind,id:selectFile.id},['workspace','kind','id'],readOnly),
-    tool('merchant_coops_file_read','Read an original source/export/customer file as verified base64 byte chunks. Continue the same selector, readId, expectedSha256 and nextOffset. A retained read can finish after the console closes.',{...scope,...selectFile,...chunks},['workspace','kind','id'],readOnly),
+    tool('merchant_coops_files','Read exact file metadata and selectors for an original edition’s source responses, every retained input-file revision for one mapping, one retained export, or one complete five-file customer receipt.',{...scope,kind:selectFile.kind,id:selectFile.id},['workspace','kind','id'],readOnly),
+    tool('merchant_coops_file_read','Read an original source/mapping-input/export/customer file as verified base64 byte chunks. Mapping-source page selects its exact positive revision. Continue the same selector, readId, expectedSha256 and nextOffset. A retained read can finish after the console closes.',{...scope,...selectFile,...chunks},['workspace','kind','id'],readOnly),
     tool('merchant_coops_file_release','Release only the named temporary download snapshot; preserve original workspace source and customer files.',{...scope,readId:matching(UUID)},['workspace','readId'],{idempotent:true}),
     ...actions.map(([action, description, properties, required, annotations = {}]) =>
       tool('merchant_coops_' + action.replaceAll('.','_'),

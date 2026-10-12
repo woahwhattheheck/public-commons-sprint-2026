@@ -1,0 +1,34 @@
+{
+  "capture": {
+    "stationId": "9410230",
+    "beginDate": "2025-01-01",
+    "endDate": "2025-01-07",
+    "products": [
+      "water_level"
+    ],
+    "units": "metric",
+    "timeZone": "gmt",
+    "datum": "MLLW",
+    "predictionInterval": "6"
+  },
+  "historical": {
+    "beginDate": "2024-01-01",
+    "endDate": "2025-12-31",
+    "products": [
+      "hourly_height"
+    ],
+    "units": "metric",
+    "timeZone": "gmt",
+    "datum": "MLLW",
+    "predictionInterval": "6"
+  },
+  "study": {
+    "name": "La Jolla public source study and internal receiving",
+    "project": "Authored public-reference coastal data handoff",
+    "question": "Preserve the exact selected high-frequency reference and historical hourly observations, source quality and station-specific native measurement basis for an explicit model-input receiving convention. Verify the returned original file without altering provider evidence.",
+    "owner": "Internal coastal source receiving",
+    "basisPolicy": "uniform_requests",
+    "additionalEditionIds": [],
+    "note": "The selected original water-level and hourly-height products remain separate records on their original native time grids. No resampling, physical vertical-datum equivalence, project-boundary suitability or private client model is asserted."
+  }
+}

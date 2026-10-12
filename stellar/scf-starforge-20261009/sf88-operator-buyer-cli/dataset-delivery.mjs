@@ -1,6 +1,7 @@
 // MIT. Local SF88 acquisition -> original SF100 delivery CLI. No buyer/network calls.
 import { constants } from 'node:fs';
-import { open, lstat, realpath, readdir } from 'node:fs/promises';
+import { open, lstat, realpath, readdir } from './dataset-location.mjs';
+import {datasetStoragePath} from './dataset-location.mjs';
 import { dirname, basename, join, resolve, isAbsolute, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
@@ -25,12 +26,12 @@ async function exists(path) {
 async function directory(path, privateMode = true) {
   need(exactPath(path), 'DATASET_DELIVERY_PATH_INVALID');
   const info = await lstat(path);
-  need(info.isDirectory() && !info.isSymbolicLink() && await realpath(path) === path &&
+  need(info.isDirectory() && !info.isSymbolicLink() && await realpath(path) === datasetStoragePath(path) &&
     (!privateMode || (info.mode & 0o077) === 0), 'DATASET_DELIVERY_DIRECTORY_INVALID');
 }
 async function file(path, limit, privateMode = true) {
   need(exactPath(path), 'DATASET_DELIVERY_PATH_INVALID');
-  need(await realpath(path) === path, 'DATASET_DELIVERY_SYMLINK_REFUSED');
+  need(await realpath(path) === datasetStoragePath(path), 'DATASET_DELIVERY_SYMLINK_REFUSED');
   const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
   try {
     const info = await handle.stat();
@@ -92,7 +93,9 @@ async function nativeFingerprint() {
 function native(command, out, extra = [], inputs = null) {
   const batch = command === 'append-batch';
   need(batch === (inputs !== null), 'DATASET_DELIVERY_NATIVE_INPUT_INVALID');
-  const input = batch ? Buffer.from(JSON.stringify(inputs)) : null;
+  const input = batch ? Buffer.from(JSON.stringify(inputs.map(item=>({...item,
+    page:datasetStoragePath(item.page),evidence:datasetStoragePath(item.evidence)})))) : null;
+  out=datasetStoragePath(out);
   need(!input || input.length <= 16 * 1024 * 1024, 'DATASET_DELIVERY_BATCH_INPUT_LIMIT');
   return new Promise((accept, reject) => {
     // In particular: no NODE_OPTIONS, SF36 signing material, provider keys, or inherited HOME.
@@ -306,9 +309,12 @@ export async function buildNativeDataRoom(report, destination) {
   let out;
   try {
     need(exactPath(destination), 'DATASET_DELIVERY_PATH_INVALID');
-    out = destination;
+    out = datasetStoragePath(destination);
     const records = await preflight(report);
-    need(out !== report.directory && !report.directory.startsWith(out + sep) &&
+    need(out !== datasetStoragePath(report.directory) && !datasetStoragePath(report.directory).startsWith(out + sep) &&
+      out !== datasetStoragePath(join(report.directory,'pages')) && !out.startsWith(datasetStoragePath(join(report.directory,'pages')) + sep) &&
+      out !== datasetStoragePath(join(report.directory,'evidence')) && !out.startsWith(datasetStoragePath(join(report.directory,'evidence')) + sep) &&
+      out !== report.directory && !report.directory.startsWith(out + sep) &&
       out !== join(report.directory, 'pages') && !out.startsWith(join(report.directory, 'pages') + sep) &&
       out !== join(report.directory, 'evidence') && !out.startsWith(join(report.directory, 'evidence') + sep),
     'DATASET_DELIVERY_DESTINATION_OVERLAPS_SOURCE');

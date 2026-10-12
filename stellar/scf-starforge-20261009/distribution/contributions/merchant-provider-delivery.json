@@ -1,0 +1,12 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-delivery",
+  "description": "Original single-release settlement delivery and complete retained receiving",
+  "merchantProviders": {
+    "delivery": "stellar-forge/mcp-merchant-operator/providers/delivery.mjs"
+  },
+  "exports": {
+    "./merchant/delivery": "./source/stellar-forge/mcp-merchant-operator/delivery.mjs",
+    "./merchant/delivery/download": "./source/stellar-forge/mcp-merchant-operator/delivery-download.mjs"
+  }
+}

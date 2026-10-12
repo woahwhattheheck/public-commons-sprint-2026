@@ -5,6 +5,7 @@ import { readFile, lstat, stat, rename, unlink, readdir } from 'node:fs/promises
 import { privateDirectory, acquireWorkspace, readJson, readPrivate, createFile,
   atomicJson, digest, identity, stamp, object, fault } from '../postgres/publisher/files.mjs';
 export { digest, identity, fault };
+import { validateWfsSource, wfsPageDetails, checkWfsCoverage } from '../wfs/protocol.mjs';
 const DECODER = new TextDecoder('utf-8', { fatal: true });
 const MIME = ['application/geo+json', 'application/json'];
 export class JsonNumber {
@@ -34,7 +35,7 @@ function count(value) {
 export function validateSourceConfig(input) {
   if (!object(input) || input.schema !== 'stellar-forge.ogc-source.v1' ||
       Object.keys(input).some(k => !['schema','itemsUrl','name','authorizationEnv','allowLoopback',
-        'pageBytes','totalBytes','maxPages','requestTimeoutMs','collection','license','kind','coordinateDescription'].includes(k)))
+        'pageBytes','totalBytes','maxPages','requestTimeoutMs','collection','license','kind','coordinateDescription','wfs'].includes(k)))
     throw fault('OGC_CONFIG_INVALID', 'Use an ogc-source.v1 with a selected itemsUrl.');
   const url = new URL(input.itemsUrl);
   if (url.username || url.password || url.hash || !(url.protocol === 'https:' ||
@@ -52,9 +53,12 @@ export function validateSourceConfig(input) {
   }
   if (input.allowLoopback !== undefined && typeof input.allowLoopback !== 'boolean') throw fault('OGC_CONFIG_INVALID');
   const kind = input.kind ?? 'ogc-api-features';
-  if (!['ogc-api-features', 'geojson'].includes(kind) ||
+  if (!['ogc-api-features', 'geojson', 'wfs2'].includes(kind) ||
       (input.coordinateDescription !== undefined && (typeof input.coordinateDescription !== 'string' || input.coordinateDescription.length > 4096))) throw fault('OGC_CONFIG_INVALID');
-  return { ...input, ...limits, kind, itemsUrl: url.href };
+  const result = { ...input, ...limits, kind, itemsUrl: url.href };
+  if (kind === 'wfs2') validateWfsSource(result);
+  else if (input.wfs !== undefined) throw fault('OGC_CONFIG_INVALID');
+  return result;
 }
 function authorizedUrl(href, base, config) {
   const url = new URL(href, base), selected = new URL(config.itemsUrl);
@@ -111,12 +115,13 @@ export async function getSource(url, config, { signal, fetchImpl = fetch } = {})
     throw fault('OGC_REDIRECT_LIMIT');
   } finally { clearTimeout(timer); }
 }
-function pageDetails(record, config) {
+export function pageDetails(record, config) {
   const doc = record.document;
   if (!object(doc) || doc.type !== 'FeatureCollection' || !Array.isArray(doc.features) ||
       doc.features.some(f => !object(f) || f.type !== 'Feature' || !(f.properties === null || object(f.properties)) ||
         !Object.hasOwn(f, 'geometry') || !(f.geometry === null || object(f.geometry))))
     throw fault('OGC_FEATURE_COLLECTION_REQUIRED');
+  if (config.kind === 'wfs2') return wfsPageDetails(record, config, { count, linked: linkedUrl });
   // A declared count must describe the actual page. No short-page termination guess.
   const returned = count(doc.numberReturned), matched = count(doc.numberMatched);
   if (doc.numberReturned !== undefined && (returned === null || BigInt(returned) !== BigInt(doc.features.length)))
@@ -164,6 +169,7 @@ export async function readCapture(directory, { verify = true } = {}) {
     if (!page || page.requestedUrl !== next || seen.has(next) || record.previous !== head ||
         record.head !== identity({ previous: head, page })) throw fault('OGC_CAPTURE_CHAIN_INVALID');
     if (verify) await readPage(directory, page, manifest.config);
+    if (manifest.config.kind === 'wfs2') checkWfsCoverage(manifest.pages, page);
     seen.add(next); total += page.bytes; rows += page.returned; next = page.next; head = record.head;
     manifest.pages.push(page);
   }
@@ -238,6 +244,16 @@ export async function capture(directory, input, { signal, fetchImpl, onPage, rec
         status: record.status ?? 200, contentType: record.contentType ?? 'application/geo+json',
         etag: record.etag ?? null, lastModified: record.lastModified ?? null, contentCrs: record.contentCrs ?? null,
         file, sha256, bytes: record.bytes.length, ...details };
+      if (manifest.config.kind === 'wfs2') {
+        try { checkWfsCoverage(manifest.pages, page); }
+        catch (error) {
+          // Keep the complete conflicting response beside the accepted prefix.
+          await atomicJson(join(directory, 'pages'), 'wfs-rejected-' + sha256 + '.json', {
+            schema: 'stellar-forge.wfs-rejected-page.v1', reason: error.code, page,
+            previousKnownTotal: manifest.pages.find(item => item.matched !== null)?.matched ?? null });
+          throw error;
+        }
+      }
       const nextHead = identity({ previous: manifest.head, page });
       if (!pending) await atomicJson(join(directory, 'pages'), indexName(manifest.pageCount),
         { previous: manifest.head, head: nextHead, page });

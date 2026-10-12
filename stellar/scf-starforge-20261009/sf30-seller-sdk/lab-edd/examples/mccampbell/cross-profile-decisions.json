@@ -1,0 +1,221 @@
+{
+  "schema": "starforge.lab-edd-cross-profile-decisions.v1",
+  "comparisonSha256": "0d284228f47a75b82b360e9225d84bd15b56c81725383d55732b49b758905452",
+  "mapping": {
+    "id": "equis-3-4-receiving",
+    "version": "1.0.0"
+  },
+  "baseline": {
+    "sourceSha256": "db4ac5c96d687b19c8a5b2dece909c3a338361258d213c2a0a84f482b0c0afc6",
+    "profile": {
+      "id": "equis-lab-3",
+      "version": "1.0.0"
+    },
+    "reviewSha256": null
+  },
+  "current": {
+    "sourceSha256": "7ce006eade0db042557c7d69182feab9da294a9f49d1c318f852771e6d0e9015",
+    "profile": {
+      "id": "equis-lab-4",
+      "version": "1.0.0"
+    },
+    "reviewSha256": null
+  },
+  "decisions": [
+    {
+      "groupId": "group-11d303383a3b404132381b752851f5b4",
+      "groupSha256": "09aa12cefd29ce7943c568123793a646335c862f99d3dbac70d5d235fcd0fe2b",
+      "action": "defer",
+      "reason": "The exact published results candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-1848cd86fc4223ef6928e461542daf70",
+      "groupSha256": "938fad068f7bcbcc8236c618e41d8dd0e3530cae5da8acac3ded912c0905a806",
+      "action": "defer",
+      "reason": "The exact published results candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-1d2e7ba130b3e47ead49f36b2a433e41",
+      "groupSha256": "9812b2d0fb726bbb8ac63d66b4cd013b30d44823463e8c89e2e42d489e5e988e",
+      "action": "defer",
+      "reason": "The exact published results candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-288d0a1227221b9130e6b9680b1f8b98",
+      "groupSha256": "69525548c9c08713397db2db1258eead43ea0b970e622a403e22ca6ec923fceb",
+      "action": "defer",
+      "reason": "The exact published results candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-38de2a9c780a4271f916ea1108c498d3",
+      "groupSha256": "98d9e3245d994f93de994ec2dbb43f6f2906d0fe11c0f2b45a79f9579409298d",
+      "action": "defer",
+      "reason": "The exact published results candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-4919c90f6cc5e95d0cdca3b1b10e3223",
+      "groupSha256": "d24943541680acf017917ee69de1f8194bb7bcd57867b62832f0a3260d9f138f",
+      "action": "defer",
+      "reason": "The exact published batches candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-5377972ec77a1d7a14f1d76586346634",
+      "groupSha256": "10450995726f9a9e516f0b875ce2fad8eb590d22060dc1593e638500c040b3e5",
+      "action": "defer",
+      "reason": "The exact published results candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-55fc8a96ecd62db7aa1afdf5018e8ac4",
+      "groupSha256": "5e59794eea1306adae2e75434b695e0885f40debcbb307b9eba79999b741b745",
+      "action": "defer",
+      "reason": "The exact published results candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-569ddc15d1c49ca367c6b89775d2ad46",
+      "groupSha256": "99fb0398e5895d36aa8934d003a2d8d2ec69f3b430b2ec1e255923320c44c297",
+      "action": "defer",
+      "reason": "The exact published results candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-5b56da418a287d8b42cd52f071ae9271",
+      "groupSha256": "b9518852d1a70344db49550b5078417c45d3b5dd9fbe894ad6bc4c681965e626",
+      "action": "defer",
+      "reason": "The exact published results candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-5c68d96e9bc739ccb86fd91fb40357d1",
+      "groupSha256": "3ecf1ea8625c058cc991670e4fb15a5c767367dab298be87949ff1673aede6d3",
+      "action": "defer",
+      "reason": "The exact published tests candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-63ae97361bee6784e598c8085c8fa26b",
+      "groupSha256": "a9b347036260363dd78232f20a8848f65a4a81b438ea299ea8b83bd98d6dce0b",
+      "action": "defer",
+      "reason": "The exact published batches candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-6710448de31a5475645d79daac9f182b",
+      "groupSha256": "9acd2ba99716a35a825e5de1aada623eadb611efe45e30e99687ec796ec48e80",
+      "action": "defer",
+      "reason": "The exact published tests candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-6b54c6bbea9d50b301d4b44af5bc8f9f",
+      "groupSha256": "4d420f6754acea407fd399d05983d74f525e62d3e10064986f95fe6c23f95a40",
+      "action": "defer",
+      "reason": "The exact published results candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-724f0b82e4dedc5d90deeaccf1fd2cc5",
+      "groupSha256": "6bb845ab64fdfde14c0a0201d7258ca790fa8870a4c9058cb47391fd7ddbe877",
+      "action": "defer",
+      "reason": "The exact published results candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-887d8c0cf5a9cd61f49deade60af0a16",
+      "groupSha256": "23bb7f5af8e6330619daa027ee6a6ae68b822d5283c472eb6b0fb51d65b4f461",
+      "action": "defer",
+      "reason": "The exact published results candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-9470e40719ab6e1045b909db3e639612",
+      "groupSha256": "54215c0ace0e04cd78b397adf06303350598864087f965c5d5e6dd9846482803",
+      "action": "defer",
+      "reason": "The exact published results candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-9d94fdcd869a0b04f01cae169b178ff8",
+      "groupSha256": "4907fffd418b41e53c771901d25fdd3fb7279b6ac3ec32ede1aea0e89fdd5900",
+      "action": "defer",
+      "reason": "The exact published samples candidate contains 1 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-a58c66bf069a663316c0132476092538",
+      "groupSha256": "05b531fd71b109b5e7a4d2f39552847558c47d3833926ad93b007d8a9d63f735",
+      "action": "defer",
+      "reason": "The exact published results candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-b4a797a8483f751515a6f26278e1317e",
+      "groupSha256": "8be27228ce1645f5b74f7c99a26d1106d95bb83d8aac501899af1bdf504efada",
+      "action": "defer",
+      "reason": "The exact published results candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-c1c2c50aec1eb860658c4a23be7e7ccd",
+      "groupSha256": "c9179b7d131cdccb60c3f523560209f7e850a30aecd023f94fd665999c4f09b4",
+      "action": "defer",
+      "reason": "The exact published results candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-c1cc310a89966b5cd399c5f7f4df5ab9",
+      "groupSha256": "688b6afb277075da994f7f869064b6c66aa7b121538a8061607f69371bbbc867",
+      "action": "defer",
+      "reason": "The exact published samples candidate contains 1 EQuIS3 and 3 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-daef73fde76055d78923606b5b610335",
+      "groupSha256": "d0e292124e86d1ec31a85068f45bf7d7a1029358627ac6298851e92fc17d75ed",
+      "action": "pair",
+      "pairs": [
+        {
+          "baselineId": "entity-34f46368b69081b7e86320eae4bc5e6e",
+          "currentId": "entity-a2152dfdfcf1448c8ed9bfc4e22132fb"
+        }
+      ],
+      "reason": "In the published 2508877 format examples, both complete source records report laboratory sample 2508877-001A, COD, E410.4, civil analysis time 2025-08-21 18:53 and result 105. Record their explicit correspondence while retaining the original fraction/test-type, mg/l versus mg/L and all other native fields."
+    },
+    {
+      "groupId": "group-dfcf9301072b30bee9449d2227c5290c",
+      "groupSha256": "30bd69bd21e1782b395a15cac590bc2d6ddc04a7c395bec6f199b130c118de41",
+      "action": "defer",
+      "reason": "The exact published results candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-e3b98cad3e897092182daa24fabfeecc",
+      "groupSha256": "7e44cc07bf03efefc0993f09ae72e458e0b3a9d0a00db3731eb96975e37f0f08",
+      "action": "defer",
+      "reason": "The exact published tests candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-e6b88f36577d65e2278685e83cec791e",
+      "groupSha256": "3cb8c74e718e0bf092bdd22ca847811fdc74490bdacf072e2059173e0b5d1d22",
+      "action": "defer",
+      "reason": "The exact published results candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-e6d9391f6c993e6c59918b7122d44e7b",
+      "groupSha256": "78081b13abe2fbbb5a11eb80c2e72099e646c8ed2547340e90d0b1b6edb2c0f5",
+      "action": "defer",
+      "reason": "The exact published batches candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-ef85a7daaeabde834d0fb87998c91a20",
+      "groupSha256": "fd9c1bedfb30a791296805d3707146b82e77058b9dbbc80bf849a60a0f68894c",
+      "action": "defer",
+      "reason": "The exact published results candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-fcafaecb6c7d74b724ce98546b903590",
+      "groupSha256": "26102d28a789c7c3d43511405daece1644a0715ef2980a417408b150dbf88b99",
+      "action": "defer",
+      "reason": "The exact published results candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    },
+    {
+      "groupId": "group-fed67ad852000f70b93adc551adb888a",
+      "groupSha256": "ce059d6a515ce8cae91a2848c8bef1e09d3c28ce90b7acdcec26f5b3602bdac4",
+      "action": "defer",
+      "reason": "The exact published results candidate contains 2 EQuIS3 and 2 EQuIS4 entities. Preserve every original entity and its native key; select correspondence only after reviewing these variants."
+    }
+  ],
+  "links": [
+    {
+      "baselineId": "entity-f1c813b5122ef1e433a37626403a68ff",
+      "baselineSha256": "7a8595461f220f43d4eb5efce374bbaf6cc1f368bc6be9603f2de4eb49cfa5de",
+      "currentId": "entity-9560862e28696c3d546cf230cbcde2a3",
+      "currentSha256": "3f3d151ff889807db85088f5b10c231b5df025ba4d3d214164b9be5453b5877c",
+      "reason": "Explicit source-entity selection for the published 2508877-001A BOD example: both records report SM5210B, civil analysis time 2025-08-25 11:20 and result 61.9. This link retains both native identities, source units and every other original field."
+    }
+  ]
+}

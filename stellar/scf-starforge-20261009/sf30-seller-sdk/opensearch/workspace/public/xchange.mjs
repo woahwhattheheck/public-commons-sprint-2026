@@ -125,7 +125,27 @@ export function createXChangeController({container,api,element,attempt,read,chan
     '<label>Original mapping SHA-256<input id="sup-x-map-sha" class="code" maxlength="64" spellcheck="false"></label>',
     '<div class="two-column"><label>Product status mapping<textarea id="sup-x-product-status" class="code" rows="8" spellcheck="false">{}</textarea></label><label>Trade item status mapping<textarea id="sup-x-trade-status" class="code" rows="8" spellcheck="false">{}</textarea></label></div>',
     '<label>Released ETIM modelling classes as JSON<textarea id="sup-x-mc" class="code" rows="5" spellcheck="false">[]</textarea></label>',
-    '<label>Keep original attachment URLs for these MDX codes<input id="sup-x-keep-url" placeholder="MDX054"><span class="help">Retained as the 2BA KeepMimeURL requirement for the receiving operator.</span></label>',
+    '<label>Keep original attachment URLs for these MDX codes<input id="sup-x-keep-url" placeholder="MDX054"><span class="help">These original MDX codes become KeepMimeURL in the selected processing XML.</span></label>',
+    '<details id="sup-x-processing"><summary>2BA processing and upload package</summary>',
+    '<p class="help">Save the processing choice with this submission. The review applies its record and omission rules; the upload ZIP carries the same parameters.xml with the complete native JSON.</p>',
+    '<label class="cat-check"><input id="sup-x-processing-enabled" type="checkbox">Include a versioned 2BA processing selection</label>',
+    '<div id="sup-x-processing-fields" hidden>',
+    '<label>Reason for this processing selection<input id="sup-x-processing-reason" maxlength="2000"></label>',
+    '<div class="two-column"><label>Software name<input id="sup-x-p-GeneratedBy" maxlength="255"></label><label>Processing report description<input id="sup-x-p-PackageDescription" maxlength="255"></label></div>',
+    '<div class="two-column"><label>Processing report addresses<input id="sup-x-p-SendReportToEmail" maxlength="255" placeholder="data@example.com;ops@example.com"><span class="help">Supplied addresses receive the report instead of the upload account. Empty uses the supplier address.</span></label>',
+    '<label>Report language<select id="sup-x-p-ReportLanguage"><option value="">Recipient default · NL</option><option value="EN">English · EN</option><option value="NL">Dutch · NL</option></select></label></div>',
+    '<div class="two-column">',
+    '<label>Skip product loading<select id="sup-x-p-SkipLoadProducts"><option value="">Default · false</option><option value="false">Load products · false</option><option value="true">Skip products · true</option></select></label>',
+    '<label>Skip trade items and prices<select id="sup-x-p-SkipLoadArticlesAndPrices"><option value="">Default · false</option><option value="false">Load trade items · false</option><option value="true">Skip trade items · true</option></select></label>',
+    '<label>Skip price loading<select id="sup-x-p-SkipLoadPrices"><option value="">Default · false</option><option value="false">Load supplied prices · false</option><option value="true">Retain previous prices · true</option></select></label>',
+    '<label>Skip attachment loading<select id="sup-x-p-SkipLoadAttachments"><option value="">Default · false</option><option value="false">Read supplied attachments · false</option><option value="true">Retain previous attachments · true</option></select></label>',
+    '<label>Override the native dataset type<select id="sup-x-p-OverrulePackageMutationCode"><option value="">Default · false</option><option value="false">Use native type · false</option><option value="true">Use selected processing type · true</option></select></label>',
+    '<label>Selected processing type<select id="sup-x-p-PackageMutationCode"><option value="">Select when overriding</option><option value="ReplaceExistingCatalog">Complete · ReplaceExistingCatalog</option><option value="UpdateExistingCatalog">Mutation · UpdateExistingCatalog</option></select></label>',
+    '<label>Omitted attachments in a FULL delivery<select id="sup-x-p-FullAttachments"><option value="">Choose during recipient processing</option><option value="106">Keep omitted; apply supplied mutations · 106</option><option value="108">Delete omitted for supplied products · 108</option></select></label>',
+    '<label>Omitted attachments in a CHANGE delivery<select id="sup-x-p-ChangeAttachments"><option value="">Choose during recipient processing</option><option value="165">Delete omitted for supplied products · 165</option><option value="166">Keep omitted; apply supplied mutations · 166</option></select></label>',
+    '<label>KeepMimeURL scope<select id="sup-x-p-KeepMimeURLMode"><option value="selected">Original MDX codes entered above</option><option value="all">All recipient-eligible codes · *</option></select><span class="help">Custom selections use xChange MDX codes. The recipient applies its own exclusions to *.</span></label>',
+    '<label>Convert supplier GLN to recipient master GLN<select id="sup-x-p-AutoConvertToMasterGLN"><option value="">Default · false</option><option value="false">Keep original supplier · false</option><option value="true">Use recipient account mapping · true</option></select></label>',
+    '</div><p class="help"><a href="https://www.2ba.nl/en/documentation/file-exchange/file-upload/process-parameters/" target="_blank" rel="noreferrer">Original 2BA processing parameters</a></p></div></details>',
     '<p class="help"><a href="https://www.2ba.nl/en/documentation/file-exchange/etim-xchange-v2-0/" target="_blank" rel="noreferrer">2BA xChange 2.0 receiving rules</a></p></section>',
     '<details><summary>Original catalogue and supplier context</summary><p id="sup-x-source-note" class="help">Open a product in the selected review to inspect its original context.</p><pre id="sup-x-source"></pre><button id="sup-x-catalogue-load" type="button">Use original catalogue header as an override</button></details>'
   ].join('');
@@ -133,9 +153,9 @@ export function createXChangeController({container,api,element,attempt,read,chan
   const impact=element('article',undefined,{id:'sup-x-impact',hidden:''});
   impact.innerHTML=[
     '<h3>Recipient effects</h3><p id="sup-x-review" class="summary"></p><div id="sup-x-counts" class="cat-counts"></div>',
-    '<p id="sup-x-rules" class="help"></p>',
+    '<p id="sup-x-rules" class="help"></p><details id="sup-x-processing-review" hidden><summary>Selected processing effects</summary><pre id="sup-x-processing-result"></pre></details>',
     '<div class="cat-table-controls"><label>Record type<select id="sup-x-kind"><option value="all">All records</option><option value="product">Products</option><option value="tradeItem">Trade items</option></select></label>',
-    '<label>Change<select id="sup-x-change"><option value="all">All changes</option><option value="added">Added</option><option value="changed">Changed</option><option value="unchanged">Unchanged</option><option value="expired">Expired</option><option value="deleted">Deleted</option></select></label>',
+    '<label>Change<select id="sup-x-change"><option value="all">All changes</option><option value="added">Added</option><option value="changed">Changed</option><option value="unchanged">Unchanged</option><option value="expired">Expired</option><option value="deleted">Deleted</option><option value="skipped">Skipped by processing</option></select></label>',
     '<label>Identifier or supplier<input id="sup-x-search" type="search"></label><button id="sup-x-find" type="button">Show recipient effects</button></div>',
     '<div id="sup-x-rows" class="table-wrap"></div><div class="actions"><button id="sup-x-back" type="button">Previous records</button><span id="sup-x-page" class="help"></span><button id="sup-x-next" type="button">Next records</button></div>',
     '<section id="sup-x-detail" hidden><h4 id="sup-x-detail-title"></h4><div class="two-column"><details open><summary>Previous recipient record</summary><pre id="sup-x-before"></pre></details><details open><summary>Selected recipient record</summary><pre id="sup-x-after"></pre></details></div><details><summary>Complete record identity</summary><pre id="sup-x-row-meta"></pre></details></section>'
@@ -167,6 +187,56 @@ export function createXChangeController({container,api,element,attempt,read,chan
     if(index<0)overrides.push(value);else overrides[index]=value;
     renderOverrides(supplierKey);supplierEditDirty=false;changed();
   }
+  const processingText=['GeneratedBy','PackageDescription','SendReportToEmail'];
+  const processingBoolean=['SkipLoadProducts','SkipLoadArticlesAndPrices','SkipLoadPrices',
+    'SkipLoadAttachments','OverrulePackageMutationCode','AutoConvertToMasterGLN'];
+  function processingVisibility(){
+    const enabled=$('processing-enabled').checked;
+    $('processing-fields').hidden=!enabled;
+    const all=enabled&&$('p-KeepMimeURLMode').value==='all';
+    $('keep-url').closest('label').hidden=all;
+    for(const field of $('processing-fields').querySelectorAll('input,select,textarea,button'))field.disabled=held||!enabled;
+  }
+  function setProcessing(){
+    const selected=profile?.processing,p=selected?.parameters??{};
+    $('processing-enabled').checked=Boolean(selected);$('processing-reason').value=selected?.reason??'';
+    for(const name of processingText)$('p-'+name).value=p[name]??'';
+    for(const name of processingBoolean)$('p-'+name).value=Object.hasOwn(p,name)?String(p[name]):'';
+    for(const name of ['ReportLanguage','PackageMutationCode'])$('p-'+name).value=p[name]??'';
+    $('p-FullAttachments').value=p.InteractiveChecks?.find(row=>row.Code==='7000160')?.SolutionId??'';
+    $('p-ChangeAttachments').value=p.InteractiveChecks?.find(row=>row.Code==='7000161')?.SolutionId??'';
+    $('p-KeepMimeURLMode').value=p.KeepMimeURL==='*'?'all':'selected';
+    if(typeof p.KeepMimeURL==='string'&&p.KeepMimeURL!=='*')$('keep-url').value=p.KeepMimeURL.split(';').filter(Boolean).join(', ');
+    processingVisibility();
+  }
+  function getProcessing(value){
+    if(!$('processing-enabled').checked){delete value.processing;return;}
+    const original=profile?.processing?.parameters??{},parameters={};
+    for(const name of processingText){
+      const entry=$('p-'+name).value;
+      if(entry!==''||Object.hasOwn(original,name))parameters[name]=entry;
+    }
+    for(const name of processingBoolean){
+      const entry=$('p-'+name).value;
+      if(entry==='true'||entry==='false')parameters[name]=entry==='true';
+    }
+    for(const name of ['ReportLanguage','PackageMutationCode']){
+      const entry=$('p-'+name).value;if(entry)parameters[name]=entry;
+    }
+    const checks=[];
+    if($('p-FullAttachments').value)checks.push({Code:'7000160',SolutionId:$('p-FullAttachments').value});
+    if($('p-ChangeAttachments').value)checks.push({Code:'7000161',SolutionId:$('p-ChangeAttachments').value});
+    if(checks.length||Object.hasOwn(original,'InteractiveChecks'))parameters.InteractiveChecks=checks;
+    if($('p-KeepMimeURLMode').value==='all'){
+      parameters.KeepMimeURL='*';value.attachmentPolicy.keepMimeUrlCodes=[];
+    }else{
+      const codes=value.attachmentPolicy.keepMimeUrlCodes;
+      if(codes.length||Object.hasOwn(original,'KeepMimeURL'))parameters.KeepMimeURL=codes.join(';');
+    }
+    const reason=$('processing-reason').value.trim();
+    if(!reason)throw Error('Record why these processing settings are appropriate for this delivery.');
+    value.processing={schema:'stellar-forge.2ba-processing.v1',reason,parameters};
+  }
   function setProfile(value){
     profile=isXChangeProfile(value)?copy(value):null;settings.hidden=!profile;
     if(!profile)return;
@@ -180,7 +250,7 @@ export function createXChangeController({container,api,element,attempt,read,chan
     $('map-url').value=mapping?.source?.url??'';$('map-sha').value=mapping?.source?.sha256??'';$('map-revision').value=mapping?.source?.revision??'';
     $('product-status').value=pretty(mapping?.product??{});$('trade-status').value=pretty(mapping?.tradeItem??{});
     $('mc').value=pretty(profile.releasedModellingClasses??[]);$('keep-url').value=(profile.attachmentPolicy?.keepMimeUrlCodes??[]).join(', ');
-    buttons(held);
+    setProcessing();buttons(held);
   }
   function getProfile(){
     if(!profile)return null;
@@ -206,6 +276,7 @@ export function createXChangeController({container,api,element,attempt,read,chan
       value.releasedModellingClasses=json('mc','Released modelling classes');
       if(!Array.isArray(value.releasedModellingClasses))throw Error('Released modelling classes must be an array.');
       value.attachmentPolicy={...(value.attachmentPolicy??{}),keepMimeUrlCodes:$('keep-url').value.split(',').map(s=>s.trim()).filter(Boolean)};
+      getProcessing(value);
     }
     return value;
   }
@@ -220,12 +291,23 @@ export function createXChangeController({container,api,element,attempt,read,chan
     $('rows').replaceChildren();$('detail').hidden=true;$('page').textContent='';$('counts').replaceChildren();
     if(!review){buttons(held);return;}
     const recipient=review.recipient;
+    $('processing-review').hidden=!recipient.processing;
+    $('processing-result').textContent=recipient.processing?pretty({processing:recipient.processing,materialization:recipient.materialization}):'';
     $('review').textContent=recipient.target+' · '+recipient.catalogueType+' · review '+review.id;
-    $('rules').textContent=(recipient.catalogueType==='FULL'?
-      'FULL compares the complete selected delivery with the prior recipient state. Omitted 2BA products expire; omitted trade items are deleted.':
-      'CHANGE applies the supplied product and trade-item records to the explicitly selected previous review. Status mappings determine the 2BA trade-item mutations.')+
+    const processing=recipient.processing;
+    $('rules').textContent=(processing?
+      'Native '+processing.nativeCatalogueType+' message; selected '+processing.effectiveCatalogueType+' processing. '+
+      (processing.skipProducts?'Product loading is skipped; previous products are retained. ':
+        recipient.catalogueType==='FULL'?'Omitted previous products expire. ':'Unlisted products are retained. ')+
+      (processing.skipTradeItems?'Trade-item loading is skipped; previous trade items are retained. ':
+        recipient.catalogueType==='FULL'?'Omitted previous trade items are deleted. ':'Unlisted trade items are retained; supplied status mappings control mutations. ')+
+      (processing.skipPrices&&!processing.skipTradeItems?'Existing prices are retained for loaded trade items. ':'')+
+      'Attachment policy: '+processing.attachments.mode+'.':
+      recipient.catalogueType==='FULL'?
+        'FULL compares the complete selected delivery with the prior recipient state. Omitted 2BA products expire; omitted trade items are deleted.':
+        'CHANGE applies the supplied product and trade-item records to the explicitly selected previous review. Status mappings determine the 2BA trade-item mutations.')+
       (recipient.previousReviewId?' Previous review '+recipient.previousReviewId+' · '+recipient.previousReviewSha256+'.':' This is the first retained recipient state.');
-    const labels={productsAdded:'Products added',productsChanged:'Products changed',productsUnchanged:'Products unchanged',productsExpired:'Products expired',tradeItemsAdded:'Trade items added',tradeItemsChanged:'Trade items changed',tradeItemsUnchanged:'Trade items unchanged',tradeItemsDeleted:'Trade items deleted',productsTotal:'Recipient products',tradeItemsTotal:'Recipient trade items'};
+    const labels={productsAdded:'Products added',productsChanged:'Products changed',productsUnchanged:'Products unchanged',productsExpired:'Products expired',tradeItemsAdded:'Trade items added',tradeItemsChanged:'Trade items changed',tradeItemsUnchanged:'Trade items unchanged',tradeItemsDeleted:'Trade items deleted',productsSkipped:'Products skipped',tradeItemsSkipped:'Trade items skipped',productsTotal:'Recipient products',tradeItemsTotal:'Recipient trade items'};
     for(const [key,label]of Object.entries(labels)){
       const count=recipient.counts[key];if(count===undefined)continue;
       const node=element('div');node.append(element('strong',String(count)),element('span',label));$('counts').append(node);
@@ -263,8 +345,11 @@ export function createXChangeController({container,api,element,attempt,read,chan
     $('catalogue-load').disabled=held||!object(sourceProduct?.catalogue?.header);
     $('supplier-remove').disabled=held||!$('supplier-select').value;
     $('find').disabled=held||!review;$('back').disabled=held||!review||offset===0;$('next').disabled=held||!review||next===null;
+    processingVisibility();
   }
-  for(const node of settings.querySelectorAll('input,textarea'))node.addEventListener('input',changed);
+  for(const node of settings.querySelectorAll('input,textarea,select'))node.addEventListener('input',changed);
+  $('processing-enabled').addEventListener('change',()=>{processingVisibility();changed();});
+  $('p-KeepMimeURLMode').addEventListener('change',()=>{processingVisibility();changed();});
   $('inherit').addEventListener('change',()=>{$('header-editor').hidden=$('inherit').checked;changed();});
   for(const id of ['supplier-key','supplier-header','supplier-reason'])$(id).addEventListener('input',()=>{supplierEditDirty=true;});
   $('supplier-select').addEventListener('change',()=>attempt(async()=>{
@@ -285,5 +370,15 @@ export function createXChangeController({container,api,element,attempt,read,chan
   $('back').addEventListener('click',()=>attempt(()=>read(async()=>{offset=Math.max(0,offset-50);await loadRows();})));
   $('next').addEventListener('click',()=>attempt(()=>read(async()=>{offset=next;await loadRows();})));
   $('search').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();$('find').click();}});
-  return {setProfile,getProfile,setProduct,setReview,loadRows,buttons};
+  function focusSetting(path){
+    if(!path.startsWith('/profile/processing')&&!path.startsWith('/profile/attachmentPolicy'))return false;
+    $('processing').open=true;
+    const key=path.split('/')[4],selected=key==='InteractiveChecks'?(review?.recipient?.catalogueType==='CHANGE'?'p-ChangeAttachments':'p-FullAttachments'):key==='KeepMimeURL'?'p-KeepMimeURLMode':
+      key&&$('p-'+key)?'p-'+key:path.startsWith('/profile/attachmentPolicy')?'keep-url':'processing-reason';
+    if(!$('processing-enabled').checked&&path.startsWith('/profile/processing')){
+      $('processing-enabled').focus();$('processing-enabled').scrollIntoView({block:'center'});return true;
+    }
+    $(selected).focus();$(selected).scrollIntoView({block:'center'});return true;
+  }
+  return {setProfile,getProfile,setProduct,setReview,loadRows,buttons,focusSetting};
 }

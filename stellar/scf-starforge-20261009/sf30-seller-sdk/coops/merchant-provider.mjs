@@ -23,9 +23,9 @@ export default defineMerchantProvider({
     (await import('./merchant-setup.mjs')).initializeCoopsWorkspaceMerchant(options),
   concurrency: 'provider',
   shutdown: 'drain',
-  maxRequestBytes: 128 * 1024,
+  maxRequestBytes: 512 * 1024,
   instructions: [{
     prefix: 'merchant_coops_',
-    text: "Select an explicitly host-declared coastal workspace and its original UUID. Read the native schema, station profile and current revision before any source action. Review explicit NOAA product, dates, units, time basis and datum. Preserve preliminary/verified flag meanings, nulls and separately selected predictions. Historical studies reuse bounded annual source editions. Retry the exact original operation ID after uncertainty; never create a replacement identity. Import only a host-selected source package whose bytes match its declared digest. Model-input mappings select original fields and headings without datum or unit conversion. Use native SF30/SF82 publication and original completed SF88/SF100 customer receipts. Read retained files by their exact SHA and byte offsets; the shared file reader streams verified original files with bounded memory."
+    text: "Select an explicitly host-declared coastal workspace and its original UUID. Read the native schema, station profile and current revision before any source action. Review explicit NOAA product, dates, units, time basis and datum. Preserve preliminary/verified flag meanings, nulls and separately selected predictions. Historical studies reuse bounded annual source editions. Retry the exact original operation ID after uncertainty; never create a replacement identity. Import only a host-selected source package whose bytes match its declared digest. Inspect a selected mapping JSON before saving; imported IDs remain provenance and the original file follows each mapping revision. Model-input mappings select original fields and headings without datum or unit conversion. Use native SF30/SF82 publication and original completed SF88/SF100 customer receipts. Read retained files by their exact SHA and byte offsets; the shared file reader streams verified original files with bounded memory."
   }]
 });

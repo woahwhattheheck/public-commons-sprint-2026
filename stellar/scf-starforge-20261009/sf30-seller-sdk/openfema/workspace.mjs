@@ -21,7 +21,7 @@ export async function startOpenFemaWorkspace({directory,inboxDirectory,port=0,re
   if(expectedWorkspaceId!==undefined&&app.schema().workspaceId!==expectedWorkspaceId){await app.close();throw fault('OPENFEMA_WORKSPACE_IDENTITY_CHANGED','Open the originally selected workspace.',409);}
   let assets;try{assets=await readBrowserAssets(new URL('./browser-assets.json',import.meta.url));}catch(error){await app.close();throw error;}
   const token=randomBytes(32).toString('base64url'),authorization=Buffer.from('Bearer '+token),tickets=new Map(),archives=new Map();
-  let origin,closing=false;
+  let origin,closePromise=null;
   const headers=(type,extra={})=>({'content-type':type,'cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer','content-security-policy':CSP,...extra});
   async function readJSON(req,max){
     if(!/^application\/json(?:; *charset=utf-8)?$/i.test(req.headers['content-type']??''))throw fault('OPENFEMA_JSON_REQUIRED','Send application/json.',415);
@@ -102,8 +102,17 @@ export async function startOpenFemaWorkspace({directory,inboxDirectory,port=0,re
   server.maxRequestsPerSocket=100;
   server.on('clientError',(_error,socket)=>socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n'));
   try{await new Promise((yes,no)=>{server.once('error',no);server.listen(port,'127.0.0.1',()=>{server.off('error',no);yes();});});}catch(error){await app.close();throw error;}
-  origin='http://127.0.0.1:'+server.address().port;
-  return {origin,url:origin+'/#'+token,token,app,async close(){if(closing)return;closing=true;tickets.clear();archives.clear();await new Promise((yes,no)=>{server.close(e=>e?no(e):yes());server.closeIdleConnections?.();});await app.close();}};
+  origin=new URL('http://127.0.0.1:'+server.address().port).origin;
+  return {origin,url:origin+'/#'+token,token,app,close(){
+    if(!closePromise){
+      tickets.clear();archives.clear();
+      closePromise=(async()=>{
+        if(server.listening)await new Promise((yes,no)=>{server.close(e=>e?no(e):yes());server.closeIdleConnections?.();});
+        await app.close();
+      })().catch(error=>{closePromise=null;throw error;});
+    }
+    return closePromise;
+  }};
 }
 export async function readReleaseRuntime(filename){
   const bytes=await readOwned(resolve(filename),65536),value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));

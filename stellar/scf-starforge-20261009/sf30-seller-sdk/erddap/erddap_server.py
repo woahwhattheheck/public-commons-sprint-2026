@@ -17,6 +17,8 @@ from urllib.parse import parse_qs, unquote, urlsplit
 import zipfile
 
 from erddap_workspace import Workspace, InputError, MAX_SOURCE, MAX_PACKET, json_bytes, load_json
+from provider_handoff_workspace import HandoffStore
+from provider_handoff import MAX_HANDOFF, MAX_PROFILE
 
 HERE = Path(__file__).resolve().parent
 
@@ -41,6 +43,7 @@ class OperatorServer(ThreadingHTTPServer):
 
     def __init__(self, workspace: Workspace, port: int = 0):
         self.workspace, self.token = workspace, secrets.token_urlsafe(32)
+        self.handoffs = HandoffStore(workspace)
         self.workspace_id = hashlib.sha256(str(workspace.root).encode("utf-8")).hexdigest()
         self.instance_id = str(uuid.uuid4())
         self.started_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
@@ -154,9 +157,9 @@ class Handler(BaseHTTPRequestHandler):
         except (InputError, ValueError, KeyError, zipfile.BadZipFile) as error:
             status = getattr(error, "status", 400)
             body = {"error": str(error)}
-            for attribute, name in (("provider_status", "providerStatus"), ("retry_after", "retryAfter")):
+            for attribute, name in (("provider_status", "providerStatus"), ("retry_after", "retryAfter"), ("current_revision", "currentRevision")):
                 value = getattr(error, attribute, None)
-                if value is not None:
+                if value is not None or (attribute == "current_revision" and hasattr(error, attribute)):
                     body[name] = value
             self._json(body, status if status in {400, 404, 409, 413, 422, 429, 502, 503, 504} else 400)
         except FileNotFoundError:
@@ -166,10 +169,10 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             self._json({"error": "The local operation failed. Reopen its retained operation and workspace."}, 500)
 
-    def _object(self):
+    def _object(self, maximum=131072):
         if self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower() != "application/json":
             raise InputError("Send the reviewed request as application/json")
-        body = load_json(self._body().read())
+        body = load_json(self._body(maximum).read())
         if not isinstance(body, dict):
             raise InputError("Expected a JSON object")
         return body
@@ -214,6 +217,36 @@ class Handler(BaseHTTPRequestHandler):
             self._json(value)
             return
         parts = target.path.strip("/").split("/")
+        if target.path == "/api/handoffs":
+            self._json(self.server.handoffs.state())
+            return
+        if target.path == "/api/handoffs/draft":
+            self._json(self.server.handoffs.draft(self._field(query, "source")))
+            return
+        if target.path == "/api/handoffs/history":
+            self._json(self.server.handoffs.history(self._field(query, "source"),
+                                                    self._integer(query, "offset", 0),
+                                                    self._integer(query, "limit", 100, 1, 250)))
+            return
+        if len(parts) == 4 and parts[:3] == ["api", "handoffs", "received"]:
+            self._json(self.server.handoffs.received(parts[3]))
+            return
+        if len(parts) == 5 and parts[:3] == ["api", "handoffs", "received"] and parts[4] == "bundle":
+            self._download(self.server.handoffs.received_path(parts[3]),
+                           "received-provider-handoff-" + parts[3][:16] + ".zip",
+                           "application/zip")
+            return
+        if len(parts) == 4 and parts[:3] == ["api", "handoffs", "reviews"]:
+            self._json(self.server.handoffs.get(parts[3]))
+            return
+        if len(parts) == 5 and parts[:3] == ["api", "handoffs", "exports"]:
+            if parts[4] not in {"review", "ready"}:
+                raise InputError("Select review or ready provider export")
+            value = self.server.handoffs.export(parts[3], mode=parts[4])
+            self._download(Path(value["path"]),
+                           "provider-handoff-" + parts[3][:16] + "-" + parts[4] + ".zip",
+                           "application/zip")
+            return
         if len(parts) == 3 and parts[:2] == ["api", "metadata"]:
             self._json(ws.metadata_item(parts[2]))
             return
@@ -303,6 +336,21 @@ class Handler(BaseHTTPRequestHandler):
                     shutil.copyfileobj(self._zip_body(MAX_PACKET), output, 65536)
                 result = ws.import_packet(packet)
             self._json(result, 201)
+            return
+        if target.path == "/api/handoffs/receive":
+            self._json(self.server.handoffs.receive(self._zip_body(MAX_HANDOFF)), 201)
+            return
+        if target.path in {"/api/handoffs/previews", "/api/handoffs/reviews", "/api/handoffs/exports"}:
+            body = self._object(MAX_PROFILE + 4096)
+            store = self.server.handoffs
+            if target.path == "/api/handoffs/previews":
+                self._json(store.preview(self._field(body, "source"), self._field(body, "profile")))
+            elif target.path == "/api/handoffs/reviews":
+                self._json(store.save(self._field(body, "source"), self._field(body, "profile"),
+                                      expected_head=body.get("expectedHead")), 201)
+            else:
+                value = store.export(self._field(body, "revision"), mode=body.get("mode", "review"))
+                self._json({key: item for key, item in value.items() if key != "path"})
             return
         body = self._object()
         parts = target.path.strip("/").split("/")

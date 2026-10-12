@@ -86,8 +86,8 @@ export async function readErddapConfiguration(path) {
       for (const [name, input] of Object.entries(value.inputs)) {
         need(ALIAS.test(name), 'CONFIG_INVALID', 'Use a lower-case input alias.');
         fields(input, ['path', 'kind', 'label', 'sha256'], 'original input');
-        need(['source', 'packet'].includes(input.kind) && SHA.test(input.sha256 ?? ''), 'CONFIG_INVALID',
-          'Pin the complete source or customer packet with its original SHA256.');
+        need(['source', 'packet', 'handoff'].includes(input.kind) && SHA.test(input.sha256 ?? ''), 'CONFIG_INVALID',
+          'Pin the complete source, customer packet or provider handoff with its original SHA256.');
         item.inputs[name] = { path: resolve(base, text(input.path, 'source path')), kind: input.kind,
           label: text(input.label ?? name, 'input label', 160), sha256: input.sha256 };
       }
@@ -165,15 +165,18 @@ export class ErddapClient {
         typeof value?.error === 'string' ? value.error : typeof value?.error?.message === 'string' ? value.error.message : 'The original operator rejected the request.';
       throw failure('HTTP_' + response.status, message.split(selected.token).join('[private capability]'),
         { ...safe, status: response.status, responseReceived: true, providerStatus: value?.providerStatus ?? null,
-          retryAfter: value?.retryAfter ?? response.headers.get('retry-after') ?? null });
+          retryAfter: value?.retryAfter ?? response.headers.get('retry-after') ?? null,
+          currentRevision: value?.currentRevision ?? value?.current_revision ?? null });
     }
     return response;
   }
-  json(path, body, { operationId } = {}) {
+  json(path, body, { operationId, maxRequestBytes = 1024 * 1024 } = {}) {
     return this.#run(async () => {
       const selected = await this.#connection(), method = body === undefined ? 'GET' : 'POST';
       const encoded = body === undefined ? undefined : JSON.stringify(body);
-      need(encoded === undefined || Buffer.byteLength(encoded) <= 1024 * 1024, 'REQUEST_TOO_LARGE', 'Use a complete mapping or explicit selection within the native JSON capacity.');
+      need(Number.isSafeInteger(maxRequestBytes) && maxRequestBytes >= 1 && maxRequestBytes <= 2 * 1024 * 1024 + 4096,
+        'REQUEST_LIMIT_INVALID', 'Use the original native JSON request capacity.');
+      need(encoded === undefined || Buffer.byteLength(encoded) <= maxRequestBytes, 'REQUEST_TOO_LARGE', 'Use a complete mapping, provider review or explicit selection within the native JSON capacity.');
       const response = await this.#send(selected, path, { method, body: encoded, operationId });
       try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await consume(response, this.#definition.maxResponseBytes ?? 64 * 1024 * 1024))); }
       catch (error) { if (error.code?.startsWith('ERDDAP_')) throw error;
@@ -184,12 +187,15 @@ export class ErddapClient {
   upload(input) {
     return this.#run(async () => {
       const bytes = await readHostFile(input.path, input.kind === 'source' ? 256 * 1024 * 1024 : MAX_FILE_BYTES, { expectedSha256: input.sha256 });
-      const selected = await this.#connection(), path = input.kind === 'source' ? '/api/sources' : '/api/packets';
+      need(['source', 'packet', 'handoff'].includes(input.kind), 'INPUT_INVALID', 'Select a declared original source, dataset packet or provider handoff.');
+      const selected = await this.#connection(), path = input.kind === 'source' ? '/api/sources' :
+        input.kind === 'packet' ? '/api/packets' : '/api/handoffs/receive';
       const response = await this.#send(selected, path, { method: 'POST', body: bytes, type: 'application/zip',
         headers: { 'x-source-name': encodeURIComponent(basename(input.path)), 'x-source-label': encodeURIComponent(input.label) } });
       try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await consume(response, this.#definition.maxResponseBytes ?? 64 * 1024 * 1024))); }
       catch { throw failure('RESPONSE_INCOMPLETE', 'The original import response did not complete. Inspect the source ID or received build before retrying.',
-        { path, ambiguous: true, sourceSha256: input.sha256 }); }
+        { path, ambiguous: true, sourceSha256: input.sha256,
+          ...(input.kind === 'handoff' ? { receiptId: input.sha256, recoveryPath: '/api/handoffs/received/' + input.sha256 } : {}) }); }
     });
   }
   file(selection, directory, expectedSha256) {
@@ -199,6 +205,18 @@ export class ErddapClient {
         need(SHA.test(selection.sourceId ?? '') && ['manifest.json', 'metadata.json', 'dataset.dds', 'dataset.das', 'data.json', 'data.csv'].includes(selection.member),
           'FILE_SELECTION_INVALID', 'Choose the retained source and its exact original member.');
         path = '/api/sources/' + selection.sourceId + '/files/' + encodeURIComponent(selection.member); name = selection.member;
+      } else if (selection.kind === 'provider-handoff') {
+        need(SHA.test(selection.revision ?? '') && ['review', 'ready'].includes(selection.mode),
+          'FILE_SELECTION_INVALID', 'Choose the exact saved provider review revision and explicit export mode.');
+        path = '/api/handoffs/exports/' + selection.revision + '/' + selection.mode;
+        name = 'erddap-provider-' + selection.revision.slice(0, 12) + '-' + selection.mode + '.zip';
+      } else if (selection.kind === 'provider-received') {
+        need(SHA.test(selection.receiptId ?? ''), 'FILE_SELECTION_INVALID', 'Choose the exact received provider bundle SHA256.');
+        need(expectedSha256 === undefined || expectedSha256 === selection.receiptId,
+          'FILE_SELECTION_INVALID', 'The received bundle identity is its complete original SHA256.');
+        expectedSha256 = selection.receiptId;
+        path = '/api/handoffs/received/' + selection.receiptId + '/bundle';
+        name = 'erddap-provider-received-' + selection.receiptId.slice(0, 12) + '.zip';
       } else {
         need(['packet', 'dataset'].includes(selection.kind) && SHA.test(selection.buildId ?? ''), 'FILE_SELECTION_INVALID', 'Choose the complete original build export.');
         path = '/api/builds/' + selection.buildId + '/' + selection.kind; name = 'erddap-' + selection.kind + '-' + selection.buildId.slice(0, 12) + '.zip';
@@ -223,10 +241,22 @@ export class ErddapClient {
         const sha256 = hash.digest('hex');
         need(expectedSha256 === undefined || expectedSha256 === sha256, 'FILE_CHANGED', 'The original export differs from the selected SHA256.');
         const retained = join(directory, 'erddap-' + sha256 + '.bin');
+        let existing = false;
         try { await link(temporary, retained); }
-        catch (error) { if (error.code !== 'EEXIST') throw error; }
+        catch (error) { if (error.code !== 'EEXIST') throw error; existing = true; }
         reader = await open(retained, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
         const stat = await reader.stat(); need(stat.isFile() && stat.size === size, 'FILE_CHANGED', 'The retained export identity differs.');
+        if (existing) {
+          const retainedHash = createHash('sha256'), chunk = Buffer.allocUnsafe(1024 * 1024); let offset = 0;
+          while (offset < size) {
+            const read = await reader.read(chunk, 0, Math.min(chunk.length, size - offset), offset);
+            need(read.bytesRead > 0, 'FILE_CHANGED', 'The existing retained export ended before its complete byte count.');
+            retainedHash.update(chunk.subarray(0, read.bytesRead)); offset += read.bytesRead;
+          }
+          const after = await reader.stat();
+          need(retainedHash.digest('hex') === sha256 && ['dev', 'ino', 'size', 'mtimeMs', 'ctimeMs'].every(key => stat[key] === after[key]),
+            'FILE_CHANGED', 'The existing retained export changed or differs from its full SHA256.');
+        }
         const owned = reader; reader = null;
         return { readonlyFileHandle: owned, bytes: size, sha256, name, type: response.headers.get('content-type') ?? 'application/octet-stream' };
       } finally { await writer?.close(); await reader?.close(); await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; }); }

@@ -1,0 +1,43 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "fhir-bulk",
+  "description": "Original FHIR Bulk Data acquisition, reviewed native dataset editions, merchant operation and complete customer receiving.",
+  "commands": {
+    "fhir-bulk": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/cli.mjs",
+    "merchant-fhir-bulk": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/connected/cli.mjs"
+  },
+  "commandDescriptions": {
+    "fhir-bulk": "Acquire complete original FHIR exports, review source and projections, publish native dataset editions and receive saved work.",
+    "merchant-fhir-bulk": "Operate the original FHIR workspace from CLI/MCP and receive complete retained source, dataset and workspace files."
+  },
+  "exports": {
+    "./seller/fhir-bulk": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/merchant.mjs",
+    "./buyer/fhir-bulk": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/customer.mjs",
+    "./merchant/fhir-bulk": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/connected/client.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/connected/client.mjs"
+    },
+    "./merchant/fhir-bulk/setup": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/connected/setup.mjs",
+    "./merchant/fhir-bulk/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/connected/provider.mjs"
+  },
+  "applicationProviders": {
+    "fhir-bulk": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/application-provider.mjs"
+  },
+  "merchantProviders": {
+    "fhir-bulk-workspaces": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/connected/provider.mjs"
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/connected/contracts.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/connected/files.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/connected/connection.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/connected/catalog.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/connected/runtime.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/connected/provider.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/connected/client.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/connected/setup.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/connected/cli.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/connected/client.d.mts",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/connected/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/connected/RECEIVING.mjs"
+  ]
+}

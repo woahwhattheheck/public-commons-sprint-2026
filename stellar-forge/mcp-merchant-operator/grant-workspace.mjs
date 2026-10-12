@@ -238,7 +238,7 @@ export class MerchantGrantWorkspaces {
       'The selected input differs from the exact reviewed SHA256 or byte count.');
     return {bytes, metadata, sourceWorkspace:source};
   }
-  async #modelInputs(alias, args, label) {
+  async #modelInputs(alias, args, label, maximum = GRANT_MAX_SOURCE_BYTES) {
     need((args.inputs !== undefined) !== (args.input !== undefined), 'GRANT_INPUT_SELECTION_INVALID',
       'Supply original ' + label.toLowerCase() + ' inputs inline or one verified input reference.');
     if (args.inputs !== undefined) {
@@ -252,8 +252,8 @@ export class MerchantGrantWorkspaces {
     need(plain(inputs), 'GRANT_INVALID_INPUT',
       label + ' input must select its original JSON object. Use inputPointer for an original response wrapper.');
     const selectedBytes = args.inputPointer ? Buffer.byteLength(JSON.stringify(inputs)) : original.bytes.length;
-    need(selectedBytes <= GRANT_MAX_SOURCE_BYTES, 'GRANT_INPUT_TOO_LARGE',
-      label + ' input JSON fits the native 8 MiB source bound.');
+    need(selectedBytes <= maximum, 'GRANT_INPUT_TOO_LARGE',
+      label + ' input JSON fits the native ' + (maximum / (1024 * 1024)) + ' MiB source bound.');
     return inputs;
   }
   async #transfer(alias, selected) {
@@ -404,13 +404,28 @@ export class MerchantGrantWorkspaces {
     const rest = Object.fromEntries(Object.entries(args).filter(([key]) => key !== 'workspace'));
     const reads = {plans:'plans', plan:'plan', plan_history:'plan-history', cases:'cases', case:'case',
       case_report:'case-report', case_history:'case-history', forecasts:'forecasts', forecast:'forecast',
-      portfolios:'portfolios', portfolio:'portfolio', review:'review', completion:'completion'};
+      portfolios:'portfolios', portfolio:'portfolio', review:'review', completion:'completion',
+      installations:'installations',installation:'installation',installation_history:'installation-history'};
     let original;
     if (Object.hasOwn(reads, verb)) original = await client.read(reads[verb], rest);
     else if (['plan_estimate','plan_save','plan_restore','plan_clone'].includes(verb)) {
       const {planId, ...body} = rest; original = await client.plan(verb.slice(5), planId, body);
     } else if (verb === 'case_create') original = await client.createCase(rest);
     else if (verb === 'case_command') { const {caseId, ...body} = rest; original = await client.command(caseId, body); }
+    else if (verb === 'installation_seed') original=await client.installationSeed(args.caseId,args.expectedVersion);
+    else if (verb === 'installation_preview'||verb === 'installation_save') {
+      const {caseId,inputs,input,inputPointer,expectedInputSha256,...body}=rest;
+      const document=await this.#modelInputs(alias,args,'Installation');
+      original=verb==='installation_preview'?await client.installationPreview(caseId,{...body,document}):
+        await client.installationSave(caseId,{...body,document});
+    }
+    else if (verb === 'cohort_seed') original=await client.cohortSeed(args.caseId,args.expectedVersion,args.tranche);
+    else if (verb === 'cohort_preview') original=await client.cohortPreview(args.caseId,args.expectedVersion,
+      await this.#modelInputs(alias,args,'Cohort',GRANT_MAX_BUNDLE_BYTES));
+    else if (verb === 'cohort_prepare') {
+      const {caseId,input,inputPointer,expectedInputSha256,...body}=rest;
+      original=await client.cohortPrepare(caseId,{...body,inputs:await this.#modelInputs(alias,args,'Cohort',GRANT_MAX_BUNDLE_BYTES)});
+    }
     else if (verb === 'completion_seed') original=await client.completionSeed(args.caseId,args.expectedVersion,args.tranche);
     else if (verb === 'completion_preview') {
       const {caseId,expectedVersion,...inputs}=rest;
@@ -463,9 +478,9 @@ export class MerchantGrantWorkspaces {
       } else { const {caseId, ...fields} = body; original = await client.attach(caseId, selected.bytes, fields); }
     } else throw failure('GRANT_TOOL_UNKNOWN', 'Choose an original grant operation.');
     return this.#snapshot(alias, original, {tool:name, ...Object.fromEntries(Object.entries(rest).filter(([key]) =>
-      ['planId','caseId','forecastId','portfolioId','alternativeId','sourceId','reviewId','revision','after','limit','kind',
+      ['planId','caseId','forecastId','portfolioId','alternativeId','sourceId','reviewId','installationId','revision','after','before','limit','kind',
         'requestId','expectedRevision','expectedVersion','input','inputPointer','expectedInputSha256',
-        'filename','expectedPreviewSha256','deploymentId','tranche','asOfDate','receiptId',
+        'filename','expectedPreviewSha256','deploymentId','tranche','asOfDate','receiptId','cohortReviewIds',
         'expectedReviewSha256','confirmedOn','deadlineOn','submittedOn','formReference','outcomeId','state','date'].includes(key)))});
   }
   async call(name, args = {}) {

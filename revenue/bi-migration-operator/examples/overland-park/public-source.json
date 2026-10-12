@@ -1,0 +1,439 @@
+{
+  "schema": "commons.tourism-source.v1",
+  "currency": "USD",
+  "minor_unit": 2,
+  "title": "Overland Park published collections and VisitOP budget — original values",
+  "observed_at": "2026-10-12",
+  "scope": {
+    "jurisdiction": "OVERLAND PARK",
+    "monthly_collection_start": "2024-07",
+    "monthly_collection_end": "2026-08",
+    "collection_basis": "The KDOR table reports 98% collections after the state retains its 2% administration amount.",
+    "budget_basis": "Original published VisitOP columns: ACTUAL 2024, BUDGET 2025, ESTIMATED 2025, PROPOSED 2026.",
+    "cash_basis": "This packet contains no operator receipts or expenditure entries. A separate reviewed cash source is required for a cash activity statement."
+  },
+  "source_documents": [
+    {
+      "title": "Kansas Department of Revenue — Transient Guest Tax Fiscal Year 2025",
+      "url": "https://www.ksrevenue.gov/pdf/tgfy25.pdf",
+      "page": 2,
+      "location_label": "OVERLAND PARK",
+      "fiscal_year": 2025,
+      "original_table_basis": "98% Collection (state retains 2% for administrative costs)",
+      "observed_at": "2026-10-12",
+      "retained_observations": 12,
+      "retained_distribution_controls": 5
+    },
+    {
+      "title": "Kansas Department of Revenue — Transient Guest Tax Fiscal Year 2026",
+      "url": "https://www.ksrevenue.gov/pdf/tgfy26.pdf",
+      "page": 2,
+      "location_label": "OVERLAND PARK",
+      "fiscal_year": 2026,
+      "original_table_basis": "98% Collection (state retains 2% for administrative costs)",
+      "published_at_local": "2026-08-06T15:23:00",
+      "observed_at": "2026-10-12",
+      "retained_observations": 12,
+      "retained_distribution_controls": 5
+    },
+    {
+      "title": "Kansas Department of Revenue — Transient Guest Tax Fiscal Year 2027",
+      "url": "https://www.ksrevenue.gov/pdf/tgfy27.pdf",
+      "page": 2,
+      "location_label": "OVERLAND PARK",
+      "fiscal_year": 2027,
+      "original_table_basis": "98% Collection (state retains 2% for administrative costs)",
+      "published_at_local": "2026-09-25T13:56:00",
+      "observed_at": "2026-10-12",
+      "retained_observations": 2,
+      "retained_distribution_controls": 0
+    },
+    {
+      "title": "Visit Overland Park 2026 budget — four original columns",
+      "url": "https://opkansas.civicweb.net/document/394189/2026%20VisitOP%20Budget.pdf?handle=83BD8E5FF7CC41358417C2DC49267ABC",
+      "page": 1,
+      "observed_at": "2026-10-12",
+      "columns": [
+        {
+          "year": 2024,
+          "source_label": "ACTUAL",
+          "normalised_status": "ACTUAL"
+        },
+        {
+          "year": 2025,
+          "source_label": "BUDGET",
+          "normalised_status": "BUDGET"
+        },
+        {
+          "year": 2025,
+          "source_label": "ESTIMATED",
+          "normalised_status": "ESTIMATE"
+        },
+        {
+          "year": 2026,
+          "source_label": "PROPOSED",
+          "normalised_status": "PROPOSED"
+        }
+      ],
+      "field_labels": {
+        "opening_cash": "Cash Balance 1/1",
+        "tgt_income": "Transient Guest Tax - 2/9ths",
+        "operating_reserve": "Operating Reserve",
+        "other_income": "Other Income",
+        "reported_resources": "TOTAL RESOURCES",
+        "reported_available": "AVAILABLE RESOURCES",
+        "personnel": "Personnel",
+        "sales_marketing": "Sales/Marketing/Promotion",
+        "administration": "Administration/General Operations",
+        "reported_expenditures": "TOTAL EXPENDITURES",
+        "reported_closing": "CASH + RESERVE BALANCE 12/31"
+      },
+      "opening_cash_meaning": "The source table presents cash and reserve as separate components. A reserve-inclusive operator opening balance is their sum; the reserve amount remains separately recorded."
+    }
+  ],
+  "tables": {
+    "collections": [
+      {
+        "period": "2024-07",
+        "amount": "1156285.63",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy25.pdf#page=2&location=OVERLAND_PARK&month=2024-07"
+      },
+      {
+        "period": "2024-08",
+        "amount": "1094914.63",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy25.pdf#page=2&location=OVERLAND_PARK&month=2024-08"
+      },
+      {
+        "period": "2024-09",
+        "amount": "1217884.79",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy25.pdf#page=2&location=OVERLAND_PARK&month=2024-09"
+      },
+      {
+        "period": "2024-10",
+        "amount": "911374.72",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy25.pdf#page=2&location=OVERLAND_PARK&month=2024-10"
+      },
+      {
+        "period": "2024-11",
+        "amount": "1149101.83",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy25.pdf#page=2&location=OVERLAND_PARK&month=2024-11"
+      },
+      {
+        "period": "2024-12",
+        "amount": "926602.55",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy25.pdf#page=2&location=OVERLAND_PARK&month=2024-12"
+      },
+      {
+        "period": "2025-01",
+        "amount": "734656.27",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy25.pdf#page=2&location=OVERLAND_PARK&month=2025-01"
+      },
+      {
+        "period": "2025-02",
+        "amount": "749719.33",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy25.pdf#page=2&location=OVERLAND_PARK&month=2025-02"
+      },
+      {
+        "period": "2025-03",
+        "amount": "797176.29",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy25.pdf#page=2&location=OVERLAND_PARK&month=2025-03"
+      },
+      {
+        "period": "2025-04",
+        "amount": "1124017.65",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy25.pdf#page=2&location=OVERLAND_PARK&month=2025-04"
+      },
+      {
+        "period": "2025-05",
+        "amount": "1176587.65",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy25.pdf#page=2&location=OVERLAND_PARK&month=2025-05"
+      },
+      {
+        "period": "2025-06",
+        "amount": "1478875.37",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy25.pdf#page=2&location=OVERLAND_PARK&month=2025-06"
+      },
+      {
+        "period": "2025-07",
+        "amount": "1019558.30",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy26.pdf#page=2&location=OVERLAND_PARK&month=2025-07"
+      },
+      {
+        "period": "2025-08",
+        "amount": "1050169.05",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy26.pdf#page=2&location=OVERLAND_PARK&month=2025-08"
+      },
+      {
+        "period": "2025-09",
+        "amount": "1263760.91",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy26.pdf#page=2&location=OVERLAND_PARK&month=2025-09"
+      },
+      {
+        "period": "2025-10",
+        "amount": "938322.78",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy26.pdf#page=2&location=OVERLAND_PARK&month=2025-10"
+      },
+      {
+        "period": "2025-11",
+        "amount": "1266200.03",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy26.pdf#page=2&location=OVERLAND_PARK&month=2025-11"
+      },
+      {
+        "period": "2025-12",
+        "amount": "1042996.39",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy26.pdf#page=2&location=OVERLAND_PARK&month=2025-12"
+      },
+      {
+        "period": "2026-01",
+        "amount": "775702.63",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy26.pdf#page=2&location=OVERLAND_PARK&month=2026-01"
+      },
+      {
+        "period": "2026-02",
+        "amount": "760749.83",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy26.pdf#page=2&location=OVERLAND_PARK&month=2026-02"
+      },
+      {
+        "period": "2026-03",
+        "amount": "954545.90",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy26.pdf#page=2&location=OVERLAND_PARK&month=2026-03"
+      },
+      {
+        "period": "2026-04",
+        "amount": "1152580.79",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy26.pdf#page=2&location=OVERLAND_PARK&month=2026-04"
+      },
+      {
+        "period": "2026-05",
+        "amount": "1274082.48",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy26.pdf#page=2&location=OVERLAND_PARK&month=2026-05"
+      },
+      {
+        "period": "2026-06",
+        "amount": "1427200.61",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy26.pdf#page=2&location=OVERLAND_PARK&month=2026-06"
+      },
+      {
+        "period": "2026-07",
+        "amount": "1269051.17",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy27.pdf#page=2&location=OVERLAND_PARK&month=2026-07"
+      },
+      {
+        "period": "2026-08",
+        "amount": "1528423.31",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR net collection (98%; state retains 2% administration)",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy27.pdf#page=2&location=OVERLAND_PARK&month=2026-08"
+      }
+    ],
+    "distributions": [
+      {
+        "start": "2024-07",
+        "end": "2024-09",
+        "amount": "3469085.05",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR published amount distributed",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy25.pdf#page=2&location=OVERLAND_PARK&column=FY2025-Q1"
+      },
+      {
+        "start": "2024-10",
+        "end": "2024-12",
+        "amount": "2987079.10",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR published amount distributed",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy25.pdf#page=2&location=OVERLAND_PARK&column=FY2025-Q2"
+      },
+      {
+        "start": "2025-01",
+        "end": "2025-03",
+        "amount": "2281551.89",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR published amount distributed",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy25.pdf#page=2&location=OVERLAND_PARK&column=FY2025-Q3"
+      },
+      {
+        "start": "2025-04",
+        "end": "2025-06",
+        "amount": "3779480.67",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR published amount distributed",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy25.pdf#page=2&location=OVERLAND_PARK&column=FY2025-Q4"
+      },
+      {
+        "start": "2024-07",
+        "end": "2025-06",
+        "amount": "12517196.71",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR published amount distributed",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy25.pdf#page=2&location=OVERLAND_PARK&column=FY2025-TOTAL"
+      },
+      {
+        "start": "2025-07",
+        "end": "2025-09",
+        "amount": "3333488.26",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR published amount distributed",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy26.pdf#page=2&location=OVERLAND_PARK&column=FY2026-Q1"
+      },
+      {
+        "start": "2025-10",
+        "end": "2025-12",
+        "amount": "3247519.20",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR published amount distributed",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy26.pdf#page=2&location=OVERLAND_PARK&column=FY2026-Q2"
+      },
+      {
+        "start": "2026-01",
+        "end": "2026-03",
+        "amount": "2490998.36",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR published amount distributed",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy26.pdf#page=2&location=OVERLAND_PARK&column=FY2026-Q3"
+      },
+      {
+        "start": "2026-04",
+        "end": "2026-06",
+        "amount": "3853863.88",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR published amount distributed",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy26.pdf#page=2&location=OVERLAND_PARK&column=FY2026-Q4"
+      },
+      {
+        "start": "2025-07",
+        "end": "2026-06",
+        "amount": "12925869.70",
+        "jurisdiction": "OVERLAND PARK",
+        "basis": "KDOR published amount distributed",
+        "source_ref": "https://www.ksrevenue.gov/pdf/tgfy26.pdf#page=2&location=OVERLAND_PARK&column=FY2026-TOTAL"
+      }
+    ],
+    "budgets": [
+      {
+        "budget_id": "op-actual-2024",
+        "year": 2024,
+        "status": "ACTUAL",
+        "jurisdiction": "OVERLAND PARK",
+        "opening_cash": "791657",
+        "tgt_income": "2654375",
+        "operating_reserve": "285093",
+        "other_income": "281071",
+        "reported_resources": "4012196",
+        "reported_available": "3727103",
+        "personnel": "959715",
+        "sales_marketing": "1497159",
+        "administration": "268827",
+        "reported_expenditures": "2725701",
+        "reported_closing": "1286495",
+        "source_ref": "https://opkansas.civicweb.net/document/394189/2026%20VisitOP%20Budget.pdf?handle=83BD8E5FF7CC41358417C2DC49267ABC#page=1&column=ACTUAL-2024"
+      },
+      {
+        "budget_id": "op-budget-2025",
+        "year": 2025,
+        "status": "BUDGET",
+        "jurisdiction": "OVERLAND PARK",
+        "opening_cash": "954258",
+        "tgt_income": "2525000",
+        "operating_reserve": "290000",
+        "other_income": "221200",
+        "reported_resources": "3990458",
+        "reported_available": "3700458",
+        "personnel": "1074787",
+        "sales_marketing": "1729023",
+        "administration": "242390",
+        "reported_expenditures": "3046200",
+        "reported_closing": "944257",
+        "source_ref": "https://opkansas.civicweb.net/document/394189/2026%20VisitOP%20Budget.pdf?handle=83BD8E5FF7CC41358417C2DC49267ABC#page=1&column=BUDGET-2025"
+      },
+      {
+        "budget_id": "op-estimate-2025",
+        "year": 2025,
+        "status": "ESTIMATE",
+        "jurisdiction": "OVERLAND PARK",
+        "opening_cash": "954258",
+        "tgt_income": "2652161",
+        "operating_reserve": "291474",
+        "other_income": "223629",
+        "reported_resources": "4121522",
+        "reported_available": "3830048",
+        "personnel": "1066109",
+        "sales_marketing": "1816740",
+        "administration": "232465",
+        "reported_expenditures": "3115314",
+        "reported_closing": "1006208",
+        "source_ref": "https://opkansas.civicweb.net/document/394189/2026%20VisitOP%20Budget.pdf?handle=83BD8E5FF7CC41358417C2DC49267ABC#page=1&column=ESTIMATED-2025"
+      },
+      {
+        "budget_id": "op-proposed-2026",
+        "year": 2026,
+        "status": "PROPOSED",
+        "jurisdiction": "OVERLAND PARK",
+        "opening_cash": "808780",
+        "tgt_income": "2760000",
+        "operating_reserve": "293000",
+        "other_income": "65540",
+        "reported_resources": "3927320",
+        "reported_available": "3634320",
+        "personnel": "1239606",
+        "sales_marketing": "1584488",
+        "administration": "245447",
+        "reported_expenditures": "3069540",
+        "reported_closing": "857780",
+        "source_ref": "https://opkansas.civicweb.net/document/394189/2026%20VisitOP%20Budget.pdf?handle=83BD8E5FF7CC41358417C2DC49267ABC#page=1&column=PROPOSED-2026"
+      }
+    ],
+    "cash": [],
+    "lodging": [],
+    "demand": []
+  }
+}

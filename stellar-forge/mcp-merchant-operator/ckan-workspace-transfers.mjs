@@ -56,7 +56,7 @@ async function namedIdentity(file) {
 export function ckanTransferSource(source) {
   return { catalogOrigin: source.catalogOrigin, projectCreatedAt: source.projectCreatedAt,
     workbenchSha256: source.workbenchSha256,
-    counts: Object.fromEntries(['editions', 'sources', 'publications', 'exports', 'buyerRequests']
+    counts: Object.fromEntries(['editions', 'sources', 'publications', 'exports', 'buyerRequests', 'refreshes']
       .map(name => [name, Array.isArray(source[name]) ? source[name].length : 0])) };
 }
 export function ckanTransferDescriptor(value) {

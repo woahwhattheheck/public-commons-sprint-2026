@@ -4,7 +4,7 @@ The **Public Assistance portfolios** entry opens the original OpenFEMA applicati
 
 ## Select the actual workspace
 
-Supply the existing private workspace directory, or a new directory beneath an existing private parent. Optional fields select the original buyer inbox, merchant runtime JSON and identifying User-Agent. Common Applications fields retain its local port and original environment settings.
+Supply the existing private workspace directory, or a new directory beneath an existing private parent. Optional fields select the original buyer inbox, merchant runtime JSON and identifying User-Agent of at most 240 printable characters. Common Applications fields retain its local port and original environment settings. Port 0 selects an available listener; an explicit port uses the browser's canonical loopback origin, including HTTP port 80.
 
 Preparation reads the selected release's original workspace/core/schema modules and native store identity reader. An existing workspace is bound by its UUID in `--expected-workspace-id`. Its mutable workspace JSON is not frozen as an input file, so normal capture progress and operator decisions remain valid when the same application restarts.
 
@@ -34,7 +34,11 @@ The managed URL record is the input `applicationUrlFile` used by the complete me
 
 Use the same browser to select a complete retained source cohort, create a portfolio, inspect all six tables, record analyst decisions and compare immutable versions. Dataset creation, publication and completed customer receiving use the original shared engines. New revision and generation inputs are taken from the actual displayed original state.
 
+Handover exposes every retained browser request for this workspace and the native operation history. Continue reopens the original action and complete retained source. A source import whose initial request never reached the service prompts for the same source file and keeps its original operation ID. Switching portfolio versions invalidates a pending record selection, so a review remains tied to the exact displayed record.
+
 The merchant tool surface performs the same operations through that running browser service. Typed call payloads, action outcomes, whole source/export receiving and offline verification are documented in [MCP.md](MCP.md). An interrupted action remains associated with its original operation ID; read that record and continue it rather than starting a duplicate.
+
+Stopping the application drains its original capture and action work, then closes the native publisher children before releasing the workspace writer. Concurrent close callers share that drain. If a child close fails, the same owner retains it for the next close attempt.
 
 Complete portable creation/restoration belongs to the original OpenFEMA workspace and receiving guide. The launcher opens the resulting actual directory through its native identity reader. A different restored UUID, if deliberately created by that workflow, must be selected as that distinct workspace in the host connection; never relabel an unrelated store as an earlier UUID.
 
