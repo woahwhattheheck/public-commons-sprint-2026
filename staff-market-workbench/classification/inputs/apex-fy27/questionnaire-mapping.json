@@ -1,0 +1,20 @@
+{
+  "schema": "apex.questionnaire-column-mapping/v1",
+  "basis": "Authorized questionnaire export mapped by the consulting team. Map the actual 360Comp or other source export headers to the job-content sections below, then retain the original export with the resulting role edition.",
+  "columns": {
+    "id": "response_id",
+    "role_id": "role_id",
+    "department": "department",
+    "role_title": "role_title"
+  },
+  "text_fields": {
+    "Duties": "duties",
+    "Responsibilities": "responsibilities",
+    "Qualifications": "qualifications",
+    "Working conditions": "working_conditions",
+    "Reporting relationships": "reporting_relationships",
+    "Supervision": "supervision",
+    "Certifications": "certifications"
+  },
+  "role_aliases": {}
+}

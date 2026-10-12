@@ -162,11 +162,11 @@ after preceding candidate announcements have been resolved; an ignored later
 announcement never starts another native check. Arrays support original
 multiline feeds that complete more than one JSON record in one chunk.
 
-The common reader preserves UTF-8 decoding, original ANSI removal and the default
-16,384-character unfinished-line window. Its optional fourth argument accepts
-\`{lineLimit}\` when an original provider already uses another window: DuckDB keeps
-65,536 and WQX keeps 32,768 decoded characters. The value must be an integer from
-1 through 1,048,576. Provider-specific assemblers keep their own existing limits. The original feed and wallet assemblers are reused unchanged. Ordinary
+The common reader preserves UTF-8 decoding and original ANSI removal. Its optional
+fourth argument `{ lineLimit = 16384 }` selects the original unfinished-line
+window (a positive safe integer up to 1 MiB). DuckDB retains 65,536 characters;
+WQX, DSpace and Fiscal retain 32,768. Other providers retain the normal 16 KiB
+window. Provider-specific assemblers keep their own existing limits. The original feed and wallet assemblers are reused unchanged. Ordinary
 log lines are filtered before asynchronous verification is queued.
 
 The first accepted result must point to the original private HTTP loopback

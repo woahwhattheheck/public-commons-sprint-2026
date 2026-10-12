@@ -19,6 +19,7 @@ import { odataWorkspaceTools } from './catalog/odata-workspace.mjs';
 import { worldbankWorkspaceTools } from './catalog/worldbank-workspace.mjs';
 import { fiscalDataWorkspaceTools } from './catalog/fiscaldata-workspace.mjs';
 import { geocodioWorkspaceTools } from './catalog/geocodio-workspace.mjs';
+import { censusGeocoderWorkspaceTools } from './catalog/census-geocoder-workspace.mjs';
 import { webDavWorkspaceTools } from './catalog/webdav-tools.mjs';
 import { edgarWorkspaceTools } from './catalog/sec-edgar-tools.mjs';
 import { sheetsWorkspaceTools } from './catalog/sheets-workspace.mjs';
@@ -44,6 +45,7 @@ import { datasetLifecycleTools } from './catalog/dataset-lifecycle.mjs';
 import { openapiWorkspaceTools } from './catalog/openapi-workspace.mjs';
 import { harWorkspaceTools } from './catalog/har-workspace.mjs';
 import { n8nWorkspaceTools } from './catalog/n8n-workspace.mjs';
+import { paidJobWorkspaceTools } from './catalog/paid-jobs.mjs';
 import { publisherTools } from './catalog/publisher.mjs';
 import { arcgisWorkspaceTools } from './catalog/arcgis-workspace.mjs';
 import { pricingTools } from './catalog/pricing.mjs';
@@ -86,6 +88,7 @@ const familyTools = {
   worldbankWorkspaces: worldbankWorkspaceTools(tool),
   fiscalDataWorkspaces: fiscalDataWorkspaceTools(tool),
   geocodioWorkspaces: geocodioWorkspaceTools(tool),
+  censusGeocoderWorkspaces: censusGeocoderWorkspaceTools(tool),
   webdavWorkspaces: webDavWorkspaceTools(tool),
   edgarWorkspaces: edgarWorkspaceTools(tool),
   sheetsWorkspaces: sheetsWorkspaceTools(tool),
@@ -111,6 +114,7 @@ const familyTools = {
   openapiWorkspaces: openapiWorkspaceTools(tool),
   harWorkspaces: harWorkspaceTools(tool),
   n8nWorkspaces: n8nWorkspaceTools(tool),
+  paidJobWorkspaces: paidJobWorkspaceTools(tool),
   publishers: publisherTools(tool),
   arcgisWorkspaces: arcgisWorkspaceTools(tool),
   pricing: pricingTools(tool),
@@ -182,6 +186,7 @@ const MERCHANT_TOOLS = [
   ...familyTools.worldbankWorkspaces,
   ...familyTools.fiscalDataWorkspaces,
   ...familyTools.geocodioWorkspaces,
+  ...familyTools.censusGeocoderWorkspaces,
   ...familyTools.webdavWorkspaces,
   ...familyTools.edgarWorkspaces,
   ...familyTools.sheetsWorkspaces,
@@ -207,6 +212,7 @@ const MERCHANT_TOOLS = [
   ...familyTools.openapiWorkspaces,
   ...familyTools.harWorkspaces,
   ...familyTools.n8nWorkspaces,
+  ...familyTools.paidJobWorkspaces,
   ...familyTools.publishers,
   ...familyTools.arcgisWorkspaces,
   ...familyTools.pricing,
