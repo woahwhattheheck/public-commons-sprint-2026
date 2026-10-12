@@ -1,0 +1,132 @@
+{
+  "schema": "stellar-forge.browser-assets.v1",
+  "root": "./",
+  "routes": [
+    [
+      "/",
+      [
+        "index.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/browser.mjs",
+      [
+        "browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/stream-browser.mjs",
+      [
+        "stream-browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/stream-customer-browser.mjs",
+      [
+        "stream-customer-browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/authentication-browser.mjs",
+      [
+        "authentication-browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/oauth-browser.mjs",
+      [
+        "oauth-browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/oauth.css",
+      [
+        "oauth.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/operation-panel.mjs",
+      [
+        "operation-panel.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/file-input-browser.mjs",
+      [
+        "file-input-browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/style.css",
+      [
+        "style.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/revision-browser.mjs",
+      [
+        "revision-browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/transport-browser.mjs",
+      [
+        "transport-browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/postman-browser.mjs",
+      [
+        "../postman/browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/migrations",
+      [
+        "../blockworks/index.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/migrations/",
+      [
+        "../blockworks/index.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/migrations/browser.mjs",
+      [
+        "../blockworks/browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/migrations/style.css",
+      [
+        "../blockworks/style.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/migrations/comparison-view.mjs",
+      [
+        "../blockworks/comparison-view.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ]
+  ]
+}

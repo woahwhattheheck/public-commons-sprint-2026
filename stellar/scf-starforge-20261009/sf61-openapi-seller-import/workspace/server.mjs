@@ -23,19 +23,11 @@ import { inspectPostman, preparePostmanSource } from '../postman/collection.mjs'
 import { openOAuthConnectionRegistry, readOAuthHostConnections } from '../../sf30-seller-sdk/oauth-connections/host.mjs';
 import { createOAuthWorkspaceAdapter } from './oauth-http.mjs';
 import { createMigrationRoutes } from '../blockworks/routes.mjs';
+import { readBrowserAssets } from '../../distribution/browser-assets.mjs';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
-const STATIC = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/stream-browser.mjs','stream-browser.mjs'],['/stream-customer-browser.mjs','stream-customer-browser.mjs'],['/authentication-browser.mjs','authentication-browser.mjs'],['/oauth-browser.mjs','oauth-browser.mjs'],['/oauth.css','oauth.css'],['/operation-panel.mjs','operation-panel.mjs'],['/file-input-browser.mjs','file-input-browser.mjs'],['/style.css','style.css']]);
-STATIC.set('/revision-browser.mjs','revision-browser.mjs');
-STATIC.set('/transport-browser.mjs','transport-browser.mjs');
-STATIC.set('/postman-browser.mjs','../postman/browser.mjs');
-STATIC.set('/migrations','../blockworks/index.html');
-STATIC.set('/migrations/','../blockworks/index.html');
-STATIC.set('/migrations/browser.mjs','../blockworks/browser.mjs');
-STATIC.set('/migrations/style.css','../blockworks/style.css');
-STATIC.set('/migrations/comparison-view.mjs','../blockworks/comparison-view.mjs');
+const STATIC = await readBrowserAssets(new URL('./browser-assets.json',import.meta.url));
 
-const MIME = {'.html':'text/html; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'};
 const HELP = 'node workspace/server.mjs --out-parent PRIVATE_DIRECTORY [--port 0] [--oauth-connections HOST_JSON] [--allow-loopback-oauth]\nCreate a private directory first (mkdir -m 700 /path/to/merchant-projects).\nOAuth host JSON carries approved aliases and directory environment references only. Explicit loopback OAuth is for local development.\nNode 22+; the console prints the local browser URL. Ctrl-C closes its managed seller.';
 const limited = async req => {
   const chunks = []; let size = 0;
@@ -138,8 +130,8 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
       if(req.method==='GET'&&oauth.returned(res,url))return;
       if(await oauth.callback(req,res,url))return;
       if (req.method==='GET' && STATIC.has(pathname)) {
-        const file=STATIC.get(pathname), extension=file.slice(file.lastIndexOf('.'));
-        res.writeHead(200,{'Content-Type':MIME[extension]});res.end(await readFile(join(here,file)));return;
+        const asset=STATIC.get(pathname);
+        res.writeHead(200,{'Content-Type':asset.type});res.end(await readFile(asset.url));return;
       }
       if (!pathname.startsWith('/api/')) return send(404,{error:'Not found'});
       if (!constantEqual(req.headers['x-workspace-token'],token)) return send(401,{error:'Open the complete workspace URL printed by the launcher'});
