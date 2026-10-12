@@ -1184,7 +1184,7 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
     const operations = report.operations ?? null;
     if (Boolean(record.jsonrpc || record.postgres || record.clickhouse || record.opensearch || record.grpc) !== Boolean(operations) || operations && (!/^http:\/\/127\.0\.0\.1:\d+$/.test(operations.url) ||
         operations.availability !== operations.url + '/availability' ||
-        operations.availabilityControl !== null && !new RegExp('^' + operations.url.replaceAll('.', '\.') + '/availability#[0-9a-f]{64}$').test(operations.availabilityControl)))
+        operations.availabilityControl !== null && !new RegExp('^' + operations.url.replaceAll('.', '\\.') + '/availability#[0-9a-f]{64}$').test(operations.availabilityControl)))
       throw new Error('Original merchant reported invalid private operations links.');
     await originalReadback(report.listener, record, mode);
     if (exitSettled || shutdownRequested) throw new Error('Original seller stopped during startup.');
