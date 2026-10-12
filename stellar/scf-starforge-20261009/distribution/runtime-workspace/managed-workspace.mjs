@@ -107,6 +107,17 @@ export async function openManagedHome(root, { directory, label } = {}) {
   }
   return { homeId: id, reopened: Boolean(existing), home: await homeView(await homeRecord(root, id)) };
 }
+// A single-home read for application queries. Full managedState keeps the home
+// selector and review inventory used by the Managed workspace.
+export async function managedHome(root, homeId) {
+  recordId(homeId);
+  await initializeManagedWorkspace(root);
+  const record = await readJSON(pathFor(root, 'managed-homes', homeId), true);
+  if (!record) return null;
+  need(record.id === homeId && absolute(record.directory), 'MANAGED_HOME_RECORD_INVALID');
+  try { return await homeView(record); }
+  catch (error) { return { ...record, phase: 'UNAVAILABLE', error: asError(error), releases: [], active: null }; }
+}
 export async function managedState(root, { homeId = null } = {}) {
   await initializeManagedWorkspace(root);
   const names = (await readdir(join(root, 'managed-homes'))).filter(name => /^[a-f0-9]{24}\.json$/.test(name)).sort();
