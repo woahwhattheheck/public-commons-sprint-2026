@@ -349,13 +349,30 @@ class AnalysisWorkspace:
                 if old:
                     if old["kind"] != kind or old["request"] != raw:
                         raise StateError("ANALYSIS_REQUEST_ID_REUSED")
-                    if kind in {"workspace-export", "research-capture"} and old["status"] in {"INTERRUPTED", "FAILED", "CANCELLED"}:
+                    resumable = (
+                        kind in {"workspace-export", "research-capture"} and
+                        old["status"] in {"INTERRUPTED", "FAILED", "CANCELLED"}) or (
+                        kind in {"response-preview", "response-import"} and
+                        old["status"] == "INTERRUPTED")
+                    if resumable:
                         if db.execute("SELECT 1 FROM sf_analysis_jobs WHERE status='RUNNING' LIMIT 1").fetchone():
                             raise StateError("ANALYSIS_JOB_RUNNING")
                         if kind == "research-capture":
                             self.research.resume(job_id)
-                        else:
+                        elif kind == "workspace-export":
                             self.archives.resume(job_id)
+                        else:
+                            # Continue only this already-admitted local request.
+                            # Historical source/preview identities remain exact;
+                            # a newer source alias does not change the request.
+                            original = spec
+                            if kind == "response-import":
+                                original, _ = self.responses._preview(db, spec)
+                            self.responses._source(
+                                db, original["source"], original["source_revision"])
+                            # execute() verifies the retained source and mapped
+                            # bytes again. import_response() atomically reopens
+                            # its manifest-derived version if it already committed.
                         db.execute("UPDATE sf_analysis_jobs SET status='RUNNING',error=NULL,finished_at=NULL WHERE id=?", (job_id,))
                         db.commit()
                         self._executor.submit(self._execute, job_id, kind, spec)

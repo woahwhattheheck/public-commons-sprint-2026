@@ -93,6 +93,25 @@ the current view revision. The [PostgreSQL receiving guide](POSTGRESQL.md)
 covers installation, the private environment file, full customer operation and
 restoring the original operator directory with its database schema.
 
+## Import the selected customer interface
+
+The public Python names load their original modules when first requested.
+A process that imports local storage or a saved-data reader does not import
+the database, research and other product interfaces through the package entry
+module. The complete installed package still contains those original products.
+
+```python
+from stellar_forge_buyer import DatasetAcquisition, DatasetError
+from stellar_forge_buyer.storage import read
+```
+
+Public imports and direct submodule imports return the same original classes,
+functions and exceptions. Existing class module names, pickled object references,
+`__all__` order and type-checking declarations are preserved. `dir()` lists the
+public interfaces without loading each one; an explicit `import *` requests and
+loads the complete public interface. Product initialization and runtime checks
+remain inside the selected original component.
+
 ## Acquire a dataset for a Python data application
 
 The existing native publisher/customer setup supplies the selected query,

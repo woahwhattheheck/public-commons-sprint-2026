@@ -89,18 +89,32 @@ export async function runResearchIntakeJourney({page,url,directory,selection,ana
   const existingOrResume=async kind=>{
     const request=journal.requests[kind];
     need(request,'RETAINED_NATIVE_REQUEST_REQUIRED');
-    try{return await api('/api/jobs/'+request.id);}
-    catch(error){
-      need(error.message==='ANALYSIS_JOB_NOT_FOUND','ORIGINAL_NATIVE_JOB_READ_FAILED');
-      const response=await page.request.post(endpoint.origin+'/api/start/'+kind,{
-        headers:{...auth,'Content-Type':'application/json'},data:request,timeout:120000});
-      const observed=await response.json();
-      need(response.ok()&&observed.id===request.id&&observed.kind===kind,'ORIGINAL_NATIVE_REQUEST_REPLAY_FAILED');
-      journal.interruptions.push({kind:'request_replay',action:kind,request_id:request.id,
-        outcome:'SAME_REQUEST_AFTER_ABSENT_NATIVE_READ'});
+    let job=null;
+    try{job=await api('/api/jobs/'+request.id);}
+    catch(error){need(error.message==='ANALYSIS_JOB_NOT_FOUND','ORIGINAL_NATIVE_JOB_READ_FAILED');}
+    if(job){
+      need(job.id===request.id&&job.kind===kind&&same(job.request,request),'ORIGINAL_NATIVE_REQUEST_CHANGED');
+      if(job.status!=='INTERRUPTED')return job;
+      // The original Activity control continues the exact saved local job.
+      // Failed/completed jobs remain their original terminal outcomes.
+      await page.evaluate(id=>openJob(id),request.id);
+      await click('#response-resume-job');
+      const resumed=await api('/api/jobs/'+request.id);
+      need(resumed.id===request.id&&resumed.kind===kind&&same(resumed.request,request),'ORIGINAL_NATIVE_REQUEST_CHANGED');
+      journal.interruptions.push({kind:'local_job_resume',action:kind,request_id:request.id,
+        outcome:'SAME_REQUEST_AFTER_INTERRUPTED_NATIVE_JOB'});
       await publish(journalPath,journal);
-      return observed;
+      return resumed;
     }
+    const response=await page.request.post(endpoint.origin+'/api/start/'+kind,{
+      headers:{...auth,'Content-Type':'application/json'},data:request,timeout:120000});
+    const observed=await response.json();
+    need(response.ok()&&observed.id===request.id&&observed.kind===kind&&same(observed.request,request),
+      'ORIGINAL_NATIVE_REQUEST_REPLAY_FAILED');
+    journal.interruptions.push({kind:'request_replay',action:kind,request_id:request.id,
+      outcome:'SAME_REQUEST_AFTER_ABSENT_NATIVE_READ'});
+    await publish(journalPath,journal);
+    return observed;
   };
   const sourceRadio=async()=>{
     const index=await page.locator('input[name="research-source"]').evaluateAll((items,chosen)=>{

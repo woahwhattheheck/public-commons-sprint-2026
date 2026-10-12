@@ -351,10 +351,18 @@ The joined operation:
 
 Repeat the identical command with the same selection and directory to continue
 its retained operation. The helper reuses the existing native job IDs and saved
-receipts. If a preview/import request was retained before process loss but the
+receipts. Completed browser phases also verify and reuse their original
+screenshot bytes and source/workspace bindings; another identical receiving
+command does not replace those accepted views. If a preview/import request was
+retained before process loss but the
 original host proves that ID absent, it repeats that exact request through the
-original API. Completed jobs and provider operations are never re-created.
-A native failed preview/import remains available for inspection.
+original API. If the original workspace marked a running preview/import
+`INTERRUPTED` after process loss, Activity offers **Continue original response
+action**. The example uses that same control and retained request. The native
+continuation verifies the original historical source revision and preview SHA;
+a previously committed import reopens its manifest-derived immutable version.
+Completed jobs and provider operations are never re-created. A native failed
+preview/import remains available for inspection.
 
 The receiving exercise selects complete-source imports only. An incomplete
 source asks for the ordinary operator's explicit scope decision in the existing
