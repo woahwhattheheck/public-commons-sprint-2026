@@ -289,12 +289,12 @@ export function validateCommunityView(value,state){
     utility_id:utility,watershed_id:watershed,query:string('query'),sort,compare_geoids:[...compare],plan_id:planId,report_id:reportId};
 }
 
-export function attachCommunity({getState,api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem}){
+export function attachCommunity({getState,api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem,refreshState,openDelivery}){
   const cache=new Map(),pending=new Map();
   let activeWorkspace=null,container=null,mountController=null,loadError='',formTable=null,formWorkspace=null,validatedView=null;
   let formPlanPrevious=null,formCsvPreview=null,formInterventionImport=null,formCsvEpoch=0;
   let formWatershedCatalog=[],formWatershedReport=null,formWatershedError='',formWatershedCatalogError='';
-  let formWatershedGeneration=0,formWatershedRequest=0;
+  let formWatershedGeneration=0,formWatershedRequest=0,reportSourceRequest=0;
   let local={table:'',tab:'explore',utility:'',watershed:'',query:'',sort:'geoid',compare:[],plan:'',report:''};
   let retainedState=null;
   const current=()=>{const live=getState();return retainedState?.previous===live?retainedState.state:live;};
@@ -981,6 +981,58 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
         return submitAction('community.report.build',{plan_id:p.id,...(value('community_report_title').trim()?{title:value('community_report_title').trim()}:{})});
       });
   }
+  async function reportSourceForm(id){
+    const requestedWorkspace=workspace(),request=++reportSourceRequest;
+    const report=await get('community_reports',id,{fresh:true});
+    if(workspace()!==requestedWorkspace||request!==reportSourceRequest)return;
+    const original=report.files?.['community-report.json'];
+    if(!original?.sha256||!report.files?.['REPORT.json']||!report.files?.['community-report.zip'])
+      throw Error('Open a complete saved Community report with its original source files.');
+    formWorkspace=requestedWorkspace;
+    const deliveries=list(data().deliveries);
+    document.getElementById('detail-dialog')?.close();
+    openForm('Use Community report in scientific reporting',
+      'Receive this saved report and every original member as a retained scientific source. The existing report viewer and ordered delivery selector use the same edition.',
+      '<div class="community-form-source"><h3>'+e(report.title||'Community and utility report')+'</h3>'+
+      '<p>The source includes the original community table, editable interventions, saved regional context and every file in this report edition.</p></div>'+
+      field('Delivery selection',
+        '<select name="community_report_delivery"><option value="">Prepare a new report selection</option>'+
+        deliveries.map(row=>'<option value="'+e(row.id)+'">'+e(row.title||row.selection?.title||row.id)+'</option>').join('')+'</select>',
+        'An existing delivery keeps its original model runs, maps and ordered report sources. This Community report is appended once.',true)+
+      '<p class="note">Review the prepared source through Original sources → Review retained reports. The complete map-delivery form uses its existing completed-model requirements. The Community source is available as soon as this preparation finishes.</p>',
+      'Prepare scientific report source',()=>{
+        ensureFormWorkspace();
+        if(workspace()!==requestedWorkspace||request!==reportSourceRequest)
+          throw Error('Reopen the original report in the intended Workspace.');
+        const deliveryId=value('community_report_delivery');
+        if(deliveryId&&!deliveries.some(row=>row.id===deliveryId))
+          throw Error('Choose an existing retained delivery selection.');
+        return submitAction('community.report.source.prepare',{
+          report_id:report.id,report_sha256:original.sha256,...(deliveryId?{delivery_id:deliveryId}:{})
+        });
+      });
+  }
+  async function openPreparedReport(taskId,{sourceOnly=false}={}){
+    const requestedWorkspace=workspace(),task=await api(endpoint('/api/task',{id:taskId}));
+    if(workspace()!==requestedWorkspace)return;
+    if(task.workspace!==requestedWorkspace||task.action!=='community.report.source.prepare'||task.state!=='complete')
+      throw Error('Open a completed Community report source operation in its original Workspace.');
+    const result=task.result||{},source=result.source,selection=result.delivery_selection;
+    if(!source?.source_collection_id||!source?.source_id||!list(selection?.observed_context_sources).some(
+      row=>row.source_collection_id===source.source_collection_id&&row.source_id===source.source_id))
+      throw Error('The completed operation has no matching retained report source selection.');
+    document.getElementById('detail-dialog')?.close();
+    if(sourceOnly)return openItem('sources',source.source_collection_id);
+    await refreshState({force:true});
+    if(workspace()!==requestedWorkspace)return;
+    return openDelivery(JSON.parse(JSON.stringify(selection)));
+  }
+  function taskActions(task){
+    if(task?.workspace!==workspace()||task.action!=='community.report.source.prepare'||task.state!=='complete'||!task.result?.source)return '';
+    return '<div class="page-actions">'+
+      button('report-source-edition','Open retained report source','data-id="'+e(task.id)+'"','primary')+
+      button('report-source-open','Open prepared delivery form','data-id="'+e(task.id)+'"')+'</div>';
+  }
   async function reportDetail(id,{preview=false}={}){
     const r=await get('community_reports',id,{fresh:true});
     const files=list(r._downloads),html=files.find(f=>/\.html?$/i.test(f.filename||''));
@@ -988,7 +1040,8 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     selectRetainedTable(r.table_id);local.plan=planId||'';local.report=r.id;local.tab='reports';persist();
     const title=r.title||r.selection?.title||'Community and utility report';
     const body='<div class="community-detail-actions">'+(planId?button('plan-open','Open original plan','data-id="'+e(planId)+'"'):'')+
-      (html?button('report-preview',preview?'Hide report preview':'Preview full report','data-id="'+e(id)+'" data-preview="'+(!preview)+'"','primary'):'')+'</div>'+
+      (html?button('report-preview',preview?'Hide report preview':'Preview full report','data-id="'+e(id)+'" data-preview="'+(!preview)+'"','primary'):'')+
+      button('report-source','Use in scientific report','data-id="'+e(id)+'"')+'</div>'+
       '<p class="note">'+e(SCIENTIFIC_SCOPE_TEXT)+'</p>'+
       (preview&&html?'<iframe class="community-report-preview" title="'+e(title)+'" src="'+e(html.url)+'" sandbox="" referrerpolicy="no-referrer"></iframe>':'')+
       (files.length?fileList(files):'<p class="notice">The report has no completed file tickets yet. Inspect its original operation for progress.</p>')+
@@ -1017,6 +1070,9 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     if(action==='plan-open')return planDetail(node.dataset.id);
     if(action==='report-new')return reportForm(node.dataset.id);
     if(action==='report-open')return reportDetail(node.dataset.id);
+    if(action==='report-source')return reportSourceForm(node.dataset.id);
+    if(action==='report-source-open')return openPreparedReport(node.dataset.id);
+    if(action==='report-source-edition')return openPreparedReport(node.dataset.id,{sourceOnly:true});
     if(action==='report-preview')return reportDetail(node.dataset.id,{preview:node.dataset.preview==='true'});
     if(action==='native-item')return nativeItem(node);
     if(action==='intervention-import-preview')return previewInterventionImport();
@@ -1033,5 +1089,5 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     throw Error('This community action is not available.');
   }
   function detach(){mountController?.abort();container=null;}
-  return {render,mount,dispatch,detach,capture,validateView,restoreView};
+  return {render,mount,dispatch,detach,capture,validateView,restoreView,taskActions};
 }
