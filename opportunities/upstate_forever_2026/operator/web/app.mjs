@@ -149,7 +149,7 @@ function render(){
   if(view!=='portfolios')portfolio.detach();
   mountPortfolioDetail();
   if(view==='rehearsal'){
-    for(const node of $('[data-view]'))node.setAttribute('aria-current',node.dataset.view===view?'page':'false');
+    for(const node of $$('[data-view]'))node.setAttribute('aria-current',node.dataset.view===view?'page':'false');
     if(typeof spatialWorkspace!=='undefined')spatialWorkspace.suspend();
     if(typeof community!=='undefined')community.detach();
     if(typeof customerReviews!=='undefined')customerReviews.detach();
