@@ -21,6 +21,11 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "model/robust_decisions/eco_robust/decision_delivery.py",
+    "model/delivery.py",
+    "model/client_report.py",
+    "operator/web/map_atlas.mjs",
+    "operator/MAP_ATLAS.md",
     "model/decision_study_transfer.py",
     "model/study_transfer.py",
     "operator/STUDY_TRANSFER.md",
@@ -44,6 +49,11 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    # Optional full current postimages bind original native atlas delivery.
+    "model/delivery.py",
+    "model/client_report.py",
+    "operator/web/map_atlas.mjs",
+    "operator/MAP_ATLAS.md",
     "model/decision_study_transfer.py",
     "model/study_transfer.py",
     "operator/STUDY_TRANSFER.md",

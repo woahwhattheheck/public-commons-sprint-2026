@@ -193,3 +193,13 @@ edition on the maintained application to carry pinned diagnostic revisions,
 their full common-support source roster and original Decision SQLite history
 through selected editable study transfer. The original project archive,
 transfer transport and receiving registration remain the maintained services.
+
+## Receive and continue a saved decision delivery
+
+Install the complete current packet over the same maintained application baseline using the original guarded installer. The packet includes `model/robust_decisions/eco_robust/decision_delivery.py` and its package source-manifest entry. Joined full postimages for `model/delivery.py`, `model/client_report.py`, `operator/web/map_atlas.mjs` and the atlas guide are admitted as optional host layers; their declared preimages must match the receiving application or a verified earlier layer. A newer host file is composed rather than overwritten.
+
+On an existing scientific workspace, reopen a completed saved decision calculation, choose a completed frontier point when applicable, and request its delivery options. Choose a named native profile explicitly. Check the displayed saved revision, selected scenario and original same-profile run pair, then open the map draft. Use the atlas's existing build action with the actual project/contact selections. Open the retained maps, decision evidence and client report through the original authenticated download tickets.
+
+For receiving, transfer the complete study/project using the original workspace transport, restore it under a registered workspace, reopen the same saved calculation and choose the same native profile. The source pin must still identify the original decision revision/result and selected point, while the receiving operator key may differ. Original native run IDs and the map's chosen profile remain visible. Verify the retained decision report and implementation selection from the completed delivery; a later editor draft must not change their bound source.
+
+Use the current native receiving operation for this journey. An unavailable profile reports its concrete missing original run/output or incompatible source condition before opening a deliverable draft. Continue native preparation through the existing scientific workflow, then reopen the same saved decision; the read endpoints do not schedule hidden model work.
