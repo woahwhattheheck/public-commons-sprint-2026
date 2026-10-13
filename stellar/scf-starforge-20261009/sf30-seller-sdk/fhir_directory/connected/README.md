@@ -177,3 +177,31 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/connected/REC
 The native receiving JSON supplies the actual workspace UUID, original input files and exact accepted replay inputs. If those original files moved, pass `--source-files ABS_JSON` with the existing source keys mapped to their new absolute paths; their retained lengths and SHA-256 values must still match. An existing authentication profile file may be selected with `--credentials-file`.
 
 The programme uses the maintained Merchant host, imports all declared original directory inputs, exercises all accepted native replay inputs, follows complete pages, receives complete indices and original files, receives the handoff and latest complete workspace into separate destinations, reopens the Merchant connection while keeping the original native operator, and verifies all retained downloads. It writes `OPERATED_CONNECTED_HUMAN_SERVICES_DIRECTORY.json` and its restartable `CONNECTED_JOURNEY.json`. See [the complete product receiving guide](../../../../../products/human-services-directory/RECEIVING.md).
+
+
+## Directory standards assessment and review
+
+The connected catalogue includes all four conformance writes, complete finding and row paging, exact finding reads, all declared full files, and the four immutable conformance collections. The input schemas come from the installed native catalogue.
+
+See [Conformance](../CONFORMANCE.md) for the complete operator workflow, SDK helpers, typed arguments, native routes, review semantics and editable receiving. The same local client, normal Merchant host, retained downloader and installed Applications entry operate these records.
+
+
+## Complete Operating Plans
+
+The same provider exposes all eight native Operating Plans operations plus full catalogue, document, draft, input and basis reads. Exact schemas come from **directory-operating-plans-schema.json**, alongside the existing Directory and Conformance contracts. Existing source/acquisition operation ownership and full-file transport are unchanged.
+
+Use **directory_operating_plan_preview** with **operating_plan_create**, review the complete response, then **directory_operating_plan_create** with the exact accepted **previewRecordId**. Save, copy and prefix-history receiving use the original OperatingPlan model and saved-head checks. Step preparation and current-registration comparison do not write native plan records.
+
+The typed client exports **prepareHumanServicesDirectoryOperatingPlan**, **saveHumanServicesDirectoryOperatingPlan**, **readHumanServicesDirectoryOperatingPlan** and **downloadHumanServicesDirectoryOperatingPlan**. The read helper reopens the entire document, working draft, source basis and complete accepted input through the maintained original-response range reader. Its optional historical revision selects old content while retaining the full history's latest draft base. The download helper receives every native JSON, Markdown or HTML byte with the existing export manifest and resume protocol.
+
+See [Operating Plans](../OPERATING_PLANS.md) for all thirteen action names, input keys, strict limits, native and browser/SDK/MCP receiving commands, saved-history semantics and the original-model source. Complete workspace imports carry the immutable **operatingPlans** records and their four retained files through the original Directory receiver; receiver-local import receipts retain their existing meaning.
+
+## Complete declared relationships
+
+The same provider now exposes the three original relationship page actions: `directory_conformance_foreign_keys`, `directory_conformance_foreign_key_candidates` and `directory_conformance_foreign_key_matches`. Their exact query schemas come from the installed conformance catalogue. Outcome, candidate and match types preserve original references and separate existence from identity resolution; every ambiguous match remains available.
+
+Use `iterateHumanServicesDirectoryForeignKeys` with `kind: "outcomes"`, `"candidates"` or `"matches"` to receive every native page. The original conformance iterator also exposes the corresponding `foreign_keys`, `foreign_key_candidates` and `foreign_key_matches` forms. Its earlier findings and assessed-row types are preserved. Every page carries its complete retained result and original ordinal progression.
+
+The existing conformance file action receives the four additional native kinds: `foreignKeys`, `foreignKeyCandidates`, `foreignKeyMatches` and `foreignKeyCoverage`. Earlier assessments retain their original files. The existing full download, manifest and reopening helpers preserve every byte; the connected 512 MiB file limit remains explicit alongside the native larger-file routes.
+
+See [Complete relationship receiving](../CONFORMANCE_FOREIGN_KEY_CLIENTS.md) for typed examples, exact action/filter names, whole-file custody and the complete `operate_foreign_key_clients.mjs` command. That programme consumes an actual completed native relationship result, reads the same workspace through its browser and Merchant, and receives the browser's full editable packet into a separate customer workspace. It preserves every immutable Directory record and any existing complete OperatingPlan histories without starting another source acquisition or assessment.

@@ -169,6 +169,17 @@ async function selectedRelease(root, saved, homes = null) {
     bindingKeys.every(key => item.runtime[key] === saved.runtime[key]));
   return { home, release };
 }
+async function applicationConnection(root, saved, homes = null) {
+  const [{ home, release }, adoption] = await Promise.all([
+    selectedRelease(root, saved, homes),
+    saved.adoption ? operationView(root, saved.adoption.requestId) : null,
+  ]);
+  // A release directory is visible before its dependency attachment and first
+  // active selection finish. Keep the original adoption authoritative throughout.
+  const connected = Boolean(release) && (!adoption?.request ||
+    adoption.phase === 'SUCCEEDED' && !adoption.active);
+  return { home, release, adoption, connected };
+}
 async function runViews(root, applicationId, history) {
   return Promise.all(history.map(async run => {
     const cancelled = await runCancellation(root, applicationId, run.id);
@@ -181,20 +192,19 @@ async function runViews(root, applicationId, history) {
   }));
 }
 async function view(root, saved, { homes = null, historyLimit = 30 } = {}) {
-  const [{ home, release }, page] = await Promise.all([
-    selectedRelease(root, saved, homes),
+  const [{ home, release, adoption, connected }, page] = await Promise.all([
+    applicationConnection(root, saved, homes),
     applicationRunPage(root, { applicationId: saved.id, limit: historyLimit }),
   ]);
   const rows = await runViews(root, saved.id, page.runs);
   const current = rows[0] ?? null;
-  const adoption = !release && saved.adoption ? await operationView(root, saved.adoption.requestId) : null;
-  const phase = !release ? 'CONNECTING' : !current ? 'READY' :
+  const phase = !connected ? 'CONNECTING' : !current ? 'READY' :
     current.active ? current.stop ? 'STOPPING' : current.url ? 'RUNNING' : 'STARTING' :
       ['SUCCEEDED', 'CANCELLED'].includes(current.phase) ? current.result?.state === 'EXITED' || current.result?.state === 'LAUNCH_FAILED' ? 'FAILED' : 'STOPPED' :
         current.phase;
   return { ...saved, phase, release: release ? { id: release.id, digest: release.digest, sourceCommit: release.sourceCommit } : null,
     home: home ? { id: home.id, directory: home.directory, revision: home.revision, phase: home.phase } : null,
-    adoption, current, runs: rows, totalRuns: page.totalRuns,
+    connectionReady: connected, adoption, current, runs: rows, totalRuns: page.totalRuns,
     history: { limit: page.limit, nextCursor: page.nextCursor } };
 }
 export async function applicationsState(root, { historyLimit = 30 } = {}) {
@@ -304,17 +314,17 @@ export async function saveApplication(root, { requestId, reviewId, applicationId
   } finally { await lease.close(); }
 }
 export async function applicationBindingOperation(root, id) {
-  const saved = await application(root, id), { release } = await selectedRelease(root, saved);
-  return release ? null : saved.adoption;
+  const saved = await application(root, id), { connected } = await applicationConnection(root, saved);
+  return connected ? null : saved.adoption;
 }
 export async function reviewApplicationStart(root, id, { navigationOrigin = null } = {}) {
   const saved = await application(root, id);
   need(!await busyApplication(root, id), 'APPLICATION_RUNNING', 'Reopen the retained application operation', 409);
   const runtime = await inspectMerchantRuntime(saved.runtime.directory, { expectedManifest: saved.runtime.sourceManifestSha256, load: false });
   need(hash(binding(runtime)) === hash(saved.runtime), 'APPLICATION_RUNTIME_CHANGED');
-  const { home, release } = await selectedRelease(root, saved);
+  const { home, release, connected } = await applicationConnection(root, saved);
   const selection = await applicationSelection(saved.kind, saved.providerId ?? null);
-  need(release && (selection.entry.python || Object.hasOwn(release.commands, selection.entry.command)), 'APPLICATION_CONNECTION_REQUIRED');
+  need(connected && (selection.entry.python || Object.hasOwn(release.commands, selection.entry.command)), 'APPLICATION_CONNECTION_REQUIRED');
   const command = await applicationCommand(selection, saved.settings, saved.runtime.directory, {
     root, runtimeId: saved.runtimeId, navigationOrigin,
   });
@@ -362,7 +372,8 @@ export async function prepareApplicationStart(root, { applicationId, requestId, 
       root, runtimeId: saved.runtimeId, navigationOrigin: reviewed.navigationOrigin ?? null,
     });
     need(hash(current) === hash(reviewed.command), 'APPLICATION_INPUTS_CHANGED', 'Review the original current inputs again', 409);
-    const { home, release } = await selectedRelease(root, saved);
+    const { home, release, connected } = await applicationConnection(root, saved);
+    need(connected, 'APPLICATION_CONNECTION_REQUIRED');
     need(home?.revision === reviewed.homeRevision && release?.id === reviewed.releaseId &&
       release?.digest === reviewed.releaseDigest, 'APPLICATION_RELEASE_CHANGED');
     const request = { requestId, operation: 'managed-run', homeId: home.id, releaseId: release.id,

@@ -11,7 +11,7 @@ import { FLOWABLE_WORKSPACE_ACTIONS,FLOWABLE_MAX_JSON_BYTES,validateFlowableActi
 import { FlowableWorkspaceHttpClient,readFlowablePrivateFile,retainFlowableResponse } from './http-client.mjs';
 import { need,privateDirectory } from '../../../distribution/runtime-workspace/storage.mjs';
 const HELP=[
-  'Flowable process and decision operations workspace',
+  'Flowable process, case and decision operations workspace',
   '',
   'flowable-workspace open --dir DIRECTORY [--connections FILE] [--port 0] [--url-output FILE]',
   'flowable-workspace call --dir DIRECTORY --method ACTION [--input FILE] [--output FILE]',

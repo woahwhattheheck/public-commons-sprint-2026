@@ -50,6 +50,13 @@
         "ui/standardized-analysis.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/kiwis.mjs",
+      [
+        "ui/kiwis.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

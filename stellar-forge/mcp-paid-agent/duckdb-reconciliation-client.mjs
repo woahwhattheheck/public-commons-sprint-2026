@@ -36,7 +36,7 @@ export function parseReconciliationManifest(bytes,exportId){
  need(Array.isArray(result.queries)&&Array.isArray(result.sources),'DUCKDB_RECONCILIATION_MANIFEST_INVALID');
  const kinds=new Set();
  for(const query of result.queries){
-  need(plain(query)&&['rows','groups','decisions','changes','fields'].includes(query.kind)&&!kinds.has(query.kind)&&
+  need(plain(query)&&['rows','groups','decisions','changes','fields','normalizations','decision_carry'].includes(query.kind)&&!kinds.has(query.kind)&&
    sha(query.query_id)&&sha(query.export_id)&&Number.isSafeInteger(query.revision)&&query.revision>0&&
    Number.isSafeInteger(query.rows)&&query.rows>=0&&query.directory==='queries/'+query.kind,
    'DUCKDB_RECONCILIATION_MANIFEST_INVALID');
@@ -49,7 +49,33 @@ export function parseReconciliationManifest(bytes,exportId){
   need(plain(result.comparison_rules)&&result.comparison_rules.schema==='stellar-forge.duckdb-reconciliation.numeric-rules.v1'&&
    Array.isArray(result.comparison_rules.columns)&&result.comparison_rules.columns.length>0&&kinds.has('fields'),
    'DUCKDB_RECONCILIATION_COMPARISON_RULES_CHANGED');
- }else need(!kinds.has('fields'),'DUCKDB_RECONCILIATION_COMPARISON_RULES_CHANGED');
+ }
+ if(result.normalizations!==undefined){
+  need(plain(result.normalizations)&&result.normalizations.schema==='stellar-forge.duckdb-reconciliation.normalizations.v1'&&
+   Array.isArray(result.normalizations.columns)&&result.normalizations.columns.length>0&&kinds.has('normalizations'),
+   'DUCKDB_RECONCILIATION_NORMALIZATIONS_CHANGED');
+ }else need(!kinds.has('normalizations'),'DUCKDB_RECONCILIATION_NORMALIZATIONS_CHANGED');
+ need(kinds.has('fields')===(result.comparison_rules!==undefined||result.normalizations!==undefined),
+  'DUCKDB_RECONCILIATION_COMPARISON_FIELDS_CHANGED');
+ const carry=result.decision_carry_forward;
+ if(carry!==undefined){
+  need(plain(carry)&&carry.schema==='stellar-forge.duckdb-reconciliation.decision-carry.v1.lineage'&&
+   Array.isArray(carry.applied_here)&&carry.applied_here.length>0&&carry.applied_here.every(sha)&&
+   Array.isArray(carry.source_editions)&&carry.source_editions.length>0&&carry.source_editions.every(sha)&&
+   new Set(carry.source_editions).size===carry.source_editions.length&&kinds.has('decision_carry')&&
+   names.has('PRIOR_DECISIONS.md'),'DUCKDB_RECONCILIATION_DECISION_CARRY_CHANGED');
+  for(const kind of ['reports','reviews','applications']){
+   const key={reports:'report_id',reviews:'review_id',applications:'application_id'}[kind],seen=new Set();
+   need(Array.isArray(carry[kind])&&carry[kind].length<=10000,'DUCKDB_RECONCILIATION_DECISION_CARRY_CHANGED');
+   for(const item of carry[kind]){
+    need(plain(item)&&sha(item[key])&&sha(item.sha256)&&!seen.has(item[key])&&
+     names.has('decision-carry/'+kind+'/'+item[key]+'.json'),'DUCKDB_RECONCILIATION_DECISION_CARRY_CHANGED');
+    seen.add(item[key]);
+   }
+   if(kind==='applications')need(carry.applied_here.every(value=>seen.has(value)),
+    'DUCKDB_RECONCILIATION_DECISION_CARRY_CHANGED');
+  }
+ }else need(!kinds.has('decision_carry'),'DUCKDB_RECONCILIATION_DECISION_CARRY_CHANGED');
  const editions=new Set();
  for(const source of result.sources){
   need(plain(source)&&sha(source.edition_id)&&!editions.has(source.edition_id)&&
@@ -58,7 +84,8 @@ export function parseReconciliationManifest(bytes,exportId){
   editions.add(source.edition_id);
   for(const file of source.files)need(names.has(source.directory+'/'+name(file)),'DUCKDB_RECONCILIATION_PACKAGE_INCOMPLETE');
  }
- need(editions.size>=1&&editions.size<=2,'DUCKDB_RECONCILIATION_MANIFEST_INVALID');
+ need(editions.size>=1&&(carry?editions.size===carry.source_editions.length&&carry.source_editions.every(value=>editions.has(value)):editions.size<=2),
+  'DUCKDB_RECONCILIATION_MANIFEST_INVALID');
  return result;
 }
 
@@ -144,6 +171,7 @@ export async function openDuckDBReconciliationClient({url,client:provided,worksp
   workspace,workspaceId,endpoint:transport.endpoint,
   status:()=>call('reconcile-status'),
   review:definition=>call('reconcile-review',{definition}),
+  normalizationPreview:(definition,options)=>call('reconcile-normalization-preview',{definition,...options}),
   pairs:options=>call('reconcile-pairs',options),
   pair:(pair_id,revision)=>call('reconcile-pair',{pair_id,...(revision===undefined?{}:{revision})}),
   savePair:request=>call('reconcile-save-pair',request),
@@ -153,6 +181,7 @@ export async function openDuckDBReconciliationClient({url,client:provided,worksp
   groups:(run_id,options={})=>call('reconcile-groups',{run_id,...options}),
   rows:(run_id,options={})=>call('reconcile-rows',{run_id,...options}),
   fields:(run_id,options={})=>call('reconcile-fields',{run_id,...options}),
+  normalizations:(run_id,options={})=>call('reconcile-normalizations',{run_id,...options}),
   row:(run_id,side,row)=>call('reconcile-row',{run_id,side,row}),
   decisions:(run_id,options={})=>call('reconcile-decisions',{run_id,...options}),
   decide:request=>call('reconcile-decide',request),
@@ -160,6 +189,14 @@ export async function openDuckDBReconciliationClient({url,client:provided,worksp
   report:report_id=>call('reconcile-report',{report_id}),
   saveReport:request=>call('reconcile-save-report',request),
   changes:(report_id,options={})=>call('reconcile-changes',{report_id,...options}),
+  prepareCarry:request=>call('reconcile-prepare-carry',request),
+  carryReviews:options=>call('reconcile-carry-reviews',options),
+  carryReview:review_id=>call('reconcile-carry-review',{review_id}),
+  carryCandidates:(review_id,options={})=>call('reconcile-carry-candidates',{review_id,...options}),
+  carryCandidate:(review_id,candidate_id)=>call('reconcile-carry-candidate',{review_id,candidate_id}),
+  applyCarry:request=>call('reconcile-apply-carry',request),
+  carryApplications:options=>call('reconcile-carry-applications',options),
+  carryApplication:application_id=>call('reconcile-carry-application',{application_id}),
   operations:options=>call('reconcile-operations',options),
   request:request_id=>call('reconcile-request',{request_id}),
   resume:request_id=>call('reconcile-resume',{request_id}),

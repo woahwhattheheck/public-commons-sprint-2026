@@ -3,12 +3,19 @@ import { promises as fs, constants as FS } from "node:fs";
 import { join, resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { hostname } from "node:os";
-import { freshState, seal, validateState, summary, analyzed, applyAction, sourceSummary, findSource, findProposal, proposalView, proposedChanges, findEdition, editionView, compareEditions, STATE_MAX_BYTES, SOURCE_MAX_BYTES } from "./model.mjs";
+import { freshState, seal, validateState, summary, analyzed, applyAction, sourceSummary, findSource, findProposal, proposalView, proposedChanges, findEdition, editionView, compareEditions, STATE_MAX_BYTES, SOURCE_MAX_BYTES, materialize } from "./model.mjs";
 import { clone, digest, sha256, json, base64, plain, need, id, hash, integer, text, now, newId, page, canonical } from "./util.mjs";
 import { exists, plainRead, atomicWrite, createOnlyFile, syncDirectory } from "./files.mjs";
 import { validateArguments, MUTATIONS } from "./catalog.mjs";
-import { buildBundle, PACKAGE_MAX_BYTES } from "./portable.mjs";
+import { buildBundle, verifyBundle, PACKAGE_MAX_BYTES } from "./portable.mjs";
+import { workRows, workView, evidenceBytes, previewReturn, applyReturn, returnRows, returnView } from "./corrective-work.mjs";
+import { makeWorkReport } from "./corrective-reports.mjs";
 import { makeReport, nativeGrid } from "./reports.mjs";
+import { intakeImport, intakeSummary, semanticModelRows, semanticModelRead, previewSemanticModel, assessSemanticDraft, semanticVersionCompare,
+  semanticNativeModel, retainSemanticValidation, validationSummary, semanticSource, semanticOutput,
+  previewSemanticReturn, applySemanticReturn } from "./semantic-model.mjs";
+import { runSemanticNative, semanticCatalog } from "./semantic-native.mjs";
+import { makeSemanticReport, semanticNativeDelivery } from "./semantic-reports.mjs";
 
 function assertRevision(state, expectedRevision) {
   integer(expectedRevision, "reviewed workspace revision");
@@ -382,7 +389,24 @@ export class HaystackWorkspace {
       }
       need(!await exists(this.deliveryDirectory(operationId)), "This operation identity belongs to an existing delivery.", "HAYSTACK_OPERATION", 409);
       assertRevision(state, args.expectedRevision);
-      const result = applyAction(state, action, args); state.revision += 1;
+      let result;
+      if (action === "semantic.intake.import") {
+        const bytes = base64(args.base64, SOURCE_MAX_BYTES);
+        const received = await runSemanticNative(this.directory, operationId, {
+          action: "inspect", file: { name: args.name, format: args.format, bytes: bytes.length, sha256: sha256(bytes), base64: args.base64 },
+          ...(args.delimiter === undefined ? {} : { delimiter: args.delimiter })
+        });
+        result = intakeImport(state, args, received.result, received.execution);
+      } else if (action === "semantic.validate") {
+        const nativeModel = semanticNativeModel(state, args);
+        const received = await runSemanticNative(this.directory, operationId, { action: "validate", model: nativeModel });
+        result = retainSemanticValidation(state, args, received.result, received.execution);
+      } else if (action === "semantic.return.apply") {
+        result = applySemanticReturn(state, args, verifyBundle(base64(args.base64, PACKAGE_MAX_BYTES)));
+      } else {
+        result = action === "return.apply" ? applyReturn(state, args, verifyBundle(base64(args.base64, PACKAGE_MAX_BYTES))) : applyAction(state, action, args);
+      }
+      state.revision += 1;
       const outcome = { ...clone(result), workspaceId: state.workspaceId, revision: state.revision, operationId };
       const operation = { id: operationId, action, argumentsSha256, revision: state.revision, at: now(),
         previousSha256: state.operations.at(-1)?.sha256 || null, result: outcome };
@@ -453,8 +477,15 @@ export class HaystackWorkspace {
   }
   async prepareDelivery(args) {
     const operationId = id(args.operationId), argumentsSha256 = digest({ action: "delivery.prepare", args });
+    const semanticKind = ["semantic-report", "semantic-dictionary", "semantic-output"].includes(args.kind);
+    if (semanticKind) {
+      need(args.editionId === undefined && args.sourceId === undefined && args.role === undefined, "Semantic reports retain the chosen model version and its own complete source context.");
+      if (args.kind === "semantic-output") need(args.validationId && args.name && args.modelId === undefined && args.versionId === undefined && args.format === undefined, "Download an exact retained native output by its validation and filename.");
+      else need(args.modelId && args.validationId === undefined && args.name === undefined, "Choose one complete model version for its report or dictionary.");
+    } else need(args.modelId === undefined && args.versionId === undefined && args.validationId === undefined && args.name === undefined, "Use model selectors only for a semantic delivery.");
     if (args.kind === "workspace") need(args.format === undefined && args.editionId === undefined && args.sourceId === undefined && args.role === undefined,
       "The complete workspace delivery includes every source, edition and application file; omit report-only fields.");
+    else if (args.kind === "work-register") need(args.editionId === undefined && args.sourceId === undefined && args.role === undefined, "The complete corrective-work register retains every finding and review; omit asset-report scope fields.");
     else if (args.kind === "native-grid") need(args.sourceId && args.role === undefined && (args.format === undefined || args.format === "json"), "Native grid delivery needs one selected source and JSON format.");
     else need(args.sourceId === undefined, "Register and diagnostic reports use their complete selected source set.");
     return this.withWriter(async () => {
@@ -468,6 +499,9 @@ export class HaystackWorkspace {
       const state = await this.read(); assertRevision(state, args.expectedRevision);
       need(!state.operations.some(item => item.id === operationId), "This identity belongs to an original saved mutation.", "HAYSTACK_OPERATION", 409);
       const result = args.kind === "workspace" ? await buildBundle(state) :
+        args.kind === "work-register" ? makeWorkReport(state, args) :
+        ["semantic-report", "semantic-dictionary"].includes(args.kind) ? makeSemanticReport(state, args) :
+        args.kind === "semantic-output" ? semanticNativeDelivery(state, args) :
         args.kind === "native-grid" ? nativeGrid(state, args) : makeReport(state, args);
       const bytes = Buffer.from(result.bytes);
       need(bytes.length <= PACKAGE_MAX_BYTES, "This complete delivery exceeds 192 MiB.", "HAYSTACK_SIZE", 413);
@@ -490,12 +524,25 @@ export class HaystackWorkspace {
     if (MUTATIONS.has(action)) return this.mutate(action, args);
     if (action === "delivery.prepare") return this.prepareDelivery(args);
     if (action === "delivery.read") return this.readDelivery(args.operationId, args);
+    if (action === "semantic.catalog") return semanticCatalog();
     if (action === "source.read") {
       const original = await this.originalSource(args.sourceId);
       return range(original.bytes, { sourceId: original.source.id, sha256: original.source.id, name: original.source.name, mediaType: "application/json" }, args);
     }
     const state = await this.read();
     if (action === "workspace.status") return summary(state);
+    if (action === "semantic.source.read") {
+      const value = semanticSource(state, args);
+      return range(value.bytes, { ...value.metadata, intakeId: value.intakeId }, args);
+    }
+    if (action === "semantic.output.read") {
+      const value = semanticOutput(state, args);
+      return range(value.bytes, { ...value.metadata, validationId: value.validationId }, args);
+    }
+    if (action === "evidence.read") {
+      const value = evidenceBytes(state, args.evidenceId);
+      return range(value.bytes, { evidenceId: value.evidenceId, sha256: value.sha256, name: value.name, mediaType: value.mediaType }, args);
+    }
     if (action === "operation.read") {
       const operationId = id(args.operationId), operation = state.operations.find(item => item.id === operationId);
       if (operation) return { ...clone(operation.result), replayed: true };
@@ -510,6 +557,36 @@ export class HaystackWorkspace {
     assertRevision(state, args.expectedRevision);
     const envelope = { workspaceId: state.workspaceId, revision: state.revision, ...(args.editionId ? { editionId: args.editionId } : {}) };
     const paginate = items => ({ ...envelope, ...page(items, args) });
+    if (action === "semantic.intakes.list") return paginate((state.semantics?.intakes || []).map(intakeSummary));
+    if (action === "semantic.intake.read") {
+      const intake = state.semantics?.intakes.find(row => row.id === id(args.intakeId));
+      need(intake, "Choose a retained original point list.", "HAYSTACK_SEMANTIC_MISSING", 404);
+      return { ...paginate(intake.rows.map((cells, rowIndex) => ({ rowIndex, cells: clone(cells), physicalEndLine: intake.rowEndLines[rowIndex] }))), intake: intakeSummary(intake) };
+    }
+    if (action === "semantic.model.preview") return { ...envelope, ...previewSemanticModel(state, args, { analyzed, materialize }) };
+    if (action === "semantic.model.assess") return { ...envelope, ...assessSemanticDraft(state, args, { analyzed, materialize }) };
+    if (action === "semantic.models.list") return paginate(semanticModelRows(state));
+    if (action === "semantic.model.read") return { ...envelope, ...semanticModelRead(state, args) };
+    if (action === "semantic.model.compare") return { ...envelope, ...semanticVersionCompare(state, args) };
+    if (action === "semantic.validations.list") return paginate((state.semantics?.validations || []).filter(row => !args.modelId || row.modelId === args.modelId).map(validationSummary));
+    if (action === "semantic.validation.read") {
+      const validation = state.semantics?.validations.find(row => row.id === hash(args.validationId));
+      need(validation, "Choose a complete retained native validation.", "HAYSTACK_SEMANTIC_MISSING", 404);
+      return { ...envelope, validation: clone(validation) };
+    }
+    if (action === "semantic.return.preview") return { ...envelope, ...previewSemanticReturn(state, verifyBundle(base64(args.base64, PACKAGE_MAX_BYTES))) };
+    if (action === "semantic.return.apply") need(false, "Use the original mutation path.", "HAYSTACK_ACTION", 409);
+    if (action === "semantic.returns.list") return paginate((state.semantics?.returns || []).map(row => { const { comparisons: omitted, ...metadata } = row; return clone(metadata); }));
+    if (action === "semantic.return.read") {
+      const receipt = state.semantics?.returns.find(row => row.id === hash(args.returnId));
+      need(receipt, "Choose a retained original contractor-return decision.", "HAYSTACK_SEMANTIC_MISSING", 404);
+      return { ...envelope, return: clone(receipt) };
+    }
+    if (action === "works.list") return paginate(workRows(state, args, { analyzed }));
+    if (action === "work.read") return { ...envelope, ...workView(state, args.itemId, { analyzed }) };
+    if (action === "return.preview") return { ...envelope, ...previewReturn(state, verifyBundle(base64(args.base64, PACKAGE_MAX_BYTES))) };
+    if (action === "returns.list") return paginate(returnRows(state));
+    if (action === "return.read") return { ...envelope, ...returnView(state, args.returnId) };
     if (action === "sources.list") return paginate(state.sources.map(source => ({ ...sourceSummary(source), selected: state.selectedSourceIds.includes(source.id) })));
     if (action === "operations.list") return paginate(state.operations);
     if (action === "editions.list") return paginate(state.editions);

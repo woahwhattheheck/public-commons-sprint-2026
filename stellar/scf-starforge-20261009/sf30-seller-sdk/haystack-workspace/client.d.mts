@@ -1,4 +1,6 @@
 import type { HaystackAnalysis, HaystackRole } from "./haystack-index.mjs";
+import type { SemanticActionMap, SemanticDeliveryArguments } from "./semantic-types.mjs";
+export type * from "./semantic-types.mjs";
 export type Json = null | boolean | number | string | Json[] | { [name: string]: Json };
 export type Role = "site" | "equip" | "point" | "all";
 export type Counts = HaystackAnalysis["counts"];
@@ -31,6 +33,7 @@ export interface Status {
   createdAt: string; sha256: string; materialSha256: string; selectedSourceIds: string[];
   sourceCount: number; editionCount: number; proposalCount: number; pendingProposals: number;
   recordCount: number; counts: Counts; diagnosticCount: number; sourceDiagnostics: number;
+  semanticCounts: { intakeCount: number; modelCount: number; versionCount: number; validationCount: number; returnCount: number };
 }
 export interface Revision { expectedRevision: number }
 export interface Mutation extends Revision { operationId: string }
@@ -62,14 +65,15 @@ export interface Comparison extends Page<ComparisonRow> {
   beforeEditionId: string; afterEditionId: string; sourcePairs: SourcePair[]; counts: Record<ChangeState, number>;
 }
 export interface ByteRange {
-  sha256: string; name: string; mediaType: string; sourceId?: string; operationId?: string;
+  sha256: string; name: string; mediaType: string; sourceId?: string; operationId?: string; evidenceId?: string;
   offset: number; bytes: number; totalBytes: number; nextOffset: number; complete: boolean; base64: string; chunkSha256: string;
 }
 export interface Delivery extends Outcome {
-  name: string; mediaType: string; sha256: string; bytes: number; kind: "workspace" | "register" | "diagnostics" | "native-grid"; createdAt: string;
+  name: string; mediaType: string; sha256: string; bytes: number; kind: "workspace" | "register" | "diagnostics" | "native-grid" | "work-register" | "semantic-report" | "semantic-dictionary" | "semantic-output"; createdAt: string;
 }
-export type DeliveryArguments = Mutation & (
+export type DeliveryArguments = SemanticDeliveryArguments | Mutation & (
   { kind: "workspace" } |
+  { kind: "work-register"; format?: "json" | "csv" | "html" } |
   { kind: "register" | "diagnostics"; format?: "json" | "csv" | "html"; editionId?: string; role?: Role } |
   { kind: "native-grid"; sourceId: string; editionId?: string; format?: "json" }
 );
@@ -77,7 +81,94 @@ export interface Operation {
   id: string; action: string; argumentsSha256: string; revision: number; at: string;
   previousSha256: string | null; result: Record<string, Json>; sha256: string;
 }
-export interface ActionMap {
+
+export type WorkStatus = "open" | "in-progress" | "submitted" | "verified" | "exception";
+export type WorkPriority = "routine" | "high" | "critical";
+export interface WorkFields { title: string; description: string; assignee: string; dueDate: string; priority: WorkPriority }
+export interface WorkContext {
+  id: string; materialSha256: string; sourceIds: string[]; approvedProposalIds: string[]; proposals: Proposal[]; sha256: string;
+}
+export interface WorkMaterialReference { materialSha256: string; contextId: string; edition: Edition | null; finding: WorkFinding }
+export interface WorkSubmission extends WorkMaterialReference {
+  sha256: string; round: number; at: string; author: string; note: string; evidenceIds: string[]; workHeadSha256: string;
+}
+export interface WorkReview extends WorkMaterialReference {
+  decision: "verify" | "accept-exception"; author: string; note: string; at: string; submissionSha256: string | null;
+}
+export interface WorkProgress { status: WorkStatus; submission: WorkSubmission | null; review: WorkReview | null }
+export interface WorkCurrent extends WorkProgress { fields: WorkFields; evidenceIds: string[]; at: string; author: string }
+export interface WorkOrigin {
+  sourceId: string | null; recordKey?: string | null; diagnostic?: Diagnostic | null; diagnosticSha256?: string | null;
+  workspaceId: string; materialSha256: string; contextId: string; edition: Edition | null;
+  record: NativeRecord | null; recordSha256: string | null; sha256: string;
+}
+export interface WorkFinding { state: string; currentMaterialSha256: string; [name: string]: Json }
+export interface WorkEvidence {
+  id: string; kind: "file" | "proposal" | "note"; name: string; bytes: number; sha256: string; mediaType: string;
+  proposal?: Proposal; [name: string]: unknown;
+}
+export interface WorkSummary {
+  id: string; origin: WorkOrigin; headSha256: string; current: WorkCurrent; finding: WorkFinding; evidenceCount: number;
+}
+export interface WorkRead extends Envelope {
+  id: string; origin: WorkOrigin; headSha256: string; current: WorkCurrent; finding: WorkFinding;
+  history: Json[]; evidence: WorkEvidence[]; context: WorkContext;
+}
+export interface WorkOutcome extends Outcome { itemId: string; headSha256: string; status: WorkStatus }
+export type WorkCaptureArguments = Mutation & {
+  title: string; author: string; materialSha256: string; editionId?: string;
+  description?: string; assignee?: string; dueDate?: string; priority?: WorkPriority;
+} & ({ recordKey: string; diagnosticId?: never; diagnosticSha256?: never } | { diagnosticId: string; diagnosticSha256: string; recordKey?: never });
+export interface WorkMutation extends Mutation { itemId: string; expectedHeadSha256: string; author: string; note: string }
+export type WorkEvidenceArguments = WorkMutation & (
+  { kind: "file"; name: string; mediaType: string; base64: string } |
+  { kind: "proposal"; proposalId: string } |
+  { kind: "note" }
+);
+export type WorkReviewArguments = WorkMutation & { editionId?: string } & (
+  { decision: "verify"; submissionSha256: string } |
+  { decision: "reopen" | "accept-exception"; submissionSha256?: string }
+);
+export type ReturnField = keyof WorkFields | "progress";
+export type ReturnKind = "same" | "incoming" | "new" | "diverged" | "local-ahead";
+export interface ReturnFieldComparison {
+  base: Json; local: Json; incoming: Json; suggested: Json; conflict: boolean;
+  baseAmbiguous?: boolean; baseAlternatives?: { headSha256: string; value: Json }[];
+}
+export interface ReturnItem {
+  itemId: string; title: string; kind: ReturnKind; localHeadSha256: string | null;
+  incomingHeadSha256: string; commonHeadSha256: string | null; commonHeadSha256s: string[]; conflicts: ReturnField[];
+  fields: Record<ReturnField, ReturnFieldComparison>;
+}
+export interface ReturnPreview {
+  packageSha256: string; payloadSha256: string; incomingRevision: number; commonRevision: number | null;
+  workspaceId?: string; revision?: number; items: ReturnItem[];
+}
+export interface ReturnDecision {
+  itemId: string; decision: "keep" | "accept"; expectedHeadSha256: string | null;
+  choices: Partial<Record<ReturnField, "local" | "incoming">>;
+}
+export interface ReturnSummary {
+  id: string; packageSha256: string; payloadSha256: string; incomingWorkspaceId: string;
+  incomingRevision: number; incomingStateSha256: string; commonRevision: number | null;
+  author: string; note: string; at: string; sha256: string;
+}
+export interface ReturnRead extends ReturnSummary, Envelope { application: Json; decisions: Json[] }
+
+export interface ActionMap extends SemanticActionMap {
+  "works.list": { args: Revision & Paging & { status?: WorkStatus; assignee?: string; priority?: WorkPriority; sourceId?: string; query?: string }; result: Page<WorkSummary> };
+  "work.read": { args: Revision & { itemId: string }; result: WorkRead };
+  "work.capture": { args: WorkCaptureArguments; result: WorkOutcome };
+  "work.update": { args: WorkMutation & { fields: WorkFields }; result: WorkOutcome };
+  "work.evidence": { args: WorkEvidenceArguments; result: WorkOutcome };
+  "work.submit": { args: WorkMutation & { editionId?: string }; result: WorkOutcome };
+  "work.review": { args: WorkReviewArguments; result: WorkOutcome };
+  "evidence.read": { args: { evidenceId: string; offset?: number; length?: number }; result: ByteRange };
+  "return.preview": { args: Revision & { base64: string }; result: ReturnPreview };
+  "return.apply": { args: Mutation & { author: string; note: string; base64: string; decisions: ReturnDecision[] }; result: Outcome & Record<string, unknown> };
+  "returns.list": { args: Revision & Paging; result: Page<ReturnSummary> };
+  "return.read": { args: Revision & { returnId: string }; result: ReturnRead };
+
   "workspace.status": { args: Record<string, never>; result: Status };
   "workspace.rename": { args: Mutation & { title: string }; result: Outcome & { title: string } };
   "sources.list": { args: Revision & Paging; result: Page<Source> };
@@ -118,6 +209,7 @@ export class HaystackClient {
   request(action: "workspace.status", args?: Record<string, never>, options?: RequestOptions): Promise<Status>;
   request<A extends keyof ActionMap>(action: A, args: ActionMap[A]["args"], options?: RequestOptions): Promise<ActionMap[A]["result"]>;
   pages<A extends PagedAction>(action: A, args: ActionMap[A]["args"], options?: RequestOptions): AsyncGenerator<ActionMap[A]["result"], void, unknown>;
+  completeBytes<A extends "source.read" | "delivery.read" | "evidence.read" | "semantic.source.read" | "semantic.output.read">(action: A, args: ActionMap[A]["args"], options?: RequestOptions): Promise<Uint8Array>;
   sourceBytes(sourceId: string, options?: RequestOptions): Promise<Uint8Array>;
   deliveryBytes(operationId: string, options?: RequestOptions): Promise<Uint8Array>;
 }

@@ -1,0 +1,424 @@
+/* Upper Savannah parameter/scenario workflow. TokenJunkieLabs. */
+const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, c => ({
+  '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+}[c]));
+const short = value => String(value ?? '').slice(0,12);
+const numeric = value => value === null || value === undefined ? '—' :
+  Number(value).toLocaleString(undefined, {maximumSignificantDigits:7});
+const label = value => String(value ?? '').replaceAll('_',' ');
+const pollutants = {nitrogen_export:'Nitrogen', phosphorus_export:'Phosphorus', sediment_export:'Sediment'};
+const button = (action, text, id='', primary=false) =>
+  '<button type="button" data-action="ensemble-design-'+escapeHTML(action)+'"'+
+  (id?' data-id="'+escapeHTML(id)+'"':'')+' class="'+(primary?'primary':'')+'">'+escapeHTML(text)+'</button>';
+const table = (headers, rows) => '<div class="table-scroll"><table><thead><tr>'+
+  headers.map(x=>'<th>'+escapeHTML(x)+'</th>').join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>';
+const cell = value => '<td>'+escapeHTML(value)+'</td>';
+const field = (title, body, help='') => '<label class="field"><span>'+escapeHTML(title)+'</span>'+body+
+  (help?'<small>'+escapeHTML(help)+'</small>':'')+'</label>';
+const select = (name, values, title) => '<select name="'+escapeHTML(name)+'" required><option value="">'+
+  escapeHTML(title)+'</option>'+values.map(x=>'<option value="'+escapeHTML(x.id)+'">'+
+  escapeHTML(x.title||x.spec?.title||short(x.id))+'</option>').join('')+'</select>';
+const referenceText = references => (Array.isArray(references)?references:[]).map(reference=>{
+  if(typeof reference==='string')return reference;
+  const value=reference?.url||reference?.citation||reference?.source_id||reference?.id||reference;
+  return typeof value==='string'?value:JSON.stringify(value);
+}).filter(Boolean).join('; ');
+const choices = (name, rows, empty) => rows.length ? rows.map(row =>
+  '<label class="check-row"><input type="checkbox" name="'+escapeHTML(name)+'" value="'+escapeHTML(row.id)+'">'+
+  '<span><strong>'+escapeHTML(row.title||short(row.id))+'</strong><small>'+escapeHTML(row.reason||referenceText(row.references)||short(row.id))+
+  '</small></span></label>').join('') : '<p class="note">'+escapeHTML(empty)+'</p>';
+
+export function attachEnsembles(context) {
+  const {getState, api, endpoint, openForm, submitAction, detail, toast, openItem} = context;
+  let root=null, generation=0, controller=null, catalog=null, axisCounter=0;
+  let mountedWorkspace=null, rowSignature='', designVersion=0;
+  if(!document.querySelector('[data-view="ensembles"]')) {
+    const navigation=document.createElement('button');
+    navigation.type='button';
+    navigation.dataset.view='ensembles';
+    navigation.textContent='Scenario sensitivity';
+    document.querySelector('[data-view="comparisons"]')?.after(navigation);
+  }
+  const currentWorkspace = () => getState()?.workspace_key;
+  const form = () => document.querySelector('#operation-form');
+
+  function detach() {
+    generation++;
+    controller?.abort();
+    controller=null;
+    root=null;
+    mountedWorkspace=null;
+    rowSignature='';
+    designVersion++;
+  }
+
+  function update(state) {
+    if(!root || !catalog || state?.workspace_key!==mountedWorkspace)return;
+    const data=state.data||{};
+    const rows=data.ensembles;
+    if(!Array.isArray(rows))return;
+    catalog={...catalog,ensembles:rows,
+      profiles:data.profiles||catalog.profiles,
+      scenarios:data.scenarios||catalog.scenarios,
+      grids:data.grids||catalog.grids};
+    const signature=JSON.stringify(rows);
+    if(signature!==rowSignature)draw(root,catalog);
+  }
+
+  async function mount(container) {
+    const token=++generation, workspace=currentWorkspace();
+    controller?.abort();
+    controller=new AbortController();
+    root=container;
+    mountedWorkspace=workspace;
+    if(!container.querySelector('[data-ensemble-page]')) {
+      container.innerHTML='<div data-ensemble-page><header class="page-header"><div>'+
+        '<p class="eyebrow">UPPER SAVANNAH SCIENTIFIC WORKBENCH</p><h1>Scenario sensitivity</h1>'+
+        '<p>Compare land-cover choices across the selected scientific parameters.</p></div></header>'+
+        '<p role="status">Opening retained designs and native run progress…</p></div>';
+    }
+    try {
+      const result=await api(endpoint('/api/ensembles/catalog'), {signal:controller.signal});
+      if(token!==generation || workspace!==currentWorkspace() || root!==container)return;
+      catalog=result;
+      draw(container,result);
+      update(getState());
+    } catch(error) {
+      if(error.name==='AbortError' || token!==generation)return;
+      container.innerHTML='<div data-ensemble-page><h1>Scenario sensitivity</h1><div class="notice error" role="alert">'+
+        escapeHTML(error.message)+'</div>'+button('reload','Reload retained designs')+'</div>';
+    }
+  }
+
+  function draw(container, data) {
+    const rows=data.ensembles||[];
+    rowSignature=JSON.stringify(rows);
+    let html='<div data-ensemble-page><header class="page-header"><div><p class="eyebrow">'+
+      'UPPER SAVANNAH SCIENTIFIC WORKBENCH</p><h1>Scenario sensitivity</h1><p>'+
+      'Recalculate each baseline and alternative using the same parameter choices. Read the physical changes and their geographic coverage.'+
+      '</p></div><div class="page-actions">'+button('new','New comparison design','',true)+'</div></header>';
+    html+='<section class="section"><div class="section-body"><h2>What this answers</h2>'+
+      '<p>Does a proposed land-cover change still reduce export when the selected scientific parameters change? '+
+      'Each parameter case has its own matching baseline. Nitrogen and phosphorus retain kilograms per year; sediment retains tonnes per year.</p>'+
+      '<p>Choose existing profiles to compare their retained coefficient tables, or add explicitly sourced parameter values. '+
+      'The design shows its actual run count before execution.</p></div></section>';
+    if(!rows.length) {
+      html+='<div class="empty"><h2>Create the first paired design</h2><p>Use a complete model grid, a baseline, '+
+        'the parameter profiles to explore, and any land-cover alternatives to compare.</p>'+
+        button('new','Select existing inputs','',true)+'</div>';
+    } else {
+      html+=table(['Design','State','Parameter cases','Alternatives','Native runs',''],
+        rows.map(row=>'<tr><td class="name-cell"><strong>'+escapeHTML(row.title)+'</strong><small>'+
+          escapeHTML(row.reason||short(row.id))+'</small></td>'+cell(label(row.state))+
+          cell(numeric(row.member_count))+cell(numeric(row.alternative_count))+
+          cell(numeric(row.progress?.complete??row.completed_runs)+' / '+numeric(row.progress?.total??row.run_count))+
+          '<td class="actions-cell">'+button('inspect','Open',row.id)+
+          (row.state!=='complete'?button('run',row.state==='prepared'?'Run':'Continue',row.id):'')+'</td></tr>'));
+    }
+    html+='<section class="section"><div class="section-body"><h2>Explain it during the walkthrough</h2>'+
+      '<p>“We keep the scientific assumptions attached to every run. This view shows whether the proposed land-cover '+
+      'change has the same effect across the choices we selected, and lets us inspect and export every result.”</p></div></section></div>';
+    container.innerHTML=html;
+  }
+
+  function axisRow(targets, selected=null) {
+    const id='axis-'+(++axisCounter), selectedTargets=new Set(selected?.targets||[]);
+    const selectedValues=selected?.values?.map(value=>String(value)).join(', ')||'';
+    const references=(selected?.references||[]).map(reference=>
+      typeof reference==='string'?reference:referenceText([reference])).join('\n');
+    return '<fieldset class="full" data-ensemble-axis="'+id+'" data-axis-reference-records="'+
+      escapeHTML(JSON.stringify(selected?.references||[]))+'"><legend>Parameter values</legend>'+
+      '<div class="form-grid">'+field('Native parameter targets','<select data-axis-target multiple required size="4">'+
+        targets.map(([key,meta])=>'<option value="'+escapeHTML(key)+'"'+(selectedTargets.has(key)?' selected':'')+'>'+escapeHTML(key)+
+          (meta.units?' · '+escapeHTML(meta.units):'')+'</option>').join('')+'</select>',
+        'Select multiple targets only when the same value must change together, such as matched NDR and SDR thresholds.')+
+      field('Values to evaluate','<input data-axis-values required value="'+escapeHTML(selectedValues)+'" placeholder="Enter the actual selected values">',
+        'Separate values with commas. Use mfd or d8 for a flow-routing choice; use numbers for physical parameters.')+
+      field('Source references','<textarea data-axis-references required rows="3" placeholder="One source reference per line">'+escapeHTML(references)+'</textarea>')+
+      field('Reason for this range','<textarea data-axis-reason required rows="3">'+escapeHTML(selected?.reason||'')+'</textarea>')+
+      '</div>'+button('axis-remove','Remove parameter')+'</fieldset>';
+  }
+
+  function specFromForm() {
+    const selected=form();
+    const checked=name=>[...selected.querySelectorAll('input[name="'+name+'"]:checked')].map(x=>x.value);
+    const baseline=selected.elements.namedItem('ensemble_baseline').value;
+    const alternatives=checked('ensemble_alternative');
+    const profiles=checked('ensemble_profile');
+    if(!baseline || !profiles.length)
+      throw Error('Select a baseline and at least one retained parameter profile.');
+    const axes=[...selected.querySelectorAll('[data-ensemble-axis]')].map(row=>{
+      const targets=[...row.querySelector('[data-axis-target]').selectedOptions].map(x=>x.value);
+      const tokens=row.querySelector('[data-axis-values]').value.split(',').map(x=>x.trim());
+      if(!targets.length || tokens.some(x=>!x))throw Error('Every parameter row needs selected targets and complete values.');
+      const values=tokens.map(value=>{
+        if(value==='mfd'||value==='d8')return value;
+        const parsed=Number(value);
+        if(!Number.isFinite(parsed))throw Error('Use finite numeric parameter values, or mfd/d8 for flow routing.');
+        return parsed;
+      });
+      const referenceInput=row.querySelector('[data-axis-references]').value.trim();
+      const retained=JSON.parse(row.dataset.axisReferenceRecords||'[]');
+      const retainedDisplay=retained.map(reference=>
+        typeof reference==='string'?reference:referenceText([reference])).join('\n').trim();
+      const references=retained.length && referenceInput===retainedDisplay ? retained :
+        referenceInput.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+      const reason=row.querySelector('[data-axis-reason]').value.trim();
+      if(!references.length || !reason)throw Error('Retain the source and reason for every parameter range.');
+      return {id:row.dataset.ensembleAxis,targets,values,references,reason};
+    });
+    return {
+      title:selected.elements.namedItem('ensemble_title').value.trim(),
+      reason:selected.elements.namedItem('ensemble_reason').value.trim(),
+      grid_id:selected.elements.namedItem('ensemble_grid').value,
+      baseline_scenario_id:baseline, alternative_scenario_ids:alternatives,
+      ...(selected.elements.namedItem('ensemble_models').value==='grid'?{}:
+        {models:selected.elements.namedItem('ensemble_models').value==='both'?['ndr','sdr']:
+          [selected.elements.namedItem('ensemble_models').value]}),
+      base_profile_ids:profiles,
+      design:selected.elements.namedItem('ensemble_design').value, axes
+    };
+  }
+
+  const recordModels = record => record?.spec?.models||record?.models||['ndr','sdr'];
+
+  function selectedInputs() {
+    const selected=form();
+    const grid=(catalog?.grids||[]).find(item=>item.id===selected?.elements.namedItem('ensemble_grid')?.value);
+    const profileIds=[...(selected?.querySelectorAll('input[name="ensemble_profile"]:checked')||[])].map(item=>item.value);
+    const profiles=(catalog?.profiles||[]).filter(item=>profileIds.includes(item.id));
+    return {grid,profiles};
+  }
+
+  function compatibleStudies() {
+    const {grid,profiles}=selectedInputs();
+    return (catalog?.parameters?.studies||[]).filter(study=>{
+      const requested=study.models||['ndr','sdr'];
+      return (!grid || requested.every(name=>recordModels(grid).includes(name))) &&
+        profiles.every(profile=>requested.every(name=>recordModels(profile).includes(name)));
+    });
+  }
+
+  function refreshStudyChoices() {
+    const choice=document.querySelector('#ensemble-study');
+    if(!choice)return;
+    const current=choice.value, studies=compatibleStudies();
+    choice.innerHTML='<option value="">Choose a study</option>'+studies.map(study=>
+      '<option value="'+escapeHTML(study.id)+'">'+escapeHTML(study.title)+'</option>').join('');
+    if(studies.some(study=>study.id===current))choice.value=current;
+    const question=document.querySelector('#ensemble-study-question');
+    if(!studies.length && question)question.textContent='Choose a grid and profiles that share the models needed by a sourced study.';
+    document.querySelector('#ensemble-preview').innerHTML='';
+  }
+
+  function studyChoices(studies) {
+    if(!studies.length)return '';
+    return '<div class="notice">'+field('Ready-to-use sourced study',
+      '<select id="ensemble-study"><option value="">Choose a study</option>'+studies.map(study=>
+        '<option value="'+escapeHTML(study.id)+'">'+escapeHTML(study.title)+'</option>').join('')+'</select>')+
+      '<p class="note">Apply a study to fill its published parameter choices, sources and reasons. This replaces the parameter rows below. '+
+      'Your selected grid, profiles and land-cover choices stay in this form.</p>'+
+      button('study-apply','Apply selected study')+'<p id="ensemble-study-question"></p></div>';
+  }
+
+  function applyStudy() {
+    const id=document.querySelector('#ensemble-study')?.value;
+    const study=compatibleStudies().find(value=>value.id===id);
+    if(!study)throw Error('Choose an available sourced study.');
+    const targets=Object.entries(catalog?.parameters?.targets||{});
+    if(!targets.length || !Array.isArray(study.axes) || !study.axes.length)
+      throw Error('Reopen the comparison to load the complete sourced study.');
+    document.querySelector('#ensemble-axes').innerHTML=study.axes.map(axis=>axisRow(targets,axis)).join('');
+    const selected=form();
+    selected.elements.namedItem('ensemble_design').value=study.design||'factorial';
+    const requested=study.models||['ndr','sdr'];
+    selected.elements.namedItem('ensemble_models').value=requested.length===2?'both':requested[0];
+    const purpose=selected.elements.namedItem('ensemble_reason');
+    if(!purpose.value.trim())purpose.value=study.question||study.title;
+    document.querySelector('#ensemble-study-question').textContent=study.question||'';
+    document.querySelector('#ensemble-preview').innerHTML='';
+  }
+
+  async function newDesign() {
+    const workspace=currentWorkspace();
+    const data=await api(endpoint('/api/ensembles/catalog'));
+    if(workspace!==currentWorkspace())return;
+    catalog=data;axisCounter=0;designVersion++;
+    const grids=(data.grids||[]).filter(x=>x.state==='complete');
+    const scenarios=data.scenarios||[], profiles=data.profiles||[];
+    const baselines=scenarios.filter(x=>x.kind==='baseline'), alternatives=scenarios.filter(x=>x.kind==='landcover');
+    if(!grids.length || !baselines.length || !profiles.length) {
+      detail('Prepare the comparison inputs','<p>A paired design needs the following retained inputs:</p>'+
+        table(['Input','Available'],[
+          '<tr>'+cell('Complete model grid')+cell(grids.length)+'</tr>',
+          '<tr>'+cell('Baseline scenario')+cell(baselines.length)+'</tr>',
+          '<tr>'+cell('Optional land-cover alternatives')+cell(alternatives.length)+'</tr>',
+          '<tr>'+cell('Parameter profiles')+cell(profiles.length)+'</tr>'])+
+        '<p>Use Model grids, Land-cover scenarios and Parameter profiles to prepare the missing selections. '+
+        'Their original sources and values stay attached to this comparison.</p>',{kind:'ensemble-inputs'});
+      return;
+    }
+    const content='<div class="form-grid">'+
+      field('Comparison title','<input name="ensemble_title" required>')+
+      field('Model grid',select('ensemble_grid',grids,'Choose the complete reporting/model grid'))+
+      field('Baseline',select('ensemble_baseline',baselines,'Choose the retained baseline'))+
+      field('Models to compare','<select name="ensemble_models"><option value="grid">Use the selected grid models</option>'+
+        '<option value="both">Nutrients and sediment</option><option value="ndr">Nutrients only</option>'+
+        '<option value="sdr">Sediment only</option></select>',
+        'Choose models supported by the selected grid and every profile. The preview checks the actual retained inputs.')+
+      field('Parameter design','<select name="ensemble_design"><option value="one_at_a_time">One parameter axis at a time</option>'+
+        '<option value="factorial">Every combination of the supplied values</option></select>',
+        'With no extra parameter axes, the design compares the selected original profiles.')+
+      '<div class="full">'+field('Purpose and comparison question','<textarea name="ensemble_reason" required rows="3"></textarea>')+'</div>'+
+      '<fieldset class="full"><legend>Land-cover alternatives (optional)</legend>'+
+        '<p class="note">Leave these unselected to compare at least two distinct parameter cases on the observed baseline.</p>'+
+        choices('ensemble_alternative',alternatives,'Parameter-only designs can use the retained baseline.')+'</fieldset>'+
+      '<fieldset class="full"><legend>Scientific parameter profiles</legend>'+choices('ensemble_profile',profiles,'Prepare a profile first.')+'</fieldset>'+
+      '<section class="full"><h3>Optional sourced parameter exploration</h3><p class="note">Add the values you want to evaluate and their source. '+
+      'Existing profile values remain the reference case.</p>'+studyChoices(data.parameters?.studies||[])+
+      '<div id="ensemble-axes"></div>'+button('axis-add','Add parameter values')+'</section>'+
+      '<div class="full">'+button('preview','Preview cases and run count')+'<div id="ensemble-preview" role="status" aria-live="polite"></div></div></div>';
+    openForm('New paired scenario design','Retain the selected geography, land-cover choices and scientific assumptions together.',
+      content,'Save design',async()=>{
+        const spec=specFromForm();
+        await api('/api/ensembles/preview',{method:'POST',body:{workspace,spec}});
+        const result=await submitAction('ensemble.create',{spec});
+        toast('The comparison design is saved. Open it to run the selected native calculations.');
+        return result;
+      },()=>{
+        for(const node of form().querySelectorAll('[name="ensemble_grid"],[name="ensemble_profile"],[name="ensemble_models"]'))
+          node.addEventListener('change',refreshStudyChoices);
+        refreshStudyChoices();
+      });
+  }
+
+  async function preview() {
+    if(!form().reportValidity())return;
+    const workspace=currentWorkspace(), version=designVersion, spec=specFromForm();
+    const response=await api('/api/ensembles/preview',{
+      method:'POST',body:{workspace,spec}
+    });
+    const result=response.preview, box=document.querySelector('#ensemble-preview');
+    if(!box || workspace!==currentWorkspace() || version!==designVersion)return;
+    if(JSON.stringify(spec)!==JSON.stringify(specFromForm())){
+      box.innerHTML='<p class="note">The selection changed during the preview. Preview the updated choices.</p>';
+      return;
+    }
+    box.innerHTML='<div class="notice"><strong>'+escapeHTML(numeric(result.member_count))+
+      ' parameter cases · '+escapeHTML(numeric(result.run_count))+' native runs</strong><p>'+
+      escapeHTML((result.selected_models||['ndr','sdr']).map(name=>name==='ndr'?'Nutrients':'Sediment').join(' and '))+'</p><p>'+
+      escapeHTML(numeric(result.landcover_pair_count))+' paired land-cover comparisons · '+
+      escapeHTML(numeric(result.parameter_pair_count))+' baseline parameter comparisons.</p>'+
+      '<p>Saving retains the design. Use Run on the saved design to start the selected native calculations.</p></div>';
+  }
+
+  function pairTable(summary, kind='rows') {
+    const parameter=kind==='sensitivity', rows=summary?.[kind]||[];
+    if(!rows.length)return '<p class="note">'+(parameter?
+      'Completed baseline parameter comparisons appear here when distinct parameter cases are selected.':
+      'Completed land-cover comparisons appear here when alternatives are selected.')+'</p>';
+    const members=new Map((summary.members||[]).map(x=>[x.id,x.label||short(x.id)]));
+    const scenarios=new Map((summary.members||[]).flatMap(x=>(x.runs||[]).map(r=>[r.scenario_id,r.label||short(r.scenario_id)])));
+    const headers=parameter?['Reference profile','Varied profile','Scenario']:['Parameter case','Alternative'];
+    return table([...headers,'Pollutant',parameter?'Reference on common cells':'Baseline on common cells',
+      parameter?'Varied on common cells':'Alternative on common cells','Annual change','Change %','Common cells','Unmatched cells'],
+      rows.map(row=>'<tr>'+
+        (parameter?cell(members.get(row.reference_member_id)||short(row.reference_member_id)):'')+
+        cell(members.get(row.member_id)||short(row.member_id))+
+        cell(scenarios.get(row.scenario_id)||short(row.scenario_id))+
+        cell((pollutants[row.pollutant]||row.pollutant)+' · '+row.total_units)+
+        cell(numeric(row.baseline_common))+cell(numeric(row.alternative_common))+
+        cell(numeric(row.delta_common))+cell(numeric(row.percent_change))+
+        cell(numeric(row.common_cells))+
+        cell(numeric(row.baseline_only_cells)+(parameter?' reference / ':' baseline / ')+
+          numeric(row.alternative_only_cells)+(parameter?' varied':' alternative'))+'</tr>'));
+  }
+
+  function downloadsHTML(files) {
+    if(!files?.length)return '<p class="note">Generate a report to download its HTML, CSV, JSON and complete package.</p>';
+    return '<div class="page-actions">'+files.map(file=>'<a class="button" href="'+escapeHTML(file.url)+
+      '?download=1" download>'+escapeHTML(file.label||file.filename)+'</a>').join('')+'</div>';
+  }
+
+  async function inspect(id) {
+    const workspace=currentWorkspace();
+    const result=await api(endpoint('/api/ensembles/inspect',{ensemble_id:id}));
+    if(workspace!==currentWorkspace())return;
+    const item=result.ensemble, summary=result.summary||{}, progress=item.progress||{};
+    let content='<div id="ensemble-inspection" data-id="'+escapeHTML(id)+'"><div class="page-actions">'+
+      button('inspect','Refresh results',id)+
+      (item.state!=='complete'?button('run',item.state==='prepared'?'Run saved design':'Continue saved design',id):'')+
+      button('report','Generate report and exports',id)+'</div>'+
+      '<div class="cards">'+[
+        ['State',label(item.state)],['Complete native runs',numeric(progress.complete)+' / '+numeric(progress.total)],
+        ['Parameter cases',numeric(item.members?.length)],['Reported physical rows',numeric((summary.rows?.length||0)+(summary.sensitivity?.length||0))]
+      ].map(([title,value])=>'<div class="card"><h3>'+escapeHTML(title)+'</h3><strong class="number">'+escapeHTML(value)+'</strong></div>').join('')+'</div>'+
+      '<p>'+escapeHTML(item.reason||'')+'</p>'+
+      '<p>Selected models: '+escapeHTML((item.model_scope?.selected_models||item.models||['ndr','sdr'])
+        .map(name=>name==='ndr'?'Nutrients':'Sediment').join(' and '))+'.</p>'+
+      '<p class="note">Negative annual change means lower modeled export. Land-cover contrasts pair runs with the same parameter profile. '+
+      'Parameter contrasts hold observed land cover fixed and compare the varied profile with the first reference profile. '+
+      'Every contrast uses cells valid in both runs; source coverage and missing values remain visible.</p>';
+    if(summary.report_state && summary.report_state!=='current')
+      content+='<div class="notice">The saved result summary is '+escapeHTML(label(summary.report_state))+
+        '. Generate the report after the selected runs complete to include their current results.</div>';
+    const pendingErrors=[...(item.errors||summary.run_errors||[]),...(summary.errors||[])];
+    if(item.execution_error||summary.execution_error)pendingErrors.push(item.execution_error||summary.execution_error);
+    const errors=[...new Map(pendingErrors.map(error=>[JSON.stringify(error),error])).values()];
+    if(errors.length)content+='<section class="section"><div class="section-body"><h3>Run and comparison messages</h3>'+
+      '<ul>'+errors.map(error=>'<li>'+escapeHTML(
+        (error?.run_id?'Run '+short(error.run_id)+': ':'')+
+        (error?.message||error?.error?.message||JSON.stringify(error)))+'</li>').join('')+
+      '</ul><p>Completed stages stay available. Inspect the named run, correct its input or runtime problem and continue this same design.</p></div></section>';
+    content+='<h3 class="subheading">Land-cover physical quantities</h3>'+pairTable(summary);
+    content+='<h3 class="subheading">Parameter sensitivity on the observed baseline</h3>'+pairTable(summary,'sensitivity');
+    content+='<h3 class="subheading">Report downloads</h3>';
+    if(result.export_state==='stale')
+      content+='<div class="notice">The downloadable report needs to be refreshed. '+
+        'Choose Generate report and exports to include the current study results.</div>';
+    content+=downloadsHTML(result.downloads);
+    content+='<h3 class="subheading">Original runs and scientific choices</h3>'+
+      table(['Parameter case','Scenario','Role','State',''],(item.members||[]).flatMap(member=>
+        (member.runs||[]).map(run=>'<tr>'+cell(member.label||short(member.id))+
+          cell(run.label||short(run.scenario_id))+cell(label(run.role))+
+          cell(label(run.state||'prepared'))+
+          '<td class="actions-cell">'+button('open-run','Open native run',run.run_id)+
+          '<button type="button" data-action="spatial-item" data-kind="runs" data-id="'+escapeHTML(run.run_id)+'">Map</button></td></tr>')));
+    content+='<details class="technical"><summary>Selected profile parameters and sources</summary><pre class="json-view">'+
+      escapeHTML(JSON.stringify({grid_id:item.grid_id,baseline_scenario_id:item.baseline_scenario_id,
+        axes:item.axes,model_scope:item.model_scope||summary.model_scope,sources:summary.sources,members:(item.members||[]).map(member=>({
+          label:member.label,profile_id:member.profile_id,parent_profile_id:member.parent_profile_id,
+          parameters:member.parameters,assignments:member.assignments
+        }))},null,2))+'</pre></details></div>';
+    detail(item.title||'Scenario sensitivity',content,{kind:'ensemble',id});
+  }
+
+  async function dispatch(node) {
+    const action=node.dataset.action.replace(/^ensemble-design-/,''), id=node.dataset.id;
+    if(action==='new')return newDesign();
+    if(action==='reload')return root?mount(root):undefined;
+    if(action==='inspect')return inspect(id);
+    if(action==='preview')return preview();
+    if(action==='study-apply')return applyStudy();
+    if(action==='axis-add'){
+      const targets=Object.entries(catalog?.parameters?.targets||{});
+      if(!targets.length)throw Error('Reopen the design to load the source-supported parameter catalog.');
+      document.querySelector('#ensemble-axes').insertAdjacentHTML('beforeend',axisRow(targets));
+      return;
+    }
+    if(action==='axis-remove'){node.closest('[data-ensemble-axis]')?.remove();return;}
+    if(action==='open-run')return openItem('runs',id);
+    if(action==='run'){
+      await submitAction('ensemble.run',{ensemble_id:id,continue_on_error:true});
+      toast('The saved native design is queued. Follow Operations for progress.');
+      return;
+    }
+    if(action==='report'){
+      await submitAction('ensemble.report',{ensemble_id:id});
+      toast('The physical report is queued. Reopen this design for its downloads.');
+      return;
+    }
+    throw Error('Choose an available scenario-sensitivity action.');
+  }
+  return {mount,update,detach,dispatch};
+}

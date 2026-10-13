@@ -1,6 +1,6 @@
-# Native Flowable process and decision operations and customer receiving
+# Native Flowable process, decision and case operations and customer receiving
 
-This source runs the original Flowable 8.0.0 REST application and the complete operator product. The live engine owns process execution, task assignment, migration validation, DMN evaluation and operating history.
+This source runs the original Flowable 8.0.0 REST application and the complete operator product. The live engine owns process execution, task assignment, migration validation, DMN evaluation, CMMN case criteria and operating history.
 
 ## Original engine
 
@@ -65,6 +65,72 @@ downloads and the installed continuation. The selected contribution
 publishes the full native DMN contract and source catalogue beside the
 operator's [decision guide](../../../../products/flowable-merchant/DECISIONS.md).
 
+## Native adaptive case editions and work
+
+The same original application exposes CMMN at
+`/flowable-rest/cmmn-api`. The host explicitly configures
+`flowable.cmmn.enabled=true` and `flowable.cmmn.servlet.path=/cmmn-api`, then waits
+for an authenticated native
+`GET /cmmn-repository/case-definitions?size=1` response. Its saved
+`cmmnConnection` uses that full URL. The process, decision and case aliases are
+distinct and share the original private engine, administrator and database.
+
+CMMN uses the original shared `flowable.history-level=full` setting. The pinned
+[FlowableCmmnProperties source](https://github.com/flowable/flowable-engine/blob/0779d68e5a3385b74d8acb8bc37901ff54513249/modules/flowable-spring-boot/flowable-spring-boot-starters/flowable-spring-boot-autoconfigure/src/main/java/org/flowable/spring/boot/cmmn/FlowableCmmnProperties.java)
+declares the CMMN service properties, and
+[CmmnEngineAutoConfiguration](https://github.com/flowable/flowable-engine/blob/0779d68e5a3385b74d8acb8bc37901ff54513249/modules/flowable-spring-boot/flowable-spring-boot-starters/flowable-spring-boot-autoconfigure/src/main/java/org/flowable/spring/boot/cmmn/CmmnEngineAutoConfiguration.java)
+sets its history level from the shared Flowable properties.
+
+The original [case catalog](fixtures/cases/case-catalog.json) contains six editable
+CMMN resources and three complete typed-input documents:
+
+| Native model key | Programme |
+| --- | --- |
+| `tjlGrantDueDiligence` | Grant due diligence with manual review and retained evidence |
+| `tjlVendorException` | Vendor exception work and source confirmation |
+| `tjlOnboardingInvestigation` | Onboarding investigation, exception review and approval |
+
+The commissioner deploys and operates both editions of each family through the
+original workspace model. It retains native plan-item transitions, human tasks,
+criteria, milestones, variables and complete case history, including a
+controlled termination. One additional onboarding case on the second edition
+continues into the installed product with its original review task active.
+Its exact portfolio revision, native definition, case, plan item, task and
+completion body are part of the same saved journey.
+
+The installed continuation operates that same task and case:
+
+1. The typed SDK claims the original review task. The installed CLI releases
+   that claim using native `{"action":"claim","assignee":null}`. The authenticated
+   MCP connection claims the same task again.
+2. The **Cases** browser opens the saved original definition and downloads its
+   full CMMN source. It prepares, reviews and completes that task with the
+   original `evidenceReviewed=true` typed variable.
+3. The original case remains active and its authored source-confirmation plan
+   item becomes active. MCP triggers that exact item, starts the resulting
+   manual exception review, completes the exception work with
+   `exceptionResolved=true`, and completes final approval with
+   `handoverApproved=true`.
+4. The browser reopens the captured completed case, its task and plan-item
+   history and both onboarding milestones. The final export follows these
+   operations and contains their original source, requests, responses and
+   record revisions.
+
+Native task and plan-item IDs are selected from the saved case and verified
+against their CMMN owner. The installed continuation never starts a replacement
+case to recover an interrupted action. Its SDK, CLI and MCP requests retain
+their original UUIDs. A browser retry finds the original selected-case operation
+and native request before attempting another preparation. An already dispatched
+request continues through original readback; an unresolved trigger requires its
+original receipt.
+
+The complete capture pages all eleven CMMN collections, including variables and
+available binary variable data. SDK, CLI and MCP open the same saved definition
+and case revision. Complete source downloads preserve native byte counts and
+SHA-256 values; the browser source download is checked against that same
+original source. The installed product exposes all **41** workspace actions and
+**47** original merchant tools.
+
 ## Run with the complete original source
 
 Use an existing Linux worker with the complete source and Node24 or later:
@@ -105,6 +171,8 @@ source-release-result.json identifies the complete source ZIP, source manifest, 
 
 The native programme resumes interrupted portfolio captures and preparation with their original frozen inputs. After a pre-dispatch interruption, it retains the refreshed prepared revision and saves a dispatch input for that review. When a native request was already dispatched, continuation uses its original saved input and native readback. The installed SDK, CLI and MCP hooks likewise reopen current preparation records instead of caching an interrupted result. Interrupted readback can continue with the same reconciliation request.
 
-A completed original native run produces delivery.json, journey/journey.json, native-receiving-manifest.json and flowable-complete-native-receiving.zip. The completed scope is complete-native-process-history-and-cold-receiving. The archive contains the closed original journey workspaces, source downloads, two full workspace exports, native operation reports, installed product receiving results and browser images.
+A completed original native run produces delivery.json, journey/journey.json, native-receiving-manifest.json and flowable-complete-native-receiving.zip. The completed scope retains its original identity, complete-native-process-history-and-cold-receiving. The archive contains the closed original journey workspaces, source downloads, the initial and later full workspace exports, the final installed export, native operation reports, installed product receiving results and browser images. Both native commissioning and the installed continuation must finish before the host records PASSED; original process groups are drained and CLOSED before archive publication.
 
-The source receiver's final nativeWorkspace identifies the later complete NDJSON export, its exact saved export and receiving records, and the original journey step complete-native-process-history-export-and-cold-receiving. These paths and exact bytes are the inputs to the original company case receiving workflow.
+The initial and later commissioning exports remain in the original journey step complete-native-process-history-export-and-cold-receiving. The installed-product-cli-client-applications-and-mcp-receiving step returns completeWorkspace with the final delivery record, receiving record, complete file identity and receiving workspace UUID. This final export includes the subsequent SDK, CLI, MCP and browser operations. The parent result.workspace selects those exact final bytes, while commissionedWorkspace retains the earlier handover. The source receiver uses the final installed completeWorkspace for company receiving.
+
+The final installed export keeps its existing filename, complete-process-and-decision-workspace.ndjson, and now contains the complete case programme as well. Its full original MCP file stream is checked through EOF, adopted with the retained manifest and request UUID, then cold reopened. All **14 core record kinds** are compared, including every revision: connection, portfolio, release, process, task, migration, decisionPortfolio, decisionRelease, decisionEvaluation, casePortfolio, caseRelease, caseInstance, casePlanItem and caseTask. Delivery and receiving records preserve their separate workspace authority. No private engine credentials, listener tokens or database files are added to these customer exports.

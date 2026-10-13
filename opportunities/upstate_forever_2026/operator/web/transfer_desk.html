@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="transfer-key" content="__TRANSFER_KEY__"><title>Project handover · TokenJunkieLabs</title>
+<link rel="stylesheet" href="/transfer_desk.css"><script type="module" src="/transfer_desk.mjs"></script></head>
+<body><header><p class="eyebrow">TOKENJUNKIELABS / UPPER SAVANNAH</p><h1>Project handover</h1>
+<p>Transfer the complete working project. Resume interrupted copies. Send only what changed.</p></header>
+<main><div id="notice" role="status" aria-live="polite">Opening the retained transfer store…</div>
+<section aria-labelledby="intake-title"><div class="section-title"><span class="step">01</span><h2 id="intake-title">Select the original files</h2></div>
+<p>On the sender, select a completed <b>scientific workspace ZIP</b>. On the receiving computer, select its <b>transfer manifest</b> and then the transfer parts. The exact source and result files stay together.</p>
+<div class="controls"><label>File purpose<select id="upload-kind"><option value="capture">Original scientific workspace ZIP</option><option value="manifest">Transfer manifest (.transfer.json)</option><option value="receive">Transfer parts (.uptransfer.zip)</option></select></label>
+<label class="grow">Selected file or parts<input id="upload-files" type="file" multiple></label><button id="upload">Receive selected files</button><button id="pause-upload" disabled>Pause upload</button></div>
+<progress id="upload-progress" max="100" value="0" aria-label="File upload progress"></progress><p id="upload-status" class="small">A paused upload resumes when you select the same file again.</p>
+<button id="native-capture" hidden>Freeze the connected live workspace</button></section>
+<div class="split"><section aria-labelledby="edition-title"><div class="section-title"><span class="step">02</span><h2 id="edition-title">Choose a saved edition</h2></div>
+<label>Retained project<select id="snapshot"><option value="">No captured editions yet</option></select></label>
+<div id="summary" class="summary"><h3>No project selected</h3><p>Capture an original ZIP or receive a manifest to begin.</p></div>
+<div class="controls"><button id="manifest" disabled>Save manifest</button><button id="needs" disabled>Save missing-block request</button><button id="report" disabled>Export file inventory</button></div>
+<details><summary>What these numbers mean</summary><p>Retained bytes are all original file contents. Unique bytes count identical blocks once. Missing bytes are what this receiver still needs. A complete transfer does not run or alter the scientific model.</p></details></section>
+<section aria-labelledby="send-title"><div class="section-title"><span class="step">03</span><h2 id="send-title">Send only the missing data</h2></div>
+<p>The receiving computer can save a missing-block request. Load it here on the sender to avoid resending blocks it already has.</p>
+<label>Receiver request (optional)<input id="request-file" type="file" accept=".json,application/json"></label>
+<div class="controls"><label>Block payload per part (MiB)<input id="payload" type="number" min="4" max="4096" value="64"></label><button id="parts" disabled>Create transfer parts</button></div>
+<p class="small">Each part also contains the complete manifest and ZIP metadata. Its total file size is slightly larger than the block payload. Parts may arrive in any order.</p></section></div>
+<section aria-labelledby="receive-title"><div class="section-title"><span class="step">04</span><h2 id="receive-title">Open the complete working copy</h2></div>
+<p>When every block is present, rebuild the native workspace ZIP or receive the complete application and workspace into a new directory. Existing project copies are never overwritten.</p>
+<div class="controls"><label>New receiving folder<input id="copy-name" value="received-project" pattern="[A-Za-z0-9][A-Za-z0-9_.-]{0,79}"></label><button id="copy" disabled>Receive independent copy</button><button id="assemble" disabled>Build native workspace ZIP</button><button id="native-restore" hidden>Restore with native validation</button></div>
+<div id="received-copy" class="result" hidden></div></section>
+<section aria-labelledby="compare-title"><div class="section-title"><span class="step">05</span><h2 id="compare-title">Compare with an earlier edition</h2></div>
+<div class="controls"><label class="grow">Earlier edition<select id="previous"><option value="">Select an earlier edition</option></select></label><button id="compare" disabled>Compare files and reuse</button></div><div id="difference"></div></section>
+<section aria-labelledby="tasks-title"><div class="section-title"><h2 id="tasks-title">Operations and downloads</h2><button id="refresh">Refresh</button></div><p class="small">Progress and completed downloads survive closing this page. Interrupted operations can resume from the same saved task.</p><div id="tasks"></div></section>
+<section aria-labelledby="inventory-title"><div class="section-title"><h2 id="inventory-title">Complete original file inventory</h2></div>
+<div class="controls"><label class="grow">Filter file paths<input id="filter" type="search" placeholder="For example: sources, scenarios, runs or reports"></label><button id="prev-page">Previous</button><button id="next-page">Next</button><span id="page-label"></span></div>
+<div class="table-scroll"><table><thead><tr><th>Retained original file</th><th>Bytes</th><th>Blocks</th><th>SHA-256</th></tr></thead><tbody id="inventory"></tbody></table></div></section>
+</main><footer>Original sources, project identity and file contents travel unchanged. Received copies can be edited independently. This desk runs on this computer; it does not host your project publicly.</footer></body></html>

@@ -12,7 +12,8 @@ HERE=Path(__file__).resolve().parent
 SCHEMA="stellar-forge.human-services-directory.v1"
 KINDS={"connections","discoveries","requests","sources","editions","comparisons",
     "acquisitions","importProfiles","mappings","mappingPreviews","sourceConversions","selections",
-    "referralJoins","handoffs","exports","receivingReviews","receives"}
+    "referralJoins","handoffs","exports","receivingReviews","receives",
+    "conformancePlans","conformanceAssessments","conformanceReviews","conformanceComparisons","operatingPlans"}
 MUTABLE={"acquisitions","receives"}
 TARGETS={"Organization","Location","HealthcareService","Endpoint"}
 ROOT_TABLES={"organization":"Organization","location":"Location","service":"HealthcareService"}
@@ -25,6 +26,8 @@ def catalogue():
     from directory_source_schema import source_catalogue
     native=source_catalogue()
     value["sourceCatalogue"]=native
+    value["conformanceCatalogue"]=source.json_value((HERE/"directory-conformance-schema.json").read_bytes())
+    value["operatingPlansCatalogue"]=source.json_value((HERE/"directory-operating-plans-schema.json").read_bytes())
     profile=guidance()
     value["guidance"]={"schema":profile["schema"],"publishedMappingRows":len(profile["publishedMappings"]),
         "migrations":profile["migrations"],"selectedSources":profile["selectedSources"]}

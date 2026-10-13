@@ -126,8 +126,8 @@ private permissions and preserves existing destinations. `--binding-id` selects
 one exact local source review; the default uses the saved plan's deterministic
 local binding.
 
-`GET /api/source-builds/plan-briefing` accepts `planId`, optional `bindingId`
-and `format` (`markdown`, `html` or `json`). The existing workspace capability
+`GET /api/source-builds/plan-briefing` accepts `planId`, optional `bindingId`,
+optional `runtimeId` and `format` (`markdown`, `html` or `json`). The existing workspace capability
 protects the request. The response contains the complete `content`, `filename`,
 `mimeType`, `planId`, `bindingId`, `sourceCommit`, `generatedAt` and `format`.
 The source-owned `./operator/product-plan-briefing` export supplies the typed
@@ -137,6 +137,95 @@ The browser document uses the Runtime's declared local stylesheet and original
 content policy. Standalone HTML embeds that same stylesheet. The saved-plan
 receiving journey can therefore finish with a readable customer export from the
 actual reopened plan and its original native package.
+
+## Installed Runtime and customer handoff
+
+Operation: `SCF-SAVED-PRODUCT-HANDOVER-A8CE-20261012`
+
+A saved plan's **Installed runtimes** section connects its original build archive
+to the actual runtimes in this workspace. It matches the package's SHA-256,
+rather than treating every product from the same source commit as interchangeable.
+The list uses the original retained runtime entries and preparation, upgrade and
+recovery operations. It refreshes with the existing workspace state.
+
+After choosing adapters and preparing the package, return to the saved plan.
+**Open original Runtime** opens that installation's existing source, dependency,
+operation and recovery controls. A preparation that is still running or needs
+continuation stays visible beside its original operation. Follow that operation
+to finish the installation.
+
+Choose a ready installation explicitly when several profiles or recovery targets
+use the same source package. **Inspect and export installed handoff** opens the
+original native source inspector, validates the installed manifest against the
+saved review's complete packaged output, and exports the existing Runtime
+deployment handoff with its current inspection. It retains:
+
+- The saved plan and selected local binding, original review ID and request UUID.
+- The exact package archive SHA-256 and declared product source identity.
+- The original runtime entry, installation and adapter profile IDs.
+- The installed source manifest, observed dependency lock and actual package
+  version checks.
+- The original Runtime command, Python binding when present, and existing managed
+  release adoption arguments.
+
+The Runtime's original inspector verifies the retained archive and extracted
+source. It resolves the installed dependency versions and performs the selected
+native binding checks using the existing profile authority. The export records
+ordinary import checks as requested by that inspector. The handoff requires the
+current installation to be ready; pending work continues through its original
+controls.
+
+**View installed briefing** opens the same readable product briefing with the
+selected installation and observed dependency versions included. Its technical
+appendix preserves the complete installed resolution, import and native checks.
+**Export installed Markdown** includes those sections in the complete Markdown
+document. The customer document presents product and installation identities; the
+complete operating handoff retains the host paths used by the original commands.
+
+```bash
+starforge runtime-workspace source-plan-runtimes --workspace /absolute/existing/runtime-workspace --plan-id PLAN_ID
+starforge runtime-workspace source-plan-handoff --workspace /absolute/existing/runtime-workspace --plan-id PLAN_ID --runtime-id RUNTIME_ID --output product-runtime-handoff.json
+starforge runtime-workspace source-plan-briefing --workspace /absolute/existing/runtime-workspace --plan-id PLAN_ID --runtime-id RUNTIME_ID --format html --output installed-product.html
+```
+
+Use the actual `runtimeId` returned by `source-plan-runtimes`. The selected
+runtime must contain the saved local review's original archive. Each command
+accepts `--binding-id` for an exact local review. Runtime and handoff commands
+print complete JSON, or write a complete new private file with `--output`.
+
+The API methods are `workspace.sourcePlanRuntimes({planId, bindingId})` and
+`workspace.sourcePlanHandoff({planId, bindingId, runtimeId})`.
+`workspace.sourcePlanBriefing({planId, bindingId, runtimeId, format})` includes
+that selected native inspection in the existing document. HTTP clients use
+`GET /api/source-builds/plan-runtimes`,
+`GET /api/source-builds/plan-handoff`, or the existing `plan-briefing` route
+with the same query fields and workspace capability. The typed
+`./operator/product-plan-runtime` export supplies the shared runtime projection
+and original handoff composition.
+
+### Deliver and reopen the complete product
+
+Save **Export complete plan**, the selected **installed handoff**, and the
+**installed briefing** together for the receiving operator. The complete plan
+carries the full source, capabilities, origins and original build history. The
+handoff supplies the installation-specific commands and current native
+inspection. The briefing makes the same product understandable during a customer
+or engineering review.
+
+On the same workspace, reopening the plan restores its original local binding
+and discovers the same retained installations. In another workspace, receive the
+complete plan through the existing receiving form and its chosen source settings.
+Use the original Runtime receive/transfer or installation controls for the
+runtime package. An installed handoff is an inspection and operating document;
+the existing Runtime transfer operation owns transporting an installation. Open
+the received plan's local binding and select the runtime built from its exact
+local archive before generating its own installed handoff.
+
+This gives a delivery team one path from a requested capability basket to a
+committed product, retained native build, selected adapters, functioning Runtime
+and readable customer handover. Source inspections stay available offline when
+their exact local objects are retained. The original installation and recovery
+operations keep their own dependency-cache and host choices.
 
 ## CLI
 
@@ -151,7 +240,9 @@ Every workspace path identifies an existing private Runtime workspace.
 | `source-plan-save --workspace DIRECTORY --request COMPLETE_JSON` | Save purpose, exact product source and full capability basket |
 | `source-plan-open --workspace DIRECTORY --plan-id ID [--binding-id ID]` | Reopen its native local review and stored inspection |
 | `source-plan-refresh --workspace DIRECTORY --plan-id ID [--binding-id ID]` | Refresh actual immutable source manifests with the saved reader options |
-| `source-plan-briefing --workspace DIRECTORY --plan-id ID [--binding-id ID --format markdown\|html\|json --output NEW_FILE]` | Preview, print or export the readable saved product and actual native package state |
+| `source-plan-briefing --workspace DIRECTORY --plan-id ID [--binding-id ID --runtime-id ID --format markdown\|html\|json --output NEW_FILE]` | Preview, print or export the saved product, native package and optionally selected installed Runtime |
+| `source-plan-runtimes --workspace DIRECTORY --plan-id ID [--binding-id ID --output NEW_JSON]` | Open exact-archive installations and their original preparation or recovery operations |
+| `source-plan-handoff --workspace DIRECTORY --plan-id ID --runtime-id ID [--binding-id ID --output NEW_JSON]` | Inspect the selected original installation and export its complete operating handoff |
 | `source-plan-export --workspace DIRECTORY --plan-id ID [--output NEW_JSON]` | Export the complete plan, origins and actual observed build history |
 | `source-plan-receive --workspace DIRECTORY --document COMPLETE_JSON --repository ABSOLUTE_GIT [--offline true\|false --python PROGRAM]` | Retain the complete input and establish or reuse a local native binding |
 | `source-plan-receiving --workspace DIRECTORY --receipt-id ID [--output NEW_JSON]` | Read the entire original receiving input and its current result |
@@ -227,6 +318,9 @@ import the same source module from a maintained checkout.
 | `GET /api/source-builds/plans` | `query`, `limit` (1–100), `cursor`; independent `receivingQuery`, `receivingStatus`, `receivingLimit` and `receivingCursor` |
 | `GET /api/source-builds/plan` | `planId`, optional `bindingId` |
 | `GET /api/source-builds/plan-export` | `planId` |
+| `GET /api/source-builds/plan-runtimes` | `planId`, optional `bindingId` |
+| `GET /api/source-builds/plan-handoff` | `planId`, `runtimeId`, optional `bindingId` |
+| `GET /api/source-builds/plan-briefing` | `planId`, optional `bindingId`, `runtimeId`, `format` |
 | `GET /api/source-builds/plan-receiving` | `receiptId` |
 | `POST /api/source-builds/plan-save` | Complete save input described above |
 | `POST /api/source-builds/plan-refresh` | `planId`, optional `bindingId` |
@@ -288,3 +382,12 @@ Open the reopened plan's readable briefing, review its native package and actual
 dependency versions at desktop and mobile widths, then save the standalone HTML
 and Markdown. Use the original browser's print preview for the customer PDF and
 check that the generated document names the same source, review and build.
+
+From the same plan, open its actual installed Runtime, inspect and export the
+original handoff, and save an installed briefing. Verify the selected profile,
+archive and installation in the original Runtime screen. A second prepared
+profile must remain an explicit separate choice. If preparation or recovery is
+in progress, continue its existing operation and reopen that same runtime. After
+restarting the server, the saved plan must still open the same original local
+review, package and installation. Join these artifacts to the existing receiving
+operation's customer export.

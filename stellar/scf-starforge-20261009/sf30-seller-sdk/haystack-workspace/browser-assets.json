@@ -57,6 +57,48 @@
         "fixtures.json",
         "application/json"
       ]
+    ],
+    [
+      "/CORRECTIVE_WORK.md",
+      [
+        "CORRECTIVE_WORK.md",
+        "text/markdown; charset=utf-8"
+      ]
+    ],
+    [
+      "/semantic.html",
+      [
+        "semantic.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/semantic.js",
+      [
+        "semantic.js",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/semantic.css",
+      [
+        "semantic.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/SEMANTIC_MODELLING.md",
+      [
+        "SEMANTIC_MODELLING.md",
+        "text/markdown; charset=utf-8"
+      ]
+    ],
+    [
+      "/semantic-browser-state.mjs",
+      [
+        "semantic-browser-state.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

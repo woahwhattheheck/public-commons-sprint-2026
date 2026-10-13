@@ -1,9 +1,9 @@
 {
   "name": "@tokenjunkielabs/haystack-workspace",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
-  "description": "Native Haystack building turnover, typed tag review, edition comparison and complete receiving workspace",
+  "description": "Native Haystack turnover, corrective work, point-list mappings, reviewed semantic models and offline Brick validation",
   "license": "MIT",
   "engines": {
     "node": ">=22"
@@ -25,7 +25,9 @@
     },
     "./portable": "./portable.mjs",
     "./catalog": "./catalog.mjs",
-    "./protocol": "./protocol.mjs"
+    "./protocol": "./protocol.mjs",
+    "./corrective-work": "./corrective-work.mjs",
+    "./semantic-model": "./semantic-model.mjs"
   },
   "bin": {
     "haystack-workspace": "./cli.mjs",

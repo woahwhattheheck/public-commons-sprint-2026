@@ -101,6 +101,16 @@ receiving driver supplies these values from its scratch and interpreter choices.
 The original native-process broker owns workbook subprocess retirement and its
 private scratch when the application runs as a file job.
 
+## Receive and reopen a customer result folder
+
+`starforge lab-edd open-result --file COMPLETE_ZIP --directory PRIVATE_FOLDER`
+verifies the original result and installs every original/native/report member,
+with a local entry page and complete receipt. `starforge lab-edd reopen-result
+--directory PRIVATE_FOLDER` performs a read-only cold reopen. Both commands keep
+the original job and review identities and accept an expected complete ZIP hash.
+See [the complete customer receiving workflow](RESULT_RECEIVING.md) for resume,
+independent transfer, typed SDK and the retained original native exercise.
+
 ## Review and change exact fields
 
 Extract the complete result archive and open `report.html`. The report includes
