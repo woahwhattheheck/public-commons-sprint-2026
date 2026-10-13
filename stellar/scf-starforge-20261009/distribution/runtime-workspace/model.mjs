@@ -14,7 +14,7 @@ import { runtimeCatalog, resolveRuntimeProfile } from '../runtime-profile.mjs';
 import { plain, now, digest, json, canonical, fail, need, recordId, operationId, absolute,
   privateDirectory, makePrivate, readJSON, saveJSON, workerAlive, processIdentity,
   operationLease, operationRunning, tailFile, runtimeWorkspaceError, withWorkspaceWrite,
-  workspaceLeaseDescriptor, workspaceReceivingState, currentRuntimeEntry, receivedOperation, requireCurrentOperation,
+  workspaceLeaseDescriptor, workspaceReceivingState, createWorkspaceReceivingReader, currentRuntimeEntry, receivedOperation, requireCurrentOperation,
   requireCurrentApplication, receivedManagedHome } from './storage.mjs';
 import { createOperationReader, summarizeOperationObservations } from './operation-observations.mjs';
 import { createWorkspaceBackupAPI } from './workspace-backup.mjs';
@@ -154,13 +154,13 @@ async function retainedView(value) {
       archiveSha256: plan?.archiveSha256 ?? preparation?.archiveSha256 ?? null };
   } catch (error) { return { ...value, phase: 'UNAVAILABLE', error: asError(error) }; }
 }
-async function jobView(root, id, observe = null, readRecord = readJSON) {
+async function jobView(root, id, observe = null, readRecord = readJSON, receivingReader = null) {
   const directory = jobPath(root, id), request = await readRecord(join(directory, 'request.json'), true);
   if (!request) return { id, operation: 'prepare request', phase: 'INITIALIZING', displayPhase: 'INITIALIZING',
     workerActive: false, commandActive: false, ...(observe ? {
       observation: { status: 'CURRENT', source: 'RETAINED', checkedAt: now() } } : {}) };
   let state = await readRecord(join(directory, 'state.json'), true) ?? { phase: 'QUEUED' };
-  const receiving = await receivedOperation(root, id);
+  const receiving = await receivedOperation(root, id, receivingReader);
   if (receiving) return { ...request, id, ...state, originalPhase: state.phase, phase: 'RECEIVED_HISTORY',
     displayPhase: 'RECEIVED_HISTORY', receivedHistory: true, receivingId: receiving.receivingId,
     originalRequest: request, workerActive: false, commandActive: false,
@@ -259,18 +259,19 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
   // feature directories under the shared workspace lease.
   const operationRecords = createOperationRecordReader();
   const originalOperationReader = createOperationReader({
-    readJob: (id, observe) => jobView(root, id, observe, operationRecords.read),
+    createBatchContext: () => createWorkspaceReceivingReader(root),
+    readJob: (id, observe, receiving) => jobView(root, id, observe, operationRecords.read, receiving),
     workerAlive, managedCommandAlive, operationRunning, projectError: asError,
   });
   const operationReader = {
     // Complete legacy callers receive detached original values. Compact
     // activity never clones/transports a historical result payload.
-    async read(ids) { return structuredClone(await originalOperationReader.read(ids)); },
-    async summaries(ids) { return (await originalOperationReader.read(ids)).map(operationSummary); },
+    async read(ids, receiving) { return structuredClone(await originalOperationReader.read(ids, receiving)); },
+    async summaries(ids, receiving) { return (await originalOperationReader.read(ids, receiving)).map(operationSummary); },
   };
-  async function observedOperations(ids = null) {
+  async function observedOperations(ids = null, receiving = undefined) {
     const selected = ids ?? (await readdir(join(root, 'operations'))).filter(name => /^[a-f0-9-]{36}$/.test(name));
-    return new Map((await operationReader.read(selected)).map(job => [job.id, job]));
+    return new Map((await operationReader.read(selected, receiving)).map(job => [job.id, job]));
   }
   async function inspectPlanHandoff(plan, runtimeId) {
     const id = recordId(runtimeId), build = selectedProductPlanBuild(plan);
@@ -392,9 +393,10 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
     async state({ runtimeId = null, operationDetail = 'full' } = {}) {
       need(['full', 'summary'].includes(operationDetail), 'RUNTIME_OPERATION_DETAIL_INVALID');
       const [saved, archives, names] = await Promise.all([records(root, 'entries'), records(root, 'archives'), readdir(join(root, 'operations'))]);
-      const entries = await Promise.all(saved.map(async value => retainedView(await currentRuntimeEntry(root, value, false))));
+      const receiving = createWorkspaceReceivingReader(root);
+      const entries = await Promise.all(saved.map(async value => retainedView(await currentRuntimeEntry(root, value, false, receiving))));
       const jobs = await operationReader[operationDetail === 'summary' ? 'summaries' : 'read'](
-        names.filter(name => /^[a-f0-9-]{36}$/.test(name)));
+        names.filter(name => /^[a-f0-9-]{36}$/.test(name)), receiving);
       jobs.sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
       const selected = runtimeId ? entries.find(item => item.id === recordId(runtimeId)) ?? null : entries[0] ?? null;
       const observation = selected ? await readJSON(recordPath(root, 'observations', selected.id), true) : null;
@@ -591,8 +593,14 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
         'RUNTIME_WORKSPACE_INSTALL_LOG_UNAVAILABLE', 'This runtime has no npm attempt log yet');
       return { name: state.logFile, ...await tailFile(join(selected.directory, state.logFile)) };
     },
-    async applicationsState(options) { return applicationsState(root, options, await observedOperations()); },
-    async applicationsHistory(options) { return applicationsHistory(root, options, await observedOperations()); },
+    async applicationsState(options) {
+      const receiving = createWorkspaceReceivingReader(root);
+      return applicationsState(root, options, await observedOperations(null, receiving), receiving);
+    },
+    async applicationsHistory(options) {
+      const receiving = createWorkspaceReceivingReader(root);
+      return applicationsHistory(root, options, await observedOperations(null, receiving), receiving);
+    },
     async applicationsOpenApiSetup(input) {
       const selected = await entry(root, recordId(input.runtimeId));
       return openApiConnectionSetupAction(root, { ...input, runtimeDirectory: selected.directory }, { policy: setupPolicy });
@@ -642,7 +650,10 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
       if (current.phase === 'QUEUED') return model.resumeQueued(input.operationId);
       return model.recoverManagedOperation(input.operationId);
     },
-    async applicationsOutput(input) { return applicationOutput(root, input, await observedOperations([operationId(input.operationId)])); },
+    async applicationsOutput(input) {
+      const receiving = createWorkspaceReceivingReader(root);
+      return applicationOutput(root, input, await observedOperations([operationId(input.operationId)], receiving), receiving);
+    },
     async applicationsWorkbookResult(input) { return workbookApplicationResult(root, input); },
     async applicationsWorkbookDownload(input) { return workbookApplicationDownload(root, input); },
     async applicationsTerminal(input) { return readApplicationTerminal(root, input, await observedOperations([operationId(input.operationId)])); },
