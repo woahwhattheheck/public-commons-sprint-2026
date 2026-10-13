@@ -15,6 +15,8 @@ COMPONENT_FILES = (
     "model/profile_editions.py",
     "model/profile_customer_review.py",
     "model/biophysical_evidence.py",
+    "model/biophysical_evidence_authoring.py",
+    "model/BIOPHYSICAL_AUTHORING.md",
     "model/BIOPHYSICAL_EVIDENCE.md",
     "source_tools/receive_profile_customer_review.py",
     "source_tools/receive_biophysical_evidence.py",
@@ -27,6 +29,8 @@ COMPONENT_FILES = (
     "operator/web/profile_workbench.mjs",
     "operator/web/profile_customer_review.mjs",
     "operator/web/biophysical_evidence.mjs",
+    "operator/web/biophysical_authoring_core.mjs",
+    "operator/web/biophysical_authoring.mjs",
     "operator/web/profile_workbench.css",
     "operator/extensions/profile-workbench.json",
     "operator/PROFILE_WORKBENCH.md",
@@ -135,6 +139,30 @@ def retain_biophysical_evidence(source):
     return source
 
 
+def retain_biophysical_authoring(source):
+    def verification(indent):
+        return (
+            indent + 'if any(restored._list(kind) for kind in ("biophysical-authoring", "biophysical-authoring-imports",\n'
+            + indent + '                                        "biophysical-authoring-registrations")):\n'
+            + indent + '    from .biophysical_evidence_authoring import verify_all as verify_biophysical_authoring\n'
+            + indent + '    verify_biophysical_authoring(restored)\n'
+        )
+    if "verify_biophysical_authoring(restored)" in source:
+        ast.parse(source)
+        return source
+    anchors = [(indent, indent + 'if restored._list("planning-inventories"):\n')
+               for indent in ("    ", "        ")]
+    matches = [(indent, anchor) for indent, anchor in anchors
+               if any(line == anchor for line in source.splitlines(keepends=True))]
+    if len(matches) != 1:
+        raise ValueError("Compose working evidence history verification into the original receiving function.")
+    indent, anchor = matches[0]
+    source = replace_once(source, "\n" + anchor, "\n" + verification(indent) + anchor,
+                          "coefficient authoring semantic receiving")
+    ast.parse(source)
+    return source
+
+
 def app_join(source):
     # Applied to the current core source, preserving every other extension join.
     source = replace_once(source,
@@ -182,7 +210,7 @@ def _install_locked(application, source_root, *, dry_run=False):
     if sha(profile_original) == PROFILE_BASE and sha(profile_source) != PROFILE_SELECTED_MODELS:
         raise ValueError("The selected-model join differs from its retained original postimage.")
     originals[profile_name], pending[profile_name] = profile_original, profile_source
-    for name, join in (("model/portable.py", lambda source: retain_biophysical_evidence(retain_launchers(source))),
+    for name, join in (("model/portable.py", lambda source: retain_biophysical_authoring(retain_biophysical_evidence(retain_launchers(source)))),
                        ("operator/web/app.mjs", app_join)):
         body = (application / name).read_bytes()
         originals[name], pending[name] = body, join(body.decode("utf-8")).encode("utf-8")
@@ -191,6 +219,9 @@ def _install_locked(application, source_root, *, dry_run=False):
     policy_original = policy_path.read_bytes()
     policy = json.loads(policy_original)
     read_paths = ["/api/profile-workbench/biophysical/catalog","/api/profile-workbench/biophysical/template","/api/profile-workbench/biophysical/evidence-preview","/api/profile-workbench/biophysical/evidence-inspect","/api/profile-workbench/biophysical/ranges-preview","/api/profile-workbench/biophysical/ranges-inspect"]
+    read_paths.extend(["/api/profile-workbench/biophysical/authoring-list",
+                       "/api/profile-workbench/biophysical/authoring-inspect",
+                       "/api/profile-workbench/biophysical/authoring-export"])
     for path in read_paths:
         if path in policy.get("writePosts", []) or path in policy.get("adminRoutes", []):
             raise ValueError("Keep the current route access classification at " + path)
