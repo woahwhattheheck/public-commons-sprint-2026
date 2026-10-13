@@ -1,0 +1,89 @@
+{
+  "schema": "sv833.original-water-quality-inputs/v1",
+  "captured_at": "2026-10-13",
+  "path_base": "application root",
+  "observation_window": {
+    "startDateLo": "01-01-2021",
+    "startDateHi": "10-13-2026"
+  },
+  "source_page": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
+  "files": [
+    {
+      "path": "source/sv833-water-quality-20261013/original/sv833-physical-period-of-record-original.csv",
+      "bytes": 11265,
+      "sha256": "a82722d08a9592c9f302107149c36073ce0c9b38900d095dbbde262215baff14",
+      "role": "period_of_record_summary",
+      "uri": "https://waterqualitydata.us/data/summary/monitoringLocation/search?siteid=21SC60WQ_WQX-SV-833&characteristicType=Physical&mimeType=csv&dataProfile=periodOfRecord&summaryYears=all"
+    },
+    {
+      "path": "source/sv833-water-quality-20261013/original/sv833-physical-results-2021-20261013-original.csv",
+      "bytes": 120960,
+      "sha256": "d1260bb7bcf1f1edcedca33bcc5f3ece374a14fa27da1a89ba16aef2885c3e00",
+      "role": "physical_results",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-833&characteristicType=Physical&startDateLo=01-01-2021&startDateHi=10-13-2026&mimeType=csv&sorted=no"
+    },
+    {
+      "path": "source/sv833-water-quality-20261013/original/sv833-nutrient-results-2021-20261013-original.csv",
+      "bytes": 78656,
+      "sha256": "f6cf205ce830b97d8208839460d788993a890ddd95890634e5bf88ebddaebf2e",
+      "role": "nutrient_results",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-833&characteristicType=Nutrient&startDateLo=01-01-2021&startDateHi=10-13-2026&mimeType=csv&sorted=no"
+    },
+    {
+      "path": "source/sv833-water-quality-20261013/original/sv833-microbiological-results-2021-20261013-original.csv",
+      "bytes": 29770,
+      "sha256": "c5043c095664811a29489f36c1a16427ed7965a2919d3d61506b48ea0dbe161a",
+      "role": "microbiological_results",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-833&characteristicType=Microbiological&startDateLo=01-01-2021&startDateHi=10-13-2026&mimeType=csv&sorted=no"
+    },
+    {
+      "path": "source/sv833-water-quality-20261013/original/sv833-activities-2021-20261013-original.csv",
+      "bytes": 17210,
+      "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4",
+      "role": "original_activities",
+      "uri": "https://www.waterqualitydata.us/data/Activity/search?siteid=21SC60WQ_WQX-SV-833&startDateLo=01-01-2021&startDateHi=10-13-2026&mimeType=csv&sorted=no"
+    },
+    {
+      "path": "source/sv833-water-quality-20261013/original/sv833-result-limits-2021-20261013-original.csv",
+      "bytes": 110860,
+      "sha256": "cfe407194b3326c696b7627c4aaa2594cc6d8ae20f88fd6d7d8aa80928918dd1",
+      "role": "original_quantitation_limits",
+      "uri": "https://www.waterqualitydata.us/data/ResultDetectionQuantitationLimit/search?siteid=21SC60WQ_WQX-SV-833&startDateLo=01-01-2021&startDateHi=10-13-2026&mimeType=csv&sorted=no"
+    },
+    {
+      "path": "source/sv833-water-quality-20261013/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "bytes": 133399,
+      "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "role": "physical_result_identifiers",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-833&characteristicType=Physical&startDateLo=01-01-2021&startDateHi=10-13-2026&mimeType=csv&sorted=no&dataProfile=narrowResult"
+    },
+    {
+      "path": "source/sv833-water-quality-20261013/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+      "bytes": 104616,
+      "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+      "role": "nutrient_result_identifiers",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-833&characteristicType=Nutrient&startDateLo=01-01-2021&startDateHi=10-13-2026&mimeType=csv&sorted=no&dataProfile=narrowResult"
+    },
+    {
+      "path": "source/sv833-water-quality-20261013/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+      "bytes": 37404,
+      "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870",
+      "role": "microbiological_result_identifiers",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-833&characteristicType=Microbiological&startDateLo=01-01-2021&startDateHi=10-13-2026&mimeType=csv&sorted=no&dataProfile=narrowResult"
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+      "bytes": 14616,
+      "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c",
+      "role": "original_station_catalogue",
+      "uri": "https://www.waterqualitydata.us/data/Station/search?huc=03060101&startDateLo=01-01-2020&startDateHi=12-31-2025&characteristicType=Nutrient&mimeType=csv&zip=no"
+    },
+    {
+      "path": "source/sv833-water-quality-20261013/retained-assessment-context.json",
+      "bytes": 8285,
+      "sha256": "582f5465696d291e3e9de8d66357227f6f405422609f83dff7dc66c2aa6a87f5",
+      "role": "retained_assessment_extract",
+      "uri": "https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8KECMA4V"
+    }
+  ]
+}
