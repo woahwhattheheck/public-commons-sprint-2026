@@ -23,10 +23,10 @@ from .common import atomic_bytes, atomic_json, describe_file, digest, file_diges
 from .implementation import ImplementationStore
 from .implementation_schema import ImplementationError, document_digest, validate_plan
 from . import observed_context
-from .implementation_observation_quality import summarize_field_quality, write_quality_sources, quality_sections
+from .implementation_observation_quality import summarize_field_quality, write_quality_sources, quality_sections, method_context
 
 SCHEMA = "upstate.implementation-observation-context/v1"
-EDITION = "field-observations-20261013-v3-readable-quality"
+EDITION = "field-observations-20261013-v4-source-method-context"
 REPORT_IDENTITY = "upstate.implementation-observation-report-source/v1"
 FIELDS = (
     "record_id", "station_id", "site_label", "site_latitude", "site_longitude",
@@ -35,7 +35,9 @@ FIELDS = (
     "activity_id", "activity_kind", "sample_id", "collected_at", "custody_ref",
     "parameter", "result_type", "numeric_value", "original_text", "display_value",
     "unit", "basis", "fraction", "qualifier", "detection_limit", "quantitation_limit",
-    "method", "activity_method", "qa_status", "notes", "period_start", "period_end",
+    "method", "method_context", "method_name", "activity_method",
+    "activity_method_context", "activity_method_name", "collection_equipment",
+    "method_source_definition", "qa_status", "notes", "period_start", "period_end",
     "measurement_support", "quantity_basis", "source_quantity", "quantitation_class",
     "source_records",
 )
@@ -230,6 +232,7 @@ def _rows(plan):
                               "visit": pointers["visits"][visit["id"]],
                               "site": pointers["sites"][site["id"]]},
         }
+        method = method_context(observation, activity)
         row = {
             "record_id": observation["id"], "station_id": site["id"], "site_label": site["label"],
             "site_latitude": site.get("latitude"), "site_longitude": site.get("longitude"),
@@ -247,6 +250,9 @@ def _rows(plan):
             "detection_limit": observation.get("detection_limit"),
             "quantitation_limit": observation.get("quantitation_limit"),
             "method": observation.get("method"), "activity_method": activity.get("method"),
+            **{key: method[key] for key in ("method_context", "method_name", "activity_method_context",
+                                          "activity_method_name", "collection_equipment")},
+            "method_source_definition": method,
             "qa_status": observation.get("qa_status"), "notes": observation["notes"],
             "period_start": day, "period_end": day,
             "measurement_support": "other_context", "quantity_basis": "context",
@@ -321,7 +327,9 @@ def _metadata(context, table, collection_id):
         "time_support": "original collection timestamp; local calendar date index",
         "period_end_inclusive": True,
         "columns": {"value": "display_value"},
-        "series_dimensions": ["basis", "fraction", "method", "activity_method", "qa_status", "result_type"],
+        "series_dimensions": ["basis", "fraction", "method", "method_context", "method_name",
+                              "activity_method", "activity_method_context", "activity_method_name",
+                              "qualifier", "qa_status", "result_type"],
         "quantitation_column": "quantitation_class",
         "limit_column": "unassigned_plot_bound", "limit_unit_column": "unassigned_plot_bound_unit",
         "interpretation": "Saved field results retain original sample collection times, units, basis, fraction, "
