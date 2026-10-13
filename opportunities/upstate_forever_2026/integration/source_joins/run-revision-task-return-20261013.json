@@ -1,0 +1,77 @@
+{
+  "schema": "upstate.operator-integration/v1",
+  "operation_id": "RUN-REVISION-TASK-RETURN-20261013",
+  "allowed_paths": [
+    "operator/server.py",
+    "operator/web/app.mjs"
+  ],
+  "file_guards": {
+    "operator/server.py": {
+      "before": {
+        "bytes": 92129,
+        "sha256": "f978cb51b7f22ddeef337633f768719a0715bef46558448f4b384edbe8098dff"
+      },
+      "after": {
+        "bytes": 92617,
+        "sha256": "992a8587b8fab8e49794270bbc3c5e048dc3ecc8f8da43840b135542facc535d"
+      }
+    },
+    "operator/web/app.mjs": {
+      "before": {
+        "bytes": 167666,
+        "sha256": "e935d048697b93ba612b69a394e849ee45cf26c47abd87f9be88be96749893af"
+      },
+      "after": {
+        "bytes": 168115,
+        "sha256": "2a86ed262461ba322cdea92d333571ecc92fa057ccdfa2c219c6ee72e514e16e"
+      }
+    }
+  },
+  "edits": [
+    {
+      "id": "operator/server.py-1",
+      "path": "operator/server.py",
+      "before": "        return self.rehearsals.decorate_task(self.extensions.decorate_task(self.experiments.decorate_task(self.programmes.decorate_task(self.customer_reviews.decorate_task(task)))))",
+      "after": "        task = self.rehearsals.decorate_task(self.extensions.decorate_task(self.experiments.decorate_task(self.programmes.decorate_task(self.customer_reviews.decorate_task(task)))))\n        if task.get(\"action\") in {\"profile.save\", \"scenario.save\", \"run.prepare\", \"run.compare\", \"run.start\"}:\n            if (self.ws(task[\"workspace\"]).root / \"run-revisions\").is_dir():\n                try:\n                    from run_revision import decorate_task as revision_task_links\n                    task.update(revision_task_links(self, task))\n                except Exception as error:\n                    task[\"_run_revision_link_errors\"] = [str(error)]\n        return task"
+    },
+    {
+      "id": "operator/web/app.mjs-1",
+      "path": "operator/web/app.mjs",
+      "before": "  const registeredActions=await extensions.taskActions(row);if(workspace!==requestedWorkspace||request!==itemRequest||!isCurrent())return;",
+      "after": "  const registeredActions=await extensions.taskActions(row);if(workspace!==requestedWorkspace||request!==itemRequest||!isCurrent())return;\n  let revisionActions='';\n  if(Array.isArray(row._run_revisions)&&row._run_revisions.length&&extensions.hasView('run-revisions')){\n    try{revisionActions=await extensions.openExtension('run-revisions','taskActions',row);}\n    catch(error){revisionActions='<div class=\"notice\">'+esc('The revision link could not open: '+error.message)+'</div>';}\n    if(workspace!==requestedWorkspace||request!==itemRequest||!isCurrent())return;\n  }"
+    },
+    {
+      "id": "operator/web/app.mjs-2",
+      "path": "operator/web/app.mjs",
+      "before": "+parameterStudies.taskActions(row)+registeredActions+fileList(row._downloads||[])",
+      "after": "+parameterStudies.taskActions(row)+registeredActions+revisionActions+fileList(row._downloads||[])"
+    }
+  ],
+  "checks": [
+    {
+      "id": "server-original-provider-chain",
+      "path": "operator/server.py",
+      "text": "self.rehearsals.decorate_task(self.extensions.decorate_task(self.experiments.decorate_task(self.programmes.decorate_task(self.customer_reviews.decorate_task(task)))))",
+      "count": 1
+    },
+    {
+      "id": "server-actual-task-view-call",
+      "path": "operator/server.py",
+      "text": "task.update(revision_task_links(self, task))",
+      "count": 1
+    },
+    {
+      "id": "browser-explicit-task-actions",
+      "path": "operator/web/app.mjs",
+      "text": "extensions.openExtension('run-revisions','taskActions',row)",
+      "count": 1
+    },
+    {
+      "id": "browser-registered-and-native-controls",
+      "path": "operator/web/app.mjs",
+      "text": "+parameterStudies.taskActions(row)+registeredActions+revisionActions+fileList(row._downloads||[])",
+      "count": 1
+    }
+  ],
+  "source_ref": "3ccadcf3525013942a8baadd35f4df6752155c1b"
+}
