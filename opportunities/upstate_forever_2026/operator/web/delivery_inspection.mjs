@@ -119,7 +119,8 @@ export function attachDeliveryInspection(host){
    previewControl(atlas,'Browse map datasets and metadata')+
    download(match('map_atlas_csv'),'Download map-to-dataset CSV')+
    download(match('map_atlas_index'),'Download dataset and lineage JSON')+
-   button('gis-files','Show GIS files and metadata')+'</div>'+
+   button('gis-files','Show GIS files and metadata')+
+   (row.state==='complete'?nav('gis-project','Prepare editable GIS project',row.id):'')+'</div>'+
    '<p class="note">Each linked map panel retains its actual GIS dataset and FGDC XML, including signed scenario changes and dimensionless priorities in current deliveries. Download accompanying files beside the GeoTIFF, or use the complete ZIP to keep relative paths intact. The atlas index records units, original grid, valid-support method, selected runs and source lineage.</p>'+
    '<h3 class="subheading">Original analysis and source context</h3>'+
    (links.analysis_id?'<p>'+esc(links.analysis_title||'Saved scenario analysis')+' · <code>'+esc(links.analysis_id)+'</code></p><p class="note">'+esc(links.source_area_count)+' retained analysis areas. Original record SHA256 '+esc(links.analysis_sha256||'Retained with the analysis')+'.</p>':'')+
@@ -251,6 +252,10 @@ export function attachDeliveryInspection(host){
   if(action==='analysis'){if(node.dataset.id!==links.analysis_id)throw Error('Choose the attached saved analysis.');extension='scenario-analysis';method='open';args=[links.analysis_id,{workspace_key:expected}];}
   else if(action==='watershed-report'){if(node.dataset.id!==links.watershed_report_id)throw Error('Choose the source watershed report.');extension='scenario-reports';method='open';args=[links.watershed_report_id,{workspace_key:expected}];}
   else if(action==='atlas'){if(node.dataset.id!==value.record.id)throw Error('Choose this original delivery atlas.');extension='map-atlas';method='open';args=[value.record.id,{workspace_key:expected}];}
+  else if(action==='gis-project'){
+   if(node.dataset.id!==value.record.id||value.record.state!=='complete')throw Error('Choose this original completed delivery.');
+   extension='gis-projects';method='createForDelivery';args=[{workspace_key:expected,delivery_id:value.record.id}];
+  }
   else if(action==='plan')id=chosen('plan',links.source_plan_ids);
   else if(action==='water-analysis'){if(node.dataset.id!==links.receiving_water_analysis_id)throw Error('Choose the retained receiving-water analysis.');id=links.receiving_water_analysis_id;}
   else if(action==='source'){id=chosen('source',links.source_collection_ids);kind='sources';}
