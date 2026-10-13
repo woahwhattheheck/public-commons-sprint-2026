@@ -7,8 +7,8 @@ from model import parameter_studies as experiments
 from model import parameter_calibration
 from model.common import identifier
 
-ACTIONS = {"parameter-study.prepare", "parameter-study.run", "parameter-study.summarize", "parameter-study.source.prepare", "parameter-study.ensemble.continue"}
-READS = {"catalog", "results", "calibration", "calibration-origin", "execution", "view", "source-catalog", "scientific-source", "ensemble-studies"}
+ACTIONS = {"parameter-study.working.save", "parameter-study.working.export", "parameter-study.prepare", "parameter-study.run", "parameter-study.summarize", "parameter-study.source.prepare", "parameter-study.ensemble.continue"}
+READS = {"working-list", "working-view", "catalog", "results", "calibration", "calibration-origin", "execution", "view", "source-catalog", "scientific-source", "ensemble-studies"}
 
 
 class ParameterStudyAPI:
@@ -19,6 +19,12 @@ class ParameterStudyAPI:
     def invoke(self, task):
         workspace = self.operator.ws(task["workspace"])
         payload = task["payload"]
+        if task["action"] == "parameter-study.working.save":
+            from model.parameter_working import save
+            return {**save(workspace, payload), "workspace_key": task["workspace"]}
+        if task["action"] == "parameter-study.working.export":
+            from model.parameter_working import export_files
+            return self._source(task["workspace"], export_files(workspace, identifier(payload.get("revision_id"))))
         if task["action"] == "parameter-study.ensemble.continue":
             from model.ensemble_parameter_studies import continue_studies
             return self._ensemble_studies(task["workspace"], continue_studies(workspace, payload))
@@ -72,6 +78,12 @@ class ParameterStudyAPI:
 
     def read(self, workspace_id, operation, payload):
         workspace = self.operator.ws(workspace_id)
+        if operation == "working-list":
+            from model.parameter_working import list_series
+            return {"workspace_key": workspace_id, "items": list_series(workspace)}
+        if operation == "working-view":
+            from model.parameter_working import inspect
+            return {**inspect(workspace, identifier(payload.get("id"))), "workspace_key": workspace_id}
         if operation == "ensemble-studies":
             from model.ensemble_parameter_studies import latest, preview
             key = identifier(payload.get("id"))
