@@ -1,0 +1,53 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "monitoring-report",
+  "title": "Monitoring scientific report sources",
+  "version": "1.0.0",
+  "order": 86,
+  "requires_actions": [
+    "monitoring.export"
+  ],
+  "assets": [
+    "monitoring-report.mjs"
+  ],
+  "backend": {
+    "module": "monitoring_report_native",
+    "actions": [
+      "monitoring.report.prepare"
+    ],
+    "invoke": {
+      "handler": "perform",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/monitoring-report",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  }
+}
