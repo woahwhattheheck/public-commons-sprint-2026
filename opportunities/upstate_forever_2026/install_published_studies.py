@@ -50,6 +50,7 @@ def portable_source(source):
         "APPLICATION_FILES": (
             "PUBLISHED_STUDIES.md", "install_published_studies.py",
             "receive_published_studies.py", "tools/attach_published_report.py",
+            "eighteenmile_chlorophyll_reconciled.sources.json",
         ),
     }
     lines = source.splitlines(keepends=True)
@@ -90,6 +91,36 @@ def main():
         if not (application / required).is_file():
             parser.error("The existing ECSA application is missing " + required)
     data_files = [str(path.relative_to(source)) for path in sorted((source / DATA_ROOT).iterdir()) if path.is_file()]
+    observations = source / DATA_ROOT / "wqp_20261013"
+    if observations.is_dir():
+        data_files.extend(str(path.relative_to(source)) for path in sorted(observations.iterdir()) if path.is_file())
+    cohort = source / DATA_ROOT / "cohort_reconciliation_20261013"
+    if cohort.is_dir():
+        data_files.extend(str(path.relative_to(source)) for path in sorted(cohort.rglob("*")) if path.is_file())
+    cohort_manifest = "eighteenmile_chlorophyll_reconciled.sources.json"
+    if (source / cohort_manifest).is_file():
+        data_files.append(cohort_manifest)
+    for manifest in (
+        source / DATA_ROOT / "model-sources.json",
+        source / DATA_ROOT / "wqp_20261013" / "source-manifest.json",
+        source / "eighteenmile_chlorophyll_reconciled.sources.json",
+    ):
+        if not manifest.is_file():
+            continue
+        value = json.loads(manifest.read_text(encoding="utf-8-sig"))
+        if value.get("schema") != "upstate.sources/v1":
+            parser.error("Incompatible installed source manifest: " + str(manifest))
+        data_files.append(str(manifest.relative_to(source)))
+        for entry in value.get("entries", []):
+            for item in [entry, *entry.get("companions", [])]:
+                path = (manifest.parent / item["path"]).resolve(strict=True)
+                if not path.is_relative_to((source / DATA_ROOT).resolve()):
+                    parser.error("A study manifest refers outside its source directory.")
+                data_files.append(str(path.relative_to(source)))
+    flow_manifest = DATA_ROOT / "wqp" / "flow-context-sources.json"
+    if (source / flow_manifest).is_file():
+        data_files.append(str(flow_manifest))
+    data_files = sorted(set(data_files))
     expected = list(CODE_FILES) + data_files
     for relative in expected:
         if not (source / relative).is_file():
