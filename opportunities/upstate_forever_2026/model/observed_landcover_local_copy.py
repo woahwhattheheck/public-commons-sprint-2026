@@ -229,7 +229,8 @@ def create(workspace, payload):
     return get(workspace, key)
 
 
-def get(workspace, key):
+def _retained(workspace, key):
+    """Validate admission records and CAS bytes without materializing source views."""
     from . import observed_landcover
     key = identifier(key)
     directory = workspace.root / DIRECTORY / key
@@ -246,6 +247,9 @@ def get(workspace, key):
              and receipt["source_project_id"] == identity["captured_lineage"]["source_project_id"]
              and receipt["original_selection_id"] == identity["captured_lineage"]["observed_landcover_selection_id"],
              "The admission changed its original report identity")
+    _require(receipt["files"]["source_admission"]["path"] == DIRECTORY + "/" + key + "/source-admission.json"
+             and receipt["files"]["source_manifest"]["path"] == DIRECTORY + "/" + key + "/sources.json",
+             "The admission points outside its original records")
     for descriptor in receipt["files"].values():
         verify_file(workspace.root, descriptor)
     plan = read_json(workspace.root / receipt["files"]["source_admission"]["path"])
@@ -266,16 +270,64 @@ def get(workspace, key):
     captured = read_json(verify_file(workspace.root, {
         "path": selection_member["object"], "bytes": selection_member["bytes"],
         "sha256": selection_member["sha256"]}))
+    local_id = identifier(receipt["local_selection_id"])
+    local_prefix = observed_landcover.KIND + "/" + local_id + "/"
+    edition = observed_landcover._receipt(workspace, workspace.root / local_prefix / "receipt.json")
+    for descriptor in edition["files"].values():
+        _require(_relative(descriptor["path"]).startswith(local_prefix),
+                 "Original local comparison member escapes its saved edition")
+        verify_file(workspace.root, descriptor)
+    report = read_json(workspace.root / edition["files"]["selection.json"]["path"])
+    _require(edition["source"] == receipt["local_source"]
+             and edition["identity"]["project_id"] == workspace.project["id"]
+             and report["selection"] == edition["identity"]["selection"] == receipt["selection"]
+             and report["binding"] == edition["identity"]["binding"] == receipt["source_binding"]
+             and report["summary"] == edition["summary"] == receipt["summary"],
+             "The local editable comparison differs from its retained admission")
+    entries = {row["id"]: row for row in imported["entries"]}
+    originals = report["binding"]["inputs"]
+    _require(len(entries) == len(imported["entries"]) == len(originals) == 4
+             and report["selection"]["source_collection_id"] == receipt["input_collection_id"]
+             and all(row["source_collection_id"] == receipt["input_collection_id"]
+                     and entries.get(row["source_id"]) == row["entry"] for row in originals),
+             "The local comparison changed its original admitted input entries")
+    for entry in entries.values():
+        for body in [entry["body"], *entry.get("companions", [])]:
+            verify_file(workspace.root, {"path": body["object"], "bytes": body["bytes"],
+                                         "sha256": body["sha256"]})
+    local_collection = workspace._get("sources", receipt["local_source"]["source_collection_id"])
+    sources = [row for row in local_collection["entries"]
+               if row["id"] == receipt["local_source"]["source_id"]]
+    recipe = edition["files"]["observed-report.json"]
+    _require(len(sources) == 1 and sources[0]["body"]["sha256"] == recipe["sha256"]
+             and sources[0]["body"]["bytes"] == recipe["bytes"],
+             "The local comparison lost its original report source")
+    expected = {name: item for name, item in edition["files"].items()
+                if name not in ("observed-report.json", "sources.json", "selected-huc-landcover.zip")}
+    actual = {body.get("view_path", body["filename"]): body for body in sources[0].get("companions", [])}
+    _require(len(actual) == len(sources[0].get("companions", [])) and set(actual) == set(expected)
+             and all(actual[name]["sha256"] == item["sha256"] and actual[name]["bytes"] == item["bytes"]
+                     for name, item in expected.items()),
+             "The local comparison changed its retained report companions")
+    for body in [sources[0]["body"], *sources[0].get("companions", [])]:
+        verify_file(workspace.root, {"path": body["object"], "bytes": body["bytes"],
+                                     "sha256": body["sha256"]})
+    _same_science(captured, report)
+    return {**receipt, "files": {**receipt["files"],
+            "receipt": describe_file(workspace.root, directory / "receipt.json")}}
+
+
+def get(workspace, key):
+    from . import observed_landcover
+    receipt = _retained(workspace, key)
     local = observed_landcover.inspect(workspace, receipt["local_selection_id"])
     inputs = observed_landcover.load_inputs(workspace, receipt["selection"])
     _require(local["edition"]["source"] == receipt["local_source"]
              and local["report"]["selection"] == receipt["selection"]
              and local["report"]["binding"] == receipt["source_binding"] == inputs["binding"]
              and local["report"]["summary"] == receipt["summary"],
-             "The local editable comparison differs from its retained admission")
-    _same_science(captured, local["report"])
-    return {**receipt, "files": {**receipt["files"],
-            "receipt": describe_file(workspace.root, directory / "receipt.json")}}
+             "The editable comparison no longer resolves to its admitted original inputs")
+    return receipt
 
 
 def list_copies(workspace, *, study_id=None, source=None):
@@ -287,7 +339,7 @@ def list_copies(workspace, *, study_id=None, source=None):
             continue
         if source is not None and identity.get("source") != source:
             continue
-        value = get(workspace, path.parent.name)
+        value = _retained(workspace, path.parent.name)
         rows.append({name: deepcopy(value[name]) for name in (
             "id", "title", "created_at", "project_id", "source_project_id",
             "original_source", "original_selection_id", "local_selection_id",

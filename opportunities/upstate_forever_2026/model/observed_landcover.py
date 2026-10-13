@@ -17,6 +17,7 @@ from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest
 from .reuse import copy_verified
 from . import observed_context
 from . import observed_landcover_report
+from . import observed_landcover_provenance
 
 KIND = "observed-landcover-selections"
 SCHEMA = "upstate.observed-landcover-selection/v1"
@@ -361,9 +362,27 @@ def _csv(columns, rows):
     return stream.getvalue().encode("utf-8")
 
 
-def _table(columns, rows):
-    return {"kind": "table", "columns": columns,
-            "rows": [["Not available" if value is None else str(value) for value in row] for row in rows]}
+def _display(value):
+    """Format human tables only; scientific dictionaries and exports stay exact."""
+    if value is None:
+        return "Not available"
+    if isinstance(value, float):
+        if 0 < abs(value) < .0005:
+            return "<0.001" if value > 0 else ">-0.001"
+        return format(0.0 if value == 0 else value, ",.3f")
+    if isinstance(value, int) and not isinstance(value, bool):
+        return format(value, ",d")
+    return str(value)
+
+
+def _table(columns, rows, *, widths=None, caption=None):
+    value = {"kind": "table", "columns": columns,
+             "rows": [[_display(item) for item in row] for row in rows]}
+    if widths is not None:
+        value["widths"] = widths
+    if caption is not None:
+        value["caption"] = caption
+    return value
 
 
 def report_sections(report):
@@ -371,34 +390,55 @@ def report_sections(report):
     summary = report["summary"]
     support = [[name.replace("_", " "), summary[name]] for name in SUPPORT]
     areas = [[row["huc12"], row["properties"].get("name", ""), row["paired_valid_cells"],
-              row["changed_class_cells"], row["changed_percent_of_paired_valid"],
-              row["valid_before_only_cells"], row["valid_after_only_cells"], row["both_nodata_cells"]]
+              row["changed_class_cells"], row["changed_percent_of_paired_valid"]]
              for row in report["watersheds"]]
+    unpaired = [[row["huc12"], row["valid_before_only_cells"],
+                 row["valid_after_only_cells"], row["both_nodata_cells"]]
+                for row in report["watersheds"]]
+    transitions = {(row["before_class"], row["after_class"]): row["cells"]
+                   for row in summary["transitions"]}
+    matrix = ["All 256 earlier-to-later class counts are shown in four panels. "
+              "Rows repeat the same earlier classes; each panel uses four different later classes. "
+              "Class codes follow the original NLCD legend."]
+    for offset in range(0, len(CODES), 4):
+        later = CODES[offset:offset + 4]
+        matrix.append(_table(
+            ["Earlier class"] + [str(code) for code in later],
+            [[str(code) + " " + CLASSES[code]] + [transitions[(code, target)] for target in later]
+             for code in CODES], widths=[2.8, 1, 1, 1, 1],
+            caption="Later classes: " + "; ".join(str(code) + " " + CLASSES[code] for code in later) + ". Counts are cells."))
     return [
         ["Selected watershed annual land-cover changes", [report["interpretation"],
          "Original product years: " + str(years["before"]["year"]) + " to " + str(years["after"]["year"]) + ".",
          "Selected HUC12s: " + ", ".join(report["selection"]["huc12s"]) + ".",
          _table(["Original native support", "Cells"], support),
-         ("Changed share of paired-valid cells: " + str(summary["changed_percent_of_paired_valid"]) + "%."
+         ("Changed share of paired-valid cells: " + _display(summary["changed_percent_of_paired_valid"]) + "%."
           if summary["paired_valid_cells"] else "Changed share is unavailable: there are zero paired-valid cells.") +
-         " Denominator: " + str(summary["paired_valid_cells"]) + " paired-valid cells. Cell area is " +
-         str(report["binding"]["method"]["cell_area_m2"]) + " square metres.",
+         " Denominator: " + _display(summary["paired_valid_cells"]) + " paired-valid cells. Cell area is " +
+         _display(report["binding"]["method"]["cell_area_m2"]) + " square metres.",
          "Selected non-overlapping watershed counts are added before percentages are computed. "
-         "The selection keeps cells valid in only one year separate from the paired directional matrix."]],
+         "The selection keeps cells valid in only one year separate from the paired directional matrix.",
+         "Displayed areas and percentages use three decimal places; nonzero magnitudes below 0.0005 "
+         "are shown as <0.001 or >-0.001. Integer cell counts remain exact. Downloaded CSV and JSON "
+         "retain all original numeric precision."]],
         ["Each selected original watershed", [_table(
-            ["HUC12", "Original name", "Paired-valid cells", "Changed cells", "Changed (%)",
-             "Earlier-only valid", "Later-only valid", "Both NoData"], areas)]],
+            ["HUC12", "Original name", "Paired-valid cells", "Changed cells", "Changed (%)"],
+            areas, widths=[1.5, 2.7, 1.2, 1.2, 1.1],
+            caption="Changed percentage uses this watershed's paired-valid cells."),
+         _table(["HUC12", "Earlier-only valid cells", "Later-only valid cells", "Both NoData cells"],
+                unpaired, widths=[1.5, 1.5, 1.5, 1.5],
+                caption="Additional native support is retained separately from the paired comparison.")]],
+        ["Original class areas on paired support", [_table(
+            ["Class", "Description", "Earlier (ha)", "Later (ha)"],
+            [[row["class_code"], row["label"], row["before_ha"], row["after_ha"]]
+             for row in summary["classes"]], widths=[.6, 2.8, 1.3, 1.3])]],
         ["Directional class gains and losses on paired support", [_table(
-            ["Class", "Description", "Earlier (ha)", "Later (ha)", "Gained (ha)", "Lost (ha)", "Net (ha)"],
-            [[row["class_code"], row["label"], row["before_ha"], row["after_ha"],
-              row["gained_ha"], row["lost_ha"], row["net_ha"]] for row in summary["classes"]]),
+            ["Class", "Description", "Gained (ha)", "Lost (ha)", "Net (ha)"],
+            [[row["class_code"], row["label"], row["gained_ha"], row["lost_ha"], row["net_ha"]]
+             for row in summary["classes"]], widths=[.6, 2.3, 1.1, 1.1, 1.1]),
          "Gains and losses exclude the unchanged diagonal. Net equals later minus earlier; "
          "independent annual class inventories, including unpaired valid cells, remain in the attached tables."]],
-        ["Complete directional matrix (cells)", [_table(
-            ["Earlier class / later class"] + [str(code) for code in CODES],
-            [[str(x) + " " + CLASSES[x]] + [next(row["cells"] for row in summary["transitions"]
-                                                     if row["before_class"] == x and row["after_class"] == y)
-                                            for y in CODES] for x in CODES])]],
+        ["Complete directional matrix (cells)", matrix],
         ["Original method and reusable data", [
             report["binding"]["method"]["pixel_rule"],
             "Raster coordinate system: EPSG:5070. Original boundary and raster hashes, affine grid, "
@@ -418,7 +458,7 @@ def report_sections(report):
                     ("Readable offline report", "report.html"),
                 )]},
         ]],
-    ]
+    ] + observed_landcover_provenance.sections(report.get("source_provenance"))
 
 
 def _html(report, figure_product=None):
@@ -426,17 +466,28 @@ def _html(report, figure_product=None):
         return html.escape("Not available" if value is None else str(value), quote=True)
     chunks = ['<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">',
               "<title>" + escaped(report["title"]) + "</title>",
-              "<style>body{font:16px system-ui;max-width:1200px;margin:32px auto;padding:0 24px;color:#202020;background:#fff}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}th,td{border:1px solid #ccc;padding:8px;text-align:right}th:first-child,td:first-child{text-align:left}section{margin:28px 0}.scroll{overflow:auto}.scroll:focus{outline:2px solid #333;outline-offset:3px}h1{font-size:28px}a{color:inherit;overflow-wrap:anywhere}li a{display:inline-block;min-height:28px;padding:8px 0}p{line-height:1.5}figure{margin:24px 0}figure svg{display:block;width:100%;min-width:840px;height:auto}figcaption{line-height:1.5;margin:12px 0}caption{text-align:left;padding:8px 0}table th{font-weight:600}@media(max-width:700px){body{margin:16px auto;padding:0 12px}h1{font-size:24px}table{min-width:620px}}@media print{body{max-width:none;padding:0;margin:0;font-size:10pt}.scroll{overflow:visible}figure svg{min-width:0;width:100%;break-inside:avoid}thead{display:table-header-group}th,td{padding:4px;overflow-wrap:anywhere}table{min-width:0;font-size:8pt}h2,h3{break-after:avoid}}</style>",
+              "<style>body{font:16px system-ui;max-width:1200px;margin:32px auto;padding:0 24px;color:#202020;background:#fff}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}th,td{border:1px solid #ccc;padding:8px;text-align:right}th:first-child,td:first-child{text-align:left}section{margin:28px 0}.scroll{overflow:auto}.scroll:focus{outline:2px solid #333;outline-offset:3px}h1{font-size:28px}a{color:inherit;overflow-wrap:anywhere}li a{display:inline-block;min-height:28px;padding:8px 0}p{line-height:1.5;overflow-wrap:anywhere}.identifier{white-space:nowrap;overflow-wrap:normal}.label{text-align:left}figure{margin:24px 0}figure svg{display:block;width:100%;min-width:840px;height:auto}figcaption{line-height:1.5;margin:12px 0}caption{text-align:left;padding:8px 0}table th{font-weight:600}@media(max-width:700px){body{margin:16px auto;padding:0 12px}h1{font-size:24px}table{min-width:620px}}@media print{body{max-width:none;padding:0;margin:0;font-size:10pt}.scroll{overflow:visible}figure svg{min-width:0;width:100%;break-inside:avoid}thead{display:table-header-group}th,td{padding:4px;overflow-wrap:anywhere}table{min-width:0;font-size:8pt}h2,h3{break-after:avoid}}</style>",
               "<h1>" + escaped(report["title"]) + "</h1>",
               "<p>" + escaped(report["interpretation"]) + "</p>",
               "<p>Figures are embedded in this file. Extract selected-huc-landcover.zip to use every linked original data file.</p>"]
     def table(block):
+        def cell(index, value):
+            tag = "th" if index == 0 else "td"
+            attrs = ' scope="row"' if index == 0 else ""
+            if block["columns"][index] == "HUC12":
+                attrs += ' class="identifier"'
+            elif block["columns"][index] in ("Original name", "Description"):
+                attrs += ' class="label"'
+            return "<" + tag + attrs + ">" + escaped(value) + "</" + tag + ">"
+        widths = block.get("widths")
+        columns = ("<colgroup>" + "".join('<col style="width:' + str(100 * weight / sum(widths)) + '%">'
+                                         for weight in widths) + "</colgroup>") if widths else ""
         return ('<div class="scroll" tabindex="0" role="region" aria-label="Original data table; scroll horizontally"><table>' +
                 ("<caption>" + escaped(block["caption"]) + "</caption>" if block.get("caption") else "") +
-                "<thead><tr>" + "".join('<th scope="col">' + escaped(x) + "</th>" for x in block["columns"]) +
+                columns + "<thead><tr>" + "".join('<th scope="col">' + escaped(x) + "</th>" for x in block["columns"]) +
                 "</tr></thead><tbody>" + "".join("<tr>" + "".join(
-                    ("<th scope=\"row\">" + escaped(x) + "</th>") if index == 0 else "<td>" + escaped(x) + "</td>"
-                    for index, x in enumerate(row)) + "</tr>" for row in block["rows"]) + "</tbody></table></div>")
+                    cell(index, value) for index, value in enumerate(row)) + "</tr>"
+                    for row in block["rows"]) + "</tbody></table></div>")
     if figure_product:
         indexed = {row["id"]: row for row in figure_product["spec"]["figures"]}
         chunks.append("<section><h2>Selected watershed group figures</h2>")
@@ -463,7 +514,7 @@ def _html(report, figure_product=None):
     return ("\n".join(chunks) + "</html>\n").encode("utf-8")
 
 
-def _write_outputs(directory, report, report_implementation):
+def _write_outputs(directory, report, report_implementation, source_provenance_implementation):
     atomic_json(directory / "selection.json", report, immutable=True)
     atomic_json(directory / "original-inputs.json", report["binding"], immutable=True)
     figure_product = observed_landcover_report.prepare(directory, report, report_implementation)
@@ -487,6 +538,7 @@ def _write_outputs(directory, report, report_implementation):
             ("selection.json", "original-inputs.json", "report.html", "huc-summary.csv",
              "huc-classes.csv", "huc-transitions.csv", "selected-transitions.csv")}
     files.update(figure_product["files"])
+    files.update(observed_landcover_provenance.retain(directory, report, source_provenance_implementation))
     return files, figure_product
 
 
@@ -498,12 +550,18 @@ def build(workspace, selection):
                 "report_implementation": report_implementation,
                 "project_id": workspace.project["id"], "title": report["title"],
                 "selection": report["selection"], "binding": report["binding"]}
+    source_provenance_implementation = observed_landcover_provenance.implementation()
+    # Add a separate identity key: do not change report_implementation passed to the group helper.
+    identity["source_provenance_implementation"] = source_provenance_implementation
     key = digest(identity)
+    report["source_provenance"] = observed_landcover_provenance.describe(
+        report, workspace.project["id"], comparison_id=key)
     directory = workspace.root / KIND / key
     with held(directory / ".build.lock", blocking=False):
         if (directory / "receipt.json").exists():
             return inspect(workspace, key)["edition"]
-        files, figure_product = _write_outputs(directory, report, report_implementation)
+        files, figure_product = _write_outputs(
+            directory, report, report_implementation, source_provenance_implementation)
         for index, original in enumerate(inputs["originals"]):
             for body in [original["entry"]["body"], *original["entry"].get("companions", [])]:
                 name = "originals/" + str(index) + "/" + _relative(body.get("view_path", body["filename"]))
