@@ -43,6 +43,25 @@ The two Commons contracts require original `file_count` and `source_bytes`. The 
 
 For a directly pasted three-line Python receiver prepared by `prepareInlineReceiver`, run that script with one new owned output directory. It retains the exact maintained materializer plus manifest/parts beneath `input/`, then uses this same receiving implementation beneath `received/`. Both payload and bootstrap are encoded so Canvas whitespace transformations cannot alter executable indentation. See [SOURCE_BANK_TRANSFER.md](SOURCE_BANK_TRANSFER.md) for the sender API and complete size budget.
 
+## Complete Sampling source and input carriers
+
+The existing `--carrier` mode also reads the retained Sampling component and input envelopes. Save the complete original JSON, Markdown or provider result, then use the same qualified Python and separate receiving directory:
+
+~~~sh
+python -B source_tools/materialize_source_banks.py \
+  --carrier /retained/complete-sampling-inputs.md \
+  --expect-source-sha256 ORIGINAL_DECODED_BANK_SHA256 \
+  --application /path/to/current/application \
+  --workspace /path/to/current/workspace \
+  --output /path/to/new-owned-sampling-inputs
+~~~
+
+`commons.complete-source-gzip.v1` declares its decoded `bytes`/`sha256` and compressed `gzip_bytes`/`gzip_sha256`. `commons.gzip-source-bank/v1` declares `payload_bytes`/`payload_sha256` and `compressed_bytes`/`compressed_sha256`. Both require `gzip+base64` encoding and their complete declared identity pairs. Every supplied identity alias is checked; conflicting declarations fail. The first carrier's original `commons.complete-source/v1` member list is supported alongside the existing source-bank formats. The full original bank, including retained shared preimages, repository, source prefix and merge identity, remains unchanged in `banks/original.json`. A declared `operation` is retained as the receiving operation when `operation_id` is absent.
+
+This mode checks every member's original bytes, hash, path and any declared Git identity, then compiles Python source before publishing the complete staging directory. It never installs or executes the received source. A syntactically damaged old component still fails before staging; use the producer's complete corrected source edition and retain the original. Do not remove syntax checks or overwrite a working application to admit an older member. Original scientific inputs need no new model run to be received.
+
+The matching `materialize_source_banks.bootstrap.txt` contains this exact receiver and accepts the same arguments. See [SOURCE_BANK_TRANSFER.md](SOURCE_BANK_TRANSFER.md) for protected roots, atomic staging, retry behavior and complete output layout.
+
 ## Original Ecosystem Sciences receiving transfer
 
 The 13 October 2026 S1 cloud receiving transfer contains four original banks:
