@@ -6,6 +6,8 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 import {createHash,randomUUID} from 'node:crypto';
 import {inspectClickHouseAcceptancePreparation} from './prepare.mjs';
 import {spawn} from 'node:child_process';
+import {resolveSourceEdition} from './source-editions.mjs';
+import {admitSourceObserver,completeSourceObserver,runSourceObserver} from './source-observer.mjs';
 import {collectSourceFiles} from './workbench/vendor/sling/core/common.mjs';
 import {acquireWorkspaceLease,privateDirectory} from './workbench/vendor/sling/vendor/stellar-expert/store.mjs';
 import {inspectOriginalSource,WORKBENCH_ROOT,ORIGINAL_MANIFEST_SHA256} from './managed.mjs';
@@ -52,19 +54,23 @@ async function save(path,value,{immutable=false}={}){
 async function copySelected(source,target,expected){
   if(await exists(target)){await verify(target,expected);return;}
   await verify(source,expected);await mkdir(dirname(target),{recursive:true,mode:0o700});
-  const temporary=target+'.copy-'+randomUUID(),input=await open(source,'r'),output=await open(temporary,'wx',0o600);
+  const temporary=target+'.copy-'+randomUUID();let input,output,published=false;
   try{
-    const before=await input.stat(),buffer=Buffer.alloc(1024*1024);let offset=0;
-    while(offset<before.size){const r=await input.read(buffer,0,Math.min(buffer.length,before.size-offset),offset);need(r.bytesRead>0,'MERCHANT_PACKAGE_COPY','The selected complete package ended early.');await output.writeFile(buffer.subarray(0,r.bytesRead));offset+=r.bytesRead;}
-    const after=await input.stat();need(['dev','ino','size','mtimeMs','ctimeMs'].every(k=>before[k]===after[k]),'MERCHANT_PACKAGE_COPY','The selected package changed while retaining it.');
-    await output.sync();
-  }finally{await input.close();await output.close();}
-  await verify(temporary,expected);await rename(temporary,target);const directory=await open(dirname(target),'r');try{await directory.sync();}finally{await directory.close();}
+    try{
+      input=await open(source,'r');output=await open(temporary,'wx',0o600);
+      const before=await input.stat(),buffer=Buffer.alloc(1024*1024);let offset=0;
+      while(offset<before.size){const r=await input.read(buffer,0,Math.min(buffer.length,before.size-offset),offset);need(r.bytesRead>0,'MERCHANT_PACKAGE_COPY','The selected complete package ended early.');await output.writeFile(buffer.subarray(0,r.bytesRead));offset+=r.bytesRead;}
+      const after=await input.stat();need(['dev','ino','size','mtimeMs','ctimeMs'].every(k=>before[k]===after[k]),'MERCHANT_PACKAGE_COPY','The selected package changed while retaining it.');
+      await output.sync();
+    }finally{try{await output?.close();}finally{await input?.close();}}
+    await verify(temporary,expected);await rename(temporary,target);published=true;
+    const directory=await open(dirname(target),'r');try{await directory.sync();}finally{await directory.close();}
+  }finally{if(!published)await unlink(temporary).catch(error=>{if(error.code!=='ENOENT')throw error;});}
 }
 
 function parse(argv){
   const option={},merchant={};
-  const allowed=new Set(['--merchant-workspace','--merchant-runtime','--preparation-result','--reference-result','--reference-request','--playwright','--chromium','--resume']);
+  const allowed=new Set(['--merchant-workspace','--merchant-runtime','--preparation-result','--reference-result','--reference-request','--source-observer','--playwright','--chromium','--resume']);
   for(let i=0;i<argv.length;i++){
     const flag=argv[i];need(allowed.has(flag),'MERCHANT_RECEIVING_OPTION','Use a declared complete receiving option.');
     const key=flag.slice(2);need(!Object.hasOwn(option,key),'MERCHANT_RECEIVING_OPTION','Select each receiving option once.');
@@ -81,27 +87,12 @@ function parse(argv){
 async function historicalSource(source,manifestPath,expected){
   source=resolve(source);manifestPath=resolve(manifestPath);
   need(await realpath(source)===source&&manifestPath===join(source,'SOURCE_MANIFEST.json'),'MERCHANT_REFERENCE_SOURCE','Use the original complete source root and its own manifest.');
-  const authority=await json(join(HERE,'original-source.json')),manifest=await json(manifestPath),selected=new Map(authority.files.map(x=>[x.path,x]));
-  const maintenance=new Map((authority.maintenance??[]).map(x=>[x.path,x]));
-  const actual=collectSourceFiles(source).map(({path,bytes,sha256})=>({path,bytes,sha256}));
-  need(actual.length===54&&selected.size===54&&new Set(actual.map(x=>x.path)).size===54,'MERCHANT_REFERENCE_SOURCE','Retain the complete original 54-file edition.');
-  const selectedMatches=[],originalMatches=[];
-  for(const row of actual){
-    const current=selected.get(row.path),old=maintenance.get(row.path)?.original??current;
-    need(current&&old,'MERCHANT_REFERENCE_SOURCE','The retained reference contains another source path.');
-    selectedMatches.push(row.sha256===current.sha256&&row.bytes===current.bytes);
-    originalMatches.push(row.sha256===old.sha256&&row.bytes===old.bytes);
-  }
-  need(selectedMatches.every(Boolean)||originalMatches.every(Boolean),'MERCHANT_REFERENCE_SOURCE','Retain one coherent original or maintained source edition, including its exact manifest.');
-  const byPath=new Map(actual.map(x=>[x.path,x]));
-  need(Array.isArray(manifest.files)&&manifest.files.length===53&&new Set(manifest.files.map(x=>x.path)).size===53&&
-    manifest.files.every(x=>x.path!=='SOURCE_MANIFEST.json'&&byPath.get(x.path)?.sha256===x.sha256&&byPath.get(x.path)?.bytes===x.bytes),
-    'MERCHANT_REFERENCE_SOURCE','The original manifest must bind all 53 source leaves before its own hash.');
-  const descriptor=await identity(manifestPath);if(expected)need(descriptor.sha256===expected.sha256&&descriptor.bytes===expected.bytes,'MERCHANT_REFERENCE_SOURCE','The actual source must match the original operation manifest.');
-  return{source,manifestPath,manifest:descriptor,edition:selectedMatches.every(Boolean)?'maintained':'original',files:actual,maintenance:authority.maintenance??[],origin:authority.origin};
+  const authority=await json(join(HERE,'original-source.json')),actual=collectSourceFiles(source).map(({path,bytes,sha256})=>({path,bytes,sha256}));
+  const edition=resolveSourceEdition({authority,manifestBytes:await readFile(manifestPath),actualFiles:actual,expectedManifest:expected});
+  return{source,manifestPath,manifest:edition.manifest,edition:edition.edition,files:actual,maintenance:authority.maintenance??[],origin:authority.origin};
 }
 async function originalReference(options){
-  let request=null,requestIdentity=null,source=null,root;
+  let request=null,requestIdentity=null,source=null,root,observer=null;
   if(options.option['reference-request']){
     const path=options.option['reference-request'];request=await json(path);requestIdentity={path,...await identity(path)};
     const keys=['schema','source','directory','fixtureDirectory','config','sourceManifest','python','clickhouse','node','playwright','chromium'];
@@ -117,6 +108,11 @@ async function originalReference(options){
   }
   await privateDirectory(root,{create:true});
   const resultPath=join(root,'CUSTOMER_RESULT.json');
+  if(options.option['source-observer']){observer=admitSourceObserver(options.option['source-observer']);need(observer.request.directory===root&&(!request||same(observer.request,request)),'MERCHANT_REFERENCE_SOURCE','The observer must select this same original reference.');}
+  if(observer&&await exists(resultPath)){
+    const fixturePath=join(observer.request.fixtureDirectory,'fixture-result.json'),fixture=await exists(fixturePath)?await json(fixturePath):null;
+    if(!fixture?.completed||fixture.programmeExit!==0||!fixture.closedAt)await runSourceObserver(observer.path);
+  }
   if(!await exists(resultPath)){
     need(request,'MERCHANT_NATIVE_REQUIRED','The selected completed original reference result is absent.');
     const guard=await acquireWorkspaceLease(join(root,'merchant-reference.lock'));let childProcess,stdout,stderr,closedPromise=null,actuallyClosed=false,spawnError=null,commandFailure=null,record=null,recordPath=null,outcome=null;
@@ -145,11 +141,18 @@ async function originalReference(options){
         const old=await json(fixtureManifest);need(same(old.command,originalArgs),'MERCHANT_REFERENCE_CHANGED','The original fixture command must remain byte-for-byte selected.');
       }
       const continuation=join(root,'merchant-reference');await mkdir(continuation,{recursive:true,mode:0o700});
-      await save(join(continuation,'request.json'),{request,requestIdentity,source,node:{executable:process.execPath,version:process.version}},{immutable:true});
+      const retainedRequestPath=join(continuation,'request.json'),currentRequest={request,requestIdentity,source,node:{executable:process.execPath,version:process.version}};
+      if(await exists(retainedRequestPath)){
+        const old=await json(retainedRequestPath);
+        need(same(old.request,request)&&same(old.requestIdentity,requestIdentity)&&same(old.node,currentRequest.node)&&
+          old.source?.source===source.source&&old.source?.manifestPath===source.manifestPath&&same(old.source.manifest,source.manifest)&&same(old.source.files,source.files),
+          'MERCHANT_REFERENCE_CHANGED','Retain the exact original request and complete selected source; descriptive maintenance metadata may grow.');
+      }else await save(retainedRequestPath,currentRequest,{immutable:true});
       const attempt='attempt-'+randomUUID(),directory=join(continuation,attempt);await mkdir(directory,{mode:0o700});
-      const argv=[join(request.source,'reference','fixture.py'),'--directory',request.fixtureDirectory,'--clickhouse',request.clickhouse,
-        ...(await exists(fixtureManifest)?['--resume']:[]),'--',...originalArgs];
+      const argv=[join(observer?.value.observer.root??request.source,'reference','fixture.py'),'--directory',request.fixtureDirectory,'--clickhouse',request.clickhouse,
+        ...(await exists(fixtureManifest)?['--resume']:[]),...(observer?['--source-observer',observer.path]:[]),'--',...originalArgs];
       record={schema:'stellar-forge.clickhouse-acceptance-reference-continuation.v1',attempt,directory,state:'prepared',startedAt:now(),executable:request.python,argv,cwd:request.source,request:requestIdentity};
+      if(observer)record.sourceObserver={path:observer.path,...observer.identity};
       recordPath=join(directory,'command.json');await save(recordPath,record);
       stdout=await open(join(directory,'stdout.log'),'wx',0o600);stderr=await open(join(directory,'stderr.log'),'wx',0o600);
       const env={...process.env};for(const key of ['PYTHONPATH','PYTHONHOME','PYTHONUSERBASE','PYTHONSTARTUP'])delete env[key];
@@ -178,7 +181,7 @@ async function originalReference(options){
         }
       }finally{
         process.off('SIGTERM',sigterm);process.off('SIGINT',sigint);
-        await stdout?.close();await stderr?.close();await guard.close();
+        try{await stdout?.close();}finally{try{await stderr?.close();}finally{await guard.close();}}
       }
     }
   }
@@ -191,23 +194,29 @@ async function originalReference(options){
   for(const file of result.artifacts??[]){const path=resolve(root,file.path);child(root,path);await verify(path,file);}
   if(request)source=await historicalSource(request.source,request.sourceManifest,result.sourceManifest);
   else{
-    const authority=await json(join(HERE,'original-source.json')),current=authority.files.find(x=>x.path==='SOURCE_MANIFEST.json'),
-      original=(authority.maintenance??[]).find(x=>x.path==='SOURCE_MANIFEST.json')?.original??current;
-    need([current,original].some(d=>d.sha256===result.sourceManifest.sha256&&d.bytes===result.sourceManifest.bytes),
-      'MERCHANT_REFERENCE_SOURCE','The adopted complete reference must retain the exact original or maintained manifest.');
-    const retained=await json(join(root,'source-manifest.json')),selected=new Map(authority.files.map(x=>[x.path,x])),changes=new Map((authority.maintenance??[]).map(x=>[x.path,x.original]));
-    const old=result.sourceManifest.sha256===original.sha256;
-    need(retained.files.length===53&&new Set(retained.files.map(x=>x.path)).size===53&&retained.files.every(f=>{
-      const expected=old?(changes.get(f.path)??selected.get(f.path)):selected.get(f.path);return expected&&f.bytes===expected.bytes&&f.sha256===expected.sha256;
-    }),'MERCHANT_REFERENCE_SOURCE','Every original source row must match the retained complete edition.');
-    source={edition:old?'original':'maintained',manifest:result.sourceManifest,files:retained.files,origin:authority.origin,maintenance:authority.maintenance??[]};
+    const authority=await json(join(HERE,'original-source.json')),edition=resolveSourceEdition({authority,manifestBytes:await readFile(join(root,'source-manifest.json')),expectedManifest:result.sourceManifest});
+    source={edition:edition.edition,manifest:edition.manifest,files:edition.files,origin:authority.origin,maintenance:authority.maintenance??[]};
   }
   if(request){
     const fixture=await json(join(request.fixtureDirectory,'fixture-result.json'));
     need(fixture.schema==='altinity.reference-result.v1'&&fixture.completed===true&&fixture.programmeExit===0&&fixture.closedAt&&fixture.native?.version==='26.8.24.9'&&fixture.native.sourceRows===3,
       'MERCHANT_NATIVE_REQUIRED','The original fixture must close its own database and completed receiving child.');
   }
-  return{root,result,resultIdentity:await identity(resultPath),source,request,requestIdentity};
+  const observers=[],observerRoot=join(root,'merchant-reference','source-observers');
+  if(await exists(observerRoot)){
+    for(const entry of await readdir(observerRoot,{withFileTypes:true})){
+      need(entry.isDirectory()&&!entry.isSymbolicLink(),'MERCHANT_REFERENCE_SOURCE','Retain original observer directories.');
+      if(!(state.sourceObservers??[]).some(row=>row.id===entry.name))continue;
+      const descriptor=join(observerRoot,entry.name,'request.json');
+      need(await exists(descriptor),'MERCHANT_REFERENCE_SOURCE','An actually admitted observer must retain its complete request.');
+      const selected=admitSourceObserver(descriptor);
+      const admitted=completeSourceObserver(descriptor);
+      need(admitted.value.operationId===result.operationId&&same(admitted.completion.result,{path:resultPath,...await identity(resultPath)}),'MERCHANT_REFERENCE_SOURCE','The completed observer must bind this exact original result.');
+      observers.push({directory:admitted.directory,descriptor:{path:descriptor,...admitted.identity},completion:admitted.completion,completionIdentity:admitted.completionIdentity});
+    }
+  }
+  if(observer)need(observers.some(row=>row.descriptor.path===observer.path&&same({bytes:row.descriptor.bytes,sha256:row.descriptor.sha256},observer.identity)),'MERCHANT_REFERENCE_SOURCE','The explicitly selected observer must have actually entered and completed this original operation.');
+  return{root,result,resultIdentity:await identity(resultPath),source,request,requestIdentity,observers};
 }
 class Course{
   constructor(root,options,selection,original,lease){this.root=root;this.options=options;this.selection=selection;this.original=original;this.lease=lease;this.directory=join(root,'merchant-receiving');this.path=join(this.directory,'operation.json');this.manager=null;this.apps=null;this.closing=false;}
@@ -710,7 +719,7 @@ class Course{
 }
 export async function main(argv=process.argv.slice(2)){
   if(!argv.length||argv.includes('--help')){
-    process.stdout.write('clickhouse-acceptance-workbench-receive --preparation-result ABS_PREPARED_JSON (--reference-result ABS_CUSTOMER_RESULT | --reference-request ABS_REFERENCE_REQUEST) --merchant-workspace PRIVATE_RUNTIME_WORKSPACE --merchant-runtime READY_MERCHANT_INSTALLATION --playwright ABS_MODULE --chromium ABS_BROWSER [--resume]\nContinues the same original ClickHouse reference through Applications, full typed retained consumers, complete customer-agent files and cold receiving. The existing native fixture remains its own original owner.\n');return{help:true};
+    process.stdout.write('clickhouse-acceptance-workbench-receive --preparation-result ABS_PREPARED_JSON (--reference-result ABS_CUSTOMER_RESULT | --reference-request ABS_REFERENCE_REQUEST) --merchant-workspace PRIVATE_RUNTIME_WORKSPACE --merchant-runtime READY_MERCHANT_INSTALLATION --playwright ABS_MODULE --chromium ABS_BROWSER [--source-observer ABS_ORIGINAL_OBSERVER_REQUEST] [--resume]\nContinues the same original ClickHouse reference through Applications, full typed retained consumers, complete customer-agent files and cold receiving. The existing native fixture remains its own original owner.\n');return{help:true};
   }
   const options=parse(argv),inspected=await inspectMerchantRuntime(options.merchant.runtime,{load:false});
   need(inspected.sourceRoot&&await realpath(inspected.sourceRoot)===SOURCE_ROOT,'MERCHANT_SOURCE_BINDING','Invoke this continuation from the selected installed Merchant source.');
@@ -743,6 +752,10 @@ export async function main(argv=process.argv.slice(2)){
     course=new Course(root,options,selection,original,lease);await course.open();
     if(course.state.status!=='complete')await course.phase('00-selected-original-source',async()=>{
       await course.record('selected-merchant-runtime-'+hash(canonical(inspected)),inspected);
+      for(const observer of options.reference.observers){
+        for(const file of observer.completion.sourceFiles)await course.retain(join(observer.directory,file.path));
+        await course.retain(join(observer.directory,'complete.json'));
+      }
       return course.retain(join(root,'CUSTOMER_RESULT.json'));
     });
     return await course.run();
