@@ -88,3 +88,21 @@ Preserve the active Workspace writer and the original baseline, restoration, mat
 A transferred result must retain actual stage donors, including `reused_from.original_arguments` and any previous-reuse chain, through the maintained study-transfer closure. Compose the current transfer owner's repair before receiving a partial study that contains reused stages. Preserve the original paths and hashes; a donor's arguments belong to its original run directory. The complete Workspace archive already uses its maintained recursive inventory and semantic verification hooks.
 
 Use recorded stage and operation timestamps for elapsed history. The actual source-update preview and resulting report must distinguish candidate selection from native reuse that occurred. Retain nitrogen and phosphorus as annual kg, sediment as annual metric tonnes, and the existing stream-delivery and common-support interpretation. The recipient should be able to reopen the installed application, inspect assumptions and actual artifacts, revise the retained sources or parameters and continue the Programme.
+
+## Continue the same source update from the native command line
+
+The existing Programme CLI exposes the same backend as the **Update sources** control. These commands consume retained Programme and refresh-plan IDs; they create no additional model family or independent runner.
+
+```bash
+python -B -m model.compute_programme_cli --workspace "$WORKSPACE" source-update-catalog "$PROGRAMME_ID"
+python -B -m model.compute_programme_cli --workspace "$WORKSPACE" source-update-preview "$PROGRAMME_ID" "$REFRESH_PLAN_ID" --title "$SUCCESSOR_TITLE"
+python -B -m model.compute_programme_cli --workspace "$WORKSPACE" source-update "$PROGRAMME_ID" "$REFRESH_PLAN_ID" --title "$SUCCESSOR_TITLE" --expected-preview-id "$PREVIEW_ID"
+python -B -m model.compute_programme_cli --workspace "$WORKSPACE" resume "$SUCCESSOR_PROGRAMME_ID"
+python -B -m model.compute_programme_cli --workspace "$WORKSPACE" read-report "$SUCCESSOR_PROGRAMME_ID"
+```
+
+Run from the received application directory with its verified GIS/InVEST interpreter. The preview returns the exact ID required for creation. Use the same title for preview and creation. An unready preview exits with status 2 and retains the original issues. Creation returns the successor `programme_id` and source-update lineage.
+
+The creation command also accepts `--run` to continue its successor through the original Programme resume path. The result includes both the original Programme status/report and the source-update adoption record. An incomplete native continuation returns status 2; a raised continuation error reports the successor Programme ID for resumption. Separate preview and creation let the operator inspect the exact candidates and source changes before dispatch.
+
+The installer composes these four CLI seams after the source-successor backend. It retains the prior installed source hashes so existing 1.0.0 receivers can upgrade and repeat the installation safely. The same saved successor and original native candidate IDs are used by both browser and CLI.

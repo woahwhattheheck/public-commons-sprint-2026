@@ -1,6 +1,6 @@
 {
   "schema": "upstate.programme-native-reuse-patch/v1",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "shared": {
     "model/compute_programme.py": [
       {
@@ -84,7 +84,43 @@
         "before": "    point_source_path = \"operator/install_point_source_context.py\"\n",
         "after": "    programme_reuse_path = \"operator/install_programme_reuse.py\"\n    if (root / programme_reuse_path).is_file():\n        programme_reuse = module(root, programme_reuse_path)\n        complete(\"Original native reuse for Programme successors\", programme_reuse[\"FILES\"])\n        result = programme_reuse[\"install\"](root, root)\n        records.append({\"component\": \"Original native reuse for Programme successors\", \"result\": result})\n\n    point_source_path = \"operator/install_point_source_context.py\"\n"
       }
+    ],
+    "model/compute_programme_cli.py": [
+      {
+        "id": "programme-source-successor-cli-arguments",
+        "before": "    for name in (\"interaction-preview\", \"interaction-create\"):\n",
+        "after": "    source_catalog = commands.add_parser(\"source-update-catalog\",\n        help=\"List saved refresh plans and source successors for one retained Programme\")\n    source_catalog.add_argument(\"programme_id\")\n    for name in (\"source-update-preview\", \"source-update\"):\n        command = commands.add_parser(name,\n            help=\"Review source replacements\" if name.endswith(\"preview\") else\n                 \"Create or reopen the exact reviewed source-successor Programme\")\n        command.add_argument(\"programme_id\")\n        command.add_argument(\"refresh_plan_id\")\n        command.add_argument(\"--title\")\n        if name == \"source-update\":\n            command.add_argument(\"--expected-preview-id\", required=True,\n                                 help=\"The exact source-update preview just inspected\")\n            command.add_argument(\"--run\", action=\"store_true\",\n                                 help=\"Continue this successor with original stage reuse\")\n    for name in (\"interaction-preview\", \"interaction-create\"):\n"
+      },
+      {
+        "id": "programme-source-successor-cli-dispatch",
+        "before": "    if args.command in (\"interaction-preview\", \"interaction-create\", \"attach-interaction\", \"sync-interaction\"):\n",
+        "after": "    if args.command in (\"source-update-catalog\", \"source-update-preview\", \"source-update\"):\n        from . import programme_source_updates\n        if args.command == \"source-update-catalog\":\n            return programme_source_updates.catalog(programmes.workspace, args.programme_id)\n        if args.command == \"source-update-preview\":\n            return programme_source_updates.preview(programmes.workspace, args.programme_id,\n                                                    args.refresh_plan_id, title=args.title)\n        adopted = programme_source_updates.create(programmes.workspace, args.programme_id,\n            args.refresh_plan_id, expected_preview_id=args.expected_preview_id, title=args.title)\n        if not args.run:\n            return adopted\n        try:\n            status = _synchronize_completed(programmes, programmes.resume(adopted[\"programme_id\"]))\n            return {**status, \"source_update\": adopted}\n        except Exception as exc:\n            exc.programme_id = adopted[\"programme_id\"]\n            raise\n    if args.command in (\"interaction-preview\", \"interaction-create\", \"attach-interaction\", \"sync-interaction\"):\n"
+      },
+      {
+        "id": "programme-source-successor-cli-incomplete-status",
+        "before": "                or (args.command == \"pair-completion\" and args.run)) and result[\"state\"] != \"complete\":",
+        "after": "                or (args.command in (\"pair-completion\", \"source-update\") and args.run)) and result[\"state\"] != \"complete\":"
+      },
+      {
+        "id": "programme-source-successor-cli-preview-status",
+        "before": "        return 0\n    except (ValueError, OSError, KeyError, ImportError, RuntimeError) as exc:",
+        "after": "        if args.command == \"source-update-preview\" and not result[\"ready\"]:\n            return 2\n        return 0\n    except (ValueError, OSError, KeyError, ImportError, RuntimeError) as exc:"
+      }
     ]
   },
-  "known_additions": {}
+  "known_additions": {
+    "model/PROGRAMME_NATIVE_REUSE.md": [
+      "bffb20211f4ccee53db3d1d3d2cb6e91519198c8b688a7336bd9d4134f3302e3",
+      "55b8bdcd10146fffb063a69f18931a826a89496564d41c143746ec94fca708aa"
+    ],
+    "operator/programme_native_reuse_patch.json": [
+      "eb9b62dd1be0beb00c61f6adbe50567794991d2c4f0ce64c4d3e793460cc8f64"
+    ],
+    "operator/install_programme_reuse.py": [
+      "a565a35bf72dbb508e58f5b58f63cd9784667ca47e053ec240578ed1469cbcf3"
+    ],
+    "integration/component_fragments/programme-native-reuse.json": [
+      "a5ac1093936e72a481ba697988a487ca8a1d503545679fe8f85683daa6cb5efb"
+    ]
+  }
 }
