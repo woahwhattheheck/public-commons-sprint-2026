@@ -282,6 +282,31 @@
         <p id="recipient-result" role="status"></p>
         <p>All prepared editors, complete returns and acceptance custody remain available in the export table. The next complete workspace/application export includes their original bytes.</p>
       </article>
+      <article id="recipient-queue-panel" class="card">
+        <p class="eyebrow">Several complete returns, one ordered desk</p>
+        <h3>Recipient review queue</h3>
+        <p>Choose already-retained returns, keep staff notes, and review them in order. Review and defer describe your workflow; acceptance still uses each original preview and explicit Apply. Saved editions retain all earlier selections.</p>
+        <p id="recipient-queue-state" role="status">Connect the original author workspace.</p>
+        <div class="actions"><button id="recipient-queue-new" type="button">Start new queue</button><a href="/AUDIT_RECIPIENT_QUEUE.md" target="_blank" rel="noopener">Queue and complete handover guide</a></div>
+        <div class="form-grid">
+          <label>Saved native queue edition<select id="recipient-queue-saved"><option value="">Choose a complete saved queue edition</option></select></label>
+          <button id="recipient-queue-open" type="button">Open saved edition</button>
+          <label>Unfinished copy in this browser<select id="recipient-queue-working"><option value="">Choose a retained unfinished working copy</option></select></label>
+          <button id="recipient-queue-working-open" type="button">Open unfinished copy</button>
+        </div>
+        <form id="recipient-queue-save-form">
+          <label>Queue title<input id="recipient-queue-title" maxlength="500"></label>
+          <label>Whole queue staff note<textarea id="recipient-queue-note" maxlength="6000" rows="3"></textarea></label>
+          <button id="recipient-queue-save" type="submit">Save queue edition</button>
+        </form>
+        <p id="recipient-queue-persistence" role="status" aria-live="polite">New queue; save its complete working copy.</p>
+        <div class="form-grid"><label>Complete retained return<select id="recipient-queue-add-select"><option value="">Choose an already-retained complete return</option></select></label><button id="recipient-queue-add" type="button">Add return to queue</button></div>
+        <p id="recipient-queue-empty">No returns are selected. Receive the complete return above, then add it here.</p>
+        <div id="recipient-queue-table" class="table-wrap" hidden><table><thead><tr><th>Order</th><th>Original return</th><th>Native progress</th><th>Workflow</th><th>Staff note</th></tr></thead><tbody id="recipient-queue-rows"></tbody></table></div>
+        <div class="actions"><button id="recipient-queue-next" type="button">Open next pending review</button><button id="recipient-queue-export" type="button">Download saved queue and all originals</button><button id="recipient-queue-download-working" type="button">Download complete unfinished copy</button><button id="recipient-queue-download-history" type="button">Download complete saved history</button></div>
+        <label>Restore an unfinished copy for this original author<input id="recipient-queue-import" type="file" accept=".json,application/json"></label>
+        <p class="muted">Downloads of a saved queue describe that selected immutable edition. Save changes first to include new notes or order. Received queues remain original read-only history; they do not become new accepted reviews in another workspace.</p>
+      </article>
       <form id="receive-form" class="card"><h3>Receive a complete exported case</h3><label>Workspace or application package<input id="receive-file" type="file" required></label><p id="receive-file-status"></p><label>Receiving note<textarea id="receive-note" data-draft rows="3"></textarea></label>
         <p class="muted">The original case is received with distinct local identities in one transaction, retaining its sources, revisions, editions, reviews, and related work.</p><button type="submit" data-mutation disabled>Receive complete case</button>
       </form><article id="receive-result" hidden><h3>Received case</h3><pre id="receive-result-json"></pre></article>
