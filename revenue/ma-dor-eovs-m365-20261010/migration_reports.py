@@ -139,6 +139,7 @@ def build_reports(workspace, directory, *, source_revision, title, note):
     files.extend(write_register_reports(workspace, directory, source_revision=source_revision))
     files.extend(write_property_financial_reports(workspace, directory, source_revision=source_revision))
     files.extend(write_crf_reports(workspace, directory, source_revision=source_revision))
+    files.extend(write_adviser_reports(workspace, directory, source_revision=source_revision))
     review_path = directory / "review.html"
     with PublishedText(review_path) as report:
         report.write("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>" + cell(title) + "</title><style>" + STYLE + "</style></head><body>")
@@ -150,6 +151,7 @@ def build_reports(workspace, directory, *, source_revision, title, note):
         report.write("<h2>Register migration</h2><p><a href=\"register-review.html\">Open the complete typed registers, relationship checks, exact financial controls and cutover reviews</a>. Full original rows and findings accompany each selected edition.</p>")
         report.write('<h2>Property and financial continuity</h2><p><a href="property-review.html">Open complete property, tenancy, relationship and temporal findings</a> · <a href="financial-review.html">Open original financial definitions, period calculations and independent output reconciliation</a>. Both reports retain every historical edition and link its complete catalogue and CSV/NDJSON sections.</p>')
         report.write('<h2>CRF reporting</h2><p><a href="crf-review.html">Open the complete retained reporting editions, findings, comparisons and workbook observations</a>. Every record includes its complete CSV and NDJSON section exports.</p>')
+        report.write('<h2>Adviser migration commissioning</h2><p><a href="adviser-review.html">Open complete source-family coverage, reconstruction, target verification and release review</a>. Full original rows, work history and independent target evidence accompany the readable review.</p>')
         report.write("<h2>Actions and current correction decisions</h2>")
         table_start(report, "Current correction queue at the selected revision", ("Correction", "State", "Owner", "Finding", "Latest review note"))
         count = 0
@@ -714,4 +716,64 @@ def write_property_financial_reports(workspace, directory, *, source_revision):
         files.append(target.name)
     if workspace.project["revision"] != source_revision:
         raise ValueError("Operating reports changed from the selected original revision")
+    return files
+
+
+def write_adviser_reports(workspace,directory,*,source_revision):
+    """Complete original adviser work and readable review at the frozen source cut."""
+    import adviser_workspace as adviser
+    from migration_store import identifier
+    if workspace.project["revision"]!=source_revision:
+        raise ValueError("Adviser report must use the complete selected original snapshot")
+    files=[]
+    path=directory/"adviser-review.html"
+    with PublishedText(path) as report:
+        report.write('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Adviser migration handover</title><style>'+STYLE+'</style></head><body>')
+        report.write('<header><p class="subtle">Adviser CRM / Migration commissioning</p><h1>Adviser migration handover</h1><p>Workspace <code>'+cell(workspace.project["id"])+'</code> · Selected revision '+str(source_revision)+'</p></header>')
+        report.write('<p>This report retains every selected programme, reconstruction edition and release. Current reconstruction counts concern this frozen snapshot. Independent native register findings and external CRM operation remain attached to their original evidence and accountable owners.</p>')
+        for kind in adviser.KINDS:
+            catalogue=directory/(kind+".ndjson")
+            with PublishedText(catalogue) as raw:
+                offset=0
+                report.write("<h2>"+cell(kind.replace("adviser_","").replace("_"," ").capitalize())+"</h2>")
+                while True:
+                    selected=adviser.listed(workspace,{"kind":kind,"offset":offset,"limit":250})
+                    for record in selected["rows"]:
+                        raw.write(canonical(record)+"\n")
+                        rid=identifier(record["id"])
+                        report.write('<section><h3>'+cell(record["title"])+'</h3><p><code>'+cell(rid)+'</code> · '+cell(record["created_at"])+' · '+cell(record["actor"])+'</p>')
+                        report.write(json_detail("Complete original selection, decisions and evidence",record))
+                        if kind=="adviser_programme":
+                            review=adviser.assessment(workspace,rid)
+                            table_start(report,"Every source family and its current reconstruction",("Family","Coverage","Original rows","Unassigned","Planned","In progress","Verified","Deferred","Accepted omission"))
+                            for family,value in review["families"].items():
+                                count=value["counts"]
+                                table_row(report,(value["title"],value["status"],count["source_rows"],count["unassigned"],count["planned"],count["in_progress"],count["verified"],count["deferred"],count["accepted_omission"]))
+                            table_end(report)
+                            report.write(json_detail("Full current assessment and open boundaries",review))
+                        elif kind=="adviser_work":
+                            report.write('<p>State: '+cell(record["status"])+' · Owner: '+cell(record["owner"])+' · Due: '+cell(record["due_at"])+'</p>')
+                            report.write(detail("Explicit original source and target associations",record.get("target_links",[])))
+                            report.write(detail("Inventory-bound original document files",record.get("document_files",[])))
+                            table_start(report,"Exact independently returned target checks",("Original source row","Returned target row","Field","Matches","Complete expected value","Complete observed value"))
+                            for check in record["target_checks"]:
+                                table_row(report,(check.get("source_row_id"),check["target_row_id"],check["field"],check["matches"],canonical(check["expected"]),canonical(check["observed"])))
+                            table_end(report)
+                        else:
+                            report.write('<p>Recorded decision: '+cell(record["decision"])+' · Acceptance owner: '+cell(record["acceptance_owner"])+'</p>')
+                        links=[]
+                        for format_name in ("csv","ndjson"):
+                            name=rid+"."+format_name
+                            with PublishedText(directory/name) as full:
+                                for chunk in adviser.iter_export(workspace,kind,rid,format_name):
+                                    full.write(chunk.decode("utf-8"))
+                            files.append(name)
+                            links.append('<a href="'+cell(name)+'">Complete '+format_name.upper()+'</a>')
+                        report.write('<p>'+" · ".join(links)+'</p></section>')
+                    offset+=len(selected["rows"])
+                    if offset>=selected["total"]:break
+                    if not selected["rows"]:raise ValueError("Adviser report stopped before its complete original catalogue")
+            files.append(catalogue.name)
+        report.write('</body></html>')
+    files.append(path.name)
     return files
