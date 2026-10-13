@@ -177,6 +177,12 @@
       "source_results": "receiving/sediment-comparison-source-20261013",
       "receiving": "Same original 6ACE scientific-reference operation; supplied existing workspace handles and original source input",
       "installed_files": 303
+    },
+    "client_source_mapping_reuse": {
+      "operation_id": "ECO-INTAKE-MAPPING-REUSE-20261013",
+      "base_commit": "b86149e92d92e3bdde43b1fb1aede9c2edf8fde9",
+      "guide": "operator/CLIENT_SOURCE_INTAKE.md",
+      "scope": "Exact original-header reuse with per-file preview and fresh scientific confirmation."
     }
   },
   "files": [
@@ -1247,8 +1253,8 @@
     },
     {
       "path": "operator/extensions/client-source-intake.json",
-      "bytes": 1931,
-      "sha256": "46cb65ecafa6060ba6082b22a497950725b4da2b0645f28d640be026ac326d09"
+      "bytes": 1964,
+      "sha256": "77c577192ef20057c0301854c9fdab9583641198ed5218652d3d7e69a1d6331f"
     },
     {
       "path": "operator/extensions/measured-observations.json",
@@ -1297,13 +1303,13 @@
     },
     {
       "path": "operator/web/client_source_intake.css",
-      "bytes": 3253,
-      "sha256": "9bbf74fc3b09f863d40b07805312e9034a7af6ee9bf7189cedef9c44e35b39e2"
+      "bytes": 3510,
+      "sha256": "4bba586e6a7fcbfc1c65e95bbcee05c0afc2e600589d548d0402f3444e8a7b5a"
     },
     {
       "path": "operator/web/client_source_intake.mjs",
-      "bytes": 42852,
-      "sha256": "f4657a0aa92b6454c0e3ca0607c960915ff2d84ace9efef4caa8501e8c5a3190"
+      "bytes": 49545,
+      "sha256": "702c0fbe709ae6de7d97b1180c807bc20a12ce6b32bb7b575fda72658cd0473f"
     },
     {
       "path": "operator/web/flow_editions.css",
@@ -1694,6 +1700,16 @@
       "path": "source/run_measured_chemistry_receiving.py",
       "bytes": 39590,
       "sha256": "fe133b88ca7a4b27b04c6f161b3f9f1a40dda73e07e7829c0b2453ceea095f04"
+    },
+    {
+      "path": "operator/CLIENT_SOURCE_INTAKE.md",
+      "bytes": 13770,
+      "sha256": "5178729af1050201988fcd9d3338773b96e128296ffc3e032ef657c41f61a102"
+    },
+    {
+      "path": "operator/web/client_source_mapping.mjs",
+      "bytes": 6848,
+      "sha256": "5419be173999a141ba82679a340b7600c49144c927d775235f1d477e044fd3f8"
     }
   ],
   "predecessors": {
@@ -2105,7 +2121,8 @@
     ],
     "operator/web/client_source_intake.mjs": [
       "4165a38f7c53578025dad6df047131ff6b00aa4bafd73922a776d8dea76073bd",
-      "a8319e4a970e5508f763f05a8c105c187278c80b4ab38fc471866ebe6ea0d2b8"
+      "a8319e4a970e5508f763f05a8c105c187278c80b4ab38fc471866ebe6ea0d2b8",
+      "f4657a0aa92b6454c0e3ca0607c960915ff2d84ace9efef4caa8501e8c5a3190"
     ],
     "measurement_workspace/engine/intake.mjs": [
       "be7e0157389a4416b048080b755b9d1061d3c49915ef71a86705551db04b3b8a",

@@ -1,11 +1,13 @@
 /** Guided original-file intake in the maintained scientific operator. */
+import {validateMappingLibrary, createMappingTemplate, verifyMappingTemplate,
+  previewMappingTemplate, applyMappingTemplate} from './client_source_mapping.mjs';
 const clone = value => JSON.parse(JSON.stringify(value));
 const esc = value => String(value ?? '').replace(/[&<>"']/g, x => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
 const arr = value => Array.isArray(value) ? value : [];
 const keyPattern = /^[0-9a-f]{64}$/;
 const same = (a,b) => JSON.stringify(a) === JSON.stringify(b);
 const fresh = () => ({schema:'upstate.client-source-draft/v1',title:'',uploads:[],inspection_id:null,
-  selections:[],requests:[],selected_task:null,selected_result:null,workspace_key:null,recovery:[]});
+  selections:[],requests:[],selected_task:null,selected_result:null,workspace_key:null,recovery:[],mapping_templates:[],mapping_reuse:{}});
 const canonical = value => Array.isArray(value) ? '['+value.map(canonical).join(',')+']' :
   value && typeof value==='object' ? '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k])).join(',')+'}' : JSON.stringify(value);
 const hash = async raw => [...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(raw)))].map(x=>x.toString(16).padStart(2,'0')).join('');
@@ -62,6 +64,13 @@ function validateDraft(value,expectedWorkspace=null,withRecovery=true){
     }
   }
   need(!value.selections.length||value.inspection_id!==null,'Source choices require their original inspection.');
+  validateMappingLibrary(value.mapping_templates??[]);
+  need(object(value.mapping_reuse??{}),'The saved mapping choices are invalid.');
+  for(const [identity,form] of Object.entries(value.mapping_reuse??{})){
+    need(/^[0-9a-f]{64}:\d+:\d+$/.test(identity)&&object(form)&&typeof form.name==='string'&&form.name.length<=160&&
+      (form.selected_id===''||keyPattern.test(form.selected_id)),'A saved mapping form is invalid.');
+    need(!form.selected_id||(value.mapping_templates??[]).some(item=>item.id===form.selected_id),'A selected saved mapping is missing from the complete working copy.');
+  }
   for(const x of value.requests){
     need(object(x)&&/^client-source-[0-9a-f]{64}$/.test(x.id)&&typeof x.key==='string'&&
       ['client-source.inspect','client-source.commit'].includes(x.action)&&object(x.payload),'An original request identity is missing.');
@@ -78,7 +87,7 @@ function validateDraft(value,expectedWorkspace=null,withRecovery=true){
     }
   }
   encoded(value);
-  return clone(value);
+  return clone({...value,mapping_templates:value.mapping_templates??[],mapping_reuse:value.mapping_reuse??{}});
 }
 function preserveWorking(candidate,previous,reason){
   const history=[...candidate.recovery,...previous.recovery];
@@ -162,7 +171,7 @@ export function createClientSourceIntake(host){
     q('[data-ci-storage]').textContent=storageProblem;
     q('[data-ci-invalid]').hidden=invalidRaw===null;
     q('[data-ci-recovery-count]').textContent=draft.recovery.length+' previous working selections retained in the complete download.';
-    root.querySelectorAll('[data-ci-mutating]').forEach(el=>el.disabled=busy);
+    root.querySelectorAll('[data-ci-mutating]').forEach(el=>el.disabled=busy||el.hasAttribute('data-ci-unavailable'));
   }
   function download(raw,name,type='application/json'){
     const url=URL.createObjectURL(new Blob([raw],{type})),a=document.createElement('a');
@@ -212,6 +221,30 @@ export function createClientSourceIntake(host){
     return '<p data-ci-mapping-status role="status" aria-live="polite">'+esc(mappingStatus(choice))+'</p>'+fields(primary)+
       (additional.length?'<details><summary data-ci-additional-summary>Additional native columns · '+additional.filter(name=>choice.mapping[name]).length+' selected</summary><p>These optional selections remain saved and included in the projected table. They are not required by the chosen model.</p>'+fields(additional)+'</details>':'');
   }
+  const mappingKey = choice => draft.inspection_id+':'+choice.file_index+':'+choice.part_index;
+  function mappingForm(choice){return draft.mapping_reuse[mappingKey(choice)]||{name:'',selected_id:''};}
+  function savedMappingControls(choice,part){
+    const form=mappingForm(choice),template=draft.mapping_templates.find(item=>item.id===form.selected_id);
+    const preview=template?previewMappingTemplate(template,part,requiredFields(choice)||[]):null;
+    const status={matched:'Matching original header', 'missing-header':'Missing from this file',
+      'blank-original-header':'Blank original header — choose manually',
+      'ambiguous-original-header':'Repeated original header — choose manually',
+      'ambiguous-current-header':'Repeated current header — choose manually'};
+    return '<details class="ci-reuse"'+(template?' open':'')+'><summary>Save or reuse column mapping'+
+      (draft.mapping_templates.length?' · '+draft.mapping_templates.length+' saved':'')+'</summary>'+
+      '<p>Reuse named column choices when another table uses familiar headings. Review the new file’s values, units and scientific meaning before saving its source edition.</p>'+
+      '<div class="ci-fields"><label><span>Name for these column choices</span><input type="text" maxlength="160" data-ci-mapping-name value="'+esc(form.name)+'" data-ci-mutating></label>'+
+      '<div class="ci-actions">'+actionButton('mapping-save','Save named mapping','data-ci-mutating')+'</div></div>'+
+      (draft.mapping_templates.length?'<label><span>Saved column mapping</span><select data-ci-mapping-selection data-ci-mutating>'+option('','Choose a saved mapping',form.selected_id)+
+        draft.mapping_templates.map(item=>option(item.id,item.name+' — '+item.source.filename+' / '+item.source.part_name,form.selected_id)).join('')+'</select></label>':'<p>No named mapping saved yet. Choose the parameter columns below, give the mapping a name and save it here.</p>')+
+      (preview?'<p><strong>'+esc(template.name)+'</strong> · '+esc(template.source.filename)+' / '+esc(template.source.part_name)+
+        '. '+preview.matched+' of '+preview.rows.length+' saved columns match this file unambiguously.</p>'+
+        '<div class="ci-scroll" role="region" tabindex="0" aria-label="Saved column mapping preview"><table><caption>Original headings compared with this table</caption><thead><tr><th scope="col">Parameter</th><th scope="col">Original heading</th><th scope="col">This file</th></tr></thead><tbody>'+
+        preview.rows.map(row=>'<tr><th scope="row">'+esc(bioLabels[row.parameter])+'</th><td>'+esc(row.label||'(blank)')+'</td><td>'+esc(status[row.status])+'</td></tr>').join('')+'</tbody></table></div>'+
+        (preview.missing_required.length?'<p class="ci-warning">After applying, select original columns for: '+esc(preview.missing_required.map(name=>bioLabels[name]).join(', '))+'.</p>':'')+
+        '<p>Apply replaces the current column mapping. It keeps this source’s selected models, units, references and other scientific choices, and clears its confirmation.</p>'+
+        actionButton('mapping-apply','Apply matching columns','data-ci-mutating'+(preview.matched?'':' data-ci-unavailable disabled')):'')+'</details>';
+  }
   function interpretation(choice,index){
     const file=inspection.files[choice.file_index],part=file.inspection.parts[choice.part_index];
     const fieldValues=[['','Not selected'],...arr(part.fields).map(x=>[x.id,x.display||x.label])];
@@ -231,7 +264,7 @@ export function createClientSourceIntake(host){
         inputField('Conversion source / reference','conversion.reference',choice.conversion?.reference??'')+'</div></fieldset>':'')+
       (part.kind==='table'&&choice.role==='BIOPHYSICAL'?'<fieldset><legend>Map original columns to native parameters</legend><p>Only reviewed column selections produce the native CSV. The complete original workbook, all sheets, formulas and extra columns remain retained. Values are validated by the existing NDR/SDR table reader.</p>'+
         selectField('Native model validation','models',[['ndr,sdr','NDR and SDR'],['ndr','NDR'],['sdr','SDR']],choice.models.join(','))+
-        mappingControls(choice,fieldValues)+'</fieldset>':'')+
+        savedMappingControls(choice,part)+mappingControls(choice,fieldValues)+'</fieldset>':'')+
       '<label class="ci-confirm"><input type="checkbox" data-ci-field="confirmed" '+(choice.confirmed?'checked':'')+' data-ci-mutating> I reviewed this original source, its scientific meaning, units and selected transformations.</label>'+
       actionButton('remove-choice','Remove this source selection','data-ci-index="'+index+'" data-ci-mutating')+'</article>';
   }
@@ -366,6 +399,19 @@ export function createClientSourceIntake(host){
   }
   function change(event){
     const target=event.target,field=target.dataset.ciField;
+    if(target.matches('[data-ci-mapping-name],[data-ci-mapping-selection]')){
+      try{
+        const index=Number(target.closest('[data-ci-choice]').dataset.ciChoice),choice=draft.selections[index];
+        saveChange(value=>{
+          const identity=mappingKey(choice),form={...mappingForm(choice)};
+          if(target.matches('[data-ci-mapping-name]'))form.name=target.value;
+          else form.selected_id=target.value;
+          value.mapping_reuse[identity]=form;
+        });
+        if(target.matches('[data-ci-mapping-selection]'))renderChoices();
+      }catch(error){problem=error.message;messages();}
+      return;
+    }
     if(!field)return;
     try{
       const choice=target.closest('[data-ci-choice]'),upload=target.closest('[data-ci-upload]');
@@ -410,6 +456,30 @@ export function createClientSourceIntake(host){
     if(action==='source'){await host.openItem('sources',button.dataset.ciId);return;}
     if(action==='navigate'){host.navigate(button.dataset.ciView);return;}
     await run(async()=>{
+      if(action==='mapping-save'||action==='mapping-apply'){
+        const expected=workspace,epoch=generation,index=Number(button.closest('[data-ci-choice]').dataset.ciChoice);
+        const choice=draft.selections[index],file=inspection?.files[choice.file_index],part=file?.inspection?.parts[choice.part_index];
+        need(inspection&&draft.inspection_id===inspection.id,'Open the original inspection first.');
+        const identity=mappingKey(choice),form=mappingForm(choice);
+        let candidate=clone(draft);
+        if(action==='mapping-save'){
+          const template=await createMappingTemplate({name:form.name,choice,part,file,inspection});
+          if(!current(expected,epoch))return;
+          candidate.mapping_templates.push(template);
+          candidate.mapping_reuse[identity]={...form,selected_id:template.id};
+          notice='Saved “'+template.name+'” with its original headers. This mapping travels in the complete working copy.';
+        }else{
+          const template=draft.mapping_templates.find(item=>item.id===form.selected_id);
+          await verifyMappingTemplate(template);if(!current(expected,epoch))return;
+          const applied=applyMappingTemplate(choice,template,part,requiredFields(choice)||[]);
+          candidate=preserveWorking(candidate,draft,'Before applying saved column mapping '+template.name);
+          candidate.selections[index]=applied.choice;
+          notice='Applied '+applied.preview.matched+' matching column choices from “'+template.name+'”. '+
+            (applied.preview.unresolved.length?applied.preview.unresolved.length+' missing or ambiguous choices need manual selection. ':'')+
+            'Review this file’s values, units and scientific meaning, then confirm it again.';
+        }
+        draft=validateDraft(candidate,workspace);retain();renderChoices();return;
+      }
       if(action==='refresh'){await refreshCatalog();return;}
       if(action==='open-result'){await openResult(button.dataset.ciId);return;}
       if(action==='resume'){await host.api('/api/task/resume',{method:'POST',body:{id:button.dataset.ciId}});await host.refresh({force:true});return;}
