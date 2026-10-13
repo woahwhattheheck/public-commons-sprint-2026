@@ -114,7 +114,8 @@ export function createClimateForcing(context) {
         button('run-detail','Run details','data-run="'+escape(row.run_id)+'"') + '</div></td></tr>').join('') + '</tbody></table></div>' +
       '<div class="cf-actions">' + button('run-all','Queue unfinished cases',(busy || !runnable.length)?'disabled':'') +
       button('refresh','Refresh run states',busy?'disabled':'') +
-      button('report','Compare completed cases',busy?'disabled':'') + '</div>' +
+      button('report','Compare completed cases',busy?'disabled':'') +
+      (typeof context.openDesk==='function'?button('export-study','Export editable study',busy?'disabled':''):'') + '</div>' +
       '<p class="cf-meta">Completed runs are reused. The comparison retains the actual completed-case roster and reports the common finite area. Additional completed cases produce a new retained report.</p>' +
       details('Study selection and forcing diagnostics',study) + '</section>';
   }
@@ -201,8 +202,10 @@ export function createClimateForcing(context) {
     if(!active(target,generation)||request!==currentRead)return;
     catalog=value;
     if(loadStudy && selectedId) {
-      const record=await api(url('study',{id:selectedId}),{signal:readAbort.signal});
+      const requestedId=selectedId;
+      const record=await api(url('study',{id:requestedId}),{signal:readAbort.signal});
       if(!active(target,generation)||request!==currentRead)return;
+      if(record?.id!==requestedId)throw new Error('The operator returned a different retained study.');
       study=record;
       if(record.latest_report?.id) {
         const retained=await api(url('report',{id:record.id,report_id:record.latest_report.id}),{signal:readAbort.signal});
@@ -211,6 +214,20 @@ export function createClimateForcing(context) {
       } else report=null;
     }
     render();
+  }
+  async function openSavedStudy(value) {
+    const requestedId=value?.study_id;
+    if(!root || !workspace || value?.workspace_key!==workspace || getState()?.workspace_key!==workspace)
+      throw new Error('Open the receiving workspace before opening its climate forcing study.');
+    if(!/^[0-9a-f]{64}$/.test(requestedId || ''))throw new Error('Select a retained climate forcing study.');
+    const target=workspace,generation=epoch,version=draftRevision;
+    selectedId=requestedId;study=null;report=null;preview=null;error='';persist();render();
+    await refresh();
+    if(!active(target,generation)||selectedId!==requestedId||study?.id!==requestedId)return null;
+    if(version!==draftRevision)throw new Error('The draft changed while the saved study was loading. Open the saved study again to replace that draft.');
+    if(!study.selection || !Array.isArray(study.selection.cases))throw new Error('The retained study does not include an editable selection.');
+    draft=structuredClone(study.selection);draftRevision++;preview=null;persist();render();
+    return study;
   }
   function rememberTask(value,request) {
     const record=value?.task || value;
@@ -293,16 +310,20 @@ export function createClimateForcing(context) {
         }
         if(!active(target,generation))return;
         notice='Pending submissions reconciled with their original operation identities.';
-      } else if(action==='refresh'||action==='open-study') {
-        if(action==='open-study' && !selectedId)throw new Error('Select a retained study.');
+      } else if(action==='open-study') {
+        await openSavedStudy({workspace_key:workspace,study_id:selectedId});
+      } else if(action==='refresh') {
         await refresh();
+      } else if(action==='export-study') {
+        if(!study || typeof context.openDesk!=='function')throw new Error('Open a retained study in the original operator.');
+        await context.openDesk('study-transfer','openForStudies',{workspace_key:workspace,roots:[{kind:'climate-forcing-studies',id:study.id,title:study.title,state:study.state}]});
       } else if(action==='new') {
-        draft=newDraft();preview=null;study=null;report=null;selectedId='';persist();
+        draft=newDraft();draftRevision++;preview=null;study=null;report=null;selectedId='';persist();
       } else if(action==='add-case') {
         let n=draft.cases.length+1;while(draft.cases.some(row=>row.id==='period-'+n))n++;
-        draft.cases.push(emptyCase(n));preview=null;persist();
+        draft.cases.push(emptyCase(n));draftRevision++;preview=null;persist();
       } else if(action==='remove-case') {
-        if(draft.cases.length>1)draft.cases.splice(Number(el.dataset.index),1);
+        if(draft.cases.length>1){draft.cases.splice(Number(el.dataset.index),1);draftRevision++;}
         preview=null;persist();
       } else if(action==='task') {
         if(context.showTask)await context.showTask(el.dataset.task);
@@ -373,5 +394,5 @@ export function createClimateForcing(context) {
       persist();schedule();
     }
   }
-  return {mount,update,detach};
+  return {mount,update,detach,openSavedStudy};
 }
