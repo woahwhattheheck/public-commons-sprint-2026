@@ -75,6 +75,26 @@ def main(argv=None):
         if name == "cohort":
             sub.add_argument("--scenario-id", required=True,
                              help="Retained alternative belonging to this saved ensemble")
+    sub = commands.add_parser("scenario-catalog",
+                              help="List original scenarios and profiles for a direct comparison")
+    sub.add_argument("ensemble_id")
+    sub = commands.add_parser("scenario-report",
+                              help="Prepare a direct report from completed same-profile native runs")
+    sub.add_argument("ensemble_id")
+    sub.add_argument("--reference-scenario-id", required=True,
+                     help="Original saved scenario supplying the paired reference")
+    sub.add_argument("--alternative-scenario-id", dest="alternative_scenario_ids",
+                     action="append", required=True,
+                     help="Original alternative to compare with the reference; repeat as needed")
+    sub.add_argument("--coefficient-evidence",
+                     help="Optional JSON with original evidence_ids and range_ids")
+    sub.add_argument("--without-render", action="store_true",
+                     help="Retain the original scientific source without rendering PDF/HTML")
+    sub = commands.add_parser("scenario-report-inspect",
+                              help="Verify and reopen one exact retained direct-report source edition")
+    sub.add_argument("ensemble_id")
+    sub.add_argument("source_operation_id",
+                     help="Exact source operation ID returned by scenario-report")
     args = parser.parse_args(argv)
 
     def progress(value):
@@ -104,6 +124,30 @@ def main(argv=None):
                 result = ensemble.run(args.ensemble_id, continue_on_error=not args.stop_on_error)
             elif args.command == "report":
                 result = ensemble.report_data(args.ensemble_id, refresh=args.refresh)
+            elif args.command == "scenario-catalog":
+                from .ensemble_scenario_contrasts import catalog
+                result = catalog(workspace, args.ensemble_id)
+            elif args.command == "scenario-report":
+                from .ensemble_study_source import prepare
+                evidence = None
+                if args.coefficient_evidence:
+                    with open(args.coefficient_evidence, encoding="utf-8-sig") as stream:
+                        evidence = json.load(stream)
+                    if not isinstance(evidence, dict):
+                        raise ValueError("Coefficient evidence must be an original selection object")
+                result = prepare(workspace, args.ensemble_id,
+                                 scenario_reference={
+                                     "reference_scenario_id": args.reference_scenario_id,
+                                     "alternative_scenario_ids": args.alternative_scenario_ids},
+                                 coefficient_evidence=evidence,
+                                 render=not args.without_render)
+            elif args.command == "scenario-report-inspect":
+                from .ensemble_study_source import latest
+                result = latest(workspace, args.ensemble_id, verify=True,
+                                scenario_contrast=True,
+                                source_operation_id=args.source_operation_id)
+                if not result or not result.get("selection", {}).get("scenario_reference"):
+                    raise ValueError("Choose an exact saved direct scenario report source")
             elif args.command == "context":
                 from .ensemble_operations import workspace_context
                 result = workspace_context(workspace)
@@ -147,6 +191,10 @@ def main(argv=None):
         return 2
     if args.command == "report" and result.get("errors"):
         return 2
+    if args.command == "scenario-report":
+        expected_state = "source_ready" if args.without_render else "complete"
+        if result.get("state") not in {expected_state, "complete"} or result.get("native_state") != "complete":
+            return 2
     if args.command == "cohort" and not result["ready"]:
         return 2
     return 0
