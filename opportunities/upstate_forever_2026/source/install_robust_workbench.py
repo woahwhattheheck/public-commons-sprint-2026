@@ -21,6 +21,17 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "model/report_changes_study_transfer.py",
+    "model/REPORT_CHANGES_STUDY_TRANSFER.md",
+    "integration/component_fragments/report-changes-study-transfer.json",
+    "operator/web/report_changes.mjs",
+    "operator/extensions/report-changes.json",
+    "model/report_changes.py",
+    "operator/report_changes.py",
+    "operator/web/report_changes.css",
+    "docs/SCIENTIFIC_REPORT_CHANGES.md",
+    "install_report_changes.py",
+    "integration/component_fragments/scientific-report-changes.json",
     "source_tools/receive_scientific_report_review.py",
     "source_tools/RECEIVE_SCIENTIFIC_REPORT_REVIEW.md",
     "integration/component_fragments/customer-review-receiving.json",
@@ -132,6 +143,17 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "model/report_changes_study_transfer.py",
+    "model/REPORT_CHANGES_STUDY_TRANSFER.md",
+    "integration/component_fragments/report-changes-study-transfer.json",
+    "operator/web/report_changes.mjs",
+    "operator/extensions/report-changes.json",
+    "model/report_changes.py",
+    "operator/report_changes.py",
+    "operator/web/report_changes.css",
+    "docs/SCIENTIFIC_REPORT_CHANGES.md",
+    "install_report_changes.py",
+    "integration/component_fragments/scientific-report-changes.json",
     "source_tools/receive_scientific_report_review.py",
     "source_tools/RECEIVE_SCIENTIFIC_REPORT_REVIEW.md",
     "integration/component_fragments/customer-review-receiving.json",
@@ -410,7 +432,7 @@ def verify_composition(application, pending):
                        "community_study_transfer", "conservation_study_transfer",
                        "native_process_study_transfer", "receptor_study_transfer",
                        "customer_review_study_transfer", "conservation_design_study_transfer",
-                       "paired_ensemble_study_transfer",
+                       "paired_ensemble_study_transfer", "report_changes_study_transfer",
                        "chemistry_study_transfer", "ensemble_study_transfer",
                        "gauge_study_transfer", "landcover_study_transfer",
                        "published_review_study_transfer", "implementation_report_transfer"):
@@ -544,6 +566,17 @@ def verify_composition(application, pending):
             if (b"workspace/conservation-design/editor/projects.sqlite" not in databases
                     or b"frozen_databases" not in portable):
                 raise ValueError("Receive original frozen editor-database support before selected editor receiving")
+    if transfer is not None and b"report_changes_study_transfer" in transfer:
+        for dependency in (
+                "model/report_changes_study_transfer.py", "model/report_changes.py",
+                "model/scientific_report_editions.py", "model/scientific_report_study_transfer.py",
+                "operator/report_changes.py", "operator/extensions/report-changes.json",
+                "operator/web/report_changes.mjs", "operator/web/report_changes.css",
+                "docs/SCIENTIFIC_REPORT_CHANGES.md", "install_report_changes.py",
+                "model/REPORT_CHANGES_STUDY_TRANSFER.md",
+                "integration/component_fragments/scientific-report-changes.json",
+                "integration/component_fragments/report-changes-study-transfer.json"):
+            assembled_data(application, pending, dependency)
     if transfer is not None and b"paired_ensemble_study_transfer" in transfer:
         for dependency in (
                 "model/paired_ensemble_study_transfer.py", "model/paired_ensemble_study_cli.py",

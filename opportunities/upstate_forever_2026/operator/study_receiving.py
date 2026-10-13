@@ -29,5 +29,7 @@ def read(operator, workspace_key, operation, value):
             packet["_downloads"] = tickets(packet["members"])
     import gauge_receiving
     gauge_receiving.decorate(operator, workspace_key, result)
+    import ensemble_receiving
+    ensemble_receiving.decorate(operator, workspace_key, result)
     result["workspace_key"] = workspace_key
     return result

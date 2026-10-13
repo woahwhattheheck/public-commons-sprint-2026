@@ -329,7 +329,10 @@ export function createWatershedContextDesk(host) {
       '<input type="file" name="wc-source-review" accept=".json,application/json" hidden>' +
       (selected ? '<h3>' + esc(selected.receptor_id) + '</h3><p>' +
         esc(number(list(selected.huc12s).length)) + ' original watersheds · ' + esc(human(selected.kind)) +
-        ' selection. Discussion text travels with this saved source report; prepared prompts keep their own label.</p>' +
+        ' selection · ' + esc(selected.filters?.scope || '') + ' view' +
+        (selected.filters?.state ? ' · state ' + esc(selected.filters.state) : '') +
+        (selected.filters?.search ? ' · search “' + esc(selected.filters.search) + '”' : '') +
+        '. Discussion text travels with this saved source report; prepared prompts keep their own label.</p>' +
         '<details><summary>Reviewed membership and discussion text</summary><pre>' +
         esc(pretty({selection:selected, discussion:review.discussion})) + '</pre></details>' +
         '<button type="button" data-wc-review-export' + (busy || !saved ? ' disabled' : '') +
