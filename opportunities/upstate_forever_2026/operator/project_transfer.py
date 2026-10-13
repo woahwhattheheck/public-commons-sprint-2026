@@ -198,6 +198,8 @@ class ProjectTransfers:
                     "files": len(snapshot["members"]) - 1, **extra,
                     **({"source_acquisitions": snapshot["archive"]["source_acquisitions"]}
                        if "source_acquisitions" in snapshot["archive"] else {}),
+                    **({"implementation": snapshot["archive"]["implementation"]}
+                       if "implementation" in snapshot["archive"] else {}),
                     "artifacts": [self.describe(path, "Transfer manifest")]}
         if action in {"project.transfer.accept", "project.transfer.receive"}:
             uploaded = self.operator.upload(digest_id(value["upload_id"]))
