@@ -1,4 +1,6 @@
 import type { HaystackAnalysis, HaystackRole } from "./haystack-index.mjs";
+import type { SemanticActionMap, SemanticDeliveryArguments } from "./semantic-types.mjs";
+export type * from "./semantic-types.mjs";
 export type Json = null | boolean | number | string | Json[] | { [name: string]: Json };
 export type Role = "site" | "equip" | "point" | "all";
 export type Counts = HaystackAnalysis["counts"];
@@ -31,6 +33,7 @@ export interface Status {
   createdAt: string; sha256: string; materialSha256: string; selectedSourceIds: string[];
   sourceCount: number; editionCount: number; proposalCount: number; pendingProposals: number;
   recordCount: number; counts: Counts; diagnosticCount: number; sourceDiagnostics: number;
+  semanticCounts: { intakeCount: number; modelCount: number; versionCount: number; validationCount: number; returnCount: number };
 }
 export interface Revision { expectedRevision: number }
 export interface Mutation extends Revision { operationId: string }
@@ -66,9 +69,9 @@ export interface ByteRange {
   offset: number; bytes: number; totalBytes: number; nextOffset: number; complete: boolean; base64: string; chunkSha256: string;
 }
 export interface Delivery extends Outcome {
-  name: string; mediaType: string; sha256: string; bytes: number; kind: "workspace" | "register" | "diagnostics" | "native-grid" | "work-register"; createdAt: string;
+  name: string; mediaType: string; sha256: string; bytes: number; kind: "workspace" | "register" | "diagnostics" | "native-grid" | "work-register" | "semantic-report" | "semantic-dictionary" | "semantic-output"; createdAt: string;
 }
-export type DeliveryArguments = Mutation & (
+export type DeliveryArguments = SemanticDeliveryArguments | Mutation & (
   { kind: "workspace" } |
   { kind: "work-register"; format?: "json" | "csv" | "html" } |
   { kind: "register" | "diagnostics"; format?: "json" | "csv" | "html"; editionId?: string; role?: Role } |
@@ -152,7 +155,7 @@ export interface ReturnSummary {
 }
 export interface ReturnRead extends ReturnSummary, Envelope { application: Json; decisions: Json[] }
 
-export interface ActionMap {
+export interface ActionMap extends SemanticActionMap {
   "works.list": { args: Revision & Paging & { status?: WorkStatus; assignee?: string; priority?: WorkPriority; sourceId?: string; query?: string }; result: Page<WorkSummary> };
   "work.read": { args: Revision & { itemId: string }; result: WorkRead };
   "work.capture": { args: WorkCaptureArguments; result: WorkOutcome };
@@ -206,7 +209,7 @@ export class HaystackClient {
   request(action: "workspace.status", args?: Record<string, never>, options?: RequestOptions): Promise<Status>;
   request<A extends keyof ActionMap>(action: A, args: ActionMap[A]["args"], options?: RequestOptions): Promise<ActionMap[A]["result"]>;
   pages<A extends PagedAction>(action: A, args: ActionMap[A]["args"], options?: RequestOptions): AsyncGenerator<ActionMap[A]["result"], void, unknown>;
-  completeBytes<A extends "source.read" | "delivery.read" | "evidence.read">(action: A, args: ActionMap[A]["args"], options?: RequestOptions): Promise<Uint8Array>;
+  completeBytes<A extends "source.read" | "delivery.read" | "evidence.read" | "semantic.source.read" | "semantic.output.read">(action: A, args: ActionMap[A]["args"], options?: RequestOptions): Promise<Uint8Array>;
   sourceBytes(sourceId: string, options?: RequestOptions): Promise<Uint8Array>;
   deliveryBytes(operationId: string, options?: RequestOptions): Promise<Uint8Array>;
 }

@@ -551,6 +551,7 @@ async function decodeTransaction(ctx,row,ref) {
     metadataStatus:metadata?'retained':'unavailable',metadataRawRef:metadata?ref:null};
   if (envelope) {
     parsed=ctx.sdk.TransactionBuilder.fromXDR(envelope,ctx.passphrase);
+    tx.feeBump=Boolean(parsed.innerTransaction);
     seedClassicAssets(ctx,parsed.innerTransaction||parsed);
     const actual=Buffer.from(parsed.hash()).toString('hex');
     tx.hashAliases=[...new Set([hash,actual,...(parsed.innerTransaction?[Buffer.from(parsed.innerTransaction.hash()).toString('hex')]:[])])];

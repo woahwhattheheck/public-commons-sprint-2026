@@ -71,3 +71,10 @@ The output contains `APPLICATIONS_JOURNEY.json`, retained original runtime/appli
 | `directory/operator-connection.json` | Original private native descriptor |
 
 Native operation and the connected SDK share the same original workspace. A connected client borrows an already running Applications operator. For complete install, transfer and customer receiving commands, follow [the product receiving guide](../../../../products/human-services-directory/RECEIVING.md).
+
+
+## Conformance in the installed application
+
+The **Conformance** section is part of the same Human Services Directory application. Open its saved workspace, select standards and source scope, run complete assessments, review findings and compare results. All records and retained files travel with the normal editable workspace export and receiving flow.
+
+The [complete conformance guide](CONFORMANCE.md) covers source and profile selection, finding groups, review successors, report packages and connected SDK/MCP operation.

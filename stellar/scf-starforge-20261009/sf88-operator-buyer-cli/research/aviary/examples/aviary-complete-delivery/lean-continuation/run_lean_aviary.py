@@ -11,6 +11,12 @@ def run_lean_aviary(value):
  def sha(raw):return hashlib.sha256(raw).hexdigest()
  def emit(event,**data):print(json.dumps({"event":event,"operation":operation,**data},ensure_ascii=False),flush=True)
  need(value.get("schema")=="commons.aviary.newhost-original-continuation.v6","Unknown complete original Aviary input")
+ bridge_adoption=value["bridgeSourceAdoption"]
+ need(bridge_adoption.get("schema")=="commons.aviary.official-library-name-source-adoption.v1"
+      and bridge_adoption.get("operationId")==operation,"The selected save-source adoption belongs to another operation")
+ for key,pin in (("bridgePredecessorSource",bridge_adoption["previous"]),("bridgeSource",bridge_adoption["selected"])):
+  raw=value[key].encode()
+  need(len(raw)==pin["bytes"] and sha(raw)==pin["sha256"],"The selected save-source adoption bytes differ")
  source_keys=("runtimeSource","bridgeSource","releaseSource","entryText","runtimeArchiveSource")
  for key in source_keys:ast.parse(value[key],filename=key+".py")
  self_raw=Path("/proc/self/stat").read_text()
@@ -56,6 +62,8 @@ def run_lean_aviary(value):
  retained=[
   ("lean-runtime",value["runtimeSource"].encode(),".py"),
   ("official-library-save",value["bridgeSource"].encode(),".py"),
+  ("official-library-save-predecessor",value["bridgePredecessorSource"].encode(),".py"),
+  ("official-library-name-adoption",(json.dumps(value["bridgeSourceAdoption"],sort_keys=True,indent=2)+"\n").encode(),".json"),
   ("completed-lock-release",value["releaseSource"].encode(),".py"),
   ("late-runtime-preservation",value["runtimeArchiveSource"].encode(),".py"),
   ("lean-continuation",value["mainSource"].encode(),".py"),

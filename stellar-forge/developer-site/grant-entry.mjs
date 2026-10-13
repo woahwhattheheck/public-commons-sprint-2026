@@ -50,12 +50,12 @@ function panel(links,filmHtml){
     '<p>Watch the operated purchase, inspect a complete customer report, or reopen the original purchase in the installed reviewer. The full application and funded delivery plan follow below.</p></header>'+
     '<nav class="grant-entry-jumps" aria-label="Choose a product review"><a href="#review-watch">Watch the purchase</a><a href="#review-result">Inspect a complete result</a><a href="#review-operate">Operate the reviewer</a><a href="#project-and-requested-outcome">Read the application</a></nav>'+
     '<div class="grant-entry-grid"><section class="grant-entry-card" id="review-watch" aria-labelledby="review-watch-title"><h3 id="review-watch-title">Watch the purchase</h3>'+
-    '<p>The 3:32 product film follows the source query, approved terms, native testnet purchase, complete result and reopening.</p>'+
+    '<p>The 3:32 product film follows one 0.005-testnet-XLM query purchase through its approved terms, complete returned result, download and reopening.</p>'+
     filmHtml+
-    '<p class="grant-entry-caption">The original HPD query produces 100 rows and 14 columns. Its source vintage and query remain available with the saved result.</p>'+
+    '<p class="grant-entry-caption"><strong>Paid query example.</strong> The original HPD query returns 100 rows, 14 columns and 53,468 bytes. Its recorded truncation flag is true. The complete limited-query response retains its source vintage and query.</p>'+
     link(links.film,'Open the film in a separate window',external)+'</section>'+
     '<section class="grant-entry-card" id="review-result" aria-labelledby="review-result-title"><h3 id="review-result-title">Inspect a complete result</h3>'+
-    '<p>Open the retained economic briefing, compare its series and source states, and inspect the original observations. The complete package includes the report, data, review history and receiving guide.</p>'+
+    '<p><strong>Economic report example.</strong> Inspect the retained briefing, its series and original observations. This report has its own source and review history; its complete package and receiving guide open below.</p>'+
     '<div class="grant-entry-actions">'+link(links.report,'Open the economic report',' class="button primary" target="_blank" rel="noopener noreferrer"')+
     link(links.reportPackage,'Download the complete report package',' class="button" download')+'</div>'+
     '<p>'+link(links.reportGuide,'Read the report opening and receiving guide',external)+'</p>'+
