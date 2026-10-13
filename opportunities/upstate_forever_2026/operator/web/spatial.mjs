@@ -1,4 +1,6 @@
-import {isReceivingWaterTarget, receivingWaterTargetMatches, receivingWaterView} from './receiving_water_spatial.mjs';
+import {isReceivingWaterTarget, receivingWaterTargetMatches, receivingWaterView, receivingWaterStateSignature} from './receiving_water_spatial.mjs';
+
+import {regionMarkup,regionFeatureButton,createRegionAnalysis} from './spatial_regions.mjs';
 
 const SVG_NS='http://www.w3.org/2000/svg';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -82,7 +84,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
       '<section class="spatial-map-area" aria-label="Spatial review workspace">'+
         '<div class="spatial-source-controls" data-spatial-source-controls></div>'+
         '<div class="spatial-tools" role="toolbar" aria-label="Map controls">'+
-          '<div class="spatial-tool-group">'+button('tool-inspect','Inspect','aria-pressed="true" title="Inspect original cells and features (I)"')+button('tool-pan','Pan','aria-pressed="false" title="Pan the linked map view (P)"')+button('tool-mark','Mark','aria-pressed="false" title="Place a review marker (M)"')+'</div>'+
+          '<div class="spatial-tool-group">'+button('tool-inspect','Inspect','aria-pressed="true" title="Inspect original cells and features (I)"')+button('tool-pan','Pan','aria-pressed="false" title="Pan the linked map view (P)"')+button('tool-region','Area','aria-pressed="false" title="Drag a rectangle for native region measurements (A)"')+button('tool-mark','Mark','aria-pressed="false" title="Place a review marker (M)"')+'</div>'+
           '<div class="spatial-tool-group">'+button('zoom-in','Zoom in','aria-label="Zoom in"')+button('zoom-out','Zoom out','aria-label="Zoom out"')+button('fit','Fit source','title="Fit the original reference bounds"')+'</div>'+
           '<span data-spatial-coordinate class="spatial-coordinate">Choose a source to begin.</span>'+
         '</div>'+
@@ -93,6 +95,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
         '<div class="spatial-view-meta" data-spatial-view-meta></div>'+
         '<div class="spatial-warning" data-spatial-warnings hidden></div>'+
         '<section class="spatial-inspector" aria-label="Native point inspection"><header><h2>Original value at point</h2>'+button('clear-point','Clear inspection')+'</header><div data-spatial-inspection><p class="note">Click the map with Inspect selected to read original native cell values and nearby original features.</p></div></section>'+
+        regionMarkup()+
       '</section>'+
       '<aside class="spatial-side" aria-label="Spatial review settings">'+
         '<section><h2>Vector overlays</h2><p class="note">Visible features are read in full for this viewport. Layer and attribute filters select original data.</p><div data-spatial-overlays></div><div class="spatial-overlay-add">'+field('Original vector source','<select data-spatial-input="add-overlay"><option value="">Choose a vector source</option></select>')+button('overlay-add','Add overlay')+'</div></section>'+
@@ -266,9 +269,9 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
   function mapPane(c,name,title,base,top=null){
     const frame=c.model.frame,size=frame.size;
     return '<div class="spatial-pane"><header><strong>'+esc(title)+'</strong><span>'+esc(base?.units||'')+'</span></header>'+
-      '<div class="spatial-map" data-spatial-map="'+name+'" data-tool="'+c.model.tool+'" tabindex="0" role="application" aria-label="'+esc(title)+' interactive spatial review. Arrow keys pan; plus and minus zoom; I inspects, P pans, M places markers." style="aspect-ratio:'+size.width+' / '+size.height+'">'+
+      '<div class="spatial-map" data-spatial-map="'+name+'" data-tool="'+c.model.tool+'" tabindex="0" role="application" aria-label="'+esc(title)+' interactive spatial review. Arrow keys pan; plus and minus zoom; I inspects, P pans, M places markers, A selects an area." style="aspect-ratio:'+size.width+' / '+size.height+'">'+
       imageHTML(base)+(top?'<div class="spatial-swipe-image" style="clip-path:inset(0 '+(100-c.model.swipe)+'% 0 0)">'+imageHTML(top)+'</div>':'')+
-      '<svg class="spatial-vector-canvas" viewBox="0 0 '+size.width+' '+size.height+'" aria-hidden="true"><g data-spatial-vector-paths></g><g data-spatial-marker-paths></g><g data-spatial-point-paths></g></svg>'+
+      '<svg class="spatial-vector-canvas" viewBox="0 0 '+size.width+' '+size.height+'" aria-hidden="true"><g data-spatial-vector-paths></g><g data-spatial-region-paths></g><g data-spatial-marker-paths></g><g data-spatial-point-paths></g></svg>'+
       '<span class="spatial-map-axis" aria-hidden="true" title="Increasing coordinate-system Y">Y+</span></div></div>';
   }
   function rangeText(image){
@@ -385,7 +388,15 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
   }
   function drawAnnotations(c){
     if(!c.model.frame)return;
-    const size=c.model.frame.size;
+    const size=c.model.frame.size,region=c.regionPreview||c.model.regions?.selection;
+    for(const group of c.root.querySelectorAll('[data-spatial-region-paths]')){
+      group.replaceChildren();
+      if(region?.crs!==c.model.view?.crs)continue;
+      const b=region.bounds,geometry=region.geometry||(b?{type:'Polygon',coordinates:[[[b[0],b[1]],[b[2],b[1]],[b[2],b[3]],[b[0],b[3]],[b[0],b[1]]]]}:null);
+      if(!geometry)continue;
+      const path=document.createElementNS(SVG_NS,'path');
+      path.setAttribute('d',geometryPath(geometry,c.model.view,size));path.setAttribute('fill','rgba(0,0,0,.08)');path.setAttribute('fill-rule','evenodd');path.setAttribute('stroke','#111');path.setAttribute('stroke-width','2');path.setAttribute('stroke-dasharray','6 4');path.setAttribute('vector-effect','non-scaling-stroke');group.appendChild(path);
+    }
     for(const group of c.root.querySelectorAll('[data-spatial-marker-paths]')){
       group.replaceChildren();
       c.model.markers.forEach((marker,index)=>{
@@ -417,12 +428,12 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     if(typeof feature.properties_json==='string')return '<dd class="spatial-exact-json">'+esc(feature.properties_json)+'</dd>';
     return Object.entries(feature.properties||{}).map(([key,value])=>'<dt>'+esc(key)+'</dt><dd>'+esc(typeof value==='object'?JSON.stringify(value):String(value??'null'))+'</dd>').join('');
   }
-  function featureHTML(feature){
+  function featureHTML(feature,groupIndex,featureIndex){
     const operations=Array.isArray(feature.geometry_operations)?feature.geometry_operations:[];
     const sourcePosition=Number.isSafeInteger(feature.source_feature_index)?'<p class="note">Original source feature position '+esc(feature.source_feature_index)+'.</p>':'';
     const corrections=operations.length?'<details><summary>Geometry preparation · '+operations.length+' recorded operation'+(operations.length===1?'':'s')+'</summary><pre class="spatial-exact-json">'+esc(JSON.stringify(operations,null,2))+'</pre></details>':'';
     const originalGeometry=typeof feature.source_geometry_json==='string'?'<details><summary>Original source geometry</summary><pre class="spatial-exact-json">'+esc(feature.source_geometry_json)+'</pre></details>':'';
-    return '<details><summary>Feature '+esc(feature.id??'')+'</summary>'+sourcePosition+'<dl>'+exactProperties(feature)+'</dl>'+corrections+originalGeometry+'</details>';
+    return '<details><summary>Feature '+esc(feature.id??'')+'</summary>'+sourcePosition+'<dl>'+exactProperties(feature)+'</dl>'+regionFeatureButton(groupIndex,featureIndex,feature)+corrections+originalGeometry+'</details>';
   }
   async function inspect(c,point){
     if(!alive(c)||c.busy||!c.model.frame)return;
@@ -434,11 +445,12 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
       const tolerance=Math.max((view.bounds[2]-view.bounds[0])/(rect?.width||size.width),(view.bounds[3]-view.bounds[1])/(rect?.height||size.height))*6;
       const value=await spatial(c,'point',{primary:clone(c.model.primary),comparison:clone(c.model.comparison),point,overlays:c.model.overlays.filter(item=>item.visible).map(item=>clone(item.selection)),tolerance},control.signal);
       if(control.signal.aborted||c.pointControl!==control)return;
+      c.regions?.setFeatures(value.features);
       const difference=value.difference;
       target.innerHTML='<p class="spatial-inspection-location"><strong>Selected point</strong> '+esc(fmt(point.x))+', '+esc(fmt(point.y))+' · '+esc(point.crs)+'</p>'+
         '<div class="spatial-pixel-columns">'+pixelHTML('Baseline',value.primary)+(c.model.comparison?pixelHTML('Alternative',value.comparison):'')+'</div>'+
         (difference?'<p class="spatial-difference-value"><strong>Alternative minus baseline</strong> '+esc(difference.value_text??String(difference.value))+' '+esc(difference.units||'')+'</p>':'')+
-        '<div class="spatial-feature-inspection">'+(value.features||[]).map(group=>'<section><h3>'+esc(group.layer?.title||group.selection?.layer_id)+'</h3>'+(group.features?.length?group.features.map(featureHTML).join(''):'<p class="note">No original features within the selected point tolerance.</p>')+(group.truncated?'<p class="note">Additional nearby features exceed this point response. Zoom in or apply an attribute filter to inspect a smaller selection.</p>':'')+'</section>').join('')+'</div>';
+        '<div class="spatial-feature-inspection">'+(value.features||[]).map((group,groupIndex)=>'<section><h3>'+esc(group.layer?.title||group.selection?.layer_id)+'</h3>'+(group.features?.length?group.features.map((feature,featureIndex)=>featureHTML(feature,groupIndex,featureIndex)).join(''):'<p class="note">No original features within the selected point tolerance.</p>')+(group.truncated?'<p class="note">Additional nearby features exceed this point response. Zoom in or apply an attribute filter to inspect a smaller selection.</p>':'')+'</section>').join('')+'</div>';
     }catch(error){if(!quiet(error)&&alive(c)){target.innerHTML='<p class="error-text">'+esc(error.message)+'</p>';}}
     finally{release(c,control);if(c.pointControl===control)c.pointControl=null;}
   }
@@ -637,7 +649,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
   }
   function resetDrag(c){
     for(const map of c.root.querySelectorAll('[data-spatial-map]'))for(const child of map.children)if(child.matches('img,svg,.spatial-swipe-image'))child.style.transform='';
-    c.drag=null;
+    c.drag=null;c.regionPreview=null;drawAnnotations(c);
   }
   function bind(c){
     const options={signal:c.events.signal};
@@ -652,7 +664,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     c.root.addEventListener('pointerdown',event=>{
       const map=event.target.closest('[data-spatial-map]');if(!map||event.button!==0||c.busy||!validView(c.model.view))return;
       event.preventDefault();map.focus();map.setPointerCapture(event.pointerId);
-      c.drag={pointerId:event.pointerId,map,x:event.clientX,y:event.clientY,view:clone(c.model.view),moved:false};
+      c.drag={pointerId:event.pointerId,map,x:event.clientX,y:event.clientY,start:eventPoint(c,event,map),tool:c.model.tool,view:clone(c.model.view),moved:false};
     },options);
     c.root.addEventListener('pointermove',event=>{
       const map=event.target.closest('[data-spatial-map]');if(!map)return;
@@ -660,12 +672,20 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
       const drag=c.drag;if(!drag||drag.pointerId!==event.pointerId)return;
       const dx=event.clientX-drag.x,dy=event.clientY-drag.y;
       if(Math.hypot(dx,dy)>4&&!drag.moved){drag.moved=true;stopGroup(c,'drawControl');stopGroup(c,'pointControl');}
+      if(drag.moved&&drag.tool==='region'){
+        if(point?.crs===drag.start?.crs){c.regionPreview={crs:point.crs,bounds:[Math.min(drag.start.x,point.x),Math.min(drag.start.y,point.y),Math.max(drag.start.x,point.x),Math.max(drag.start.y,point.y)]};drawAnnotations(c);}
+        return;
+      }
       if(drag.moved){for(const pane of c.root.querySelectorAll('[data-spatial-map]'))for(const child of pane.children)if(child.matches('img,svg,.spatial-swipe-image'))child.style.transform='translate('+dx+'px,'+dy+'px)';}
     },options);
     c.root.addEventListener('pointerup',event=>{
       const drag=c.drag;if(!drag||drag.pointerId!==event.pointerId)return;
       if(drag.map.hasPointerCapture(event.pointerId))drag.map.releasePointerCapture(event.pointerId);
       const point=eventPoint(c,event,drag.map),rect=drag.map.getBoundingClientRect();
+      if(drag.tool==='region'){
+        try{if(drag.moved&&point&&drag.start)c.regions.selectBounds(drag.start,point);}catch(error){fail(c,error);}
+        resetDrag(c);return;
+      }
       if(drag.moved){
         const [left,bottom,right,top]=drag.view.bounds,dx=-(event.clientX-drag.x)/rect.width*(right-left),dy=(event.clientY-drag.y)/rect.height*(top-bottom);
         c.model.view={crs:drag.view.crs,bounds:[left+dx,bottom+dy,right+dx,top+dy]};resetDrag(c);dirty(c);scheduleDraw(c,0);
@@ -678,13 +698,13 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     c.root.addEventListener('pointercancel',()=>resetDrag(c),options);
     c.root.addEventListener('wheel',event=>{
       const map=event.target.closest('[data-spatial-map]');if(!map||!c.model.frame)return;
-      event.preventDefault();zoom(c,Math.exp(Math.max(-1,Math.min(1,event.deltaY*0.0015))),eventPoint(c,event,map));
+      event.preventDefault();if(c.drag?.tool==='region')return;zoom(c,Math.exp(Math.max(-1,Math.min(1,event.deltaY*0.0015))),eventPoint(c,event,map));
     },{...options,passive:false});
     c.root.addEventListener('dblclick',event=>{const map=event.target.closest('[data-spatial-map]');if(map){event.preventDefault();zoom(c,0.5,eventPoint(c,event,map));}},options);
     c.root.addEventListener('keydown',event=>{
       const map=event.target.closest('[data-spatial-map]');if(!map)return;
       const key=event.key.toLowerCase(),m=c.model;
-      if(!['arrowleft','arrowright','arrowup','arrowdown','+','=','-','0','i','p','m','enter','escape'].includes(key))return;
+      if(!['arrowleft','arrowright','arrowup','arrowdown','+','=','-','0','i','p','m','a','enter','escape'].includes(key))return;
       event.preventDefault();
       if(key==='arrowleft')pan(c,-0.15,0);
       if(key==='arrowright')pan(c,0.15,0);
@@ -693,7 +713,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
       if(key==='+'||key==='=')zoom(c,0.65);
       if(key==='-')zoom(c,1/0.65);
       if(key==='0')fit(c).catch(error=>fail(c,error));
-      if(['i','p','m'].includes(key)){m.tool={i:'inspect',p:'pan',m:'mark'}[key];updateTool(c);}
+      if(['i','p','m','a'].includes(key)){m.tool={i:'inspect',p:'pan',m:'mark',a:'region'}[key];updateTool(c);}
       if(key==='escape')resetDrag(c);
       if(key==='enter'&&validView(m.view)){
         const point={x:(m.view.bounds[0]+m.view.bounds[2])/2,y:(m.view.bounds[1]+m.view.bounds[3])/2,crs:m.view.crs};
@@ -708,16 +728,17 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     }
   }
   function signature(state){
-    return JSON.stringify(['sources','grids','runs','comparisons','deliveries','spatial_reviews'].map(kind=>(state.data?.[kind]||[]).map(row=>[row.id,row.state])));
+    return JSON.stringify([['sources','grids','runs','comparisons','deliveries','spatial_reviews'].map(kind=>(state.data?.[kind]||[]).map(row=>[row.id,row.state])),receivingWaterStateSignature(state)]);
   }
   function suspend(){
     if(!current)return;const c=current;c.disposed=true;
     clearTimeout(c.drawTimer);for(const control of c.controllers)control.abort();c.controllers.clear();
-    c.events.abort();c.resizeObserver?.disconnect();current=null;
+    c.regions?.dispose();c.events.abort();c.resizeObserver?.disconnect();current=null;
   }
   function mount(root,state){
     if(!state?.workspace_key||getWorkspace()!==state.workspace_key)return;
     if(current?.root===root&&current.key===state.workspace_key&&root.querySelector('.spatial-workbench')){
+      current.regions?.setState(state);
       current.model.exportItems=state.data?.spatial_exports||[];current.model.exportTasks=state.tasks||[];renderExports(current);
       const next=signature(state);
       if(next!==current.stateSignature){const c=current;c.stateSignature=next;catalog(c).catch(error=>fail(c,error));}
@@ -727,7 +748,28 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     let model=models.get(state.workspace_key);if(!model){model=newModel(state.workspace_key);models.set(state.workspace_key,model);}
     model.exportItems=state.data?.spatial_exports||[];model.exportTasks=state.tasks||[];
     const c={key:state.workspace_key,root,model,controllers:new Set(),events:new AbortController(),drawVersion:0,drawTimer:null,disposed:false,busy:false,stateSignature:signature(state)};
-    current=c;root.innerHTML=shell();bind(c);renderExports(c);
+    current=c;root.innerHTML=shell();
+    model.regions||={};
+    c.regions=createRegionAnalysis({root,model:model.regions,workspace:c.key,request,alive:()=>alive(c),refreshState,showTask,
+      getSelection:()=>{
+        if(c.busy||!validView(model.view)||!model.frame||frameIdentity(model)!==model.renderedKey)throw Error('Wait for the selected native map view to finish rendering.');
+        return {primary:clone(model.primary),comparison:clone(model.comparison),view:clone(model.view)};
+      },
+      selectionChanged:()=>drawAnnotations(c),
+      reopen:async value=>{
+        const request=value.request;
+        for(const choice of [request.primary,request.comparison].filter(Boolean))if(!layer(c,choice))throw Error('Restore this analysis’s original raster layers before reopening its area.');
+        const region=request.region,points=[];
+        const visit=value=>{if(Array.isArray(value)&&typeof value[0]==='number')points.push(value);else if(Array.isArray(value))value.forEach(visit);};
+        visit(region.geometry?.coordinates);
+        if(!points.length)throw Error('The saved region has no geographic extent.');
+        let bounds=[Infinity,Infinity,-Infinity,-Infinity];
+        for(const point of points){bounds[0]=Math.min(bounds[0],point[0]);bounds[1]=Math.min(bounds[1],point[1]);bounds[2]=Math.max(bounds[2],point[0]);bounds[3]=Math.max(bounds[3],point[1]);}
+        if(model.view?.crs!==region.crs)model.markers=[];
+        Object.assign(model,{reference:clone(request.primary),primary:clone(request.primary),comparison:clone(request.comparison),mode:request.comparison?'compare':'single',view:{crs:region.crs,bounds},scale:{mode:'auto'},point:null});
+        dirty(c);sourceControls(c);renderMarkers(c);await draw(c);
+      }});
+    c.regions.setState(state);bind(c);renderExports(c);
     catalog(c,{initial:true}).catch(error=>fail(c,error));
   }
   async function openTarget(target){

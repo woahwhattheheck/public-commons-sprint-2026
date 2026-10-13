@@ -171,6 +171,27 @@ def sync_completed(workspace, programme):
         return None
     source = programme.get("selection", {}).get("source_reference", "")
     prefix = "upstate.experiment:"
+    completion_prefix = "upstate.programme-pair-completion:"
+    source_programme_id = programme.get("programme_id", programme.get("id"))
+    if isinstance(source, str) and source.startswith(completion_prefix):
+        manager = ComputeProgrammes(workspace)
+        seen = set()
+        while source.startswith(completion_prefix):
+            cursor = identifier(source_programme_id)
+            if cursor in seen:
+                raise ValueError("The matched-pair programme origin contains a cycle.")
+            seen.add(cursor)
+            record = manager._load(cursor)
+            if record["selection"].get("source_reference") != source:
+                raise ValueError("The completed programme differs from its retained pair-completion origin.")
+            origin = manager._pair_completion_origin(cursor, record)
+            if origin is None:
+                raise ValueError("Retain the original matched-pair continuation before synchronizing its experiment.")
+            parent = manager._load(origin["parent_programme_id"])
+            source_programme_id = parent["id"]
+            source = parent["selection"].get("source_reference", "")
+            if not isinstance(source, str):
+                return None
     if not isinstance(source, str) or not source.startswith(prefix):
         return None
     key = identifier(source[len(prefix):])
@@ -207,5 +228,7 @@ def sync_completed(workspace, programme):
     # completed_only prevents native calculation if a run changes meanwhile.
     result = engine.execute(workspace, key, completed_only=True)
     return {"experiment_id": key, "state": result["state"],
+            "source_programme_id": source_programme_id,
+            "completed_programme_id": programme.get("programme_id", programme.get("id")),
             "progress": result["progress"], "updated_at": result.get("updated_at"),
             "completed_at": result.get("completed_at")}

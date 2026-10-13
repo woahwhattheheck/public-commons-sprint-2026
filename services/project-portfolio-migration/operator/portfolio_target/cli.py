@@ -15,6 +15,7 @@ from portfolio import PortfolioWorkspace
 from .storage import checked_id, sync_directory
 from .target import TargetError, canonical
 from .workspace import ACTIONS, TargetWorkspace
+from .commissioning_cli import add_commands as add_commissioning_commands, run_command as run_commissioning_command
 
 
 def read_arguments(path):
@@ -65,6 +66,7 @@ def parser():
     result.add_argument("--profiles", help="Private target profile JSON outside the portable workspace.")
     commands = result.add_subparsers(dest="command", required=True)
     commands.add_parser("state", help="Read retained editions, migrations, profiles and actions.")
+    add_commissioning_commands(commands)
     upload = commands.add_parser("upload", help="Retain an original project or companion file.")
     upload.add_argument("file")
     upload.add_argument("--archive", action="store_true", help="Retain a complete reporting archive up to 8 GiB using the original streaming upload.")
@@ -123,7 +125,9 @@ def main(argv=None):
             if not args.workspace:
                 raise TargetError("WORKSPACE_REQUIRED", "Select the original --workspace directory.")
             workspace = TargetWorkspace(args.workspace, profile_config=args.profiles)
-            if args.command == "state":
+            if args.command == "commissioning":
+                result = run_commissioning_command(workspace, args)
+            elif args.command == "state":
                 result = workspace.state()
             elif args.command == "upload":
                 source = Path(args.file).expanduser().resolve(strict=True)
