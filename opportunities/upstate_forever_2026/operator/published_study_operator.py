@@ -9,7 +9,7 @@ from typing import Any
 from urllib.parse import quote
 
 from model.common import describe_file
-from measurement_workspace.published_studies import PublishedStudyStore, TABLE_TITLES, COMPANION_SCHEMA
+from measurement_workspace.published_studies import PublishedStudyStore, TABLE_TITLES, COMPANION_SCHEMA, _manifest_path
 
 ACTIONS = ("published-study.import", "published-study.export", "published-study.report")
 BUILTIN_ID = "scdes-eighteenmile-lake-2023"
@@ -61,6 +61,7 @@ class PublishedStudyProvider:
         for name in (
             "table7-visual-context.csv", "table7-visual-reading.json", "table7-page-render.json",
             "map-layer-capture.json", "NATIVE_IMPORT.md", "wqp/flow-context-sources.json",
+            "microcystin_support_20261013/original-campaign-support.json",
         ):
             path = self.builtin / name
             if path.is_file():
@@ -70,6 +71,7 @@ class PublishedStudyProvider:
             self.builtin / "wqp" / "flow-context-sources.json",
             self.builtin / "wqp" / "flow-context-public-sources.json",
             self.builtin / "wqp_20261013" / "source-manifest.json",
+            self.builtin / "figures" / "model-sources.json",
             self.builtin.parent.parent / "eighteenmile_chlorophyll_reconciled.sources.json",
             self.builtin.parent.parent / "eighteenmile_lake_observation_report.sources.json",
             self.builtin.parent.parent / "eighteenmile_lake_paired_analysis.sources.json",
@@ -87,11 +89,11 @@ class PublishedStudyProvider:
                 self._fail("STUDY_BUILTIN_MANIFEST", "The installed study manifest has an incompatible schema.")
             for entry in manifest.get("entries", []):
                 for item in [entry, *entry.get("companions", [])]:
-                    relative = item["path"]
-                    part = PurePosixPath(relative)
-                    if part.is_absolute() or ".." in part.parts or "\\" in relative or str(part) != relative:
-                        self._fail("STUDY_BUILTIN_PATH", "An installed source path is not a canonical relative path.")
-                    retain(manifest_path.parent / relative)
+                    try:
+                        relative = _manifest_path(manifest_name, item["path"])
+                    except (TypeError, ValueError) as error:
+                        self._fail("STUDY_BUILTIN_PATH", str(error))
+                    retain(self.builtin / relative)
         files, evidence = [], {}
         for name, raw in sorted(selected.items()):
             if Path(name).suffix.lower() in (".pdf", ".png", ".jpg", ".jpeg"):
@@ -320,7 +322,7 @@ class PublishedStudyProvider:
                     "study_id": study_id, "version_id": report["version_id"],
                     "selection": report["selection"], "view": "published-studies",
                     "artifacts": [
-                        self._artifact(ws, Path(item["path"]), item["filename"])
+                        self._artifact(ws, Path(item["path"]), item.get("relative_path", item["filename"]))
                         for item in report["files"]
                     ],
                 }
