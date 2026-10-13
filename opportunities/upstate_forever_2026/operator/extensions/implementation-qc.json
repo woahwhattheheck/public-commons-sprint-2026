@@ -1,0 +1,130 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "implementation-qc",
+  "title": "Sample quality control",
+  "version": "1",
+  "order": 72,
+  "assets": [
+    "implementation_qc.mjs"
+  ],
+  "backend": {
+    "module": "implementation_qc",
+    "factory": {
+      "handler": "ImplementationQC",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "implementation.qc.save",
+      "implementation.qc.source",
+      "implementation.qc.export"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/implementation-qc/records",
+        "operation": "records",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/implementation-qc/list",
+        "operation": "list",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/implementation-qc/inspect",
+        "operation": "inspect",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation-qc/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation-qc/save",
+        "operation": "save",
+        "handler": "queue",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation-qc/source",
+        "operation": "source",
+        "handler": "queue",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation-qc/export",
+        "operation": "export",
+        "handler": "queue",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    }
+  }
+}
