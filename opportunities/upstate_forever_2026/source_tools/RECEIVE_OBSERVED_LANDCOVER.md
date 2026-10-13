@@ -97,3 +97,43 @@ Open **Observed watershed change** in the restored application and select the sa
 CSV text that begins with a spreadsheet formula prefix is apostrophe-prefixed for safe spreadsheet opening. Exact original strings remain in the retained JSON. Import HUC12 columns as text to preserve leading zeroes.
 
 Class change describes the observed annual classifications and their explicit paired support. It does not establish intervention causality or substitute for native fractional-treatment scenarios. Original class inventories, transitions, geometry/domain binding and source years remain available in the delivered originals.
+
+
+## Continue the completed course into an editable selected Study
+
+After the original course completes, keep its output directory, Workspace, state directory and operation ID. Install the reviewed current application containing the selected-watershed Study closure and the receiving adapters. Continue the same accepted operation:
+
+```sh
+"$ECO_GIS_PYTHON" "$ECO_APPLICATION/source_tools/receive_observed_landcover.py" \
+  --workspace "$ECO_WORKSPACE" \
+  --state-directory "$ECO_RECEIVING_STATE" \
+  --output "$ECO_RECEIVING_OUTPUT" \
+  --operation-id ECO-264B-SELECTED-HUC-20261013 \
+  --source-revision "$ECO_APPLICATION_REVISION" \
+  --reviewed-source-revision "$ECO_APPLICATION_REVISION" \
+  --selected-study
+```
+
+This continuation requires the original completed selected-huc-receiving.json record. It uses that record's original selected comparison, Scientific Report, source binding, HUC roster and project. It leaves the original completed phases and source history intact. Its own selected_study record preserves each explicitly reviewed implementation edition, accepted Study export/restore tasks and artifact identities.
+
+The original Study queue exports the existing Scientific Report as a selected editable Study. The continuation checks that the actual archive contains the saved comparison receipt, downloads that exact archive through its ordinary authenticated ticket, and uses the original upload and workspace.restore action. Restarting repeats the same accepted tasks and uses the maintained restore handling for the same destination.
+
+In the restored Workspace it opens the saved comparison and original Scientific Report, verifies the selected Study receipt, and loads the original analysis using model.observed_landcover.load_inputs. It compares the exact source binding, HUC roster, summary and original report/comparison file hashes. It also opens the maintained received-detail API, checks the exact native source card and displayed quantities, and downloads that card’s original selection.json through its authenticated ticket. It then starts the same helper from the **transferred application's own directory**, with PYTHONPATH removed, and repeats those product checks in a separate Python process. The expected model hash is read from the original archive manifest, so a later reviewed receiving-code revision does not redefine an older archive's application identity. The archive-derived expectation, cold stdout/stderr and result are retained in the same output directory.
+
+If an original queue task failed, inspect and resolve its returned exception, then use the existing --resume-failed option. A different current implementation requires a distinct explicitly reviewed revision. It does not silently rewrite completed source history or change the original selection.
+
+## Open the received comparison in the original operator
+
+In **Study transfer → Received studies and original sources**, open the retained Study. The **Selected watershed land-cover comparisons** cards show the exact earlier/later product years, paired-valid and changed-class cells, paired area, changed area and original changed-share denominator. The selected-watershed table retains every original HUC12 and name; single-year-only support and both-year NoData are separate.
+
+Use **Open saved watershed comparison** to open the original Observed watershed change desk at the saved comparison ID. That desk contains the full directional matrix and original inputs and can create a new saved selection. **Add source to report** opens the maintained Scientific Reports composer with the exact retained source. **Open original source edition** opens its immutable catalogue record. Original comparison files, all source companions and the saved Scientific Report use the existing authenticated download tickets.
+
+Sources from another original project retain their captured report and input files. Their card identifies that project and offers source/report navigation; it does not invent a local saved comparison. Historical Studies are resolved using their originally captured typed-source roster, matching the original restore verifier.
+
+The receiving extension retains the original Study/Gauge/Implementation/native-ensemble controls and their current source. Its selected-watershed helpers and native desk dependencies are explicit in integration/component_fragments/observed-landcover-study-receiving.json; there is no reverse dependency from Study transfer to a report family.
+
+## Review the exact outgoing rendered edition
+
+Operate the populated outgoing application at desktop and narrow widths. In the received Study, inspect the selected-waterbody table and support labels, use the keyboard to scroll the complete table, open the saved comparison, return to the Study, open its original source, compose a report and download the original CSV/JSON/ZIP. Switch Workspace while an earlier detail request is pending and confirm the previous source does not open in the new Workspace. Open a foreign-project source card and confirm its captured files are available.
+
+Use the original completed comparison values and retained source identities when checking the screen. The receiving cards display those values; they do not rerun raster arithmetic. Record the actual browser origin, source revision and viewed output with the same receiving operation. Source review and controlled JavaScript execution are distinct from this rendered browser inspection.
