@@ -107,7 +107,7 @@ def read_inventory(path,reference,entry):
 def catalogue_fields(entry):
     """Recognize declared normalized banks without scanning unrelated source bodies."""
     metadata=entry.get("metadata") or {}
-    recognized=(entry.get("format")=="normalized" or metadata.get("schema")==SCHEMA or
+    recognized=(entry.get("schema")==SCHEMA or metadata.get("schema")==SCHEMA or
                 entry.get("body",{}).get("sha256") in {row["sha256"] for row in PUBLISHED_BANKS})
     if entry.get("kind")=="table" and recognized:
         return {"station_id_field":entry.get("station_id_field") or "site",

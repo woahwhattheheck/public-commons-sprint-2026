@@ -96,13 +96,13 @@ Import the completed published inventory in addition to the same retained monito
 
 Run from the existing application directory:
 
-    python -m model.station_study --workspace WORKSPACE \\
-      --create-workspace --build \\
-      --study-id upper-savannah-published-assessments-2024-2026-159 \\
-      --source-manifest MONITORING/sources.json \\
-      --source-manifest WQP_SUPPLEMENT/sources.json \\
-      --source-manifest ORIGINAL_DOMAIN/sources.json \\
-      --source-manifest PUBLISHED_INVENTORY/sources.json \\
+    python -m model.station_study --workspace WORKSPACE \
+      --create-workspace --build \
+      --study-id upper-savannah-published-assessments-2024-2026-159 \
+      --source-manifest MONITORING/sources.json \
+      --source-manifest WQP_SUPPLEMENT/sources.json \
+      --source-manifest ORIGINAL_DOMAIN/sources.json \
+      --source-manifest PUBLISHED_INVENTORY/sources.json \
       --receive-workspace SECOND_WORKSPACE --create-receiving-workspace
 
 The existing workspace creation, native build, portable archive and receiving commands are shared by both studies. This selection requires 192 records at 159 exact station IDs, including both published editions. It resolves original inputs by their retained byte identity. The 2024 records carry their original assessment cause/use and published HUC; the July 2026 records also carry TMDL support status, report and approval date. Five of the retained eight WQP stations belong to this published inventory. The accepted draft-study inventory overlaps the published inventory at 82 station IDs; all remaining IDs are matched against the same complete retained source layer.
@@ -160,17 +160,24 @@ copied native points; it is not a downloaded publisher CSV.
 
 Run the existing complete operation with these retained source manifests:
 
-    python -m model.station_study \\
-      --workspace ACTUAL_STUDY --create-workspace --build \\
-      --study-id upper-savannah-published-assessments-2024-2026-159 \\
-      --source-manifest MONITORING/sources.json \\
-      --source-manifest WQP8/sources.json \\
-      --source-manifest ORIGINAL_DOMAIN/sources.json \\
-      --source-manifest ES9960_COMPLETE_ORIGINALS/sources.json \\
-      --source-manifest WQP_ADDITIONAL_TWO/sources.json \\
+    python -m model.station_study \
+      --workspace ACTUAL_STUDY --create-workspace --build \
+      --study-id upper-savannah-published-assessments-2024-2026-159 \
+      --source-manifest MONITORING/sources.json \
+      --source-manifest WQP8/sources.json \
+      --source-manifest ORIGINAL_DOMAIN/sources.json \
+      --source-manifest ES9960_COMPLETE_ORIGINALS/sources.json \
+      --source-manifest WQP_ADDITIONAL_TWO/sources.json \
       --receive-workspace ACTUAL_RECEIVING --create-receiving-workspace
 
 The preset binds both normalized assessment banks and the same exact original
 217 HUC selection. The source summary identifies its JSON selection and additional
 location source. The existing CSV-backed alternative uses the same additional
 point source and source-preserving native operation.
+
+The component installer also retains the accepted original CSV beside
+source/station-assessment-context/sources.json. Its original body is 111,624
+bytes with SHA256 01f1a0262bb719f39d4b6c8b6e690bbf670d9aea83cbe0f532daf81b0c6a09f7.
+This fallback manifest can be imported directly when the original statewide
+JSON banks have not yet been received. Both paths preserve the original 192
+edition-specific records and use the same three native station sources.

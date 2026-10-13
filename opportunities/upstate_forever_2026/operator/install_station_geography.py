@@ -21,6 +21,7 @@ FILES = (
     "operator/web/assessment_context.css",
     "operator/ASSESSMENT_CONTEXT.md",
     "source/station-assessment-context/sources.json",
+    "source/station-assessment-context/assessment-records-domain217.csv",
     "model/station_assessment_context.py",
     "model/station_study.py",
     "operator/PREPARED_STATION_STUDY.md",

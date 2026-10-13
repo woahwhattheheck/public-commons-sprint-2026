@@ -6,7 +6,7 @@
     "192 original assessment records at 159 distinct station IDs. Each record preserves its own source edition, cause, use and publisher HUC12.",
     "The 2024 published 303(d) listing and July 28, 2026 TMDL attainment status are separate source editions.",
     "For RS-06190, retain both original publisher HUC12 assignments; station polygon membership is determined independently by the original coordinates.",
-    "This inventory selects stations for the existing station.geography.build operation. Original geometry is supplied by the retained SCDES705 and WQP8 sources."
+    "This inventory selects stations for the existing station.geography.build operation. Original geometry is supplied by the retained SCDES705, WQP8 and additional WQP2 sources; all 192 original assessment records remain distinct."
   ],
   "entries": [
     {
