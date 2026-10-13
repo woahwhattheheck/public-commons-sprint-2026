@@ -623,19 +623,35 @@
       ]
     },
     "currentSource": {
-      "payloadSha256": "2f8d51a742e40605be739ed66e024d8ae99d57a18747b8fd64e440b9f7d67d72",
-      "controllerSha256": "80a3b07c5a0064e4c6aafe5108272458d84115ef670aa99fca671c4df3474c88",
+      "payloadSha256": "070a46caca941398828461e249a41e8c77475b9c70aae56e7f6559afe51e1644",
+      "controllerSha256": "8db18979c77f79b6187d7e39cae1c365842a7fa4e5c56a83f7ab625bc69358bf",
       "driverSha256": "fb3a5d6ae425b8aebd15bea56405256b9434e279c1da5df00da5722ef89e9870",
       "runnerSha256": "716e0643f5cd9562478129783621ff05f162fa105499526671c783c5981542f2",
-      "followingSha256": "4a1be88033bd1e1c82b7514ce5fb888acd8796d35bec04376bc1c787541ff7f1",
+      "followingSha256": "640b3fd519ef2589c80c5391fe52fd20cb4357c1bc1dc2b3b1ac01f8abd4c5d8",
       "nodeMemoryBudget": {
         "old_space_mib": 256,
         "semi_space_mib": 8
       }
     },
     "latestAdmission": {
-      "cell": 543,
-      "outcome": "environment_offline409 before CreateProcess"
+      "cell": "674",
+      "at": "2026-10-13 10:12:51 UTC",
+      "state": "PREPROCESS_FAILED",
+      "error": "exec_command failed before CreateProcess: failed to query exec-server capabilities; environment registry409 Conflict environment_offline; Environment is not connected.",
+      "ready": false,
+      "pid": null,
+      "session": null,
+      "input_sent": false,
+      "operation": "SCF-DATASETTE-SOURCE-EDITIONS-07476-20261012",
+      "source": "1e50ca4f1dbb8c123cdbdac3e9c9149778c63a68",
+      "payload_sha256": "a186321d9b8c44b443f9a62b52ef85edb6c9f08d8a0393559eba65aaa322f295"
+    },
+    "renderedProductPolicy": {
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "path": "docs/policies/rendered-product-inspection-policy.md",
+      "gitBlob": "c4aad53ada5122023c13854c2aca680c9c2b84bd",
+      "sha256": "a13813175460d96bc779de8bb20ff0971676e22bcb569e11c916373949fa36d3",
+      "ownerReply": "1791885532.614949"
     }
   }
 }
