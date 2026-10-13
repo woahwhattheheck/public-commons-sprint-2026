@@ -9,13 +9,14 @@ import sys
 import xml.etree.ElementTree as ET
 from .common import (INVEST_SOURCE, INVEST_VERSION, MAP_IDS, SOURCE_IDS, atomic_bytes, atomic_json,
                      describe_file, digest, held, identifier, now, read_json, verify_file)
-from . import cartography, map_atlas, portable, rasters
+from . import cartography, client_report, map_atlas, portable, rasters
 from .report_release import bind_report, retain_report
 from .delivery_archive import package_archive
 from . import receiving_water_delivery
 
 NDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html"
 SDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
+DELIVERY_EDITION = "2026-10-13-integrated-report-1"
 OVERLAY_LABELS = (("drinking_water", "Drinking-water source areas"),
                   ("high_quality_waters", "Designated high-quality waters"))
 DELIVERY_FORMAT_VERSION = "native-grid-metadata-2"
@@ -212,6 +213,8 @@ def build(workspace, selection):
     report_link = bind_report(workspace, selection)
     if report_link is not None:
         selection["source_report_sha256"] = report_link["report_sha256"]
+    selection["client_report_edition"] = client_report.REPORT_EDITION
+    selection["delivery_edition"] = DELIVERY_EDITION
     review_ids = selection.get("spatial_review_ids", [])
     export_ids = selection.get("spatial_export_ids", [])
     if not isinstance(review_ids, list) or not isinstance(export_ids, list):
@@ -494,98 +497,67 @@ def build(workspace, selection):
                                    for value in selection.get("observation_comparison_ids", [])]
             if any(v["run_id"] not in [baseline["id"]] + scenario_ids for v in observation_results):
                 raise ValueError("Observation comparison is not bound to a selected delivery run")
-            if "report" not in state["files"]:
-                sections = [
-                    ("Study scope", [selection.get("title", workspace.project["title"]),
-                     "The reporting polygon is retained separately from the model domain and its " +
-                     str(grid["spec"]["upstream_buffer_m"]) + " metre context buffer. "
-                     "Model outputs and the explicit current-versus-future scenarios use the same original "
-                     + cells["resolution"] + " land-cover reference alignment."]),
-                    ("Model and units", [
-                     "The original InVEST " + INVEST_VERSION + " Nutrient Delivery Ratio and Sediment Delivery Ratio "
-                     "engines were executed with the retained inputs and parameter profile. Nitrogen and phosphorus "
-                     "are delivered in kg per pixel per year; sediment is in metric tonnes per pixel per year. "
-                     "Native per-hectare rates are multiplied by the actual " + cells["hectares"] + "-ha cell area.",
-                     "NDR guide: " + NDR_GUIDE, "SDR guide: " + SDR_GUIDE]),
-                    ("Selected parameter profile", [profile["title"],
-                     json.dumps({"ndr": profile["ndr"], "sdr": profile["sdr"]}, sort_keys=True),
-                     "Original profile references: " + json.dumps(profile["references"], ensure_ascii=False)]),
-                    ("Current quantitative exports", [
-                     name.replace("_", " ") + ": " + json.dumps({k: v for k, v in item.items()
-                         if k in ("units", "sum", "sum_units", "valid_cells", "pixel_area_ha", "native_units")}, sort_keys=True)
-                     for name, item in baseline["artifacts"].items() if name in rasters.MASS_UNITS]),
-                    ("Future conservation and development scenarios", [
-                     json.dumps(workspace._get("scenarios", r["selection"]["scenario_id"]), ensure_ascii=False)
-                     for r in alternatives]),
-                    ("Combined priorities", [json.dumps(state["priority"], sort_keys=True),
-                     "Physical N/P/sediment rasters remain separate. The combined map is a dimensionless "
-                     "weighted index, with normalization and weights recorded above. Source-water and "
-                     "designated high-quality-water overlays use the original retained source geometry."]),
-                    *([("Source-water contributing land", [
-                        state["receptor_inventory"]["method"],
-                        state["receptor_inventory"]["quantity_basis"],
-                        "Saved area definitions: " + json.dumps([
-                            {"title": area["title"], "anchors": area["anchor_huc12s"],
-                             "huc12_count": area["huc12_count"], "reporting_area_ha": area["reporting_area_ha"]}
-                            for area in state["receptor_inventory"]["areas"]], ensure_ascii=False),
-                        "The contributing-area GIS layers, original network links, upstream memberships "
-                        "and annual scenario quantities are retained under receptors. Scenario differences "
-                        "use the same valid reporting pixels; each row includes its coverage counts. "
-                        "Shared upstream land is retained explicitly and should be combined using its union."])]
-                      if receptor_product else []),
-                    ("Observed watershed loads", [
-                     json.dumps(v["metrics"], sort_keys=True) + "; observation source " + v["observation_id"]
-                     for v in observation_results] or [
-                     "This delivery retains the selected published parameter profile. Original annual-load "
-                     "observations can be imported and compared by catchment through the workspace."]),
-                    ("Interpretation", [
-                     "Native SDR estimates overland erosion and sediment delivery; channel-bank erosion, "
-                     "mass wasting and in-stream/reservoir processes require their own reviewed treatment. "
-                     "NDR represents the selected annual nutrient loading, retention and flow assumptions.",
-                     "The future maps compare explicit land-cover scenarios using one common parameter "
-                     "profile. Actual bacterial or cyanotoxin observations remain distinct source measurements "
-                     "and are preserved alongside annual nutrient and sediment load comparisons.",
-                     "Sampling periods, source resolution/vintage, spatial coverage and any point-source "
-                     "or impoundment influences must accompany interpretation of modeled export totals."]),
-                    ("Project notes", selection.get("notes", [])),
-                    *([("Saved spatial reviews", [
-                        review["title"] + " / " + review["id"] + "; " + review["view"]["crs"]
-                        for review in reviews] + [
-                        "The selected original review JSON files retain the geographic viewport, "
-                        "exact source and run bindings, numeric scales, overlay filters and annotations. "
-                        "They are included with original project assets and the complete working archive."])]
-                      if reviews else []),
-                    *([("Printed saved spatial reviews", [
-                        exported["title"] + " / " + exported["id"] + "; " +
-                        exported["selection"]["paper"].upper() + " landscape, " +
-                        str(exported["selection"]["dpi"]) + " DPI; saved review " + exported["review_id"]
-                        for exported in spatial_exports] + [
-                        "Each selected map pack retains its PDF/SVG/PNG, complete source and legend "
-                        "appendix, exact native point values and feature attributes, original saved "
-                        "review, provenance, application source and ZIP. The original export file "
-                        "hierarchy is retained under spatial-maps and in the working archive."])]
-                      if spatial_exports else []),
-                    ("Receiving and reuse", [
-                     "The working archive includes original retained source bytes, immutable profile and "
-                     "scenario selections, aligned inputs, original native working files, run logs and this "
-                     "application. Restore it into a new directory with the included CLI. The accompanying "
-                     "original delivery navigator and audit inspect the actual final GIS files."]),
-                ]
-                target = directory / "report.pdf"
-                sections.extend(receiving_water_delivery.report_section(water_product))
-                cartography.report_pdf(target, selection.get("title", workspace.project["title"]),
-                                       sections, contact=contact, source_records=records)
-                state["files"]["report"] = describe_file(directory, target)
+            from .scenario_summary import build_delivery_summary, write_summary
+            summary_keys = ("scenario_summary_json", "scenario_summary_csv", "scenario_summary_markdown")
+            if not all(name in state["files"] for name in summary_keys):
+                summary = build_delivery_summary(workspace, selection, comparison,
+                    baseline=baseline, alternatives=alternatives, grid=grid)
+                for name, item in write_summary(directory, summary).items():
+                    state["files"]["scenario_summary_" + name] = item
+                state["scenario_summary_id"] = summary["id"]
+                atomic_json(state_path, state)
+            else:
+                summary = read_json(verify_file(directory, state["files"]["scenario_summary_json"]))
+            report_keys = ("report", "report_html", "report_markdown", "report_model")
+            if not all(name in state["files"] for name in report_keys):
+                generated = client_report.build_report(
+                    workspace=workspace, directory=directory, selection=selection,
+                    state=state, baseline=baseline, alternatives=alternatives,
+                    grid=grid, profile=profile, records=records,
+                    observation_results=observation_results, comparison=comparison,
+                    scenario_summary=summary,
+                    additional_sections=receiving_water_delivery.report_section(water_product))
+                for name, relative in generated.items():
+                    state["files"][name] = describe_file(directory, directory / relative)
+                state["report_edition"] = client_report.REPORT_EDITION
                 atomic_json(state_path, state)
             working = directory / "working" / "scientific-workspace.zip"
             if "working_archive" not in state["files"]:
                 working.parent.mkdir(parents=True, exist_ok=True)
+                snapshot = {**state["files"], **{
+                    "map_" + name: item for name, item in state["maps"].items()}}
                 if working.exists():
                     previous = portable.inspect_archive(working, verify=True)
-                    if previous["project"] != workspace.project:
-                        raise ValueError("Existing working archive belongs to another original project")
-                else:
-                    portable.backup(workspace, working, include_intermediates=True, include_deliveries=False)
+                    captured = previous.get("delivery", {})
+                    retained = captured.get("files", {})
+                    matches = (
+                        previous["project"] == workspace.project
+                        and captured.get("id") == state["id"]
+                        and captured.get("record", {}).get("selection") == state["selection"]
+                        and set(retained) == set(snapshot)
+                        and all(retained[name].get("path") == "delivery/" + item["path"]
+                                and all(retained[name].get(field) == item[field]
+                                        for field in ("bytes", "sha256"))
+                                for name, item in snapshot.items()))
+                    if not matches:
+                        label = "scientific-workspace-previous-" + digest(previous)
+                        retained_path = working.with_name(label + ".zip")
+                        suffix = 0
+                        while retained_path.exists():
+                            suffix += 1
+                            retained_path = working.with_name(label + "-" + str(suffix) + ".zip")
+                        working.rename(retained_path)
+                        state.setdefault("previous_working_archives", []).append({
+                            "path": retained_path.relative_to(directory).as_posix(),
+                            "project_id": previous["project"].get("id"),
+                            "delivery_id": captured.get("id"),
+                            "reason": "Retained capture selects different delivery assets",
+                            "retained_at": now()})
+                        atomic_json(state_path, state)
+                if not working.exists():
+                    portable.backup(workspace, working, include_intermediates=True,
+                        include_deliveries=False, delivery_root=directory,
+                        delivery_files=snapshot, delivery_state=state)
                 state["files"]["working_archive"] = describe_file(directory, working)
                 atomic_json(state_path, state)
             manifest = {"schema": "upstate-ec-sdc-2026/delivery-v1",
@@ -595,15 +567,21 @@ def build(workspace, selection):
                           "profile_id": profile["id"], "grid_id": grid["id"]},
                 "source_data": records, "rasters": {},
                 "maps": maps, "report_pdf": state["files"]["report"]["path"],
+                "report_edition": client_report.REPORT_EDITION,
+                "delivery_edition": DELIVERY_EDITION,
                 "project_assets": [state["files"]["combined_priority"]["path"],
                                    state["files"]["working_archive"]["path"],
                                    state["files"]["display_scales"]["path"]]}
             for name in rasters.MASS_UNITS:
                 manifest["rasters"][name] = {"path": state["files"][name]["path"],
                     "fgdc_xml": state["files"][name + "_metadata"]["path"], "units": rasters.MASS_UNITS[name]}
-            manifest["project_assets"].extend(item["path"] for name, item in state["files"].items()
-                                             if name.startswith(("parcel_", "spatial_review_", "spatial_export_", "receptor_",
-                                                                 "map_atlas", "source_report_")))
+            primary_files = set(rasters.MASS_UNITS) | {
+                name + "_metadata" for name in rasters.MASS_UNITS} | {
+                "report", "manifest", "package_index", "delivery_archive"}
+            map_paths = {item["path"] for item in state["maps"].values()}
+            manifest["project_assets"] = list(dict.fromkeys(
+                item["path"] for name, item in state["files"].items()
+                if name not in primary_files and item["path"] not in map_paths))
             if report_link is not None:
                 manifest["source_report"] = report_link
             audit_manifest = directory / "delivery.json"

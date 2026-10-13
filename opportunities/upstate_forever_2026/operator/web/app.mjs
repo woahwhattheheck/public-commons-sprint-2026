@@ -1,5 +1,6 @@
 import {attachRehearsal} from './rehearsal.mjs';
 import {createSpatialWorkspace} from './spatial.mjs';
+import {createDeliveryReview} from './delivery_review.mjs';
 import {attachCommunity} from './community.mjs';
 import {attachCustomerReviews} from './reviews.mjs';
 import {attachReceivingWaters} from './receiving_waters.mjs';
@@ -85,6 +86,9 @@ const extensions=createExtensionHost({getState:()=>state,getWorkspace:()=>worksp
  openBackup:()=>journeyForm(()=>backupForm()),
  openRestore:()=>journeyForm(()=>restoreForm()),
  getProgramme:()=>typeof programmes==='undefined'?null:programmes});
+const deliveryReview=createDeliveryReview({esc,button,bytes,number,when,runTitle,mapFamilies,mapTitles,section,pageHeader,table,
+ getState:()=>state,getWorkspace:()=>workspace,api,endpoint,detail,refresh,showTask,revise:deliveryForm,
+ setDetailFiles:files=>{if(detailContext)detailContext.files=files;}});
 function toast(message){clearTimeout(toastTimer);$('#toast').textContent=message;$('#toast').hidden=false;toastTimer=setTimeout(()=>$('#toast').hidden=true,5500);}
 function globalError(error){$('#global-error').textContent=error.message||String(error);$('#global-error').hidden=false;}
 function clearError(){$('#global-error').hidden=true;$('#global-error').textContent='';}
@@ -116,7 +120,7 @@ async function refresh({force=false}={}){
     const fingerprint=JSON.stringify({rehearsal_tasks:view==='rehearsal'?(data.tasks||[]).filter(t=>String(t.action||'').startsWith('rehearsal.')).map(t=>[t.id,t.state]):undefined,view,workspace,data:data.data});
     if(force||fingerprint!==lastRendered){render();lastRendered=fingerprint;}
     if(detailContext?.kind==='task')await showTask(detailContext.id,false);
-    if(['runs','spatial_exports'].includes(detailContext?.kind)&&detailDialog.open){const kind=detailContext.kind,row=(data.data[kind]||[]).find(x=>x.id===detailContext.id);if(row&&row.state!==detailContext.state)await openItem(kind,row.id,false);}
+    if(['runs','spatial_exports','deliveries'].includes(detailContext?.kind)&&detailDialog.open){const kind=detailContext.kind,row=(data.data[kind]||[]).find(x=>x.id===detailContext.id);if(row&&(row.state!==detailContext.state||(kind==='deliveries'&&JSON.stringify({files:row.files,maps:row.maps})!==detailContext.deliveryRevision)))await openItem(kind,row.id,false);}
   }catch(error){
     if(workspace===requestedWorkspace){$('#connection-state').textContent='Connection interrupted. Retained task state is preserved.';if(force)globalError(error);}
   }finally{
@@ -211,10 +215,7 @@ function render(){
     if(comparisons.length)html+=section('Retained observed-versus-modeled comparisons','Review periods, spatial coverage and model assumptions with the residuals.',table(['Observation edition','Model run','Compared','Context / excluded',''],comparisons.map(row=>'<tr><td class="name-cell"><strong>'+esc(named('observations',row.observation_id))+'</strong><small class="mono">'+short(row.id)+'</small></td><td>'+esc(runTitle(row.run_id))+'</td><td>'+number(row.comparisons.length)+'</td><td>'+number(row.exclusions.length)+'</td><td class="actions-cell">'+itemButton('observation_comparisons',row.id)+'</td></tr>')));
   }
   if(view==='deliveries'){
-    html=pageHeader('Maps and delivery','Build all seven requested map families from completed native runs, actual water-designation overlays and original parcel/source editions.',button('delivery-new','Build complete delivery','','primary'));
-    html+=d.deliveries.length?section('Retained delivery builds','Each package joins physical rasters, FGDC metadata, PDF maps/report, observations and a receiving-ready working archive.',table(['Delivery','State','Maps','Original package audit',''],d.deliveries.map(row=>'<tr><td class="name-cell"><strong>'+esc(row.selection.title||'Scientific delivery')+'</strong>'+metaId(row)+'</td><td>'+badge(row.state)+'</td><td>'+Object.keys(row.maps||{}).length+'</td><td>'+esc(row.package?.auditStatus||'In progress')+'</td><td class="actions-cell">'+itemButton('deliveries',row.id)+(row.state==='failed'?button('delivery-resume','Resume','data-id="'+row.id+'"','small'):'')+'</td></tr>'))):noRows('Build the complete original-data delivery','Select the completed baseline and alternatives, real source-water/designation overlays, original supporting datasets and metadata contact.','delivery-new','Prepare delivery');
-    if(d.spatial_exports?.length)html+=section('Saved map packs','Printable figures retain the selected review, source editions, extent, legend and annotations.',table(['Map pack','State','Paper / resolution',''],d.spatial_exports.map(row=>'<tr><td class="name-cell"><strong>'+esc(row.title||row.id)+'</strong>'+metaId(row)+'</td><td>'+badge(row.state)+'</td><td>'+esc([row.selection?.paper?.toUpperCase()||'',row.selection?.dpi?row.selection.dpi+' dpi':''].filter(Boolean).join(' · '))+'</td><td class="actions-cell">'+itemButton('spatial_exports',row.id,'Open files')+'</td></tr>')));
-    html+='<div class="map-cards">'+mapFamilies.map((id,i)=>'<article class="map-card"><p class="map-index">MAP FAMILY '+String(i+1).padStart(2,'0')+'</p><h3>'+mapTitles[id]+'</h3><p>Generated from the selected original model outputs and retained source editions.</p></article>').join('')+'</div>';
+    html=deliveryReview.overview(d);
   }
   if(view==='communities')html=community.render();
   if(view==='customer-reviews')html=customerReviews.render();
@@ -278,15 +279,12 @@ async function openItem(kind,id,focus=true){
     if(row.summary)content+=defs({map_mode:row.summary.mode,coordinate_system:row.summary.view?.crs,extent:row.summary.view?.bounds,annotations:row.summary.marker_count});
     content+=customerReviews.mapActions(row);
    }else if(kind==='deliveries'){
-    content='<div class="meta">'+badge(row.state)+'<span>Original audit: '+esc(row.package?.auditStatus||'In progress')+'</span><span>'+Object.keys(row.maps||{}).length+' retained map PDFs</span></div>';
-    if(row.error)content+='<div class="notice error">'+esc(row.error.message)+'</div>';
-    content+='<div class="map-cards">'+Object.entries(row.maps||{}).map(([name,item])=>{const family=mapFamilies.find(x=>name===x||name.startsWith(x+'-'));const f=row._downloads.find(x=>x.sha256===item.sha256&&x.bytes===item.bytes);return '<article class="map-card"><p class="map-index">'+esc(family?'MAP FAMILY '+(mapFamilies.indexOf(family)+1):'MAP')+'</p><h3>'+esc(mapTitles[family]||human(name))+'</h3><p>'+esc(name.slice((family||'').length).replace(/^-/,'')?runTitle(name.slice(family.length+1)):'Selected baseline and source context')+'</p>'+(f?button('preview-file','Open original PDF','data-file-id="'+f.id+'"','small'):'')+'</article>';}).join('')+'</div>';
-    if(row.priority)content+='<h3 class="subheading">Combined priority settings</h3>'+defs(row.priority);
-    if(row.state==='failed')content+=button('delivery-resume','Resume original delivery','data-id="'+id+'"','primary');
+    content=deliveryReview.detail(row);
   }
   if(['sources','grids','runs','comparisons','deliveries','spatial_reviews'].includes(kind))content='<div class="page-actions">'+button('spatial-item','Open in spatial review','data-kind="'+kind+'" data-id="'+id+'"')+'</div>'+content;
-  content+='<h3 class="subheading">Retained files</h3>'+fileList(row._downloads)+'<details class="technical"><summary>Original record, selection and provenance</summary><pre class="json-view">'+esc(pretty(Object.fromEntries(Object.entries(row).filter(([key])=>key!=='_downloads'))))+'</pre></details>';
+  if(kind!=='deliveries')content+='<h3 class="subheading">Retained files</h3>'+fileList(row._downloads)+'<details class="technical"><summary>Original record, selection and provenance</summary><pre class="json-view">'+esc(pretty(Object.fromEntries(Object.entries(row).filter(([key])=>key!=='_downloads'))))+'</pre></details>';
   detail(row.title||row.metadata?.title||row.spec?.title||row.selection?.title||viewLabels[kind]||human(kind),content,{kind,id,state:row.state});detailContext.files=row._downloads;
+  if(kind==='deliveries')detailContext.deliveryRevision=JSON.stringify({files:row.files,maps:row.maps});
   if(kind==='observations'){detailContext.observation=row;renderObservationRows();$('#observation-search').addEventListener('input',renderObservationRows);$('#observation-filter').addEventListener('change',renderObservationRows);}
   if(kind==='observation_comparisons'){
      detailContext.observationComparison=row;
@@ -995,6 +993,7 @@ async function dispatch(button){
  if(action==='observation-new')return observationForm();
  if(action==='observation-compare')return observationCompareForm(id);
  if(action==='observation-comparison-csv')return downloadObservationComparison();
+ if(['delivery-report','delivery-report-refresh','delivery-revise'].includes(action))return deliveryReview.handle(action,id);
  if(action==='delivery-new')return deliveryForm();
  if(action==='delivery-resume'){const row=await api(endpoint('/api/item',{kind:'deliveries',id}));return executeAction('delivery.build',row.selection);}
  if(action==='backup')return backupForm();
