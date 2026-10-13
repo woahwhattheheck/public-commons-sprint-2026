@@ -553,6 +553,8 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                 stack.enter_context(held(path, blocking=False))
             for path in sorted((root / "experiments").glob("*/.experiment.lock")):
                 stack.enter_context(held(path, blocking=False))
+            for path in sorted((root / "source-disturbance-studies").glob("*.lock")):
+                stack.enter_context(held(path, blocking=False))
             for path in sorted((root / "runs").glob("*/.run.lock")):
                 stack.enter_context(held(path, blocking=False))
             for path in sorted((root / "grids").glob("*/.grid.lock")):
@@ -1121,6 +1123,10 @@ def _verify_restored_workspace(manifest, destination):
             or (restored.root / "structural-study-operations").exists()):
         from .structural_studies import verify_all as verify_structural_studies
         details["structural_studies"] = verify_structural_studies(restored)
+    if ((restored.root / "source-disturbance-studies").exists()
+            or (restored.root / "source-disturbance-operations").exists()):
+        from .source_disturbance import verify_all as verify_source_disturbance
+        details["source_disturbance"] = verify_source_disturbance(restored)
     return details
 
 
