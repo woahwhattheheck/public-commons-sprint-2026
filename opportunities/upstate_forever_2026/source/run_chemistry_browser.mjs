@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /** Operate a retained chemical project through the original scientific operator. */
 import { chromium } from 'playwright';
-import { mkdir, readFile, writeFile, open, rename } from 'node:fs/promises';
+import { mkdir, readFile, open, rename } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { resolve, join, relative, basename } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -30,13 +30,16 @@ const stopped=new Set(['failed','interrupted','cancelled']);
 async function readOptional(path){
  try{return await readFile(path,'utf8');}catch(error){if(error.code==='ENOENT')return null;throw error;}
 }
-async function persistRequests(){
- const path=join(output,'request-state.json'),temporary=path+'.'+process.pid+'.tmp';
+async function atomicText(path,text){
+ const temporary=path+'.'+process.pid+'.tmp';
  const file=await open(temporary,'w',0o600);
- try{await file.writeFile(JSON.stringify(requestState,null,2)+'\n');await file.sync();}finally{await file.close();}
+ try{await file.writeFile(text);await file.sync();}finally{await file.close();}
  await rename(temporary,path);
  const directory=await open(output,'r');
  try{await directory.sync();}finally{await directory.close();}
+}
+async function persistRequests(){
+ await atomicText(join(output,'request-state.json'),JSON.stringify(requestState,null,2)+'\n');
 }
 async function initializeContinuation(){
  required(!args.resume||args.output,'Resume with the original explicit --output directory.');
@@ -78,7 +81,7 @@ function redact(value){
 }
 async function writeJournal(){
  if(!journalWritable)return;
- await writeFile(join(output,'journey.json'),redact(JSON.stringify(journal,null,2))+'\n');
+ await atomicText(join(output,'journey.json'),redact(JSON.stringify(journal,null,2))+'\n');
 }
 async function record(name,details={}){
  journal.steps.push({name,completed_at:new Date().toISOString(),...details});await writeJournal();
