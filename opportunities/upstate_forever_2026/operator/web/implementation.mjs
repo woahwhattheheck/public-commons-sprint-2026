@@ -172,34 +172,56 @@ export class ImplementationWorkbench {
   observationBindingCurrent(flow=this.observationFlow){
     return !!flow?.preview && flow.preview.workspace_key===this.workspace &&
       flow.preview.plan_id===this.plan?.id && flow.preview.revision===this.plan?.revision &&
+      docEqual(flow.reviewed_selection??null,flow.existing_report_selection??null) &&
       !this.dirty && !!this.nativePlan && docEqual(this.plan,this.nativePlan);
   }
+  async chooseFieldReportSelection(useCurrent){
+    if(!this.native||this.gone||this.host.getState?.()?.workspace_key!==this.workspace)throw Error('Open the field plan in its original native Workspace.');
+    if(this.pending||['saving','previewing','importing'].includes(this.observationFlow?.stage))throw Error('Finish the retained field-source operation first.');
+    const turn=this.generation,id=this.plan.id,flow={stage:'idle',plan_id:id,existing_report_selection:null,selection_label:''};
+    this.observationFlow=flow;this.cache();this.render();
+    if(!useCurrent)return;
+    this.observationSelectionRead=flow;this.render();
+    const current=()=>!this.gone&&this.generation===turn&&this.plan?.id===id&&this.observationFlow===flow&&flow.stage==='idle'&&!this.pending&&this.host.getState?.()?.workspace_key===this.workspace;
+    try{
+      const module=await import('./implementation_source_reports.mjs');
+      if(!current())return;
+      const selection=await module.captureImplementationReportSelection(this);
+      if(!current()||selection===null)return;
+      flow.existing_report_selection=selection;flow.selection_label='Current Report desk selection, in its original source order';this.cache();this.render();
+    }catch(error){if(current())throw error;}
+    finally{if(this.observationSelectionRead===flow){this.observationSelectionRead=null;if(current())this.render();}}
+  }
   async reviewFieldObservations(){
+    if(this.observationSelectionRead&&this.observationSelectionRead===this.observationFlow)throw Error('Wait for the original Report desk selection to finish loading.');
     if(!this.native||this.gone||this.host.getState?.()?.workspace_key!==this.workspace)throw Error('Open the original native workspace to register field observations.');
     if(this.pending)throw Error('Finish the retained plan operation first.');
     if(this.root.querySelector('dialog[open]'))throw Error('Finish the current field editor first.');
+    const selection=clone(this.observationFlow?.existing_report_selection??null),label=this.observationFlow?.selection_label||'';
     if(this.dirty||!this.nativePlan){
-      this.observationFlow={stage:'saving',plan_id:this.plan.id,operation_id:null};
+      this.observationFlow={stage:'saving',plan_id:this.plan.id,operation_id:null,existing_report_selection:selection,selection_label:label};
       this.cache();
       try{
         const kind=this.importedFile?'implementation.plan.import':this.nativePlan?'implementation.plan.save':'implementation.plan.create';
         await this.queue(kind,{document:this.plan,expected_revision:this.plan.revision});
-      }catch(error){if(!this.pending){this.observationFlow=null;this.cache();}throw error;}
+      }catch(error){if(!this.pending){this.observationFlow.stage='idle';this.cache();}throw error;}
       return;
     }
     const turn=this.generation,selected=clone(this.plan);
-    this.observationFlow={stage:'previewing',plan_id:selected.id};this.cache();this.render();
+    const flow={stage:'previewing',plan_id:selected.id,existing_report_selection:selection,selection_label:label};
+    this.observationFlow=flow;this.cache();this.render();
+    const current=()=>!this.gone&&turn===this.generation&&this.observationFlow===flow&&this.host.getState?.()?.workspace_key===this.workspace;
     try{
-      const result=await this.read('/api/implementation/observations-preview',{plan_id:selected.id,revision:selected.revision});
-      if(this.gone||turn!==this.generation||this.host.getState?.()?.workspace_key!==this.workspace)return;
-      if(!docEqual(this.plan,selected)||this.dirty)throw Error('Field records changed while the preview opened. Save and review their new revision.');
+      const result=await this.host.api('/api/implementation/observations-preview',{method:'POST',body:{workspace:this.workspace,plan_id:selected.id,revision:selected.revision,existing_report_selection:selection}});
+      if(!current())return;
+      if(!docEqual(this.plan,selected)||this.dirty||!docEqual(flow.existing_report_selection,selection))throw Error('Field records or the report selection changed while the preview opened. Save and review their new selection.');
       if(result.schema!=='upstate.implementation-observation-context/v1'||result.workspace_key!==this.workspace||
         result.plan_id!==selected.id||result.revision!==selected.revision||!result.document_digest||!result.operation_id||
         result.plan?.id!==selected.id||result.plan?.revision!==selected.revision)throw Error('The observation preview does not match this saved plan revision.');
-      this.observationFlow={stage:'review',plan_id:selected.id,preview:result};this.tab='field';this.cache();this.render();
+      flow.stage='review';flow.preview=result;flow.reviewed_selection=clone(selection);this.tab='field';this.cache();this.render();
     }catch(error){
-      if(this.gone||turn!==this.generation)return;
-      this.observationFlow=null;this.cache();
+      if(!current())return;
+      flow.stage='idle';flow.preview=null;this.cache();
       throw error;
     }
   }
@@ -212,15 +234,16 @@ export class ImplementationWorkbench {
     try{
       await this.queue('implementation.observations.import',{
         plan_id:flow.preview.plan_id,revision:flow.preview.revision,
-        document_digest:flow.preview.document_digest,observation_operation_id:flow.preview.operation_id
+        document_digest:flow.preview.document_digest,observation_operation_id:flow.preview.operation_id,
+        existing_report_selection:clone(flow.reviewed_selection??null)
       });
     }catch(error){if(!this.pending&&!flow.operation_id){flow.stage='review';this.cache();}throw error;}
   }
   async finishObservationSave(pending){
     const flow=this.observationFlow;
     if(!flow||flow.stage!=='saving'||flow.operation_id!==pending.operation_id||flow.plan_id!==pending.plan_id)return;
-    this.observationFlow=null;this.cache();
-    if(this.dirty){this.message='The field revision is saved. Later browser edits remain available; save and review them when ready.';this.render();return;}
+    flow.stage='idle';flow.operation_id=null;this.cache();
+    if(this.dirty){this.message='The field revision is saved. Later browser edits and the original report selection remain available; save and review them when ready.';this.render();return;}
     await this.reviewFieldObservations();
   }
   completeObservationImport(pending,result){
@@ -265,19 +288,24 @@ export class ImplementationWorkbench {
     const turn=this.generation,planId=this.plan.id;
     const module=await import('./implementation_source_reports.mjs');
     if(this.gone||turn!==this.generation||this.plan?.id!==planId||this.host.getState?.()?.workspace_key!==this.workspace)return;
-    await module.openImplementationSourceReport(this,[source],{title:'Field observations · saved revision '+receipt.revision});
+    await module.openImplementationSourceReport(this,[source],{title:'Field observations · saved revision '+receipt.revision,selection:source.delivery_selection});
   }
   fieldObservationPanel(){
     if(!this.native)return '';
     const flow=this.observationFlow,receipt=(this.observationReceipts||[]).at(-1);
-    const summary=flow?.preview?.summary,working=['saving','previewing','importing'].includes(flow?.stage);
+    const summary=flow?.preview?.summary,reading=!!flow&&this.observationSelectionRead===flow,working=reading||['saving','previewing','importing'].includes(flow?.stage);
     const counts=summary?'<dl>'+[['Original records',summary.row_count],['Numeric',summary.numeric_count],['Censored',summary.censored_count],['Text',summary.text_count],['Missing',summary.missing_count],['Sites',summary.site_count],['Activities',summary.activity_count],['Records without collection time',summary.collection_time_missing_count],['Sites without coordinates',summary.coordinate_missing_site_count]].map(([label,value])=>'<dt>'+esc(label)+'</dt><dd>'+esc(value??'')+'</dd>').join('')+'</dl>':'';
+    const selectedReport=flow?.existing_report_selection;
+    const selectedSources=selectedReport?.observed_context_sources||(selectedReport?.source_roles?.OBSERVED_CONTEXT?[selectedReport.source_roles.OBSERVED_CONTEXT]:[]);
+    const reportSelection='<details><summary>Preserve an existing report selection</summary><p>Use the current Report desk selection to keep its complete source order, earlier sections and figures, and model/geography settings. Registration retains this snapshot; it does not replace the current Report desk draft.</p>'+
+      (typeof this.host.openExtension==='function'?button('observations-use-current','Use current Report desk selection',working||this.pending?'disabled':''):'')+
+      (selectedReport?'<p>'+esc(flow.selection_label||'Original report selection retained')+' · '+esc(selectedSources.length)+' observed '+(selectedSources.length===1?'source':'sources')+'.</p>'+button('observations-clear-selection','Register without preceding report selection',working||this.pending?'disabled':''):'<p>No preceding report selection chosen.</p>')+'</details>';
     const review=flow?.stage==='review'?'<p>Saved revision '+esc(flow.preview.revision)+'. Review the original records and their coverage before registering this edition.</p>'+counts+
       '<div class="iw-actions">'+button('observations-import','Register saved field observations','',this.observationBindingCurrent(flow)&&summary?.row_count>0?'iw-primary':'iw-disabled')+button('observations-dismiss','Dismiss preview')+'</div>':'';
     const ready=receipt?'<section><h4>Registered field revision '+esc(receipt.revision)+'</h4><p>'+esc(receipt.summary?.row_count??'')+' original records. This edition remains tied to its saved plan revision even after later field edits.</p><div class="iw-actions">'+receipt.observation_ids.map((id,index)=>button('observations-open','Open observed data'+(receipt.observation_ids.length>1?' '+(index+1):''),'data-index="'+index+'"')).join('')+button('observations-source','Open retained source and report')+(receipt.report_source?.delivery_selection&&typeof this.host.openDelivery==='function'?button('observations-report','Prepare client report'):'')+(receipt.report_source?.source_id&&typeof this.host.openScientificReport==='function'?button('observations-publish','Prepare standalone scientific report'):'')+button('observations-details','Inspect observation edition')+'</div></section>':'';
     return '<section class="iw-notice" aria-label="Field observations in the scientific workspace"><h3>Use saved field records in Observed water quality</h3><p>Register the actual observations with their sites, collection times, sample relationships, methods and original qualifiers. Censored, text and missing results retain their original meaning. The same saved revision also supplies its field-observation report source.</p>'+
-      (working?'<p>'+esc(flow.stage==='saving'?'Saving the field revision before review.':flow.stage==='previewing'?'Reading the original saved field revision.':'Registering the retained field revision through its original native operation.')+'</p>':
-      '<div class="iw-actions">'+button('observations-review',this.dirty||!this.nativePlan?'Save and review field observations':'Review saved field observations','','iw-primary')+'</div>')+review+ready+'</section>';
+      (working?'<p>'+esc(reading?'Reading the current Report desk selection.':flow.stage==='saving'?'Saving the field revision before review.':flow.stage==='previewing'?'Reading the original saved field revision.':'Registering the retained field revision through its original native operation.')+'</p>':
+      '<div class="iw-actions">'+button('observations-review',this.dirty||!this.nativePlan?'Save and review field observations':'Review saved field observations','','iw-primary')+'</div>')+reportSelection+review+ready+'</section>';
   }
 
   readLocal(){try{const data=JSON.parse(localStorage.getItem(this.storageKey)||'{"plans":{}}');this.offlineCopies=data.plans||{};}catch(e){this.message='Browser storage could not be read. Export JSON to retain your work.';}}
@@ -566,6 +594,8 @@ export class ImplementationWorkbench {
     if(action==='results-json'){download(this.plan.id+'-matching-results-and-sources.json',JSON.stringify(matchingResultsDocument(this.plan,this.resultView,this.dirty?'browser_draft':this.native?'saved_native_revision':'portable_plan'),null,2)+'\n','application/json');return;}
     if(action.startsWith('dispatch-')){const turn=this.generation,selected=this.plan?.id;const dispatch=await this.dispatchCapability();if(!this.gone&&turn===this.generation&&this.plan?.id===selected)await dispatch.act(this,b);return;}
     if(action.startsWith('lab-')){const lab=await this.labCapability();if(!this.gone)await lab.act(this,b);return;}
+    if(action==='observations-use-current'){await this.chooseFieldReportSelection(true);return;}
+    if(action==='observations-clear-selection'){await this.chooseFieldReportSelection(false);return;}
     if(action==='observations-review'){await this.reviewFieldObservations();return;}
     if(action==='observations-import'){await this.registerFieldObservations();return;}
     if(action==='observations-dismiss'){if(this.pending)throw Error('Finish the retained operation before dismissing its preview.');this.observationFlow=null;this.cache();this.render();return;}
