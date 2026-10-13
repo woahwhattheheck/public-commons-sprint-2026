@@ -671,10 +671,19 @@ def context_desks_join(root, records, *, application_source=None):
     monitoring_path = "integrations/monitoring/install_observed_context.py"
     if (root / monitoring_path).is_file():
         adoption = json.loads((root / "integrations/monitoring/source_adoption.json").read_text("utf-8"))
+        context = adoption.get("observational_context", {})
+        source_manifests = context.get("source_manifests")
+        if source_manifests is None:
+            source_manifests = [context.get(
+                "source_manifest", "eighteenmile_monitoring_context.sources.json")]
+        if (not isinstance(source_manifests, list) or not source_manifests
+                or any(not isinstance(name, str) or not name for name in source_manifests)
+                or len(source_manifests) != len(set(source_manifests))):
+            raise ValueError("Monitoring observational source manifests are invalid")
         complete("Monitoring observational context", tuple(
             item["path"] for item in adoption["installed_files"]) + (
-                monitoring_path, "integration/monitoring_observed_sources.json",
-                "eighteenmile_monitoring_context.sources.json"))
+                monitoring_path, "integration/monitoring_observed_sources.json"
+            ) + tuple(source_manifests))
         for item in adoption["installed_files"]:
             body = (root / item["path"]).read_bytes()
             if len(body) != item["bytes"] or sha(body) != item["sha256"]:
@@ -682,7 +691,7 @@ def context_desks_join(root, records, *, application_source=None):
         result = module(root, monitoring_path)["install"](root, application_source)
         records.append({"component": "Monitoring observational context", "result": result,
                         "original_source_manifests": [
-                            manifest("eighteenmile_monitoring_context.sources.json")]})
+                            manifest(name) for name in source_manifests]})
 
     # Use the maintained collector composition once on the actual receiving
     # source. Newer assemblers read these names from portable; older complete
