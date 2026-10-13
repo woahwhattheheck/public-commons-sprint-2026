@@ -1,0 +1,646 @@
+{
+  "schema": "amero.original-operation-projections.v1",
+  "provider": "sdp",
+  "originalSha256": "0064671e3fefb0d3b9560181b3288379e6b35be0c9197ee2ca3fdb9a3a395738",
+  "compiledSha256": "1f760b5631a5561e812f7f442587fa8c25567bd5e092fc946b175c80b8f22b61",
+  "sourceCommit": "14704274467d267b6c6679052d7251ef6050d118",
+  "docsCommit": "b3cb1c5a642e092f90e7bef242ebfe6885a58006",
+  "actions": {
+    "GET /disbursements": {
+      "id": "sdp.disbursements.list",
+      "kind": "sdp-disbursement",
+      "projections": [
+        {
+          "pointer": "/data",
+          "many": true,
+          "idPointer": "/id",
+          "fallbackIdentity": false
+        }
+      ],
+      "pagination": "sdp-page",
+      "paginationOptions": {
+        "defaults": {
+          "page": 1,
+          "page_limit": 100
+        }
+      },
+      "dispatchable": true,
+      "mock": false
+    },
+    "POST /disbursements": {
+      "id": "sdp.disbursement.create",
+      "kind": "sdp-disbursement",
+      "projections": [
+        {
+          "pointer": "",
+          "many": false,
+          "idPointer": "/id",
+          "fallbackIdentity": false
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false,
+      "readback": {
+        "action": "sdp.disbursements.list",
+        "query": {
+          "q": "/body/name"
+        },
+        "resourceKind": "sdp-disbursement",
+        "match": {
+          "pointer": "/name",
+          "inputPointer": "/body/name"
+        }
+      },
+      "requiredBodyFields": [
+        "name",
+        "asset_id",
+        "registration_contact_type"
+      ]
+    },
+    "GET /disbursements/{id}": {
+      "id": "sdp.disbursement.get",
+      "kind": "sdp-disbursement",
+      "projections": [
+        {
+          "pointer": "",
+          "many": false,
+          "idPointer": "/id",
+          "fallbackIdentity": false
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    },
+    "DELETE /disbursements/{id}": {
+      "id": "sdp.disbursement.delete",
+      "kind": "sdp-disbursement",
+      "projections": [
+        {
+          "pointer": "",
+          "many": false,
+          "idPointer": "/id",
+          "fallbackIdentity": false
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false,
+      "readback": {
+        "action": "sdp.disbursement.get",
+        "params": {
+          "id": "/params/id"
+        },
+        "resourceKind": "sdp-disbursement",
+        "resourceIdPointer": "/params/id"
+      }
+    },
+    "GET /disbursements/{id}/receivers": {
+      "id": "sdp.disbursement.receivers",
+      "kind": "sdp-receiver",
+      "projections": [
+        {
+          "pointer": "/data",
+          "many": true,
+          "idPointer": "/id",
+          "fallbackIdentity": false
+        }
+      ],
+      "pagination": "sdp-page",
+      "paginationOptions": {
+        "defaults": {
+          "page": 1,
+          "page_limit": 100
+        }
+      },
+      "dispatchable": true,
+      "mock": false
+    },
+    "GET /disbursements/{id}/instructions": {
+      "id": "sdp.disbursement.instructions.get",
+      "kind": "sdp-document",
+      "projections": [],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    },
+    "POST /disbursements/{id}/instructions": {
+      "id": "sdp.disbursement.instructions.upload",
+      "kind": "sdp-operation-result",
+      "projections": [
+        {
+          "pointer": "",
+          "many": false,
+          "idPointer": "/id",
+          "fallbackIdentity": true
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false,
+      "readback": {
+        "action": "sdp.disbursement.get",
+        "params": {
+          "id": "/params/id"
+        },
+        "resourceKind": "sdp-disbursement",
+        "resourceIdPointer": "/params/id"
+      },
+      "fileUpload": true
+    },
+    "PATCH /disbursements/{id}/status": {
+      "id": "sdp.disbursement.status",
+      "kind": "sdp-operation-result",
+      "projections": [
+        {
+          "pointer": "",
+          "many": false,
+          "idPointer": "/id",
+          "fallbackIdentity": true
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false,
+      "readback": {
+        "action": "sdp.disbursement.get",
+        "params": {
+          "id": "/params/id"
+        },
+        "resourceKind": "sdp-disbursement",
+        "resourceIdPointer": "/params/id"
+      },
+      "bodyCorrection": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "STARTED",
+                    "PAUSED",
+                    "CANCELED"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "GET /payments": {
+      "id": "sdp.payments.list",
+      "kind": "sdp-payment",
+      "projections": [
+        {
+          "pointer": "/data",
+          "many": true,
+          "idPointer": "/id",
+          "fallbackIdentity": false
+        }
+      ],
+      "pagination": "sdp-page",
+      "paginationOptions": {
+        "defaults": {
+          "page": 1,
+          "page_limit": 100
+        }
+      },
+      "dispatchable": true,
+      "mock": false
+    },
+    "POST /payments": {
+      "id": "sdp.payment.create",
+      "kind": "sdp-payment",
+      "projections": [
+        {
+          "pointer": "",
+          "many": false,
+          "idPointer": "/id",
+          "fallbackIdentity": false
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false,
+      "readback": {
+        "action": "sdp.payments.list",
+        "query": {
+          "q": "/body/external_payment_id"
+        },
+        "resourceKind": "sdp-payment",
+        "match": {
+          "pointer": "/external_payment_id",
+          "inputPointer": "/body/external_payment_id"
+        }
+      }
+    },
+    "GET /payments/{id}": {
+      "id": "sdp.payment.get",
+      "kind": "sdp-payment",
+      "projections": [
+        {
+          "pointer": "",
+          "many": false,
+          "idPointer": "/id",
+          "fallbackIdentity": false
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    },
+    "PATCH /payments/retry": {
+      "id": "sdp.payments.retry",
+      "kind": "sdp-operation-result",
+      "projections": [
+        {
+          "pointer": "",
+          "many": false,
+          "idPointer": "/id",
+          "fallbackIdentity": true
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    },
+    "PATCH /payments/{id}/status": {
+      "id": "sdp.payment.status",
+      "kind": "sdp-operation-result",
+      "projections": [
+        {
+          "pointer": "",
+          "many": false,
+          "idPointer": "/id",
+          "fallbackIdentity": true
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false,
+      "readback": {
+        "action": "sdp.payment.get",
+        "params": {
+          "id": "/params/id"
+        },
+        "resourceKind": "sdp-payment",
+        "resourceIdPointer": "/params/id"
+      }
+    },
+    "GET /receivers": {
+      "id": "sdp.receivers.list",
+      "kind": "sdp-receiver",
+      "projections": [
+        {
+          "pointer": "/data",
+          "many": true,
+          "idPointer": "/id",
+          "fallbackIdentity": false
+        }
+      ],
+      "pagination": "sdp-page",
+      "paginationOptions": {
+        "defaults": {
+          "page": 1,
+          "page_limit": 100
+        }
+      },
+      "dispatchable": true,
+      "mock": false
+    },
+    "POST /receivers": {
+      "id": "sdp.receiver.create",
+      "kind": "sdp-receiver",
+      "projections": [
+        {
+          "pointer": "",
+          "many": false,
+          "idPointer": "/id",
+          "fallbackIdentity": false
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    },
+    "GET /receivers/{id}": {
+      "id": "sdp.receiver.get",
+      "kind": "sdp-receiver",
+      "projections": [
+        {
+          "pointer": "",
+          "many": false,
+          "idPointer": "/id",
+          "fallbackIdentity": false
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    },
+    "PATCH /receivers/{id}": {
+      "id": "sdp.receiver.update",
+      "kind": "sdp-receiver",
+      "projections": [
+        {
+          "pointer": "",
+          "many": false,
+          "idPointer": "/id",
+          "fallbackIdentity": false
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    },
+    "GET /receivers/verification-types": {
+      "id": "sdp.receiver.verification-types",
+      "kind": "sdp-verification-types",
+      "projections": [
+        {
+          "pointer": "",
+          "many": false,
+          "idPointer": "/id",
+          "fallbackIdentity": true
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    },
+    "PATCH /receivers/{receiver_id}/wallets/{receiver_wallet_id}": {
+      "id": "sdp.receiver.wallet.update",
+      "kind": "sdp-receiver-wallet",
+      "projections": [
+        {
+          "pointer": "",
+          "many": false,
+          "idPointer": "/id",
+          "fallbackIdentity": true
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    },
+    "PATCH /receivers/wallets/{receiver_wallet_id}/status": {
+      "id": "sdp.receiver.wallet.status",
+      "kind": "sdp-operation-result",
+      "projections": [
+        {
+          "pointer": "",
+          "many": false,
+          "idPointer": "/id",
+          "fallbackIdentity": true
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    },
+    "GET /wallets": {
+      "id": "sdp.wallets.list",
+      "kind": "sdp-wallet",
+      "projections": [
+        {
+          "pointer": "",
+          "many": true,
+          "idPointer": "/id",
+          "fallbackIdentity": false
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    },
+    "GET /assets": {
+      "id": "sdp.assets.list",
+      "kind": "sdp-asset",
+      "projections": [
+        {
+          "pointer": "",
+          "many": true,
+          "idPointer": "/id",
+          "fallbackIdentity": false
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    },
+    "GET /organization": {
+      "id": "sdp.organization.get",
+      "kind": "sdp-organization",
+      "projections": [
+        {
+          "pointer": "",
+          "many": false,
+          "idPointer": "/id",
+          "fallbackIdentity": true
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    },
+    "GET /statistics": {
+      "id": "sdp.statistics.get",
+      "kind": "sdp-statistics",
+      "projections": [
+        {
+          "pointer": "",
+          "many": false,
+          "idPointer": "/id",
+          "fallbackIdentity": true
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    },
+    "GET /statistics/{id}": {
+      "id": "sdp.disbursement.statistics",
+      "kind": "sdp-statistics",
+      "projections": [
+        {
+          "pointer": "",
+          "many": false,
+          "idPointer": "/id",
+          "fallbackIdentity": true
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    },
+    "GET /distribution-wallets": {
+      "id": "sdp.distribution-wallets.list",
+      "kind": "sdp-distribution-wallet",
+      "projections": [
+        {
+          "pointer": "",
+          "many": true,
+          "idPointer": "/id",
+          "fallbackIdentity": false
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    },
+    "GET /distribution-wallets/balance": {
+      "id": "sdp.distribution-wallets.balance",
+      "kind": "sdp-balance",
+      "projections": [
+        {
+          "pointer": "",
+          "many": false,
+          "idPointer": "/wallet_id",
+          "fallbackIdentity": true
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    },
+    "GET /distribution-wallets/{id}": {
+      "id": "sdp.distribution-wallet.get",
+      "kind": "sdp-distribution-wallet",
+      "projections": [
+        {
+          "pointer": "",
+          "many": false,
+          "idPointer": "/id",
+          "fallbackIdentity": false
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    },
+    "GET /distribution-wallets/{id}/balance": {
+      "id": "sdp.distribution-wallet.balance",
+      "kind": "sdp-balance",
+      "projections": [
+        {
+          "pointer": "",
+          "many": false,
+          "idPointer": "/wallet_id",
+          "fallbackIdentity": true
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    },
+    "GET /distribution-wallets/{id}/capabilities": {
+      "id": "sdp.distribution-wallet.capabilities",
+      "kind": "sdp-capabilities",
+      "projections": [
+        {
+          "pointer": "",
+          "many": false,
+          "idPointer": "/wallet_id",
+          "fallbackIdentity": true
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    },
+    "GET /distribution-wallets/{id}/memberships": {
+      "id": "sdp.distribution-wallet.memberships",
+      "kind": "sdp-wallet-membership",
+      "projections": [
+        {
+          "pointer": "",
+          "many": true,
+          "idPointer": "/id",
+          "fallbackIdentity": true
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    },
+    "GET /distribution-wallets/{id}/audit": {
+      "id": "sdp.distribution-wallet.audit",
+      "kind": "sdp-wallet-audit",
+      "projections": [
+        {
+          "pointer": "",
+          "many": true,
+          "idPointer": "/id",
+          "fallbackIdentity": true
+        }
+      ],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    },
+    "GET /exports/disbursements": {
+      "id": "sdp.export.disbursements",
+      "kind": "sdp-document",
+      "projections": [],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    },
+    "GET /exports/payments": {
+      "id": "sdp.export.payments",
+      "kind": "sdp-document",
+      "projections": [],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    },
+    "GET /exports/receivers": {
+      "id": "sdp.export.receivers",
+      "kind": "sdp-document",
+      "projections": [],
+      "pagination": null,
+      "paginationOptions": null,
+      "dispatchable": true,
+      "mock": false
+    }
+  }
+}
