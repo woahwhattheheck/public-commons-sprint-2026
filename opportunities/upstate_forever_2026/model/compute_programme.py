@@ -15,6 +15,7 @@ from .common import (INVEST_VERSION, ROLES, SOURCE_IDS, atomic_bytes, atomic_jso
                      canonical, describe_file, digest, finite, held, identifier,
                      now, read_json, verify_file)
 from .profiles import checked_parameters, scenario_spec
+from . import common as scientific_common
 
 SELECTION_SCHEMA = "upstate.compute-programme-selection/v1"
 PROGRAMME_SCHEMA = "upstate.compute-programme/v1"
@@ -27,6 +28,8 @@ POLLUTANTS = {
     "phosphorus_export": ("kg/pixel/year", "kg/year"),
     "sediment_export": ("metric_tonnes/pixel/year", "metric_tonnes/year"),
 }
+POLLUTANT_MODELS = {"nitrogen_export": "ndr", "phosphorus_export": "ndr",
+                   "sediment_export": "sdr"}
 ENGINE_FILES = ("common.py", "profiles.py", "workspace.py", "rasters.py",
                 "native.py", "compute_programme.py")
 
@@ -53,29 +56,79 @@ def _error(exc):
 
 def _engine_sources():
     root = Path(__file__).resolve().parent
-    return [describe_file(root, root / name) for name in ENGINE_FILES]
+    names = list(ENGINE_FILES)
+    # These selected-model and reuse helpers participate in native execution.
+    names.extend(name for name in ("model_selection.py", "reuse.py", "grid_reuse.py", "stage_cache.py")
+                 if (root / name).is_file())
+    return [describe_file(root, root / name) for name in names]
+
+
+def _models(value=None, inherited=None):
+    values = inherited if value is None else value
+    selector = getattr(scientific_common, "selected_models", None)
+    if callable(selector):
+        return selector(values)
+    if values is None:
+        return ["ndr", "sdr"]
+    if (not isinstance(values, (list, tuple)) or not values
+            or any(not isinstance(name, str) for name in values)):
+        raise ValueError("Select distinct native models: ndr, sdr, or both")
+    names = [name.strip().lower() for name in values]
+    if len(set(names)) != len(names) or set(names) - {"ndr", "sdr"}:
+        raise ValueError("Select each native model once from ndr, sdr")
+    return [name for name in ("ndr", "sdr") if name in names]
+
+
+def _shared_output_comparisons():
+    from . import native
+    return callable(getattr(native, "common_comparison_outputs", None))
+
+
+def _comparison_disposition(baseline, alternative):
+    baseline_models = _models(baseline["selection"].get("models"))
+    alternative_models = _models(alternative["selection"].get("models"))
+    common = [model for model in baseline_models if model in alternative_models]
+    if not common:
+        kind, reason = "no_common_outputs", "The selected runs calculate different native models."
+    elif baseline_models != alternative_models and not _shared_output_comparisons():
+        kind, reason = "models_differ", "This installed native difference engine requires matching model selections."
+    else:
+        return None
+    return {"kind": kind, "baseline_run_id": baseline["id"], "run_id": alternative["id"],
+            "baseline_models": baseline_models, "models": alternative_models,
+            "common_models": common, "artifacts": {}, "reason": reason}
 
 
 def _grid_identity(grid):
     return digest({key: grid[key] for key in ("id", "spec", "grid", "files", "inputs")})
 
 
-def _native_selection(grid_id, profile_id, scenario_id):
-    return {"schema": "upstate.run-selection/v1", "grid_id": grid_id,
-            "profile_id": profile_id, "scenario_id": scenario_id,
-            "invest_version": INVEST_VERSION}
+def _native_selection(grid_id, profile_id, scenario_id, models=None):
+    value = {"schema": "upstate.run-selection/v1", "grid_id": grid_id,
+             "profile_id": profile_id, "scenario_id": scenario_id,
+             "invest_version": INVEST_VERSION}
+    selected = _models(models)
+    if selected != ["ndr", "sdr"]:
+        value["models"] = selected
+    return value
 
 
 def _run_snapshot(run):
+    from . import native
+    scope = getattr(native, "run_scope", None)
     state = run["state"]
     result = {
         "run_id": run["id"], "state": state, "selection": run["selection"],
+        "models": _models(run["selection"].get("models")),
+        "model_scope": scope(run) if callable(scope) else run.get("model_scope"),
         "created_at": run.get("created_at"), "updated_at": run.get("updated_at"),
         "completed_at": run.get("completed_at"), "runtime": run.get("runtime"),
         "stages": {name: {key: value[key] for key in
-                   ("started_at", "completed_at", "arguments", "registry_ids", "edits")
+                   ("started_at", "completed_at", "arguments", "registry_ids", "edits",
+                    "input_signature", "runtime", "reused_from", "reused_at")
                    if key in value} for name, value in run.get("stages", {}).items()},
         "artifacts": run.get("artifacts", {}),
+        "reuse_observations": run.get("reuse_observations", {}),
     }
     # The original runner retains historical validation details after recovery.
     # Display them as current failure details only while the run is failed.
@@ -157,14 +210,35 @@ class ComputeProgrammes:
         for row in selection["runs"]:
             profile = self.workspace._get("profiles", row["profile_id"])
             scenario = self.workspace._get("scenarios", row["scenario_id"])
+            models = _models(row.get("models"), grid["spec"].get("models"))
+            if models != ["ndr", "sdr"] and not callable(getattr(scientific_common, "selected_models", None)):
+                raise ValueError("Install the selected-model native core before preparing a partial-model programme")
+            if set(models) - set(_models(grid["spec"].get("models"))):
+                raise ValueError("Grid does not contain the selected native models: " + row["key"])
+            if set(models) - set(_models(profile.get("models"))):
+                raise ValueError("Profile does not supply the selected native models: " + row["key"])
+            needed_roles = {"DEM", "NLCD"}
+            if "ndr" in models:
+                needed_roles.add("PRECIPITATION")
+            if "sdr" in models:
+                needed_roles.update(("R_FACTOR", "K_FACTOR"))
+            missing_roles = needed_roles - set(grid["files"])
+            if missing_roles:
+                raise ValueError("Prepare actual grid inputs for " + row["key"] + ": " + ", ".join(sorted(missing_roles)))
+            available_codes = {int(code) for code in grid["inputs"]["NLCD"]["class_counts"]}
+            missing_codes = available_codes - set(profile["table_summary"]["lucodes"])
+            if missing_codes:
+                raise ValueError("Biophysical table lacks retained land-cover codes: " + ", ".join(map(str, sorted(missing_codes))))
             checked_parameters(profile)
             scenario_spec(_copy(scenario))
-            native = _native_selection(grid["id"], profile["id"], scenario["id"])
+            native = _native_selection(grid["id"], profile["id"], scenario["id"], models)
             changes = {}
-            for model in ("ndr", "sdr"):
-                for parameter in sorted(set(profile[model]) | set(baseline_profile[model])):
-                    a = baseline_profile[model].get(parameter)
-                    b = profile[model].get(parameter)
+            for model in _models(native.get("models")):
+                selected_parameters = profile.get(model, {})
+                baseline_parameters = baseline_profile.get(model, {})
+                for parameter in sorted(set(selected_parameters) | set(baseline_parameters)):
+                    a = baseline_parameters.get(parameter)
+                    b = selected_parameters.get(parameter)
                     if a != b:
                         changes[model + "." + parameter] = {"baseline": a, "selected": b}
             rows.append({
@@ -194,7 +268,7 @@ class ComputeProgrammes:
         if not isinstance(rows, list) or not rows:
             raise ValueError("Select one or more named native runs")
         keys = []
-        allowed_run = {"key", "title", "profile_id", "scenario_id", "reason", "experiment_key", "changes"}
+        allowed_run = {"key", "title", "profile_id", "scenario_id", "reason", "experiment_key", "changes", "models"}
         for row in rows:
             if not isinstance(row, dict) or set(row) - allowed_run:
                 raise ValueError("A run selects key, title, profile_id, scenario_id and optional experiment context")
@@ -202,6 +276,8 @@ class ComputeProgrammes:
             row["title"] = _text(row.get("title"), "each run title")
             identifier(row.get("profile_id"))
             identifier(row.get("scenario_id"))
+            if "models" in row:
+                row["models"] = _models(row["models"])
             for name in ("reason", "experiment_key"):
                 if name in row:
                     row[name] = _text(row[name], name)
@@ -223,7 +299,10 @@ class ComputeProgrammes:
                 "grid_identity": _grid_identity(grid), "runs": result_rows,
                 "run_count": len(bindings),
                 "unique_run_count": len({row["run_id"] for row in bindings}),
-                "warnings": []}
+                "warnings": ([("Runs compare their common native outputs; each selected pollutant also retains its own total."
+                              if _shared_output_comparisons() else
+                              "This native difference engine requires matching model selections; individual model totals remain available.")]
+                    if len({tuple(_models(row["native_selection"].get("models"))) for row in bindings}) > 1 else [])}
 
     def _initial_state(self, record):
         return {"schema": STATE_SCHEMA, "programme_id": record["id"],
@@ -258,7 +337,8 @@ class ComputeProgrammes:
             else:
                 for row in bindings:
                     run = self.workspace.prepare_run({name: row["native_selection"][name]
-                        for name in ("grid_id", "profile_id", "scenario_id")})
+                        for name in ("grid_id", "profile_id", "scenario_id", "models")
+                        if name in row["native_selection"]})
                     if run["id"] != row["run_id"]:
                         raise ValueError("Native preparation returned a different retained run")
                 from .native_batch import _application_sources
@@ -310,6 +390,7 @@ class ComputeProgrammes:
                 "created_at": record["created_at"], "updated_at": state["updated_at"],
                 "completed_at": state.get("completed_at"), "comparisons": state.get("comparisons", {}),
                 "comparison_errors": state.get("comparison_errors", {}),
+                "execution_sources": state.get("execution_sources"),
                 "error": state.get("error"), "report": latest or None, "latest_report": latest or None,
                 "files": latest.get("files", []), "deliveries": state.get("deliveries", {})}
 
@@ -327,17 +408,20 @@ class ComputeProgrammes:
             value = read_json(path)
             grids.append({"id": value["id"], "title": value.get("spec", {}).get("title", value["id"][:12]),
                           "state": value["state"],
+                          "models": _models(value.get("spec", {}).get("models")),
                           "source_collection_id": value.get("spec", {}).get("source_collection_id")})
         profiles = [{"id": p["id"], "title": p["title"],
                      "source_collection_id": p["source_collection_id"],
                      "biophysical_source_id": p["biophysical_source_id"],
-                     "parameters": {"ndr": p["ndr"], "sdr": p["sdr"]}}
+                     "models": _models(p.get("models")),
+                     "parameters": {model: p[model] for model in ("ndr", "sdr") if model in p}}
                     for p in self.workspace._list("profiles")]
         scenarios = [{"id": p["id"], "title": p["title"], "kind": p["kind"],
                       "source_collection_id": p["source_collection_id"]}
                      for p in self.workspace._list("scenarios")]
         return {"schema": "upstate.compute-programme-catalog/v1", "selection_schema": SELECTION_SCHEMA,
-                "programmes": programmes, "grids": grids, "profiles": profiles, "scenarios": scenarios}
+                "programmes": programmes, "grids": grids, "profiles": profiles, "scenarios": scenarios,
+                "model_selection_available": callable(getattr(scientific_common, "selected_models", None))}
 
     def pause(self, key):
         control = self._set_pause(key, True)
@@ -348,9 +432,14 @@ class ComputeProgrammes:
         self._set_pause(key, False)
         return self.execute(key, only_runs=only_runs)
 
-    def _check_execution(self, record):
-        if _engine_sources() != record["identity"]["engine_sources"]:
-            raise ValueError("Programme engine source changed; reopen its retained application or create a new programme")
+    def _check_execution(self, record, engine_sources=None):
+        current = _engine_sources() if engine_sources is None else engine_sources
+        # Retain the original complete inventory while allowing lifecycle/report
+        # repairs to this coordinator. Every scientific dependency still matches.
+        scientific = lambda values: [item for item in values
+                                     if item["path"] != "compute_programme.py"]
+        if scientific(current) != scientific(record["identity"]["engine_sources"]):
+            raise ValueError("Programme scientific engine source changed; reopen its retained application or create a new programme")
         grid = self.workspace.get_grid(record["selection"]["grid_id"])
         if _grid_identity(grid) != record["identity"]["grid_identity"]:
             raise ValueError("Programme grid inputs or output identities changed")
@@ -358,6 +447,29 @@ class ComputeProgrammes:
         if bindings != record["runs"]:
             raise ValueError("Programme profile or scenario binding changed")
         return grid
+
+    def _recover_attempts(self, key, state):
+        recovered_at = now()
+        changed = False
+        for attempts in state["attempts"].values():
+            for attempt in attempts:
+                if attempt.get("state") != "running":
+                    continue
+                try:
+                    native = self.workspace.inspect_run(attempt["run_id"])
+                    observation = {"state": native["state"], "completed_stages": {
+                        name: stage["completed_at"] for name, stage in native.get("stages", {}).items()
+                        if stage.get("completed_at")}}
+                except (ValueError, OSError, KeyError) as exc:
+                    observation = {"state": "unavailable", "error": _error(exc)}
+                # This closes a lost coordinator attempt, preserving the native
+                # runner state. The next attempt verifies/reuses native files.
+                attempt.update(state="interrupted", recovered_at=recovered_at,
+                               native_state_at_recovery=observation["state"],
+                               recovery_observation=observation)
+                changed = True
+        if changed:
+            self._write_state(key, state)
 
     def _pause_boundary(self, key, state):
         if self._control(key)["pause_requested"]:
@@ -387,13 +499,23 @@ class ComputeProgrammes:
             self._write_state(key, state, state="running", phase="inputs", current_run=None,
                               requested_runs=requested, effective_runs=selected, error=None)
             try:
-                self._check_execution(record)
+                self._recover_attempts(key, state)
+                execution_sources = _engine_sources()
+                self._write_state(key, state, execution_sources=execution_sources)
+                self._check_execution(record, execution_sources)
+                orchestrator_source = next(item for item in execution_sources
+                                           if item["path"] == "compute_programme.py")
                 # Resolve a missing or different native runtime once before a series.
                 unfinished = [name for name in selected
                     if self.workspace.inspect_run(by_name[name]["run_id"])["state"] != "complete"]
                 if unfinished:
                     from .native import runtime
-                    runtime()
+                    needed_models = [model for model in ("ndr", "sdr") if any(
+                        model in _models(by_name[name]["native_selection"].get("models")) for name in unfinished)]
+                    if callable(getattr(scientific_common, "selected_models", None)):
+                        runtime(needed_models)
+                    else:
+                        runtime()
                 verified_runs = set()
                 for name in selected:
                     if self._pause_boundary(key, state):
@@ -401,7 +523,8 @@ class ComputeProgrammes:
                     binding = by_name[name]
                     attempts = state["attempts"].setdefault(name, [])
                     attempt = {"number": len(attempts) + 1, "started_at": now(),
-                               "state": "running", "run_id": binding["run_id"]}
+                               "state": "running", "run_id": binding["run_id"],
+                               "orchestrator_source": orchestrator_source}
                     attempts.append(attempt)
                     self._write_state(key, state, current_run=name, phase="run:" + name)
                     try:
@@ -435,10 +558,15 @@ class ComputeProgrammes:
                                     comparison = {"kind": "identity", "baseline_run_id": baseline["id"],
                                                   "run_id": alternative["id"], "artifacts": {}}
                                 else:
-                                    result = self.workspace.compare_runs([baseline["id"], alternative["id"]])
-                                    comparison = {"kind": "native", "id": result["id"],
-                                                  "baseline_run_id": baseline["id"],
-                                                  **result["alternatives"][0]}
+                                    comparison = _comparison_disposition(baseline, alternative)
+                                    if comparison is None:
+                                        result = self.workspace.compare_runs([baseline["id"], alternative["id"]])
+                                        comparison = {"kind": "native", "id": result["id"],
+                                                      "baseline_run_id": baseline["id"],
+                                                      "common_artifacts": result.get("common_artifacts",
+                                                          list(result["alternatives"][0]["artifacts"])),
+                                                      "model_scopes": result.get("model_scopes"),
+                                                      **result["alternatives"][0]}
                                 state["comparisons"][name] = comparison
                                 state["comparison_errors"].pop(name, None)
                             except Exception as exc:
@@ -481,18 +609,24 @@ class ComputeProgrammes:
         rows = []
         for run in status["runs"]:
             for pollutant, (cell_units, annual_units) in POLLUTANTS.items():
+                model = POLLUTANT_MODELS[pollutant]
+                if model not in run.get("models", _models(run["native_selection"].get("models"))):
+                    continue
                 artifact = run.get("artifacts", {}).get(pollutant) if run["state"] == "complete" else None
                 base_artifact = baseline.get("artifacts", {}).get(pollutant) if baseline["state"] == "complete" else None
                 row = {"run_key": run["key"], "run_id": run["run_id"], "title": run["title"],
                        "profile_id": run["profile_id"], "scenario_id": run["scenario_id"],
-                       "experiment_key": run.get("experiment_key"), "pollutant": pollutant,
+                       "experiment_key": run.get("experiment_key"), "model": model, "pollutant": pollutant,
                        "state": run["state"], "total": None, "units": annual_units,
                        "valid_cells": None, "valid_area_ha": None, "baseline_total": None,
                        "baseline_valid_cells": None, "total_change": None,
                        "comparison_cells": None, "percent_change": None, "support_matches": None,
                        "comparison_id": None, "parameter_changes": run["parameter_changes"],
                        "table_changed": run["table_changed"], "scenario_changed": run["scenario_changed"],
-                       "artifact": None, "comparison_artifact": None}
+                       "artifact": None, "comparison_artifact": None,
+                       "comparison_state": "pending", "comparison_reason": None}
+                if run["state"] == "complete" and artifact is None:
+                    raise ValueError("Completed native run lacks its selected export: " + run["key"] + "/" + pollutant)
                 if artifact is not None:
                     if artifact.get("units") != cell_units or artifact.get("sum_units") != annual_units:
                         raise ValueError("Native output summary units differ for " + pollutant)
@@ -505,10 +639,16 @@ class ComputeProgrammes:
                     row["baseline_total"] = finite(base_artifact["sum"], "baseline total", minimum=0)
                     row["baseline_valid_cells"] = int(base_artifact["valid_cells"])
                 comparison = status["comparisons"].get(run["key"])
+                if comparison:
+                    row["comparison_state"] = comparison["kind"]
+                    row["comparison_reason"] = comparison.get("reason")
+                elif run["key"] in status["comparison_errors"]:
+                    row["comparison_state"] = "failed"
+                    row["comparison_reason"] = status["comparison_errors"][run["key"]].get("message")
                 same_run = run["run_id"] == baseline["run_id"]
                 if artifact is not None and base_artifact is not None and same_run:
                     row.update(total_change=0.0, comparison_cells=row["valid_cells"], support_matches=True,
-                               percent_change=0.0 if row["baseline_total"] else None)
+                               percent_change=0.0 if row["baseline_total"] else None, comparison_state="identity")
                 elif artifact is not None and base_artifact is not None and comparison:
                     item = comparison.get("artifacts", {}).get(pollutant)
                     if item is not None:
@@ -520,6 +660,9 @@ class ComputeProgrammes:
                                    percent_change=(100.0 * change / row["baseline_total"])
                                        if matches and row["baseline_total"] else None,
                                    comparison_artifact={**item, "path": "comparisons/" + comparison["id"] + "/" + item["path"]})
+                if artifact is not None and base_artifact is None:
+                    row["comparison_state"] = "no_baseline_output"
+                    row["comparison_reason"] = "A matching " + model.upper() + " baseline output is required for this pollutant change."
                 row["change_basis"] = "alternative minus baseline on the native comparison's common valid cells"
                 rows.append(row)
         return {"schema": REPORT_SCHEMA, "programme_id": key, "workspace_id": record["workspace_id"],
@@ -527,11 +670,16 @@ class ComputeProgrammes:
                 "baseline_run": status["baseline_run"], "grid_id": record["selection"]["grid_id"],
                 "source_reference": record["identity"]["source_reference"],
                 "engine_sources": record["identity"]["engine_sources"],
+                "execution_sources": status.get("execution_sources"),
                 "rows": rows, "comparisons": status["comparisons"],
                 "comparison_errors": status["comparison_errors"],
                 "interpretation": {
+                    "completion": "A completed run has finished its selected native models; each row names the model and pollutant.",
                     "totals": "Annual mass within each native output's retained reporting mask.",
                     "change": "Native difference rasters use the intersection of baseline and alternative valid cells.",
+                    "model_scope": ("Native comparisons use common selected outputs on the same retained grid. Each other selected pollutant retains its individual annual total."
+                                    if _shared_output_comparisons() else
+                                    "This native comparison engine uses matching model selections; each selected run retains its individual annual totals."),
                     "percent": "Percent change is available when native common-cell count equals both output counts and baseline mass is positive.",
                     "coverage": "Valid area is original valid cells multiplied by the retained pixel area in hectares.",
                     "parameters": "Parameter changes are read from actual saved profiles relative to the selected baseline.",
@@ -553,9 +701,9 @@ class ComputeProgrammes:
             report = {**payload, "id": report_id, "generated_at": now()}
             atomic_json(path, report, immutable=True)
         fields = ("run_key", "run_id", "title", "profile_id", "scenario_id", "experiment_key",
-                  "pollutant", "state", "total", "units", "valid_cells", "valid_area_ha",
+                  "model", "pollutant", "state", "total", "units", "valid_cells", "valid_area_ha",
                   "baseline_total", "baseline_valid_cells", "total_change", "comparison_cells",
-                  "percent_change", "support_matches", "comparison_id")
+                  "percent_change", "support_matches", "comparison_id", "comparison_state", "comparison_reason")
         stream = io.StringIO(newline="")
         writer = csv.DictWriter(stream, fieldnames=fields, extrasaction="ignore")
         writer.writeheader()
@@ -613,6 +761,9 @@ class ComputeProgrammes:
                 or len(set([base_name] + names)) != len(names) + 1):
             raise ValueError("Select a distinct named baseline and future land-cover runs")
         native_ids = [by_name[name]["run_id"] for name in [base_name] + names]
+        if any(_models(by_name[name]["native_selection"].get("models")) != ["ndr", "sdr"]
+               for name in [base_name] + names):
+            raise ValueError("Select baseline and future runs containing both NDR and SDR for the complete seven-map delivery")
         if len(set(native_ids)) != len(native_ids):
             raise ValueError("Select distinct actual native runs for the delivery comparison")
         base = by_name[base_name]
@@ -669,7 +820,8 @@ class ComputeProgrammes:
         record = self._load(key)
         directory = self._directory(key)
         delivery_key = digest(preview["selection"])
-        with held(directory / ".programme.lock", blocking=False):
+        with held(self.workspace.root / ".native-model-batch.lock", blocking=False), \
+                held(directory / ".programme.lock", blocking=False):
             state = self._state(key)
             selected_names = [preview["baseline_run"]] + preview["scenario_runs"]
             by_name = {row["key"]: row for row in record["runs"]}
