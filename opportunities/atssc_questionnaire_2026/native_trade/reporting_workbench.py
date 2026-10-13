@@ -15,7 +15,7 @@ from collections import defaultdict
 from datetime import date
 from decimal import Decimal, localcontext
 
-from questionnaire_workspace import OperationError, csv_safe, decimal, encoded, expression_refs, identifier, now
+from questionnaire_workspace import OperationError, csv_safe, decimal, disclosure_projection, encoded, identifier, now, table_rows
 
 
 CHARTS = {"bar", "line", "none"}
@@ -61,7 +61,27 @@ def _definition(workspace, db, questionnaire_id):
     return json.loads(result[0])
 
 
-def _reference(value, questions):
+def _definition_disclosures(questions):
+    """Use the original projector for source-only reference classification.
+
+    Empty cells carry the declared table shape and physical source-row order.
+    They are never statistical observations or saved answers.  Reusing one
+    context per template keeps native dependencies and coordinate selection
+    identical to the questionnaire's authoritative disclosure projection.
+    """
+    values = {}
+    for key, question in questions.items():
+        if question["kind"] != "table":
+            values[key] = None
+            continue
+        binding = question.get("source")
+        count = len(table_rows(binding)) if isinstance(binding, dict) else 1
+        row = dict.fromkeys(column["id"] for column in question["columns"])
+        values[key] = [row] * count
+    return disclosure_projection({"questions": list(questions.values())}, values, final=False)["disclosures"]
+
+
+def _reference(value, questions, projected=None):
     if isinstance(value, str):
         value = {"question_id": value}
     if not isinstance(value, dict) or value.get("question_id") not in questions:
@@ -75,31 +95,25 @@ def _reference(value, questions):
             raise OperationError("REPORT_VARIABLE", "Choose an original column for the table variable")
     elif column_id is not None:
         raise OperationError("REPORT_VARIABLE", "A scalar question has no table column")
-    protected = question.get("disclosure", "protected") == "protected" or field.get("disclosure", question.get("disclosure", "protected")) == "protected"
-    pending = list(expression_refs(question["calculation"])) if "calculation" in question else []
-    seen = set()
-    while pending and not protected:
-        dependency_id = pending.pop()
-        if dependency_id in seen: continue
-        seen.add(dependency_id)
-        dependency = questions[dependency_id]
-        protected = dependency.get("disclosure", "protected") == "protected" or any(x.get("disclosure", dependency.get("disclosure", "protected")) == "protected" for x in dependency.get("columns", []))
-        if "calculation" in dependency: pending.extend(expression_refs(dependency["calculation"]))
+    if projected is None:
+        projected = _definition_disclosures(questions)
+    protected = projected[question["id"]]["classification"] == "protected" or field.get("disclosure", question.get("disclosure", "protected")) == "protected"
     return {"question_id": question["id"], **({"column_id": column_id} if column_id else {}),
             "label": field["label"], "kind": field["kind"], "unit": field.get("unit"),
             "disclosure": "protected" if protected else "public"}
 
-
-def _filters(value, questions):
+def _filters(value, questions, projected=None):
     if value is None:
         return []
     if not isinstance(value, list):
         raise OperationError("REPORT_FILTER", "Supply an ordered list of response filters")
+    if value and projected is None:
+        projected = _definition_disclosures(questions)
     result = []
     for item in value:
         if not isinstance(item, dict) or item.get("operator") not in FILTER_OPERATORS:
             raise OperationError("REPORT_FILTER", "Choose a supported filter operator")
-        ref = _reference(item.get("variable"), questions)
+        ref = _reference(item.get("variable"), questions, projected)
         operator = item["operator"]
         operand = item.get("value")
         if operator not in {"answered", "missing"}:
@@ -129,14 +143,16 @@ def _filters(value, questions):
     return result
 
 
-def _section(value, questions):
+def _section(value, questions, projected=None):
     if not isinstance(value, dict):
         raise OperationError("REPORT_LAYOUT", "Each ordered report section needs its specifications")
     key = _text(value.get("id", identifier()), "section identifier", 200, True)
     if value.get("kind") == "text":
         return {"id": key, "kind": "text", "title": _text(value.get("title", ""), "section title", 500),
                 "note": _text(value.get("note", ""), "descriptive text")}
-    ref = _reference({"question_id": value.get("question_id"), **({"column_id": value["column_id"]} if value.get("column_id") else {})}, questions)
+    if projected is None:
+        projected = _definition_disclosures(questions)
+    ref = _reference({"question_id": value.get("question_id"), **({"column_id": value["column_id"]} if value.get("column_id") else {})}, questions, projected)
     chart = value.get("chart", "bar")
     statistics = value.get("statistics", ["count", "percentage", "sum", "average"] if ref["kind"] in NUMERIC else ["count", "percentage"])
     if chart not in CHARTS or not isinstance(statistics, list) or not statistics or len(statistics) != len(set(statistics)) or not set(statistics) <= STATISTICS:
@@ -146,13 +162,13 @@ def _section(value, questions):
     group_by = value.get("group_by", [])
     if not isinstance(group_by, list):
         raise OperationError("REPORT_VARIABLE", "Nesting uses an ordered list of original variables")
-    groups = [_reference(x, questions) for x in group_by]
+    groups = [_reference(x, questions, projected) for x in group_by]
     if len({(x["question_id"], x.get("column_id")) for x in groups}) != len(groups):
         raise OperationError("REPORT_VARIABLE", "Nested grouping variables must be distinct")
-    year = _reference(value["year_field"], questions) if value.get("year_field") else None
+    year = _reference(value["year_field"], questions, projected) if value.get("year_field") else None
     ratio = None
     if value.get("ratio"):
-        ratio = {"denominator": _reference(value["ratio"].get("denominator"), questions)}
+        ratio = {"denominator": _reference(value["ratio"].get("denominator"), questions, projected)}
         if ref["kind"] not in NUMERIC or ratio["denominator"]["kind"] not in NUMERIC:
             raise OperationError("REPORT_VARIABLE", "A ratio needs two original numeric variables")
     if "ratio" in statistics and ratio is None:
@@ -168,7 +184,7 @@ def _section(value, questions):
               "title": _text(value.get("title", ref["label"]), "view title", 10000, True),
               "note": _text(value.get("note", ""), "view note"), "chart": chart,
               "statistics": statistics, "variable": ref, "group_by": groups,
-              "year_field": year, "ratio": ratio, "filters": _filters(value.get("filters"), questions)}
+              "year_field": year, "ratio": ratio, "filters": _filters(value.get("filters"), questions, projected)}
     if value.get("saved_view_id"):
         if not isinstance(value.get("saved_view_version"), int) or value["saved_view_version"] < 1:
             raise OperationError("REPORT_LAYOUT", "Bind the original saved view version")
@@ -176,10 +192,12 @@ def _section(value, questions):
     return result
 
 
-def _template(value, definition):
+def _template(value, definition, projected=None):
     if not isinstance(value, dict):
         raise OperationError("REPORT_LAYOUT", "Supply the complete report template")
     questions = {x["id"]: x for x in definition["questions"]}
+    if projected is None:
+        projected = _definition_disclosures(questions)
     selected = value.get("question_ids", list(questions))
     if not isinstance(selected, list) or not selected or any(not isinstance(x, str) for x in selected) or len(selected) != len(set(selected)) or not set(selected) <= set(questions):
         raise OperationError("REPORT_SELECTION", "Select distinct questions in this definition")
@@ -190,10 +208,10 @@ def _template(value, definition):
                     for c in (q["columns"] if q["kind"] == "table" else [None])]
     if not isinstance(sections, list) or not sections:
         raise OperationError("REPORT_LAYOUT", "Add an ordered question view or descriptive section")
-    sections = [_section(x, questions) for x in sections]
+    sections = [_section(x, questions, projected) for x in sections]
     if len({x["id"] for x in sections}) != len(sections):
         raise OperationError("REPORT_LAYOUT", "Each section needs a distinct identifier")
-    filters = _filters(value.get("filters"), questions)
+    filters = _filters(value.get("filters"), questions, projected)
     references = [x["variable"] for x in filters]
     for section in sections:
         if section["kind"] == "text":
@@ -228,12 +246,15 @@ def _saved_row(db, kind, key, version=None):
     return {**dict(row), "current_version": row["version"], "version": retained_version, "version_created": item["created"], "definition": json.loads(item["definition"])}
 
 
-def _view_bindings(db, template):
+def _view_bindings(db, template, questions, projected):
     for section in template["ordered_sections"]:
         if section.get("saved_view_id"):
             saved = _saved_row(db, "view", section["saved_view_id"], section["saved_view_version"])
             core = {k: v for k, v in section.items() if k not in {"id", "saved_view_id", "saved_view_version"}}
-            original = {k: v for k, v in saved["definition"].items() if k != "id"}
+            # Compare authored specifications after resolving both copies
+            # against this publication.  The immutable saved version itself
+            # stays unchanged when native source metadata is now understood.
+            original = {k: v for k, v in _section(saved["definition"], questions, projected).items() if k != "id"}
             if core != original:
                 raise OperationError("REPORT_VIEW_BINDING", "The report section differs from its retained saved view; save the edit as a new view version")
 
@@ -247,13 +268,15 @@ def _save(workspace, params, kind):
     def action(db):
         questionnaire_id = params["questionnaire_id"]
         definition = _definition(workspace, db, questionnaire_id)
-        item = _template(params["template"], definition) if kind == "template" else _section(params["view"], {q["id"]: q for q in definition["questions"]})
+        questions = {q["id"]: q for q in definition["questions"]}
+        projected = _definition_disclosures(questions)
+        item = _template(params["template"], definition, projected) if kind == "template" else _section(params["view"], questions, projected)
         if kind == "view" and item["kind"] != "question":
             raise OperationError("REPORT_LAYOUT", "Save a complete question chart/table view")
         if kind == "view":
             item.pop("saved_view_id", None)
             item.pop("saved_view_version", None)
-        if kind == "template": _view_bindings(db, item)
+        if kind == "template": _view_bindings(db, item, questions, projected)
         old = db.execute(f"SELECT * FROM {table} WHERE id=?", (key,)).fetchone()
         expected = params.get("expected_version")
         if type(expected) is not int or expected != (old["version"] if old else 0):
@@ -304,9 +327,9 @@ def _value(response, ref, row=None):
 def _present(value): return value is not None and value != "" and value != []
 
 
-def _condition(value, item, public=False):
+def _condition(value, item, public=False, withheld=False):
     ref, operator = item["variable"], item["operator"]
-    if public and ref["disclosure"] == "protected":
+    if public and (ref["disclosure"] == "protected" or withheld):
         return False
     if operator == "answered": return _present(value)
     if operator == "missing": return not _present(value)
@@ -326,17 +349,30 @@ def _condition(value, item, public=False):
         return False
 
 
+def _withheld(response, ref, row_index=None):
+    """Read the original projection's classification beside its selected value."""
+    choice = response.get("disclosures", {}).get(ref["question_id"], {})
+    if ref["disclosure"] == "protected" or choice.get("classification") == "protected" or choice.get("derived_from_protected"):
+        return True
+    if not ref.get("column_id"):
+        return False
+    cells = choice.get("cells", [])
+    rows = cells if row_index is None else cells[row_index:row_index + 1]
+    return any(row.get(ref["column_id"], {}).get("classification") == "protected"
+               or row.get(ref["column_id"], {}).get("derived_from_protected") for row in rows)
+
+
 def _matches(response, filters, public=False):
     tables = defaultdict(list)
     for item in filters:
         ref = item["variable"]
         if ref.get("column_id"):
             tables[ref["question_id"]].append(item)
-        elif not _condition(_value(response, ref), item, public):
+        elif not _condition(_value(response, ref), item, public, public and _withheld(response, ref)):
             return False
     for question_id, conditions in tables.items():
         rows = response["values"].get(question_id) or []
-        if not any(all(_condition(row.get(x["variable"]["column_id"]), x, public) for x in conditions) for row in rows):
+        if not any(all(_condition(row.get(x["variable"]["column_id"]), x, public, public and _withheld(response, x["variable"], index)) for x in conditions) for index, row in enumerate(rows)):
             return False
     return True
 
@@ -374,17 +410,17 @@ def _summary(observations, numeric, respondent_count, ratio=False):
                 "decimal_precision": precision, "rounding": context.rounding}
 
 
-def _visible_specs(value, public):
+def _visible_specs(value, public, protected_filter_refs=()):
     result = copy.deepcopy(value)
     if not public: return result
     for item in result.get("filters", []):
-        if item["variable"]["disclosure"] == "protected":
+        if item["variable"]["disclosure"] == "protected" or (item["variable"]["question_id"], item["variable"].get("column_id")) in protected_filter_refs:
             item.pop("value", None)
             item["literal_withheld"] = True
     return result
 
 
-def _analysis(section, responses, global_filters, public):
+def _analysis(section, responses, global_filters, public, protected_filter_refs=()):
     if section["kind"] == "text": return copy.deepcopy(section)
     ref = section["variable"]
     filters = global_filters + section["filters"]
@@ -393,14 +429,14 @@ def _analysis(section, responses, global_filters, public):
     for response_index, response in enumerate(eligible):
         rows = response["values"].get(ref["question_id"]) if ref.get("column_id") else [None]
         row_filters = [x for x in filters if x["variable"].get("column_id") and x["variable"]["question_id"] == ref["question_id"]]
-        for row in rows or []:
-            if any(not _condition(row.get(x["variable"]["column_id"]), x, public) for x in row_filters): continue
+        for row_index, row in enumerate(rows or []):
+            if any(not _condition(row.get(x["variable"]["column_id"]), x, public, public and _withheld(response, x["variable"], row_index)) for x in row_filters): continue
             observations.append({"value": _value(response, ref, row), "respondent": response_index,
                                  "dimensions": [_value(response, x, row) for x in section["group_by"]],
                                  "year": _year(_value(response, section["year_field"], row), section["year_field"]["kind"]) if section["year_field"] else None,
                                  "denominator": _value(response, section["ratio"]["denominator"], row) if section["ratio"] else None})
     numeric = ref["kind"] in NUMERIC
-    result = {**_visible_specs(section, public), "summary": _summary(observations, numeric, len(eligible), bool(section["ratio"])), "groups": [], "frequencies": [], "cross_tab": None}
+    result = {**_visible_specs(section, public, protected_filter_refs), "summary": _summary(observations, numeric, len(eligible), bool(section["ratio"])), "groups": [], "frequencies": [], "cross_tab": None}
     frequencies = defaultdict(int)
     for observation in observations:
         if _present(observation["value"]): frequencies[encoded(observation["value"])] += 1
@@ -431,16 +467,22 @@ def _attach_analysis(editions, layout):
     for edition_name, report in editions.items():
         public = edition_name == "public"
         original = report["accepted_responses"]
+        filters = layout["filters"] + [item for section in layout["ordered_sections"] for item in section.get("filters", [])]
+        protected_filter_refs = {
+            (item["variable"]["question_id"], item["variable"].get("column_id"))
+            for item in filters
+            if public and any(_withheld(response, item["variable"]) for response in original)
+        }
         responses = [copy.deepcopy(x) for x in original if _matches(x, layout["filters"], public)]
         for index, response in enumerate(responses, 1):
             for name in ("values", "disclosures", "public_values", "public_alternatives"):
                 if name in response: response[name] = {k: v for k, v in response[name].items() if k in selected}
             if public: response["response_number"] = index
         report["accepted_responses"] = responses
-        safe_layout = _visible_specs(layout, public)
-        safe_layout["ordered_sections"] = [_visible_specs(x, public) for x in layout["ordered_sections"]]
+        safe_layout = _visible_specs(layout, public, protected_filter_refs)
+        safe_layout["ordered_sections"] = [_visible_specs(x, public, protected_filter_refs) for x in layout["ordered_sections"]]
         report["report_layout"] = safe_layout
-        sections = [_analysis(x, responses, layout["filters"], public) for x in layout["ordered_sections"]]
+        sections = [_analysis(x, responses, layout["filters"], public, protected_filter_refs) for x in layout["ordered_sections"]]
         report["report_views"] = {"schema": "atssc.report-views.v1", "edition": edition_name,
                                   "selection_count": len(responses), "accepted_population_count": len(original),
                                   "filters": safe_layout["filters"], "sections": sections}
@@ -460,8 +502,10 @@ def _compose(workspace, db, params, report_id):
     saved = _saved_row(db, "template", params["template_id"], params.get("template_version")) if params.get("template_id") else None
     if saved and saved["questionnaire_id"] != publication["questionnaire_id"]:
         raise OperationError("REPORT_SELECTION", "Choose a template from the publication's original questionnaire")
-    layout = _template(saved["definition"] if saved else params.get("template", {}), definition)
-    _view_bindings(db, layout)
+    questions = {q["id"]: q for q in definition["questions"]}
+    projected = _definition_disclosures(questions)
+    layout = _template(saved["definition"] if saved else params.get("template", {}), definition, projected)
+    _view_bindings(db, layout, questions, projected)
     if saved: layout.update(template_id=saved["id"], template_version=saved["version"])
     editions = workspace.compose_report(db, {"publication_id": publication["id"], "question_ids": layout["question_ids"],
                                              **({"respondent_ids": params["respondent_ids"]} if params.get("respondent_ids") is not None else {})}, report_id)
