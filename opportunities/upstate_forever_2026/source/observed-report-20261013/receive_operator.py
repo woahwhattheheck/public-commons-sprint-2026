@@ -84,6 +84,8 @@ def main():
                         help="Original typed-report manifest; repeat in reading order.")
     source.add_argument("--selection", type=Path,
                         help="JSON with ordered sources, optional title and contact.")
+    source.add_argument("--terrain-selection", type=Path,
+                        help="Original Terrain response/title/reason JSON; prepares its report source without rerunning models.")
     source.add_argument("--course", type=Path,
                         help="Continue an explicit ordered manifest of original report operations.")
     parser.add_argument("--title")
@@ -127,7 +129,9 @@ def _worker_command(args):
                "--output", str(args.output.resolve()),
                "--timeout", str(args.timeout),
                "--upload-limit-gib", str(args.upload_limit_gib)]
-    if args.selection:
+    if getattr(args, "terrain_selection", None):
+        command += ["--terrain-selection", str(args.terrain_selection.resolve())]
+    elif args.selection:
         command += ["--selection", str(args.selection.resolve())]
     else:
         for manifest in args.manifest or []:
@@ -288,6 +292,11 @@ def operate(args, workspace, out):
     title = args.title if args.title is not None else supplied.get("title")
     if title is not None:
         require(isinstance(title, str) and bool(title.strip()), "Enter a nonempty report title.")
+    terrain_request = None
+    if getattr(args, "terrain_selection", None):
+        from source_tools import terrain_report_receiving
+        require(args.selected_study, "The Terrain chapter retains its original editable selected Study; include --selected-study.")
+        terrain_request = terrain_report_receiving.selection(args.terrain_selection)
     requested = {
         "schema": "upstate.scientific-report-receiving-selection/v1",
         "project_id": original.project["id"], "workspace": str(workspace),
@@ -295,6 +304,8 @@ def operate(args, workspace, out):
         "sources": supplied.get("sources"), "title": title, "contact": contact,
         "selected_study": args.selected_study,
     }
+    if terrain_request is not None:
+        requested["terrain"] = terrain_request
     request_path = out / "receiving-selection.json"
     if request_path.exists():
         require(read_json(request_path) == requested,
@@ -390,7 +401,16 @@ def operate(args, workspace, out):
             routes.append(("POST", "/api/study-transfer/preview"))
         require(all(operator.extensions.has_route(*route) for route in routes),
                 "Install the complete saved scientific report family before receiving.")
-        choices = supplied.get("sources") or []
+        terrain_chapter = None
+        if terrain_request is not None:
+            require(operator.extensions.has_route("POST", "/api/terrain-conditioning/report-source-preview")
+                    and operator.extensions.has_route("GET", "/api/terrain-conditioning"),
+                    "Install the original Terrain scientific-source family.")
+            terrain_chapter = terrain_report_receiving.prepare(
+                original, out, terrain_request, read, action, download)
+        choices = [terrain_chapter["source"]] if terrain_chapter else supplied.get("sources") or []
+        if terrain_chapter and title is None:
+            title = terrain_request["selection"]["title"]
         if manifests:
             choices = []
             registered = {row["path"]: row for row in operator.registered.values()}
@@ -482,6 +502,9 @@ def operate(args, workspace, out):
         for role, expected in copied.items():
             require(all(restored_roles[role][field] == expected[field] for field in ("bytes", "sha256")),
                     "The receiving file ticket changed " + role)
+        terrain_restored = None
+        if terrain_chapter:
+            terrain_restored = terrain_report_receiving.verify(restored, terrain_chapter)
         selected_receiving = None
         if args.selected_study:
             selection = {"title": edition["title"] + " — editable scientific study",
@@ -525,6 +548,10 @@ def operate(args, workspace, out):
                 "original_nodes": retained["nodes"],
                 "scientific_report_editions": retained["scientific_report_editions"],
             }
+        if terrain_chapter:
+            require(selected_receiving is not None, "Retain the Terrain selected Study receiving result.")
+            terrain_selected = terrain_report_receiving.verify(
+                selected_workspace, terrain_chapter, selected_receiving["original_nodes"])
         outcome = {
             "schema": "upstate.scientific-report-receiving-workflow/v1",
             "state": "complete", "operation_id": operation, "project_id": original.project["id"],
@@ -542,6 +569,9 @@ def operate(args, workspace, out):
             "browser_handoff": {"view": "sources", "workspace_key": restored_key,
                                 "edition_id": edition_id, "sources": choices},
         }
+        if terrain_chapter:
+            outcome["terrain"] = {**terrain_chapter, "full_received": terrain_restored,
+                                  "selected_received": terrain_selected}
         atomic_json(out / "scientific-report-receiving.json", outcome)
         checkpoint("closing", receipt=str(out / "scientific-report-receiving.json"),
                    edition_id=edition_id, restored_workspace_key=restored_key)
