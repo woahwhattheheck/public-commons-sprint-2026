@@ -1,8 +1,9 @@
 """Open the retained demo in a fresh process using its restored application.
 
 The parent verifies application members before launching the restored helper.
-The receiving process reads original scientific records and files; it never
-continues a model, parameter course or delivery build.
+The receiving process reads original scientific records and files and reopens
+selected original customer packages; it never continues a model, parameter
+course or scientific delivery build.
 """
 from __future__ import annotations
 
@@ -125,8 +126,8 @@ class ColdReopenError(RuntimeError):
 def cold_reopen(restored, manifest, receipt, output, extra_checks=None):
     """Verify restored source and inspect selected results in a new interpreter.
 
-    extra_checks is an explicit list of parameter_course or field_campaign
-    selections. Each may carry an expected dictionary of stable original keys.
+    extra_checks is an explicit list of parameter_course, field_campaign or
+    customer_review selections. Each may carry an expected dictionary of stable original keys.
     A new attempt is retained for every invocation.
     """
     root = Path(restored["directory"]).resolve(strict=True)
@@ -422,6 +423,50 @@ def _sources(ws, files, key):
         files.file(ws.root, {**descriptor, "path": descriptor["object"]})
 
 
+def _customer_review(ws, files, check, receipt):
+    """Use the restored application for the exact saved customer case and packages."""
+    from model.simulated_customer_review import inspect_review, receive_review_case, STEPS
+    key = check["operation_id"]
+    relative = "implementation/simulated-customer-reviews/" + key
+    files.json(relative + "/operation.json")
+    for step in STEPS:
+        files.json(relative + "/" + step + ".request.json")
+        files.json(relative + "/" + step + ".result.json")
+    result = inspect_review(ws, key)
+    stable = ("operation_id", "project_id", "field_operation_id", "original_review_id",
+              "response_id", "planning_handback_id", "revised_review_id", "handback_id")
+    expected = check.get("expected", {})
+    if (set(expected) != set(stable) or any(result.get(name) != expected[name] for name in stable)
+            or result["phase"] != "ready" or result["project_id"] != ws.project["id"]
+            or result["field_operation_id"] != receipt["fieldwork_operation_id"]
+            or result["field_binding"]["recipe_sha256"] != receipt["recipe_sha256"]):
+        raise ValueError("Receiving changed the original field customer review selection")
+    if any(receipt["customer_review"].get(name) != result[name] for name in stable
+           if name not in ("project_id", "field_operation_id")):
+        raise ValueError("The original demo receipt names different customer records")
+    for kind, keys in (
+            ("reviews", ("original_review_id", "revised_review_id")),
+            ("review-responses", ("response_id",)),
+            ("review-handbacks", ("planning_handback_id", "handback_id"))):
+        for name in keys:
+            files.json(kind + "/" + result[name] + ".json")
+    for collection_id in sorted({row["source_collection_id"] for choices in result["sources"].values()
+                                 for row in choices}):
+        _sources(ws, files, collection_id)
+    source = Path(check["source"]).resolve(strict=True)
+    original_packages = receipt["customer_review_packages"]
+    if source != Path(original_packages["directory"]).resolve(strict=True):
+        raise ValueError("Receive the original customer packages selected by this demo receipt")
+    for name in ("original_review", "engineering_handback"):
+        _check_file(_member(source, original_packages[name]["archive"]["path"]),
+                    original_packages[name]["archive"])
+    received = receive_review_case(ws, source, check["output"])
+    if any(received.get(name) != result[name] for name in stable):
+        raise ValueError("The reopened customer packages changed their original scientific identities")
+    return {"kind": "customer_review", "operation_id": key,
+            "inspection": result, "receiving": received}
+
+
 def _inspect(request):
     application = Path(request["application"]).resolve(strict=True)
     if Path(__file__).resolve() != application / HELPER:
@@ -498,6 +543,8 @@ def _inspect(request):
             raise ValueError("Each receiving check must identify an original product")
         if check.get("kind") == "parameter_course":
             extra.append(_parameter_course(ws, files, check, receipt))
+        elif check.get("kind") == "customer_review":
+            extra.append(_customer_review(ws, files, check, receipt))
         elif check.get("kind") == "field_campaign":
             from model.simulated_fieldwork import inspect_campaign
             result = inspect_campaign(ws, check["operation_id"])
