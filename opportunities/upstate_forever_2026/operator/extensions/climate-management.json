@@ -1,0 +1,126 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "climate-management",
+  "title": "Management across forcing",
+  "version": "1.0.0",
+  "order": 52,
+  "assets": [
+    "climate_management.mjs",
+    "climate_management.css"
+  ],
+  "backend": {
+    "module": "climate_management",
+    "actions": [
+      "climate-management.build"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/climate-management/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/climate-management/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/climate-management/report",
+        "operation": "report",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "items": [
+      {
+        "kind": "climate-management-reports",
+        "operation": "report",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "state": {
+      "key": "climate_management",
+      "handler": "updates",
+      "args": [
+        "workspace"
+      ]
+    },
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/climate_management.mjs",
+    "factory": "createClimateManagement",
+    "requires": [
+      "api",
+      "getState",
+      "getWorkspace",
+      "showTask",
+      "openItem",
+      "openDesk"
+    ],
+    "view": {
+      "id": "climate-management",
+      "title": "Management across forcing",
+      "after": "climate-forcing"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    },
+    "styles": [
+      "/web/climate_management.css"
+    ]
+  }
+}
