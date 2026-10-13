@@ -117,6 +117,16 @@
 <button id="household-import" type="button" disabled>Restore as a new household</button>
 <p class="field-hint">Reopened inputs start a fresh plan and approval. Prior decisions remain readable in history.</p>
 </section>
+<section id="assistant-panel" class="panel" aria-labelledby="assistant-title">
+<div class="tag">Assistant access</div><h2 id="assistant-title">Connect an assistant</h2>
+<p class="dim">Let an MCP client use this household’s saved inputs, daily and weekly planning, tariff comparisons and review exports. Review and approve each proposed schedule with the household controls.</p>
+<p id="assistant-household" class="field-hint">Opening household…</p>
+<label for="assistant-name">Connection name<input id="assistant-name" maxlength="100" placeholder="e.g. Household planning assistant" autocomplete="off" disabled></label>
+<div class="controls assistant-toolbar"><button id="assistant-create" type="button" disabled>Create connection</button><button id="assistant-refresh" class="secondary" type="button" disabled>Refresh connections</button></div>
+<p id="assistant-status" class="dim" role="status" aria-live="polite">Opening saved connections…</p><p id="assistant-error" class="warn" role="alert"></p>
+<div id="assistant-list"></div>
+<p class="field-hint">The downloaded configuration contains a private access token. It works while this local GridKind server is running and the linked household is selected. Tokens stay in this browser and the files you download; household backups carry planning history without credentials.</p>
+</section>
 </aside></div>
 <footer class="dim"><small>GridKind runs the original constraint-aware optimizer on your hypothetical prices and loads. Execution produces a labeled simulated receipt. Saved households belong to this browser on this local server; download a backup before clearing browser data or moving machines.</small></footer>
 </main><script type="module" src="/app.js"></script></body></html>
