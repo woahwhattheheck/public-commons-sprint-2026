@@ -15,8 +15,8 @@
   "members": [
     {
       "path": "README.md",
-      "bytes": 9442,
-      "sha256": "0d24fc223e5238549348dd4af64dfe7318c9ff3866e20658e397333b00f5fe2b"
+      "bytes": 9440,
+      "sha256": "80f368ff6aca01aa29be20b9ff8b7eec6c117a5cc9a2b011037536333d06fb7b"
     },
     {
       "path": "analysis_core.mjs",
@@ -34,14 +34,9 @@
       "sha256": "4cb8299aaff8f54ba320e3048b034ccb5f345b75bd4197da6e1c413dde15a312"
     },
     {
-      "path": "explorer.html",
-      "bytes": 1153569,
-      "sha256": "21f925946d0d10cea1e4dd3edbc9e46164fbba81f098f7346d51a071aad42ed6"
-    },
-    {
       "path": "explorer.mjs",
-      "bytes": 13232,
-      "sha256": "b94616491fad90d560501d8889c178adc2e566b50bb16ad61ceafce6a5b4ebe4"
+      "bytes": 13230,
+      "sha256": "7aff2700f83bf41497314af5addf8b30ad5f2ec1ba85d191239f5285391c87a6"
     },
     {
       "path": "explorer_template.mjs",
@@ -109,14 +104,19 @@
       "sha256": "f9b8ec464b3c0e0a3bc8f1ac7571b83c474d07523fa90dc9f17dda16531d81a3"
     },
     {
+      "path": "report.html",
+      "bytes": 1153559,
+      "sha256": "a2ade2e31306e9f253404ad69b284d50a16ee47e48d77ce37228d671734dfa81"
+    },
+    {
       "path": "report.json",
-      "bytes": 52155,
-      "sha256": "2a37c63c1fab43c7324d066866c94f41c83a545c40d113180358cb5208bb7f54"
+      "bytes": 52153,
+      "sha256": "a3f182e568354141027504498346f032de6e870678905705934457a9d8cfc3e1"
     },
     {
       "path": "report_core.mjs",
-      "bytes": 15862,
-      "sha256": "440760a23f1c286f810a276609034a85b03e773d389491a3ed13602f870c099f"
+      "bytes": 15860,
+      "sha256": "17cb51f6936373943f8e028475a865f563f2958bc63b61dab496b59c53864d05"
     },
     {
       "path": "same-activity-context.csv",
@@ -145,8 +145,8 @@
     },
     {
       "path": "sources.json",
-      "bytes": 6178,
-      "sha256": "9ccca1c4fdcc2d2e6435c0b3d3c99d910ed1c8be11c939219d2bfb8427730e32"
+      "bytes": 6176,
+      "sha256": "e50734f474faadb82458246f27c2d276601b6837bb2235ba21ff8154a0d30488"
     },
     {
       "path": "wqp/normalize_core.mjs",
