@@ -267,12 +267,20 @@ def receive(args):
                 verify_file(workspace.root, item)
             return {**previous, "application": str(application), "workspace": str(workspace.root),
                     "directory": str(output), "index": str(output / "index.html")}
+        attempts = copy.deepcopy(previous.get("attempts", []))
+        if attempts and attempts[-1].get("state") in (None, "receiving", "running"):
+            attempts[-1].update(state="interrupted", ended_at=now(),
+                                error={"type": "InterruptedReceivingAttempt",
+                                       "message": "A continuation acquired the original operation lock"})
         state = {
+            **previous,
             "schema": SCHEMA, "id": key, "identity": identity,
             "state": "receiving", "created_at": previous.get("created_at", now()), "updated_at": now(),
             "application": str(application), "workspace": str(workspace.root),
-            "source_imports": [], "attempts": previous.get("attempts", []) + [{"started_at": now()}],
+            "source_imports": previous.get("source_imports", []),
+            "attempts": attempts + [{"started_at": now(), "state": "receiving"}],
         }
+        state.pop("error", None)
         atomic_json(state_path, state)
         try:
             collections = []
