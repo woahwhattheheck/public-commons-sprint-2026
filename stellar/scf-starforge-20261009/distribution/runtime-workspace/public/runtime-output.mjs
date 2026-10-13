@@ -24,6 +24,7 @@ export function createRuntimeOutputView({ root, api, getWorkspaceId, error, onSe
   const reader = createApplicationOutputReader({
     root: readerRoot, api, getWorkspaceId, error,
     pageRoute: '/api/runtime-output/page', downloadRoute: '/api/runtime-output/download',
+    searchRoute: '/api/runtime-output/search', searchDownloadRoute: '/api/runtime-output/search-download',
     sourceFields: ['operationId', 'runtimeId', 'logFile'], storagePrefix: 'starforge-runtime-output-',
     describe: value => value.operationId ? 'operation ' + value.operationId : 'runtime ' + value.runtimeId + ' · ' + value.logFile,
   });

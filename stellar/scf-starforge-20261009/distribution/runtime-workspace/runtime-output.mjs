@@ -2,7 +2,7 @@
 import { readdir, lstat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { need, plain, recordId, operationId, privateDirectory, readJSON, currentRuntimeEntry } from './storage.mjs';
-import { readRetainedOutputPage, openRetainedOutputDownload } from './application-output.mjs';
+import { readRetainedOutputPage, openRetainedOutputDownload, searchRetainedOutput, openRetainedOutputSearchDownload, OUTPUT_SEARCH_FIELDS } from './application-output.mjs';
 
 const INSTALL_LOG = /^install-(\d+)(?:-[a-f0-9-]{36})?\.log$/;
 const fields = ['operationId', 'runtimeId', 'logFile', 'selection', 'offset', 'limit'];
@@ -111,4 +111,16 @@ export async function readRuntimeOutputPage(root, workspaceId, input = {}) {
 }
 export async function openRuntimeOutputDownload(root, workspaceId, input = {}) {
   return openRetainedOutputDownload(await source(root, workspaceId, input), input);
+}
+
+function searchInput(input, download) {
+  inputSelection(input, ['operationId', 'runtimeId', 'logFile',
+    ...(download ? ['selection', 'query', 'contextBytes'] : OUTPUT_SEARCH_FIELDS)]);
+  return Object.fromEntries(['operationId', 'runtimeId', 'logFile'].filter(key => input[key] !== undefined).map(key => [key, input[key]]));
+}
+export async function searchRuntimeOutput(root, workspaceId, input = {}) {
+  return searchRetainedOutput(await source(root, workspaceId, searchInput(input, false)), input);
+}
+export async function openRuntimeOutputSearchDownload(root, workspaceId, input = {}) {
+  return openRetainedOutputSearchDownload(await source(root, workspaceId, searchInput(input, true)), input);
 }

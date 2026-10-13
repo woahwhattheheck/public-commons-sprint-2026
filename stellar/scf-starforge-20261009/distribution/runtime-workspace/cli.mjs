@@ -10,6 +10,7 @@ import { runtimeProcedureCommands, runtimeProcedureHelp, runRuntimeProcedureComm
 import { applicationInputCommands, applicationInputHelp, runApplicationInputCommand } from './application-inputs-cli.mjs';
 import { applicationInputSetCommands, applicationInputSetHelp, runApplicationInputSetCommand } from './application-input-sets-cli.mjs';
 import { applicationInputEditionCommands, applicationInputEditionHelp, runApplicationInputEditionCommand } from './application-input-set-editions-cli.mjs';
+import { outputSearchCommands, outputSearchHelp, runOutputSearchCommand } from './output-search-cli.mjs';
 import { writeApplicationOutputDownload } from './application-output.mjs';
 import { readJSON } from './storage.mjs';
 import { fail, json, saveJSON, runtimeWorkspaceError } from './storage.mjs';
@@ -98,6 +99,7 @@ const HELP = `Starforge customer runtime workspace
   runtime-workspace application-group-member --workspace DIRECTORY --request PRIVATE_JSON
   runtime-workspace application-group-stop --workspace DIRECTORY --group-id ID --run-id UUID
 
+${outputSearchHelp}
 ${workspaceBackupHelp}
 ${runtimeProcedureHelp}
 ${applicationInputHelp}
@@ -113,6 +115,7 @@ Install workers retain progress and continue across browser/server restarts.
 Linux, Node22.16+, Python3.11+, npm and flock are the original installer requirements.
 `;
 const allowed = {
+  ...outputSearchCommands,
   'application-setup-inspect': ['--document'],
   'application-setup-export': ['--workspace', '--application-id', '--output', '--name'],
   'application-setup-prepare': ['--workspace', '--operation', '--document', '--mode', '--kind', '--bindings', '--request-id'],
@@ -236,7 +239,8 @@ export async function main(argv = process.argv.slice(2)) {
   } else if (command === 'application-setup-save') {
     if (!options['--operation']) fail('APPLICATION_SETUP_OPERATION_REQUIRED');
     result = await saveApplicationSetup(model, { operation: options['--operation'] });
-  } else if (Object.hasOwn(dcatReceivingCommands, command)) result = await runDcatReceivingCommand(model, command, options);
+  } else if (Object.hasOwn(outputSearchCommands, command)) result = await runOutputSearchCommand(model, command, options);
+  else if (Object.hasOwn(dcatReceivingCommands, command)) result = await runDcatReceivingCommand(model, command, options);
   else if (Object.hasOwn(workspaceBackupCommands, command)) result = await runWorkspaceBackupCommand(model, command, options);
   else if (Object.hasOwn(runtimeProcedureCommands, command)) result = await runRuntimeProcedureCommand(model, command, options);
   else if (Object.hasOwn(applicationInputEditionCommands, command)) result = await runApplicationInputEditionCommand(model, command, options);
