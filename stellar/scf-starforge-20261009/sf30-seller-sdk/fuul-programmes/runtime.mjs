@@ -1291,11 +1291,15 @@ async function prepareBuildSource(root,checked,selectedSource) {
 }
 async function matchesProcessIdentity(owner) {
   if(!object(owner)||!Number.isInteger(owner.pid)||owner.pid<=0)return false;
-  try{process.kill(owner.pid,0);}catch(error){if(error.code==='ESRCH')return false;if(error.code!=='EPERM')throw error;}
-  const actual=await processIdentity(owner.pid);
-  if(owner.boot&&actual.boot!==owner.boot)return false;
-  if(owner.start&&actual.start!==owner.start)return false;
-  return true;
+  if(process.platform==='linux'){
+    const actual=Number.isInteger(owner.procPid)&&owner.procPid>0?await procIdentity(owner.procPid):await processIdentity(owner.pid);
+    if(!actual||actual.absent)return false;
+    if(owner.boot&&actual.boot!==owner.boot||owner.namespace&&actual.namespace!==owner.namespace||
+       owner.start&&actual.start!==owner.start)return false;
+    if(owner.procPid&&(!owner.start||actual.procPid!==owner.procPid))return false;
+    return true;
+  }
+  try{process.kill(owner.pid,0);return true;}catch(error){if(error.code==='ESRCH')return false;if(error.code==='EPERM')return true;throw error;}
 }
 async function matchingBuildProcesses(command) {
   const result=[];
@@ -1308,7 +1312,7 @@ async function matchingBuildProcesses(command) {
       if(typeof process.getuid==='function'&&info.uid!==process.getuid())continue;
       const environment=await fs.readFile('/proc/'+pid+'/environ');
       const selected=Buffer.from('FUUL_BUILD_COMMAND_TOKEN='+command.token+'\0');
-      if(environment.includes(selected))result.push(await processIdentity(pid));
+      if(environment.includes(selected)){const actual=await procIdentity(pid);if(actual)result.push(actual);}
     }catch(error){if(!['ENOENT','EACCES','EPERM','ESRCH'].includes(error.code))throw error;}
   }
   return result;
@@ -1618,15 +1622,42 @@ export async function buildFuulRuntime({installationDirectory,directory:selected
   }finally{await release();}
 }
 
-async function processIdentity(pid = process.pid) {
-  let boot = null, start = null;
-  try { boot = (await fs.readFile('/proc/sys/kernel/random/boot_id', 'utf8')).trim(); } catch {}
-  try {
-    const stat = await fs.readFile('/proc/' + pid + '/stat', 'utf8');
-    start = stat.slice(stat.lastIndexOf(')') + 2).split(' ')[19];
-  } catch {}
-  return {pid, boot, start};
+async function procIdentity(procPid) {
+  const base=procPid==='self'?'/proc/self':'/proc/'+procPid;
+  let stat;
+  try { stat=await fs.readFile(base+'/stat','utf8'); }
+  catch(error){if(['ENOENT','ESRCH'].includes(error.code))return null;throw error;}
+  const actualPid=Number(stat.slice(0,stat.indexOf(' ')));
+  const fields=stat.slice(stat.lastIndexOf(')')+2).trim().split(/\s+/);
+  let namespace=null,nspids=[],boot=null;
+  try{namespace=await fs.readlink(base+'/ns/pid');}catch(error){if(!['ENOENT','EACCES','EPERM'].includes(error.code))throw error;}
+  try{
+    const status=await fs.readFile(base+'/status','utf8'),line=status.split('\n').find(row=>row.startsWith('NSpid:'));
+    if(line)nspids=line.slice(6).trim().split(/\s+/).map(Number);
+  }catch(error){if(!['ENOENT','EACCES','EPERM'].includes(error.code))throw error;}
+  try{boot=(await fs.readFile('/proc/sys/kernel/random/boot_id','utf8')).trim();}catch{}
+  if(!Number.isInteger(actualPid)||actualPid<=0||!/^\d+$/.test(fields[19]??''))fail('RUNTIME_PROCESS_IDENTITY_UNAVAILABLE');
+  return {pid:nspids.at(-1)??actualPid,procPid:actualPid,boot,start:fields[19],namespace,nspids};
 }
+async function processIdentity(pid=process.pid) {
+  if(process.platform!=='linux')return {pid,procPid:null,boot:null,start:null,namespace:null,nspids:[]};
+  const self=await procIdentity('self');
+  if(!self)fail('RUNTIME_PROCESS_IDENTITY_UNAVAILABLE');
+  if(pid===process.pid)return {...self,pid:process.pid};
+  let direct=await procIdentity(pid);
+  if(direct&&direct.pid===pid&&direct.namespace===self.namespace)return direct;
+  // /proc can be mounted from an ancestor PID namespace while Node reports a
+  // container-local PID. Resolve children by both namespace and their NSpid.
+  for(const item of await fs.readdir('/proc',{withFileTypes:true})){
+    if(!item.isDirectory()||!/^\d+$/.test(item.name)||Number(item.name)===self.procPid)continue;
+    try{
+      const actual=await procIdentity(Number(item.name));
+      if(actual&&actual.pid===pid&&actual.namespace===self.namespace)return actual;
+    }catch(error){if(!['ENOENT','ESRCH','EACCES','EPERM'].includes(error.code))throw error;}
+  }
+  return {pid,procPid:null,boot:self.boot,start:null,namespace:self.namespace,nspids:[],absent:true};
+}
+
 async function acquire(destination) {
   const lease = destination + '.runtime-lock';
   const token = randomUUID();
@@ -1654,12 +1685,9 @@ async function acquire(destination) {
     catch { fail('RUNTIME_BUSY', {directory: destination}); }
     if (!Number.isInteger(previous.pid) || previous.pid <= 0 || typeof previous.token !== 'string')
       fail('RUNTIME_BUSY', {directory: destination});
-    let alive = true;
-    try { process.kill(previous.pid, 0); }
-    catch (error) { if (error.code === 'ESRCH') alive = false; else throw error; }
-    const current = await processIdentity(previous.pid);
-    if (alive && (!previous.boot || previous.boot === current.boot) && (!previous.start || previous.start === current.start))
-      fail('RUNTIME_BUSY', {directory: destination});
+    if(await matchesProcessIdentity(previous))
+      fail('RUNTIME_BUSY',{directory:destination,owner:{pid:previous.pid,procPid:previous.procPid??null,
+        boot:previous.boot??null,start:previous.start??null,namespace:previous.namespace??null}});
     const stale = lease + '.stale-' + previous.token + '-' + randomUUID();
     try { await fs.rename(lease, stale); }
     catch (error) { if (error.code === 'ENOENT') continue; throw error; }

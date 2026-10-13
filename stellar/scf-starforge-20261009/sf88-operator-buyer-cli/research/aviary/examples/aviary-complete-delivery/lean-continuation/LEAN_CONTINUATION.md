@@ -1,103 +1,115 @@
-# Continue the original Aviary application
+# Continue the saved Aviary application with the worker's installed runtime
 
-This complete source continues the saved Aviary application from its existing native package and original browser steps. It does not run the 19-check provider fixture again.
+This complete entry continues the original saved application from C998. The worker supplies its actual Python, Node, Playwright and browser paths in the same invocation. The entry preserves the original logical command requests, browser identity, saved review history and queued outputs, then records the actual runtime and executed source separately.
 
-Operation: **AVIARY-COMPLETE-DELIVERY-6BA15-20261012**.
-Browser operation: **AVIARY-BROWSER-RECEIVING-6BA15-20261012**.
-Original provider operation: **aviary-http-receiving-6ba15-20261012**.
-Provider workspace: **e2c87db6-5832-4c62-8e22-90a407770ec2**.
-Public workspace: **c4c35210-9d2c-4837-8fba-10298d2e9b1b**.
+Delivery operation: **AVIARY-COMPLETE-DELIVERY-6BA15-20261012**. Browser operation: **AVIARY-BROWSER-RECEIVING-6BA15-20261012**. Provider operation: **aviary-http-receiving-6ba15-20261012**. The provider workspace remains **e2c87db6-5832-4c62-8e22-90a407770ec2** and the public workspace remains **c4c35210-9d2c-4837-8fba-10298d2e9b1b**.
 
-## Source and saved progress
+## Run on the accepting worker
 
-The complete input retains the seven reviewed files from public-commons-sprint-2026 PR2547, merged as 5bbbdcb660fe353ab89b321362ace3d823e19c7a. The unchanged input is 1,258,636 bytes, SHA-256 0ae1bdb8ce54c94ea3d6bd2a203730acdcbb56d18fa6b473c5a4b33b5a771e5e. Its selected producer is 98,770 bytes, SHA-256 ad828d5fd25c6db0488935580f8c41f52ee7b26cb16cb172ef870f1422152439. The selected browser receiver is 77,494 bytes, SHA-256 6f6fa4e54bef86b1df205219f6ece517d578ea4b5ddb0a69d0705941226c9b6a.
+Use the already accepted original queued job. Select installed executables and the actual Playwright entry module; the entry does not download or install a browser, copy runtime directories, or change operating-system controls.
 
-The original provider checks passed. The public workspace contains two resources, three media rows, one transcript, two indexes and two supplemental rows. Browser steps through 09-native-package are saved. The exact original queued ZIP and sidecar remain authoritative. The remaining journey downloads that package, exports the complete workspace, cold receives it, checks the original provider identities, and captures four actual views for visual inspection.
+Run this complete command with the actual Python that the worker selected:
 
-The latest saved checkpoint is **Aviary_Receiving_Checkpoint_934398ae3d51ab0e.zip**, 9,965,306 bytes, SHA-256 **c9980b4c9a7297512f221db8e23419eae983e53ba934e8e87bd82074271f1d1f**. Its original finalized version is 0:
+    /actual/python3 -B run_lean_aviary.py /absolute/authorized-lean-input.json \
+      --python /actual/python3 \
+      --node /actual/node \
+      --playwright-module /actual/node_modules/playwright/index.mjs \
+      --browser-executable /actual/chrome-headless-shell
 
-- file_000000000f4481f5b80646f3df3febeb
-- libfile_efcd41110f008191a3190f5589800c36
+The four flags are the runtime adoption. No subsequent source-owner approval or compatibility patch is required. Their equivalent input object is runtimeSelection with keys python, node, playwrightModule and browserExecutable. Explicit flags override those values without modifying the original embedded inputText or any saved request. If Python is omitted, the entry selects the interpreter already running it. Other omitted values use the original paths. Every selected value must be an absolute path to a regular installed file; executable entries must be executable. Python must be the same interpreter actually running this entry. The entry requires Node 20 or newer and an installed playwright or playwright-core package descriptor. Actual version output is retained.
 
-The full source input retains the exact successful tool response. Session 70551 subsequently reverified all 287 official browser members but lost its executor lifetime before another browser result. Its complete retained source, logs, resource observations and Unknown-process response are included. No later checkpoint or browser PASS is claimed.
+Keep this process alive through its save replies and four-image review. The supplied official_library_native_controller.js implements the full event/reply protocol on the original connected native-tool surface. A worker with its own established long-lived execution wrapper may use that wrapper with the same stdin/stdout protocol. The product programme, checkpoint, requests and result checks remain identical.
 
-## Receiving worker and archive access
+All Python source is parsed within this one complete receiving invocation. The actual imported Playwright module and selected browser execute the entire remaining original UI journey. Source publication or runtime version observations do not count as browser PASS.
 
-Use one accepting worker with an independent process lifetime. Read its current job ownership before dispatch. The worker must already be authorized to read the three original Library files through its existing account; do not change sharing or copy private checkpoint bytes to an unapproved service.
+## Acquire only the three original saved archives
 
-Materialize or provide an authorized GET for these exact archives:
+Use the accepting worker's existing authorized Library account. Read the original file by its file_id and library_file_id at version 0. Fill only each matching runtimeArchives[].transfer with the normal prepare_materialize GET descriptor, or materialize the exact file at its listed local path first. Never publish signed URLs or headers into the public repository or Slack.
 
-| Library file | Bytes | SHA-256 | Required local path |
+| Original saved file | Bytes | SHA-256 | IDs |
 |---|---:|---|---|
-| libfile_502e5e882df88191a7833f66d53c1a19 | 512241 | 3922aa6e4a01209304cf3a6c3e557125234a62ad41b1c92a7397e72e38cf2460 | /workspace/scratch/6ba15c52ace4/aviary-native-restored/Aviary_Complete_HTTP_Receiving.zip |
-| libfile_781c180ef83081919b1c256652ae3472 | 701339 | 5f5dec1cdd2075e9e88e78cab72c677de634bb117f214483c307da844658e294 | /workspace/scratch/6ba15c52ace4/aviary-native-restored/Aviary_Delivery_Continuation_20261012.zip |
-| libfile_efcd41110f008191a3190f5589800c36 | 9965306 | c9980b4c9a7297512f221db8e23419eae983e53ba934e8e87bd82074271f1d1f | /dev/aviary-original-30165-checkpoint/Aviary_Receiving_Checkpoint_934398ae3d51ab0e.zip |
+| Aviary_Receiving_Checkpoint_934398ae3d51ab0e.zip | 9,965,306 | c9980b4c9a7297512f221db8e23419eae983e53ba934e8e87bd82074271f1d1f | file_000000000f4481f5b80646f3df3febeb / libfile_efcd41110f008191a3190f5589800c36 |
+| Aviary_Complete_HTTP_Receiving.zip | 512,241 | 3922aa6e4a01209304cf3a6c3e557125234a62ad41b1c92a7397e72e38cf2460 | file_00000000d30c81f58a6b52b654ee383d / libfile_502e5e882df88191a7833f66d53c1a19 |
+| Aviary_Delivery_Continuation_20261012.zip | 701,339 | 5f5dec1cdd2075e9e88e78cab72c677de634bb117f214483c307da844658e294 | file_00000000869081f5b386ce1d6f5376da / libfile_781c180ef83081919b1c256652ae3472 |
 
-The complete public input sets every transfer to null. Existing exact local bytes are accepted. If a file is not yet local, fill only its runtimeArchives[].transfer with the original library_prepare_materialize result's matching transfer: method GET, original file/library IDs, size_bytes, version 0, download_url, headers and xattrs. Match all fields to the retained descriptor. The signed URL stays private in the actual invocation; never publish that filled input. The checkpoint transfer at the top level can stay null because runtime restoration places the exact local C998 file before entering the original producer.
+The runtime archive entries in the complete input carry the precise original destinations. C998 is restored to /dev/aviary-complete-final-6ba15 from its verified local archive. The two native archives use /workspace/scratch/6ba15c52ace4/aviary-native-restored/ and restore the original native receiving roots. These data paths remain the original saved layout because they occur in requests and artifact descriptors. This runtime adaptation changes executable selection, not the application or workspace layout.
 
-Use the Library tool's selected actual destination or the required paths above. If the worker cannot use these original filesystem paths, return its actual path/access facts for an explicit runtime/source adoption before launch. A generic statement that Python or a browser is available does not establish this compatibility.
+The downloader checks the existing file or complete GET response against the exact size and SHA-256 before using it. The original restorer validates every DELIVERY_MEMBERS.json or RECEIVING_MEMBERS.json member before publication. It never infers a new workspace or provider operation from an archive filename.
 
-## Runtime binding
+The public input contains null transfer fields. The current finalized C998 successful tool response remains inside the input, allowing a missing local copy of that already completed response to be reconstructed without a second upload. The top-level transfer may remain null when runtimeArchives restored the exact checkpoint first.
 
-The saved browser identity uses these exact logical runtime paths:
+## What the runtime adoption preserves
 
-| Component | Original path |
+The original source input is 1,258,636 bytes, SHA-256 0ae1bdb8ce54c94ea3d6bd2a203730acdcbb56d18fa6b473c5a4b33b5a771e5e, from PR2547 merged as 5bbbdcb660fe353ab89b321362ace3d823e19c7a. Its selected producer is 98,770 bytes / ad828d5fd25c6db0488935580f8c41f52ee7b26cb16cb172ef870f1422152439. The selected original browser source is 77,494 bytes / 6f6fa4e54bef86b1df205219f6ece517d578ea4b5ddb0a69d0705941226c9b6a. All three byte sequences remain intact.
+
+The original browser input SHA is d01dde40f1968591918cda48509bb17c33cc9c5b6a46c9aa3fa45c2e964c8f02. Its logical runtime values remain:
+
+| Component | Original logical path |
 |---|---|
 | Python | /opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3 |
 | Node | /opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node |
 | Playwright | /opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs |
-| Official headless shell | /workspace/scratch/705ebf077387/browser-runtime/chrome-headless-shell-linux64/chrome-headless-shell |
+| Browser | /workspace/scratch/705ebf077387/browser-runtime/chrome-headless-shell-linux64/chrome-headless-shell |
 
-The selected browser is the official Chrome headless shell **155.0.8059.39**. Its 287 resources already matched the official release bytes in session 70551. Startup reuses the saved full-resource receipt, checks that every required file is regular and retains its original length, and observes the actual version. It does not hash additional desktop files, download the browser, copy its resources, or search for the retired upload helper.
+The source file lean_runtime.py carries the complete, bounded adoption:
 
-The original runtime receipt is inside C998 at root/producer-source/history-86320/official-headless-shell-8b4a896701caa8eb32888c7bdc4dc587c74599c2a8160da85b78ff60788d0d84.json. Its exact SHA-256 is the final filename hash. It contains the full per-member identities, including the selected executable's actual SHA-256.
+1. Record the explicit logical-to-actual mapping, actual resolved file identities, Python/Node/browser versions, Playwright package descriptor and current boot.
+2. Preserve both original and selected producer-main and command-bootstrap sources under producer-source/runtime-executions. Compile only the three reviewed main launch substitutions. The original complete producer and input stay byte-identical.
+3. Retain the public-source and browser command JSON exactly. Each new command plan binds the original request hash to the actual executable and argument vector. The original attempt, parent, inherited child identity pipe, recorded START dispatch and owned-child drain remain in use.
+4. Preserve the full selected original browser file. Publish the separate runtime-browser execution source and its explicit source-adoption receipt. The original identity.json, input SHA, base/follow-up source-adoption receipts, review histories and all saved steps stay unchanged.
+5. Keep the logical Python/Playwright/browser values in the original browser identity. Substitute actual paths only at Python child spawn, Playwright import and browser launch. Every new launch records its logical and actual command plus the runtime selection.
+6. Bind every support, lifetime-lock, server, CLI and cold-receive child to that same actual Python. Node is recorded as the actual outer executable. Process ownership still uses the held Popen/ChildProcess handles and verified procfs identity.
+7. Include the full runtime source, selected command plans, source-adoption receipts, executed browser source and per-run runtime evidence in the original checkpoint and final complete archive.
 
-Report different actual runtime paths to the original owner for an explicit adaptation. Do not change the saved logical browser inputs, queued output or command request to make them appear compatible. No OS security controls are changed.
+No historical request or application file is rewritten to fit the worker. The source transformation is explicit and checked against the full supplied runtime-browser-execution.mjs postimage. Repeated adoption validates the original saved adoption and step inventory; it does not overwrite an earlier version or replay a completed command. An unresolved original attempt remains unresolved rather than spawning a competitor.
 
-## Run the complete continuation
+The earlier 287-member official-shell proof remains historical evidence inside C998 at root/producer-source/history-86320/official-headless-shell-8b4a896701caa8eb32888c7bdc4dc587c74599c2a8160da85b78ff60788d0d84.json. Its bytes retain SHA-256 8b4a896701caa8eb32888c7bdc4dc587c74599c2a8160da85b78ff60788d0d84. A different installed browser gets its own actual observation and receiving result; the entry does not relabel the old proof as a verification of the new runtime.
 
-Verify the full source carrier and every files[] content descriptor. The input contains each complete source module as well as the original source input, saved checkpoint receipt and actual prior histories.
+## Accepted work and remaining journey
 
-With the three exact local archives and original runtime paths available, run:
+The original provider receiving completed all 19 checks. Its final actions are CONFIRMED or ADOPTED. This continuation performs no provider mutation and does not run that fixture again.
 
-    /opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3 -B run_lean_aviary.py /absolute/authorized-lean-input.json
+The retained public example has two resources, three media rows, one transcript, two indexes and two supplemental rows from the five original public binary captures. The saved browser steps include original key allocation, review notes, late-typing handling, reasoned exclusion and inclusion restoration, five-table review, and the original queued native package through 09-native-package.
 
-Use the complete supplied lean-aviary-input.json as authorized-lean-input.json, with only authorized transfer objects filled if necessary. Keep stdin/stdout connected to the supplied controller. Do not redirect stdin to EOF: file-save responses and the four-image visual decision return through this same native process.
+Continue that existing package and job. The remaining browser journey performs the exact package download, complete workspace export and download, cold receive and reopen, original provider-operation selection, saved/new destination draft checks, and four screenshots. It preserves the original job/archive identities after interruptions. PASS is published only after the owned application, browser, context and control lock have drained.
 
-For the existing tools interface, use official_library_native_controller.js after setting:
+The full 70551 failure history is retained. That process reverified the original 287 browser members but was lost before a resumed browser result. The new entry makes no upfront browser download, runtime directory copy or extra-file hash pass.
 
-- aviary-lean-v5-envelope: the actual private complete input object.
-- aviary-lean-v5-envelope-text: its exact compressed base64 wire.
-- aviary-lean-v5-command: the fully filled native bootstrap command.
-- aviary-lean-v5-transport: decodedSha256 and wireSha256 plus the recorded lengths.
+## Supported file saves in the same process
 
-The native-bootstrap-template.py substitutes WIRE_BYTES, WIRE_SHA256, DECODED_BYTES and DECODED_SHA256 from the exact compressed input. Use the retained pako 2.1.0 deflateRaw encoder and bounded Python zlib decoder from public blob 5ee8e8e6a3ad5993d972559f331eacf4e4329b0e. That seven-file carrier includes the unchanged source and license. The controller's SHA helper is supplied here. Its ordinary tools.exec_command/tools.write_stdin admission, one complete stdin write, subsequent polls and file-save calls remain in one functions isolate. Do not rely on cross-cell store/load command queues.
+The selected official save bridge retains the full v2 implementation and its checkpoint restoration, with the observed numbered filename correction from CanadaBuys PR795. It accepts the requested basename or a positive numbered collision name such as `START_HERE(3).md`, retains that actual returned name, and preserves every original request, byte, ID, size, version and full-response check. The retired private helper directory is not required.
 
-No native call is made by reading, verifying or materializing this source carrier. The actual run first checks the original producer identities and the saved application children, restores every declared checkpoint member, retains the reviewed source transition, and continues the existing operation.
+The complete 14,682-byte predecessor and selected 15,084-byte bridge are both retained by hash under the original producer history, together with the source-adoption record. The selected bridge is also provided as `official_library_save_bridge.py`. An already successful response is reconciled from its original receipt; this correction never requests another upload.
 
-## Supported file-save protocol
+Selected bridge SHA-256: `8d8fff77773320f1c949e4d07e52d3b9ef012fd2f5d7c48a08d2c2ef536119dc`. Complete selected input: 1,757,304 bytes / SHA-256 `3e426dd17fc94860ec2d5729e231a87c8ab08a087dd0b3a821142f179356d547`. The original embedded 1,258,636-byte producer input, C998, logical requests, queued package, functional application and completed browser steps remain unchanged.
 
-The complete strict bridge is the same reviewed v2 source from public blob 147ebc054e3e33cce9034e5e175c6c65b3415c39. It is not the missing historical private helper.
+For each artifact the producer retains one immutable original save request and emits LIBRARY_SAVE_REQUEST. The controller checks source/staged size and SHA-256, then calls the supported tool:
 
-A native LIBRARY_SAVE_REQUEST identifies the exact private source and shared staged file, both bytes/SHA-256, the immutable request-file descriptor and requestSha256. The controller makes the actual supported call:
+    library_create_library_file({
+      file: request.arguments.file,
+      library_artifact_type: "other"
+    })
 
-    library_create_library_file({file: request.arguments.file, library_artifact_type: "other"})
+Return the complete actual raw tool result on the same process's stdin:
 
-It retains the complete unmodified tool response before returning one line:
+    {"action":"official-library-save-result","requestSha256":"<exact request hash>","result":<complete tool result>}
 
-    {"action":"official-library-save-result","requestSha256":"...","result":<complete original tool response>}
+A success requires isError:false and structuredContent with operation:create_library_file, status:succeeded, the exact filename and size, nonempty file_id and library_file_id, and an integer version. The raw response, normalized receipt and xattr results are retained before advancing. Do not create another save for an unresolved original request. A retained exact successful response may be returned to its existing intent; it must not be replaced with invented IDs or a second upload.
 
-The bridge validates isError:false, structuredContent.operation=create_library_file, status=succeeded, exact basename and file_size_bytes, both original file IDs and integer version. It preserves the full response and applies returned xattrs. An existing request with no response remains unresolved; it does not silently create another file. An existing successful saved receipt reconstructs and validates its original response when needed, without another upload.
+The first browser-complete checkpoint keeps the four original PNGs for private recovery. Pixel files are excluded from final customer deliverable archives. The application/workspace, source histories and text reports remain complete.
 
-A worker with a different artifact connector must report that actual supported return ABI for a source-reviewed transport adaptation before dispatch. Do not fabricate a Library success response.
+## Four actual image inspections
 
-## Visual review and completion
+At READY_FOR_VISUAL_REVIEW, use read-qa-image with the original filename, offset and length. The maximum chunk is 12,288 bytes. Verify every chunk's name, offset, total size and SHA binding, then reconstruct and independently view all four exact PNGs:
 
-After the remaining browser journey passes and every owned browser/context/server is drained, the producer saves a complete BROWSER_COMPLETE_VISUAL_PENDING checkpoint containing all four original PNGs for private recovery. This protects actual image inspection if the controller later disconnects.
+- aviary-public-desktop.png
+- aviary-public-mobile.png
+- aviary-original-migration-desktop.png
+- aviary-original-migration-mobile.png
 
-The controller requests each image in bounded 12,288-byte chunks, verifies the original complete PNG byte count and SHA-256, and presents all four images for real visual inspection. Only then send the exact complete-visual-review decision with the four original names/hashes and actual findings. No image is marked accepted by a timer or automatic default.
+The controller verifies whole PNG size, SHA-256 and signature before displaying it. Send complete-visual-review only after actual inspection, naming all four bound images and recording concrete findings. Keep the same native process alive through that reply and all final saves. A checkpoint with pending images is reusable; do not redraw accepted images solely because the controller changed.
 
-Continue the same process through these six requested final saves:
+The final six files are:
 
 1. Aviary_Complete_Application_and_Receiving_20261012.zip
 2. Aviary_USGS_Complete_Workspace_20261012.zip
@@ -106,10 +118,18 @@ Continue the same process through these six requested final saves:
 5. Aviary_Operator_Receiving_20261012.md
 6. Aviary_Complete_Receiving_20261012.json
 
-The final customer archives contain complete source/workspace/receiving evidence and image descriptors, excluding the local QA pixel files. Actual QA PNGs remain recoverable in the private visual checkpoint.
+Return the complete native result, all six succeeded file receipts, exact image descriptors and actual visual findings, original provider/workspace/job identities, selected runtime mapping and source-adoption evidence. The product's stated tenant scope is unchanged: this is the saved provider-contract fixture and public-source application receiving, not an unentered customer tenant acceptance.
 
-The existing 6CF6 runtime-preservation owner has now reported the exact official archive durably saved in three parts: manifest libfile_3750b6fab1f481918c8b8fc049805879 and reassembler libfile_737d958beb3c8191afa3c11eb1a0cc8f, source message https://tokenjunkielabs.slack.com/archives/C0BTB4SUCP9/p1791843101704519 . This owner receipt is retained in the input. The default saveOfficialRuntimeAfterApplication is therefore false: no new runtime ZIP download or save occurs. Read that original manifest before using its parts. The reported alternative installed shell path is /workspace/scratch/6cf60819dc7c/grant-browser-runtime/headless-shell-155.0.8059.39/chrome-headless-shell-linux64/chrome-headless-shell; using that different path still needs an explicit saved-runtime adoption.
+## Transport and existing runtime custody
 
-If the original owner later requests a new runtime save and its existing saved parts cannot serve the authorized receiving, the optional preservation function runs only after the application saves complete. Exact release: https://storage.googleapis.com/chrome-for-testing-public/155.0.8059.39/linux64/chrome-headless-shell-linux64.zip — 124,203,329 bytes, SHA-256 39dcb8c46550632a3d911850ab3b8af840b4e3f6d8622faa2018eb8756278786. If its private archive is absent, that public source GET occurs at this final stage and does not delay the application/browser start. Record its release URL, exact bytes and returned file IDs.
+The supplied bootstrap checks compressed and decoded input length/SHA before execution. The retained original pako 2.1.0 source and licenses are public blob 5ee8e8e6a3ad5993d972559f331eacf4e4329b0e, 38,242 bytes / e171aa972adc4a9a7e3514f3fe275ec2fddc0f1e7cce8e0c1d59ac38178ca0cc, and exact Canvas F0C8J6GLDSR. The controller uses v6 cache keys; fill runtimeSelection and the authorized archive transfer descriptors before generating the wire.
 
-Return all successful file receipts, the complete native/browser result, actual inspected image findings, and final process exit. Source-only publication, successful runtime inspection, completed provider checks and actual browser completion remain distinct states.
+The existing 6CF6 owner reported the exact official 155.0.8059.39 archive already saved in three parts: manifest libfile_3750b6fab1f481918c8b8fc049805879 and reassembler libfile_737d958beb3c8191afa3c11eb1a0cc8f. Source: https://tokenjunkielabs.slack.com/archives/C0BTB4SUCP9/p1791843101704519 . Its installed path is /workspace/scratch/6cf60819dc7c/grant-browser-runtime/headless-shell-155.0.8059.39/chrome-headless-shell-linux64/chrome-headless-shell. That path can be selected directly with --browser-executable when it is present on the worker.
+
+The optional saveOfficialRuntimeAfterApplication remains false by default. Reuse existing installed resources or the original owner's authorized saved parts. No new equipment, account routing, sharing change or duplicate compute job is part of this continuation.
+
+## Original coordination
+
+Continue the existing queued CLOUD12 request in C0BTB4SUCP9 / 1791829516.730339, initial message 1791844312.076109 and source follow-up 1791844525.368779. Acceptance and the actual job/runtime access receipt are required before any competing local execution. Source/runtime selection can be supplied by the accepting worker itself in the command above.
+
+Deliver the completed original Aviary arm in C0BTTA66TK3 / 1791791664.944019 and preserve the source/runtime/result evidence in its existing memory page. Do not create a new customer message or replay the original provider operation.

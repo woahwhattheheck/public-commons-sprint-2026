@@ -1,4 +1,5 @@
 // MIT. Original native catalog policy, version-bound discovery and complete receiving.
+import {nextCatalogQuery, receiveNativeCatalogView} from './catalog-receiving.mjs';
 export function createCatalogOperator({$, make, api, act, disabled, notice}) {
   let nextBinding = 0, current = null, retained = null, selection = '', history = [], at = -1;
   const policy = $('catalog-policy-fields'), bindings = $('catalog-merchants');
@@ -78,18 +79,6 @@ export function createCatalogOperator({$, make, api, act, disabled, notice}) {
     params.set('limit',$('catalog-limit').value);
     return params;
   }
-  function nextParameters(value) {
-    const params=new URLSearchParams(value.query);
-    if (value.mode==='search') {
-      const cursor=value.page.pagination.cursor;if(!cursor)return null;
-      params.set('cursor',cursor);
-    } else {
-      const {offset,limit,total}=value.page.pagination;
-      const next=offset+limit;if(next>=total)return null;
-      params.set('offset',String(next));
-    }
-    return params.toString();
-  }
   function isReady() {
     return Boolean(current && !current.stopping && current.status.catalog?.enabled &&
       current.status.catalog.state==='READY');
@@ -102,7 +91,7 @@ export function createCatalogOperator({$, make, api, act, disabled, notice}) {
     const ready=isReady(), unchanged=selection===parameters().toString(), live=matchesCurrent();
     for(const element of readControls)disabled(element,!ready);
     disabled($('catalog-previous'),!ready || !live || !unchanged || at<=0);
-    disabled($('catalog-next'),!ready || !live || !unchanged || !retained || !nextParameters(retained));
+    disabled($('catalog-next'),!ready || !live || !unchanged || !retained || !nextCatalogQuery(retained));
     disabled($('catalog-download-page'),!retained);
     disabled($('catalog-download-view'),!ready || !live || !unchanged || !retained);
     const node=$('catalog-observation');
@@ -173,7 +162,7 @@ export function createCatalogOperator({$, make, api, act, disabled, notice}) {
     notice('Read the committed catalog at revision '+value.catalog.version+'.');
   }
   async function move(delta) {
-    const target=at+delta, query=delta>0?nextParameters(retained):history[target];
+    const target=at+delta, query=delta>0?nextCatalogQuery(retained):history[target];
     if(query==null)return;
     const value=await read(query,retained.catalog.version);
     if(delta>0){history=history.slice(0,target);history.push(query);}
@@ -191,29 +180,17 @@ export function createCatalogOperator({$, make, api, act, disabled, notice}) {
   async function exportView() {
     if(!retained || !matchesCurrent())throw new Error('Read the current catalog before exporting its complete view.');
     const version=retained.catalog.version, runtimeId=retained.runtimeId;
-    const start=new URLSearchParams(selection);start.set('limit','100');
-    let query=start.toString(), anchor=null, parts=[], count=0, pages=0;
-    do {
-      const value=await read(query,version);
-      if(value.runtimeId!==runtimeId)throw new Error('The export belongs to another native runtime.');
-      if(!anchor) {
-        anchor=value;
-        const metadata={schema:'stellar-forge.native-catalog-export.v1',runtimeId:value.runtimeId,
-          profile:value.profile,network:value.network,observedAt:value.observedAt,
-          catalog:value.catalog,mode:value.mode,query:value.query};
-        parts=[JSON.stringify(metadata).slice(0,-1)+',"resources":['];
-      }
-      for(const resource of value.page.resources) {
-        if(count++)parts.push(',');
-        parts.push(JSON.stringify(resource));
-      }
-      pages++;$('catalog-export-progress').textContent='Received '+count+' complete resources across '+pages+
-        ' original pages at revision '+version+'.';
-      query=nextParameters(value);
-    } while(query!==null);
-    parts.push('],"resourceCount":'+count+',"pages":'+pages+'}\n');
-    download(parts,filename(anchor,'complete-view'));
-    notice('Downloaded all '+count+' resources in the selected catalog view at revision '+version+'.');
+    const received=await receiveNativeCatalogView({runtimeId,query:selection,expectedVersion:version,
+      readPage:({runtimeId:selected,query,expectedVersion})=>{
+        if(current?.id!==selected)throw new Error('The export belongs to another native runtime.');
+        return read(query,expectedVersion);
+      },
+      onProgress:({resourceCount,pages})=>{
+        $('catalog-export-progress').textContent='Received '+resourceCount+' complete resources across '+pages+
+          ' original pages at revision '+version+'.';
+      }});
+    download(received.parts,filename(received.metadata,'complete-view'));
+    notice('Downloaded all '+received.resourceCount+' resources in the selected catalog view at revision '+version+'.');
   }
   $('catalog-query-form').addEventListener('submit',event=>{event.preventDefault();act(firstPage);});
   $('catalog-query-form').addEventListener('input',refreshControls);

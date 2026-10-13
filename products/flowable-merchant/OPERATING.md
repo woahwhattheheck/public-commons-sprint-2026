@@ -286,3 +286,7 @@ Receive a new installed runtime into a new directory and review its complete
 source through Applications while keeping the customer's original product
 and native workspace. Complete the [customer receiving procedure](RECEIVING.md)
 when moving history to another host.
+
+## Case operations in the same workspace
+
+Use the [case operating guide](CASES.md) for complete CMMN releases, case lifecycle, plan items, human work, variables and milestones. All four case operation kinds use the existing saved preparation, reviewed dispatch and original-request reconciliation. The explicit CMMN service connection and its current native case/source state remain part of each operation.

@@ -14,10 +14,16 @@ const LOOPBACK = new Set(["127.0.0.1", "::1", "localhost"]);
 function equal(left, right) {
   const a = Buffer.from(left), b = Buffer.from(right); return a.length === b.length && timingSafeEqual(a, b);
 }
-async function body(request, maximum) {
-  const chunks = []; let total = 0;
+async function body(request, maximum, retainLargeRequest) {
+  const chunks = []; let total = 0, large = false;
+  const declared = request.headers["content-length"];
+  if (declared && /^\d+$/.test(declared) && Number(declared) > 48 * 1024 * 1024) {
+    need(Number(declared) <= maximum, "The complete request exceeds its configured byte limit.", "HAYSTACK_SIZE", 413);
+    retainLargeRequest(); large = true;
+  }
   for await (const chunk of request) {
     total += chunk.length; need(total <= maximum, "The complete request exceeds its configured byte limit.", "HAYSTACK_SIZE", 413);
+    if (!large && total > 48 * 1024 * 1024) { retainLargeRequest(); large = true; }
     chunks.push(chunk);
   }
   return Buffer.concat(chunks);
@@ -41,18 +47,18 @@ function attachment(response, bytes, metadata, rangeHeader) {
   response.writeHead(status, { ...headers, "Content-Length": selected.length }); response.end(selected);
 }
 export async function startServer({ directory, title = "Building turnover", host = "127.0.0.1", port = 8768, token = "",
-  expectedWorkspaceId = null, maxBodyBytes = 48 * 1024 * 1024, maxActiveRequests = 8 } = {}) {
+  expectedWorkspaceId = null, maxBodyBytes = 288 * 1024 * 1024, maxActiveRequests = 8 } = {}) {
   need(typeof host === "string" && host.length > 0 && !/[\r\n\0/]/.test(host), "Choose the serving host.");
   need(typeof token === "string" && !/[\r\n\0]/.test(token), "Use a single-line access token.");
   need(LOOPBACK.has(host) || token.length >= 24, "Serving another computer requires an access token of at least 24 characters.");
   need(Number.isInteger(port) && port >= 0 && port <= 65535, "Choose a valid serving port.");
-  need(Number.isSafeInteger(maxBodyBytes) && maxBodyBytes >= 1024 && maxBodyBytes <= 192 * 1024 * 1024, "Choose a request byte limit up to 192 MiB.");
+  need(Number.isSafeInteger(maxBodyBytes) && maxBodyBytes >= 1024 && maxBodyBytes <= 288 * 1024 * 1024, "Choose a request byte limit up to 288 MiB.");
   need(Number.isSafeInteger(maxActiveRequests) && maxActiveRequests >= 1 && maxActiveRequests <= 64, "Choose from one to 64 simultaneous requests.");
   const workspace = new HaystackWorkspace(directory);
   if (expectedWorkspaceId) need((await workspace.read()).workspaceId === expectedWorkspaceId, "The selected workspace identity changed.", "HAYSTACK_IDENTITY", 409);
   const initial = await workspace.initialize(title), instanceId = newId(), startedAt = now();
   const assets = await readBrowserAssets(new URL("./browser-assets.json", import.meta.url));
-  let origin, active = 0;
+  let origin, active = 0, largeRequests = 0;
   const identity = () => ({ schema: "commons.haystack.startup.v1", workspaceId: initial.workspaceId,
     workspaceCreatedAt: initial.createdAt, instanceId, startedAt, pid: process.pid, url: origin, directory: workspace.directory });
   const server = createServer(async (request, response) => {
@@ -60,7 +66,13 @@ export async function startServer({ directory, title = "Building turnover", host
     response.setHeader("X-Frame-Options", "DENY"); response.setHeader("x-haystack-workspace", initial.workspaceId);
     response.setHeader("x-haystack-instance", instanceId);
     response.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
-    let admitted = false;
+    let admitted = false, largeRequest = false;
+    const retainLargeRequest = () => {
+      if (largeRequest) return;
+      need(largeRequests === 0, "The workspace is completing another large file request. Continue this original request after it completes.",
+        "HAYSTACK_CAPACITY", 503, { retryAfterSeconds: 1 });
+      largeRequests++; largeRequest = true;
+    };
     try {
       need(request.headers.host === new URL(origin).host, "Use the selected workspace host.", "HAYSTACK_ORIGIN", 403);
       need(!request.headers.origin || request.headers.origin === origin, "Use this workspace's own origin.", "HAYSTACK_ORIGIN", 403);
@@ -79,12 +91,12 @@ export async function startServer({ directory, title = "Building turnover", host
         sendJson(response, 200, { workspaceId: initial.workspaceId, instanceId, actions }); return;
       }
       if (request.method === "POST" && url.pathname === "/api/action") {
-        const payload = decodeJson(await body(request, maxBodyBytes), maxBodyBytes);
+        const payload = decodeJson(await body(request, maxBodyBytes, retainLargeRequest), maxBodyBytes);
         fields(payload, ["action", "args"], ["action"]); need(typeof payload.action === "string", "Supply the declared action name.");
         sendJson(response, 200, await workspace.dispatch(payload.action, payload.args ?? {})); return;
       }
       if (request.method === "POST" && url.pathname === "/mcp") {
-        const payload = decodeJson(await body(request, maxBodyBytes), maxBodyBytes), result = await handleRpc(workspace, payload);
+        const payload = decodeJson(await body(request, maxBodyBytes, retainLargeRequest), maxBodyBytes), result = await handleRpc(workspace, payload);
         if (result === null) { response.writeHead(202, { "Cache-Control": "no-store" }); response.end(); }
         else sendJson(response, 200, result);
         return;
@@ -107,7 +119,7 @@ export async function startServer({ directory, title = "Building turnover", host
         if (error.details?.retryAfterSeconds) response.setHeader("Retry-After", String(error.details.retryAfterSeconds));
         sendJson(response, status, { error: error.message, code: error.code || "HAYSTACK_INTERNAL", ...(error.details ? { details: error.details } : {}) });
       }
-    } finally { if (admitted) active--; }
+    } finally { if (largeRequest) largeRequests--; if (admitted) active--; }
   });
   server.maxConnections = 64;
   await new Promise((resolve, reject) => { server.once("error", reject); server.listen(port, host, resolve); });

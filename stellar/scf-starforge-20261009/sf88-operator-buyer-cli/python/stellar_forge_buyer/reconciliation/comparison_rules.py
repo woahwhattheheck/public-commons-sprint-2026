@@ -1,7 +1,9 @@
 """Reviewed numeric allowances over native values in the original warehouse.
 
 Arithmetic uses exact rational representations of native integers, decimals and
-binary floats. It never rounds observations, converts units or pairs duplicates.
+binary floats. It never rounds observations or pairs duplicates. Explicit source
+normalization, when reviewed, supplies exact canonical native scalars and retains
+the original source values in its own complete conversion records.
 """
 from __future__ import annotations
 
@@ -73,7 +75,9 @@ def manifest(definition, types):
     if not columns:
         return None
     return {"schema": RULE_SCHEMA, "formula": FORMULA, "columns": columns,
-            "arithmetic": "Exact native integer/decimal/binary-float rational values; no rounding or unit conversion.",
+            "arithmetic": ("Exact native canonical integer/decimal/binary-float rational values after separately reviewed lossless normalization; no rounding."
+                           if any("normalization" in column for column in definition["columns"]) else
+                           "Exact native integer/decimal/binary-float rational values; no rounding or unit conversion."),
             "duplicates": "Exact original multiset only; tolerance never assigns a duplicate row pairing.",
             "missing": "One NULL and every nonfinite numeric value are uncomparable; two NULLs require explicit equal policy."}
 
@@ -162,21 +166,31 @@ def materialize(db, identity, review):
             continue
         kind = review["comparison_columns"][index]["type"]
         rule = column.get("comparison")
+        normalization = column.get("normalization")
         name = "c" + str(index)
         metadata = [index, column["name"], kind, column["source"], column["target"]]
         policy = [rule["mode"] if rule else "exact", _json(rule) if rule else None,
-                  rule["unit"] if rule else None]
+                  rule["unit"] if rule else (normalization.get("canonical_unit", "UTC microseconds") if normalization else None)]
         joined = (" FROM " + groups + " g LEFT JOIN " + rows +
                   " s ON s.group_id=g.group_id AND s.side='source' AND g.source_count=1"
                   " LEFT JOIN " + rows + " t ON t.group_id=g.group_id AND t.side='target' AND g.target_count=1")
+        source_text, target_text = "CAST(s." + name + " AS VARCHAR)", "CAST(t." + name + " AS VARCHAR)"
+        if normalization:
+            # The native scalar is canonical; the displayed original text is
+            # always taken from this run's complete retained conversion record.
+            from .normalization import detail_table
+            conversions = _qid(detail_table(identity))
+            joined += (" LEFT JOIN " + conversions + " ns ON ns.side='source' AND ns.\"row\"=s.row_id AND ns.column_index=" + str(index) +
+                       " LEFT JOIN " + conversions + " nt ON nt.side='target' AND nt.\"row\"=t.row_id AND nt.column_index=" + str(index))
+            source_text, target_text = "ns.original_value_text", "nt.original_value_text"
         same = "s." + name + " IS NOT DISTINCT FROM t." + name
         blocked = ("CASE WHEN g.source_quarantined>0 OR g.target_quarantined>0 THEN 'QUARANTINED'"
                    " WHEN g.source_count=0 OR g.target_count=0 THEN 'ONE_SIDED'"
                    " WHEN g.duplicate_key THEN 'DUPLICATE_NOT_PAIRED' ELSE NULL END")
         if not numeric_type(kind):
             db.execute("INSERT INTO " + target + " SELECT g.group_id,?,?,?,?,?,s.row_id,t.row_id,"
-                       "g.source_count,g.target_count,CAST(s." + name + " AS VARCHAR),CAST(t." + name +
-                       " AS VARCHAR),NULL,NULL,?,?,?,coalesce((" + blocked + "),CASE WHEN " + same +
+                       "g.source_count,g.target_count," + source_text + "," + target_text +
+                       ",NULL,NULL,?,?,?,coalesce((" + blocked + "),CASE WHEN " + same +
                        " THEN 'EXACT_EQUAL' ELSE 'EXACT_DIFFERENT' END),NULL,NULL,NULL,NULL" + joined,
                        metadata + policy)
             continue
@@ -185,8 +199,8 @@ def materialize(db, identity, review):
         # its zone maps instead of rebuilding a source/group join per page.
         # No arbitrary source strings or complete input are buffered in Python.
         db.execute("CREATE TEMP TABLE " + stage + " AS SELECT g.group_id,s.row_id AS source_row,t.row_id AS target_row,"
-                   "g.source_count,g.target_count,CAST(s." + name + " AS VARCHAR) AS source_text,"
-                   "CAST(t." + name + " AS VARCHAR) AS target_text,s." + name + " AS source_value,t." + name +
+                   "g.source_count,g.target_count," + source_text + " AS source_text," +
+                   target_text + " AS target_text,s." + name + " AS source_value,t." + name +
                    " AS target_value,(" + same + ") AS sql_equal,(" + blocked + ") AS blocked" +
                    joined + " ORDER BY g.group_id")
         compare = evaluator(rule)

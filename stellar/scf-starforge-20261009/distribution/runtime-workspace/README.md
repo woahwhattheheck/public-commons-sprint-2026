@@ -8,6 +8,12 @@ choose its adapters, review exact versions, prepare a runtime, follow installati
 inspect the result, compare an upgrade and hand the ready runtime to the existing
 merchant deployment controls.
 
+[Saved product plans](PRODUCT_PLANS.md) connect a complete capability basket and
+immutable source review to its original package and installed runtimes. Open a
+plan to continue native preparation or recovery, inspect a selected ready
+installation, export its original operating handoff and print a customer briefing
+with actual source and installed dependency versions.
+
 The command runs on the operator's Linux host with Node 22.16 or later, Python
 3.11 or later, npm and `flock`. The selected source can require a newer Node
 version; its profile reports that requirement before preparation. The browser

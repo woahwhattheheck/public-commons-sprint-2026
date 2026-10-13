@@ -33,15 +33,17 @@ import { pythonOperationFields, initializePythonWorkspace, reviewPythonRuntime, 
   executePythonOperation, recoverPythonOperation, pythonWorkspaceState, receivePythonArchive,
   openPythonBundle } from '../python-runtime/workspace.mjs';
 import { bindPythonApplicationCommand } from '../python-runtime/command-binding.mjs';
+import { workbookApplicationResult, workbookApplicationDownload } from '../python-runtime/workbook-results.mjs';
 import { openApiConnectionSetupAction } from './openapi-connection-setup.mjs';
 import { sourceBuildOperationFields, initializeSourceBuildWorkspace, sourceBuildWorkspaceState,
   sourceBuildCatalog, sourceBuildProduct, reviewSourceBuild, readSourceBuildReview, normalizeSourceBuildOperation, initializeSourceBuildRequest,
-  executeSourceBuildOperation, recoverSourceBuildOperation, openSourceBuildArchive } from './source-build-workspace.mjs';
+  executeSourceBuildOperation, recoverSourceBuildOperation, openSourceBuildArchive, validateSourceBuildOutput } from './source-build-workspace.mjs';
 
 import { sourceProductPlansState, readSourceProductPlan, saveSourceProductPlan, refreshSourceProductPlan,
   exportSourceProductPlan, receiveSourceProductPlan, readProductPlanReceiving,
   continueProductPlanReceiving } from './source-product-plans.mjs';
 import { exportProductPlanBriefing } from './product-plan-briefing.mjs';
+import { selectedProductPlanBuild, productPlanRuntimes, productPlanHandoff } from './product-plan-runtime.mjs';
 
 export const WORKSPACE_SCHEMA = 'stellar-forge.runtime-workspace.v1';
 const WORKER = fileURLToPath(new URL('./worker.mjs', import.meta.url));
@@ -139,6 +141,7 @@ async function jobView(root, id) {
     ...(Object.hasOwn(pythonOperationFields, request.operation) ? { python: request.python,
       candidateId: request.candidateId ?? null, pythonInstallationId: request.installationId ?? null } : {}),
     targetId: request.targetId ?? null, imageId: request.imageId ?? null, transferId: request.transferId ?? null,
+    archiveId: request.archiveId ?? null, archiveSha256: request.sha256 ?? null, profileId: request.profileId ?? null,
     cacheTransferId: request.cacheTransferId ?? null,
     sourceBuildId: request.sourceBuildId ?? null, sourceBuildOutput: request.sourceBuildOutput ?? null,
     targetDirectory: request.targetDirectory ?? null, createdAt: request.createdAt,
@@ -193,15 +196,49 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
   await initializeTransferWorkspace(root);
   await initializePythonWorkspace(root);
   await initializeSourceBuildWorkspace(root);
+  async function inspectPlanHandoff(plan, runtimeId) {
+    const id = recordId(runtimeId), build = selectedProductPlanBuild(plan);
+    need(build?.archive?.sha256,
+      'PRODUCT_PLAN_PACKAGED_BUILD_REQUIRED', 'Build the saved product package before selecting its installed runtime.');
+    const runtime = await entry(root, id), installationPath = join(runtime.directory, 'runtime-install.json');
+    const installation = await readJSON(installationPath);
+    need(installation.archiveSha256 === build.archive.sha256 &&
+      installation.source?.sourceCommit === plan.plan.intent.sourceCommit,
+    'PRODUCT_PLAN_RUNTIME_SOURCE_MISMATCH', 'Choose the installation of this plan’s exact original archive.');
+    const buildState = await readJSON(join(jobPath(root, plan.review.requestId), 'state.json'));
+    const receipt = buildState.result?.build ?? buildState.sourceBuildReceipt;
+    need(receipt?.sha256 === build.archive.sha256, 'PRODUCT_PLAN_BUILD_ARCHIVE_CHANGED');
+    const manifest = await readJSON(join(runtime.directory, 'package', 'manifest.json'));
+    validateSourceBuildOutput(plan.review, receipt, manifest);
+    const inspection = await inspectRuntimeInstall({ directory: runtime.directory, load: false, source: true });
+    const handoff = await model.handoff(id), current = await readJSON(installationPath);
+    need(digest(json(canonical(installation))) === digest(json(canonical(current))),
+      'PRODUCT_PLAN_RUNTIME_CHANGED', 'Reopen the selected runtime after its current operation.');
+    return productPlanHandoff(plan, { runtime, installation, inspection, handoff });
+  }
   const model = {
     directory: root,
     async sourcePlansState(input) { return sourceProductPlansState(root, input); },
     async sourcePlanRead(input) { return readSourceProductPlan(root, input); },
+    async sourcePlanRuntimes(input) {
+      need(plain(input) && Object.keys(input).every(key => ['planId', 'bindingId'].includes(key)),
+        'PRODUCT_PLAN_RUNTIMES_FIELDS_INVALID');
+      const plan = await readSourceProductPlan(root, input);
+      return productPlanRuntimes(plan, await model.state());
+    },
+    async sourcePlanHandoff(input) {
+      need(plain(input) && Object.keys(input).every(key => ['planId', 'bindingId', 'runtimeId'].includes(key)),
+        'PRODUCT_PLAN_HANDOFF_FIELDS_INVALID');
+      const { runtimeId, ...selected } = input;
+      return inspectPlanHandoff(await readSourceProductPlan(root, selected), runtimeId);
+    },
     async sourcePlanBriefing(input) {
-      need(plain(input) && Object.keys(input).every(key => ['planId', 'bindingId', 'format'].includes(key)), 'PRODUCT_PLAN_BRIEFING_FIELDS_INVALID');
-      const { format = 'markdown', ...selected } = input;
+      need(plain(input) && Object.keys(input).every(key => ['planId', 'bindingId', 'format', 'runtimeId'].includes(key)), 'PRODUCT_PLAN_BRIEFING_FIELDS_INVALID');
+      const { format = 'markdown', runtimeId, ...selected } = input;
       need(['json', 'markdown', 'html'].includes(format), 'PRODUCT_PLAN_BRIEFING_FORMAT_INVALID');
-      return exportProductPlanBriefing(await readSourceProductPlan(root, selected), { format });
+      const plan = await readSourceProductPlan(root, selected);
+      const installation = runtimeId === undefined ? undefined : await inspectPlanHandoff(plan, runtimeId);
+      return exportProductPlanBriefing(plan, { format, installation });
     },
     async sourcePlanSave(input) { return saveSourceProductPlan(root, input); },
     async sourcePlanRefresh(input) { return refreshSourceProductPlan(root, input); },
@@ -496,6 +533,8 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
       return model.recoverManagedOperation(input.operationId);
     },
     async applicationsOutput(input) { return applicationOutput(root, input); },
+    async applicationsWorkbookResult(input) { return workbookApplicationResult(root, input); },
+    async applicationsWorkbookDownload(input) { return workbookApplicationDownload(root, input); },
     async applicationsTerminal(input) { return readApplicationTerminal(root, input); },
     async applicationsInput(input) { return sendApplicationTerminal(root, input); },
     async managedState(options) { return managedState(root, options); },

@@ -2,7 +2,7 @@
 
 The `haystack-turnover` selection delivers the complete native building-data application through the maintained source builder, installer, Applications lifecycle and Merchant host.
 
-The operator imports original Haystack JSON v4, inspects source-local site/equipment/point records, reviews complete typed tag edits, saves editions, compares revisions and hands an editable project to a receiving operator.
+The operator imports original Haystack JSON v4, inspects source-local site/equipment/point records, reviews complete typed tag edits, saves editions, compares revisions, assigns corrective work and reviews the receiving team's completed work with its full evidence.
 
 | Surface | Entry |
 | --- | --- |
@@ -12,6 +12,7 @@ The operator imports original Haystack JSON v4, inspects source-local site/equip
 | Browser/Node SDK | `./seller/haystack` |
 | Native grid API | `./seller/haystack/types` |
 | Durable workspace | `./seller/haystack/workspace` |
+| Corrective work API | `./seller/haystack/corrective-work` |
 | Complete receiving | `./seller/haystack/portable` |
 | Managed agent | `haystack-workspaces` provider |
 | Selected installation | `--selection haystack-turnover` |
@@ -89,11 +90,21 @@ Compare editions using every original changed row and tag. Pair different origin
 
 The browser preserves each pending operation's UUID, reviewed revision and exact input before it sends the request. When a response is interrupted, reconnect to the original workspace and recover that operation.
 
+## Assign, complete and return corrective work
+
+Open **Work items** from an original source record or complete diagnostic. Record the full task, responsible person, due date and priority. Attach complete files, operator observations or an original native tag proposal, then submit the work against its reviewed source material.
+
+The reviewer can verify that exact submitted material, reopen it for another round or record an explicit accepted exception. The full event history and every evidence file stay with the original project.
+
+When a recipient returns a complete editable workspace, preview every item in the original project's **Work items** view. Choose keep or accept for each item, and resolve fields changed by both operators. Later returns use the already accepted recipient history, preserving deliberate follow-up edits and reversals.
+
+Read the complete [corrective-work guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/CORRECTIVE_WORK.md) for assignment, evidence, review, return comparison, reports, large-file access and native actions.
+
 ## Hand over an editable project
 
-Create a complete workspace delivery through the browser or CLI. It carries the full saved state, every original source, all proposals/reviews and editions, original mutation outcomes, and every portable application file.
+Create a complete workspace delivery through the browser or CLI. It carries the full saved state, every original source, all proposals/reviews and editions, every corrective-work event and evidence file, original mutation outcomes, and all 41 portable application files.
 
-The operator guide's receiving command installs it into a new directory. Start its own `application/cli.mjs` against that directory, or select it in the same managed Applications view. The receiving team can continue native source import, review, comparison and delivery under the original workspace identity.
+The operator guide's receiving command installs it into a new directory. Start its own `application/cli.mjs` against that directory, or select it in the same managed Applications view. The receiving team can continue native source import, tag review, assignments, evidence, corrective-work review and delivery under the original workspace identity.
 
 Deliver the selected managed installation archive and runtime transfer alongside the customer package when the recipient needs the full Merchant environment. Private project data stays in its selected project directory across runtime upgrades.
 
@@ -113,3 +124,69 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/RECEIVING
 ~~~
 
 Retain that operation directory when continuing it. The programme saves original inputs, full useful reports, the editable workspace package and actual outcomes as it progresses.
+
+The complementary corrective-work programme operates the full Charlie source through assignment, complete evidence, independent native proposal reviews, concurrent operators, repeated recipient returns, browser work and complete independent receiving:
+
+~~~sh
+mkdir -p /absolute/haystack-corrective-operation
+flock -n /absolute/haystack-corrective-operation/programme.lock \
+  node stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/CORRECTIVE_RECEIVING.mjs \
+  /absolute/haystack-corrective-operation
+~~~
+
+Use the same original operation directory when continuing. It retains full original requests, operator browser drafts, complete useful reports and the editable receiving package.
+
+
+## Point-list modelling and contractor returns
+
+The same installation now includes the complete semantic workflow. Open **Point-list modelling** from the managed application's related links, or use `/semantic.html` on the already running original server. Native building grids and corrective work remain available from the same workspace.
+
+Import original CSV/TSV point lists or select retained native grids. Inspect every source row and choose column positions explicitly; repeated headings remain separate. Preview naming and class proposals, then retain a full model with stable entity identities, original row references, relationships, dictionary terms and review notes.
+
+A saved model is an immutable version over a retained source context. The browser keeps open entity/relationship/dictionary drafts and complete pending requests in its original IndexedDB stores. After a lost response, use **Requests → Read original receipt** or **Continue same request**. If a peer edits the model, **Compare draft with current saved head** preserves both contents. An unchanged model head can explicitly adopt the current workspace revision; a changed head requires deliberate review and a new save against that selected head.
+
+The [complete modelling guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/SEMANTIC_MODELLING.md) covers source mappings, full source references, model/dictionary editing, native reports and the returned-model choices.
+
+### Install the selected offline Brick engine
+
+The Node application retains its normal operator profile. Native Brick validation additionally uses the exact CPython 3.12 Linux x86_64 wheel archive and original ontology declared by `semantic-dependencies.json` and `semantic-standard.json`. Follow the complete [offline runtime guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/SEMANTIC_NATIVE.md):
+
+~~~sh
+python3.12 stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/install_semantic_runtime.py \
+  --manifest /absolute/selected-source/semantic-dependencies.json \
+  --archive /absolute/exact-semantic-offline-archive.zip \
+  --directory /absolute/private/semantic-runtime
+~~~
+
+The installer verifies the whole archive, closed member inventory, exact wheel set and requirements, then installs offline at the final virtual-environment path. Keep that destination and its original installation record when reopening an interrupted installation.
+
+Use the common Applications **environmentFile** field to select an owned private file containing:
+
+~~~json
+{
+  "HAYSTACK_SEMANTIC_PYTHON": "/absolute/private/semantic-runtime/bin/python"
+}
+~~~
+
+The original controller binds the file's exact hash to the reviewed launch. For a direct operator CLI, set that same variable in the process environment. No additional CLI or provider-specific launcher is introduced.
+
+Open a saved model, validate its exact head and read the actual native Boolean and every returned output file. The application retains original model JSON/Turtle, complete SHACL report text/Turtle, the original Brick wrapper report and expanded validation graph when supplied by the selected runtime. Source mappings, human review and field-observation status stay explicit; an ontology result does not establish live building telemetry.
+
+### Deliver and receive the complete work
+
+Prepare full model reports in JSON, CSV or HTML and dictionary reports in JSON or CSV. A complete workspace package also retains all original point files, model versions, contexts, relationships, dictionaries, reviews, native outputs, return decisions and portable application sources.
+
+Receive that package with the existing receiver and open its original workspace in the installed application. A contractor can edit a received model and export the whole workspace again. The original operator chooses **keep** or **adopt** for each returned model after reviewing the complete comparison. Keeping a local head still retains the incoming source and model history. New returned models become active only through an explicit adopt decision.
+
+The managed Merchant tools share these same actions. Host-pinned `point-list` and `workspace-return` aliases carry complete files above the request-body limit; SHA-bound JSON ranges preserve large catalogues/models/return comparisons. Read the full [Merchant guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/MERCHANT.md) for exact tools, file pins and original-request recovery.
+
+### Complete operating continuation
+
+`SEMANTIC_RECEIVING.mjs` and its `SEMANTIC_BROWSER.mjs` companion operate one retained point-modelling project. The native programme supplies the exact saved inputs and running server; the browser completes the source/mapping/model/review/return journey, desktop and 390 px views, all selected native downloads, and original request reconciliation. It returns only after its browser and borrowed merchant clients close.
+
+~~~sh
+node stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/SEMANTIC_RECEIVING.mjs \
+  /absolute/original-semantic-input.json
+~~~
+
+Retain the original operation directory, request files, browser profile and selected inputs. The programme's full result records actual completed steps and complete output identities. Managed Applications Start/Stop receiving remains a separate actual READY-runtime input; source inclusion alone is not a successful installed launch.

@@ -1,8 +1,8 @@
 {
   "schema": "stellar-forge.distribution-source-selection.v1",
   "id": "haystack-turnover",
-  "title": "Haystack building-turnover workspace",
-  "description": "Native building grids, source-local equipment and points, complete typed tag review, immutable editions and editable receiving",
+  "title": "Haystack building turnover and point modelling",
+  "description": "Original building grids, corrective work, complete point-list mapping, saved semantic models, offline Brick validation and editable contractor returns",
   "base": {
     "commands": [
       "installation",
@@ -98,7 +98,7 @@
   ],
   "product": {
     "schema": "stellar-forge.merchant-product-package.v1",
-    "description": "Native Haystack equipment and point turnover, reviewed source editions and complete editable customer receiving",
+    "description": "Native Haystack turnover and corrective work with source-linked point modelling, exact Brick reports, explicit contractor-return review and complete editable customer receiving",
     "readme": "products/haystack/OPERATING.md",
     "bin": {
       "starforge": "stellar/scf-starforge-20261009/distribution/cli.mjs"

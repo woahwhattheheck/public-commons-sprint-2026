@@ -6,6 +6,22 @@ export const COMPANION_ROUTES = [
   ['/grant-companion-workspace.mjs',['grant-companion-workspace.mjs','text/javascript; charset=utf-8']],
 ];
 
+/** Current navigation follows this application's companion; historical citations retain their source URLs. */
+export function currentGrantCompanionLinks(markdown) {
+  const labels = new Set([
+    'detailed customer and commercial plan',
+    'architecture and ecosystem comparison',
+    'detailed product and finance companion',
+    'product and finance companion',
+    'product and financing companion',
+  ]);
+  return String(markdown).replace(
+    /\[([^\]\r\n]+)\]\(https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/(?:main|[a-f0-9]{40})\/stellar-forge\/developer-site\/dist\/grant-data\/product-and-finance\.md(#[^\s)]*)?\)/g,
+    (original, label, fragment = '') => labels.has(label.trim().toLowerCase().replace(/\s+/g, ' ')) ?
+      '[' + label + '](./product-and-finance.md' + fragment + ')' : original
+  );
+}
+
 /** Preserve the four original reader outputs and their existing source selections. */
 export function attachGrantCompanion({templateHtml,sourceIndex}) {
   if(typeof templateHtml!=='string'||!templateHtml.includes('<nav aria-label="Primary">'))throw new Error('Retain the complete original application navigation.');
@@ -13,7 +29,9 @@ export function attachGrantCompanion({templateHtml,sourceIndex}) {
   const link='<a data-grant-companion="v1" href="./grant-companion.html">Product and financing</a>';
   let html=templateHtml.replace(/<a data-grant-companion="v1"[^>]*>[\s\S]*?<\/a>/g,'');
   html=html.replace('<nav aria-label="Primary">','<nav aria-label="Primary">'+link);
-  html=html.replace(/href="\.\/grant-data\/product-and-finance\.md(#[^"]+)"/g,'href="./grant-companion.html$1"');
+  html=html.replace(/<a\b([^>]*\bhref=")\.\/grant-data\/product-and-finance\.md(#[^"]*)?"([^>]*)>/g,
+    (original, before, fragment = '', after) => /\bdownload(?:\s|=|$)/.test(before + after) ? original :
+      '<a' + before + './grant-companion.html' + fragment + '"' + after + '>');
   return {
     templateHtml:html,
     sourceIndex:{...sourceIndex,companion_reader:{

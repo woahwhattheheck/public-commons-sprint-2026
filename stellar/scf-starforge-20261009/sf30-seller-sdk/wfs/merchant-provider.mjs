@@ -1,10 +1,10 @@
 // MIT. Original source-owned WFS merchant registration and lazy owner.
 import { defineMerchantProvider,MERCHANT_PROVIDER_SCHEMA } from '../../../../stellar-forge/mcp-merchant-operator/provider-contract.mjs';
-import { wfsWorkspaceTools } from './mcp-tools.mjs';
+import { wfsWorkspaceTools,WFS_MCP_REQUEST_MAX_BYTES } from './mcp-tools.mjs';
 export default defineMerchantProvider({
   schema:MERCHANT_PROVIDER_SCHEMA,id:'wfs-workspaces',family:'wfsWorkspaces',
   title:'WFS feature workspaces',order:366,catalogOrder:366,configKey:'wfsWorkspaces',summary:true,dependencies:[],
-  concurrency:'host',concurrentTools:['merchant_wfs_cancel'],shutdown:'provider',maxRequestBytes:131072,
+  concurrency:'host',concurrentTools:['merchant_wfs_cancel'],shutdown:'provider',maxRequestBytes:WFS_MCP_REQUEST_MAX_BYTES,
   configuration:{input:'wfsWorkspaceConnection',privateExports:true,
     read:async(value,{hostPath})=>(await import('./mcp-client.mjs')).readWfsWorkspaceConfiguration(hostPath(value))},
   tools:wfsWorkspaceTools,load:()=>import('./mcp.mjs'),

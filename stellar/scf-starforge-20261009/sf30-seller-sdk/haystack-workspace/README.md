@@ -35,6 +35,10 @@ An edition retains its exact ordered source set, accepted proposal IDs, complete
 
 For two imports of different original files, pair their sources explicitly using `sourcePairs`. Unique native IDs then align within the chosen pair. An unpaired source keeps its own identity. Ambiguous or missing IDs remain tied to their original rows.
 
+## Assigned corrective work and recipient returns
+
+The [corrective-work guide](CORRECTIVE_WORK.md) covers source-bound findings, assignments, complete evidence, submission rounds, verification, reopening, accepted exceptions and reviewed recipient returns. Use the existing Work items section and original mutation recovery to continue this work across receiving operators.
+
 ## Native API
 
 Start the application and read `GET /api/identity`. Keep its original workspace and current instance IDs. Native callers send them as `x-haystack-workspace` and `x-haystack-instance` headers. Supply the private token through `Authorization: Bearer …` when configured.
@@ -48,6 +52,8 @@ Start the application and read `GET /api/identity`. Keep its original workspace 
 | Native records | `records.list`, `record.read`, `diagnostics.list` |
 | Typed corrections | `proposal.preview`, `proposals.list`, `proposal.read`, `proposal.prepare`, `proposal.review` |
 | Editions | `editions.list`, `edition.read`, `edition.save`, `edition.compare` |
+| Corrective work | `works.list`, `work.read`, `work.capture`, `work.update`, `work.evidence`, `evidence.read`, `work.submit`, `work.review` |
+| Reviewed returns | `return.preview`, `return.apply`, `returns.list`, `return.read` |
 | Original outcomes | `operations.list`, `operation.read` |
 | Complete deliveries | `delivery.prepare`, `delivery.read` |
 
@@ -121,3 +127,11 @@ node RECEIVING.mjs /absolute/haystack-turnover-operation
 ~~~
 
 The complete application is MIT-licensed under [LICENSE](LICENSE). Original upstream material retains its accompanying [HAYSTACK_LICENSE.txt](HAYSTACK_LICENSE.txt) and provenance.
+
+## Point-list modelling and contractor returns
+
+Open **Point-list modelling** from the existing workspace. Import the complete CSV or TSV through the native Python reader, select original Haystack rows, review naming and source-column mappings, and keep stable entity identities through every model revision. The full local Brick 1.4.4 catalogue, actual SHACL report and source observation status remain distinct. Export the complete editable workspace and explicitly keep or adopt each contractor-returned model while retaining all incoming source and history.
+
+The [complete modelling guide](SEMANTIC_MODELLING.md) covers the interface, original request recovery, typed client, CLI, native reports and independent receiving. The [native standards guide](SEMANTIC_NATIVE.md) describes the separate, exact offline dependency archive and explicit local installation. Inspecting, browsing or validating never installs dependencies or fetches an ontology.
+
+`SEMANTIC_RECEIVING.mjs` runs the same complete original point-modelling operation from one retained JSON input. It includes the full 624-record Charlie source, an explicitly derived point list, exact model revisions, native validation, desktop/mobile operator work, contractor return and independent application receiving. Read its actual result to distinguish completed stages and native conformance from prepared source.

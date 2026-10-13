@@ -15,7 +15,7 @@ import {canonical} from "./util.mjs";
 
 const REQUEST_FORMAT="commons.haystack.operator.request.v1";
 const SOURCE_LIMIT=32*1024*1024;
-const REQUEST_LIMIT=48*1024*1024;
+const REQUEST_LIMIT=288*1024*1024;
 const RECEIPT_LIMIT=192*1024*1024;
 const own=(object,key)=>Object.prototype.hasOwnProperty.call(object,key);
 const sha256=bytes=>createHash("sha256").update(bytes).digest("hex");
@@ -191,6 +191,26 @@ async function replay(target,flags){
   if(original.action==="delivery.prepare")return deliveryToFile(target,result,flags);
   return output(result,flags);
 }
+async function semanticInput(path){
+  const value=await readJson(path);
+  if(!value||typeof value!=="object"||Array.isArray(value))throw new Error("Supply the complete semantic arguments object.");
+  if(own(value,"operationId")||own(value,"expectedRevision"))throw new Error("For an existing complete request with operation/revision fields, use request ACTION --args or replay. Friendly model commands take business fields and explicit command flags.");
+  return value;
+}
+async function semanticBytes(target,action,args){
+  if(target.client)return Buffer.from(await target.client.completeBytes(action,args));
+  const chunks=[];let offset=0,identity=null;
+  for(;;){
+    const part=await target.request(action,{...args,offset,length:1048576});
+    const bytes=Buffer.from(part.base64,"base64");
+    if(part.offset!==offset||part.bytes!==bytes.length||part.nextOffset!==offset+bytes.length||sha256(bytes)!==part.chunkSha256)throw new Error("The original semantic source range differs.");
+    if(identity===null)identity={sha256:part.sha256,bytes:part.totalBytes};
+    if(identity.sha256!==part.sha256||identity.bytes!==part.totalBytes||part.complete!==(part.nextOffset===part.totalBytes))throw new Error("The complete semantic source identity changed.");
+    chunks.push(bytes);offset=part.nextOffset;
+    if(part.complete){const all=Buffer.concat(chunks);if(all.length!==identity.bytes||sha256(all)!==identity.sha256)throw new Error("The complete semantic source differs.");return all;}
+    if(!bytes.length||offset>identity.bytes)throw new Error("The original semantic range did not advance.");
+  }
+}
 const HELP=`Haystack turnover workspace
 
 Run with Node.js 22 or later. Commands use one explicit local --directory DIR,
@@ -245,6 +265,43 @@ Complete delivery
   native-grid      --source-id SHA [--edition SHA] [--out FILE]
   export-workspace [--out FILE]
   replay           --request-file ORIGINAL.request.json [--out FILE]
+
+Point-list modelling and native standard
+  standard
+  point-intakes
+  point-intake       --intake-id UUID [--page --offset N --limit N]
+  point-import       --file SOURCE.csv --format csv|tsv [--name TEXT]
+                     [--delimiter comma|tab|semicolon] [--source-url URL]
+  point-source-download --intake-id UUID --out FILE
+  model-preview      --file COMPLETE_MAPPING_ARGS.json
+  model-assess       --file COMPLETE_DRAFT_ARGS.json
+  models
+  model              --model-id UUID [--version-id SHA]
+  model-create       --file COMPLETE_CREATE_ARGS.json
+  model-save         --file COMPLETE_SAVE_ARGS.json
+  model-review       --model-id UUID --head-id SHA --decision ready|changes
+                     --author TEXT [--validation-id SHA] --note TEXT|--note-file FILE
+  model-validate     --model-id UUID --head-id SHA --author TEXT
+  model-compare      --model-id UUID --before SHA --after SHA
+  model-validations  [--model-id UUID]
+  model-validation   --validation-id SHA
+  model-report       --model-id UUID [--version-id SHA] --format json|csv|html
+                     [--out FILE]
+  model-dictionary   --model-id UUID [--version-id SHA] --format json|csv [--out FILE]
+  model-output       --validation-id SHA --name model.ttl|report.ttl|report.txt
+                     [--out FILE]
+  model-return-preview --file COMPLETE_RETURNED_WORKSPACE.json
+  model-return-apply  --file COMPLETE_RETURNED_WORKSPACE.json --decisions ARRAY.json
+                     --author TEXT --note TEXT|--note-file FILE
+  model-returns
+  model-return       --return-id SHA
+
+Model JSON inputs retain explicit selection/context, full content, original
+entity/row IDs and expectedHeadId for an existing model. Read
+SEMANTIC_MODELLING.md for the complete field examples. The existing request
+journal/CAS/replay path also serves every modelling command. Native validation
+uses only the selected local Python and original offline Brick dependency set;
+the application does not download or install packages during a request.
 
 General action access
   request          ACTION --args OBJECT.json [--out FILE]
@@ -315,6 +372,16 @@ export async function main(argv=process.argv.slice(2)){
     await workspace.read();return serveStdio(workspace);
   }
   const specific={
+    standard:[],"point-intakes":pageFlags,"point-intake":[...pageFlags,"intake-id"],
+    "point-import":[...mutationFlags,"file","format","name","delimiter","source-url"],"point-source-download":["intake-id"],
+    "model-preview":["file"],"model-assess":["file"],models:pageFlags,model:["model-id","version-id"],
+    "model-create":[...mutationFlags,"file"],"model-save":[...mutationFlags,"file"],
+    "model-review":[...mutationFlags,"model-id","head-id","decision","author","validation-id","note","note-file"],
+    "model-validate":[...mutationFlags,"model-id","head-id","author"],"model-compare":[...pageFlags,"model-id","before","after"],
+    "model-validations":[...pageFlags,"model-id"],"model-validation":["validation-id"],
+    "model-report":[...mutationFlags,"model-id","version-id","format"],"model-dictionary":[...mutationFlags,"model-id","version-id","format"],
+    "model-output":[...mutationFlags,"validation-id","name"],"model-return-preview":["file"],
+    "model-return-apply":[...mutationFlags,"file","decisions","author","note","note-file"],"model-returns":pageFlags,"model-return":["return-id"],
     status:[],sources:pageFlags,records:[...pageFlags,"edition","source-id","role","query"],
     record:["record-key","edition"],diagnostics:[...pageFlags,"edition","source-id","severity","record-key"],
     proposals:[...pageFlags,"state"],proposal:["proposal-id"],editions:pageFlags,edition:["edition"],
@@ -333,6 +400,17 @@ export async function main(argv=process.argv.slice(2)){
   if(!specific[command])throw new Error("Unknown command "+command+". Use help for the complete workflow.");
   options(flags,[...sharedFlags,...specific[command]]);
   const target=await targetFor(flags);
+  if(command==="standard")return output(await target.request("semantic.catalog",{}),flags);
+  const semanticLists={"point-intakes":"semantic.intakes.list",models:"semantic.models.list","model-validations":"semantic.validations.list","model-returns":"semantic.returns.list"};
+  if(semanticLists[command])return output(await allPages(target,semanticLists[command],await revisionArgs(target,flags,clean({modelId:one(flags,"model-id")})),flags),flags);
+  if(command==="point-intake")return output(await allPages(target,"semantic.intake.read",await revisionArgs(target,flags,{intakeId:required(flags,"intake-id")}),flags),flags);
+  if(command==="point-source-download"){const bytes=await semanticBytes(target,"semantic.source.read",{intakeId:required(flags,"intake-id")});return output(await exactFile(required(flags,"out"),bytes),{});}
+  if(command==="model")return output(await target.request("semantic.model.read",await revisionArgs(target,flags,clean({modelId:required(flags,"model-id"),versionId:one(flags,"version-id")}))),flags);
+  if(command==="model-preview"||command==="model-assess")return output(await target.request(command==="model-preview"?"semantic.model.preview":"semantic.model.assess",await revisionArgs(target,flags,await semanticInput(required(flags,"file")))),flags);
+  if(command==="model-compare")return output(await allPages(target,"semantic.model.compare",await revisionArgs(target,flags,{modelId:required(flags,"model-id"),beforeVersionId:required(flags,"before"),afterVersionId:required(flags,"after")}),flags),flags);
+  if(command==="model-validation")return output(await target.request("semantic.validation.read",await revisionArgs(target,flags,{validationId:required(flags,"validation-id")})),flags);
+  if(command==="model-return")return output(await target.request("semantic.return.read",await revisionArgs(target,flags,{returnId:required(flags,"return-id")})),flags);
+  if(command==="model-return-preview"){const bytes=await plainRead(resolve(required(flags,"file")),PACKAGE_MAX_BYTES);return output(await target.request("semantic.return.preview",await revisionArgs(target,flags,{base64:bytes.toString("base64")})),flags);}
   if(command==="status")return output(await target.request("workspace.status",{}),flags);
   if(command==="sources")return output(await allPages(target,"sources.list",await revisionArgs(target,flags),flags),flags);
   if(command==="records")return output(await allPages(target,"records.list",await revisionArgs(target,flags,listArgs(flags)),flags),flags);
@@ -378,7 +456,19 @@ export async function main(argv=process.argv.slice(2)){
     validateArguments(action,args);return output(await target.request(action,args),flags);
   }
   let action,fields;
-  if(command==="rename"){action="workspace.rename";fields={title:required(flags,"title")};}
+  if(command==="point-import"){
+    action="semantic.intake.import";const file=resolve(required(flags,"file")),bytes=await plainRead(file,SOURCE_LIMIT),format=required(flags,"format");
+    if(!["csv","tsv"].includes(format))throw new Error("Choose the actual csv or tsv source format.");
+    const delimiter=one(flags,"delimiter"),delimiters={comma:",",tab:"\t",semicolon:";"};
+    if(delimiter&&!own(delimiters,delimiter))throw new Error("Use --delimiter comma, tab or semicolon.");
+    fields=clean({name:one(flags,"name",basename(file)),format,base64:bytes.toString("base64"),sourceUrl:one(flags,"source-url",""),delimiter:delimiter?delimiters[delimiter]:undefined});
+  }else if(command==="model-create"||command==="model-save"){action=command==="model-create"?"semantic.model.create":"semantic.model.save";fields=await semanticInput(required(flags,"file"));}
+  else if(command==="model-review"){action="semantic.model.review";fields=clean({modelId:required(flags,"model-id"),expectedHeadId:required(flags,"head-id"),decision:required(flags,"decision"),author:required(flags,"author"),validationId:one(flags,"validation-id"),note:await optionalNote(flags)});}
+  else if(command==="model-validate"){action="semantic.validate";fields={modelId:required(flags,"model-id"),expectedHeadId:required(flags,"head-id"),author:required(flags,"author")};}
+  else if(command==="model-report"||command==="model-dictionary"){action="delivery.prepare";fields=clean({kind:command==="model-report"?"semantic-report":"semantic-dictionary",modelId:required(flags,"model-id"),versionId:one(flags,"version-id"),format:one(flags,"format","json")});}
+  else if(command==="model-output"){action="delivery.prepare";fields={kind:"semantic-output",validationId:required(flags,"validation-id"),name:required(flags,"name")};}
+  else if(command==="model-return-apply"){action="semantic.return.apply";const bytes=await plainRead(resolve(required(flags,"file")),PACKAGE_MAX_BYTES);fields={base64:bytes.toString("base64"),decisions:await readJson(required(flags,"decisions")),author:required(flags,"author"),note:await optionalNote(flags)};}
+  else if(command==="rename"){action="workspace.rename";fields={title:required(flags,"title")};}
   else if(command==="import"){
     action="source.import";const file=resolve(required(flags,"file")),bytes=await plainRead(file,SOURCE_LIMIT);
     fields={name:one(flags,"name",basename(file)),base64:bytes.toString("base64"),sourceUrl:one(flags,"source-url",""),format:"json-v4",select:!flags["no-select"]};

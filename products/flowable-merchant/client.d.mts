@@ -1,8 +1,12 @@
 /** Installed client of the original Flowable workspace and its complete native source/history deliveries. */
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 export type RecordKind = 'connection' | 'portfolio' | 'release' | 'process' | 'task' | 'migration'
-  | 'decisionPortfolio' | 'decisionRelease' | 'decisionEvaluation' | 'delivery' | 'receiving';
-export type OperationKind = 'release' | 'process' | 'task' | 'migration' | 'decisionRelease' | 'decisionEvaluation';
+  | 'decisionPortfolio' | 'decisionRelease' | 'decisionEvaluation'
+  | 'casePortfolio' | 'caseRelease' | 'caseInstance' | 'casePlanItem' | 'caseTask' | 'delivery' | 'receiving';
+export type OperationKind = 'release' | 'process' | 'task' | 'migration' | 'decisionRelease' | 'decisionEvaluation'
+  | 'caseRelease' | 'caseInstance' | 'casePlanItem' | 'caseTask';
+export type CaseCollectionKind = 'deployments' | 'definitions' | 'cases' | 'planItems' | 'tasks' | 'variables'
+  | 'historicCases' | 'historicPlanItems' | 'historicTasks' | 'historicVariables' | 'milestones';
 export type DecisionCollectionKind = 'deployments' | 'definitions' | 'historicExecutions';
 export type CollectionKind = 'deployments' | 'definitions' | 'processes' | 'tasks'
   | 'historicProcesses' | 'historicTasks' | 'historicActivities' | 'historicVariables';
@@ -23,9 +27,18 @@ export interface FlowableConnection {
 export interface SourceReference { sha256: string; bytes: number; mediaType?: string }
 export interface RecordReference { kind: RecordKind; id: string; revision: number; sha256: string }
 export interface NativeEntity { id: string; [key: string]: Json | undefined }
+/** Original CMMN VariableInstanceResponse; typed data is nested in variable. */
+export interface NativeCaseVariable {
+  id: string; caseInstanceId?: string; caseInstanceUrl?: string; taskId?: string; planItemInstanceId?: string;
+  variable: { name: string; type?: string; value?: Json; scope?: string; valueUrl?: string;
+    [key: string]: Json | undefined };
+  [key: string]: unknown;
+}
 export interface NativeResource {
   kind?: 'dmn-definition-resource' | 'dmn-execution-audit' | string;
   definitionId?: string; definitionIds?: string[]; deploymentId?: string; executionId?: string;
+  caseInstanceId?: string; variableInstanceId?: string; taskId?: string; planItemInstanceId?: string;
+  variableName?: string; variableType?: string; history?: boolean;
   filename: string; contentType?: string;
   bytes: number; sha256: string; contentBase64?: string;
   definitionRef?: SourceReference; originalResource?: SourceReference; [key: string]: unknown;
@@ -38,7 +51,7 @@ export interface FlowableRecord<Value = Record<string, unknown>> extends RecordR
   schema: 'stellar-forge.flowable-workspace.v1';
   requestId: string; requestSha256: string; createdAt: string; updatedAt: string; bytes: number; value: Value;
   portfolio?: { startedAt: string; completedAt: string;
-    collections: Partial<Record<CollectionKind | DecisionCollectionKind, { total: number; retained: number; complete: boolean; pages: number }>>;
+    collections: Partial<Record<CollectionKind | DecisionCollectionKind | CaseCollectionKind, { total: number; retained: number; complete: boolean; pages: number }>>;
     resources: number };
   plan?: NativeRequestPlan;
   reconciliation?: NativeReconciliation;
@@ -64,10 +77,19 @@ export interface ListRecordsInput extends Paging { kind?: RecordKind; snapshot?:
 export interface GetRecordInput extends Paging { kind: RecordKind; id: string; revision?: number }
 export interface ReadPortfolioInput extends Paging { id: string; revision?: number; collection: CollectionKind }
 export interface ReadDecisionPortfolioInput extends Paging { id: string; revision?: number; collection: DecisionCollectionKind }
+export interface ReadCasePortfolioInput extends Paging { id: string; revision?: number; collection: CaseCollectionKind }
 export interface PortfolioPage extends Paging {
   portfolio: RecordReference; collection: CollectionKind | DecisionCollectionKind; offset: number; limit: number;
   items: NativeEntity[]; total: number; nativeTotal: number; complete: boolean;
   pages: unknown[]; exchanges: unknown[]; nextOffset: number | null;
+}
+export interface CasePortfolioPage extends Omit<PortfolioPage, 'collection' | 'items'> {
+  collection: CaseCollectionKind; items: (NativeEntity | NativeCaseVariable)[];
+}
+export interface CapturedCase {
+  portfolio: RecordReference; caseInstance: NativeEntity | null; historicCase: NativeEntity | null;
+  definitions: NativeEntity[]; resources: NativeResource[];
+  related: Partial<Record<CaseCollectionKind, (NativeEntity | NativeCaseVariable)[]>>;
 }
 export interface RequestIdentity { requestId: string }
 export interface SaveConnectionInput extends RequestIdentity {
@@ -105,8 +127,41 @@ export interface DecisionEvaluationSelection {
    * The engine resolves its actual definition; retain original numeric text and native variable types. */
   bodyText: string;
 }
+export interface CaseDeploymentSelection {
+  action: 'deploy'; deploymentName?: string; deploymentKey?: string; tenantId?: string;
+  /** Complete original CMMN resource or native deployment archive. */
+  resource: { filename: string; contentType?: string; contentBase64: string };
+}
+export interface CaseStartSelection {
+  action: 'startCase';
+  /** Exact native caseDefinitionId or caseDefinitionKey, business identity and typed variables. */
+  bodyText: string;
+}
+export interface CaseUpdateSelection {
+  action: 'updateCase' | 'evaluateCaseCriteria'; caseInstanceId: string;
+  /** Update uses name/businessKey without an action. Criteria uses action:evaluateCriteria. */
+  bodyText: string;
+}
+export interface CaseTerminationSelection { action: 'terminateCase'; caseInstanceId: string }
+export type CaseInstanceSelection = CaseStartSelection | CaseUpdateSelection | CaseTerminationSelection;
+export interface CasePlanItemSelection {
+  action: 'startPlanItem' | 'triggerPlanItem' | 'enablePlanItem' | 'disablePlanItem';
+  planItemInstanceId: string;
+  /** Optional expected owning case; the adapter verifies it against the actual native plan item. */
+  caseInstanceId?: string;
+  /** Exact JSON action start, trigger, enable or disable. In this engine enable starts the item. */
+  bodyText: string;
+}
+export interface CaseTaskSelection {
+  action: 'claim' | 'unclaim' | 'complete' | 'delegate' | 'resolve'; taskId: string;
+  /** Optional expected owning case; the adapter verifies it against the native task. */
+  caseInstanceId?: string;
+  /** The original native JSON action must match; unclaim uses claim with assignee:null. */
+  bodyText: string;
+}
 export type FlowableSelection = DeploymentSelection | ProcessSelection | TaskSelection | MigrationSelection
-  | DecisionDeploymentSelection | DecisionEvaluationSelection;
+  | DecisionDeploymentSelection | DecisionEvaluationSelection | CaseDeploymentSelection | CaseInstanceSelection
+  | CasePlanItemSelection | CaseTaskSelection;
 export interface PrepareInput<Selection extends FlowableSelection> extends RequestIdentity {
   connectionId: string; selection: Selection; label?: string; note?: string;
 }
@@ -116,6 +171,10 @@ export type PrepareTaskInput = PrepareInput<TaskSelection>;
 export type PrepareMigrationInput = PrepareInput<MigrationSelection>;
 export type PrepareDecisionReleaseInput = PrepareInput<DecisionDeploymentSelection>;
 export type PrepareDecisionEvaluationInput = PrepareInput<DecisionEvaluationSelection>;
+export type PrepareCaseReleaseInput = PrepareInput<CaseDeploymentSelection>;
+export type PrepareCaseInstanceInput = PrepareInput<CaseInstanceSelection>;
+export type PrepareCasePlanItemInput = PrepareInput<CasePlanItemSelection>;
+export type PrepareCaseTaskInput = PrepareInput<CaseTaskSelection>;
 export interface DispatchOperationInput extends RequestIdentity {
   id: string; expectedRevision: number; planSha256: string;
 }
@@ -138,6 +197,9 @@ export interface NativeState {
   definitions?: NativeEntity[]; deployments?: NativeEntity[]; processes?: NativeEntity[];
   historicProcesses?: NativeEntity[]; tasks?: NativeEntity[]; historicTasks?: NativeEntity[];
   activities?: NativeEntity[]; historicActivities?: NativeEntity[]; historicExecutions?: NativeEntity[]; resources?: NativeResource[];
+  cases?: NativeEntity[]; planItems?: NativeEntity[]; variables?: NativeCaseVariable[];
+  historicCases?: NativeEntity[]; historicPlanItems?: NativeEntity[];
+  historicVariables?: NativeCaseVariable[]; milestones?: NativeEntity[];
   [key: string]: unknown;
 }
 export interface NativeReconciliation {
@@ -164,6 +226,7 @@ export interface OperationReview {
     contentType?: string; bodyBytes: number; bodySha256: string; planSha256: string; bodyText?: string;
     resource?: { filename: string; contentType?: string; bytes?: number; sha256?: string; mediaType?: string };
     deploymentName?: string; deploymentKey?: string; tenantId?: string; processInstanceId?: string; taskId?: string;
+    caseInstanceId?: string; planItemInstanceId?: string;
     mode?: 'auto' | 'decision' | 'decisionService'; singleResult?: boolean } | null;
   before: NativeState | null; after: NativeState | null;
   validation: NativeResponse | null; response: NativeResponse | null; reconciliation: NativeReconciliation | null;
@@ -207,6 +270,18 @@ export interface ActionInputs {
   dispatchDecisionRelease: DispatchOperationInput;
   prepareDecisionEvaluation: PrepareDecisionEvaluationInput;
   dispatchDecisionEvaluation: DispatchOperationInput;
+  readCasePortfolio: ReadCasePortfolioInput;
+  readCaseDefinition: { portfolioId: string; definitionId: string; revision?: number };
+  readCaseInstance: { portfolioId: string; caseInstanceId: string; revision?: number };
+  captureCasePortfolio: CapturePortfolioInput;
+  prepareCaseRelease: PrepareCaseReleaseInput;
+  dispatchCaseRelease: DispatchOperationInput;
+  prepareCaseInstance: PrepareCaseInstanceInput;
+  dispatchCaseInstance: DispatchOperationInput;
+  prepareCasePlanItem: PrepareCasePlanItemInput;
+  dispatchCasePlanItem: DispatchOperationInput;
+  prepareCaseTask: PrepareCaseTaskInput;
+  dispatchCaseTask: DispatchOperationInput;
   reconcileOperation: ReconcileOperationInput;
   exportWorkspace: ExportWorkspaceInput;
   inspectDelivery: InspectDeliveryInput;
@@ -238,6 +313,18 @@ export interface ActionResults {
   dispatchDecisionRelease: FlowableRecord<OperationValue>;
   prepareDecisionEvaluation: FlowableRecord<OperationValue>;
   dispatchDecisionEvaluation: FlowableRecord<OperationValue>;
+  readCasePortfolio: CasePortfolioPage;
+  readCaseDefinition: { portfolio: RecordReference; definition: NativeEntity; deployment: NativeEntity | null; resources: NativeResource[] };
+  readCaseInstance: CapturedCase;
+  captureCasePortfolio: FlowableRecord;
+  prepareCaseRelease: FlowableRecord<OperationValue>;
+  dispatchCaseRelease: FlowableRecord<OperationValue>;
+  prepareCaseInstance: FlowableRecord<OperationValue>;
+  dispatchCaseInstance: FlowableRecord<OperationValue>;
+  prepareCasePlanItem: FlowableRecord<OperationValue>;
+  dispatchCasePlanItem: FlowableRecord<OperationValue>;
+  prepareCaseTask: FlowableRecord<OperationValue>;
+  dispatchCaseTask: FlowableRecord<OperationValue>;
   reconcileOperation: FlowableRecord<OperationValue>;
   exportWorkspace: FlowableRecord<DeliveryValue>;
   inspectDelivery: FlowableRecord<ReceivingValue>;
@@ -301,6 +388,18 @@ export class FlowableProductClient {
   dispatchDecisionRelease(input: DispatchOperationInput): Promise<FlowableRecord<OperationValue>>;
   prepareDecisionEvaluation(input: PrepareDecisionEvaluationInput): Promise<FlowableRecord<OperationValue>>;
   dispatchDecisionEvaluation(input: DispatchOperationInput): Promise<FlowableRecord<OperationValue>>;
+  readCasePortfolio(input: ReadCasePortfolioInput): Promise<CasePortfolioPage>;
+  readCaseDefinition(input: ActionInputs['readCaseDefinition']): Promise<ActionResults['readCaseDefinition']>;
+  readCaseInstance(input: ActionInputs['readCaseInstance']): Promise<CapturedCase>;
+  captureCasePortfolio(input: CapturePortfolioInput): Promise<FlowableRecord>;
+  prepareCaseRelease(input: PrepareCaseReleaseInput): Promise<FlowableRecord<OperationValue>>;
+  dispatchCaseRelease(input: DispatchOperationInput): Promise<FlowableRecord<OperationValue>>;
+  prepareCaseInstance(input: PrepareCaseInstanceInput): Promise<FlowableRecord<OperationValue>>;
+  dispatchCaseInstance(input: DispatchOperationInput): Promise<FlowableRecord<OperationValue>>;
+  prepareCasePlanItem(input: PrepareCasePlanItemInput): Promise<FlowableRecord<OperationValue>>;
+  dispatchCasePlanItem(input: DispatchOperationInput): Promise<FlowableRecord<OperationValue>>;
+  prepareCaseTask(input: PrepareCaseTaskInput): Promise<FlowableRecord<OperationValue>>;
+  dispatchCaseTask(input: DispatchOperationInput): Promise<FlowableRecord<OperationValue>>;
   reconcileOperation(input: ReconcileOperationInput): Promise<FlowableRecord<OperationValue>>;
   exportWorkspace(input: ExportWorkspaceInput): Promise<FlowableRecord<DeliveryValue>>;
   inspectDelivery(input: InspectDeliveryInput): Promise<FlowableRecord<ReceivingValue>>;

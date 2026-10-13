@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Continue the saved Aviary application directly with its original runtime and tool saves."""
 from __future__ import annotations
-import ast,contextlib,hashlib,json,os,sys,traceback
+import argparse,ast,contextlib,hashlib,json,os,sys,traceback
 from pathlib import Path
 
 def run_lean_aviary(value):
@@ -9,8 +9,14 @@ def run_lean_aviary(value):
  def need(ok,message):
   if not ok:raise RuntimeError(message)
  def sha(raw):return hashlib.sha256(raw).hexdigest()
- def emit(name,**data):print(json.dumps({"event":name,"operation":operation,**data},ensure_ascii=False),flush=True)
- need(value.get("schema")=="commons.aviary.newhost-original-continuation.v5","Unknown complete original Aviary input")
+ def emit(event,**data):print(json.dumps({"event":event,"operation":operation,**data},ensure_ascii=False),flush=True)
+ need(value.get("schema")=="commons.aviary.newhost-original-continuation.v6","Unknown complete original Aviary input")
+ bridge_adoption=value["bridgeSourceAdoption"]
+ need(bridge_adoption.get("schema")=="commons.aviary.official-library-name-source-adoption.v1"
+      and bridge_adoption.get("operationId")==operation,"The selected save-source adoption belongs to another operation")
+ for key,pin in (("bridgePredecessorSource",bridge_adoption["previous"]),("bridgeSource",bridge_adoption["selected"])):
+  raw=value[key].encode()
+  need(len(raw)==pin["bytes"] and sha(raw)==pin["sha256"],"The selected save-source adoption bytes differ")
  source_keys=("runtimeSource","bridgeSource","releaseSource","entryText","runtimeArchiveSource")
  for key in source_keys:ast.parse(value[key],filename=key+".py")
  self_raw=Path("/proc/self/stat").read_text()
@@ -45,12 +51,19 @@ def run_lean_aviary(value):
  exec(compile(value["runtimeSource"],"aviary_lean_runtime.py","exec"),namespace)
  exec(compile(value["bridgeSource"],"aviary_official_library_save.py","exec"),namespace)
  exec(compile(value["releaseSource"],"aviary_completed_lock_release.py","exec"),namespace)
- namespace["restore_current_aviary_runtime"](value)
+ runtime_context=namespace["restore_current_aviary_runtime"](value)
+ original_bridge_install=namespace["install_aviary_library_tool_bridge"]
+ def install_runtime_and_save_bridge(producer):
+  original_bridge_install(producer)
+  namespace["install_aviary_runtime_selection"](producer,value,runtime_context)
+ namespace["install_aviary_library_tool_bridge"]=install_runtime_and_save_bridge
  history=Path("/dev/aviary-complete-final-6ba15/producer-source/history-86320")
  history.mkdir(parents=True,exist_ok=True,mode=0o700)
  retained=[
   ("lean-runtime",value["runtimeSource"].encode(),".py"),
   ("official-library-save",value["bridgeSource"].encode(),".py"),
+  ("official-library-save-predecessor",value["bridgePredecessorSource"].encode(),".py"),
+  ("official-library-name-adoption",(json.dumps(value["bridgeSourceAdoption"],sort_keys=True,indent=2)+"\n").encode(),".json"),
   ("completed-lock-release",value["releaseSource"].encode(),".py"),
   ("late-runtime-preservation",value["runtimeArchiveSource"].encode(),".py"),
   ("lean-continuation",value["mainSource"].encode(),".py"),
@@ -81,6 +94,17 @@ def run_lean_aviary(value):
 if __name__=="__main__":
  selected=globals().get("AVIARY_LEAN_VALUE")
  if selected is None:
-  if len(sys.argv)!=2:raise SystemExit("usage: run_lean_aviary.py /absolute/authorized-complete-input.json")
-  selected=json.loads(Path(sys.argv[1]).read_bytes())
+  parser=argparse.ArgumentParser(description=__doc__)
+  parser.add_argument("input",help="Complete authorized input JSON with original saved file identities")
+  parser.add_argument("--python",help="Actual installed Python; must be the interpreter running this entry")
+  parser.add_argument("--node",help="Actual installed Node executable")
+  parser.add_argument("--playwright-module",help="Actual installed Playwright entry module")
+  parser.add_argument("--browser-executable",help="Actual installed browser executable")
+  arguments=parser.parse_args()
+  selected=json.loads(Path(arguments.input).read_bytes())
+  supplied=dict(selected.get("runtimeSelection") or {})
+  for key,item in {"python":arguments.python,"node":arguments.node,"playwrightModule":arguments.playwright_module,
+                   "browserExecutable":arguments.browser_executable}.items():
+   if item is not None:supplied[key]=item
+  selected={**selected,"runtimeSelection":supplied}
  run_lean_aviary(selected)
