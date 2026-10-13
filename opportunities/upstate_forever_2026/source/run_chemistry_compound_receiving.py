@@ -159,6 +159,7 @@ def run_course(args):
     workspace = Workspace(args.workspace.resolve(strict=True), create=False)
     output = args.output.resolve()
     require(not output.is_relative_to(workspace.root), "Keep receiving output outside the scientific Workspace")
+    require(not output.is_relative_to(APP), "Keep receiving output outside the scientific application")
     output.mkdir(parents=True, exist_ok=True)
     service = Chemistry(workspace)
     case = service.get_case(args.case_id)
