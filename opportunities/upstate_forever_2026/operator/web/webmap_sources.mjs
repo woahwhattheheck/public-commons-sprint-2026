@@ -237,6 +237,22 @@ export function attachWebMapSources(host){
   if(workspaceOf(host.getState())!==selectedWorkspace)throw Error('The workspace changed while opening the selected analysis.');
   return host.openExtension('scenario-analysis','createForSourceAreas',request);
  }
+ async function openGIS(result){
+  const selectedWorkspace=workspaceOf(host.getState());
+  if(!selectedWorkspace||selectedWorkspace!==workspace)throw Error('Choose the original workspace before preparing its GIS handover.');
+  const records=result?.admitted_sources||[],collection=result?.source_collection_id;
+  if(!collection||!records.some(row=>['vector','raster'].includes(row.kind))||records.some(row=>!row.source_id))
+   throw Error('Open a retained admission with original geographic sources.');
+  const request={workspace_key:selectedWorkspace,selection:{
+   title:(result.title||'Admitted map sources')+' — editable GIS',
+   project_crs:'EPSG:4326',source_collection_id:collection,
+   sources:records.map(row=>({source_collection_id:collection,source_id:row.source_id})),
+   notes:['Selected admitted map layers and their retained original attributes.',
+    ...(result.context?['The Census table describes whole counties and retains its original population date and estimate vintage.']:[])]}};
+  request.selection.title=request.selection.title.slice(0,240);
+  if(typeof host.openExtension!=='function')throw Error('The current operator extension host is required to open native GIS delivery.');
+  return host.openExtension('gis-projects','createForSources',copy(request));
+ }
  function resultCard(result,taskId){
   const section=el('article',null,'webmap-admission');section.append(el('h3','Retained native sources'));
   const records=result.admitted_sources||[];
@@ -250,6 +266,8 @@ export function attachWebMapSources(host){
     source_id:source.source_id,region_selector:source.region_selector,scenario_zones:source.scenario_zones,related_source_ids:source.related_source_ids}));
    section.append(row);
   }
+  if(records.some(source=>['vector','raster'].includes(source.kind)))
+   section.append(button('Prepare complete editable GIS handover',()=>openGIS(result)));
   if(result.context)section.append(el('p',result.context.label||'Dated whole-county population context included.'),detail('Context source and reference dates',result.context));
   const downloads=el('nav',null,'webmap-downloads');downloads.setAttribute('aria-label','Admitted source downloads');
   for(const file of result.files||[]){const a=fileLink(file);if(a)downloads.append(a);}if(downloads.childNodes.length)section.append(downloads);
