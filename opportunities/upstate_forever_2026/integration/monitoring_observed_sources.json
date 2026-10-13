@@ -123,11 +123,12 @@
     },
     {
       "path": "operator/web/monitoring.mjs",
-      "bytes": 7237,
-      "sha256": "be145e48c968912ad9d759977b1f26b8271ef5bd1702411be21a9bf1ba77658a",
+      "bytes": 7810,
+      "sha256": "f24ec9690b5aefc8e85c9792a55ef311e4933371688d83ce4f5f108d1ea32919",
       "predecessor_sha256": [
         "4997a2652034fae1708455f742b72b68dcc7d3a405c0ff303c7c69828b6ab9ea",
-        "1728c22d5b2c9ffaf572b9cea8d9f9dcc4a3e28edd81c5125d7af9d227b124be"
+        "1728c22d5b2c9ffaf572b9cea8d9f9dcc4a3e28edd81c5125d7af9d227b124be",
+        "be145e48c968912ad9d759977b1f26b8271ef5bd1702411be21a9bf1ba77658a"
       ]
     },
     {
@@ -147,12 +148,13 @@
     },
     {
       "path": "integrations/monitoring/source_adoption.json",
-      "bytes": 13312,
-      "sha256": "89dea2bd401a1aa523d809ec0be8d29f8bd0c3ab6c472b9c50c61b39dd2e5534",
+      "bytes": 14760,
+      "sha256": "f089667e84cfd0c188ba9b88b70b4eba254dbd0ad7515a1732e7669a159cc518",
       "predecessor_sha256": [
         "830e35b5d5b8929ef6ea238935b96bd7148c1224fab04802a89c9b52234f98a7",
         "785ffefbacf24579a9d6d138797ea50874e42a9ce75b7db5282c24f36d42be19",
-        "7620dbe4b3e5a4f6fd9a9d24215c393248198591dffa00ef8876791310e93a3c"
+        "7620dbe4b3e5a4f6fd9a9d24215c393248198591dffa00ef8876791310e93a3c",
+        "fb09fda9c1ab9c0daabd7da2f7433c9e53e3e5ddf7ad8d98c37f23028c93d7fd"
       ]
     },
     {
@@ -165,11 +167,17 @@
     },
     {
       "path": "integrations/monitoring/RECEIVING.md",
-      "bytes": 10969,
-      "sha256": "9c858d28db688f198fb9c0996cce947140fccde6b03138f9f14aed360fb72ce7",
+      "bytes": 12853,
+      "sha256": "c8a3d22111a0195b73937cc086ffb77fad8180a812a9bcbc9bb830944996bd8e",
       "predecessor_sha256": [
-        "06a1f51d6eb55c5747d541d6bf0e696e33937a5b4bb5d202615e1626d8e15746"
+        "64c51b2a43621fd9f57b8457754a77a0bb7f0bc356aab1c253a6b0edf8ed451b"
       ]
+    },
+    {
+      "path": "model/MONITORING.md",
+      "bytes": 19210,
+      "sha256": "666f2407ff9e3c668e6dc1bff9e1871db3abbf4e3438d402db1f0d612096e4d5",
+      "predecessor_sha256": []
     }
   ],
   "requires": [
@@ -233,5 +241,6 @@
       "sha256": "785ffefbacf24579a9d6d138797ea50874e42a9ce75b7db5282c24f36d42be19"
     }
   },
-  "receiving": "integrations/monitoring/RECEIVING.md"
+  "receiving": "integrations/monitoring/RECEIVING.md",
+  "receiving_base": "Current complete application atce1175a61650ffcd961ef784766df7d5c07e6b59, preserving Monitoring report and Implementation fieldwork composition"
 }

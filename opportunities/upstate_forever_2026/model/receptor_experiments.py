@@ -15,7 +15,7 @@ import statistics
 
 from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest,
                      held, identifier, now, read_json, verify_file)
-from . import experiments
+from . import experiments, receptor_execution
 from .receptor_cli import build as build_inventory
 
 SCHEMA = "upstate.receptor-experiment/v1"
@@ -33,13 +33,14 @@ EXPORT_FIELDS = (
     "basin_baseline_export", "basin_alternative_export", "basin_change",
     "basin_change_percent", "basin_common_valid_cells", "basin_coverage_fraction",
     "basin_support_sha256", "inventory_id", "inventory_report",
+    *receptor_execution.CSV_FIELDS,
 )
 RANGE_FIELDS = (
     "receptor_id", "receptor_title", "role", "scenario_id", "scenario_title",
     "pollutant", "unit", "evaluated_profiles", "profiles_with_quantities",
     "minimum_change", "median_change", "maximum_change", "reduced_profiles",
     "unchanged_profiles", "increased_profiles", "minimum_coverage_fraction",
-    "maximum_coverage_fraction", "same_basin_support",
+    "maximum_coverage_fraction", "same_basin_support", "native_model", "native_version",
 )
 
 
@@ -177,13 +178,29 @@ def plan(workspace, selection, *, page_size=100):
     selected = _selection(selection)
     captured = snapshot(workspace, selected["experiment_id"], page_size=page_size)
     chosen, groups, grid_id = _group_cases(captured, selected)
-    # Pending-case transitions receive distinct snapshots while completed
-    # receptor inventories remain reusable by their unchanged selections.
+    # Resolve the complete selected cohort before validating producing versions.
+    # A profile group may have extra outputs; the shared cohort is kept explicit.
+    native_runs = {}
+    for group in groups:
+        for run_id in [group["baseline_run_id"], *[case["run_id"] for case in group["cases"]]]:
+            if run_id not in native_runs:
+                native_runs[run_id] = workspace.inspect_run(run_id)
+    execution = (receptor_execution.bind(list(native_runs.values()), grid_id=grid_id)
+                 if native_runs else None)
+    for group in groups:
+        group["native_execution"] = receptor_execution.bind(
+            [native_runs[key] for key in [group["baseline_run_id"],
+                                         *[case["run_id"] for case in group["cases"]]]],
+            grid_id=grid_id, pollutants=execution["pollutants"])
+    # Retained products remain immutable as case progress or native sources change.
     identity = {"schema": SCHEMA, "workspace_id": workspace.project["id"],
-                "selection": selected, "cases": chosen}
+                "product_version": receptor_execution.PRODUCT_VERSION,
+                "selection": selected, "cases": chosen,
+                "execution_signature": receptor_execution.signature(execution) if execution else None}
     key = digest(identity)
     return {"schema": SCHEMA, "id": key, "workspace_id": workspace.project["id"],
             "selection": selected, "grid_id": grid_id, "snapshot": captured,
+            "identity": identity, "native_execution": execution,
             "chosen_cases": chosen, "groups": groups,
             "pending_cases": [row for row in chosen if row["state"] != "complete"]}
 
@@ -236,13 +253,16 @@ def _build_group(workspace, selected, group):
             raise ValueError("The completed alternative differs from its experiment case")
     inventory_selection = {"baseline_run_id": group["baseline_run_id"],
         "scenario_run_ids": [row["run_id"] for row in group["cases"]],
-        "receptor_spec": selected["receptor_spec"]}
+        "receptor_spec": selected["receptor_spec"],
+        "comparison_pollutants": group["native_execution"]["pollutants"]}
     delivery_id = selected["delivery_ids_by_baseline"].get(group["baseline_run_id"])
     if delivery_id:
         inventory_selection["delivery_id"] = delivery_id
     inventory = build_inventory(workspace, inventory_selection)
     if inventory["baseline_run_id"] != group["baseline_run_id"] or inventory["grid_id"] != group["grid_id"]:
         raise ValueError("Retained inventory differs from its profile group")
+    if inventory.get("native_execution") != group["native_execution"]:
+        raise ValueError("The producing native outputs changed after experiment comparison planning")
     references = _inventory_references(workspace, inventory)
     return {"id": group["id"], "state": "complete", "profile_id": group["profile_id"],
         "profile_title": group["profile_title"], "baseline_run_id": group["baseline_run_id"],
@@ -251,6 +271,8 @@ def _build_group(workspace, selected, group):
         "files": references, "areas": inventory["areas"],
         "pollutants": inventory.get("pollutants", sorted({row["pollutant"] for row in inventory["scenario_exports"]})),
         "run_pollutants": inventory.get("run_pollutants", {}),
+        "native_execution": inventory["native_execution"],
+        "execution_signature": inventory["execution_signature"],
         "scenario_exports": inventory["scenario_exports"]}
 
 
@@ -295,7 +317,8 @@ def _joined_rows(experiment_id, group, product):
 def _ranges(rows):
     groups = {}
     for row in rows:
-        key = (row["receptor_id"], row["scenario_id"], row["pollutant"], row["unit"])
+        key = (row["receptor_id"], row["scenario_id"], row["pollutant"], row["unit"],
+               row.get("native_model"), row.get("native_version"))
         groups.setdefault(key, []).append(row)
     result = []
     for key in sorted(groups):
@@ -308,6 +331,8 @@ def _ranges(rows):
         result.append({**{name: selected[0][name] for name in
                           ("receptor_id", "receptor_title", "role", "scenario_id",
                            "scenario_title", "pollutant", "unit")},
+            "native_model": selected[0].get("native_model"),
+            "native_version": selected[0].get("native_version"),
             "evaluated_profiles": len(selected), "profiles_with_quantities": len(changes),
             "minimum_change": min(changes) if changes else None,
             "median_change": statistics.median(changes) if changes else None,
@@ -351,12 +376,13 @@ def _report(path, result):
                          (("profile", "profile_title"), ("scenario", "scenario_title"), ("receptor", "receptor_title"), ("pollutant", "pollutant")))
         detailed += "<tr " + attrs + ">" + cells((
             row["profile_title"], row["receptor_title"], row["scenario_title"],
-            row["pollutant"].replace("_", " "), row["common_baseline_export"],
+            row["pollutant"].replace("_", " "), row["native_model"].upper() + " " + row["native_version"],
+            row["common_baseline_export"],
             row["common_alternative_export"], row["alternative_minus_baseline"],
             row["change_percent"], row["unit"], str(row["common_valid_cells"]) + " / " + str(row["selected_cells"]))) + "</tr>"
     ranges = "".join("<tr>" + cells((
         row["receptor_title"], row["scenario_title"], row["pollutant"].replace("_", " "),
-        row["minimum_change"], row["median_change"], row["maximum_change"], row["unit"],
+        row["native_model"].upper() + " " + row["native_version"], row["minimum_change"], row["median_change"], row["maximum_change"], row["unit"],
         str(row["profiles_with_quantities"]) + " / " + str(row["evaluated_profiles"]),
         str(row["reduced_profiles"]) + " / " + str(row["unchanged_profiles"]) + " / " + str(row["increased_profiles"]),
         "Same" if row["same_basin_support"] else "Varies")) + "</tr>" for row in result["profile_ranges"])
@@ -389,10 +415,11 @@ def _report(path, result):
         "<section><h2>Range across evaluated profiles</h2><p>These ranges describe the explicitly evaluated profile choices. "
         "The footprint column compares the original whole-basin valid-pixel signatures; per-area coverage is retained with each detailed comparison. "
         "Each receiving area is evaluated independently because upstream areas can overlap.</p>"
-        "<table><thead><tr><th>Area</th><th>Scenario</th><th>Pollutant</th><th>Minimum change</th><th>Median change</th><th>Maximum change</th><th>Unit</th>"
+        "<table><thead><tr><th>Area</th><th>Scenario</th><th>Pollutant</th><th>Native version</th><th>Minimum change</th><th>Median change</th><th>Maximum change</th><th>Unit</th>"
         "<th>Profiles with quantities / evaluated</th><th>Lower / unchanged / higher</th><th>Native pair footprint</th></tr></thead><tbody>" + ranges + "</tbody></table></section>"
-        "<h2>Receiving-area comparisons</h2><div class=\"filters\">" + filter_controls + '</div><p id="visible-count"></p><section>'
-        '<table id="comparisons"><thead><tr><th>Profile</th><th>Receiving area</th><th>Scenario</th><th>Pollutant</th><th>Baseline</th>'
+        + receptor_execution.report_section(result.get("native_execution"))
+        + "<h2>Receiving-area comparisons</h2><div class=\"filters\">" + filter_controls + '</div><p id="visible-count"></p><section>'
+        '<table id="comparisons"><thead><tr><th>Profile</th><th>Receiving area</th><th>Scenario</th><th>Pollutant</th><th>Native version</th><th>Baseline</th>'
         "<th>Alternative</th><th>Change</th><th>Change, %</th><th>Unit</th><th>Compared / selected pixels</th></tr></thead><tbody>"
         + detailed + "</tbody></table></section>"
         + ("<section><h2>Native cases progressing</h2><table><thead><tr><th>Profile</th><th>Scenario</th><th>State</th></tr></thead><tbody>" + pending + "</tbody></table></section>" if pending else "")
@@ -426,6 +453,8 @@ def build(workspace, selection, *, page_size=100):
             previous = read_json(saved_path)
             if previous["id"] != key or previous["workspace_id"] != workspace.project["id"]:
                 raise ValueError("Saved receptor comparison belongs to another selection")
+            if previous.get("native_execution") != proposed["native_execution"]:
+                raise ValueError("Saved comparison differs from its producing native outputs")
             if previous["state"] == "complete":
                 for item in previous["files"].values():
                     verify_file(directory, item)
@@ -470,6 +499,8 @@ def build(workspace, selection, *, page_size=100):
             "experiment_id": selected["experiment_id"], "grid_id": proposed["grid_id"],
             "title": selected["title"], "created_at": now(), "state": state,
             "selection": selected, "snapshot_sha256": describe_file(directory, directory / "snapshot.json")["sha256"],
+            "identity": proposed["identity"], "native_execution": proposed["native_execution"],
+            "product_version": receptor_execution.PRODUCT_VERSION,
             "groups": products, "rows": rows, "profile_ranges": _ranges(rows),
             "pending_cases": [{name: row[name] for name in ("id", "profile_id", "profile_title", "scenario_id", "scenario_title", "state")}
                               for row in unfinished],
@@ -487,10 +518,12 @@ def build(workspace, selection, *, page_size=100):
         _write_csv(directory / "scenario-exports.csv", EXPORT_FIELDS, rows)
         _write_csv(directory / "profile-ranges.csv", RANGE_FIELDS, result["profile_ranges"])
         atomic_json(directory / "groups.json", products)
+        atomic_json(directory / "native-execution.json", proposed["native_execution"])
         _report(directory / "index.html", result)
         for name, filename in (("snapshot", "snapshot.json"), ("cases", "cases.csv"),
                                ("groups", "groups.json"), ("scenario_exports", "scenario-exports.csv"),
-                               ("profile_ranges", "profile-ranges.csv"), ("report", "index.html")):
+                               ("profile_ranges", "profile-ranges.csv"), ("report", "index.html"),
+                               ("native_execution", "native-execution.json")):
             result["files"][name] = describe_file(directory, directory / filename)
         atomic_json(saved_path, result)
         return result
@@ -501,6 +534,8 @@ def inspect(workspace, comparison_id):
     result = read_json(directory / "result.json")
     if result["schema"] != SCHEMA or result["id"] != comparison_id or result["workspace_id"] != workspace.project["id"]:
         raise ValueError("Select an original receptor experiment comparison")
+    if result.get("identity") is not None and digest(result["identity"]) != comparison_id:
+        raise ValueError("The retained receptor comparison identity changed")
     for item in result["files"].values():
         verify_file(directory, item)
     for group in result["groups"]:

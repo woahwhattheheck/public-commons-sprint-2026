@@ -86,50 +86,35 @@ def parser():
     return p
 
 
-def _copy_exports(workspace, directory, state):
-    from model.common import atomic_bytes, atomic_json, describe_file, verify_file
+def _copy_exports(workspace, directory, state, *, exports=None, build_archive=True, progress=None):
+    from model.common import atomic_bytes, atomic_json, describe_file
     from model.parameter_exports import write_archive
-    from model.reuse import copy_verified
+    from model.parameter_suite_exports import SuiteExports
+    exports = exports or SuiteExports(workspace, directory, state["id"])
     results, outputs, studies = [], {}, []
     for item in state["studies"]:
         key = item.get("study_id")
         if not key:
             studies.append(dict(item))
             continue
-        from model import parameter_studies
-        current = parameter_studies.inspect(workspace, key)
+        current, exported, study_rows = exports.retain(item)
         item.update(state=current["state"], progress=current["progress"],
                     cases=[{name: case[name] for name in ("id", "run_id", "profile_id", "state")}
                            for case in current["cases"]])
-        exported = {}
-        for name, descriptor in current.get("artifacts", {}).items():
-            # Preserve each report's own relative paths, including comparison
-            # records and GIS files below difference-maps/<comparison-id>/.
-            relative = (Path("studies") / key / descriptor["path"]).as_posix()
-            exported[name] = copy_verified(
-                workspace.root / "experiments" / key, descriptor, directory,
-                path=relative, replace_mismatch=True)
         item["artifacts"] = exported
         outputs.update({key + "/" + name: value for name, value in exported.items()})
-        artifact = current.get("artifacts", {}).get("results")
-        if artifact:
-            original = verify_file(workspace.root / "experiments" / key, artifact)
-            result = json.loads(original.read_text(encoding="utf-8"))
-            if (result.get("experiment_id") != key
-                    or result.get("workspace_id") != workspace.project["id"]):
-                raise ValueError("A study result belongs to another retained operation")
-            for row in result["rows"]:
-                results.append({
-                    "study_id": key, "model_scope": item["model_scope"],
-                    "landscape_run_id": item["landscape_run_id"],
-                    "landscape": item["landscape"], **row,
-                })
+        for row in study_rows:
+            results.append({
+                "study_id": key, "model_scope": item["model_scope"],
+                "landscape_run_id": item["landscape_run_id"],
+                "landscape": item["landscape"], **row,
+            })
         studies.append(dict(item))
     result = {
         "schema": "upstate.gura-parameter-suite-results/v1",
         "suite_id": state["id"], "workspace_id": workspace.project["id"],
         "selection": state["selection"], "state": state["state"],
-        "studies": studies, "rows": results,
+        "studies": studies, "rows": results, "export_cache": exports.progress(),
         "mass_basis": "Sum of retained annual mass per pixel after one native-rate area conversion.",
         "comparison_basis": "Each case minus its same-landscape original-parameter reference on paired valid cells.",
         "interpretation": (
@@ -195,14 +180,20 @@ small{color:#515b63}a{color:#273844;margin-right:12px}code{overflow-wrap:anywher
                 "suite_id": state["id"], "workspace_id": workspace.project["id"],
                 "state": state["state"], "files": outputs}
     atomic_json(directory / "manifest.json", manifest)
-    write_archive(
-        directory, directory / "gura-parameter-suite.zip",
-        [describe_file(directory, directory / "manifest.json"), *outputs.values()])
-    return {"report": describe_file(directory, directory / "index.html"),
-            "csv": describe_file(directory, directory / "results.csv"),
-            "results": describe_file(directory, directory / "results.json"),
-            "manifest": describe_file(directory, directory / "manifest.json"),
-            "archive": describe_file(directory, directory / "gura-parameter-suite.zip")}
+    artifacts = {"report": describe_file(directory, directory / "index.html"),
+                 "csv": describe_file(directory, directory / "results.csv"),
+                 "results": describe_file(directory, directory / "results.json"),
+                 "manifest": describe_file(directory, directory / "manifest.json")}
+    state["packaging"] = {"state": "reports_ready", "cache": exports.progress(),
+                          "studies": len(studies), "archive": "pending"}
+    if build_archive:
+        write_archive(
+            directory, directory / "gura-parameter-suite.zip",
+            [describe_file(directory, directory / "manifest.json"), *outputs.values()],
+            progress=progress)
+        artifacts["archive"] = describe_file(directory, directory / "gura-parameter-suite.zip")
+        state["packaging"].update(state="complete", archive="current")
+    return artifacts
 
 
 def main(argv=None):
@@ -221,6 +212,7 @@ def main(argv=None):
     from model.model_selection import run_models, validate_completed_run
     from model.workspace import Workspace
     from model.native_execution import storage_exhausted
+    from model.parameter_suite_exports import SuiteExports
 
     root = args.workspace.resolve()
     receiving = root / "gura-receiving"
@@ -344,6 +336,7 @@ def main(argv=None):
             }
             if state["selection"] != selection:
                 raise ValueError("Retained suite selection differs from its immutable source identity")
+            exports = SuiteExports(workspace, directory, suite_id)
             for item in state["studies"]:
                 if item.get("study_id"):
                     current = parameter_studies.inspect(workspace, item["study_id"])
@@ -399,11 +392,15 @@ def main(argv=None):
                         logging.exception("Gura parameter study needs recovery: %s", item_key)
                     # Keep the completed reports usable while remaining native cases continue.
                     state["state"] = "running"
-                    state["files"] = _copy_exports(workspace, directory, state)
+                    checkpoint("study-exports", active_study_key=item_key)
+                    state["files"] = _copy_exports(
+                        workspace, directory, state, exports=exports, build_archive=False)
                     checkpoint("study-reported", active_study_key=item_key)
             complete = not failures and all(row["state"] == "complete" for row in state["studies"])
             state["state"] = "complete" if complete else "partial"
-            state["files"] = _copy_exports(workspace, directory, state)
+            state["files"] = _copy_exports(
+                workspace, directory, state, exports=exports,
+                progress=lambda value: checkpoint("suite-archive", export_progress=value))
             if args.archive:
                 destination = args.archive.resolve()
                 if destination.is_relative_to(root):

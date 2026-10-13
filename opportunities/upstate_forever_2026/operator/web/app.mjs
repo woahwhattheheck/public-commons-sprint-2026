@@ -1,5 +1,6 @@
 // ES-SUPERVISION-20261012
 import {attachNativeJobs} from './jobs.mjs';
+import {attachWorkspaceFinder} from './workspace_finder.mjs';
 import {attachDeliveryInspection} from './delivery_inspection.mjs';
 import {attachRehearsal} from './rehearsal.mjs';
 import {createSpatialWorkspace} from './spatial.mjs';
@@ -46,6 +47,7 @@ const fragment=new URLSearchParams(location.hash.slice(1));
 let capability=fragment.get('token')||sessionStorage.getItem(keyName);
 if(fragment.get('token')){sessionStorage.setItem(keyName,capability);history.replaceState(null,'','#overview');}
 let workspace=sessionStorage.getItem('upstate-selected-workspace')||null;
+let teamPerson=null,connectionEpoch=0;
 let state=null,view=viewLabels[location.hash.slice(1)]?location.hash.slice(1):'overview',poll=null,refreshing=false,refreshQueued=false;
 let formContext=null,detailContext=null,taskPanel=false,toastTimer=null,sourcePreview=null;
 let lastTaskStates=new Map(),lastRendered='',logOffset=0,itemRequest=0,detailRequest=0;
@@ -54,11 +56,13 @@ const form=$('#operation-form'),formDialog=$('#form-dialog'),detailDialog=$('#de
 const spatialWorkspace=createSpatialWorkspace({request:api,getWorkspace:()=>workspace,refreshState:refresh,showTask,openItem,toast});
 
 async function api(path,{method='GET',body,raw,filename,signal}={}){
-  const headers={Authorization:'Bearer '+capability};
+  const epoch=connectionEpoch;
+  const headers={Authorization:'Bearer '+capability,...(workspace?{'X-Workspace':workspace}:{})};
   if(body!==undefined)headers['Content-Type']='application/json';
   if(filename)headers['X-Upload-Filename']=encodeURIComponent(filename);
   const response=await fetch(path,{method,headers,body:raw??(body===undefined?undefined:JSON.stringify(body)),credentials:'same-origin',signal});
   const text=await response.text();
+  if(epoch!==connectionEpoch)throw Error('The connection changed while this request was running.');
   let value;try{value=JSON.parse(text);}catch{value={error:{message:'The operator returned an unreadable response (HTTP '+response.status+').'}};}
   if(!response.ok){const error=new Error(value.error?.message||'HTTP '+response.status);error.code=value.error?.code;error.status=response.status;throw error;}
   return value;
@@ -117,6 +121,21 @@ const deliveryReview=createDeliveryReview({esc,button,bytes,number,when,runTitle
  setDetailFiles:files=>{if(detailContext)detailContext.files=files;},
  beginDetailRequest:()=>++itemRequest,isDetailRequest:request=>request===itemRequest&&detailDialog.open});
 const nativeJobs=attachNativeJobs({api,endpoint,detail,refresh,getWorkspace:()=>workspace,getDetailContext:()=>detailContext,openItem,toast,getState:()=>state});
+function finderDestination(open){
+ itemRequest++;detailContext=null;deliveryInspection.detach();
+ if(detailDialog.open)detailDialog.close();
+ return open();
+}
+const workspaceFinder=attachWorkspaceFinder({
+ getState:()=>state,getWorkspace:()=>workspace,
+ getDesks:()=>$$('.sidebar [data-view]').filter(node=>viewLabels[node.dataset.view]||extensions.hasView(node.dataset.view))
+  .map(node=>({id:node.dataset.view,title:node.textContent.trim()})),
+ navigate:next=>finderDestination(()=>navigate(next)),
+ openItem:(kind,id)=>finderDestination(()=>openItem(kind,id)),
+ showTask:id=>finderDestination(()=>showTask(id)),
+ taskLabel:action=>actionLabels[action]||human(action),
+ canOpen:()=>!formDialog.open,reportError:error=>toast(error.message||String(error))
+});
 function toast(message){clearTimeout(toastTimer);$('#toast').textContent=message;$('#toast').hidden=false;toastTimer=setTimeout(()=>$('#toast').hidden=true,5500);}
 function globalError(error){$('#global-error').textContent=error.message||String(error);$('#global-error').hidden=false;}
 function clearError(){$('#global-error').hidden=true;$('#global-error').textContent='';}
@@ -130,12 +149,17 @@ async function refresh({force=false}={}){
     try{data=await api('/api/state?compact=1'+(requestedWorkspace?'&workspace='+encodeURIComponent(requestedWorkspace):''));}
     catch(error){
       if(workspace!==requestedWorkspace)return;
-      if(error.status!==404||!requestedWorkspace)throw error;
+      if(![403,404].includes(error.status)||!requestedWorkspace)throw error;
       data=await api('/api/state?compact=1');
     }
     if(workspace!==requestedWorkspace)return;
     state=data;workspace=data.workspace_key;sessionStorage.setItem('upstate-selected-workspace',workspace);
-    $('#connection-state').textContent='';
+    teamPerson=data.person||teamPerson;
+    const access=data.workspaces.find(x=>x.id===workspace)?.access_role||'administrator';
+    $('#connection-state').textContent=access==='viewer'?'Viewer access · Inspect retained results and download available files.':'';
+    $('#team-person').textContent=(teamPerson?.display_name||'Local installation owner')+' · '+access;
+    $('#team-manage').hidden=!teamPerson?.administrator;
+    $('#team-sign-out').hidden=false;
     const options=data.workspaces.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===workspace?'selected':'')+' '+(!x.available?'disabled':'')+'>'+esc(x.title)+(x.received?' · restored copy':'')+'</option>').join('');
     $('#workspace-select').innerHTML=options;
     for(const task of data.tasks){
@@ -145,12 +169,16 @@ async function refresh({force=false}={}){
     }
     renderTasks();
     extensions.update(state);
+    workspaceFinder.update(state);
     const fingerprint=JSON.stringify({conservation_tasks:view==='conservation'?(data.tasks||[]).filter(t=>String(t.action||'').startsWith('conservation.')||['experiment.save','experiment.run','experiment.summarize'].includes(t.action)).map(t=>[t.id,t.state,t.updated_at||null,t.progress||null]):undefined,rehearsal_tasks:view==='rehearsal'?(data.tasks||[]).filter(t=>String(t.action||'').startsWith('rehearsal.')).map(t=>[t.id,t.state]):undefined,view,workspace,data:data.data});
     if(force||fingerprint!==lastRendered){render();lastRendered=fingerprint;}
     if(detailContext?.kind==='task')await showTask(detailContext.id,false);
     if(['runs','spatial_exports','deliveries'].includes(detailContext?.kind)&&detailDialog.open){const kind=detailContext.kind,row=(data.data[kind]||[]).find(x=>x.id===detailContext.id);if(row&&(kind==='deliveries'?deliveryChanged(row,detailContext):row.state!==detailContext.state))await openItem(kind,row.id,false);}
   }catch(error){
-    if(workspace===requestedWorkspace){$('#connection-state').textContent='Connection interrupted. Retained task state is preserved.';if(force)globalError(error);}
+    if(workspace===requestedWorkspace){
+      if(error.status===401){showConnection(error.message);return;}
+      $('#connection-state').textContent='Connection interrupted. Retained task state is preserved.';if(force)globalError(error);
+    }
   }finally{
     refreshing=false;clearTimeout(poll);
     if(refreshQueued){refreshQueued=false;poll=setTimeout(()=>refresh({force:true}),0);}
@@ -411,8 +439,8 @@ function downloadObservationComparison(){
 }
 
 async function showTask(id,focus=true){
-  const requestedWorkspace=workspace,row=await api(endpoint('/api/task',{id}));if(workspace!==requestedWorkspace)return;
-  const registeredActions=await extensions.taskActions(row);if(workspace!==requestedWorkspace)return;
+  const request=++itemRequest,requestedWorkspace=workspace,row=await api(endpoint('/api/task',{id}));if(workspace!==requestedWorkspace||request!==itemRequest)return;
+  const registeredActions=await extensions.taskActions(row);if(workspace!==requestedWorkspace||request!==itemRequest)return;
   const body='<div class="meta">'+badge(row.state)+'<span>'+esc(when(row.created_at))+'</span><span>'+row.attempts.length+' retained attempts</span></div>'+(row.error?'<div class="notice error">'+esc(row.error.message)+'</div>':'')+
   (row.result?.workspace_key?'<div class="notice"><strong>Original workspace restored</strong>'+button('workspace-select','Open restored copy','data-id="'+row.result.workspace_key+'"','small')+'</div>':'')+
   (row.action==='spatial.review.export'&&row.result?.id?'<div class="page-actions">'+itemButton('spatial_exports',row.result.id,'Open map pack')+'</div>':'')+
@@ -1099,6 +1127,7 @@ async function selectWorkspace(id){
  nativeJobs.detach();
  if(operatingJourney?.isBusy())throw Error('Wait for the current journey request before changing workspaces.');
  if(formDialog.open)throw Error('Finish or close the current draft before changing workspaces.');
+ workspaceFinder.reset();
  sourceReports.reset();
  rehearsal.detach();
  extensions.detach();
@@ -1176,9 +1205,37 @@ form.addEventListener('submit',async event=>{
 formDialog.addEventListener('cancel',event=>{if(formContext?.busy)event.preventDefault();else formContext=null;});
 detailDialog.addEventListener('close',()=>{if(detailDialog.open||itemRequest!==detailRequest)return;itemRequest++;deliveryInspection.detach();detailContext=null;});
 $('#workspace-select').addEventListener('change',event=>selectWorkspace(event.target.value).catch(globalError));
-window.addEventListener('hashchange',()=>{const requested=location.hash.slice(1);if(viewLabels[requested]||extensions.hasView(requested))navigate(requested);});
+window.addEventListener('hashchange',()=>{const incoming=new URLSearchParams(location.hash.slice(1)).get('token');if(incoming){sessionStorage.setItem(keyName,incoming);sessionStorage.removeItem('upstate-selected-workspace');history.replaceState(null,'','/');location.reload();return;}const requested=location.hash.slice(1);if(viewLabels[requested]||extensions.hasView(requested))navigate(requested);});
 window.addEventListener('online',()=>refresh({force:true}));
+function showConnection(message='Open your private access link or paste it below.'){
+ connectionEpoch++;itemRequest++;
+ nativeJobs.detach();rehearsal.detach();extensions.detach();spatialWorkspace.suspend();
+ programmes.detach();community.detach();customerReviews.detach();experiments.detach();
+ receivingWaters.detach();portfolio.detach();parameterStudies.detach();deliveryInspection.detach();
+ capability=null;teamPerson=null;state=null;workspace=null;clearTimeout(poll);
+ lastTaskStates.clear();lastRendered='';refreshQueued=false;taskPanel=false;
+ sessionStorage.removeItem(keyName);sessionStorage.removeItem('upstate-selected-workspace');
+ if(formDialog.open)formDialog.close();if(detailDialog.open)detailDialog.close();formContext=null;detailContext=null;
+ $('#task-panel').hidden=true;$('#task-list').replaceChildren();$('#task-count').textContent='0';
+ $('#workspace-select').replaceChildren();$('#team-person').textContent='Disconnected';$('#team-manage').hidden=true;$('#team-sign-out').hidden=true;
+ $('#connection-state').textContent='';
+ $('#content').innerHTML='<div class="empty"><h1>Connect to the workbench</h1><p>'+esc(message)+'</p><form id="team-connect-form"><label for="team-access-link">Private access link</label><input id="team-access-link" type="password" required autocomplete="off"><button type="submit">Connect</button></form></div>';
+ $('#team-connect-form').addEventListener('submit',event=>{
+   event.preventDefault();const supplied=$('#team-access-link').value.trim();let selected;
+   try{selected=new URL(supplied,location.origin).hash;selected=new URLSearchParams(selected.slice(1)).get('token');}catch{}
+   if(!selected){globalError(Error('Paste the complete private access link supplied by your administrator.'));return;}
+   sessionStorage.setItem(keyName,selected);location.replace('/');location.reload();
+ });
+}
+$('#team-sign-out').addEventListener('click',async()=>{
+ try{await api('/api/logout',{method:'POST',body:{}});}catch{}
+ finally{showConnection('Signed out. Open a current private access link to reconnect.');}
+});
 if(capability){
- try{await api('/api/session',{method:'POST',body:{}});try{await extensions.load();const requested=location.hash.slice(1);if(extensions.hasView(requested))view=requested;}catch(error){toast('Additional desks: '+error.message);}await refresh({force:true});}
- catch(error){globalError(error);$('#connection-state').textContent='Open the current operator URL printed by the local server.';}
-}else $('#connection-state').textContent='Open the complete operator URL printed by the local server to access this workspace.';
+ try{
+  const session=await api('/api/session',{method:'POST',body:{}});teamPerson=session.person;
+  if(!session.workspaces.some(row=>row.id===workspace))workspace=session.default_workspace;
+  try{await extensions.load();const requested=location.hash.slice(1);if(extensions.hasView(requested))view=requested;}catch(error){toast('Additional desks: '+error.message);}
+  await refresh({force:true});
+ }catch(error){showConnection(error.message);}
+}else showConnection();

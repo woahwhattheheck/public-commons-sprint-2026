@@ -46,6 +46,7 @@ from delivery_review import read as read_delivery_report, send_preview as send_d
 from extension_registry import ExtensionRegistry
 from programmes import Programmes, ACTIONS as PROGRAMME_ACTIONS, READS as PROGRAMME_READS
 from task_requests import TaskRequests
+from team_access import TeamAccess, CONTEXT
 from study_catalogues import StudyCatalogues
 from programme_activity import ProgrammeActivity
 
@@ -124,6 +125,8 @@ class Operator:
                  source_manifests=(), source_roots=(), restore_directory=None, upload_limit=4*1024**3,
                  extraction_limit=64*1024**3):
         self.root = Path(state_directory).resolve()
+        if self.root.is_relative_to(APPLICATION) or self.root.is_relative_to(Path(directory).resolve()):
+            raise Fault("TEAM_STORAGE", "Keep the operator-state directory outside application source and scientific workspace directories.", 422)
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.owner = held(self.root / ".operator.lock", blocking=False)
         self.owner.__enter__()
@@ -171,9 +174,10 @@ class Operator:
             key = digest({"path": str(p), "sha256": file_digest(p)})
             self.registered[key] = {"id": key, "path": str(p), "sha256": file_digest(p),
                                     "title": value.get("title", p.name), "entries": len(value.get("entries", []))}
+        self.team = TeamAccess(self.root, Fault, lambda: self.registry.keys())
         self.extensions = ExtensionRegistry(self, Fault,
             builtin_actions=ACTIONS, builtin_kinds=KINDS,
-            builtin_routes=(('GET', '/api/extensions'), ('GET', '/api/state'), ('GET', '/api/item'), ('GET', '/api/source-info'), ('GET', '/api/task'), ('GET', '/api/native-job'), ('GET', '/api/run-log'), ('GET', '/api/runtime'), ('POST', '/api/upload'), ('POST', '/api/session'), ('POST', '/api/operator-session'), ('POST', '/api/source-preview'), ('POST', '/api/actions'), ('POST', '/api/task/resume'), ('POST', '/api/task/cancel')),
+            builtin_routes=(('GET', '/api/team'), ('GET', '/api/whoami'), ('POST', '/api/team'), ('POST', '/api/logout'), ('GET', '/api/extensions'), ('GET', '/api/state'), ('GET', '/api/item'), ('GET', '/api/source-info'), ('GET', '/api/task'), ('GET', '/api/native-job'), ('GET', '/api/run-log'), ('GET', '/api/runtime'), ('POST', '/api/upload'), ('POST', '/api/session'), ('POST', '/api/operator-session'), ('POST', '/api/source-preview'), ('POST', '/api/actions'), ('POST', '/api/task/resume'), ('POST', '/api/task/cancel')),
             source_roots=source_roots).load()
         for path in (self.root / "tasks").glob("*.json"):
             task = read_json(path)
@@ -183,6 +187,8 @@ class Operator:
                 atomic_json(path, task)
 
     def _open(self, item):
+        if self.root.is_relative_to(Path(item["directory"]).resolve()):
+            raise Fault("TEAM_STORAGE", "The operator-state directory must stay outside each scientific workspace.", 422)
         ws = Workspace(item["directory"])
         self.workspaces[item["id"]] = ws
         self.spatial_reviews[item["id"]] = SpatialReview(ws)
@@ -193,6 +199,8 @@ class Operator:
         return ws
 
     def register(self, workspace, *, received=None):
+        if hasattr(self, "team") and self.team.current():
+            self.team.require(self.team.current()["principal"], administrator=True)
         key = digest({"directory": str(workspace.root)})
         with self.lock:
             item = self.registry.get(key, {"id": key, "directory": str(workspace.root),
@@ -206,6 +214,8 @@ class Operator:
 
     def ws(self, key):
         key = token(key)
+        if hasattr(self, "team"):
+            self.team.check_workspace(key)
         if key not in self.workspaces:
             raise Fault("WORKSPACE_MISSING", "Select an available workspace.", 404)
         return self.workspaces[key]
@@ -309,10 +319,15 @@ class Operator:
             raise Fault("JOURNEY_BUSY", "A workspace save is in progress. Save this view again when it finishes.", 409) from error
 
     def public_workspaces(self):
-        return [{k: v for k, v in row.items() if k != "directory"} for row in self.registry.values()]
+        rows = [{k: v for k, v in row.items() if k != "directory"} for row in self.registry.values()]
+        context = self.team.current() if hasattr(self, "team") else None
+        return self.team.workspaces(context["principal"], rows) if context else rows
 
     def task(self, key):
-        return read_json(self.root / "tasks" / (token(key) + ".json"))
+        task = read_json(self.root / "tasks" / (token(key) + ".json"))
+        if hasattr(self, "team"):
+            self.team.check_workspace(task["workspace"])
+        return task
 
     def task_list(self, workspace=None, *, compact=False):
         paths = list((self.root / "tasks").glob("*.json"))
@@ -323,10 +338,17 @@ class Operator:
             items = [read_json(path) for path in paths]
         if workspace:
             items = [x for x in items if x["workspace"] == workspace]
+        context = self.team.current() if hasattr(self, "team") else None
+        if context:
+            items = [x for x in items if self.team.role(context["principal"], x["workspace"])]
         return sorted(items, key=lambda x: x["created_at"], reverse=True)
 
     def submit(self, workspace, action, payload, operation_id):
         self.ws(workspace)
+        self.team.check_workspace(workspace, write=True)
+        self.team.set_workspace(workspace)
+        context = self.team.current()
+        self.team.require_action(action, payload)
         if (action not in ACTIONS and not self.extensions.handles_action(action)) or not isinstance(payload, dict):
             raise Fault("ACTION_INVALID", "Choose a supported workspace operation.")
         if not isinstance(operation_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{16,100}", operation_id):
@@ -356,13 +378,19 @@ class Operator:
             task = {"schema": "upstate.operator-task/v1", "id": key, "operation_id": operation_id,
                     **request, "request_sha256": request_sha, "created_at": now(),
                     "state": "queued", "attempts": []}
+            actor = self.team.actor()
+            if actor:
+                task["requested_by"] = actor
             atomic_json(file, task, immutable=True)
+            self.team.record("task.queued", workspace=workspace, task_id=key,
+                             detail={"action": action, "operation_id": operation_id})
             self.pool.submit(self._perform, key)
             return task
 
     def resume(self, key):
         with self.lock:
             task = self.task(key)
+            self.team.check_workspace(task["workspace"], write=True)
             if task["state"] in ACTIVE or task["state"] == "complete":
                 return task
             if task["state"] not in {"interrupted", "failed", "cancelled"}:
@@ -370,6 +398,10 @@ class Operator:
             if self.closing:
                 raise Fault("OPERATOR_DRAINING", "The operator is draining.", 409)
             task.update(state="queued")
+            actor = self.team.actor()
+            if actor:
+                task["execution_requested_by"] = actor
+                task.setdefault("resumptions", []).append({"at": now(), "by": actor})
             task.pop("error", None)
             atomic_json(self.root / "tasks" / (key + ".json"), task)
             self.pool.submit(self._perform, key)
@@ -378,11 +410,12 @@ class Operator:
     def cancel(self, key):
         with self.lock:
             task = self.task(key)
+            self.team.check_workspace(task["workspace"], write=True)
             if self.native_jobs.supports(task) and task["state"] != "queued":
                 return self.native_jobs.request_stop(task)
             if task["state"] != "queued":
                 raise Fault("TASK_RUNNING", "Only a task that has not started can be cancelled here.", 409)
-            task.update(state="cancelled", ended_at=now())
+            task.update(state="cancelled", ended_at=now(), cancelled_by=self.team.actor())
             atomic_json(self.root / "tasks" / (key + ".json"), task)
             return task
 
@@ -397,8 +430,12 @@ class Operator:
             task["attempts"].append(attempt)
             atomic_json(self.root / "tasks" / (key + ".json"), task)
         try:
-            with self.gates[task["workspace"]]:
-                result = self._invoke(task)
+            principal = self.team.task_principal(task)
+            with self.team.scope(principal, task["workspace"]):
+                self.team.require_action(task["action"], task["payload"])
+                attempt["executed_for"] = self.team.actor()
+                with self.gates[task["workspace"]]:
+                    result = self._invoke(task)
             task.update(state="complete", result=result, ended_at=now())
             attempt.update(state="complete", ended_at=task["ended_at"])
         except BaseException as error:
@@ -510,6 +547,7 @@ class Operator:
         raise Fault("ACTION_INVALID", "The original operation is not supported.")
 
     def upload(self, key):
+        self.team.check_resource("upload", key)
         record = read_json(self.root / "uploads" / (token(key) + ".json"))
         path = self.root / record["object"]
         if not path.is_file() or path.stat().st_size != record["bytes"] or file_digest(path) != record["sha256"]:
@@ -550,6 +588,9 @@ class Operator:
             record = {"id": key, "filename": filename, "mime_type": media_type,
                       "bytes": length, "sha256": sha, "object": "objects/" + sha}
             atomic_json(self.root / "uploads" / (key + ".json"), record, immutable=True)
+            context = self.team.current()
+            if context:
+                self.team.grant_resource("upload", key, context["workspace"])
             return record
         finally:
             if pending:
@@ -591,6 +632,9 @@ class Operator:
 
     def preview_source(self, data):
         if data.get("registered_id"):
+            context = self.team.current()
+            if context:
+                self.team.require(context["principal"], administrator=True)
             key = required(data, "registered_id")
             registered = self.registered.get(key)
             if not registered:
@@ -643,9 +687,13 @@ class Operator:
         key = digest(preview)
         preview = {"id": key, **preview}
         atomic_json(self.root / "previews" / (key + ".json"), preview, immutable=True)
+        context = self.team.current()
+        if context:
+            self.team.grant_resource("preview", key, context["workspace"])
         return {k: v for k, v in preview.items() if k not in {"path", "manifest"}}
 
     def materialize_source(self, preview, task_id):
+        self.team.check_resource("preview", preview["id"])
         if preview["kind"] == "registered":
             p = Path(preview["path"])
             if file_digest(p) != preview["manifest_sha256"]:
@@ -679,6 +727,7 @@ class Operator:
             raise
 
     def _ticket(self, workspace, path, expected, label=None):
+        self.team.check_workspace(workspace)
         path = Path(path).resolve()
         key = digest({"workspace": workspace, "path": str(path), "sha256": expected["sha256"], "bytes": expected["bytes"]})
         item = {"id": key, "workspace": workspace, "path": str(path), "filename": expected.get("filename") or path.name,
@@ -710,6 +759,7 @@ class Operator:
         return list(unique.values())
 
     def item(self, workspace, kind, key):
+        self.ws(workspace)
         if self.extensions.has_item(kind):
             return self.extensions.item(workspace, kind, key)
         if kind not in KINDS:
@@ -858,9 +908,11 @@ class Operator:
             row.pop("stages", None)
         return {"workspace_key": workspace, "workspaces": self.public_workspaces(), "data": state,
                 "tasks": self.task_list(workspace, compact=compact), "registered_sources": [
-                    {k: v for k, v in row.items() if k != "path"} for row in self.registered.values()],
+                    {k: v for k, v in row.items() if k != "path"} for row in self.registered.values()
+                    if not self.team.current() or self.team.current()["principal"]["administrator"]],
                 "limits": {"upload_bytes": self.upload_limit, "source_extraction_bytes": self.extraction_limit},
-                "closing": self.closing}
+                "closing": self.closing,
+                "person": self.team.current()["principal"] if self.team.current() else self.team.owner()}
 
     def task_view(self, key):
         task = self.task(key)
@@ -904,6 +956,7 @@ class Operator:
             item = self.downloads.get(token(key))
         if not item:
             raise Fault("DOWNLOAD_MISSING", "Reopen the retained item before downloading its file.", 404)
+        self.team.check_workspace(item["workspace"])
         file = open(item["path"], "rb")
         try:
             st = os.fstat(file.fileno())
@@ -953,19 +1006,33 @@ class Handler(BaseHTTPRequestHandler):
         if origin and origin != self.app.origin:
             raise Fault("ORIGIN_INVALID", "Use the original local operator page.", 403)
 
+    def team_cookie(self):
+        jar = cookies.SimpleCookie()
+        with contextlib.suppress(cookies.CookieError):
+            jar.load(self.headers.get("Cookie", ""))
+        selected = jar.get(self.app.team.cookie_name)
+        return selected.value if selected else None
+
     def authorized(self, *, file=False):
         self.check_host()
-        expected = "Bearer " + self.app.capability
-        if hmac.compare_digest(self.headers.get("Authorization", ""), expected):
-            return
-        if file:
-            jar = cookies.SimpleCookie()
-            with contextlib.suppress(cookies.CookieError):
-                jar.load(self.headers.get("Cookie", ""))
-            value = jar.get("upstate_download")
-            if value and hmac.compare_digest(value.value, self.app.download_cookie):
-                return
-        raise Fault("OPERATOR_TOKEN", "Open the current operator startup URL to connect.", 401)
+        self.principal = self.app.team.authenticate(
+            self.headers.get("Authorization", ""), self.app.capability,
+            self.team_cookie() if file else None)
+        self.app.team.set_request(self.principal)
+        return self.principal
+
+    def selected_workspace(self, supplied=None, *, write=False):
+        workspace = supplied or self.app.team.default_workspace(self.principal, self.app.primary)
+        self.app.team.require(self.principal, workspace, write=write)
+        self.app.ws(workspace)
+        self.app.team.set_workspace(workspace)
+        return workspace
+
+    def finish(self):
+        try:
+            super().finish()
+        finally:
+            CONTEXT.set(None)
 
     def send_json(self, status, value, *, cookie=False):
         self.close_connection = True
@@ -977,7 +1044,10 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         if cookie:
-            self.send_header("Set-Cookie", "upstate_download=" + self.app.download_cookie + "; HttpOnly; SameSite=Strict; Path=/api/file/")
+            value = self.app.team.session(self.principal)
+            self.send_header("Set-Cookie", self.app.team.cookie_name + "=" + value + "; HttpOnly; SameSite=Strict; Path=/api/; Max-Age=28800")
+        if getattr(self, "clear_team_cookie", False):
+            self.send_header("Set-Cookie", self.app.team.cookie_name + "=; HttpOnly; SameSite=Strict; Path=/api/; Max-Age=0")
         self.end_headers()
         self.wfile.write(body)
 
@@ -1020,14 +1090,24 @@ class Handler(BaseHTTPRequestHandler):
                                       content_security_policy=reply["content_security_policy"])
             if url.path == "/api/file/delivery-report":
                 self.authorized(file=True)
-                return send_delivery_report_preview(self, one("workspace", self.app.primary), one("id"),
+                workspace = self.selected_workspace(one("workspace"))
+                return send_delivery_report_preview(self, workspace, one("id"),
                                                     report=one("report", "scientific"))
             if url.path.startswith("/api/file/"):
                 self.authorized(file=True)
                 return self.send_file(url.path.rsplit("/", 1)[1], download=one("download") == "1")
             if url.path.startswith("/api/"):
                 self.authorized()
-                workspace = one("workspace", self.app.primary)
+                if url.path == "/api/team":
+                    return self.send_json(200, self.app.team.state(self.principal, self.app.public_workspaces()))
+                if url.path == "/api/whoami":
+                    return self.send_json(200, {"person": self.principal, "workspaces": self.app.public_workspaces(),
+                                               "default_workspace": self.app.team.default_workspace(self.principal, self.app.primary)})
+                if url.path == "/api/task":
+                    task = self.app.task(one("id"))
+                    self.selected_workspace(task["workspace"])
+                    return self.send_json(200, self.app.task_view(one("id")))
+                workspace = self.selected_workspace(one("workspace"))
                 rehearsal_reads = {"/api/rehearsals/" + name: name for name in REHEARSAL_READS}
                 if url.path in rehearsal_reads:
                     return self.send_json(200, self.app.rehearsals.read(workspace,
@@ -1096,7 +1176,7 @@ class Handler(BaseHTTPRequestHandler):
                         {name: values[0] for name, values in query.items()}))
                 raise Fault("ROUTE_MISSING", "This operator route does not exist.", 404)
             selected = "index.html" if url.path == "/" else url.path.removeprefix("/web/")
-            if selected not in (({'app.mjs', 'community.css', 'community.mjs', 'conservation.css', 'conservation.mjs', 'conservation_optimization.css', 'conservation_optimization.mjs', 'conservation_optimization_bridge.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'jobs.css', 'jobs.mjs', 'observed_series.mjs', 'parameter_studies.css', 'parameter_studies.mjs', 'portfolio.css', 'portfolio.mjs', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css', 'observation_support.mjs', 'observed_reports.mjs'} | self.app.extensions.web_assets | {"delivery_review.mjs", "delivery_review.css"} | {"rehearsal.mjs", "rehearsal.css"})):
+            if selected not in (({'app.mjs', 'community.css', 'community.mjs', 'conservation.css', 'conservation.mjs', 'conservation_optimization.css', 'conservation_optimization.mjs', 'conservation_optimization_bridge.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'jobs.css', 'jobs.mjs', 'observed_series.mjs', 'parameter_studies.css', 'parameter_studies.mjs', 'portfolio.css', 'portfolio.mjs', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css', 'observation_support.mjs', 'observed_reports.mjs'} | self.app.extensions.web_assets | {"delivery_review.mjs", "delivery_review.css"} | {"rehearsal.mjs", "rehearsal.css", "team.html", "team.mjs", "team.css"})):
                 raise Fault("PAGE_MISSING", "This operator page does not exist.", 404)
             data = (Path(__file__).parent / "web" / selected).read_bytes()
             self.close_connection = True
@@ -1122,12 +1202,38 @@ class Handler(BaseHTTPRequestHandler):
             self.authorized()
             url = urllib.parse.urlsplit(self.path)
             if url.path == "/api/upload":
+                self.selected_workspace(self.headers.get("X-Workspace"), write=True)
                 length = int(self.headers.get("Content-Length", "-1"))
                 result = self.app.receive_upload(self.rfile, length,
                                                 self.headers.get("X-Upload-Filename", ""),
                                                 self.headers.get("Content-Type", "application/octet-stream"))
                 return self.send_json(201, result)
             value = self.body()
+            if url.path == "/api/team":
+                result = self.app.team.change(self.principal, value)
+                if result.get("access_token"):
+                    result["access_url"] = self.app.origin + "/#token=" + result.pop("access_token")
+                return self.send_json(201 if value.get("operation") == "create" else 200, result)
+            if url.path == "/api/session":
+                return self.send_json(200, {"connected": True, "person": self.principal,
+                    "workspaces": self.app.public_workspaces(),
+                    "default_workspace": self.app.team.default_workspace(self.principal, self.app.primary)}, cookie=True)
+            if url.path == "/api/logout":
+                self.app.team.logout(self.team_cookie())
+                self.clear_team_cookie = True
+                return self.send_json(200, {"connected": False})
+            readonly = {"/api/spatial/describe", "/api/spatial/frame", "/api/spatial/overlay", "/api/spatial/point",
+                        "/api/parameter-studies/preview", "/api/experiments/preview",
+                        "/api/programmes/preview", "/api/programmes/experiment-preview", "/api/programmes/delivery-preview"}
+            if url.path in {"/api/task/resume", "/api/task/cancel"}:
+                task = self.app.task(required(value, "id"))
+                self.selected_workspace(task["workspace"], write=True)
+            else:
+                workspace = self.selected_workspace(value.get("workspace") or self.headers.get("X-Workspace"),
+                                                    write=url.path not in readonly and not self.app.team.viewer_post(url.path))
+                value = {**value, "workspace": workspace}
+            self.app.team.require_route(url.path)
+            self.app.team.require_payload(value)
             if url.path == "/api/parameter-studies/preview":
                 return self.send_json(200, self.app.parameter_studies.preview(
                     value.get("workspace", self.app.primary), value["selection"]))
@@ -1143,8 +1249,6 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(200, self.app.programmes.delivery_preview(value.get("workspace", self.app.primary), value))
             if url.path == "/api/operator-session":
                 return self.send_json(200, self.app.save_operator_session(value.get("workspace", self.app.primary), value))
-            if url.path == "/api/session":
-                return self.send_json(200, {"connected": True}, cookie=True)
             if url.path == "/api/source-preview":
                 return self.send_json(200, self.app.preview_source(value))
             spatial_reads = {"/api/spatial/" + name: name for name in ("describe", "frame", "overlay", "point")}

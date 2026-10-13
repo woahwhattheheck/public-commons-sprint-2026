@@ -21,7 +21,7 @@ _MODULE = re.compile(r"^[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*$")
 _MEMBER = re.compile(r"^[A-Za-z_]\w*$")
 _CONTEXT_KEYS = frozenset({
     "operator", "fault", "source_roots", "workspace", "workspace_key",
-    "operation", "action", "payload", "task", "route_params",
+    "operation", "action", "payload", "task", "route_params", "principal",
 })
 
 
@@ -93,7 +93,11 @@ class ExtensionRegistry:
             payload = task.get("payload", payload)
         if workspace is None and workspace_key is not None:
             workspace = self.operator.ws(workspace_key)
+        team = getattr(self.operator, "team", None)
+        request_context = team.current() if team else None
+        principal = request_context["principal"] if request_context else None
         return {
+            "principal": principal,
             "operator": self.operator, "fault": self.fault,
             "source_roots": self.source_roots,
             "workspace_key": workspace_key, "workspace": workspace,
@@ -491,8 +495,17 @@ class ExtensionRegistry:
         if found is None:
             self._fail("EXTENSION_ROUTE", "This extension read route is not registered.", 404)
         entry, binding, operation = found
-        return self._call(binding, self._context(workspace_key=workspace_key,
-                                                operation=operation, payload=payload))
+        team = getattr(self.operator, "team", None)
+        if team:
+            team.require_route(path, method)
+            team.require_payload(payload)
+        result = self._call(binding, self._context(workspace_key=workspace_key,
+                                                  operation=operation, payload=payload))
+        context = team.current() if team else None
+        if (context and not context["principal"]["administrator"] and isinstance(result, dict)
+                and path in {"/api/parcel-sources/catalog", "/api/published-studies/catalog"}):
+            result = {**result, ("source_roots" if path == "/api/published-studies/catalog" else "roots"): []}
+        return result
 
     def item(self, workspace_key, kind, key):
         found = self._items.get(kind)
@@ -576,6 +589,6 @@ class ExtensionRegistry:
         return {
             "schema": "upstate.operator-extensions/v1",
             "extensions": entries,
-            "issues": list(self._issues.values()),
+            "issues": list(self._issues.values()) if not getattr(self.operator, "team", None) or not self.operator.team.current() or self.operator.team.current()["principal"]["administrator"] else [],
             "web_assets": sorted(self._assets),
         }

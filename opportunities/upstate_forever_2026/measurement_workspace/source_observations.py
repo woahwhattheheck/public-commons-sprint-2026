@@ -8,11 +8,17 @@ import hashlib
 import json
 from pathlib import PurePosixPath
 
+if __package__:
+    from .wqp_profiles import FORMAT as NARROW_FORMAT, metadata_entries, parse_narrow_results
+else:
+    from wqp_profiles import FORMAT as NARROW_FORMAT, metadata_entries, parse_narrow_results
+
 INDEX = "observation-sources.json"
 SCHEMA = "upstate.observation-sources/v1"
 SERIES_FIELDS = ("sample_fraction", "method_authority", "method_id",
                  "result_value_type", "result_weight_basis", "result_time_basis",
-                 "result_temperature_basis", "result_particle_size_basis", "support_unit")
+                 "result_temperature_basis", "result_particle_size_basis", "support_unit",
+                 "method_specification_name")
 
 
 def _path(value):
@@ -43,8 +49,8 @@ def load_observations(files, parser):
     paths = source_paths(index)
     selected, intervals = [], []
     for entry, path in zip(index["sources"], paths):
-        if entry.get("format") != "wqp-result-csv":
-            raise ValueError("The registered observation reader expects original WQP Result CSV.")
+        if entry.get("format") not in ("wqp-result-csv", NARROW_FORMAT):
+            raise ValueError("The registered observation reader expects original WQP Result or NarrowResult CSV.")
         data = files[path]
         sha = hashlib.sha256(data).hexdigest()
         if entry.get("sha256") != sha or entry.get("bytes") != len(data):
@@ -61,12 +67,26 @@ def load_observations(files, parser):
             scope = set(declared)
         else:
             scope = None
-        for start, end, previous_scope in intervals:
-            if first <= end and last >= start and (
-                    scope is None or previous_scope is None or not scope.isdisjoint(previous_scope)):
-                raise ValueError("Overlapping observation dates require disjoint declared station scopes.")
-        intervals.append((first, last, scope))
-        rows = parser(data, path, raw_wqp=True)
+        declared_characteristics = entry.get("characteristics")
+        if declared_characteristics is not None:
+            if (not isinstance(declared_characteristics, list) or not declared_characteristics
+                    or any(not isinstance(value, str) or not value for value in declared_characteristics)
+                    or len(set(declared_characteristics)) != len(declared_characteristics)):
+                raise ValueError("An observation characteristic scope requires distinct original names.")
+            characteristics = set(declared_characteristics)
+        else:
+            characteristics = None
+        for start, end, previous_scope, previous_characteristics in intervals:
+            separated_stations = scope is not None and previous_scope is not None and scope.isdisjoint(previous_scope)
+            separated_characteristics = (characteristics is not None and previous_characteristics is not None
+                                         and characteristics.isdisjoint(previous_characteristics))
+            if first <= end and last >= start and not (separated_stations or separated_characteristics):
+                raise ValueError("Overlapping observation dates require disjoint station or characteristic scopes.")
+        intervals.append((first, last, scope, characteristics))
+        rows = (parse_narrow_results(files, entry, parser) if entry.get("format") == NARROW_FORMAT
+                else parser(data, path, raw_wqp=True))
+        if characteristics is not None and {row["parameter_original"] for row in rows} != characteristics:
+            raise ValueError("Original observation rows differ from their declared characteristic scope.")
         if len(rows) != entry.get("record_count"):
             raise ValueError("Original observation source row count changed: " + path)
         if scope is not None and {row["monitoring_location_id"] for row in rows} != scope:
@@ -83,6 +103,7 @@ def load_observations(files, parser):
                 original_source_record_index=row["source_csv_row"] - 2,
                 original_source_url=entry.get("source_url", ""),
                 result_value_type=raw.get("ResultValueTypeName", ""),
+                method_specification_name=raw.get("MethodSpecificationName", ""),
                 result_weight_basis=raw.get("ResultWeightBasisText", ""),
                 result_time_basis=raw.get("ResultTimeBasisText", ""),
                 result_temperature_basis=raw.get("ResultTemperatureBasisText", ""),
@@ -98,6 +119,9 @@ def load_observations(files, parser):
             selected.append(row)
     if len(selected) != index.get("record_count"):
         raise ValueError("Original observation cohort count changed.")
+    result_ids = [row["original_result_identifier"] for row in selected if row.get("original_result_identifier")]
+    if len(result_ids) != len(set(result_ids)):
+        raise ValueError("Original result identifiers must remain distinct across registered profiles.")
     activities = {(row["monitoring_location_id"], row.get("project_id", ""), row["activity_id"])
                   for row in selected}
     if len(activities) != index.get("activity_count"):
@@ -129,7 +153,10 @@ def observation_files(original, available):
         return {}
     body = original(INDEX)
     index = json.loads(body.decode("utf-8-sig"))
-    return {INDEX: body, **{path: original(path) for path in source_paths(index)}}
+    paths = set(source_paths(index))
+    for entry in index["sources"]:
+        paths.update(_path(item["path"]) for item in metadata_entries(entry))
+    return {INDEX: body, **{path: original(path) for path in sorted(paths)}}
 
 
 def builtin_companion(root):

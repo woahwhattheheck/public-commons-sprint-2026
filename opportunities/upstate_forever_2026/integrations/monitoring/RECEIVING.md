@@ -134,6 +134,8 @@ relations and daily gauge context. Calendar overlap is evaluated on the actual
 saved dates. Its export preserves that scientific meaning and the full original
 source files.
 
+For the actual operator browser continuation, use the existing [Monitoring browser guide](../../source/MONITORING_BROWSER.md) and its maintained `source/run_monitoring_browser.mjs`, with the original preparation opening, completed receiving receipt and actual saved context ID. That driver operates the current desk, same queued exports and an independently registered received Workspace.
+
 ## Source composition and current host
 
 The original archive is Drive `1NLDkD5byBTZ2hOYxQio7Uv_KkxgBLQ8d`, 101,834 bytes, SHA256 `7b61ddcf2cb7eef3fd5d89a4f8474e677a3b13ec7b3ef07fd21050844ccf6a5e`. Its complete original member manifest remains `integrations/monitoring/MANIFEST.json`. The installed production cohort was recovered byte-for-byte from ECD1 edition 3, Slack `F0C8KFCT3S9`, whose decoded full source payload SHA256 is `4064517a7a3ca09db90dc3d936413cf07e8af96e4b30e5cb4a3c9c88a91514a8`.
@@ -141,3 +143,28 @@ The original archive is Drive `1NLDkD5byBTZ2hOYxQio7Uv_KkxgBLQ8d`, 101,834 bytes
 `integrations/monitoring/source_adoption.json` records original and current installed identities separately. The unchanged native network builder, optimization solver and calendar/cost engine remain ASTRA-MONITOR12's complete implementation. This edition changes current host integration, passive receiving, selected export consistency and asynchronous controls.
 
 The complete current files install directly under `opportunities/upstate_forever_2026/` in the public application. Preserve the current extension registry, operator server, other descriptors and moving application source. No shared host replacement is required. On a separately installed current application, compose these complete owned leaves through its existing guarded cumulative assembler, retaining identical files and reconciling any unknown newer edits. Restart the existing operator after the source is composed and reload its browser.
+
+## Scientific report source continuation
+
+The current Monitoring Reports section can prepare a retained scientific report
+source from a saved feasible plan or an exact campaign revision. Follow
+[the native report-source guide](../../model/MONITORING_REPORT_SOURCE.md) for the
+selection, source files and command. This continues the original native export
+into the existing ordered scientific report and customer-review delivery.
+
+Receive the complete source cohort: `model/monitoring_report_source.py`,
+`model/monitoring_report_cli.py`, `model/MONITORING_REPORT_SOURCE.md`,
+`operator/monitoring_report_native.py`,
+`operator/extensions/monitoring-report.json`, and
+`operator/web/monitoring-report.mjs`, together with the composed current
+Monitoring adapter and maintained installer. The component catalogue selects
+this family with both Monitoring and observed-context dependencies.
+
+The maintained `operator/install_receiving_waters.py` validates the actual
+backend-only provider, file-ticket and restore bindings before its existing
+compare-and-write transaction. Its five guarded browser joins preserve current
+observed-context reads, water-network navigation, startup readiness and all
+other current Monitoring behavior. It preserves the original archived source
+and migrations. Complete Workspace transfer takes the report-source root lock
+after the existing workspace lock, before capturing any report output or
+retained source; preparation does not acquire the workspace lock afterward.
