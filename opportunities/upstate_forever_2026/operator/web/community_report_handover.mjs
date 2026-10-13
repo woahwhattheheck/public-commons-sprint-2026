@@ -14,7 +14,7 @@ export function communityHandoverSummary(handover){
     description('Original report members',handover.member_count)+'</dl></div>';
 }
 
-export function attachCommunityReportHandover({getState,api,endpoint,openForm,submitAction,detail,fileList,getReport}){
+export function attachCommunityReportHandover({getState,api,endpoint,openForm,submitAction,detail,fileList,getReport,beginOpening=()=>null,isOpeningCurrent=()=>true}){
   let generation=0;
   const current=()=>getState()||{};
   const workspace=()=>current().workspace_key||'';
@@ -24,7 +24,8 @@ export function attachCommunityReportHandover({getState,api,endpoint,openForm,su
   function receiveButton(){return button('receive','Receive source handover','',workspace());}
   function chosenWorkspace(expected){
     if(!expected||expected!==workspace()||!project())throw Error('Open this Community action in the intended workspace.');
-    return {workspace:expected,project:project(),generation:++generation};
+    const opening=beginOpening();
+    return {workspace:expected,project:project(),generation:++generation,opening};
   }
   const same=ticket=>workspace()===ticket.workspace&&project()===ticket.project&&generation===ticket.generation;
   function formLifetime(ticket,marker){
@@ -51,8 +52,10 @@ export function attachCommunityReportHandover({getState,api,endpoint,openForm,su
   }
   async function exportReport(id,expectedWorkspace){
     const ticket=chosenWorkspace(expectedWorkspace);
-    const report=await getReport(id);
-    if(!same(ticket))return;
+    let report;
+    try{report=await getReport(id);}
+    catch(error){if(same(ticket)&&isOpeningCurrent(ticket.opening))throw error;return;}
+    if(!same(ticket)||!isOpeningCurrent(ticket.opening))return;
     const original=report.files?.['community-report.json'];
     if(report.id!==id||!identity(id)||!identity(original?.sha256)||!report.files?.['community-report.zip']||!report.files?.['REPORT.json'])
       throw Error('Choose a complete retained Community report.');
@@ -172,8 +175,10 @@ export function attachCommunityReportHandover({getState,api,endpoint,openForm,su
   }
   async function openExport(id,expectedWorkspace){
     const ticket=chosenWorkspace(expectedWorkspace);
-    const task=await api(endpoint('/api/task',{id}));
-    if(!same(ticket))return;
+    let task;
+    try{task=await api(endpoint('/api/task',{id}));}
+    catch(error){if(same(ticket)&&isOpeningCurrent(ticket.opening))throw error;return;}
+    if(!same(ticket)||!isOpeningCurrent(ticket.opening))return;
     if(task.id!==id||task.workspace!==ticket.workspace||task.action!=='community.report.handover.export'||
        task.state!=='complete'||!rows(task._downloads).length)
       throw Error('Open a completed source handover in its original workspace.');
