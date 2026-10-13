@@ -6,7 +6,7 @@ These are the original **simulated headwaters teaching-case** results: 1,296 hec
 
 ## 1. Open and use the reader
 
-Extract the complete ZIP to one folder and open `index.html` in a current browser. The packaged file is the 237,056-byte presentation-edition-4 lossless wrapper, SHA256 `7ba6ed17ff2eac261be022fd5b6f31d56e9cd7f7c1c5a74da4ea33d09c0e3c14`. It verifies and opens its full original inner reader. No model run, installation, account or network connection is required for the retained results.
+Extract the complete ZIP to one folder and open `index.html` in a current browser. The packaged file is the 237,156-byte presentation-edition-5 lossless wrapper, SHA256 `3621552cbccc28edc99dd5994cfff61aebd3b3781d0de17079c99fe7d5017a26`. It verifies and opens its full original inner reader. No model run, installation, account or network connection is required for the retained results.
 
 Under **Choose the question**, use **Read**, **Parameter member**, **Land-cover scenario** and **Quantity**:
 
@@ -74,7 +74,7 @@ A rebuilt unwrapped HTML is a separate delivery form from this package's retaine
 
 This package follows `CURRENT_OWNER_DIRECTION.md` **2026-10-13.4** and the owner's renewed finishing instruction of 13 October. Continue useful Eco production through the current original operations; the earlier 14:00 UTC checkpoint does not terminate this renewed product work.
 
-`NATIVE_OUTCOME_READING.md` is the original source owner's complete current guide, including its original-packet recovery command and presentation-successor notes. This package adopts that exact edition-4 source from F0C8R4V2BEH. The preceding unchanged reader package remains in Git history at 00cf8e40bd29128938d2212e11e316bcb4b819b1.
+`NATIVE_OUTCOME_READING.md` is the original source owner's complete current guide, including its original-packet recovery command and presentation-successor notes. This package adopts that exact edition-5 source from F0C8R4V2BEH. The preceding unchanged reader package remains in Git history at 00cf8e40bd29128938d2212e11e316bcb4b819b1.
 
 The existing Call Desk is https://chatgpt.com/space/page_49deb16b215c81919c4e479f0ba180b7 . Its original populated reader block is `8c8966f5-0df7-48fa-a713-2354136a8bd9`. The same thread and original producing/receiving peers retain the delivery; this source ZIP provides a usable file transfer for that operation.
 
