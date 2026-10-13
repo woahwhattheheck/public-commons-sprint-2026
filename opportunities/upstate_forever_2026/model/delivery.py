@@ -16,6 +16,7 @@ from .source_lineage import LINEAGE_VERSION
 from .delivery_archive import package_archive
 from . import receiving_water_delivery, scientific_report, observed_context
 from . import scenario_analysis_delivery as analysis_delivery
+from .robust_decisions.eco_robust import decision_delivery
 from .client_economics import (CLIENT_REPORT_EDITION, bind_economic,
                                retain_economic, scientific_sections)
 
@@ -23,8 +24,8 @@ NDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/i
 SDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
 OVERLAY_LABELS = (("drinking_water", "Drinking-water source areas"),
                   ("high_quality_waters", "Designated high-quality waters"))
-DELIVERY_EDITION = "2026-10-13-integrated-native-study-report-11"
-DELIVERY_FORMAT_VERSION = "retained-grid-study-observed-client-report-11"
+DELIVERY_EDITION = "2026-10-13-integrated-native-decision-report-12"
+DELIVERY_FORMAT_VERSION = "retained-grid-study-decision-client-report-12"
 
 def _copy(source, target, expected=None):
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -250,6 +251,9 @@ def build(workspace, selection):
     analysis_link = analysis_delivery.bind_analysis(workspace, selection)
     if analysis_link is not None:
         selection["source_scenario_analysis_sha256"] = analysis_link["analysis_sha256"]
+    decision_link = decision_delivery.bind_decision(workspace, selection)
+    if decision_link is not None:
+        selection["source_decision"] = decision_link["source_decision"]
     economic_link = bind_economic(workspace, selection)
     if economic_link is not None:
         selection["economic_edition_sha256"] = economic_link["edition_sha256"]
@@ -360,6 +364,9 @@ def build(workspace, selection):
                 atomic_json(state_path, state)
             if report_link is not None:
                 retain_report(workspace, directory, state, report_link)
+                atomic_json(state_path, state)
+            decision_product = decision_delivery.retain_decision(workspace, directory, state, decision_link)
+            if decision_product is not None:
                 atomic_json(state_path, state)
             economic_decision = retain_economic(workspace, directory, state, economic_link)
             if economic_decision is not None:
@@ -702,6 +709,7 @@ def build(workspace, selection):
                         "Original study metadata, reporting polygon, model domain, mask and biophysical table are retained under native-study."]))
                 sections.extend(scientific_report.receiving_sections(water_product))
                 sections.extend(analysis_delivery.report_sections(analysis_product))
+                sections.extend(decision_delivery.report_sections(decision_product))
                 sections.extend(scientific_sections(economic_decision, state))
                 if observed_product is not None:
                     sections.extend(observed_product["sections"])
@@ -727,6 +735,7 @@ def build(workspace, selection):
                         "source_report_id": selection.get("source_report_id"),
                         "source_report_sha256": selection.get("source_report_sha256"),
                         "source_report": report_link, "economic_decision": economic_link,
+                        "source_decision": decision_link,
                         "client_report_edition": CLIENT_REPORT_EDITION,
                         "observed_context": observed_link,
                     },
@@ -742,6 +751,7 @@ def build(workspace, selection):
                     grid=grid, profile=profile, records=records,
                     observation_results=observation_results, comparison=comparison,
                     scenario_summary=summary,
+                    decision_product=decision_product,
                     additional_sections=receiving_water_delivery.report_section(water_product),
                     output_stem="client-report", file_key_prefix="client_",
                     working_archive_path=working_relative)
@@ -795,6 +805,7 @@ def build(workspace, selection):
             audit_manifest = directory / "delivery.json"
             receiving_water_delivery.extend_assets(manifest, state)
             analysis_delivery.extend_assets(manifest, state)
+            decision_delivery.extend_assets(manifest, state)
             for report_name in ("report_html", "report_markdown", "report_data"):
                 report_path = state["files"][report_name]["path"]
                 if report_path not in manifest["project_assets"]:

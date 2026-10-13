@@ -16,11 +16,12 @@ from typing import Any, Mapping
 
 from .common import INVEST_VERSION
 from . import native_study
+from .robust_decisions.eco_robust import decision_delivery
 from .model_selection import MODEL_LABELS, MODEL_OUTPUTS, run_scope
 from .native_versions import POLICY as EXECUTION_VERSION_POLICY, model_versions, models_for_outputs
 
 SCHEMA = "upstate.client-report/v1"
-REPORT_EDITION = "2026-10-13-client-report-9"
+REPORT_EDITION = "2026-10-13-client-report-decision-10"
 RFP_URL = "https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf"
 RFP_SHA256 = "a519d33190eefaef7ec082c19642fc6b8ef89329ad3c648a561699c7dd277e74"
 POLLUTANTS = (
@@ -648,7 +649,7 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
     }
     seen_scientific_paths = set()
     for role, item in files.items():
-        if role not in asset_titles and not role.startswith(("economic_", "observed_context_")):
+        if role not in asset_titles and not role.startswith(("economic_", "observed_context_", "decision_")):
             continue
         path = _safe_path(item)
         if path and path not in seen_scientific_paths:
@@ -932,7 +933,7 @@ def write_report(directory, report, *, pdf_name="report.pdf", output_stem=None,
 
 def build_report(*, workspace, directory, selection, state, baseline, alternatives,
                  grid, profile, records, observation_results, comparison=None,
-                 scenario_summary=None, additional_sections=(),
+                 scenario_summary=None, additional_sections=(), decision_product=None,
                  output_stem=None, file_key_prefix="", working_archive_path=None):
     """Drop-in report hook for the existing delivery.py report branch."""
     from .client_receiving_waters import build_sections, LEGACY_SECTION_TITLE
@@ -950,7 +951,10 @@ def build_report(*, workspace, directory, selection, state, baseline, alternativ
         alternative_run_ids=[run["id"] for run in alternatives],
         run_names=run_names, number=_fmt, text=_text,
     )
-    appended = []
+    appended = list(decision_delivery.client_sections(decision_product))
+    if decision_product is not None:
+        report["source_decision"] = decision_product["binding"]
+        report["quantity_provenance"]["source_decision"] = decision_product["binding"]
     for index, (title, paragraphs) in enumerate(additional_sections, 1):
         if water_report is not None and title == LEGACY_SECTION_TITLE:
             continue
