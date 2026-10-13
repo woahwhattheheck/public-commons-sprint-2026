@@ -176,8 +176,9 @@ def run(workspace_path, operation, *, as_of="2026-10-13", plan_id=None, revision
                 checkpoint("imported", import_status=imported["status"],
                            original_document_digest=imported["source_document_digest"])
             else:
-                original = store.get(active_plan_id, revision)
-                checkpoint("original_plan_opened", revision=original["revision"],
+                original = store.get(active_plan_id, state.get("selected_revision",
+                    state.get("original_selected_revision", revision)))
+                checkpoint("original_plan_opened", original_selected_revision=original["revision"],
                            original_document_digest=document_digest(original))
 
             if "selected_revision" not in state:
@@ -196,7 +197,7 @@ def run(workspace_path, operation, *, as_of="2026-10-13", plan_id=None, revision
                         checkpoint("retaining_originals", attachments=attached)
                     selected = store.get(active_plan_id)
                 else:
-                    selected = store.get(active_plan_id, revision)
+                    selected = store.get(active_plan_id, original["revision"])
                     attached = [link for link in selected["source_links"]
                                 if link.get("kind") == "local_file"]
                 checkpoint("selected_revision", selected_revision=selected["revision"],
