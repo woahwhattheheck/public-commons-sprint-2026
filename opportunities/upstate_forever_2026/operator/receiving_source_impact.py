@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from model import receiving_source_impact
+from model import receiving_source_impact, receiving_source_revision
 
 
 def read(operator, workspace_key, payload):
@@ -27,8 +27,18 @@ def read(operator, workspace_key, payload):
         result = receiving_source_impact.detail(
             workspace, values.get("refresh_plan_id"), values.get("kind"), values.get("id"),
             snapshot=values.get("snapshot"))
+    elif action == "revision-options":
+        result = receiving_source_revision.options(
+            workspace, values.get("refresh_plan_id"), values.get("kind"), values.get("id"),
+            snapshot=values.get("snapshot"))
+    elif action in ("revision-draft", "revision-download"):
+        result = receiving_source_revision.draft(workspace, values)
     else:
-        raise ValueError("Choose a saved refresh catalog, impact page or study detail")
+        raise ValueError("Choose a saved refresh, impact, or explicit revision action")
+    if action == "revision-download":
+        return {"workspace_key": workspace_key,
+                "filename": "receiving-source-revision-" + result["kind"] + "-" + result["draft_id"][:12] + ".json",
+                "content": json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False) + "\n"}
     if action == "download":
         return {"workspace_key": workspace_key,
                 "filename": "receiving-source-impact-" + result["kind"] + "-" + result["record"]["id"][:12] + ".json",
