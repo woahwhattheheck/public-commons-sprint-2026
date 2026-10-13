@@ -13,7 +13,7 @@ from . import assessment_context, observed_context, assessment_map_context
 from .common import (atomic_json, describe_file, digest, file_digest, held,
                      identifier, read_json, verify_file)
 
-VERSION = "1.2.0"
+VERSION = "1.2.1"
 SCHEMA = "upstate.assessment-report-context/v1"
 RECIPE = "assessment-report.json"
 MANIFEST = "assessment-report.sources.json"
@@ -191,8 +191,15 @@ def _sections(context, parcel=None, map_context=None):
             "Compared original watershed source: " + source_label + ". These counts refer to "
             "distinct original assessment records, so a station with several causes or editions "
             "can occur more than once.",
-            "Original selection and filters: " + json.dumps(context["selection"],
-                ensure_ascii=False, sort_keys=True, allow_nan=False),
+            "Selected assessment records: " + (
+                "; ".join(str(name).replace("_", " ") + " = " +
+                    (", ".join(_text(item) for item in values)
+                     if isinstance(values, list) else _text(values))
+                    for name, values in sorted(context["selection"].get("filters", {}).items()))
+                or "all retained records, with no additional filters") + ". "
+            "The source editions are listed below. The complete original selection, source "
+            "identities and field mappings are retained in the linked selection file.",
+            _links([("Exact original selection and filters", "context/selection.json")]),
         ]],
         ["Original assessment editions and source references", [
             _table(["Source title", "Publication status", "Source vintage", "Record edition",
