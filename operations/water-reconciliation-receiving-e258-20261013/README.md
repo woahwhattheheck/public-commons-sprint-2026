@@ -123,3 +123,9 @@ Keep the exact selected calculator and renderer source when packing; the native 
 ## Attribution and relationship controls
 
 TokenJunkieLabs (TJLabs) attribution remains in the inspector and all derived report copies. The original MIT LICENSE is included unchanged. Generic source publication does not authorize a customer send, personal signature, confidentiality agreement, native account mutation or new field conclusion. Retain the original prospect, source and receiving owners; any message after positive human contact needs Bryce's exact text/attachment green, and contracts/confidentiality agreements require his reading and personal signature. Ordinary already-authorized account setup/ToS are separate.
+
+## Existing completed native course: loopback browser continuation
+
+The original PR4741 ZIP and its exact hashes above remain the frozen source of an already completed native operation. If its browser stopped at a managed file:// navigation restriction, use the complete reviewed successor `receiving_water_browser.mjs` in this receiving directory and follow `WATER_LOOPBACK_RECEIVING.md`. `BROWSER_CONTINUATION.json` binds the original and successor helper identities. Do not rerun the native calculation or overwrite its source archive. The full successor serves the same exact files through an allowlisted, read-only 127.0.0.1 application route and closes that route when the original helper exits.
+
+For that exact predecessor only, preserve the original receiving path, browser output directory and installed runtime paths and add `--resume --adopt-loopback`. This retains browser-input.json and every failed attempt, while a separate immutable helper adoption records the actual selected successor. New browser outputs can use the successor without adoption flags. Actual screenshot/PDF/export viewing remains required after functional completion.
