@@ -396,6 +396,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
       if (host && assemblyRead === request && request.epoch === assemblyEpoch && getState()?.workspace_key === target) {
         assemblyCapability = {workspace: target, supported: value?.schema === 'upstate.native-run-assembly-capabilities/v1' &&
           value.available === true && value.action === 'run.start' && value.source_runs === true,
+          composeSupported: value?.prepared_grid_composition === true && value.composition_action === 'run.assembly.compose',
           reason: value?.reason || '', observedAt: Date.now()};
         paint();
       }
@@ -411,6 +412,22 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     const sources = currentIndex().reusableModels;
     return assemblyCapability?.supported && !!assemblyForm && row.modelKey === 'ndr+sdr' &&
       row.startable && ['prepared', 'failed'].includes(row.run?.state) && sources.ndr && sources.sdr;
+  }
+  function canComposePreparedInputs() {
+    const sources = currentIndex().reusableModels;
+    return assemblyCapability?.supported && assemblyCapability?.composeSupported && !!assemblyForm &&
+      sources.ndr && sources.sdr && (current.data.profiles || []).some(row => modelsOf(row).length === 2) &&
+      (current.data.scenarios || []).length > 0;
+  }
+  async function openPreparedComposition() {
+    if (busy) return;
+    synchronize(getState());
+    const target = current.workspace_key;
+    await refreshAssemblyAvailability();
+    assertWorkspace(target); synchronize(getState());
+    if (!canComposePreparedInputs())
+      throw Error('Retain completed NDR and SDR calculations, a full parameter profile and the original scenario to compose their prepared inputs.');
+    return assemblyForm.open({compose: true});
   }
   async function openAssembly(key) {
     if (busy) return;
@@ -591,7 +608,8 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     const baselineChoices = (current.data.scenarios || []).filter(row => row.kind === 'baseline' && selectedScenarios.has(row.id));
     host.innerHTML = '<div class="run-desk" data-run-desk><header class="page-header"><div><p class="eyebrow">UPPER SAVANNAH SCIENTIFIC WORKBENCH</p>' +
       '<h1>Native run desk</h1><p>Select retained scientific inputs, prepare their run matrix, and queue the original NDR and SDR engines.</p></div>' +
-      '<div class="page-actions">' + htmlButton('download-selection', 'Download run selection', {}, busy) + htmlButton('import-selection', 'Open run selection', {}, busy) +
+      '<div class="page-actions">' + htmlButton('compose-prepared-inputs', 'Compose prepared inputs', {}, busy || !canComposePreparedInputs()) +
+      htmlButton('download-selection', 'Download run selection', {}, busy) + htmlButton('import-selection', 'Open run selection', {}, busy) +
       '</div></header>' +
       '<section class="section"><header class="section-header"><div><h2>1. Select the original inputs</h2><p>Each checked cell is one immutable grid, profile, scenario and native model selection.</p></div></header>' +
       '<div class="section-body rd-selector"><div><label>Complete model grid<select data-rd-field="grid_id" data-rd-focus="grid"' + (busy ? ' disabled' : '') + '>' +
@@ -874,6 +892,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     const action = button.dataset.action?.replace(/^run-desk-/, '');
     if (['prepare','start','cancel'].includes(action)) return operate(action);
     if (action === 'prepare-one' || action === 'start-one') return operate(action === 'prepare-one' ? 'prepare' : 'start', button.dataset.key);
+    if (action === 'compose-prepared-inputs') return openPreparedComposition();
     if (action === 'assemble') return openAssembly(button.dataset.key);
     if (action === 'record') return openItem('runs', button.dataset.id);
     if (action === 'task') return showTask(button.dataset.id);
