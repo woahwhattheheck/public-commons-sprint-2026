@@ -1,0 +1,124 @@
+{
+  "schema": "tjlabs.forms-workbench.intake-contract.v1",
+  "input": {
+    "schema": "tjlabs.forms-workbench.intake.v1",
+    "label": "Selected complete form migration edition",
+    "data_class": "DEMONSTRATION|AUTHORIZED_CUSTOMER_EXPORT",
+    "edition": "operator-selected",
+    "interpretation_reference": "original owner decision",
+    "classes": {
+      "definitions": {
+        "disposition": "include|exclude|defer",
+        "reference": "Exact selected scope and supported route"
+      },
+      "settings": {
+        "disposition": "include|exclude|defer",
+        "reference": "Exact selected scope and supported route"
+      },
+      "responses": {
+        "disposition": "include|exclude|defer",
+        "reference": "Exact selected scope and supported route"
+      },
+      "uploads": {
+        "disposition": "include|exclude|defer",
+        "reference": "Exact selected scope and supported route"
+      },
+      "workflow": {
+        "disposition": "include|exclude|defer",
+        "reference": "Exact selected scope and supported route"
+      },
+      "downstream": {
+        "disposition": "include|exclude|defer",
+        "reference": "Exact selected scope and supported route"
+      }
+    },
+    "assets": [
+      {
+        "id": "source_responses",
+        "asset_class": "responses",
+        "side": "source|target|shared",
+        "availability": "PRESENT|MISSING|REDACTED",
+        "path": "exports/source.csv",
+        "bytes": 0,
+        "sha256": "64 lowercase hex for PRESENT",
+        "filename": "original.csv",
+        "media_type": "text/csv",
+        "provenance": "Exact original export/source/version locator; no tokens",
+        "content_state": "COMPLETE|PARTIAL|REDACTED|UNASSESSED (separate from file presence; default UNASSESSED)"
+      }
+    ],
+    "table_assets": {
+      "source_records": "source_responses",
+      "target_records": "target_responses"
+    },
+    "discovery_manifest": "Complete original commons.discovery.cohort-manifest.v1 object. Each selected table must map to a PRESENT CSV asset; only paths are rewritten to retained originals.",
+    "migration_selection": "Complete original tjlabs.migration-reconciliation.selection.v1 object",
+    "pair_classes": {
+      "responses": "responses"
+    },
+    "file_comparisons": [
+      {
+        "id": "form_definition",
+        "asset_class": "definitions",
+        "source_asset": "source_definition",
+        "target_asset": "target_definition",
+        "reference": "Exact byte-equivalence interpretation; differing IDs remain byte differences"
+      }
+    ],
+    "attachments": [
+      {
+        "entry_id": "upload_s1",
+        "logical_id": "owner-mapped-upload-1",
+        "side": "source|target",
+        "asset_id": "original_pdf_or_null",
+        "availability": "PRESENT|MISSING|REDACTED",
+        "form_key": "canonical form key",
+        "response_key": "canonical response key",
+        "field_key": "canonical field key",
+        "ordinal": "1",
+        "filename": "Original.pdf",
+        "media_type": "application/pdf",
+        "parent": {
+          "table": "source_records",
+          "record": 1,
+          "key_columns": [
+            "response_id"
+          ],
+          "key_values": [
+            "R001"
+          ],
+          "asset_class": "responses (default; another class requires parent.reference)",
+          "reference": "Required explicit parent interpretation when asset_class differs from responses"
+        },
+        "reference": "Explicit owner-selected canonical link; never inferred from filename"
+      }
+    ],
+    "attachment_comparison": {
+      "filename": true,
+      "media_type": true,
+      "reference": "Approved equivalence; parent keys, ordinal, byte count and full digest always compared"
+    }
+  },
+  "source_files": [
+    "forms_workbench.py",
+    "forms_server.py",
+    "forms_report.py",
+    "forms_capture.py",
+    "receiving_forms.py",
+    "receiving_forms_browser.mjs",
+    "FORMS_WORKBENCH.md",
+    "FORMS_INTAKE_API.json",
+    "FORMS_HTTP_API.json"
+  ],
+  "notes": [
+    "Each original CSV table is bound to an exact present asset; full original engine manifest and migration selection retained.",
+    "CSV repeated sections and historical field revisions require explicit source modeling. Every selected row participates.",
+    "Body presence is separate from content coverage; unknown coverage remains UNASSESSED.",
+    "Parent record is the one-based data record after header; parent raw key values are matched before attachment equivalence.",
+    "All original and received intake fields are preserved, including extra supported-route/reviewer/decision metadata. A saved revised intake creates a new native project.",
+    "Every selected upload original requires an explicit parent link; no filename or ZIP-path inference.",
+    "Source and target comparison table assets must match pair_classes and their respective source/target side.",
+    "Attachment parent table original must have the attachment's side and explicitly selected parent class.",
+    "Coverage tracks every selected original asset independently; each uncovered asset receives an asset_coverage finding."
+  ]
+}

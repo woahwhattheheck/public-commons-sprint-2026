@@ -1,0 +1,78 @@
+{
+  "schema": "tjlabs.migration-reconciliation.selection.v1",
+  "label": "Reviewed complete migration edition",
+  "interpretation_reference": "Exact prime-approved source/target scope, keys, crosswalk and semantic decisions",
+  "population_reference": "Complete selected frozen exports; no hidden row filters",
+  "pairs": [
+    {
+      "id": "accounts",
+      "label": "Accounts and balances",
+      "source": {
+        "table": "source_accounts",
+        "keys": [
+          "account_id"
+        ]
+      },
+      "target": {
+        "table": "target_accounts",
+        "keys": [
+          "account_id"
+        ]
+      },
+      "key_mapping": {
+        "table": "account_crosswalk",
+        "source_columns": [
+          "old_account_id"
+        ],
+        "target_columns": [
+          "new_account_id"
+        ],
+        "reference": "Approved identifier mapping"
+      },
+      "fields": [
+        {
+          "id": "currency",
+          "kind": "text",
+          "source": {
+            "column": "currency"
+          },
+          "target": {
+            "column": "currency"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "balance",
+          "kind": "decimal",
+          "source": {
+            "column": "balance",
+            "multiplier": "1",
+            "divisor": "1"
+          },
+          "target": {
+            "column": "balance_minor",
+            "multiplier": "1",
+            "divisor": "100",
+            "reference": "Example reviewed interpretation: target minor GBP units are pence; dividing by100 gives the source pounds. Replace with the actual selected owner decision."
+          },
+          "tolerance": "0.01",
+          "allow_both_null": false
+        }
+      ],
+      "dimensions": [
+        "currency"
+      ],
+      "comparison_reference": "Exact field units, sign convention, currencies, tolerance and null interpretation"
+    }
+  ],
+  "contract_notes": [
+    "All rows in each named table participate. Every original CSV remains in case. There are no implicit filters, deduplication, fuzzy matching, tolerances, rounding, currency conversions, payment allocation or tariff calculations.",
+    "source/target keys are ordered declared column names. Without key_mapping, key types must agree positionally. With mapping, columns must match corresponding side key types; every participating source key requires exactly one valid mapping and one source-to-target identity. Duplicate/colliding mapping rows remain unresolved.",
+    "Field kinds: text, integer, decimal, date, boolean. Nondecimal kinds require matching original declared type. Decimal accepts integer/decimal inputs and exact rational multiplier/divisor, optional additive offset; transformations need explicit reference whenever nonidentity. Tolerance is required and nonnegative. No round-to-match.",
+    "dimensions lists nondecimal field IDs; they must match and be nonnull before any decimal-field comparison. All full-population totals are grouped by these exact dimensions in disk-backed indexes and streamed totals.jsonl/totals.csv; no group cap or giant embedded summary. Incomplete rows retain eligible subtotal plus explicit uncomputed count.",
+    "A paired group needs exactly one valid source and target row. Every compared field must be MATCHED or explicitly allowed BOTH_NULL to classify MATCHED. Source/target-only rows, invalid/unkeyed rows, duplicate groups and crosswalk problems are fully emitted with original record references. Ambiguous groups emit one comparison per original member plus complete group counts.",
+    "Comparisons are streamed as rows.jsonl, rows.csv and indexed comparisons.sqlite. result.json holds complete pair definitions, all aggregate-total descriptors/source-quality, output hashes/counts and paths; it never embeds the full row population. The full indexed SQLite member is included and verified alongside its exact JSONL exports.",
+    "Review server serves only an explicitly selected private case on 127.0.0.1, through a generated unpredictable access token. No public bind or upload mutation. Browser retains no customer values in external services. Case export is prepacked from verified immutable inputs/results/source.",
+    "The result summary pairs[].totals is {count,first_total_id,last_total_id,status_counts}. Each paged/streamed total has total_id,pair,dimensions,field,source:{sum,rows,uncomputed_rows},target:{sum,rows,uncomputed_rows},difference,status,meaning. Source/target sum and difference are exact fraction objects with numerator,denominator,decimal display. Crosswalk issues are full comparison records, classification CROSSWALK_ISSUE; counts remain in pair.crosswalk_issue_counts."
+  ]
+}

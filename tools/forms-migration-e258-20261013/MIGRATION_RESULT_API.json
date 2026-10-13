@@ -1,0 +1,204 @@
+{
+  "schema": "tjlabs.migration-reconciliation.result-contract.v1",
+  "summary_shape": {
+    "schema": "tjlabs.migration-reconciliation.result.v1",
+    "source_run_identity": "sha256",
+    "data_class": "DEMONSTRATION|AUTHORIZED_CUSTOMER_EXPORT",
+    "selection_sha256": "sha256",
+    "source_inputs": "original report.lineage.inputs",
+    "pairs": [
+      {
+        "id": "accounts",
+        "label": "Account migration",
+        "source_table": "legacy_accounts",
+        "target_table": "new_accounts",
+        "key_fields": {
+          "source": [
+            "legacy_id"
+          ],
+          "target": [
+            "account_id"
+          ]
+        },
+        "dimensions": [
+          "currency"
+        ],
+        "fields": [
+          {
+            "id": "currency",
+            "kind": "text",
+            "tolerance": null
+          },
+          {
+            "id": "balance",
+            "kind": "decimal",
+            "tolerance": {
+              "numerator": "1",
+              "denominator": "100",
+              "decimal": "0.01"
+            }
+          }
+        ],
+        "summary": {
+          "source_rows": 0,
+          "target_rows": 0,
+          "key_groups": 0,
+          "status_counts": {},
+          "issue_count": 0,
+          "comparison_records": 0
+        },
+        "totals": {
+          "count": 0,
+          "first_total_id": null,
+          "last_total_id": null,
+          "status_counts": {}
+        },
+        "first_row_id": null,
+        "last_row_id": null,
+        "crosswalk_issue_counts": {},
+        "crosswalk_issues": "Every original crosswalk issue is in the full comparison population with classification CROSSWALK_ISSUE."
+      }
+    ],
+    "source_quality": {
+      "quality_status": "from original",
+      "tables": "original full profiles",
+      "foreign_keys": "original full foreign key results"
+    },
+    "interpretation_reference": "selected original agreement",
+    "recipe_files": "calculator + renderer identities",
+    "meaning": "Every row in selected frozen source and target tables; matching compares selected meanings and exact arithmetic, with all source records retained.",
+    "comparison_records": 0,
+    "rows": {
+      "count": 0,
+      "jsonl": {
+        "path": "rows.jsonl",
+        "bytes": 0,
+        "sha256": "actual"
+      },
+      "csv": {
+        "path": "rows.csv",
+        "bytes": 0,
+        "sha256": "actual"
+      },
+      "index": {
+        "path": "comparisons.sqlite",
+        "bytes": 0,
+        "sha256": "actual"
+      }
+    },
+    "totals": {
+      "count": 0,
+      "jsonl": {
+        "path": "totals.jsonl",
+        "bytes": 0,
+        "sha256": "actual"
+      },
+      "csv": {
+        "path": "totals.csv",
+        "bytes": 0,
+        "sha256": "actual"
+      }
+    }
+  },
+  "comparison_row_shape": {
+    "key": [
+      "new key"
+    ],
+    "source_key": [
+      "old key"
+    ],
+    "source_records": [
+      {
+        "table": "legacy_accounts",
+        "record": 1
+      }
+    ],
+    "target_records": [
+      {
+        "table": "new_accounts",
+        "record": 1
+      }
+    ],
+    "classification": "MATCHED|DIFFERENCE|SOURCE_ONLY|TARGET_ONLY|AMBIGUOUS_KEY|INVALID_SOURCE_ROW|INVALID_TARGET_ROW|UNKEYED|UNMAPPED_KEY|AMBIGUOUS_CROSSWALK|CROSSWALK_ISSUE",
+    "issues": [
+      {
+        "code": "code",
+        "detail": "text",
+        "source_records": []
+      }
+    ],
+    "fields": [
+      {
+        "id": "balance",
+        "kind": "decimal",
+        "source_value": "original normalized source",
+        "target_value": "original normalized target",
+        "source_exact": {
+          "numerator": "1",
+          "denominator": "1",
+          "decimal": "1"
+        },
+        "target_exact": {
+          "numerator": "1",
+          "denominator": "1",
+          "decimal": "1"
+        },
+        "difference": {
+          "numerator": "0",
+          "denominator": "1",
+          "decimal": "0"
+        },
+        "tolerance": {
+          "numerator": "1",
+          "denominator": "100",
+          "decimal": "0.01"
+        },
+        "status": "MATCHED|DIFFERENCE|BOTH_NULL|UNCOMPUTED|NULL_MISMATCH",
+        "reason": null
+      }
+    ],
+    "row_id": 1,
+    "pair": "accounts",
+    "group_source_rows": "optional complete duplicate-group count",
+    "group_target_rows": "optional complete duplicate-group count"
+  },
+  "total_row_shape": {
+    "total_id": 1,
+    "pair": "balances",
+    "dimensions": [
+      "GBP"
+    ],
+    "field": "balance",
+    "source": {
+      "sum": {
+        "numerator": "1",
+        "denominator": "1",
+        "decimal": "1"
+      },
+      "rows": 1,
+      "uncomputed_rows": 0
+    },
+    "target": {
+      "sum": {
+        "numerator": "1",
+        "denominator": "1",
+        "decimal": "1"
+      },
+      "rows": 1,
+      "uncomputed_rows": 0
+    },
+    "difference": {
+      "numerator": "0",
+      "denominator": "1",
+      "decimal": "0"
+    },
+    "status": "COMPUTED|UNCOMPUTED"
+  },
+  "notes": [
+    "Shapes are descriptive contracts; actual values are computed from full original sources.",
+    "result.json contains bounded per-pair descriptors and source profiles. Every comparison and grouped total lives in the complete JSONL/CSV exports plus the indexed SQLite database.",
+    "Original raw scalar strings remain strings. Exact numeric objects contain numerator and denominator as decimal integer strings plus decimal display and display_rounding.",
+    "total.source/target.sum includes only computable rows; uncomputed_rows and status preserve coverage. A complete aggregate is not acceptance of individual records.",
+    "All indices are included and verified in the immutable case archive. Original discovery SQLite can be rebuilt by the maintained record_database route; the comparison index is preserved as a measured delivered member."
+  ]
+}
