@@ -9,7 +9,15 @@
         "operator/extensions/geographic-headwaters.json",
         "operator/web/geographic_workbench.mjs",
         "operator/web/geographic_workbench.css",
-        "operator/GEOGRAPHIC_HEADWATERS.md"
+        "operator/GEOGRAPHIC_HEADWATERS.md",
+        "operator/web/geographic_allocation.mjs",
+        "source_tools/high_quality_water_preparation.py",
+        "source_tools/nlcd_range_preparation.py",
+        "source_tools/nlcd_remote_window.py",
+        "source_tools/nlcd_static.py",
+        "source_tools/nlcd_wcs.py",
+        "source_tools/raster_sources.py",
+        "source_tools/source_transfer.py"
       ],
       "requires": [
         "source-preparation",

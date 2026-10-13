@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "geographic-headwaters",
   "title": "Geographic model case",
-  "version": "1",
+  "version": "2",
   "order": 21,
   "requires_actions": [
     "source.prepare",
@@ -12,7 +12,8 @@
     "source_workbench.mjs",
     "source_workbench.css",
     "geographic_workbench.mjs",
-    "geographic_workbench.css"
+    "geographic_workbench.css",
+    "geographic_allocation.mjs"
   ],
   "backend": {
     "module": "geographic_preparation",
@@ -98,6 +99,20 @@
         ],
         "path": "/api/geographic-headwaters/result",
         "operation": "result",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/geographic-headwaters/allocation",
+        "operation": "allocation",
         "handler": "read",
         "args": [
           "workspace_key",

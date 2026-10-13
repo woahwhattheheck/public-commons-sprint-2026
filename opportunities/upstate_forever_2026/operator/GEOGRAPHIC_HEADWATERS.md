@@ -1,6 +1,6 @@
 # Geographic model case — original operator integration
 
-This complete additive source joins model.geographic_headwaters.catalog/preview/prepare to the existing SourcePreparation provider and configurable SourceWorkbench. Install the complete five-file operator family and its additive application component fragment into the current full application, then open the existing operator at its normal source boundary. Existing active processes retain their current application until their owner reaches that boundary.
+This complete additive source joins model.geographic_headwaters.catalog/preview/prepare to the existing SourcePreparation provider and configurable SourceWorkbench. Install the complete six-file operator family and its additive application component fragment into the current full application, then open the existing operator at its normal source boundary. Existing active processes retain their current application until their owner reaches that boundary.
 
 ## Operate the complete case
 
@@ -20,15 +20,33 @@ Combined editions reuse the existing source composer and CAS objects. Full Works
 
 - Additive backend: operator/geographic_preparation.py.
 - Manifest: operator/extensions/geographic-headwaters.json.
-- Browser: operator/web/geographic_workbench.mjs and geographic_workbench.css.
+- Browser: operator/web/geographic_workbench.mjs, geographic_allocation.mjs and geographic_workbench.css.
 - Existing dependencies: source_preparation.SourcePreparation; source_workbench.createSourceWorkbench(host, configuration); model.geographic_headwaters.
-- Read routes: /api/geographic-headwaters/catalog, preview, case, progress, result. POST bodies include the original workspace key.
+- Read routes: /api/geographic-headwaters/catalog, preview, case, allocation, progress, result. POST bodies include the original workspace key.
 - Original queued actions: geography.prepare and geography.compose.
 - Task downloads use the existing verified file-ticket transport.
 - Native surface: catalog(workspace), preview(workspace, selection), prepare(workspace, selection).
 - Selection schema: upstate.geographic-headwaters-selection/v1.
 - Native sources use original source_collection_id/source_id, optional layer/part and exact typed where equality.
 - Scientific source values and scope are defined by the native producer; this adapter does not reinterpret geometry or calculate loads.
+
+## Inspect local allocation in the saved case
+
+Open **Saved geographic studies → Open saved geographic case → Local restoration and control**. The screen lists the completed allocation editions that belong to that original prepared case. Choose an edition, quantity scope, geographic relationship and region. The full upstream model domain and SC reporting area remain distinct. A new native report can be picked up with **Refresh saved results**; **Reload this allocation** reopens the selected saved edition.
+
+The first panel shows the actual common categorical hectares, restoration and control changed hectares, and their signed difference. Original class rows preserve81,82 and every other changed baseline class. Coverage keeps the original region mask and each baseline/restoration/control valid count visible. Empty common support remains explicitly unavailable for a local balance conclusion. RFP utility-union rows preserve the exact original anchor mask OR and upstream membership.
+
+When the saved edition includes physical contrasts, choose the original land-cover group to inspect rainfall, elevation, erosivity, erodibility and joint R×K means at changed source pixels. Each variable shows its actual valid/selected counts and population standard deviation; complete bins and distributions remain downloadable. These values retain the exact prepared input labels and units. Annual precipitation is named only for the declared mm/year input; other NDR runoff proxies retain their original label.
+
+The native-support table retains the three-run intersection separately for each pollutant. Expand **Original baseline comparisons and annual quantities** for the original pairwise native totals and alternative-minus-baseline Float32 change-pixel sums, with their own common-cell counts and units. A group without an original corresponding native mass analysis says so explicitly. The UI does not subtract different-support pairwise totals into a restoration-versus-control effect.
+
+Where the saved source includes original same-mask siting contrasts, **Native comparison on the same source pixels** displays baseline/restoration/control masses and the directly retained control-minus-restoration advantage. The expanded view preserves exact common support, actual changed-hectare normalization, avoided percentages and changed/unchanged/unavailable-category source-cell partitions. Values are read from the original numerical companion. Original pairwise quantities remain in their separate section.
+
+Saved maps and allocation scatterplots open through their original verified file tickets. Each figure is selected by its retained region roster. A group map shows that group's original boundaries; the numeric panels refer to the specifically selected region. Download and inspect all original CSV/GeoJSON/JSON/profile/figure members through **Complete original data and source files**. Existing preparation, assumption editing, native run controls and whole-project handoff stay in the same workbench.
+
+The read-only `/api/geographic-headwaters/allocation` route takes `workspace`, `case_id` and `allocation_id`. It validates project/preparation/run identities, verifies the saved allocation and original imported source inventory, and returns its retained numeric report, figure bindings and verified tickets. Listing saved editions reads their small report descriptors; neither route opens native rasters or creates a task. The stateless `geographic_allocation.mjs` formats those original records; the existing workbench owns requests and lifecycle. Late responses cannot cross a changed study, case, edition or detached view. Older saved editions without physical contrasts continue to open.
+
+At the existing equipped browser course, open a real completed allocation at desktop and390px, switch scope/relationship/region/edition, inspect zero-support regions if present, open both actual figure types and source downloads, then cold-reopen the complete project and repeat the saved-case path. Actually view the resulting screenshots and outgoing attachments. Report the first concrete defect to the existing source writer so it can be repaired in this same integration.
 
 ## Explicit matching editions
 
