@@ -56,7 +56,7 @@ The analysis records its actual selected pollutants. By default it selects the r
 
 All selected runs must be complete on the same grid. Future alternatives must retain the baseline scientific profile and select an explicit different land-cover scenario. Parameter sensitivity belongs in the shared experiment workflow.
 
-quantity_scope is reporting by default. It reads the existing reporting-masked kg/pixel/year nutrient and metric_tonnes/pixel/year sediment artifacts with multiplier 1. Select model_domain to read retained original InVEST 3.20 native density outputs over the full modeled domain. Those densities are multiplied by the original 30 m cell area, 0.09 ha, exactly once. Original file descriptors, source units and applied factors remain in the analysis.
+quantity_scope is reporting by default. It reads the existing reporting-masked kg/pixel/year nutrient and metric_tonnes/pixel/year sediment artifacts with multiplier 1. Select model_domain to read retained original InVEST 3.20 native density outputs over the full modeled domain. Those densities are multiplied by the retained cell area exactly once. The area must equal the determinant of the original projected-metre grid transform: the regional 30 m grid is 0.09 ha per cell, and an existing original 300 m sample is 9 ha per cell. The declared resolution, finite north-up square-cell transform, dimensions and area are checked together; baseline and alternatives still share their exact original grid identity. Original file descriptors, source units and applied factors remain in the analysis.
 
 All calculations stream 256-cell raster windows. Inputs retain their original valid-data masks. A valid zero remains zero; absent pixels remain absent. Differences use the intersection of valid baseline and alternative pixels. Physical totals remain kg/year for nitrogen and phosphorus and metric_tonnes/year for sediment.
 
@@ -128,3 +128,15 @@ operator.receiving_water_actions.ReceivingWaterActions uses the existing task qu
 Read operations are catalog, plan, analysis and designation-catalog. snapshot adds receiving_water_plans, receiving_water_analyses and receiving_water_catalogs to the existing operator state. Browser reads verify record identities and use the operator's existing file tickets, whose original byte checks occur when downloading; they do not rehash all rasters on every progress refresh.
 
 The complete browser and additive current-source installer are supplied by the companion receiving-water workbench. The installer composes the actual operator/server, browser navigation and delivery methods while preserving other installed scientific components.
+
+## Spatial review of saved receiving waters
+
+The additive model.receiving_water_spatial adapter registers completed source plans and analyses in the existing SpatialReview catalog. Its manifest_paths(workspace) supplies the original plan.json and analysis.json paths to the catalog signature; add_layers(workspace, add) supplies original scoped artifact descriptors to the existing layer callback. Opening a layer uses the native reader's byte and digest verification.
+
+Each source-plan receptor exposes its original feature and selected contribution geometry. These retain the native GeoPackage layer receiving_water, exact source references, relationship method and precision. The catalog uses group receiving-water-plan and owner_id equal to the original plan ID. Each row includes subject_id, subject_kind, subject_title, family and geometry_role.
+
+Completed analyses expose the receiving_waters summary GeoPackage and the actual per-subject rasters for both individual receptors and family unions. The native summary fields subject_id and kind select an exact subject boundary; the layer name is receiving_waters. Group receiving-water-analysis and owner_id identify the original analysis. Raster metadata distinguishes current_priority, contribution_mask, increased_export_priority, avoided_export_priority and signed physical change; physical changes also identify the original quantity and alternative run.
+
+Priority scales use the fixed dimensionless range 0 to 1. Contribution masks retain binary units. Signed change layers retain their original annual mass-per-pixel units and alternative-minus-baseline direction. The compact normalization_id is the digest of the complete normalization in the original analysis record, allowing comparisons to retain the same caps without repeating that large record for each layer.
+
+Only existing completed artifacts enter this catalog. A source plan can be inspected and saved in GIS review before any numerical run. The original workspace archive retains these source and analysis files, and saved spatial reviews bind their exact file identities for export and reopening.
