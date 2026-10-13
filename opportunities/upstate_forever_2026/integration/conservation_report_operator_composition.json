@@ -211,5 +211,108 @@
     "components": [
       "conservation-scientific-report-source"
     ]
-  }
+  },
+  "successors": [
+    {
+      "edition": "20261013-e7a1-conservation-report-optimizer-v2",
+      "purpose": "Retain original saved optimizer analysis, normalized candidates and report with its original portfolio scientific source",
+      "base_commit": "5052e2425446efd472943ae0699fd5ef162e8993",
+      "source_carrier": "F0C8M358UR3",
+      "files": [
+        {
+          "path": "model/conservation_report_source.py",
+          "before_sha256": "b9cb922025f3843a3d26e4592249842c6df221f678db276fd0e083b3b4402538",
+          "after_sha256": "72182c02d1d91e710139026c24d1ce5af1ab3961174426a7790c2ebd81bfc482",
+          "replacements": [
+            {
+              "before": "EDITION = \"conservation-saved-plan-report/1\"",
+              "after": "EDITION = \"conservation-saved-plan-report/2\""
+            },
+            {
+              "before": "def _sections(state, plan, rows, packet, sources):",
+              "after": "def _retained_optimization(workspace, state, plan):\n    \"\"\"Reopen the original saved decision analysis without solving it again.\"\"\"\n    reference = plan[\"selection\"].get(\"optimization\")\n    if reference is None:\n        return None\n    from . import conservation_optimization\n    if (not isinstance(reference, dict)\n            or reference.get(\"schema\") != conservation_optimization.REFERENCE_SCHEMA\n            or reference.get(\"study_id\") != state[\"id\"]):\n        raise ValueError(\"Retain the original saved optimization reference\")\n    retained = conservation_optimization.get_analysis(\n        workspace, state[\"id\"], identifier(reference.get(\"analysis_id\")))\n    analysis = retained[\"analysis\"]\n    selected = analysis.get(\"selected_ids\")\n    if (retained[\"state\"][\"files\"] != reference.get(\"files\")\n            or analysis.get(\"request\") != reference.get(\"request\")\n            or analysis.get(\"engine\") != reference.get(\"engine\")\n            or analysis.get(\"normalization\") != reference.get(\"normalization\")\n            or analysis.get(\"optimization\") != reference.get(\"solver_result\")\n            or analysis.get(\"input\", {}).get(\"study_id\") != state[\"id\"]\n            or not isinstance(selected, list)\n            or selected != reference.get(\"selected_ids\")\n            or len(selected) != len(set(selected))\n            or set(selected) != set(plan[\"selected_ids\"])):\n        raise ValueError(\"The original optimization and selected portfolio differ\")\n    return retained\n\n\ndef _optimization_section(retained):\n    analysis = retained[\"analysis\"]\n    request = analysis[\"request\"]\n    rows = [\n        [\"Original analysis ID\", analysis[\"id\"]],\n        [\"Objective kind\", request[\"objective\"].get(\"kind\")],\n        [\"Objective basis\", request[\"objective\"].get(\"basis\")],\n        [\"Objective scope\", analysis[\"methods\"].get(\"objective_scope\")],\n        [\"Original candidate count\", analysis[\"counts\"].get(\"inventory\")],\n        [\"Eligible candidate count\", analysis[\"counts\"].get(\"eligible\")],\n        [\"Selected candidate count\", analysis[\"counts\"].get(\"selected\")],\n        [\"Normalized objective score\", analysis[\"selection\"].get(\"objective_score\")],\n        [\"Original solver module\", analysis[\"engine\"].get(\"module\")],\n        [\"Original solver SHA-256\", analysis[\"engine\"].get(\"sha256\")],\n    ]\n    for group, values in (\n            (\"Weight\", request.get(\"weights\", {})),\n            (\"Constraint\", request.get(\"constraints\", {})),\n            (\"Solver result\", analysis.get(\"optimization\", {}))):\n        rows.extend([group + \": \" + name, value] for name, value in values.items()\n                    if not isinstance(value, (dict, list)))\n    return [\"Original saved optimization\", [\n        \"This portfolio was selected by its retained optimization analysis and then \"\n        \"stored through the original manual-ID plan interface. The storage mode does \"\n        \"not replace its original objective, solver or constraints.\",\n        _table([\"Decision record\", \"Retained value\"], rows),\n        _text(analysis[\"methods\"].get(\"optimality_scope\")),\n        _text(analysis[\"methods\"].get(\"selected_result\")),\n        _text(analysis.get(\"stability\", {}).get(\"interpretation\")),\n        \"The full normalized candidate table, all declared preference profiles and \"\n        \"solver details are attached unchanged. Independent-unit objective sums and \"\n        \"union-recomputed physical quantities retain their original meanings.\",\n        _links([\n            (\"Original complete optimization analysis\", \"optimization/analysis.json\"),\n            (\"Original full optimization candidate table\", \"optimization/candidates.csv\"),\n            (\"Original optimization report\", \"optimization/index.html\"),\n        ]),\n    ]]\n\n\ndef _sections(state, plan, rows, packet, sources, optimization=None):"
+            },
+            {
+              "before": "        [\"Selection algorithm\", plan.get(\"algorithm\")],",
+              "after": "        [\"Saved-plan selection mode\", plan.get(\"algorithm\")],"
+            },
+            {
+              "before": "    sections.append([\"Complete selected planning-unit inventory\", [",
+              "after": "    if optimization is not None:\n        sections.append(_optimization_section(optimization))\n    sections.append([\"Complete selected planning-unit inventory\", ["
+            },
+            {
+              "before": "    packet = conservation.export_packet(workspace, state[\"id\"], plan[\"id\"])\n    originals = _source_entries(workspace, state)",
+              "after": "    optimization = _retained_optimization(workspace, state, plan)\n    if optimization is not None:\n        from . import conservation_optimization\n        packet = conservation_optimization.export(workspace, plan[\"id\"])\n    else:\n        packet = conservation.export_packet(workspace, state[\"id\"], plan[\"id\"])\n    originals = _source_entries(workspace, state)"
+            },
+            {
+              "before": "        \"packet\": {**_identity_file(packet), \"id\": packet[\"id\"], \"presentation\": packet[\"presentation\"]},",
+              "after": "        \"packet\": {**_identity_file(packet), \"id\": packet[\"id\"],\n                   \"schema\": packet[\"schema\"], \"presentation\": packet.get(\"presentation\")},\n        \"optimization\": ({\"id\": optimization[\"analysis\"][\"id\"],\n                          \"files\": optimization[\"state\"][\"files\"]}\n                         if optimization is not None else None),"
+            },
+            {
+              "before": "        retain(\"records/candidates.json\", state[\"files\"][\"candidates\"])\n",
+              "after": "        retain(\"records/candidates.json\", state[\"files\"][\"candidates\"])\n        if optimization is not None:\n            names = {\"analysis\": \"analysis.json\", \"candidates\": \"candidates.csv\",\n                     \"report\": \"index.html\"}\n            for role, item in optimization[\"state\"][\"files\"].items():\n                retain(\"optimization/\" + names[role], item)\n"
+            },
+            {
+              "before": "            \"sections\": _sections(state, plan, rows, packet, originals),",
+              "after": "            \"sections\": _sections(state, plan, rows, packet, originals, optimization),"
+            }
+          ]
+        },
+        {
+          "path": "model/CONSERVATION_REPORT_SOURCE.md",
+          "before_sha256": "07ff0559636694b28836b0dcca6aef2a77c36cce8b6d9a6f265da5f93c4e7885",
+          "after_sha256": "0337aca8899e357dea61ea672413ae85f2cbe413cf4bf18936faf423322f6ccd",
+          "replacements": [
+            {
+              "before": "edition conservation-saved-plan-report/1",
+              "after": "edition conservation-saved-plan-report/2"
+            },
+            {
+              "before": "The original existing decision-packet.zip remains a complete companion.",
+              "after": "For an optimized portfolio, the source reopens its original saved analysis and verifies the original study, selected IDs, request, solver, normalization and file identities. It calls the maintained optimizer export, which packages the ordinary Conservation packet together with its complete optimization analysis, all-candidate CSV and original optimization HTML. Those three original files are also separate source companions and linked report records. The report shows the actual saved objective, constraints, solver result and preference interpretation; the manual-ID persistence mode remains a separate storage detail. No optimizer is run again. Ordinary manually selected portfolios continue through the original Conservation packet export.\n\nThe original existing decision-packet.zip remains a complete companion."
+            }
+          ]
+        }
+      ],
+      "installer": {
+        "known_predecessors_added": [
+          {
+            "path": "model/conservation_report_source.py",
+            "bytes": 28912,
+            "sha256": "b9cb922025f3843a3d26e4592249842c6df221f678db276fd0e083b3b4402538",
+            "git_blob": "0c9ea0ceced715cb20530584742cf7ce9e6d3f4d"
+          },
+          {
+            "path": "model/CONSERVATION_REPORT_SOURCE.md",
+            "bytes": 10076,
+            "sha256": "07ff0559636694b28836b0dcca6aef2a77c36cce8b6d9a6f265da5f93c4e7885",
+            "git_blob": "5b27b4a6294401e2ff10897f4b81d9a52251ca6c"
+          },
+          {
+            "path": "operator/install_conservation.py",
+            "bytes": 65467,
+            "sha256": "62cedec1064442f76cf40dc971901e7077ba7aa1c0614c1a7af7705aba360b6e",
+            "git_blob": "f964c68770261fdd5ec95883cc30c91bfc13ab1f"
+          },
+          {
+            "path": "integration/conservation_report_operator_composition.json",
+            "bytes": 16725,
+            "sha256": "44675f162fb4d1e2276abab5da7e75ea55717ed77776c0b1bc71e44cccf18fa1",
+            "git_blob": "fb5c9542a6e760eea0cc8026a9ce853f8195f02c"
+          }
+        ],
+        "before": {
+          "path": "operator/install_conservation.py",
+          "bytes": 65467,
+          "sha256": "62cedec1064442f76cf40dc971901e7077ba7aa1c0614c1a7af7705aba360b6e",
+          "git_blob": "f964c68770261fdd5ec95883cc30c91bfc13ab1f"
+        },
+        "after": {
+          "bytes": 65946,
+          "sha256": "8da0c5e4b6fb38c7cdeddd65f86f1256186da1aa1876c00c454bedb303e4bbfd"
+        }
+      },
+      "validation": "Exact source guards replayed onto the complete current originals; existing optimizer export/get_analysis and saved-plan references independently reviewed; current source and scientific selections preserved."
+    }
+  ]
 }
