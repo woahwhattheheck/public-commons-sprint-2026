@@ -96,6 +96,8 @@ UNIT_DEFINITIONS = {
     "FNU": "Formazin nephelometric units",
     "degC": "Degrees Celsius",
     "uS/cm": "Microsiemens per centimetre",
+    "MPN/100mL": "Most probable number per 100 millilitres; original source spelling",
+    "MPN/100 ml": "Most probable number per 100 millilitres; original source spelling",
 }
 SURFACE_PARAMETERS = {
     "ph": ("ph_min_su", "ph_max_su", "SU"),
@@ -426,6 +428,7 @@ def _observation_rows(data: bytes, source_file: str = OBSERVATION_FILE, *, raw_w
             "activity_type": original.get("activity_type", original.get("ActivityTypeCode", "")),
             "activity_comment": original.get("activity_comment", original.get("ActivityCommentText", "")),
             "result_comment": original.get("result_comment", original.get("ResultCommentText", "")),
+            "laboratory_comment": original.get("laboratory_comment", original.get("ResultLaboratoryCommentText", "")),
         }
         for field in ("value", "detection_limit", "depth"):
             if raw[field] == "":
@@ -521,7 +524,7 @@ def _dated_context(complete, sites, parameters, observation_context):
         "calendar": complete["wqp_calendar"], "flow_rows": flow,
         "flow_methods": complete["flow_methods"],
         "dates_without_flow_context": [] if generic else sorted(observed_dates - {row["sampling_date"] for row in complete["flow_rows"]}),
-        "selection_notes": ([
+        "selection_notes": (complete["study"].get("observation_selection_notes") or [
             "Station, characteristic, year and month filters select original dated WQP result rows. Original source CSVs remain complete in every study export.",
             "Series keep their own fraction, analytical method, result value type, basis fields and support unit. Calculated source nitrogen remains a distinct characteristic and result type.",
             "Whole-basin point membership is source context; it does not establish location upstream of a gauge within the same unsplit reach.",
@@ -706,7 +709,7 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
             basis += " Original result qualifiers are retained: " + ", ".join(qualifiers) + "."
         metadata = series_metadata(records)
         if metadata:
-            support = "Original stream sampling activities"
+            support = metadata.get("source_sample_support", "Original sampling activities")
             basis += " Fraction, method authority and identifier, result value type, original basis fields and effective support unit define separate series."
         series.append({
             **metadata,
@@ -1321,6 +1324,39 @@ class PublishedStudyStore:
             _atomic(destination / filename, output.getvalue().encode("utf-8"))
             written.append(filename)
 
+        registered_rows = {}
+        for row in context["observations"]["rows"]:
+            if row.get("source_observation"):
+                registered_rows.setdefault(row["source_file"], []).append(row)
+        selected_sources = []
+        for source_file, selected_rows in sorted(registered_rows.items()):
+            source, descriptor = self.source_file(study_id, source_file, context["record"]["version_id"])
+            headers = csv.DictReader(io.StringIO(source.read_text(encoding="utf-8-sig"))).fieldnames or []
+            output = io.StringIO(newline="")
+            writer = csv.DictWriter(output, fieldnames=headers, lineterminator="\n")
+            writer.writeheader()
+            writer.writerows(row["raw_cells"] for row in selected_rows)
+            filename = "selected-activities/" + _name(source_file)
+            _atomic(destination / filename, output.getvalue().encode("utf-8"))
+            written.append(filename)
+            selected_sources.append({
+                "path": filename, "original_source_path": source_file,
+                "original_source_sha256": selected_rows[0]["original_source_sha256"],
+                "original_source_url": selected_rows[0].get("original_source_url", ""),
+                "record_count": len(selected_rows),
+                "rows": [{"selected_csv_row": number, "original_csv_row": row["source_csv_row"],
+                          "record_id": row["record_id"], "activity_id": row["activity_id"]}
+                         for number, row in enumerate(selected_rows, 2)],
+            })
+        if selected_sources:
+            filename = "selected-activities/index.json"
+            _atomic(destination / filename, _json_bytes({
+                "schema": "upstate.selected-original-observations/v1",
+                "study_id": study_id, "version_id": context["record"]["version_id"],
+                "sources": selected_sources,
+            }))
+            written.append(filename)
+
         for key, filename in (
             ("rows", "wqp-results-selected.csv"), ("coverage", "wqp-coverage-selected.csv"),
             ("flow_rows", "upstream-flow-selected.csv"),
@@ -1335,19 +1371,25 @@ class PublishedStudyStore:
             _atomic(destination / filename, output.getvalue().encode("utf-8"))
             written.append(filename)
         support_output = io.StringIO(newline="")
-        support_columns = (
+        series_columns = (
             "site_id", "parameter", "project_id", "activity_type", "sample_support",
+            "series_key", "sample_fraction", "method_authority", "method_id",
+            "result_value_type", "result_weight_basis", "result_time_basis",
+            "result_temperature_basis", "result_particle_size_basis", "support_unit",
+        )
+        interval_columns = (
             "record_count", "distinct_activity_count", "quantified_count", "below_limit_count",
             "unresolved_count", "unit", "mean_lower", "mean_upper",
             "mean_upper_inclusive", "complete_interval_support", "basis",
         )
+        support_columns = series_columns + interval_columns
         support_writer = csv.DictWriter(support_output, fieldnames=support_columns, lineterminator="\n")
         support_writer.writeheader()
         for series in context["observations"]["series"]:
             support = series.get("observation_support", {})
             support_writer.writerow({
-                **{name: series.get(name, "") for name in support_columns[:5]},
-                **{name: support.get(name, "") for name in support_columns[5:]},
+                **{name: series.get(name, "") for name in series_columns},
+                **{name: support.get(name, "") for name in interval_columns},
             })
         _atomic(destination / "observation-support-selected.csv", support_output.getvalue().encode("utf-8"))
         written.append("observation-support-selected.csv")
@@ -1536,6 +1578,9 @@ class PublishedStudyStore:
             ("value", "Original value"), ("unit", "Unit"), ("detection_condition", "Detection"),
             ("detection_limit", "Limit"), ("detection_limit_unit", "Limit unit"),
             ("depth", "Depth"), ("depth_unit", "Depth unit"), ("activity_id", "Activity identifier"),
+            ("result_comment", "Original result comment"),
+            ("activity_comment", "Original activity comment"),
+            ("laboratory_comment", "Original laboratory comment"),
         ])
         cohort = context.get("cohort_reconciliation")
         if cohort:

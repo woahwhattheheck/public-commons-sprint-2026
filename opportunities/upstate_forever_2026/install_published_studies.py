@@ -15,6 +15,8 @@ CODE_FILES = (
     "measurement_workspace/published_studies.py",
     "measurement_workspace/observation_support.py",
     "measurement_workspace/source_observations.py",
+    "measurement_workspace/utility_microbiology.py",
+    "measurement_workspace/UTILITY_MICROBIAL_OBSERVATIONS.md",
     "measurement_workspace/STREAM_OBSERVATIONS.md",
     "source_tools/build_eighteenmile_stream_study.mjs",
     "measurement_workspace/OBSERVATION_SUPPORT.md",
@@ -177,6 +179,11 @@ def main():
                 if not path.is_file() or path.stat().st_size != item.get("bytes") or digest(path) != item.get("sha256"):
                     parser.error("The original stream analysis bytes changed: " + relative)
                 data_files.append(relative)
+    from measurement_workspace import utility_microbiology as microbial
+    microbial_root = source / microbial.SOURCE_DIRECTORY
+    if microbial_root.is_dir():
+        originals = microbial.source_files(source)
+        data_files.extend(str(Path(microbial.SOURCE_DIRECTORY) / name) for name in originals)
     data_files = sorted(set(data_files))
     expected = list(CODE_FILES) + data_files
     for relative in expected:
@@ -225,7 +232,7 @@ def main():
         "extension": "published-studies", "view": "published-studies",
         "action": "published-study.import",
         "builtin_id": "scdes-eighteenmile-lake-2023",
-        "builtin_ids": ["scdes-eighteenmile-lake-2023"] + (["scdes-eighteenmile-streams-2020-2025"] if stream_root.is_dir() else []),
+        "builtin_ids": ["scdes-eighteenmile-lake-2023"] + (["scdes-eighteenmile-streams-2020-2025"] if stream_root.is_dir() else []) + ([microbial.BUILTIN_ID] if microbial_root.is_dir() else []),
         "files": [{"path": name, "sha256": digest(application / name)} for name in expected],
     }, indent=2))
 
