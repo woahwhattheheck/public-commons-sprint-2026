@@ -307,6 +307,26 @@ async function main(argv){
   const afterInvalid=await download(page.locator('[data-geo-save]'),'choice-after-invalid-import');
   requireValue(equal((await readJSON(afterInvalid.file)).payload,priorPayload),'A malformed final option partially replaced the working choice');
 
+  // A failed persistence attempt must leave the full live choice intact.
+  const storageBlockedChoice=JSON.parse(JSON.stringify(choices));storageBlockedChoice.payload.title='Unretained choice must not become current';
+  await page.evaluate(workspaceKey=>{
+   if(window.__ecoOriginalStorageSetItem)throw new Error('An earlier original storage receiving step is still active');
+   const original=Storage.prototype.setItem;window.__ecoOriginalStorageSetItem=original;
+   Storage.prototype.setItem=function(key,value){
+    if(this===sessionStorage&&String(key).endsWith(':'+workspaceKey))throw new DOMException('Receiving the original storage-failure path','QuotaExceededError');
+    return original.call(this,key,value);
+   };
+  },originalWorking.workspace_key);
+  try{
+   await page.locator('[data-geo-reopen]').setInputFiles({name:'storage-blocked-geographic-choice.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(storageBlockedChoice))});
+   await waitFor(async()=>(await page.locator('[data-geo-notice]').textContent()).includes('could not be retained'),'storage failure preserves complete choice');
+   const afterStorageFailure=await download(page.locator('[data-geo-save]'),'choice-after-storage-failure');
+   requireValue(equal((await readJSON(afterStorageFailure.file)).payload,priorPayload),'A failed persistence attempt replaced live choices');
+   await screenshot(page,'source-intake-storage-failure',1440);
+  }finally{
+   await page.evaluate(()=>{const original=window.__ecoOriginalStorageSetItem;if(original)Storage.prototype.setItem=original;delete window.__ecoOriginalStorageSetItem;});
+  }
+
   await openWorking();
   await page.locator('[data-sp-working-file]').setInputFiles(workingBefore.file);
   await waitFor(async()=>await title.inputValue()===originalWorking.selection.title&&await page.locator(intakeSelector).inputValue()===originalSelector,'complete working file reopened');
@@ -328,7 +348,7 @@ async function main(argv){
   requireValue(equal(coldWorking.selection,originalWorking.selection)&&coldWorking.upload_receipts.some(row=>row.id===receipt.id)&&coldWorking.input_history.length>=recoveredWorking.input_history.length,'Cold receiving changed the selected choice or lost original history');
   await screenshot(page,'source-intake-cold-reopen',1440);await screenshot(page,'source-intake-cold-reopen',390);
   await saveRecord('source-input-lifecycle',{original:originalWorking,late:retainedWorking,reopened:recoveredWorking,cold:coldWorking,upload:receipt,invalid_choice_left_selection_unchanged:true});
-  action('source_input_lifecycle',{upload_id:uploaded.id,receipt_id:receipt.id,late_response_preserved_newer_choice:true,atomic_invalid_reopen:true,history_reselected:true,cold_reopen:true});
+  action('source_input_lifecycle',{upload_id:uploaded.id,receipt_id:receipt.id,late_response_preserved_newer_choice:true,atomic_invalid_reopen:true,storage_failure_preserves_choice:true,history_reselected:true,cold_reopen:true});
 
   // Preview reads original geometry only. Do not click Prepare or Run in this receiving course.
   const [previewResponse]=await Promise.all([
