@@ -1,0 +1,27 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "geographic-reference-gis",
+  "components": {
+    "geographic-reference-gis": {
+      "title": "Completed regional reference trio to editable GIS and frozen execution history",
+      "requires": [
+        "geographic-programme",
+        "gis-native-study",
+        "native-run-history"
+      ],
+      "paths": [
+        "model/geographic_gis_handover.py",
+        "source_tools/GEOGRAPHIC_REFERENCE_GIS.md",
+        "integration/component_fragments/geographic-reference-gis.json",
+        "CURRENT_OWNER_DIRECTION.md"
+      ]
+    }
+  },
+  "required_components": [
+    "geographic-reference-gis"
+  ],
+  "source_reference": {
+    "repository": "woahwhattheheck/public-commons-sprint-2026",
+    "contract": "Original prepared reference trio; full captured study states unchanged; existing Workspace/GIS/history/portable APIs"
+  }
+}
