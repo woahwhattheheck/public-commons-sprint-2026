@@ -10,8 +10,9 @@ The Sources desk now publishes saved scientific study sections as a complete sta
 4. Choose **Preview selected sources**. Check each original study title, vintage, document ID and source checksum. The preview binds every selected source and companion before a rendering task is submitted.
 5. Choose **Prepare PDF, HTML and data**. The original task panel displays progress and completed download tickets. Refresh saved reports to reopen the completed edition.
 6. Open the saved report to read its HTML and download the PDF, Markdown, structured report data, original report inputs, figures and exact selection. **Prepare complete report ZIP** packages those same retained files with the saved operation and edition records.
-7. **Back up Workspace with this report** opens the existing complete Workspace backup workflow. Restore that original archive in another operator and open the same Sources desk. The retained report edition, its original source choices and editable studies remain together.
-8. **Use these studies in another report** loads the saved ordered selection and contact into the composer. The existing edition stays available.
+7. **Transfer this report and its studies** opens the original Study transfer desk with this exact saved edition selected. Preview its ordered source collections and available original Diagnostic, Monitoring and calibration history, then export an editable study. Receive that archive through the existing restore form and reopen the same report in Sources.
+8. **Back up Workspace with this report** opens the existing complete Workspace backup workflow when the entire project is required.
+9. **Use these studies in another report** loads the saved ordered selection and contact into the composer. The existing edition stays available.
 
 The composer retains its draft for each Workspace in the browser session. Editing the title, contact or order requires a fresh preview. A late preview or file response from another Workspace cannot replace the current selection. Repeating the same prepared identity reuses its completed files. Report sources can come from completed single-model studies; standalone publishing does not require a paired NDR/SDR map baseline.
 
@@ -29,7 +30,7 @@ Each completed operator edition lives under `scientific-report-editions/<full-re
 
 Rendering and report ZIP creation use the same Workspace lock as complete project backup. Report reads verify the saved selection, operation, source binding and original files. The registered Workspace verification hook performs those checks after receiving. Source mutation between preview and task execution changes the preview identity and requires a new preview.
 
-The report ZIP contains the complete rendered edition and its retained report inputs. The original complete Workspace archive carries editable study histories and full original source collections. Downloading a source edition from the adjacent Source reports section still uses its original import manifest and all related scientific source entries.
+The report ZIP contains the complete rendered edition and its retained report inputs. Editable Study transfer additionally carries full ordered source collections and the original local study history named by maintained producer contracts. Imported reports retain their contained source files and provenance; missing declared local history is reported before export. The original complete Workspace archive carries the entire project. Downloading a source edition from the adjacent Source reports section still uses its original import manifest and all related scientific source entries.
 
 ## Registered operations
 

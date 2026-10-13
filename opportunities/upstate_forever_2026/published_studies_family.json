@@ -1,9 +1,9 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
-  "source_reference_base": "aeed653906f9397f058cde3bf080011ac852e9f5",
+  "source_reference_base": "37691b6e75aedf0943603cf71b8ba6ae5e4ed85f",
   "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension. The microbial temporal and calendar companion preserves its complete original application layout, self-contained HTML explorer and a separately bound native scientific-report recipe. Named saved reviews retain exact original study editions and complete cohort selections; complete review exports include the original study and selected report tree. Review import preserves an existing current study edition. The owned published-study-reviews component fragment retains complete review, hydrologic-source and microbial-gallery dependencies in cumulative application assembly. RL-18151 preserves its complete original 40-file scientific family and exact 498-result cohort. The shared native receiving course preserves the existing SV-833 saved-review continuation and provides the complete RL-18151 import/report/study/project lifecycle.",
   "external_source_edition": {
     "files": 62,
@@ -78,8 +78,8 @@
     },
     {
       "path": "measurement_workspace/RL18151_OBSERVATIONS.md",
-      "bytes": 6222,
-      "sha256": "e3c8a246a9f82f8f1deca2e0107d5cf7dffdbe1cbb9efb0121a986c44b0e778c"
+      "bytes": 6840,
+      "sha256": "cda1b7f7935bdcad3d2a632adab7c81d6502d9ef343586bcdc6593d47d004142"
     },
     {
       "path": "measurement_workspace/rl18151_observations.py",
@@ -1114,7 +1114,7 @@
     {
       "path": "operator/extensions/published-studies.json",
       "bytes": 2862,
-      "sha256": "db2cb5a5c4dacf3ad5d2cebde0577e222461d4447c1290ae672e6dbf473998ce"
+      "sha256": "4a684075a7c36fd9c07692e2d460f36072a7e0700a63d86c65fa47f6057050dc"
     },
     {
       "path": "operator/published_study_operator.py",
@@ -1693,13 +1693,13 @@
     },
     {
       "path": "source/rl18151-lake-phosphorus-20261013/import_rl18151.py",
-      "bytes": 4776,
-      "sha256": "f148bc2845cfca878046260ff4e2a1f974aa33642458e7a8a2a40f2faf76f0db"
+      "bytes": 10927,
+      "sha256": "99ffdda790f8f2896319eab97b994c942ebdaeb72ac2c4dc323d3ae77de0d9bd"
     },
     {
       "path": "source/rl18151-lake-phosphorus-20261013/observed-report.json",
-      "bytes": 14430,
-      "sha256": "a3c311f92c06e9eecc01b15019139ce7fbfd1c137505f91c097c2647ca6383e1"
+      "bytes": 15226,
+      "sha256": "a74e17899482229f4110a8395983dca4c696d4265c84d07c2fb18dcbb4484d1f"
     },
     {
       "path": "source/rl18151-lake-phosphorus-20261013/original-join-census.json",
@@ -1802,19 +1802,24 @@
       "sha256": "7720306213c64e7b79185f61ccbc3a406c169730925b33d20bb47e8a946fb4a6"
     },
     {
+      "path": "source/rl18151-lake-phosphorus-20261013/RL_NATIVE_RECEIVING.md",
+      "bytes": 5488,
+      "sha256": "7d0862fcf9e16ad725dfa12f2c3e6b32531eb4e3bed82b482a0f597b3d4acb16"
+    },
+    {
       "path": "source/rl18151-lake-phosphorus-20261013/SOURCE_CAPTURE.md",
       "bytes": 3129,
       "sha256": "ab8f6cd949db6b142644a6250c5594aeef7972a510651bf28af3eb8c02a94de4"
     },
     {
       "path": "source/rl18151-lake-phosphorus-20261013/sources.json",
-      "bytes": 37597,
-      "sha256": "a5735803cf7db14c6650268988cf5d5e29a2202e6c9b209ab76312cabc70c58f"
+      "bytes": 38487,
+      "sha256": "72a5d67dd32fcb257a188aad4048323d9068a98c0d493bd1f61d87c78ee2019c"
     },
     {
       "path": "source/rl18151-lake-phosphorus-20261013/study-files.json",
-      "bytes": 6468,
-      "sha256": "869c2f6ce6ed006c33428a19d7fb0455706c827641e79c64ae7f44e502941a4a"
+      "bytes": 6626,
+      "sha256": "a50fcbcc06df7a78dba43cb0af72b1393070c80487f3cb2dd8ae2c1e41574e92"
     },
     {
       "path": "source/rl18151-lake-phosphorus-20261013/supplemental-requests.json",
@@ -2071,15 +2076,16 @@
       "team_read_route": "/api/published-studies/review"
     },
     "rl18151": {
-      "commit": "cd3b5e82095a1b34e298a4eca5a570889e66b763",
-      "authored_commit": "7fb3d92fd9b2aba3f654dcc616b5bdb814fea4a8",
-      "source_bank_sha256": "6287666dbf6d748f41d2d9e960d0c4407c217bee2015d834b5f82419b2d8f6aa",
+      "commit": "6b140546f9a16d416b5a7d78c1c5a500966fcdd4",
       "manifest": "source/rl18151-lake-phosphorus-20261013/sources.json",
-      "manifest_sha256": "a5735803cf7db14c6650268988cf5d5e29a2202e6c9b209ab76312cabc70c58f",
-      "source_files": 40,
+      "manifest_sha256": "72a5d67dd32fcb257a188aad4048323d9068a98c0d493bd1f61d87c78ee2019c",
+      "source_files": 41,
       "original_result_rows": 498,
       "original_activities": 40,
-      "original_reporting_limit_rows": 447
+      "original_reporting_limit_rows": 447,
+      "original_scientific_commit": "cd3b5e82095a1b34e298a4eca5a570889e66b763",
+      "original_scientific_bank_sha256": "6287666dbf6d748f41d2d9e960d0c4407c217bee2015d834b5f82419b2d8f6aa",
+      "native_geography_and_delivery": "Original importer, station-selection guide and report closure from PR3465."
     }
   }
 }

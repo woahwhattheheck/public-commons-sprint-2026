@@ -345,6 +345,9 @@ export function createSourceBankToolkit(options = {}) {
   }
   function unwrapJson(value, depth = 0) {
     if (depth > 4) fail("archive envelope nesting exceeds limit");
+    if (value?.schema === "upstate.application-source-part/v1") return packets([value]);
+    if (Array.isArray(value) && value.length && value.every(part =>
+        part?.schema === "upstate.application-source-part/v1")) return packets(value);
     if (value?.schema === "commons.gzip-source-bank/v1") return gzipEnvelope(value, depth);
     if (value?.schema === "commons.artifact-base64/v1") {
       const data = decodeBase64(value.content_base64, limits.maxInputBytes, "artifact envelope");
@@ -408,6 +411,15 @@ export function createSourceBankToolkit(options = {}) {
                   "compressed_bytes", "compressed_sha256", "files", "source_bytes"];
     if (first.schema !== "upstate.application-source-part/v1" || first.encoding !== "gzip+base64")
       fail("unsupported source packet schema or encoding");
+    if (typeof first.edition !== "string" || !first.edition ||
+        !Number.isSafeInteger(first.parts) || first.parts < 1 ||
+        !Number.isSafeInteger(first.payload_bytes) || first.payload_bytes < 0 ||
+        !Number.isSafeInteger(first.compressed_bytes) || first.compressed_bytes < 0 ||
+        typeof first.payload_sha256 !== "string" || !shaPattern.test(first.payload_sha256) ||
+        typeof first.compressed_sha256 !== "string" || !shaPattern.test(first.compressed_sha256))
+      fail("source packets require an edition, part count and decoded/gzip byte and SHA-256 identities");
+    if (first.payload_bytes > limits.maxOutputBytes || first.compressed_bytes > limits.maxInputBytes)
+      fail("source packet declared size exceeds resource limits");
     count(parts.length, first.parts, "source packet total");
     ordered.forEach((part, i) => {
       if (part.part !== i + 1) fail("missing or duplicate source packet");
@@ -421,7 +433,7 @@ export function createSourceBankToolkit(options = {}) {
     const packed = decodeBase64(joined, limits.maxInputBytes, "source packets");
     count(packed.length, first.compressed_bytes, "compressed source packets");
     hash(packed, first.compressed_sha256, "compressed source packets");
-    const raw = codec.gunzip(packed, { maxOutputBytes: limits.maxOutputBytes, maxMembers: limits.maxGzipMembers });
+    const raw = codec.gunzip(packed, { maxOutputBytes: first.payload_bytes, maxMembers: limits.maxGzipMembers });
     count(raw.length, first.payload_bytes, "source packet payload");
     hash(raw, first.payload_sha256, "source packet payload");
     const result = sourceBank(carrierJson(codec.utf8Decode(raw)));

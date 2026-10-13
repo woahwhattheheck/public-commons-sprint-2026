@@ -29,7 +29,7 @@ async function main() {
   if(options.help){process.stdout.write(`Prepare the original192-record /159-site assessment association report.
 Usage: node source_tools/assessment_association_report_cli.mjs --output NEW_DIRECTORY [--workspace EXISTING_WORKSPACE] [--python PYTHON]
 Optional --assessments CSV --crosswalk CSV --programme JSON override retained input paths.
-Optional --geography ANALYSIS_JSON attaches an actual saved station-geography result.
+Optional --geography JSON attaches a completed native assessment context or saved station-geography result.
 The new directory contains the readable report, complete JSON/CSVs, exact source inputs,
 portable ZIP and sources.json. --workspace invokes the maintained source-import operation.
 Output directories must be new; an import error preserves all completed report files.
