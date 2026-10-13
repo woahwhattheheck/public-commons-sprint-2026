@@ -313,11 +313,6 @@ def receive(workspace, document, report_path, index_path, notes_path, *,
         if context["prior_selection"] is not None:
             if current["plan"]["revision"] != base["revision"]:
                 raise RevisionConflict(base["id"], base["revision"], current["plan"]["revision"])
-            return {**result, "schema": IMPORT_SCHEMA, "status": "already_received",
-                    "base_revision": base["revision"], "base_document_digest": result["document_digest"],
-                    "applied_revision": current["plan"]["revision"], "plan": current["plan"],
-                    "current_revision": current["plan"]["revision"],
-                    "source_links": list(context["links"].values())}
         applied_path = directory / "revisions" / ("%016d.json" % (base["revision"] + 1))
         applied = store._read_record(applied_path) if applied_path.exists() else None
         prior = next((row for row in (applied["plan"].get("briefing_imports", []) if applied else [])
@@ -335,6 +330,12 @@ def receive(workspace, document, report_path, index_path, notes_path, *,
             except FileExistsError:
                 if target.read_bytes() != raw:
                     raise ImplementationError("A retained briefing attachment changed")
+        if context["prior_selection"] is not None:
+            return {**result, "schema": IMPORT_SCHEMA, "status": "already_received",
+                    "base_revision": base["revision"], "base_document_digest": result["document_digest"],
+                    "applied_revision": current["plan"]["revision"], "plan": current["plan"],
+                    "current_revision": current["plan"]["revision"],
+                    "source_links": list(context["links"].values())}
         if reconnected:
             saved = applied["plan"]
         else:

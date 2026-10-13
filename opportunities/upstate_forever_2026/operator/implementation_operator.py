@@ -547,6 +547,8 @@ class ImplementationOperator:
             result = briefing_implementation.receive(
                 ws, document, paths["report"], paths["index"], notes["path"],
                 expected_operation_id=value.get("briefing_operation_id"), actor=actor, **arguments)
+        if not preview:
+            result = {**result, "revision": result["applied_revision"]}
         return {**result, "workspace_key": workspace,
                 "notes_upload_id": notes_id,
                 "delivery_id": value.get("delivery_id")}
