@@ -486,6 +486,76 @@ def inspect(bank, *, node="node", temporary_parent=None):
             fail("COMPONENT_IDENTITY", "The complete collected family identity differs")
         return report
 
+
+def validate_composed_contexts(document, layers, directories):
+    """The actual receiving tree must preserve each retained source lookup."""
+    final_files = document["files"]
+    final_metadata = document["file_metadata"]
+    final_directories = {"."}
+    final_directories.update(directories)
+    for name in [*final_files, *directories]:
+        parts = name.split("/")
+        final_directories.update("/".join(parts[:i]) for i in range(1, len(parts)))
+    if set(final_files) & final_directories:
+        fail("COMPONENT_DIRECTORY", "A final source member also names an original directory")
+    aliases = {name.casefold(): name for name in final_files}
+    for name in sorted(final_directories):
+        if name.casefold() in aliases and aliases[name.casefold()] != name:
+            fail("COMPONENT_DIRECTORY", "Final source and namespace paths have a case alias", {"path": name})
+        aliases[name.casefold()] = name
+    for layer in layers:
+        bank = layer.document
+        collected = bank["source_collection"]
+        originals = {**checked_rows(bank["files"]),
+                     **checked_rows(bank["family_selection"]["declaration_sources"])}
+        for language in ("python", "javascript"):
+            for entry in collected["analyses"][language]:
+                for name in entry["packet"]["members"]:
+                    if name not in final_files:
+                        fail("COMPONENT_RECEIVING_SOURCE", "A collected runtime member is absent from the final application",
+                             {"selection_id": entry["id"], "path": name})
+                    original = originals[name]
+                    body = assembly.represented_body(final_files[name], final_metadata[name])
+                    if body != document_bytes(original) or final_metadata[name].get("mode", "100644") != original.get("mode", "100644"):
+                        fail("COMPONENT_RECEIVING_SOURCE", "A later source layer changes an originally analysed member",
+                             {"selection_id": entry["id"], "path": name,
+                              "expected_sha256": original["sha256"], "actual_sha256": assembly.sha256(body)})
+                if language == "python":
+                    analysis = entry["packet"]["analysis"]
+                    for observation in analysis["observations"]:
+                        name = observation["path"]
+                        actual = "file" if name in final_files else "directory" if name in final_directories else "missing"
+                        if actual != observation["kind"]:
+                            fail("COMPONENT_RECEIVING_CONTEXT", "The complete receiving tree changes an original import lookup",
+                                 {"selection_id": entry["id"], "path": name,
+                                  "collected_kind": observation["kind"], "receiving_kind": actual})
+                    for name in analysis.get("directories", []):
+                        if name not in final_directories:
+                            fail("COMPONENT_RECEIVING_CONTEXT", "An original namespace directory is absent", {"path": name})
+    return {"families": len(layers), "namespace_directories": len(directories),
+            "state": "original_source_contexts_preserved"}
+
+
+def validate_received_contexts(destination, layers, directories):
+    """Resume inspects the actual original directory, including additional files."""
+    destination = Path(destination).absolute()
+    for ancestor in (destination, *destination.parents):
+        if ancestor.is_symlink():
+            fail("COMPONENT_RECEIVING_ALIAS", "The receiving path contains a directory alias", {"path": str(ancestor)})
+    actual = python_source.FilesystemSource(destination, python_source.selected_limits(None))
+    for layer in layers:
+        for entry in layer.document["source_collection"]["analyses"]["python"]:
+            for observation in entry["packet"]["analysis"]["observations"]:
+                kind = actual._kind(observation["path"])
+                if kind != observation["kind"]:
+                    fail("COMPONENT_RECEIVING_CONTEXT", "The actual received directory changes an original import lookup",
+                         {"selection_id": entry["id"], "path": observation["path"],
+                          "collected_kind": observation["kind"], "received_kind": kind})
+    for name in directories:
+        if actual._kind(name) != "directory":
+            fail("COMPONENT_RECEIVING_CONTEXT", "An original namespace portion is not an ordinary received directory", {"path": name})
+    return {"state": "original_physical_contexts_preserved"}
+
 def assemble(base, banks, *, edition, operation_id=None, output=None, node="node", temporary_parent=None):
     """Replay collected source and invoke the original exact-guarded receiving API."""
     layers = [assembly.read_layer(base)]
@@ -503,11 +573,12 @@ def assemble(base, banks, *, edition, operation_id=None, output=None, node="node
         if name in document["files"] or any(parent in document["files"]
                 for parent in ("/".join(name.split("/")[:i]) for i in range(1, len(name.split("/"))))):
             fail("COMPONENT_DIRECTORY", "An original namespace directory conflicts with an assembled file", {"path": name})
+    context_receipt = validate_composed_contexts(document, layers[1:], directories)
     document["component_source_collection"] = {
         "schema": SCHEMA, "original_assembly_source_ref": document["source_ref"],
         "families": [{"source_ref": layer.document["source_ref"],
                      "selection": layer.document["source_collection"]["selection"]} for layer in layers[1:]],
-        "directories": directories}
+        "directories": directories, "context_receipt": context_receipt}
     document["source_ref"] = "assembly-collected:" + digest({
         "assembly": document["assembly"], "collection": document["component_source_collection"]})
     receipt = assembly.source_receipt(document, canonical(document))
@@ -522,6 +593,7 @@ def assemble(base, banks, *, edition, operation_id=None, output=None, node="node
                 current = current / part
                 python_source.ordinary_directory(current)
         received["namespace_directories"] = len(directories)
+        received["context_receipt"] = validate_received_contexts(output, layers[1:], directories)
     return document, receipt, received
 
 def main(argv=None):
