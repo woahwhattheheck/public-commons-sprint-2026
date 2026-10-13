@@ -1,0 +1,71 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "eighteenmile-trace-metals",
+  "source_reference": "Original Ecosystem operation 1791883613.993319; original WQP sources and exact input hashes retained in the component.",
+  "components": {
+    "eighteenmile-trace-metals": {
+      "title": "Original153 trace-metal results, sampling calendar, selected scientific source and offline explorer",
+      "paths": [
+        "eighteenmile_trace_metals.sources.json",
+        "observations/eighteenmile_2023/trace_metals/README.md",
+        "observations/eighteenmile_2023/trace_metals/analysis_core.mjs",
+        "observations/eighteenmile_2023/trace_metals/build.mjs",
+        "observations/eighteenmile_2023/trace_metals/explorer.css",
+        "observations/eighteenmile_2023/trace_metals/explorer.mjs",
+        "observations/eighteenmile_2023/trace_metals/explorer_template.mjs",
+        "observations/eighteenmile_2023/trace_metals/generated/README.md",
+        "observations/eighteenmile_2023/trace_metals/generated/analysis_core.mjs",
+        "observations/eighteenmile_2023/trace_metals/generated/build.mjs",
+        "observations/eighteenmile_2023/trace_metals/generated/explorer.css",
+        "observations/eighteenmile_2023/trace_metals/generated/explorer.html",
+        "observations/eighteenmile_2023/trace_metals/generated/explorer.mjs",
+        "observations/eighteenmile_2023/trace_metals/generated/explorer_template.mjs",
+        "observations/eighteenmile_2023/trace_metals/generated/figure-spec.json",
+        "observations/eighteenmile_2023/trace_metals/generated/figures/trace-cadmium.svg",
+        "observations/eighteenmile_2023/trace_metals/generated/figures/trace-chromium.svg",
+        "observations/eighteenmile_2023/trace_metals/generated/figures/trace-copper.svg",
+        "observations/eighteenmile_2023/trace_metals/generated/figures/trace-iron.svg",
+        "observations/eighteenmile_2023/trace_metals/generated/figures/trace-lead.svg",
+        "observations/eighteenmile_2023/trace_metals/generated/figures/trace-manganese.svg",
+        "observations/eighteenmile_2023/trace_metals/generated/figures/trace-mercury.svg",
+        "observations/eighteenmile_2023/trace_metals/generated/figures/trace-nickel.svg",
+        "observations/eighteenmile_2023/trace_metals/generated/figures/trace-zinc.svg",
+        "observations/eighteenmile_2023/trace_metals/generated/hash.mjs",
+        "observations/eighteenmile_2023/trace_metals/generated/index.html",
+        "observations/eighteenmile_2023/trace_metals/generated/inputs.json",
+        "observations/eighteenmile_2023/trace_metals/generated/inventory.json",
+        "observations/eighteenmile_2023/trace_metals/generated/report.json",
+        "observations/eighteenmile_2023/trace_metals/generated/report_core.mjs",
+        "observations/eighteenmile_2023/trace_metals/generated/same-activity-context.csv",
+        "observations/eighteenmile_2023/trace_metals/generated/selected-activities.csv",
+        "observations/eighteenmile_2023/trace_metals/generated/selected-records.csv",
+        "observations/eighteenmile_2023/trace_metals/generated/selected-summary.csv",
+        "observations/eighteenmile_2023/trace_metals/generated/selection.json",
+        "observations/eighteenmile_2023/trace_metals/generated/sources.json",
+        "observations/eighteenmile_2023/trace_metals/generated/study.json",
+        "observations/eighteenmile_2023/trace_metals/generated/wqp/normalize_core.mjs",
+        "observations/eighteenmile_2023/trace_metals/generated/wqp/originals/SV-245-2023.csv",
+        "observations/eighteenmile_2023/trace_metals/generated/wqp/originals/SV-268-2023.csv",
+        "observations/eighteenmile_2023/trace_metals/generated/wqp/originals/SV-374-2023.csv",
+        "observations/eighteenmile_2023/trace_metals/generated/wqp/originals/SV-375-2023.csv",
+        "observations/eighteenmile_2023/trace_metals/generated/wqp/originals/SV-376-2023.csv",
+        "observations/eighteenmile_2023/trace_metals/generated/wqp/originals/SV-591-2023.csv",
+        "observations/eighteenmile_2023/trace_metals/generated/wqp/originals/SV-838-2023.csv",
+        "observations/eighteenmile_2023/trace_metals/generated/wqp/originals/SV-839-2023.csv",
+        "observations/eighteenmile_2023/trace_metals/generated/wqp/originals/SV-840-2023.csv",
+        "observations/eighteenmile_2023/trace_metals/hash.mjs",
+        "observations/eighteenmile_2023/trace_metals/inputs.json",
+        "observations/eighteenmile_2023/trace_metals/report_core.mjs"
+      ],
+      "requires": [
+        "observed-context"
+      ],
+      "source_manifests": [
+        "eighteenmile_trace_metals.sources.json"
+      ]
+    }
+  },
+  "required_components": [
+    "eighteenmile-trace-metals"
+  ]
+}
