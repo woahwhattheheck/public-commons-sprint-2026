@@ -1,0 +1,106 @@
+{
+  "schema": "commons.mep-migration.target-rows.v1",
+  "targetSystem": "DEMONSTRATION receiver for dixie",
+  "targetVersion": "1",
+  "targetContractLabel": "Explicit DEMONSTRATION receiving schema v1; supplied fields are not a MEPflow API contract.",
+  "batchId": "batch_af59ed3c99b09f0a00fcfe8f9dce19f3d4478a5fb359c4afe207f52d1369a915",
+  "columns": [
+    "externalKey",
+    "customerKey",
+    "siteKey",
+    "kind",
+    "status",
+    "quotedAmount",
+    "startDate",
+    "notes"
+  ],
+  "rows": [
+    {
+      "rowId": "original_dixie_job_first:1",
+      "recordId": "job_a4f3a0daa114d87c3d9e956bfb157b66",
+      "recordRevision": 1,
+      "fields": {
+        "externalKey": "dixie-J001",
+        "customerKey": "DEMO-dixie-customer-1",
+        "siteKey": "DEMO-dixie-site-1",
+        "kind": "Water heater diagnosis",
+        "status": "requested",
+        "quotedAmount": "125.00",
+        "startDate": "2026-10-14",
+        "notes": "Fictional operating input."
+      },
+      "sourceFields": {
+        "externalKey": "dixie-J001",
+        "customerKey": "dixie-C001",
+        "siteKey": "dixie-S001",
+        "kind": "Water heater diagnosis",
+        "status": "requested",
+        "quotedAmount": "125.00",
+        "startDate": "2026-10-14",
+        "notes": "Fictional operating input."
+      },
+      "links": {
+        "customerKey": "customer_b956902e9e7f21181004e83f86a79d75",
+        "siteKey": "site_6526cc17cfab733800e914a59a1683ef"
+      }
+    },
+    {
+      "rowId": "original_dixie_job_first:2",
+      "recordId": "job_73ff5418f44c27d757a10dcf96a43862",
+      "recordRevision": 1,
+      "fields": {
+        "externalKey": "dixie-J002",
+        "customerKey": "DEMO-dixie-customer-2",
+        "siteKey": "DEMO-dixie-site-2",
+        "kind": "Drain repair",
+        "status": "scheduled",
+        "quotedAmount": "1800.00",
+        "startDate": "2026-10-15",
+        "notes": "Exact original\nmultiline scope, with comma."
+      },
+      "sourceFields": {
+        "externalKey": "dixie-J002",
+        "customerKey": "dixie-C002",
+        "siteKey": "dixie-S002",
+        "kind": "Drain repair",
+        "status": "scheduled",
+        "quotedAmount": "1800.00",
+        "startDate": "2026-10-15",
+        "notes": "Exact original\nmultiline scope, with comma."
+      },
+      "links": {
+        "customerKey": "customer_1f365d2d3e2eaebf76caf71536279d7f",
+        "siteKey": "site_cd5202c391bf1a3683a88e73571984c5"
+      }
+    },
+    {
+      "rowId": "original_dixie_job_first:3",
+      "recordId": "job_5edd1952136142ffedb69a704193f1b0",
+      "recordRevision": 1,
+      "fields": {
+        "externalKey": "dixie-J003",
+        "customerKey": "DEMO-dixie-customer-1",
+        "siteKey": "DEMO-dixie-site-1",
+        "kind": "Accepted replacement",
+        "status": "completed",
+        "quotedAmount": "95.00",
+        "startDate": "2026-10-16",
+        "notes": "Fictional operating input."
+      },
+      "sourceFields": {
+        "externalKey": "dixie-J003",
+        "customerKey": "dixie-C001",
+        "siteKey": "dixie-S001",
+        "kind": "Accepted replacement",
+        "status": "completed",
+        "quotedAmount": "95.00",
+        "startDate": "2026-10-16",
+        "notes": "Fictional operating input."
+      },
+      "links": {
+        "customerKey": "customer_b956902e9e7f21181004e83f86a79d75",
+        "siteKey": "site_6526cc17cfab733800e914a59a1683ef"
+      }
+    }
+  ]
+}

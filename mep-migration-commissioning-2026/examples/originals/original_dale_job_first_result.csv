@@ -1,0 +1,4 @@
+"original_row","status","native_id","reason"
+"original_dale_job_first:1","accepted","DEMO-dale-job-1","Fictional target accepted this original row."
+"original_dale_job_first:2","rejected","","Fictional target requires the revised scope code."
+"original_dale_job_first:3","unknown","","Fictional response did not establish whether this row was received; inspect before repeating."

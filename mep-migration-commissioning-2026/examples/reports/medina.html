@@ -1,0 +1,187 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Medina Heat and Air, LLC — fictional commissioning</title><style>html{color:#202020;background:#f5f5f5;font:15px/1.5 system-ui,sans-serif}body{max-width:1200px;margin:24px auto;padding:0 18px}h1{font-size:25px}h2{font-size:20px;margin-top:32px}h3{font-size:17px}p,td,li{overflow-wrap:anywhere}.table{overflow:auto;background:#fff;border:1px solid #aaa}table{width:100%;border-collapse:collapse}th,td{text-align:left;vertical-align:top;padding:9px;border-bottom:1px solid #ccc;max-width:460px;white-space:pre-wrap}th{background:#e8e8e8}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#fff;padding:14px;border:1px solid #aaa}.muted{color:#505050}@media print{body{max-width:none;margin:0}th,td{font-size:10px;padding:5px}.table{overflow:visible}}</style><h1>Medina Heat and Air, LLC — fictional commissioning</h1><p>DEMONSTRATION receiver for medina · 1 · Workspace mep_migration_demonstration · revision 124</p><p>Published HVAC repair, maintenance, replacement and installation, with estimate visit and options/pricing before work. Services include air conditioning, heating, mini-splits, indoor air quality and thermostats. All customer/site/job rows, IDs, values and target outcomes in this programme are fictional operating examples. </p><h2>Reconciliation</h2><div class="table"><table><thead><tr><th>Measure</th><th>Count</th></tr></thead><tbody><tr><td>sources</td><td>3</td></tr><tr><td>sourceRows</td><td>8</td></tr><tr><td>stagedRecords</td><td>7</td></tr><tr><td>batches</td><td>3</td></tr><tr><td>deliveries</td><td>3</td></tr><tr><td>accepted</td><td>5</td></tr><tr><td>rejected</td><td>1</td></tr><tr><td>unknown</td><td>1</td></tr><tr><td>currentAccepted</td><td>5</td></tr><tr><td>outdated</td><td>0</td></tr><tr><td>excluded</td><td>1</td></tr></tbody></table></div><p>Accepted records and accepted current revisions are separate: an older receipt remains original history when a later correction has not yet been received. All target outcomes below are operator-recorded observations linked to retained originals.</p><div class="table"><table><thead><tr><th>Entity / original key</th><th>Current revision</th><th>Actual outcome / native ID</th><th>Current revision accepted</th><th>Original result / reason</th></tr></thead><tbody><tr><td>customer / medina-C001</td><td>1</td><td>accepted / DEMO-medina-customer-1</td><td>Yes</td><td>receipt_146f5c287eb5da92ae0b2fa748f264d0b9988b15dba301f1c9735c85274d9417
+2026-10-13T00:00:00.000Z
+Fictional response retained for this worked course.</td></tr><tr><td>customer / medina-C002</td><td>1</td><td>accepted / DEMO-medina-customer-2</td><td>Yes</td><td>receipt_146f5c287eb5da92ae0b2fa748f264d0b9988b15dba301f1c9735c85274d9417
+2026-10-13T00:00:00.000Z
+Fictional response retained for this worked course.</td></tr><tr><td>site / medina-S001</td><td>1</td><td>accepted / DEMO-medina-site-1</td><td>Yes</td><td>receipt_61407a71d0bd7272a1bd5e757046ca1002dabfbf8f519ace582ccbf117bc094e
+2026-10-13T00:00:00.000Z
+Fictional response retained for this worked course.</td></tr><tr><td>site / medina-S002</td><td>1</td><td>accepted / DEMO-medina-site-2</td><td>Yes</td><td>receipt_61407a71d0bd7272a1bd5e757046ca1002dabfbf8f519ace582ccbf117bc094e
+2026-10-13T00:00:00.000Z
+Fictional response retained for this worked course.</td></tr><tr><td>job / medina-J001</td><td>1</td><td>accepted / DEMO-medina-job-1</td><td>Yes</td><td>receipt_4dd99ef1aa30aef8f73dc20a0f7d33fbb0cf2d7d0f3c1437d1f47cc9edcb149b
+2026-10-13T00:00:00.000Z
+Fictional target accepted this original row.</td></tr><tr><td>job / medina-J002</td><td>1</td><td>rejected</td><td>No</td><td>receipt_4dd99ef1aa30aef8f73dc20a0f7d33fbb0cf2d7d0f3c1437d1f47cc9edcb149b
+2026-10-13T00:00:00.000Z
+Fictional target requires the revised scope code.</td></tr><tr><td>job / medina-J003</td><td>1</td><td>unknown</td><td>No</td><td>receipt_4dd99ef1aa30aef8f73dc20a0f7d33fbb0cf2d7d0f3c1437d1f47cc9edcb149b
+2026-10-13T00:00:00.000Z
+Fictional response did not establish whether this row was received; inspect before repeating.</td></tr></tbody></table></div><h2>Original source editions</h2><div class="table"><table><thead><tr><th>File / original system</th><th>Role / entity</th><th>Original period / edition</th><th>Rows / bytes / SHA-256</th></tr></thead><tbody><tr><td>original_medina_customer_first.csv
+Fictional original HVAC export</td><td>source / customer</td><td>2026-10-12T12:00:00.000Z
+Original selection</td><td>3 rows · 275 bytes
+bcc1f1ffb298b20cc1b12b8dbb6ad6276e464d56b9235d577385d1e525eadff9</td></tr><tr><td>original_medina_customer_first_result.csv
+Fictional local target result</td><td>target-result / customer</td><td>2026-10-12T12:00:00.000Z
+Original selection</td><td>2 rows · 298 bytes
+3c281ac66560f168c25505dc91d62779a351452c960269ad6fc71f242e46f0f6</td></tr><tr><td>original_medina_site_first.csv
+Fictional original HVAC export</td><td>source / site</td><td>2026-10-12T12:00:00.000Z
+Original selection</td><td>2 rows · 209 bytes
+1f3665b324a98d9e1b2ab14530ef1e46ef34102b9575735c225716c0c2168e55</td></tr><tr><td>original_medina_site_first_result.csv
+Fictional local target result</td><td>target-result / site</td><td>2026-10-12T12:00:00.000Z
+Original selection</td><td>2 rows · 282 bytes
+e676c29e7ea273856a3148cf0b7fe4b1b7c4202134490da4b4c206900da2d09e</td></tr><tr><td>original_medina_job_first.json
+Fictional original HVAC export</td><td>source / job</td><td>2026-10-12T12:00:00.000Z
+Original selection</td><td>3 rows · 989 bytes
+003f5386e06d0ff5e274d35ac2b963810d0de10d6e989d9536406be19575d863</td></tr><tr><td>original_medina_job_first_result.csv
+Fictional local target result</td><td>target-result / job</td><td>2026-10-12T12:00:00.000Z
+Original selection</td><td>3 rows · 392 bytes
+cbdfd4c82112abe7917420dbd7885a2b9d6873e593da4eac51a863f4dff89c45</td></tr></tbody></table></div><h2>First customer selection</h2><p>Original original_medina_customer_first.csv · mapping Demonstration customer first · 2026-10-13T00:01:11.000Z</p><p>Fictional original commissioning operation; preserve all selected source decisions.</p><div class="table"><table><thead><tr><th>Source row</th><th>Decision / record</th><th>Reason / changes</th><th>Mapped values / retained relationships</th></tr></thead><tbody><tr><td>1</td><td>create
+customer_cec107d47dd79258e0b805d07732beba
+Revision 1</td><td>Reviewed source row.</td><td>{
+  &quot;externalKey&quot;: &quot;medina-C001&quot;,
+  &quot;name&quot;: &quot;Demonstration customer A&quot;,
+  &quot;status&quot;: &quot;active&quot;,
+  &quot;address&quot;: &quot;1 Demonstration Lane&quot;
+}
+{}</td></tr><tr><td>2</td><td>create
+customer_bdd9855d1157c36c76c4214320a34231
+Revision 1</td><td>Reviewed source row.</td><td>{
+  &quot;externalKey&quot;: &quot;medina-C002&quot;,
+  &quot;name&quot;: &quot;Demonstration customer B&quot;,
+  &quot;status&quot;: &quot;active&quot;,
+  &quot;address&quot;: &quot;2 Demonstration Lane&quot;
+}
+{}</td></tr><tr><td>3</td><td>exclude
+
+</td><td>Duplicate original legacy key; the first complete row is selected. Original duplicate remains retained.</td><td>{
+  &quot;externalKey&quot;: &quot;medina-C001&quot;,
+  &quot;name&quot;: &quot;Demonstration duplicate A&quot;,
+  &quot;status&quot;: &quot;active&quot;,
+  &quot;address&quot;: &quot;1 Demonstration Lane&quot;
+}
+{}</td></tr></tbody></table></div><h2>Separate physical site selection</h2><p>Original original_medina_site_first.csv · mapping Demonstration site first · 2026-10-13T00:01:17.000Z</p><p>Fictional original commissioning operation; preserve all selected source decisions.</p><div class="table"><table><thead><tr><th>Source row</th><th>Decision / record</th><th>Reason / changes</th><th>Mapped values / retained relationships</th></tr></thead><tbody><tr><td>1</td><td>create
+site_aaca708942ced9875540dabe5f1fc9f2
+Revision 1</td><td>Reviewed fictional original.</td><td>{
+  &quot;externalKey&quot;: &quot;medina-S001&quot;,
+  &quot;customerKey&quot;: &quot;medina-C001&quot;,
+  &quot;description&quot;: &quot;Demonstration workshop address supplied by operator&quot;
+}
+{&quot;customerKey&quot;:&quot;customer_cec107d47dd79258e0b805d07732beba&quot;}</td></tr><tr><td>2</td><td>create
+site_ea4e5846cbb93c5b4e6df8d05c4173ed
+Revision 1</td><td>Reviewed fictional original.</td><td>{
+  &quot;externalKey&quot;: &quot;medina-S002&quot;,
+  &quot;customerKey&quot;: &quot;medina-C002&quot;,
+  &quot;description&quot;: &quot;Demonstration service address supplied by operator&quot;
+}
+{&quot;customerKey&quot;:&quot;customer_bdd9855d1157c36c76c4214320a34231&quot;}</td></tr></tbody></table></div><h2>Three distinct job types with original status meaning</h2><p>Original original_medina_job_first.json · mapping Demonstration job first · 2026-10-13T00:01:23.000Z</p><p>Fictional original commissioning operation; preserve all selected source decisions.</p><div class="table"><table><thead><tr><th>Source row</th><th>Decision / record</th><th>Reason / changes</th><th>Mapped values / retained relationships</th></tr></thead><tbody><tr><td>1</td><td>create
+job_136c75cbb3411265d062a764d6289808
+Revision 1</td><td>Reviewed fictional original.</td><td>{
+  &quot;externalKey&quot;: &quot;medina-J001&quot;,
+  &quot;customerKey&quot;: &quot;medina-C001&quot;,
+  &quot;siteKey&quot;: &quot;medina-S001&quot;,
+  &quot;kind&quot;: &quot;Repair diagnosis&quot;,
+  &quot;status&quot;: &quot;requested&quot;,
+  &quot;quotedAmount&quot;: &quot;125.00&quot;,
+  &quot;startDate&quot;: &quot;2026-10-14&quot;,
+  &quot;notes&quot;: &quot;Fictional operating input.&quot;
+}
+{&quot;customerKey&quot;:&quot;customer_cec107d47dd79258e0b805d07732beba&quot;,&quot;siteKey&quot;:&quot;site_aaca708942ced9875540dabe5f1fc9f2&quot;}</td></tr><tr><td>2</td><td>create
+job_adba5321c1c0c17a235c2b482c143c5c
+Revision 1</td><td>Reviewed fictional original.</td><td>{
+  &quot;externalKey&quot;: &quot;medina-J002&quot;,
+  &quot;customerKey&quot;: &quot;medina-C002&quot;,
+  &quot;siteKey&quot;: &quot;medina-S002&quot;,
+  &quot;kind&quot;: &quot;Planned installation&quot;,
+  &quot;status&quot;: &quot;scheduled&quot;,
+  &quot;quotedAmount&quot;: &quot;1800.00&quot;,
+  &quot;startDate&quot;: &quot;2026-10-15&quot;,
+  &quot;notes&quot;: &quot;Exact original\nmultiline scope, with comma.&quot;
+}
+{&quot;customerKey&quot;:&quot;customer_bdd9855d1157c36c76c4214320a34231&quot;,&quot;siteKey&quot;:&quot;site_ea4e5846cbb93c5b4e6df8d05c4173ed&quot;}</td></tr><tr><td>3</td><td>create
+job_5ed4f763f429dbaf017c7ad504ae0ae1
+Revision 1</td><td>Reviewed fictional original.</td><td>{
+  &quot;externalKey&quot;: &quot;medina-J003&quot;,
+  &quot;customerKey&quot;: &quot;medina-C001&quot;,
+  &quot;siteKey&quot;: &quot;medina-S001&quot;,
+  &quot;kind&quot;: &quot;Maintenance review&quot;,
+  &quot;status&quot;: &quot;completed&quot;,
+  &quot;quotedAmount&quot;: &quot;95.00&quot;,
+  &quot;startDate&quot;: &quot;2026-10-16&quot;,
+  &quot;notes&quot;: &quot;Fictional operating input.&quot;
+}
+{&quot;customerKey&quot;:&quot;customer_cec107d47dd79258e0b805d07732beba&quot;,&quot;siteKey&quot;:&quot;site_aaca708942ced9875540dabe5f1fc9f2&quot;}</td></tr></tbody></table></div><h2>Prepared handovers and actual result editions</h2><h3>Two selected customer rows</h3><p>delivery_5c73458cdc537d9f919f3643c5bf5cf6c034e77ee22802d41f524bd1044d96e4 · 2 rows · Explicit DEMONSTRATION receiving schema v1; supplied fields are not a MEPflow API contract.</p><p>CSV SHA-256 a983ed596a50579bdf0326268da31966dd59d465b9eb8adebe62d1809a74c28a<br>JSON SHA-256 3d1ac471100cea437b44023f92cd2fdd327e48360203133aedbed92e23f4586f</p><h3>Original target outcome: DEMONSTRATION medina customer first_result</h3><p>2026-10-13T00:00:00.000Z · source original_medina_customer_first_result.csv</p><p>Explicitly authored local example outcomes, not a native company import.</p><div class="table"><table><thead><tr><th>Original row</th><th>Outcome</th><th>Native ID</th><th>Reason / source</th></tr></thead><tbody><tr><td>original_medina_customer_first:1</td><td>accepted</td><td>DEMO-medina-customer-1</td><td>Fictional response retained for this worked course.
+original_medina_customer_first_result</td></tr><tr><td>original_medina_customer_first:2</td><td>accepted</td><td>DEMO-medina-customer-2</td><td>Fictional response retained for this worked course.
+original_medina_customer_first_result</td></tr></tbody></table></div><h3>Sites with actual demonstration customer-ID bindings</h3><p>delivery_39556a91d134cce9ab3956e169ec6d0ae51d93c5b7dee835e7b99fb7ce620922 · 2 rows · Explicit DEMONSTRATION receiving schema v1; supplied fields are not a MEPflow API contract.</p><p>CSV SHA-256 c4fc7ebfbd962ae54485ba6d6226a34986365c98cb817d73702d18c0ee040524<br>JSON SHA-256 55e2f5c3fa8730db8791c0cd2802d6f85c20e2f91051ebe706fcc010c96992b1</p><h3>Original target outcome: DEMONSTRATION medina site first_result</h3><p>2026-10-13T00:00:00.000Z · source original_medina_site_first_result.csv</p><p>Explicitly authored local example outcomes, not a native company import.</p><div class="table"><table><thead><tr><th>Original row</th><th>Outcome</th><th>Native ID</th><th>Reason / source</th></tr></thead><tbody><tr><td>original_medina_site_first:1</td><td>accepted</td><td>DEMO-medina-site-1</td><td>Fictional response retained for this worked course.
+original_medina_site_first_result</td></tr><tr><td>original_medina_site_first:2</td><td>accepted</td><td>DEMO-medina-site-2</td><td>Fictional response retained for this worked course.
+original_medina_site_first_result</td></tr></tbody></table></div><h3>Configured jobs with confirmed parent native IDs</h3><p>delivery_f4eff98c0df358beb8ee330e79f12198956d2ad3b1e589e9e8c8d34b51586554 · 3 rows · Explicit DEMONSTRATION receiving schema v1; supplied fields are not a MEPflow API contract.</p><p>CSV SHA-256 c180782a0de06d429c32d2d6b80fdefb4dbf6bb853d7e71910b71af764e8963a<br>JSON SHA-256 c6dd989df0550723e19e02f3e38fa2efe36e88671dabace9fe97d648386118f2</p><h3>Original target outcome: DEMONSTRATION medina job first_result</h3><p>2026-10-13T00:00:00.000Z · source original_medina_job_first_result.csv</p><p>Explicitly authored local example outcomes, not a native company import.</p><div class="table"><table><thead><tr><th>Original row</th><th>Outcome</th><th>Native ID</th><th>Reason / source</th></tr></thead><tbody><tr><td>original_medina_job_first:1</td><td>accepted</td><td>DEMO-medina-job-1</td><td>Fictional target accepted this original row.
+original_medina_job_first_result</td></tr><tr><td>original_medina_job_first:2</td><td>rejected</td><td></td><td>Fictional target requires the revised scope code.
+original_medina_job_first_result</td></tr><tr><td>original_medina_job_first:3</td><td>unknown</td><td></td><td>Fictional response did not establish whether this row was received; inspect before repeating.
+original_medina_job_first_result</td></tr></tbody></table></div><h2>Record histories</h2><h3>customer · medina-C001</h3><p>Original identity aliases: None</p><div class="table"><table><thead><tr><th>Revision</th><th>Original source / row</th><th>Reason / operator / time</th><th>Fields and links</th></tr></thead><tbody><tr><td>1</td><td>original_medina_customer_first
+original_medina_customer_first:1</td><td>Reviewed source row.
+Demonstration migration operator
+2026-10-13T00:01:11.000Z</td><td>{
+  &quot;externalKey&quot;: &quot;medina-C001&quot;,
+  &quot;name&quot;: &quot;Demonstration customer A&quot;,
+  &quot;status&quot;: &quot;active&quot;,
+  &quot;address&quot;: &quot;1 Demonstration Lane&quot;
+}
+{}</td></tr></tbody></table></div><h3>customer · medina-C002</h3><p>Original identity aliases: None</p><div class="table"><table><thead><tr><th>Revision</th><th>Original source / row</th><th>Reason / operator / time</th><th>Fields and links</th></tr></thead><tbody><tr><td>1</td><td>original_medina_customer_first
+original_medina_customer_first:2</td><td>Reviewed source row.
+Demonstration migration operator
+2026-10-13T00:01:11.000Z</td><td>{
+  &quot;externalKey&quot;: &quot;medina-C002&quot;,
+  &quot;name&quot;: &quot;Demonstration customer B&quot;,
+  &quot;status&quot;: &quot;active&quot;,
+  &quot;address&quot;: &quot;2 Demonstration Lane&quot;
+}
+{}</td></tr></tbody></table></div><h3>site · medina-S001</h3><p>Original identity aliases: None</p><div class="table"><table><thead><tr><th>Revision</th><th>Original source / row</th><th>Reason / operator / time</th><th>Fields and links</th></tr></thead><tbody><tr><td>1</td><td>original_medina_site_first
+original_medina_site_first:1</td><td>Reviewed fictional original.
+Demonstration migration operator
+2026-10-13T00:01:17.000Z</td><td>{
+  &quot;externalKey&quot;: &quot;medina-S001&quot;,
+  &quot;customerKey&quot;: &quot;medina-C001&quot;,
+  &quot;description&quot;: &quot;Demonstration workshop address supplied by operator&quot;
+}
+{&quot;customerKey&quot;:&quot;customer_cec107d47dd79258e0b805d07732beba&quot;}</td></tr></tbody></table></div><h3>site · medina-S002</h3><p>Original identity aliases: None</p><div class="table"><table><thead><tr><th>Revision</th><th>Original source / row</th><th>Reason / operator / time</th><th>Fields and links</th></tr></thead><tbody><tr><td>1</td><td>original_medina_site_first
+original_medina_site_first:2</td><td>Reviewed fictional original.
+Demonstration migration operator
+2026-10-13T00:01:17.000Z</td><td>{
+  &quot;externalKey&quot;: &quot;medina-S002&quot;,
+  &quot;customerKey&quot;: &quot;medina-C002&quot;,
+  &quot;description&quot;: &quot;Demonstration service address supplied by operator&quot;
+}
+{&quot;customerKey&quot;:&quot;customer_bdd9855d1157c36c76c4214320a34231&quot;}</td></tr></tbody></table></div><h3>job · medina-J001</h3><p>Original identity aliases: None</p><div class="table"><table><thead><tr><th>Revision</th><th>Original source / row</th><th>Reason / operator / time</th><th>Fields and links</th></tr></thead><tbody><tr><td>1</td><td>original_medina_job_first
+original_medina_job_first:1</td><td>Reviewed fictional original.
+Demonstration migration operator
+2026-10-13T00:01:23.000Z</td><td>{
+  &quot;externalKey&quot;: &quot;medina-J001&quot;,
+  &quot;customerKey&quot;: &quot;medina-C001&quot;,
+  &quot;siteKey&quot;: &quot;medina-S001&quot;,
+  &quot;kind&quot;: &quot;Repair diagnosis&quot;,
+  &quot;status&quot;: &quot;requested&quot;,
+  &quot;quotedAmount&quot;: &quot;125.00&quot;,
+  &quot;startDate&quot;: &quot;2026-10-14&quot;,
+  &quot;notes&quot;: &quot;Fictional operating input.&quot;
+}
+{&quot;customerKey&quot;:&quot;customer_cec107d47dd79258e0b805d07732beba&quot;,&quot;siteKey&quot;:&quot;site_aaca708942ced9875540dabe5f1fc9f2&quot;}</td></tr></tbody></table></div><h3>job · medina-J002</h3><p>Original identity aliases: None</p><div class="table"><table><thead><tr><th>Revision</th><th>Original source / row</th><th>Reason / operator / time</th><th>Fields and links</th></tr></thead><tbody><tr><td>1</td><td>original_medina_job_first
+original_medina_job_first:2</td><td>Reviewed fictional original.
+Demonstration migration operator
+2026-10-13T00:01:23.000Z</td><td>{
+  &quot;externalKey&quot;: &quot;medina-J002&quot;,
+  &quot;customerKey&quot;: &quot;medina-C002&quot;,
+  &quot;siteKey&quot;: &quot;medina-S002&quot;,
+  &quot;kind&quot;: &quot;Planned installation&quot;,
+  &quot;status&quot;: &quot;scheduled&quot;,
+  &quot;quotedAmount&quot;: &quot;1800.00&quot;,
+  &quot;startDate&quot;: &quot;2026-10-15&quot;,
+  &quot;notes&quot;: &quot;Exact original\nmultiline scope, with comma.&quot;
+}
+{&quot;customerKey&quot;:&quot;customer_bdd9855d1157c36c76c4214320a34231&quot;,&quot;siteKey&quot;:&quot;site_ea4e5846cbb93c5b4e6df8d05c4173ed&quot;}</td></tr></tbody></table></div><h3>job · medina-J003</h3><p>Original identity aliases: None</p><div class="table"><table><thead><tr><th>Revision</th><th>Original source / row</th><th>Reason / operator / time</th><th>Fields and links</th></tr></thead><tbody><tr><td>1</td><td>original_medina_job_first
+original_medina_job_first:3</td><td>Reviewed fictional original.
+Demonstration migration operator
+2026-10-13T00:01:23.000Z</td><td>{
+  &quot;externalKey&quot;: &quot;medina-J003&quot;,
+  &quot;customerKey&quot;: &quot;medina-C001&quot;,
+  &quot;siteKey&quot;: &quot;medina-S001&quot;,
+  &quot;kind&quot;: &quot;Maintenance review&quot;,
+  &quot;status&quot;: &quot;completed&quot;,
+  &quot;quotedAmount&quot;: &quot;95.00&quot;,
+  &quot;startDate&quot;: &quot;2026-10-16&quot;,
+  &quot;notes&quot;: &quot;Fictional operating input.&quot;
+}
+{&quot;customerKey&quot;:&quot;customer_cec107d47dd79258e0b805d07732beba&quot;,&quot;siteKey&quot;:&quot;site_aaca708942ced9875540dabe5f1fc9f2&quot;}</td></tr></tbody></table></div></html>
