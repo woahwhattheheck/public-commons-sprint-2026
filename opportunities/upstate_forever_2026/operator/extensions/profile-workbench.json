@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "profile-workbench",
   "title": "Profile workbench",
-  "version": "5",
+  "version": "7",
   "order": 25,
   "assets": [
     "profile_workbench.mjs",
@@ -10,7 +10,8 @@
     "profile_customer_review.mjs",
     "biophysical_evidence.mjs",
     "biophysical_authoring_core.mjs",
-    "biophysical_authoring.mjs"
+    "biophysical_authoring.mjs",
+    "management_cases.mjs"
   ],
   "backend": {
     "module": "profile_workbench",
@@ -31,7 +32,9 @@
       "profile.biophysical.experiment.prepare",
       "profile.biophysical.evidence.populate",
       "profile.biophysical.authoring.save",
-      "profile.biophysical.authoring.register"
+      "profile.biophysical.authoring.register",
+      "profile.management.prepare",
+      "profile.management.experiment.prepare"
     ],
     "invoke": {
       "handler": "invoke",
@@ -272,6 +275,58 @@
         ],
         "path": "/api/profile-workbench/biophysical/authoring-export",
         "operation": "biophysical-authoring-export",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/profile-workbench/management/catalog",
+        "operation": "management-catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/profile-workbench/management/preview",
+        "operation": "management-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/profile-workbench/management/inspect",
+        "operation": "management-inspect",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/profile-workbench/management/published-preview",
+        "operation": "management-published-preview",
         "handler": "read",
         "args": [
           "workspace_key",
