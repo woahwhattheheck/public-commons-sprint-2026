@@ -5,7 +5,12 @@
     "receptors": {
       "paths": [
         "model/receptor_report_source.py",
-        "model/RECEPTOR_REPORT_SOURCE.md"
+        "model/RECEPTOR_REPORT_SOURCE.md",
+        "model/receptor_report_maps.py",
+        "model/scientific_map_figures.py",
+        "model/scientific_figures.py",
+        "model/spatial_esri.py",
+        "source/capture_upstream_network.py"
       ]
     }
   },
