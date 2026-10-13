@@ -446,3 +446,8 @@ original files plus reviewed metadata through the released METS/PREMIS
 relationships. A selected DIP is tracked separately. The original request history,
 receiving reports and all four provider source/guide files travel with the
 complete workbench or standalone provider snapshot.
+
+
+## Institutional original-file collections
+
+The same Workbench now has a **Collections** tab for exact original files, reasoned metadata/rights/selection review, verified BagIt and complete editable workspace receiving. It can start without a research edition. See [Original file collection accession](COLLECTION_ACCESSION.md) for the full browser/CLI operating path, explicit profile limits, draft reconciliation and independent receiving. Existing research metadata and repository-client semantics remain unchanged.
