@@ -1,6 +1,7 @@
 """Regional watershed context in the original operator and verified file transport."""
 from __future__ import annotations
 
+import base64
 import gzip
 import hashlib
 import json
@@ -277,6 +278,52 @@ class WatershedContextActions:
             raise ValueError("This saved selection does not contain the original polygon map")
         return map_model.load_retained(export_directory, context, source_sha256), context
 
+    def _source_explorer(self, workspace):
+        """Link the fixed installed source edition through its registered file route."""
+        application = Path(__file__).resolve().parents[1]
+        path = application / "source/utility-source-context/20261013/source-explorer.html"
+        if not path.is_file():
+            return None
+        descriptor = describe_file(application, path)
+        ticket = self.operator._ticket(
+            workspace, path, descriptor,
+            "Original utility source explorer and native report review")
+        return {**ticket, "url": (
+            "/api/file/watershed-explorer/" + workspace + "/" +
+            descriptor["sha256"] + "/source-explorer.html")}
+
+    def source_explorer_file(self, workspace, source_sha256):
+        """Serve one verified installed HTML edition with only its own script hash."""
+        application = Path(__file__).resolve().parents[1]
+        path = application / "source/utility-source-context/20261013/source-explorer.html"
+        body = path.read_bytes()
+        actual_sha256 = hashlib.sha256(body).hexdigest()
+        if not re.fullmatch(r"[0-9a-f]{64}", source_sha256) or actual_sha256 != source_sha256:
+            raise ValueError("The installed source explorer changed; reopen Regional watersheds.")
+        html = body.decode("utf-8")
+        # The maintained self-contained source has two JSON data blocks and one
+        # plain executable script. Browser HTML parsing normalizes line endings.
+        scripts = re.findall(r"<script>([\s\S]*?)</script>", html, flags=re.IGNORECASE)
+        if len(scripts) != 1:
+            raise ValueError("The installed source explorer must retain its one original inline script.")
+        script = scripts[0].replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
+        script_hash = base64.b64encode(hashlib.sha256(script).digest()).decode("ascii")
+        descriptor = {
+            "path": path.relative_to(application).as_posix(),
+            "bytes": len(body), "sha256": actual_sha256,
+        }
+        ticket = self.operator._ticket(
+            workspace, path, descriptor,
+            "Original utility source explorer and native report review")
+        policy = (
+            "default-src 'none'; script-src 'sha256-" + script_hash + "'; "
+            "style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; "
+            "object-src 'none'; base-uri 'none'; form-action 'none'; "
+            "sandbox allow-scripts allow-downloads allow-modals "
+            "allow-popups allow-popups-to-escape-sandbox"
+        )
+        return ticket, policy
+
     def read(self, workspace, operation, value=None):
         value = value or {}
         ws = self.operator.ws(workspace)
@@ -288,6 +335,7 @@ class WatershedContextActions:
                 "sources": self._sources(ws),
                 "networks": self._network_sources(ws),
                 "utility_monitoring": utility_monitoring.catalog(ws),
+                "source_explorer": self._source_explorer(workspace),
             }
         if operation == "monitoring":
             key = identifier(value.get("monitoring_id") or value.get("id"))
