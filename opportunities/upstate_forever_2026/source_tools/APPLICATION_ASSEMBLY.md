@@ -29,7 +29,7 @@ Paths prefixed by the document's declared application prefix are normalized to t
 
 A full carrier records the source it captured. A later-arriving carrier may still contain an older application module. When two selected layers contain different bodies at the same path, the assembler reports the current, incoming and declared predecessor SHA-256 values. Join the intended change into the actual current source, then publish the complete resulting body with the hash of the source used for that join. Keep a complete current snapshot as the first layer when adding selected components.
 
-The actual PR2714 full carrier `F0C8Q6C81U2` contained an older `operator/web/app.mjs` with SHA-256 `96ccc710c6cfe4c223153ccc9c4e394c12ffc4d1d0b6069e43899a179aa0806a`. The [resolved current host](https://raw.githubusercontent.com/woahwhattheheck/public-commons-sprint-2026/f5e5d676357031429fbec3a7adc65b3589a6308b/opportunities/upstate_forever_2026/operator/web/app.mjs) retains the corrected stage detection, multi-element selectors and water-designation source lineage. Save that original file and produce its explicit source join:
+The actual PR2714 component `F0C8Q6C81U2` contains 23 files and an older `operator/web/app.mjs` with SHA-256 `96ccc710c6cfe4c223153ccc9c4e394c12ffc4d1d0b6069e43899a179aa0806a`. Its retained revision already declares `base_sha256 = 75d0670f5b1d00e1871f033d55b9ca5834bdc051f37f0b025f8fbc67483ae204`; the original composer correctly rejects that declaration against a different current host. Keep this component's predecessor metadata intact. In the source replay, the [pinned resolved host](https://raw.githubusercontent.com/woahwhattheheck/public-commons-sprint-2026/f5e5d676357031429fbec3a7adc65b3589a6308b/opportunities/upstate_forever_2026/operator/web/app.mjs) retains the corrected stage detection, multi-element selectors and water-designation source lineage. For an installed complete application whose host is the stated stale body, save the pinned resolved file and produce its explicit source join:
 
 ```sh
 python3 -B - /retained/current-app.mjs /owned/resolved-host.json <<'PY'
@@ -55,12 +55,12 @@ with Path(sys.argv[2]).open("x", encoding="utf-8") as stream:
     json.dump(document, stream, ensure_ascii=False)
     stream.write("\n")
 PY
-python3 -B source_tools/application_assembly.py /retained/decoded-F0C8Q6C81U2.json \
+python3 -B source_tools/application_assembly.py /owned/current-application \
   --overlay /owned/resolved-host.json --edition resolved-current-host \
   --source-map /owned/resolved-current-host.json
 ```
 
-This selected module join preserves every other member from the complete base. Receive other maintained components and their installers through the normal application workflow. Reusing the resolved host overlay against its installed postimage succeeds as an identical replay. A different newer host receives the intended source changes against its own actual beforeimage.
+The component itself is an overlay, so use the complete installed application as the first input. This selected module join preserves every other member from that complete base. Receive other maintained components and their installers through the normal application workflow. Reusing the resolved host overlay against its installed postimage succeeds as an identical replay. A different newer host receives the intended source changes against its own actual beforeimage. The separately exercised `before.sha256` interface case preserves the original predecessor value while changing only its declared spelling; it is distinct from replaying the unmodified component.
 
 ## Binary companions and installed snapshots
 
