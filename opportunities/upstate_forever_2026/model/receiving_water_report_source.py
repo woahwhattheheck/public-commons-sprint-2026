@@ -356,7 +356,7 @@ def _classification_rows(value):
     if isinstance(vintage, dict):
         for key, label in (("status", "Recorded designation status"),
                            ("selection_status", "Status for selected date"),
-                           ("effective_from", "Effective from"), ("effective_to", "Effective through"),
+                           ("effective_from", "Effective from"), ("effective_to", "Effective until (exclusive)"),
                            ("as_of", "Selected date")):
             if vintage.get(key) not in (None, ""):
                 rows.append([label, _display_value(vintage[key])])
