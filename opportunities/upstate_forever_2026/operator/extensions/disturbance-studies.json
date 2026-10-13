@@ -1,0 +1,80 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "disturbance-studies",
+  "title": "Future disturbance",
+  "version": "1.0.0",
+  "order": 66,
+  "assets": [
+    "disturbance_studies.mjs",
+    "disturbance_studies.css"
+  ],
+  "backend": {
+    "module": "disturbance_studies",
+    "factory": {
+      "handler": "DisturbanceOperations",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "disturbance.prepare",
+      "disturbance.report"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/disturbance/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/disturbance_studies.mjs",
+    "factory": "createDisturbanceDesk",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "submitAction",
+      "toast"
+    ],
+    "styles": [
+      "/web/disturbance_studies.css"
+    ],
+    "view": {
+      "id": "disturbance-studies",
+      "title": "Future disturbance",
+      "after": "scenarios"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    },
+    "dispatch": "dispatch",
+    "action_prefixes": [
+      "disturbance-"
+    ]
+  }
+}
