@@ -149,7 +149,11 @@ class NativeJobs:
         return record
 
     def request_stop(self, task):
-        if task.get("action") != "run.start":
+        if task.get("action") == "parameter-study.run":
+            # Retain Stop at the case boundary as well as on the active child.
+            with self.lock:
+                self.pending_stops.add(task["id"])
+        elif task.get("action") != "run.start":
             from programme_jobs import programme_id
             from model.compute_programme import ComputeProgrammes
             ws = self.operator.ws(task["workspace"])
@@ -295,40 +299,73 @@ class NativeJobs:
                                    _RetainedWorkspace(self, task, ws),
                                    task["payload"]["run_id"])
 
+    def _reconciled(self, execution):
+        """A recorded terminal attempt may be retried by a later explicit task."""
+        receipt = _read(execution["directory"] / "supervision.json")
+        if not receipt:
+            return False
+        request = execution["request"]
+        if (receipt.get("execution_id") != request["execution_id"]
+                or receipt.get("request_sha256") != request["request_sha256"]):
+            raise NativeJobError("NATIVE_SUPERVISION_CHANGED",
+                                 "The retained supervision receipt belongs to another request.")
+        return receipt.get("state") in {"complete", "failed", "cancelled"}
+
+    def _wait_for_exit(self, execution, process):
+        """Drain the exact owned process before its inherited lease is reacquired."""
+        while (process.poll() is None if process else self._alive(execution)):
+            if self.operator.closing:
+                error = NativeJobDetached(
+                    "NATIVE_DETACHED",
+                    "The worker is finishing. Reopen the saved task to reconnect to its original process.")
+                try:
+                    self._record_exit(execution, "detached")
+                except OSError as recording_error:
+                    raise error from recording_error
+                raise error
+            time.sleep(0.4)
+        return process.poll() if process else None
+
     def execute(self, task, ws):
         _, run = self._selection(task)
         gate = ws.root / "runs" / run["id"] / ".native-supervision.lock"
         with held(gate, blocking=False):
             execution = self._latest(task)
-            if execution:
-                complete = self._complete(execution)
-                if complete:
-                    return complete
+            with self.lock:
+                process = (self.processes.get(execution["request"]["execution_id"])
+                           if execution else None)
+            if execution and self._complete(execution):
+                return self._monitor(execution, process)
             if execution and self._alive(execution):
-                with self.lock:
-                    process = self.processes.get(execution["request"]["execution_id"])
                 atomic_json(execution["directory"] / "reconnected.json",
                             {"task_id": task["id"], "at": now(),
                              "operator_attempt": len(task["attempts"]),
                              "execution_id": execution["request"]["execution_id"]})
             else:
+                # A missing result after an operator restart is first reconciled
+                # against the old request, before another process can replace it.
+                if execution and not self._reconciled(execution):
+                    self._monitor(execution, process)
                 execution, process = self._new(task, ws, run)
             return self._monitor(execution, process)
 
     def reconnect_existing(self, task, ws):
-        """Drain an already-owned programme child without starting another case."""
+        """Drain or reconcile the owned child without starting another case."""
         _, run = self._selection(task)
         with held(ws.root / "runs" / run["id"] / ".native-supervision.lock", blocking=False):
             execution = self._latest(task)
-            if not execution or not self._alive(execution):
+            if not execution:
                 return None
             with self.lock:
                 process = self.processes.get(execution["request"]["execution_id"])
+            if (not self._alive(execution) and self._reconciled(execution)
+                    and not self._complete(execution)):
+                return None
             atomic_json(execution["directory"] / "reconnected.json",
                         {"task_id": task["id"], "at": now(),
                          "operator_attempt": len(task["attempts"]),
                          "execution_id": execution["request"]["execution_id"],
-                         "boundary": "before_programme_resume"})
+                         "boundary": "before_coordinator_resume"})
             return self._monitor(execution, process)
 
     def _monitor(self, execution, process):
@@ -338,10 +375,7 @@ class NativeJobs:
         while True:
             complete = self._complete(execution)
             if complete:
-                if process:
-                    with contextlib.suppress(subprocess.TimeoutExpired):
-                        process.wait(timeout=3)
-                returncode = process.poll() if process else None
+                returncode = self._wait_for_exit(execution, process)
                 self._record_exit(execution, "complete", returncode=returncode)
                 return complete
             worker = _read(directory / "worker.json") or _read(directory / "launch.json") or {}
@@ -364,11 +398,12 @@ class NativeJobs:
                         signal_owned(directory, execution["identity"], request["execution_id"],
                                      request["request_sha256"], sig)
             failure = _read(directory / "failure.json")
+            if failure and (failure.get("execution_id") != request["execution_id"]
+                            or failure.get("request_sha256") != request["request_sha256"]):
+                raise NativeJobError("NATIVE_FAILURE_CHANGED",
+                                     "The retained worker failure belongs to another request.")
             if failure or not alive:
-                if process:
-                    with contextlib.suppress(subprocess.TimeoutExpired):
-                        process.wait(timeout=3)
-                    returncode = process.poll()
+                returncode = self._wait_for_exit(execution, process)
                 # The worker publishes its result before ending. Read again after exit.
                 complete = self._complete(execution)
                 if complete:
@@ -385,7 +420,11 @@ class NativeJobs:
                 recording_errors = []
                 signal_failure = None
                 if not cancelled:
-                    current = execution["workspace"].inspect_run(request["run_id"])
+                    current = None
+                    try:
+                        current = execution["workspace"].inspect_run(request["run_id"])
+                    except OSError as recording_error:
+                        recording_errors.append(recording_error)
                     launch = _read(directory / "launch.json") or {}
                     signal_failure = process_failure(
                         returncode, run_id=request["run_id"],

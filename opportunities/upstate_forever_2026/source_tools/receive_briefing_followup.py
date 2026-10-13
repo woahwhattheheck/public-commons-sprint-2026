@@ -14,6 +14,7 @@ def main(argv=None):
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--delivery-id")
     group.add_argument("--source-export-id")
+    group.add_argument("--scientific-briefing-id")
     group.add_argument("--report-model", type=Path)
     parser.add_argument("--briefing-index", type=Path)
     parser.add_argument("--notes", type=Path, required=True)
@@ -28,7 +29,11 @@ def main(argv=None):
     from model import briefing_implementation
     workspace = Workspace(args.workspace)
     document = ImplementationStore(workspace).get(args.plan_id, args.revision)
-    if args.source_export_id:
+    if args.scientific_briefing_id:
+        if args.briefing_index:
+            parser.error("A saved scientific briefing already supplies its original page index")
+        paths = briefing_implementation.scientific_sources(workspace, args.scientific_briefing_id)
+    elif args.source_export_id:
         if args.briefing_index:
             parser.error("A saved source export already supplies its original page index")
         paths = briefing_implementation.source_context_sources(workspace, args.source_export_id)

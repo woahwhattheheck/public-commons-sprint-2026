@@ -6,9 +6,9 @@ const FIELDS=[
  ['collected_at','Actual collection timestamp'],['parameter','Parameter'],['original_text','Original result text'],
  ['value','Numeric value'],['result_type','Result type'],['unit','Unit'],['basis','Chemical basis'],['fraction','Fraction'],
  ['qualifier','Qualifier'],['detection_limit','Detection limit'],['quantitation_limit','Quantitation limit'],
- ['method','Laboratory method'],['qa_status','QA status'],['notes','Notes']
+ ['method','Laboratory method'],['method_context','Method naming context'],['method_name','Full method name'],['qa_status','QA status'],['notes','Notes']
 ];
-const CONSTANTS=new Set(['activity_id','sample_id','site_id','visit_id','parameter','result_type','unit','basis','fraction','qualifier','method','qa_status','notes']);
+const CONSTANTS=new Set(['activity_id','sample_id','site_id','visit_id','parameter','result_type','unit','basis','fraction','qualifier','method','method_context','method_name','qa_status','notes']);
 const TYPES=['numeric','censored','text','missing'];
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 const button=(action,label,extra='')=>'<button type="button" data-impl="lab-'+action+'" '+extra+'>'+esc(label)+'</button>';
@@ -66,7 +66,7 @@ export function render(w){
  const samples=s.inspection.sample_rows||[];
  const sampleTable=w.table(['Record / original lines',...headers],samples.map(row=>[esc(row.record)+' / '+esc(row.line_start)+'–'+esc(row.line_end),...headers.map(h=>esc(row.values?.[h]??''))]));
  const advanced=['result_type_values','fallback_columns','row_actions'].map(key=>label(key,'<textarea data-lab-json="'+key+'" rows="5" '+disabled+'>'+esc(s.advanced?.[key]??JSON.stringify(m[key]||{},null,2))+'</textarea>')).join('');
- const mappingPanel='<h4>Map source columns explicitly</h4><p>Choose Activity ID, or Sample ID with any needed Site/Visit selectors. Original result text must come from a source column. Set result type explicitly; numeric, censored, text and missing stay distinct. A constant is used only when its corresponding column is not mapped.</p><div class="iw-table-wrap"><table><thead><tr><th>Plan field</th><th>Original CSV column</th><th>Explicit constant</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+ const mappingPanel='<h4>Map source columns explicitly</h4><p>Choose Activity ID, or Sample ID with any needed Site/Visit selectors. Original result text must come from a source column. Set result type explicitly; numeric, censored, text and missing stay distinct. A constant is used only when its corresponding column is not mapped. Map method naming context and full name only from the actual laboratory definition; requested_ columns describe the request and must not be used as returned values.</p><div class="iw-table-wrap"><table><thead><tr><th>Plan field</th><th>Original CSV column</th><th>Explicit constant</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
  '<div class="iw-two">'+label('Decimal separator','<select data-lab-map="decimal_separator" '+disabled+'>'+option('.','Period (.)',m.decimal_separator)+option(',','Comma (,)',m.decimal_separator)+'</select>')+
  '<label><input type="checkbox" data-lab-map="fill_missing_collection_times" '+(m.fill_missing_collection_times?'checked':'')+' '+disabled+'> Fill an empty activity collection time from a complete source timestamp with timezone</label></div>'+
  '<p>Date-only source text stays in the original CSV. Existing collection times are checked, never silently replaced.</p>'+
@@ -85,7 +85,7 @@ function previewPanel(w){
  const summary=p.summary||{},rows=p.rows||[],all=p.issues||[];
  const filtered=all.filter(x=>!s.issue_filter||x.severity===s.issue_filter),page=Math.max(0,Math.min(s.issue_page||0,Math.max(0,Math.ceil(filtered.length/50)-1))),shown=filtered.slice(page*50,(page+1)*50);
  const issues=w.table(['Record / lines','Severity','Issue','Original candidate matches'],shown.map(x=>[esc(x.record??'')+' / '+esc(x.line_start??'')+'–'+esc(x.line_end??''),esc(x.severity),esc(x.message),esc(typeof x.candidates==='object'?JSON.stringify(x.candidates):x.candidates||'')]),'No issues in this selection.');
- const decisions=w.table(['Record / lines','Decision','Activity','Result','Type','Parameter','Original text','Value','Unit'],rows.map(x=>[esc(x.record)+' / '+esc(x.line_start)+'–'+esc(x.line_end),esc(x.status||x.action),esc(x.activity_id||''),esc(x.observation_id||''),esc(x.result_type||''),esc(x.parameter||''),esc(x.original_text??''),esc(x.value??''),esc(x.unit||'')]));
+ const decisions=w.table(['Record / lines','Decision','Sample and result','Parameter and type','Original result','Declared method'],rows.map(x=>[esc(x.record)+' / '+esc(x.line_start)+'–'+esc(x.line_end),esc(x.status||x.action),'Activity: '+esc(x.activity_id||'')+'<br>Result: '+esc(x.observation_id||''),esc(x.parameter||'')+'<br>Type: '+esc(x.result_type||''),'Original: '+esc(x.original_text??'')+'<br>Value: '+esc(x.value??'')+'<br>Unit: '+esc(x.unit||''),esc(x.method_definition?Object.entries(x.method_definition).map(([key,value])=>key+': '+value).join(' · '):'')]));
  const resolver='<details><summary>Resolve a specific original data record</summary><p>Choose an explicit activity for an ambiguous record, identify the existing observation to replace, or skip a record with a reason. Re-preview after every decision.</p><div class="iw-two">'+label('Data record number','<input type="number" min="1" step="1" data-lab-resolution="record">')+
  label('Decision','<select data-lab-resolution="action">'+['import','replace','skip'].map(x=>option(x,x,'import')).join('')+'</select>')+
  label('Existing activity','<select data-lab-resolution="activity_id">'+option('','—','')+w.plan.activities.map(a=>option(a.id,a.id+' · '+(a.sample_id||a.kind),'')).join('')+'</select>')+

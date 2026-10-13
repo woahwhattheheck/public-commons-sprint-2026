@@ -539,3 +539,8 @@ class SourceReports:
         ticket, path = self.scientific.member(workspace, key, name)
         policy = document_policy(path.read_bytes()) if path.suffix.lower() in (".html", ".htm") else None
         return ticket, policy
+
+    def briefing_member(self, workspace, key, name):
+        ticket, path = self.scientific.briefing_member(workspace, key, name)
+        policy = document_policy(path.read_bytes()) if path.suffix.lower() in (".html", ".htm") else None
+        return ticket, policy

@@ -71,6 +71,10 @@ def prepared_studies(workspace, original_studies=None):
     for recipe in spec["studies"]:
         needed = list(dict.fromkeys([*recipe["point_sources"], *recipe["observation_tables"],
                                     *recipe.get("watershed_sources", [])]))
+        context_keys = recipe.get("site_tables", [])
+        attached_context = [key for key in context_keys if key in bound]
+        context_missing = [source_problems.get(key, "Import " + spec["sources"][key]["title"] + ".")
+                           for key in context_keys if key not in bound]
         missing = [source_problems.get(key, "Import " + spec["sources"][key]["title"] + ".")
                    for key in needed if key not in bound]
         if recipe.get("require_original_domain") and domain is None:
@@ -81,7 +85,8 @@ def prepared_studies(workspace, original_studies=None):
                      "sites": json.loads(json.dumps(recipe["sites"])), "aliases": {}, "choices": {}}
         for field, keys in (("sources", recipe["point_sources"]),
                             ("observation_tables", recipe["observation_tables"]),
-                            ("watersheds", recipe.get("watershed_sources", []))):
+                            ("watersheds", recipe.get("watershed_sources", [])),
+                            ("site_tables", attached_context)):
             for key in keys:
                 if key in bound:
                     definition = spec["sources"][key]
@@ -112,15 +117,21 @@ def prepared_studies(workspace, original_studies=None):
                     spec["sources"][key]["expected_features"]
                     for key in recipe.get("watershed_sources", [])),
                 "observation_table_count": len(selection["observation_tables"]),
+                "station_context_table_count": len(selection["site_tables"]),
+                "station_context_missing": context_missing,
+                "station_context_method": (
+                    "Original coordinate variants and dated publisher polygon matches; "
+                    "these records preserve source context and do not replace selected geometry "
+                    "or the retained-domain point/polygon calculation."),
                 "selected_outfall_geometry": recipe.get("outfall_choice_source"),
                 "selected_coordinate_source": choice_key,
                 "retained_flow_days": sum(site.get("retained_flow_days", 0) for site in selection["sites"]),
                 "retained_stage_days": sum(site.get("retained_stage_days", 0) for site in selection["sites"]),
-                "source_count": len(needed)},
+                "source_count": len(needed) + len(attached_context)},
             "source_links": [{"title": spec["sources"][key]["title"],
                              "uri": bound[key][1].get("uri"),
                              "source_sha256": spec["sources"][key]["sha256"]}
-                            for key in needed if key in bound]})
+                            for key in [*needed, *attached_context] if key in bound]})
     return studies
 
 
@@ -153,7 +164,14 @@ def _portable_identity(result):
             "station_id": station["station_id"], "status": station["status"],
             "coordinates": station["coordinates"], "watershed_status": station["watershed_status"],
             "observation_count": station["observation_count"],
+            "wbd_context_status": station.get("wbd_context_status"),
+            "selected_current_huc12s": station.get("selected_current_huc12s", []),
+            "selected_wbd_point_ids": station.get("selected_wbd_point_ids", []),
+            "wbd_source_context": station.get("wbd_source_context", []),
             "selected_source": source(station.get("selected_source_ref")),
+            "source_references": sorted([
+                {key: value for key, value in reference.items() if key != "collection_id"}
+                for reference in station.get("source_references", [])], key=canonical),
             "candidates": sorted([{"source": source(candidate["source_ref"]),
                 "native_crs": candidate["native_crs"],
                 "native_geometry": candidate["native_geometry"],

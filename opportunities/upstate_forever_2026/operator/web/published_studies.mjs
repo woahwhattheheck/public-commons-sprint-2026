@@ -53,9 +53,119 @@ export function createPublishedStudiesDesk(host) {
   let loadedStudy = null, loadedSelection = null, reviewLoading = false, reviewRequest = 0, interpretationMatches = true;
   let catalogPreference = null;
 
+  let geographicInput = null, geographicPreview = null, geographicChoice = "";
+  let geographicLoading = false, geographicRequest = 0, geographicPrevious = null;
+
+  function geographicCandidate() {
+    return arr(geographicPreview?.candidates).find(row => row.study_id + "|" + row.version_id === geographicChoice);
+  }
+  function renderGeographic() {
+    const target = find("[data-ps-geographic]"); if (!target) return;
+    target.hidden = !geographicInput;
+    if (!geographicInput) { target.innerHTML = ""; return; }
+    const candidate = geographicCandidate(), source = geographicPreview?.source;
+    target.innerHTML = '<h2>Stations from saved geography</h2><p>' +
+      esc(source?.geography_title || "Checking the retained geographic selection") + '</p>' +
+      '<p class="ps-help">Match exact station identifiers to a retained study edition. Geographic assessment filters select stations; original observation dates, parameters and result qualifiers remain those of the chosen study.</p>' +
+      (source ? '<p>' + source.site_ids.length + ' requested stations · geography <code>' + esc(source.geography_id) + '</code></p>' : "") +
+      (geographicLoading ? '<p role="status">Reading original station and study sources…</p>' : "") +
+      (arr(geographicPreview?.candidates).length ? '<label>Study edition containing these stations<select data-ps-geographic-study' + (geographicLoading ? " disabled" : "") + '>' +
+        geographicPreview.candidates.map(row => '<option value="' + esc(row.study_id + "|" + row.version_id) + '"' +
+          (row.study_id + "|" + row.version_id === geographicChoice ? " selected" : "") + '>' +
+          esc(row.title + " · " + row.matched_count + "/" + row.requested_count + " stations · " + row.version_id.slice(-8)) + '</option>').join("") + '</select></label>' : "") +
+      (candidate ? '<p><strong>' + candidate.matched_count + ' of ' + candidate.requested_count + ' requested stations occur in this edition.</strong> ' +
+        candidate.observed_row_count + ' retained observation rows; ' + candidate.original_result_row_count + ' original result rows for these stations. These are separate source views and are not added together.</p>' +
+        '<p>' + (candidate.sampling_start ? 'Observed sampling dates: ' + esc(candidate.sampling_start) + ' through ' + esc(candidate.sampling_end) + '.' :
+          'This edition has no dated original observation rows for the matched stations; its published source tables remain available.') + '</p>' +
+        '<details><summary>Matched original stations (' + candidate.matched_count + ')</summary><p>' + esc(candidate.matched_site_ids.join(", ")) + '</p></details>' +
+        (candidate.missing_site_ids.length ? '<details open><summary>Requested stations absent from this study (' + candidate.missing_site_ids.length +
+          ')</summary><p>' + esc(candidate.missing_site_ids.join(", ")) + '</p></details>' : "") : "") +
+      (geographicPreview && !geographicPreview.candidates.length ? '<p>No retained study contains these exact station identifiers. Import the relevant original study above, then refresh this preview.</p>' : "") +
+      (arr(geographicPreview?.unavailable).length ? '<details><summary>Study sources needing attention (' + geographicPreview.unavailable.length + ')</summary><ul>' +
+        geographicPreview.unavailable.map(row => '<li>' + esc((row.title || row.study_id) + " · " + row.version_id + ": " + row.message) + '</li>').join("") + '</ul></details>' : "") +
+      '<div class="ps-actions"><button type="button" data-ps-action="geographic-apply"' + (!candidate || geographicLoading || busy ? " disabled" : "") +
+        '>Open ' + (candidate ? candidate.matched_count : "") + ' matched stations</button>' +
+      '<button type="button" data-ps-action="geographic-refresh"' + (geographicLoading ? " disabled" : "") + '>Refresh station preview</button>' +
+      (geographicPrevious ? '<button type="button" data-ps-action="geographic-previous"' + (geographicLoading ? " disabled" : "") + '>Restore previous study draft</button>' : "") +
+      '<button type="button" data-ps-action="geographic-close">Close cohort preview</button></div>' +
+      '<p class="ps-help">Opening the matched cohort prepares a review draft with the original geography identity and source hash. Save review retains its exact study edition, station filters and notes; Export saved review ZIP carries that observation review and its original study sources.</p>';
+  }
+  async function openForStations(value) {
+    if (!node || !value || value.workspace_key !== workspace || host.getWorkspace() !== workspace)
+      throw new Error("Open the original Workspace before selecting these geographic stations.");
+    if (!Array.isArray(value.site_ids) || !value.site_ids.length)
+      throw new Error("Choose at least one original station in Station geography.");
+    const incoming = copy({geography_id:value.geography_id, site_ids:value.site_ids, view:value.view || {}});
+    const opening = ++geographicRequest, expectedWorkspace = workspace, expectedView = viewGeneration;
+    const expectedEdit = ++editGeneration;
+    ++request; ++reviewRequest; ++catalogRequest; catalogPreference = null; reviewLoading = false;
+    const active = () => Boolean(node) && workspace === expectedWorkspace && host.getWorkspace() === expectedWorkspace &&
+      viewGeneration === expectedView && geographicRequest === opening && editGeneration === expectedEdit;
+    geographicInput = incoming; geographicLoading = true; geographicPreview = null; geographicChoice = "";
+    renderGeographic(); remember();
+    try {
+      const [preview, freshCatalog] = await Promise.all([
+        api("/api/published-studies/geographic-preview", incoming),
+        api("/api/published-studies/catalog", {})
+      ]);
+      if (!active()) return;
+      geographicPreview = preview; catalog = freshCatalog;
+      const first = arr(preview.candidates)[0];
+      geographicChoice = first ? first.study_id + "|" + first.version_id : "";
+      renderCatalog(); renderGeographic(); remember();
+      if (!complete || loadedStudy !== selected) await loadStudy();
+    } catch (error) { if (active()) showError(error); }
+    finally {
+      if (node && workspace === expectedWorkspace && viewGeneration === expectedView && geographicRequest === opening) {
+        geographicLoading = false; renderGeographic(); remember();
+      }
+    }
+  }
+  async function applyGeographic() {
+    const candidate = geographicCandidate();
+    if (!candidate || !geographicInput || geographicLoading || busy) return;
+    const incoming = copy(geographicInput), opening = ++geographicRequest;
+    const expectedWorkspace = workspace, expectedView = viewGeneration, expectedEdit = ++editGeneration;
+    ++request; ++reviewRequest; ++catalogRequest; catalogPreference = null; reviewLoading = false;
+    const active = () => Boolean(node) && workspace === expectedWorkspace && host.getWorkspace() === expectedWorkspace &&
+      viewGeneration === expectedView && geographicRequest === opening && editGeneration === expectedEdit;
+    geographicLoading = true; renderGeographic();
+    try {
+      const value = await api("/api/published-studies/geographic-selection", {...incoming,
+        study_id:candidate.study_id, version_id:candidate.version_id,
+        expected_source_manifest_sha256:candidate.source_manifest_sha256});
+      if (!active()) return;
+      const key = value.candidate.study_id + "|" + value.candidate.version_id;
+      if (!arr(catalog?.studies).some(row => row.study_id + "|" + row.version_id === key))
+        throw new Error("Refresh the station preview to reopen the exact retained study edition.");
+      geographicPrevious = copy({selected, selection, tab, savedReview, reviewChoice, reviewTitle, reviewNotes, interpretationMatches});
+      selected = key; selection = copy(value.context.selection); tab = value.review.table;
+      savedReview = null; reviewChoice = ""; reviewTitle = value.review.title; reviewNotes = value.review.notes; interpretationMatches = true;
+      complete = value.study; loadedStudy = selected; loadedSelection = canonical(currentPayload());
+      renderCatalog(); renderSummary(); renderTables(value.context); renderReview(); remember();
+      find("[data-ps-detail]").hidden = true;
+      status("Original station cohort opened. Refine sampling filters or save this named review.");
+    } catch (error) { if (active()) showError(error); }
+    finally {
+      if (node && workspace === expectedWorkspace && viewGeneration === expectedView && geographicRequest === opening) {
+        geographicLoading = false; renderGeographic(); remember();
+      }
+    }
+  }
+  async function restoreGeographicDraft() {
+    if (!geographicPrevious || geographicLoading) return;
+    const previous = geographicPrevious; geographicPrevious = null;
+    ++geographicRequest; ++editGeneration; ++reviewRequest; ++catalogRequest; catalogPreference = null;
+    selected = previous.selected; selection = copy(previous.selection); tab = previous.tab;
+    savedReview = copy(previous.savedReview); reviewChoice = previous.reviewChoice;
+    reviewTitle = previous.reviewTitle; reviewNotes = previous.reviewNotes; interpretationMatches = previous.interpretationMatches;
+    renderCatalog(); renderGeographic(); remember(); await loadStudy();
+  }
+
   function remember() {
     if (!node || !workspace) return;
-    drafts.set(workspace, copy({selected, selection, tab, savedReview, reviewChoice, reviewTitle, reviewNotes, interpretationMatches}));
+    drafts.set(workspace, copy({selected, selection, tab, savedReview, reviewChoice, reviewTitle, reviewNotes, interpretationMatches,
+      geographicInput, geographicPreview, geographicChoice, geographicPrevious}));
   }
   function edited() { ++editGeneration; remember(); renderReview(); }
   function sameSource(review = savedReview) {
@@ -203,6 +313,7 @@ export function createPublishedStudiesDesk(host) {
       '<label class="ps-check"><input type="checkbox" name="include_installed_context" checked>Include installed study reports and analyses</label>' +
       '<p class="ps-help">Accepts the original study JSON, its complete Canvas Markdown, a complete study ZIP, or a directory of published tables. Paths start inside the selected source folder.</p>' +
       '<button type="submit">Import study</button></form></details></section>' +
+      '<section class="ps-reviews" data-ps-geographic hidden aria-label="Geographic station selection"></section>' +
       '<section class="ps-study-control"><label>Retained study<select data-ps-study aria-label="Retained study"></select></label>' +
       '<div class="ps-actions"><button type="button" data-ps-action="report" disabled>Export selected report</button>' +
       '<button type="button" data-ps-action="export" disabled>Export complete study</button></div></section>' +
@@ -685,6 +796,10 @@ export function createPublishedStudiesDesk(host) {
     }
     const action = button.dataset.psAction;
     if (action === "refresh") refreshCatalog();
+    if (action === "geographic-refresh" && geographicInput) openForStations({workspace_key:workspace, ...geographicInput});
+    if (action === "geographic-apply") applyGeographic();
+    if (action === "geographic-previous") restoreGeographicDraft();
+    if (action === "geographic-close") { ++geographicRequest; geographicInput = null; geographicPreview = null; geographicLoading = false; renderGeographic(); remember(); }
     if (action === "close-detail") find("[data-ps-detail]").hidden = true;
     if (action === "report" && currentPayload()) queue("published-study.report",currentPayload());
     if (action === "export" && currentPayload()) {
@@ -748,8 +863,10 @@ export function createPublishedStudiesDesk(host) {
     selected = draft?.selected || null; selection = copy(draft?.selection || emptySelection()); tab = draft?.tab || "seasonal";
     savedReview = copy(draft?.savedReview || null); reviewChoice = draft?.reviewChoice || "";
     reviewTitle = draft?.reviewTitle || ""; reviewNotes = draft?.reviewNotes || ""; interpretationMatches = draft?.interpretationMatches !== false;
+    geographicInput = copy(draft?.geographicInput || null); geographicPreview = copy(draft?.geographicPreview || null);
+    geographicChoice = draft?.geographicChoice || ""; geographicPrevious = copy(draft?.geographicPrevious || null); geographicLoading = false;
     ++editGeneration;
-    frame();
+    frame(); renderGeographic();
     node.addEventListener("click",click,{signal:events.signal});
     node.addEventListener("submit",submit,{signal:events.signal});
     node.addEventListener("input",event => {
@@ -761,6 +878,8 @@ export function createPublishedStudiesDesk(host) {
         selected = event.target.value; selection = emptySelection(); savedReview = null; reviewChoice = "";
         reviewTitle = activeRecord()?.title || ""; reviewNotes = "";
         find("[data-ps-detail]").hidden = true; edited(); loadStudy();
+      } else if (event.target.matches("[data-ps-geographic-study]")) {
+        geographicChoice = event.target.value; ++geographicRequest; geographicLoading = false; edited(); renderGeographic();
       } else if (event.target.matches("[data-ps-review]")) {
         reviewChoice = event.target.value; edited();
       } else if (event.target.closest("[data-ps-filters]")) filters();
@@ -770,9 +889,9 @@ export function createPublishedStudiesDesk(host) {
   function detach() {
     remember();
     events?.abort(); for (const controller of requests) controller.abort(); requests.clear();
-    ++request; ++catalogRequest; ++viewGeneration; ++reviewRequest; catalogPreference = null;
+    ++request; ++catalogRequest; ++viewGeneration; ++reviewRequest; ++geographicRequest; catalogPreference = null;
     if (node) node.classList.remove("published-studies-desk");
     node = null; events = null;
   }
-  return {mount,update,detach};
+  return {mount,update,detach,openForStations};
 }

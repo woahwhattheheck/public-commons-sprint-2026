@@ -194,18 +194,22 @@ export function createExtensionHost(host) {
 
   function call(entry, stage, method, args) {
     if (!method || typeof entry.controller?.[method] !== 'function') return;
+    const selected = active, selectedEpoch = epoch;
+    const obsolete = () => destroyed || active !== selected || epoch !== selectedEpoch;
     try {
       const result = entry.controller[method](...args);
       clearIssue(entry, stage);
       if (result?.then) result.catch(error => {
+        if (stage === 'mount' && obsolete()) return;
         report(entry, stage, error);
-        if (stage === 'mount' && active?.entry === entry) showFailure(entry, active, error);
+        if (stage === 'mount' && selected?.entry === entry) showFailure(entry, selected, error);
       });
       return result;
     } catch (error) {
+      if (stage === 'mount' && obsolete()) return;
       report(entry, stage, error);
-      if (stage === 'mount' && active?.entry === entry) {
-        showFailure(entry, active, error);
+      if (stage === 'mount' && selected?.entry === entry) {
+        showFailure(entry, selected, error);
       }
     }
   }
