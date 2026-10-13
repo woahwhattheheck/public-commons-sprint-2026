@@ -65,6 +65,10 @@ def main():
                 if not self.allowed_host(): return self.send(403,{"error":"Invalid local host"})
                 parsed = urlparse(self.path)
                 path = parsed.path
+                if path in {"/workbook-exchange", "/workbook-exchange/"}:
+                    return self.send(200,(SOURCE/"workbook_exchange.html").read_bytes(),"text/html; charset=utf-8")
+                if path in {"/workbook_exchange.mjs", "/workbook_exchange.css"}:
+                    return self.send(200,(SOURCE/path[1:]).read_bytes(),"text/javascript; charset=utf-8" if path.endswith(".mjs") else "text/css; charset=utf-8")
                 if path == "/respondent-operations/guide":
                     return self.send(200,(SOURCE/"RESPONDENT_OPERATIONS.md").read_bytes(),"text/plain; charset=utf-8")
                 if path in {"/respondent-operations","/respondent-operations/","/respondent-operations/contact"} or path.startswith("/public/entry/"):
