@@ -1,0 +1,77 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "grant-analyst-workbench",
+  "description": "Complete installed grant source review, Learning and commissioned-study application using privately supplied original source and full independent customer receiving. Includes complete offline Learning exchange and original-owner receiving.",
+  "commands": {
+    "grant-analyst-workbench": "products/grant-analyst-workbench/cli.mjs",
+    "grant-analyst-workbench-prepare": "products/grant-analyst-workbench/prepare.mjs",
+    "grant-analyst-workbench-managed": "products/grant-analyst-workbench/managed.mjs",
+    "grant-analyst-workbench-receive": "products/grant-analyst-workbench/receive.mjs"
+  },
+  "commandDescriptions": {
+    "grant-analyst-workbench": "Operate the unchanged original analyst CLI with reviewed private source/interpreter/workspace",
+    "grant-analyst-workbench-prepare": "Prepare and independently receive full private application/commission source and actual local Python imports",
+    "grant-analyst-workbench-managed": "Run the same original grant, Learning and study application through managed Applications",
+    "grant-analyst-workbench-receive": "Adopt actual original completed results and operate full browser/customer-agent/onward receiving"
+  },
+  "exports": {
+    "./grant-analyst-workbench/connection": "./source/products/grant-analyst-workbench/connection.mjs",
+    "./grant-analyst-workbench/managed": "./source/products/grant-analyst-workbench/managed.mjs",
+    "./grant-analyst-workbench/mcp": "./source/products/grant-analyst-workbench/mcp.mjs",
+    "./grant-analyst-workbench/setup": "./source/products/grant-analyst-workbench/setup.mjs",
+    "./grant-analyst-workbench/prepare": "./source/products/grant-analyst-workbench/prepare.mjs",
+    "./grant-analyst-workbench/learning-exchange": "./source/products/grant-analyst-workbench/learning-exchange.mjs",
+    "./grant-analyst-workbench/learning-exchange-render": "./source/products/grant-analyst-workbench/learning-exchange-render.mjs"
+  },
+  "applicationProviders": {
+    "grant-analyst-workbench": "products/grant-analyst-workbench/application-provider.mjs"
+  },
+  "merchantProviders": {
+    "grant-analyst-workbench": "products/grant-analyst-workbench/merchant-provider.mjs"
+  },
+  "runtimePackageManifests": {
+    "grant-analyst-workbench": "products/grant-analyst-workbench/runtime-package.json"
+  },
+  "components": [
+    "products/grant-analyst-workbench"
+  ],
+  "supportFiles": [
+    "products/grant-analyst-workbench/LEARNING_EXCHANGE.md",
+    "products/grant-analyst-workbench/LEARNING_EXCHANGE_RECEIVING.md",
+    "products/grant-analyst-workbench/OPERATING.md",
+    "products/grant-analyst-workbench/PREPARING.md",
+    "products/grant-analyst-workbench/RECEIVING.md",
+    "products/grant-analyst-workbench/application-provider.mjs",
+    "products/grant-analyst-workbench/cli.mjs",
+    "products/grant-analyst-workbench/connection.mjs",
+    "products/grant-analyst-workbench/files.mjs",
+    "products/grant-analyst-workbench/learning-exchange-browser.mjs",
+    "products/grant-analyst-workbench/learning-exchange-host.css",
+    "products/grant-analyst-workbench/learning-exchange-host.mjs",
+    "products/grant-analyst-workbench/learning-exchange-host.py",
+    "products/grant-analyst-workbench/learning-exchange-offline.css",
+    "products/grant-analyst-workbench/learning-exchange-offline.html",
+    "products/grant-analyst-workbench/learning-exchange-offline.mjs",
+    "products/grant-analyst-workbench/learning-exchange-receiving.mjs",
+    "products/grant-analyst-workbench/learning-exchange-render.mjs",
+    "products/grant-analyst-workbench/learning-exchange.mjs",
+    "products/grant-analyst-workbench/managed.mjs",
+    "products/grant-analyst-workbench/managed_host.py",
+    "products/grant-analyst-workbench/mcp.mjs",
+    "products/grant-analyst-workbench/merchant-provider.mjs",
+    "products/grant-analyst-workbench/preparation.py",
+    "products/grant-analyst-workbench/prepare.mjs",
+    "products/grant-analyst-workbench/receive.mjs",
+    "products/grant-analyst-workbench/receiving-browser.mjs",
+    "products/grant-analyst-workbench/receiving-original.py",
+    "products/grant-analyst-workbench/receiving.mjs",
+    "products/grant-analyst-workbench/requests.mjs",
+    "products/grant-analyst-workbench/runtime-package.json",
+    "products/grant-analyst-workbench/setup.mjs",
+    "products/grant-analyst-workbench/source-manifest.schema.json",
+    "products/grant-analyst-workbench/tools.mjs",
+    "stellar-forge/developer-site/GRANT_GRANT_ANALYST_WORKBENCH.md",
+    "stellar-forge/developer-site/grant-products/grant-analyst-workbench.json",
+    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/grant-analyst-workbench.json"
+  ]
+}
