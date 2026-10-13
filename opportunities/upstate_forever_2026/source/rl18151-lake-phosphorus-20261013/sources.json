@@ -1,0 +1,1007 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "RL-18151 original Lake Keowee observations, 2018–2026",
+  "station_id": "21SC60WQ_WQX-RL-18151",
+  "entries": [
+    {
+      "id": "rl18151-phosphorus-observed-report-2018-20261013",
+      "title": "RL-18151 original phosphorus and lake context, 2018–2026",
+      "kind": "document",
+      "path": "observed-report.json",
+      "role": "OBSERVED_CONTEXT",
+      "uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RL-18151/",
+      "vintage": "Original agency responses retained 2026-10-13",
+      "bytes": 14430,
+      "sha256": "a3c311f92c06e9eecc01b15019139ce7fbfd1c137505f91c097c2647ca6383e1",
+      "companions": [
+        {
+          "path": "README.md",
+          "bytes": 9886,
+          "sha256": "02a86c0d8d8b80219f368a5c9113cc2d40c616ad1b06b2a61a56d55bf8fa93e6"
+        },
+        {
+          "path": "SOURCE_CAPTURE.md",
+          "bytes": 3129,
+          "sha256": "ab8f6cd949db6b142644a6250c5594aeef7972a510651bf28af3eb8c02a94de4"
+        },
+        {
+          "path": "acquisition-plan.json",
+          "bytes": 9199,
+          "sha256": "472cd98e720add432fd750ec69ab93c8540395bb527cd5abf5a30826fa36e3c4"
+        },
+        {
+          "path": "analysis.mjs",
+          "bytes": 25000,
+          "sha256": "abdc4ae6b4c3928c05831264e076f7be0cd25d8b2d5c324164d4b569b3526042"
+        },
+        {
+          "path": "build-study.mjs",
+          "bytes": 9606,
+          "sha256": "1125e1f04f7c4b9d8a91548fb31c86d56e4f41c9c902b326153e80542f396f81"
+        },
+        {
+          "path": "capture-manifest.json",
+          "bytes": 47483,
+          "sha256": "e8eedb832f5d6b117a2280282bd1ba7ddd153626e53a1a7d3faceeb19a7fb9b8"
+        },
+        {
+          "path": "capture_rl18151.py",
+          "bytes": 18835,
+          "sha256": "c853934b1a975695b6005b3e9b6601125a81c1948250ee35e5e87f2a4f4814fd"
+        },
+        {
+          "path": "derived/annual-cohorts.csv",
+          "bytes": 39912,
+          "sha256": "b41a9647d91227476067323c3797e4220497bcbb4fc2db0d787c1761af476f08"
+        },
+        {
+          "path": "derived/annual-cohorts.json",
+          "bytes": 142642,
+          "sha256": "139a79ae2e582e531ee834cf87882fb107089e68ae815966c40cf54bbc505f66"
+        },
+        {
+          "path": "derived/observations-microbiological.csv",
+          "bytes": 63381,
+          "sha256": "221c721ad4b2f53bcd57358e8cbc56060c88571eba67d3c14f36efaa77523173"
+        },
+        {
+          "path": "derived/observations-nutrient.csv",
+          "bytes": 220255,
+          "sha256": "e8250cc712c5f29ff81c1e5c23cde524a6650e36810ffcd8353948adc8b571ed"
+        },
+        {
+          "path": "derived/observations-physical.csv",
+          "bytes": 393259,
+          "sha256": "10a576ecefd713bf8ac24276c761b7ecb78aedcd3744a629837d3fef5072ea05"
+        },
+        {
+          "path": "derived/observed-records.csv",
+          "bytes": 482781,
+          "sha256": "af3746074c4d93f165388bece566192027ef190c25967f559a9a5eb261079d47"
+        },
+        {
+          "path": "derived/observed-records.json",
+          "bytes": 1212237,
+          "sha256": "4b867f9f45dc5ced7c6e0a3bd4541c688d1ff33c59878bb7b6aecd6c33f55374"
+        },
+        {
+          "path": "derived/station.geojson",
+          "bytes": 2435,
+          "sha256": "225e7c0ac6c89703154f406406526415a871aa9f670f2bc9cb8717904f036a3a"
+        },
+        {
+          "path": "derived/study-summary.json",
+          "bytes": 7495,
+          "sha256": "2b1a71f4b63a61ed72e6ef8a371d94fe74d5407feb1c6553dfad4d7bad877477"
+        },
+        {
+          "path": "import_rl18151.py",
+          "bytes": 4776,
+          "sha256": "f148bc2845cfca878046260ff4e2a1f974aa33642458e7a8a2a40f2faf76f0db"
+        },
+        {
+          "path": "original-join-census.json",
+          "bytes": 7722,
+          "sha256": "073de4119bdda66898a197d74d801ce382ed4f86c195a73c25d84f76346299ba"
+        },
+        {
+          "path": "original/microbiological-activities.csv",
+          "bytes": 13054,
+          "sha256": "940dddea160b94cbe55820eae5c9de5d0085b78724b408594f53f445187846f6"
+        },
+        {
+          "path": "original/microbiological-detection_limits.csv",
+          "bytes": 8587,
+          "sha256": "4c6b73b72d4a703a5e8d7d9ecdc15c14ae444c47e3c8adefd44bbe7e06e0d853"
+        },
+        {
+          "path": "original/microbiological-narrow-results.csv",
+          "bytes": 27742,
+          "sha256": "792e4113a233e030868aaddd1500ec5f215844b95137f12c1bed0797a5d57264"
+        },
+        {
+          "path": "original/microbiological-results.csv",
+          "bytes": 22204,
+          "sha256": "ecc84b2627bdf66366a9116e2f7ef4d2d0689c05ca373ce57c91b4e199261e5b"
+        },
+        {
+          "path": "original/microbiological-summary.csv",
+          "bytes": 1757,
+          "sha256": "66a3f4dcb355b45d1c895cc83978333810194f49ae3de3dda0df16fac85fa615"
+        },
+        {
+          "path": "original/nutrient-activities.csv",
+          "bytes": 12520,
+          "sha256": "8b2660489fceae6bd899e84e7570d1599beb5094e1d45b6740ab57e8096fbcde"
+        },
+        {
+          "path": "original/nutrient-detection_limits.csv",
+          "bytes": 31072,
+          "sha256": "2b3c8de0cb9535bc4b832ec6ced8377ec7756651511ee3b0e3c69f335c5a6aa9"
+        },
+        {
+          "path": "original/nutrient-narrow-results.csv",
+          "bytes": 83720,
+          "sha256": "99359e82f86cd837f03ebb362577f47a91ec780bc119b3f124d5f07d95645029"
+        },
+        {
+          "path": "original/nutrient-results.csv",
+          "bytes": 64069,
+          "sha256": "4a7bbf405453dcecab17008aabd567d810ad1c7be0f421a41d5716ad64454919"
+        },
+        {
+          "path": "original/nutrient-summary.csv",
+          "bytes": 6088,
+          "sha256": "b27917852d21f4c06b36d1d97fb5a19b4575f722fe6066252144c677c21cf3e8"
+        },
+        {
+          "path": "original/physical-activities.csv",
+          "bytes": 13054,
+          "sha256": "940dddea160b94cbe55820eae5c9de5d0085b78724b408594f53f445187846f6"
+        },
+        {
+          "path": "original/physical-detection_limits.csv",
+          "bytes": 46817,
+          "sha256": "4ca32a1db27ce8e346f639147afcea7a0a3b800f479e6dd33d2afcc342e67d54"
+        },
+        {
+          "path": "original/physical-narrow-results.csv",
+          "bytes": 135205,
+          "sha256": "b16459ef9dd5813e0a7bee472d0fb6dbe774fef6eebf19e1a943f73f86f163e8"
+        },
+        {
+          "path": "original/physical-results.csv",
+          "bytes": 114132,
+          "sha256": "939db3b76a302ab663e412f069660dbf3a4dfeabfdb9e4d6fd3943b67adcc5bb"
+        },
+        {
+          "path": "original/physical-summary.csv",
+          "bytes": 11504,
+          "sha256": "76433929d14f85fa5e3c9386d6c2171e40cde913a1bc2085deee8ad7d4896a10"
+        },
+        {
+          "path": "original/station.csv",
+          "bytes": 1313,
+          "sha256": "45829fab069ef23454a949aa2469ed947ade8cbee08387a9d23f56cf51931d50"
+        },
+        {
+          "path": "render-report.mjs",
+          "bytes": 19383,
+          "sha256": "df55266c583e36989b1675a786abb9526a810dfba09a90998219627aec123555"
+        },
+        {
+          "path": "report.html",
+          "bytes": 1251821,
+          "sha256": "7720306213c64e7b79185f61ccbc3a406c169730925b33d20bb47e8a946fb4a6"
+        },
+        {
+          "path": "supplemental-requests.json",
+          "bytes": 1967,
+          "sha256": "bfa93d854ff0e29b45169c2d463161ae429633590638fbd4dd9b5a44bc22879e"
+        }
+      ],
+      "station_id": "21SC60WQ_WQX-RL-18151",
+      "source_operation": "A73C-RL18151-PHOSPHORUS-20261013"
+    },
+    {
+      "id": "rl18151-original-station",
+      "title": "RL-18151 original agency station coordinates",
+      "kind": "vector",
+      "path": "derived/station.geojson",
+      "role": "OBSERVATION_STATION",
+      "uri": "https://waterqualitydata.us/data/Station/search?siteid=21SC60WQ_WQX-RL-18151&mimeType=csv&sorted=no",
+      "vintage": "Original agency responses retained 2026-10-13",
+      "bytes": 2435,
+      "sha256": "225e7c0ac6c89703154f406406526415a871aa9f670f2bc9cb8717904f036a3a",
+      "companions": [
+        {
+          "path": "README.md",
+          "bytes": 9886,
+          "sha256": "02a86c0d8d8b80219f368a5c9113cc2d40c616ad1b06b2a61a56d55bf8fa93e6"
+        },
+        {
+          "path": "SOURCE_CAPTURE.md",
+          "bytes": 3129,
+          "sha256": "ab8f6cd949db6b142644a6250c5594aeef7972a510651bf28af3eb8c02a94de4"
+        },
+        {
+          "path": "acquisition-plan.json",
+          "bytes": 9199,
+          "sha256": "472cd98e720add432fd750ec69ab93c8540395bb527cd5abf5a30826fa36e3c4"
+        },
+        {
+          "path": "analysis.mjs",
+          "bytes": 25000,
+          "sha256": "abdc4ae6b4c3928c05831264e076f7be0cd25d8b2d5c324164d4b569b3526042"
+        },
+        {
+          "path": "build-study.mjs",
+          "bytes": 9606,
+          "sha256": "1125e1f04f7c4b9d8a91548fb31c86d56e4f41c9c902b326153e80542f396f81"
+        },
+        {
+          "path": "capture-manifest.json",
+          "bytes": 47483,
+          "sha256": "e8eedb832f5d6b117a2280282bd1ba7ddd153626e53a1a7d3faceeb19a7fb9b8"
+        },
+        {
+          "path": "capture_rl18151.py",
+          "bytes": 18835,
+          "sha256": "c853934b1a975695b6005b3e9b6601125a81c1948250ee35e5e87f2a4f4814fd"
+        },
+        {
+          "path": "derived/annual-cohorts.csv",
+          "bytes": 39912,
+          "sha256": "b41a9647d91227476067323c3797e4220497bcbb4fc2db0d787c1761af476f08"
+        },
+        {
+          "path": "derived/annual-cohorts.json",
+          "bytes": 142642,
+          "sha256": "139a79ae2e582e531ee834cf87882fb107089e68ae815966c40cf54bbc505f66"
+        },
+        {
+          "path": "derived/observations-microbiological.csv",
+          "bytes": 63381,
+          "sha256": "221c721ad4b2f53bcd57358e8cbc56060c88571eba67d3c14f36efaa77523173"
+        },
+        {
+          "path": "derived/observations-nutrient.csv",
+          "bytes": 220255,
+          "sha256": "e8250cc712c5f29ff81c1e5c23cde524a6650e36810ffcd8353948adc8b571ed"
+        },
+        {
+          "path": "derived/observations-physical.csv",
+          "bytes": 393259,
+          "sha256": "10a576ecefd713bf8ac24276c761b7ecb78aedcd3744a629837d3fef5072ea05"
+        },
+        {
+          "path": "derived/observed-records.csv",
+          "bytes": 482781,
+          "sha256": "af3746074c4d93f165388bece566192027ef190c25967f559a9a5eb261079d47"
+        },
+        {
+          "path": "derived/observed-records.json",
+          "bytes": 1212237,
+          "sha256": "4b867f9f45dc5ced7c6e0a3bd4541c688d1ff33c59878bb7b6aecd6c33f55374"
+        },
+        {
+          "path": "derived/study-summary.json",
+          "bytes": 7495,
+          "sha256": "2b1a71f4b63a61ed72e6ef8a371d94fe74d5407feb1c6553dfad4d7bad877477"
+        },
+        {
+          "path": "import_rl18151.py",
+          "bytes": 4776,
+          "sha256": "f148bc2845cfca878046260ff4e2a1f974aa33642458e7a8a2a40f2faf76f0db"
+        },
+        {
+          "path": "original-join-census.json",
+          "bytes": 7722,
+          "sha256": "073de4119bdda66898a197d74d801ce382ed4f86c195a73c25d84f76346299ba"
+        },
+        {
+          "path": "original/microbiological-activities.csv",
+          "bytes": 13054,
+          "sha256": "940dddea160b94cbe55820eae5c9de5d0085b78724b408594f53f445187846f6"
+        },
+        {
+          "path": "original/microbiological-detection_limits.csv",
+          "bytes": 8587,
+          "sha256": "4c6b73b72d4a703a5e8d7d9ecdc15c14ae444c47e3c8adefd44bbe7e06e0d853"
+        },
+        {
+          "path": "original/microbiological-narrow-results.csv",
+          "bytes": 27742,
+          "sha256": "792e4113a233e030868aaddd1500ec5f215844b95137f12c1bed0797a5d57264"
+        },
+        {
+          "path": "original/microbiological-results.csv",
+          "bytes": 22204,
+          "sha256": "ecc84b2627bdf66366a9116e2f7ef4d2d0689c05ca373ce57c91b4e199261e5b"
+        },
+        {
+          "path": "original/microbiological-summary.csv",
+          "bytes": 1757,
+          "sha256": "66a3f4dcb355b45d1c895cc83978333810194f49ae3de3dda0df16fac85fa615"
+        },
+        {
+          "path": "original/nutrient-activities.csv",
+          "bytes": 12520,
+          "sha256": "8b2660489fceae6bd899e84e7570d1599beb5094e1d45b6740ab57e8096fbcde"
+        },
+        {
+          "path": "original/nutrient-detection_limits.csv",
+          "bytes": 31072,
+          "sha256": "2b3c8de0cb9535bc4b832ec6ced8377ec7756651511ee3b0e3c69f335c5a6aa9"
+        },
+        {
+          "path": "original/nutrient-narrow-results.csv",
+          "bytes": 83720,
+          "sha256": "99359e82f86cd837f03ebb362577f47a91ec780bc119b3f124d5f07d95645029"
+        },
+        {
+          "path": "original/nutrient-results.csv",
+          "bytes": 64069,
+          "sha256": "4a7bbf405453dcecab17008aabd567d810ad1c7be0f421a41d5716ad64454919"
+        },
+        {
+          "path": "original/nutrient-summary.csv",
+          "bytes": 6088,
+          "sha256": "b27917852d21f4c06b36d1d97fb5a19b4575f722fe6066252144c677c21cf3e8"
+        },
+        {
+          "path": "original/physical-activities.csv",
+          "bytes": 13054,
+          "sha256": "940dddea160b94cbe55820eae5c9de5d0085b78724b408594f53f445187846f6"
+        },
+        {
+          "path": "original/physical-detection_limits.csv",
+          "bytes": 46817,
+          "sha256": "4ca32a1db27ce8e346f639147afcea7a0a3b800f479e6dd33d2afcc342e67d54"
+        },
+        {
+          "path": "original/physical-narrow-results.csv",
+          "bytes": 135205,
+          "sha256": "b16459ef9dd5813e0a7bee472d0fb6dbe774fef6eebf19e1a943f73f86f163e8"
+        },
+        {
+          "path": "original/physical-results.csv",
+          "bytes": 114132,
+          "sha256": "939db3b76a302ab663e412f069660dbf3a4dfeabfdb9e4d6fd3943b67adcc5bb"
+        },
+        {
+          "path": "original/physical-summary.csv",
+          "bytes": 11504,
+          "sha256": "76433929d14f85fa5e3c9386d6c2171e40cde913a1bc2085deee8ad7d4896a10"
+        },
+        {
+          "path": "original/station.csv",
+          "bytes": 1313,
+          "sha256": "45829fab069ef23454a949aa2469ed947ade8cbee08387a9d23f56cf51931d50"
+        },
+        {
+          "path": "render-report.mjs",
+          "bytes": 19383,
+          "sha256": "df55266c583e36989b1675a786abb9526a810dfba09a90998219627aec123555"
+        },
+        {
+          "path": "report.html",
+          "bytes": 1251821,
+          "sha256": "7720306213c64e7b79185f61ccbc3a406c169730925b33d20bb47e8a946fb4a6"
+        },
+        {
+          "path": "supplemental-requests.json",
+          "bytes": 1967,
+          "sha256": "bfa93d854ff0e29b45169c2d463161ae429633590638fbd4dd9b5a44bc22879e"
+        },
+        {
+          "path": "observed-report.json",
+          "bytes": 14430,
+          "sha256": "a3c311f92c06e9eecc01b15019139ce7fbfd1c137505f91c097c2647ca6383e1"
+        }
+      ],
+      "station_id": "21SC60WQ_WQX-RL-18151",
+      "source_operation": "A73C-RL18151-PHOSPHORUS-20261013"
+    },
+    {
+      "id": "rl18151-nutrient-observations-2018-20261013",
+      "title": "RL-18151 original nutrient context",
+      "kind": "table",
+      "path": "derived/observations-nutrient.csv",
+      "role": "OBSERVATION_CONTEXT",
+      "uri": "https://waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-RL-18151&characteristicType=Nutrient&mimeType=csv&sorted=no&startDateLo=01-01-2018&startDateHi=10-13-2026",
+      "vintage": "Original agency responses retained 2026-10-13",
+      "bytes": 220255,
+      "sha256": "e8250cc712c5f29ff81c1e5c23cde524a6650e36810ffcd8353948adc8b571ed",
+      "companions": [
+        {
+          "path": "README.md",
+          "bytes": 9886,
+          "sha256": "02a86c0d8d8b80219f368a5c9113cc2d40c616ad1b06b2a61a56d55bf8fa93e6"
+        },
+        {
+          "path": "SOURCE_CAPTURE.md",
+          "bytes": 3129,
+          "sha256": "ab8f6cd949db6b142644a6250c5594aeef7972a510651bf28af3eb8c02a94de4"
+        },
+        {
+          "path": "acquisition-plan.json",
+          "bytes": 9199,
+          "sha256": "472cd98e720add432fd750ec69ab93c8540395bb527cd5abf5a30826fa36e3c4"
+        },
+        {
+          "path": "analysis.mjs",
+          "bytes": 25000,
+          "sha256": "abdc4ae6b4c3928c05831264e076f7be0cd25d8b2d5c324164d4b569b3526042"
+        },
+        {
+          "path": "build-study.mjs",
+          "bytes": 9606,
+          "sha256": "1125e1f04f7c4b9d8a91548fb31c86d56e4f41c9c902b326153e80542f396f81"
+        },
+        {
+          "path": "capture-manifest.json",
+          "bytes": 47483,
+          "sha256": "e8eedb832f5d6b117a2280282bd1ba7ddd153626e53a1a7d3faceeb19a7fb9b8"
+        },
+        {
+          "path": "capture_rl18151.py",
+          "bytes": 18835,
+          "sha256": "c853934b1a975695b6005b3e9b6601125a81c1948250ee35e5e87f2a4f4814fd"
+        },
+        {
+          "path": "derived/annual-cohorts.csv",
+          "bytes": 39912,
+          "sha256": "b41a9647d91227476067323c3797e4220497bcbb4fc2db0d787c1761af476f08"
+        },
+        {
+          "path": "derived/annual-cohorts.json",
+          "bytes": 142642,
+          "sha256": "139a79ae2e582e531ee834cf87882fb107089e68ae815966c40cf54bbc505f66"
+        },
+        {
+          "path": "derived/observations-microbiological.csv",
+          "bytes": 63381,
+          "sha256": "221c721ad4b2f53bcd57358e8cbc56060c88571eba67d3c14f36efaa77523173"
+        },
+        {
+          "path": "derived/observations-physical.csv",
+          "bytes": 393259,
+          "sha256": "10a576ecefd713bf8ac24276c761b7ecb78aedcd3744a629837d3fef5072ea05"
+        },
+        {
+          "path": "derived/observed-records.csv",
+          "bytes": 482781,
+          "sha256": "af3746074c4d93f165388bece566192027ef190c25967f559a9a5eb261079d47"
+        },
+        {
+          "path": "derived/observed-records.json",
+          "bytes": 1212237,
+          "sha256": "4b867f9f45dc5ced7c6e0a3bd4541c688d1ff33c59878bb7b6aecd6c33f55374"
+        },
+        {
+          "path": "derived/station.geojson",
+          "bytes": 2435,
+          "sha256": "225e7c0ac6c89703154f406406526415a871aa9f670f2bc9cb8717904f036a3a"
+        },
+        {
+          "path": "derived/study-summary.json",
+          "bytes": 7495,
+          "sha256": "2b1a71f4b63a61ed72e6ef8a371d94fe74d5407feb1c6553dfad4d7bad877477"
+        },
+        {
+          "path": "import_rl18151.py",
+          "bytes": 4776,
+          "sha256": "f148bc2845cfca878046260ff4e2a1f974aa33642458e7a8a2a40f2faf76f0db"
+        },
+        {
+          "path": "original-join-census.json",
+          "bytes": 7722,
+          "sha256": "073de4119bdda66898a197d74d801ce382ed4f86c195a73c25d84f76346299ba"
+        },
+        {
+          "path": "original/microbiological-activities.csv",
+          "bytes": 13054,
+          "sha256": "940dddea160b94cbe55820eae5c9de5d0085b78724b408594f53f445187846f6"
+        },
+        {
+          "path": "original/microbiological-detection_limits.csv",
+          "bytes": 8587,
+          "sha256": "4c6b73b72d4a703a5e8d7d9ecdc15c14ae444c47e3c8adefd44bbe7e06e0d853"
+        },
+        {
+          "path": "original/microbiological-narrow-results.csv",
+          "bytes": 27742,
+          "sha256": "792e4113a233e030868aaddd1500ec5f215844b95137f12c1bed0797a5d57264"
+        },
+        {
+          "path": "original/microbiological-results.csv",
+          "bytes": 22204,
+          "sha256": "ecc84b2627bdf66366a9116e2f7ef4d2d0689c05ca373ce57c91b4e199261e5b"
+        },
+        {
+          "path": "original/microbiological-summary.csv",
+          "bytes": 1757,
+          "sha256": "66a3f4dcb355b45d1c895cc83978333810194f49ae3de3dda0df16fac85fa615"
+        },
+        {
+          "path": "original/nutrient-activities.csv",
+          "bytes": 12520,
+          "sha256": "8b2660489fceae6bd899e84e7570d1599beb5094e1d45b6740ab57e8096fbcde"
+        },
+        {
+          "path": "original/nutrient-detection_limits.csv",
+          "bytes": 31072,
+          "sha256": "2b3c8de0cb9535bc4b832ec6ced8377ec7756651511ee3b0e3c69f335c5a6aa9"
+        },
+        {
+          "path": "original/nutrient-narrow-results.csv",
+          "bytes": 83720,
+          "sha256": "99359e82f86cd837f03ebb362577f47a91ec780bc119b3f124d5f07d95645029"
+        },
+        {
+          "path": "original/nutrient-results.csv",
+          "bytes": 64069,
+          "sha256": "4a7bbf405453dcecab17008aabd567d810ad1c7be0f421a41d5716ad64454919"
+        },
+        {
+          "path": "original/nutrient-summary.csv",
+          "bytes": 6088,
+          "sha256": "b27917852d21f4c06b36d1d97fb5a19b4575f722fe6066252144c677c21cf3e8"
+        },
+        {
+          "path": "original/physical-activities.csv",
+          "bytes": 13054,
+          "sha256": "940dddea160b94cbe55820eae5c9de5d0085b78724b408594f53f445187846f6"
+        },
+        {
+          "path": "original/physical-detection_limits.csv",
+          "bytes": 46817,
+          "sha256": "4ca32a1db27ce8e346f639147afcea7a0a3b800f479e6dd33d2afcc342e67d54"
+        },
+        {
+          "path": "original/physical-narrow-results.csv",
+          "bytes": 135205,
+          "sha256": "b16459ef9dd5813e0a7bee472d0fb6dbe774fef6eebf19e1a943f73f86f163e8"
+        },
+        {
+          "path": "original/physical-results.csv",
+          "bytes": 114132,
+          "sha256": "939db3b76a302ab663e412f069660dbf3a4dfeabfdb9e4d6fd3943b67adcc5bb"
+        },
+        {
+          "path": "original/physical-summary.csv",
+          "bytes": 11504,
+          "sha256": "76433929d14f85fa5e3c9386d6c2171e40cde913a1bc2085deee8ad7d4896a10"
+        },
+        {
+          "path": "original/station.csv",
+          "bytes": 1313,
+          "sha256": "45829fab069ef23454a949aa2469ed947ade8cbee08387a9d23f56cf51931d50"
+        },
+        {
+          "path": "render-report.mjs",
+          "bytes": 19383,
+          "sha256": "df55266c583e36989b1675a786abb9526a810dfba09a90998219627aec123555"
+        },
+        {
+          "path": "report.html",
+          "bytes": 1251821,
+          "sha256": "7720306213c64e7b79185f61ccbc3a406c169730925b33d20bb47e8a946fb4a6"
+        },
+        {
+          "path": "supplemental-requests.json",
+          "bytes": 1967,
+          "sha256": "bfa93d854ff0e29b45169c2d463161ae429633590638fbd4dd9b5a44bc22879e"
+        },
+        {
+          "path": "observed-report.json",
+          "bytes": 14430,
+          "sha256": "a3c311f92c06e9eecc01b15019139ce7fbfd1c137505f91c097c2647ca6383e1"
+        }
+      ],
+      "station_id": "21SC60WQ_WQX-RL-18151",
+      "source_operation": "A73C-RL18151-PHOSPHORUS-20261013"
+    },
+    {
+      "id": "rl18151-physical-observations-2018-20261013",
+      "title": "RL-18151 original physical context",
+      "kind": "table",
+      "path": "derived/observations-physical.csv",
+      "role": "OBSERVATION_CONTEXT",
+      "uri": "https://waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-RL-18151&characteristicType=Physical&mimeType=csv&sorted=no&startDateLo=01-01-2018&startDateHi=10-13-2026",
+      "vintage": "Original agency responses retained 2026-10-13",
+      "bytes": 393259,
+      "sha256": "10a576ecefd713bf8ac24276c761b7ecb78aedcd3744a629837d3fef5072ea05",
+      "companions": [
+        {
+          "path": "README.md",
+          "bytes": 9886,
+          "sha256": "02a86c0d8d8b80219f368a5c9113cc2d40c616ad1b06b2a61a56d55bf8fa93e6"
+        },
+        {
+          "path": "SOURCE_CAPTURE.md",
+          "bytes": 3129,
+          "sha256": "ab8f6cd949db6b142644a6250c5594aeef7972a510651bf28af3eb8c02a94de4"
+        },
+        {
+          "path": "acquisition-plan.json",
+          "bytes": 9199,
+          "sha256": "472cd98e720add432fd750ec69ab93c8540395bb527cd5abf5a30826fa36e3c4"
+        },
+        {
+          "path": "analysis.mjs",
+          "bytes": 25000,
+          "sha256": "abdc4ae6b4c3928c05831264e076f7be0cd25d8b2d5c324164d4b569b3526042"
+        },
+        {
+          "path": "build-study.mjs",
+          "bytes": 9606,
+          "sha256": "1125e1f04f7c4b9d8a91548fb31c86d56e4f41c9c902b326153e80542f396f81"
+        },
+        {
+          "path": "capture-manifest.json",
+          "bytes": 47483,
+          "sha256": "e8eedb832f5d6b117a2280282bd1ba7ddd153626e53a1a7d3faceeb19a7fb9b8"
+        },
+        {
+          "path": "capture_rl18151.py",
+          "bytes": 18835,
+          "sha256": "c853934b1a975695b6005b3e9b6601125a81c1948250ee35e5e87f2a4f4814fd"
+        },
+        {
+          "path": "derived/annual-cohorts.csv",
+          "bytes": 39912,
+          "sha256": "b41a9647d91227476067323c3797e4220497bcbb4fc2db0d787c1761af476f08"
+        },
+        {
+          "path": "derived/annual-cohorts.json",
+          "bytes": 142642,
+          "sha256": "139a79ae2e582e531ee834cf87882fb107089e68ae815966c40cf54bbc505f66"
+        },
+        {
+          "path": "derived/observations-microbiological.csv",
+          "bytes": 63381,
+          "sha256": "221c721ad4b2f53bcd57358e8cbc56060c88571eba67d3c14f36efaa77523173"
+        },
+        {
+          "path": "derived/observations-nutrient.csv",
+          "bytes": 220255,
+          "sha256": "e8250cc712c5f29ff81c1e5c23cde524a6650e36810ffcd8353948adc8b571ed"
+        },
+        {
+          "path": "derived/observed-records.csv",
+          "bytes": 482781,
+          "sha256": "af3746074c4d93f165388bece566192027ef190c25967f559a9a5eb261079d47"
+        },
+        {
+          "path": "derived/observed-records.json",
+          "bytes": 1212237,
+          "sha256": "4b867f9f45dc5ced7c6e0a3bd4541c688d1ff33c59878bb7b6aecd6c33f55374"
+        },
+        {
+          "path": "derived/station.geojson",
+          "bytes": 2435,
+          "sha256": "225e7c0ac6c89703154f406406526415a871aa9f670f2bc9cb8717904f036a3a"
+        },
+        {
+          "path": "derived/study-summary.json",
+          "bytes": 7495,
+          "sha256": "2b1a71f4b63a61ed72e6ef8a371d94fe74d5407feb1c6553dfad4d7bad877477"
+        },
+        {
+          "path": "import_rl18151.py",
+          "bytes": 4776,
+          "sha256": "f148bc2845cfca878046260ff4e2a1f974aa33642458e7a8a2a40f2faf76f0db"
+        },
+        {
+          "path": "original-join-census.json",
+          "bytes": 7722,
+          "sha256": "073de4119bdda66898a197d74d801ce382ed4f86c195a73c25d84f76346299ba"
+        },
+        {
+          "path": "original/microbiological-activities.csv",
+          "bytes": 13054,
+          "sha256": "940dddea160b94cbe55820eae5c9de5d0085b78724b408594f53f445187846f6"
+        },
+        {
+          "path": "original/microbiological-detection_limits.csv",
+          "bytes": 8587,
+          "sha256": "4c6b73b72d4a703a5e8d7d9ecdc15c14ae444c47e3c8adefd44bbe7e06e0d853"
+        },
+        {
+          "path": "original/microbiological-narrow-results.csv",
+          "bytes": 27742,
+          "sha256": "792e4113a233e030868aaddd1500ec5f215844b95137f12c1bed0797a5d57264"
+        },
+        {
+          "path": "original/microbiological-results.csv",
+          "bytes": 22204,
+          "sha256": "ecc84b2627bdf66366a9116e2f7ef4d2d0689c05ca373ce57c91b4e199261e5b"
+        },
+        {
+          "path": "original/microbiological-summary.csv",
+          "bytes": 1757,
+          "sha256": "66a3f4dcb355b45d1c895cc83978333810194f49ae3de3dda0df16fac85fa615"
+        },
+        {
+          "path": "original/nutrient-activities.csv",
+          "bytes": 12520,
+          "sha256": "8b2660489fceae6bd899e84e7570d1599beb5094e1d45b6740ab57e8096fbcde"
+        },
+        {
+          "path": "original/nutrient-detection_limits.csv",
+          "bytes": 31072,
+          "sha256": "2b3c8de0cb9535bc4b832ec6ced8377ec7756651511ee3b0e3c69f335c5a6aa9"
+        },
+        {
+          "path": "original/nutrient-narrow-results.csv",
+          "bytes": 83720,
+          "sha256": "99359e82f86cd837f03ebb362577f47a91ec780bc119b3f124d5f07d95645029"
+        },
+        {
+          "path": "original/nutrient-results.csv",
+          "bytes": 64069,
+          "sha256": "4a7bbf405453dcecab17008aabd567d810ad1c7be0f421a41d5716ad64454919"
+        },
+        {
+          "path": "original/nutrient-summary.csv",
+          "bytes": 6088,
+          "sha256": "b27917852d21f4c06b36d1d97fb5a19b4575f722fe6066252144c677c21cf3e8"
+        },
+        {
+          "path": "original/physical-activities.csv",
+          "bytes": 13054,
+          "sha256": "940dddea160b94cbe55820eae5c9de5d0085b78724b408594f53f445187846f6"
+        },
+        {
+          "path": "original/physical-detection_limits.csv",
+          "bytes": 46817,
+          "sha256": "4ca32a1db27ce8e346f639147afcea7a0a3b800f479e6dd33d2afcc342e67d54"
+        },
+        {
+          "path": "original/physical-narrow-results.csv",
+          "bytes": 135205,
+          "sha256": "b16459ef9dd5813e0a7bee472d0fb6dbe774fef6eebf19e1a943f73f86f163e8"
+        },
+        {
+          "path": "original/physical-results.csv",
+          "bytes": 114132,
+          "sha256": "939db3b76a302ab663e412f069660dbf3a4dfeabfdb9e4d6fd3943b67adcc5bb"
+        },
+        {
+          "path": "original/physical-summary.csv",
+          "bytes": 11504,
+          "sha256": "76433929d14f85fa5e3c9386d6c2171e40cde913a1bc2085deee8ad7d4896a10"
+        },
+        {
+          "path": "original/station.csv",
+          "bytes": 1313,
+          "sha256": "45829fab069ef23454a949aa2469ed947ade8cbee08387a9d23f56cf51931d50"
+        },
+        {
+          "path": "render-report.mjs",
+          "bytes": 19383,
+          "sha256": "df55266c583e36989b1675a786abb9526a810dfba09a90998219627aec123555"
+        },
+        {
+          "path": "report.html",
+          "bytes": 1251821,
+          "sha256": "7720306213c64e7b79185f61ccbc3a406c169730925b33d20bb47e8a946fb4a6"
+        },
+        {
+          "path": "supplemental-requests.json",
+          "bytes": 1967,
+          "sha256": "bfa93d854ff0e29b45169c2d463161ae429633590638fbd4dd9b5a44bc22879e"
+        },
+        {
+          "path": "observed-report.json",
+          "bytes": 14430,
+          "sha256": "a3c311f92c06e9eecc01b15019139ce7fbfd1c137505f91c097c2647ca6383e1"
+        }
+      ],
+      "station_id": "21SC60WQ_WQX-RL-18151",
+      "source_operation": "A73C-RL18151-PHOSPHORUS-20261013"
+    },
+    {
+      "id": "rl18151-microbiological-observations-2018-20261013",
+      "title": "RL-18151 original microbiological context",
+      "kind": "table",
+      "path": "derived/observations-microbiological.csv",
+      "role": "OBSERVATION_CONTEXT",
+      "uri": "https://waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-RL-18151&characteristicType=Microbiological&mimeType=csv&sorted=no&startDateLo=01-01-2018&startDateHi=10-13-2026",
+      "vintage": "Original agency responses retained 2026-10-13",
+      "bytes": 63381,
+      "sha256": "221c721ad4b2f53bcd57358e8cbc56060c88571eba67d3c14f36efaa77523173",
+      "companions": [
+        {
+          "path": "README.md",
+          "bytes": 9886,
+          "sha256": "02a86c0d8d8b80219f368a5c9113cc2d40c616ad1b06b2a61a56d55bf8fa93e6"
+        },
+        {
+          "path": "SOURCE_CAPTURE.md",
+          "bytes": 3129,
+          "sha256": "ab8f6cd949db6b142644a6250c5594aeef7972a510651bf28af3eb8c02a94de4"
+        },
+        {
+          "path": "acquisition-plan.json",
+          "bytes": 9199,
+          "sha256": "472cd98e720add432fd750ec69ab93c8540395bb527cd5abf5a30826fa36e3c4"
+        },
+        {
+          "path": "analysis.mjs",
+          "bytes": 25000,
+          "sha256": "abdc4ae6b4c3928c05831264e076f7be0cd25d8b2d5c324164d4b569b3526042"
+        },
+        {
+          "path": "build-study.mjs",
+          "bytes": 9606,
+          "sha256": "1125e1f04f7c4b9d8a91548fb31c86d56e4f41c9c902b326153e80542f396f81"
+        },
+        {
+          "path": "capture-manifest.json",
+          "bytes": 47483,
+          "sha256": "e8eedb832f5d6b117a2280282bd1ba7ddd153626e53a1a7d3faceeb19a7fb9b8"
+        },
+        {
+          "path": "capture_rl18151.py",
+          "bytes": 18835,
+          "sha256": "c853934b1a975695b6005b3e9b6601125a81c1948250ee35e5e87f2a4f4814fd"
+        },
+        {
+          "path": "derived/annual-cohorts.csv",
+          "bytes": 39912,
+          "sha256": "b41a9647d91227476067323c3797e4220497bcbb4fc2db0d787c1761af476f08"
+        },
+        {
+          "path": "derived/annual-cohorts.json",
+          "bytes": 142642,
+          "sha256": "139a79ae2e582e531ee834cf87882fb107089e68ae815966c40cf54bbc505f66"
+        },
+        {
+          "path": "derived/observations-nutrient.csv",
+          "bytes": 220255,
+          "sha256": "e8250cc712c5f29ff81c1e5c23cde524a6650e36810ffcd8353948adc8b571ed"
+        },
+        {
+          "path": "derived/observations-physical.csv",
+          "bytes": 393259,
+          "sha256": "10a576ecefd713bf8ac24276c761b7ecb78aedcd3744a629837d3fef5072ea05"
+        },
+        {
+          "path": "derived/observed-records.csv",
+          "bytes": 482781,
+          "sha256": "af3746074c4d93f165388bece566192027ef190c25967f559a9a5eb261079d47"
+        },
+        {
+          "path": "derived/observed-records.json",
+          "bytes": 1212237,
+          "sha256": "4b867f9f45dc5ced7c6e0a3bd4541c688d1ff33c59878bb7b6aecd6c33f55374"
+        },
+        {
+          "path": "derived/station.geojson",
+          "bytes": 2435,
+          "sha256": "225e7c0ac6c89703154f406406526415a871aa9f670f2bc9cb8717904f036a3a"
+        },
+        {
+          "path": "derived/study-summary.json",
+          "bytes": 7495,
+          "sha256": "2b1a71f4b63a61ed72e6ef8a371d94fe74d5407feb1c6553dfad4d7bad877477"
+        },
+        {
+          "path": "import_rl18151.py",
+          "bytes": 4776,
+          "sha256": "f148bc2845cfca878046260ff4e2a1f974aa33642458e7a8a2a40f2faf76f0db"
+        },
+        {
+          "path": "original-join-census.json",
+          "bytes": 7722,
+          "sha256": "073de4119bdda66898a197d74d801ce382ed4f86c195a73c25d84f76346299ba"
+        },
+        {
+          "path": "original/microbiological-activities.csv",
+          "bytes": 13054,
+          "sha256": "940dddea160b94cbe55820eae5c9de5d0085b78724b408594f53f445187846f6"
+        },
+        {
+          "path": "original/microbiological-detection_limits.csv",
+          "bytes": 8587,
+          "sha256": "4c6b73b72d4a703a5e8d7d9ecdc15c14ae444c47e3c8adefd44bbe7e06e0d853"
+        },
+        {
+          "path": "original/microbiological-narrow-results.csv",
+          "bytes": 27742,
+          "sha256": "792e4113a233e030868aaddd1500ec5f215844b95137f12c1bed0797a5d57264"
+        },
+        {
+          "path": "original/microbiological-results.csv",
+          "bytes": 22204,
+          "sha256": "ecc84b2627bdf66366a9116e2f7ef4d2d0689c05ca373ce57c91b4e199261e5b"
+        },
+        {
+          "path": "original/microbiological-summary.csv",
+          "bytes": 1757,
+          "sha256": "66a3f4dcb355b45d1c895cc83978333810194f49ae3de3dda0df16fac85fa615"
+        },
+        {
+          "path": "original/nutrient-activities.csv",
+          "bytes": 12520,
+          "sha256": "8b2660489fceae6bd899e84e7570d1599beb5094e1d45b6740ab57e8096fbcde"
+        },
+        {
+          "path": "original/nutrient-detection_limits.csv",
+          "bytes": 31072,
+          "sha256": "2b3c8de0cb9535bc4b832ec6ced8377ec7756651511ee3b0e3c69f335c5a6aa9"
+        },
+        {
+          "path": "original/nutrient-narrow-results.csv",
+          "bytes": 83720,
+          "sha256": "99359e82f86cd837f03ebb362577f47a91ec780bc119b3f124d5f07d95645029"
+        },
+        {
+          "path": "original/nutrient-results.csv",
+          "bytes": 64069,
+          "sha256": "4a7bbf405453dcecab17008aabd567d810ad1c7be0f421a41d5716ad64454919"
+        },
+        {
+          "path": "original/nutrient-summary.csv",
+          "bytes": 6088,
+          "sha256": "b27917852d21f4c06b36d1d97fb5a19b4575f722fe6066252144c677c21cf3e8"
+        },
+        {
+          "path": "original/physical-activities.csv",
+          "bytes": 13054,
+          "sha256": "940dddea160b94cbe55820eae5c9de5d0085b78724b408594f53f445187846f6"
+        },
+        {
+          "path": "original/physical-detection_limits.csv",
+          "bytes": 46817,
+          "sha256": "4ca32a1db27ce8e346f639147afcea7a0a3b800f479e6dd33d2afcc342e67d54"
+        },
+        {
+          "path": "original/physical-narrow-results.csv",
+          "bytes": 135205,
+          "sha256": "b16459ef9dd5813e0a7bee472d0fb6dbe774fef6eebf19e1a943f73f86f163e8"
+        },
+        {
+          "path": "original/physical-results.csv",
+          "bytes": 114132,
+          "sha256": "939db3b76a302ab663e412f069660dbf3a4dfeabfdb9e4d6fd3943b67adcc5bb"
+        },
+        {
+          "path": "original/physical-summary.csv",
+          "bytes": 11504,
+          "sha256": "76433929d14f85fa5e3c9386d6c2171e40cde913a1bc2085deee8ad7d4896a10"
+        },
+        {
+          "path": "original/station.csv",
+          "bytes": 1313,
+          "sha256": "45829fab069ef23454a949aa2469ed947ade8cbee08387a9d23f56cf51931d50"
+        },
+        {
+          "path": "render-report.mjs",
+          "bytes": 19383,
+          "sha256": "df55266c583e36989b1675a786abb9526a810dfba09a90998219627aec123555"
+        },
+        {
+          "path": "report.html",
+          "bytes": 1251821,
+          "sha256": "7720306213c64e7b79185f61ccbc3a406c169730925b33d20bb47e8a946fb4a6"
+        },
+        {
+          "path": "supplemental-requests.json",
+          "bytes": 1967,
+          "sha256": "bfa93d854ff0e29b45169c2d463161ae429633590638fbd4dd9b5a44bc22879e"
+        },
+        {
+          "path": "observed-report.json",
+          "bytes": 14430,
+          "sha256": "a3c311f92c06e9eecc01b15019139ce7fbfd1c137505f91c097c2647ca6383e1"
+        }
+      ],
+      "station_id": "21SC60WQ_WQX-RL-18151",
+      "source_operation": "A73C-RL18151-PHOSPHORUS-20261013"
+    }
+  ]
+}

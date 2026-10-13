@@ -1,0 +1,253 @@
+{
+  "schema": "upstate.dmr-native-map-companion/v1",
+  "operation_id": "UPSTATE-EIGHTEENMILE-2023-NPDES-20261013",
+  "source_id": "scdes-eighteenmile-npdes-outfalls-2023",
+  "geometry_source": {
+    "path": "observations/eighteenmile_2023/npdes/originals/des_four_npdes_outfall_features.json",
+    "bytes": 19462,
+    "sha256": "46505b3448322549e2939e431cd4fe6b095eebbd5369c20e0612dac546c6c50e",
+    "url": "https://gis.des.sc.gov/gisserver/rest/services/water/Water_Permits/MapServer/21/query?where=PrmtPrmtNum%20IN%20('SC0042994'%2C'SC0047856'%2C'SC0000477'%2C'SC0035700')&outFields=*&returnGeometry=true&f=pjson",
+    "source_crs": "EPSG:26917",
+    "capture_utc": "2026-10-13 01:12:13 UTC",
+    "feature_count": 4
+  },
+  "annual_source": {
+    "id": "upstate-eighteenmile-2023-dmr-annual-loads-ef74ad35ef48",
+    "path": "observations/eighteenmile_2023/npdes/derived/annual_loads.csv",
+    "bytes": 13416,
+    "sha256": "ef74ad35ef4882ae41f9ce0b80c17d6c37dec5af1a45f4cd7be5cb0e1351294e"
+  },
+  "period_source": {
+    "id": "upstate-eighteenmile-2023-dmr-period-loads-872d4183e2e5",
+    "path": "observations/eighteenmile_2023/npdes/derived/period_loads.csv",
+    "bytes": 141817,
+    "sha256": "872d4183e2e55706c031c6d60438963660f6fb56e8312eaa9da1b75473b44648"
+  },
+  "join": {
+    "primary_key": "permit_id == PrmtPrmtNum",
+    "state_feature_field": "FeatrFeatrId",
+    "epa_feature_field": "reporting_feature",
+    "mapping": "The current state layer maps outfall 001 for each permit. Milliken's original ECHO external reporting features remain T1M and T1Q.",
+    "geometry": "The original returned EPSG:26917 x/y coordinates are copied exactly.",
+    "mass": "GeoJSON numeric properties copy the completed annual table; exact decimal strings and original record selection remain in the CSV and summary.json.",
+    "coverage": "Incomplete annual totals remain null; quantified period totals and day counts remain separate.",
+    "datum": "The original feature response CRS is EPSG:26917; the service metadata's source CRS is retained separately in the original companion."
+  },
+  "source_files": [
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0042994_00665_2023.json",
+      "encoding": "utf-8",
+      "bytes": 58896,
+      "sha256": "a47883f829abe169d618dc79b07d0ecddd6e1c6050e8063e5d62eed338f5dcdb"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0047856_00665_2023.json",
+      "encoding": "utf-8",
+      "bytes": 58803,
+      "sha256": "667e8edd23dc8e50248f74f4f28dc3883b19f1779654e222854e5b227122b204"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0000477_00665_2023.json",
+      "encoding": "utf-8",
+      "bytes": 88067,
+      "sha256": "f138da40ca7d73b3f96a901e478446468bbafdc48d3a5cd79c655efe28b41067"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0035700_00665_2023.json",
+      "encoding": "utf-8",
+      "bytes": 58753,
+      "sha256": "99106e19c23fe55a507dc8b7cfa7a4c37f7bf3f78c6c75ca7e729dca3935f3ff"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0042994_00600_2023.json",
+      "encoding": "utf-8",
+      "bytes": 53692,
+      "sha256": "a54c2fb1e278e7a28269c215c10962ec557818dcb92d5cbb146d839dc1142fe6"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0047856_00600_2023.json",
+      "encoding": "utf-8",
+      "bytes": 53687,
+      "sha256": "62775560cf5a0e39f3ac4956285d5b93bb0e4a33be95400c30d51012cd35356f"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0000477_00620_2023.json",
+      "encoding": "utf-8",
+      "bytes": 118771,
+      "sha256": "aecf79e0f1a2194921879b55dde6a7172ccb41302d543957369ee6768a72548a"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0035700_00600_2023.json",
+      "encoding": "utf-8",
+      "bytes": 58421,
+      "sha256": "955e7700bd4efa980a971e72b88aa91402080f255afb318ef1a8729c51665811"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0042994_00610_2023.json",
+      "encoding": "utf-8",
+      "bytes": 59611,
+      "sha256": "adec3fb0bd7df3d06da23f4b6d23c74db7eda3e071ec29e8400ec2aaee617407"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0047856_00610_2023.json",
+      "encoding": "utf-8",
+      "bytes": 60354,
+      "sha256": "6b8b6995af174e32940ce86a4c65b26559d4e089b778c65eb49d3fec4b236eb1"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0000477_00610_2023.json",
+      "encoding": "utf-8",
+      "bytes": 35170,
+      "sha256": "33e0a6acbf1c21cbf8a1543e8f926d02f7628430e6d12ce83152f3586e0539ee"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0035700_00610_2023.json",
+      "encoding": "utf-8",
+      "bytes": 62375,
+      "sha256": "01b3bb30d74dd2c75d8470eafe800e5cc57c582ba8e4de8e018df703ffb03a25"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0042994_00530_2023.json",
+      "encoding": "utf-8",
+      "bytes": 58956,
+      "sha256": "bb9aa13245f9d1938542ec6dd3174e3e6e948ad59e688b33393dc624b7d28dbf"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0047856_00530_2023.json",
+      "encoding": "utf-8",
+      "bytes": 58966,
+      "sha256": "5a5270796fc2e91206a4db2ac70c605d7edd0833e0568399b2947291607f377e"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0000477_00530_2023.json",
+      "encoding": "utf-8",
+      "bytes": 117178,
+      "sha256": "f6d782ebb4512132adef1acac25aa9d68b678e30886b680e7bc7056675d7a9d0"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0035700_00530_2023.json",
+      "encoding": "utf-8",
+      "bytes": 59193,
+      "sha256": "325975cd22e1d74318f578a9a8f3fcde7dea1e34f3091da92a28847ea33ce413"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0042994_50050_2023.json",
+      "encoding": "utf-8",
+      "bytes": 30014,
+      "sha256": "ba2c20ea9abc201f344c2be9b6444d2a97b2fa48eb7be4c15514f2d3cd71b675"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0047856_50050_2023.json",
+      "encoding": "utf-8",
+      "bytes": 30013,
+      "sha256": "9f546e57a7a4c1b8c5a70eed279c06cc53358e7511ffa1f7b0bc0430dfe7c0d3"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0000477_50050_2023.json",
+      "encoding": "utf-8",
+      "bytes": 59043,
+      "sha256": "48ad94742a16e0d06f78cc94a72e648bed1d309983308ec89ffee13bc359289a"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0035700_50050_2023.json",
+      "encoding": "utf-8",
+      "bytes": 30109,
+      "sha256": "deaca45550a108094158be654e6c8abc5f5f0638b30738d1c24c3e5402b0d9c4"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0042994_2023_inventory.json",
+      "encoding": "utf-8",
+      "bytes": 3520,
+      "sha256": "af3f79a8d09fe3d494922b411375a380f876b8e1a91fb9fbeb610911954c69d4"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0047856_2023_inventory.json",
+      "encoding": "utf-8",
+      "bytes": 3855,
+      "sha256": "43d195131e1615a1d29244d5e7ba5cea7e3099a2ce7acf80e8ef8cf68a1b704e"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0000477_2023_inventory.json",
+      "encoding": "utf-8",
+      "bytes": 3804,
+      "sha256": "e7d8ee26dacc939acf25b07de891de1be561f5860deac8c82dec86c403858e3f"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0035700_2023_inventory.json",
+      "encoding": "utf-8",
+      "bytes": 4166,
+      "sha256": "8d812c75b4c1185252b8ba0dcf30fe3a03c0fa37bfce84eee909ed97dfdeabf9"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/des_four_npdes_outfall_features.json",
+      "encoding": "utf-8",
+      "bytes": 19462,
+      "sha256": "46505b3448322549e2939e431cd4fe6b095eebbd5369c20e0612dac546c6c50e"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0042994_2023_january_all_parameters.json",
+      "encoding": "utf-8",
+      "bytes": 51680,
+      "sha256": "68b577ac0275ad491d154d4cb5932803819bfec82855f9a0bdc5dac7aefc15da"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0047856_2023_january_all_parameters.json",
+      "encoding": "utf-8",
+      "bytes": 43563,
+      "sha256": "1cccc9a8bdfe005dc27ee1362469bd2536d020eddfd52ed53e2fa0a04a476e5d"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/originals/des_npdes_layer21_metadata.json",
+      "encoding": "utf-8",
+      "bytes": 12951,
+      "sha256": "f1260fda40481fe22524971a144d72002011017c3b2b49f91c325854c56f6ecb"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/dmr_records.csv",
+      "encoding": "utf-8",
+      "bytes": 515108,
+      "sha256": "220204d5858981b56a203bb94e3a0a7459706e2ec037bee8b6e12a6503634ac9"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/capture.json",
+      "encoding": "utf-8",
+      "bytes": 32826,
+      "sha256": "434dd8d458e646581224878cc4f4f110f91100af25048f30b70765c8e872fe9c"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/summarize_dmr.mjs",
+      "encoding": "utf-8",
+      "bytes": 20347,
+      "sha256": "dfd36aae420220a2e34a4bce98f29cd5ad715c20ecded4d6acf8c77924bd53f0"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/DMR_LOADS.md",
+      "encoding": "utf-8",
+      "bytes": 9421,
+      "sha256": "fb5b82f3654b14562ed02024308c955e7d081a49d8f8c7b229167cff6ad5d71f"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/derived/period_loads.csv",
+      "encoding": "utf-8",
+      "bytes": 141817,
+      "sha256": "872d4183e2e55706c031c6d60438963660f6fb56e8312eaa9da1b75473b44648"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/derived/annual_loads.csv",
+      "encoding": "utf-8",
+      "bytes": 13416,
+      "sha256": "ef74ad35ef4882ae41f9ce0b80c17d6c37dec5af1a45f4cd7be5cb0e1351294e"
+    },
+    {
+      "path": "observations/eighteenmile_2023/npdes/derived/summary.json",
+      "encoding": "utf-8",
+      "bytes": 35142,
+      "sha256": "50d2234bc42a369ec4da7b5de1e2b045fe061ae92f0e4c6716be3eaf98722969"
+    }
+  ],
+  "vector": {
+    "path": "observations/eighteenmile_2023/npdes/dmr_outfalls_2023.geojson",
+    "bytes": 11329,
+    "sha256": "07b42387abb0398e5be468fce3f28f72ce654ce4abf35fb7a2184e522c65fdf7"
+  }
+}

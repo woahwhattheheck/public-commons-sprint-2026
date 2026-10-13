@@ -186,7 +186,9 @@ report and portable Workspace paths.
 Receive or build the regional result in the existing **Watershed context**
 workbench. Its original result and source identity remain in the project's
 regional registry. In the Community plan editor, select that completed report
-under **Original scientific context**, then save the plan or its next revision.
+under **Regional watershed context → Retained regional report**, then save the
+plan or its next revision. Use **Refresh regional reports** after receiving a new
+regional result. The saved selection appears under **Original scientific context**.
 
 The saved Community context contains only the HUC12 rows represented by the
 selected block-group memberships. The plan preserves the original report ID,

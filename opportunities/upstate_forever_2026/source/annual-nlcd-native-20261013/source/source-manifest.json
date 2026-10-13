@@ -3,7 +3,7 @@
   "title": "USGS Annual NLCD2025 native classes - complete Upper Savannah model source",
   "entries": [
     {
-      "id": "usgs-annual-nlcd-2025-native-region-a9f6bfedc4bd3936",
+      "id": "usgs-annual-nlcd-2025-native-region-3fa517b4cc3251b9",
       "title": "USGS Annual NLCD2025 native classes - complete Upper Savannah model source",
       "kind": "raster",
       "role": "NLCD",
@@ -13,10 +13,10 @@
       "vintage": "USGS published Annual NLCD native time2025-01-01T00:00:00.000Z; captured2026-10-13",
       "source_crs": "EPSG:5070",
       "path": "land-cover.tif",
-      "bytes": 9237060,
-      "sha256": "a9f6bfedc4bd3936b20c05b68709f2f450b822df9fbd8cd53fa2f46bb27e5157",
+      "bytes": 9443751,
+      "sha256": "3fa517b4cc3251b9e1bd31e51b54b036a875c09e5f1075511da7c8e951656670",
       "source_time": "2025-01-01T00:00:00.000Z",
-      "preparation_sha256": "c62a2098a0aebe7000d6dbbb7f94fd999a9f6067f299064d418bf17969d6aba3",
+      "preparation_sha256": "2379619824566b5c4e47d6b6e953ccabaad861508455f7736e9bb2f5cb9b6917",
       "source_description_sha256": "1a3cba52dca82969d46c0f08aa02f5f2047b5c94edb87bc476c8d172bbad0ff9",
       "domain_feature_count": 217,
       "buffer_m": 1000,
@@ -71,18 +71,21 @@
         "nodata_cells": 0,
         "class_counts_scope": "Entire rectangular native source grid; polygon-domain and per-HUC totals are calculated by the receiving model using the original217feature domain.",
         "provider_png_bytes": 11252658,
-        "provider_tiles": 49
+        "provider_tiles": 49,
+        "assembly_revision": "original-png-cell-verified-20261013",
+        "serialized_original_matched_cells": 40713317,
+        "unexpected_zero_cells": 0
       },
       "companions": [
         {
           "path": "plan.json",
-          "bytes": 146944,
-          "sha256": "1ebaae20730dd8cb7ce996211732e536b3ab6ed5ef56f724feaaae53c5af823c"
+          "bytes": 147290,
+          "sha256": "bb1b47bb1836ef856af60085834e6c4b7e7be2fe5ab0c94f3fc4fe8e39f66494"
         },
         {
           "path": "validation.json",
-          "bytes": 12504,
-          "sha256": "d3f93796a006fb80092f97584faca0c0cd13ab65232521ccf56be7fd52d97344"
+          "bytes": 26965,
+          "sha256": "f41bad26fb452d8db29b340bacad02b75fc7e4d94bb1173c0f3a6c01b14cbeaf"
         },
         {
           "path": "class-area.csv",

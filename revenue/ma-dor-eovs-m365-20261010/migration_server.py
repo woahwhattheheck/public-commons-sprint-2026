@@ -10,6 +10,7 @@ import mimetypes
 from pathlib import Path
 import re
 import socket
+import tempfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, quote, urlsplit
 import uuid
@@ -24,11 +25,15 @@ READS = {
     "evidence_link.get", "evidence_link.list", "entity.list", "source.list", "round.list",
     "mapping.list", "reconciliation.list", "correction.list", "correction.history",
     "delivery.get", "delivery.list",
+    "case.schema", "case.dataset.preview", "case.dataset.get", "case.dataset.rows",
+    "case.plan.get", "case.plan.items", "case.rehearsal.get", "case.rehearsal.items",
+    "case.rehearsal.compare", "case.review.get", "case.cutover.get", "case.list",
 }
 STATIC = {
     "/": ("public/migration-index.html", "text/html; charset=utf-8"),
     "/migration-style.css": ("public/migration-style.css", "text/css; charset=utf-8"),
     "/migration-app.js": ("public/migration-app.js", "text/javascript; charset=utf-8"),
+    "/migration-cases.js": ("public/migration-cases.js", "text/javascript; charset=utf-8"),
 }
 HASH = re.compile(r"^[0-9a-f]{64}$")
 MAX_COMMAND = 2 * 1024 * 1024
@@ -189,6 +194,26 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
                 self._json(200, {"sha256": sha, "headers": rows[0] if rows else [],
                                  "sample_rows": rows[1:], "truncated": truncated,
                                  "purpose": "Header selection preview; original import parses the full retained bytes"})
+                return
+            if path == "/api/exports":
+                kind = query.get("kind", [""])[0]
+                identifier = query.get("id", [""])[0]
+                format_name = query.get("format", ["ndjson"])[0]
+                if kind not in {"case.dataset", "case.plan", "case.rehearsal", "case.review", "case.cutover"}:
+                    raise ValueError("Choose a complete case migration export")
+                if format_name not in {"ndjson", "csv"}:
+                    raise ValueError("Choose NDJSON or CSV")
+                # Finish the retained generator before sending headers. Its mutex
+                # binds the complete export to the original immutable selection.
+                with tempfile.TemporaryFile(mode="w+b") as output:
+                    for chunk in self.server.workspace.iter_export(kind, identifier, format=format_name):
+                        output.write(chunk)
+                    length = output.tell()
+                    output.seek(0)
+                    self._headers(200, "text/csv; charset=utf-8" if format_name == "csv" else "application/x-ndjson; charset=utf-8",
+                                  length, filename=kind + "-" + identifier + "." + format_name)
+                    while part := output.read(BLOCK):
+                        self.wfile.write(part)
                 return
             if path.startswith("/api/files/"):
                 sha = path[len("/api/files/"):]

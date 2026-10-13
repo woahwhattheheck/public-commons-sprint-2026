@@ -141,7 +141,7 @@ def _safe_id(value: str) -> str:
     return value
 
 
-def _atomic(path: Path, data: bytes) -> None:
+def _atomic(path: Path, data: bytes, *, overwrite: bool = True) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(prefix="." + path.name + "-", dir=path.parent)
     try:
@@ -149,7 +149,14 @@ def _atomic(path: Path, data: bytes) -> None:
             stream.write(data)
             stream.flush()
             os.fsync(stream.fileno())
-        os.replace(tmp, path)
+        if overwrite:
+            os.replace(tmp, path)
+        else:
+            # Publish a complete new head without replacing another import's choice.
+            try:
+                os.link(tmp, path)
+            except FileExistsError:
+                pass
     finally:
         if os.path.exists(tmp):
             os.unlink(tmp)
@@ -886,7 +893,15 @@ class PublishedStudyStore:
         operation_id: str | None = None,
         context_manifests: list[Path] | None = None,
         context_application: str | Path | None = None,
+        make_current: bool = True,
     ) -> dict[str, Any]:
+        """Retain an exact source version, optionally preserving the selected version.
+
+        Normal imports select their edition. Saved-review restoration uses
+        make_current=False: it creates a head only in a workspace without one.
+        """
+        if not isinstance(make_current, bool):
+            raise ValueError("make_current must be a boolean.")
         if isinstance(source, bytes):
             files, origin = decode_companion(source)
         else:
@@ -1003,6 +1018,7 @@ class PublishedStudyStore:
         _atomic(
             self.root / study_id / "current.json",
             _json_bytes({"study_id": study_id, "version_id": version_id}),
+            overwrite=make_current,
         )
         return {"record": self._record(study_id, version_id), "reused": reused}
 

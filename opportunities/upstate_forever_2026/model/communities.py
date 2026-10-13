@@ -383,10 +383,8 @@ def _context(workspace, value, groups=()):
             comparison_id = identifier(comparison.get("id"))
             if comparison_path.parent.name != comparison_id:
                 raise ValueError("Original comparison identity differs")
-            expected = digest({"runs": [baseline_id] + [row["run_id"] for row in alternatives],
-                               "direction": "alternative minus baseline"})
-            if comparison_id != expected:
-                raise ValueError("Original comparison selection changed")
+            from .native_versions import validate_run_comparison
+            validate_run_comparison(workspace, comparison, expected_id=comparison_id)
             snapshots["comparisons"].append(comparison)
     watershed_id = value.get("watershed_context_id") or None
     if watershed_id:
@@ -634,8 +632,16 @@ def save_plan(workspace, selection):
     else:
         previous = None
     context = _context(workspace, selection.get("context", {}), groups)
-    imported = (_intervention_import(selection["intervention_import"], table, previous)
-                if selection.get("intervention_import") is not None else None)
+    requested_import = selection.get("intervention_import")
+    retained_import = (previous or {}).get("intervention_import")
+    if (retained_import is not None and requested_import == retained_import):
+        # A later plan edition retains the original CSV parsing context, including
+        # its known spreadsheet escapes and original comparison plan. Editor changes
+        # below are compared with those original parsed rows without reinterpreting them.
+        imported = deepcopy(retained_import)
+    else:
+        imported = (_intervention_import(requested_import, table, previous)
+                    if requested_import is not None else None)
     supplied_interventions = selection.get(
         "interventions", imported["imported_interventions"] if imported is not None else [])
     interventions = _interventions(supplied_interventions, groups, previous)

@@ -399,9 +399,16 @@ class NativeJobs:
                 raise error
             if self.operator.closing:
                 # Let Operator.close finish while the detached native worker continues.
-                self._record_exit(execution, "detached")
-                raise NativeJobDetached("NATIVE_DETACHED",
-                                        "The operator closed while its native calculation continued. Reopen this task to reconnect to the same worker.")
+                error = NativeJobDetached(
+                    "NATIVE_DETACHED",
+                    "The operator closed while its native calculation continued. Reopen this task to reconnect to the same worker.")
+                try:
+                    self._record_exit(execution, "detached")
+                except OSError as recording_error:
+                    # Receipt capacity cannot turn a live detached worker into
+                    # a failed calculation or change its original identity.
+                    raise error from recording_error
+                raise error
             time.sleep(0.4)
 
     @staticmethod

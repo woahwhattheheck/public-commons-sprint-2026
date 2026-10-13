@@ -1,0 +1,788 @@
+{
+  "schema": "upstate.point-source-cohort-inputs/v1",
+  "edition": "20261013-eighteenmile-point-source-cohort-2",
+  "source_banks": [
+    "F0C8K2W4B0D",
+    "F0C8Q6PADFC",
+    "F0C8J1E75FV"
+  ],
+  "required_inputs": {
+    "echo_measurements": {
+      "path": "source/echo_dmr/20261013/tables/dmr_measurements_2023.csv",
+      "bytes": 1831853,
+      "sha256": "fd655b7a6046db2dc2ea75988088b1e7faa07cfaf5782575707b18b8e7b3c4b7"
+    },
+    "echo_periods_2023": {
+      "path": "source/echo_dmr/20261013/tables/dmr_loads_monitoring_period_2023.csv",
+      "bytes": 436056,
+      "sha256": "c0cad052fd255997e4b66c5e485e355fa5a46a950780cc44d2806b27c505d50a"
+    },
+    "echo_history_periods": {
+      "path": "source/echo_dmr/20261013/tables/dmr_loads_monitoring_period_history_2007_2026.csv",
+      "bytes": 7525675,
+      "sha256": "a23fc47b3bbd57cd690a1667b2ee5d93298cec3633c0ecf6383fd3d58883e783"
+    },
+    "echo_annual_n": {
+      "path": "source/echo_dmr/20261013/tables/dmr_annual_history_2007_2026.csv",
+      "bytes": 630873,
+      "sha256": "fe28085c03c7b0773b136bb5b81ac3c9235c7f138ef89203d7c73325b67011d8"
+    },
+    "echo_annual_y": {
+      "path": "source/echo_dmr/20261013/tables/dmr_annual_estimation_history_2007_2026.csv",
+      "bytes": 630484,
+      "sha256": "c0d79558023dfd12157ed64c913a55d98ca22e1e8b78dc854329513966247c6b"
+    },
+    "echo_history_context": {
+      "path": "source/echo_dmr/20261013/tables/dmr_annual_period_history_context.csv",
+      "bytes": 1724715,
+      "sha256": "25529c05ccf27e2fc935cbd4330ba8c5dee418a204c03780cd22034dea960c47"
+    },
+    "echo_manifest": {
+      "path": "source/echo_dmr/20261013/sources.json",
+      "bytes": 52275,
+      "sha256": "45fe15471a315270f54979a466ac42adfdc6662a2f0a4ca48d6d47905339b55b"
+    },
+    "echo_capture": {
+      "path": "source/echo_dmr/20261013/capture-manifest.json",
+      "bytes": 43054,
+      "sha256": "1e7ce5caa13808b8e6ed9ba0a2c5be34f210434e050c5a69071cd592f9f7d73f"
+    },
+    "science_records": {
+      "path": "observations/eighteenmile_2023/npdes/dmr_records.csv",
+      "bytes": 515108,
+      "sha256": "220204d5858981b56a203bb94e3a0a7459706e2ec037bee8b6e12a6503634ac9"
+    },
+    "science_periods": {
+      "path": "observations/eighteenmile_2023/npdes/derived/period_loads.csv",
+      "bytes": 141817,
+      "sha256": "872d4183e2e55706c031c6d60438963660f6fb56e8312eaa9da1b75473b44648"
+    },
+    "science_annual": {
+      "path": "observations/eighteenmile_2023/npdes/derived/annual_loads.csv",
+      "bytes": 13416,
+      "sha256": "ef74ad35ef4882ae41f9ce0b80c17d6c37dec5af1a45f4cd7be5cb0e1351294e"
+    },
+    "science_summary": {
+      "path": "observations/eighteenmile_2023/npdes/derived/summary.json",
+      "bytes": 35142,
+      "sha256": "50d2234bc42a369ec4da7b5de1e2b045fe061ae92f0e4c6716be3eaf98722969"
+    },
+    "science_capture": {
+      "path": "observations/eighteenmile_2023/npdes/capture.json",
+      "bytes": 32826,
+      "sha256": "434dd8d458e646581224878cc4f4f110f91100af25048f30b70765c8e872fe9c"
+    },
+    "state_features": {
+      "path": "observations/eighteenmile_2023/npdes/originals/des_four_npdes_outfall_features.json",
+      "bytes": 19462,
+      "sha256": "46505b3448322549e2939e431cd4fe6b095eebbd5369c20e0612dac546c6c50e"
+    },
+    "state_metadata": {
+      "path": "observations/eighteenmile_2023/npdes/originals/des_npdes_layer21_metadata.json",
+      "bytes": 12951,
+      "sha256": "f1260fda40481fe22524971a144d72002011017c3b2b49f91c325854c56f6ecb"
+    },
+    "science_map": {
+      "path": "observations/eighteenmile_2023/npdes/dmr_outfalls_2023.geojson",
+      "bytes": 11329,
+      "sha256": "07b42387abb0398e5be468fce3f28f72ce654ce4abf35fb7a2184e522c65fdf7"
+    },
+    "science_map_manifest": {
+      "path": "observations/eighteenmile_2023/npdes/model-sources.json",
+      "bytes": 31528,
+      "sha256": "3a621b46350c20488ce6410188dce8247e182a44b8519196802f2ea875840d9f"
+    },
+    "science_map_capture": {
+      "path": "observations/eighteenmile_2023/npdes/map-layer-capture.json",
+      "bytes": 10478,
+      "sha256": "c6a83003f474bd031a485f397cfda2e61722ca61cd0fd33a594ea661c56dbb73"
+    }
+  },
+  "source_files": {
+    "source_tools/echo_dmr_source.mjs": {
+      "path": "source_tools/echo_dmr_source.mjs",
+      "bytes": 21995,
+      "sha256": "46c38517c582f0c77f5b575c06690357618ebf44276b1abf768c201fc7189b7a"
+    },
+    "source_tools/echo_dmr_source_cli.mjs": {
+      "path": "source_tools/echo_dmr_source_cli.mjs",
+      "bytes": 2151,
+      "sha256": "8ae677b6220d038311e38f685ebcc7377e472e6d9a00a43cf52b725642a49aba"
+    },
+    "source/echo_dmr/20261013/raw/reporting-years.json": {
+      "path": "source/echo_dmr/20261013/raw/reporting-years.json",
+      "bytes": 1013,
+      "sha256": "7760b5f81c58e9f1efe7640b8f84d05b18ce29c1c7abfa2d07b9308cc77b6578"
+    },
+    "source/echo_dmr/20261013/raw/SC0042994-facility-2023.json": {
+      "path": "source/echo_dmr/20261013/raw/SC0042994-facility-2023.json",
+      "bytes": 9667,
+      "sha256": "0ca866eba00b0da5ef5fe395d5e65124ae8ac537ed45430368e540467e1e8b20"
+    },
+    "source/echo_dmr/20261013/raw/SC0047856-facility-2023.json": {
+      "path": "source/echo_dmr/20261013/raw/SC0047856-facility-2023.json",
+      "bytes": 9491,
+      "sha256": "1b8f1c451d90c54f113459deceb67598a6af7498d39d7cb90c5d26401df55a63"
+    },
+    "source/echo_dmr/20261013/raw/SC0000477-facility-2023.json": {
+      "path": "source/echo_dmr/20261013/raw/SC0000477-facility-2023.json",
+      "bytes": 12400,
+      "sha256": "8f39cc609e7415e54dd27c3ad64920469ba66806e767e50c55fabb6e012a3008"
+    },
+    "source/echo_dmr/20261013/raw/SC0035700-facility-2023.json": {
+      "path": "source/echo_dmr/20261013/raw/SC0035700-facility-2023.json",
+      "bytes": 8724,
+      "sha256": "845ad55063d808a20012759574b2a63b6ca65fc9c5c1aeae7b101d2e13365ca1"
+    },
+    "source/echo_dmr/20261013/raw/SC0042994-effluent-2023.json": {
+      "path": "source/echo_dmr/20261013/raw/SC0042994-effluent-2023.json",
+      "bytes": 647932,
+      "sha256": "b83de2dc6a83f521a1e6a46ddb48709882c77cefd74097038cb838c900a886d7"
+    },
+    "source/echo_dmr/20261013/raw/SC0047856-effluent-2023.json": {
+      "path": "source/echo_dmr/20261013/raw/SC0047856-effluent-2023.json",
+      "bytes": 580658,
+      "sha256": "bfd999ef18525d1eb89c3f4f6bdbf79a7944cf8ec29c6d4905ba2feaa2fe0c87"
+    },
+    "source/echo_dmr/20261013/raw/SC0000477-effluent-2023.json": {
+      "path": "source/echo_dmr/20261013/raw/SC0000477-effluent-2023.json",
+      "bytes": 1016805,
+      "sha256": "248c85d898bac245ba7427a6a74ddbff2d64299cdfdb01f45bfd4288d5fcaaef"
+    },
+    "source/echo_dmr/20261013/raw/SC0035700-effluent-2023.json": {
+      "path": "source/echo_dmr/20261013/raw/SC0035700-effluent-2023.json",
+      "bytes": 547565,
+      "sha256": "2b4f77a68bae1672346e3aa207217e31d4a6c09fbbf1de1ea353f0110ba39470"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2023-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2023-est-N.json",
+      "bytes": 752080,
+      "sha256": "052a79122c0d3b77b352e122b600938955658d7178a3e7d8204024bdebf74ac0"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2026-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2026-est-N.json",
+      "bytes": 75973,
+      "sha256": "896b6f8f4d950f128b4d3071ed83cb307770e7ac4b7641306ee7980846e4e96e"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2025-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2025-est-N.json",
+      "bytes": 63222,
+      "sha256": "71b488d5d3292c70003424dbf429552f7e48cde635eff5eb76335c3d0a2bdc58"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2024-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2024-est-N.json",
+      "bytes": 63198,
+      "sha256": "e8abf40efa7607b1f53c38cb10ecbe82b699c53b200fbd3f3a525974cba70046"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2022-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2022-est-N.json",
+      "bytes": 63180,
+      "sha256": "3d97982b4d31a25c5a19ebcbbd43baea319651dfa5243565c93992ad0cd41fb4"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2021-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2021-est-N.json",
+      "bytes": 66835,
+      "sha256": "2b0248b77e873c04ef97829ee78310304f3c0226b2551d6057a6e815245ad5c3"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2020-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2020-est-N.json",
+      "bytes": 63188,
+      "sha256": "48a1f65592b1787a7f182f9b94786001cc16c23cfa3d56abe9e84763d82118f7"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2018-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2018-est-N.json",
+      "bytes": 53789,
+      "sha256": "d471af15ff1508d02a4f41967d2836fd6009f99f7d426d2e43443ae3d00a6ab0"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2017-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2017-est-N.json",
+      "bytes": 53969,
+      "sha256": "2d8ae869d1bec83e936b9555f74c3ec811f4d880b083fbe548649f8096730c7a"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2016-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2016-est-N.json",
+      "bytes": 53882,
+      "sha256": "da9aaff0e4a02ba747fe438f5bc9812bc518e94b4e49eea41a228455629fd13d"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2015-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2015-est-N.json",
+      "bytes": 53939,
+      "sha256": "8c585b586d2706fa8fb3abc04ab0bbc39cdb6f97991771b5fa47b70d7e9437e7"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2014-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2014-est-N.json",
+      "bytes": 59525,
+      "sha256": "bc8ca5a4aedbb94a333744c14140a263f06543761554fdb28b8fb2c155257de7"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2013-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2013-est-N.json",
+      "bytes": 52131,
+      "sha256": "647b9c2962301da76c5170809b285ace3f2789ad01beda568aa5b481b42730f9"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2012-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2012-est-N.json",
+      "bytes": 52197,
+      "sha256": "df86e80ab7f8c461abc43fc54de2a58f345c4f9a225f27d69413f8f7a797ec54"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2011-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2011-est-N.json",
+      "bytes": 65225,
+      "sha256": "13136db05bfe9a2ffdddb542510648a7abe0fa50370443e6822af862c2a66358"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2010-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2010-est-N.json",
+      "bytes": 68876,
+      "sha256": "3412c4288d0b3c3464c6bde84025fc0129c76e7c6d8924bd8f31060d22b09762"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2009-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2009-est-N.json",
+      "bytes": 54027,
+      "sha256": "b66b24268375a7b4b3a1df475b99f7292eff548e0c94dafd3b307d808e043b6c"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2008-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2008-est-N.json",
+      "bytes": 72557,
+      "sha256": "b53dd10bf74743d8a62878be08af47d77988c5c5c16af10f575d1f70d591b361"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2007-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2007-est-N.json",
+      "bytes": 66954,
+      "sha256": "d747fa42e68dc30214c334d985f8ab2e16ac8b520c5623cbdb8330f4939733d7"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2019-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2019-est-N.json",
+      "bytes": 66832,
+      "sha256": "eaa956ec5d7c27b3ea0f66443336d6d4c4b12eb154fee36c19ad35ac64a8edfa"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2023-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2023-est-N.json",
+      "bytes": 63203,
+      "sha256": "cb51589444025c11805161fa522ded12200c40fc7fe119c1fb235c8591a58008"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2023-est-Y.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2023-est-Y.json",
+      "bytes": 63185,
+      "sha256": "f8898c1faf64daecb6feff0e3d2f365150af55b0ee97423da0b8c66238c830ce"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-facility-coordinate-methods.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-facility-coordinate-methods.json",
+      "bytes": 2871,
+      "sha256": "f7dc30ad716b2b965215ab49bdd9196ff191f5173d34bd95e5790ff09fcbb053"
+    },
+    "source/echo_dmr/20261013/documentation/dmr-api-schema.json": {
+      "path": "source/echo_dmr/20261013/documentation/dmr-api-schema.json",
+      "bytes": 528790,
+      "sha256": "9fba2778ea30b18664cd69dc87e3f7967c1a1216c56e618a701ecf542ae16023"
+    },
+    "source/echo_dmr/20261013/documentation/eff-api-schema.json": {
+      "path": "source/echo_dmr/20261013/documentation/eff-api-schema.json",
+      "bytes": 61813,
+      "sha256": "c41b228f2cf754830f9117cd17c61035d9d57551af082f2a48f910a3dfbfef8b"
+    },
+    "source/echo_dmr/20261013/documentation/cwa-api-schema.json": {
+      "path": "source/echo_dmr/20261013/documentation/cwa-api-schema.json",
+      "bytes": 488463,
+      "sha256": "28188ed995e98bd02bd8bbd11fe3f91e04154d237fd710b72fc5e11858bd2649"
+    },
+    "source/echo_dmr/20261013/documentation/cwa-column-metadata.json": {
+      "path": "source/echo_dmr/20261013/documentation/cwa-column-metadata.json",
+      "bytes": 39209,
+      "sha256": "f10e0e01d488541b91b25af8037e78dd906c957cc9d8e64b3c94ed3fcca4de8a"
+    },
+    "source/echo_dmr/20261013/documentation/custom-search-results.source.json": {
+      "path": "source/echo_dmr/20261013/documentation/custom-search-results.source.json",
+      "bytes": 26204,
+      "sha256": "7daeeb2d21bb5f6ac2726c34e8ba7d729af892471595b23adccda53023a44559"
+    },
+    "source/echo_dmr/20261013/documentation/technical-background.source.json": {
+      "path": "source/echo_dmr/20261013/documentation/technical-background.source.json",
+      "bytes": 10360,
+      "sha256": "dd8d8260d1489bad43a0b41f96e53cd2e3822e47a38e46876eeb227eff826e44"
+    },
+    "source/echo_dmr/20261013/documentation/effluent-charts.source.json": {
+      "path": "source/echo_dmr/20261013/documentation/effluent-charts.source.json",
+      "bytes": 14164,
+      "sha256": "a5e0ca1b52386b942c11a77318568b117449281fdb5cb4b32de4dc6e0600eb73"
+    },
+    "source/echo_dmr/20261013/documentation/custom-search.source.json": {
+      "path": "source/echo_dmr/20261013/documentation/custom-search.source.json",
+      "bytes": 58056,
+      "sha256": "14c2f361ded416197ab2b00bbd971fbe07ee5e7a31817ad6caed597a144e08f6"
+    },
+    "source/echo_dmr/20261013/documentation/monitoring-period.source.json": {
+      "path": "source/echo_dmr/20261013/documentation/monitoring-period.source.json",
+      "bytes": 9311,
+      "sha256": "a6e00491e620af5c817da386b861922f432d381312662ba0cdcaaa87b10705a6"
+    },
+    "source/echo_dmr/20261013/capture-manifest.json": {
+      "path": "source/echo_dmr/20261013/capture-manifest.json",
+      "bytes": 43054,
+      "sha256": "1e7ce5caa13808b8e6ed9ba0a2c5be34f210434e050c5a69071cd592f9f7d73f"
+    },
+    "source/echo_dmr/20261013/field-guide.json": {
+      "path": "source/echo_dmr/20261013/field-guide.json",
+      "bytes": 10944,
+      "sha256": "e9c3f921deeb6652a5438bad0b2cf05213875e38b3046920df8770d17270726a"
+    },
+    "source/echo_dmr/20261013/README.md": {
+      "path": "source/echo_dmr/20261013/README.md",
+      "bytes": 12972,
+      "sha256": "6674208ea60bc07463add806a5fdf6009715ff71d02af938be3844e1cb937530"
+    },
+    "source/echo_dmr/20261013/tables/dmr_measurements_2023.csv": {
+      "path": "source/echo_dmr/20261013/tables/dmr_measurements_2023.csv",
+      "bytes": 1831853,
+      "sha256": "fd655b7a6046db2dc2ea75988088b1e7faa07cfaf5782575707b18b8e7b3c4b7"
+    },
+    "source/echo_dmr/20261013/tables/dmr_loads_monitoring_period_2023.csv": {
+      "path": "source/echo_dmr/20261013/tables/dmr_loads_monitoring_period_2023.csv",
+      "bytes": 436056,
+      "sha256": "c0cad052fd255997e4b66c5e485e355fa5a46a950780cc44d2806b27c505d50a"
+    },
+    "source/echo_dmr/20261013/tables/dmr_annual_history_2007_2026.csv": {
+      "path": "source/echo_dmr/20261013/tables/dmr_annual_history_2007_2026.csv",
+      "bytes": 630873,
+      "sha256": "fe28085c03c7b0773b136bb5b81ac3c9235c7f138ef89203d7c73325b67011d8"
+    },
+    "source/echo_dmr/20261013/tables/dmr_annual_estimation_2023.csv": {
+      "path": "source/echo_dmr/20261013/tables/dmr_annual_estimation_2023.csv",
+      "bytes": 33835,
+      "sha256": "3ff99ec2123d3fc5be004fb12f83fcef5d5785ccd4bd55b9a0f48411394dda07"
+    },
+    "source/echo_dmr/20261013/tables/dmr_2023_mass_context.csv": {
+      "path": "source/echo_dmr/20261013/tables/dmr_2023_mass_context.csv",
+      "bytes": 24892,
+      "sha256": "7ebcecc03d8123c33a0cb55e3e9145b97de3492631e618b84bb90399ab0c4412"
+    },
+    "source/echo_dmr/20261013/tables/dmr_parameter_inventory_2023.csv": {
+      "path": "source/echo_dmr/20261013/tables/dmr_parameter_inventory_2023.csv",
+      "bytes": 27032,
+      "sha256": "877bfc823f344b4bc50db8230f5fca0d96470d858d57ac5b70799b29e4c7af2c"
+    },
+    "source/echo_dmr/20261013/tables/dmr_requested_parameter_coverage_2023.csv": {
+      "path": "source/echo_dmr/20261013/tables/dmr_requested_parameter_coverage_2023.csv",
+      "bytes": 4721,
+      "sha256": "956ffdb3d18258cef6ed22cfddb6dd7a4c03845fa5395796b5de8b7738bfc07c"
+    },
+    "source/echo_dmr/20261013/tables/dmr_facility_coordinates.csv": {
+      "path": "source/echo_dmr/20261013/tables/dmr_facility_coordinates.csv",
+      "bytes": 2518,
+      "sha256": "fae705c791eb227c608978e590dbd5692ca200754021222fccd9be3abada8e55"
+    },
+    "source/echo_dmr/20261013/tables/dmr_permit_feature_coordinates.csv": {
+      "path": "source/echo_dmr/20261013/tables/dmr_permit_feature_coordinates.csv",
+      "bytes": 3327,
+      "sha256": "7a52f720eeaec3203dcd1ee3541829bc3378d7eef9660aa3dd18934b5bfac2ef"
+    },
+    "source/echo_dmr/20261013/tables/dmr_facility_profiles.csv": {
+      "path": "source/echo_dmr/20261013/tables/dmr_facility_profiles.csv",
+      "bytes": 2372,
+      "sha256": "a9fef062de7cbb61d2f776de70123b11773dc7ba39d9a91f24b29a2f2b5cc28a"
+    },
+    "source/echo_dmr/20261013/sources.json": {
+      "path": "source/echo_dmr/20261013/sources.json",
+      "bytes": 52275,
+      "sha256": "45fe15471a315270f54979a466ac42adfdc6662a2f0a4ca48d6d47905339b55b"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2026-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2026-est-N.json",
+      "bytes": 506612,
+      "sha256": "349caa3b41bf1e17adb5512a6cd71baa451b1469f341da87fb39054876af40c2"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2026-est-Y.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2026-est-Y.json",
+      "bytes": 76010,
+      "sha256": "3c02634ffad2211840e47104e3a09ac5148c4156e9bcd82395cc1d19fa69bb2f"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2025-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2025-est-N.json",
+      "bytes": 756332,
+      "sha256": "e4d3c9bd56acede35991a0d056a7613d7713ec7d5291b5bb02514bedb378981e"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2025-est-Y.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2025-est-Y.json",
+      "bytes": 63192,
+      "sha256": "bc7f9efc7d2e5703ee8f674b1497a7cea50bee6fe42b610be970071f0f7e027c"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2024-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2024-est-N.json",
+      "bytes": 756465,
+      "sha256": "2c0e7cecd02e392ceebe72f74ddfe1fc48ba84d3bfa871f8c29ba516432d4674"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2024-est-Y.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2024-est-Y.json",
+      "bytes": 63173,
+      "sha256": "c3b947c3da7636e934d93a28cf25f3dfd30d014cc481c9ee9ef353042db27ca7"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2022-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2022-est-N.json",
+      "bytes": 724411,
+      "sha256": "2a54d296068263721ea870d4d886dd5f733a8404029835981d15dc9732445870"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2022-est-Y.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2022-est-Y.json",
+      "bytes": 63156,
+      "sha256": "4d7d3c82b31077eb4e3a3bf4f49df83f5ace40350a5a71eb0655ec37ca8d646a"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2021-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2021-est-N.json",
+      "bytes": 688623,
+      "sha256": "5df30d5a67ddee80fd1b77389e984dd1ce8019d176eae7e956bb4dbc12cba4e0"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2021-est-Y.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2021-est-Y.json",
+      "bytes": 66806,
+      "sha256": "02309ebb5cdfab381c6bcfc4a3bdefe0b011bf61d898f79a2f18494ff958fb27"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2020-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2020-est-N.json",
+      "bytes": 622165,
+      "sha256": "eb0d570c01044eb51e7b19badf560a6541b835a750b7c8b705b1c02db2228f13"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2020-est-Y.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2020-est-Y.json",
+      "bytes": 63166,
+      "sha256": "825c131deaa7c0f18f6e00a4bc0841b0ef7e09dc10a12f35c61e7ea96c43279f"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2019-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2019-est-N.json",
+      "bytes": 555256,
+      "sha256": "c8efdc021bb0bda4b03ed57cba9dcc5d843edef62ad2abeb5daad622089dd8f7"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2019-est-Y.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2019-est-Y.json",
+      "bytes": 66843,
+      "sha256": "f76701db3c0cf89f0e41c265317825f2681aa75721665343cfd103c3d4b708b9"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2018-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2018-est-N.json",
+      "bytes": 449091,
+      "sha256": "f98dbec4225c167c52de5f820e53df35e2a8f8bd6a780c0617aebae1d693b184"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2018-est-Y.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2018-est-Y.json",
+      "bytes": 53781,
+      "sha256": "7821c94cd4e3e8952705a7a23ae1c920b7b0232eec64b35c2ee18a0bf30e6cc7"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2017-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2017-est-N.json",
+      "bytes": 545141,
+      "sha256": "be02291cf99f953016f1f19f8e30055ceb947d3c8880c6330126a51d36d33cdd"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2017-est-Y.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2017-est-Y.json",
+      "bytes": 53975,
+      "sha256": "a5318bd10bb27d5efb0bad4f88acad433fb4e2c131629eec202bc27139627a42"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2016-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2016-est-N.json",
+      "bytes": 424721,
+      "sha256": "45b054767b71d03de4e1bc25ec938ff161f84a5c77390d60eff7f8e934a7cba1"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2016-est-Y.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2016-est-Y.json",
+      "bytes": 53879,
+      "sha256": "ca5e5b9eb114053a7bd6af1770ae54842e5802211228def37a5c56b140ab8ab7"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2015-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2015-est-N.json",
+      "bytes": 631710,
+      "sha256": "c28706826a9ff6cd034ac0ad3925e85b8a78d237fbfcf61c5913e321a50f3845"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2015-est-Y.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2015-est-Y.json",
+      "bytes": 53914,
+      "sha256": "f2280f19ece4574ec1ea547b252b45169c3a75929f854abbfaba0c6ea87ce241"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2014-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2014-est-N.json",
+      "bytes": 641916,
+      "sha256": "7ef7447dc4e0896b8b0aff5d838f03392fd047f73bb2a4b25d45c10021687c6f"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2014-est-Y.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2014-est-Y.json",
+      "bytes": 59504,
+      "sha256": "f82edeb7870e7f590c70f998ba514cfcfdc0ce06dc570f1eddf7ff44c936cfde"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2013-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2013-est-N.json",
+      "bytes": 662159,
+      "sha256": "9744d11286f84f8576264bbc3d18cae8ec5007206b8249828866196ae3595377"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2013-est-Y.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2013-est-Y.json",
+      "bytes": 52107,
+      "sha256": "23180ec321c6974dd777902b872a7bd3e677d1a319c05e6ababb421cca292de5"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2012-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2012-est-N.json",
+      "bytes": 663576,
+      "sha256": "7db6f9c09e8a5b33eb87d1fea0066ae45dfc2c2d881721376ce7b9c78cef7848"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2012-est-Y.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2012-est-Y.json",
+      "bytes": 52179,
+      "sha256": "df5a25e10d3ac1810ae62329e2cd739de0f8a5ee2916f5d1cceda057468f78fe"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2011-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2011-est-N.json",
+      "bytes": 662995,
+      "sha256": "130c37bad4f4117f15d5cf1443ee042f8500eb04ea298e983ac454c7be84551b"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2011-est-Y.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2011-est-Y.json",
+      "bytes": 65195,
+      "sha256": "e9515c473cac3db323a777252df8db4438a46872fc2e43ef09a8341fee4eaf25"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2010-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2010-est-N.json",
+      "bytes": 666703,
+      "sha256": "3b82e8520fb17dd6107ad2a70e464b12f52764da163600654adf8bdf5ded826e"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2010-est-Y.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2010-est-Y.json",
+      "bytes": 68851,
+      "sha256": "5c5c72230d74e0208d6761eb7e79fa35862df7309ae76fa852d4371a8f1ca0f8"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2009-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2009-est-N.json",
+      "bytes": 684969,
+      "sha256": "c91ce923f847e84953a393b1ecbf9dbea6f6d8186640c776e765784b80eff4fb"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2009-est-Y.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2009-est-Y.json",
+      "bytes": 54007,
+      "sha256": "9e76e5ab9be2a9c2ab6d09bb10960010f293201fd202df5cfda4e65de450804e"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2008-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2008-est-N.json",
+      "bytes": 799856,
+      "sha256": "e5a3cc79508fa9d8a94285b82cf2f033461fd5bea73bf49dc149210156d9de50"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2008-est-Y.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2008-est-Y.json",
+      "bytes": 72552,
+      "sha256": "dd127056bcd59dcdfc4a9026be791c4d69e56d323c04e17d05b19064c6fbce1a"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2007-est-N.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-monitoring-period-2007-est-N.json",
+      "bytes": 853595,
+      "sha256": "1d297e4e7d3d7975615dcc9ce0bc4cbb697085c3697b4bf585964a33cd3c0315"
+    },
+    "source/echo_dmr/20261013/raw/four-permits-annual-2007-est-Y.json": {
+      "path": "source/echo_dmr/20261013/raw/four-permits-annual-2007-est-Y.json",
+      "bytes": 66926,
+      "sha256": "05a8b1c1f3d33cabd8c388a6f7e588ff889dd4c29ac5bd0f99a55627d164a600"
+    },
+    "source/echo_dmr/20261013/tables/dmr_loads_monitoring_period_history_2007_2026.csv": {
+      "path": "source/echo_dmr/20261013/tables/dmr_loads_monitoring_period_history_2007_2026.csv",
+      "bytes": 7525675,
+      "sha256": "a23fc47b3bbd57cd690a1667b2ee5d93298cec3633c0ecf6383fd3d58883e783"
+    },
+    "source/echo_dmr/20261013/tables/dmr_annual_estimation_history_2007_2026.csv": {
+      "path": "source/echo_dmr/20261013/tables/dmr_annual_estimation_history_2007_2026.csv",
+      "bytes": 630484,
+      "sha256": "c0d79558023dfd12157ed64c913a55d98ca22e1e8b78dc854329513966247c6b"
+    },
+    "source/echo_dmr/20261013/tables/dmr_annual_period_history_context.csv": {
+      "path": "source/echo_dmr/20261013/tables/dmr_annual_period_history_context.csv",
+      "bytes": 1724715,
+      "sha256": "25529c05ccf27e2fc935cbd4330ba8c5dee418a204c03780cd22034dea960c47"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0042994_00665_2023.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0042994_00665_2023.json",
+      "bytes": 58896,
+      "sha256": "a47883f829abe169d618dc79b07d0ecddd6e1c6050e8063e5d62eed338f5dcdb"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0047856_00665_2023.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0047856_00665_2023.json",
+      "bytes": 58803,
+      "sha256": "667e8edd23dc8e50248f74f4f28dc3883b19f1779654e222854e5b227122b204"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0000477_00665_2023.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0000477_00665_2023.json",
+      "bytes": 88067,
+      "sha256": "f138da40ca7d73b3f96a901e478446468bbafdc48d3a5cd79c655efe28b41067"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0035700_00665_2023.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0035700_00665_2023.json",
+      "bytes": 58753,
+      "sha256": "99106e19c23fe55a507dc8b7cfa7a4c37f7bf3f78c6c75ca7e729dca3935f3ff"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0042994_00600_2023.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0042994_00600_2023.json",
+      "bytes": 53692,
+      "sha256": "a54c2fb1e278e7a28269c215c10962ec557818dcb92d5cbb146d839dc1142fe6"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0047856_00600_2023.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0047856_00600_2023.json",
+      "bytes": 53687,
+      "sha256": "62775560cf5a0e39f3ac4956285d5b93bb0e4a33be95400c30d51012cd35356f"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0000477_00620_2023.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0000477_00620_2023.json",
+      "bytes": 118771,
+      "sha256": "aecf79e0f1a2194921879b55dde6a7172ccb41302d543957369ee6768a72548a"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0035700_00600_2023.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0035700_00600_2023.json",
+      "bytes": 58421,
+      "sha256": "955e7700bd4efa980a971e72b88aa91402080f255afb318ef1a8729c51665811"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0042994_00610_2023.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0042994_00610_2023.json",
+      "bytes": 59611,
+      "sha256": "adec3fb0bd7df3d06da23f4b6d23c74db7eda3e071ec29e8400ec2aaee617407"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0047856_00610_2023.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0047856_00610_2023.json",
+      "bytes": 60354,
+      "sha256": "6b8b6995af174e32940ce86a4c65b26559d4e089b778c65eb49d3fec4b236eb1"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0000477_00610_2023.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0000477_00610_2023.json",
+      "bytes": 35170,
+      "sha256": "33e0a6acbf1c21cbf8a1543e8f926d02f7628430e6d12ce83152f3586e0539ee"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0035700_00610_2023.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0035700_00610_2023.json",
+      "bytes": 62375,
+      "sha256": "01b3bb30d74dd2c75d8470eafe800e5cc57c582ba8e4de8e018df703ffb03a25"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0042994_00530_2023.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0042994_00530_2023.json",
+      "bytes": 58956,
+      "sha256": "bb9aa13245f9d1938542ec6dd3174e3e6e948ad59e688b33393dc624b7d28dbf"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0047856_00530_2023.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0047856_00530_2023.json",
+      "bytes": 58966,
+      "sha256": "5a5270796fc2e91206a4db2ac70c605d7edd0833e0568399b2947291607f377e"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0000477_00530_2023.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0000477_00530_2023.json",
+      "bytes": 117178,
+      "sha256": "f6d782ebb4512132adef1acac25aa9d68b678e30886b680e7bc7056675d7a9d0"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0035700_00530_2023.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0035700_00530_2023.json",
+      "bytes": 59193,
+      "sha256": "325975cd22e1d74318f578a9a8f3fcde7dea1e34f3091da92a28847ea33ce413"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0042994_50050_2023.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0042994_50050_2023.json",
+      "bytes": 30014,
+      "sha256": "ba2c20ea9abc201f344c2be9b6444d2a97b2fa48eb7be4c15514f2d3cd71b675"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0047856_50050_2023.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0047856_50050_2023.json",
+      "bytes": 30013,
+      "sha256": "9f546e57a7a4c1b8c5a70eed279c06cc53358e7511ffa1f7b0bc0430dfe7c0d3"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0000477_50050_2023.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0000477_50050_2023.json",
+      "bytes": 59043,
+      "sha256": "48ad94742a16e0d06f78cc94a72e648bed1d309983308ec89ffee13bc359289a"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0035700_50050_2023.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0035700_50050_2023.json",
+      "bytes": 30109,
+      "sha256": "deaca45550a108094158be654e6c8abc5f5f0638b30738d1c24c3e5402b0d9c4"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0042994_2023_inventory.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0042994_2023_inventory.json",
+      "bytes": 3520,
+      "sha256": "af3f79a8d09fe3d494922b411375a380f876b8e1a91fb9fbeb610911954c69d4"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0047856_2023_inventory.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0047856_2023_inventory.json",
+      "bytes": 3855,
+      "sha256": "43d195131e1615a1d29244d5e7ba5cea7e3099a2ce7acf80e8ef8cf68a1b704e"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0000477_2023_inventory.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0000477_2023_inventory.json",
+      "bytes": 3804,
+      "sha256": "e7d8ee26dacc939acf25b07de891de1be561f5860deac8c82dec86c403858e3f"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0035700_2023_inventory.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0035700_2023_inventory.json",
+      "bytes": 4166,
+      "sha256": "8d812c75b4c1185252b8ba0dcf30fe3a03c0fa37bfce84eee909ed97dfdeabf9"
+    },
+    "observations/eighteenmile_2023/npdes/originals/des_four_npdes_outfall_features.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/des_four_npdes_outfall_features.json",
+      "bytes": 19462,
+      "sha256": "46505b3448322549e2939e431cd4fe6b095eebbd5369c20e0612dac546c6c50e"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0042994_2023_january_all_parameters.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0042994_2023_january_all_parameters.json",
+      "bytes": 51680,
+      "sha256": "68b577ac0275ad491d154d4cb5932803819bfec82855f9a0bdc5dac7aefc15da"
+    },
+    "observations/eighteenmile_2023/npdes/originals/SC0047856_2023_january_all_parameters.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/SC0047856_2023_january_all_parameters.json",
+      "bytes": 43563,
+      "sha256": "1cccc9a8bdfe005dc27ee1362469bd2536d020eddfd52ed53e2fa0a04a476e5d"
+    },
+    "observations/eighteenmile_2023/npdes/originals/des_npdes_layer21_metadata.json": {
+      "path": "observations/eighteenmile_2023/npdes/originals/des_npdes_layer21_metadata.json",
+      "bytes": 12951,
+      "sha256": "f1260fda40481fe22524971a144d72002011017c3b2b49f91c325854c56f6ecb"
+    },
+    "observations/eighteenmile_2023/npdes/dmr_records.csv": {
+      "path": "observations/eighteenmile_2023/npdes/dmr_records.csv",
+      "bytes": 515108,
+      "sha256": "220204d5858981b56a203bb94e3a0a7459706e2ec037bee8b6e12a6503634ac9"
+    },
+    "observations/eighteenmile_2023/npdes/capture.json": {
+      "path": "observations/eighteenmile_2023/npdes/capture.json",
+      "bytes": 32826,
+      "sha256": "434dd8d458e646581224878cc4f4f110f91100af25048f30b70765c8e872fe9c"
+    },
+    "observations/eighteenmile_2023/npdes/summarize_dmr.mjs": {
+      "path": "observations/eighteenmile_2023/npdes/summarize_dmr.mjs",
+      "bytes": 20347,
+      "sha256": "dfd36aae420220a2e34a4bce98f29cd5ad715c20ecded4d6acf8c77924bd53f0"
+    },
+    "observations/eighteenmile_2023/npdes/DMR_LOADS.md": {
+      "path": "observations/eighteenmile_2023/npdes/DMR_LOADS.md",
+      "bytes": 9421,
+      "sha256": "fb5b82f3654b14562ed02024308c955e7d081a49d8f8c7b229167cff6ad5d71f"
+    },
+    "observations/eighteenmile_2023/npdes/derived/period_loads.csv": {
+      "path": "observations/eighteenmile_2023/npdes/derived/period_loads.csv",
+      "bytes": 141817,
+      "sha256": "872d4183e2e55706c031c6d60438963660f6fb56e8312eaa9da1b75473b44648"
+    },
+    "observations/eighteenmile_2023/npdes/derived/annual_loads.csv": {
+      "path": "observations/eighteenmile_2023/npdes/derived/annual_loads.csv",
+      "bytes": 13416,
+      "sha256": "ef74ad35ef4882ae41f9ce0b80c17d6c37dec5af1a45f4cd7be5cb0e1351294e"
+    },
+    "observations/eighteenmile_2023/npdes/derived/summary.json": {
+      "path": "observations/eighteenmile_2023/npdes/derived/summary.json",
+      "bytes": 35142,
+      "sha256": "50d2234bc42a369ec4da7b5de1e2b045fe061ae92f0e4c6716be3eaf98722969"
+    },
+    "observations/eighteenmile_2023/npdes/dmr_outfalls_2023.geojson": {
+      "path": "observations/eighteenmile_2023/npdes/dmr_outfalls_2023.geojson",
+      "bytes": 11329,
+      "sha256": "07b42387abb0398e5be468fce3f28f72ce654ce4abf35fb7a2184e522c65fdf7"
+    },
+    "observations/eighteenmile_2023/npdes/map-layer-capture.json": {
+      "path": "observations/eighteenmile_2023/npdes/map-layer-capture.json",
+      "bytes": 10478,
+      "sha256": "c6a83003f474bd031a485f397cfda2e61722ca61cd0fd33a594ea661c56dbb73"
+    },
+    "observations/eighteenmile_2023/npdes/model-sources.json": {
+      "path": "observations/eighteenmile_2023/npdes/model-sources.json",
+      "bytes": 31528,
+      "sha256": "3a621b46350c20488ce6410188dce8247e182a44b8519196802f2ea875840d9f"
+    },
+    "observations/eighteenmile_2023/npdes/NATIVE_IMPORT.md": {
+      "path": "observations/eighteenmile_2023/npdes/NATIVE_IMPORT.md",
+      "bytes": 2813,
+      "sha256": "6e2abe804ef62ab5f1400bfc89bceb2d7931e579c809201a65ae3a526bf3b1da"
+    }
+  }
+}

@@ -158,8 +158,8 @@ def _comparison(workspace, comparison_id):
     ids = [value["baseline_run_id"]] + [item["run_id"] for item in value["alternatives"]]
     if len(ids) < 2 or len(set(ids)) != len(ids):
         raise ValueError("Comparison must contain a baseline and distinct alternatives")
-    if value["id"] != comparison_id or digest({"runs": ids, "direction": DIRECTION}) != comparison_id:
-        raise ValueError("Retained comparison identity differs from its selection")
+    from .native_versions import validate_run_comparison
+    validate_run_comparison(workspace, value, expected_id=comparison_id)
     return value, ids
 
 

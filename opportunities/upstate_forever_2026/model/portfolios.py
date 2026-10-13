@@ -1546,11 +1546,8 @@ def _decision_comparison(workspace, record, run, value):
         comparison = read_json(workspace.root / "comparisons" / comparison_id / "comparison.json")
         run_ids = [comparison.get("baseline_run_id")] + [
             item["run_id"] for item in comparison.get("alternatives", [])]
-        if (comparison.get("schema") != "upstate.run-comparison/v1"
-                or comparison.get("id") != comparison_id
-                or comparison.get("direction") != "alternative minus baseline"
-                or digest({"runs": run_ids, "direction": comparison["direction"]}) != comparison_id):
-            raise ValueError("Select the original completed native comparison")
+        from .native_versions import validate_run_comparison
+        validate_run_comparison(workspace, comparison, expected_id=comparison_id)
         if run["id"] not in run_ids[1:]:
             raise ValueError("The decision comparison must contain the selected portfolio evaluation")
         if explicit_baseline and identifier(explicit_baseline) != run_ids[0]:
