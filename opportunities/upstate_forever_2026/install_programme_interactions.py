@@ -22,24 +22,24 @@ SOURCE_FILES = {
     "sha256": "49eec1695330380f6f8da551b3d41f225142a6ebb704bde9863d4be9ce1d4950"
   },
   "model/compute_programme.py": {
-    "bytes": 95604,
-    "sha256": "dc102a0ff059c2e004d33cb5a45ff358d2e91bc3a55a7db33ac99afd2c012b13"
+    "bytes": 95942,
+    "sha256": "a9263d47f7a021b6c46eb434e29bcc994702637522ff07105e863cb08ebb0a61"
   },
   "model/compute_programme_cli.py": {
-    "bytes": 8954,
-    "sha256": "8e35bffa0669f80a24aeafeb34a166c0d53e436b0a49efa2196345e489932730"
+    "bytes": 9094,
+    "sha256": "b7737519bbe49fdf95c1ff2236fa3826aa80a5d14c7759d6e74cc827456e8e4d"
   },
   "model/portable.py": {
-    "bytes": 49628,
-    "sha256": "2e46470a7f0096446a396c96f3ae1e6b26b57228c71da94b9fc6c3cffd3fbb3f"
+    "bytes": 50424,
+    "sha256": "e5bee8cbc0b56f3302b3c954d1ba61ec9243bbee4e0d62d6d33148de98e26ee7"
   },
   "operator/programmes.py": {
     "bytes": 13262,
     "sha256": "e203c6fd581f2bd0c26fdbee47c951f6e270911ee1890e8bebd6748639755993"
   },
   "operator/web/programmes.mjs": {
-    "bytes": 78664,
-    "sha256": "b4166ab4d763dc0df5dde77f3164f369b80779104cd260752388cfa8c148bd32"
+    "bytes": 88818,
+    "sha256": "082f1d2fd3745703cc33a8950d0eb7add73606b170dfffbe799dc2fa7c20fbb7"
   },
   "install_programmes.py": {
     "bytes": 23802,
@@ -58,7 +58,8 @@ PREDECESSORS = {
   "model/compute_programme.py": [
     "5df48145fc5b05a4a2468fe938c2eddd5c4bd508c6407e6e95cd3cc616969f37",
     "7bfaac9fd416a503441038a4716db4b75d2cf8c71db88c4417055c2c686ae4a1",
-    "1b01e49baeb0463b7dd194a39979b81bc47785c735c63cefea71c2a5d699753e"
+    "1b01e49baeb0463b7dd194a39979b81bc47785c735c63cefea71c2a5d699753e",
+    "dc102a0ff059c2e004d33cb5a45ff358d2e91bc3a55a7db33ac99afd2c012b13"
   ],
   "model/compute_programme_cli.py": [
     "634894886f680f1762a7885bf6de9233edad4d15a2159bcdd41506e8698f0f29",
@@ -66,7 +67,8 @@ PREDECESSORS = {
   ],
   "model/portable.py": [
     "60e424da2ba8b395b7e5c2df2da8309e206f628f0cd95b95aa009347fee48386",
-    "27cd6f5c16d9c8b81b3d5ead461ea9f6ed5f11e2ec22a81222deed4a248b2ea5"
+    "27cd6f5c16d9c8b81b3d5ead461ea9f6ed5f11e2ec22a81222deed4a248b2ea5",
+    "2e46470a7f0096446a396c96f3ae1e6b26b57228c71da94b9fc6c3cffd3fbb3f"
   ],
   "operator/programmes.py": [
     "431a783614df0b72d3c25a3896f520ed69fbd421c172046d2a6b0b2480ccd94e",

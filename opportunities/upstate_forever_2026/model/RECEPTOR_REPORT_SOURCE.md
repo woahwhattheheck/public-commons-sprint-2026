@@ -127,3 +127,87 @@ module and guide to that family through the maintained complete-application
 composer, preserving other component declarations. The original shared
 renderer, source catalogue, extension host and archive implementation remain
 the receiving dependencies.
+
+## Projected original watershed figures
+
+The optional projected-map edition uses the maintained original Esri reader and
+the shared scientific-map renderer. It reads the exact captured source body
+listed in the saved network, validates its decoded identity and all original
+HUC12 attributes, and selects only the receiving areas in that network or
+prepared-area result. It never re-runs a watershed acquisition, a grid build, or
+a pollutant model.
+
+The default build remains the source-only standard-library workflow. To include
+the native vector figures, run the same command with an explicit flag:
+
+```sh
+python -B -m model.receptor_report_source --workspace ACTUAL_WORKSPACE build \
+  --prepared ACTUAL_SAVED_PREPARATION_ID --include-maps
+```
+
+The existing Source-water areas desk exposes this choice in **Prepare scientific
+report source**. The checkbox starts unchecked. It becomes available only when
+the installed application can import its current original Esri reader, shared
+map renderer, pyproj/PROJ, Shapely/GEOS and ReportLab. The form identifies those
+installed versions. A source-only edition remains useful on a standard-library
+host; opening and checking an already retained source does not re-render it.
+
+### Geographic meaning
+
+Each light polygon is a native interpretation of an original upstream HUC12
+unit. Dark outlines mark the original anchor HUC12 polygons. A numbered label
+identifies a receiving area and is placed inside one of its original anchor
+polygons; it does not identify an intake or sampling station. Overview pages
+contain at most six receiving-area labels and are followed by one frame per
+area. Original unit boundaries remain separate. Shared memberships do not imply
+that areas or quantities can be added.
+
+All figures retain the original projected coordinate system. Their grid north
+and scale use projected metres; EPSG:3857 grid distances are not corrected local
+ground distances. Figure preparation applies no reprojection, simplification,
+union, or new area calculation. The report's quantitative areas still sum the
+original publisher's AreaSqKm fields over the stated distinct HUC12 support.
+
+The maintained Esri parser assembles original rings by symmetric difference and
+records any validity repairs. The source body remains byte-identical. Native
+parsed polygons are therefore described as an interpretation of that body,
+with the complete reader metadata and each feature's operation list retained
+in `figures/original-geometry-reader.json`. That inventory also records the
+network ID basis and the GIS reader's ID basis separately, along with the
+original feature-array position. The HUC12 and complete attribute join ties
+each mapped feature back to the saved network independently of ID fallbacks.
+
+### Retained edition and normal report composition
+
+The mapped edition has its own immutable report-source identity. It binds the
+original saved network/preparation, selected areas, native library versions,
+and complete source hashes for the consumer, original reader/parser and shared
+renderer. Their exact source files are retained under `render-source/`.
+An earlier source-only edition keeps its original identity and source choice.
+
+The source carries the complete geometry-bearing scientific figure
+specification, all generated SVGs, original source files and a verified figure
+member inventory. The same ReportLab drawing model generates each SVG and the
+scientific report's PDF figure. The standalone HTML displays all the vector
+figures and links their original downloads. The typed observed-report recipe
+declares the same figures explicitly, so the existing scientific report
+composer, native renderer, full Workspace archive and selected-study transfer
+all retain the complete closure.
+
+Opening **Open scientific report composer** uses this mapped edition's actual
+source collection and entry. Combine it with observation or native process
+sources in the intended reading order. The ordinary queued report receiving
+course can render/export/restore it using the same source choice. Retain the
+source-only run already underway; prepare maps as a new explicit edition at its
+next source boundary.
+
+### Complete application dependencies
+
+The receptors component fragment includes this producer and
+`model/receptor_report_maps.py` together with the maintained
+`model/scientific_map_figures.py`, `model/scientific_figures.py`,
+`model/spatial_esri.py` and `source/capture_upstream_network.py`.
+Install them as part of the complete application, preserving the current shared
+renderer rather than replacing it with an older component copy. Native packages
+are capabilities of the actual receiving host; they are not synthesized by the
+source installer.

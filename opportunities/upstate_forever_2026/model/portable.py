@@ -528,6 +528,7 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
             stack.enter_context(held(root / ".receiving-water-report-source.lock", blocking=False))
             stack.enter_context(held(root / ".monitoring-report-source.lock", blocking=False))
             stack.enter_context(held(root / ".receiving-water-monitoring.lock", blocking=False))
+            stack.enter_context(held(root / ".utility-monitoring.lock", blocking=False))
             for pattern in ("compute-programmes/*/.programme.lock",
                             "interactions/*/.interaction.lock",
                             "interaction-results/*/.analysis.lock"):
@@ -909,6 +910,15 @@ def _restore_archive(archive, archive_source, before, manifest, destination):
         if any((restored.root / "compute-programmes").glob("*/interaction-links/*.json")):
             from .programme_interactions import validate_workspace as validate_programme_interactions
             validate_programme_interactions(restored, verified_members=manifest["members"])
+        # Verify retained Scenario analysis source context before publication.
+        if any((restored.root / "scenario-source-contexts").glob("*.json")):
+            from .analysis_source_context import verify_workspace as verify_analysis_source_context
+            result["scenario_source_context"] = verify_analysis_source_context(restored)
+        # Verify retained original point-source observation bindings before publication.
+        if any((restored.root / "point-source-bindings").glob("*.json")):
+            from source.retained_point_sources import verify_workspace as verify_point_source_bindings
+            result["point_source_context"] = verify_point_source_bindings(restored)
+
         # Directory rename is final publication; the staging directory is owned.
         if destination.exists():
             raise ValueError("Receiving destination appeared during capture")

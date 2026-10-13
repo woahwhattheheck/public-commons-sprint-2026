@@ -22,6 +22,28 @@ def dispatch(workspace, action, payload):
     return scenario_footprint.preview_run(workspace, payload["run_id"])
 
 
+def state_snapshot(operator, workspace_key):
+    """Expose retained input accounting in the ordinary workspace overview.
+
+    This reads immutable preview records only. It never compiles a scenario or
+    starts a model while the operator polls its current workspace.
+    """
+    records = []
+    for row in scenario_footprint.list_footprints(operator.ws(workspace_key)):
+        request = row.get("request") or {}
+        records.append({
+            "id": row["id"], "run_id": row["run_id"],
+            "title": row.get("title"), "created_at": row.get("created_at"),
+            "selection": copy.deepcopy(row.get("selection", {})),
+            "summary": copy.deepcopy(row.get("summary", {})),
+            "notes": copy.deepcopy(row.get("notes", [])),
+            "compiler_version": request.get("compiler_version"),
+            "compiler_sha256": request.get("compiler_sha256"),
+        })
+    records.sort(key=lambda row: (str(row.get("created_at") or ""), row["id"]), reverse=True)
+    return {"schema": "upstate.scenario-footprint-state/v1", "records": records}
+
+
 def catalog(operator, workspace_key, offset=0, limit=100):
     ws = operator.ws(workspace_key)
     offset, limit = int(offset), int(limit)

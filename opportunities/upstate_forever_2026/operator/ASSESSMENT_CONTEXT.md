@@ -404,3 +404,15 @@ Native operator action:
 The optional parcel and delivery IDs may be omitted. The action uses the original supervised queue and upload/download permissions. Its completed task includes direct links to the recipe, manifest and complete context/parcel ZIPs. The desk and global task list open the scientific composer or Maps and delivery only in the task's original Workspace. The descriptor declares `openScientificReport` and `openDelivery`; install this client with the maintained host that exposes both capabilities. The shared source composer validates the actual collection/document choices and keeps its preview and original-source checks. Before changing any source file, the station-family installer checks the installed app callback and both maintained composer modules, and records their source hashes in its receipt. An older application must receive the maintained Scientific reports implementation before this client is installed.
 
 For a focused receiving check, use the same actual saved context, prepare and import its report source, bind and collect it through `model.observed_context`, and verify every delivered companion against the original source member descriptor. Archive/restore the current Workspace through its normal operation and reopen the same saved source and delivery. Preserve actual context, parcel, collection, document, report and receiving IDs in the existing operation receipt.
+
+
+### Complete component installation
+
+The station installer composes its owned source with the original WBD producer's selected component inventory. Every selected original response, input and source companion is included and checked before any file changes. The WBD context module remains available when opening the existing station studies; its dated boundary association preserves each selected point's original datum and coordinates.
+
+The additive assessment scientific-report component declaration names the existing composer runtime files directly. Their implementation stays with the maintained Scientific reports producer. This explicit source membership avoids a dependency cycle with the broader observed-context data component and keeps ordinary station and assessment selections usable without introducing unrelated source datasets.
+
+
+### NLDI station source extension
+
+The station installer composes the original WBD catalogue with its maintained `observed-station-wbd-nldi-197` extension before selecting files. The extension contributes the original NLDI point file and all 13 original WBD responses, retaining 197 coordinate-specific context rows and both gauge-coordinate variants. The existing component fragment reader validates the declaration; all selected source members and declared hashes are checked before any application file changes. Geographic source context remains separate from the assessment cause and use inventory.

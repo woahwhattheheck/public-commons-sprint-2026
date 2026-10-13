@@ -11,13 +11,21 @@
     },
     {
       "path": "model/study_transfer.py",
-      "bytes": 52435,
-      "sha256": "a7f2d41bcf16b6c6ac0348d5e68610b579e6179c76094447503166bf16a8a5e6"
+      "bytes": 55093,
+      "sha256": "68cc71847d5c98420a8fa05075cf213621995ed9e6fbddd82b2a84e2827479cc",
+      "predecessor_sha256": [
+        "a7f2d41bcf16b6c6ac0348d5e68610b579e6179c76094447503166bf16a8a5e6",
+        "1946ca46d0e683b15ddcea9cae53a0848a8a976675a202fe912b5b33df404621"
+      ]
     },
     {
       "path": "operator/web/extensions/study_transfer.mjs",
-      "bytes": 29470,
-      "sha256": "68d5fde23d506ad289b7a4a55d6f78461ac542609d392b6f8e781a0dfec8d27b"
+      "bytes": 30540,
+      "sha256": "8c04a7b68da00a0fd035e5d08150aab37f2d73ff3b981a4519f9a349439777b7",
+      "predecessor_sha256": [
+        "68d5fde23d506ad289b7a4a55d6f78461ac542609d392b6f8e781a0dfec8d27b",
+        "8b701ce6c93b301b39093a52f101de8074981d550eea4ec43c33b659ef84f64d"
+      ]
     },
     {
       "path": "operator/web/monitoring-study-transfer.mjs",
@@ -26,26 +34,29 @@
     },
     {
       "path": "operator/web/monitoring-observed.mjs",
-      "bytes": 17134,
-      "sha256": "b892173baf305692e3b4fcb1b108cc47bcd5a747de32e99beed51f3667d6c9b8",
+      "bytes": 24516,
+      "sha256": "ead60a60b44adc80e0495ba988a337ac11afa92a9af26b12734528d94ee1114e",
       "predecessor_sha256": [
-        "d9e01600e859b91ca5a881ad6d844874938c99f8ebc618e4d6ac5ca37896c21f"
+        "d9e01600e859b91ca5a881ad6d844874938c99f8ebc618e4d6ac5ca37896c21f",
+        "b892173baf305692e3b4fcb1b108cc47bcd5a747de32e99beed51f3667d6c9b8"
       ]
     },
     {
       "path": "operator/web/monitoring.mjs",
-      "bytes": 8438,
-      "sha256": "61806854947e01183f0e160a6ae808346c9b794b5b6ac7210372ae97ab7ffe49",
+      "bytes": 8855,
+      "sha256": "3e25982a207cb20a4493dee22cab03ec399b8c59941beb89b9c78408dfb17deb",
       "predecessor_sha256": [
-        "dd73d9da22fe3b9b1199dc9c3f824401b98b4fa94bbd10d180698e8a4c50084a"
+        "dd73d9da22fe3b9b1199dc9c3f824401b98b4fa94bbd10d180698e8a4c50084a",
+        "61806854947e01183f0e160a6ae808346c9b794b5b6ac7210372ae97ab7ffe49"
       ]
     },
     {
       "path": "operator/extensions/monitoring.json",
-      "bytes": 1876,
-      "sha256": "9b2dc0414555cf1666b4998a5d3d22faa9d551eb18174337c6cd31b625bb2bfc",
+      "bytes": 2017,
+      "sha256": "0c97b6dd758697849acc96a2f7b1fa42c2a702962569929e6b43fb798e498d35",
       "predecessor_sha256": [
-        "2f6b3291ae2c1c6c64cd62a53c75e55d5f1cca4659f018e590252b9c32d44d61"
+        "2f6b3291ae2c1c6c64cd62a53c75e55d5f1cca4659f018e590252b9c32d44d61",
+        "9b2dc0414555cf1666b4998a5d3d22faa9d551eb18174337c6cd31b625bb2bfc"
       ]
     },
     {
@@ -60,8 +71,11 @@
     },
     {
       "path": "operator/STUDY_TRANSFER.md",
-      "bytes": 22754,
-      "sha256": "cbd3cf3a108de8322a381708cc4aed638aac6ac81c28de7950562991609d1b5c"
+      "bytes": 25250,
+      "sha256": "b3dd875629dbff048ecba7d8610dfd8d9f9bb54106e8a9a971f61bad0f052219",
+      "predecessor_sha256": [
+        "cbd3cf3a108de8322a381708cc4aed638aac6ac81c28de7950562991609d1b5c"
+      ]
     },
     {
       "path": "integrations/monitoring/RECEIVING.md",
@@ -73,42 +87,106 @@
     },
     {
       "path": "integrations/monitoring/source_adoption.json",
-      "bytes": 25880,
-      "sha256": "53b7ff0e49b95bee66cf537625ff6b941851ffe386d3165b672353f6dae94a5c",
+      "bytes": 31753,
+      "sha256": "7f1e2886a331d75ce1def4c5d4a0a91a551573ad72931efeddd3933c42e214e8",
       "predecessor_sha256": [
         "1c52b77c3cf651568251c049c797f492bcf1eee408660309058b705bf49ab361",
-        "c8fa5a27fe68a5eb17863f52cd9b13e87b8625a0960c480ae8490469a54533b7"
+        "c8fa5a27fe68a5eb17863f52cd9b13e87b8625a0960c480ae8490469a54533b7",
+        "53b7ff0e49b95bee66cf537625ff6b941851ffe386d3165b672353f6dae94a5c",
+        "f410679ab2882516ecfb31e90778bd136984ab08518d35d7f903c3945c0d2550",
+        "4b2afe0f7086c3fdee29f8962b4197dbbb32915ecd702e055be726b23ad5513a"
       ]
     },
     {
       "path": "integration/monitoring_observed_sources.json",
-      "bytes": 27202,
-      "sha256": "79985363d3d6b0922d55bc414f91b28c039b21b95678a56fcb813ec6c7d6db9d",
+      "bytes": 31200,
+      "sha256": "a5cefbfcd818e2b260b35c95356822c919f63df91eed6a1c719eead6a02a4af5",
       "predecessor_sha256": [
         "6903fe553d01dd601ee1c32d7a09c3e617ed3bc1c71eb552bdf6a47f404c0d91",
-        "77fdd06163233d11e78f5fd27439a6d93fe26f0868abea122fa8f6856d3c226e"
+        "77fdd06163233d11e78f5fd27439a6d93fe26f0868abea122fa8f6856d3c226e",
+        "79985363d3d6b0922d55bc414f91b28c039b21b95678a56fcb813ec6c7d6db9d",
+        "acd91457f98fd8d22b72445948f5d38628a501f3c3bc39be2b5294083e3ca095",
+        "96732f61972ebe194db9b23881ad139d6c31ef99a67c96e41ed8d75bef0bf04a"
       ]
     },
     {
       "path": "integrations/monitoring/current_application_files.json",
-      "bytes": 3193,
-      "sha256": "2aab63ec540ce2f406ccd4eda2c864ca6293fd67bd147d19ca1058050d9cc9db",
+      "bytes": 4239,
+      "sha256": "57adcfadab949fdf637f6eb231cdbf05ac2a346d6be265441217c05e224b3439",
       "predecessor_sha256": [
-        "2cb77f58869fd051029c8bd263a862bf97b4ff1ddc465d2d2f2b7d7319e7fb76"
+        "2cb77f58869fd051029c8bd263a862bf97b4ff1ddc465d2d2f2b7d7319e7fb76",
+        "2aab63ec540ce2f406ccd4eda2c864ca6293fd67bd147d19ca1058050d9cc9db"
       ]
     },
     {
       "path": "integration/component_fragments/monitoring-study-transfer.json",
-      "bytes": 1442,
-      "sha256": "be084556d443de041145bb467ed668fdcdbfe91ee8ffbf71bc143f74a1a609fc",
+      "bytes": 1486,
+      "sha256": "8d205d6c1f7e0044f4b39de8a8c4300179e4a925335ea04cc38ad9883b898e7b",
       "predecessor_sha256": [
-        "8d205d6c1f7e0044f4b39de8a8c4300179e4a925335ea04cc38ad9883b898e7b"
+        "8d205d6c1f7e0044f4b39de8a8c4300179e4a925335ea04cc38ad9883b898e7b",
+        "be084556d443de041145bb467ed668fdcdbfe91ee8ffbf71bc143f74a1a609fc"
       ]
     },
     {
       "path": "model/monitoring_field_return.py",
       "bytes": 24812,
       "sha256": "d9019900577dfb9ae9311e6086b3d2c175871c80055f5dec874e840c3455876b"
+    },
+    {
+      "path": "model/monitoring_frontier_comparison.py",
+      "bytes": 25919,
+      "sha256": "1d12423cefad54a458f063c6a20d534b95a75d6587715fad654caae6c793a51b",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "model/MONITORING_BUDGET_COMPARISON.md",
+      "bytes": 6508,
+      "sha256": "0de09d942e2e60832b61489ab8da0edbc49769dc025fee51eaeefabab6aa8790",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "model/monitoring_actions.py",
+      "bytes": 5097,
+      "sha256": "6a1943001eb067e41681d491dd25e6e6ecc3a324e958f4b547367db212bd84c1",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "operator/monitoring_native.py",
+      "bytes": 9632,
+      "sha256": "3f0d199f044445c45b72fde84bc356bac33e97ff7e45189d6cda0112456a47dd",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "operator/web/monitoring-frontiers.mjs",
+      "bytes": 24139,
+      "sha256": "827fbf9f1985b373aebac8d441eb31640a14c85bfe12ddfdc3676113b9d3cfc0",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "operator/web/monitoring-frontiers.css",
+      "bytes": 1484,
+      "sha256": "5e171a30eba7511e8c163c25e3a88209fcc7a07aa2ee5c07a5769260165cde59",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "operator/MONITORING_BUDGET_CHOICES.md",
+      "bytes": 6953,
+      "sha256": "774b203ed4a533b1ecac8029927478b17858a45fb7f8faad6040e2609304ceab",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "integration/component_fragments/monitoring-budget-comparison.json",
+      "bytes": 801,
+      "sha256": "964daaf5c02aac67b6642cb976cad23e038cd491c3f16b4263f89e695596c1d2",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "integrations/monitoring/PREDECESSORS.json",
+      "bytes": 16267,
+      "sha256": "bed954a59d000b22ae24bb71f2a23359975d1099031aeb3b8d54106e9542c91f",
+      "predecessor_sha256": [
+        "9fef2b526d6fd30ffcb226cfef642c53f9cbabd01dc47a2923dadbbe62a6e9d2"
+      ]
     }
   ],
   "requires": [
@@ -146,5 +224,10 @@
       "field-plan.json"
     ],
     "history": "Preserve the exact reviewed campaign revision and each native event binding; reuse native validation per retained request."
+  },
+  "saved_budget_comparison": {
+    "source_publication": "a92980a492604e6cb7684d13c84afdbbdbefb1d9",
+    "guide": "model/MONITORING_BUDGET_COMPARISON.md",
+    "receiving": "Saved comparison records accompany complete Workspace backup/restore; existing selected-study roots retain their original semantics."
   }
 }

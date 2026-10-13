@@ -26,21 +26,27 @@ from . import portable, study_delivery_transfer as delivery_transfer
 from . import monitoring_study_transfer as monitoring_transfer, study_report_transfer as report_transfer
 from . import scientific_report_study_transfer as report_editions
 from . import calibration_study_transfer as calibration_transfer
+from . import community_study_transfer as community_transfer
+from . import conservation_study_transfer as conservation_transfer
+from . import native_process_study_transfer as process_transfer
 
 SELECTION_SCHEMA = "upstate.study-selection/v1"
 PLAN_SCHEMA = "upstate.study-transfer-plan/v1"
 RECEIPT_SCHEMA = "upstate.study-transfer/v1"
 ROOT_KINDS = ("experiment-diagnostics", "experiments", "runs", "robust-decisions",
-              *monitoring_transfer.ROOT_KINDS, *report_editions.ROOT_KINDS)
+              *monitoring_transfer.ROOT_KINDS, *report_editions.ROOT_KINDS,
+              *community_transfer.ROOT_KINDS, *conservation_transfer.ROOT_KINDS)
 IMMUTABLE_KINDS = ("sources", "profiles", "scenarios", "observations",
                    "observation-comparisons", *delivery_transfer.IMMUTABLE_KINDS,
-                   *monitoring_transfer.IMMUTABLE_KINDS, *calibration_transfer.IMMUTABLE_KINDS)
+                   *monitoring_transfer.IMMUTABLE_KINDS, *calibration_transfer.IMMUTABLE_KINDS,
+                   *community_transfer.IMMUTABLE_KINDS)
 DOCUMENTS = {
     "grids": "grid.json", "runs": "run.json", "experiments": "plan.json",
     "experiment-diagnostics": "manifest.json", "comparisons": "comparison.json",
     **delivery_transfer.DOCUMENTS,
     **monitoring_transfer.DOCUMENTS,
     **report_editions.DOCUMENTS,
+    **conservation_transfer.DOCUMENTS,
 }
 LOCKS = {
     "grids": ".grid.lock", "runs": ".run.lock",
@@ -48,6 +54,7 @@ LOCKS = {
     "comparisons": ".comparison.lock",
     **delivery_transfer.LOCKS,
     **report_editions.LOCKS,
+    **conservation_transfer.LOCKS,
 }
 LABELS = {
     "experiment-diagnostics": "Scientific analyses", "experiments": "Experiment programmes",
@@ -60,6 +67,8 @@ LABELS = {
     **monitoring_transfer.LABELS,
     **report_editions.LABELS,
     **calibration_transfer.LABELS,
+    **community_transfer.LABELS,
+    **conservation_transfer.LABELS,
 }
 
 
@@ -80,11 +89,11 @@ def normalise(selection):
         raise ValueError("Select an original scientific study selection.")
     roots = selection.get("roots")
     if not isinstance(roots, list) or not roots:
-        raise ValueError("Select at least one scientific analysis, programme, native run, decision study or Monitoring study.")
+        raise ValueError("Select at least one saved scientific, Monitoring, Community or Conservation study.")
     unique = set()
     for item in roots:
         if not isinstance(item, dict) or set(item) != {"kind", "id"} or item["kind"] not in ROOT_KINDS:
-            raise ValueError("Study roots must name a saved scientific or Monitoring study.")
+            raise ValueError("Study roots must name a saved scientific, Monitoring, Community or Conservation study.")
         unique.add((item["kind"], _study_key(item["kind"], item["id"])))
     related = selection.get("include_related_results", True)
     if type(related) is not bool:
@@ -419,6 +428,10 @@ class _Closure:
             pass
         elif calibration_transfer.visit(self, kind, key, value, reason):
             pass
+        elif community_transfer.visit(self, kind, key, value):
+            pass
+        elif conservation_transfer.visit(self, kind, key, value):
+            pass
         elif monitoring_transfer.visit(self, kind, key, value):
             pass
         elif delivery_transfer.visit(self, kind, key, value):
@@ -504,6 +517,8 @@ class _Closure:
                 self._related()
                 delivery_transfer.related(self)
                 monitoring_transfer.related(self)
+                community_transfer.related(self)
+                conservation_transfer.related(self)
                 while self.pending:
                     self._visit(*self.pending.popleft())
                 if len(self.nodes) == count:
@@ -580,7 +595,9 @@ def preview(workspace, selection):
 
 
 def _capture_locks(stack, closure, already):
-    for relative in (*monitoring_transfer.lock_paths(closure), *calibration_transfer.lock_paths(closure)):
+    for relative in (*monitoring_transfer.lock_paths(closure), *calibration_transfer.lock_paths(closure),
+                     *community_transfer.lock_paths(closure), *conservation_transfer.lock_paths(closure),
+                     *process_transfer.lock_paths(closure)):
         token = ("original-study-owner-lock", relative)
         if token not in already:
             stack.enter_context(held(closure.root / relative, blocking=False))
@@ -921,7 +938,7 @@ def verify_received_studies(workspace):
 
 def catalog(workspace, *, kind=None, query="", offset=0, limit=200):
     if kind not in (None, "", *ROOT_KINDS):
-        raise ValueError("Choose scientific or Monitoring studies.")
+        raise ValueError("Choose saved scientific, Monitoring, Community or Conservation studies.")
     if type(offset) is not int or offset < 0 or type(limit) is not int or limit < 1 or limit > 1000:
         raise ValueError("Use a nonnegative offset and a page size from 1 to 1000.")
     query = str(query).strip().casefold()
@@ -936,6 +953,12 @@ def catalog(workspace, *, kind=None, query="", offset=0, limit=200):
             continue
         if selected_kind in monitoring_transfer.ROOT_KINDS:
             for row in monitoring_transfer.catalogue(workspace, selected_kind):
+                if not query or query in canonical(row).decode("utf-8").casefold():
+                    rows.append(row)
+            continue
+        if selected_kind in community_transfer.ROOT_KINDS or selected_kind in conservation_transfer.ROOT_KINDS:
+            provider = community_transfer if selected_kind in community_transfer.ROOT_KINDS else conservation_transfer
+            for row in provider.catalogue(workspace, selected_kind):
                 if not query or query in canonical(row).decode("utf-8").casefold():
                     rows.append(row)
             continue

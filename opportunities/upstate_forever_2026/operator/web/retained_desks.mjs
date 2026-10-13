@@ -112,7 +112,14 @@ export async function attachExperimentsDesk(host) {
 
 export async function attachConservationDesk(host) {
   const {attachConservationWithOptimization} = await import('./conservation_optimization_bridge.mjs');
-  return adapt(host, attachConservationWithOptimization, {
+  const catalogue=await host.api('/api/extensions');
+  const transfer=(catalogue.extensions??[]).some(entry=>entry.id==='study-transfer'&&entry.client?.view);
+  const joined={
+    ...host,
+    openStudyTransfer:typeof host.openExtension==='function'&&transfer?
+      selection=>host.openExtension('study-transfer','openForStudies',selection):host.openStudyTransfer
+  };
+  return adapt(joined, attachConservationWithOptimization, {
     view:'conservation', render:true,
     collections:['sources','profiles','scenarios','grids','runs','experiments'],
     prefixes:['conservation.','experiment.'],

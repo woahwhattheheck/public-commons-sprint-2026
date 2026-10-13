@@ -28,6 +28,9 @@ VERSION = "1.0.0"
 
 import operations_http
 operations_http.register_static(STATIC)
+import source_tables
+import source_workbooks
+source_tables.register_static(STATIC)
 
 
 def atomic_private(path, data):
@@ -176,9 +179,17 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, {"revisions": workspace.history(pid)})
         if action and action.startswith("revision/"):
             return self.send(200, workspace.read(pid, int(action.split("/")[1])))
+        revision = None
+        if action in {"export.zip", "scenario.json", "daily.csv", "costs.csv"}:
+            selected = parse_qs(parsed.query, keep_blank_values=True)
+            if selected:
+                values = selected.get("revision", [])
+                if set(selected) != {"revision"} or len(values) != 1 or not re.fullmatch(r"[1-9][0-9]{0,8}", values[0]):
+                    raise Problem("Select one positive saved revision for the original planning export.", 422, "INVALID_REVISION")
+                revision = int(values[0])
         if action == "export.zip":
-            return self.send(200, workspace.export(pid), "application/zip", "sf47-planning-workspace.zip")
-        current = workspace.read(pid)
+            return self.send(200, workspace.export(pid, revision), "application/zip", "sf47-planning-workspace.zip")
+        current = workspace.read(pid, revision)
         if action == "scenario.json":
             return self.send(200, json.dumps(current["scenario"], ensure_ascii=False, indent=2) + "\n",
                              "application/json; charset=utf-8", "sf47-scenario.json")
@@ -207,6 +218,8 @@ class Handler(BaseHTTPRequestHandler):
             result = workspace.import_bundle(raw, name, self.headers.get("X-Request-ID", ""))
             return self.send(201, result)
         body = self.json_body()
+        if source_workbooks.write_http(self, path, body):
+            return
         if path == "/api/import-scenario":
             if ("sourceText" in body) == ("sourceBase64" in body):
                 raise Problem("Supply exactly one sourceText or sourceBase64 field.")

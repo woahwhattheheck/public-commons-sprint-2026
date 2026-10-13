@@ -50,7 +50,7 @@ class Progression:
         self.regional_args = regional_args
         existing = item(self.path)
         documents = {}
-        for key in ("opening", "run_selection", "chemistry_selection", "monitoring_selection", "monitoring_opening", "monitoring_receiving", "monitoring_restored_selection", "chemistry_restored_selection"):
+        for key in ("opening", "run_selection", "chemistry_selection", "monitoring_selection", "monitoring_opening", "monitoring_receiving", "monitoring_restored_selection", "chemistry_restored_selection", "monitoring_comparison_selection"):
             path = getattr(args, key)
             if path:
                 resolved = str(path.resolve(strict=True))
@@ -233,6 +233,31 @@ class Progression:
         self.record("baseline", {"run_id": run_id, "selection": run["selection"]})
         return run_id
 
+    def monitoring_comparison_input(self, path):
+        """Match the maintained browser's optional immutable comparison input."""
+        path = Path(path)
+        selected = read_json(path)
+        browser_whitespace = " \t\n\r\v\f\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff"
+        require(isinstance(selected, dict) and selected.get("schema") ==
+                "upstate.monitoring-budget-browser-selection/v1",
+                "Choose an original saved Monitoring budget browser selection")
+        require(isinstance(selected.get("frontier_id"), str) and selected["frontier_id"].strip(browser_whitespace),
+                "Select an existing native Monitoring frontier")
+        baseline = selected.get("baseline_plan_id")
+        require(baseline is None or isinstance(baseline, str) and baseline.strip(browser_whitespace),
+                "Select an original baseline plan or omit baseline_plan_id")
+        contexts = selected.get("context_ids", [])
+        require(isinstance(contexts, list) and
+                all(isinstance(value, str) and value.strip(browser_whitespace) for value in contexts) and
+                len(set(contexts)) == len(contexts),
+                "Choose distinct saved original observed contexts")
+        require(isinstance(selected.get("title"), str) and selected["title"].strip(browser_whitespace),
+                "Give the Monitoring budget comparison a title")
+        return {"selection_sha256": describe_file(path.parent, path)["sha256"],
+                "selection": {"frontier_id": selected["frontier_id"],
+                              "baseline_plan_id": baseline,
+                              "context_ids": contexts, "title": selected["title"].strip(browser_whitespace)}}
+
     def browser_identity(self, name, script, arguments, workspace, journal, bound):
         """Bind a finished original browser journal to this receiving stage."""
         require(journal.get("status") == "complete" and not journal.get("browser_errors"),
@@ -280,6 +305,10 @@ class Progression:
                     and journal.get("opening") == opening,
                     "The completed saved-view browser belongs to another retained opening")
         elif script == "source/run_monitoring_browser.mjs":
+            comparison_input = (self.monitoring_comparison_input(choices["--comparison-selection"])
+                                if "--comparison-selection" in choices else None)
+            require(journal.get("input", {}).get("comparison") == comparison_input,
+                    "The completed Monitoring browser selected another budget comparison input")
             if "--restored-selection" in choices:
                 selected_path = Path(choices["--restored-selection"])
                 selected = read_json(selected_path)
@@ -287,15 +316,17 @@ class Progression:
                     **{field: selected[field] for field in
                        ("project_id", "network_id", "plan_id", "campaign_id")},
                     "context_id": selected.get("context_id")}
+                expected_input = {"mode": "restored-native",
+                    "restored_selection_sha256":
+                        describe_file(selected_path.parent, selected_path)["sha256"],
+                    **expected_selection}
+                if comparison_input is not None:
+                    expected_input["comparison"] = comparison_input
                 require(selected["project_id"] == self.operator.ws(workspace).project["id"]
                         and journal.get("schema") == "upstate.monitoring-browser/v1"
                         and journal.get("workspace_key") == workspace
                         and journal.get("selection") == expected_selection
-                        and journal.get("input") == {
-                            "mode": "restored-native",
-                            "restored_selection_sha256":
-                                describe_file(selected_path.parent, selected_path)["sha256"],
-                            **expected_selection},
+                        and journal.get("input") == expected_input,
                         "The completed Monitoring browser belongs to another received campaign or source selection")
             else:
                 opening_path, receiving_path = Path(choices["--opening"]), Path(choices["--receiving"])
@@ -314,6 +345,23 @@ class Progression:
                             describe_file(receiving_path.parent, receiving_path)["sha256"]
                         and opening.get("selection") == receiving.get("selection"),
                         "The completed Monitoring browser belongs to another original campaign or source selection")
+            if comparison_input is not None:
+                from model.monitoring_frontier_comparison import inspect as inspect_comparison
+                from model.monitoring_workspace import MonitoringWorkspace
+                require(journal.get("comparison_id"),
+                        "The completed Monitoring browser has no saved comparison identity")
+                comparison = inspect_comparison(self.operator.ws(workspace), journal["comparison_id"])
+                chosen = comparison_input["selection"]
+                frontier = MonitoringWorkspace(self.operator.ws(workspace)).get(
+                    "frontiers", chosen["frontier_id"])
+                require(comparison["network_id"] == expected_selection["network_id"]
+                        and comparison["frontier_id"] == chosen["frontier_id"]
+                        and comparison["baseline_plan_id"] ==
+                            (chosen["baseline_plan_id"] or frontier["plan_ids"][0])
+                        and comparison["title"] == chosen["title"]
+                        and sorted(comparison["selection"]["context_ids"]) ==
+                            sorted(chosen["context_ids"]),
+                        "The completed browser comparison differs from its original frontier or observed support")
         elif script == "source/run_chemistry_browser.mjs":
             if "--restored-selection" in choices:
                 selected_path = Path(choices["--restored-selection"])
@@ -829,6 +877,13 @@ class Progression:
         return outcome
 
     def monitoring_browser(self, outcome):
+        comparison_arguments = []
+        if self.args.monitoring_comparison_selection:
+            comparison_path = self.frozen_input(
+                self.request["documents"]["monitoring_comparison_selection"],
+                "monitoring-comparison-selection.json")
+            self.monitoring_comparison_input(comparison_path)
+            comparison_arguments = ["--comparison-selection", str(comparison_path)]
         if self.args.monitoring_restored_selection:
             require(outcome and outcome.get("kind") == "retained_campaign",
                     "Reopen the original native Monitoring campaign before its browser continuation")
@@ -836,7 +891,7 @@ class Progression:
                 self.request["documents"]["monitoring_restored_selection"],
                 "monitoring-restored-selection.json")
             self.browser("monitoring-browser", "source/run_monitoring_browser.mjs",
-                         ["--restored-selection", str(selected)])
+                         ["--restored-selection", str(selected), *comparison_arguments])
             return
         if not self.args.monitoring_opening:
             return
@@ -862,7 +917,8 @@ class Progression:
                 receiving["summary"]["original_project"]["id"] == opening["project_id"],
                 "The original Monitoring receiver must complete this same selected campaign")
         self.browser("monitoring-browser", "source/run_monitoring_browser.mjs",
-                     ["--opening", str(opening_path), "--receiving", str(receiving_path)])
+                     ["--opening", str(opening_path), "--receiving", str(receiving_path),
+                      *comparison_arguments])
 
     def completed_transfer(self, opening, saved_view, plan):
         """Reopen a finished receiving task without staging its archive again."""
@@ -1011,6 +1067,8 @@ def main(argv=None):
     parser.add_argument("--monitoring-receiving", type=Path, help="Adopt this completed original Monitoring receiver and its saved campaign")
     parser.add_argument("--monitoring-restored-selection", type=Path,
                         help="Open exact native project/network/plan/campaign IDs from an already received full Workspace")
+    parser.add_argument("--monitoring-comparison-selection", type=Path,
+                        help="Operate an original saved budget frontier through the same Monitoring browser and full receiving")
     parser.add_argument("--prepare-only", action="store_true", help="Prepare source dependencies without executing native models")
     parser.add_argument("--node", default="node")
     parser.add_argument("--port", type=int, default=0)
@@ -1033,6 +1091,9 @@ def main(argv=None):
             "Choose restored Monitoring native IDs or original preparation/receiving journals")
     require(not (args.monitoring_opening or args.monitoring_receiving) or args.monitoring_selection,
             "--monitoring-opening/--monitoring-receiving require the exact --monitoring-selection")
+    require(not args.monitoring_comparison_selection or
+            args.monitoring_restored_selection or args.monitoring_opening,
+            "--monitoring-comparison-selection requires the original Monitoring browser input")
     require(bool(args.opening) != bool(regional_args),
             "Supply either --opening or the original regional preparation arguments after --")
     require(0 <= args.port <= 65535 and 0 < args.timeout <= 86400,

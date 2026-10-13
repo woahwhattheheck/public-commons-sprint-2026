@@ -8,8 +8,10 @@ Run from the complete product root:
 
 Already imported originals are reused by exact original byte identity, preserving
 their actual received source collection and source ID. The geography argument is optional when
-its real entries are already imported. Missing reporting files are received from
-the exact pinned public source after the upstream journey. A four-HUC companion can supply
+its real entries are already imported. Missing reporting files first reuse the exact bundled originals in
+source/geography/planning_basins2023. Each copied original is checked against
+its pinned byte count and SHA256; only absent bundled members use the original
+public source after the upstream journey. A four-HUC companion can supply
 the exact original utility-focus source. If that separate capture is absent, the
 same four unchanged HUC12 features are selected from the verified original domain
 under a distinct derived source identity with its full original parent retained.
@@ -460,9 +462,10 @@ def promote_original_focus(workspace, domain):
 
 
 def receive_original_reporting(workspace):
-    """Receive only missing, exact public originals from their pinned commit."""
+    """Reuse exact bundled/cached originals; receive absent members from their pinned commit."""
     destination = workspace.root / "conservation-receiving" / "original-reporting"
     destination.mkdir(parents=True, exist_ok=True)
+    bundled_root = PRODUCT_ROOT / "source" / "geography" / "planning_basins2023"
     companions = []
     for filename, (expected_bytes, expected_sha) in GEOGRAPHY_FILES.items():
         path = destination / filename
@@ -481,16 +484,37 @@ def receive_original_reporting(workspace):
             started = time.perf_counter()
             observed_at = utc_now()
             try:
-                with urllib.request.urlopen(request, timeout=45) as response:
+                bundled = bundled_root / filename
+                if bundled.exists() or bundled.is_symlink():
+                    if (not bundled.is_file()
+                            or not bundled.resolve(strict=True).is_relative_to(PRODUCT_ROOT)):
+                        raise ValueError("Bundled original must be a regular file within the application: " + filename)
+                    bundled_fact = file_fact(bundled)
+                    if (bundled_fact["bytes"] != expected_bytes
+                            or bundled_fact["sha256"] != expected_sha):
+                        raise ValueError("Bundled public original identity mismatch for " + filename)
+                    with bundled.open("rb") as source, pending.open("wb") as handle:
+                        shutil.copyfileobj(source, handle, length=1024 * 1024)
                     capture = {
+                        "source_kind": "bundled_original",
                         "requested_url": uri,
-                        "final_url": response.geturl(),
-                        "status": response.status,
-                        "headers": list(response.headers.items()),
+                        "source_path": bundled.relative_to(PRODUCT_ROOT).as_posix(),
+                        "source_public_commit": "45f7ea3ca968c96e2fc6188d7f55c3b0ce60da95",
                         "observed_at": observed_at,
+                        "original": bundled_fact,
                     }
-                    with pending.open("wb") as handle:
-                        shutil.copyfileobj(response, handle, length=1024 * 1024)
+                else:
+                    with urllib.request.urlopen(request, timeout=45) as response:
+                        capture = {
+                            "source_kind": "original_public_download",
+                            "requested_url": uri,
+                            "final_url": response.geturl(),
+                            "status": response.status,
+                            "headers": list(response.headers.items()),
+                            "observed_at": observed_at,
+                        }
+                        with pending.open("wb") as handle:
+                            shutil.copyfileobj(response, handle, length=1024 * 1024)
                 actual = file_fact(pending)
                 capture.update(**actual, elapsed_seconds=round(time.perf_counter() - started, 6))
                 save_json(receipt_path, capture)

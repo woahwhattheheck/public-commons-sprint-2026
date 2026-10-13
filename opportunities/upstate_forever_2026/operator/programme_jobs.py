@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from model.common import atomic_json, digest, identifier, read_json
 from model.compute_programme import ComputeProgrammes
+from model.native_execution import process_interrupted
 from native_jobs import NativeJobCancelled, NativeJobDetached, NativeJobError
 
 def supported(task):
@@ -214,7 +215,7 @@ def execute_programme(supervisor, task, manager, key, *, only_runs=None):
                 # Only an ordinary prior process failure belongs to the
                 # coordinator's selected-cohort disposition. Identity and
                 # result failures must stop this continuation immediately.
-                if error.code != "NATIVE_PROCESS_EXIT":
+                if error.code != "NATIVE_PROCESS_EXIT" or process_interrupted(error):
                     raise
         return manager.resume(key, only_runs=only_runs)
     except _ProgrammeInterrupt as interrupt:
