@@ -15,8 +15,10 @@ function downloads(rows,label){
 }
 export function receivedParameterStudiesHTML(detail,disabled=false){
   const rows=list(detail?.parameter_study_sources);
-  if(!rows.length)return '';
-  return '<section aria-label="Original Parameter studies"><h4>Parameter studies and saved source editions</h4>'+
+  const working=list(detail?.parameter_working);
+  const workingHTML=working.length?'<section aria-label="Original Parameter working designs"><h4>Unfinished Parameter working histories</h4>'+working.map((row,index)=>'<article class="st-received-source"><h4>'+esc(row.name)+'</h4><p>Revision '+count(row.revision)+' · '+esc(row.author)+' · '+count(row.history_ids.length)+' original working revisions</p><p>'+esc(row.note)+'</p><p>Unfinished values remain editable working material. The ordinary preview validates a scientific selection before preparing runs.</p><button type="button" data-received-action="parameter-study-working" data-working-revision="'+index+'" '+(disabled?'disabled':'')+'>Open working design and history</button></article>').join('')+'</section>':'';
+  if(!rows.length)return workingHTML;
+  return workingHTML+'<section aria-label="Original Parameter studies"><h4>Parameter studies and saved source editions</h4>'+
     rows.map((row,index)=>{
       const local=row.editable===true&&row.relationship==='same_project';
       const direct=row.source_kind==='direct_study';
@@ -60,6 +62,13 @@ export function receivedParameterStudiesHTML(detail,disabled=false){
 export async function openReceivedParameterStudy(host,detail,target,{workspace_key,current}){
   const action=target?.dataset?.receivedAction;
   if(!action?.startsWith('parameter-study-'))return false;
+  if(action==='parameter-study-working'){
+    const position=Number(target.dataset.workingRevision),row=list(detail?.parameter_working)[position];
+    if(!Number.isSafeInteger(position)||position<0||!row||detail.workspace_key!==workspace_key||!current()||!validID(row.revision_id))throw Error('Reopen this original working history in its received Study.');
+    if(typeof host.openParameterStudy!=='function')throw Error('Use the maintained Parameter working-design desk.');
+    await host.openParameterStudy({workspace_key,working_revision_id:row.revision_id},{current});
+    return true;
+  }
   const index=Number(target.dataset.parameterSource);
   const row=Number.isSafeInteger(index)&&index>=0?list(detail?.parameter_study_sources)[index]:null;
   if(!row||detail.workspace_key!==workspace_key||!current())

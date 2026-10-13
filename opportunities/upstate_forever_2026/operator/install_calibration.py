@@ -18,7 +18,39 @@ import re
 import sys
 import tempfile
 
-FILES = ("model/calibration_execution.py", "model/calibration.py", "model/CALIBRATION.md",
+FILES = ("model/terrain_conditioning_study_transfer.py",
+         "model/terrain_conditioning_report_source.py",
+         "model/terrain_conditioning_scientific_report.py",
+         "operator/extensions/terrain-conditioning.json",
+         "operator/terrain_conditioning_native.py",
+         "operator/web/terrain_conditioning.css",
+         "operator/web/terrain_conditioning.mjs",
+         "source_tools/TERRAIN_CONDITIONING.md",
+         "source_tools/terrain_conditioning.py",
+         "source_tools/terrain_conditioning_report.py",
+         "source_tools/terrain_conditioning_response.py",
+         "source_tools/terrain_flood.cpp",
+         "integration/component_fragments/climate-management.json",
+         "model/climate_management.py",
+         "model/climate_management_study_transfer.py",
+         "operator/climate_management.py",
+         "operator/extensions/climate-management.json",
+         "operator/web/climate_management.mjs",
+         "operator/web/climate_management.css",
+         "operator/CLIMATE_MANAGEMENT.md",
+         "model/parameter_working.py",
+         "model/parameter_working_transfer.py",
+         "model/portable_parameter_studies.py",
+         "operator/web/parameter_working.mjs",
+         "operator/PARAMETER_WORKING.md",
+         "integration/component_fragments/parameter-working.json",
+         "model/management_case_study_transfer.py",
+         "model/management_cases.py",
+         "model/experiment_profiles.py",
+         "model/climate_forcing_study_transfer.py",
+         "model/climate_forcing.py",
+         "model/forcing_sources.py",
+         "model/calibration_execution.py", "model/calibration.py", "model/CALIBRATION.md",
          "model/calibration_uncertainty.py", "model/CALIBRATION_UNCERTAINTY.md",
          "model/calibration_maps.py", "model/CALIBRATION_MAPS.md",
          "model/calibration_review.py", "model/CALIBRATION_REVIEW.md",
@@ -236,6 +268,28 @@ PREDECESSORS.setdefault("operator/calibration.py", set()).add("a48a7fcbc1547737f
 PREDECESSORS.setdefault("operator/web/calibration.mjs", set()).add("d4bfed6479f270f970fe3228206a5f87ea5532a19d7922a2af21a784b4d487eb")
 PREDECESSORS.setdefault("operator/install_calibration.py", set()).add("392049d851647f1e82853cb8360d411a5d500d30ff5716a5b0324678669927f8")
 PREDECESSORS.setdefault("operator/extensions/calibration.json", set()).add("220f00c388201fed5afd341442e3c6d4be51e6febdc95f6db11564432587c81a")
+
+# Exact predecessors for complete Parameter working designs and received histories.
+PREDECESSORS.setdefault("operator/parameter_study_api.py", set()).add("c1605ca3590ebf3cbccffbb0b8e3a2fe37349e8db474aca209d3631e56600635")
+PREDECESSORS.setdefault("model/parameter_studies.py", set()).add("f12821a40787764c9baf8451fe161519074e8d82f203d4d9349e41b39271b581")
+PREDECESSORS.setdefault("operator/web/parameter_studies.mjs", set()).add("e0575413795fc50d442d25152b59722a4c493dfbddc24541dd1ab2fd836b3b86")
+PREDECESSORS.setdefault("model/study_transfer.py", set()).add("1c7822e2047df7a85f0e6b70cedaca59cb55d9204c4923090e1e432c252ef4fe")
+PREDECESSORS.setdefault("model/parameter_study_transfer.py", set()).add("d9be141fa0ee47296e6c72bd383597f9db86925231f86e53376845eb0426f135")
+PREDECESSORS.setdefault("model/parameter_study_receiving.py", set()).add("9c81edbeaf29b1d7c6f4c7ea3115421c1dbbb4ab037ea7718b1edb7fb560951f")
+PREDECESSORS.setdefault("operator/web/parameter_received_studies.mjs", set()).add("f340e7b511ea1cff7205dfc962e10d6e0002af8ced9cabe2fd32f8fcca4f6e09")
+PREDECESSORS.setdefault("model/parameter_report_source.py", set()).add("1e2691a7e4110f5773fb3ba6a555b9f5e1439493104ef330550310802ecdaa30")
+PREDECESSORS.setdefault("model/portable_parameter_studies.py", set()).add("8c08026c0cccc5835bc7f9826557bc8def034ea689811b580872f6c643ddd98c")
+PREDECESSORS.setdefault("operator/install_calibration.py", set()).add("d19363177ef4effcefe4663d4cf69990559e27c0750bac011a236016a95b9199")
+PREDECESSORS.setdefault("operator/web/extensions/study_transfer.mjs", set()).add("d8e8a9d7791345e80d7d43f51554abb83d140dce521c536dcf1a631975067d29")
+
+
+PREDECESSORS.setdefault("model/study_transfer.py", set()).add("8a4ef8ad6dd737a7b6c2bb1e4576f24a33e34381469c4fd56cbd0d5f288266e5")
+PREDECESSORS.setdefault("operator/web/extensions/study_transfer.mjs", set()).add("f486e2101bf5a78801f499c51ba59b291400fea5ccd834f20e2b47da283a9dc5")
+
+
+PREDECESSORS.setdefault("model/study_transfer.py", set()).add("e5343e7f6db596f5b924a4b8f99eb36df4a934699bafb1493b51f5b3d724008a")
+PREDECESSORS.setdefault("operator/web/extensions/study_transfer.mjs", set()).add("aec3600339a51bfd53a52343a236a8be49fc15647879902f9c6678958da7ab1f")
+
 
 def _hash(data):
     return hashlib.sha256(data).hexdigest()
