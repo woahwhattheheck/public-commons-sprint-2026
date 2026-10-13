@@ -72,6 +72,8 @@
         "model/ensemble_consumers.py",
         "model/ensemble_consumers_cli.py",
         "model/native_study.py",
+        "model/observation_diagnostics.py",
+        "model/OBSERVATION_DIAGNOSTICS.md",
         "model/parameter_studies.py",
         "model/portable.py",
         "model/raster_block_cache.py",

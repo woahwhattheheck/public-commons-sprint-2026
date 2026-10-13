@@ -5,7 +5,7 @@ import {attachRehearsal} from './rehearsal.mjs';
 import {createSpatialWorkspace} from './spatial.mjs';
 import {mountObservedSeries} from './observed_series.mjs';
 import {observedValueMarkup} from './observed_series.mjs';
-import {supportFields,supportOptions,observationSupportMarkup,observationSupportSummary,observationContextMarkup} from './observation_support.mjs';
+import {supportFields,supportOptions,observationSupportMarkup,observationSupportSummary,observationContextMarkup,observationDiagnosticsMarkup} from './observation_support.mjs';
 import {createDeliveryReview,deliveryRevision,deliveryChanged} from './delivery_review.mjs';
 import {attachCommunity} from './community.mjs';
 import {attachCustomerReviews} from './reviews.mjs';
@@ -318,8 +318,9 @@ async function openItem(kind,id,focus=true){
      content='<p class="note">'+esc(row.interpretation)+'</p>'+defs({run:runTitle(row.run_id),observations:named('observations',row.observation_id),catchment_source:row.catchment_source,model_period:row.model_period||'Review original source vintages',selected_models:row.model_scope?.selected_models||'Review the retained run selection'});
      content+='<p class="note">'+esc(row.metrics_basis||'This retained comparison predates the complete-catchment coverage check. Create a comparison on the same retained run and observations to calculate current coverage.')+'</p>';
      content+=table(['Parameter',row.comparison_version>=2?'Complete comparisons':'Retained comparisons','Mean bias','RMSE','Nash–Sutcliffe efficiency','Catchments / periods'],Object.entries(row.metrics).map(([name,m])=>'<tr><td>'+esc(name)+'<br><small>'+esc(m.units)+'</small></td><td>'+m.n+'</td><td>'+number(m.mean_bias)+'</td><td>'+number(m.rmse)+'</td><td>'+number(m.nash_sutcliffe_efficiency)+'</td><td>'+number(m.unique_catchments??m.n)+' catchments<br><small>'+esc(m.repeated_catchments?'Includes repeated station periods':'Distinct catchments')+'</small></td></tr>'));
+     content+=observationDiagnosticsMarkup(row);
      content+='<div class="filters"><label>Parameter<select id="comparison-parameter"></select></label><label>Station / catchment<select id="comparison-station"></select></label><label>Coverage<select id="comparison-coverage"><option value="">Every retained comparison</option><option value="complete">Complete catchments</option><option value="partial">Partial or legacy coverage</option></select></label></div><div id="observation-comparison-view"></div>';
-     content+='<div class="page-actions">'+button('observation-comparison-csv','Download selected comparison rows')+'</div>';
+     content+='<div class="page-actions">'+button('observation-comparison-csv','Download selected comparison rows')+(row.diagnostics?button('observation-diagnostics-json','Download complete cohort review'): '')+'</div>';
      if(row.exclusions.length)content+='<details class="technical"><summary>'+row.exclusions.length+' original context or excluded rows</summary><pre class="json-view">'+esc(pretty(row.exclusions))+'</pre></details>';
    }else if(kind==='spatial_exports'){
     content='<div class="meta">'+badge(row.state)+'</div>'+defs({saved_review:row.review_id,paper:row.selection?.paper,resolution_dpi:row.selection?.dpi,created_at:row.created_at});
@@ -383,6 +384,13 @@ function renderObservationComparison(){
    const support=c.native_support_fraction==null?'':number(c.native_support_fraction*100)+'% expected native support; '+number(c.structural_stream_omission_cells)+' original stream omissions; '+number(c.unexpected_missing_cells)+' unexpected missing cells';
    return '<tr><td>'+esc(r.station_id||r.catchment_id)+'<br><small>'+esc(r.catchment_id)+'</small></td><td>'+esc(r.period_start)+'<br>'+esc(r.period_end)+'</td><td>'+number(r.observed_annual_mass)+'<br><small>'+esc(r.units)+'</small></td><td>'+number(r.modeled_annual_mass)+(r.included_in_metrics===false?'<small>Partial native total</small>':'')+'</td><td>'+(r.included_in_metrics===true?number(r.residual):'—')+'</td><td>'+badge(legacy?'legacy':r.coverage_status||'partial')+'<small>'+esc(extent)+'</small><small>'+esc(grid)+'</small>'+(support?'<small>'+esc(support)+'</small>':'')+'<small>'+esc((c.coverage_issues||[]).join('; '))+'</small></td><td>'+observationMethod(r)+'</td></tr>';
  }))+observationContextMarkup(detailContext.observationComparison.context_rows||[]);
+}
+function downloadObservationDiagnostics(){
+ const comparison=detailContext?.observationComparison;
+ if(!comparison?.diagnostics)return;
+ const payload={comparison_id:comparison.id,diagnostics:comparison.diagnostics};
+ const url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)+'\n'],{type:'application/json;charset=utf-8'})),a=document.createElement('a');
+ a.href=url;a.download='annual-load-cohort-review-'+short(comparison.id)+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 function downloadObservationComparison(){
  const selected=comparisonRows(),fields=['observation_id','station_id','catchment_id','parameter','measurement_support','species','support_origin','period_start','period_end','period_days','observed_annual_mass','modeled_annual_mass','units','residual','relative_residual','partial_catchment_difference','included_in_metrics','coverage_status','method','uncertainty','source_records','observed_value_text','observed_source_unit','observed_qualifier','spatial_coverage'];
@@ -1119,6 +1127,7 @@ async function dispatch(button){
  if(action==='observation-new')return observationForm();
  if(action==='observation-compare')return observationCompareForm(id);
  if(action==='observation-comparison-csv')return downloadObservationComparison();
+ if(action==='observation-diagnostics-json')return downloadObservationDiagnostics();
  if(['delivery-report','delivery-client-report','delivery-report-refresh','delivery-revise'].includes(action))return deliveryReview.handle(action,id);
  if(action==='delivery-new')return deliveryForm();
  if(action==='delivery-resume'){const row=await api(endpoint('/api/item',{kind:'deliveries',id}));return executeAction('delivery.build',row.selection);}
