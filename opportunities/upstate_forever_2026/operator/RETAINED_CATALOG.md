@@ -153,6 +153,43 @@ case and confirm its newly saved checkpoint appears on the next refresh, then
 open that study and its original full case/results table. This follows the
 existing native programme without creating a replacement scientific dataset.
 
+## Programme activity and project continuity
+
+The original programme activity service persists for the operator lifetime.
+Changed programme records pass the same complete identity, selection and run-binding
+validation as the full native manager. Its cached projection keeps the original
+title, project, baseline and every run key/native selection needed by the activity
+view. Global summaries keep only the latest retained attempt per run; the full
+programme progress and histories remain in their original files and full APIs.
+
+Programme progress signatures are checked on each summary request. The current
+project is checked again after a cache hit, and actual programme/native execution
+locks plus pause controls are read on every response. Completion counts still use
+the current original run states and selections; cached metadata never stands in
+for an active process. The dedicated activity read retains its original full
+progress reader and unchanged bindings/request response protocol.
+
+Project continuity caches only its existing five-field transfer list after the
+unchanged complete transfer-content and captured-task digest validation. A cache
+hit must still belong to the current scientific project. Full inspection,
+restoration, input-file verification, capture locking and replay continue through
+the original service. The transfer-plan form uses the existing compact task/core
+catalogues for the identities, state, selection and origins it already displayed;
+selected archived tasks and actual capture inputs are still loaded in full when
+the original operation is created.
+
+Both services use the existing independent 2,048-entry / 8 MiB retention budgets.
+A record that exceeds its budget remains readable. These projections are local to
+the operator process; the complete scientific workspace and transfer editions are
+unchanged.
+
+In the existing native operation, refresh a saved programme while an actual case
+changes state and a pause request is recorded. Its activity should reflect those
+original changes while retaining the same run bindings. Open Project continuity,
+inspect an original transfer and create its original plan; compare its counts,
+selected task identities and saved view with the full retained source. Continue
+the existing capture/receive workflow with the same project and task identities.
+
 ## Cache lifetime and bounds
 
 The cache contains canonical JSON bytes of a projection, never a shared mutable
