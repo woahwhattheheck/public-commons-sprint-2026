@@ -78,9 +78,11 @@
     },
     {
       "path": "source_tools/receive_watershed_edition.py",
-      "bytes": 20282,
-      "sha256": "c29393b157783806b7d289adf6197c6bf4deb42564c6b1b1f2d4d9b3672061a6",
-      "previous_sha256": []
+      "bytes": 25845,
+      "sha256": "b69627794e18d9495afaa75d29e705336ad2b1c10a6d9881624e58283d7aedcc",
+      "previous_sha256": [
+        "c29393b157783806b7d289adf6197c6bf4deb42564c6b1b1f2d4d9b3672061a6"
+      ]
     },
     {
       "path": "source_tools/RECEIVE_WATERSHED_EDITION.md",
@@ -118,10 +120,11 @@
     },
     {
       "path": "operator/web/keowee-method-view.mjs",
-      "bytes": 19598,
-      "sha256": "f2af6b30c30daa61b0bfcde2d91551628390bcc89ffe7c6dc8f5f036a609a698",
+      "bytes": 19705,
+      "sha256": "7889cdcb92db67af1bbe5c0918c95ac114c8b2623e6d86917eccfd9ed3871163",
       "previous_sha256": [
-        "bf94b4bd3da9924f43724005ec54461c8a747df83e9acc8aeb9eb064955f6886"
+        "bf94b4bd3da9924f43724005ec54461c8a747df83e9acc8aeb9eb064955f6886",
+        "f2af6b30c30daa61b0bfcde2d91551628390bcc89ffe7c6dc8f5f036a609a698"
       ]
     },
     {
@@ -600,5 +603,28 @@
       "source_registry_blob": "6f78503a2895b7a077a5159e1741ec3303606651",
       "source_ref": "f09cc7ee4618c60dd99cabf8246a4a71d6280c3f"
     }
-  ]
+  ],
+  "cumulative_source_selection": {
+    "edition": "eco13-keowee-current-receiver-method-view-20261013",
+    "original_manifest_sha256": "8a7ec17c3c349e85a78599c57e7b47b1a78c68cee8bdf401da402fda49002235",
+    "original_source_bank_sha256": "9b7d4f7ee0a675dc0b541c00abda79ad000c8457e9d102a96d4da9534c0fbf51",
+    "members": [
+      {
+        "path": "source_tools/receive_watershed_edition.py",
+        "bytes": 25845,
+        "sha256": "b69627794e18d9495afaa75d29e705336ad2b1c10a6d9881624e58283d7aedcc",
+        "previous_sha256": "c29393b157783806b7d289adf6197c6bf4deb42564c6b1b1f2d4d9b3672061a6",
+        "source_commit": "a986973c69abd74e3f0e34c1b58e6e24468b187c"
+      },
+      {
+        "path": "operator/web/keowee-method-view.mjs",
+        "bytes": 19705,
+        "sha256": "7889cdcb92db67af1bbe5c0918c95ac114c8b2623e6d86917eccfd9ed3871163",
+        "previous_sha256": "f2af6b30c30daa61b0bfcde2d91551628390bcc89ffe7c6dc8f5f036a609a698",
+        "source_commit": "a986973c69abd74e3f0e34c1b58e6e24468b187c"
+      }
+    ],
+    "preserved_original_profile_members": 9,
+    "preserved_original_shared_join_recipes": 3
+  }
 }

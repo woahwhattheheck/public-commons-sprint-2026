@@ -86,6 +86,7 @@ def operate(args):
         source_paths += (
             "operator/web/receiving_water_editing.mjs",
             "operator/web/receiving_water_sources.mjs",
+            "operator/web/receiving_water_plan_compare.mjs",
             "operator/web/receiving_waters_extension.mjs", "operator/web/receiving_waters.css",
             "operator/web/extensions/study_transfer.mjs",
             "operator/extensions/receiving-waters.json", "model/receiving_waters.py",
@@ -173,6 +174,25 @@ def operate(args):
                         or any(not row.get("selection_unchanged") or not row.get("reopened")
                                for row in records.values())):
                     raise ValueError("The original editable selections did not finish saving and reopening")
+                comparison = editable.get("comparison", {})
+                if (not comparison.get("completed") or not comparison.get("reopened")
+                        or comparison.get("reference_id") != plan["id"]
+                        or comparison.get("candidate_id") != records["plan"]["id"]):
+                    raise ValueError("The original saved plan comparison did not complete and reopen")
+                downloaded = comparison.get("download", {})
+                downloaded_path = Path(downloaded.get("path", "")).resolve()
+                if not downloaded_path.is_relative_to(directory / "browser"):
+                    raise ValueError("Keep the original comparison download in its owned browser output")
+                actual_download = record(downloaded_path)
+                if any(actual_download.get(key) != downloaded.get(key) for key in ("bytes", "sha256")):
+                    raise ValueError("The original comparison download changed after the browser received it")
+                if args.analysis_id:
+                    draft = comparison.get("analysis_draft", {})
+                    if (draft.get("original_analysis_id") != args.analysis_id
+                            or draft.get("candidate_plan_id") != records["plan"]["id"]
+                            or not draft.get("original_other_selections_preserved")
+                            or draft.get("submitted") is not False):
+                        raise ValueError("The candidate-plan draft did not preserve the original numerical selection")
                 result["editable_selection"] = editable
             result.update(browser_result=record(browser_path),
                           exported_maps=len(browser["cases"]),
@@ -212,7 +232,7 @@ def main(argv=None):
     parser.add_argument("--operator-state", type=Path)
     parser.add_argument("--analysis-id")
     parser.add_argument("--editable-selection", action="store_true",
-                        help="Operate saved Study return and exact plan/analysis revisions in the same browser course")
+                        help="Operate saved Study return, exact revisions, source-plan comparison and reopening in the same browser course")
     parser.add_argument("--paper", choices=("letter", "a4"), default="letter")
     parser.add_argument("--dpi", type=int, choices=(150, 220, 300), default=220)
     parser.add_argument("--task-timeout-seconds", type=int, default=1800)

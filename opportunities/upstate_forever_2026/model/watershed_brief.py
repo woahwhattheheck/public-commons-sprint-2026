@@ -15,7 +15,7 @@ import tempfile
 from typing import Mapping
 from urllib.parse import urlsplit
 
-BRIEF_FORMAT = "upstate.watershed-selection-brief/v5"
+BRIEF_FORMAT = "upstate.watershed-selection-brief/v6"
 BRIEF_FILENAME = "watershed-selection-brief.md"
 HTML_FILENAME = "watershed-selection-brief.html"
 
@@ -369,6 +369,8 @@ def render_selection_brief(selection):
     lines.extend(["", *brief_lines(selection, _table, _number)])
     from .watershed_observation_context import brief_lines as evidence_lines
     lines.extend(["", *evidence_lines(selection, _table, _number)])
+    from .watershed_map_context import brief_lines as map_lines
+    lines.extend(["", *map_lines(selection, _table, _number)])
     lines.extend(["", "## Selected watersheds", ""])
     lines.extend(_table(
         ["HUC12", "Watershed", "Area (acres)", "States", "NRCS priority states", "Selected-class records"],
