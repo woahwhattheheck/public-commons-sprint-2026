@@ -90,9 +90,9 @@ def collect_references(data):
         references.append({'role': 'map.' + key, 'path': maps.get(key)})
     references.append({'role': 'final_report', 'path': data.get('report_pdf')})
     assets = data.get('project_assets', [])
-    require(isinstance(assets, list) and len(assets) <= 200 and
+    require(isinstance(assets, list) and
             all(isinstance(path, str) and path for path in assets),
-            'project_assets must be an explicit list of at most 200 relative file paths')
+            'project_assets must be an explicit list of relative file paths')
     references.extend({'role': 'project_asset', 'path': path} for path in assets)
     return references, raster_paths
 

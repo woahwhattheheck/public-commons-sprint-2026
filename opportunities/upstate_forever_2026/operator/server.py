@@ -36,6 +36,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from customer_reviews import CustomerReviews, ACTIONS as CUSTOMER_REVIEW_ACTIONS, READS as CUSTOMER_REVIEW_READS
 from experiment_operator import ExperimentOperator, ACTIONS as EXPERIMENT_ACTIONS, READS as EXPERIMENT_READS
 from model.spatial_exports import SpatialExports
+from delivery_review import read as read_delivery_report, send_preview as send_delivery_report_preview, REPORT_EDITION as CLIENT_REPORT_EDITION
 from extension_registry import ExtensionRegistry
 from programmes import Programmes, ACTIONS as PROGRAMME_ACTIONS, READS as PROGRAMME_READS
 
@@ -613,6 +614,8 @@ class Operator:
         else:
             downloads = []
         result["_downloads"] = downloads
+        if kind == "deliveries":
+            result["_current_report_edition"] = CLIENT_REPORT_EDITION
         return result
 
     def source_info(self, workspace, collection, source, layer=None):
@@ -820,6 +823,9 @@ class Handler(BaseHTTPRequestHandler):
                 reply = self.app.extensions.file_reply(url.path)
                 return self.send_file(reply["ticket_id"], download=one("download") == "1",
                                       content_security_policy=reply["content_security_policy"])
+            if url.path == "/api/file/delivery-report":
+                self.authorized(file=True)
+                return send_delivery_report_preview(self, one("workspace", self.app.primary), one("id"))
             if url.path.startswith("/api/file/"):
                 self.authorized(file=True)
                 return self.send_file(url.path.rsplit("/", 1)[1], download=one("download") == "1")
@@ -848,6 +854,8 @@ class Handler(BaseHTTPRequestHandler):
                         {name: one(name) for name in ("review_id", "before_id", "after_id", "export_id")}))
                 if url.path == "/api/spatial/catalog":
                     return self.send_json(200, self.app.spatial_read(workspace, "catalog"))
+                if url.path == "/api/deliveries/report":
+                    return self.send_json(200, read_delivery_report(self.app, workspace, one("id")))
                 if url.path == "/api/item":
                     return self.send_json(200, self.app.item(workspace, one("kind"), one("id")))
                 if url.path == "/api/source-info":
@@ -882,7 +890,7 @@ class Handler(BaseHTTPRequestHandler):
                         {name: values[0] for name, values in query.items()}))
                 raise Fault("ROUTE_MISSING", "This operator route does not exist.", 404)
             selected = "index.html" if url.path == "/" else url.path.removeprefix("/web/")
-            if selected not in (({'app.mjs', 'community.css', 'community.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css'} | self.app.extensions.web_assets | {"rehearsal.mjs", "rehearsal.css"})):
+            if selected not in (({'app.mjs', 'community.css', 'community.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css'} | (self.app.extensions.web_assets | {"delivery_review.mjs", "delivery_review.css"}) | {"rehearsal.mjs", "rehearsal.css"})):
                 raise Fault("PAGE_MISSING", "This operator page does not exist.", 404)
             data = (Path(__file__).parent / "web" / selected).read_bytes()
             self.close_connection = True
