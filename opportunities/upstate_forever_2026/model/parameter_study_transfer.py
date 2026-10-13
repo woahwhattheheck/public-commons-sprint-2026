@@ -83,7 +83,7 @@ def _captured(closure, entry):
     key = identifier(selection.get("experiment_id"))
     result_sha = identifier(selection.get("expected_artifact_sha256"))
     project = selection.get("workspace_id")
-    if (type(selection.get("edition")) is not int or selection["edition"] not in (1, 2)
+    if (type(selection.get("edition")) is not int or selection["edition"] not in (1, 2, 3)
             or not isinstance(project, str) or not project
             or metadata.get("experiment_id") != key or recipe.get("edition") != result_sha
             or entry.get("uri") != "urn:upstate:parameter-study:" + key + ":" + result_sha):
