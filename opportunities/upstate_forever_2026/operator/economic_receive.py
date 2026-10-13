@@ -280,6 +280,260 @@ def receive_operator(args, original_url, origin, token, journal):
                 return target.read_bytes()
 
 
+            def receive_saved_comparison(first_edition, second_edition):
+                """Operate the maintained comparison using two actual completed editions."""
+                action = "economic.comparison.build"
+                timeout = args.task_timeout_seconds * 1000
+                first_id, second_id = first_edition["id"], second_edition["id"]
+                require(first_id != second_id, "The reviewed cost edition must differ from its original edition")
+                before_inputs = page.locator(".economic-workbench").evaluate(
+                    "(root) => Array.from(root.querySelectorAll('input,select,textarea')).map(node => "
+                    "({tag:node.tagName,type:node.type||'',name:node.name||'',"
+                    "data:{...node.dataset},value:node.value,checked:!!node.checked}))")
+                with journal.stage("preview_original_and_reviewed_economic_editions") as step:
+                    close_details()
+                    page.locator('[data-econ="compare-editions"][data-id="' + first_id + '"]').click()
+                    comparison_dialog = page.locator("dialog.economic-comparison")
+                    comparison_dialog.wait_for(state="visible")
+                    page.wait_for_function(
+                        "(id) => document.querySelector('dialog.economic-comparison [data-ec=first]')?.value===id"
+                        " && !document.querySelector('dialog.economic-comparison [data-ec=first]')?.disabled",
+                        arg=first_id)
+                    comparison_dialog.locator('[data-ec="second"]').select_option(first_id)
+                    comparison_dialog.locator('[data-ec-action="preview"]').click()
+                    comparison_dialog.locator(".ec-error").wait_for(state="visible")
+                    require("two different" in comparison_dialog.locator(".ec-error").inner_text().lower(),
+                            "The actual comparison control did not explain an invalid repeated edition")
+                    capture("15a-economic-comparison-selection-error.png")
+                    comparison_dialog.locator('[data-ec="second"]').select_option(second_id)
+                    comparison_dialog.locator('[data-ec="title"]').fill("")
+                    with page.expect_response(lambda response:
+                                              urlsplit(response.url).path == "/api/economic-comparison/preview"
+                                              and response.request.method == "POST") as pending:
+                        comparison_dialog.locator('[data-ec-action="preview"]').click()
+                    response = pending.value
+                    check_response(response, "Original Economic comparison preview")
+                    preview = response.json()
+                    comparison = preview["comparison"]
+                    require(preview["workspace_key"] == workspace
+                            and preview["input"]["first_edition_id"] == first_id
+                            and preview["input"]["second_edition_id"] == second_id
+                            and comparison["first"]["id"] == first_id
+                            and comparison["second"]["id"] == second_id,
+                            "The visible comparison changed its original edition pair")
+                    require(comparison["comparability"]["physical"] is True,
+                            "The cost successor changed original physical comparison definitions")
+                    originals = ({row["run_id"]: row for row in item["report"]["alternatives"]}
+                                 for item in (first_edition, second_edition))
+                    first_rows, second_rows = originals
+                    require(set(first_rows) == set(second_rows)
+                            == {row["run_id"] for row in comparison["scenarios"]},
+                            "The comparison changed the original full scenario cohort")
+                    for row in comparison["scenarios"]:
+                        require(row["first"] == first_rows[row["run_id"]]
+                                and row["second"] == second_rows[row["run_id"]],
+                                "The comparison changed an original complete scenario")
+                    (output / "original-economic-comparison-preview.json").write_text(
+                        json.dumps(preview, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+                    comparison_dialog.locator('[data-ec-action="build"]').wait_for(state="visible")
+                    capture("15-economic-comparison-preview-desktop.png")
+                    require(comparison["scenarios"], "The original comparison has no scenarios to inspect")
+                    run_id = chosen["run_id"]
+                    comparison_dialog.locator('[data-ec="search"]').fill(run_id)
+                    comparison_dialog.locator('[data-ec="filter"]').select_option("all")
+                    comparison_dialog.locator('[data-ec-action="scenario"][data-id="' + run_id + '"]').click()
+                    require(run_id in comparison_dialog.locator("[data-ec-scenario]").inner_text(),
+                            "The visible scenario details belong to another original run")
+                    with page.expect_download() as pending:
+                        comparison_dialog.locator('[data-ec-action="matching-download"]').click()
+                    downloaded = pending.value
+                    require(not downloaded.failure(), "The all-matching original scenario export failed")
+                    matching_path = output / "comparison-matching-original-scenarios.json"
+                    downloaded.save_as(str(matching_path))
+                    matching = json.loads(matching_path.read_text(encoding="utf-8"))
+                    expected_matching = [row for row in comparison["scenarios"]
+                                         if run_id.lower() in (row["label"] + " " + row["run_id"]).lower()]
+                    require(matching["comparison_id"] == preview["comparison_id"]
+                            and matching["scenarios"] == expected_matching,
+                            "The matching export omitted or changed original scenario records")
+                    comparison_dialog.locator('[data-ec="search"]').fill(run_id + "-no-original-match")
+                    require(comparison_dialog.locator("[data-ec-scenarios] tbody tr").count() == 0,
+                            "The original scenario search did not expose its actual empty matching state")
+                    capture("16a-economic-comparison-empty-filter.png")
+                    comparison_dialog.locator('[data-ec="search"]').fill("")
+                    comparison_dialog.locator('[data-ec="filter"]').select_option("cost")
+                    page.set_viewport_size({"width": 720, "height": 1000})
+                    capture("16-economic-comparison-cost-changes-narrow.png")
+                    page.set_viewport_size({"width": 1440, "height": 1000})
+                    comparison_dialog.locator('[data-ec="filter"]').select_option("all")
+                    step.update(first_edition_id=first_id, second_edition_id=second_id,
+                                comparison_id=preview["comparison_id"],
+                                original_scenarios=len(comparison["scenarios"]),
+                                matching_export=descriptor(matching_path, output))
+                    journal.save()
+
+                with journal.stage("save_and_rejoin_original_economic_comparison") as step:
+                    with page.expect_response(lambda response: is_action(response, action),
+                                              timeout=timeout) as pending:
+                        comparison_dialog.locator('[data-ec-action="build"]').click()
+                    response = pending.value
+                    check_response(response, "Original comparison queued action")
+                    original_request = json.loads(response.request.post_data)
+                    require(original_request["payload"] == {
+                                **preview["input"], "expected_comparison_id": preview["comparison_id"]},
+                            "The queued comparison differs from the actual reviewed preview")
+                    task = wait_task(response.json(), action, refresh_economics=False)
+                    require(task["workspace"] == workspace and task["action"] == action
+                            and task["operation_id"] == original_request["operation_id"]
+                            and task["payload"] == original_request["payload"],
+                            "The completed task differs from the original comparison request")
+                    result = task["result"]
+                    require(result["id"] == preview["comparison_id"]
+                            and result["input"] == preview["input"]
+                            and result["comparison"] == comparison,
+                            "The saved comparison changed its original preview or scenario values")
+                    replay_response = context.request.post(
+                        origin + "/api/actions", headers={"Authorization": "Bearer " + token},
+                        data=original_request, max_redirects=0)
+                    check_response(replay_response, "Rejoin the same original comparison request")
+                    replay = replay_response.json()
+                    require(replay["id"] == task["id"],
+                            "The same comparison operation created a different native task")
+                    fresh = get("/api/economic-comparison/detail", workspace=workspace, id=result["id"])
+                    require(fresh["comparison"] == comparison and fresh["input"] == preview["input"],
+                            "The reopened native comparison changed its retained original sources")
+                    (output / "saved-economic-comparison.json").write_text(
+                        json.dumps(fresh, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+                    comparison_dialog.get_by_role("link", name="Open complete comparison report", exact=True).wait_for(
+                        state="visible", timeout=timeout)
+                    with page.expect_download() as pending:
+                        comparison_dialog.locator('[data-ec-action="recovery-download"]').click()
+                    recovered = pending.value
+                    require(not recovered.failure(), "The original comparison recovery file did not download")
+                    recovery_path = output / "economic-comparison-original-recovery.json"
+                    recovered.save_as(str(recovery_path))
+                    require(recovery_path.stat().st_size > 0, "The original comparison recovery file is empty")
+                    capture("17-complete-economic-comparison-desktop.png")
+                    record["economic_comparison"] = {
+                        "id": result["id"], "task_id": task["id"],
+                        "operation_id": original_request["operation_id"],
+                        "first_edition_id": first_id, "second_edition_id": second_id,
+                        "input": preview["input"], "summary": comparison["summary"],
+                        "physical_comparable": comparison["comparability"]["physical"]}
+                    step.update(**record["economic_comparison"])
+                    journal.save()
+
+                with journal.stage("receive_complete_comparison_and_both_original_editions") as step:
+                    package_descriptor = next(item for item in fresh["files"]
+                                              if item["path"] == "comparison-package.zip")
+                    package_ticket = next(item for item in fresh["_downloads"]
+                                          if item["filename"] == "comparison-package.zip")
+                    relative = package_ticket["url"]
+                    require(relative.startswith("/") and not relative.startswith("//"),
+                            "The complete comparison download must use the original operator")
+                    with page.expect_download() as pending:
+                        comparison_dialog.locator('a[download][href="' + origin + relative + '"]').click()
+                    downloaded = pending.value
+                    require(not downloaded.failure(), "The complete comparison package did not download")
+                    package_path = output / "complete-original-economic-comparison.zip"
+                    downloaded.save_as(str(package_path))
+                    require(package_path.stat().st_size == package_descriptor["bytes"]
+                            and digest(package_path) == package_descriptor["sha256"],
+                            "The outgoing comparison ZIP differs from its exact native descriptor")
+                    directory = output / "economic-comparison"
+                    manifest = extract_edition(package_path, directory,
+                                               schema="upstate.economic-comparison-package/v1")
+                    require(manifest["id"] == fresh["id"]
+                            and json.loads((directory / "comparison.json").read_text(encoding="utf-8")) == comparison,
+                            "The exported comparison changed its identity or complete original values")
+                    nested_members = {}
+                    for side, edition in (("first", first_edition), ("second", second_edition)):
+                        retained = json.loads((directory / (side + "-edition.json")).read_text(encoding="utf-8"))
+                        original_report = json.loads((directory / (side + "-report.json")).read_text(encoding="utf-8"))
+                        require(retained["id"] == edition["id"] and retained["input"] == edition["input"]
+                                and original_report == edition["report"],
+                                "The comparison package lost an original edition record or report")
+                        nested = extract_edition(directory / (side + "-economic-package.zip"),
+                                                 directory / (side + "-economic-edition"))
+                        require(nested["report_id"] == edition["report_id"],
+                                "A nested original Economic package belongs to another report")
+                        nested_members[side] = len(nested["members"])
+                    report_page = context.new_page()
+                    report_page.goto((directory / "index.html").as_uri(), wait_until="load")
+                    require(comparison["title"] == report_page.locator("h1").inner_text()
+                            and first_id in report_page.locator("main").inner_text()
+                            and second_id in report_page.locator("main").inner_text(),
+                            "The outgoing readable comparison opened another original pair")
+                    report_page.screenshot(path=str(output / "18-received-economic-comparison-desktop.png"),
+                                           full_page=True)
+                    report_page.set_viewport_size({"width": 720, "height": 1000})
+                    report_page.screenshot(path=str(output / "19-received-economic-comparison-narrow.png"),
+                                           full_page=True)
+                    report_page.pdf(path=str(output / "economic-comparison-report.pdf"),
+                                    prefer_css_page_size=True, print_background=True)
+                    require((output / "economic-comparison-report.pdf").read_bytes().startswith(b"%PDF"),
+                            "The outgoing comparison report did not produce its PDF")
+                    report_page.close()
+                    with context.expect_page() as opened:
+                        comparison_dialog.get_by_role("link", name="Open complete comparison report", exact=True).click()
+                    native_report = opened.value
+                    native_report.wait_for_load_state("load")
+                    require(native_report.locator("h1").inner_text() == comparison["title"],
+                            "The typed original comparison report opened another saved result")
+                    native_report.screenshot(path=str(output / "20-typed-economic-comparison.png"), full_page=True)
+                    native_report.close()
+                    comparison_dialog.locator('[data-ec-action="close"]').click()
+                    after_inputs = page.locator(".economic-workbench").evaluate(
+                        "(root) => Array.from(root.querySelectorAll('input,select,textarea')).map(node => "
+                        "({tag:node.tagName,type:node.type||'',name:node.name||'',"
+                        "data:{...node.dataset},value:node.value,checked:!!node.checked}))")
+                    require(after_inputs == before_inputs,
+                            "The independent comparison changed the underlying Economic input draft")
+                    page.reload(wait_until="load")
+                    page.locator("#workspace-select").wait_for(state="visible")
+                    if page.locator("#workspace-select").input_value() != workspace:
+                        with page.expect_response(lambda response:
+                                                  urlsplit(response.url).path == "/api/state"
+                                                  and parse_qs(urlsplit(response.url).query).get("workspace") == [workspace]):
+                            page.locator("#workspace-select").select_option(workspace)
+                    page.locator('[data-view="economic-desk"]').click()
+                    page.locator('[data-econ="compare-editions"]').first.click()
+                    comparison_dialog = page.locator("dialog.economic-comparison")
+                    comparison_dialog.wait_for(state="visible")
+                    saved_button = comparison_dialog.locator('[data-ec-action="saved"][data-id="' + fresh["id"] + '"]')
+                    saved_button.first.wait_for(state="visible")
+                    page.wait_for_function(
+                        "(id) => Array.from(document.querySelectorAll('dialog.economic-comparison [data-ec-action=saved]'))"
+                        ".some(node => node.dataset.id===id && !node.disabled)", arg=fresh["id"])
+                    with page.expect_response(lambda response:
+                                              urlsplit(response.url).path == "/api/economic-comparison/detail"
+                                              and parse_qs(urlsplit(response.url).query).get("id") == [fresh["id"]]) as reopened:
+                        saved_button.first.click()
+                    check_response(reopened.value, "Reopen the original saved comparison after reload")
+                    require(reopened.value.json()["comparison"] == comparison,
+                            "Reloading the comparison changed its complete original source values")
+                    comparison_dialog.get_by_role("link", name="Open complete comparison report", exact=True).wait_for(
+                        state="visible")
+                    capture("21-reopened-saved-economic-comparison.png")
+                    comparison_dialog.locator('[data-ec-action="close"]').click()
+                    step.update(package=descriptor(package_path, output),
+                                verified_comparison_members=len(manifest["members"]),
+                                original_economic_members=nested_members,
+                                original_draft_preserved=True, reopened_after_reload=True)
+                    record["economic_comparison"].update(
+                        package=descriptor(package_path, output), verified_members=len(manifest["members"]),
+                        nested_economic_members=nested_members,
+                        product_view_status="captured_for_producer_review",
+                        visual_artifacts=[
+                            "15-economic-comparison-preview-desktop.png",
+                            "16-economic-comparison-cost-changes-narrow.png",
+                            "18-received-economic-comparison-desktop.png",
+                            "19-received-economic-comparison-narrow.png",
+                            "20-typed-economic-comparison.png",
+                            "21-reopened-saved-economic-comparison.png"])
+                    journal.save()
+
+
             def receive_cost_review(plan, candidate, source_edition):
                 """Use supplied original forecasts through the populated native UI."""
                 source_path = Path(args.cost_review).resolve(strict=True)
@@ -470,6 +724,9 @@ def receive_operator(args, original_url, origin, token, journal):
                     capture("14-reopened-reviewed-economic-desk.png")
                     step.update(package=archive_path.name, verified_members=len(manifest["members"]),
                                 economic_members=len(economic_manifest["members"]), edition_id=reviewed["id"])
+
+                if args.compare_editions:
+                    receive_saved_comparison(source_edition, reviewed)
 
             if existing_cost_plan:
                 with journal.stage("reopen_existing_native_plan_with_original_ledger") as step:
@@ -951,6 +1208,8 @@ def parser():
     result.add_argument("--cost-review", help="Explicit original field-cost review selection JSON; includes the native implementation, cost-review and complete package journeys")
     result.add_argument("--cost-plan-id", help="With --cost-review, reopen this saved native plan and retain its actual ledger instead of creating a new plan")
     result.add_argument("--cost-candidate-id", help="Select this original economic candidate in --cost-plan-id; required when matching candidates are ambiguous")
+    result.add_argument("--compare-editions", action="store_true",
+                        help="With --cost-review, compare its actual original Economic edition and completed reviewed successor through the saved comparison UI and complete package")
     result.add_argument("--notes", default="Reviewed in the original operator receiving walkthrough.")
     result.add_argument("--browser-executable")
     result.add_argument("--timeout-seconds", type=float, default=30)
@@ -964,6 +1223,8 @@ def main(argv=None):
     started = time.perf_counter()
     try:
         require(args.timeout_seconds > 0 and args.task_timeout_seconds > 0, "Use positive browser and queue timeouts")
+        require(not args.compare_editions or args.cost_review,
+                "--compare-editions requires the original --cost-review journey")
         require(not args.cost_plan_id or args.cost_review,
                 "--cost-plan-id requires the explicit original --cost-review JSON")
         require(not args.cost_candidate_id or args.cost_plan_id,
@@ -1023,6 +1284,8 @@ def main(argv=None):
                   "browser_error_count": len(record["browser_errors"]), "resume_command": record["resume_command"]}
         if record.get("implementation"):
             result["implementation"] = record["implementation"]
+        if record.get("economic_comparison"):
+            result["economic_comparison"] = record["economic_comparison"]
         print(json.dumps(journal.clean(result), indent=2), flush=True)
         return code
     except Exception as error:
