@@ -1,3 +1,5 @@
+import {sedimentComparisonOperation,readSedimentComparison} from './sediment_comparison_workspace.mjs';
+import {sedimentComparisonHTML,sedimentComparisonCSV} from './sediment_comparison_reports.mjs';
 import {flowComparisonOperation} from './flow_comparison.mjs';
 import {sedimentOperation,readSedimentStudy} from './sediment_workspace.mjs';
 import {sedimentHTML,sedimentCSV} from './sediment_reports.mjs';
@@ -61,6 +63,13 @@ export function createMeasurementHandler({directory,base=DEFAULT_BASE,fetcher=gl
           send(response,200,value,type,'observation-edition-'+parts[2].slice(0,12)+'-'+format);return;
         }
         send(response,200,await observationEditionOperation(s,method,parts.slice(1),query,method==='POST'?await readBody(request):{}));return;
+      }
+      if(parts[0]==='sediment-comparisons'){
+        if(method==='GET'&&parts[1]==='comparisons'&&parts.length===4&&['report.html','metrics.csv','observations.csv','coefficients.csv'].includes(parts[3])){
+          const edition=readSedimentComparison(s,parts[2]),html=parts[3]==='report.html';
+          send(response,200,html?sedimentComparisonHTML(edition):sedimentComparisonCSV(edition,parts[3].split('.')[0]),html?'text/html; charset=utf-8':'text/csv; charset=utf-8','sediment-comparison-'+edition.id.slice(0,12)+'-'+parts[3]);return;
+        }
+        send(response,200,sedimentComparisonOperation(s,method,parts.slice(1),method==='POST'?await readBody(request):{}));return;
       }
       if(parts[0]==='chiques'){send(response,200,chiquesOperation(s,method,parts.slice(1),method==='POST'?await readBody(request):{}));return;}
       if(parts[0]==='sediment'){
