@@ -723,7 +723,13 @@ def _field_qc_comparison(ws, files, check, receipt, delivery):
         raise ValueError("Retain the original same-case QC comparison receipt")
     files.descriptors(ws.root, captured["retained_files"])
     result = simulated_qc_comparison.inspect_comparison(ws, key)
-    if (result != captured or result["phase"] != "complete"
+    # inspect_comparison verifies the immutable original reviews and source,
+    # while current_revision reports the receiver's current editable plan.
+    original_snapshot = {name: value for name, value in captured.items()
+                         if name != "current_revision"}
+    received_snapshot = {name: value for name, value in result.items()
+                         if name != "current_revision"}
+    if (received_snapshot != original_snapshot or result["phase"] != "complete"
             or result["browser_choice"] != check.get("expected")):
         raise ValueError("Receiving changed the retained field/QC comparison")
     source = result["report_source"]
