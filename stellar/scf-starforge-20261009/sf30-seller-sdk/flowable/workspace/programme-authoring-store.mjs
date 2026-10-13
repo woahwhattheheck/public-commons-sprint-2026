@@ -1,5 +1,6 @@
 // MIT. Workspace-scoped complete authoring drafts with atomic concurrent-edit protection.
 import {validateProgrammeDraft} from './programme-authoring.mjs';
+import {validateProgrammeSourceReviewWork} from './programme-source-review.mjs';
 export async function openProgrammeDraftStore(workspaceId,{indexedDB=globalThis.indexedDB}={}){
  if(typeof workspaceId!=='string'||!workspaceId.trim())throw new Error('Open the original workspace before saving a source draft.');
  if(!indexedDB)throw new Error('Browser draft storage is unavailable. Download the complete source draft to retain your edits.');
@@ -23,13 +24,15 @@ export async function openProgrammeDraftStore(workspaceId,{indexedDB=globalThis.
   async list(){return transaction('readonly',(store,result)=>{const request=store.index('workspaceId').getAll(workspaceId);request.onsuccess=()=>result(request.result.map(row=>({
    id:row.draft.id,title:row.draft.title,kind:row.draft.kind,revision:row.revision,updatedAt:row.updatedAt})).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)));});},
   async read(id){return transaction('readonly',(store,result)=>{const request=store.get(key(id));request.onsuccess=()=>result(request.result??null);});},
-  async save(draft,expectedRevision){
-   const selected=validateProgrammeDraft(draft);
+  async save(draft,expectedRevision,options={}){
+   const selected=validateProgrammeDraft(draft),hasReview=Object.prototype.hasOwnProperty.call(options,'sourceReview'),
+    review=hasReview&&options.sourceReview!==null?validateProgrammeSourceReviewWork(options.sourceReview):null;
    return transaction('readwrite',(store,result,fail)=>{
     const request=store.get(key(selected.id));request.onsuccess=()=>{
      const previous=request.result,current=previous?.revision??0;
      if(current!==expectedRevision){fail(Object.assign(new Error('This source draft changed in another tab. Download your edits or save a new copy, then reopen the saved edition.'),{code:'PROGRAMME_DRAFT_CONFLICT'}));return;}
-     const row={key:key(selected.id),workspaceId,revision:current+1,updatedAt:new Date().toISOString(),draft:selected};
+     const row={key:key(selected.id),workspaceId,revision:current+1,updatedAt:new Date().toISOString(),draft:selected,
+      sourceReview:hasReview?review:(previous?.sourceReview??null)};
      store.put(row);result(row);
     };
    });
