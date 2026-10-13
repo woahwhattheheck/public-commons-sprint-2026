@@ -102,10 +102,10 @@ def _plan(path):
     return plan, body, manifest_path, manifest_bytes, models
 
 
-def _progress(path, state, **changes):
-    state.update(changes, updated_at=now())
-    atomic_json(path, state)
-    print(json.dumps({key: state.get(key) for key in
+def _progress(path, record, **changes):
+    record.update(changes, updated_at=now())
+    atomic_json(path, record)
+    print(json.dumps({key: record.get(key) for key in
                       ("id", "state", "phase", "source_collection_id", "grid_id", "run_id")},
                      sort_keys=True), flush=True)
 
