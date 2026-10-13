@@ -225,6 +225,7 @@ def main(argv=None):
     from model.common import atomic_json, digest, held, identifier, now, read_json
     from model.model_selection import run_models, validate_completed_run
     from model.workspace import Workspace
+    from model.native_execution import storage_exhausted
 
     root = args.workspace.resolve()
     receiving = root / "gura-receiving"
@@ -398,6 +399,8 @@ def main(argv=None):
                             "type": type(error).__name__, "message": str(error),
                             "traceback": traceback.format_exc()})
                         failures.append(item_key)
+                        if storage_exhausted(error):
+                            raise
                         logging.exception("Gura parameter study needs recovery: %s", item_key)
                     # Keep the completed reports usable while remaining native cases continue.
                     state["state"] = "running"
@@ -419,9 +422,14 @@ def main(argv=None):
                        failed_study_keys=failures, completed_at=now() if complete else None)
             return 0 if complete else 1
         except Exception as error:
-            checkpoint("error", state="error", error={
-                "type": type(error).__name__, "message": str(error),
-                "traceback": traceback.format_exc()})
+            try:
+                checkpoint("error", state="error", error={
+                    **(getattr(error, "native_failure", None) or {}),
+                    "type": type(error).__name__, "message": str(error),
+                    "traceback": traceback.format_exc()})
+            except OSError:
+                if not storage_exhausted(error):
+                    raise
             logging.exception("Gura parameter suite stopped at its actual operation")
             return 1
 
