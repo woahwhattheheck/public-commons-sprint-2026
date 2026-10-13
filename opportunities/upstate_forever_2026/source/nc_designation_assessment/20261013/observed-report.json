@@ -1,0 +1,334 @@
+{
+  "schema": "upstate.observed-report/v1",
+  "title": "NC designated waters: published 2022 assessment context",
+  "edition": "20261013-nc-exact-designation-assessment",
+  "inputs": [
+    {
+      "path": "source/nc_designation_assessment/20261013/original/ncdeq-final2022-layer2-metadata-original.json",
+      "bytes": 17527,
+      "sha256": "672d98bc5aa07374357a431e00646ef66b05f1981f650038972b5f4af29eef0d"
+    },
+    {
+      "path": "source/nc_designation_assessment/20261013/original/ncdeq-final2022-layer3-metadata-original.json",
+      "bytes": 18735,
+      "sha256": "3265b8d48cab4463e9b65fdff6f4bf6f44c90c03acdd915ac43e82dcfbcdbd06"
+    },
+    {
+      "path": "source/nc_designation_assessment/20261013/original/ncdeq-final2022-layer4-metadata-original.json",
+      "bytes": 8728,
+      "sha256": "2f57c61c6a9d73b9657636ac90fc00ebe6c3a54dec8426f19ac400a12999dc46"
+    },
+    {
+      "path": "source/nc_designation_assessment/20261013/original/ncdeq-final2022-layer2-all-attributes-original.json",
+      "bytes": 64862,
+      "sha256": "b838dd0e6f624159d84320a249d82b4d72e9d7e63638c18c36937ed498212381"
+    },
+    {
+      "path": "source/nc_designation_assessment/20261013/original/ncdeq-final2022-layer3-all-attributes-original.json",
+      "bytes": 25842,
+      "sha256": "4b271e04676f04f100d7913bb93f0bc1772346526b6a3d2ef3dcfa1515d9cbc4"
+    },
+    {
+      "path": "source/nc_designation_assessment/20261013/original/ncdeq-final2022-table4-selected-parameters-original.json",
+      "bytes": 36279,
+      "sha256": "0e54925fdc154fe3db39465e9c63aab3280df519667db1cc7495603715dea5c7"
+    },
+    {
+      "path": "source/nc_designation_assessment/20261013/original/nc-savannah-classification-registry.json",
+      "bytes": 198292,
+      "sha256": "6136e64bc720adb89f9e81fa360e74c6bbe99fee548f9b8df7791ab15fc59c5a"
+    }
+  ],
+  "sections": [
+    [
+      "How the two source systems align",
+      [
+        "110 unique NC assessment units align to all 103 retained Savannah legal schedule indices. The join uses the exact BIMS index within North Carolina. Every original assessment class label agrees literally with the retained legal label.",
+        "The legal schedule describes designated uses and classifications; IR2022 contains the publisher's assessment labels. The two dimensions remain separate in every output.",
+        "The assessment acquisition selects original HUC8 values 3060101 and 3060102. These counts describe that acquired source cohort. Project membership is supplied by the native selected-217-HUC geometry crosswalk.",
+        {
+          "kind": "table",
+          "columns": [
+            "Source dimension",
+            "Count",
+            "Identity"
+          ],
+          "rows": [
+            [
+              "Legal schedule records",
+              "103",
+              "NC + classification system + BIMS index"
+            ],
+            [
+              "Assessment units",
+              "110",
+              "NC + FINAL 2022 + AU_ID"
+            ],
+            [
+              "Alternate polygon features",
+              "34",
+              "Original layer 3 OBJECTID; repeats existing AU_ID"
+            ],
+            [
+              "Parameter records",
+              "77",
+              "Original table 4 OBJECTID, ASMT_ID and CYCLE"
+            ]
+          ]
+        }
+      ]
+    ],
+    [
+      "Assessment labels within the original designations",
+      [
+        "84 legal records contain Tr, HQW or ORW components, covering 90 assessment units. Component membership is retained for source screening and does not replace the full legal class label or its management markers.",
+        {
+          "kind": "table",
+          "columns": [
+            "Literal designation group",
+            "Meeting Criteria",
+            "No Data",
+            "Data Inconclusive",
+            "Total assessment units"
+          ],
+          "rows": [
+            [
+              "Contains Tr, HQW or ORW",
+              "22",
+              "66",
+              "2",
+              "90"
+            ],
+            [
+              "Other literal designations",
+              "1",
+              "17",
+              "2",
+              "20"
+            ],
+            [
+              "All acquired NC assessment units",
+              "23",
+              "83",
+              "4",
+              "110"
+            ]
+          ]
+        },
+        "'No Data' is the publisher's IR2022 label. It describes this assessment edition and does not establish that environmental measurements are absent. 'Meeting Criteria' and 'Data Inconclusive' are preserved with the same edition-specific meaning.",
+        "For the project-selected subset, use the designation and assessment layers together to distinguish protection objectives from assessment follow-up. Review the associated parameter records and current monitoring evidence before choosing a sampling or intervention location."
+      ]
+    ],
+    [
+      "Keep split legal reaches at assessment-unit resolution",
+      [
+        "Four legal BIMS indices contain multiple assessment units. The record table preserves each AU_Number, original description and label; the legal rollup lists all child AU_IDs and label counts.",
+        {
+          "kind": "table",
+          "columns": [
+            "BIMS index",
+            "Legal waterbody",
+            "Assessment units",
+            "Original IR2022 labels"
+          ],
+          "rows": [
+            [
+              "3",
+              "CHATTOOGA RIVER (Cashiers Lake)",
+              "10117, 10118, 10119, 10120",
+              "Meeting Criteria (1); No Data (3)"
+            ],
+            [
+              "3-3",
+              "Norton Mill Creek",
+              "10493, 10494",
+              "Meeting Criteria (1); No Data (1)"
+            ],
+            [
+              "4-13-(0.5)",
+              "Horsepasture River (Lupton Lake, Sapphire Lake)",
+              "10511, 10512, 10513",
+              "Meeting Criteria (2); No Data (1)"
+            ],
+            [
+              "4-13-5-(3)",
+              "Trays Island Creek (Fairfield Lake)",
+              "13394, 13419",
+              "Data Inconclusive (1); No Data (1)"
+            ]
+          ]
+        },
+        "An exact source index establishes the documented relationship. It does not assert identical mapped extent between a legal reach and each assessment unit. Use original native geometry for project intersection and preserve the separate unit descriptions."
+      ]
+    ],
+    [
+      "Inconclusive units for focused evidence review",
+      [
+        {
+          "kind": "table",
+          "columns": [
+            "AU_ID",
+            "Assessment waterbody",
+            "BIMS index",
+            "Literal class",
+            "Original measure"
+          ],
+          "rows": [
+            [
+              "10475",
+              "Big Creek",
+              "3-10-3",
+              "C;Tr,ORW",
+              "4.115699768 FW Miles"
+            ],
+            [
+              "10516",
+              "Burlingame Creek",
+              "4-13-10",
+              "C:+",
+              "1.47250998 FW Miles"
+            ],
+            [
+              "10533",
+              "Hogback Creek",
+              "4-13-9",
+              "C;Tr:+",
+              "1.647210002 FW Miles"
+            ],
+            [
+              "13394",
+              "Trays Island Creek (Fairfield Lake)",
+              "4-13-5-(3)",
+              "B:+",
+              "0.4 FW Miles"
+            ]
+          ]
+        },
+        "These four original overall labels identify a focused review set. Parameter-specific records retain their own assessment status, category, method code, collection year and cycle; those fields should drive the next source review."
+      ]
+    ],
+    [
+      "Parameter cycles, alternate geometry and measured extent",
+      [
+        "77 original parameter rows cover 27 assessment units. The table includes 75 rows with CYCLE 2022 and 2 rows with CYCLE 2020. Both cycles are retained unchanged.",
+        "The 34 polygon features repeat existing assessment-unit identities. They are alternate source geometries and add zero assessment units to the 110-unit cohort.",
+        "AU_Length carries the original AU_Units, including FW Miles and FW Acres. The outputs preserve those pairs without combining incompatible units or substituting projected Shape__Length for the publisher's measure.",
+        "Historical IR2008 through IR2020 fields are retained as original labels. Changes across editions require review of the agency's methods, parameter coverage and unit definitions before interpretation as environmental trends."
+      ]
+    ],
+    [
+      "Parameter-level evidence that changes the review",
+      [
+        "65 of 77 parameter rows retain a COLLECTION_YEAR before 2016. 24 of the 27 units with parameter records have exactly one row. 83 acquired units have no row in this parameter table.",
+        "The publisher's 2022 methodology uses a 2016–2020 data window and carries older assessments forward when newer information is unavailable (printed page 2). The service edition, original cycle, collection year, assessment date and publisher row status are separate fields.",
+        {
+          "kind": "table",
+          "columns": [
+            "Assessment unit",
+            "Original evidence",
+            "Source-review implication"
+          ],
+          "rows": [
+            [
+              "Big Creek / 10475",
+              "42 parameter rows; collection years 2012 and 2014; biological and iron records include Data Inconclusive",
+              "Review the original biological and ambient records; this one unit supplies much of the acquired parameter variety."
+            ],
+            [
+              "Horsepasture / 10512",
+              "Overall Meeting Criteria; trout-temperature20°C row OBJECTID15212 is category3a / Data Inconclusive",
+              "Keep overall and parameter status visible together when reviewing trout-water monitoring needs."
+            ],
+            [
+              "Trays Island / 13394",
+              "Two fecal-coliform rows retain CYCLE2020 / DRAFT, with categories1 and3a",
+              "Retain both ASMT_ID14374 and14375 and review their separate stated reasons."
+            ]
+          ]
+        },
+        "5 original parameter rows carry ASMNT_STATUS DRAFT. That field remains visible in parameter-join.csv and source-review-queue.csv.",
+        "The rows contain assessment categories and parameter labels. Calibration of sediment or nutrient mass export requires appropriate measured concentrations, discharge and time support from the original monitoring records.",
+        {
+          "kind": "table",
+          "columns": [
+            "Source-label reconciliation",
+            "Original row",
+            "Methodology"
+          ],
+          "rows": [
+            [
+              "Cyanide (5 mg/L, AL, FW)",
+              "AU 10475 / OBJECTID 10173",
+              "Cyanide5µg/L, printed page6; original source label is retained unchanged."
+            ]
+          ]
+        },
+        {
+          "kind": "links",
+          "items": [
+            {
+              "title": "Original NC 2022 assessment methodology",
+              "path": "https://www.deq.nc.gov/water-quality/planning/tmdl/303d/2022/2022-303d-listing-methodology-final/download"
+            },
+            {
+              "title": "All 110 units with explicit source-review actions",
+              "path": "source/nc_designation_assessment/20261013/source-review-queue.csv"
+            },
+            {
+              "title": "Source-label reconciliation details",
+              "path": "source/nc_designation_assessment/20261013/source-label-reconciliation.json"
+            }
+          ]
+        }
+      ]
+    ],
+    [
+      "Open and reuse the complete joined source",
+      [
+        {
+          "kind": "links",
+          "items": [
+            {
+              "title": "All 110 joined assessment units and original fields",
+              "path": "source/nc_designation_assessment/20261013/assessment-unit-join.csv"
+            },
+            {
+              "title": "All 77 parameter records with legal designation identity",
+              "path": "source/nc_designation_assessment/20261013/parameter-join.csv"
+            },
+            {
+              "title": "All 103 legal records with assessment-unit rollups",
+              "path": "source/nc_designation_assessment/20261013/legal-reach-rollup.csv"
+            },
+            {
+              "title": "Complete joined JSON with row provenance",
+              "path": "source/nc_designation_assessment/20261013/designation-assessment.json"
+            },
+            {
+              "title": "Reproduction and native report opening",
+              "path": "source/nc_designation_assessment/20261013/README.md"
+            }
+          ]
+        }
+      ]
+    ]
+  ],
+  "source_links": [
+    "source/nc_designation_assessment/20261013/original/ncdeq-final2022-layer2-metadata-original.json",
+    "source/nc_designation_assessment/20261013/original/ncdeq-final2022-layer3-metadata-original.json",
+    "source/nc_designation_assessment/20261013/original/ncdeq-final2022-layer4-metadata-original.json",
+    "source/nc_designation_assessment/20261013/original/ncdeq-final2022-layer2-all-attributes-original.json",
+    "source/nc_designation_assessment/20261013/original/ncdeq-final2022-layer3-all-attributes-original.json",
+    "source/nc_designation_assessment/20261013/original/ncdeq-final2022-table4-selected-parameters-original.json",
+    "source/nc_designation_assessment/20261013/original/nc-savannah-classification-registry.json",
+    "source/nc_designation_assessment/20261013/assessment-unit-join.csv",
+    "source/nc_designation_assessment/20261013/parameter-join.csv",
+    "source/nc_designation_assessment/20261013/legal-reach-rollup.csv",
+    "source/nc_designation_assessment/20261013/summary.json",
+    "source/nc_designation_assessment/20261013/provenance.json",
+    "source/nc_designation_assessment/20261013/README.md",
+    "source/nc_designation_assessment/20261013/source-review-queue.csv",
+    "source/nc_designation_assessment/20261013/source-label-reconciliation.json",
+    "https://www.deq.nc.gov/water-quality/planning/tmdl/303d/2022/2022-303d-listing-methodology-final/download"
+  ]
+}
