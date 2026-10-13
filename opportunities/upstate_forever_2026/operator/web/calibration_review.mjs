@@ -6,14 +6,51 @@ const section=(title,note,body)=>'<section class="panel"><div class="section-hea
 const option=(id,text,selected)=>'<option value="'+esc(id)+'"'+(id===selected?' selected':'')+'>'+esc(text)+'</option>';
 
 /** Whole original calibration review, within the maintained desk and task queue. */
-export function createCalibrationReviews({current,read,submitAction,openForm,detail,fileList,getReport,getData,repaint,activate,openReport}){
-  let packet=null,request=0,formRevision=0;
+export function createCalibrationReviews({current,read,submitAction,openForm,detail,fileList,getReport,getData,repaint,activate,openReport,openDelivery,openItem}){
+  let packet=null,request=0,formRevision=0,sourceFingerprint='';
   const active=()=>!!packet&&packet.workspace_key===current();
-  function reset(){packet=null;request++;formRevision++;}
+  function reset(){packet=null;request++;formRevision++;sourceFingerprint='';}
   function invalidate(){request++;formRevision++;}
   function sync(){
     if(packet&&packet.workspace_key!==current()){reset();return true;}
+    if(active()){
+      const signature=JSON.stringify(reportSources());
+      if(signature!==sourceFingerprint){sourceFingerprint=signature;return true;}
+    }
     return false;
+  }
+  function reportSources(){
+    if(!active())return [];
+    const selected=new Map();
+    for(const row of [...(packet.report_sources??[]),...(getData().calibration_report_sources??[])]){
+      if(row.review_id===packet.review.id)selected.set(row.id,row);
+    }
+    return [...selected.values()];
+  }
+  async function makeSource(id){
+    if(!active()||packet.review.id!==id)throw Error('Open the exact retained review before preparing its report source.');
+    return submitAction('calibration.review.source',{review_id:id});
+  }
+  async function delivery(id){
+    const workspace=current(),revision=++request;
+    const result=await read('report-source',{id});
+    if(current()!==workspace||revision!==request)return;
+    if(result.workspace_key!==workspace||result.report_source.id!==id)throw Error('The report source belongs to a different selection.');
+    if(!result.delivery_selection)throw Error(result.delivery_issue||'Complete both native model families on the original selected baseline before map delivery. The registered report source remains available in the source catalogue.');
+    if(typeof openDelivery!=='function')throw Error('Receive the current original delivery form with this calibration desk.');
+    return openDelivery(result.delivery_selection);
+  }
+  function sourceSection(){
+    const sources=reportSources();
+    return section('Include this review in the complete client delivery',
+      'Prepare its registered scientific source, then use the existing ordered report picker. Original tables, equal-axis figures, map files and the complete dossier ZIP travel with the client report and editable workspace.',
+      '<div class="section-body"><div class="page-actions">'+button('source','Prepare report source',packet.review.id,!sources.length)+'</div></div>'+
+      (sources.length?table(['Registered source','Figures','Companions',''],sources.map(row=>
+        '<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(short(row.source_collection_id))+' · '+esc(row.source_id)+'</small></td>'+
+        '<td>'+esc(row.figure_count)+'</td><td>'+esc(row.companion_count)+'</td><td>'+
+        button('source-delivery','Open complete delivery',row.id,true)+
+        button('source-edition','Open source edition',row.source_collection_id)+'</td></tr>')):
+        '<p class="calibration-empty">The report source preserves this saved review and its exact native selection. Preparing it uses the current task queue.</p>'));
   }
   function rows(reportId){
     const report=getReport();
@@ -73,7 +110,7 @@ export function createCalibrationReviews({current,read,submitAction,openForm,det
     const result=await read('review',{id});
     if(current()!==workspace||revision!==request)return;
     if(result.workspace_key!==workspace||result.review.id!==id)throw Error('The returned review belongs to a different selection.');
-    packet=result;activate();repaint();
+    packet=result;sourceFingerprint=JSON.stringify(reportSources());activate();repaint();
   }
   function render(){
     if(!active())return '';
@@ -86,6 +123,7 @@ export function createCalibrationReviews({current,read,submitAction,openForm,det
         '<div class="card"><h3>'+esc(title)+'</h3><strong class="calibration-card-value">'+esc(value)+'</strong></div>').join('')+'</div>'+
       section('Readable report and complete package','Open the report in the current app, or download the ZIP and open index.html offline. The complete source files and relative links travel together.',
         '<div class="section-body"><div class="page-actions">'+button('preview','Read report',review.id,true)+'</div></div>'+fileList(packet._downloads??[]))+
+      sourceSection()+
       section('Review notes and original selections','Notes belong to this retained review edition and do not change the scientific calibration.',
         '<div class="section-body"><p class="calibration-review-notes">'+esc(selection.notes||'No additional review notes.')+'</p><dl>'+
         [['Calibration',review.calibration_id],['Plan',review.plan_id],['Selected profile',review.selected_profile_id],['Source-error edition',review.uncertainty_id],['Map edition',review.map_id]].map(([key,value])=>
@@ -103,6 +141,12 @@ export function createCalibrationReviews({current,read,submitAction,openForm,det
   }
   async function dispatch(node){
     const action=node.dataset.action?.replace(/^calibration-review-/,'');
+    if(action==='source')return makeSource(node.dataset.id);
+    if(action==='source-delivery')return delivery(node.dataset.id);
+    if(action==='source-edition'){
+      if(!active()||!reportSources().some(row=>row.source_collection_id===node.dataset.id))throw Error('Open the original registered report source first.');
+      return openItem('sources',node.dataset.id);
+    }
     if(action==='prepare')return prepare(node.dataset.id);
     if(action==='open')return open(node.dataset.id);
     if(action==='preview')return preview();
