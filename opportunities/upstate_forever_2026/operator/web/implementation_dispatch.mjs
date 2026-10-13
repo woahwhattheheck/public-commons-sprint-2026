@@ -2,13 +2,14 @@
 import {clone,esc} from './implementation_core.mjs';
 const SELECTION='upstate.implementation-lab-dispatch-selection/v1';
 const PREVIEW='upstate.implementation-lab-dispatch-preview/v1';
+const REPORT='upstate.implementation-lab-dispatch-report/v1';
 const PACKAGE='upstate.implementation-lab-dispatch/v1';
 const RECONCILIATION='upstate.implementation-lab-dispatch-reconciliation/v1';
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 const button=(action,label,attrs='')=>'<button type="button" data-impl="dispatch-'+action+'" '+attrs+'>'+esc(label)+'</button>';
 const field=(label,body,help='')=>'<label class="iw-field"><span>'+esc(label)+'</span>'+body+(help?'<small>'+esc(help)+'</small>':'')+'</label>';
 const option=(value,label,selected)=>'<option value="'+esc(value)+'" '+(value===selected?'selected':'')+'>'+esc(label)+'</option>';
-const busy=s=>['loading','previewing','saving','preparing','reconciling','opening'].includes(s?.stage);
+const busy=s=>['loading','previewing','saving','preparing','reconciling','opening','report-previewing','report-registering'].includes(s?.stage);
 function active(w){
  if(!w.native||w.gone||w.host.getState?.()?.workspace_key!==w.workspace)throw Error('Open laboratory requests in the original native workspace.');
 }
@@ -50,7 +51,7 @@ function packageHtml(w,s){
  const p=s.active_package;if(!p)return '';
  return '<h4>Retained laboratory request package</h4><p>'+esc(p.label||p.selection?.label||p.dispatch_id)+' · original plan revision '+esc(p.original_revision??p.revision??p.plan?.revision)+'</p>'+
  '<p>'+w.nativeDownloads(p._downloads||[])+'</p><p>The request files retain the original sample IDs and explicit analyte orders. Complete the original return template with the laboratory’s actual values and result types; import it through Laboratory CSV results using the package’s mapping.</p>'+
- '<div class="iw-actions">'+button('reconcile','Compare with saved results')+button('export-package','Export package metadata')+button('open-intake','Open laboratory CSV intake')+'</div>'+reconcileHtml(w,s);
+ '<div class="iw-actions">'+button('reconcile','Compare with saved results')+button('export-package','Export package metadata')+button('open-intake','Open laboratory CSV intake')+'</div>'+reconcileHtml(w,s)+reportPanel(w,s);
 }
 export function render(w){
  const s=w.labDispatch;
@@ -152,11 +153,12 @@ export async function finish(w,pending,result){
  if(s.stage==='saving'){
   const next=s.after_save;s.stage='editing';s.operation_id=null;s.after_save=null;w.cache();
   if(w.dirty){w.message='The plan revision was saved. Later browser edits remain; save and review them before continuing the laboratory request.';w.render();return;}
-  if(next==='preview')await preview(w);else if(next==='reconcile')await reconcile(w);
+  if(next==='preview')await preview(w);else if(next==='reconcile')await reconcile(w);else if(next==='report-preview')await reviewReport(w);
  }
 }
 export async function act(w,b){
  const action=b.dataset.impl.slice(9);
+ if(action.startsWith('report-'))return reportAction(w,action,b);
  if(action==='open'){editable(w);if(!w.labDispatch)w.labDispatch=state(w.plan);w.tab='field';w.cache();await refresh(w);return;}
  if(action==='close'){editable(w);w.labDispatch=null;w.cache();w.render();return;}
  if(action==='open-intake'){editable(w);const s=w.labDispatch,turn=w.generation,lab=await w.labCapability();if(current(w,s,turn))await lab.act(w,{dataset:{impl:'lab-open'}});return;}
@@ -185,7 +187,9 @@ export async function act(w,b){
  if(action==='remove-order'){const index=Number(b.dataset.index);if(!Number.isInteger(index)||index<0||index>=s.selection.orders.length)throw Error('The requested analysis row changed. Reopen it.');s.selection.orders.splice(index,1);touch(w,s);w.render();}
 }
 export async function change(w,e){
- const t=e.target,s=w.labDispatch;if(!s)return;editable(w);
+ const t=e.target,s=w.labDispatch;if(!s)return;
+ if(t.matches('[data-dispatch-report-selection]'))return reportSelectionFile(w,t);
+ editable(w);
  if(t.dataset.dispatchFilter){s.sample_query=t.value;s.sample_page=0;w.cache();w.render();return;}
  if(t.hasAttribute('data-dispatch-campaign')){
   const chosen=campaignChoices(w.plan,s.selected_activities).find(row=>row.key===t.value);if(chosen)s.draft_analyte.parameter=chosen.parameter;w.cache();w.render();return;
@@ -198,4 +202,107 @@ export async function change(w,e){
   s.selection.orders[index][key]=t.value;touch(w,s);w.render();return;
  }
  if(t.dataset.dispatchAttachment){const set=new Set(s.selection.attachment_source_ids);if(t.checked)set.add(t.dataset.dispatchAttachment);else set.delete(t.dataset.dispatchAttachment);s.selection.attachment_source_ids=[...set];touch(w,s);w.render();}
+}
+
+function reportFlow(s){
+ const id=s.active_package?.dispatch_id;
+ if(!id)throw Error('Open an original laboratory request package first.');
+ if(s.reportFlow?.dispatch_id!==id)s.reportFlow={dispatch_id:id,stage:'idle',preview:null,existing_report_selection:null,selection_label:'',operation_id:null};
+ return s.reportFlow;
+}
+export function canRegisterReport(w){
+ const s=w.labDispatch,f=s?.reportFlow,p=f?.preview;
+ return !!p&&!w.pending&&!w.dirty&&!!w.nativePlan&&same(w.plan,w.nativePlan)&&
+ p.schema===REPORT&&p.state==='preview'&&p.dispatch_id===s.active_package?.dispatch_id&&
+ p.plan?.id===w.plan.id&&p.plan.revision===w.plan.revision&&!!p.plan.document_digest&&!!p.operation_id&&
+ same(f.reviewed_selection,f.existing_report_selection);
+}
+function reportPanel(w,s){
+ const id=s.active_package?.dispatch_id;if(!id)return '';
+ const f=s.reportFlow?.dispatch_id===id?s.reportFlow:null,p=f?.preview;
+ const receipt=(s.report_receipts||[]).filter(x=>x.dispatch_id===id).at(-1);
+ const prior=(w.observationReceipts||[]).filter(x=>x.plan_id===w.plan.id&&x.report_source?.delivery_selection).at(-1);
+ const disabled=busy(s)||w.pending?'disabled':'';
+ const summary=p?'<p>Request revision '+esc(p.dispatch_plan?.revision)+' · compared saved revision '+esc(p.plan.revision)+'.</p>'+
+ w.table(['Source coverage','Original count'],Object.entries(p.summary||{}).map(([key,value])=>[esc(key.replaceAll('_',' ')),esc(typeof value==='object'?JSON.stringify(value):value)]))+
+ '<p>'+esc(p.interpretation||'')+'</p><div class="iw-actions">'+button('report-register','Register report source',canRegisterReport(w)?'':'disabled')+button('report-export-preview','Export report-source review')+'</div>':'';
+ const ready=receipt?'<h5>Retained report source · saved revision '+esc(receipt.plan.revision)+'</h5><p>This source keeps its exact request and compared plan revision when later records change.</p><div class="iw-actions">'+button('report-source','Open retained report source')+
+ (typeof w.host.openDelivery==='function'?button('report-delivery','Prepare client report'):'')+button('report-export-receipt','Export report-source metadata')+'</div><p>'+w.nativeDownloads(receipt._downloads||[])+'</p>':'';
+ return '<section><h4>Use this request and its results in a scientific report</h4><p>Retain the complete original request, saved results, unresolved matches and sample context in the existing scientific report flow. Requests with no returned results remain reportable.</p>'+
+ '<details><summary>Preserve an existing report selection</summary><p>Use an existing registered field report or choose its complete delivery-selection JSON to retain earlier report sections, figures and selected model/geography settings.</p>'+
+ (prior?button('report-use-field','Use registered field report revision '+prior.revision,disabled):'')+
+ field('Original delivery-selection JSON (optional)','<input type="file" accept=".json,application/json" data-dispatch-report-selection '+disabled+'>')+
+ (f?.existing_report_selection?'<p>'+esc(f.selection_label||'Original report selection retained')+'</p><pre class="iw-json">'+esc(JSON.stringify(f.existing_report_selection,null,2))+'</pre>'+button('report-clear-selection','Clear preceding report selection',disabled):'<p>No preceding report selection chosen.</p>')+'</details>'+
+ '<div class="iw-actions">'+button('report-review',w.dirty||!w.nativePlan?'Save and review report source':'Review scientific report source',disabled)+'</div>'+summary+ready+'</section>';
+}
+async function reviewReport(w){
+ editable(w);const s=w.labDispatch,f=reportFlow(s);
+ if(await saveFirst(w,s,'report-preview'))return;
+ const turn=w.generation,selected=clone(w.plan),id=s.active_package.dispatch_id,selection=clone(f.existing_report_selection);
+ s.stage='report-previewing';f.stage='previewing';f.preview=null;w.cache();w.render();
+ try{
+  const p=await request(w,'dispatch-report-preview',{plan_id:selected.id,revision:selected.revision,dispatch_id:id,existing_report_selection:selection});
+  if(!current(w,s,turn)||s.reportFlow!==f)return;
+  if(p?.schema!==REPORT||p.state!=='preview'||p.dispatch_id!==id||p.plan?.id!==selected.id||p.plan.revision!==selected.revision||!p.plan.document_digest||!p.operation_id)throw Error('The scientific source review does not identify the original request and saved revision.');
+  if(!same(w.plan,selected)||!same(f.existing_report_selection,selection))throw Error('The plan or preceding report selection changed. Review the original source again.');
+  f.preview=p;f.reviewed_selection=selection;f.stage='review';s.stage='editing';w.cache();w.render();
+ }catch(error){if(current(w,s,turn)&&s.reportFlow===f){f.stage='idle';s.stage='editing';w.cache();w.render();}throw error;}
+}
+async function registerReport(w){
+ editable(w);if(!canRegisterReport(w))throw Error('Review the exact original laboratory report source before registering it.');
+ const s=w.labDispatch,f=s.reportFlow,p=f.preview;f.stage='registering';f.operation_id=null;s.stage='report-registering';w.cache();
+ try{await w.queue('implementation.lab.dispatch-report',{plan_id:p.plan.id,revision:p.plan.revision,document_digest:p.plan.document_digest,dispatch_id:p.dispatch_id,report_operation_id:p.operation_id,existing_report_selection:f.reviewed_selection});}
+ catch(error){if(!w.pending&&!f.operation_id){f.stage='review';s.stage='editing';w.cache();}throw error;}
+}
+export function validateReportReceipt(w,pending,result){
+ if(result?.schema!==REPORT||result.state!=='imported'||result.workspace_key!==w.workspace||result.plan_id!==pending.plan_id||result.plan?.id!==pending.plan_id||result.plan.revision!==pending.payload.revision||result.plan.document_digest!==pending.payload.document_digest||result.operation_id!==pending.payload.report_operation_id||result.dispatch_id!==pending.payload.dispatch_id||!result.source_collection_id||result.report_source?.source_collection_id!==result.source_collection_id||!same(result.delivery_selection,result.report_source?.delivery_selection))throw Error('The registered scientific source differs from the retained original request operation.');
+}
+export function finishReport(w,pending,result){
+ validateReportReceipt(w,pending,result);
+ const s=w.labDispatch,f=s?.reportFlow;if(!s||!f||f.operation_id!==pending.operation_id)throw Error('Reopen the original request controls to receive this saved scientific source.');
+ s.report_receipts=[...(s.report_receipts||[]).filter(x=>x.operation_id!==result.operation_id),clone(result)];
+ f.stage='complete';f.operation_id=null;f.preview=null;s.stage='editing';w.pending=null;
+ w.message='Laboratory request and result source registered for saved revision '+result.plan.revision+'.'+(w.dirty?' Later browser edits remain in this draft.':'');
+ w.cache();w.render();
+}
+function selectedReportReceipt(w){
+ active(w);const s=w.labDispatch,id=s?.active_package?.dispatch_id,r=(s?.report_receipts||[]).filter(x=>x.dispatch_id===id).at(-1);
+ if(!r||r.workspace_key!==w.workspace||r.plan_id!==w.plan.id)throw Error('Open a registered laboratory report source in its original workspace.');
+ return r;
+}
+async function reportAction(w,action,b){
+ const s=w.labDispatch;if(!s)return;
+ if(action==='report-review')return reviewReport(w);
+ if(action==='report-register')return registerReport(w);
+ if(action==='report-export-preview'){const p=s.reportFlow?.preview;if(!p)throw Error('Review the original report source first.');download(p.dispatch_id+'-report-source-review.json',p);return;}
+ if(action==='report-export-receipt'){const r=selectedReportReceipt(w);download(r.operation_id+'-report-source.json',r);return;}
+ if(action==='report-source'){
+  const r=selectedReportReceipt(w),id=r.source_collection_id,turn=w.generation;
+  if(typeof w.host.openItem!=='function')throw Error('This operator needs its original source viewer.');
+  if(document.querySelector('dialog[open]'))throw Error('Finish the current editor before opening another source.');
+  w.cache();await (w.host.refreshState?.({force:true})||w.host.refresh?.({force:true}));
+  if(!current(w,s,turn))return;w.host.navigate?.('sources');await w.host.openItem('sources',id);return;
+ }
+ if(action==='report-delivery'){
+  const r=selectedReportReceipt(w);
+  if(typeof w.host.openDelivery!=='function')throw Error('This operator needs its original report preparation capability.');
+  if(document.querySelector('dialog[open]'))throw Error('Finish the current report or field editor before preparing another report.');
+  if(!r.delivery_selection||typeof r.delivery_selection!=='object'||Array.isArray(r.delivery_selection))throw Error('The retained report selection is unavailable.');
+  w.cache();await w.host.openDelivery(clone(r.delivery_selection));return;
+ }
+ editable(w);const f=reportFlow(s);
+ if(action==='report-clear-selection'){f.selection_epoch=(f.selection_epoch||0)+1;f.existing_report_selection=null;f.selection_label='';f.preview=null;f.stage='idle';w.cache();w.render();return;}
+ if(action==='report-use-field'){
+  const prior=(w.observationReceipts||[]).filter(x=>x.plan_id===w.plan.id&&x.workspace_key===w.workspace&&x.report_source?.delivery_selection).at(-1);
+  if(!prior)throw Error('Register an original field-observation source for this plan first.');
+  f.selection_epoch=(f.selection_epoch||0)+1;f.existing_report_selection=clone(prior.report_source.delivery_selection);f.selection_label='Original registered field report revision '+prior.revision;f.preview=null;f.stage='idle';w.cache();w.render();
+ }
+}
+async function reportSelectionFile(w,input){
+ editable(w);const s=w.labDispatch,f=reportFlow(s),file=input.files?.[0];if(!file)return;
+ const turn=w.generation,epoch=(f.selection_epoch||0)+1;f.selection_epoch=epoch;f.preview=null;f.stage='idle';f.existing_report_selection=null;f.selection_label='';w.cache();w.render();
+ if(file.size>16*1024*1024)throw Error('Use the original delivery-selection JSON within the native 16 MiB document limit.');
+ const value=JSON.parse(await file.text());if(!current(w,s,turn)||s.reportFlow!==f||f.selection_epoch!==epoch)return;
+ if(!value||typeof value!=='object'||Array.isArray(value))throw Error('Choose the original delivery-selection JSON object.');
+ f.existing_report_selection=value;f.selection_label=file.name;w.cache();w.render();
 }

@@ -54,6 +54,22 @@ Unchanged observations already present at the original request revision remain s
 
 The interactive return table shows 50 rows at a time. **Export complete reconciliation** includes every requested order, match, issue and unrequested observation ID across all pages. **Export package metadata** retains the original package identity separately.
 
+## Carry the original request and returns into a scientific report
+
+Open the retained request, then choose **Review scientific report source**. This uses one exact saved field-plan revision. If there are browser edits, **Save and review report source** uses the existing native queue first and preserves any later changes separately.
+
+The review retains the original request revision, compared plan revision, matching and competing results, unrequested and pre-existing records, source result types, original sample context and source files. A request with zero returned results is valid: its report records the requested analyses and missing returns without creating measurements.
+
+To preserve an existing report, expand **Preserve an existing report selection**. **Use registered field report revision …** explicitly selects the latest original field-report source for this plan. Alternatively, choose the complete original delivery-selection JSON from a saved report. Its existing sections, figures, scientific context and selected model/geography settings remain part of the new selection. The chosen selection is displayed for review. Changing or clearing it invalidates the source preview.
+
+Choose **Register report source** to retain that exact source edition through the original task queue. This creates a scientific source document; it does not change a plan revision or an observation dataset.
+
+**Open retained report source** opens the original Sources viewer with its complete source document and companion files. **Prepare client report** opens the maintained report form with that retained selection. Finish an already-open report or field editor before opening another; existing draft controls are preserved.
+
+The source edition remains tied to its original request and compared revision after later field edits. **Export report-source review** and **Export report-source metadata** retain the respective full bindings. Native download links expose the verified original package, current plan/revision, reconciliation JSON and complete request/result/context tables. The readable report tables may show an initial portion of a large table; the full retained CSV/JSON companions carry every record.
+
+For source methods, composition and exact API details, see **IMPLEMENTATION_DISPATCH_REPORT.md**. The native model is `model/implementation_dispatch_report.py`; its source-registration action is `implementation.lab.dispatch-report`. It uses the existing OBSERVED_CONTEXT collector, including the caller's original preceding report selection where chosen.
+
 ## Revision, draft and retry behavior
 
 - Request controls are cached with the original plan’s browser draft. Switching plans restores that plan’s own controls; creating a new plan or opening another JSON document clears the previous active request state.
@@ -76,7 +92,11 @@ The extension descriptor exposes the original provider’s routes:
 | Open package | GET `/api/implementation/dispatch-detail` |
 | Compare returns | POST `/api/implementation/dispatch-reconcile` |
 | Prepare through retained task queue | `implementation.lab.dispatch` / POST `/api/implementation/dispatch` |
+| Review scientific report source | POST `/api/implementation/dispatch-report-preview` |
+| Register retained report source | `implementation.lab.dispatch-report` / POST `/api/implementation/dispatch-report` |
 
 The model is `model/implementation_lab_dispatch.py`. Preview and reconciliation read an explicit saved revision and return its actual digest. Preparation requires that preview’s digest and operation ID. The provider owns workspace access and original download tickets.
+
+The existing **Sample quality control** action is available in native **Field records**. It opens the independently maintained QC editor on the exact saved revision; a later browser draft stays intact. Closing, changing plans or rendering another workbench view preserves the QC editor’s own revision-specific selection and pending-operation record. Its additive model/provider/descriptor/helper must be received with the current complete application. Outcomes remains in its original tab.
 
 The supplied standalone HTML is regenerated from the current complete planner, preserving native-only dynamic capabilities without invoking them in offline mode. Preserve other owners’ Outcomes, explicit QC, campaign, evidence and current source-catalogue integrations when composing the shared controller.

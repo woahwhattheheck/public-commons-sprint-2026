@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "implementation",
   "title": "Implementation & fieldwork",
-  "version": "7",
+  "version": "8",
   "order": 70,
   "assets": [
     "implementation.mjs",
@@ -36,7 +36,8 @@
       "implementation.observations.import",
       "implementation.lab.import",
       "implementation.lab.dispatch",
-      "implementation.briefing.import"
+      "implementation.briefing.import",
+      "implementation.lab.dispatch-report"
     ],
     "invoke": {
       "handler": "invoke",
@@ -402,6 +403,32 @@
         ],
         "path": "/api/implementation/briefing-import",
         "operation": "briefing-import",
+        "handler": "queue",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation/dispatch-report-preview",
+        "operation": "dispatch-report-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation/dispatch-report",
+        "operation": "dispatch-report",
         "handler": "queue",
         "args": [
           "workspace_key",
