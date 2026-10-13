@@ -2,14 +2,15 @@
   "schema": "upstate.operator-extension/v1",
   "id": "calibration",
   "title": "Calibration and validation",
-  "version": "10+source-design1",
+  "version": "10+source-design1+profile-history1",
   "order": 65,
   "assets": [
     "calibration.mjs",
     "calibration.css",
     "calibration_maps.mjs",
     "calibration_review.mjs",
-    "calibration_design.mjs"
+    "calibration_design.mjs",
+    "calibration_history.mjs"
   ],
   "backend": {
     "module": "calibration",
@@ -29,7 +30,8 @@
       "calibration.maps.prepare",
       "calibration.maps.review",
       "calibration.review.prepare",
-      "calibration.review.source"
+      "calibration.review.source",
+      "calibration.history.export"
     ],
     "invoke": {
       "handler": "invoke",
@@ -135,6 +137,19 @@
         ],
         "path": "/api/calibration/report-source",
         "operation": "report-source",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/calibration/history",
+        "operation": "history",
         "handler": "read",
         "args": [
           "workspace_key",
