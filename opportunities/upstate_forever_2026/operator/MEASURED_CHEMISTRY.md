@@ -52,9 +52,12 @@ contained in TKN must not be added a second time.
 
 ## Time, censoring and roles
 
-Enter model day zero as an ISO timestamp with an explicit timezone, for example
-a source-supported timestamp ending in Z or -05:00. The model's calendar origin
-is a scientific choice; it is not filled from an arbitrary import clock.
+Choose either a source-supported model day zero as an ISO timestamp with an
+explicit timezone, or reviewed explicit model days on individual records. A supplied
+origin must include Z or an explicit offset such as -05:00. When using only explicit
+record days, leave the calendar origin blank. Records without a usable timing
+choice remain excluded by the native producer. The model's calendar origin is a
+scientific choice; it is not filled from an arbitrary import clock.
 
 Choose the default fit or holdout role and, if appropriate, a source date from which
 records are held out. Individual record details can override the role or set a

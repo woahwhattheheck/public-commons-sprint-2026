@@ -94,7 +94,7 @@ export function mountMeasuredChemistry(root,host,{memory=new Map()}={}){
      text('basis_reference','Source supporting this mass basis and fraction',m.basis_reference)+note('basis_reason','Why this operator represents the reported measurement',m.basis_reason)+
      text('sigma_mg_l','Observation error scale (mg of declared basis/L)',m.sigma_mg_l??'','type="number" min="0" step="any"')+note('uncertainty_reason','Error scale rationale',m.uncertainty_reason)+'</details>';
    }).join('')+'</fieldset>'+
-   '<fieldset><legend>Time and fit / holdout</legend><div class="mb-grid">'+text('time_origin','Model day zero (ISO timestamp with timezone)',value.time_origin,'placeholder="2023-01-01T00:00:00-05:00" required')+
+   '<fieldset><legend>Time and fit / holdout</legend><div class="mb-grid">'+text('time_origin','Model day zero (optional with reviewed per-record days)',value.time_origin,'placeholder="ISO timestamp with timezone"')+
     select('default_role','Default role',[['fit','Fit'],['holdout','Holdout']],value.roles.default)+text('holdout_from','Hold out on or after source date',value.roles.holdout_from,'type="date"')+'</div>'+
     '<label class="mb-check"><input name="allow_censored" type="checkbox" '+(value.allow_censored?'checked':'')+'>Retain supported finite censored bounds</label>'+
     '<details><summary>Individual records, original rows and time overrides</summary><div data-mb-records></div></details>'+
@@ -156,7 +156,8 @@ export function mountMeasuredChemistry(root,host,{memory=new Map()}={}){
   if(derived)v.derived_total_nitrogen=derived;else delete v.derived_total_nitrogen;
   if(strict){
    if(!v.title||!v.reviewer||!v.reason)throw Error('Complete the binding title, reviewer and scientific rationale.');
-   if(!/T.*(?:Z|[+-]\d\d:\d\d)$/.test(v.time_origin)||!Number.isFinite(Date.parse(v.time_origin)))throw Error('Model day zero needs an ISO timestamp with an explicit timezone.');
+   if(v.time_origin&&(!/T.*(?:Z|[+-]\d\d:\d\d)$/.test(v.time_origin)||!Number.isFinite(Date.parse(v.time_origin))))throw Error('A supplied model day zero needs an ISO timestamp with an explicit timezone.');
+   if(!v.time_origin&&!inspected.records.some(row=>Object.hasOwn(v.day_overrides||{},row.id)))throw Error('Enter model day zero, or retain a reviewed explicit model day for at least one original record. Records without a usable time binding remain excluded by the native producer.');
    if(!v.station_bindings.length||!v.measurement_mappings.length)throw Error('Select at least one station assignment and one explicit measurement mapping.');
    if(!v.request||typeof v.request!=='object'||Array.isArray(v.request))throw Error('The native request must be an object.');
    if(Object.hasOwn(v.request,'observations'))throw Error('Remove observations from the request; the reviewed measured binding supplies them.');
