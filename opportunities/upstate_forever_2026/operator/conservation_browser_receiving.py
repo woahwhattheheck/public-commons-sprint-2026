@@ -3,8 +3,9 @@
 
 The existing receiving owner starts the original operator and retains its startup
 JSON locally. This script reuses that operator and the regional receiver's study.
-It saves one real manual portfolio, reopens it after reload, and downloads the
-original exported packet. An interrupted run resumes its retained task IDs.
+It checks two actual units, retains that cohort when the candidate catalog is
+available, saves one original portfolio, reopens it after reload, and downloads
+the original exported packet. An interrupted run resumes its retained task IDs.
 
 Example:
   /opt/pyvenv/bin/python operator/conservation_browser_receiving.py \
@@ -186,7 +187,10 @@ def main():
         def action(control, expected_action, report_key):
             existing = report["task_ids"].get(report_key)
             if existing:
-                return task(existing)
+                retained_task = task(existing)
+                require(retained_task.get("action") == expected_action,
+                        "The retained browser task belongs to another action.")
+                return retained_task
             with page.expect_response(lambda response:
                     urlsplit(response.url).path == "/api/actions"
                     and response.request.method == "POST") as pending:
@@ -201,6 +205,16 @@ def main():
             persist()
             return task(submitted["id"])
 
+        def open_retained_task(task_id):
+            # A resumed task may already be complete without an open task dialog.
+            control = page.locator('[data-action="task-open"][data-id=' +
+                                   json.dumps(task_id) + "]")
+            if not control.is_visible():
+                page.locator('[data-action="tasks"]').first.click()
+            expect(control).to_be_visible()
+            control.click()
+            expect(page.locator("#detail-dialog[open]")).to_be_visible()
+
         try:
             page.goto(operator_url, wait_until="domcontentloaded")
             expect(page.locator("#workspace-select")).to_have_value(workspace)
@@ -209,6 +223,19 @@ def main():
             expect(root).to_be_visible()
             page.locator('[data-action="conservation-open-study"][data-study-id=' +
                          json.dumps(study_id) + "]").click()
+            inventory_or_prepare = page.locator(
+                '.cons-candidates, [data-action="conservation-catalog-prepare"]')
+            expect(inventory_or_prepare.first).to_be_visible()
+            prepare_search = page.locator('[data-action="conservation-catalog-prepare"]')
+            if prepare_search.is_visible():
+                prepared = action(prepare_search, "conservation.catalog.prepare", "catalog")
+                require(prepared["result"].get("study_id") == study_id,
+                        "Candidate search preparation returned another original study.")
+                opener = page.locator(
+                    '#detail-dialog [data-action="conservation-open-study"][data-study-id=' +
+                    json.dumps(study_id) + "]")
+                expect(opener).to_be_visible()
+                opener.click()
             expect(page.locator(".cons-candidates")).to_be_visible()
             state = get("/api/conservation/study", study_id=study_id)
             require(state.get("state") == "complete", "Open a completed regional candidate inventory.")
@@ -252,6 +279,33 @@ def main():
             page.locator('[data-filter="search"]').fill("")
             page.locator('[data-filter="eligibility"]').select_option("selected")
             expect(page.locator(".cons-candidates input[data-candidate-id]:checked")).to_have_count(2)
+            retain_control = page.locator('[data-action="conservation-select-matching"]')
+            catalog_selection_id = report.get("catalog_selection_id")
+            use_catalog = bool(retain_control.count()) and (
+                not report["task_ids"].get("plan") or bool(catalog_selection_id))
+            if use_catalog:
+                retained_task = action(retain_control, "conservation.catalog.select", "catalog_selection")
+                retained = retained_task["result"]
+                require(retained.get("study_id") == study_id and retained.get("count") == len(selected)
+                        and retained.get("selection_id"),
+                        "Retain exactly the two checked original units from this study.")
+                catalog_selection_id = retained["selection_id"]
+                report["catalog_selection_id"] = catalog_selection_id
+                report["catalog_selection"] = retained
+                persist()
+                if not page.locator("#detail-dialog[open]").count():
+                    open_retained_task(report["task_ids"]["catalog_selection"])
+                opener = page.locator(
+                    '#detail-dialog [data-action="conservation-open-study"][data-study-id=' +
+                    json.dumps(study_id) + "][data-selection-id=" +
+                    json.dumps(catalog_selection_id) + "]")
+                expect(opener).to_be_visible()
+                opener.click()
+                expect(page.locator(".cons-help").filter(
+                    has_text="Complete retained cohort: " + catalog_selection_id)).to_be_visible()
+                expect(page.locator(".cons-candidates")).to_be_visible()
+                page.locator('[data-filter="eligibility"]').select_option("selected")
+                expect(page.locator(".cons-candidates input[data-candidate-id]:checked")).to_have_count(2)
             photograph("02-selection.png")
 
             if not report["task_ids"].get("plan"):
@@ -259,9 +313,11 @@ def main():
                 page.locator('[data-field="plan.title"]').fill(TITLE)
                 page.locator('[data-field="plan.mode"]').select_option("manual")
                 page.locator('[data-field="plan.area_basis"]').select_option("whole_units")
+            plan_action = "conservation.catalog.plan.save" if use_catalog else "conservation.plan.save"
             saved_task = action(page.locator('[data-action="conservation-save-plan"]'),
-                                "conservation.plan.save", "plan")
-            plan_id = saved_task["result"]["id"]
+                                plan_action, "plan")
+            plan_result = saved_task["result"].get("plan") or saved_task["result"]
+            plan_id = plan_result["id"]
             report["plan_id"] = plan_id
             persist()
             if page.locator('#detail-dialog[open]').count():
@@ -277,6 +333,13 @@ def main():
             saved = get("/api/conservation/plan", plan_id=plan_id)
             require(sorted(saved["selected_ids"]) == sorted(selected),
                     "The saved portfolio differs from the checked native units.")
+            if use_catalog:
+                cohort = saved.get("selection", {}).get("catalog_selection", {})
+                require(cohort.get("selection_id") == catalog_selection_id
+                        and cohort.get("resolved_count") == len(selected)
+                        and not cohort.get("include_ids") and not cohort.get("exclude_ids"),
+                        "The saved original portfolio lost its exact retained cohort.")
+                report["saved_catalog_selection"] = cohort
             portfolio = page.locator('[aria-label="Saved portfolio"]')
             expect(portfolio).to_be_visible()
             expect(portfolio.get_by_role("heading", name=TITLE, exact=True)).to_be_visible()
@@ -292,6 +355,7 @@ def main():
             reopened = get("/api/conservation/plan", plan_id=plan_id)
             require(reopened["id"] == saved["id"]
                     and reopened["selected_ids"] == saved["selected_ids"]
+                    and reopened["selection"] == saved["selection"]
                     and reopened["summary"] == saved["summary"],
                     "Reopened portfolio identity, selection or quantities changed.")
             report["reopened_plan_id"] = reopened["id"]
