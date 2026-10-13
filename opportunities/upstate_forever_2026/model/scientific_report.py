@@ -947,7 +947,14 @@ def receiving_sections(product):
         blocks.extend(_receiving_metric_blocks(
             metrics.get("baseline_physical", {}), metrics.get("alternatives", {}),
         ))
-    return [("Receiving-water quantities and priorities", blocks)]
+    sections = [("Receiving-water quantities and priorities", blocks)]
+    from .client_receiving_waters import accounting_sections
+    for part in accounting_sections(inventory, number=_number, text=_plain):
+        account_blocks = list(part["paragraphs"])
+        for item in part["tables"]:
+            account_blocks.append(_table(item["columns"], item["rows"], caption=item.get("caption")))
+        sections.append((part["title"], account_blocks))
+    return sections
 
 
 def _source_block(source_records):
