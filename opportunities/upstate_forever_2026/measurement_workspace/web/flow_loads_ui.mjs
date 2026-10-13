@@ -1,4 +1,5 @@
 /** Optional load integration over a saved original daily-flow study. */
+import {mountFlowLoadComparison} from './flow_load_comparison_ui.mjs';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clone=x=>JSON.parse(JSON.stringify(x));
 const num=x=>x==null?'—':Number(x).toLocaleString(undefined,{maximumSignificantDigits:9});
@@ -153,13 +154,15 @@ export function mountFlowLoads(host,{api,request,studies=[],selectedStudy=null,i
  if(!(host instanceof Element)||typeof api!=='function'||typeof request!=='function')throw TypeError('Use the existing daily-flow API and host.');
  const controller=new AbortController(),signal=controller.signal;
  let sourceContractText='',parentStudy=null;
+ let comparisonDesk=null,comparisonSnapshot=initialState?.comparisonSnapshot??null;
+ function stopComparison(){if(comparisonDesk){comparisonSnapshot=comparisonDesk.snapshot();comparisonDesk.destroy();comparisonDesk=null;}}
  let dead=false,busy=false,catalogue=[],studyId=selectedStudy||'',contractText='',result=null,resultId='',previewInput=null,current=false,view='series',seriesKey='',page=0;
  if(initialState){({studyId,contractText,result,resultId,previewInput,current,view,seriesKey,page}=clone(initialState));sourceContractText=initialState.sourceContractText||contractText;parentStudy=clone(initialState.parentStudy||null);}
  host.classList.add('mf-loads');
  host.innerHTML='<section class="mf-card"><h3>Concentration and discharge loads</h3><p>Use a saved flow study and an explicit support/interpolation contract. Original methods, fractions, censoring and station relationships remain separate.</p><p class="mf-status" role="status" aria-live="polite">Opening saved load results…</p><div class="mf-load-body"></div></section>';
  const status=host.querySelector('[role=status]'),body=host.querySelector('.mf-load-body');
  function message(s,error=false){if(dead)return;status.textContent=s;status.dataset.error=String(error);}
- function controls(){host.setAttribute('aria-busy',String(busy));for(const el of host.querySelectorAll('button,input,textarea,select'))el.disabled=busy||el.dataset.unavailable==='true';}
+ function controls(){host.setAttribute('aria-busy',String(busy));for(const el of host.querySelectorAll('button,input,textarea,select')){if(el.closest('[data-flow-load-comparison]'))continue;el.disabled=busy||el.dataset.unavailable==='true';}comparisonDesk?.setDisabled(busy);}
  async function task(fn){if(dead||busy)return;busy=true;controls();try{await fn();}catch(e){if(!dead&&e.name!=='AbortError')message(e.message,true);}finally{busy=false;if(!dead)controls();}}
  function capture(){const id=host.querySelector('[name=load-study]'),editor=host.querySelector('[name=load-contract]');if(id)studyId=id.value;if(editor)contractText=editor.value;}
  function dirty(){capture();current=false;const save=host.querySelector('[data-load-act=save]');if(save){save.dataset.unavailable='true';save.disabled=true;}message('The selected study or contract changed. Preview this exact combination before saving.');}
@@ -192,7 +195,7 @@ export function mountFlowLoads(host,{api,request,studies=[],selectedStudy=null,i
     '<strong>'+esc(r.title||'Saved load result')+'</strong><small>'+esc(r.created_at)+'</small>','<span class="mf-mono">'+esc(r.flow_study_id)+'</span>',num(r.counts?.series)+' / '+num(r.counts?.context_only_series),'<button type="button" data-load-act="open" data-id="'+esc(r.id)+'">Open result</button>'
    ]),'Saved original load results'):'<p class="mf-muted">No load calculation has been saved. Context-only results can be saved with the same original evidence.</p>')+'</details>';
  }
- function render(){if(dead)return;body.innerHTML=savedHTML()+editorHTML()+'<div class="mf-load-result"></div>';renderResult();controls();}
+ function render(){if(dead)return;stopComparison();body.innerHTML=savedHTML()+'<div class="mf-load-comparison-host"></div>'+editorHTML()+'<div class="mf-load-result"></div>';comparisonDesk=mountFlowLoadComparison(body.querySelector('.mf-load-comparison-host'),{api,catalogue,initialState:comparisonSnapshot,disabled:busy});renderResult();controls();}
  function renderResult(){
   const target=host.querySelector('.mf-load-result');if(!result){target.innerHTML='';return;}
   const calc=result.integration,counts=calc.counts,annual=result.observationExports.annual_count;
@@ -293,5 +296,5 @@ export function mountFlowLoads(host,{api,request,studies=[],selectedStudy=null,i
   });
  },{signal});
  task(async()=>{await catalogueRefresh();if(dead)return;render();message('Choose a saved parent study and a complete explicit contract. Context-only results remain usable original records.');});
- return {snapshot(){capture();return clone({studyId,contractText,sourceContractText,parentStudy,result,resultId,previewInput,current,view,seriesKey,page});},destroy(){dead=true;controller.abort();host.replaceChildren();host.classList.remove('mf-loads');}};
+ return {snapshot(){capture();if(comparisonDesk)comparisonSnapshot=comparisonDesk.snapshot();return clone({studyId,contractText,sourceContractText,parentStudy,result,resultId,previewInput,current,view,seriesKey,page,comparisonSnapshot});},destroy(){dead=true;stopComparison();controller.abort();host.replaceChildren();host.classList.remove('mf-loads');}};
 }
