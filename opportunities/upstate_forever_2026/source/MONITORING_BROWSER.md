@@ -189,3 +189,44 @@ For the completed original b9d5 scientific Workspace, the actual retained three-
 ```
 
 The native receiver reads this frontier's actual ordered plans and uses its first plan as the baseline. The original separate six-area campaign remains the campaign selected by the existing Monitoring browser selection. Attach observed contexts only after reading their actual saved IDs for these exact frontier plans.
+
+
+## Prepare and receive the complete scientific report
+
+Add an explicit report title to the saved-comparison course:
+
+```sh
+node source/run_monitoring_browser.mjs \
+  --url-file PRIVATE_OPERATOR_URL_FILE \
+  --restored-selection monitoring-browser-selection.json \
+  --workspace ACTUAL_RECEIVING_OPERATOR_KEY \
+  --comparison-selection monitoring-budget-selection.json \
+  --comparison-report-title "Regional monitoring budget choices — scientific report" \
+  --output COMPARISON_REPORT_BROWSER_DIRECTORY \
+  --browser-executable /tmp/chromium \
+  --browser-renderer-limit 2
+```
+
+The title requires `--comparison-selection` and must contain 1–300 characters. Optionally add `--comparison-report-delivery ACTUAL_SAVED_DELIVERY_ID` to include the selected delivery's existing ordered study choices. Omitting that ID starts from this comparison report source. The delivery ID must already exist in the selected original Workspace.
+
+The browser uses the original Monitoring panel, **Use this Monitoring work in the scientific report**, followed by the existing **Prepare a scientific report** composer in Sources:
+
+1. Choose **Saved budget comparison**, select the actual comparison retained by this course, and enter the requested report source title.
+2. Submit **Prepare scientific report source** through the original `monitoring.report.prepare` queue. The durable request journal captures its operation and payload before transmission; reentry resumes that same task.
+3. Refresh the saved-source library and open the exact retained report. Verify its complete native record, comparison selection, document entry and ordered scientific source selection.
+4. Download every original report-source member sequentially through its native file ticket. Check each byte count and SHA-256; indexed filenames preserve same-named members.
+5. Choose **Open scientific report**. The existing composer appends these exact source identities to its retained draft order, preserving its existing title and contact fields. The browser freezes that complete selection before preview.
+6. Preview the selected scientific sources and compare the visible reading order with the original native preview. Prepare the full PDF, HTML and data edition through `source-reports.render`, or reopen an identical edition that already exists.
+7. Open the saved scientific edition, download every original report file, and prepare/download its complete ZIP through the existing `source-reports.export` action.
+8. Return to the original Monitoring campaign. Its complete Workspace archive now includes the comparison source and rendered scientific edition.
+9. Reopen both the report source and complete scientific edition in a fresh browser and after the original full Workspace transfer, checking their retained records, ordered source identities and file fingerprints.
+
+This standalone scientific report uses its actual Monitoring records and original sources. The direct composer does not require an NDR/SDR cohort. The separate **Open model delivery** control remains available for a combined model delivery; this browser course operates the standalone scientific report and original full-project receiving workflow.
+
+The new option adds `journal.input.comparison_report` with the normalized source title and optional delivery ID. Completion records both `comparison_report_id` and `scientific_report_edition_id`. Commands without this option preserve their earlier input and actions. To expand an earlier completed course with report preparation, choose a new output directory. To continue this explicit report course, keep the same output, selections and title and add `--resume`.
+
+The complete native report-source record, document entry and ordered delivery-selection fingerprints live in `request-state.json`. The browser also freezes the exact scientific composer source order, title/contact fields, original preview rendering identity, completed edition and original file inventory. If interrupted before render submission, reentry restores that owned working selection through the existing composer controls. Once the render request or complete edition is retained, reentry opens that original operation directly and continues its saved edition/export without generating a replacement preview.
+
+The three additional durable stages are `comparison-report-prepare`, `comparison-scientific-render` and `comparison-scientific-export`. An already-existing identical edition is reopened without an additional render request. The source downloads include the original packet, extracted scientific data, maps, recipe and preparation members; the edition downloads include the native PDF, HTML, data and retained operation/edition metadata. All travel in the same original Workspace archive before independent receiving.
+
+Use the current Monitoring panel with its direct scientific-composer join (PR3663 or successor), the original source-report edition provider, and this maintained browser continuation. The expanded intent should start only on a host whose browser is authorized to navigate to the original operator.
