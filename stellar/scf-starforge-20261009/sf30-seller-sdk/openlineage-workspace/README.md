@@ -1,5 +1,15 @@
 # OpenLineage operations workspace
 
+The [reviewed multi-job policy rollout](SERVICE_POLICY_ROLLOUT.md) commissions selected jobs through one original workspace transaction. Inspect every exact before/after policy version, retain the full reviewed request, apply atomically, and reopen immutable rollout history and complete reports after receiving. The original single-policy editor, assessments and incident decisions remain available.
+
+The [async Python producer](ASYNC_PYTHON_PRODUCER.md) operates the released 1.53.0 queue, ordering and retry worker through `cli.mjs native-python-async`. It retains each first native request and actual acknowledgement, resumes the same delivery after interruption, and exports the complete producer operation with the original workspace. The guide includes the full native customer receiving command.
+
+Native Python and Java OpenLineage 1.53.0 producers are included in the complete application. Use `cli.mjs native-python` or `cli.mjs native-java` to send retained original pipeline events and continue interrupted deliveries through the same workspace. The [producer guide](PRODUCERS.md), [Python guide](PYTHON_PRODUCER.md) and [Java guide](JAVA_PRODUCER.md) cover preparation, configuration, saved progress and customer receiving.
+
+The managed merchant producer desk prepares private Python or Java settings,
+sends complete host-pinned event files and continues their original delivery.
+Use `cli.mjs producer` and the [merchant guide](MERCHANT.md) to operate it.
+
 A private, editable operations workspace for original OpenLineage events.
 Receive a producer's HTTP events or import original JSON, NDJSON or gzip files,
 inspect their jobs, runs and datasets, follow
@@ -264,3 +274,178 @@ reader without an external package dependency.
 
 The application is MIT licensed. Upstream event fixtures retain their
 OpenLineage provenance and upstream license information in SOURCE_CONTRACT.md.
+
+## Schema change review and staff resolution
+
+Open **Schema changes** to compare two named saved editions, inspect original field observations and declared downstream paths, assign follow-up and retain complete staff decision history. Reviews use the existing workspace writer and saved-request recovery. HTML, CSV and JSON reports and editable workspace receiving carry the complete comparison, original sources and evidence. See [SCHEMA_OPERATIONS.md](SCHEMA_OPERATIONS.md) for the full UI, SDK, CLI, receiving and operating programme.
+
+## Pipeline service levels
+
+Open **Service levels** from the workspace header to maintain per-job freshness, duration and failure policies; evaluate original events at a stated time; and assign, acknowledge, resolve or accept incidents with complete decision history. The same workflow is available through `scf-lineage service-levels`, the typed service-levels client and the original native/merchant tools. See [SERVICE_LEVELS.md](SERVICE_LEVELS.md) for policy semantics, complete customer reports and editable receiving, and [SERVICE_LEVELS_OPERATOR.md](SERVICE_LEVELS_OPERATOR.md) for the operator desk.
+
+## Dataset quality operations
+
+The original browser's **Quality** view provides original metric and assertion history, exact dataset/run selection, saved rules, immutable evaluations and reasoned finding dispositions. Original producer severity, assertion success and observed run state are visible independently. A reported zero remains a value and an omitted metric remains unreported.
+
+Use `QualityClient` from `./quality-client.mjs`, or the installed `@tokenjunkielabs/starforge-merchant/seller/openlineage/quality` export. Its seven methods call the existing `quality.*` actions through the original workspace HTTP owner. Rule, evaluation and disposition saves use the same operation IDs, revision checks and replay handling as the other application workflows.
+
+The [complete quality operator and client guide](QUALITY_OPERATOR.md) explains the four desk views, metric and assertion rules, reports, original request recovery and full editable receiving. Existing schema and service-level operations remain available in the same application.
+
+## Customer service reviews
+
+Open `customer-service-review.html` in the original authenticated host to prepare an attributed customer handover from saved Service Levels assessments, Quality evaluations and comparisons, and retained result files. The preview includes the complete supporting original records and freezes incident, disposition and follow-up histories at one committed workspace revision. Saved reports and their full JSON/CSV/HTML downloads preserve that exact snapshot after later workspace changes.
+
+Use `openlineage customer-review status|preview|prepare|request|save|resume|show|report` for the same native workflow. A create-only prepared request retains the complete preview before dispatch, and original operation lookup recovers accepted work. The existing workspace export/receive carries every original source and evidence file plus all historical customer reviews and the complete editable application. See [CUSTOMER_SERVICE_REVIEW.md](CUSTOMER_SERVICE_REVIEW.md) for the native/typed/MCP and recovery contract, and [CUSTOMER_SERVICE_REVIEW_OPERATOR.md](CUSTOMER_SERVICE_REVIEW_OPERATOR.md) for the browser workflow. Actual rendered/native receiving remains with the original equipped owner.
+
+## Recipient review requests and returned responses
+
+Open **Recipient returns** from the customer-review operator view after saving
+the original customer service review. Select that immutable review, the intended
+recipient, requesting operator and instructions. Preview and save the complete
+request, then download its editable recipient HTML. Each request retains its exact
+review edition, original selected records and recipient instructions.
+
+The recipient can reopen that document, inspect the original records and enter
+their attribution, item responses and overall response. The complete response JSON
+is the file to return. In the original operator workspace, select the saved
+request, open that returned JSON, preview its exact content, enter the receiving
+operator and note, and retain the reviewed response. The response remains an
+attributed statement in its own immutable history. Original assessments, incidents,
+quality results, dispositions and saved customer reviews keep their existing
+identities and decisions.
+
+The [complete recipient-return guide](REVIEW_RETURNS.md) covers the offline
+recipient document, operator recovery, SDK, exact input fields and complete
+workspace receiving. The editable recipient document belongs to one saved
+request; the whole workspace export includes the wider operator history and
+original source files.
+
+### Command line: keep the complete request
+
+The installed command is `starforge openlineage review-return`.
+The portable application uses `node cli.mjs review-return`, and the individual
+`review-return-cli.mjs` remains directly executable.
+All three use the same eight native actions.
+
+Create a UTF-8 JSON request file containing these exact outer fields. Obtain the
+original workspace ID from the selected application's status; keep that value
+when receiving or reconnecting the same workspace.
+
+~~~json
+{
+  "schema": "commons.openlineage.review-return-action.v1",
+  "workspaceId": "ORIGINAL_WORKSPACE_ID",
+  "action": "review-return.overview",
+  "args": {}
+}
+~~~
+
+Calculate SHA-256 from the complete saved file, including its actual whitespace.
+This command only reads those bytes:
+
+~~~sh
+node --input-type=module -e 'import {readFileSync} from "node:fs"; import {createHash} from "node:crypto"; console.log(createHash("sha256").update(readFileSync(process.argv[1])).digest("hex"));' /absolute/requests/overview.json
+~~~
+
+Pass that hash explicitly. Output destinations are new files; repeating an action
+can reopen an already complete byte-identical output.
+
+~~~sh
+node cli.mjs review-return \
+  --workspace /absolute/private/lineage \
+  --request /absolute/requests/overview.json \
+  --expected-request-sha256 EXACT_REQUEST_FILE_SHA256 \
+  --out /absolute/results/overview.json
+~~~
+
+For an existing HTTP workspace, replace `--workspace` with `--url` and,
+where configured, its existing private token file. An explicit instance ID pins
+the intended running instance. The request file still pins the original workspace.
+
+~~~sh
+starforge openlineage review-return \
+  --url http://127.0.0.1:8767 \
+  --token-file /absolute/private/operator-token \
+  --instance-id CURRENT_INSTANCE_ID \
+  --request /absolute/requests/overview.json \
+  --expected-request-sha256 EXACT_REQUEST_FILE_SHA256 \
+  --out /absolute/results/overview.json
+~~~
+
+Use a separate retained request file for each intended action:
+
+| Action | Complete input in args | Result |
+| --- | --- | --- |
+| review-return.overview | An empty object | Saved reviews, requests and response summaries |
+| review-return.request.preview | reviewId, recipient, requestedBy; optional instructions | Full original review and recipient, current revision and preview digest |
+| review-return.request.save | Previewed input plus operationId, expectedRevision and expectedPreviewSha256 | Immutable saved request and native receipt |
+| review-return.response.preview | requestId and originalText containing the entire returned JSON | Original/source binding, respondent entries, current history and preview digest |
+| review-return.response.save | Previewed requestId/originalText plus receivedBy, optional operatorNote, operationId, expectedRevision and expectedPreviewSha256 | Retained response, original text and native receipt |
+| review-return.operation.get | Original operationId and its expectedRevision | Original receipt or absence at the current committed revision |
+| review-return.get | requestId | Full request and every saved response |
+| review-return.report | requestId; optional format editable, json or html | Complete recipient HTML or JSON/printable history |
+
+The recipient object contains name and optional organisation/reference. Mutation
+files retain the original preview's revision and digest before dispatch; a current
+workspace revision alone does not replace that preview. Keep the same complete
+file, byte hash and operation ID after an interrupted response. Rewriting a
+request with a new revision is a new intended operation and requires its own
+inspected preview.
+
+To receive a returned file, put its complete UTF-8 text into originalText using
+JSON serialization. Preserve leading/trailing whitespace and original item
+identities. The preview validates its full content before adoption. Report actions
+write the complete report text directly: use .html for editable/html formats
+and .json for complete history.
+
+### Typed Node client
+
+The complete selected distribution exports
+`@tokenjunkielabs/starforge-merchant/seller/openlineage/review-return`.
+An independently received application imports `ReviewReturnClient` from
+`./review-return-client.mjs`. The adjacent declaration file provides recipient,
+mutation and returned-review input types.
+
+~~~js
+import { ReviewReturnClient } from
+  "@tokenjunkielabs/starforge-merchant/seller/openlineage/review-return";
+
+const client = new ReviewReturnClient("http://127.0.0.1:8767", {
+  token: existingOperatorToken,
+  expectedWorkspaceId: originalWorkspaceId,
+  instanceId: selectedInstanceId
+});
+
+const overview = await client.reviewReturns();
+const preview = await client.previewRecipientRequest({
+  reviewId: selectedSavedReviewId,
+  recipient: { name: intendedRecipient, organisation: intendedOrganisation },
+  requestedBy: requestingOperator,
+  instructions: requestedReviewInstructions
+});
+~~~
+
+After inspecting the complete preview, retain its exact input together with the
+new operation ID, expectedRevision and expectedPreviewSha256 before calling
+`saveRecipientRequest`. Keep that saved input for replay.
+Use `previewReturnedReview(requestId, originalText)` and
+`retainReturnedReview` for the analogous explicit receiving step.
+`getReviewReturn`, `reviewReturnReport` and `reviewReturnOperation`
+expose complete history, downloads and original receipt lookup.
+
+### Native, MCP and merchant integration
+
+The original `LineageWorkspace.dispatch`, HTTP `/api/action` and MCP
+catalog expose the same actions. MCP names use the existing `lineage_` prefix
+with dots/hyphens converted to underscores, for example
+`lineage_review_return_request_preview` and
+`lineage_review_return_response_save`. The catalog marks only the two saves
+as mutations. Merchant connections retain their existing selected workspace and
+authenticated transport; this feature adds no server or token store.
+
+The following application edition carries all thirteen recipient-return source
+files and the complete guide through the existing contribution and full
+application inventory. Complete workspace export/receive preserves the original
+requests, exact returned text, operation receipts and source review editions.
+Historical application inventories remain available to the original receiver;
+the complete following application retains its separate source selection.

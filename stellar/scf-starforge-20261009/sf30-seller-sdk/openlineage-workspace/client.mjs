@@ -52,6 +52,10 @@ export class LineageClient {
   compare(from, to) { return this.action("edition.compare", { from, ...(to ? { to } : {}) }); }
   entity(key, edition) { return this.action("entity.read", { key, ...(edition ? { edition } : {}) }); }
   lineage(key, options = {}) { return this.action("lineage.read", { key, ...options }); }
+  compareSchemas(from, to) { return this.action("schema.compare", { from, to }); }
+  schemaImpact(args) { return this.action("schema.impact", args); }
+  saveSchemaReview(args) { return this.action("schema.review.save", args); }
+  schemaReport(from, to, format = "json") { return this.action("schema.report", { from, to, format }); }
   saveReview(args) { return this.action("review.save", args); }
   attachResult(bytes, args) { return this.action("result.attach", { ...args, base64: Buffer.from(bytes).toString("base64") }); }
   exportWorkspace(options = {}) { return this.action("workspace.export", options); }

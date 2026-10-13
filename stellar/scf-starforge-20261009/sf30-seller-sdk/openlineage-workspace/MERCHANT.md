@@ -146,7 +146,7 @@ Tool requests accept 128 KiB; host file aliases carry larger complete inputs. Co
 
 ## Recovery and concurrency
 
-Every mutation requires an operationId and expectedRevision. The native workspace stores successful operations with their input identity and replays a completed operation before checking its old revision.
+Every mutation requires an operationId. Operator edits require expectedRevision; native producer append accepts an optional expectedRevision. The native workspace stores successful operations with their input identity and replays a completed operation before checking its old revision.
 
 After timeout, cancellation, connection interruption, or an unexpected server error, repeat the identical operation, including its original ID, expected revision, file SHA, and full input. The borrowed client's metadata records active operations and uncertain operation identities. The original workspace's operations collection is the durable server record; retaining the caller's exact request supports recovery across client restarts.
 
@@ -161,3 +161,91 @@ merchant_lineage_cancel cancels one active local wait by operationId. Its respon
 Authentication, startup identity changes, source SHA changes, validation, revision conflicts, active writer responses, connection interruption, and uncertain mutations remain distinct. Provider errors carry their native HTTP status and details. Mutation recovery details include operation ID, expected revision, payload hash, configured workspace, and attached instance.
 
 Read tools use the configured local workspace. Imports, saved editions, reviews, result attachments, and exports use the original native actions. Workspace exports write their retained complete package in the original project. 
+
+
+## Configure native Python and Java producers
+
+The producer desk uses the same event intake as the original Python and Java OpenLineage clients. Add a producer section to the selected workspace entry in the private host JSON:
+
+~~~json
+{
+  "producer": {
+    "tokenFile": "./producer-token",
+    "directory": "./producer-configurations",
+    "profiles": {
+      "python": {
+        "client": "python",
+        "compression": "gzip",
+        "timeoutSeconds": 30
+      },
+      "java": {
+        "client": "java",
+        "compression": "gzip",
+        "timeoutSeconds": 30
+      }
+    }
+  }
+}
+~~~
+
+The producer section accepts 1–32 explicit profiles. Paths belong to the computer running the merchant host and resolve relative to its private host JSON. The configuration directory must be owned by that host user and private (0700 on Unix); the host creates a missing directory. Generated files are private (0600). Keep the operator token in the workspace entry's tokenFile and a distinct event-only token in producer.tokenFile. Start the original server with matching --token-file and --producer-token-file options.
+
+If producer.tokenFile is omitted, generated configuration and native emission use the selected workspace token. An unprotected loopback workspace uses no token. The status, identity, editions, review and export tools use the operator connection. Only event intake uses the producer token.
+
+Call merchant_lineage_producer_profiles to inspect the declared clients, compression, timeout and authentication role. Call merchant_lineage_producer_status for the live intake state, byte capacities, pending requests and acknowledged source counters. Call merchant_lineage_producer_configure with workspace and profile to prepare a complete upstream configuration. For example:
+
+~~~javascript
+const configuration = await owner.call("merchant_lineage_producer_configure", {
+  workspace: "operations",
+  profile: "python"
+});
+~~~
+
+The response contains configurationFile, sha256, bytes, client, authentication and the OPENLINEAGE_CONFIG environment setting. The private file contains the original producerConfiguration output, including the selected credential. Set OPENLINEAGE_CONFIG to that returned path in the process running the upstream client on the merchant computer. A remote tool caller must run the producer on that host or use an authorized transfer of the private file to the actual producer host with its reachable workspace connection.
+
+Configuration paths contain the profile and full content hash. Repeating the same request recovers the same complete file. Changed transport settings, origin or token produce a new file and preserve earlier configurations. A server restart at the same origin can reuse identical configuration bytes because the upstream configuration pins the workspace identity. The borrowed Merchant client separately pins the application instance and requires explicit reconnect after a restart.
+
+## Emit complete original event files
+
+Use a host-pinned source alias for the complete JSON, NDJSON or gzip event file. The SHA-256 must cover the transmitted bytes, including gzip framing. The native route supports the receiver's configured body and decoded capacities; inspect producer status before sending large inputs.
+
+~~~javascript
+const receipt = await owner.call("merchant_lineage_emit_file", {
+  workspace: "operations",
+  input: "production-events",
+  expectedSha256: "REPLACE_WITH_COMPLETE_FILE_SHA256",
+  operationId: "production-export-2026-10-12",
+  contentEncoding: "identity"
+});
+~~~
+
+The tool reads the complete source once, verifies the pinned hash and sends those captured bytes to /api/v1/lineage. It preserves the input alias, name, source reference, encoding and operation identity. To emit a gzip input, set contentEncoding to gzip and retain the compressed file's original hash.
+
+An expectedRevision is optional for native producer append. Supply it when the send must be conditional on a particular workspace revision. Existing operator mutations, including source imports and edition changes, continue to require an expected revision. A confirmed native response includes its original source identity, revision and replay status.
+
+If the local wait ends before the result is confirmed, the borrowed client retains the captured bytes. Repeat the exact original input alias, hash, operation ID, encoding, source reference and optional revision. During that client's lifetime it can recover those original bytes even if the host input file has moved. A different body or changed request cannot take over that operation. After reopening the merchant owner, restore the host-pinned source file and repeat the same operation; the original workspace journal resolves whether it was already saved.
+
+Use merchant_lineage_connection to inspect a restarted application, then merchant_lineage_reconnect with its selected instanceId. Recover an unfinished send with the original operation arguments. Cancelling a local wait leaves the native journal authoritative. Closing the borrowed owner drains local work while the native workspace remains available.
+
+Both native configuration and event emission read the configured producer token from its private file for the operation. When rotating a token, update the original server and the host's producer token file together, explicitly reconnect after the server restart, and prepare the new immutable configuration for upstream producers.
+
+## Producer commands on the merchant computer
+
+The source CLI exposes the same host aliases and native owner:
+
+~~~sh
+node cli.mjs producer profiles --connection /absolute/path/to/openlineage-host.json --workspace operations
+node cli.mjs producer status --connection /absolute/path/to/openlineage-host.json --workspace operations
+node cli.mjs producer configure --connection /absolute/path/to/openlineage-host.json --workspace operations --profile python
+node cli.mjs producer emit --connection /absolute/path/to/openlineage-host.json --workspace operations --input production-events --sha COMPLETE_WIRE_SHA256 --operation-id production-export-2026-10-12 --content-encoding identity
+~~~
+
+Each CLI invocation creates and closes a borrowed owner. It attaches the current original instance for that command. Persistent Merchant sessions use the explicit connection/reconnect tools. The existing producer-config command still creates a private configuration directly from a native startup record.
+
+The native producer receiving entry starts a real authenticated workspace, prepares both upstream configuration formats, emits original event fixtures, recovers a send through actual writer backpressure, rotates credentials, reopens the complete exported application and reads the original retained sources:
+
+~~~sh
+node MERCHANT_PRODUCER_RECEIVING.mjs /absolute/path/to/private-receiving-operation
+~~~
+
+The operation directory retains the original inputs, private credentials/configurations, native workspace, complete export and receiving output. Share the application export and receiving summary with the recipient; keep the host credentials and private configuration files with the operator.

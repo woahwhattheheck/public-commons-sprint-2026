@@ -10,3 +10,24 @@
 @media(max-width:480px){main{padding:0 12px 12px}.app-header{padding:12px;align-items:flex-start}.header-controls{flex-direction:column;align-items:stretch}.header-controls button{font-size:.76rem}.workspace-toolbar .button-row{width:100%}.workspace-toolbar .button-row button{flex:1;padding:.5rem .4rem;font-size:.82rem}.edition-picker{min-width:0;width:100%}.edition-picker select{min-width:0}.filters{gap:9px}.search-field{min-width:100%;width:100%}.form-grid{grid-template-columns:1fr;gap:0}.lineage-controls{grid-template-columns:1fr 70px}.lineage-controls button{grid-column:1/-1}.record-fields{grid-template-columns:95px 1fr;gap:8px}.summary-card .number{font-size:1.4rem}dialog{padding:18px}}
 @media(prefers-reduced-motion:no-preference){button{transition:background-color .1s,border-color .1s}}
 @media print{.app-header,.workspace-toolbar,.section-nav,.filters,.button-row,.pending-panel,.workspace-footer{display:none}.explorer{display:block}.catalog,.inspector{border:0;max-height:none;overflow:visible;position:static}.inspector{margin-top:24px}.source-text,details.json-block pre{max-height:none;overflow:visible;white-space:pre-wrap}main{padding:0}.summary-grid{break-inside:avoid}}
+
+
+/* Schema comparison and staff resolution use the operations workspace's neutral palette. */
+.schema-controls,.schema-actions{padding:16px;border-bottom:1px solid var(--line,#d0d0d0)}
+.schema-controls h3{margin:0 0 12px}
+.schema-controls .compare-selects{align-items:end}
+.schema-actions>p{margin-top:0}
+.schema-actions .button-row{align-items:end;flex-wrap:wrap}
+.schema-actions label{display:grid;gap:4px}
+.schema-report-controls{margin-top:12px}
+.schema-message{padding:0 16px}
+.schema-values details{margin-top:0}
+.schema-review-dialog{width:min(760px,calc(100vw - 32px));max-height:calc(100dvh - 40px)}
+.schema-review-form{display:grid;gap:12px}
+.schema-review-form>label{display:grid;gap:6px}
+.schema-review-form textarea{resize:vertical;min-height:78px}
+.schema-selected-changes{max-height:180px;overflow:auto;margin:0;border:1px solid var(--line,#d0d0d0);padding:12px 12px 12px 30px}
+.schema-evidence{display:grid;gap:8px;border:1px solid var(--line,#d0d0d0);padding:12px;min-width:0}
+.schema-evidence label{overflow-wrap:anywhere}
+.schema-evidence input{flex-shrink:0}
+.schema-review-form .field-help{margin-top:-8px}

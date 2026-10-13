@@ -16,13 +16,15 @@ export function projectReport(state, { edition = null } = {}) {
     editions: selected ? [selected] : state.editions,
     reviews: state.reviews.filter(item => !edition || item.editionId === edition),
     results: state.results.filter(item => !edition || item.editionId === edition),
+    schemaComparisons: (state.schemaComparisons ?? []).filter(item => !edition || item.from.id === edition || item.to.id === edition),
+    schemaReviews: (state.schemaReviews ?? []).filter(item => !edition || item.from === edition || item.to === edition),
     events: state.events.filter(item => !eventIds || eventIds.has(item.id)) };
 }
 function rows(report) {
   const records = [];
   for (const [kind, items] of Object.entries({ job: report.jobs, dataset: report.datasets,
     run: report.runs, edge: report.edges, source: report.sources, edition: report.editions,
-    review: report.reviews, result: report.results, event: report.events, diagnostic: report.diagnostics }))
+    review: report.reviews, schemaComparison: report.schemaComparisons, schemaReview: report.schemaReviews, result: report.results, event: report.events, diagnostic: report.diagnostics }))
     for (const item of items ?? []) records.push({ kind, id: item.key ?? item.id ?? item.eventId ?? "",
       namespace: item.namespace ?? "", name: item.name ?? item.title ?? "",
       state: item.state ?? item.decision ?? "", record: item });
@@ -57,6 +59,8 @@ export function reportHtml(state, options) {
     section("Original source files", report.sources, ["name", "id", "bytes", "sourceUrl", "eventIds"]) +
     section("Saved editions", report.editions, ["title", "id", "description", "sourceRevision", "createdAt", "eventIds"]) +
     section("Operator reviews", report.reviews, ["title", "decision", "reason", "entityKeys", "editionId", "history"]) +
+    section("Schema change reviews", report.schemaReviews, ["from", "to", "changeIds", "reviewer", "decision", "reason", "owner", "action", "resolution", "evidence", "history"]) +
+    section("Saved schema comparisons", report.schemaComparisons, ["id", "from", "to", "summary", "datasets", "declaredEdges"]) +
     section("Attached original results", report.results, ["name", "objectId", "bytes", "mediaType", "sourceReference", "entityKeys", "editionId", "query"]) +
     section("Intake diagnostics", report.diagnostics, ["eventId", "messages"]) +
     "<section><h2>Complete event records (" + report.events.length + ")</h2>" +

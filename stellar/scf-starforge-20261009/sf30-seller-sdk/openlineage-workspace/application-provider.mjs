@@ -75,7 +75,7 @@ export default {
   catalog({ common, field }) {
     return [{ id: "openlineage-workspace", command: "openlineage", title: "OpenLineage operations",
       terminal: false, requiredSource: ROOT + "cli.mjs",
-      description: "Import original lineage events, inspect jobs, runs and datasets, compare saved editions, retain decisions and attach complete customer results.",
+      description: "Import original lineage events, inspect jobs, runs, datasets and quality history, review schema and service levels, retain evaluations and decisions, and deliver the complete editable workspace.",
       fields: [
         field("workspaceDirectory", "OpenLineage workspace", "path", true, "Select an initialized or received OpenLineage project directory."),
         field("tokenFile", "Private access token", "path", false, "Optional private file containing the existing workspace access token."),

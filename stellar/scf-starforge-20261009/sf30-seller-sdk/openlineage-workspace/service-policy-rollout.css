@@ -1,0 +1,17 @@
+/* MIT. Neutral industrial policy commissioning, extending the maintained desk. */
+[hidden]{display:none!important}.rollout-metadata{display:grid;grid-template-columns:minmax(220px,1fr) minmax(300px,2fr);gap:18px;margin:18px 0 6px}
+.rollout-metadata label,.form-grid label,.bulk-field{display:flex;flex-direction:column;gap:6px;min-width:0}textarea{resize:vertical;min-height:80px}
+.draft-status{font-size:12px;color:var(--muted);margin:0 0 24px}.draft-status.error{font-weight:650;color:#222}.selection-tools{margin-bottom:12px}
+.selected-row{background:#efefed}.version-note{font-weight:650}.policy-editor,.preview-panel{border-top:1px solid var(--line);margin-top:28px;padding-top:24px}
+.policy-editor>.form-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.policy-editor .checkbox-label,.bulk-field .checkbox-label{display:flex;flex-direction:row;align-items:center;gap:8px}
+.rollout-row{border:1px solid var(--line);background:var(--paper);padding:18px;margin:18px 0}.rollout-row .section-heading{margin-bottom:14px}
+.rollout-row .record-fields{grid-template-columns:minmax(110px,.7fr) minmax(0,2fr)}.rollout-row pre{white-space:pre-wrap;overflow-wrap:anywhere}
+#preview-content>.record-fields{grid-template-columns:minmax(110px,.7fr) minmax(0,3fr)}#rollout-history small,#selected-policies small{display:block}
+.bulk-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px}.bulk-field{padding:12px;border:1px solid var(--line)}
+.file-button{display:inline-flex!important;position:relative;align-items:center;justify-content:center;border:1px solid #bcbcb8;background:white;border-radius:3px;padding:7px 13px;min-height:36px;font-weight:550;cursor:pointer}
+.file-button input{position:absolute;inset:0;opacity:0;width:100%;cursor:pointer}.file-button:focus-within{outline:3px solid #555;outline-offset:3px}
+dialog h3{margin:24px 0 10px}dialog>.table-wrap{margin-top:12px}dialog .table-wrap{max-height:45vh;overflow:auto}#baseline-body .table-wrap{max-height:none}
+#policy-job,#policy-version,#workspace-title{overflow-wrap:anywhere}.table-wrap th{white-space:normal}.table-wrap td{vertical-align:top;overflow-wrap:anywhere}
+#selected-policies table{min-width:790px}#source-jobs table,#source-policies table{min-width:580px}#rollout-detail{margin-top:24px}
+@media(max-width:900px){.rollout-metadata{grid-template-columns:1fr}.policy-editor>.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.policy-editor>.form-grid,.bulk-grid{grid-template-columns:1fr}.section-heading{align-items:stretch}.section-heading>.button-row{width:100%}.section-heading>.button-row>*{flex:1 1 140px}.rollout-row{padding:13px}.record-fields{grid-template-columns:1fr!important}.record-fields dd{margin:0 0 10px}.file-button{flex-wrap:wrap}#source-dialog,#bulk-dialog,#baseline-dialog,#incoming-dialog,#drafts-dialog{padding:16px}.dialog-actions{flex-wrap:wrap}}
