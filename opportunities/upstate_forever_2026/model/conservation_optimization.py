@@ -601,7 +601,8 @@ def _independent_quantities(rows, ids, request):
             "unknown_units": sum(x is None for x in values),
             "unit": (chosen[0]["objective_units"][axis] if chosen else
                      CONTEXT_UNITS[axis] if request["objective"]["kind"] == "source-context" else
-                     conservation.POLLUTANTS[axis][2] + ("/reporting_ha" if request["objective"]["basis"] == "per-reporting-hectare" else "")),
+                     ("points" if request["objective"]["kind"] == "published-method" else conservation.POLLUTANTS[axis][2]) +
+                     ("/reporting_ha" if request["objective"]["basis"] == "per-reporting-hectare" else "")),
             "availability": "selected_input" if axis in request["available_axes"] else "unavailable_input",
         }
     return result

@@ -172,19 +172,27 @@ adapter are the direct maintained entrypoints of this source edition.
 ## Original operator integration
 
 The contribution includes the complete grayscale `Editable GIS projects` panel,
-queued `gis.project.export` and `gis.project.receive` operations, original upload
+queued `gis.project.export`, `gis.project.receive` and
+`gis.project.adopt-sources` operations, original upload
 receiving, independent archive copies and the original hash-checked downloads.
 
-On the original pre-registry application, apply the maintained narrow installer:
+Apply the component installer to the current complete application. It uses the
+receiving application's maintained extension installer when present; the original
+pre-registry application retains its narrow direct integration:
 
 ```sh
 python install_gis_projects.py --application /path/to/original/application --dry-run
 python install_gis_projects.py --application /path/to/original/application
 ```
 
-The installer composes three original registration files, preserves all unrelated
+The installer composes the actual registration source, preserves unrelated
 source, validates Python syntax before mutation, checks source predecessors and
-retains exact before-images. Reapplying the same edition makes no changes. Start
+retains exact before-images. On a registry application it calls the installed
+`install_extensions.py` source transformations and registers only the GIS-owned
+descriptor and leaves. It removes the exact former GIS-owned direct hooks when
+migrating an older GIS installation, so the shared registry owns the actions,
+navigation, assets and file routes once. Reapplying the same edition makes no
+changes. Start
 the original `operator/server.py` with its original startup command, then select
 **Editable GIS projects**. Choose an actual source edition, prepared grid and/or
 completed cases. Click **Build complete GIS project**, inspect the original task,
@@ -195,18 +203,40 @@ For ECSA's shared registry, `operator/extensions/gis-projects.json` implements t
 actual published `upstate.operator-extension/v1` descriptor. It uses the same
 backend implementation and lifecycle, not a second queue. The client requests the
 original `getState`, `api`, `refreshState`, `showTask` and `toast` callbacks.
-Choose the shared-registry composition OR the pre-registry installer, rather than
-registering the same navigation twice.
+The component installer selects the current application's host automatically and
+keeps one navigation and task owner. It composes the installed host source in
+memory before writing the completed change; it never replaces that host with the
+older GIS-era server, browser or registry.
 
-The complete original-member viewer uses the original file/download service. Its
-concrete handler join is included in `install_gis_projects.py`: before the generic
-`/api/file/` route, resolve `/api/file/gis-project/<workspace>/<kind>/<id>/<member>`
-through `GISProjects(operator).member(...)`, then call original `send_file` with
-the returned ticket and content-security policy. ECSA's cumulative host can join
-this same member handler. All IDs and member paths resolve against the retained
-inventory; full native files are served, not display proxies. Received HTML has an
-opaque-origin sandbox with scripts and downloads but without operator-session,
-network, forms or same-origin access.
+The complete original-member viewer uses the original file/download service.
+Version 1.2.1 adds the current descriptor's typed nested member binding:
+
+```json
+{
+  "path": "/api/file/gis-project/{workspace_key}/{kind}/{project_id}/{member_path...}",
+  "handler": "member",
+  "args": ["operator", "route.workspace_key", "route.kind", "route.project_id", "route.member_path"],
+  "response": "ticket_policy_pair"
+}
+```
+
+The module callback forwards those values to the unchanged
+`GISProjects(operator).member(...)` resolver. The shared host authorizes the file
+request, decodes the relative member once and serves the returned original ticket
+with the resolver's content-security policy, byte ranges and download behavior.
+All IDs and member paths resolve against the retained inventory; full native files
+are served. Received HTML has an opaque-origin sandbox with scripts and downloads
+and without operator-session, network, forms or same-origin access. The complete
+pre-registry handler remains available for an application without the shared host.
+
+The integration was composed against the maintained host and Workspace source at
+[public application commit 74af5627](https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/74af56274889b6d769516edb68399d3664cfc09e/opportunities/upstate_forever_2026).
+Its APIs include `patch_server`, `patch_app`, typed nested file routes and original
+`Workspace.import_sources`/`source_file` contracts. The 1.2.0 GIS computational,
+archive, CLI, browser and native-QGIS bodies remain the original authored edition;
+1.2.1 completes the current host registration and installer migration. The complete
+source manifest records each file's size and SHA-256 and the original archive
+identity.
 
 Each complete task is redecorated with its original archive download and viewer
 link when reopened after a process restart. Completed receiving is recoverable
@@ -220,3 +250,54 @@ The source-only bridge was executed against the complete original `model.workspa
 The included operating case uses the complete South Carolina, Georgia and North Carolina county geometry selected from the retained Basemap 2.0.0 US-counties distribution, plus a 30 m mask and geographic distance raster computed from the actual Anderson/Oconee/Pickens county union. It exercises native file handling and editing. The study's actual retained 217-HUC domain is a separate source selection accepted by the same original Workspace importer and GIS exporter. The operating case's METHODS.json and all original distribution notices travel in its archive.
 
 Raster min/max and display overviews apply the stored band scale and offset to physical values, without rewriting source cells. Physically comparable layers share their range even when stored encodings differ. A complete 3,252 by 3,273-cell distance raster and its differently encoded copy produced identical physical limits and all 5,591,230 valid cells.
+
+## Bring a recipient's GIS edits back into the original study
+
+Version 1.2 adds a complete return-to-study operation. Receive the sender's sealed
+ZIP, choose the actual working layers to keep, give the new source edition a title
+and explain the change. The existing `Workspace.import_sources` writer retains
+those full GeoPackages or rasters as a **new** immutable source collection. Older
+sources, prepared grids, coefficients, scenarios and numerical results stay intact.
+A new source edition is available for the operator's normal selection and preparation
+workflow; adopting it does not silently rerun or replace an existing model.
+
+In **Editable GIS projects**, open the received edition's **Use edited working
+layers as new study sources** section. Select its layers, enter the title and reason,
+and click **Adopt selected study sources**. The original task records the received
+edition, selected working layers and resulting source collection. In **Adopted study
+source editions**, **Select this source edition for export** opens that same native
+collection for another complete handover. The retained source catalogue also exposes
+it to the rest of the scientific application.
+
+The command-line workflow uses exactly the same writers:
+
+```sh
+python model/gis_project_cli.py workspace-receive "$WORKSPACE" reviewed-gis.zip
+python model/gis_project_cli.py workspace-adopt-sources "$WORKSPACE" adoption.json
+python model/gis_project_cli.py workspace-catalogue "$WORKSPACE"
+python model/gis_project_cli.py workspace-export "$WORKSPACE" continued-selection.json
+```
+
+`adoption.json` contains `receipt_id`, `title`, `reason` and a nonempty `layer_ids`
+array, using the actual IDs from the received project's `project.json`. The returned
+`source_collection_id` belongs to the original Workspace. Its `sources` array maps
+each received layer ID to the native source ID. The next export selection can use
+that collection and the same retained native source IDs.
+
+The return operation also carries the selected layers' upstream originals, native
+companions, provenance, history and attribution. Required context documents have
+an explicit `gis_context_group`/`gis_required_context` binding; exporting only a
+working layer still includes that layer's adoption context. Native companion
+relationships retain their relative directory structure, including multi-file
+source formats. Working files remain independent, so a colleague's edit never
+changes the received originals or an earlier source collection. Repeating an
+identical adoption, including recovery after its final response was lost, produces
+the same original source collection instead of adding duplicates.
+
+The actual full-size return exercise received five working layers, appended a
+14-entry source edition (five geographic layers and nine context documents),
+reopened it through the original Workspace, retained an actual Anderson County
+attribute edit, and exported all five layers to a second independent receiver.
+The 305 county features, two 3,252 by 3,273 rasters, original file identities and
+attribution all survived the complete cycle. The native programme also removed
+its final adoption response and recovered the same immutable source collection.

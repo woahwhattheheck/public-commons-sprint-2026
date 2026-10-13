@@ -7,7 +7,7 @@ import platform
 from pathlib import Path
 import sys
 from .common import (atomic_json, describe_file, digest, file_digest, held,
-                     identifier, now, read_json)
+                     identifier, now, read_json, verify_file)
 from .model_selection import run_models
 from .reuse import (copy_verified, dataset_companions, destination_file,
                     native_companions, verify_stage)
@@ -197,10 +197,9 @@ def recover(workspace, run_id, model, selected, directory, requested_arguments,
 
     Every output body is verified during its independent transfer. Interrupted
     transfers retain complete matching files and can continue with the same or
-    another available source. Indexed stages require their recorded scientific
-    input signature. Explicit historical donors may also use the receiving
-    runtime-bound scientific matcher; their original signature and comparison
-    remain in the adopted stage provenance.
+    another available source. Indexed stages require their recorded signature.
+    Explicit source runs may also match actual scientific inputs through the
+    receiving runtime; their original signature and comparison are retained.
     """
     selected = _scientific_signature(selected)
     if selected["selection"]["model"] != model:
@@ -213,7 +212,7 @@ def recover(workspace, run_id, model, selected, directory, requested_arguments,
                   for value in explicit]
     candidates.extend((index_key, path, None) for index_key, path in
                       _candidate_indexes(workspace, model, selected, requested_arguments))
-    observations, seen = [], {run_id}
+    observations, seen = [], set()
     for index_key, path, explicit_id in candidates:
         adopted, phase = {}, "validation"
         try:
@@ -225,18 +224,19 @@ def recover(workspace, run_id, model, selected, directory, requested_arguments,
                 original_id = identifier(record["run_id"])
             else:
                 original_id = explicit_id
-            if original_id in seen:
+            if original_id == run_id or original_id in seen:
                 continue
             seen.add(original_id)
             original = workspace.inspect_run(original_id)
             if model not in run_models(original):
                 raise ValueError("Original run did not select this native model")
             stage = original["stages"][model]
+            old_directory = workspace.root / "runs" / original_id
             original_signature = stage.get("input_signature")
-            scientific_signature = (_scientific_signature(original_signature)
-                                    if original_signature else None)
+            original_selection = (_scientific_signature(original_signature)
+                                  if original_signature else None)
             equivalence = None
-            if scientific_signature != selected:
+            if original_selection != selected:
                 if explicit_id is None or matcher is None:
                     raise ValueError("Original stage inputs differ")
                 if matcher.target_run_id != run_id:
@@ -249,11 +249,17 @@ def recover(workspace, run_id, model, selected, directory, requested_arguments,
                         any(target_runtime.get("modules", {}).get(dependency) != module
                             for dependency, module in requested["modules"].items())):
                     raise ValueError("Bind the matcher to the actual receiving native runtime")
+                # Scientific matching may ignore container bytes and unused
+                # table columns, never an original native flag or output suffix.
+                original_arguments = read_json(verify_file(old_directory, stage["arguments"]))
+                original_values = {key: value for key, value in original_arguments.items()
+                                   if key not in ("workspace_dir", "n_workers") + INPUT_PATHS[model]}
+                if original_values != requested["arguments"]:
+                    raise ValueError("Original native arguments differ")
                 equivalence = matcher.compare(original_id, model)
                 if not equivalence["matches"]:
                     raise ValueError("Original stage inputs differ: " +
                                      "; ".join(equivalence["differences"]))
-            old_directory = workspace.root / "runs" / original_id
             # Descriptor arguments are small; large outputs are hashed exactly
             # as they are copied or cloned below, rather than in a second pass.
             verify_stage(old_directory, stage, outputs=False)

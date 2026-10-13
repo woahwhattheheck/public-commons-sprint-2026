@@ -9,8 +9,8 @@ from pathlib import Path
 from .common import (INVEST_SOURCE, INVEST_VERSION, describe_file, file_digest, finite,
                      output_models, required_roles, selected_models, verify_file)
 from .profiles import inspect_table
-from . import rasters
 from .reuse import dataset_companions
+from . import rasters
 
 _COLUMNS = {
     "ndr": ("lucode", "load_n", "load_p", "load_type_n", "load_type_p",
@@ -109,12 +109,12 @@ class NativeInputMatcher:
         return self._tables[key]
 
     def _dataset_identity(self, path, item):
-        """Use the cache's actual external masks, georeferencing and journals."""
+        """Use the same companion bodies as the native stage signature."""
         companions = []
         for candidate in dataset_companions(path):
             descriptor = describe_file(self.workspace.root, candidate)
-            suffix = candidate.name[len(path.stem):]
-            companions.append((suffix, descriptor["bytes"], descriptor["sha256"]))
+            companions.append((candidate.name[len(path.stem):],
+                               descriptor["bytes"], descriptor["sha256"]))
         return item["sha256"], tuple(companions)
 
     def _same_raster(self, left, right):

@@ -46,12 +46,12 @@ export function createTimephasedPanel(C){
   generator.append(labelled("First local date",start),labelled("Final local boundary",finish),labelled("Generate periods",grain));
   const generate=el("button","Replace selected periods");generate.id="archive-period-generate";
   const periodStatus=el("p",undefined,"hint"),periodHolder=el("div",undefined,"table-scroll"),periodTable=el("table");
-  periodTable.id="archive-periods";periodHolder.append(periodTable);
+  periodTable.id="archive-periods";periodHolder.classList.add("archive-table-region");periodHolder.tabIndex=0;periodHolder.setAttribute("role","region");periodHolder.setAttribute("aria-label","Selected native reporting periods");periodHolder.append(periodTable);
   const pagers=el("div",undefined,"actions"),previous=el("button","Previous periods"),next=el("button","Next periods");
   previous.dataset.read=next.dataset.read="";pagers.append(previous,next);
   const addPeriod=el("button","Add explicit period");addPeriod.id="archive-period-add";
   const seriesTitle=el("h4","Native assignment series"),seriesStatus=el("p",undefined,"hint"),seriesHolder=el("div",undefined,"table-scroll"),seriesTable=el("table");
-  seriesTable.id="archive-timephased-series";seriesHolder.append(seriesTable);
+  seriesTable.id="archive-timephased-series";seriesHolder.classList.add("archive-table-region");seriesHolder.tabIndex=0;seriesHolder.setAttribute("role","region");seriesHolder.setAttribute("aria-label","Selected native assignment series");seriesHolder.append(seriesTable);
   const addSeries=el("button","Add native series");addSeries.id="archive-timephased-add-series";
   const scope=el("p","Assignment grain keeps task and resource links. Work uses the selected native unit and elapsed flag; cost uses the project currency; material totals remain separate for each actual resource. Native nulls stay distinct from zero. Baseline series retain the project baseline calendar. Native instant cost accrual includes endpoints and uses the first matching range; duration overlap excludes its finish. Pro-rata COST-resource actual amounts require an equal-width contiguous whole-minute grid. Task fixed costs remain in their original task fields.","hint");
   controls.append(read,generator,generate,periodStatus,periodHolder,pagers,addPeriod,seriesTitle,seriesStatus,seriesHolder,addSeries,scope);

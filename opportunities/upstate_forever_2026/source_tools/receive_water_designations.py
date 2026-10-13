@@ -95,7 +95,9 @@ def main():
     with (selection_dir / "selected-features.csv").open(newline="", encoding="utf-8") as stream:
         csv_rows = list(csv.DictReader(stream))
     assert len(csv_rows) == 332
-    overlay_choice = water.apply_to_delivery(workspace, saved["id"], {})["overlays"]["high_quality_waters"]
+    delivery_patch = water.apply_to_delivery(workspace, saved["id"], {})
+    overlay_choice = delivery_patch["overlays"]["high_quality_waters"]
+    assert delivery_patch["source_roles"]["HIGH_QUALITY_WATERS"] == overlay_choice
     path, entry = workspace.source_file(overlay_choice["source_collection_id"], overlay_choice["source_id"])
     native_rows, native_crs = rasters.vector_geometry(path, layer=overlay_choice["layer"], target_crs="EPSG:26917")
     assert {str(r["properties"]["OBJECTID_1"]) for r in native_rows} == outstanding_ids
@@ -165,7 +167,7 @@ def main():
                "restored_workspace": str(restored_workspace.root),
                "selection_report": str(selection_dir / "selection-report.html")}
     atomic_json(output / "water-designation-receiving.json", summary)
-    atomic_json(output / "delivery-overlay.json", {"overlays": {"high_quality_waters": saved["delivery_overlay"]}})
+    atomic_json(output / "delivery-overlay.json", delivery_patch)
     print(json.dumps(summary, indent=2))
     return 0
 

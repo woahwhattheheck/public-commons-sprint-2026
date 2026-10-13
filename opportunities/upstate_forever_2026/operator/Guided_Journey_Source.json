@@ -16,16 +16,16 @@
       "sha256": "301e7f2672c63d6f709a5d86e43dba83a8bf9f2735831a7ee12fcf23f6ebaba9"
     },
     "operator/web/journey.mjs": {
-      "bytes": 55378,
-      "sha256": "901b2ea83d98ddd19eb950cad9ce427092bbff2252d5ce83977e818fbf2811d8"
+      "bytes": 58538,
+      "sha256": "200c126f16d107bc4f495606241ec63e700fa8ffc0553170de6af33be2e52bf7"
     },
     "operator/web/journey.css": {
       "bytes": 6235,
       "sha256": "61952e1dbaf7340f0a43e2fa45df33f12a8d82f5a684fabe178bffab78903e5a"
     },
     "operator/GUIDED_JOURNEY.md": {
-      "bytes": 14494,
-      "sha256": "c89ef53a45316b74bd692d4dc130843d648170c2901b177357cf7bcbb185ff77"
+      "bytes": 16756,
+      "sha256": "17bc70693526ede0ce2024a2c32fd5940d0c83bb95319b2975fe6fc14454e4fa"
     }
   },
   "source_context": {

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 from collections import Counter
 import csv
 import html
@@ -105,7 +106,19 @@ def _study_sources(profiles):
     return "<ul>" + "".join(selected) + "</ul>" if selected else ""
 
 
-def _render(summary, rows, profiles):
+def _download_links(downloads):
+    """Keep exported HTML usable independently of its original directory."""
+    links = []
+    for label, filename, content_type, body in downloads:
+        encoded = base64.b64encode(body).decode("ascii")
+        links.append(
+            '<a download="' + _text(filename) + '" href="data:'
+            + _text(content_type) + ';base64,' + encoded + '">'
+            + _text(label) + '</a>')
+    return " · ".join(links)
+
+
+def _render(summary, rows, profiles, *, downloads=()):
     total = summary["counts"]["cases"]
     completed = summary["progress"]["complete"]
     names = _aliases(profiles)
@@ -211,10 +224,7 @@ def _render(summary, rows, profiles):
             + "</section>")
     sections.append(
         "<section><h2>Files and methods</h2>"
-        "<p><a href=\"study-comparisons.csv\">Comparison CSV</a> · "
-        "<a href=\"study-summary.json\">Study summary</a> · "
-        "<a href=\"../summary.json\">Experiment summary</a> · "
-        "<a href=\"../results.csv\">Experiment CSV</a></p>"
+        "<p>" + _download_links(downloads) + "</p>"
         "<p>The selected profile definitions retain their published coefficients and references. "
         "Native scenario allocation and its regional placement choices are retained with "
         "each actual scenario source.</p>"
@@ -290,7 +300,7 @@ render();
 def build(workspace, experiment_id, *, profiles=None):
     """Render values from one locked summary and register the retained outputs."""
     from model import experiments
-    from model.common import atomic_bytes, atomic_json, describe_file, held, identifier
+    from model.common import atomic_bytes, atomic_json, describe_file, held, identifier, verify_file
     experiment_id = identifier(experiment_id)
     scope = workspace.root / "experiments" / experiment_id
     # The same lock guards summary publication in the experiment engine and
@@ -319,7 +329,23 @@ def build(workspace, experiment_id, *, profiles=None):
             }
             atomic_json(directory / "study-summary.json", data)
             atomic_bytes(directory / "study-comparisons.csv", _csv(rows))
-            atomic_bytes(directory / "index.html", _render(summary, rows, profiles).encode("utf-8"))
+            # Embed the actual retained bytes, not a reconstruction, so a
+            # separately downloaded HTML report keeps all its data links.
+            downloads = [
+                ("Comparison CSV", "study-comparisons.csv", "text/csv",
+                 (directory / "study-comparisons.csv").read_bytes()),
+                ("Study summary", "study-summary.json", "application/json",
+                 (directory / "study-summary.json").read_bytes()),
+                ("Experiment summary", "experiment-summary.json", "application/json",
+                 verify_file(scope, summary_source).read_bytes()),
+            ]
+            experiment_csv = summary.get("files", {}).get("csv")
+            if experiment_csv is not None:
+                downloads.append(
+                    ("Experiment CSV", "experiment-results.csv", "text/csv",
+                     verify_file(scope, experiment_csv).read_bytes()))
+            atomic_bytes(directory / "index.html",
+                         _render(summary, rows, profiles, downloads=downloads).encode("utf-8"))
             names = ("index.html", "study-summary.json", "study-comparisons.csv")
             files = {name: describe_file(workspace.root, directory / name) for name in names}
             marker = {

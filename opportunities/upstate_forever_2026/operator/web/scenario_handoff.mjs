@@ -10,6 +10,17 @@ const OUTPUT_IDS = Object.keys(OUTPUTS);
 const rows = value => Array.isArray(value) ? value : [];
 const id = value => typeof value === "string" ? value.trim() : "";
 const unique = values => [...new Set(values)];
+
+/** Observed executor version takes precedence; old retained runs keep a labeled fallback. */
+export function scenarioNativeVersion(run){
+  const text=value=>typeof value==='string'&&value.trim()?value.trim():null;
+  const requested=text(run?.selection?.invest_version??run?.native_version?.requested);
+  const observed=text(run?.runtime?.version??run?.native_version?.observed);
+  return {requested,observed,comparison_version:observed||requested,
+    basis:observed?'observed_runtime':requested?'requested_legacy':'unavailable',
+    differs_from_requested:Boolean(observed&&requested&&observed!==requested)};
+}
+
 function expectedOutputs(run) {
   const models = run && run.selection && run.selection.models != null ? run.selection.models : ["ndr","sdr"];
   if (!Array.isArray(models) || !models.length || models.some(name => !["ndr","sdr"].includes(name))) return [];
@@ -63,9 +74,10 @@ export function buildScenarioAnalysisSeed({
   if (!baselineRunId) baselineIssues.push("The selected baseline has no retained native run identity.");
   baselineIssues.push(...runReasons(baseline));
   const gridId = id(baseline && baseline.selection && baseline.selection.grid_id);
-  const modelVersion = id(baseline && baseline.selection && baseline.selection.invest_version);
+  const baselineVersion = scenarioNativeVersion(baseline);
+  const modelVersion = baselineVersion.comparison_version;
   if (baseline && !gridId) baselineIssues.push("The selected baseline has no retained model-grid identity.");
-  if (baseline && !modelVersion) baselineIssues.push("The selected baseline has no retained InVEST version.");
+  if (baseline && !modelVersion) baselineIssues.push("The selected baseline has no observed or retained requested InVEST version.");
   const baselineOutputs = nativeOutputs(baseline);
   const selectedCaseIds = unique(rows(state.alternative_ids).map(id).filter(value => value && value !== id(state.baseline_id)));
   const accepted = [],rejected = [];
@@ -77,14 +89,15 @@ export function buildScenarioAnalysisSeed({
     reasons.push(...runReasons(run));
     if (run && runId === baselineRunId) reasons.push("The baseline reference is outside the alternative choice set.");
     if (run && id(run.selection && run.selection.grid_id) !== gridId) reasons.push("The native run uses a different model grid from the baseline.");
-    if (run && id(run.selection && run.selection.invest_version) !== modelVersion) reasons.push("The native run uses a different InVEST version from the baseline.");
+    const version = scenarioNativeVersion(run);
+    if (run && version.comparison_version !== modelVersion) reasons.push("The native run has a different observed InVEST version from the baseline, using the saved requested version only for legacy records without execution metadata.");
     const available = nativeOutputs(run);
     if (baselineOutputs.length && available.length && !baselineOutputs.some(metric => available.includes(metric))) {
       reasons.push("The native run and selected baseline have no shared nutrient or sediment output.");
     }
     const row = {
       case_id:caseId,run_id:runId,label:id(item && item.label) || caseId,
-      available_metric_ids:available
+      available_metric_ids:available,native_version:version
     };
     if (reasons.length) rejected.push({...row,reasons:unique(reasons)});
     else accepted.push(row);
@@ -136,7 +149,7 @@ export function buildScenarioAnalysisSeed({
       baseline_case_id:id(state.baseline_id),alternative_case_ids:selectedCaseIds,
       metric_ids:rows(state.metric_ids).map(id),catchment_ids:rows(state.catchment_ids).map(id)
     },
-    target_metric_ids:shared,
+    target_metric_ids:shared,baseline_native_version:baselineVersion,
     method:"The target form uses the cohort's actual shared native outputs, fixed baseline caps, explicit planning weights and retained source areas."
   };
 }

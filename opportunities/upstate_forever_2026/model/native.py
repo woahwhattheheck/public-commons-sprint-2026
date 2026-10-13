@@ -96,6 +96,7 @@ def execute_run(workspace, key, *, reuse_source_run_ids=None):
                 # directly; loading or executing InVEST again is unnecessary.
                 modules = {}
                 arguments = {}
+                input_matcher = None
                 runtime_source = previous_runtime
                 if unfinished or unfinished_outputs:
                     execution.phase("grid")
@@ -138,7 +139,6 @@ def execute_run(workspace, key, *, reuse_source_run_ids=None):
                             execution.save()
                         verified_inputs[str(lulc.resolve())] = state["stages"]["landcover"]["artifact"]
                     arguments = build_native_arguments(unfinished, profile, paths, table, lulc)
-                    input_matcher = None
                     if retained_sources:
                         from .native_equivalence import NativeInputMatcher
                         input_matcher = NativeInputMatcher(
