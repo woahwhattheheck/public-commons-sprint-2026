@@ -1,0 +1,111 @@
+{
+  "schema": "twenty.capture-config.v1",
+  "operationId": "replace_with_original_operation_id",
+  "consistency": {
+    "mode": "observed-interval"
+  },
+  "source": {
+    "kind": "retained-json",
+    "system": "Replace with original export system",
+    "workspaceReference": "Replace with source workspace identity",
+    "objects": [
+      {
+        "path": "source/companies.json",
+        "spec": {
+          "namePlural": "companies",
+          "recordIdPointer": "/legacyId",
+          "rowsPointer": "",
+          "scope": {
+            "coverage": "all-exported",
+            "population": "Every independently authored companies source record",
+            "deleted": "No deletion history authored"
+          }
+        }
+      },
+      {
+        "path": "source/people.json",
+        "spec": {
+          "namePlural": "people",
+          "recordIdPointer": "/legacyId",
+          "rowsPointer": "",
+          "scope": {
+            "coverage": "all-exported",
+            "population": "Every independently authored people source record",
+            "deleted": "No deletion history authored"
+          }
+        }
+      },
+      {
+        "path": "source/opportunities.json",
+        "spec": {
+          "namePlural": "opportunities",
+          "recordIdPointer": "/legacyId",
+          "rowsPointer": "",
+          "scope": {
+            "coverage": "all-exported",
+            "population": "Every independently authored opportunities source record",
+            "deleted": "No deletion history authored"
+          }
+        }
+      }
+    ]
+  },
+  "target": {
+    "kind": "twenty-rest",
+    "baseUrl": "https://crm.example.test",
+    "workspaceReference": "Replace with authorized target workspace identity",
+    "tokenEnv": "TWENTY_TARGET_API_KEY",
+    "deployedVersion": null,
+    "objects": [
+      {
+        "namePlural": "companies",
+        "fields": [
+          "id",
+          "name",
+          "legacyId",
+          "domainName"
+        ],
+        "scope": {
+          "coverage": "all-live",
+          "population": "Every authored example companies record",
+          "deleted": "not-observed-by-list"
+        },
+        "filter": null
+      },
+      {
+        "namePlural": "people",
+        "fields": [
+          "id",
+          "name",
+          "legacyId",
+          "emails",
+          "company"
+        ],
+        "scope": {
+          "coverage": "all-live",
+          "population": "Every authored example people record",
+          "deleted": "not-observed-by-list"
+        },
+        "filter": null
+      },
+      {
+        "namePlural": "opportunities",
+        "fields": [
+          "id",
+          "name",
+          "legacyId",
+          "stage",
+          "amount",
+          "company",
+          "pointOfContact"
+        ],
+        "scope": {
+          "coverage": "all-live",
+          "population": "Every authored example opportunities record",
+          "deleted": "not-observed-by-list"
+        },
+        "filter": null
+      }
+    ]
+  }
+}

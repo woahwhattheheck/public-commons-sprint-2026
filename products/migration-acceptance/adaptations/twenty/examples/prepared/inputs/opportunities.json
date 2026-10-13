@@ -1,0 +1,20 @@
+[
+  {
+    "opportunity_key": "O001",
+    "name": "CRM setup",
+    "stage": "PROPOSAL",
+    "amount": "1200.12",
+    "currency": "USD",
+    "company_key": "001",
+    "contact_key": "P001"
+  },
+  {
+    "opportunity_key": "O002",
+    "name": "Support renewal",
+    "stage": "QUALIFICATION",
+    "amount": "0.00",
+    "currency": "CAD",
+    "company_key": "002",
+    "contact_key": "P002"
+  }
+]

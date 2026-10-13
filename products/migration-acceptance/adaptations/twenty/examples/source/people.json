@@ -1,0 +1,23 @@
+[
+  {
+    "legacyId": "P001",
+    "firstName": "Alex",
+    "lastName": "Reed",
+    "email": "alex@example.test",
+    "companyKey": "001"
+  },
+  {
+    "legacyId": "P002",
+    "firstName": "Jo",
+    "lastName": "Mills",
+    "email": null,
+    "companyKey": "002"
+  },
+  {
+    "legacyId": "P003",
+    "firstName": "Casey",
+    "lastName": "Lin",
+    "email": "",
+    "companyKey": null
+  }
+]

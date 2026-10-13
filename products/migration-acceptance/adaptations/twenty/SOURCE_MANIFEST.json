@@ -1,0 +1,196 @@
+{
+  "schema": "tjlabs.source-manifest.v1",
+  "description": "Complete Twenty CRM read-only source/destination capture, editable review and original native acceptance adaptation",
+  "files": [
+    {
+      "path": "CAPTURE_OPERATING.md",
+      "bytes": 13764,
+      "sha256": "0e6e1ee6c26dace5baa4c69c124454e7efc7d0607dc1db0611748b3ff27bd59d"
+    },
+    {
+      "path": "OPERATING.md",
+      "bytes": 13178,
+      "sha256": "ffa6919e302695c3fe5f00387f99b91aed0e3482f8f4c0885ab686143981b6cf"
+    },
+    {
+      "path": "README.md",
+      "bytes": 2159,
+      "sha256": "b71aecb082fa7e3086c023308dd744d9cbbfa1aa7429175e7cc95b59c7478466"
+    },
+    {
+      "path": "SOURCE_REUSE.json",
+      "bytes": 3220,
+      "sha256": "7c2a8e3bcabfb2826083d121fbe50e48c6110eb81e28e45f51d82c9b814d9df9"
+    },
+    {
+      "path": "acceptance.mjs",
+      "bytes": 1754,
+      "sha256": "71226c0d14dc699296ffa5348265f29ddf065728f657b582cb960d73da02f472"
+    },
+    {
+      "path": "app.mjs",
+      "bytes": 24766,
+      "sha256": "92e92788890c0c5e4d33f83b0daac791c51ee8ccfef049776437cd55a2700e7a"
+    },
+    {
+      "path": "browser-receive.mjs",
+      "bytes": 12266,
+      "sha256": "fc03ad6219c7ae1541249d6a458f5ef0df414a4cff270511f757cf2a9cd7168a"
+    },
+    {
+      "path": "build-review.mjs",
+      "bytes": 9293,
+      "sha256": "3765a81e048c449ce9742af9f86b2710eaaa74ba8abc3aea93cea17f5d3d9f75"
+    },
+    {
+      "path": "capture-twenty.mjs",
+      "bytes": 12147,
+      "sha256": "567249ea27bcdfdff8415cea856fdd28942a351a4af69f7aae7f4e44d7dff7df"
+    },
+    {
+      "path": "collector.mjs",
+      "bytes": 11053,
+      "sha256": "b8c1a6c5c23396e66b99ae53f108b1486d103dd00cf7a5d770b81dbd307d2930"
+    },
+    {
+      "path": "examples/build-reference.mjs",
+      "bytes": 9024,
+      "sha256": "1d1257d3ead23f178f98c5cbcb8ee105de1222d259a78a857b431ea4e3986d7e"
+    },
+    {
+      "path": "examples/capture-configuration.json",
+      "bytes": 2980,
+      "sha256": "eb0907aa6171c62f68e7cf2390085b6c498e32593767c03d39708e1a4103f644"
+    },
+    {
+      "path": "examples/capture-twenty-to-twenty.json",
+      "bytes": 3190,
+      "sha256": "5eac682dfb3059c35b58cd1bdb24bc0a2fa998546c106cdeede0dc518d53138c"
+    },
+    {
+      "path": "examples/capture.json",
+      "bytes": 40357,
+      "sha256": "819119ec71d4dd4b2c0454115671e5e19dc9636be5864478538633f2484b3749"
+    },
+    {
+      "path": "examples/collector-course.mjs",
+      "bytes": 10150,
+      "sha256": "e01c86d2426e3833889c6269995ee32f21c5af5a6b6011df8f9c28987165d40d"
+    },
+    {
+      "path": "examples/mapping.json",
+      "bytes": 8351,
+      "sha256": "aaab9ea644ecef6c1d4df137cbcad10e3bc8b58b4f5f72d91cfd99bb16e962f3"
+    },
+    {
+      "path": "examples/prepared/capture.json",
+      "bytes": 40357,
+      "sha256": "819119ec71d4dd4b2c0454115671e5e19dc9636be5864478538633f2484b3749"
+    },
+    {
+      "path": "examples/prepared/expected/companies.json",
+      "bytes": 808,
+      "sha256": "5a849c3b6b93ed3eec0e3b3bc1eb24d55e91546edd34fd916caecf46d26f74c2"
+    },
+    {
+      "path": "examples/prepared/expected/opportunities.json",
+      "bytes": 1562,
+      "sha256": "795388b427c50d38d734069673e825328fda264fc67c4751216a68bac7c77406"
+    },
+    {
+      "path": "examples/prepared/expected/people.json",
+      "bytes": 1423,
+      "sha256": "6bc74d70a895b3fdc0fb2f39024e487f19c65acb758b52987f1d8923bc81e69d"
+    },
+    {
+      "path": "examples/prepared/inputs/companies.json",
+      "bytes": 227,
+      "sha256": "d43204cf4489475f0fd19fe9d7cff3c2f8d1782843a1af4a5a6b392a04e2f260"
+    },
+    {
+      "path": "examples/prepared/inputs/opportunities.json",
+      "bytes": 391,
+      "sha256": "e2022c6645af35fcbbb571163a813c3eb352b0a397c6f578aa335c99829e5f64"
+    },
+    {
+      "path": "examples/prepared/inputs/people.json",
+      "bytes": 404,
+      "sha256": "7eaf50aab19ad02fdf368f8b970d591755e6ca442969f523326e1a682d1cd53e"
+    },
+    {
+      "path": "examples/prepared/mapping.json",
+      "bytes": 8351,
+      "sha256": "aaab9ea644ecef6c1d4df137cbcad10e3bc8b58b4f5f72d91cfd99bb16e962f3"
+    },
+    {
+      "path": "examples/prepared/projection.json",
+      "bytes": 16526,
+      "sha256": "f85915d58e7b9471c21ec90af1071e85aafd8777be6870364192fcb88a1934f3"
+    },
+    {
+      "path": "examples/reviewed-project.json",
+      "bytes": 83497,
+      "sha256": "8ea4aa59fafeae03999bdf087e48b0d541b2054d2f5fdb0ff7c1e3aced03e3fb"
+    },
+    {
+      "path": "examples/run-collector-course.mjs",
+      "bytes": 5078,
+      "sha256": "325eafc0eff00746127119c2a092c56842f009cc5387b506df6c18a6653eb243"
+    },
+    {
+      "path": "examples/source/companies.json",
+      "bytes": 221,
+      "sha256": "a7b9d8fdff3b304c0032aec30c1e20d9a0d262aceb88816fb4ecf49ef814fe10"
+    },
+    {
+      "path": "examples/source/opportunities.json",
+      "bytes": 373,
+      "sha256": "395a793dfc11121c86e61f2876da7b359fd54a3e697ee394a91648677b545ca2"
+    },
+    {
+      "path": "examples/source/people.json",
+      "bytes": 389,
+      "sha256": "191d0e17ab6527b3681e1a4dc7a949868fd6ff326b98b902575e52f9d3a1e4f7"
+    },
+    {
+      "path": "index.html",
+      "bytes": 8802,
+      "sha256": "1e0b0834684658ec8998f1eb6fc8906b775c975a42f69805aa6d3246ac3654d8"
+    },
+    {
+      "path": "native-intake.mjs",
+      "bytes": 10158,
+      "sha256": "61eaff6d107b83b7176f517825c3f4bc595e2115d4b4990ba05718a12dc1d6b5"
+    },
+    {
+      "path": "project.mjs",
+      "bytes": 6779,
+      "sha256": "caae5db22a1866e09d91d3875e1f7f346c77f0d6f4132051daf3fbb56f5c1eca"
+    },
+    {
+      "path": "provider-input.mjs",
+      "bytes": 33292,
+      "sha256": "374a6e68559de299a78a71c3516001c8c2e858b0342dd28f033b228f52b12da5"
+    },
+    {
+      "path": "receive.mjs",
+      "bytes": 22446,
+      "sha256": "ac52d6518acf61e4f27439e937835090495a2563e5e0df70d13f4dc038f6c95e"
+    },
+    {
+      "path": "session.mjs",
+      "bytes": 5070,
+      "sha256": "ab7d0bac87557fdbfc3920fb6db80f90189d64c1bc1591237759d16c89d9d493"
+    },
+    {
+      "path": "sha256.mjs",
+      "bytes": 18412,
+      "sha256": "52a44d3fdb0c1e94282051fe073af67a9c1c57b16c9c94946bd5ebfdade394a6"
+    },
+    {
+      "path": "style.css",
+      "bytes": 4201,
+      "sha256": "46cafb4f1964e9cb0acb9142bd01cc51f2dbbde108d060382ee1a4ddf955fa38"
+    }
+  ]
+}
