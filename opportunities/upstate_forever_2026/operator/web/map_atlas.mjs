@@ -192,7 +192,13 @@ export function attachMapAtlas(host) {
    next.title=value('title').trim();
    if(!cohortLinked(next)){next.baseline_run_id=value('baseline');next.scenario_run_ids=selected('alternatives');}
    next.delivery_mode=value('delivery_mode')||'regional_rfp';
-   if(isStudy(next)){next.native_study={title:value('study_title').trim()||next.title,purpose:value('study_purpose').trim(),reference:value('study_reference').trim()};}
+   if(isStudy(next)){
+    const study={...(next.native_study||{})};
+    for(const [field,name] of [['title','study_title'],['purpose','study_purpose'],['reference','study_reference']]){
+     const control=f.elements.namedItem(name);if(control)study[field]=control.value.trim();
+    }
+    study.title=study.title||next.title;next.native_study=study;
+   }
   }
   if(step===1){
    for(const [group,items] of [['source_roles',ROLES.map(r=>[...r,true])],['overlays',OVERLAYS]]){
