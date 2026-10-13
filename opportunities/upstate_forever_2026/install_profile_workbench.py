@@ -109,16 +109,27 @@ def retain_launchers(source):
 
 
 def retain_biophysical_evidence(source):
-    # Join the current receiving source rather than replacing concurrent extensions.
-    verification = (
-        '        if (restored._list("biophysical-evidence") or restored._list("biophysical-ranges")):\n'
-        '            from .biophysical_evidence import verify_all as verify_biophysical_evidence\n'
-        '            verify_biophysical_evidence(restored)\n'
-    )
-    if verification in source:
-        return source
-    anchor = '        if restored._list("planning-inventories"):\n'
-    source = replace_once(source, anchor, verification + anchor,
+    # The maintained receiver supports both its earlier inline restore checks
+    # and the extracted _verify_restored_workspace function.
+    def verification(indent):
+        return (
+            indent + 'if (restored._list("biophysical-evidence") or restored._list("biophysical-ranges")):\n'
+            + indent + '    from .biophysical_evidence import verify_all as verify_biophysical_evidence\n'
+            + indent + '    verify_biophysical_evidence(restored)\n'
+        )
+    for indent in ("    ", "        "):
+        if verification(indent) in source:
+            return source
+    anchors = [(indent, indent + 'if restored._list("planning-inventories"):\n')
+               for indent in ("    ", "        ")]
+    matches = [(indent, anchor) for indent, anchor in anchors
+               if any(line == anchor for line in source.splitlines(keepends=True))]
+    if len(matches) != 1:
+        raise ValueError("Compose coefficient evidence verification into the current original receiving function.")
+    indent, anchor = matches[0]
+    # Include the preceding newline so four-space matching cannot consume
+    # the suffix of an eight-space source line.
+    source = replace_once(source, "\n" + anchor, "\n" + verification(indent) + anchor,
                           "coefficient evidence semantic receiving")
     ast.parse(source)
     return source
