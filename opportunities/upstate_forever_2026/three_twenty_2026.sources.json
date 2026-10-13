@@ -1,0 +1,1456 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Three and Twenty Creek original2026 four-station study",
+  "captured_at": "2026-10-13",
+  "scope": "2026 sampled observations and exact same-day comparison",
+  "entries": [
+    {
+      "id": "three-twenty-2026-report",
+      "title": "2026 monitoring across Three and Twenty Creek",
+      "kind": "document",
+      "role": "observed_water_quality_report",
+      "path": "observations/three_twenty_2026/three-twenty-2026-study.html",
+      "bytes": 79485,
+      "sha256": "7bf694a246bd1a0b1b5efdcb15b7f70008b0dd831094d17fcf923a4b41990a47",
+      "uri": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
+      "vintage": "2026 original observations; derived 2026-10-13",
+      "metadata": {
+        "source_schema": "three-twenty.original-multistation-study/v1",
+        "stations": [
+          "21SC60WQ_WQX-SV-833",
+          "21SC60WQ_WQX-RS-26250",
+          "21SC60WQ_WQX-SV-735",
+          "21SC60WQ_WQX-SV-111"
+        ],
+        "original_result_identifiers": 242,
+        "activities": 15,
+        "activity_characteristic_values": 142,
+        "repeated_value_groups": 100,
+        "observation_window": {
+          "start": "2026-01-01",
+          "end": "2026-10-13",
+          "latest_observed": "2026-07-08"
+        },
+        "original_retained_cohort": {
+          "record_count": 766,
+          "activity_count": 65,
+          "selection_path": "observations/three_twenty_2026/native-study/result-selection.json",
+          "index_path": "observations/three_twenty_2026/native-study/observation-sources.json"
+        },
+        "original_observation_sources": [
+          {
+            "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-results-2026-original.csv",
+            "sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+            "role": "original_result_identifiers",
+            "profile": "narrowResult",
+            "station": "21SC60WQ_WQX-RS-26250",
+            "identity_field": "ResultIdentifier"
+          },
+          {
+            "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-results-2026-original.csv",
+            "sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+            "role": "original_result_identifiers",
+            "profile": "narrowResult",
+            "station": "21SC60WQ_WQX-SV-735",
+            "identity_field": "ResultIdentifier"
+          },
+          {
+            "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-results-2026-original.csv",
+            "sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+            "role": "original_result_identifiers",
+            "profile": "narrowResult",
+            "station": "21SC60WQ_WQX-SV-111",
+            "identity_field": "ResultIdentifier"
+          },
+          {
+            "path": "source/sv833-water-quality-20261013/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+            "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+            "role": "original_result_identifiers",
+            "profile": "narrowResult",
+            "station": "21SC60WQ_WQX-SV-833",
+            "identity_field": "ResultIdentifier"
+          },
+          {
+            "path": "source/sv833-water-quality-20261013/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+            "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+            "role": "original_result_identifiers",
+            "profile": "narrowResult",
+            "station": "21SC60WQ_WQX-SV-833",
+            "identity_field": "ResultIdentifier"
+          },
+          {
+            "path": "source/sv833-water-quality-20261013/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+            "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870",
+            "role": "original_result_identifiers",
+            "profile": "narrowResult",
+            "station": "21SC60WQ_WQX-SV-833",
+            "identity_field": "ResultIdentifier"
+          }
+        ]
+      },
+      "companions": [
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-results-2026-original.csv",
+          "bytes": 44491,
+          "sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-activities-2026-original.csv",
+          "bytes": 3701,
+          "sha256": "9b74e437e63215252878233e0e3384ef79c0a7e866f0e6150857e3710227a835"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-limits-2026-original.csv",
+          "bytes": 16719,
+          "sha256": "46568dd496358fcc7c8c746d92cd62017172564fbeec9df93a2e7454b7facfd5"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-station-2026-original.csv",
+          "bytes": 1306,
+          "sha256": "015a0a608294e3f5d1b136860e0a8a9178400a6f6aa8dc7cdfc218adc85b20e0"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-results-2026-original.csv",
+          "bytes": 11086,
+          "sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-activities-2026-original.csv",
+          "bytes": 2631,
+          "sha256": "4eb977677b3d1087bf2b6084860744f7b34cd616b61321375dc8860427a1b31c"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-limits-2026-original.csv",
+          "bytes": 3766,
+          "sha256": "599a9e10835dbde1da44b502959e7bd4bb1de42c38c7114792355442b8600f70"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-station-2026-original.csv",
+          "bytes": 1287,
+          "sha256": "0a92788a6adbcab34e59fd654a162b78b17373e85fa78a29911290d1677c3c16"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-results-2026-original.csv",
+          "bytes": 26502,
+          "sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-activities-2026-original.csv",
+          "bytes": 3161,
+          "sha256": "37986a0b98c02b3d138c1fe15bcab2f369e8b2d32018956c9a59229249d6822f"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-limits-2026-original.csv",
+          "bytes": 9653,
+          "sha256": "744364d16c19cea386a5ed4799bdf56a47738498e63da3268524d84b6be83189"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-station-2026-original.csv",
+          "bytes": 1290,
+          "sha256": "445bba685654433fd815350478bacd8ab5504c6153d10591a514871dc9658939"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-activities-2021-20261013-original.csv",
+          "bytes": 17210,
+          "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-result-limits-2021-20261013-original.csv",
+          "bytes": 110860,
+          "sha256": "cfe407194b3326c696b7627c4aaa2594cc6d8ae20f88fd6d7d8aa80928918dd1"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 133399,
+          "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 104616,
+          "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 37404,
+          "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-rs-26250-results-2026-original.csv",
+          "bytes": 44491,
+          "sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-rs-26250-activities-2026-original.csv",
+          "bytes": 3701,
+          "sha256": "9b74e437e63215252878233e0e3384ef79c0a7e866f0e6150857e3710227a835"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-rs-26250-limits-2026-original.csv",
+          "bytes": 16719,
+          "sha256": "46568dd496358fcc7c8c746d92cd62017172564fbeec9df93a2e7454b7facfd5"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-rs-26250-station-2026-original.csv",
+          "bytes": 1306,
+          "sha256": "015a0a608294e3f5d1b136860e0a8a9178400a6f6aa8dc7cdfc218adc85b20e0"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-735-results-2026-original.csv",
+          "bytes": 11086,
+          "sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-735-activities-2026-original.csv",
+          "bytes": 2631,
+          "sha256": "4eb977677b3d1087bf2b6084860744f7b34cd616b61321375dc8860427a1b31c"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-735-limits-2026-original.csv",
+          "bytes": 3766,
+          "sha256": "599a9e10835dbde1da44b502959e7bd4bb1de42c38c7114792355442b8600f70"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-735-station-2026-original.csv",
+          "bytes": 1287,
+          "sha256": "0a92788a6adbcab34e59fd654a162b78b17373e85fa78a29911290d1677c3c16"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-111-results-2026-original.csv",
+          "bytes": 26502,
+          "sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-111-activities-2026-original.csv",
+          "bytes": 3161,
+          "sha256": "37986a0b98c02b3d138c1fe15bcab2f369e8b2d32018956c9a59229249d6822f"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-111-limits-2026-original.csv",
+          "bytes": 9653,
+          "sha256": "744364d16c19cea386a5ed4799bdf56a47738498e63da3268524d84b6be83189"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-111-station-2026-original.csv",
+          "bytes": 1290,
+          "sha256": "445bba685654433fd815350478bacd8ab5504c6153d10591a514871dc9658939"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/sv833-activities-2021-20261013-original.csv",
+          "bytes": 17210,
+          "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/sv833-result-limits-2021-20261013-original.csv",
+          "bytes": 110860,
+          "sha256": "cfe407194b3326c696b7627c4aaa2594cc6d8ae20f88fd6d7d8aa80928918dd1"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 133399,
+          "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 104616,
+          "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 37404,
+          "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/observation-sources.json",
+          "bytes": 11270,
+          "sha256": "b85b7271d90181200a9f002e2cf1f5fbabfbb983958df4ce257370ed50fe0870"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/result-selection.json",
+          "bytes": 95841,
+          "sha256": "299d16fc1552fbcda1742204033430ffb3619059288ac5079655e7d1451b12db"
+        },
+        {
+          "path": "observations/three_twenty_2026/analysis_core.mjs",
+          "bytes": 13932,
+          "sha256": "e40d365f57c14f2c619805ea7c37ea6bc240f0b30eb85ea250f67884e382c553"
+        },
+        {
+          "path": "observations/three_twenty_2026/csv.mjs",
+          "bytes": 1178,
+          "sha256": "689e201967192e743d9f207936c2673c23f8523a8be91d3df307277ca6195c9b"
+        },
+        {
+          "path": "observations/three_twenty_2026/report.mjs",
+          "bytes": 17191,
+          "sha256": "f9e9248b16b2050d9f3c6ba0173ab76c7703af9cb3128ad411af84aa2472d593"
+        },
+        {
+          "path": "observations/three_twenty_2026/outputs.mjs",
+          "bytes": 2072,
+          "sha256": "60b60ab7b78d3fea4afe5b45485046ee05dd4d88b30351cf34ff767d7c101685"
+        },
+        {
+          "path": "observations/three_twenty_2026/build_study.mjs",
+          "bytes": 2666,
+          "sha256": "202953dc9959c782624ceffdde6781a5d54e667c9e92c973ae141322fc816071"
+        },
+        {
+          "path": "observations/three_twenty_2026/README.md",
+          "bytes": 10376,
+          "sha256": "99808c2a40f1df8f467bb0b5e4deb8d45c8462201f82d24dfc428d349056af39"
+        },
+        {
+          "path": "observations/three_twenty_2026/input-manifest.json",
+          "bytes": 14856,
+          "sha256": "719d122a901249944f92e657ee1968eb8ad636d5247f7e0e470f650672fa674c"
+        },
+        {
+          "path": "observations/three_twenty_2026/original-result-index.csv",
+          "bytes": 551053,
+          "sha256": "912b416fb98179af9d5f7cf8eb67637ebab6f781f78473625dc3d7dc25a03669"
+        },
+        {
+          "path": "observations/three_twenty_2026/activity-measurements.csv",
+          "bytes": 221425,
+          "sha256": "ac1fbb3fe57bc307391742b4a7f1d4b38ab1f30d953912a30b9904ab667fb37b"
+        },
+        {
+          "path": "observations/three_twenty_2026/duplicate-results.csv",
+          "bytes": 159246,
+          "sha256": "8a95478cfb67bdd9fc2c90dee155db80773adac6136ee30f25224c6946686518"
+        },
+        {
+          "path": "observations/three_twenty_2026/sampling-calendar.csv",
+          "bytes": 3658,
+          "sha256": "6afd47f82f980966509af895dad73a8c4e5489f5c38bbf2e5741fde7393a3f59"
+        },
+        {
+          "path": "observations/three_twenty_2026/station-summary.csv",
+          "bytes": 9104,
+          "sha256": "553728c8246fbdde5d96e09cc7a45fe5de352ea382fde45d051324dbc8f99039"
+        },
+        {
+          "path": "observations/three_twenty_2026/same-day-contrasts.csv",
+          "bytes": 6519,
+          "sha256": "4ebb8d9ceb5410b7a03f069ca530c7e34cdead3378cf936728a4407e7fc93ec9"
+        },
+        {
+          "path": "observations/three_twenty_2026/pair-coverage.csv",
+          "bytes": 376,
+          "sha256": "030973e0bdbdc0718a611bcea65761a501c1a91f6b1a78cd0122c50ef2277a00"
+        },
+        {
+          "path": "observations/three_twenty_2026/reconstructed-nitrogen.csv",
+          "bytes": 3198,
+          "sha256": "8e99eeaa555e9781fe74743fe8995a9a73a96828df665af1e8e1dd368d6da667"
+        },
+        {
+          "path": "observations/three_twenty_2026/study-summary.json",
+          "bytes": 80118,
+          "sha256": "3ddaae3ede35232b7bb24b4f1f223b40106bc161fbb04298da5e31f1be30fccc"
+        },
+        {
+          "path": "observations/three_twenty_2026/stations.geojson",
+          "bytes": 2622,
+          "sha256": "a3c5fcfa2dad1efc44009e77226b8b971e1cc8f2606025facbce51c7f1d9d2cb"
+        }
+      ]
+    },
+    {
+      "id": "three-twenty-2026-activities",
+      "title": "Three and Twenty Creek activity measurements",
+      "kind": "table",
+      "role": "observed_water_quality_activity_context",
+      "path": "observations/three_twenty_2026/activity-measurements.csv",
+      "bytes": 221425,
+      "sha256": "ac1fbb3fe57bc307391742b4a7f1d4b38ab1f30d953912a30b9904ab667fb37b",
+      "uri": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
+      "vintage": "2026 original observations; derived 2026-10-13",
+      "metadata": {
+        "source_schema": "three-twenty.original-multistation-study/v1",
+        "stations": [
+          "21SC60WQ_WQX-SV-833",
+          "21SC60WQ_WQX-RS-26250",
+          "21SC60WQ_WQX-SV-735",
+          "21SC60WQ_WQX-SV-111"
+        ],
+        "original_result_identifiers": 242,
+        "activities": 15,
+        "activity_characteristic_values": 142,
+        "repeated_value_groups": 100,
+        "observation_window": {
+          "start": "2026-01-01",
+          "end": "2026-10-13",
+          "latest_observed": "2026-07-08"
+        },
+        "original_retained_cohort": {
+          "record_count": 766,
+          "activity_count": 65,
+          "selection_path": "observations/three_twenty_2026/native-study/result-selection.json",
+          "index_path": "observations/three_twenty_2026/native-study/observation-sources.json"
+        },
+        "original_observation_sources": [
+          {
+            "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-results-2026-original.csv",
+            "sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+            "role": "original_result_identifiers",
+            "profile": "narrowResult",
+            "station": "21SC60WQ_WQX-RS-26250",
+            "identity_field": "ResultIdentifier"
+          },
+          {
+            "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-results-2026-original.csv",
+            "sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+            "role": "original_result_identifiers",
+            "profile": "narrowResult",
+            "station": "21SC60WQ_WQX-SV-735",
+            "identity_field": "ResultIdentifier"
+          },
+          {
+            "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-results-2026-original.csv",
+            "sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+            "role": "original_result_identifiers",
+            "profile": "narrowResult",
+            "station": "21SC60WQ_WQX-SV-111",
+            "identity_field": "ResultIdentifier"
+          },
+          {
+            "path": "source/sv833-water-quality-20261013/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+            "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+            "role": "original_result_identifiers",
+            "profile": "narrowResult",
+            "station": "21SC60WQ_WQX-SV-833",
+            "identity_field": "ResultIdentifier"
+          },
+          {
+            "path": "source/sv833-water-quality-20261013/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+            "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+            "role": "original_result_identifiers",
+            "profile": "narrowResult",
+            "station": "21SC60WQ_WQX-SV-833",
+            "identity_field": "ResultIdentifier"
+          },
+          {
+            "path": "source/sv833-water-quality-20261013/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+            "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870",
+            "role": "original_result_identifiers",
+            "profile": "narrowResult",
+            "station": "21SC60WQ_WQX-SV-833",
+            "identity_field": "ResultIdentifier"
+          }
+        ]
+      },
+      "companions": [
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-results-2026-original.csv",
+          "bytes": 44491,
+          "sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-activities-2026-original.csv",
+          "bytes": 3701,
+          "sha256": "9b74e437e63215252878233e0e3384ef79c0a7e866f0e6150857e3710227a835"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-limits-2026-original.csv",
+          "bytes": 16719,
+          "sha256": "46568dd496358fcc7c8c746d92cd62017172564fbeec9df93a2e7454b7facfd5"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-station-2026-original.csv",
+          "bytes": 1306,
+          "sha256": "015a0a608294e3f5d1b136860e0a8a9178400a6f6aa8dc7cdfc218adc85b20e0"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-results-2026-original.csv",
+          "bytes": 11086,
+          "sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-activities-2026-original.csv",
+          "bytes": 2631,
+          "sha256": "4eb977677b3d1087bf2b6084860744f7b34cd616b61321375dc8860427a1b31c"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-limits-2026-original.csv",
+          "bytes": 3766,
+          "sha256": "599a9e10835dbde1da44b502959e7bd4bb1de42c38c7114792355442b8600f70"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-station-2026-original.csv",
+          "bytes": 1287,
+          "sha256": "0a92788a6adbcab34e59fd654a162b78b17373e85fa78a29911290d1677c3c16"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-results-2026-original.csv",
+          "bytes": 26502,
+          "sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-activities-2026-original.csv",
+          "bytes": 3161,
+          "sha256": "37986a0b98c02b3d138c1fe15bcab2f369e8b2d32018956c9a59229249d6822f"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-limits-2026-original.csv",
+          "bytes": 9653,
+          "sha256": "744364d16c19cea386a5ed4799bdf56a47738498e63da3268524d84b6be83189"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-station-2026-original.csv",
+          "bytes": 1290,
+          "sha256": "445bba685654433fd815350478bacd8ab5504c6153d10591a514871dc9658939"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-activities-2021-20261013-original.csv",
+          "bytes": 17210,
+          "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-result-limits-2021-20261013-original.csv",
+          "bytes": 110860,
+          "sha256": "cfe407194b3326c696b7627c4aaa2594cc6d8ae20f88fd6d7d8aa80928918dd1"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 133399,
+          "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 104616,
+          "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 37404,
+          "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-rs-26250-results-2026-original.csv",
+          "bytes": 44491,
+          "sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-rs-26250-activities-2026-original.csv",
+          "bytes": 3701,
+          "sha256": "9b74e437e63215252878233e0e3384ef79c0a7e866f0e6150857e3710227a835"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-rs-26250-limits-2026-original.csv",
+          "bytes": 16719,
+          "sha256": "46568dd496358fcc7c8c746d92cd62017172564fbeec9df93a2e7454b7facfd5"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-rs-26250-station-2026-original.csv",
+          "bytes": 1306,
+          "sha256": "015a0a608294e3f5d1b136860e0a8a9178400a6f6aa8dc7cdfc218adc85b20e0"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-735-results-2026-original.csv",
+          "bytes": 11086,
+          "sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-735-activities-2026-original.csv",
+          "bytes": 2631,
+          "sha256": "4eb977677b3d1087bf2b6084860744f7b34cd616b61321375dc8860427a1b31c"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-735-limits-2026-original.csv",
+          "bytes": 3766,
+          "sha256": "599a9e10835dbde1da44b502959e7bd4bb1de42c38c7114792355442b8600f70"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-735-station-2026-original.csv",
+          "bytes": 1287,
+          "sha256": "0a92788a6adbcab34e59fd654a162b78b17373e85fa78a29911290d1677c3c16"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-111-results-2026-original.csv",
+          "bytes": 26502,
+          "sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-111-activities-2026-original.csv",
+          "bytes": 3161,
+          "sha256": "37986a0b98c02b3d138c1fe15bcab2f369e8b2d32018956c9a59229249d6822f"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-111-limits-2026-original.csv",
+          "bytes": 9653,
+          "sha256": "744364d16c19cea386a5ed4799bdf56a47738498e63da3268524d84b6be83189"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-111-station-2026-original.csv",
+          "bytes": 1290,
+          "sha256": "445bba685654433fd815350478bacd8ab5504c6153d10591a514871dc9658939"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/sv833-activities-2021-20261013-original.csv",
+          "bytes": 17210,
+          "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/sv833-result-limits-2021-20261013-original.csv",
+          "bytes": 110860,
+          "sha256": "cfe407194b3326c696b7627c4aaa2594cc6d8ae20f88fd6d7d8aa80928918dd1"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 133399,
+          "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 104616,
+          "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 37404,
+          "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/observation-sources.json",
+          "bytes": 11270,
+          "sha256": "b85b7271d90181200a9f002e2cf1f5fbabfbb983958df4ce257370ed50fe0870"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/result-selection.json",
+          "bytes": 95841,
+          "sha256": "299d16fc1552fbcda1742204033430ffb3619059288ac5079655e7d1451b12db"
+        },
+        {
+          "path": "observations/three_twenty_2026/analysis_core.mjs",
+          "bytes": 13932,
+          "sha256": "e40d365f57c14f2c619805ea7c37ea6bc240f0b30eb85ea250f67884e382c553"
+        },
+        {
+          "path": "observations/three_twenty_2026/csv.mjs",
+          "bytes": 1178,
+          "sha256": "689e201967192e743d9f207936c2673c23f8523a8be91d3df307277ca6195c9b"
+        },
+        {
+          "path": "observations/three_twenty_2026/report.mjs",
+          "bytes": 17191,
+          "sha256": "f9e9248b16b2050d9f3c6ba0173ab76c7703af9cb3128ad411af84aa2472d593"
+        },
+        {
+          "path": "observations/three_twenty_2026/outputs.mjs",
+          "bytes": 2072,
+          "sha256": "60b60ab7b78d3fea4afe5b45485046ee05dd4d88b30351cf34ff767d7c101685"
+        },
+        {
+          "path": "observations/three_twenty_2026/build_study.mjs",
+          "bytes": 2666,
+          "sha256": "202953dc9959c782624ceffdde6781a5d54e667c9e92c973ae141322fc816071"
+        },
+        {
+          "path": "observations/three_twenty_2026/README.md",
+          "bytes": 10376,
+          "sha256": "99808c2a40f1df8f467bb0b5e4deb8d45c8462201f82d24dfc428d349056af39"
+        },
+        {
+          "path": "observations/three_twenty_2026/input-manifest.json",
+          "bytes": 14856,
+          "sha256": "719d122a901249944f92e657ee1968eb8ad636d5247f7e0e470f650672fa674c"
+        },
+        {
+          "path": "observations/three_twenty_2026/original-result-index.csv",
+          "bytes": 551053,
+          "sha256": "912b416fb98179af9d5f7cf8eb67637ebab6f781f78473625dc3d7dc25a03669"
+        },
+        {
+          "path": "observations/three_twenty_2026/duplicate-results.csv",
+          "bytes": 159246,
+          "sha256": "8a95478cfb67bdd9fc2c90dee155db80773adac6136ee30f25224c6946686518"
+        },
+        {
+          "path": "observations/three_twenty_2026/sampling-calendar.csv",
+          "bytes": 3658,
+          "sha256": "6afd47f82f980966509af895dad73a8c4e5489f5c38bbf2e5741fde7393a3f59"
+        },
+        {
+          "path": "observations/three_twenty_2026/station-summary.csv",
+          "bytes": 9104,
+          "sha256": "553728c8246fbdde5d96e09cc7a45fe5de352ea382fde45d051324dbc8f99039"
+        },
+        {
+          "path": "observations/three_twenty_2026/same-day-contrasts.csv",
+          "bytes": 6519,
+          "sha256": "4ebb8d9ceb5410b7a03f069ca530c7e34cdead3378cf936728a4407e7fc93ec9"
+        },
+        {
+          "path": "observations/three_twenty_2026/pair-coverage.csv",
+          "bytes": 376,
+          "sha256": "030973e0bdbdc0718a611bcea65761a501c1a91f6b1a78cd0122c50ef2277a00"
+        },
+        {
+          "path": "observations/three_twenty_2026/reconstructed-nitrogen.csv",
+          "bytes": 3198,
+          "sha256": "8e99eeaa555e9781fe74743fe8995a9a73a96828df665af1e8e1dd368d6da667"
+        },
+        {
+          "path": "observations/three_twenty_2026/study-summary.json",
+          "bytes": 80118,
+          "sha256": "3ddaae3ede35232b7bb24b4f1f223b40106bc161fbb04298da5e31f1be30fccc"
+        },
+        {
+          "path": "observations/three_twenty_2026/stations.geojson",
+          "bytes": 2622,
+          "sha256": "a3c5fcfa2dad1efc44009e77226b8b971e1cc8f2606025facbce51c7f1d9d2cb"
+        },
+        {
+          "path": "observations/three_twenty_2026/three-twenty-2026-study.html",
+          "bytes": 79485,
+          "sha256": "7bf694a246bd1a0b1b5efdcb15b7f70008b0dd831094d17fcf923a4b41990a47"
+        }
+      ]
+    },
+    {
+      "id": "three-twenty-2026-same-day",
+      "title": "14 January 2026 same-day station comparison",
+      "kind": "table",
+      "role": "observed_water_quality_comparison",
+      "path": "observations/three_twenty_2026/same-day-contrasts.csv",
+      "bytes": 6519,
+      "sha256": "4ebb8d9ceb5410b7a03f069ca530c7e34cdead3378cf936728a4407e7fc93ec9",
+      "uri": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
+      "vintage": "2026 original observations; derived 2026-10-13",
+      "metadata": {
+        "source_schema": "three-twenty.original-multistation-study/v1",
+        "stations": [
+          "21SC60WQ_WQX-SV-833",
+          "21SC60WQ_WQX-RS-26250",
+          "21SC60WQ_WQX-SV-735",
+          "21SC60WQ_WQX-SV-111"
+        ],
+        "original_result_identifiers": 242,
+        "activities": 15,
+        "activity_characteristic_values": 142,
+        "repeated_value_groups": 100,
+        "observation_window": {
+          "start": "2026-01-01",
+          "end": "2026-10-13",
+          "latest_observed": "2026-07-08"
+        },
+        "original_retained_cohort": {
+          "record_count": 766,
+          "activity_count": 65,
+          "selection_path": "observations/three_twenty_2026/native-study/result-selection.json",
+          "index_path": "observations/three_twenty_2026/native-study/observation-sources.json"
+        },
+        "original_observation_sources": [
+          {
+            "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-results-2026-original.csv",
+            "sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+            "role": "original_result_identifiers",
+            "profile": "narrowResult",
+            "station": "21SC60WQ_WQX-RS-26250",
+            "identity_field": "ResultIdentifier"
+          },
+          {
+            "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-results-2026-original.csv",
+            "sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+            "role": "original_result_identifiers",
+            "profile": "narrowResult",
+            "station": "21SC60WQ_WQX-SV-735",
+            "identity_field": "ResultIdentifier"
+          },
+          {
+            "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-results-2026-original.csv",
+            "sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+            "role": "original_result_identifiers",
+            "profile": "narrowResult",
+            "station": "21SC60WQ_WQX-SV-111",
+            "identity_field": "ResultIdentifier"
+          },
+          {
+            "path": "source/sv833-water-quality-20261013/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+            "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+            "role": "original_result_identifiers",
+            "profile": "narrowResult",
+            "station": "21SC60WQ_WQX-SV-833",
+            "identity_field": "ResultIdentifier"
+          },
+          {
+            "path": "source/sv833-water-quality-20261013/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+            "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+            "role": "original_result_identifiers",
+            "profile": "narrowResult",
+            "station": "21SC60WQ_WQX-SV-833",
+            "identity_field": "ResultIdentifier"
+          },
+          {
+            "path": "source/sv833-water-quality-20261013/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+            "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870",
+            "role": "original_result_identifiers",
+            "profile": "narrowResult",
+            "station": "21SC60WQ_WQX-SV-833",
+            "identity_field": "ResultIdentifier"
+          }
+        ]
+      },
+      "companions": [
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-results-2026-original.csv",
+          "bytes": 44491,
+          "sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-activities-2026-original.csv",
+          "bytes": 3701,
+          "sha256": "9b74e437e63215252878233e0e3384ef79c0a7e866f0e6150857e3710227a835"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-limits-2026-original.csv",
+          "bytes": 16719,
+          "sha256": "46568dd496358fcc7c8c746d92cd62017172564fbeec9df93a2e7454b7facfd5"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-station-2026-original.csv",
+          "bytes": 1306,
+          "sha256": "015a0a608294e3f5d1b136860e0a8a9178400a6f6aa8dc7cdfc218adc85b20e0"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-results-2026-original.csv",
+          "bytes": 11086,
+          "sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-activities-2026-original.csv",
+          "bytes": 2631,
+          "sha256": "4eb977677b3d1087bf2b6084860744f7b34cd616b61321375dc8860427a1b31c"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-limits-2026-original.csv",
+          "bytes": 3766,
+          "sha256": "599a9e10835dbde1da44b502959e7bd4bb1de42c38c7114792355442b8600f70"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-station-2026-original.csv",
+          "bytes": 1287,
+          "sha256": "0a92788a6adbcab34e59fd654a162b78b17373e85fa78a29911290d1677c3c16"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-results-2026-original.csv",
+          "bytes": 26502,
+          "sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-activities-2026-original.csv",
+          "bytes": 3161,
+          "sha256": "37986a0b98c02b3d138c1fe15bcab2f369e8b2d32018956c9a59229249d6822f"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-limits-2026-original.csv",
+          "bytes": 9653,
+          "sha256": "744364d16c19cea386a5ed4799bdf56a47738498e63da3268524d84b6be83189"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-station-2026-original.csv",
+          "bytes": 1290,
+          "sha256": "445bba685654433fd815350478bacd8ab5504c6153d10591a514871dc9658939"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-activities-2021-20261013-original.csv",
+          "bytes": 17210,
+          "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-result-limits-2021-20261013-original.csv",
+          "bytes": 110860,
+          "sha256": "cfe407194b3326c696b7627c4aaa2594cc6d8ae20f88fd6d7d8aa80928918dd1"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 133399,
+          "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 104616,
+          "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 37404,
+          "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-rs-26250-results-2026-original.csv",
+          "bytes": 44491,
+          "sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-rs-26250-activities-2026-original.csv",
+          "bytes": 3701,
+          "sha256": "9b74e437e63215252878233e0e3384ef79c0a7e866f0e6150857e3710227a835"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-rs-26250-limits-2026-original.csv",
+          "bytes": 16719,
+          "sha256": "46568dd496358fcc7c8c746d92cd62017172564fbeec9df93a2e7454b7facfd5"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-rs-26250-station-2026-original.csv",
+          "bytes": 1306,
+          "sha256": "015a0a608294e3f5d1b136860e0a8a9178400a6f6aa8dc7cdfc218adc85b20e0"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-735-results-2026-original.csv",
+          "bytes": 11086,
+          "sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-735-activities-2026-original.csv",
+          "bytes": 2631,
+          "sha256": "4eb977677b3d1087bf2b6084860744f7b34cd616b61321375dc8860427a1b31c"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-735-limits-2026-original.csv",
+          "bytes": 3766,
+          "sha256": "599a9e10835dbde1da44b502959e7bd4bb1de42c38c7114792355442b8600f70"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-735-station-2026-original.csv",
+          "bytes": 1287,
+          "sha256": "0a92788a6adbcab34e59fd654a162b78b17373e85fa78a29911290d1677c3c16"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-111-results-2026-original.csv",
+          "bytes": 26502,
+          "sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-111-activities-2026-original.csv",
+          "bytes": 3161,
+          "sha256": "37986a0b98c02b3d138c1fe15bcab2f369e8b2d32018956c9a59229249d6822f"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-111-limits-2026-original.csv",
+          "bytes": 9653,
+          "sha256": "744364d16c19cea386a5ed4799bdf56a47738498e63da3268524d84b6be83189"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-111-station-2026-original.csv",
+          "bytes": 1290,
+          "sha256": "445bba685654433fd815350478bacd8ab5504c6153d10591a514871dc9658939"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/sv833-activities-2021-20261013-original.csv",
+          "bytes": 17210,
+          "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/sv833-result-limits-2021-20261013-original.csv",
+          "bytes": 110860,
+          "sha256": "cfe407194b3326c696b7627c4aaa2594cc6d8ae20f88fd6d7d8aa80928918dd1"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 133399,
+          "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 104616,
+          "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 37404,
+          "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/observation-sources.json",
+          "bytes": 11270,
+          "sha256": "b85b7271d90181200a9f002e2cf1f5fbabfbb983958df4ce257370ed50fe0870"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/result-selection.json",
+          "bytes": 95841,
+          "sha256": "299d16fc1552fbcda1742204033430ffb3619059288ac5079655e7d1451b12db"
+        },
+        {
+          "path": "observations/three_twenty_2026/analysis_core.mjs",
+          "bytes": 13932,
+          "sha256": "e40d365f57c14f2c619805ea7c37ea6bc240f0b30eb85ea250f67884e382c553"
+        },
+        {
+          "path": "observations/three_twenty_2026/csv.mjs",
+          "bytes": 1178,
+          "sha256": "689e201967192e743d9f207936c2673c23f8523a8be91d3df307277ca6195c9b"
+        },
+        {
+          "path": "observations/three_twenty_2026/report.mjs",
+          "bytes": 17191,
+          "sha256": "f9e9248b16b2050d9f3c6ba0173ab76c7703af9cb3128ad411af84aa2472d593"
+        },
+        {
+          "path": "observations/three_twenty_2026/outputs.mjs",
+          "bytes": 2072,
+          "sha256": "60b60ab7b78d3fea4afe5b45485046ee05dd4d88b30351cf34ff767d7c101685"
+        },
+        {
+          "path": "observations/three_twenty_2026/build_study.mjs",
+          "bytes": 2666,
+          "sha256": "202953dc9959c782624ceffdde6781a5d54e667c9e92c973ae141322fc816071"
+        },
+        {
+          "path": "observations/three_twenty_2026/README.md",
+          "bytes": 10376,
+          "sha256": "99808c2a40f1df8f467bb0b5e4deb8d45c8462201f82d24dfc428d349056af39"
+        },
+        {
+          "path": "observations/three_twenty_2026/input-manifest.json",
+          "bytes": 14856,
+          "sha256": "719d122a901249944f92e657ee1968eb8ad636d5247f7e0e470f650672fa674c"
+        },
+        {
+          "path": "observations/three_twenty_2026/original-result-index.csv",
+          "bytes": 551053,
+          "sha256": "912b416fb98179af9d5f7cf8eb67637ebab6f781f78473625dc3d7dc25a03669"
+        },
+        {
+          "path": "observations/three_twenty_2026/activity-measurements.csv",
+          "bytes": 221425,
+          "sha256": "ac1fbb3fe57bc307391742b4a7f1d4b38ab1f30d953912a30b9904ab667fb37b"
+        },
+        {
+          "path": "observations/three_twenty_2026/duplicate-results.csv",
+          "bytes": 159246,
+          "sha256": "8a95478cfb67bdd9fc2c90dee155db80773adac6136ee30f25224c6946686518"
+        },
+        {
+          "path": "observations/three_twenty_2026/sampling-calendar.csv",
+          "bytes": 3658,
+          "sha256": "6afd47f82f980966509af895dad73a8c4e5489f5c38bbf2e5741fde7393a3f59"
+        },
+        {
+          "path": "observations/three_twenty_2026/station-summary.csv",
+          "bytes": 9104,
+          "sha256": "553728c8246fbdde5d96e09cc7a45fe5de352ea382fde45d051324dbc8f99039"
+        },
+        {
+          "path": "observations/three_twenty_2026/pair-coverage.csv",
+          "bytes": 376,
+          "sha256": "030973e0bdbdc0718a611bcea65761a501c1a91f6b1a78cd0122c50ef2277a00"
+        },
+        {
+          "path": "observations/three_twenty_2026/reconstructed-nitrogen.csv",
+          "bytes": 3198,
+          "sha256": "8e99eeaa555e9781fe74743fe8995a9a73a96828df665af1e8e1dd368d6da667"
+        },
+        {
+          "path": "observations/three_twenty_2026/study-summary.json",
+          "bytes": 80118,
+          "sha256": "3ddaae3ede35232b7bb24b4f1f223b40106bc161fbb04298da5e31f1be30fccc"
+        },
+        {
+          "path": "observations/three_twenty_2026/stations.geojson",
+          "bytes": 2622,
+          "sha256": "a3c5fcfa2dad1efc44009e77226b8b971e1cc8f2606025facbce51c7f1d9d2cb"
+        },
+        {
+          "path": "observations/three_twenty_2026/three-twenty-2026-study.html",
+          "bytes": 79485,
+          "sha256": "7bf694a246bd1a0b1b5efdcb15b7f70008b0dd831094d17fcf923a4b41990a47"
+        }
+      ]
+    },
+    {
+      "id": "three-twenty-2026-stations",
+      "title": "Original Three and Twenty Creek monitoring stations",
+      "kind": "vector",
+      "role": "monitoring_station_locations",
+      "path": "observations/three_twenty_2026/stations.geojson",
+      "bytes": 2622,
+      "sha256": "a3c5fcfa2dad1efc44009e77226b8b971e1cc8f2606025facbce51c7f1d9d2cb",
+      "uri": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
+      "vintage": "2026 original observations; derived 2026-10-13",
+      "metadata": {
+        "source_schema": "three-twenty.original-multistation-study/v1",
+        "stations": [
+          "21SC60WQ_WQX-SV-833",
+          "21SC60WQ_WQX-RS-26250",
+          "21SC60WQ_WQX-SV-735",
+          "21SC60WQ_WQX-SV-111"
+        ],
+        "original_result_identifiers": 242,
+        "activities": 15,
+        "activity_characteristic_values": 142,
+        "repeated_value_groups": 100,
+        "observation_window": {
+          "start": "2026-01-01",
+          "end": "2026-10-13",
+          "latest_observed": "2026-07-08"
+        },
+        "original_retained_cohort": {
+          "record_count": 766,
+          "activity_count": 65,
+          "selection_path": "observations/three_twenty_2026/native-study/result-selection.json",
+          "index_path": "observations/three_twenty_2026/native-study/observation-sources.json"
+        },
+        "original_observation_sources": [
+          {
+            "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-results-2026-original.csv",
+            "sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+            "role": "original_result_identifiers",
+            "profile": "narrowResult",
+            "station": "21SC60WQ_WQX-RS-26250",
+            "identity_field": "ResultIdentifier"
+          },
+          {
+            "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-results-2026-original.csv",
+            "sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+            "role": "original_result_identifiers",
+            "profile": "narrowResult",
+            "station": "21SC60WQ_WQX-SV-735",
+            "identity_field": "ResultIdentifier"
+          },
+          {
+            "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-results-2026-original.csv",
+            "sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+            "role": "original_result_identifiers",
+            "profile": "narrowResult",
+            "station": "21SC60WQ_WQX-SV-111",
+            "identity_field": "ResultIdentifier"
+          },
+          {
+            "path": "source/sv833-water-quality-20261013/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+            "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+            "role": "original_result_identifiers",
+            "profile": "narrowResult",
+            "station": "21SC60WQ_WQX-SV-833",
+            "identity_field": "ResultIdentifier"
+          },
+          {
+            "path": "source/sv833-water-quality-20261013/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+            "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+            "role": "original_result_identifiers",
+            "profile": "narrowResult",
+            "station": "21SC60WQ_WQX-SV-833",
+            "identity_field": "ResultIdentifier"
+          },
+          {
+            "path": "source/sv833-water-quality-20261013/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+            "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870",
+            "role": "original_result_identifiers",
+            "profile": "narrowResult",
+            "station": "21SC60WQ_WQX-SV-833",
+            "identity_field": "ResultIdentifier"
+          }
+        ]
+      },
+      "companions": [
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-results-2026-original.csv",
+          "bytes": 44491,
+          "sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-activities-2026-original.csv",
+          "bytes": 3701,
+          "sha256": "9b74e437e63215252878233e0e3384ef79c0a7e866f0e6150857e3710227a835"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-limits-2026-original.csv",
+          "bytes": 16719,
+          "sha256": "46568dd496358fcc7c8c746d92cd62017172564fbeec9df93a2e7454b7facfd5"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-station-2026-original.csv",
+          "bytes": 1306,
+          "sha256": "015a0a608294e3f5d1b136860e0a8a9178400a6f6aa8dc7cdfc218adc85b20e0"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-results-2026-original.csv",
+          "bytes": 11086,
+          "sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-activities-2026-original.csv",
+          "bytes": 2631,
+          "sha256": "4eb977677b3d1087bf2b6084860744f7b34cd616b61321375dc8860427a1b31c"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-limits-2026-original.csv",
+          "bytes": 3766,
+          "sha256": "599a9e10835dbde1da44b502959e7bd4bb1de42c38c7114792355442b8600f70"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-station-2026-original.csv",
+          "bytes": 1287,
+          "sha256": "0a92788a6adbcab34e59fd654a162b78b17373e85fa78a29911290d1677c3c16"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-results-2026-original.csv",
+          "bytes": 26502,
+          "sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-activities-2026-original.csv",
+          "bytes": 3161,
+          "sha256": "37986a0b98c02b3d138c1fe15bcab2f369e8b2d32018956c9a59229249d6822f"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-limits-2026-original.csv",
+          "bytes": 9653,
+          "sha256": "744364d16c19cea386a5ed4799bdf56a47738498e63da3268524d84b6be83189"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-station-2026-original.csv",
+          "bytes": 1290,
+          "sha256": "445bba685654433fd815350478bacd8ab5504c6153d10591a514871dc9658939"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-activities-2021-20261013-original.csv",
+          "bytes": 17210,
+          "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-result-limits-2021-20261013-original.csv",
+          "bytes": 110860,
+          "sha256": "cfe407194b3326c696b7627c4aaa2594cc6d8ae20f88fd6d7d8aa80928918dd1"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 133399,
+          "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 104616,
+          "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 37404,
+          "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-rs-26250-results-2026-original.csv",
+          "bytes": 44491,
+          "sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-rs-26250-activities-2026-original.csv",
+          "bytes": 3701,
+          "sha256": "9b74e437e63215252878233e0e3384ef79c0a7e866f0e6150857e3710227a835"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-rs-26250-limits-2026-original.csv",
+          "bytes": 16719,
+          "sha256": "46568dd496358fcc7c8c746d92cd62017172564fbeec9df93a2e7454b7facfd5"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-rs-26250-station-2026-original.csv",
+          "bytes": 1306,
+          "sha256": "015a0a608294e3f5d1b136860e0a8a9178400a6f6aa8dc7cdfc218adc85b20e0"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-735-results-2026-original.csv",
+          "bytes": 11086,
+          "sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-735-activities-2026-original.csv",
+          "bytes": 2631,
+          "sha256": "4eb977677b3d1087bf2b6084860744f7b34cd616b61321375dc8860427a1b31c"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-735-limits-2026-original.csv",
+          "bytes": 3766,
+          "sha256": "599a9e10835dbde1da44b502959e7bd4bb1de42c38c7114792355442b8600f70"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-735-station-2026-original.csv",
+          "bytes": 1287,
+          "sha256": "0a92788a6adbcab34e59fd654a162b78b17373e85fa78a29911290d1677c3c16"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-111-results-2026-original.csv",
+          "bytes": 26502,
+          "sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-111-activities-2026-original.csv",
+          "bytes": 3161,
+          "sha256": "37986a0b98c02b3d138c1fe15bcab2f369e8b2d32018956c9a59229249d6822f"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-111-limits-2026-original.csv",
+          "bytes": 9653,
+          "sha256": "744364d16c19cea386a5ed4799bdf56a47738498e63da3268524d84b6be83189"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/three-twenty-sv-111-station-2026-original.csv",
+          "bytes": 1290,
+          "sha256": "445bba685654433fd815350478bacd8ab5504c6153d10591a514871dc9658939"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/sv833-activities-2021-20261013-original.csv",
+          "bytes": 17210,
+          "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/sv833-result-limits-2021-20261013-original.csv",
+          "bytes": 110860,
+          "sha256": "cfe407194b3326c696b7627c4aaa2594cc6d8ae20f88fd6d7d8aa80928918dd1"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 133399,
+          "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 104616,
+          "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 37404,
+          "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/observation-sources.json",
+          "bytes": 11270,
+          "sha256": "b85b7271d90181200a9f002e2cf1f5fbabfbb983958df4ce257370ed50fe0870"
+        },
+        {
+          "path": "observations/three_twenty_2026/native-study/result-selection.json",
+          "bytes": 95841,
+          "sha256": "299d16fc1552fbcda1742204033430ffb3619059288ac5079655e7d1451b12db"
+        },
+        {
+          "path": "observations/three_twenty_2026/analysis_core.mjs",
+          "bytes": 13932,
+          "sha256": "e40d365f57c14f2c619805ea7c37ea6bc240f0b30eb85ea250f67884e382c553"
+        },
+        {
+          "path": "observations/three_twenty_2026/csv.mjs",
+          "bytes": 1178,
+          "sha256": "689e201967192e743d9f207936c2673c23f8523a8be91d3df307277ca6195c9b"
+        },
+        {
+          "path": "observations/three_twenty_2026/report.mjs",
+          "bytes": 17191,
+          "sha256": "f9e9248b16b2050d9f3c6ba0173ab76c7703af9cb3128ad411af84aa2472d593"
+        },
+        {
+          "path": "observations/three_twenty_2026/outputs.mjs",
+          "bytes": 2072,
+          "sha256": "60b60ab7b78d3fea4afe5b45485046ee05dd4d88b30351cf34ff767d7c101685"
+        },
+        {
+          "path": "observations/three_twenty_2026/build_study.mjs",
+          "bytes": 2666,
+          "sha256": "202953dc9959c782624ceffdde6781a5d54e667c9e92c973ae141322fc816071"
+        },
+        {
+          "path": "observations/three_twenty_2026/README.md",
+          "bytes": 10376,
+          "sha256": "99808c2a40f1df8f467bb0b5e4deb8d45c8462201f82d24dfc428d349056af39"
+        },
+        {
+          "path": "observations/three_twenty_2026/input-manifest.json",
+          "bytes": 14856,
+          "sha256": "719d122a901249944f92e657ee1968eb8ad636d5247f7e0e470f650672fa674c"
+        },
+        {
+          "path": "observations/three_twenty_2026/original-result-index.csv",
+          "bytes": 551053,
+          "sha256": "912b416fb98179af9d5f7cf8eb67637ebab6f781f78473625dc3d7dc25a03669"
+        },
+        {
+          "path": "observations/three_twenty_2026/activity-measurements.csv",
+          "bytes": 221425,
+          "sha256": "ac1fbb3fe57bc307391742b4a7f1d4b38ab1f30d953912a30b9904ab667fb37b"
+        },
+        {
+          "path": "observations/three_twenty_2026/duplicate-results.csv",
+          "bytes": 159246,
+          "sha256": "8a95478cfb67bdd9fc2c90dee155db80773adac6136ee30f25224c6946686518"
+        },
+        {
+          "path": "observations/three_twenty_2026/sampling-calendar.csv",
+          "bytes": 3658,
+          "sha256": "6afd47f82f980966509af895dad73a8c4e5489f5c38bbf2e5741fde7393a3f59"
+        },
+        {
+          "path": "observations/three_twenty_2026/station-summary.csv",
+          "bytes": 9104,
+          "sha256": "553728c8246fbdde5d96e09cc7a45fe5de352ea382fde45d051324dbc8f99039"
+        },
+        {
+          "path": "observations/three_twenty_2026/same-day-contrasts.csv",
+          "bytes": 6519,
+          "sha256": "4ebb8d9ceb5410b7a03f069ca530c7e34cdead3378cf936728a4407e7fc93ec9"
+        },
+        {
+          "path": "observations/three_twenty_2026/pair-coverage.csv",
+          "bytes": 376,
+          "sha256": "030973e0bdbdc0718a611bcea65761a501c1a91f6b1a78cd0122c50ef2277a00"
+        },
+        {
+          "path": "observations/three_twenty_2026/reconstructed-nitrogen.csv",
+          "bytes": 3198,
+          "sha256": "8e99eeaa555e9781fe74743fe8995a9a73a96828df665af1e8e1dd368d6da667"
+        },
+        {
+          "path": "observations/three_twenty_2026/study-summary.json",
+          "bytes": 80118,
+          "sha256": "3ddaae3ede35232b7bb24b4f1f223b40106bc161fbb04298da5e31f1be30fccc"
+        },
+        {
+          "path": "observations/three_twenty_2026/three-twenty-2026-study.html",
+          "bytes": 79485,
+          "sha256": "7bf694a246bd1a0b1b5efdcb15b7f70008b0dd831094d17fcf923a4b41990a47"
+        }
+      ]
+    }
+  ]
+}

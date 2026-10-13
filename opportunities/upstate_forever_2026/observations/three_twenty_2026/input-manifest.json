@@ -1,0 +1,215 @@
+{
+  "schema": "three-twenty.original-water-quality-inputs/v1",
+  "captured_at": "2026-10-13",
+  "path_base": "application root",
+  "window": {
+    "start": "2026-01-01",
+    "end": "2026-10-13"
+  },
+  "source_page": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
+  "files": [
+    {
+      "station": "RS-26250",
+      "role": "results",
+      "filename": "three-twenty-rs-26250-results-2026-original.csv",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-RS-26250&startDateLo=01-01-2026&startDateHi=10-13-2026&mimeType=csv&sorted=no&dataProfile=narrowResult",
+      "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-results-2026-original.csv",
+      "bytes": 44491,
+      "sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "file_upload_id": "3f8dd772-3100-814e-a654-00b2544059f7",
+      "notion_reference": "notion-file-block://55ea1612-7d50-43cc-b301-675570cc9a95/6d8cd44b-5bea-476e-9fe9-8295090dd4d6?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=three-twenty-rs-26250-results-2026-original.csv"
+    },
+    {
+      "station": "RS-26250",
+      "role": "activities",
+      "filename": "three-twenty-rs-26250-activities-2026-original.csv",
+      "uri": "https://www.waterqualitydata.us/data/Activity/search?siteid=21SC60WQ_WQX-RS-26250&startDateLo=01-01-2026&startDateHi=10-13-2026&mimeType=csv&sorted=no",
+      "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-activities-2026-original.csv",
+      "bytes": 3701,
+      "sha256": "9b74e437e63215252878233e0e3384ef79c0a7e866f0e6150857e3710227a835",
+      "file_upload_id": "3f8dd772-3100-8122-bbbb-00b2e9a3619f",
+      "notion_reference": "notion-file-block://c3f4a029-345c-4ce4-94b8-93ce4348e04b/480611eb-44db-48b3-b326-b1c61b9f557d?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=three-twenty-rs-26250-activities-2026-original.csv"
+    },
+    {
+      "station": "RS-26250",
+      "role": "limits",
+      "filename": "three-twenty-rs-26250-limits-2026-original.csv",
+      "uri": "https://www.waterqualitydata.us/data/ResultDetectionQuantitationLimit/search?siteid=21SC60WQ_WQX-RS-26250&startDateLo=01-01-2026&startDateHi=10-13-2026&mimeType=csv&sorted=no",
+      "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-limits-2026-original.csv",
+      "bytes": 16719,
+      "sha256": "46568dd496358fcc7c8c746d92cd62017172564fbeec9df93a2e7454b7facfd5",
+      "file_upload_id": "3f8dd772-3100-811a-944a-00b2ca76f54e",
+      "notion_reference": "notion-file-block://b906270e-58a4-4f38-ac61-c37c59d4819d/f59ee5c1-2564-4b75-af37-4f966e44a6c3?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=three-twenty-rs-26250-limits-2026-original.csv"
+    },
+    {
+      "station": "RS-26250",
+      "role": "station",
+      "filename": "three-twenty-rs-26250-station-2026-original.csv",
+      "uri": "https://www.waterqualitydata.us/data/Station/search?siteid=21SC60WQ_WQX-RS-26250&startDateLo=01-01-2026&startDateHi=10-13-2026&mimeType=csv&sorted=no",
+      "path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-station-2026-original.csv",
+      "bytes": 1306,
+      "sha256": "015a0a608294e3f5d1b136860e0a8a9178400a6f6aa8dc7cdfc218adc85b20e0",
+      "file_upload_id": "3f8dd772-3100-8184-a78f-00b260693a17",
+      "notion_reference": "notion-file-block://3899bd54-4d7a-4007-822f-6380ad6a3f96/74eca35c-1e25-447f-8d87-fcf8e727e5dd?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=three-twenty-rs-26250-station-2026-original.csv"
+    },
+    {
+      "station": "SV-735",
+      "role": "results",
+      "filename": "three-twenty-sv-735-results-2026-original.csv",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-735&startDateLo=01-01-2026&startDateHi=10-13-2026&mimeType=csv&sorted=no&dataProfile=narrowResult",
+      "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-results-2026-original.csv",
+      "bytes": 11086,
+      "sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+      "file_upload_id": "3f8dd772-3100-81b5-a71e-00b24562f8ab",
+      "notion_reference": "notion-file-block://6f916387-b4df-45f1-aa4c-d55ee696f3d8/359e8c6b-0fe6-4b3b-a394-8664a36bb7fb?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=three-twenty-sv-735-results-2026-original.csv"
+    },
+    {
+      "station": "SV-735",
+      "role": "activities",
+      "filename": "three-twenty-sv-735-activities-2026-original.csv",
+      "uri": "https://www.waterqualitydata.us/data/Activity/search?siteid=21SC60WQ_WQX-SV-735&startDateLo=01-01-2026&startDateHi=10-13-2026&mimeType=csv&sorted=no",
+      "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-activities-2026-original.csv",
+      "bytes": 2631,
+      "sha256": "4eb977677b3d1087bf2b6084860744f7b34cd616b61321375dc8860427a1b31c",
+      "file_upload_id": "3f8dd772-3100-8168-843e-00b242ce2efb",
+      "notion_reference": "notion-file-block://43ea3a70-a0a7-49ed-9227-28ab75ee823c/abe8da8a-066b-4cde-b293-015375dad4bc?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=three-twenty-sv-735-activities-2026-original.csv"
+    },
+    {
+      "station": "SV-735",
+      "role": "limits",
+      "filename": "three-twenty-sv-735-limits-2026-original.csv",
+      "uri": "https://www.waterqualitydata.us/data/ResultDetectionQuantitationLimit/search?siteid=21SC60WQ_WQX-SV-735&startDateLo=01-01-2026&startDateHi=10-13-2026&mimeType=csv&sorted=no",
+      "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-limits-2026-original.csv",
+      "bytes": 3766,
+      "sha256": "599a9e10835dbde1da44b502959e7bd4bb1de42c38c7114792355442b8600f70",
+      "file_upload_id": "3f8dd772-3100-81cf-8536-00b22b421ea1",
+      "notion_reference": "notion-file-block://53787f39-e0b1-4119-9444-d283d303bea5/c82f4995-4973-488c-bd5b-57a7eae65f9e?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=three-twenty-sv-735-limits-2026-original.csv"
+    },
+    {
+      "station": "SV-735",
+      "role": "station",
+      "filename": "three-twenty-sv-735-station-2026-original.csv",
+      "uri": "https://www.waterqualitydata.us/data/Station/search?siteid=21SC60WQ_WQX-SV-735&startDateLo=01-01-2026&startDateHi=10-13-2026&mimeType=csv&sorted=no",
+      "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-station-2026-original.csv",
+      "bytes": 1287,
+      "sha256": "0a92788a6adbcab34e59fd654a162b78b17373e85fa78a29911290d1677c3c16",
+      "file_upload_id": "3f8dd772-3100-8145-85ac-00b2f3cbbdc0",
+      "notion_reference": "notion-file-block://277c4b0c-2b8d-43cd-8dc0-dac4c1a3a14f/147abb7c-c37f-4a9a-9529-7e58ba86e7a9?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=three-twenty-sv-735-station-2026-original.csv"
+    },
+    {
+      "station": "SV-111",
+      "role": "results",
+      "filename": "three-twenty-sv-111-results-2026-original.csv",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-111&startDateLo=01-01-2026&startDateHi=10-13-2026&mimeType=csv&sorted=no&dataProfile=narrowResult",
+      "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-results-2026-original.csv",
+      "bytes": 26502,
+      "sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "file_upload_id": "3f8dd772-3100-81be-99d2-00b255f93f5d",
+      "notion_reference": "notion-file-block://4e279ded-4dc0-4842-b77c-b24b0e076d23/25826658-b4a0-4111-969e-fb11f6c7bb68?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=three-twenty-sv-111-results-2026-original.csv"
+    },
+    {
+      "station": "SV-111",
+      "role": "activities",
+      "filename": "three-twenty-sv-111-activities-2026-original.csv",
+      "uri": "https://www.waterqualitydata.us/data/Activity/search?siteid=21SC60WQ_WQX-SV-111&startDateLo=01-01-2026&startDateHi=10-13-2026&mimeType=csv&sorted=no",
+      "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-activities-2026-original.csv",
+      "bytes": 3161,
+      "sha256": "37986a0b98c02b3d138c1fe15bcab2f369e8b2d32018956c9a59229249d6822f",
+      "file_upload_id": "3f8dd772-3100-81bc-8f93-00b2933e3f29",
+      "notion_reference": "notion-file-block://6388a375-776d-45a7-b47e-4f3b0cb63c9d/9912bb5e-5faf-4ae5-9fd7-d09c66e580f5?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=three-twenty-sv-111-activities-2026-original.csv"
+    },
+    {
+      "station": "SV-111",
+      "role": "limits",
+      "filename": "three-twenty-sv-111-limits-2026-original.csv",
+      "uri": "https://www.waterqualitydata.us/data/ResultDetectionQuantitationLimit/search?siteid=21SC60WQ_WQX-SV-111&startDateLo=01-01-2026&startDateHi=10-13-2026&mimeType=csv&sorted=no",
+      "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-limits-2026-original.csv",
+      "bytes": 9653,
+      "sha256": "744364d16c19cea386a5ed4799bdf56a47738498e63da3268524d84b6be83189",
+      "file_upload_id": "3f8dd772-3100-81be-bd88-00b2b5e79ede",
+      "notion_reference": "notion-file-block://1e2ca908-7ea4-4526-8d7f-bb48df7a5596/aa8d4d70-b93d-4739-b694-8b5bc68af6a1?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=three-twenty-sv-111-limits-2026-original.csv"
+    },
+    {
+      "station": "SV-111",
+      "role": "station",
+      "filename": "three-twenty-sv-111-station-2026-original.csv",
+      "uri": "https://www.waterqualitydata.us/data/Station/search?siteid=21SC60WQ_WQX-SV-111&startDateLo=01-01-2026&startDateHi=10-13-2026&mimeType=csv&sorted=no",
+      "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-station-2026-original.csv",
+      "bytes": 1290,
+      "sha256": "445bba685654433fd815350478bacd8ab5504c6153d10591a514871dc9658939",
+      "file_upload_id": "3f8dd772-3100-8118-879b-00b261ff6f88",
+      "notion_reference": "notion-file-block://26dabf58-0e8d-4334-bd5d-0802f1b2c05b/8705116f-c39a-4389-87bf-d92f7f498acf?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=three-twenty-sv-111-station-2026-original.csv"
+    },
+    {
+      "path": "source/sv833-water-quality-20261013/original/sv833-activities-2021-20261013-original.csv",
+      "bytes": 17210,
+      "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4",
+      "role": "activities",
+      "uri": "https://www.waterqualitydata.us/data/Activity/search?siteid=21SC60WQ_WQX-SV-833&startDateLo=01-01-2021&startDateHi=10-13-2026&mimeType=csv&sorted=no",
+      "file_upload_id": "3f8dd772-3100-81b7-93ad-00b2eb04e95a",
+      "station": "SV-833",
+      "notion_reference": "notion-file-block://55c03eb0-6725-4f0b-9c99-eabb9b7ab363/b630c642-4a92-477f-8b05-9a7a540b5a83?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=sv833-activities-2021-20261013-original.csv"
+    },
+    {
+      "path": "source/sv833-water-quality-20261013/original/sv833-result-limits-2021-20261013-original.csv",
+      "bytes": 110860,
+      "sha256": "cfe407194b3326c696b7627c4aaa2594cc6d8ae20f88fd6d7d8aa80928918dd1",
+      "role": "limits",
+      "uri": "https://www.waterqualitydata.us/data/ResultDetectionQuantitationLimit/search?siteid=21SC60WQ_WQX-SV-833&startDateLo=01-01-2021&startDateHi=10-13-2026&mimeType=csv&sorted=no",
+      "file_upload_id": "3f8dd772-3100-811d-ac45-00b20bd6c78b",
+      "station": "SV-833",
+      "notion_reference": "notion-file-block://7364c04c-fc8e-4e15-8b04-1338472b0a18/34ef899b-7a31-4385-a107-b2251f4daa4a?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=sv833-result-limits-2021-20261013-original.csv"
+    },
+    {
+      "path": "source/sv833-water-quality-20261013/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "bytes": 133399,
+      "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "role": "results",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-833&characteristicType=Physical&startDateLo=01-01-2021&startDateHi=10-13-2026&mimeType=csv&sorted=no&dataProfile=narrowResult",
+      "file_upload_id": "3f8dd772-3100-81ab-9784-00b2cd290a48",
+      "station": "SV-833",
+      "notion_reference": "notion-file-block://ac5c2f7a-b49c-4913-b40c-f351f576563e/04e36050-9842-4806-99bd-7efc2e5c5fcf?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=sv833-physical-narrow-result-identifiers-2021-20261013-original.csv"
+    },
+    {
+      "path": "source/sv833-water-quality-20261013/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+      "bytes": 104616,
+      "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+      "role": "results",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-833&characteristicType=Nutrient&startDateLo=01-01-2021&startDateHi=10-13-2026&mimeType=csv&sorted=no&dataProfile=narrowResult",
+      "file_upload_id": "3f8dd772-3100-81de-bf84-00b24b95138e",
+      "station": "SV-833",
+      "notion_reference": "notion-file-block://82d0bd0b-36ff-45be-9a97-0a5bd6c0dea6/1b6c6087-08ea-477a-8c48-213aa4c53648?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv"
+    },
+    {
+      "path": "source/sv833-water-quality-20261013/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+      "bytes": 37404,
+      "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870",
+      "role": "results",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-833&characteristicType=Microbiological&startDateLo=01-01-2021&startDateHi=10-13-2026&mimeType=csv&sorted=no&dataProfile=narrowResult",
+      "file_upload_id": "3f8dd772-3100-81fd-b456-00b2a69dcfb2",
+      "station": "SV-833",
+      "notion_reference": "notion-file-block://659b2481-0e94-44c2-921e-fc34b68451da/065457a5-049d-4599-acb0-a2565fbe6165?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv"
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+      "bytes": 14616,
+      "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c",
+      "role": "station",
+      "uri": "https://www.waterqualitydata.us/data/Station/search?huc=03060101&startDateLo=01-01-2020&startDateHi=12-31-2025&characteristicType=Nutrient&mimeType=csv&zip=no",
+      "station": "SV-833"
+    }
+  ],
+  "expected_counts": {
+    "original_results": 242,
+    "distinct_result_ids": 242,
+    "activities": 15,
+    "dates": 14,
+    "stations": 4,
+    "measurements": 142,
+    "duplicate_groups": 100,
+    "additional_equal_results": 100,
+    "same_day_station_pairs": 1,
+    "compatible_same_day_contrasts": 10,
+    "below_measurements": 10
+  }
+}
