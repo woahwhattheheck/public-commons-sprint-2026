@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 import os
 import shutil
 import tempfile
@@ -16,7 +17,7 @@ from .common import (atomic_json, describe_file, digest, file_digest, held,
                      identifier, now, read_json, relative_file, verify_file)
 
 SCHEMA = "upstate.receiving-water-report-source/v1"
-EDITION = "receiving-water-report-source/2"
+EDITION = "receiving-water-report-source/3"
 FOLDER = "receiving-water-report-sources"
 SOURCE_ID = "receiving-water-scientific-report"
 LOCK = ".receiving-water-report-source.lock"
@@ -288,16 +289,143 @@ def _feature_ids(receptor):
     return ", ".join(values[:12]) + " …; " + str(len(values)) + " original features (all in the saved plan)"
 
 
-def _geometry_note(receptor):
+def _display_number(value, places=3):
+    """Round display cells only; complete native records retain original precision."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return _text(value)
+    if not math.isfinite(value):
+        raise ValueError("Report display quantity must be finite")
+    if value == 0:
+        return "0"
+    if abs(value) < 10 ** (-places):
+        return format(value, ".3g")
+    return format(value, ",." + str(places) + "f").rstrip("0").rstrip(".")
+
+
+def _family_label(value):
+    labels = {"critical_drinking_water": "Critical drinking water",
+              "classified_water": "Classified water",
+              "source_water": "Source water",
+              "drinking_water": "Drinking water"}
+    return labels.get(value, str(value).replace("_", " "))
+
+
+def _display_value(value):
+    if value is None:
+        return "Not recorded"
+    if isinstance(value, bool):
+        return "Yes" if value else "No"
+    if isinstance(value, list) and all(isinstance(item, (str, int, float)) for item in value):
+        return "; ".join(str(item) for item in value) or "None recorded"
+    return _brief(value, 650)
+
+
+def _classification_rows(value):
+    """Show recorded source attributes; retain complete dictionaries in the linked plan."""
+    if not isinstance(value, dict):
+        return [["Recorded classification", _display_value(value)]]
+    if not value:
+        return [["Recorded classification", "Not recorded"]]
+    labels = {
+        "FACILITY": "Facility", "NAME": "Waterbody", "SYSTEM": "Water system ID",
+        "INTAKE": "Intake ID", "BUFFER_FT": "Published protection distance (ft)",
+        "designation": "Designation", "previous_class": "Previous classification",
+        "site_specific": "Site-specific designation",
+        "previous_class_site_specific": "Previous site-specific designation",
+        "display_code": "Source classification code", "raw": "Original classification value",
+        "recognized": "Recognized source classification",
+        "native_name": "Original feature name", "description": "Source description",
+        "system_id": "Water system ID", "intake_id": "Intake ID",
+    }
+    rows = []
+    classification = value.get("source_classification")
+    if isinstance(classification, dict):
+        for key in ("display_code", "designation", "previous_class", "site_specific",
+                    "previous_class_site_specific", "recognized"):
+            if classification.get(key) not in (None, ""):
+                rows.append([labels[key], _display_value(classification[key])])
+        if not rows and classification.get("raw") is not None:
+            rows.append([labels["raw"], _display_value(classification["raw"])])
+    for key in ("FACILITY", "NAME", "SYSTEM", "INTAKE", "BUFFER_FT",
+                "native_name", "description", "system_id", "intake_id",
+                "designation", "previous_class", "site_specific",
+                "previous_class_site_specific", "display_code", "raw", "recognized"):
+        if key in value and value[key] not in (None, ""):
+            rows.append([labels[key], _display_value(value[key])])
+    vintage = value.get("vintage")
+    if isinstance(vintage, dict):
+        for key, label in (("status", "Recorded designation status"),
+                           ("selection_status", "Status for selected date"),
+                           ("effective_from", "Effective from"), ("effective_to", "Effective through"),
+                           ("as_of", "Selected date")):
+            if vintage.get(key) not in (None, ""):
+                rows.append([label, _display_value(vintage[key])])
+    status = value.get("status")
+    if isinstance(status, dict):
+        recorded = status.get("label")
+        if recorded in (None, ""):
+            recorded = status.get("raw")
+        if recorded is not None:
+            rows.append(["Original source status", _display_value(recorded)])
+    elif status not in (None, ""):
+        rows.append(["Original source status", _display_value(status)])
+    handled = set(labels) | {"source_classification", "vintage", "status",
+        "OBJECTID", "Shape.STArea()", "Shape.STLength()", "source_layer",
+        "profile", "kind", "rule_references", "legal_geometry_scope",
+        "hydrologic_support_scope", "source_fields"}
+    for key, item in value.items():
+        if key not in handled and item not in (None, ""):
+            rows.append([str(key).replace("_", " "), _display_value(item)])
+    if value.get("rule_references"):
+        rows.append(["Rule references", _display_value(value["rule_references"])])
+    return rows or [["Recorded classification", _display_value(value)]]
+
+
+def _geometry_note(receptor, analysis_crs):
     source = receptor["source"]
+    reader = source.get("geometry_reader")
     details = []
-    if source.get("geometry_reader"):
-        details.append("Recorded geometry reader: " + _brief(source["geometry_reader"], 360))
+    if reader:
+        adapter = reader.get("adapter") if isinstance(reader, dict) else reader
+        if adapter and "OriginalEsriFeatures" in str(adapter):
+            adapter = "Original Esri feature collection"
+        elif adapter:
+            adapter = str(adapter)
+        details.append("Geometry interpretation: " + (adapter or "Recorded source reader")
+                       + "; analysis coordinates " + analysis_crs + ".")
     features = source.get("selected_features", []) + receptor.get("original_features", [])
-    operations = sorted({_text(operation) for feature in features
-                         for operation in feature.get("geometry_operations", [])})
-    if operations:
-        details.append("Explicit recorded geometry operations: " + _brief(operations, 500))
+    operations = {}
+    for feature in features:
+        for operation in feature.get("geometry_operations", []):
+            if isinstance(operation, str):
+                try:
+                    parsed = json.loads(operation)
+                except (TypeError, ValueError):
+                    parsed = operation
+            else:
+                parsed = operation
+            operations[_text(parsed)] = parsed
+    for unused, operation in sorted(operations.items()):
+        if not isinstance(operation, dict):
+            details.append("Recorded geometry operation: " + _brief(operation, 650))
+            continue
+        identity = operation.get("identity")
+        prefix = "Feature " + str(identity) if identity is not None else "Selected feature"
+        stage = operation.get("stage")
+        if stage:
+            prefix += " (" + str(stage) + ")"
+        action = operation.get("analysis_operation")
+        reason = operation.get("reason")
+        if action:
+            text = prefix + ": " + str(action).rstrip(".") + "."
+            if reason:
+                text += " Recorded reason: " + str(reason).rstrip(".") + "."
+            details.append(text)
+        else:
+            details.append(prefix + ": " + _brief(operation, 650))
+    if details:
+        details.append("Complete reader settings, original feature attributes and geometry-operation "
+                       "records are retained in the linked saved plan.")
     return details
 
 
@@ -320,10 +448,12 @@ def _plan_sections(plan, analysis, views):
             ["Quantity basis", "Completed original analysis" if analysis else "Source-plan geography"],
         ]),
         _table(["Receiving area", "Family", "Geographic relationship", "Contribution area (ha)"],
-               [[row["title"], row["family"], row["relationship_precision"],
-                 row["contribution_area_ha"]] for row in plan["receptors"]],
+               [[row["title"], _family_label(row["family"]), row["relationship_precision"],
+                 _display_number(row["contribution_area_ha"])] for row in plan["receptors"]],
                "Original saved areas. Modeled quantities and their valid support, when selected, "
-               "are reported in the original analysis section."),
+               "are reported in the original analysis section. Display areas are rounded to three "
+               "decimal places; very small nonzero areas use significant digits. Complete values "
+               "remain in the linked saved plan."),
         {"kind": "links", "items": [
             {"title": "Complete saved plan, original features, methods and network",
              "path": "native/plan/plan.json"},
@@ -336,23 +466,23 @@ def _plan_sections(plan, analysis, views):
         relation, source = receptor["relation"], receptor["source"]
         rows = [
             ["Original receiving-area ID", receptor["id"]],
-            ["Designation / classification", _brief(receptor.get("classification", {}))],
+            *_classification_rows(receptor.get("classification", {})),
             ["Original source", source["title"]],
             ["Source edition", source["vintage"]],
             ["Publisher reference", source["uri"]],
             ["Selected native feature IDs", _feature_ids(receptor)],
-            ["Relationship method", relation["method"]],
+            ["Geographic relationship", receptor["relationship_precision"]],
             ["Source rationale", _brief(relation["rationale"], 900)],
         ]
         if "buffer_m" in relation:
-            rows.append(["Explicit geometry buffer (m)", relation["buffer_m"]])
+            rows.append(["Explicit geometry buffer (m)", _display_number(relation["buffer_m"])])
         if "seed_huc_ids" in relation:
             rows.append(["Selected receiving HUCs", _brief(relation["seed_huc_ids"])])
             rows.append(["Retained upstream HUC count", len(relation.get("upstream_huc_ids", []))])
         sections.append(["Receiving area: " + receptor["title"], [
             receptor["interpretation"],
             _table(["Source and method", "Retained value"], rows),
-            *_geometry_note(receptor),
+            *_geometry_note(receptor, plan["analysis_crs_name"]),
         ]])
     sections.append(["Original source register", [
         _table(["Source", "Edition", "Publisher reference", "Use in saved plan"],
