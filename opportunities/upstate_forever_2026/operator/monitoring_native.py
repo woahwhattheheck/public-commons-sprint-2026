@@ -132,6 +132,7 @@ def verify_workspace(workspace):
     from model.monitoring_sources import verify_retained_binding
     service = MonitoringWorkspace(workspace)
     counts = {}
+    return_cache = {}
     for kind, folder in COLLECTIONS.items():
         paths = sorted((workspace.root / folder).glob("*.json"))
         for path in paths:
@@ -149,7 +150,7 @@ def verify_workspace(workspace):
             elif kind in {"revisions", "events"}:
                 if kind == "events" and record.get("values", {}).get("fieldwork_return") is not None:
                     from model.monitoring_field_return import source_binding
-                    source_binding(workspace, record)
+                    source_binding(workspace, record, return_cache)
                 plan = service.get("plans", record["plan_id"])
                 if plan["network_id"] != record["network_id"]:
                     raise ValueError("Monitoring field history names a different source network")

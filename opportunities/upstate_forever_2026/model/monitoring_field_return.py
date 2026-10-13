@@ -110,13 +110,16 @@ def _rows(document, revision, design, network, events, event_times):
         station = stations.get(station_id)
         bound = revision["site_bindings"].get(slot["site_id"])
         source_issues = []
-        if (site.get("monitoring_catchment_id") != slot["site_id"]
-                or station_id != bound or station is None
-                or station["huc_id"] != slot["site_id"]):
-            source_issues.append("Reconcile this visit with the campaign's original bound source station")
-        elif (station["geometry"]["type"] != "Point"
-              or [site.get("longitude"), site.get("latitude")] != station["geometry"]["coordinates"][:2]):
-            source_issues.append("The field site coordinates differ from the retained source station")
+        if site.get("monitoring_catchment_id") != slot["site_id"] or station_id != bound:
+            source_issues.append("Reconcile this visit with the campaign's original catchment and station binding")
+        elif bound is not None:
+            if station is None or station["huc_id"] != slot["site_id"]:
+                source_issues.append("Retain the campaign's original bound source station")
+            elif (station["geometry"]["type"] != "Point"
+                  or [site.get("longitude"), site.get("latitude")] != station["geometry"]["coordinates"][:2]):
+                source_issues.append("The field site coordinates differ from the retained source station")
+        # Native events retain the campaign binding, including an unbound note.
+        station_id = bound
         local = activities.get(visit["id"], [])
         samples = [row for row in local if row["kind"] == "sample"]
         other = [row for row in local if row["kind"] != "sample"]
@@ -139,6 +142,8 @@ def _rows(document, revision, design, network, events, event_times):
             continue
         for entry_id, status, activity, occurred_at, evidence_activities in candidates:
             issues = list(source_issues)
+            if status == "collected" and not bound:
+                issues.append("Bind an actual original source station before returning a collected sample")
             try:
                 _timestamp(occurred_at)
                 if status == "collected":
@@ -260,8 +265,8 @@ def _event_payload(request, row):
     return payload
 
 
-def source_binding(workspace, event):
-    """Verify an original return before reusing its actual fieldwork activity ID."""
+def source_binding(workspace, event, cache=None):
+    """Verify each event against original files; reuse reads within one operation."""
     binding = event.get("values", {}).get("fieldwork_return")
     if binding is None:
         return None
@@ -269,18 +274,27 @@ def source_binding(workspace, event):
         raise ContractError("The campaign event has an invalid original fieldwork return")
     key = _native_id(binding.get("request_id"), "request_id")
     root = workspace.root / "monitoring_field_returns" / key
-    request = load_json(root / "request.json")
-    if (request.get("request_id") != key or digest(request.get("selection")) != key
-            or request.get("schema") != SCHEMA):
-        raise ContractError("The retained fieldwork return selection changed")
+    cache_key = (str(workspace.root), key)
+    retained = cache.get(cache_key) if cache is not None else None
+    if retained is None:
+        request = load_json(root / "request.json")
+        if (request.get("request_id") != key or digest(request.get("selection")) != key
+                or request.get("schema") != SCHEMA):
+            raise ContractError("The retained fieldwork return selection changed")
+        selection = request["selection"]
+        document = validate_plan(load_json(root / "field-plan.json"))
+        if (document["id"] != selection["plan_id"]
+                or document["revision"] != selection["plan_revision"]
+                or document_digest(document) != selection["document_digest"]):
+            raise ContractError("The retained return differs from its original field plan")
+        retained = (request, document,
+                    {item["entry_id"]: item for item in selection["entries"]},
+                    {item["id"]: item for item in document["activities"]})
+        if cache is not None:
+            cache[cache_key] = retained
+    request, document, entries, activities = retained
     selection = request["selection"]
-    document = validate_plan(load_json(root / "field-plan.json"))
-    if (document["id"] != selection["plan_id"]
-            or document["revision"] != selection["plan_revision"]
-            or document_digest(document) != selection["document_digest"]):
-        raise ContractError("The retained return differs from its original field plan")
-    row = next((item for item in selection["entries"]
-                if item["entry_id"] == binding.get("entry_id")), None)
+    row = entries.get(binding.get("entry_id"))
     if (row is None or event["campaign_id"] != selection["campaign_id"]
             or event["plan_id"] != selection["design_id"]
             or event["network_id"] != selection["network_id"]
@@ -289,8 +303,7 @@ def source_binding(workspace, event):
     expected = _event_payload(request, row)
     if any(event.get(key) != value for key, value in expected.items()):
         raise ContractError("The campaign event changed its original returned evidence")
-    original = next((item for item in document["activities"]
-                     if item["id"] == row.get("activity_id")), None)
+    original = activities.get(row.get("activity_id"))
     if row.get("activity_id") and original is None:
         raise ContractError("The returned sample is absent from its original field revision")
     return {"request_id": key, "request": request, "field_plan": document,
@@ -384,6 +397,7 @@ def receive(service, *, campaign_id, expected_revision_id, plan_revision,
         progress = {"schema": SCHEMA, "request_id": expected_request_id,
                     "phase": "returning", "events": [], "updated_at": utc_now()}
         previous_id = expected_revision_id
+        return_cache = {}
         try:
             for row in selection["entries"]:
                 payload = _event_payload(request, row)
@@ -392,7 +406,7 @@ def receive(service, *, campaign_id, expected_revision_id, plan_revision,
                     operation_id=digest({"fieldwork_return": expected_request_id, "entry_id": row["entry_id"]}),
                     **payload)
                 event_id = returned["event_ids"][-1]
-                source_binding(service.workspace, service.get("events", event_id))
+                source_binding(service.workspace, service.get("events", event_id), return_cache)
                 progress["events"].append({"entry_id": row["entry_id"], "event_id": event_id,
                                            "campaign_revision_id": returned["id"]})
                 previous_id = returned["id"]
