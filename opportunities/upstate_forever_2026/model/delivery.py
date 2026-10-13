@@ -360,7 +360,14 @@ def build(workspace, selection):
                     for items in version_provenance["runs"].values()
                     for info in items.values()}
     common_version = next(iter(all_versions)) if len(all_versions) == 1 else None
+    receptor_execution_binding = None
+    if selection.get("receptor_spec"):
+        from . import receptor_execution
+        receptor_execution_binding = receptor_execution.bind([baseline, *alternatives], grid_id=grid["id"])
     key = digest({"selection": selection, "baseline": baseline["id"],
+                  **({"receptor_execution": receptor_execution.signature(receptor_execution_binding),
+                      "receptor_product_version": receptor_execution.PRODUCT_VERSION}
+                     if receptor_execution_binding is not None else {}),
                   "application_version": INVEST_VERSION,
                   "native_version_provenance": version_provenance,
                   "map_renderer": cartography.MAP_RENDERER_VERSION,
@@ -510,7 +517,8 @@ def build(workspace, selection):
                 from .receptors import build_inventory
                 receptor_root = directory / "receptors"
                 receptor_product = build_inventory(workspace, selection["receptor_spec"], grid,
-                    baseline, alternatives, receptor_root, priority_path=priority)
+                    baseline, alternatives, receptor_root, priority_path=priority,
+                    execution_binding=receptor_execution_binding)
                 state["receptor_inventory"] = receptor_product["inventory"]
                 receptor_overlays = {role: overlay for role, overlay in receptor_product["overlays"].items()
                                      if overlay["features"]}

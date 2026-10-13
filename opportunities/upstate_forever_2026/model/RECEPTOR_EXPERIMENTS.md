@@ -18,7 +18,8 @@ model/RECEPTOR_EXPERIMENTS.md at the application root.
 Required existing components:
 
 - model/experiments.py and model/experiment_cli.py from ES-EXP-2319.
-- model/receptor_network.py, model/receptors.py and model/receptor_cli.py from
+- model/receptor_network.py, model/receptors.py, model/receptor_cli.py and
+  model/receptor_execution.py from
   the contributing-area component.
 - Original model/common.py, model/workspace.py and retained source/grid/run
   data used by both components.
@@ -30,6 +31,42 @@ workspace-relative files. The Source-water areas operator desk opens this same
 component through the shared extension registry; its full controls, retained
 tasks, reports and complete result ZIP are described in
 operator/RECEPTORS_OPERATOR.md.
+
+## Complete cohort and producing executions
+
+Planning reads each completed selected case and its own profile's baseline
+through the original Workspace. It resolves outputs common to that entire
+completed cohort before comparing producing-stage versions. Each profile
+inventory receives those same output names. Native run IDs, scenario IDs and
+profile IDs stay attached to their original cases.
+
+The maintained native-version helper gives each completed selected model stage
+priority over an unrelated last-run runtime or requested declaration.
+Compatibility is checked independently for NDR and SDR. A missing or
+incompatible producing version is reported before this comparison is built.
+Observed-run and requested-legacy fallback sources remain explicitly labeled.
+
+The comparison identity includes the selected case snapshot and complete
+producing-execution signature. Each group also checks that its inventory still
+matches the planned native sources. Completed products and progress records
+therefore reopen only for the same retained execution binding. Earlier saved
+comparison IDs remain inspectable; collecting the original selection creates
+a current separate edition when its producing sources or product revision
+differ.
+
+`native-execution.json` and the report table retain each original output
+descriptor, run selection, model version, timestamp and reuse source.
+The joined CSV carries the same sixteen provenance columns as the standalone
+inventory, including both original raster hashes. Profile-range rows include
+the producing model and version in their grouping and exported columns.
+Whole-basin context columns continue to identify the original experiment case
+snapshot; receiving-area quantities are read from the explicitly bound
+physical rasters.
+
+The source-water programme's existing **Collect comparison** action delegates
+to this same planner and collector after its original completed-programme
+synchronization. Its profile pairing and native execution service remain the
+authoritative source of those runs.
 
 ## Build from a retained experiment
 

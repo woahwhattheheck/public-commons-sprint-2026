@@ -9,7 +9,7 @@ import math
 from pathlib import Path
 from .common import atomic_json, describe_file, digest, read_json, verify_file
 from .receptor_network import upstream_memberships
-from . import rasters
+from . import rasters, receptor_execution
 
 
 def _csv(path, columns, rows):
@@ -130,7 +130,7 @@ def _report(path, inventory):
     quantity_rows = "".join(
         "<tr>" + "".join("<td>" + escape(str(v)) + "</td>" for v in (
             row["receptor_title"], row["scenario_title"], "Changed" if row["profile_changed"] else "Same",
-            row["pollutant"].replace("_", " "),
+            row["pollutant"].replace("_", " "), row["native_model"].upper() + " " + row["native_version"],
             value(row["common_baseline_export"]), value(row["common_alternative_export"]),
             value(row["alternative_minus_baseline"]), value(row["change_percent"]),
             row["unit"], str(row["common_valid_cells"]) + " / " + str(row["selected_cells"]))) + "</tr>"
@@ -154,7 +154,7 @@ def _report(path, inventory):
         "<p>Positive change means greater annual export "
         "under the alternative. Every change compares the same valid pixels. Separate CSV columns also retain "
         "the complete valid footprint for each run.</p>"
-        "<table><thead><tr><th>Area</th><th>Alternative</th><th>Parameter profile</th><th>Pollutant</th><th>Baseline</th><th>Alternative</th>"
+        "<table><thead><tr><th>Area</th><th>Alternative</th><th>Parameter profile</th><th>Pollutant</th><th>Native version</th><th>Baseline</th><th>Alternative</th>"
         "<th>Change</th><th>Change, %</th><th>Unit</th><th>Compared / selected pixels</th></tr></thead><tbody>"
         + quantity_rows + "</tbody></table></section>"
         "<h2>Method</h2><p>" + escape(inventory["method"]) + "</p>"
@@ -165,7 +165,8 @@ def _report(path, inventory):
         "<p>Areas may share contributing land. Review each area independently; combined footprint totals "
         "must use the geometric union. Channel transport, impoundment retention and intake-specific delivery "
         "are scientific processes that can be added through the project's selected method.</p>"
-        "<h2>Editable files</h2><p><a href=\"contributing-areas.gpkg\">Contributing areas and HUC12 layers</a> · "
+        + receptor_execution.report_section(inventory.get("native_execution"))
+        + "<h2>Editable files</h2><p><a href=\"contributing-areas.gpkg\">Contributing areas and HUC12 layers</a> · "
         "<a href=\"memberships.csv\">Upstream memberships</a> · <a href=\"scenario-exports.csv\">Physical scenario quantities</a> · "
         "<a href=\"inventory.json\">Inventory</a> · <a href=\"network.json\">Original network attributes and selections</a></p>"
         "<footer><p>Network source: " + escape(source["title"]) + " · " + escape(str(source["vintage"])) +
@@ -176,36 +177,36 @@ def _report(path, inventory):
     path.write_text(content, encoding="utf-8")
 
 
-def build_inventory(workspace, selection, grid, baseline, alternatives, directory, *, priority_path=None):
+def build_inventory(workspace, selection, grid, baseline, alternatives, directory, *, priority_path=None,
+                    execution_binding=None):
     """Build the area inventory and map inputs using completed native runs.
 
     The returned inventory is JSON-compatible. The separate overlays value holds
     Shapely geometries for the existing cartography and parcel inventory code.
     """
+    selection = dict(selection)
+    directory = Path(directory)
+    selected_runs = [baseline] + alternatives
+    execution = receptor_execution.bind(selected_runs, grid_id=grid["id"],
+        pollutants=execution_binding["pollutants"] if execution_binding is not None else None)
+    if execution_binding is not None and execution != execution_binding:
+        raise ValueError("Source-water producing executions changed during preparation")
+    pollutants = execution["pollutants"]
+    run_pollutants = {key: item["scope"]["available_artifacts"]
+                      for key, item in execution["runs"].items()}
     import fiona
     import rasterio
     from pyproj import CRS
     from shapely.geometry import mapping
     from shapely.ops import unary_union
-    selection = dict(selection)
-    directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
-    selected_runs = [baseline] + alternatives
-    run_pollutants = {}
-    for run in selected_runs:
-        if run["state"] != "complete" or run["selection"]["grid_id"] != grid["id"]:
-            raise ValueError("Contributing-area inventory needs complete runs on the selected grid")
-        run_pollutants[run["id"]] = [
-            key for key in rasters.MASS_UNITS if key in run.get("artifacts", {})]
-    pollutants = [key for key in rasters.MASS_UNITS
-                  if all(key in run_pollutants[run["id"]] for run in selected_runs)]
-    if not pollutants:
-        raise ValueError("Selected native runs have no retained pollutants in common")
     collection_id = selection.get("source_collection_id", grid["spec"]["source_collection_id"])
     network_id = selection.get("network_source_id", grid["spec"]["model_domain"]["source_id"])
     source_path, source_entry = workspace.source_file(collection_id, network_id)
     crs = CRS.from_user_input(grid["grid"]["crs"])
     input_signature = digest({"schema": "upstate.receptor-inventory/v1", "selection": selection,
+        "product_version": receptor_execution.PRODUCT_VERSION,
+        "execution_signature": receptor_execution.signature(execution),
         "grid_id": grid["id"], "baseline_run_id": baseline["id"],
         "alternative_run_ids": [run["id"] for run in alternatives],
         "network_source_sha256": source_entry["body"]["sha256"],
@@ -318,16 +319,19 @@ def build_inventory(workspace, selection, grid, baseline, alternatives, director
                         "alternative_run_id": alternative["id"], "scenario_title": scenario["title"],
                         "pollutant": pollutant, "unit": rasters.MASS_UNITS[pollutant].replace("/pixel", ""),
                         "profile_changed": alternative["selection"]["profile_id"] != baseline["selection"]["profile_id"],
+                        **receptor_execution.pair_fields(execution, baseline["id"], alternative["id"], pollutant),
                         **summary})
     columns = ["receptor_id", "receptor_title", "role", "baseline_run_id", "alternative_run_id", "scenario_title",
         "pollutant", "unit", "profile_changed", "baseline_export", "alternative_export",
         "common_baseline_export", "common_alternative_export", "alternative_minus_baseline", "change_percent",
         "selected_cells", "baseline_valid_cells", "alternative_valid_cells", "common_valid_cells",
-        "baseline_only_cells", "alternative_only_cells"]
+        "baseline_only_cells", "alternative_only_cells", *receptor_execution.CSV_FIELDS]
     _csv(directory / "scenario-exports.csv", columns, quantities)
+    atomic_json(directory / "native-execution.json", execution)
     files = {key: describe_file(directory, directory / filename) for key, filename in (
         ("geopackage", "contributing-areas.gpkg"), ("memberships", "memberships.csv"),
-        ("scenario_exports", "scenario-exports.csv"), ("network", "network.json"))}
+        ("scenario_exports", "scenario-exports.csv"), ("network", "network.json"),
+        ("native_execution", "native-execution.json"))}
     priority_rasters = {}
     if priority_path is not None:
         for role, overlay in overlays.items():
@@ -343,6 +347,8 @@ def build_inventory(workspace, selection, grid, baseline, alternatives, director
         "selection": selection, "input_signature": input_signature, "network_source": source_binding, "grid_id": grid["id"],
         "baseline_run_id": baseline["id"], "alternative_run_ids": [run["id"] for run in alternatives],
         "pollutants": pollutants, "run_pollutants": run_pollutants,
+        "product_version": receptor_execution.PRODUCT_VERSION, "native_execution": execution,
+        "execution_signature": receptor_execution.signature(execution),
         "areas": areas, "scenario_exports": quantities, "files": files, "priority_rasters": priority_rasters,
         "method": network["method"] + "; polygon union for each receiving area; original reporting mask and pixel-centre aggregation.",
         "quantity_basis": "Annual land-origin nutrient and sediment export to the modeled stream network from contributing land inside the reporting basin.",
