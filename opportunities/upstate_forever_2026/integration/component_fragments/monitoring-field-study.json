@@ -1,7 +1,7 @@
 {
   "schema": "upstate.application-component-fragment/v1",
   "id": "monitoring-field-study",
-  "source_reference": "RIVER13 completed1193 field-support study: original730 measurements,36 original observation stations,87 native assessment sites and unchanged three saved plans; source collection371fca0c31de80d7309e6b7793ca56ac4563a7135409f667e240340957b098a3.",
+  "source_reference": "RIVER13 completed1193 field-support study: original730 measurements,36 original observation stations,87 native assessment sites and unchanged three saved plans; source collection371fca0c31de80d7309e6b7793ca56ac4563a7135409f667e240340957b098a3. Native selection retention uses the original Workspace queue and complete retained source; shared Monitoring joins preserve the receiving host.",
   "components": {
     "monitoring-field-study": {
       "title": "Saved regional monitoring field selection and original station evidence",
@@ -15,10 +15,12 @@
         "source/monitoring-field-study/CURRENT_OWNER_DIRECTION.md",
         "source/monitoring-field-study/source-manifest.json",
         "source/monitoring-field-study/INSTALLATION.md",
-        "integration/component_fragments/monitoring-field-study.json"
+        "integration/component_fragments/monitoring-field-study.json",
+        "source_tools/monitoring_field_selection_composition.py"
       ],
       "requires": [
-        "monitoring-chemistry-study"
+        "monitoring-chemistry-study",
+        "monitoring-field-selection"
       ]
     }
   },

@@ -2,7 +2,7 @@
 
 This directory retains the original RIVER13 field-planning contribution delivered in the same completed Monitoring/Chemistry project. The selected native project is `b9d5d257-c6bb-4f07-b975-8e8c63705db3`; the original field-support identity is `e62688692e78bc7cb1551d15cff73afa2a6e3db47b44e78a06e34a89656b51aa`. The original source and finished data remain separately identifiable.
 
-The original eight-file source packet contains **198,490 bytes of producer, template, instructions and the delivered manifest**. Its seven unchanged members retain their original bytes. The maintained `source/make_field_brief.py` adds explicit `--study` and `--output` arguments in place of the author's local directory; its actual report content, tables and layout are preserved.
+The original eight-file source packet contains **198,490 bytes of producer, template, instructions and the delivered manifest**. Its six unchanged members retain their original bytes. The maintained HTML template includes the reviewed selection-import lifetime correction; the original template digest remains in the immutable original manifest. The maintained `source/make_field_brief.py` adds explicit `--study` and `--output` arguments in place of the author's local directory; its actual report content, tables and layout are preserved.
 
 ## What is already complete
 
@@ -20,9 +20,26 @@ python -B STAGE/operator/install_chemistry.py --application APP --source-root ST
 python -B STAGE/operator/install_chemistry.py --application APP --source-root STAGE
 ```
 
-Use actual absolute paths; BANK and STAGE are separate owned directories outside APP and the scientific Workspace. The existing installer takes the shared extension lock, validates complete source and known predecessors, preserves independently edited source, and installs the same original registry/component inventory. Its existing capture/open helpers and original engine remain unchanged. No active native process needs a forced restart.
+Use actual absolute paths; BANK and STAGE are separate owned directories outside APP and the scientific Workspace. The existing installer takes the shared extension lock, validates complete source and known predecessors, preserves independently edited source, and installs the same original registry/component inventory. Its existing capture/open helpers and original engine remain unchanged. Use the independently restored and installed application/Workspace copy. Start its original operator normally after installation with its own operator-state directory and an automatically selected port; the registry loads providers during Operator construction. Browser reload alone does not load a newly installed descriptor. Leave active calculations and the original receiving process intact.
 
 The component declaration is `integration/component_fragments/monitoring-field-study.json`, requiring the retained `monitoring-chemistry-study` component. Thus complete editable application exports retain these original tools and instructions along with their native dependencies.
+
+
+## Retain edited selections in the original application
+
+Open **Monitoring design → Saved field selections**. Use **Download working field desk**, choose the actual source station, enter field notes and select the original rounds. Save its selection JSON. Back in Monitoring, choose that file, review its source and calendar, and retain the edition. Reopen its exact JSON and selected working desk from the saved library. A complete Workspace backup/restore carries the original source, its companions, the retained selection and working desk. Follow `operator/MONITORING_FIELD_SELECTION.md` for this complete native workflow.
+
+The installer composes three exact additions into the receiving `operator/web/monitoring.mjs`; it never substitutes the reference host wholesale. Its original shared lock, source recheck and rollback cover those additions together with the new backend-only registration and full source. Unknown changed named hooks return a source-reconciliation error before writes. The full reference host is carried for source review, while unrelated current receiver edits stay intact.
+
+### Start the installed receiving operator
+
+With APP and WORKSPACE naming that independent receiving copy, and OPERATOR_STATE a separate directory outside both:
+
+```bash
+python -B APP/operator/server.py --workspace WORKSPACE --operator-state OPERATOR_STATE --port 0
+```
+
+Open the private operator URL returned by this original server. Keep the capability URL private. Choose Monitoring design and Saved field selections.
 
 ## Receive the finished scientific package
 
@@ -42,6 +59,10 @@ This existing receiver verifies the original project, exact network digest and a
 - `monitoring-budget-field-support`: original table, 5,310 bytes, SHA256 `38d491f73536ce418340fe1833beba142b42774f99a5d828508beae563b93f5b`.
 
 Open the received document through the existing Sources document controls; its embedded data and original downloads work offline. Both entries use the original `monitoring_field_support` source role. A source document is not automatically a scientific-report recipe; use only the maintained report/Study integrations that recognize the selected source type.
+
+### Reopen the original populated field example
+
+For the first receiving exercise, select the unchanged `examples/Monitoring_4800_Field_Selection.json` from the complete original package or its retained source companions. Its SHA256 is `29a31882db493664d955bb4872209eb1791f999704a163f5fe36ccbf64dc98dc`. Review and retain those exact bytes before making another edition; the original populated choices, notes and rounds were already operated by the producer. Open its accompanying crew CSV (SHA256 `19478f5a82be7b3569f1faf1a01879f0d706954608b4eb8f688760b4c0dd27b2`) and two-page calendar PDF (SHA256 `ef483895a9f7791fd0df55cac0f641fe86e35c5322c819a8c47f6b2da52b34a8`) as the recipient. These are package/source companions, not additional embedded buttons. Then use the maintained working desk to choose a real candidate, change a note or round, export the new JSON, and retain that next edition through the existing panel.
 
 ## Reproduce the original source-support computation
 
@@ -75,7 +96,7 @@ These commands reproduce the analytical data, offline page and PDF from retained
 
 In the exact received desk, choose each saved budget and search area; inspect original station fields and map coordinates. Choose an explicit candidate, add a note, select calendar rounds, and export crew CSV and selection JSON. The schema is `upstate.monitoring-field-selection/v1`; it retains the original support, project, frontier and plan IDs plus candidate keys, notes and selected original rounds. Reopen it in an independent copy of the same source-bound desk. Historical-record filters preserve complete selected original CSV rows and separate routine samples from the one field replicate.
 
-A browser selection does not silently revise the native campaign's station IDs: original observation and assessment candidates remain distinct. Source import retains the complete unchanged finished study; later explicit selection retention uses its dedicated native workflow if installed.
+A browser selection does not silently revise the native campaign's station IDs: original observation and assessment candidates remain distinct. Source import retains the complete unchanged finished study; the installed Saved field selections workflow retains each reviewed selection and its working desk in the original Workspace.
 
 The actual producer already reported desktop/390px selection, note/calendar export and independent reopen. The integrating/receiving peer still must personally inspect its exact outgoing version, actual attachment pixels and complete cold-reopened project. Do not replace inspection with a source count or an inherited claim.
 

@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CMS hospital source-edition comparison</title>
+<style>
+:root{font:14px/1.5 Arial,Helvetica,sans-serif;color:#202020;background:#f7f7f7}body{margin:0}header,main,footer{max-width:1440px;margin:auto;padding:24px}h1{font-size:26px;line-height:1.2;margin:0 0 16px}h2{font-size:19px}header{border-bottom:1px solid #bbb}.toolbar,.filters,.paging{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin:18px 0}label{display:flex;flex-direction:column;gap:6px;font-size:13px}input,select,textarea,button{font:inherit;padding:9px;color:#202020;background:#fff;border:1px solid #999;border-radius:2px}button{cursor:pointer}button:disabled{opacity:.45}button:hover{background:#eee}input[type=search]{min-width:260px}.table-wrap{overflow:auto;background:#fff;border:1px solid #bbb}table{border-collapse:collapse;width:100%;font-size:12px}th,td{text-align:left;vertical-align:top;padding:10px;border-bottom:1px solid #ddd;max-width:320px;overflow-wrap:anywhere;white-space:pre-wrap}th{background:#eee}#identity,pre{font:11px/1.5 monospace;white-space:pre-wrap;overflow-wrap:anywhere}details{border:1px solid #bbb;padding:16px;background:#fff;margin:14px 0}#status{min-height:24px;font-weight:600}.source-grid,.value-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.source-grid button{margin:4px}.source-grid pre{max-height:260px;overflow:auto}dialog{width:min(1100px,92vw);max-height:87vh;border:1px solid #666;padding:22px}dialog::backdrop{background:#0005}textarea{min-height:80px}#before-value,#after-value{background:#f1f1f1;border:1px solid #ccc;padding:12px}#edit-error{font-weight:600}a{color:inherit}@media(max-width:650px){header,main,footer{padding:14px}.source-grid,.value-grid{grid-template-columns:1fr}.toolbar button{width:100%}}
+
+/* Keep source controls readable inside light and dark host applications. */
+:root{color-scheme:light}body{color:#202020;background:#f7f7f7}header,main,footer{color:#202020}label,summary,th,td{color:#202020}.table-wrap,details,dialog{color:#202020;background:#fff}button:disabled{opacity:1;color:#666;background:#eee;border-color:#aaa;cursor:default}button:disabled:hover{background:#eee}input,select,textarea,button{box-sizing:border-box;max-width:100%}label{min-width:0;max-width:100%}dialog{box-sizing:border-box}#before-value,#after-value{color:#202020}
+@media(max-width:650px){.filters>label{flex:1 1 100%;width:100%}.filters>button,.paging>button{max-width:100%}input[type=search]{min-width:0;width:100%}.toolbar>label{width:100%}.toolbar button{white-space:normal;text-align:left}.csv-mapping-scroll th{white-space:normal;min-width:160px}.csv-mapping-scroll td{min-width:160px}.csv-mapping-scroll select{min-width:150px}#csv-intake-fields{min-width:0;padding:10px}dialog{width:calc(100vw - 24px);padding:16px}}
+
+p,li,code,#facts,#editions,#status,#archive-status,#csv-intake-status,.csv-source-summary{overflow-wrap:anywhere}.source-grid>*,.value-grid>*{min-width:0}
+</style></head><body>
+<header><h1>Hospital source-edition comparison</h1><p id="editions"></p><code id="identity"></code><p id="summary"></p><p id="field-summary"></p></header>
+<main><p id="status" role="status"></p><div id="interactive">
+<p>Inspect exact changes between the retained editions. Empty source cells, absent columns and added or removed facilities remain distinct. Review decisions concern this data handover; the original CMS values stay unchanged.</p>
+<div class="toolbar"><button id="download-comparison">Download comparison JSON</button><button id="download-changes">Download all changes CSV</button><button id="download-bundle">Download complete source handover</button><button id="download-review">Export review JSON</button><button id="download-review-csv">Export review CSV</button><label>Import saved review<input id="import-review" type="file" accept=".json,.csv"></label></div>
+<p id="review-count"></p><p id="empty" hidden>The two retained editions have identical facility records and fields. Their original capture, resource, mapping and release identities are preserved below.</p>
+<div class="filters"><label>Search changes<input id="search" type="search" placeholder="Facility, field or original source value"></label><label>Change<select id="kind"><option value="">All changes</option><option value="ADDED">Added facility</option><option value="REMOVED">Removed facility</option><option value="FIELD_CHANGED">Changed field</option><option value="FIELD_ADDED">Added field</option><option value="FIELD_REMOVED">Removed field</option></select></label><label>Field<select id="field-filter"><option value="">All fields</option></select></label><label>Review<select id="decision"><option value="">All decisions</option><option>UNREVIEWED</option><option>ACCEPT</option><option>CHECK</option></select></label></div>
+<div class="table-wrap"><table><thead><tr><th>Facility ID</th><th>Facility</th><th>Change</th><th>Field</th><th>Before</th><th>After</th><th>Review</th><th>Open</th></tr></thead><tbody id="rows"></tbody></table></div>
+<div class="paging"><button id="previous">Previous</button><span id="count"></span><button id="next">Next</button></div>
+<details><summary>Original files and exact field mappings</summary><p>Every source column is retained. Fields prefixed source_column: were left unmapped and remain visible under their exact original header. Review any edition's mapping before interpreting an added or removed column. Facility identifiers, ZIP codes, counts, ratings and missing-value strings stay as source text.</p><div class="source-grid"><section id="source-before"><h2>Before</h2></section><section id="source-after"><h2>After</h2></section></div></details>
+</div></main>
+<dialog id="record"><h2 id="record-title"></h2><p id="change-description"></p><div class="value-grid"><section><h3>Before</h3><pre id="before-value"></pre></section><section><h3>After</h3><pre id="after-value"></pre></section></div><div class="filters"><label>Decision<select id="record-decision"><option>UNREVIEWED</option><option>ACCEPT</option><option>CHECK</option></select></label><label>Reviewer<input id="reviewer" maxlength="200"></label></div><label>Review note<textarea id="note" maxlength="3000"></textarea></label><p id="edit-error" role="alert"></p><div class="toolbar"><button id="save-review">Save review</button><button id="close-record">Close</button></div><h3>Complete original records</h3><div class="table-wrap"><table><thead><tr><th>Field</th><th>Before</th><th>After</th></tr></thead><tbody id="all-fields"></tbody></table></div></dialog>
+<footer>TokenJunkie Labs · Complete public-source receiving and review</footer>
+<script type="application/json" id="comparison-source">__CMS_COMPARISON_SOURCE__</script>
+<script>const Core=(()=>{/** Public CMS release/reviewer package. Zero dependencies; caller supplies SHA-256. */
+const VERSION = "source-release/1";
+const REVIEW_COLUMNS = ["release_id","facility_id","row_sha256","decision","reviewer","note"];
+function stable(value) {
+  if (Array.isArray(value)) return "[" + value.map(stable).join(",") + "]";
+  if (value && typeof value === "object")
+    return "{" + Object.keys(value).sort().map(k => JSON.stringify(k)+":"+stable(value[k])).join(",") + "}";
+  return JSON.stringify(value);
+}
+function need(condition, message) { if (!condition) throw new Error(message); }
+
+/** Explicit publisher/archive dates; omitted extensions preserve legacy release identities. */
+function normalizeEditionDates(metadata) {
+  const object=value=>value&&typeof value==="object"&&!Array.isArray(value);
+  need(object(metadata),"Source edition metadata required");
+  const date=(value,label)=>{need(typeof value==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value,label+" needs YYYY-MM-DD");return value;};
+  const attribution=(value,label)=>{
+    need(object(value)&&Object.keys(value).every(k=>["note","source_url","source_member","source_sha256"].includes(k)),label+" needs an explicit source attribution");
+    need(typeof value.note==="string"&&value.note.trim().length>0&&value.note.length<=4000,label+" needs the publisher wording or a clear explanation");
+    need(typeof value.source_url==="string"&&/^https:\/\/[^/\s?#@]+(?:[/?#][^\s]*)?$/.test(value.source_url),label+" needs the exact public HTTPS source URL");
+    const out={note:value.note,source_url:value.source_url};
+    if(value.source_member!==undefined||value.source_sha256!==undefined){
+      need(typeof value.source_member==="string"&&value.source_member.length>0&&!/^[\/\\]|^[A-Za-z]:|[\\\u0000-\u001f]/.test(value.source_member)&&!value.source_member.split("/").some(p=>!p||p==="."||p===".."),label+" needs an exact safe archive member");
+      need(typeof value.source_sha256==="string"&&/^[a-f0-9]{64}$/.test(value.source_sha256),label+" archive member needs its original SHA-256");
+      out.source_member=value.source_member;out.source_sha256=value.source_sha256;
+    }
+    return out;
+  };
+  const out={source_released:metadata.source_released===null?null:date(metadata.source_released,"Publication date")};
+  let provenance;
+  if(metadata.date_provenance!==undefined){
+    need(object(metadata.date_provenance)&&Object.keys(metadata.date_provenance).length>0&&Object.keys(metadata.date_provenance).every(k=>["publication","archive"].includes(k)),"Use publication and/or archive date attribution");
+    provenance={};for(const kind of ["publication","archive"])if(metadata.date_provenance[kind]!==undefined)provenance[kind]=attribution(metadata.date_provenance[kind],kind+" date");
+  }
+  need(out.source_released!==null||provenance?.publication,"Unknown publication date needs an explicit source attribution");
+  if(metadata.archive_date!==undefined){
+    out.archive_date=date(metadata.archive_date,"Archive date");
+    need(typeof metadata.archive_date_meaning==="string"&&metadata.archive_date_meaning.trim()&&metadata.archive_date_meaning.length<=1000,"Archive date needs its actual publisher meaning");
+    need(provenance?.archive,"Archive date needs an explicit source attribution");
+    out.archive_date_meaning=metadata.archive_date_meaning;
+  }else need(metadata.archive_date_meaning===undefined&&!provenance?.archive,"Archive meaning/attribution requires its separate archive date");
+  if(provenance)out.date_provenance=provenance;
+  return out;
+}
+function editionDateSummary(metadata) {
+  const parts=[metadata.source_released===null?"Publication date not supplied":"Published "+metadata.source_released];
+  if(metadata.archive_date)parts.push("Archive "+metadata.archive_date+" ("+metadata.archive_date_meaning+")");
+  if(metadata.source_modified)parts.push("Modified "+metadata.source_modified);
+  if(metadata.captured_on)parts.push("Captured "+metadata.captured_on);
+  return parts.join(" · ");
+}
+
+function csv(rows, fields) {
+  const cell = value => '"' + String(value ?? "").replaceAll('"','""') + '"';
+  return [fields.map(cell).join(","), ...rows.map(row => fields.map(f=>cell(row[f])).join(","))].join("\r\n")+"\r\n";
+}
+function parseCsv(text) {
+  const rows=[];let row=[],cell="",quoted=false,closed=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(quoted){if(c==='"'){if(text[i+1]==='"'){cell+='"';i++;}else{quoted=false;closed=true;}}else cell+=c;}
+    else if(c==='"'){need(cell===""&&!closed,"Unexpected CSV quote");quoted=true;}
+    else if(c===","){row.push(cell);cell="";closed=false;}
+    else if(c==="\n"||c==="\r"){
+      if(c==="\r"&&text[i+1]==="\n")i++;
+      row.push(cell);rows.push(row);row=[];cell="";closed=false;
+    }else{need(!closed,"Unexpected text after CSV quote");cell+=c;}
+  }
+  need(!quoted,"Unclosed CSV quote");
+  if(cell!==""||row.length||closed){row.push(cell);rows.push(row);}
+  if(!rows.length)return{fields:[],rows:[]};
+  const fields=rows.shift();need(new Set(fields).size===fields.length,"Duplicate CSV header");
+  return{fields,rows:rows.map((cells,i)=>{need(cells.length===fields.length,"CSV row "+(i+2)+" has wrong width");return Object.fromEntries(fields.map((f,j)=>[f,cells[j]]));})};
+}
+function buildRelease(pageSources, metadata, sha256) {
+  need(Array.isArray(pageSources)&&pageSources.length>0,"Original API pages required");
+  need(typeof sha256==="function","SHA-256 function required");
+  const pages=pageSources.map(p=>({...p,data:JSON.parse(p.text)})).sort((a,b)=>a.data.query.offset-b.data.query.offset);
+  const first=pages[0].data, resources=first.query.resources, resource=resources?.[0]?.id;
+  need(first.query.offset===0&&resources.length===1,"Start with offset zero and one resource");
+  const fields=first.query.properties;
+  need(Array.isArray(fields)&&fields.includes("facility_id")&&new Set(fields).size===fields.length,"Unique source fields required");
+  need(Number.isSafeInteger(first.count)&&first.count>0,"Invalid provider result count");
+  const conditions=stable(first.query.conditions);
+  need(first.query.conditions.length===1&&first.query.conditions[0].property==="state"&&
+    first.query.conditions[0].operator==="="&&first.query.conditions[0].value==="CA","This release requires the original California filter");
+  const rows=[], seen=new Set(); let expectedOffset=0;
+  const raw=pages.map(p=>{
+    const d=p.data;
+    need(d.count===first.count&&stable(d.query.resources)===stable(resources),"Provider count or resource changed across pages");
+    need(stable(d.query.properties)===stable(fields)&&stable(d.query.conditions)===conditions,"Source fields or scope changed across pages");
+    need(stable(d.schema)===stable(first.schema),"Source schema changed across pages");
+    need(d.query.offset===expectedOffset&&Number.isSafeInteger(d.query.limit)&&d.query.limit>0,"Missing or overlapping page");
+    need(Array.isArray(d.results)&&d.results.length===Math.min(d.query.limit,first.count-expectedOffset),"Incomplete original page");
+    for(const r of d.results){
+      need(stable(Object.keys(r).sort())===stable([...fields].sort()),"Unexpected source record fields");
+      need(fields.every(f=>typeof r[f]==="string"),"Preserve original text fields");
+      need(r.state==="CA"&&r.facility_id.length>0&&!seen.has(r.facility_id),"Wrong state or duplicated source facility ID");
+      seen.add(r.facility_id);rows.push({...r});
+    }
+    expectedOffset+=d.results.length;
+    return{path:p.path,source_url:p.source_url,offset:d.query.offset,rows:d.results.length,bytes:p.bytes,sha256:sha256(p.text)};
+  });
+  need(expectedOffset===first.count,"The original query has unread rows");
+  rows.sort((a,b)=>a.facility_id<b.facility_id?-1:a.facility_id>b.facility_id?1:0);
+  const releaseBasis={schema:VERSION,dataset_id:"xubh-q36u",resource_id:resource,scope:{state:"CA"},fields,rows};
+  const release_id="cms-ca-"+sha256(stable(releaseBasis));
+  const records=rows.map(row=>({facility_id:row.facility_id,row_sha256:sha256(stable(row)),original:row}));
+  const countBy=field=>Object.fromEntries([...new Set(rows.map(r=>r[field]))].sort().map(value=>[value,rows.filter(r=>r[field]===value).length]));
+  const manifest={schema:VERSION,release_id,dataset_id:"xubh-q36u",resource_id:resource,scope:{state:"CA"},
+    captured_on:metadata.captured_on,source_modified:metadata.source_modified,...normalizeEditionDates(metadata),
+    dataset_url:metadata.dataset_url,dictionary_url:metadata.dictionary_url,row_count:rows.length,field_count:fields.length,
+    key:{field:"facility_id",type:"text",meaning:"CMS facility identifier; preserved exactly including leading zeroes"},
+    fields,original_pages:raw,records_sha256:sha256(stable(records)),data_csv_sha256:sha256(csv(rows,fields))};
+  const review=records.map(r=>({release_id,facility_id:r.facility_id,row_sha256:r.row_sha256,decision:"UNREVIEWED",reviewer:"",note:""}));
+  const fieldsOut=Object.fromEntries(fields.map(f=>[f,{...first.schema[resource].fields[f],preserved_type:"string"}]));
+  return {manifest,records,fields:fieldsOut,review,summary:{release_id,row_count:rows.length,field_count:fields.length,
+    hospital_types:countBy("hospital_type"),counties:countBy("countyparish"),
+    rating_blank:rows.filter(r=>r.hospital_overall_rating==="").length,
+    rating_not_available:rows.filter(r=>r.hospital_overall_rating==="Not Available").length}};
+}
+function applyReview(release, input) {
+  need(input&&input.schema==="source-review/1"&&input.release_id===release.manifest.release_id,"Review belongs to a different release");
+  need(Array.isArray(input.decisions)&&input.decisions.length===release.records.length,"A reviewer return must contain one decision per original record");
+  const ids=new Set(),source=new Map(release.records.map(r=>[r.facility_id,r]));
+  const decisions=input.decisions.map(r=>{
+    need(r&&typeof r==="object","Invalid reviewer row");
+    need(!ids.has(r.facility_id)&&source.has(r.facility_id),"Unknown or repeated reviewer facility");
+    ids.add(r.facility_id);
+    need(r.release_id===release.manifest.release_id&&r.row_sha256===source.get(r.facility_id).row_sha256,"Reviewer row source changed");
+    need(["UNREVIEWED","ACCEPT","CHECK"].includes(r.decision),"Unknown review decision");
+    need(typeof r.reviewer==="string"&&r.reviewer.length<=200&&typeof r.note==="string"&&r.note.length<=3000,"Invalid reviewer identity/note");
+    need(r.decision==="UNREVIEWED"||r.reviewer.trim(),"Enter a reviewer for a completed decision");
+    need(r.decision!=="CHECK"||r.note.trim(),"Explain a CHECK decision");
+    return Object.fromEntries(REVIEW_COLUMNS.map(k=>[k,r[k]]));
+  }).sort((a,b)=>a.facility_id<b.facility_id?-1:a.facility_id>b.facility_id?1:0);
+  return {schema:"source-review/1",release_id:release.manifest.release_id,decisions,
+    summary:Object.fromEntries(["UNREVIEWED","ACCEPT","CHECK"].map(s=>[s,decisions.filter(d=>d.decision===s).length]))};
+}
+function compareReleases(before, after) {
+  need(before.manifest.dataset_id===after.manifest.dataset_id&&stable(before.manifest.scope)===stable(after.manifest.scope),"Compare the same dataset and query scope");
+  const prior=new Map(before.records.map(r=>[r.facility_id,r])), next=new Map(after.records.map(r=>[r.facility_id,r]));
+  const fields=[...new Set([...before.manifest.fields,...after.manifest.fields])];
+  const changes=[];
+  for(const id of [...new Set([...prior.keys(),...next.keys()])].sort()){
+    const a=prior.get(id),b=next.get(id);
+    if(!a||!b){changes.push({facility_id:id,change:a?"REMOVED":"ADDED",field:"",before:a?stable(a.original):"",after:b?stable(b.original):""});continue;}
+    for(const field of fields)if(a.original[field]!==b.original[field])
+      changes.push({facility_id:id,change:"FIELD_CHANGED",field,before:a.original[field]??"",after:b.original[field]??""});
+  }
+  return{schema:"source-diff/1",before_release_id:before.manifest.release_id,after_release_id:after.manifest.release_id,
+    added_fields:after.manifest.fields.filter(f=>!before.manifest.fields.includes(f)),
+    removed_fields:before.manifest.fields.filter(f=>!after.manifest.fields.includes(f)),changes};
+}
+
+return {stable,csv,parseCsv,buildRelease,REVIEW_COLUMNS,normalizeEditionDates,editionDateSummary};})();
+const Edition=(()=>{const {stable,csv,parseCsv,buildRelease,REVIEW_COLUMNS,normalizeEditionDates}=Core;
+/** Complete original-CSV intake and source-bound edition comparison. */
+const CSV_RELEASE_VERSION="source-release-csv/1";
+const TRANSFER_VERSION="source-release-transfer/1";
+const CMS_CANONICAL_FIELDS=["facility_id","facility_name","address","citytown","state","zip_code","countyparish","telephone_number","hospital_type","hospital_ownership","emergency_services","meets_criteria_for_birthing_friendly_designation","hospital_overall_rating","hospital_overall_rating_footnote","mort_group_measure_count","count_of_facility_mort_measures","count_of_mort_measures_better","count_of_mort_measures_no_different","count_of_mort_measures_worse","mort_group_footnote","safety_group_measure_count","count_of_facility_safety_measures","count_of_safety_measures_better","count_of_safety_measures_no_different","count_of_safety_measures_worse","safety_group_footnote","readm_group_measure_count","count_of_facility_readm_measures","count_of_readm_measures_better","count_of_readm_measures_no_different","count_of_readm_measures_worse","readm_group_footnote","pt_exp_group_measure_count","count_of_facility_pt_exp_measures","pt_exp_group_footnote","te_group_measure_count","count_of_facility_te_measures","te_group_footnote"];
+const need=(condition,message)=>{if(!condition)throw Error(message);};
+const object=value=>value&&typeof value==="object"&&!Array.isArray(value);
+const same=(a,b)=>stable(a)===stable(b);
+function utf8Bytes(value){let n=0;for(const c of value){const p=c.codePointAt(0);n+=p<128?1:p<2048?2:p<65536?3:4;}return n;}
+function date(value,name){need(typeof value==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value,name+" needs an explicit YYYY-MM-DD date");return value;}
+function sourcePath(value){need(typeof value==="string"&&value.startsWith("original/")&&!value.includes("\\")&&!value.split("/").some(x=>!x||x==="."||x===".."),"Use an original/ relative source member");return value;}
+function sourceURL(value){need(typeof value==="string"&&/^https:\/\/[^/\s?#@]+(?:[/?#][^\s]*)?$/.test(value),"Use the exact public HTTPS source URL");return value;}
+function normalizeCsvRequest(request,headers){
+  need(object(request)&&request.schema==="source-csv-request/1","Use source-csv-request/1");
+  need(request.dataset_id==="xubh-q36u"&&same(request.scope,{state:"CA"}),"Select the original CMS dataset and California scope");
+  need(["official-original","derived-current-api-csv"].includes(request.origin),"State the actual original or derived CSV origin");
+  need(typeof request.resource_id==="string"&&request.resource_id.trim()&&request.resource_id.length<=400,"Enter the actual source resource/edition identity");
+  need(object(request.metadata),"Original edition metadata required");
+  const m=request.metadata;
+  date(m.captured_on,"Capture date");const editionDates=normalizeEditionDates(m);
+  if(m.source_modified!==null&&m.source_modified!==undefined)date(m.source_modified,"Published modification date");
+  sourceURL(m.dataset_url);sourceURL(m.source_url);
+  if(m.dictionary_url)sourceURL(m.dictionary_url);
+  need(Array.isArray(request.column_mapping)&&request.column_mapping.length>0,"Explicit original-header to known-field mapping required");
+  const seenHeaders=new Set(),seenFields=new Set(),map=new Map();
+  const mappings=request.column_mapping.map(row=>{
+    need(object(row)&&typeof row.source_header==="string"&&headers.includes(row.source_header),"Mapped original header is absent");
+    need(typeof row.field==="string"&&/^[a-z][a-z0-9_]*$/.test(row.field)&&CMS_CANONICAL_FIELDS.includes(row.field),"Map only to a known CMS field; other source columns remain retained under their original headers");
+    need(!seenHeaders.has(row.source_header)&&!seenFields.has(row.field),"CSV mappings must be one-to-one");
+    seenHeaders.add(row.source_header);seenFields.add(row.field);map.set(row.source_header,row.field);
+    return{source_header:row.source_header,field:row.field};
+  });
+  need(seenFields.has("facility_id")&&seenFields.has("state"),"Explicit Facility ID and State mappings are required");
+  const columns=headers.map(header=>({source_header:header,field:map.get(header)||"source_column:"+header,mapped:map.has(header)}));
+  need(new Set(columns.map(c=>c.field)).size===columns.length,"Retained source columns collide");
+  const parent=request.parent_release?{
+    release_id:String(request.parent_release.release_id||""),
+    data_csv_sha256:String(request.parent_release.data_csv_sha256||"")
+  }:null;
+  if(request.origin==="derived-current-api-csv")need(parent&&/^cms-ca-[a-f0-9]{64}$/.test(parent.release_id)&&/^[a-f0-9]{64}$/.test(parent.data_csv_sha256),"Derived-current input must retain its original release and CSV hash");
+  return{schema:request.schema,dataset_id:request.dataset_id,scope:{state:"CA"},origin:request.origin,
+    resource_id:request.resource_id,metadata:{captured_on:m.captured_on,source_modified:m.source_modified??null,
+      ...editionDates,dataset_url:m.dataset_url,source_url:m.source_url,dictionary_url:m.dictionary_url||null,
+      ...(m.archive_url?{archive_url:sourceURL(m.archive_url)}:{}),...(m.archive_member?{archive_member:String(m.archive_member)}:{})},
+    column_mapping:mappings,columns,...(parent?{parent_release:parent}:{})};
+}
+function buildCsvRelease(source,request,sha256){
+  need(object(source)&&typeof source.text==="string"&&typeof sha256==="function","Original CSV text and SHA-256 function required");
+  const originalPath=sourcePath(source.path),originalSHA=sha256(source.text),bytes=utf8Bytes(source.text);
+  need(source.bytes===undefined||source.bytes===bytes,"Original CSV byte count differs");
+  need(source.sha256===undefined||source.sha256===originalSHA,"Original CSV SHA differs");
+  const hadBOM=source.text.charCodeAt(0)===0xfeff;
+  const parsed=parseCsv(hadBOM?source.text.slice(1):source.text);
+  need(parsed.fields.length>0&&parsed.fields.every(h=>h.length>0),"Original CSV has an empty header");
+  need(parsed.rows.length>0,"Original CSV has no source records");
+  const normalized=normalizeCsvRequest(request,parsed.fields),fields=normalized.columns.map(c=>c.field);
+  if(normalized.origin==="derived-current-api-csv")need(normalized.parent_release.data_csv_sha256===originalSHA,"Derived CSV differs from its retained parent output");
+  const full=parsed.rows.map((row,i)=>({source_record_number:i+2,original:Object.fromEntries(normalized.columns.map(c=>[c.field,row[c.source_header]]))}));
+  const seen=new Set();
+  for(const {original:r,source_record_number}of full){
+    need(r.facility_id.length>0&&!seen.has(r.facility_id),"Empty or duplicate original facility ID at CSV record "+source_record_number);
+    seen.add(r.facility_id);
+  }
+  const selected=full.filter(r=>r.original.state==="CA").sort((a,b)=>a.original.facility_id<b.original.facility_id?-1:a.original.facility_id>b.original.facility_id?1:0);
+  need(selected.length>0,"Original CSV has no California rows for the selected scope");
+  const rows=selected.map(r=>r.original);
+  const basis={schema:CSV_RELEASE_VERSION,dataset_id:normalized.dataset_id,resource_id:normalized.resource_id,
+    scope:normalized.scope,request:normalized,original_csv_sha256:originalSHA,fields,rows};
+  const release_id="cms-ca-"+sha256(stable(basis));
+  const records=selected.map(r=>({facility_id:r.original.facility_id,row_sha256:sha256(stable(r.original)),source_record_number:r.source_record_number,original:r.original}));
+  const raw={path:originalPath,source_url:normalized.metadata.source_url,bytes,sha256:originalSHA,source_row_count:full.length,selected_row_count:rows.length,utf8_bom:hadBOM};
+  const manifest={schema:CSV_RELEASE_VERSION,release_id,dataset_id:normalized.dataset_id,resource_id:normalized.resource_id,
+    scope:normalized.scope,origin:normalized.origin,...normalized.metadata,request:normalized,source_headers:parsed.fields,
+    row_count:rows.length,field_count:fields.length,source_row_count:full.length,
+    key:{field:"facility_id",type:"text",meaning:"CMS facility identifier; preserved exactly including leading zeroes"},
+    fields,original_csv:raw,records_sha256:sha256(stable(records)),data_csv_sha256:sha256(csv(rows,fields))};
+  const fieldsOut=Object.fromEntries(normalized.columns.map(c=>[c.field,{description:c.source_header,preserved_type:"string",source_header:c.source_header,mapped:c.mapped}]));
+  const countBy=field=>fields.includes(field)?Object.fromEntries([...new Set(rows.map(r=>r[field]))].sort().map(value=>[value,rows.filter(r=>r[field]===value).length])):{};
+  const review=records.map(r=>({release_id,facility_id:r.facility_id,row_sha256:r.row_sha256,decision:"UNREVIEWED",reviewer:"",note:""}));
+  return{manifest,records,fields:fieldsOut,review,summary:{release_id,row_count:rows.length,field_count:fields.length,
+    source_row_count:full.length,selected_scope:{state:"CA"},retained_unmapped_columns:normalized.columns.filter(c=>!c.mapped),
+    hospital_types:countBy("hospital_type"),counties:countBy("countyparish"),
+    rating_blank:fields.includes("hospital_overall_rating")?rows.filter(r=>r.hospital_overall_rating==="").length:null,
+    rating_not_available:fields.includes("hospital_overall_rating")?rows.filter(r=>r.hospital_overall_rating==="Not Available").length:null}};
+}
+function makeTransfer(release,originals){
+  return{schema:TRANSFER_VERSION,manifest:release.manifest,records:release.records,fields:release.fields,summary:release.summary,
+    originals:originals.map(r=>({path:r.path,text:r.text}))};
+}
+function receiveTransfer(packet,sha256){
+  need(object(packet)&&packet.schema===TRANSFER_VERSION&&object(packet.manifest)&&Array.isArray(packet.originals),"Use a complete release transfer");
+  const m=packet.manifest,descriptors=m.schema===CSV_RELEASE_VERSION?[m.original_csv]:m.original_pages;
+  need(Array.isArray(descriptors)&&descriptors.length>0&&packet.originals.length===descriptors.length,"Original source inventory differs");
+  const sourceMap=new Map();
+  for(const r of packet.originals){sourcePath(r.path);need(typeof r.text==="string"&&!sourceMap.has(r.path),"Duplicate or missing original transfer source");sourceMap.set(r.path,r.text);}
+  const sources=descriptors.map(d=>{const body=sourceMap.get(d.path);need(typeof body==="string"&&utf8Bytes(body)===d.bytes&&sha256(body)===d.sha256,"Original source differs: "+d.path);return{...d,text:body};});
+  const rebuilt=m.schema===CSV_RELEASE_VERSION?buildCsvRelease(sources[0],m.request,sha256):buildRelease(sources,m,sha256);
+  for(const key of ["manifest","records","fields","summary"])need(same(rebuilt[key],packet[key]),"Transfer "+key+" differs from its complete originals");
+  return rebuilt;
+}
+function compareEditions(before,after,sha256){
+  const a=before.manifest,b=after.manifest;
+  need(a.dataset_id===b.dataset_id&&same(a.scope,b.scope),"Compare the same original dataset and geographic scope");
+  need(Array.isArray(a.fields)&&Array.isArray(b.fields),"Original field inventories required");
+  const old=new Map(before.records.map(r=>[r.facility_id,r])),next=new Map(after.records.map(r=>[r.facility_id,r]));
+  need(old.size===before.records.length&&next.size===after.records.length,"Original facility identifiers must be unique");
+  const fields=[...new Set([...a.fields,...b.fields])],changes=[],facilities=[];
+  let unchanged=0;
+  for(const id of [...new Set([...old.keys(),...next.keys()])].sort()){
+    const x=old.get(id),y=next.get(id);const beforeRow=x?.original||null,afterRow=y?.original||null;
+    const names=[beforeRow?.facility_name,afterRow?.facility_name].filter(Boolean);
+    const kind=!x?"ADDED":!y?"REMOVED":null;
+    let touched=0;
+    if(kind){
+      changes.push({facility_id:id,facility_name:names.at(-1)||id,change:kind,field:"",
+        before_present:!!x,after_present:!!y,before:x?stable(beforeRow):"",after:y?stable(afterRow):"",
+        before_row_sha256:x?.row_sha256||"",after_row_sha256:y?.row_sha256||""});touched=1;
+    }else{
+      for(const field of fields){
+        const ap=Object.hasOwn(beforeRow,field),bp=Object.hasOwn(afterRow,field);
+        if(ap===bp&&beforeRow[field]===afterRow[field])continue;
+        changes.push({facility_id:id,facility_name:names.at(-1)||id,change:!ap?"FIELD_ADDED":!bp?"FIELD_REMOVED":"FIELD_CHANGED",field,
+          before_present:ap,after_present:bp,before:ap?beforeRow[field]:"",after:bp?afterRow[field]:"",
+          before_row_sha256:x.row_sha256,after_row_sha256:y.row_sha256});touched++;
+      }
+    }
+    if(touched)facilities.push({facility_id:id,facility_name:names.at(-1)||id,change:kind||"CHANGED",changed_items:touched,before:beforeRow,after:afterRow});
+    else unchanged++;
+  }
+  const comparison_id="cms-diff-"+sha256(stable({before_release_id:a.release_id,after_release_id:b.release_id,changes}));
+  changes.forEach((row,index)=>{row.change_id="change-"+sha256(stable({comparison_id,index,row}));});
+  return{schema:"source-edition-comparison/1",comparison_id,dataset_id:a.dataset_id,scope:a.scope,
+    before:{release_id:a.release_id,resource_id:a.resource_id,source_released:a.source_released,...(a.archive_date?{archive_date:a.archive_date,archive_date_meaning:a.archive_date_meaning}:{}),...(a.date_provenance?{date_provenance:a.date_provenance}:{}),captured_on:a.captured_on,origin:a.origin||"official-original-api",row_count:before.records.length,field_count:a.fields.length,original_sources:a.original_csv?[a.original_csv]:a.original_pages},
+    after:{release_id:b.release_id,resource_id:b.resource_id,source_released:b.source_released,...(b.archive_date?{archive_date:b.archive_date,archive_date_meaning:b.archive_date_meaning}:{}),...(b.date_provenance?{date_provenance:b.date_provenance}:{}),captured_on:b.captured_on,origin:b.origin||"official-original-api",row_count:after.records.length,field_count:b.fields.length,original_sources:b.original_csv?[b.original_csv]:b.original_pages},
+    summary:{added_facilities:facilities.filter(r=>r.change==="ADDED").length,removed_facilities:facilities.filter(r=>r.change==="REMOVED").length,
+      changed_facilities:facilities.filter(r=>r.change==="CHANGED").length,unchanged_facilities:unchanged,changed_items:changes.length},
+    added_fields:b.fields.filter(f=>!a.fields.includes(f)),removed_fields:a.fields.filter(f=>!b.fields.includes(f)),
+    field_mapping:{before:a.request?.columns||a.fields.map(f=>({source_header:f,field:f,mapped:true})),
+      after:b.request?.columns||b.fields.map(f=>({source_header:f,field:f,mapped:true}))},
+    changes,facilities};
+}
+const CHANGE_REVIEW_COLUMNS=["comparison_id","change_id","facility_id","field","decision","reviewer","note"];
+function newChangeReview(comparison){
+  return{schema:"source-change-review/1",comparison_id:comparison.comparison_id,
+    decisions:comparison.changes.map(r=>({comparison_id:comparison.comparison_id,change_id:r.change_id,facility_id:r.facility_id,field:r.field,decision:"UNREVIEWED",reviewer:"",note:""}))};
+}
+function applyChangeReview(comparison,input){
+  need(object(input)&&input.schema==="source-change-review/1"&&input.comparison_id===comparison.comparison_id,"Review belongs to another comparison");
+  need(Array.isArray(input.decisions)&&input.decisions.length===comparison.changes.length,"Retain one review decision for every original change");
+  const originals=new Map(comparison.changes.map(r=>[r.change_id,r])),seen=new Set();
+  const decisions=input.decisions.map(r=>{
+    need(object(r)&&originals.has(r.change_id)&&!seen.has(r.change_id),"Unknown or duplicate original change");seen.add(r.change_id);
+    const original=originals.get(r.change_id);
+    need(r.comparison_id===comparison.comparison_id&&r.facility_id===original.facility_id&&r.field===original.field,"Review source binding differs");
+    need(["UNREVIEWED","ACCEPT","CHECK"].includes(r.decision),"Choose an original review decision");
+    need(typeof r.reviewer==="string"&&r.reviewer.length<=200&&typeof r.note==="string"&&r.note.length<=3000,"Review name or note is invalid");
+    need(r.decision==="UNREVIEWED"||r.reviewer.trim(),"A completed decision needs its reviewer");
+    need(r.decision!=="CHECK"||r.note.trim(),"CHECK needs an explanation");
+    return Object.fromEntries(CHANGE_REVIEW_COLUMNS.map(k=>[k,r[k]]));
+  });
+  const byID=new Map(decisions.map(r=>[r.change_id,r]));
+  return{schema:"source-change-review/1",comparison_id:comparison.comparison_id,
+    decisions:comparison.changes.map(r=>byID.get(r.change_id)),
+    summary:Object.fromEntries(["UNREVIEWED","ACCEPT","CHECK"].map(v=>[v,decisions.filter(r=>r.decision===v).length]))};
+}
+function comparisonCSV(comparison){return csv(comparison.changes,["change_id","facility_id","facility_name","change","field","before_present","before","after_present","after","before_row_sha256","after_row_sha256"]);}
+
+return {receiveTransfer,compareEditions,newChangeReview,applyChangeReview,comparisonCSV,CHANGE_REVIEW_COLUMNS};})();
+const SHA=function sha256Bytes(bytes){
+const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const H=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+const total=(bytes.length+9+63)&~63,buf=new Uint8Array(total);buf.set(bytes);buf[bytes.length]=128;let bitlen=BigInt(bytes.length)*8n;for(let i=0;i<8;i++){buf[total-1-i]=Number(bitlen&255n);bitlen>>=8n;}const w=new Uint32Array(64),rotr=(v,n)=>(v>>>n)|(v<<(32-n));
+for(let p=0;p<total;p+=64){for(let i=0;i<16;i++)w[i]=(buf[p+4*i]<<24)|(buf[p+4*i+1]<<16)|(buf[p+4*i+2]<<8)|buf[p+4*i+3];for(let i=16;i<64;i++){const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]>>>3),s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]>>>10);w[i]=(w[i-16]+s0+w[i-7]+s1)>>>0;}let [a,b,c,d,e,f,g,h]=H;for(let i=0;i<64;i++){const s1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&f)^((~e)&g),t1=(h+s1+ch+K[i]+w[i])>>>0,s0=rotr(a,2)^rotr(a,13)^rotr(a,22),maj=(a&b)^(a&c)^(b&c),t2=(s0+maj)>>>0;h=g;g=f;f=e;e=(d+t1)>>>0;d=c;c=b;b=a;a=(t1+t2)>>>0;}const state=[a,b,c,d,e,f,g,h];for(let i=0;i<8;i++)H[i]=(H[i]+state[i])>>>0;}
+return H.map(v=>v.toString(16).padStart(8,"0")).join("");
+};
+try{
+const sourcePacket=JSON.parse(document.querySelector("#comparison-source").textContent);
+if(sourcePacket.schema!=="source-comparison-bundle/1")throw Error("Use a complete comparison bundle");
+const sha=s=>SHA(new TextEncoder().encode(s));
+const before=Edition.receiveTransfer(sourcePacket.before,sha),after=Edition.receiveTransfer(sourcePacket.after,sha);
+const comparison=Edition.compareEditions(before,after,sha);
+if(sourcePacket.comparison&&Core.stable(sourcePacket.comparison)!==Core.stable(comparison))throw Error("Saved comparison differs from its original source editions");
+const $=s=>document.querySelector(s),status=s=>$("#status").textContent=s;
+let review=Edition.applyChangeReview(comparison,sourcePacket.review||Edition.newChangeReview(comparison)),page=0,selected=null;
+const key="cms-change-review:"+comparison.comparison_id;
+try{const saved=localStorage.getItem(key);if(saved)review=Edition.applyChangeReview(comparison,JSON.parse(saved));}catch(e){status("Saved review needs attention: "+e.message);}
+const label=x=>x===true?"Yes":x===false?"No":String(x??"");
+function shown(value,present=true){return !present?"(column absent)":value===""?"(original empty string)":value;}
+function download(name,text,type="application/json"){const url=URL.createObjectURL(new Blob([text],{type}));const a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);}
+function persist(){try{localStorage.setItem(key,JSON.stringify(review));status("Review saved here. Export it for handover.");}catch{status("Export the review file to preserve your decisions.");}}
+function option(select,value,caption=value){const el=document.createElement("option");el.value=value;el.textContent=caption;select.append(el);}
+$("#identity").textContent=comparison.comparison_id;
+$("#summary").textContent=Object.entries(comparison.summary).map(([k,v])=>k.replaceAll("_"," ")+": "+v).join(" · ");
+$("#editions").textContent="Before: "+Core.editionDateSummary(before.manifest)+" / "+comparison.before.origin+" / "+comparison.before.row_count+" records. After: "+Core.editionDateSummary(after.manifest)+" / "+comparison.after.origin+" / "+comparison.after.row_count+" records.";
+$("#field-summary").textContent="Added fields: "+(comparison.added_fields.join(", ")||"none")+". Removed fields: "+(comparison.removed_fields.join(", ")||"none")+".";
+for(const side of ["before","after"]){
+ const section=$("#source-"+side),m=side==="before"?before.manifest:after.manifest;
+ const title=document.createElement("p");title.textContent=m.release_id;section.append(title);
+ const dates=document.createElement("p");dates.textContent=Core.editionDateSummary(m);section.append(dates);
+ for(const [kind,proof]of Object.entries(m.date_provenance||{})){const attribution=document.createElement("p");attribution.textContent=kind+" date attribution: "+proof.note+" Source: "+proof.source_url+(proof.source_member?" · Original member "+proof.source_member+" · SHA-256 "+proof.source_sha256:"");section.append(attribution);}
+ const mapping=document.createElement("pre");mapping.textContent=JSON.stringify(comparison.field_mapping[side],null,2);section.append(mapping);
+ for(const original of sourcePacket[side].originals){const button=document.createElement("button");button.textContent="Download "+original.path;button.addEventListener("click",()=>download(side+"-"+original.path.split("/").at(-1),original.text,original.path.endsWith(".csv")?"text/csv;charset=utf-8":"application/json"));section.append(button);}
+}
+for(const field of [...new Set(comparison.changes.map(r=>r.field))].sort())option($("#field-filter"),field||"__whole_record",field||"Whole added/removed record");
+function filtered(){const term=$("#search").value.trim().toLowerCase(),kind=$("#kind").value,field=$("#field-filter").value,decision=$("#decision").value,byId=new Map(review.decisions.map(r=>[r.change_id,r]));
+ return comparison.changes.filter(r=>(!term||[r.facility_id,r.facility_name,r.field,r.before,r.after].some(v=>String(v).toLowerCase().includes(term)))&&(!kind||r.change===kind)&&(!field||r.field===(field==="__whole_record"?"":field))&&(!decision||byId.get(r.change_id).decision===decision));}
+function render(){const rows=filtered(),last=Math.max(0,Math.ceil(rows.length/50)-1);page=Math.min(page,last);const body=$("#rows");body.replaceChildren();const byId=new Map(review.decisions.map(r=>[r.change_id,r]));
+ for(const row of rows.slice(page*50,page*50+50)){const tr=document.createElement("tr");
+   for(const value of [row.facility_id,row.facility_name,row.change.replaceAll("_"," "),row.field||"Complete facility",shown(row.before,row.before_present),shown(row.after,row.after_present),byId.get(row.change_id).decision]){
+     const td=document.createElement("td");td.textContent=value;tr.append(td);}
+   const td=document.createElement("td"),button=document.createElement("button");button.textContent="Inspect / review";button.onclick=()=>open(row.change_id);td.append(button);tr.append(td);body.append(tr);
+ }
+ $("#count").textContent=rows.length+" changes · page "+(page+1)+" of "+(last+1);
+ $("#previous").disabled=page===0;$("#next").disabled=page===last;
+ $("#review-count").textContent=Object.entries(review.summary).map(([k,v])=>k+": "+v).join(" · ");
+ $("#empty").hidden=comparison.changes.length!==0;
+}
+function open(id){selected=id;const row=comparison.changes.find(r=>r.change_id===id),d=review.decisions.find(r=>r.change_id===id);
+ $("#record-title").textContent=row.facility_name+" · "+row.facility_id;$("#change-description").textContent=row.change.replaceAll("_"," ")+" / "+(row.field||"complete facility");
+ $("#before-value").textContent=shown(row.before,row.before_present);$("#after-value").textContent=shown(row.after,row.after_present);
+ $("#reviewer").value=d.reviewer;$("#note").value=d.note;$("#record-decision").value=d.decision;$("#edit-error").textContent="";
+ const prior=before.records.find(r=>r.facility_id===row.facility_id)?.original||null,next=after.records.find(r=>r.facility_id===row.facility_id)?.original||null;
+ const body=$("#all-fields");body.replaceChildren();for(const field of [...new Set([...before.manifest.fields,...after.manifest.fields])]){
+   const tr=document.createElement("tr");for(const v of [field,shown(prior?.[field]??"",!!prior&&Object.hasOwn(prior,field)),shown(next?.[field]??"",!!next&&Object.hasOwn(next,field))]){const td=document.createElement("td");td.textContent=v;tr.append(td);}body.append(tr);
+ }$("#record").showModal();}
+$("#save-review").onclick=()=>{try{review=Edition.applyChangeReview(comparison,{schema:"source-change-review/1",comparison_id:comparison.comparison_id,decisions:review.decisions.map(r=>r.change_id===selected?{...r,decision:$("#record-decision").value,reviewer:$("#reviewer").value,note:$("#note").value}:r)});persist();$("#record").close();render();}catch(e){$("#edit-error").textContent=e.message;}};
+$("#close-record").onclick=()=>$("#record").close();
+for(const id of ["search","kind","field-filter","decision"])$("#"+id).oninput=()=>{page=0;render();};
+$("#previous").onclick=()=>{page--;render();};$("#next").onclick=()=>{page++;render();};
+$("#download-comparison").onclick=()=>download("cms-source-comparison.json",JSON.stringify(comparison,null,2)+"\n");
+$("#download-changes").onclick=()=>download("cms-source-changes.csv",Edition.comparisonCSV(comparison),"text/csv;charset=utf-8");
+$("#download-review").onclick=()=>download("cms-change-review.json",JSON.stringify(review,null,2)+"\n");
+$("#download-review-csv").onclick=()=>download("cms-change-review.csv",Core.csv(review.decisions,Edition.CHANGE_REVIEW_COLUMNS),"text/csv;charset=utf-8");
+$("#download-bundle").onclick=()=>download("cms-comparison-complete.json",JSON.stringify({...sourcePacket,comparison,review},null,2)+"\n");
+$("#import-review").onchange=async event=>{try{const file=event.target.files[0];if(!file)return;const text=new TextDecoder("utf-8",{fatal:true,ignoreBOM:true}).decode(await file.arrayBuffer());let value;
+ if(file.name.toLowerCase().endsWith(".csv")){const parsed=Core.parseCsv(text);if(Core.stable(parsed.fields)!==Core.stable(Edition.CHANGE_REVIEW_COLUMNS))throw Error("Review CSV headers changed");value={schema:"source-change-review/1",comparison_id:comparison.comparison_id,decisions:parsed.rows};}else value=JSON.parse(text);
+ review=Edition.applyChangeReview(comparison,value);persist();render();status("Complete source-bound review received.");
+ }catch(e){status("Review import stopped: "+e.message);}finally{event.target.value="";}};
+render();
+
+}catch(error){document.querySelector("#status").textContent="Source receiving stopped: "+error.message;document.querySelector("#interactive").hidden=true;}</script></body></html>

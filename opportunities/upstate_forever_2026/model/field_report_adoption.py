@@ -291,6 +291,122 @@ def adopt_presentations(workspace, field_operation_id, receipt_path, *, source_c
         return result
 
 
+
+ARCHIVE_SCHEMA = "upstate.field-report-adoption-archive/v1"
+
+
+def _archive_file(workspace, relative):
+    """Hash one ordinary retained member without loading report attachments."""
+    root = _ordinary(workspace.root, directory=True).resolve(strict=True)
+    name = Path(relative)
+    if (name.is_absolute() or not name.parts or name.as_posix() != str(relative)
+            or any(part in ("", ".", "..") for part in name.parts)):
+        raise ImplementationError("Use the exact Workspace-relative adoption member.")
+    path = _ordinary(root / name)
+    before = path.stat()
+    checksum = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            checksum.update(chunk)
+    after = _ordinary(path).stat()
+    fields = ("st_dev", "st_ino", "st_mode", "st_size", "st_mtime_ns")
+    if any(getattr(before, key) != getattr(after, key) for key in fields):
+        raise ImplementationError("An adopted archive member changed while reading: " + str(relative))
+    return {"path": name.as_posix(), "bytes": after.st_size, "sha256": checksum.hexdigest()}
+
+
+def archive_binding(workspace, operation_id):
+    """Bind the complete adopted five reports and original journal for export.
+
+    This separate value keeps the original adoption result and presentation IDs
+    unchanged. It can be reconstructed from an independently received Workspace.
+    """
+    operation_id = identifier(operation_id)
+    directory = _directory(workspace, operation_id)
+    with _file_lock(directory / ".lock"):
+        request, _, _, _ = _read_request(workspace, operation_id, directory)
+        _, missing = _retained(workspace, request)
+        if missing:
+            raise ImplementationError("Finish all five selected native report copies before exporting the adoption.")
+        result = _result(workspace, operation_id, directory, request)
+        completed = read_json(_ordinary(directory / "completed.json"))
+        _same(completed, result, "Retain the original completed adoption before selecting its archive.")
+        selected = {}
+        root = Path(workspace.root).resolve(strict=True)
+
+        def include(relative, expected=None):
+            row = _archive_file(workspace, relative)
+            if expected is not None and any(row[key] != expected.get(key) for key in ("path", "bytes", "sha256")):
+                raise ImplementationError("A selected report differs from its retained file identity: " + relative)
+            if relative in selected:
+                _same(selected[relative], row, "Conflicting adopted archive member: " + relative)
+            selected[relative] = row
+
+        for name in ("receipt.json", "request.json", "completed.json"):
+            include((directory / name).relative_to(root).as_posix())
+        for pair in request["reports"]:
+            selected_id = pair["presentation_report_id"]
+            journal = directory / ("retained-" + selected_id + ".json")
+            _same(read_json(_ordinary(journal)), {
+                "kind": pair["kind"], "original_report_id": pair["original_report_id"],
+                "presentation_report_id": selected_id,
+                "manifest_sha256": pair["presentation_manifest_sha256"],
+            }, "The original per-report adoption record changed.")
+            include(journal.relative_to(root).as_posix())
+            # Include the original historical revision even after later plan
+            # edits. Native report receiving validates plan.json against it.
+            include("implementation/plans/" + request["plan_id"] +
+                    "/revisions/" + f"{pair['revision']:016d}.json")
+            for field in ("original_files", "presentation_files"):
+                for item in pair[field]:
+                    include(item["path"], item)
+            # Native inventories may keep manifest metadata separate from their
+            # displayed file list; both manifests are explicit required members.
+            for id_key, hash_key in (
+                    ("original_report_id", "original_manifest_sha256"),
+                    ("presentation_report_id", "presentation_manifest_sha256")):
+                relative = ("implementation/plans/" + request["plan_id"] +
+                            "/reports/" + pair[id_key] + "/manifest.json")
+                include(relative)
+                if selected[relative]["sha256"] != pair[hash_key]:
+                    raise ImplementationError("An adopted native manifest changed: " + relative)
+        files = [selected[name] for name in sorted(selected)]
+        # Reinspect the complete scientific/source relation, then recheck every
+        # selected byte identity before the caller chooses an archive filename.
+        _same(_result(workspace, operation_id, directory, request), result,
+              "The selected presentation changed while binding its archive.")
+        for row in files:
+            _same(_archive_file(workspace, row["path"]), row,
+                  "An adoption archive member changed during inspection.")
+        return {
+            "schema": ARCHIVE_SCHEMA, "operation_id": operation_id,
+            "project_id": result["project_id"], "field_operation_id": result["field_operation_id"],
+            "plan_id": result["plan_id"], "receipt_sha256": result["receipt_sha256"],
+            "presentation_id": result["presentation"]["presentation_id"],
+            "reports": result["presentation"]["selection"]["reports"],
+            "retained_files": files,
+        }
+
+
+def retained_files(workspace, operation_id):
+    """Return complete verified Workspace-relative members for this adoption."""
+    return archive_binding(workspace, operation_id)["retained_files"]
+
+
+def attach_to_archive(workspace, operation_id, archive_selection):
+    """Add the explicit adoption to an existing archive selection unchanged."""
+    if not isinstance(archive_selection, dict):
+        raise ImplementationError("Supply the complete original project archive selection.")
+    selected = json.loads(canonical(archive_selection))
+    binding = archive_binding(workspace, operation_id)
+    key = "field_report_adoption"
+    if key in selected:
+        _same(selected[key], binding,
+              "Keep the earlier archive selection; explicitly select a new edition for another adoption.")
+    selected[key] = binding
+    return selected
+
+
 def main(argv=None):
     import argparse
     from .workspace import Workspace
@@ -307,12 +423,17 @@ def main(argv=None):
     inspect = commands.add_parser("inspect", help="Reopen the original adoption in a received Workspace")
     inspect.add_argument("--workspace", required=True, type=Path)
     inspect.add_argument("--operation", required=True)
+    binding = commands.add_parser("archive-binding", help="Inspect complete adopted report and journal members")
+    binding.add_argument("--workspace", required=True, type=Path)
+    binding.add_argument("--operation", required=True)
     args = parser.parse_args(argv)
     workspace = Workspace(args.workspace)
     if args.command == "adopt":
         result = adopt_presentations(workspace, args.field_operation, args.receipt, source_context=args.source_context)
         if args.output:
             presentation.capture(workspace, args.field_operation, result["presentation"], args.output)
+    elif args.command == "archive-binding":
+        result = archive_binding(workspace, args.operation)
     else:
         result = inspect_adoption(workspace, args.operation)
     print(json.dumps(result, ensure_ascii=False, indent=2))

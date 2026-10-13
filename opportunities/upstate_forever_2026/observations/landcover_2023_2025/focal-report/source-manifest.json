@@ -145,7 +145,7 @@
             "source_id": "upstate-landcover-focal-group-change-532c65c70a9f"
           }
         ],
-        "parent_paired_source_id": "original-landcover-change-b8bceabf4cbc9f3e97cefb88",
+        "parent_paired_source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
         "spatial_method": "centre inclusion; half-open scanline edges; even-odd ring parity"
       }
     }

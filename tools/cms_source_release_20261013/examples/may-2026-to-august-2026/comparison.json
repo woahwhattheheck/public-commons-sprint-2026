@@ -1,0 +1,1283 @@
+{
+  "schema": "source-edition-comparison/1",
+  "comparison_id": "cms-diff-e34af7ed05901f66399d9b28ffb363910e00946ad125f6d910f33700bcfc9d4f",
+  "dataset_id": "xubh-q36u",
+  "scope": {
+    "state": "CA"
+  },
+  "before": {
+    "release_id": "cms-ca-8d65ee4d345377dd49afd38ff712f28702336d2750f0a76b977d990b04fc5870",
+    "resource_id": "hospitals_2026-05-13.zip:Hospital_General_Information.csv",
+    "source_released": null,
+    "archive_date": "2026-05-13",
+    "archive_date_meaning": "Unpublished and replaced with updated data",
+    "date_provenance": {
+      "publication": {
+        "note": "The bundled publisher readme supplies the unpublication/replacement meaning of the archive date and does not provide a publication date.",
+        "source_url": "https://data.cms.gov/provider-data/sites/default/files/dataset-archives/theme/hospitals/hospitals_2026-05-13.zip",
+        "source_member": "readme.txt",
+        "source_sha256": "729913b5bccde42b3c7fe62a1a6acce41b9b3c25d6697d73b9fdc250f25686ab"
+      },
+      "archive": {
+        "note": "The data in this archive was unpublished on the date listed for the archive, because it was replaced with updated data.",
+        "source_url": "https://data.cms.gov/provider-data/sites/default/files/dataset-archives/theme/hospitals/hospitals_2026-05-13.zip",
+        "source_member": "readme.txt",
+        "source_sha256": "729913b5bccde42b3c7fe62a1a6acce41b9b3c25d6697d73b9fdc250f25686ab"
+      }
+    },
+    "captured_on": "2026-10-13",
+    "origin": "official-original",
+    "row_count": 378,
+    "field_count": 38,
+    "original_sources": [
+      {
+        "path": "original/Hospital_General_Information.csv",
+        "source_url": "https://data.cms.gov/provider-data/sites/default/files/dataset-archives/theme/hospitals/hospitals_2026-05-13.zip",
+        "bytes": 1453884,
+        "sha256": "83c98b2e8687580e0482b13e1e9acd5813534be243e5ccd9f55556a869595d40",
+        "source_row_count": 5432,
+        "selected_row_count": 378,
+        "utf8_bom": false
+      }
+    ]
+  },
+  "after": {
+    "release_id": "cms-ca-8d621b64ae245acb9f970dbc24e9447f18fb5d1c2710640d538dd6afebe29872",
+    "resource_id": "90fa4cdf-f49d-556d-8790-d32fbbec40c6",
+    "source_released": "2026-08-13",
+    "captured_on": "2026-10-13",
+    "origin": "official-original-api",
+    "row_count": 377,
+    "field_count": 38,
+    "original_sources": [
+      {
+        "path": "original/cms-ca-offset-0.json",
+        "source_url": "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0?limit=100&conditions%5B0%5D%5Bproperty%5D=state&conditions%5B0%5D%5Bvalue%5D=CA&conditions%5B0%5D%5Boperator%5D=%3D",
+        "offset": 0,
+        "rows": 100,
+        "bytes": 135537,
+        "sha256": "ade7b42ea5eff607702ef095392890551c4da9751e891202e575f7feb994892c"
+      },
+      {
+        "path": "original/cms-ca-offset-100.json",
+        "source_url": "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0?limit=100&conditions%5B0%5D%5Bproperty%5D=state&conditions%5B0%5D%5Bvalue%5D=CA&conditions%5B0%5D%5Boperator%5D=%3D&offset=100",
+        "offset": 100,
+        "rows": 100,
+        "bytes": 135714,
+        "sha256": "87ebb297ee5431cb4c424b65c4a1de6138020b6843a88a92f58b04b9d368484b"
+      },
+      {
+        "path": "original/cms-ca-offset-200.json",
+        "source_url": "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0?limit=100&conditions%5B0%5D%5Bproperty%5D=state&conditions%5B0%5D%5Bvalue%5D=CA&conditions%5B0%5D%5Boperator%5D=%3D&offset=200",
+        "offset": 200,
+        "rows": 100,
+        "bytes": 136816,
+        "sha256": "feb926709a4e3e44624da3ab9eed53db20b70909f17cdeef8fd99288ea5d8c66"
+      },
+      {
+        "path": "original/cms-ca-offset-300.json",
+        "source_url": "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0?limit=100&conditions%5B0%5D%5Bproperty%5D=state&conditions%5B0%5D%5Bvalue%5D=CA&conditions%5B0%5D%5Boperator%5D=%3D&offset=300",
+        "offset": 300,
+        "rows": 77,
+        "bytes": 118732,
+        "sha256": "a4d95bee99c25db4c84af4bf2893f91d62f3241595f3795f8fe27a4f48166675"
+      }
+    ]
+  },
+  "summary": {
+    "added_facilities": 0,
+    "removed_facilities": 1,
+    "changed_facilities": 6,
+    "unchanged_facilities": 371,
+    "changed_items": 18
+  },
+  "added_fields": [],
+  "removed_fields": [],
+  "field_mapping": {
+    "before": [
+      {
+        "source_header": "Facility ID",
+        "field": "facility_id",
+        "mapped": true
+      },
+      {
+        "source_header": "Facility Name",
+        "field": "facility_name",
+        "mapped": true
+      },
+      {
+        "source_header": "Address",
+        "field": "address",
+        "mapped": true
+      },
+      {
+        "source_header": "City/Town",
+        "field": "citytown",
+        "mapped": true
+      },
+      {
+        "source_header": "State",
+        "field": "state",
+        "mapped": true
+      },
+      {
+        "source_header": "ZIP Code",
+        "field": "zip_code",
+        "mapped": true
+      },
+      {
+        "source_header": "County/Parish",
+        "field": "countyparish",
+        "mapped": true
+      },
+      {
+        "source_header": "Telephone Number",
+        "field": "telephone_number",
+        "mapped": true
+      },
+      {
+        "source_header": "Hospital Type",
+        "field": "hospital_type",
+        "mapped": true
+      },
+      {
+        "source_header": "Hospital Ownership",
+        "field": "hospital_ownership",
+        "mapped": true
+      },
+      {
+        "source_header": "Emergency Services",
+        "field": "emergency_services",
+        "mapped": true
+      },
+      {
+        "source_header": "Meets criteria for birthing friendly designation",
+        "field": "meets_criteria_for_birthing_friendly_designation",
+        "mapped": true
+      },
+      {
+        "source_header": "Hospital overall rating",
+        "field": "hospital_overall_rating",
+        "mapped": true
+      },
+      {
+        "source_header": "Hospital overall rating footnote",
+        "field": "hospital_overall_rating_footnote",
+        "mapped": true
+      },
+      {
+        "source_header": "MORT Group Measure Count",
+        "field": "mort_group_measure_count",
+        "mapped": true
+      },
+      {
+        "source_header": "Count of Facility MORT Measures",
+        "field": "count_of_facility_mort_measures",
+        "mapped": true
+      },
+      {
+        "source_header": "Count of MORT Measures Better",
+        "field": "count_of_mort_measures_better",
+        "mapped": true
+      },
+      {
+        "source_header": "Count of MORT Measures No Different",
+        "field": "count_of_mort_measures_no_different",
+        "mapped": true
+      },
+      {
+        "source_header": "Count of MORT Measures Worse",
+        "field": "count_of_mort_measures_worse",
+        "mapped": true
+      },
+      {
+        "source_header": "MORT Group Footnote",
+        "field": "mort_group_footnote",
+        "mapped": true
+      },
+      {
+        "source_header": "Safety Group Measure Count",
+        "field": "safety_group_measure_count",
+        "mapped": true
+      },
+      {
+        "source_header": "Count of Facility Safety Measures",
+        "field": "count_of_facility_safety_measures",
+        "mapped": true
+      },
+      {
+        "source_header": "Count of Safety Measures Better",
+        "field": "count_of_safety_measures_better",
+        "mapped": true
+      },
+      {
+        "source_header": "Count of Safety Measures No Different",
+        "field": "count_of_safety_measures_no_different",
+        "mapped": true
+      },
+      {
+        "source_header": "Count of Safety Measures Worse",
+        "field": "count_of_safety_measures_worse",
+        "mapped": true
+      },
+      {
+        "source_header": "Safety Group Footnote",
+        "field": "safety_group_footnote",
+        "mapped": true
+      },
+      {
+        "source_header": "READM Group Measure Count",
+        "field": "readm_group_measure_count",
+        "mapped": true
+      },
+      {
+        "source_header": "Count of Facility READM Measures",
+        "field": "count_of_facility_readm_measures",
+        "mapped": true
+      },
+      {
+        "source_header": "Count of READM Measures Better",
+        "field": "count_of_readm_measures_better",
+        "mapped": true
+      },
+      {
+        "source_header": "Count of READM Measures No Different",
+        "field": "count_of_readm_measures_no_different",
+        "mapped": true
+      },
+      {
+        "source_header": "Count of READM Measures Worse",
+        "field": "count_of_readm_measures_worse",
+        "mapped": true
+      },
+      {
+        "source_header": "READM Group Footnote",
+        "field": "readm_group_footnote",
+        "mapped": true
+      },
+      {
+        "source_header": "Pt Exp Group Measure Count",
+        "field": "pt_exp_group_measure_count",
+        "mapped": true
+      },
+      {
+        "source_header": "Count of Facility Pt Exp Measures",
+        "field": "count_of_facility_pt_exp_measures",
+        "mapped": true
+      },
+      {
+        "source_header": "Pt Exp Group Footnote",
+        "field": "pt_exp_group_footnote",
+        "mapped": true
+      },
+      {
+        "source_header": "TE Group Measure Count",
+        "field": "te_group_measure_count",
+        "mapped": true
+      },
+      {
+        "source_header": "Count of Facility TE Measures",
+        "field": "count_of_facility_te_measures",
+        "mapped": true
+      },
+      {
+        "source_header": "TE Group Footnote",
+        "field": "te_group_footnote",
+        "mapped": true
+      }
+    ],
+    "after": [
+      {
+        "source_header": "facility_id",
+        "field": "facility_id",
+        "mapped": true
+      },
+      {
+        "source_header": "facility_name",
+        "field": "facility_name",
+        "mapped": true
+      },
+      {
+        "source_header": "address",
+        "field": "address",
+        "mapped": true
+      },
+      {
+        "source_header": "citytown",
+        "field": "citytown",
+        "mapped": true
+      },
+      {
+        "source_header": "state",
+        "field": "state",
+        "mapped": true
+      },
+      {
+        "source_header": "zip_code",
+        "field": "zip_code",
+        "mapped": true
+      },
+      {
+        "source_header": "countyparish",
+        "field": "countyparish",
+        "mapped": true
+      },
+      {
+        "source_header": "telephone_number",
+        "field": "telephone_number",
+        "mapped": true
+      },
+      {
+        "source_header": "hospital_type",
+        "field": "hospital_type",
+        "mapped": true
+      },
+      {
+        "source_header": "hospital_ownership",
+        "field": "hospital_ownership",
+        "mapped": true
+      },
+      {
+        "source_header": "emergency_services",
+        "field": "emergency_services",
+        "mapped": true
+      },
+      {
+        "source_header": "meets_criteria_for_birthing_friendly_designation",
+        "field": "meets_criteria_for_birthing_friendly_designation",
+        "mapped": true
+      },
+      {
+        "source_header": "hospital_overall_rating",
+        "field": "hospital_overall_rating",
+        "mapped": true
+      },
+      {
+        "source_header": "hospital_overall_rating_footnote",
+        "field": "hospital_overall_rating_footnote",
+        "mapped": true
+      },
+      {
+        "source_header": "mort_group_measure_count",
+        "field": "mort_group_measure_count",
+        "mapped": true
+      },
+      {
+        "source_header": "count_of_facility_mort_measures",
+        "field": "count_of_facility_mort_measures",
+        "mapped": true
+      },
+      {
+        "source_header": "count_of_mort_measures_better",
+        "field": "count_of_mort_measures_better",
+        "mapped": true
+      },
+      {
+        "source_header": "count_of_mort_measures_no_different",
+        "field": "count_of_mort_measures_no_different",
+        "mapped": true
+      },
+      {
+        "source_header": "count_of_mort_measures_worse",
+        "field": "count_of_mort_measures_worse",
+        "mapped": true
+      },
+      {
+        "source_header": "mort_group_footnote",
+        "field": "mort_group_footnote",
+        "mapped": true
+      },
+      {
+        "source_header": "safety_group_measure_count",
+        "field": "safety_group_measure_count",
+        "mapped": true
+      },
+      {
+        "source_header": "count_of_facility_safety_measures",
+        "field": "count_of_facility_safety_measures",
+        "mapped": true
+      },
+      {
+        "source_header": "count_of_safety_measures_better",
+        "field": "count_of_safety_measures_better",
+        "mapped": true
+      },
+      {
+        "source_header": "count_of_safety_measures_no_different",
+        "field": "count_of_safety_measures_no_different",
+        "mapped": true
+      },
+      {
+        "source_header": "count_of_safety_measures_worse",
+        "field": "count_of_safety_measures_worse",
+        "mapped": true
+      },
+      {
+        "source_header": "safety_group_footnote",
+        "field": "safety_group_footnote",
+        "mapped": true
+      },
+      {
+        "source_header": "readm_group_measure_count",
+        "field": "readm_group_measure_count",
+        "mapped": true
+      },
+      {
+        "source_header": "count_of_facility_readm_measures",
+        "field": "count_of_facility_readm_measures",
+        "mapped": true
+      },
+      {
+        "source_header": "count_of_readm_measures_better",
+        "field": "count_of_readm_measures_better",
+        "mapped": true
+      },
+      {
+        "source_header": "count_of_readm_measures_no_different",
+        "field": "count_of_readm_measures_no_different",
+        "mapped": true
+      },
+      {
+        "source_header": "count_of_readm_measures_worse",
+        "field": "count_of_readm_measures_worse",
+        "mapped": true
+      },
+      {
+        "source_header": "readm_group_footnote",
+        "field": "readm_group_footnote",
+        "mapped": true
+      },
+      {
+        "source_header": "pt_exp_group_measure_count",
+        "field": "pt_exp_group_measure_count",
+        "mapped": true
+      },
+      {
+        "source_header": "count_of_facility_pt_exp_measures",
+        "field": "count_of_facility_pt_exp_measures",
+        "mapped": true
+      },
+      {
+        "source_header": "pt_exp_group_footnote",
+        "field": "pt_exp_group_footnote",
+        "mapped": true
+      },
+      {
+        "source_header": "te_group_measure_count",
+        "field": "te_group_measure_count",
+        "mapped": true
+      },
+      {
+        "source_header": "count_of_facility_te_measures",
+        "field": "count_of_facility_te_measures",
+        "mapped": true
+      },
+      {
+        "source_header": "te_group_footnote",
+        "field": "te_group_footnote",
+        "mapped": true
+      }
+    ]
+  },
+  "changes": [
+    {
+      "facility_id": "050125",
+      "facility_name": "REGIONAL MEDICAL CENTER OF SAN JOSE",
+      "change": "REMOVED",
+      "field": "",
+      "before_present": true,
+      "after_present": false,
+      "before": "{\"address\":\"225 N JACKSON AVENUE\",\"citytown\":\"SAN JOSE\",\"count_of_facility_mort_measures\":\"7\",\"count_of_facility_pt_exp_measures\":\"15\",\"count_of_facility_readm_measures\":\"8\",\"count_of_facility_safety_measures\":\"7\",\"count_of_facility_te_measures\":\"7\",\"count_of_mort_measures_better\":\"2\",\"count_of_mort_measures_no_different\":\"5\",\"count_of_mort_measures_worse\":\"0\",\"count_of_readm_measures_better\":\"0\",\"count_of_readm_measures_no_different\":\"5\",\"count_of_readm_measures_worse\":\"3\",\"count_of_safety_measures_better\":\"1\",\"count_of_safety_measures_no_different\":\"6\",\"count_of_safety_measures_worse\":\"0\",\"countyparish\":\"SANTA CLARA\",\"emergency_services\":\"Yes\",\"facility_id\":\"050125\",\"facility_name\":\"REGIONAL MEDICAL CENTER OF SAN JOSE\",\"hospital_overall_rating\":\"3\",\"hospital_overall_rating_footnote\":\"\",\"hospital_ownership\":\"Government - Federal\",\"hospital_type\":\"Acute Care Hospitals\",\"meets_criteria_for_birthing_friendly_designation\":\"\",\"mort_group_footnote\":\"\",\"mort_group_measure_count\":\"8\",\"pt_exp_group_footnote\":\"\",\"pt_exp_group_measure_count\":\"15\",\"readm_group_footnote\":\"\",\"readm_group_measure_count\":\"11\",\"safety_group_footnote\":\"\",\"safety_group_measure_count\":\"8\",\"state\":\"CA\",\"te_group_footnote\":\"\",\"te_group_measure_count\":\"10\",\"telephone_number\":\"(408) 259-5000\",\"zip_code\":\"95116\"}",
+      "after": "",
+      "before_row_sha256": "40c0f7340877109fb94d66fd05b95ac0afc976a51a3f439ee39ee24579a4b362",
+      "after_row_sha256": "",
+      "change_id": "change-8867fc98868170e8822aa0308a024c44636f1ecc880f4f2f731a21498b2c447b"
+    },
+    {
+      "facility_id": "050289",
+      "facility_name": "AHMC SETON MEDICAL CENTER",
+      "change": "FIELD_CHANGED",
+      "field": "hospital_ownership",
+      "before_present": true,
+      "after_present": true,
+      "before": "Voluntary non-profit - Church",
+      "after": "Proprietary",
+      "before_row_sha256": "8a73be7800784cad5a420664db0be748319b915428a3f6a6a034c10d947594da",
+      "after_row_sha256": "554ef02042e718b8a34b51307c14903ad4746596ec21810342a428413468fcfd",
+      "change_id": "change-93d85d6a1b0714766683ed9d0d83fa6a08f24f45d68e2724eca3dc6e7708660b"
+    },
+    {
+      "facility_id": "050334",
+      "facility_name": "SALINAS VALLEY HEALTH MEDICAL CENTER",
+      "change": "FIELD_CHANGED",
+      "field": "facility_name",
+      "before_present": true,
+      "after_present": true,
+      "before": "SALINAS VALLEY MEMORIAL HOSPITAL",
+      "after": "SALINAS VALLEY HEALTH MEDICAL CENTER",
+      "before_row_sha256": "2bd13d30519b0e08abaa697ce7d9ae049cb3f11aa8e817317b63674ee3d74059",
+      "after_row_sha256": "367eb1f9681ca80258bd3c9942c3c54a0d284123462d8e202278c0c10d6e4c8d",
+      "change_id": "change-1186a378a003208f9d555f737acb7ae8d85b10c9c94acac2dd740869f7ae3d6e"
+    },
+    {
+      "facility_id": "050407",
+      "facility_name": "CHINESE HOSPITAL",
+      "change": "FIELD_CHANGED",
+      "field": "telephone_number",
+      "before_present": true,
+      "after_present": true,
+      "before": "(415) 982-2400",
+      "after": "(415) 677-2480",
+      "before_row_sha256": "56e8ea86982c46456dde9524172d5d4ce9d43295b6c171ba37ace21105414caa",
+      "after_row_sha256": "7611040fa99a782ee53d30aab7da6a6c162f5705b9b0ada4a8c9a34d67a882d5",
+      "change_id": "change-9ea291526f5348eaf593bb6aef3f9fb75a3acaa35cf41d9dccbab01ece33e0cf"
+    },
+    {
+      "facility_id": "051338",
+      "facility_name": "COALINGA REGIONAL MEDICAL CENTER",
+      "change": "FIELD_CHANGED",
+      "field": "hospital_overall_rating_footnote",
+      "before_present": true,
+      "after_present": true,
+      "before": "19",
+      "after": "5",
+      "before_row_sha256": "202607a28542f435d423364e12ed308aecfb48672570d834cf383e0a585488e1",
+      "after_row_sha256": "400ec5ec969f346d3941ef46a63dee5cfdee6bb318063991a89cad20d3e68143",
+      "change_id": "change-2100f0f598e6f17646194c4beb3c822cbd9dee71afce46a6f21f6e2dc5c5a772"
+    },
+    {
+      "facility_id": "051338",
+      "facility_name": "COALINGA REGIONAL MEDICAL CENTER",
+      "change": "FIELD_CHANGED",
+      "field": "mort_group_measure_count",
+      "before_present": true,
+      "after_present": true,
+      "before": "Not Available",
+      "after": "8",
+      "before_row_sha256": "202607a28542f435d423364e12ed308aecfb48672570d834cf383e0a585488e1",
+      "after_row_sha256": "400ec5ec969f346d3941ef46a63dee5cfdee6bb318063991a89cad20d3e68143",
+      "change_id": "change-bcb84b99e1c7791de36dbab3e33efc39bf31396cd8640275707aed34c5634a54"
+    },
+    {
+      "facility_id": "051338",
+      "facility_name": "COALINGA REGIONAL MEDICAL CENTER",
+      "change": "FIELD_CHANGED",
+      "field": "mort_group_footnote",
+      "before_present": true,
+      "after_present": true,
+      "before": "19",
+      "after": "5",
+      "before_row_sha256": "202607a28542f435d423364e12ed308aecfb48672570d834cf383e0a585488e1",
+      "after_row_sha256": "400ec5ec969f346d3941ef46a63dee5cfdee6bb318063991a89cad20d3e68143",
+      "change_id": "change-ae6c7151c088973482e307ca70255828c5e0836631d9d43992e4c9bcb32d1ddb"
+    },
+    {
+      "facility_id": "051338",
+      "facility_name": "COALINGA REGIONAL MEDICAL CENTER",
+      "change": "FIELD_CHANGED",
+      "field": "safety_group_measure_count",
+      "before_present": true,
+      "after_present": true,
+      "before": "Not Available",
+      "after": "8",
+      "before_row_sha256": "202607a28542f435d423364e12ed308aecfb48672570d834cf383e0a585488e1",
+      "after_row_sha256": "400ec5ec969f346d3941ef46a63dee5cfdee6bb318063991a89cad20d3e68143",
+      "change_id": "change-ead061b927b6a3a28991d5118a22125a4c89b6481d05affdfd846ba3912cfd01"
+    },
+    {
+      "facility_id": "051338",
+      "facility_name": "COALINGA REGIONAL MEDICAL CENTER",
+      "change": "FIELD_CHANGED",
+      "field": "safety_group_footnote",
+      "before_present": true,
+      "after_present": true,
+      "before": "19",
+      "after": "5",
+      "before_row_sha256": "202607a28542f435d423364e12ed308aecfb48672570d834cf383e0a585488e1",
+      "after_row_sha256": "400ec5ec969f346d3941ef46a63dee5cfdee6bb318063991a89cad20d3e68143",
+      "change_id": "change-1e4b4bc290625438f8c9827e7982ae17d33e314f8b1c58632d279971611c5b33"
+    },
+    {
+      "facility_id": "051338",
+      "facility_name": "COALINGA REGIONAL MEDICAL CENTER",
+      "change": "FIELD_CHANGED",
+      "field": "readm_group_measure_count",
+      "before_present": true,
+      "after_present": true,
+      "before": "Not Available",
+      "after": "11",
+      "before_row_sha256": "202607a28542f435d423364e12ed308aecfb48672570d834cf383e0a585488e1",
+      "after_row_sha256": "400ec5ec969f346d3941ef46a63dee5cfdee6bb318063991a89cad20d3e68143",
+      "change_id": "change-6e379cd3bc6383db147e3d27d2d617e06a088624f29e1e4431b46f39fabb5d81"
+    },
+    {
+      "facility_id": "051338",
+      "facility_name": "COALINGA REGIONAL MEDICAL CENTER",
+      "change": "FIELD_CHANGED",
+      "field": "readm_group_footnote",
+      "before_present": true,
+      "after_present": true,
+      "before": "19",
+      "after": "5",
+      "before_row_sha256": "202607a28542f435d423364e12ed308aecfb48672570d834cf383e0a585488e1",
+      "after_row_sha256": "400ec5ec969f346d3941ef46a63dee5cfdee6bb318063991a89cad20d3e68143",
+      "change_id": "change-f681fd808faf1fe0a2827a80715c3f65285026a6db09f73ac962c8ebca587cb0"
+    },
+    {
+      "facility_id": "051338",
+      "facility_name": "COALINGA REGIONAL MEDICAL CENTER",
+      "change": "FIELD_CHANGED",
+      "field": "pt_exp_group_measure_count",
+      "before_present": true,
+      "after_present": true,
+      "before": "Not Available",
+      "after": "15",
+      "before_row_sha256": "202607a28542f435d423364e12ed308aecfb48672570d834cf383e0a585488e1",
+      "after_row_sha256": "400ec5ec969f346d3941ef46a63dee5cfdee6bb318063991a89cad20d3e68143",
+      "change_id": "change-11d7711750de0b655e3e2dade6642d5693669add5b6afe4d58d170e8d27c8982"
+    },
+    {
+      "facility_id": "051338",
+      "facility_name": "COALINGA REGIONAL MEDICAL CENTER",
+      "change": "FIELD_CHANGED",
+      "field": "pt_exp_group_footnote",
+      "before_present": true,
+      "after_present": true,
+      "before": "19",
+      "after": "5",
+      "before_row_sha256": "202607a28542f435d423364e12ed308aecfb48672570d834cf383e0a585488e1",
+      "after_row_sha256": "400ec5ec969f346d3941ef46a63dee5cfdee6bb318063991a89cad20d3e68143",
+      "change_id": "change-deef3af260a3659ba0749c0c79c8507637de8e9aa42ae1653c072fc9f27c5e86"
+    },
+    {
+      "facility_id": "051338",
+      "facility_name": "COALINGA REGIONAL MEDICAL CENTER",
+      "change": "FIELD_CHANGED",
+      "field": "te_group_measure_count",
+      "before_present": true,
+      "after_present": true,
+      "before": "Not Available",
+      "after": "10",
+      "before_row_sha256": "202607a28542f435d423364e12ed308aecfb48672570d834cf383e0a585488e1",
+      "after_row_sha256": "400ec5ec969f346d3941ef46a63dee5cfdee6bb318063991a89cad20d3e68143",
+      "change_id": "change-aba7ffc5f14bb4a0c401361d9d88307e0a75b89be79a49cfc921691038b842de"
+    },
+    {
+      "facility_id": "051338",
+      "facility_name": "COALINGA REGIONAL MEDICAL CENTER",
+      "change": "FIELD_CHANGED",
+      "field": "te_group_footnote",
+      "before_present": true,
+      "after_present": true,
+      "before": "19",
+      "after": "16",
+      "before_row_sha256": "202607a28542f435d423364e12ed308aecfb48672570d834cf383e0a585488e1",
+      "after_row_sha256": "400ec5ec969f346d3941ef46a63dee5cfdee6bb318063991a89cad20d3e68143",
+      "change_id": "change-b5e4bfaecd337f242c005945cf38b5577588f7725b1ed3d3809568182e4d9f5b"
+    },
+    {
+      "facility_id": "054123",
+      "facility_name": "ST JOSEPH'S BEHAVIORAL HEALTH CENTER",
+      "change": "FIELD_CHANGED",
+      "field": "hospital_ownership",
+      "before_present": true,
+      "after_present": true,
+      "before": "Voluntary non-profit - Private",
+      "after": "Proprietary",
+      "before_row_sha256": "bc385cd4991c10dd911d994ff5372665dcb7fced860b4c53581a9458dfb7c9b3",
+      "after_row_sha256": "9555863631b9e93c9ef063edb3a2f8b24fb4ff4ebce216eb322d57f0147f7a1f",
+      "change_id": "change-ee5deb40752334b3d62177dc312bd5c120ca9de1a4588cdfbfe3177d7cddb354"
+    },
+    {
+      "facility_id": "054160",
+      "facility_name": "RIVER VISTA BEHAVIORAL HEALTH",
+      "change": "FIELD_CHANGED",
+      "field": "address",
+      "before_present": true,
+      "after_present": true,
+      "before": "40886 GOODWIN WAY",
+      "after": "40886 Goodwin Way",
+      "before_row_sha256": "9497b7a9efd1abba14d69d332eb0afc4799a07c0b1e08663d394e31bf1d8a75b",
+      "after_row_sha256": "673416aca00838c8373e33812fd58b0a95601bb608a4f500aac75f6ab06c8f54",
+      "change_id": "change-3e4fcf32261236daa168e15d720250e7a6e2e23f9ba9bccf2206bf78b0bb1f74"
+    },
+    {
+      "facility_id": "054160",
+      "facility_name": "RIVER VISTA BEHAVIORAL HEALTH",
+      "change": "FIELD_CHANGED",
+      "field": "telephone_number",
+      "before_present": true,
+      "after_present": true,
+      "before": "(559) 603-6000",
+      "after": "(559) 797-6992",
+      "before_row_sha256": "9497b7a9efd1abba14d69d332eb0afc4799a07c0b1e08663d394e31bf1d8a75b",
+      "after_row_sha256": "673416aca00838c8373e33812fd58b0a95601bb608a4f500aac75f6ab06c8f54",
+      "change_id": "change-91b6025bc1b7cc9ff8bdeb20d5abcb03bfbd6260ae869b5f63655c6a5948ea92"
+    }
+  ],
+  "facilities": [
+    {
+      "facility_id": "050125",
+      "facility_name": "REGIONAL MEDICAL CENTER OF SAN JOSE",
+      "change": "REMOVED",
+      "changed_items": 1,
+      "before": {
+        "facility_id": "050125",
+        "facility_name": "REGIONAL MEDICAL CENTER OF SAN JOSE",
+        "address": "225 N JACKSON AVENUE",
+        "citytown": "SAN JOSE",
+        "state": "CA",
+        "zip_code": "95116",
+        "countyparish": "SANTA CLARA",
+        "telephone_number": "(408) 259-5000",
+        "hospital_type": "Acute Care Hospitals",
+        "hospital_ownership": "Government - Federal",
+        "emergency_services": "Yes",
+        "meets_criteria_for_birthing_friendly_designation": "",
+        "hospital_overall_rating": "3",
+        "hospital_overall_rating_footnote": "",
+        "mort_group_measure_count": "8",
+        "count_of_facility_mort_measures": "7",
+        "count_of_mort_measures_better": "2",
+        "count_of_mort_measures_no_different": "5",
+        "count_of_mort_measures_worse": "0",
+        "mort_group_footnote": "",
+        "safety_group_measure_count": "8",
+        "count_of_facility_safety_measures": "7",
+        "count_of_safety_measures_better": "1",
+        "count_of_safety_measures_no_different": "6",
+        "count_of_safety_measures_worse": "0",
+        "safety_group_footnote": "",
+        "readm_group_measure_count": "11",
+        "count_of_facility_readm_measures": "8",
+        "count_of_readm_measures_better": "0",
+        "count_of_readm_measures_no_different": "5",
+        "count_of_readm_measures_worse": "3",
+        "readm_group_footnote": "",
+        "pt_exp_group_measure_count": "15",
+        "count_of_facility_pt_exp_measures": "15",
+        "pt_exp_group_footnote": "",
+        "te_group_measure_count": "10",
+        "count_of_facility_te_measures": "7",
+        "te_group_footnote": ""
+      },
+      "after": null
+    },
+    {
+      "facility_id": "050289",
+      "facility_name": "AHMC SETON MEDICAL CENTER",
+      "change": "CHANGED",
+      "changed_items": 1,
+      "before": {
+        "facility_id": "050289",
+        "facility_name": "AHMC SETON MEDICAL CENTER",
+        "address": "1900 SULLIVAN AVENUE",
+        "citytown": "DALY CITY",
+        "state": "CA",
+        "zip_code": "94015",
+        "countyparish": "SAN MATEO",
+        "telephone_number": "(650) 992-4000",
+        "hospital_type": "Acute Care Hospitals",
+        "hospital_ownership": "Voluntary non-profit - Church",
+        "emergency_services": "Yes",
+        "meets_criteria_for_birthing_friendly_designation": "",
+        "hospital_overall_rating": "1",
+        "hospital_overall_rating_footnote": "",
+        "mort_group_measure_count": "8",
+        "count_of_facility_mort_measures": "6",
+        "count_of_mort_measures_better": "0",
+        "count_of_mort_measures_no_different": "6",
+        "count_of_mort_measures_worse": "0",
+        "mort_group_footnote": "",
+        "safety_group_measure_count": "8",
+        "count_of_facility_safety_measures": "3",
+        "count_of_safety_measures_better": "1",
+        "count_of_safety_measures_no_different": "2",
+        "count_of_safety_measures_worse": "0",
+        "safety_group_footnote": "",
+        "readm_group_measure_count": "11",
+        "count_of_facility_readm_measures": "7",
+        "count_of_readm_measures_better": "0",
+        "count_of_readm_measures_no_different": "5",
+        "count_of_readm_measures_worse": "2",
+        "readm_group_footnote": "",
+        "pt_exp_group_measure_count": "15",
+        "count_of_facility_pt_exp_measures": "15",
+        "pt_exp_group_footnote": "",
+        "te_group_measure_count": "10",
+        "count_of_facility_te_measures": "7",
+        "te_group_footnote": ""
+      },
+      "after": {
+        "facility_id": "050289",
+        "facility_name": "AHMC SETON MEDICAL CENTER",
+        "address": "1900 SULLIVAN AVENUE",
+        "citytown": "DALY CITY",
+        "state": "CA",
+        "zip_code": "94015",
+        "countyparish": "SAN MATEO",
+        "telephone_number": "(650) 992-4000",
+        "hospital_type": "Acute Care Hospitals",
+        "hospital_ownership": "Proprietary",
+        "emergency_services": "Yes",
+        "meets_criteria_for_birthing_friendly_designation": "",
+        "hospital_overall_rating": "1",
+        "hospital_overall_rating_footnote": "",
+        "mort_group_measure_count": "8",
+        "count_of_facility_mort_measures": "6",
+        "count_of_mort_measures_better": "0",
+        "count_of_mort_measures_no_different": "6",
+        "count_of_mort_measures_worse": "0",
+        "mort_group_footnote": "",
+        "safety_group_measure_count": "8",
+        "count_of_facility_safety_measures": "3",
+        "count_of_safety_measures_better": "1",
+        "count_of_safety_measures_no_different": "2",
+        "count_of_safety_measures_worse": "0",
+        "safety_group_footnote": "",
+        "readm_group_measure_count": "11",
+        "count_of_facility_readm_measures": "7",
+        "count_of_readm_measures_better": "0",
+        "count_of_readm_measures_no_different": "5",
+        "count_of_readm_measures_worse": "2",
+        "readm_group_footnote": "",
+        "pt_exp_group_measure_count": "15",
+        "count_of_facility_pt_exp_measures": "15",
+        "pt_exp_group_footnote": "",
+        "te_group_measure_count": "10",
+        "count_of_facility_te_measures": "7",
+        "te_group_footnote": ""
+      }
+    },
+    {
+      "facility_id": "050334",
+      "facility_name": "SALINAS VALLEY HEALTH MEDICAL CENTER",
+      "change": "CHANGED",
+      "changed_items": 1,
+      "before": {
+        "facility_id": "050334",
+        "facility_name": "SALINAS VALLEY MEMORIAL HOSPITAL",
+        "address": "450 EAST ROMIE LANE",
+        "citytown": "SALINAS",
+        "state": "CA",
+        "zip_code": "93901",
+        "countyparish": "MONTEREY",
+        "telephone_number": "(831) 757-4333",
+        "hospital_type": "Acute Care Hospitals",
+        "hospital_ownership": "Voluntary non-profit - Other",
+        "emergency_services": "Yes",
+        "meets_criteria_for_birthing_friendly_designation": "Y",
+        "hospital_overall_rating": "4",
+        "hospital_overall_rating_footnote": "",
+        "mort_group_measure_count": "8",
+        "count_of_facility_mort_measures": "8",
+        "count_of_mort_measures_better": "1",
+        "count_of_mort_measures_no_different": "7",
+        "count_of_mort_measures_worse": "0",
+        "mort_group_footnote": "",
+        "safety_group_measure_count": "8",
+        "count_of_facility_safety_measures": "6",
+        "count_of_safety_measures_better": "1",
+        "count_of_safety_measures_no_different": "5",
+        "count_of_safety_measures_worse": "0",
+        "safety_group_footnote": "",
+        "readm_group_measure_count": "11",
+        "count_of_facility_readm_measures": "10",
+        "count_of_readm_measures_better": "0",
+        "count_of_readm_measures_no_different": "9",
+        "count_of_readm_measures_worse": "1",
+        "readm_group_footnote": "",
+        "pt_exp_group_measure_count": "15",
+        "count_of_facility_pt_exp_measures": "15",
+        "pt_exp_group_footnote": "",
+        "te_group_measure_count": "10",
+        "count_of_facility_te_measures": "9",
+        "te_group_footnote": ""
+      },
+      "after": {
+        "facility_id": "050334",
+        "facility_name": "SALINAS VALLEY HEALTH MEDICAL CENTER",
+        "address": "450 EAST ROMIE LANE",
+        "citytown": "SALINAS",
+        "state": "CA",
+        "zip_code": "93901",
+        "countyparish": "MONTEREY",
+        "telephone_number": "(831) 757-4333",
+        "hospital_type": "Acute Care Hospitals",
+        "hospital_ownership": "Voluntary non-profit - Other",
+        "emergency_services": "Yes",
+        "meets_criteria_for_birthing_friendly_designation": "Y",
+        "hospital_overall_rating": "4",
+        "hospital_overall_rating_footnote": "",
+        "mort_group_measure_count": "8",
+        "count_of_facility_mort_measures": "8",
+        "count_of_mort_measures_better": "1",
+        "count_of_mort_measures_no_different": "7",
+        "count_of_mort_measures_worse": "0",
+        "mort_group_footnote": "",
+        "safety_group_measure_count": "8",
+        "count_of_facility_safety_measures": "6",
+        "count_of_safety_measures_better": "1",
+        "count_of_safety_measures_no_different": "5",
+        "count_of_safety_measures_worse": "0",
+        "safety_group_footnote": "",
+        "readm_group_measure_count": "11",
+        "count_of_facility_readm_measures": "10",
+        "count_of_readm_measures_better": "0",
+        "count_of_readm_measures_no_different": "9",
+        "count_of_readm_measures_worse": "1",
+        "readm_group_footnote": "",
+        "pt_exp_group_measure_count": "15",
+        "count_of_facility_pt_exp_measures": "15",
+        "pt_exp_group_footnote": "",
+        "te_group_measure_count": "10",
+        "count_of_facility_te_measures": "9",
+        "te_group_footnote": ""
+      }
+    },
+    {
+      "facility_id": "050407",
+      "facility_name": "CHINESE HOSPITAL",
+      "change": "CHANGED",
+      "changed_items": 1,
+      "before": {
+        "facility_id": "050407",
+        "facility_name": "CHINESE HOSPITAL",
+        "address": "845 JACKSON ST",
+        "citytown": "SAN FRANCISCO",
+        "state": "CA",
+        "zip_code": "94133",
+        "countyparish": "SAN FRANCISCO",
+        "telephone_number": "(415) 982-2400",
+        "hospital_type": "Acute Care Hospitals",
+        "hospital_ownership": "Voluntary non-profit - Private",
+        "emergency_services": "Yes",
+        "meets_criteria_for_birthing_friendly_designation": "",
+        "hospital_overall_rating": "2",
+        "hospital_overall_rating_footnote": "",
+        "mort_group_measure_count": "8",
+        "count_of_facility_mort_measures": "5",
+        "count_of_mort_measures_better": "0",
+        "count_of_mort_measures_no_different": "5",
+        "count_of_mort_measures_worse": "0",
+        "mort_group_footnote": "",
+        "safety_group_measure_count": "8",
+        "count_of_facility_safety_measures": "2",
+        "count_of_safety_measures_better": "0",
+        "count_of_safety_measures_no_different": "2",
+        "count_of_safety_measures_worse": "0",
+        "safety_group_footnote": "",
+        "readm_group_measure_count": "11",
+        "count_of_facility_readm_measures": "8",
+        "count_of_readm_measures_better": "0",
+        "count_of_readm_measures_no_different": "7",
+        "count_of_readm_measures_worse": "1",
+        "readm_group_footnote": "",
+        "pt_exp_group_measure_count": "15",
+        "count_of_facility_pt_exp_measures": "15",
+        "pt_exp_group_footnote": "",
+        "te_group_measure_count": "10",
+        "count_of_facility_te_measures": "7",
+        "te_group_footnote": ""
+      },
+      "after": {
+        "facility_id": "050407",
+        "facility_name": "CHINESE HOSPITAL",
+        "address": "845 JACKSON ST",
+        "citytown": "SAN FRANCISCO",
+        "state": "CA",
+        "zip_code": "94133",
+        "countyparish": "SAN FRANCISCO",
+        "telephone_number": "(415) 677-2480",
+        "hospital_type": "Acute Care Hospitals",
+        "hospital_ownership": "Voluntary non-profit - Private",
+        "emergency_services": "Yes",
+        "meets_criteria_for_birthing_friendly_designation": "",
+        "hospital_overall_rating": "2",
+        "hospital_overall_rating_footnote": "",
+        "mort_group_measure_count": "8",
+        "count_of_facility_mort_measures": "5",
+        "count_of_mort_measures_better": "0",
+        "count_of_mort_measures_no_different": "5",
+        "count_of_mort_measures_worse": "0",
+        "mort_group_footnote": "",
+        "safety_group_measure_count": "8",
+        "count_of_facility_safety_measures": "2",
+        "count_of_safety_measures_better": "0",
+        "count_of_safety_measures_no_different": "2",
+        "count_of_safety_measures_worse": "0",
+        "safety_group_footnote": "",
+        "readm_group_measure_count": "11",
+        "count_of_facility_readm_measures": "8",
+        "count_of_readm_measures_better": "0",
+        "count_of_readm_measures_no_different": "7",
+        "count_of_readm_measures_worse": "1",
+        "readm_group_footnote": "",
+        "pt_exp_group_measure_count": "15",
+        "count_of_facility_pt_exp_measures": "15",
+        "pt_exp_group_footnote": "",
+        "te_group_measure_count": "10",
+        "count_of_facility_te_measures": "7",
+        "te_group_footnote": ""
+      }
+    },
+    {
+      "facility_id": "051338",
+      "facility_name": "COALINGA REGIONAL MEDICAL CENTER",
+      "change": "CHANGED",
+      "changed_items": 11,
+      "before": {
+        "facility_id": "051338",
+        "facility_name": "COALINGA REGIONAL MEDICAL CENTER",
+        "address": "1191 PHELPS AVENUE",
+        "citytown": "COALINGA",
+        "state": "CA",
+        "zip_code": "93210",
+        "countyparish": "FRESNO",
+        "telephone_number": "(559) 821-6202",
+        "hospital_type": "Critical Access Hospitals",
+        "hospital_ownership": "Government - Hospital District or Authority",
+        "emergency_services": "Yes",
+        "meets_criteria_for_birthing_friendly_designation": "",
+        "hospital_overall_rating": "Not Available",
+        "hospital_overall_rating_footnote": "19",
+        "mort_group_measure_count": "Not Available",
+        "count_of_facility_mort_measures": "Not Available",
+        "count_of_mort_measures_better": "Not Available",
+        "count_of_mort_measures_no_different": "Not Available",
+        "count_of_mort_measures_worse": "Not Available",
+        "mort_group_footnote": "19",
+        "safety_group_measure_count": "Not Available",
+        "count_of_facility_safety_measures": "Not Available",
+        "count_of_safety_measures_better": "Not Available",
+        "count_of_safety_measures_no_different": "Not Available",
+        "count_of_safety_measures_worse": "Not Available",
+        "safety_group_footnote": "19",
+        "readm_group_measure_count": "Not Available",
+        "count_of_facility_readm_measures": "Not Available",
+        "count_of_readm_measures_better": "Not Available",
+        "count_of_readm_measures_no_different": "Not Available",
+        "count_of_readm_measures_worse": "Not Available",
+        "readm_group_footnote": "19",
+        "pt_exp_group_measure_count": "Not Available",
+        "count_of_facility_pt_exp_measures": "Not Available",
+        "pt_exp_group_footnote": "19",
+        "te_group_measure_count": "Not Available",
+        "count_of_facility_te_measures": "Not Available",
+        "te_group_footnote": "19"
+      },
+      "after": {
+        "facility_id": "051338",
+        "facility_name": "COALINGA REGIONAL MEDICAL CENTER",
+        "address": "1191 PHELPS AVENUE",
+        "citytown": "COALINGA",
+        "state": "CA",
+        "zip_code": "93210",
+        "countyparish": "FRESNO",
+        "telephone_number": "(559) 821-6202",
+        "hospital_type": "Critical Access Hospitals",
+        "hospital_ownership": "Government - Hospital District or Authority",
+        "emergency_services": "Yes",
+        "meets_criteria_for_birthing_friendly_designation": "",
+        "hospital_overall_rating": "Not Available",
+        "hospital_overall_rating_footnote": "5",
+        "mort_group_measure_count": "8",
+        "count_of_facility_mort_measures": "Not Available",
+        "count_of_mort_measures_better": "Not Available",
+        "count_of_mort_measures_no_different": "Not Available",
+        "count_of_mort_measures_worse": "Not Available",
+        "mort_group_footnote": "5",
+        "safety_group_measure_count": "8",
+        "count_of_facility_safety_measures": "Not Available",
+        "count_of_safety_measures_better": "Not Available",
+        "count_of_safety_measures_no_different": "Not Available",
+        "count_of_safety_measures_worse": "Not Available",
+        "safety_group_footnote": "5",
+        "readm_group_measure_count": "11",
+        "count_of_facility_readm_measures": "Not Available",
+        "count_of_readm_measures_better": "Not Available",
+        "count_of_readm_measures_no_different": "Not Available",
+        "count_of_readm_measures_worse": "Not Available",
+        "readm_group_footnote": "5",
+        "pt_exp_group_measure_count": "15",
+        "count_of_facility_pt_exp_measures": "Not Available",
+        "pt_exp_group_footnote": "5",
+        "te_group_measure_count": "10",
+        "count_of_facility_te_measures": "Not Available",
+        "te_group_footnote": "16"
+      }
+    },
+    {
+      "facility_id": "054123",
+      "facility_name": "ST JOSEPH'S BEHAVIORAL HEALTH CENTER",
+      "change": "CHANGED",
+      "changed_items": 1,
+      "before": {
+        "facility_id": "054123",
+        "facility_name": "ST JOSEPH'S BEHAVIORAL HEALTH CENTER",
+        "address": "2510 N  CALIFORNIA ST",
+        "citytown": "STOCKTON",
+        "state": "CA",
+        "zip_code": "95204",
+        "countyparish": "SAN JOAQUIN",
+        "telephone_number": "(209) 461-2000",
+        "hospital_type": "Psychiatric",
+        "hospital_ownership": "Voluntary non-profit - Private",
+        "emergency_services": "No",
+        "meets_criteria_for_birthing_friendly_designation": "",
+        "hospital_overall_rating": "Not Available",
+        "hospital_overall_rating_footnote": "19",
+        "mort_group_measure_count": "Not Available",
+        "count_of_facility_mort_measures": "Not Available",
+        "count_of_mort_measures_better": "Not Available",
+        "count_of_mort_measures_no_different": "Not Available",
+        "count_of_mort_measures_worse": "Not Available",
+        "mort_group_footnote": "19",
+        "safety_group_measure_count": "Not Available",
+        "count_of_facility_safety_measures": "Not Available",
+        "count_of_safety_measures_better": "Not Available",
+        "count_of_safety_measures_no_different": "Not Available",
+        "count_of_safety_measures_worse": "Not Available",
+        "safety_group_footnote": "19",
+        "readm_group_measure_count": "Not Available",
+        "count_of_facility_readm_measures": "Not Available",
+        "count_of_readm_measures_better": "Not Available",
+        "count_of_readm_measures_no_different": "Not Available",
+        "count_of_readm_measures_worse": "Not Available",
+        "readm_group_footnote": "19",
+        "pt_exp_group_measure_count": "Not Available",
+        "count_of_facility_pt_exp_measures": "Not Available",
+        "pt_exp_group_footnote": "19",
+        "te_group_measure_count": "Not Available",
+        "count_of_facility_te_measures": "Not Available",
+        "te_group_footnote": "19"
+      },
+      "after": {
+        "facility_id": "054123",
+        "facility_name": "ST JOSEPH'S BEHAVIORAL HEALTH CENTER",
+        "address": "2510 N  CALIFORNIA ST",
+        "citytown": "STOCKTON",
+        "state": "CA",
+        "zip_code": "95204",
+        "countyparish": "SAN JOAQUIN",
+        "telephone_number": "(209) 461-2000",
+        "hospital_type": "Psychiatric",
+        "hospital_ownership": "Proprietary",
+        "emergency_services": "No",
+        "meets_criteria_for_birthing_friendly_designation": "",
+        "hospital_overall_rating": "Not Available",
+        "hospital_overall_rating_footnote": "19",
+        "mort_group_measure_count": "Not Available",
+        "count_of_facility_mort_measures": "Not Available",
+        "count_of_mort_measures_better": "Not Available",
+        "count_of_mort_measures_no_different": "Not Available",
+        "count_of_mort_measures_worse": "Not Available",
+        "mort_group_footnote": "19",
+        "safety_group_measure_count": "Not Available",
+        "count_of_facility_safety_measures": "Not Available",
+        "count_of_safety_measures_better": "Not Available",
+        "count_of_safety_measures_no_different": "Not Available",
+        "count_of_safety_measures_worse": "Not Available",
+        "safety_group_footnote": "19",
+        "readm_group_measure_count": "Not Available",
+        "count_of_facility_readm_measures": "Not Available",
+        "count_of_readm_measures_better": "Not Available",
+        "count_of_readm_measures_no_different": "Not Available",
+        "count_of_readm_measures_worse": "Not Available",
+        "readm_group_footnote": "19",
+        "pt_exp_group_measure_count": "Not Available",
+        "count_of_facility_pt_exp_measures": "Not Available",
+        "pt_exp_group_footnote": "19",
+        "te_group_measure_count": "Not Available",
+        "count_of_facility_te_measures": "Not Available",
+        "te_group_footnote": "19"
+      }
+    },
+    {
+      "facility_id": "054160",
+      "facility_name": "RIVER VISTA BEHAVIORAL HEALTH",
+      "change": "CHANGED",
+      "changed_items": 2,
+      "before": {
+        "facility_id": "054160",
+        "facility_name": "RIVER VISTA BEHAVIORAL HEALTH",
+        "address": "40886 GOODWIN WAY",
+        "citytown": "MADERA",
+        "state": "CA",
+        "zip_code": "93636",
+        "countyparish": "MADERA",
+        "telephone_number": "(559) 603-6000",
+        "hospital_type": "Psychiatric",
+        "hospital_ownership": "Proprietary",
+        "emergency_services": "No",
+        "meets_criteria_for_birthing_friendly_designation": "",
+        "hospital_overall_rating": "Not Available",
+        "hospital_overall_rating_footnote": "19",
+        "mort_group_measure_count": "Not Available",
+        "count_of_facility_mort_measures": "Not Available",
+        "count_of_mort_measures_better": "Not Available",
+        "count_of_mort_measures_no_different": "Not Available",
+        "count_of_mort_measures_worse": "Not Available",
+        "mort_group_footnote": "19",
+        "safety_group_measure_count": "Not Available",
+        "count_of_facility_safety_measures": "Not Available",
+        "count_of_safety_measures_better": "Not Available",
+        "count_of_safety_measures_no_different": "Not Available",
+        "count_of_safety_measures_worse": "Not Available",
+        "safety_group_footnote": "19",
+        "readm_group_measure_count": "Not Available",
+        "count_of_facility_readm_measures": "Not Available",
+        "count_of_readm_measures_better": "Not Available",
+        "count_of_readm_measures_no_different": "Not Available",
+        "count_of_readm_measures_worse": "Not Available",
+        "readm_group_footnote": "19",
+        "pt_exp_group_measure_count": "Not Available",
+        "count_of_facility_pt_exp_measures": "Not Available",
+        "pt_exp_group_footnote": "19",
+        "te_group_measure_count": "Not Available",
+        "count_of_facility_te_measures": "Not Available",
+        "te_group_footnote": "19"
+      },
+      "after": {
+        "facility_id": "054160",
+        "facility_name": "RIVER VISTA BEHAVIORAL HEALTH",
+        "address": "40886 Goodwin Way",
+        "citytown": "MADERA",
+        "state": "CA",
+        "zip_code": "93636",
+        "countyparish": "MADERA",
+        "telephone_number": "(559) 797-6992",
+        "hospital_type": "Psychiatric",
+        "hospital_ownership": "Proprietary",
+        "emergency_services": "No",
+        "meets_criteria_for_birthing_friendly_designation": "",
+        "hospital_overall_rating": "Not Available",
+        "hospital_overall_rating_footnote": "19",
+        "mort_group_measure_count": "Not Available",
+        "count_of_facility_mort_measures": "Not Available",
+        "count_of_mort_measures_better": "Not Available",
+        "count_of_mort_measures_no_different": "Not Available",
+        "count_of_mort_measures_worse": "Not Available",
+        "mort_group_footnote": "19",
+        "safety_group_measure_count": "Not Available",
+        "count_of_facility_safety_measures": "Not Available",
+        "count_of_safety_measures_better": "Not Available",
+        "count_of_safety_measures_no_different": "Not Available",
+        "count_of_safety_measures_worse": "Not Available",
+        "safety_group_footnote": "19",
+        "readm_group_measure_count": "Not Available",
+        "count_of_facility_readm_measures": "Not Available",
+        "count_of_readm_measures_better": "Not Available",
+        "count_of_readm_measures_no_different": "Not Available",
+        "count_of_readm_measures_worse": "Not Available",
+        "readm_group_footnote": "19",
+        "pt_exp_group_measure_count": "Not Available",
+        "count_of_facility_pt_exp_measures": "Not Available",
+        "pt_exp_group_footnote": "19",
+        "te_group_measure_count": "Not Available",
+        "count_of_facility_te_measures": "Not Available",
+        "te_group_footnote": "19"
+      }
+    }
+  ]
+}

@@ -16,7 +16,7 @@ const code=value=>'<code>'+esc(value)+'</code>';
 export function attachReceivingSourceRevision(context){
  const {getState,api,endpoint,openExtension}=context;
  const picker=attachReceivingSourcePicker(context);
- let root=null,state=null,generation=0,serial=0;
+ let root=null,state=null,generation=0,serial=0,handoffRequest=0;
  const workspace=()=>getState()?.workspace_key??null;
  const live=(token,ws)=>root?.isConnected&&generation===token&&state?.workspace===ws&&workspace()===ws;
  function detach(){generation++;serial++;picker.detach();root=null;state=null;}
@@ -98,7 +98,7 @@ export function attachReceivingSourceRevision(context){
   root.onclick=click;root.onchange=change;
  }
  async function open({container,...requestValues}){
-  detach();root=container;const token=generation,ws=workspace();
+  handoffRequest++;detach();root=container;const token=generation,ws=workspace();
   state={workspace:ws,request:requestValues,options:null,choices:new Map(),planId:'',useSuccessors:false,search:'',page:0,draft:null,error:'',busy:true,message:'Reading the original saved selection and current source mappings…',safe:false};
   render();const requestId=++serial;
   try{
@@ -167,8 +167,16 @@ export function attachReceivingSourceRevision(context){
  }
  function click(event){
   const node=event.target.closest('[data-rwr-action]');if(!node||!root?.contains(node)||node.disabled)return;
-  event.preventDefault();event.stopPropagation();const s=state;
-  Promise.resolve(dispatch(node.dataset.rwrAction,node)).catch(error=>{if(state===s&&root){state.error=error.message;render();}});
+  event.preventDefault();event.stopPropagation();
+  const s=state,action=node.dataset.rwrAction,ws=workspace(),token=generation,handoff=++handoffRequest;
+  Promise.resolve(dispatch(action,node)).catch(error=>{
+   if(action==='open-editor'&&handoff!==handoffRequest)return;
+   if(state===s&&root){state.error=error.message;render();}
+   else if(action==='open-editor'&&workspace()===ws&&generation===token+1&&
+           context.getView?.()==='receiving-waters'){
+    context.toast('Receiving revision could not open: '+error.message);
+   }
+  });
  }
  function change(event){
   if(!state||state.busy)return;

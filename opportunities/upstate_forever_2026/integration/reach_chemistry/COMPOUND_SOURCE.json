@@ -20,7 +20,9 @@
       "source_bytes": 198490,
       "collection_id": "371fca0c31de80d7309e6b7793ca56ac4563a7135409f667e240340957b098a3",
       "source_manifest_sha256": "e4fddfb4837676f96e8722f05b582b8cdc7f186cb20dd5fe050636aff090f7db"
-    }
+    },
+    "monitoring_field_selection_commit": "bce7959671e0ba7106847106012327e4868d6afa",
+    "monitoring_field_selection_pull_request": 4266
   },
   "original_source_manifest": {
     "path": "integration/reach_chemistry/SOURCE_MANIFEST.json",
@@ -187,8 +189,8 @@
     },
     {
       "path": "operator/install_chemistry.py",
-      "bytes": 27942,
-      "sha256": "ce29854f5f80cb4514e9a806f925af22218a75fc456a48c520aa1d9189c3f0bf"
+      "bytes": 33042,
+      "sha256": "28f0179dbd2d81040c75af6b94880471c125b704a97eaee61ae041194ae7d921"
     },
     {
       "path": "integration/reach_chemistry/install_chemistry_legacy.py",
@@ -297,8 +299,8 @@
     },
     {
       "path": "source/monitoring-field-study/source/field_planning.html",
-      "bytes": 33752,
-      "sha256": "4d11998ccf7364acd6df779d82187dba08054dd31d9f2d841e2886632690826c"
+      "bytes": 34110,
+      "sha256": "b46469fab2c9c9c0e4a87ecec3613b6c26ef05a43413304df23ce30b4150300e"
     },
     {
       "path": "source/monitoring-field-study/source/make_field_brief.py",
@@ -327,13 +329,78 @@
     },
     {
       "path": "integration/component_fragments/monitoring-field-study.json",
-      "bytes": 1322,
-      "sha256": "43ef0c65fcf204f7ea36830e1ce00982e721214bb4bec41883e551bd1521fca1"
+      "bytes": 1570,
+      "sha256": "915b907e1a2531708efd1125501e43863e58ea79b7d12ca5d699c31d5946c7ef"
     },
     {
       "path": "source/monitoring-field-study/INSTALLATION.md",
-      "bytes": 17237,
-      "sha256": "7bd79b2524eea49d785ae57a66973ccd85bca9a1a68445f3f31fbd3f82759ea9"
+      "bytes": 20237,
+      "sha256": "6abe8ae299217ceba68e508982807e4e290cc75e1083529776a23a1f43395038"
+    },
+    {
+      "path": "model/monitoring_field_selection.py",
+      "bytes": 16812,
+      "sha256": "c742bb256126646e17084cf5f22010dbd2f135f4a68b610759b145a561076dbf"
+    },
+    {
+      "path": "operator/monitoring_field_selection_native.py",
+      "bytes": 2367,
+      "sha256": "1077d4f492e88e33a12cecf9a8504f13775fc0cf811d972d7fa116497a15f45c"
+    },
+    {
+      "path": "operator/extensions/monitoring-field-selection.json",
+      "bytes": 1974,
+      "sha256": "74108c706cc569c12d578c1672dd7c9c48747702f45d9d402b309906b513d1a9"
+    },
+    {
+      "path": "operator/web/monitoring-field-selection.mjs",
+      "bytes": 10454,
+      "sha256": "6777157bb63378175693b44a7457029883435992a8c4f5ba45ff537763433a64"
+    },
+    {
+      "path": "operator/web/monitoring-field-selection.css",
+      "bytes": 1451,
+      "sha256": "0b53126ea205d7dcdcda34dec4a4e2ed5b0de6a00b7bc41352f6205efce90a82"
+    },
+    {
+      "path": "operator/MONITORING_FIELD_SELECTION.md",
+      "bytes": 7795,
+      "sha256": "5f5012281d132c2d922c18d52867ca48efbda07fc05ce126e394ebbcfe0f21a9"
+    },
+    {
+      "path": "source_tools/monitoring_field_selection_composition.py",
+      "bytes": 3838,
+      "sha256": "5b36171a60d030ed1936f19f94f0e09fdcb4edc2ca04723ca947ae55c7fc9a28"
+    },
+    {
+      "path": "integration/component_fragments/monitoring-field-selection.json",
+      "bytes": 933,
+      "sha256": "e05a7f39cabe6ef233c2843c87f1f3bf6398b47aa8c876ea0557d2846d784dc4"
+    },
+    {
+      "path": "integrations/monitoring/current_application_files.json",
+      "bytes": 8534,
+      "sha256": "ac69363ed64ff85d98179c750dc579f641fe9706312b1ca90447ccc4ed0a6344"
+    },
+    {
+      "path": "integrations/monitoring/PREDECESSORS.json",
+      "bytes": 61076,
+      "sha256": "ded24a713479587dea83a23ee954228dc66cbcd44b8650341e2d1e9bea3ba40a"
+    },
+    {
+      "path": "integrations/monitoring/source_adoption.json",
+      "bytes": 51704,
+      "sha256": "a4d141bbc82a5bec3673008537b625606309c1921e2469c645429e70745bfe75"
+    },
+    {
+      "path": "integration/monitoring_observed_sources.json",
+      "bytes": 45462,
+      "sha256": "52f038d5dad4ddd5bdf05b0d4f71bcc07f3b1fc77af3f4b93c4bd8a6033dcc7e"
+    },
+    {
+      "path": "integration/monitoring_study_transfer_sources.json",
+      "bytes": 26213,
+      "sha256": "cb1bf76f2bce93d89d15aac19ffb2934b89b89b7fa85847e5654e2ac3024a503"
     }
   ],
   "preserved_shared_dependencies": [
@@ -354,7 +421,8 @@
     "model/monitoring_workspace.py",
     "model/monitoring_campaign.py",
     "model/monitoring_common.py",
-    "model/monitoring_sources.py"
+    "model/monitoring_sources.py",
+    "operator/web/monitoring.mjs"
   ],
   "receiving": {
     "check": "python operator/install_chemistry.py --application APPLICATION --source-root SOURCE --dry-run",
@@ -370,7 +438,10 @@
     "completed_monitoring_chemistry_study": "source/monitoring-chemistry-study/README.md",
     "study_original_inventory": "source/monitoring-chemistry-study/COMPOUND_SOURCE.json",
     "completed_monitoring_field_study": "source/monitoring-field-study/INSTALLATION.md",
-    "field_original_manifest": "source/monitoring-field-study/source-manifest.json"
+    "field_original_manifest": "source/monitoring-field-study/source-manifest.json",
+    "field_selection": "operator/MONITORING_FIELD_SELECTION.md",
+    "field_selection_composition": "source_tools/monitoring_field_selection_composition.py",
+    "monitoring_custody": "The original Monitoring inventory also includes the complete field-selection provider, controls and fragment. Current metadata replaces only its declared exact predecessor; independent receiver changes are preserved."
   },
   "preserves": "Original physical project, source editions, completed numerical runs, old scientific report/source identities, current composite observation semantics and original installer lock/preimage guard.",
   "editor_lifetime": "pinned-workspace-and-native-activation"

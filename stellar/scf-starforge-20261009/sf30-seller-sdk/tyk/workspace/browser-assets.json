@@ -43,6 +43,20 @@
         "browser-request-store.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/gateway-commissioning-browser.mjs",
+      [
+        "gateway-commissioning-browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/gateway-commissioning-drafts.mjs",
+      [
+        "gateway-commissioning-drafts.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

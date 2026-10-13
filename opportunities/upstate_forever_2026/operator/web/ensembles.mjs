@@ -947,6 +947,69 @@ export function attachEnsembles(context) {
     return openScientificReport({workspace_key:workspace,sources:[{...selected.row.source}],title:selected.row.title});
   }
 
+
+  async function coefficientSourceForm(id, mode) {
+    const workspace=currentWorkspace(), version=++designVersion, mounted=generation;
+    const values=mode==='calibration'?{consumer_id:id}:{ensemble_id:id};
+    const result=await api(endpoint('/api/ensembles/coefficient-evidence',values));
+    if(workspace!==currentWorkspace() || version!==designVersion || mounted!==generation)return;
+    if(result.workspace_key!==workspace)throw Error('Coefficient sources belong to another workspace.');
+    const source=result.catalog, selected=result.selected||{evidence_ids:[],range_ids:[]};
+    const evidenceIDs=new Set(selected.evidence_ids||[]), rangeIDs=new Set(selected.range_ids||[]);
+    const actualProfiles=new Set(source.context.profile_ids);
+    const evidence=(source.evidence||[]), ranges=(source.ranges||[]);
+    const missingEvidence=[...evidenceIDs].filter(key=>!evidence.some(row=>row.id===key));
+    const missingRanges=[...rangeIDs].filter(key=>!ranges.some(row=>row.id===key));
+    const row=(kind,value,checked,description)=>
+      '<label class="check-row"><input type="checkbox" name="'+kind+'" value="'+escapeHTML(value.id)+'"'+
+      (checked?' checked':'')+'><span><strong>'+escapeHTML(value.title||short(value.id))+'</strong>'+
+      '<small>'+escapeHTML(description)+'</small><small>'+escapeHTML(value.id)+'</small></span></label>';
+    let html='<div class="notice"><p>Keep the original native results and choose the coefficient evidence '+
+      'to include in this report edition. Each source retains its original profile and table. '+
+      'The report checks actual member cells against their saved parent lineage, value, units and load type.</p>'+
+      '<p>These choices do not run a model or change coefficients. Saved lower/upper profiles are source endpoints, '+
+      'not confidence intervals or automatically lower/higher pollutant outcomes.</p></div>'+
+      '<fieldset class="full"><legend>Original coefficient evidence</legend>';
+    html+=evidence.length?evidence.map(value=>{
+      const coverage=value.member_coverage||[];
+      const applicable=coverage.filter(item=>item.relationship!=='outside-lineage');
+      const summary=applicable.map(item=>item.profile_title+': '+item.supported+'/'+item.total+
+        ' documented matching cells'+(item.changed?' · '+item.changed+' changed':'')).join('; ');
+      return row('ensemble_evidence_id',value,evidenceIDs.has(value.id),
+        (value.source?.title||'Original evidence')+' · '+(summary||'No actual member in this source lineage'));
+    }).join(''):'<p class="note">No saved evidence edition is available for the actual profiles or their saved parents. '+
+      'The report can retain the original tables with coverage unassessed. Use the existing profile workbench to save supplied evidence.</p>';
+    html+=missingEvidence.map(key=>row('ensemble_evidence_id',{id:key,title:'Previously selected evidence unavailable'},true,
+      'This original selection is preserved. Clear it explicitly or restore its source before preparing the report.')).join('');
+    html+='</fieldset><fieldset class="full"><legend>Explicit source ranges</legend>';
+    html+=ranges.length?ranges.map(value=>{
+      const actual=(value.matched_profiles||[]).filter(match=>actualProfiles.has(match.profile_id));
+      const description=value.parameter_count+' selected coefficient cells · '+
+        (actual.length?actual.map(match=>short(match.profile_id)+' matches '+match.positions.join('/')).join('; '):
+          'Saved parent reference only; no actual member has an exact endpoint profile');
+      return row('ensemble_range_id',value,rangeIDs.has(value.id),description);
+    }).join(''):'<p class="note">No saved source ranges match this cohort. No range is selected automatically.</p>';
+    html+=missingRanges.map(key=>row('ensemble_range_id',{id:key,title:'Previously selected range unavailable'},true,
+      'Clear this retained choice explicitly or restore its original source.')).join('');
+    html+='</fieldset><p class="note">Leave both groups empty to make an explicit table-only edition. '+
+      'The complete original evidence CSV, per-member applicability CSV and source records travel with the report and editable Study export.</p>';
+    openForm(mode==='calibration'?'Prepare scientific calibration report':'Prepare native study report',
+      'Choose the original coefficient sources for this saved report edition.',html,'Prepare report',async()=>{
+        if(workspace!==currentWorkspace())throw Error('Reopen the report in its original workspace.');
+        const node=form();
+        if(!node)throw Error('Reopen the report source form.');
+        const selectedEvidence=[...node.querySelectorAll('[name="ensemble_evidence_id"]:checked')].map(input=>input.value);
+        const selectedRanges=[...node.querySelectorAll('[name="ensemble_range_id"]:checked')].map(input=>input.value);
+        if(selectedEvidence.some(key=>!evidence.some(value=>value.id===key)) ||
+           selectedRanges.some(key=>!ranges.some(value=>value.id===key)))
+          throw Error('A retained source is unavailable. Restore its originals or clear that choice explicitly.');
+        const task=await submitAction(mode==='calibration'?'ensemble.scientific-source':'ensemble.study-source',{
+          ...values, coefficient_evidence:{evidence_ids:selectedEvidence,range_ids:selectedRanges}});
+        toast('The saved report is queued with the selected coefficient sources. Reopen it for the report, complete evidence and editable Study export.');
+        return task;
+      });
+  }
+
   async function dispatch(node) {
     const action=node.dataset.action.replace(/^ensemble-design-/,''), id=node.dataset.id;
     if(action==='new')return newDesign();
@@ -957,16 +1020,8 @@ export function attachEnsembles(context) {
     if(action==='consumer-decision')return consumerForm(id,'decision');
     if(action==='consumer-calibration')return consumerForm(id,'calibration',{annual_import_id:node.dataset.annualImport});
     if(action==='consumer-open')return openConsumer(id);
-    if(action==='scientific-prepare') {
-      const task=await submitAction('ensemble.scientific-source',{consumer_id:id});
-      toast('The saved scientific report is queued. Reopen this result for PDF, original sources and Compose scientific report.');
-      return task;
-    }
-    if(action==='study-source') {
-      const task=await submitAction('ensemble.study-source',{ensemble_id:id});
-      toast('The original native study report is queued. Reopen the study for its scientific source, figures and exports.');
-      return task;
-    }
+    if(action==='scientific-prepare')return coefficientSourceForm(id,'calibration');
+    if(action==='study-source')return coefficientSourceForm(id,'study');
     if(action==='study-compose')return studyScientificReport({ensemble_id:id});
     if(action==='scientific-compose')return scientificReport({consumer_id:id});
     if(action==='scientific-delivery')return scientificDelivery({consumer_id:id});

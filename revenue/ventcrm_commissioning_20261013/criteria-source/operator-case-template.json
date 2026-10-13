@@ -1,0 +1,292 @@
+{
+  "schema_version": 1,
+  "record_type": "ventcrm_operator_commissioning",
+  "edition": 1,
+  "operator": {
+    "business_name": "",
+    "owner_name": "",
+    "contact_reference": "",
+    "timezone": "",
+    "instance_url": "",
+    "current_system": "",
+    "service_types": [],
+    "crew_size": null
+  },
+  "commercial": {
+    "currency": "USD",
+    "published_reference": {
+      "setup": 750,
+      "monthly": 129,
+      "source_id": "pricing"
+    },
+    "selected_setup": null,
+    "selected_monthly": null,
+    "billing_start": null,
+    "setup_work_started_at": null,
+    "agreement_reference": "",
+    "selected_by": "",
+    "selected_at": null
+  },
+  "scope": {
+    "included": [],
+    "excluded": [],
+    "dependencies": [],
+    "selected_by": ""
+  },
+  "intake": {
+    "files": [],
+    "source_record_counts": {},
+    "mappings": [],
+    "exceptions": []
+  },
+  "custody": [],
+  "roles": [],
+  "consent_records": [],
+  "communication_results": [],
+  "payment_results": [],
+  "export": {
+    "self_serve_files": [],
+    "complete_handover_coverage": [],
+    "receiving_result": null
+  },
+  "cutover": {
+    "planned_at": null,
+    "delta_files": [],
+    "fallback": "",
+    "operator_decision": ""
+  },
+  "exit": {
+    "effective_at": null,
+    "final_billing": null,
+    "active_removal_at": null,
+    "backup_expiry": null,
+    "retention_agreement_reference": ""
+  },
+  "criteria": [
+    {
+      "criterion_id": "scope",
+      "status": "unreviewed",
+      "owner": "",
+      "observed_at": null,
+      "result": "",
+      "artifact_refs": [],
+      "operator_decision": ""
+    },
+    {
+      "criterion_id": "terms",
+      "status": "unreviewed",
+      "owner": "",
+      "observed_at": null,
+      "result": "",
+      "artifact_refs": [],
+      "operator_decision": ""
+    },
+    {
+      "criterion_id": "fees",
+      "status": "unreviewed",
+      "owner": "",
+      "observed_at": null,
+      "result": "",
+      "artifact_refs": [],
+      "operator_decision": ""
+    },
+    {
+      "criterion_id": "identity",
+      "status": "unreviewed",
+      "owner": "",
+      "observed_at": null,
+      "result": "",
+      "artifact_refs": [],
+      "operator_decision": ""
+    },
+    {
+      "criterion_id": "source",
+      "status": "unreviewed",
+      "owner": "",
+      "observed_at": null,
+      "result": "",
+      "artifact_refs": [],
+      "operator_decision": ""
+    },
+    {
+      "criterion_id": "mapping",
+      "status": "unreviewed",
+      "owner": "",
+      "observed_at": null,
+      "result": "",
+      "artifact_refs": [],
+      "operator_decision": ""
+    },
+    {
+      "criterion_id": "balances",
+      "status": "unreviewed",
+      "owner": "",
+      "observed_at": null,
+      "result": "",
+      "artifact_refs": [],
+      "operator_decision": ""
+    },
+    {
+      "criterion_id": "delta",
+      "status": "unreviewed",
+      "owner": "",
+      "observed_at": null,
+      "result": "",
+      "artifact_refs": [],
+      "operator_decision": ""
+    },
+    {
+      "criterion_id": "owner_access",
+      "status": "unreviewed",
+      "owner": "",
+      "observed_at": null,
+      "result": "",
+      "artifact_refs": [],
+      "operator_decision": ""
+    },
+    {
+      "criterion_id": "technician_access",
+      "status": "unreviewed",
+      "owner": "",
+      "observed_at": null,
+      "result": "",
+      "artifact_refs": [],
+      "operator_decision": ""
+    },
+    {
+      "criterion_id": "custody",
+      "status": "unreviewed",
+      "owner": "",
+      "observed_at": null,
+      "result": "",
+      "artifact_refs": [],
+      "operator_decision": ""
+    },
+    {
+      "criterion_id": "booking",
+      "status": "unreviewed",
+      "owner": "",
+      "observed_at": null,
+      "result": "",
+      "artifact_refs": [],
+      "operator_decision": ""
+    },
+    {
+      "criterion_id": "consent",
+      "status": "unreviewed",
+      "owner": "",
+      "observed_at": null,
+      "result": "",
+      "artifact_refs": [],
+      "operator_decision": ""
+    },
+    {
+      "criterion_id": "registration",
+      "status": "unreviewed",
+      "owner": "",
+      "observed_at": null,
+      "result": "",
+      "artifact_refs": [],
+      "operator_decision": ""
+    },
+    {
+      "criterion_id": "optout",
+      "status": "unreviewed",
+      "owner": "",
+      "observed_at": null,
+      "result": "",
+      "artifact_refs": [],
+      "operator_decision": ""
+    },
+    {
+      "criterion_id": "automation",
+      "status": "unreviewed",
+      "owner": "",
+      "observed_at": null,
+      "result": "",
+      "artifact_refs": [],
+      "operator_decision": ""
+    },
+    {
+      "criterion_id": "stripe",
+      "status": "unreviewed",
+      "owner": "",
+      "observed_at": null,
+      "result": "",
+      "artifact_refs": [],
+      "operator_decision": ""
+    },
+    {
+      "criterion_id": "payment_states",
+      "status": "unreviewed",
+      "owner": "",
+      "observed_at": null,
+      "result": "",
+      "artifact_refs": [],
+      "operator_decision": ""
+    },
+    {
+      "criterion_id": "self_export",
+      "status": "unreviewed",
+      "owner": "",
+      "observed_at": null,
+      "result": "",
+      "artifact_refs": [],
+      "operator_decision": ""
+    },
+    {
+      "criterion_id": "complete_export",
+      "status": "unreviewed",
+      "owner": "",
+      "observed_at": null,
+      "result": "",
+      "artifact_refs": [],
+      "operator_decision": ""
+    },
+    {
+      "criterion_id": "reopen",
+      "status": "unreviewed",
+      "owner": "",
+      "observed_at": null,
+      "result": "",
+      "artifact_refs": [],
+      "operator_decision": ""
+    },
+    {
+      "criterion_id": "exit_plan",
+      "status": "unreviewed",
+      "owner": "",
+      "observed_at": null,
+      "result": "",
+      "artifact_refs": [],
+      "operator_decision": ""
+    },
+    {
+      "criterion_id": "walkthrough",
+      "status": "unreviewed",
+      "owner": "",
+      "observed_at": null,
+      "result": "",
+      "artifact_refs": [],
+      "operator_decision": ""
+    },
+    {
+      "criterion_id": "publication",
+      "status": "unreviewed",
+      "owner": "",
+      "observed_at": null,
+      "result": "",
+      "artifact_refs": [],
+      "operator_decision": ""
+    }
+  ],
+  "open_questions": [],
+  "change_history": [],
+  "recording_rules": [
+    "Retain original inputs and earlier decisions when correcting a record.",
+    "Store nonsecret account references, never passwords, API keys or card data.",
+    "Record an actual observation before changing a criterion from unreviewed.",
+    "Use not_in_scope only with its reason and the operator's selected scope.",
+    "Keep named unresolved work visible; do not convert a published draft into an agreed term."
+  ]
+}

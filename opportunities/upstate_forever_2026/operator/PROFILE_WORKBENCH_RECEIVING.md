@@ -2,6 +2,15 @@
 
 Operation ECO-PROFILES-DD6B · Upper Savannah application
 
+Receiving operators must read and carry the complete application
+[CURRENT_OWNER_DIRECTION.md](../CURRENT_OWNER_DIRECTION.md), version
+`2026-10-13.3`, into the existing execution handoff. It retains the October 13,
+2026 14:00 UTC demo cutoff and prioritizes the actual prepared native case,
+editable scientific sources/results and complete working handoff. Continue the
+accepted operation and open, use and inspect the actual outgoing populated
+application and every exported attachment under the standing producer rule
+below.
+
 ## Application contribution
 
 The desk opens a saved scientific profile before its first native run. An operator can revise native NDR/SDR parameters and coefficient cells, retain source references and the reason for a change, inspect exact differences, save a named working profile, compare saved revisions and attach an actual review record. Original row identities, order and descriptive source columns remain attached to the coefficient table.
@@ -53,6 +62,53 @@ python -B /actual/profile-workbench-staging/install_profile_workbench.py --appli
 ```
 
 The installer retains prior changed files beside the application and composes the current portable application's root-file list. Its selected-model fixes apply to the existing source-profile catalogue and table-inspection sites. The source module remains the producer of coefficient lineage and native profile identities.
+
+## Receive the published complete coefficient/report source bank
+
+The maintained materializer accepts the complete 104-file coefficient/report
+source bank directly. This is the same original source family published at
+`operations/eco-coefficient-reports/coefficient-report-source-20261013.source.json`
+in the public sprint repository. Use the exact retained file body, not a
+summary. Its outer artifact is 1,058,634 bytes with SHA-256
+`d7f02029aa2319b1d638f11aa9bd5f9a65a1b003aefd1348c184182ca2759445`;
+the original decoded bank is 2,997,736 bytes with SHA-256
+`2d2eec867ab9d06f210acdee892b72e667ea2e848b7d271b656ce44fb86e1563`.
+
+From the root of the current public sprint checkout, run the existing command:
+
+```sh
+python3 -B opportunities/upstate_forever_2026/source_tools/materialize_source_banks.py \
+  --bank operations/eco-coefficient-reports/coefficient-report-source-20261013.source.json \
+  --bank-bytes 1058634 \
+  --bank-sha256 d7f02029aa2319b1d638f11aa9bd5f9a65a1b003aefd1348c184182ca2759445 \
+  --output coefficient-report-source-received
+```
+
+The existing receiver validates the canonical base64, complete gzip stream,
+compressed and decoded lengths/hashes, agreeing original/decoded identity,
+declared bank schema and all 104 member byte counts, SHA-256 and Git blob
+identities before publishing source. The selected source inventory totals
+2,758,280 bytes. It retains the incoming artifact under `inputs/`, the exact
+decoded bank under `banks/`, every selected source body under `source/`,
+and the complete `receiving.json` inventory. Repeating the identical command
+reuses matching retained files; differing files and directory symlinks are
+refused. A partial write can continue with that same selection and output.
+
+An optional `--operation EXISTING_RECEIVING_OPERATION_ID` binds the receipt to
+the existing original receiving operation. When omitted, the receipt uses the
+exact bank digest as its source-selection identity. It does not create or
+rename a scientific Workspace, native run or customer delivery. The prior
+`--manifest ... --parts ... --output ...` multipart route remains available
+with its original transfer manifest and part identities.
+
+These are the complete selected family sources, to be composed into the actual
+original application. Preserve its existing 53 original-base dependencies,
+current peer source, installed GIS/native engine and original scientific
+Workspace. The materializer does not invent missing modules or replace a
+working application. Use the existing profile-workbench source installer from
+the retained `source/` against that complete application, then continue the
+original source/profile/evidence and report journey below. The current native
+source assembly and its dependency closure remain authoritative.
 
 ## Open with retained regional coefficients
 

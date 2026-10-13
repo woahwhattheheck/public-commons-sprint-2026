@@ -1,0 +1,25 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "monitoring-field-selection",
+  "source_reference": "Native retained choices over the original completed RIVER field-support source; same Workspace and original Monitoring queue.",
+  "components": {
+    "monitoring-field-selection": {
+      "title": "Retained Monitoring field choices and editable working desk",
+      "paths": [
+        "model/monitoring_field_selection.py",
+        "operator/monitoring_field_selection_native.py",
+        "operator/extensions/monitoring-field-selection.json",
+        "operator/web/monitoring-field-selection.mjs",
+        "operator/web/monitoring-field-selection.css",
+        "operator/MONITORING_FIELD_SELECTION.md",
+        "integration/component_fragments/monitoring-field-selection.json"
+      ],
+      "requires": [
+        "monitoring"
+      ]
+    }
+  },
+  "required_components": [
+    "monitoring-field-selection"
+  ]
+}

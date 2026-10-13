@@ -1,0 +1,85 @@
+Title: C17002: RATIO OF INCOME TO POVERTY ...
+
+URL Source: https://data.census.gov/table/ACSDT1Y2019.C17002?g=010XX00US
+
+Published Time: Wed, 30 Sep 2026 09:34:21 GMT
+
+Markdown Content:
+View important guidance for comparing ACS data over time or to other sources [here](https://www.census.gov/programs-surveys/acs/guidance/comparing-acs-data.html).
+
+Table controls. Navigate with tab or arrow keys. In a column header, press enter to toggle sorting. Press control enter to open the column menu. Row groups can be expanded or contracted with the enter key.
+
+![Image 1](https://data.census.gov/assets/chevron-down-38f57bb8.svg)Total:
+
+Under .50
+
+.50 to .99
+
+1.00 to 1.24
+
+1.25 to 1.49
+
+1.50 to 1.84
+
+1.85 to 1.99
+
+2.00 and over
+
+320,118,791
+
+±24,954
+
+17,602,164
+
+±126,927
+
+21,887,932
+
+±176,458
+
+12,699,805
+
+±126,908
+
+12,949,219
+
+±118,969
+
+19,023,341
+
+±175,825
+
+8,493,325
+
+±97,073
+
+227,463,005
+
+±423,890
+
+* * *
+
+Although the American Community Survey (ACS) produces population, demographic and housing unit estimates, it is the Census Bureau's Population Estimates Program that produces and disseminates the official estimates of the population for the nation, states, counties, cities, and towns and estimates of housing units for states and counties.
+
+Supporting documentation on code lists, subject definitions, data accuracy, and statistical testing can be found on the American Community Survey website in the Technical Documentation section.
+
+Sample size and data quality measures (including coverage rates, allocation rates, and response rates) can be found on the American Community Survey website in the Methodology section.
+
+Source: U.S. Census Bureau, 2019 American Community Survey 1-Year Estimates
+
+Data are based on a sample and are subject to sampling variability. The degree of uncertainty for an estimate arising from sampling variability is represented through the use of a margin of error. The value shown here is the 90 percent margin of error. The margin of error can be interpreted roughly as providing a 90 percent probability that the interval defined by the estimate minus the margin of error and the estimate plus the margin of error (the lower and upper confidence bounds) contains the true value. In addition to sampling variability, the ACS estimates are subject to nonsampling error (for a discussion of nonsampling variability, see ACS Technical Documentation). The effect of nonsampling error is not represented in these tables.
+
+The 2019 American Community Survey (ACS) data generally reflect the September 2018 Office of Management and Budget (OMB) delineations of metropolitan and micropolitan statistical areas. In certain instances the names, codes, and boundaries of the principal cities shown in ACS tables may differ from the OMB delineations due to differences in the effective dates of the geographic entities.
+
+Estimates of urban and rural populations, housing units, and characteristics reflect boundaries of urban areas defined based on Census 2010 data. As a result, data for urban and rural areas from the ACS do not necessarily reflect the results of ongoing urbanization.
+
+Explanation of Symbols:
+
+1.   An "**" entry in the margin of error column indicates that either no sample observations or too few sample observations were available to compute a standard error and thus the margin of error. A statistical test is not appropriate.
+2.   An "-" entry in the estimate column indicates that either no sample observations or too few sample observations were available to compute an estimate, or a ratio of medians cannot be calculated because one or both of the median estimates falls in the lowest interval or upper interval of an open-ended distribution, or the margin of error associated with a median was larger than the median itself.
+3.   An "-" following a median estimate means the median falls in the lowest interval of an open-ended distribution.
+4.   An "+" following a median estimate means the median falls in the upper interval of an open-ended distribution.
+5.   An "***" entry in the margin of error column indicates that the median falls in the lowest interval or upper interval of an open-ended distribution. A statistical test is not appropriate.
+6.   An "*****" entry in the margin of error column indicates that the estimate is controlled. A statistical test for sampling variability is not appropriate. 
+7.   An "N" entry in the estimate and margin of error columns indicates that data for this geographic area cannot be displayed because the number of sample cases is too small.
+8.   An "(X)" means that the estimate is not applicable or not available.

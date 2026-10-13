@@ -1,0 +1,25 @@
+MEMBER BALLOT / BULLETIN DE VOTE
+
+English
+1. Extract the complete packet and open member-ballot.html in a current browser. It works without a network connection.
+2. Check the selected person, exact edition, recorded ballot period and return instructions. The packet contains only this member's roster entry.
+3. Read the complete frozen bilingual clauses and source-linked cases. Choose English or French at the top.
+4. In My response enter your declared name, response, reasons and UTC vote date. The date must fall within the recorded opening and closing dates.
+5. Save a draft file whenever you need to move to another browser or retain an unfinished response.
+6. Review & return shows your complete response. Confirm it, download the response JSON and return that exact file through the recorded route. Download a readable copy for your own records.
+7. To correct a sent response, open its exact JSON, then Prepare correction from this return. The original response remains intact; the correction retains its ID, next revision and the preceding file's normalized content digest. Return the corrected file after the original has reached the secretariat.
+8. Repeated downloads of an unchanged response retain the same content and identity.
+
+The secretariat retains the original file, verifies the sender, then explicitly adopts a vote using the existing ballot record. Retaining a file alone does not replace a recorded vote. A closed ballot keeps its original votes; later files remain evidence for a separate authority decision.
+
+Français
+1. Extraire le dossier complet et ouvrir member-ballot.html dans un navigateur récent. La page fonctionne sans connexion réseau.
+2. Vérifier la personne, l'édition précise, la période de vote enregistrée et le mode de retour. Le dossier contient uniquement l'inscription de ce membre.
+3. Lire les clauses bilingues figées et les cas liés aux sources. Sélectionner la langue en haut de la page.
+4. Dans Ma réponse, indiquer le nom déclaré, le choix, les motifs et la date UTC du vote, comprise dans la période enregistrée.
+5. Enregistrer un brouillon pour changer de navigateur ou conserver une réponse inachevée.
+6. Réviser et transmettre présente la réponse complète. La confirmer, télécharger le fichier JSON et transmettre ce fichier précis par le mode indiqué. Conserver une copie lisible.
+7. Pour corriger une réponse transmise, ouvrir son JSON original, puis Préparer une correction de cette réponse. La correction conserve son identité, la révision suivante et l'empreinte du contenu précédent. Transmettre la correction après la réception de l'original par le secrétariat.
+8. Des téléchargements répétés d'une réponse inchangée conservent le même contenu et la même identité.
+
+Le secrétariat conserve le fichier original, vérifie l'expéditeur puis adopte explicitement le vote dans le bulletin existant. La simple réception d'un fichier ne remplace pas un vote. Un scrutin clos conserve ses votes originaux.

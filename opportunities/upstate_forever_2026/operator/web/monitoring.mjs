@@ -1,3 +1,4 @@
+import {attachMonitoringFieldSelection} from './monitoring-field-selection.mjs';
 import {attachMonitoringFrontiers} from './monitoring-frontiers.mjs';
 import {attachMonitoringFieldReturn} from './monitoring_field_return.mjs';
 import {attachMonitoringFieldwork} from './monitoring_fieldwork.mjs';
@@ -182,6 +183,9 @@ export function attachMonitoring(host) {
     node.monitoringReport.update();
     node.monitoringStudyTransfer ||= attachMonitoringStudyTransfer(node,host,key);
     node.monitoringStudyTransfer.update();
+    node.monitoringFieldSelection ||= attachMonitoringFieldSelection(node,{...host,transport},key);
+    await node.monitoringFieldSelection.mount();
+    if(ticket!==generation || workspace()!==key)return;
     await fieldwork.mount(root,key);
     if(ticket===generation && workspace()===key)await fieldReturn.mount(root,key);
   }
@@ -209,6 +213,6 @@ export function attachMonitoring(host) {
       if (current()) completedByWorkspace.set(key, completed);
     } finally { updating = false; }
   }
-  function detach(){generation++;networkOpening++;active?.monitoringFrontiers?.detach();active?.monitoringReport?.detach();active?.monitoringStudyTransfer?.detach();fieldwork.detach();fieldReturn.detach();if(active)active.remove();active=null;}
+  function detach(){generation++;networkOpening++;active?.monitoringFrontiers?.detach();active?.monitoringReport?.detach();active?.monitoringStudyTransfer?.detach();active?.monitoringFieldSelection?.detach();fieldwork.detach();fieldReturn.detach();if(active)active.remove();active=null;}
   return {mount,update,detach,openNetwork,openStudy,render:()=>'',dispatch:()=>false};
 }

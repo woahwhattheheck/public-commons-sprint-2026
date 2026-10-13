@@ -130,6 +130,7 @@
         "operator/web/observed_series.mjs",
         "operator/web/parameter_studies.css",
         "operator/web/parameter_studies.mjs",
+        "operator/web/parameter_case_console.mjs",
         "operator/web/style.css",
         "package_delivery.py",
         "source_tools/application_assembly.py",
@@ -4053,6 +4054,7 @@
         "operator/parameter-study-integration.json",
         "operator/web/parameter_studies.css",
         "operator/web/parameter_studies.mjs",
+        "operator/web/parameter_case_console.mjs",
         "source_tools/receive_gura_studies.py",
         "model/parameter_suite_exports.py"
       ],

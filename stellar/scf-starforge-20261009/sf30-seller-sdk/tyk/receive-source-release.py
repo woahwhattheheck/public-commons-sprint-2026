@@ -267,6 +267,8 @@ def receive_locked(args, root):
         journey = json.loads(journey_path.read_bytes())
         step_name = ("gateway-complete-native-history-export-and-cold-receiving" if scope == "gateway"
                      else "complete-commissioning-history-export-and-cold-receiving")
+        if journey.get("summary", {}).get("gatewayCommissioning"):
+            step_name = "complete-gateway-cohort-history-export-and-cold-receiving"
         step = journey["steps"][step_name]
         need(journey["operation"] == OPERATION and journey["state"] == "PASSED" and
              journey["scope"] == scope and step["completedAt"], "Original workspace receiving is incomplete")

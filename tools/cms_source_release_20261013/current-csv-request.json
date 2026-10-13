@@ -1,0 +1,175 @@
+{
+  "schema": "source-csv-request/1",
+  "dataset_id": "xubh-q36u",
+  "resource_id": "derived-current-api-csv:3247fa39b9afde13de92b182a80732d721780106108fde3b1013c531f71757b2",
+  "scope": {
+    "state": "CA"
+  },
+  "origin": "derived-current-api-csv",
+  "metadata": {
+    "source_modified": "2026-07-22",
+    "source_released": "2026-08-13",
+    "dataset_url": "https://data.cms.gov/provider-data/dataset/xubh-q36u",
+    "dictionary_url": "https://data.cms.gov/provider-data/sites/default/files/data_dictionaries/hospital/HOSPITAL_Data_Dictionary.pdf",
+    "captured_on": "2026-10-13",
+    "source_url": "https://data.cms.gov/provider-data/dataset/xubh-q36u"
+  },
+  "parent_release": {
+    "release_id": "cms-ca-8d621b64ae245acb9f970dbc24e9447f18fb5d1c2710640d538dd6afebe29872",
+    "data_csv_sha256": "3247fa39b9afde13de92b182a80732d721780106108fde3b1013c531f71757b2"
+  },
+  "column_mapping": [
+    {
+      "source_header": "facility_id",
+      "field": "facility_id"
+    },
+    {
+      "source_header": "facility_name",
+      "field": "facility_name"
+    },
+    {
+      "source_header": "address",
+      "field": "address"
+    },
+    {
+      "source_header": "citytown",
+      "field": "citytown"
+    },
+    {
+      "source_header": "state",
+      "field": "state"
+    },
+    {
+      "source_header": "zip_code",
+      "field": "zip_code"
+    },
+    {
+      "source_header": "countyparish",
+      "field": "countyparish"
+    },
+    {
+      "source_header": "telephone_number",
+      "field": "telephone_number"
+    },
+    {
+      "source_header": "hospital_type",
+      "field": "hospital_type"
+    },
+    {
+      "source_header": "hospital_ownership",
+      "field": "hospital_ownership"
+    },
+    {
+      "source_header": "emergency_services",
+      "field": "emergency_services"
+    },
+    {
+      "source_header": "meets_criteria_for_birthing_friendly_designation",
+      "field": "meets_criteria_for_birthing_friendly_designation"
+    },
+    {
+      "source_header": "hospital_overall_rating",
+      "field": "hospital_overall_rating"
+    },
+    {
+      "source_header": "hospital_overall_rating_footnote",
+      "field": "hospital_overall_rating_footnote"
+    },
+    {
+      "source_header": "mort_group_measure_count",
+      "field": "mort_group_measure_count"
+    },
+    {
+      "source_header": "count_of_facility_mort_measures",
+      "field": "count_of_facility_mort_measures"
+    },
+    {
+      "source_header": "count_of_mort_measures_better",
+      "field": "count_of_mort_measures_better"
+    },
+    {
+      "source_header": "count_of_mort_measures_no_different",
+      "field": "count_of_mort_measures_no_different"
+    },
+    {
+      "source_header": "count_of_mort_measures_worse",
+      "field": "count_of_mort_measures_worse"
+    },
+    {
+      "source_header": "mort_group_footnote",
+      "field": "mort_group_footnote"
+    },
+    {
+      "source_header": "safety_group_measure_count",
+      "field": "safety_group_measure_count"
+    },
+    {
+      "source_header": "count_of_facility_safety_measures",
+      "field": "count_of_facility_safety_measures"
+    },
+    {
+      "source_header": "count_of_safety_measures_better",
+      "field": "count_of_safety_measures_better"
+    },
+    {
+      "source_header": "count_of_safety_measures_no_different",
+      "field": "count_of_safety_measures_no_different"
+    },
+    {
+      "source_header": "count_of_safety_measures_worse",
+      "field": "count_of_safety_measures_worse"
+    },
+    {
+      "source_header": "safety_group_footnote",
+      "field": "safety_group_footnote"
+    },
+    {
+      "source_header": "readm_group_measure_count",
+      "field": "readm_group_measure_count"
+    },
+    {
+      "source_header": "count_of_facility_readm_measures",
+      "field": "count_of_facility_readm_measures"
+    },
+    {
+      "source_header": "count_of_readm_measures_better",
+      "field": "count_of_readm_measures_better"
+    },
+    {
+      "source_header": "count_of_readm_measures_no_different",
+      "field": "count_of_readm_measures_no_different"
+    },
+    {
+      "source_header": "count_of_readm_measures_worse",
+      "field": "count_of_readm_measures_worse"
+    },
+    {
+      "source_header": "readm_group_footnote",
+      "field": "readm_group_footnote"
+    },
+    {
+      "source_header": "pt_exp_group_measure_count",
+      "field": "pt_exp_group_measure_count"
+    },
+    {
+      "source_header": "count_of_facility_pt_exp_measures",
+      "field": "count_of_facility_pt_exp_measures"
+    },
+    {
+      "source_header": "pt_exp_group_footnote",
+      "field": "pt_exp_group_footnote"
+    },
+    {
+      "source_header": "te_group_measure_count",
+      "field": "te_group_measure_count"
+    },
+    {
+      "source_header": "count_of_facility_te_measures",
+      "field": "count_of_facility_te_measures"
+    },
+    {
+      "source_header": "te_group_footnote",
+      "field": "te_group_footnote"
+    }
+  ]
+}
