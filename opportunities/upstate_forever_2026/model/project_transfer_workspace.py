@@ -6,6 +6,8 @@ native action is explicitly requested; standalone transport remains stdlib-only.
 from __future__ import annotations
 from contextlib import nullcontext
 from pathlib import Path
+import os
+import stat
 import time
 from .project_transfer import (TransferStore, TransferError, _atomic, canonical,
                                digest_id, load_json, sha)
@@ -98,18 +100,23 @@ class NativeProjectTransfer:
             record = record or {"schema": "upstate.project-transfer-native-restore/v1",
                                 "snapshot_id": snapshot_id, "destination": str(target), "state": "assembling"}
             _atomic(record_path, canonical(record) + b"\n", replace=record_path.exists())
-            archive = self.archives / (snapshot_id + ".received.zip")
+            # Earlier reconstructions omitted original Unix modes. Keep that cache
+            # file intact and rebuild the same immutable snapshot in the current edition.
+            archive = self.archives / (snapshot_id + ".received-modes-v2.zip")
             self.store.materialize_archive(snapshot_id, archive, progress=progress)
             if target.exists():
                 if record["state"] != "restoring":
                     raise TransferError("Native destination appeared during archive assembly")
                 # The original receiver doesn't retain ARCHIVE.json on disk.
-                from .project_transfer import file_hash, member_name
+                from .project_transfer import archive_member_mode, file_hash, member_name
                 snapshot = self.store.snapshot(snapshot_id)
                 for name, expected in snapshot["archive"]["members"].items():
                     p = target.joinpath(*Path(member_name(name)).parts)
                     if p.is_symlink() or not p.is_file() or p.stat().st_size != expected["bytes"] or file_hash(p) != expected["sha256"]:
                         raise TransferError("Interrupted native receiving differs from its original files")
+                    mode = archive_member_mode(snapshot, name)
+                    if mode is not None and os.name == "posix" and stat.S_IMODE(p.stat().st_mode) != (mode & 0o777):
+                        raise TransferError("Interrupted native receiving differs from its original file mode: " + name)
                 # Recover the same receiving summary as portable.restore after a
                 # lost reply, using the original files verified above.
                 from .workspace import Workspace

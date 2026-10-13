@@ -236,6 +236,7 @@ def validate_snapshot(value: _JSON) -> _JSON:
         digest_id(item.get("sha256"))
         if name in original and (not isinstance(original[name], dict) or length != original[name].get("bytes") or item["sha256"] != original[name].get("sha256")):
             raise TransferError("Snapshot changed an original file identity")
+        archive_member_mode(value, name)
         blocks = item.get("blocks")
         if not isinstance(blocks, list):
             raise TransferError("Expected ordered file blocks")
@@ -254,6 +255,16 @@ def validate_snapshot(value: _JSON) -> _JSON:
         if total != length or (length == 0 and item["sha256"] != sha(b"")):
             raise TransferError("Blocks do not reproduce retained file length")
     return value
+
+
+def archive_member_mode(snapshot: _JSON, name: str) -> int | None:
+    """Preserve the original optional native file mode without changing identities."""
+    mode = snapshot["archive"]["members"].get(name, {}).get("mode")
+    if mode is None:
+        return None
+    if not isinstance(mode, str) or mode not in {"100644", "100755"}:
+        raise TransferError("Unsupported original archive member mode: " + name)
+    return int(mode, 8)
 
 
 def block_inventory(snapshot: _JSON) -> dict[str, int]:
@@ -695,7 +706,11 @@ class TransferStore:
                 for name, item in sorted(snapshot["members"].items()):
                     h = hashlib.sha256()
                     size = 0
-                    with z.open(name, "w", force_zip64=True) as output:
+                    member = zipfile.ZipInfo(name)
+                    member.create_system = 3
+                    member.compress_type = compression
+                    member.external_attr = (archive_member_mode(snapshot, name) or 0o100644) << 16
+                    with z.open(member, "w", force_zip64=True) as output:
                         for block in item["blocks"]:
                             if cancel and cancel():
                                 raise Cancelled("Archive assembly paused; all received blocks remain retained")
@@ -727,6 +742,9 @@ class TransferStore:
             if original != snapshot["archive"] or set(rows) != set(snapshot["members"]):
                 raise TransferError("Reconstructed archive has different original metadata or files")
             for name, item in snapshot["members"].items():
+                mode = archive_member_mode(snapshot, name)
+                if mode is not None and rows[name].external_attr >> 16 != mode:
+                    raise TransferError("Reconstructed archive has a different original file mode; choose a new archive path: " + name)
                 h = hashlib.sha256()
                 length = 0
                 with z.open(rows[name]) as source:
@@ -870,6 +888,9 @@ def receive_directory(store: TransferStore, identity: str, destination: str | Pa
                         _sync_dir(output.parent)
                     finally:
                         pending.unlink(missing_ok=True)
+                mode = archive_member_mode(snapshot, name)
+                if mode is not None:
+                    output.chmod(mode & 0o777)
                 done += 1
                 if progress:
                     progress({"phase": "receiving_project", "path": name, "files_done": done,
@@ -900,6 +921,9 @@ def verify_directory(store: TransferStore, identity: str, directory: str | Path)
                 raise TransferError("Received project contains a file alias")
         if not p.is_file() or p.stat().st_size != record["bytes"] or file_hash(p) != record["sha256"]:
             raise TransferError("Received copy has different retained bytes: " + name)
+        mode = archive_member_mode(snapshot, name)
+        if mode is not None and os.name == "posix" and stat.S_IMODE(p.stat().st_mode) != (mode & 0o777):
+            raise TransferError("Received copy has a different original file mode: " + name)
     if load_json(root / "workspace" / "workspace.json") != snapshot["archive"]["project"]:
         raise TransferError("Received project identity differs")
     return {"snapshot_id": identity, "directory": str(root), "files": len(snapshot["members"]), "identity": "MATCH"}

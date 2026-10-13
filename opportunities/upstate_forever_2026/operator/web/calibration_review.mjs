@@ -98,7 +98,7 @@ export function createCalibrationReviews({current,read,submitAction,openForm,det
     const src=packet.viewer_url;
     if(!src?.startsWith('/api/file/calibration-review/'))throw Error('Choose the retained authenticated review viewer.');
     detail(packet.review.title,'<iframe class="calibration-review-frame" title="'+esc(packet.review.title)+
-      '" sandbox="allow-downloads" referrerpolicy="no-referrer" src="'+esc(src)+'"></iframe>'+fileList(packet._downloads??[]),
+      '" sandbox="allow-downloads allow-same-origin" referrerpolicy="no-referrer" src="'+esc(src)+'"></iframe>'+fileList(packet._downloads??[]),
       {kind:'calibration-review',id:packet.review.id});
   }
   async function dispatch(node){

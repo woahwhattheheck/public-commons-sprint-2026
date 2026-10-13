@@ -102,7 +102,7 @@ The existing provider adds:
 - Item kind \`calibration-reviews\`.
 - File route \`/api/file/calibration-review/{workspace_key}/{review_id}/{member_path...}\`.
 
-The file route uses the maintained extension registry's authenticated, inventory-checked nested-member transport. Its report is script-free and receives an opaque sandbox policy; images are embedded data images. Original JSON, CSV, vector, PDF and SVG members keep their normal file types and download behavior.
+The file route uses the maintained extension registry's authenticated, inventory-checked nested-member transport. Its report is script-free. The iframe and response policy preserve the local operator origin for authenticated relative file links, while scripts, forms, popups and top navigation remain disabled; images are embedded data images. Original JSON, CSV, vector, PDF and SVG members keep their normal file types and download behavior.
 
 The calibration desk's state contains compact review summaries. The full file inventory is loaded on explicit review opening. The browser guards workspace and request identity before applying an asynchronous response. Leaving the desk invalidates pending reads; completed tasks and saved records reopen the same original review.
 
@@ -116,3 +116,50 @@ python -B "$SOURCE/operator/install_calibration.py" \
 ~~~
 
 The cumulative receiver calls the same install function before the final source snapshot and archive. Existing recursive application/workspace inventories already retain this module, browser asset, guide, review collection and export directory.
+
+
+## Reopen the complete review after a project transfer
+
+The maintained full workspace archive includes both `calibration-reviews/<review_id>.json` and every regular file below `calibration-review-exports/<selection_id>/`. This includes the report HTML, scientific tables, original source copies, all selected map files, the member manifest and `calibration-review.zip`. The related calibration, plan, observation, map and source-error records and original content-addressed objects travel in the same workspace inventory.
+
+In the operator, finish the review task, open **Back up the original scientific workspace** and choose **Create complete backup**, then receive that archive into a new directory. Select the received workspace, open **Calibration and validation**, open the original completed calibration and choose its saved review. The receiving operator reopens every saved review with `calibration_review.inspect` before registering the workspace. Its local workspace key changes with the receiving directory; scientific project, selection and review IDs stay the same.
+
+The original native API for a full transfer is:
+
+~~~python
+from pathlib import Path
+from model import portable, calibration_review
+from model.workspace import Workspace
+
+original = Workspace("/absolute/path/to/original/workspace")
+review = calibration_review.inspect(original, review_id)
+archive_path = Path("/absolute/path/to/new-workspace-archive.zip")
+portable.backup(original, archive_path, include_intermediates=True)
+manifest = portable.inspect_archive(archive_path, verify=True)
+
+prefix = "workspace/" + review["directory"] + "/"
+for expected in [*review["files"].values(), review["manifest"], review["archive"]]:
+    retained = manifest["members"][prefix + expected["path"]]
+    if any(retained[field] != expected[field] for field in ("bytes", "sha256")):
+        raise ValueError("The review archive member differs from its saved identity")
+
+received = portable.restore(archive_path, "/absolute/path/to/new-receiving-directory")
+reopened = calibration_review.inspect(Workspace(received["workspace"]), review["id"])
+~~~
+
+The original archive collector checks every file while streaming and compares the entire workspace and application inventories again before publishing. Restore verifies the manifest and extracted bytes, keeps the original scientific project identity, and publishes a new receiving directory. Application source under `model/`, `operator/` and `source_tools/` includes the review producer, registered desk, file routes and maintained installer.
+
+For offline reading, unzip `calibration-review.zip` and open `index.html`; retain its full directory so relative table, map and source links resolve. Inside the operator, the same links use the existing HttpOnly download session. The report's iframe and HTTP sandbox both include `allow-same-origin` and `allow-downloads`, with no script permission, so `SameSite=Strict` authentication accompanies those local requests. The model report and copied original bytes are unchanged.
+
+### Incremental handover through the existing continuity desk
+
+The current [Project continuity](../operator/PROJECT_CONTINUITY.md#incremental-handover-with-saved-work) workflow, merged in PR3100, uses the same full native backup as its source. `NativeProjectTransfer.capture` calls `portable.backup` and the maintained `TransferStore.capture_archive` indexes **every** original archive member. A later review therefore enters the new snapshot as its original record, all package members and its complete ZIP. Only transfer blocks already present and verified on the receiver are reused.
+
+Choose **Incremental handover with resumable parts** in the complete-project form. Receive its manifest, return the receiver's missing-block request, receive every requested part, and choose **Receive independent project** once the edition reports complete. The maintained engine reconstructs the original archive, invokes `portable.restore`, and calls the same extension workspace validators before registration. Open the saved review from that newly registered workspace.
+
+The relevant original producers are `model/project_transfer.py`, `model/project_transfer_workspace.py`, `operator/project_transfer.py` and `operator/project_continuity.py`. `validate_snapshot` requires an exact original member set; ordered block lengths and member hashes must agree. `materialize_archive` refuses missing blocks and verifies every reconstructed member before the native restore. Full and incremental handovers therefore use the same review file identities.
+
+For the existing command-line handover, use the commands in Project continuity's **Command-line handover** section. They retain the same snapshot ID across manifest acceptance, missing-block requests, part receiving and final native receiving. No separate calibration transport or source collector is required.
+
+
+The origin requirement follows the browser's documented sandbox behavior: [Chrome's sandbox cookie explanation](https://privacysandbox.google.com/blog/sandbox-allow-same-site-none-cookies) and the [HTML iframe sandbox specification](https://html.spec.whatwg.org/multipage/iframe-embed-object.html#attr-iframe-sandbox). These are the existing session cookies; no capability token is placed in a report URL.
