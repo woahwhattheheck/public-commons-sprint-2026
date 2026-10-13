@@ -345,6 +345,21 @@ def operate_locked(args, output):
         runs.append(ws.prepare_run({"grid_id": grid["id"], "profile_id": profile["id"],
                                     "scenario_id": scenario["id"], "models": ["ndr", "sdr"]}))
     save(baseline_run_id=runs[0]["id"], alternative_run_ids=[runs[1]["id"]])
+    from model.scenario_footprint import preview_run
+    footprints = []
+    for index, run in enumerate(runs):
+        footprint = phase("baseline_footprint" if index == 0 else "alternative_footprint",
+                          lambda key=run["id"]: preview_run(ws, key))
+        expected_cells = 0 if index == 0 else recipe["input_summary"]["changed_cells"]
+        expected_area = expected_cells * recipe["grid"]["pixel_area_ha"]
+        summary = footprint["summary"]
+        if (summary["net_changed_cells"] != expected_cells or not math.isclose(
+                summary["net_changed_hectares"], expected_area, rel_tol=1e-9, abs_tol=1e-8)):
+            raise ValueError("Actual retained scenario footprint differs from its selected input recipe")
+        atomic_json(output / ("baseline-footprint.json" if index == 0 else "alternative-footprint.json"),
+                    footprint)
+        footprints.append(footprint["id"])
+    save(scenario_footprint_ids=footprints)
     if args.prepare_only:
         save(state="prepared", active_stage=None)
         return receipt
