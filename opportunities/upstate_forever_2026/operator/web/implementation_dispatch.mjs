@@ -227,7 +227,7 @@ function reportPanel(w,s){
  w.table(['Source coverage','Original count'],Object.entries(p.summary||{}).map(([key,value])=>[esc(key.replaceAll('_',' ')),esc(typeof value==='object'?JSON.stringify(value):value)]))+
  '<p>'+esc(p.interpretation||'')+'</p><div class="iw-actions">'+button('report-register','Register report source',canRegisterReport(w)?'':'disabled')+button('report-export-preview','Export report-source review')+'</div>':'';
  const ready=receipt?'<h5>Retained report source · saved revision '+esc(receipt.plan.revision)+'</h5><p>This source keeps its exact request and compared plan revision when later records change.</p><div class="iw-actions">'+button('report-source','Open retained report source')+
- (typeof w.host.openDelivery==='function'?button('report-delivery','Prepare client report'):'')+button('report-export-receipt','Export report-source metadata')+'</div><p>'+w.nativeDownloads(receipt._downloads||[])+'</p>':'';
+ (typeof w.host.openDelivery==='function'?button('report-delivery','Prepare client report'):'')+(receipt.report_source?.source_id&&typeof w.host.openScientificReport==='function'?button('report-publish','Prepare standalone scientific report'):'')+button('report-export-receipt','Export report-source metadata')+'</div><p>'+w.nativeDownloads(receipt._downloads||[])+'</p>':'';
  return '<section><h4>Use this request and its results in a scientific report</h4><p>Retain the complete original request, saved results, unresolved matches and sample context in the existing scientific report flow. Requests with no returned results remain reportable.</p>'+
  '<details><summary>Preserve an existing report selection</summary><p>Use an existing registered field report or choose its complete delivery-selection JSON to retain earlier report sections, figures and selected model/geography settings.</p>'+
  (prior?button('report-use-field','Use registered field report revision '+prior.revision,disabled):'')+
@@ -282,6 +282,13 @@ async function reportAction(w,action,b){
   if(document.querySelector('dialog[open]'))throw Error('Finish the current editor before opening another source.');
   w.cache();await (w.host.refreshState?.({force:true})||w.host.refresh?.({force:true}));
   if(!current(w,s,turn))return;w.host.navigate?.('sources');await w.host.openItem('sources',id);return;
+ }
+ if(action==='report-publish'){
+  const r=selectedReportReceipt(w),turn=w.generation;
+  if(w.root.querySelector('dialog[open]'))throw Error('Finish the current field editor before opening the report publisher.');
+  const module=await import('./implementation_source_reports.mjs');
+  if(!current(w,s,turn))return;
+  await module.openImplementationSourceReport(w,[r.report_source],{title:'Laboratory request and results · saved revision '+r.plan.revision});return;
  }
  if(action==='report-delivery'){
   const r=selectedReportReceipt(w);
