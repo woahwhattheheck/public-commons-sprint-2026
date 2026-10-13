@@ -12,6 +12,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 import assert from 'node:assert/strict';
 import {parseCommunityCsv,readInterventionCsv} from './web/community.mjs';
+import {communityScientificReceiving} from './community_scientific_receiving.mjs';
 
 const argv=process.argv.slice(2),options={};
 const flags=new Set(['resume-failed-tasks','help']);
@@ -188,7 +189,7 @@ async function showTask(id){
  }
  await target.click();await page.locator('#detail-dialog[open]').waitFor();
 }
-async function retainedStage(name,action,fill){
+async function retainedStage(name,action,fill,submit=null){
  let stage=saved.stages[name];
  if(stage?.result)return stage;
  if(stage?.request){
@@ -215,7 +216,7 @@ async function retainedStage(name,action,fill){
   try{
    await closeOverlays();await fill();
    const response=page.waitForResponse(r=>r.url()===origin+'/api/actions'&&r.request().postDataJSON()?.action===action);
-   await page.locator('#form-submit').click();
+   if(submit)await submit();else await page.locator('#form-submit').click();
    const returned=await response,value=await returned.json();
    assert.ok(returned.ok(),redact(JSON.stringify(value)));assert.ok(captured,'Retain the original UI request before dispatch.');
    assert.equal(value.workspace,stage.request.workspace);assert.equal(value.action,stage.request.action);
@@ -669,6 +670,11 @@ async function verifyCommunityJourney(state){
  assert.equal(await page.locator('[data-action="community-tab-'+expected.community.tab+'"]').getAttribute('aria-pressed'),'true');
 }
 
+
+const scientificReceiving=communityScientificReceiving({page,saved,c,api,endpoint,item,getState,checkpoint,
+ retainedStage,retainedJSON,download,openReport,openCommunityTab,showTask,closeOverlays,navigate,refresh,
+ screenshot,form,input,publicItem,output,workspace:()=>workspace});
+
 async function verifyReopened(){
  const state=await getState();assert.equal(state.data.project.id,saved.project_id);
  await verifyCommunityJourney(state);
@@ -688,7 +694,9 @@ async function verifyReopened(){
  await page.waitForFunction(title=>document.querySelector('#detail-title')?.textContent===title,original.title);
  assert.ok((await page.locator('#detail-body').innerText()).includes(original.interventions[0].next_step));
  const outputFiles=await inspectReport(report,revision,c.mode==='reopen'?'reopened-report':'restored-report');
+ const scientific=mappingCourse?await scientificReceiving.verify():null;
  saved.reopened={workspace_key:workspace,project_id:state.data.project.id,table_id:table.id,initial_plan_id:original.id,
+  ...(scientific?{community_scientific:scientific}:{}),
   revised_plan_id:revision.id,report_id:report.id,files:outputFiles,checked_at:new Date().toISOString()};
  await checkpoint();await closeOverlays();await page.reload({waitUntil:'domcontentloaded'});
  await page.waitForFunction(key=>document.querySelector('#workspace-select')?.value===key,workspace);
@@ -742,6 +750,7 @@ try{
   const deliveryStage=name=>editionKey==='legacy'?name:name+':'+editionKey;
   const deliveryPath=editionKey==='legacy'?output:path.join(output,'application-editions',editionKey);
   await checkpoint();
+  if(mappingCourse)await scientificReceiving.operate({edition,stageName:deliveryStage,directory:deliveryPath});
   await retainCommunityJourney(edition);
   const backup=await retainedStage(deliveryStage('backup'),'workspace.backup',async()=>{
    await page.locator('[data-action="backup"]').first().click();
@@ -769,7 +778,9 @@ try{
   await verifyReopened();
  }
  const unexpected=attempt.original_actions.filter(row=>!['source.import','community.table.import','community.plan.save',
-  'community.report.build','workspace.backup','workspace.restore'].includes(row.action));
+  'community.report.build','community.report.source.prepare','community.report.handover.export',
+  'community.report.handover.receive','source-reports.render','source-reports.export',
+  'workspace.backup','workspace.restore'].includes(row.action));
  assert.deepEqual(unexpected,[]);assert.deepEqual(attempt.page_errors,[]);assert.deepEqual(attempt.http_errors,[]);
  attempt.complete=true;attempt.completed_at=new Date().toISOString();saved.complete=true;await checkpoint();
  const result={schema:'upstate.community-browser-result/v1',operation,complete:true,mode:c.mode,
@@ -779,6 +790,7 @@ try{
   comparison:saved.comparison,report_downloads:saved.report_downloads,workspace_archive:saved.workspace_archive,
   received:saved.received,reopened:saved.reopened,community_journey:saved.community_journey,original_records:saved.original_records,progress:statePath,
   source_revision:c.source_revision??null,delivery_editions:saved.delivery_editions??{},
+  ...(saved.community_scientific?{community_scientific:saved.community_scientific}:{}),
   ...(mappingCourse?{mapping_selection:saved.mapping_selection,mapping_input:saved.mapping_input}:{}),
   attempts:saved.attempts.map(row=>({mode:row.mode,started_at:row.started_at,completed_at:row.completed_at,
    complete:Boolean(row.complete),error:row.error,screenshots:row.screenshots,page_errors:row.page_errors,http_errors:row.http_errors}))};
