@@ -56,6 +56,19 @@ export function validateCheckpointManifest(manifest){
   if(!plain(manifest)||manifest.schema!==CHECKPOINT_SCHEMA||!Number.isSafeInteger(manifest.generation)||manifest.generation<1||
     !plain(manifest.checkpoint)||!Array.isArray(manifest.references)||!plain(manifest.identity)||
     typeof manifest.savedAt!=='string')fail('Open a complete committed checkpoint manifest.');
+  if(manifest.imports!==undefined){
+    if(!Array.isArray(manifest.imports))fail('Keep the complete original checkpoint import journal.');
+    const seen=new Set();
+    for(const row of manifest.imports){
+      if(!plain(row)||typeof row.requestId!=='string'||!row.requestId||row.requestId.length>160||seen.has(row.requestId)||
+        typeof row.actor!=='string'||!row.actor||row.actor.length>300||!['ledger','registry'].includes(row.kind)||
+        !/^[a-f0-9]{64}$/.test(row.sourceSha256||'')||!Number.isSafeInteger(row.sourceBytes)||row.sourceBytes<1||
+        !Number.isSafeInteger(row.generation)||row.generation<1||row.generation>manifest.generation||
+        typeof row.savedAt!=='string'||!plain(row.result)||row.result.generation!==row.generation)
+        fail('Restore the exact committed checkpoint import request and result.');
+      seen.add(row.requestId);
+    }
+  }
   const identity=checkpointIdentity(manifest.checkpoint);
   if(JSON.stringify(identity)!==JSON.stringify(manifest.identity))fail('The checkpoint source identity changed.');
   const paths=new Set(),objects=new Map();
