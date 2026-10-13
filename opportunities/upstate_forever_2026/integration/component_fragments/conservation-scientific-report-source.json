@@ -17,7 +17,8 @@
         "model/conservation_decision_geography.py",
         "CONSERVATION_DECISION_METHODS.md",
         "model/CONSERVATION_REPORT_MAPS.md",
-        "integration/conservation_report_map_composition.json"
+        "integration/conservation_report_map_composition.json",
+        "model/conservation_families.py"
       ],
       "requires": [
         "conservation",
