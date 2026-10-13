@@ -22,6 +22,7 @@ APP = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(APP), str(APP / "operator")]
 from model.common import atomic_json, digest, held, read_json, verify_file
 from model.workspace import Workspace
+from model import scientific_report_editions
 
 
 def require(value, message):
@@ -221,18 +222,26 @@ def operate(args, workspace, out):
             payload["title"] = title
         if contact is not None:
             payload["contact"] = contact
-        preview = read("POST", "/api/source-reports/scientific-preview", payload)
-        require(preview["workspace_key"] == key
-                and [{name: row[name] for name in ("source_collection_id", "source_id")}
-                     for row in preview["sources"]] == choices,
-                "The preview changed the original ordered scientific sources.")
         saved_preview = out / "report-preview.json"
         if saved_preview.exists():
-            stable = lambda value: {name: item for name, item in value.items() if name != "existing"}
-            require(stable(read_json(saved_preview)) == stable(preview),
-                    "The original scientific preview changed during receiving resume.")
+            preview = read_json(saved_preview)
         else:
+            preview = read("POST", "/api/source-reports/scientific-preview", payload)
             atomic_json(saved_preview, preview, immutable=True)
+        require(preview.get("schema") == "upstate.observed-report-preview/v1"
+                and preview.get("workspace_key") == key
+                and preview.get("workspace") == str(workspace)
+                and preview.get("id") == digest(preview.get("render_identity"))
+                and preview.get("operation_id") == "observed-report-" + preview["id"][:20]
+                and all(preview.get(name) == preview["render_identity"].get(name)
+                        for name in ("title", "selection", "binding", "workspace"))
+                and [{name: row[name] for name in ("source_collection_id", "source_id")}
+                     for row in preview.get("sources", [])] == choices,
+                "The retained preview changed the original scientific report selection.")
+        scientific_report_editions.validate_request(original, payload, preview["render_identity"])
+        # Submit the exact retained payload. A completed original task reopens
+        # directly; a task interrupted after native rendering reconciles that
+        # completed edition through the maintained render action.
         rendered = action("render", "source-reports.render", {**payload, "preview_id": preview["id"]})
         edition_id = rendered["result"]["scientific_report_edition_id"]
         require(edition_id == preview["id"], "Rendering changed the prepared scientific identity.")
@@ -295,10 +304,6 @@ def operate(args, workspace, out):
             selection = {"title": edition["title"] + " — editable scientific study",
                          "roots": [{"kind": "scientific-report-editions", "id": edition_id}],
                          "include_related_results": True}
-            selected_preview = read("POST", "/api/study-transfer/preview", {"selection": selection})
-            require(any(row["kind"] == "scientific-report-editions" and row["id"] == edition_id
-                        for row in selected_preview["nodes"]),
-                    "The selected study preview omitted the original report edition.")
             selection_path = out / "selected-report-selection.json"
             if selection_path.exists():
                 retained = read_json(selection_path)
@@ -306,6 +311,10 @@ def operate(args, workspace, out):
                         "Resume the original selected report transfer.")
                 selection = retained
             else:
+                selected_preview = read("POST", "/api/study-transfer/preview", {"selection": selection})
+                require(any(row["kind"] == "scientific-report-editions" and row["id"] == edition_id
+                            for row in selected_preview["nodes"]),
+                        "The selected study preview omitted the original report edition.")
                 selection["preview_token"] = selected_preview["preview_token"]
                 atomic_json(selection_path, selection, immutable=True)
             exported = action("selected_export", "study.export", selection)
