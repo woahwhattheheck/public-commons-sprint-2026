@@ -387,6 +387,7 @@ def run_ledger(baseline: RasterInput, scenarios: Mapping[str, RasterInput],
                zones_path: Path | str, output: Path | str, *, options: Options | None = None,
                id_field: str = "huc12", name_field: str = "name", zone_crs: str | None = None,
                context_files: Sequence[Path | str] = (),
+               temporal_years: Sequence[int] | None = None,
                progress: Callable[[dict], None] | None = None) -> dict:
     """Compute a complete retained ledger. Resume repeats only uncommitted tiles.
 
@@ -401,6 +402,12 @@ def run_ledger(baseline: RasterInput, scenarios: Mapping[str, RasterInput],
         raise LedgerError("tile_size must be a positive integer")
     if options.support_scope not in ("all", "pair") or options.unknown_policy not in ("error", "exclude"):
         raise LedgerError("Unknown support_scope or unknown_policy")
+    temporal = None
+    if temporal_years is not None:
+        from . import landcover_temporal as temporal
+        temporal_years = temporal.years(temporal_years, len(scenarios) + 1)
+        if options.support_scope != "all":
+            raise LedgerError("Temporal accounting requires common support across all observations")
     output = Path(output).expanduser().resolve()
     sources = [_source(baseline.path, "baseline"), _source(zones_path, "zones")]
     sources += [_source(spec.path, "scenario:" + name) for name, spec in scenarios.items()]
@@ -423,6 +430,9 @@ def run_ledger(baseline: RasterInput, scenarios: Mapping[str, RasterInput],
               "zone_crs": zone_crs, "baseline_band": baseline.band,
               "scenario_bands": {k: v.band for k, v in scenarios.items()},
               "scenario_order": list(scenarios)}
+    if temporal is not None:
+        config["temporal"] = {"schema": temporal.SCHEMA, "years": temporal_years,
+                              "reducer_sha256": sha256_file(temporal.__file__)}
     signature = hashlib.sha256(_json_bytes(config)).hexdigest()
     if output.exists() and not options.resume:
         raise LedgerError(f"Output already exists; use --resume or a new output: {output}")
@@ -483,6 +493,8 @@ def run_ledger(baseline: RasterInput, scenarios: Mapping[str, RasterInput],
                     _initialize_raster(p, source, dtype, description)
                 elif not p.is_file():
                     raise LedgerError(f"Checkpoint raster missing: {p}; use a new output edition")
+        temporal_paths = (temporal.initialize_rasters(output, source, temporal_years, options.resume)
+                          if temporal is not None and options.write_rasters else {})
         windows = [(r, c, min(options.tile_size, source.height-r), min(options.tile_size, source.width-c))
                    for r in range(0, source.height, options.tile_size)
                    for c in range(0, source.width, options.tile_size)]
@@ -509,15 +521,22 @@ def run_ledger(baseline: RasterInput, scenarios: Mapping[str, RasterInput],
                     raise LedgerError("Watershed fractions exceed unique domain area")
                 np.clip(domain_weights, 0, 1, out=domain_weights)
             deltas = []
+            prepared_temporal = None
+            values = None
             if domain_weights.any():
                 values = [_read_classes(ds, spec, window, domain_weights > 0, options.unknown_policy)
                           for ds, spec in zip(datasets, specs)]
                 all_valid = np.logical_and.reduce([v[3] for v in values])
+                if temporal is not None:
+                    prepared_temporal = temporal.prepare_tile(values, all_valid & (domain_weights > 0), temporal_years)
                 for zid, weights in [("__domain__", domain_weights), *zone_weights]:
                     for name, scenario_values in zip(names, values[1:]):
                         delta = _delta(weights, values[0], scenario_values, all_valid,
                                        grid["cell_ha"], options.support_scope)
-                        delta.update(zone_id=zid, scenario=name); deltas.append(delta)
+                        delta.update(zone_id=zid, scenario=name)
+                        if temporal is not None and name == names[0]:
+                            delta["temporal"] = temporal.tile_delta(prepared_temporal, weights, grid["cell_ha"])
+                        deltas.append(delta)
                 if options.write_rasters:
                     for name, scenario_values in zip(names, values[1:]):
                         valid = (values[0][3] & scenario_values[3]) if options.support_scope == "pair" else all_valid
@@ -527,6 +546,8 @@ def run_ledger(baseline: RasterInput, scenarios: Mapping[str, RasterInput],
             elif options.write_rasters:
                 for path in paths.values():
                     _write_window(path, np.zeros((height, width), dtype=np.uint16), window)
+            if temporal_paths:
+                temporal.write_rasters(temporal_paths, values, prepared_temporal, window, (height, width))
             if options.write_rasters:
                 _write_window(fraction_path, domain_weights, window)
             # The complete per-window aggregate is the transaction. No mutable
@@ -544,6 +565,8 @@ def run_ledger(baseline: RasterInput, scenarios: Mapping[str, RasterInput],
                 raise LedgerError(f"Input changed during run: {record['path']}; create a new edition")
         report = _aggregate(db, zone_meta, names, config, grid, True)
         report["signature"] = signature
+        if temporal is not None:
+            report["timeline"] = temporal.aggregate(db, report, temporal_years)
         to_wgs84 = Transformer.from_crs(source.crs, "EPSG:4326", always_xy=True).transform
         geojson = {"type": "FeatureCollection", "features": [
             {"type": "Feature", "properties": {"zone_id": z.id, "zone_name": z.name},
@@ -558,6 +581,8 @@ def run_ledger(baseline: RasterInput, scenarios: Mapping[str, RasterInput],
         report["completed_at"] = datetime.now(timezone.utc).isoformat()
         report["rasters"] = {"study_area_fraction": fraction_path.name,
                              "transitions": {k: p.name for k, p in paths.items()}} if options.write_rasters else {}
+        if temporal_paths:
+            report["rasters"]["timeline"] = {key: path.name for key, path in temporal_paths.items()}
         atomic_json(output / "ledger.json", report)
         atomic_json(output / "status.json", {"signature": signature, "state": "complete", "completed_tiles": len(windows), "total_tiles": len(windows)})
         return report
