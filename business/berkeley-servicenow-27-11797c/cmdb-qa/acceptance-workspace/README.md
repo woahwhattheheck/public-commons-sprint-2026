@@ -79,3 +79,9 @@ Bryce's standing October 13 instruction applies to the complete application and 
 The maintained application now supports browsers which refuse IndexedDB: an explicit temporary-session store retains the complete original workflow and revision checks in the open view, while a permanent banner requires the normal complete-file save before reload. The existing browser database remains the preferred store and keeps its original atomic books/pending transaction. Current embedded and standalone editions consume the same full source and engine; no imported source rows, findings or decision history are omitted.
 
 The same full browser course also denies IndexedDB in one separate owned phone context, operates the complete authored example, downloads it, reloads the empty temporary session, imports the original revision-14 received case and downloads it unchanged. Actual screenshots retain both this storage condition and the persistent original course.
+
+## Complete unfinished-work receiving
+
+The same application now preserves each unfinished intake, mapping, comparison, review and acceptance group while navigating. Download a complete recovery JSON or include it automatically in the complete handover. Each group is bound to its original full workspace edition; a later recorded operation leaves earlier unfinished work available in a separate original-edition copy. Read the complete operating guide for the save, reopen and current-edition workflow.
+
+`drafts.cjs` validates complete recovery contents and original CSV identities. The existing browser-receiving.cjs course retains its full original desktop/phone operation and additionally exercises unfinished navigation, complete recovery, delayed CSV intent, earlier-edition separation and cold reopening. The original comparator, working-state transition and CLI remain unchanged.
