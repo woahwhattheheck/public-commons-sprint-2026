@@ -1,7 +1,7 @@
 {
   "schema": "upstate.keowee-watershed-source/v1",
   "operation_id": "ECO13-6A4E-KEOWEE-WATERSHED-JOIN",
-  "revision": "1.2.0",
+  "revision": "1.2.1",
   "source_commit": "f71d21b0eb204e5ef5306d069418ec0277eca670",
   "files": [
     {
@@ -96,22 +96,24 @@
     },
     {
       "path": "source_tools/install_keowee_watershed_join.py",
-      "bytes": 25763,
-      "sha256": "4267bb1394612a5cdab5873614a4fdc01a297141f0bb4af0e6587341bd7ffc37",
+      "bytes": 26456,
+      "sha256": "02d0ff889cc28ec8e139dc450a1d62836d043187d8c71869810a7251743ec44b",
       "previous_sha256": [
         "b34ef7ac82b9006b6346bfce568d8806bf76cc39a47957112b817fda62a379df",
         "e5c1794f3b68f019ab933c5727cf86dc4c5dce6563c22d8417f10885b8fd1ebf",
-        "10797da9d0236c46c9865b6757c7f24da7410e1e257a053b833057a63cb1a512"
+        "10797da9d0236c46c9865b6757c7f24da7410e1e257a053b833057a63cb1a512",
+        "4267bb1394612a5cdab5873614a4fdc01a297141f0bb4af0e6587341bd7ffc37"
       ]
     },
     {
       "path": "source_tools/INSTALL_KEOWEE_WATERSHED_JOIN.md",
-      "bytes": 13363,
-      "sha256": "f4383efb5156700f214a7b74284a6bdfbfef7deaeedb3ad2fa03bb92ef18f304",
+      "bytes": 15199,
+      "sha256": "66804829c74f89d1d4ef6e7fabd8743008553587a2005d8f35bda6ba04675a70",
       "previous_sha256": [
         "0e8d1e97892fd82f22c3dc67b4cd1045ff8a2baf13c96d8459b60f8470a95595",
         "be0aa7fcdde36e267dbaee64442bad3579f1824a1afcfa1555c16c5a5eea11e7",
-        "336491782319b285be89f48636c6890fc18dd5150ce28eb30bd460962c63ed11"
+        "336491782319b285be89f48636c6890fc18dd5150ce28eb30bd460962c63ed11",
+        "f4383efb5156700f214a7b74284a6bdfbfef7deaeedb3ad2fa03bb92ef18f304"
       ]
     },
     {
@@ -217,9 +219,11 @@
     },
     {
       "path": "operator/extensions/scientific-setup.json",
-      "bytes": 2306,
-      "sha256": "a06d12d5dd66e8e910711a2d369d68f6deb8d0adf90bb157f357ab6eed4f4ace",
-      "previous_sha256": []
+      "bytes": 2311,
+      "sha256": "e894a106e28acba4552d7e9d415c81bb43c5e10ab91b41527a0c1572bffa4aeb",
+      "previous_sha256": [
+        "a06d12d5dd66e8e910711a2d369d68f6deb8d0adf90bb157f357ab6eed4f4ace"
+      ]
     },
     {
       "path": "operator/SCIENTIFIC_SETUP_DESK.md",
@@ -256,6 +260,16 @@
       "path": "source/gura-setup-integration-20261013.json",
       "bytes": 3912,
       "sha256": "f43e35f65b4f103d36639a3fbee1147851643808caf7565799fe5d4ea22b967f"
+    },
+    {
+      "path": "source_tools/receive_first_gura_case.py",
+      "bytes": 12946,
+      "sha256": "1aa2b7c583a5a401ef450fa70addb99f1ed15ee2b90f35aca90a544fca21cacd"
+    },
+    {
+      "path": "source_tools/FIRST_GURA_RECEIVING.md",
+      "bytes": 8148,
+      "sha256": "912632751bf9420507894314404677a0498fda1cbb604b0a77481a789048a036"
     }
   ],
   "required_profile": {
@@ -568,6 +582,23 @@
       "merge": "f71d21b0eb204e5ef5306d069418ec0277eca670",
       "pull_request": 3082,
       "scope": "Original Gura setup assembly through existing scientific review and portable receiving"
+    },
+    {
+      "source_blobs": {
+        "source_tools/receive_first_gura_case.py": "b97e7cf4b314f744237016c3c32f2d5241825afb",
+        "source_tools/FIRST_GURA_RECEIVING.md": "37c67cd722fc4a1b5fbe1cb209d02f8b07ecc81c"
+      },
+      "scope": "Original first Gura intake, scientific setup, baseline and two alternatives with retained existing data paths"
+    }
+  ],
+  "integration_corrections": [
+    {
+      "path": "operator/extensions/scientific-setup.json",
+      "before_sha256": "a06d12d5dd66e8e910711a2d369d68f6deb8d0adf90bb157f357ab6eed4f4ace",
+      "after_sha256": "e894a106e28acba4552d7e9d415c81bb43c5e10ab91b41527a0c1572bffa4aeb",
+      "reason": "The original browser extension host requires /web-prefixed CSS URLs; the registry normalizes client.module and leaves declared client.styles unchanged.",
+      "source_registry_blob": "6f78503a2895b7a077a5159e1741ec3303606651",
+      "source_ref": "f09cc7ee4618c60dd99cabf8246a4a71d6280c3f"
     }
   ]
 }
