@@ -277,22 +277,21 @@ export async function openEvidenceVault(options = {}) {
 }
 export async function captureEvidence(plan, file, options = {}) {
   const limits=limitsFrom(options.limits), vault=assertVault(options.vault);
-  const links=collectLocalLinks(plan,limits), id=planIdentifier(plan);
+  collectLocalLinks(plan,limits);
+  const id=planIdentifier(plan);
   if (!file || typeof file.arrayBuffer !== "function") fail("Choose an original file from this device");
   const filename=originalName(file.name), bytes=await readBytes(file,limits.maxFileBytes);
   if (typeof file.size === "number" && bytes.length !== file.size) fail("Original file size changed during capture");
   const hash=await evidenceSha256(bytes), sourceId="file_"+hash.slice(0,24);
   const existing=plan.source_links.find(source=>source.id===sourceId);
   if (existing && (existing.kind!=="local_file" || existing.sha256!==hash || existing.size_bytes!==bytes.length)) fail("An existing source ID conflicts with these original bytes");
-  if (!existing) {
-    if (links.length >= limits.maxFiles) fail("Too many evidence files");
-    integer(links.reduce((sum,row)=>sum+row.size_bytes,0)+bytes.length,"Total evidence size",limits.maxTotalBytes);
-  }
   const link=existing || {
     id:sourceId,kind:"local_file",label:options.label || filename,
     reference:canonicalReference(id,hash,filename),sha256:hash,size_bytes:bytes.length,
     original_filename:filename,media_type:mediaType(file.type)
   };
+  // Apply the archive's unique-member accounting to the proposed source list.
+  if (!existing) collectLocalLinks({...plan,source_links:[...plan.source_links,link]},limits);
   await vault.putMany([{sha256:hash,size_bytes:bytes.length,bytes}]);
   return {source_link:JSON.parse(JSON.stringify(link)),deduplicated:!!existing};
 }
