@@ -19,7 +19,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", type=Path, required=True)
     parser.add_argument("--geographic-id", required=True, help="Original geographic-headwaters prepared ID")
-    parser.add_argument("--delivery-id", help="Optional completed mapped delivery for the exact original three runs")
+    parser.add_argument("--delivery-id", help="Optional completed mapped delivery using this baseline and selected original alternatives")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--preview", action="store_true")
     parser.add_argument("--expected-preview-id")
