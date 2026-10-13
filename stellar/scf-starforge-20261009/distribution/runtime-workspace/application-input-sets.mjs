@@ -1,3 +1,4 @@
+import {requireApplicationInputWorkspace} from './application-input-workspace.mjs';
 // MIT. Whole companion sets reuse original uploads and the existing Runtime workspace.
 import {constants} from 'node:fs';
 import {open,readdir,link,unlink,lstat} from 'node:fs/promises';
@@ -78,8 +79,7 @@ async function checkCompleteTree(root,manifest,{prefix=false}={}) {
 export function createApplicationInputSetsAPI(root,workspaceId,inputs) {
   const directory=join(root,'application-input-sets'),sets=join(directory,'originals'),working=join(directory,'working');
   async function live() {
-    const w=await readJSON(join(root,'workspace.json'));
-    need(w.workspaceId===workspaceId&&w.directory===root,'RUNTIME_WORKSPACE_IDENTITY_CHANGED',undefined,409);
+    await requireApplicationInputWorkspace(root,workspaceId);
   }
   async function mutate(fn) {
     return withWorkspaceWrite(root,async()=>{

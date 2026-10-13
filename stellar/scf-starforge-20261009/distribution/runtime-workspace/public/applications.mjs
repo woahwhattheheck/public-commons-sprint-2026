@@ -6,6 +6,7 @@ import { createOpenApiConnectionSetupView } from './openapi-connection-setup.mjs
 import { createApplicationOutputReader } from './application-output.mjs';
 import { createApplicationLibrary } from './application-library.mjs';
 import { createApplicationInputsView } from './application-inputs.mjs';
+import { createApplicationResultSetsView } from './application-result-sets.mjs';
 import { createApplicationDrafts } from './application-drafts.mjs';
 import { createGrantApplicationHandoffView } from './grant-application-handoff.mjs';
 import { createWorkbookResultsView, renderWorkbookReview, workbookFormFromDescriptor, isWorkbookApplication } from './workbook-results.mjs';
@@ -93,6 +94,11 @@ export function createApplicationsWorkspaceView({ root, api, getState, getToken,
   const inputRoot=element('div');
   const inputLibrary=createApplicationInputsView({root:inputRoot,api,getToken,
     getWorkspaceId:()=>getState()?.workspaceId,onError:error,onMessage:message,readSaved,saveSaved});
+  const resultSetsRoot = element('div');
+  const resultSets = createApplicationResultSetsView({root:resultSetsRoot,api,
+    getWorkspaceId:()=>getState()?.workspaceId,
+    getContext:()=>({application:selected(),operationId:selectedRun}),
+    readSaved,saveSaved,openSet:setId=>inputLibrary.openSet(setId),onMessage:message,onError:error});
   const draftRoot = element('div'); draftRoot.id = 'application-setup-drafts';
   const grantHandoffRoot = element('div'); grantHandoffRoot.id = 'grant-application-handoff';
   const configuration = element('details'); configuration.open = true;
@@ -212,7 +218,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, getToken,
   outputPanel.append(outputDescription, outputReaderRoot, inputForm, workbookResults.root);
   const outputReader = createApplicationOutputReader({ root: outputReaderRoot, api,
     getWorkspaceId: () => getState()?.workspaceId, error, output });
-  root.replaceChildren(header, intro, libraryRoot, inputRoot, configuration, grantHandoffRoot, selectedPanel, history, outputPanel);
+  root.replaceChildren(header, intro, libraryRoot, inputRoot, configuration, grantHandoffRoot, selectedPanel, history, outputPanel, resultSetsRoot);
   const grantHandoff = createGrantApplicationHandoffView({
     root: grantHandoffRoot, api, getState, getApplications: () => data?.applications ?? [], message, error,
     async onApplicationSaved(id) {
@@ -738,7 +744,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, getToken,
       }
       drafts.refresh();
       if (!data.applications.some(item => item.id === selectedId)) { selectedId = data.applications[0]?.id ?? null; resetHistory(selectedId); }
-      library.update(data, selectedId); inputLibrary.update(); grantHandoff.update();
+      library.update(data, selectedId); inputLibrary.update(); resultSets.update(); grantHandoff.update();
       recoverRequest.hidden = !readSaved('pending');
       if (data.applications.length && editingId === null && !configurationReview && !label.value && !drafts.hasDraft())
         configuration.open = false;
@@ -799,7 +805,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, getToken,
       scope++; navigationVersion++; data = null; selectedId = selectedRun = editingId = null; configurationReview = startReview = null;
       resetHistory(null); outputReader.reset(); initial = true; drafts.reset(); library.reset(); label.value = ''; kind.replaceChildren(); runtime.replaceChildren();
       selectedPanel.hidden = history.hidden = outputPanel.hidden = reviewResult.hidden = true; configuration.open = true;
-      openapiSetup.reset(); inputLibrary.reset(); workbookResults.reset(); grantHandoff.reset();
+      openapiSetup.reset(); inputLibrary.reset(); resultSets.reset(); workbookResults.reset(); grantHandoff.reset();
     },
   };
 }

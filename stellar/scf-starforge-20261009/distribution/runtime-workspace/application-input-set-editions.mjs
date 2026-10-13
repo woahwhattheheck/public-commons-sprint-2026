@@ -1,3 +1,4 @@
+import {requireApplicationInputWorkspace} from './application-input-workspace.mjs';
 // MIT. Capture edited companion trees through the original retained upload engine.
 import {readdir} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
@@ -59,8 +60,7 @@ function validatedCapture(value) {
 export function createApplicationInputSetEditionsAPI(root,workspaceId,model) {
   const directory=join(root,'application-input-sets','editions'),requests=join(directory,'requests'),imports=join(directory,'imports');
   async function live() {
-    const value=await readJSON(join(root,'workspace.json'));
-    need(value.workspaceId===workspaceId&&value.directory===root,'RUNTIME_WORKSPACE_IDENTITY_CHANGED',undefined,409);
+    await requireApplicationInputWorkspace(root,workspaceId);
   }
   async function mutate(fn) {
     return withWorkspaceWrite(root,async()=>{
