@@ -12,6 +12,73 @@ Retained candidate sources and source-link snapshots/bindings are immutable unde
 
 The native module does not run the prioritization model. Candidate source snapshots and modeled_benefits are retained as supplied. Costs come from the operator's actual budget, commitment or expenditure records. Field observations come from actual visits and source results. The blank method catalog contains planning templates; it supplies neither measured results nor invented cost rates.
 
+## Sampling and analytical support in the retained report
+
+The ordinary `ImplementationStore.report(plan_id, output, as_of=..., revision=...)`
+now presents the saved observation cohort before the complete row register.
+Each displayed cohort retains its exact site, parameter, unit, basis, fraction,
+native method/context/name, original CSV project/activity/media and method
+context, and original CSV/mapping identity. Original CSV metadata is labelled
+separately; it does not replace a mapped native definition.
+
+For each cohort the report shows numeric, censored, text and missing row counts;
+distinct native activities, visits and sample IDs; first/last original collection
+timestamps; undated rows; original qualifiers, QA labels and limits. Timestamps
+are ordered as their declared timezone-aware instants and displayed unchanged.
+The report's operational `as_of` date is separate from sampling support. Different
+analytes can share a visit, so counts across cohorts are not additive. The support
+section does not substitute values for censored observations or infer continuous
+coverage, concentration means, annual loads or threshold findings.
+
+The source-edition table exposes the retained CSV SHA256, source link, mapping
+SHA256, original import operations and referenced original record counts.
+Each readable result includes its native activity/visit, collection timestamp,
+full method definition and original CSV record/line range. The existing
+`observations.csv` now gives method context/name and source selectors their own
+columns; the full `lab_source` object and any other original fields remain in
+`extra_json` and unchanged `plan.json`. Site HTML and `sites.csv` expose the
+original declared coordinate reference system alongside coordinates. Wide tables scroll inside their own focusable region at
+narrow widths; long method definitions keep readable column widths. Print output
+uses the page width through the existing print layout.
+
+This uses the existing eleven-member report, existing saved-plan revision and
+normal report manifest/export/reopen route. It adds no installation dependency.
+Historical retained reports keep their original bytes; create a fresh report
+output for the same selected revision to receive this presentation. Keep the
+old report and its source identity available when comparing editions.
+
+### Continue the completed Eighteenmile field course
+
+The actual source receiving project is
+`dc92b8b9-6eda-4362-b12d-3cf2ef6c9007`. Its original laboratory plan
+`eighteenmile-2023-original-lake-samples` revision 2 has 88 result rows:
+45 chlorophyll and 43 microcystins/nodularin. The complete original source has
+82 numeric and six below-reporting-limit rows, 88 distinct ActivityIdentifiers
+and 48 station/date/time collection events. Method 520011's two original
+censored results use the 0.1 ug/L reporting limit; method 520019's four censored
+results use 0.016 ug/L. Keep the methods and original limits separate.
+The independent station/event plan remains revision 3 with no laboratory
+observations. Its declared NAD83 coordinates and original fixed EST timestamps
+stay unchanged.
+
+Continue C5AE's existing completed field/laboratory course with its own retained
+application and Workspace. Refresh only the selected report edition into a new
+output, retain it through the ordinary report operation, and use the maintained
+`source_tools/deliver_field_sources.py` with the explicit new laboratory report
+ID when multiple editions exist. The original evidence packages, source rows,
+two native plans and full Workspace archive keep their own identities.
+
+The producing peer must open and LOOK at the exact refreshed populated HTML,
+both original and native CSV downloads, report/source attachments and received
+working project. Operate table scrolling and downloads at desktop and 390px;
+view the full method names, timestamps, units/limits and declared CRS; reopen
+the selected saved report and exact exported sources. Inspect actual outgoing
+attachments in their normal viewer and fix concrete readability or control
+issues in the maintained source. A source review, DOM check, screenshot capture
+without viewing, or another peer's approval does not replace that product use.
+This remains the same original native receiving course and the standing
+application AGENTS inspection requirement.
+
 ## Files and public API
 
 The public module is model.implementation. It exposes:

@@ -29,11 +29,19 @@ Save these ordinary native files through the normal file interface for subsequen
 
 Each part records its original bank, zero-based index, offset, byte count and SHA256. The part's base64 content is one contiguous segment of that bank's gzip stream. The manifest records every exact Git blob plus the complete compressed and original JSON sizes and hashes.
 
-The receiver verifies the contiguous part order and every part hash, reconstructs and verifies the full gzip stream, decompresses it, and verifies the full original JSON. Each source member is checked against its byte count, SHA256 and native Git blob identity. All bank and combined file counts and byte totals must agree.
+The receiver verifies the contiguous part order and every part hash, reconstructs and verifies the full gzip stream, decompresses it, and verifies the full original JSON. Each source member is checked against its byte count and SHA256. Every declared Git identity must match the actual bytes; the receiver derives the Git identity for retained text contracts that omit it. All declared bank counts and totals, and the complete transfer inventory, must agree.
 
 A file path must remain relative to the received source directory. Duplicate paths across banks are rejected. The receiving directory and its source/banks subdirectories must be ordinary directories. Existing identical files can be reused; a different existing file is preserved and the operation reports the exact conflict. Atomic publication uses a same-directory temporary file and a non-overwriting hard link.
 
 All source members are validated before any source file is published. If receiving is interrupted, the same command verifies and reuses completed original files.
+
+## Retained text-source contracts
+
+The same materializer accepts the original `commons.source-bank/v1`, `commons.source-text-bank/v1` and `upstate.source-bank/v1` JSON. Every member has its original relative `path`, `bytes` and `sha256`. The first schema supports either canonical `content_base64` with its original `git_blob`, or a literal UTF-8 `content` string. The two text schemas require literal `content`. A member cannot contain both representations.
+
+The two Commons contracts require original `file_count` and `source_bytes`. The retained Upstate text contract may omit those totals and member Git identities. The receiver computes the complete inventory from actual bytes and verifies it against the transfer manifest; every field declared by the original bank is still enforced. It records computed Git identities in `receiving.json`, while retaining the exact original bank JSON without adding or rewriting metadata.
+
+For a directly pasted three-line Python receiver prepared by `prepareInlineReceiver`, run that script with one new owned output directory. It retains the exact maintained materializer plus manifest/parts beneath `input/`, then uses this same receiving implementation beneath `received/`. Both payload and bootstrap are encoded so Canvas whitespace transformations cannot alter executable indentation. See [SOURCE_BANK_TRANSFER.md](SOURCE_BANK_TRANSFER.md) for the sender API and complete size budget.
 
 ## Original Ecosystem Sciences receiving transfer
 
@@ -60,3 +68,5 @@ Use [SOURCE_BANK_TRANSFER.md](SOURCE_BANK_TRANSFER.md) and the dependency-free `
 The maintained receiving branch also retains the 22-file current-successor package and 29-file source-tools closure under `source/receiving/20261013/`. Compose those separate source editions with the original 660-file package while preserving later working changes. The resulting retained source inventory contains 703 unique application files.
 
 Carry the current application instruction copies with the handoff. Owner instruction `2026-10-13.1` requires opening and inspecting the exact outgoing client-facing product, operating its important populated controls, downloads and reopening, and checking screenshare and narrow/mobile layouts where relevant. View actual rendered output and repair clipping or unreadable presentation. Keep the plain industrial design and existing native source/computation owners.
+
+The current owner-directed inspection rule includes every outgoing attachment. Producing workers open and actually view the exact PDF/report pages, HTML, maps and usable archive/project contents, and operate their recipient-facing controls and downloads. Capturing screenshots without viewing them is insufficient. Carry the current application AGENTS and instruction copies with a standalone handoff, perform focused repairs, and continue the existing delivery course.

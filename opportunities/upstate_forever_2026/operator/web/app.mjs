@@ -813,11 +813,36 @@ async function gridForm(id){
   return submitAction('grid.prepare',selection);
  },()=>{bindCollection('collection',[...rasterRoles.map(([key])=>['raster_'+key,'raster']),['reporting_source','vector'],['domain_source','vector']]);bindNativeModelFields();bindGridResolution(original);});
 }
+function scenarioMaskSources(collection){
+ return sourceRows(collection,'vector|raster').map(row=>[row.id,
+  (row.id==='GURA_NLCD'?sourceDisplayTitle(row):row.title||row.name||short(row.id))+
+  (row.kind==='raster'?' · Binary raster mask':' · Polygon mask')]);
+}
+function scenarioMaskSource(collection,id){
+ return sourceRows(collection,'vector|raster').find(row=>row.id===id);
+}
+function updatePatchMask(node,collection,enabled=true){
+ const source=scenarioMaskSource(collection,val('mask_source',node)),raster=source?.kind==='raster';
+ for(const section of $$('[data-patch-vector]',node)){
+  section.hidden=raster;
+  for(const control of $$('input,select,textarea,button',section))control.disabled=!enabled||raster;
+ }
+ const note=$('[data-patch-mask-note]',node);
+ note.textContent=raster?
+  'Binary raster: band 1 must match the selected native grid exactly and contain only valid 0/1 values. Cells equal to 1 select the change; zero and mask NoData are excluded. Native preparation checks the original raster.':
+  source?'Polygon mask: cells are selected by the original pixel-centre rule. Optional layer and exact field selections apply to this vector source.':
+  'Choose an original polygon source or an aligned binary raster mask.';
+}
 function patchRow(collection,row={}){
+ const present=value=>value!==null&&typeof value==='object'?Object.keys(value).length>0:Boolean(value);
+ if(scenarioMaskSource(collection,row.mask_source_id)?.kind==='raster'&&(present(row.layer)||present(row.where)))
+  throw Error('This saved raster-mask patch contains a layer or attribute selection. Raster masks use band 1; correct the original scenario selection before revising it.');
  return '<fieldset class="patch" data-patch><div class="patch-header"><legend>Land-cover change</legend>'+button('row-remove','Remove change','','small')+'</div><div class="form-grid">'+
- field('Original polygon mask',select('mask_source',sourceRows(collection,'vector'),row.mask_source_id))+field('Layer name',input('mask_layer','text',row.layer||''),'Optional for a source with one layer.')+
+ field('Original polygon or binary raster mask',select('mask_source',scenarioMaskSources(collection),row.mask_source_id))+
+ '<p class="note full" data-patch-mask-note role="status"></p>'+
+ field('Layer name',input('mask_layer','text',row.layer||''),'Optional for a vector source with one layer.').replace('<label','<label data-patch-vector')+
  field('Original land-cover codes',input('from_codes','text',(row.from_codes||[]).join(', '),'required'),'Separate the exact integer codes with commas.')+field('Replacement land-cover code',input('to_code','number',row.to_code??'','required step="1"'))+
- field('Reason for this change',area('patch_reason',row.reason||'','required'),'',true)+filterEditor('patch',row.where)+'</div></fieldset>';
+ field('Reason for this change',area('patch_reason',row.reason||'','required'),'',true)+filterEditor('patch',row.where).replace('<fieldset','<fieldset data-patch-vector')+'</div></fieldset>';
 }
 async function scenarioForm(id){
  requireSources();const current=formOpening('scenario.save');
@@ -826,7 +851,7 @@ async function scenarioForm(id){
  catch(error){if(current())throw error;return;}
  if(!current())return;
  const collection=collectionDefault(row);
- openForm(row?'Revise land-cover scenario':'New land-cover scenario','Keep an unchanged baseline or define explicit changes using original polygon masks and land-cover codes. The model records the scenario separately from the source data.',
+ openForm(row?'Revise land-cover scenario':'New land-cover scenario','Keep an unchanged baseline or define ordered changes using original polygon or aligned binary raster masks and land-cover codes. The model records the scenario separately from the source data.',
  '<div class="form-grid">'+field('Scenario title',input('title','text',row?.title?row.title+' · revision':'','required'))+field('Scenario type',select('kind',[['baseline','Unchanged source baseline'],['landcover','Explicit land-cover changes']],row?.kind||'baseline'))+
  field('Original source edition',select('collection',sources(),collection))+field('Scenario reason',area('reason',row?.reason||'','required'),'',true)+
  '<div class="full" id="scenario-patches"><div id="patch-list">'+(row?.patches||[]).map(x=>patchRow(collection,x)).join('')+'</div>'+button('patch-add','Add land-cover change','','small')+'</div></div>',
@@ -837,14 +862,29 @@ async function scenarioForm(id){
    if(!codes.length||codes.some(x=>!x||!Number.isSafeInteger(Number(x))))throw Error('Enter the exact original integer land-cover codes.');
    const to=num('to_code',node);if(!Number.isSafeInteger(to))throw Error('The replacement land-cover code must be an integer.');
    const patch={mask_source_id:val('mask_source',node),from_codes:codes.map(Number),to_code:to,reason:val('patch_reason',node)};
-   const layer=val('mask_layer',node).trim(),where=readFilter('patch',node);if(layer)patch.layer=layer;if(where)patch.where=where;patches.push(patch);
+   const source=scenarioMaskSource(val('collection'),patch.mask_source_id);
+   if(!source)throw Error('Choose an original polygon or binary raster mask from this source edition.');
+   if(source.kind==='vector'){
+    const layer=val('mask_layer',node).trim(),where=readFilter('patch',node);if(layer)patch.layer=layer;if(where)patch.where=where;
+   }
+   patches.push(patch);
   }
   if(kind==='landcover'&&!patches.length)throw Error('Add at least one actual land-cover change.');
   return submitAction('scenario.save',{title:val('title'),kind,source_collection_id:val('collection'),reason:val('reason'),patches});
  },()=>{
-  const update=()=>{const visible=val('kind')==='landcover';$('#scenario-patches').hidden=!visible;for(const el of $$('input,select,textarea', $('#scenario-patches')))el.disabled=!visible;};
+  const update=()=>{
+   const visible=val('kind')==='landcover';$('#scenario-patches').hidden=!visible;
+   for(const el of $$('input,select,textarea,button', $('#scenario-patches')))el.disabled=!visible;
+   for(const node of $$('[data-patch]',form))updatePatchMask(node,val('collection'),visible);
+  };
   form.elements.namedItem('kind').addEventListener('change',update);
-  form.elements.namedItem('collection').addEventListener('change',()=>{for(const el of $$('[name="mask_source"]',form))setOptions(el,sourceRows(val('collection'),'vector'));});
+  form.elements.namedItem('collection').addEventListener('change',()=>{
+   for(const el of $$('[name="mask_source"]',form))setOptions(el,scenarioMaskSources(val('collection')));
+   update();
+  });
+  $('#patch-list').addEventListener('change',event=>{
+   if(event.target.name==='mask_source')updatePatchMask(event.target.closest('[data-patch]'),val('collection'),val('kind')==='landcover');
+  });
   update();
  });
 }
@@ -1359,7 +1399,7 @@ async function dispatch(button){
  if(action==='runtime')return runtimeDialog();
  if(action==='filter-add'){button.closest('[data-filter]').querySelector('[data-filter-rows]').insertAdjacentHTML('beforeend',filterRow());return;}
  if(action==='parameter-add'){$('#parameter-rows').insertAdjacentHTML('beforeend',parameterRow());return;}
- if(action==='patch-add'){$('#patch-list').insertAdjacentHTML('beforeend',patchRow(val('collection')));return;}
+ if(action==='patch-add'){const list=$('#patch-list');list.insertAdjacentHTML('beforeend',patchRow(val('collection')));updatePatchMask(list.lastElementChild,val('collection'),val('kind')==='landcover');return;}
  if(action==='row-remove'){button.closest('[data-filter-row],[data-parameter-row],[data-patch]').remove();return;}
  if(action==='inspect-form-vector')return inspectFormVector(button);
 }

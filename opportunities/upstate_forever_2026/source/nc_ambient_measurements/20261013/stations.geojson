@@ -1,0 +1,70 @@
+{
+  "type": "FeatureCollection",
+  "name": "Original NC ambient station coordinates",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "EPSG:4269"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "id": "21NC03WQ-H6000000",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.97642,
+          35.09222
+        ]
+      },
+      "properties": {
+        "organization": "21NC03WQ",
+        "station_id": "21NC03WQ-H6000000",
+        "name": "HORSEPASTURE RIV AT NC 281 NR UNION",
+        "latitude": 35.09222,
+        "longitude": -82.97642,
+        "datum": "NAD83",
+        "huc8": "03060101",
+        "county": "175",
+        "records": 1957,
+        "characteristics": 29,
+        "first_date": "2008-01-28",
+        "last_date": "2025-12-03",
+        "source": {
+          "path": "source/nc_ambient_measurements/20261013/original/h600-station.csv",
+          "row": 2
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21NC03WQ-H3200000",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.15964,
+          35.00824
+        ]
+      },
+      "properties": {
+        "organization": "21NC03WQ",
+        "station_id": "21NC03WQ-H3200000",
+        "name": "BIG CRK BESIDE SR 1608 NR HIGHLANDS",
+        "latitude": 35.00824,
+        "longitude": -83.15964,
+        "datum": "NAD83",
+        "huc8": "03060102",
+        "county": "113",
+        "records": 0,
+        "characteristics": 0,
+        "first_date": null,
+        "last_date": null,
+        "source": {
+          "path": "source/nc_ambient_measurements/20261013/original/h320-station.csv",
+          "row": 2
+        }
+      }
+    }
+  ]
+}

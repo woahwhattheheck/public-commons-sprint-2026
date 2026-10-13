@@ -221,6 +221,8 @@ def document(workspace, db, kind, identity):
     try:
         if kind == "snapshot":
             return _snapshot(workspace, db, identity)
+        if kind == "snapshot-fields":
+            return engine.inspectSnapshot(_snapshot(workspace, db, identity))
         if kind not in ("handoff", "return-review", "annual-review"):
             raise Problem("Unknown receiving document type.", 404, "UNKNOWN_DOCUMENT_KIND")
         return _load(db, kind, identity)

@@ -4,6 +4,7 @@
   "extend_components": {
     "assessment-context": {
       "paths": [
+        "model/assessment_map_context.py",
         "model/common.py",
         "model/model_selection.py",
         "model/native_versions.py",
@@ -13,6 +14,7 @@
         "model/profiles.py",
         "model/rasters.py",
         "model/scientific_figures.py",
+        "model/scientific_map_figures.py",
         "model/scientific_report.py",
         "operator/SCIENTIFIC_REPORT_EDITIONS.md",
         "operator/extensions/source-reports.json",
@@ -26,6 +28,7 @@
     },
     "station-assessment": {
       "paths": [
+        "model/assessment_map_context.py",
         "model/common.py",
         "model/model_selection.py",
         "model/native_versions.py",
@@ -35,6 +38,7 @@
         "model/profiles.py",
         "model/rasters.py",
         "model/scientific_figures.py",
+        "model/scientific_map_figures.py",
         "model/scientific_report.py",
         "operator/SCIENTIFIC_REPORT_EDITIONS.md",
         "operator/extensions/source-reports.json",

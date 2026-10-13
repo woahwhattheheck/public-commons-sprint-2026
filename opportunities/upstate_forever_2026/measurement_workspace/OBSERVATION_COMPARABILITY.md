@@ -201,27 +201,27 @@ archives remain readable through their original saved marker.
 
 ## Inspect the exact outgoing product
 
-Bryce's rendered-product requirement applies to this receiving course. Before
-calling a customer-facing desk, scientific report or export ready, the producing
-peer must open and render its exact outgoing edition, look at the real screen
-or actual screenshots, and operate the important controls. Exercise the real
-populated source, an empty filtered result, an unavailable input/error, original
-downloads, saved comparison/calendar selections and reopening at the intended
-screenshare width and a narrow/mobile width. Inspect the native PDF, HTML and
-portable receiving output as well as the source desk.
+<!-- bryce-rendered-product-inspection:begin -->
+## Standing lab rule: inspect the rendered product before presenting it
 
-Keep the industrial presentation: readable tables, clear hierarchy, consistent
-spacing and typography, restrained controls and complete useful source labels.
-Repair clipping, overflow, unreadable or unstyled content before presentation.
-Code review, DOM assertions, an HTTP success, captured-but-unviewed screenshots
-or another peer's approval do not replace seeing this exact rendered product.
+Bryce's direct owner instruction, October 13, 2026. This applies to every current and future lab peer, provider, model, harness, local session, cloud session, and delegated or child worker.
 
-Continue this in the original 7C31 receiving operation and report the actual
-opened source edition, completed controls and rendered views alongside its
-existing native result. Preserve the original complete source and report
-editions. Follow through on any concrete display or source issue within this
-course; do not start a separate broad validation programme. Delegated producers
-carry this requirement into their own current receiving instructions.
+Before calling a client/prospect-facing app, site, dashboard, demo, report, presentation, or export ready, or putting it before a client/prospect, the responsible producing peer MUST open/run/render the exact outgoing version and visually LOOK at the actual result. Inspect at the actual screenshare/presentation width and at narrow/mobile widths where relevant. Operate critical controls; inspect applicable loaded, empty, loading, and error states; exercise downloads/exports and reopen the delivered files. Capture real screenshots or rendered page images and actually VIEW them. Capturing without viewing does not satisfy this rule.
+
+This includes ALL attachments. Literally observe the actual thing the way a user or recipient would see and use it: open and view downloaded HTML, every relevant PDF/report page, slides, spreadsheets, maps, images, video/audio, archives and project attachments in their normal recipient-facing viewer or application; play audiovisual media and inspect the usable contents of archives/projects. Metadata, schemas, source text, and a browser link do not substitute for opening the attachment and using the delivered result normally.
+
+Fix ugly, cramped, broken, unstyled, clipped, overflowing, or unreadable results within the authorized task before presenting them. Favor simple industrial/plain presentation, consistent spacing and typography, readable tables, and working controls. Do not add decorative template slop. Source review, unit tests, HTTP 200, DOM counts, a reviewer/model approval, or an evidence form do not substitute for looking at and operating the real outgoing product.
+
+This is focused internal product validation, never permission to build or submit a proof, test, or verification product, run broad suites, or repeatedly recheck an unchanged accepted version. Building and integrating the actual deliverable remains the main work; do not substitute endless reviews for delivery. Retain an exact-version visual receipt in the handoff: source/head or artifact hash, URL/file, viewport sizes, screenshots actually viewed, controls/states/export files exercised, fixes, and any precise unresolved gap. A changed outgoing version needs inspection of the affected result.
+
+Bryce explicitly clarified: "that includes all attachments and this does not become review theatre or test theatre you need to literally observe the actual thing the way a user would see and use it". A checklist, screenshot folder, receipt, passing test, or parallel review bureaucracy is not the requirement or a substitute for actual observation and normal use. Perform focused fixes and keep shipping the main work; create no review or approval gate.
+
+Bryce also instructed: "also add that if u make a video use voice gen tts not robot voices, use generative stuff we have models, use them". For video/media narration, use available high-quality generative voice/TTS and applicable generative visual/media capabilities when helpful, with natural professional delivery instead of robotic default voices. Actually play/listen/watch the final exported attachment and inspect clarity, pronunciation, pacing, timing, and audio alignment. Reviewing a text script does not substitute for experiencing the final video/audio. This adds no paid-service purchase or real-person voice-cloning authorization; preserve lab attribution and third-party copyright/license controls.
+
+Pass this rule to child/delegated workers and persist it in owner-controlled provider/project/cloud instruction copies. Record delivery and readback coverage; never claim every running session loaded it without evidence. This rule creates no hooks, watchers, restarts, approval queue, credential restrictions, or new publication authority. Preserve all existing owner rules, including no llama.cpp, no private GitHub repositories or Actions, focused validation, attribution, incident communication, personal meeting approval, contact holds, demo pauses, bounty restrictions, and owner cutoffs.
+
+Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
+<!-- bryce-rendered-product-inspection:end -->
 
 ## Use comparable periods inside the application
 
@@ -309,3 +309,86 @@ saved scientific report, receive and reopen the Study in a fresh operator, open
 the comparison card, inspect its exact original year/title/source, download the
 complete source ZIP and CSV, then exercise both report-composer choices. View
 the actual populated desktop and narrow rendered result before presentation.
+
+
+## One complete native receiving course
+
+The maintained receiving command continues the original cohort through the actual
+operator queue, saved comparison, native scientific report, selected Study
+transfer and full Workspace receiving. It uses the original calculation and
+scientific renderer. Install the complete current application, including this
+component and the existing Study transfer component, before starting.
+
+From the actual application directory, with the original restored Workspace:
+
+```sh
+python -B source_tools/receive_observation_comparability.py \
+  --workspace /actual/received/workspace \
+  --state-directory /actual/cohort-receiving/operator-state \
+  --restore-directory /actual/cohort-receiving/restored \
+  --output /actual/cohort-receiving/output \
+  --operation-id ECO-INTEGRATE-ASTRA13-7C31
+
+```
+
+The path examples name the existing receiver's owned locations. Substitute its
+actual paths once, then retain that exact command and output directory. The
+default selects the installed original SV-833 index and its maintained default
+year pair/title. To choose a retained original cohort, supply both
+`--source-collection ORIGINAL_COLLECTION --source-id ORIGINAL_SOURCE`.
+Explicit `--year-a`, `--year-b` and
+`--title` select the same values exposed in the native desk.
+The native source reader validates the complete original inventory before saving.
+
+The command freezes its actual save request before queue admission and records
+the actual accepted task and operation IDs. Ordinary retries use the same
+arguments and output. Interrupted tasks resume through the maintained queue;
+after repairing a failed original task, add `--resume-failed`.
+The completed comparison and report remain the selected originals when installed
+source advances. An unfinished report whose original renderer changed returns
+the maintained renderer's exact exception for source repair; it does not silently
+substitute a different preview or repeat a completed report.
+
+A single run performs the whole receiving course:
+
+1. Open the original installed or retained cohort through the existing catalogue
+   and inputs routes; queue and reopen the exact saved comparison.
+2. Preview and queue its original scientific report; consume the complete native
+   report ZIP and original comparison/report download streams.
+3. Export the selected scientific report as an editable Study; confirm its archive
+   contains the original comparison receipt and full retained source tree.
+4. Upload and restore that exact Study through the native task queue; reopen the
+   original comparison and its received-source card.
+5. Export, upload and restore the full original Workspace, preserving the complete
+   original comparison and report files.
+6. Restart the original operator task registry. Then run this same receiver from
+   each actual restored application's own source in a separate Python process,
+   reopening the original report and editor there.
+7. Write `browser-handoff.json` with the exact selected IDs and both
+   restored project paths for the already assigned visual receiving phase.
+
+`cohort-receiving.json` retains the selected source, original requests,
+accepted tasks, original downloads, source implementation history, all receiving
+results and cold-reopen commands. `original-product.json` retains the
+complete original output identity used by both restored applications. The output
+also keeps the original selected Study ZIP, full Workspace ZIP, report ZIP and
+each cold process's actual stdout/stderr. The course uses its own kernel lock and supervises the native operator inside
+one owned Linux process group. `--timeout-seconds` bounds that whole invocation;
+`--shutdown-seconds` bounds its separate graceful stop before terminating that
+same verified process group. Actual PID/start/boot identity is recorded in
+`supervision.json`. Native imports and every phase run inside the owned child,
+so a queued report's blocking operator shutdown cannot trap the parent. The
+native and cold children inherit the original output lease if their parent
+stops; later invocations cannot publish over an active original continuation.
+Retained queue requests and completed files remain the source for an ordinary
+same-command retry after interruption.
+
+The native command completes native receiving. Continue the same operation in
+the actual browser using the exact handoff, under the standing owner instruction
+above: open and look at the outgoing original screens and files at desktop and
+390px; operate period/source/title, rows, shared-month calendar, save/reopen,
+replace/append report selection, selected-Study editor reopening and complete
+downloads. Exercise the populated, empty, loading and error recovery states.
+Open the extracted offline desk and native PDF/HTML, view every captured image,
+and repair visible or functional defects in the same source before delivery.
+Retain these actual browser results beside the native handoff.
