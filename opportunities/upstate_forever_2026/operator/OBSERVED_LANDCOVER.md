@@ -344,8 +344,11 @@ does not change. This lets an existing empty course recover from the former miss
 `PUBLISHED` path before any source import has been admitted.
 
 An already admitted original import or saved comparison cannot be silently replaced
-with another intake. On retries, the exact accepted native task and preview are reused.
-Once import has completed, its retained collection reopens without depending on the
+with another intake. On retries, the exact accepted native task and preview are reused. A saved import
+request is reconciled before requiring its temporary manifest again, including a
+process interruption after native completion but before the Course wrote its result.
+An unfinished worker still verifies the original manifest path and hash through that
+same saved preview. Once import has completed, its retained collection reopens without depending on the
 temporary staged manifest. Omitting the explicit option on a retry reuses the saved
 intake; supplying it again must match the same saved request. Use the existing
 `--resume-failed --reviewed-source-revision` repair controls when applying this corrected
