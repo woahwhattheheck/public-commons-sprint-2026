@@ -19,7 +19,7 @@ The installed original ExtensionRegistry discovers operator/extensions/eco13.jso
 
 Use the same configured scientific Workspace, original operator state and existing GIS interpreter when restarting the maintained operator to pick up the new installed registration. The original startup URL connects the authenticated browser. Experiment comparisons appears beside Experiments. GET /api/extensions lists the eco13 registration, its four actions, four reads and any concrete import or asset issue.
 
-For a complete original scientific-application archive, the maintained model.portable application inventory must include integrations/eco13_scenario_lab in addition to its model/operator/source files. The saved comparison records themselves live inside the original scientific Workspace and are already carried by its recursive inventory. The current CLOUD-INTEGRATION portable-source owner is composing this exact runtime path into the cumulative application.
+For a complete original scientific-application archive, the maintained model.portable application inventory must include integrations/eco13_scenario_lab in addition to its model/operator/source files. The saved comparison records themselves live inside the original scientific Workspace and are already carried by its recursive inventory. The maintained portable inventory includes the complete integrations directory, carrying the installed scenario workbench together with the original application.
 
 ## Receive an existing scientific experiment
 
@@ -38,6 +38,8 @@ The finished task opens a saved comparison. Read its original experiment ID, sou
 ## Read the current result
 
 The in-app table reads the saved report through paged authenticated routes. Switch between alternative outcomes, parameter/reference outcomes and unfinished cases. Scenario and metric filters, plus profile and result text search, select rows from that same retained report; they do not issue native jobs.
+
+Changing the selected result type, filters or page immediately clears the previous table while the selected rows load. If that request fails, use Retry selected results in the table area. The desk accepts only a response for the current comparison, result type and requested page. Refresh renews the edition details and download tickets while preserving the selected table, filters, page size, page and unsaved planning choices.
 
 Alternative outcome rows keep the original profile, alternative, case, baseline/run and reporting-grid IDs. Nitrogen, phosphorus and sediment retain their source physical units. Change is alternative minus paired baseline; positive avoided export means less modeled export. Read paired cells, reporting cells, coverage fraction and paired-support identity with the quantity.
 
@@ -140,6 +142,8 @@ Final records live at Workspace/eco13/records/ORIGINAL_TASK_ID/. Each has an imm
 The native receiver requires a new destination outside the original scientific Workspace. Its initial task-owned sibling staging directory is promoted into the retained Workspace branch after the complete independent comparison is ready. When a Workspace is on a different mounted volume, the provider first prepares and verifies the complete receiving directory on that volume, then promotes it.
 
 Report editions use separate report files and saved choices. A failed new report operation leaves the prior published edition available. Retried operations recover their own retained staging and original source selection. Original queue resume and cancellation controls remain in the task interface.
+
+When the original task is retried, the provider checks its retained operation identity under the existing operator lock and removes unfinished private receiving directories left by that task. The completed comparison remains available. A directory that cannot be read now stops cloning or cross-volume promotion with a concrete error, so the recovered edition cannot silently omit its contents.
 
 Portable exports use the original operator's outputs directory and verified download tickets. This keeps generated ZIPs outside the scientific Workspace while the underlying saved comparison records remain available for subsequent export or native project backup.
 

@@ -169,14 +169,21 @@ export function attachEco13(host){
     scenario.value=filter.scenario_id;metric.value=filter.metric;node.querySelector('[data-page-size]').value=String(limit);
     setBusy(0);
   }
-  async function loadRecord(id){
-    if(!node||!workspace||!id)return;captureDraft();recordId=id;keepSelection();
+  async function loadRecord(id,{retainResults=false}={}){
+    if(!node||!workspace||!id)return;
+    const selection=retainResults&&id===recordId&&view?{kind,offset,limit,filter:{...filter}}:null;
+    clearTimeout(debounce);captureDraft();recordId=id;keepSelection();
     if(!drafts.has(id)){const saved=stored('eco13:draft:'+workspace+':'+id,null);if(saved&&Array.isArray(saved.objectives)&&saved.costs)drafts.set(id,saved);}
     dirty=drafts.has(id);view=null;recordLoadingId=id;clearEconomicSources();
     const token=++recordToken;recordAbort?.abort();recordAbort=new AbortController();rowAbort?.abort();rowToken++;
     slot('main').setAttribute('aria-busy','true');slot('main').inert=true;setIssue('');
     try{const result=await host.api(host.endpoint('/api/eco13/record',{record_id:id}),{signal:recordAbort.signal});
-      if(token!==recordToken||!node)return;view=result;offset=0;filter={scenario_id:'',metric:'',q:''};kind='outcomes';renderView();renderCatalog();await loadRows();
+      if(token!==recordToken||!node)return;
+      if(result.record?.id!==id||result.workspace_key!==workspace)throw new Error('The returned edition belongs to another selection. Refresh this workspace.');
+      view=result;
+      if(selection){kind=selection.kind;offset=selection.offset;limit=selection.limit;filter=selection.filter;}
+      else{offset=0;filter={scenario_id:'',metric:'',q:''};kind='outcomes';}
+      renderView();renderCatalog();await loadRows();
     }catch(error){if(error?.name!=='AbortError'&&token===recordToken){setIssue(errorMessage(error));if(node)slot('main').innerHTML='<section class="eco13-panel"><h2>Comparison could not be opened</h2><p>Select another saved edition or refresh this workspace.</p></section>';}}
     finally{if(token===recordToken&&node){recordLoadingId='';slot('main').removeAttribute('aria-busy');slot('main').inert=false;}}
   }
@@ -200,14 +207,31 @@ export function attachEco13(host){
     slot('page').textContent='Page '+(Math.floor(offset/limit)+1)+' of '+Math.max(1,Math.ceil(total/limit));
     for(const button of node.querySelectorAll('[data-action="eco13-page"]'))button.disabled=['first','previous'].includes(button.dataset.step)?offset===0:nextOffset===null||nextOffset===undefined;
   }
+  function clearRows(message){
+    lastRows=[];total=0;nextOffset=null;
+    const rows=slot('rows');if(rows){rows.replaceChildren();rows.setAttribute('aria-busy','true');}
+    const status=slot('row-status');if(status)status.textContent=message;
+    const page=slot('page');if(page)page.textContent='Awaiting selected results';
+    if(node)for(const button of node.querySelectorAll('[data-action="eco13-page"]'))button.disabled=true;
+  }
   async function loadRows(){
-    if(!view||!node)return;const token=++rowToken;rowAbort?.abort();rowAbort=new AbortController();
-    slot('row-status').textContent='Loading retained results…';slot('rows').setAttribute('aria-busy','true');
-    for(const button of node.querySelectorAll('[data-action="eco13-page"]'))button.disabled=true;
+    if(!view||!node)return;clearTimeout(debounce);
+    const token=++rowToken,sourceWorkspace=workspace;rowAbort?.abort();rowAbort=new AbortController();
     const query={record_id:recordId,kind,offset,limit};for(const [key,value]of Object.entries(filter))if(value)query[key]=value;
-    try{const response=await host.api(host.endpoint('/api/eco13/rows',query),{signal:rowAbort.signal});if(token!==rowToken||!node)return;renderRows(response);}
-    catch(error){if(error?.name!=='AbortError'&&token===rowToken){slot('row-status').textContent='Results could not be loaded.';setIssue(errorMessage(error));}}
-    finally{if(token===rowToken&&node)slot('rows')?.removeAttribute('aria-busy');}
+    clearRows('Loading retained results…');
+    try{
+      const response=await host.api(host.endpoint('/api/eco13/rows',query),{signal:rowAbort.signal});
+      if(token!==rowToken||!node||workspace!==sourceWorkspace)return;
+      if(response.record_id!==query.record_id||response.kind!==query.kind||response.offset!==query.offset||response.limit!==query.limit)
+        throw new Error('The returned results belong to another selection. Retry the selected results.');
+      renderRows(response);
+    }catch(error){
+      if(error?.name!=='AbortError'&&token===rowToken&&node){
+        slot('row-status').textContent='Selected results could not be loaded.';
+        slot('rows').innerHTML='<p class="eco13-muted">'+esc(errorMessage(error))+'</p><button type="button" data-action="eco13-rows-retry">Retry selected results</button>';
+        slot('page').textContent='Selected results unavailable';
+      }
+    }finally{if(token===rowToken&&node)slot('rows')?.removeAttribute('aria-busy');}
   }
 
   function savePending(key,body){
@@ -291,7 +315,11 @@ export function attachEco13(host){
     }else if(action==='eco13-recover'){
       const body=[...pending.values()].find(value=>value.workspace===workspace&&value.operation_id===button.dataset.operationId);
       if(body)await submitAction(body.action,body.payload);
-    }else if(action==='eco13-refresh'){await loadCatalog();if(view)await loadRows();}
+    }else if(action==='eco13-refresh'){
+      const selectedId=recordId,hadView=Boolean(view);await loadCatalog();
+      if(hadView&&view&&recordId===selectedId)await loadRecord(selectedId,{retainResults:true});
+    }
+    else if(action==='eco13-rows-retry')await loadRows();
     else if(action==='eco13-import')node?.querySelector('[data-upload]')?.click();
     else if(action==='eco13-task')await host.showTask(button.dataset.id);
     else if(action==='eco13-kind'){
@@ -324,7 +352,10 @@ export function attachEco13(host){
   function onSubmit(event){const form=event.target.closest('form[data-form]');if(!form||!node?.contains(form))return;event.preventDefault();event.stopPropagation();const work=form.dataset.form==='receive'?submitReceive(form):submitPlanning(form);Promise.resolve(work).catch(error=>setIssue(errorMessage(error)));}
   function onInput(event){
     const input=event.target;
-    if(input.matches('[data-filter="q"]')){filter.q=input.value.trim();offset=0;clearTimeout(debounce);debounce=setTimeout(()=>loadRows(),300);}
+    if(input.matches('[data-filter="q"]')){
+      filter.q=input.value.trim();offset=0;clearTimeout(debounce);rowAbort?.abort();rowToken++;
+      clearRows('Waiting for selected search results…');debounce=setTimeout(()=>loadRows(),300);
+    }
     if(input.closest('[data-form="planning"]')){dirty=true;captureDraft();const label=slot('draft-status');if(label)label.textContent='Unsaved planning changes';}
   }
   function onChange(event){
@@ -342,7 +373,7 @@ export function attachEco13(host){
     event.preventDefault();event.stopPropagation();target.focus();target.click();
   }
   function restoreWorkspace(){
-    captureDraft();clearEconomicSources();workspace=activeWorkspace();catalog=null;view=null;recordLoadingId='';dirty=false;drafts.clear();pending.clear();watched.clear();taskMarks.clear();
+    clearTimeout(debounce);captureDraft();clearEconomicSources();workspace=activeWorkspace();catalog=null;view=null;recordLoadingId='';dirty=false;drafts.clear();pending.clear();watched.clear();taskMarks.clear();
     recordId=stored('eco13:selected:'+workspace,'');if(typeof recordId!=='string')recordId='';
     for(const item of stored('eco13:pending:'+workspace,[]))if(Array.isArray(item)&&item[1]?.workspace===workspace)pending.set(item[0],item[1]);
     for(const item of stored('eco13:watched:'+workspace,[]))if(Array.isArray(item))watched.set(item[0],item[1]);

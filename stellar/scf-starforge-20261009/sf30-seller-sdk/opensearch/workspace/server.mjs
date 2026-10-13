@@ -14,6 +14,8 @@ const ASSETS = new Map([['/', ['index.html', 'text/html; charset=utf-8']],
   ['/deployment.mjs', ['deployment.mjs', 'text/javascript; charset=utf-8']],
   ['/catalog.mjs', ['catalog.mjs', 'text/javascript; charset=utf-8']],
   ['/supplier.mjs', ['supplier.mjs', 'text/javascript; charset=utf-8']],
+  ['/document-preparation-ui.mjs', ['document-preparation-ui.mjs', 'text/javascript; charset=utf-8']],
+  ['/document-preparation.mjs', ['../catalog/document-preparation.mjs', 'text/javascript; charset=utf-8']],
   ['/xchange.mjs', ['xchange.mjs', 'text/javascript; charset=utf-8']],
   ['/file-sha256.mjs', ['file-sha256.mjs', 'text/javascript; charset=utf-8']],
   ['/relevance.mjs', ['../relevance/public.mjs', 'text/javascript; charset=utf-8']], ['/style.css', ['style.css', 'text/css; charset=utf-8']]]);

@@ -43,6 +43,7 @@ function buildWqpTables(captures) {
     row.quantitation_class =
       /not detected|below|less than/i.test(row.detection_condition)?"censored_below":
       /above.*upper|greater than/i.test(row.detection_condition)?"censored_above":
+      row.numeric_reported_value===null && row.detection_condition==="Present Above Quantification Limit" && /upper quantitation limit/i.test(row.detection_limit_type) && row.numeric_detection_limit!==null?"censored_above":
       row.detection_condition==="Present Above Quantification Limit"?"quantified":
       row.numeric_reported_value===null?"no_numeric_result":
       row.detection_condition?"reported_with_condition":"reported_numeric";
@@ -92,11 +93,11 @@ function buildWqpTables(captures) {
     const ck=[r.station_id,r.project_id,r.characteristic,r.sample_fraction,r.reported_unit].join("|");
     if(!coverageMap.has(ck))coverageMap.set(ck,{
       station_id:r.station_id,project_id:r.project_id,characteristic:r.characteristic,sample_fraction:r.sample_fraction,
-      reported_unit:r.reported_unit,record_count:0,numeric_reported_count:0,quantified_count:0,censored_below_count:0,
+      reported_unit:r.reported_unit,record_count:0,numeric_reported_count:0,quantified_count:0,censored_below_count:0,censored_above_count:0,
       dates:[],activity_ids:[],source_path:r.source_path,source_sha256:r.source_sha256,source_url:r.source_url
     });
     const c=coverageMap.get(ck);c.record_count++;if(r.numeric_reported_value!==null)c.numeric_reported_count++;
-    if(r.quantitation_class==="quantified")c.quantified_count++;if(r.quantitation_class==="censored_below")c.censored_below_count++;
+    if(r.quantitation_class==="quantified")c.quantified_count++;if(r.quantitation_class==="censored_below")c.censored_below_count++;if(r.quantitation_class==="censored_above")c.censored_above_count++;
     c.dates.push(r.sample_date);c.activity_ids.push(r.activity_id);
   }
   const activities=[...activityMap.values()].map(a=>({...a,characteristics:[...new Set(a.characteristics)].sort()}));

@@ -24,6 +24,8 @@ import { startJobCustomerWorkspace } from '../server.mjs';
 import { readJobWorkspaceLaunch } from '../launch.mjs';
 import { readJobCheckoutTicket } from './contract.mjs';
 import { prepareInputFileFixture, openInputFileJourney } from '../../../sf30-seller-sdk/jobs/inputs/native-journey.mjs';
+import { prepareOutputFileFixture, inspectOutputFileCustomer, inspectDownloadedOutput,
+  reviewOutputFileBrowser, finishOutputFileReceiving } from '../../../sf30-seller-sdk/jobs/outputs/native-journey.mjs';
 import { isInputRoute } from '../../../sf30-seller-sdk/jobs/inputs/http.mjs';
 import { validStrKey } from '../../../sf86-rpc-transfer-reconcile/terms.mjs';
 
@@ -33,16 +35,18 @@ assert.notEqual(fixture, '/', 'Use the original native-continuation.py launcher.
 const marker = await readJson(join(fixture, 'fixture.json'));
 const browserApproval = marker.approvalMode === 'BROWSER';
 const inputFilesMode = marker.inputMode === 'ORIGINAL_MERCHANT_INPUT_FILES';
+const outputFilesMode = marker.outputMode === 'ORIGINAL_MERCHANT_OUTPUT_FILES';
+assert.ok(!outputFilesMode || inputFilesMode, 'Named output journey retains the original input files.');
 assert.ok(!inputFilesMode || browserApproval, 'File-input journey uses the original browser approval.');
-const operation = inputFilesMode ? 'SCF-JOB-INPUT-FILES-0B8D-20261012' : browserApproval
+const operation = outputFilesMode ? 'SCF-JOB-RESULT-PACKAGES-0B8D-20261012' : inputFilesMode ? 'SCF-JOB-INPUT-FILES-0B8D-20261012' : browserApproval
   ? 'SCF-JOB-BROWSER-APPROVAL-0B8D-20261012' : 'SCF-JOB-CHECKOUT-CONTINUATION-0B8D-20261012';
-const jobId = inputFilesMode ? 'input-files:2026.10' : browserApproval ? 'browser-checkout:2026.10' : 'checkout:2026.10';
+const jobId = outputFilesMode ? 'output-files:2026.10' : inputFilesMode ? 'input-files:2026.10' : browserApproval ? 'browser-checkout:2026.10' : 'checkout:2026.10';
 const functionId = inputFilesMode ? 'reconcile' : 'analyze';
 const purchasePath = inputFilesMode ? '/invoice-reconciliation' : '/analysis';
 assert.equal(marker.schema, 'stellar-forge.sf88.job-checkout-journey.v1');
 assert.equal(marker.operation, operation);
 assert.equal(marker.fixtureDirectory, fixture);
-assert.equal(fixture, join(marker.retainedDirectory, inputFilesMode ? 'checkout-input-files-continuation' :
+assert.equal(fixture, join(marker.retainedDirectory, outputFilesMode ? 'checkout-output-files-continuation' : inputFilesMode ? 'checkout-input-files-continuation' :
   browserApproval ? 'checkout-browser-continuation' : 'checkout-continuation'));
 const retained = marker.retainedDirectory, runtimeDirectory = resolve(fileURLToPath(new URL('../../', import.meta.url)));
 assert.equal(marker.runtimeDirectory, runtimeDirectory);
@@ -60,7 +64,7 @@ assert.ok(validStrKey(fixtureAsset, 'C'));
 assert.ok(validStrKey(fixturePayTo, 'G') && validStrKey(fixturePayer, 'G'));
 assert.notEqual(fixturePayTo, fixturePayer);
 let merchant, seller, customer, model, host, received, complete = false, interrupted = false;
-let frontend, proxy, facilitator, transport, selfService = null, inputFixture = null, inputJourney = null, fileReceiving = null;
+let frontend, proxy, facilitator, transport, selfService = null, inputFixture = null, inputJourney = null, fileReceiving = null, outputReceiving = null;
 const sockets = new Set(), servers = new Set();
 const traffic = { connects: 0, status: 0, result: 0, intakeCatalog: 0, intakePrepare: 0, intakeWithdraw: 0 };
 const progress = phase => process.stdout.write(JSON.stringify({ operation, phase }) + '\n');
@@ -257,7 +261,7 @@ try {
   assert.deepEqual(raw.environment ?? [], ['SF_JOBS_JOURNEY_GATE']);
   const report = await readJson(join(retained, 'merchant-state', 'records', 'report:2026.10.json'));
   assert.deepEqual(report.input, { values: [2, 4, 6, 8], window: 2 });
-  if (inputFilesMode) inputFixture = await prepareInputFileFixture({ fixture, immutable });
+  if (inputFilesMode) inputFixture = await (outputFilesMode ? prepareOutputFileFixture : prepareInputFileFixture)({ fixture, immutable });
   const configured = inputFilesMode ? { ...inputFixture.configuration,
     maxPending: 4, maxJobs: 32, functions: { reconcile: { ...inputFixture.configuration.functions.reconcile,
       payment: { ...inputFixture.configuration.functions.reconcile.payment, asset: fixtureAsset, payTo: fixturePayTo } } } }
@@ -494,15 +498,21 @@ try {
   assert.equal(delivered.task.state, 'COMPLETE', delivered.lastError ?? '');
   assert.equal(delivered.resource.status, 'VERIFIED');
   const resource = delivered.resource;
-  const previewedResult = JSON.parse((await api('/api/resources/' + resource.id + '/preview')).text);
+  if (outputFilesMode) outputReceiving = await inspectOutputFileCustomer({ fixture, operation, entryId, jobId,
+    merchant, model, host, api, immutable });
+  const previewedResult = outputFilesMode ? outputReceiving.report :
+    JSON.parse((await api('/api/resources/' + resource.id + '/preview')).text);
   if (inputFilesMode) inputJourney.verifyReport(previewedResult);
   else assert.equal(previewedResult.mean, 5);
   const downloaded = await transfer('/api/resources/' + resource.id + '/download', {});
-  if (inputFilesMode) inputJourney.verifyReport(JSON.parse(downloaded.bytes));
+  if (outputFilesMode) inspectDownloadedOutput(downloaded.bytes, { expected: outputReceiving.package,
+    job: outputReceiving.job, manifestSha256: outputReceiving.manifestSha256 });
+  else if (inputFilesMode) inputJourney.verifyReport(JSON.parse(downloaded.bytes));
   else assert.equal(JSON.parse(downloaded.bytes).sum, 20);
   assert.equal(downloaded.sha256, resource.sha256);
   const note = inputFilesMode ? 'Original ledger and supplier prices; 6000 rows reconciled with exact integer amounts.'
     : 'October application purchased through the original checkout; mean 5 and sum 20.';
+  const selectedResources = outputFilesMode ? [resource, ...outputReceiving.resources] : [resource];
   let annotation = resource.annotation;
   if (annotation.note !== note) annotation = await api('/api/resources/' + resource.id + '/note', {
     expectedRevision: annotation.revision, operationId: operation + ':note',
@@ -515,27 +525,34 @@ try {
   if (!collection) collection = await api('/api/collections', {
     id: collectionId, name: 'October checkout result', note: 'Purchased application and original job identity.',
     expectedRevision: 0, operationId: operation + ':collection',
-    members: [{ id: resource.id, sha256: resource.sha256, annotationRevision: annotation.revision, mode: 'current' }],
+    members: selectedResources.map(value => ({ id: value.id, sha256: value.sha256,
+      annotationRevision: value.id === resource.id ? annotation.revision : value.annotation.revision, mode: 'current' })),
   }, 'PUT');
-  assert.equal(collection.members.length, 1);
+  assert.equal(collection.members.length, selectedResources.length);
   const exported = await transfer('/api/collections/' + collectionId + '/download', { revision: collection.revision });
   const archive = join(fixture, 'checkout-application-result.tar');
   await immutable(archive, exported.bytes);
   const inspected = await inspectCollectionArchive(archive, { expectedSha256: exported.sha256 });
-  assert.equal(inspected.manifest.objects.length, 1);
+  assert.equal(inspected.manifest.objects.length, selectedResources.length);
   assert.equal(inspected.manifest.collection.members[0].job.acceptanceSha256, delivered.receipt.acceptanceSha256);
   assert.equal(JSON.stringify(inspected.manifest).includes(claimToken), false);
   const intake = await receiveCollection({ archive, destination: join(fixture, 'received-collection'),
     resume: true, expectedSha256: exported.sha256 });
   received = await openReceivedLibrary({ directory: intake.directory, state: join(fixture, 'received-library') });
   const receivedRows = received.search({ limit: 50 }).items;
-  assert.equal(receivedRows.length, 1);
+  assert.equal(receivedRows.length, selectedResources.length);
   assert.equal(receivedRows[0].origin.resource.job.jobId, jobId);
-  const receivedResult = JSON.parse((await received.preview(receivedRows[0].id)).text);
+  const receivedReport = outputFilesMode ? receivedRows.find(value => value.origin.resource.id ===
+    outputReceiving.files.find(file => file.slot === 'report').resourceId) : receivedRows[0];
+  assert.ok(receivedReport, 'The original named report was independently received.');
+  const receivedResult = JSON.parse((await received.preview(receivedReport.id)).text);
   if (inputFilesMode) {
     inputJourney.verifyReport(receivedResult);
     fileReceiving = await inputJourney.finish({ resourceId: resource.id, claimToken });
   } else assert.equal(receivedResult.mean, 5);
+
+  if (outputFilesMode) outputReceiving.browser = await reviewOutputFileBrowser({ fixture, model: merchant,
+    customer: host, browserModule: marker.browserModule, browserExecutable: marker.browserExecutable });
 
   progress('reopen-original-checkout-and-customer');
   const priorToken = host.token;
@@ -547,7 +564,14 @@ try {
   assert.equal(reopenedJob.receipt.purchase.kind, 'SF88_NATIVE_RESULT');
   assert.equal(reopenedJob.receipt.delivery.sha256, resource.sha256);
   assert.equal(reopenedJob.resource.annotation.note, note);
-  assert.equal((await api('/api/collections/' + collectionId)).members.length, 1);
+  assert.equal((await api('/api/collections/' + collectionId)).members.length, selectedResources.length);
+  if (outputFilesMode) {
+    const files = await api('/api/job-workspace/jobs/' + entryId + '/outputs');
+    assert.equal(files.received, true);
+    assert.equal(files.selectionSha256, outputReceiving.selectionSha256);
+    assert.deepEqual(files.files.map(file => file.resourceId), outputReceiving.files.map(file => file.resourceId));
+    assert.ok(files.files.every(file => file.resource.status === 'VERIFIED'));
+  }
   if (browserApproval) {
     const reopenedRequest = await api('/api/job-intake/requests/' + selfService.requestId);
     assert.equal(reopenedRequest.phase, 'IMPORTED');
@@ -580,6 +604,8 @@ try {
     collection: { id: collectionId, archiveSha256: exported.sha256, receivedResources: receivedRows.length },
     nativeVerifies: counters.verifies, nativeSettlements: counters.settles, traffic,
     ...(inputFilesMode ? { inputFiles: fileReceiving } : {}),
+    ...(outputFilesMode ? { outputFiles: { package: outputReceiving.package,
+      manifestSha256: outputReceiving.manifestSha256, files: outputReceiving.files, browser: outputReceiving.browser } } : {}),
     lifecycle: ['retained merchant application', browserApproval ? 'original merchant catalog and customer input request' :
       'prepared private ticket', 'original SDK offline review',
       browserApproval ? 'original browser decision and SF62/SF36 reservation'
@@ -633,5 +659,10 @@ if (inputFilesMode) {
   completed.agent = await runPaidJobAgentContinuation({ checkoutResult: agentSource });
   assert.equal(completed.agent.result, 'PASS');
   await writeJson(output, completed);
+  if (outputFilesMode) {
+    completed.outputFiles = await finishOutputFileReceiving({ checkoutResult: output });
+    assert.equal(completed.outputFiles.result, 'PASS');
+    await writeJson(output, completed);
+  }
 }
 process.stdout.write(JSON.stringify({ operation, result: 'PASS', output }) + '\n');

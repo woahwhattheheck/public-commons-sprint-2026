@@ -596,8 +596,8 @@
       "path": "wqp/derived/measurements.csv",
       "uri": "https://www.waterqualitydata.us/",
       "vintage": "2023",
-      "sha256": "2deab6b95ada036b3a5d07692293dc474f00f1064766de2412153c8f1731ea26",
-      "bytes": 863066,
+      "sha256": "20600293095da71c25ffa104e84f07289b2ef1a86123342801512614eb4b0b7a",
+      "bytes": 863082,
       "metadata": {
         "row_count": 920,
         "study_id": "scdes-eighteenmile-lake-2023",
@@ -666,8 +666,8 @@
         },
         {
           "path": "wqp/normalize_core.mjs",
-          "sha256": "5becd65982c591a641068e0c2784f6d33a4f926c867a96b49c6eb787c7977ae6",
-          "bytes": 12502
+          "sha256": "8d3df90d42bdb591d347a3867c25806d5064dbdf6240c549b50bb2d654f0dd6f",
+          "bytes": 12817
         },
         {
           "path": "wqp/normalize.mjs",
@@ -681,8 +681,8 @@
         },
         {
           "path": "wqp/derived/coverage.csv",
-          "sha256": "5d1498bbb24ff9f9749105039e320393e8e63e60d443d972fc4418635afc6df5",
-          "bytes": 92553
+          "sha256": "798f24919a39aba6f7556367594e33775ecfef66247636c2b581e0ae96bf0633",
+          "bytes": 92908
         },
         {
           "path": "wqp/derived/calendar.csv",
@@ -716,8 +716,8 @@
         },
         {
           "path": "wqp/README.md",
-          "sha256": "534e7d2b764958b1cc91d6651a9f6f1aa6c02fa70da4c7c364c5572c7bfcc0fa",
-          "bytes": 2737
+          "sha256": "a1325d2ac5ad78768ef0975737bc30a1bc6e924899bd5ce17a5b12c138356afa",
+          "bytes": 3362
         }
       ]
     },
@@ -798,8 +798,8 @@
         },
         {
           "path": "wqp/normalize_core.mjs",
-          "sha256": "5becd65982c591a641068e0c2784f6d33a4f926c867a96b49c6eb787c7977ae6",
-          "bytes": 12502
+          "sha256": "8d3df90d42bdb591d347a3867c25806d5064dbdf6240c549b50bb2d654f0dd6f",
+          "bytes": 12817
         },
         {
           "path": "wqp/normalize.mjs",
@@ -808,13 +808,13 @@
         },
         {
           "path": "wqp/derived/measurements.csv",
-          "sha256": "2deab6b95ada036b3a5d07692293dc474f00f1064766de2412153c8f1731ea26",
-          "bytes": 863066
+          "sha256": "20600293095da71c25ffa104e84f07289b2ef1a86123342801512614eb4b0b7a",
+          "bytes": 863082
         },
         {
           "path": "wqp/derived/coverage.csv",
-          "sha256": "5d1498bbb24ff9f9749105039e320393e8e63e60d443d972fc4418635afc6df5",
-          "bytes": 92553
+          "sha256": "798f24919a39aba6f7556367594e33775ecfef66247636c2b581e0ae96bf0633",
+          "bytes": 92908
         },
         {
           "path": "wqp/derived/calendar.csv",
@@ -848,8 +848,8 @@
         },
         {
           "path": "wqp/README.md",
-          "sha256": "534e7d2b764958b1cc91d6651a9f6f1aa6c02fa70da4c7c364c5572c7bfcc0fa",
-          "bytes": 2737
+          "sha256": "a1325d2ac5ad78768ef0975737bc30a1bc6e924899bd5ce17a5b12c138356afa",
+          "bytes": 3362
         }
       ]
     },
@@ -860,8 +860,8 @@
       "path": "wqp/derived/coverage.csv",
       "uri": "https://www.waterqualitydata.us/",
       "vintage": "2023",
-      "sha256": "5d1498bbb24ff9f9749105039e320393e8e63e60d443d972fc4418635afc6df5",
-      "bytes": 92553,
+      "sha256": "798f24919a39aba6f7556367594e33775ecfef66247636c2b581e0ae96bf0633",
+      "bytes": 92908,
       "metadata": {
         "row_count": 167,
         "study_id": "scdes-eighteenmile-lake-2023",
@@ -930,8 +930,8 @@
         },
         {
           "path": "wqp/normalize_core.mjs",
-          "sha256": "5becd65982c591a641068e0c2784f6d33a4f926c867a96b49c6eb787c7977ae6",
-          "bytes": 12502
+          "sha256": "8d3df90d42bdb591d347a3867c25806d5064dbdf6240c549b50bb2d654f0dd6f",
+          "bytes": 12817
         },
         {
           "path": "wqp/normalize.mjs",
@@ -940,8 +940,8 @@
         },
         {
           "path": "wqp/derived/measurements.csv",
-          "sha256": "2deab6b95ada036b3a5d07692293dc474f00f1064766de2412153c8f1731ea26",
-          "bytes": 863066
+          "sha256": "20600293095da71c25ffa104e84f07289b2ef1a86123342801512614eb4b0b7a",
+          "bytes": 863082
         },
         {
           "path": "wqp/derived/activities.csv",
@@ -980,8 +980,8 @@
         },
         {
           "path": "wqp/README.md",
-          "sha256": "534e7d2b764958b1cc91d6651a9f6f1aa6c02fa70da4c7c364c5572c7bfcc0fa",
-          "bytes": 2737
+          "sha256": "a1325d2ac5ad78768ef0975737bc30a1bc6e924899bd5ce17a5b12c138356afa",
+          "bytes": 3362
         }
       ]
     },
@@ -1062,8 +1062,8 @@
         },
         {
           "path": "wqp/normalize_core.mjs",
-          "sha256": "5becd65982c591a641068e0c2784f6d33a4f926c867a96b49c6eb787c7977ae6",
-          "bytes": 12502
+          "sha256": "8d3df90d42bdb591d347a3867c25806d5064dbdf6240c549b50bb2d654f0dd6f",
+          "bytes": 12817
         },
         {
           "path": "wqp/normalize.mjs",
@@ -1072,8 +1072,8 @@
         },
         {
           "path": "wqp/derived/measurements.csv",
-          "sha256": "2deab6b95ada036b3a5d07692293dc474f00f1064766de2412153c8f1731ea26",
-          "bytes": 863066
+          "sha256": "20600293095da71c25ffa104e84f07289b2ef1a86123342801512614eb4b0b7a",
+          "bytes": 863082
         },
         {
           "path": "wqp/derived/activities.csv",
@@ -1082,8 +1082,8 @@
         },
         {
           "path": "wqp/derived/coverage.csv",
-          "sha256": "5d1498bbb24ff9f9749105039e320393e8e63e60d443d972fc4418635afc6df5",
-          "bytes": 92553
+          "sha256": "798f24919a39aba6f7556367594e33775ecfef66247636c2b581e0ae96bf0633",
+          "bytes": 92908
         },
         {
           "path": "wqp/derived/selected_chlorophyll.csv",
@@ -1112,8 +1112,8 @@
         },
         {
           "path": "wqp/README.md",
-          "sha256": "534e7d2b764958b1cc91d6651a9f6f1aa6c02fa70da4c7c364c5572c7bfcc0fa",
-          "bytes": 2737
+          "sha256": "a1325d2ac5ad78768ef0975737bc30a1bc6e924899bd5ce17a5b12c138356afa",
+          "bytes": 3362
         }
       ]
     },
@@ -1194,8 +1194,8 @@
         },
         {
           "path": "wqp/normalize_core.mjs",
-          "sha256": "5becd65982c591a641068e0c2784f6d33a4f926c867a96b49c6eb787c7977ae6",
-          "bytes": 12502
+          "sha256": "8d3df90d42bdb591d347a3867c25806d5064dbdf6240c549b50bb2d654f0dd6f",
+          "bytes": 12817
         },
         {
           "path": "wqp/normalize.mjs",
@@ -1204,8 +1204,8 @@
         },
         {
           "path": "wqp/derived/measurements.csv",
-          "sha256": "2deab6b95ada036b3a5d07692293dc474f00f1064766de2412153c8f1731ea26",
-          "bytes": 863066
+          "sha256": "20600293095da71c25ffa104e84f07289b2ef1a86123342801512614eb4b0b7a",
+          "bytes": 863082
         },
         {
           "path": "wqp/derived/activities.csv",
@@ -1214,8 +1214,8 @@
         },
         {
           "path": "wqp/derived/coverage.csv",
-          "sha256": "5d1498bbb24ff9f9749105039e320393e8e63e60d443d972fc4418635afc6df5",
-          "bytes": 92553
+          "sha256": "798f24919a39aba6f7556367594e33775ecfef66247636c2b581e0ae96bf0633",
+          "bytes": 92908
         },
         {
           "path": "wqp/derived/calendar.csv",
@@ -1244,8 +1244,8 @@
         },
         {
           "path": "wqp/README.md",
-          "sha256": "534e7d2b764958b1cc91d6651a9f6f1aa6c02fa70da4c7c364c5572c7bfcc0fa",
-          "bytes": 2737
+          "sha256": "a1325d2ac5ad78768ef0975737bc30a1bc6e924899bd5ce17a5b12c138356afa",
+          "bytes": 3362
         }
       ]
     },
@@ -1326,8 +1326,8 @@
         },
         {
           "path": "wqp/normalize_core.mjs",
-          "sha256": "5becd65982c591a641068e0c2784f6d33a4f926c867a96b49c6eb787c7977ae6",
-          "bytes": 12502
+          "sha256": "8d3df90d42bdb591d347a3867c25806d5064dbdf6240c549b50bb2d654f0dd6f",
+          "bytes": 12817
         },
         {
           "path": "wqp/normalize.mjs",
@@ -1336,8 +1336,8 @@
         },
         {
           "path": "wqp/derived/measurements.csv",
-          "sha256": "2deab6b95ada036b3a5d07692293dc474f00f1064766de2412153c8f1731ea26",
-          "bytes": 863066
+          "sha256": "20600293095da71c25ffa104e84f07289b2ef1a86123342801512614eb4b0b7a",
+          "bytes": 863082
         },
         {
           "path": "wqp/derived/activities.csv",
@@ -1346,8 +1346,8 @@
         },
         {
           "path": "wqp/derived/coverage.csv",
-          "sha256": "5d1498bbb24ff9f9749105039e320393e8e63e60d443d972fc4418635afc6df5",
-          "bytes": 92553
+          "sha256": "798f24919a39aba6f7556367594e33775ecfef66247636c2b581e0ae96bf0633",
+          "bytes": 92908
         },
         {
           "path": "wqp/derived/calendar.csv",
@@ -1376,8 +1376,8 @@
         },
         {
           "path": "wqp/README.md",
-          "sha256": "534e7d2b764958b1cc91d6651a9f6f1aa6c02fa70da4c7c364c5572c7bfcc0fa",
-          "bytes": 2737
+          "sha256": "a1325d2ac5ad78768ef0975737bc30a1bc6e924899bd5ce17a5b12c138356afa",
+          "bytes": 3362
         }
       ]
     },
@@ -1458,8 +1458,8 @@
         },
         {
           "path": "wqp/normalize_core.mjs",
-          "sha256": "5becd65982c591a641068e0c2784f6d33a4f926c867a96b49c6eb787c7977ae6",
-          "bytes": 12502
+          "sha256": "8d3df90d42bdb591d347a3867c25806d5064dbdf6240c549b50bb2d654f0dd6f",
+          "bytes": 12817
         },
         {
           "path": "wqp/normalize.mjs",
@@ -1468,8 +1468,8 @@
         },
         {
           "path": "wqp/derived/measurements.csv",
-          "sha256": "2deab6b95ada036b3a5d07692293dc474f00f1064766de2412153c8f1731ea26",
-          "bytes": 863066
+          "sha256": "20600293095da71c25ffa104e84f07289b2ef1a86123342801512614eb4b0b7a",
+          "bytes": 863082
         },
         {
           "path": "wqp/derived/activities.csv",
@@ -1478,8 +1478,8 @@
         },
         {
           "path": "wqp/derived/coverage.csv",
-          "sha256": "5d1498bbb24ff9f9749105039e320393e8e63e60d443d972fc4418635afc6df5",
-          "bytes": 92553
+          "sha256": "798f24919a39aba6f7556367594e33775ecfef66247636c2b581e0ae96bf0633",
+          "bytes": 92908
         },
         {
           "path": "wqp/derived/calendar.csv",
@@ -1508,8 +1508,8 @@
         },
         {
           "path": "wqp/README.md",
-          "sha256": "534e7d2b764958b1cc91d6651a9f6f1aa6c02fa70da4c7c364c5572c7bfcc0fa",
-          "bytes": 2737
+          "sha256": "a1325d2ac5ad78768ef0975737bc30a1bc6e924899bd5ce17a5b12c138356afa",
+          "bytes": 3362
         }
       ]
     },
@@ -1590,8 +1590,8 @@
         },
         {
           "path": "wqp/normalize_core.mjs",
-          "sha256": "5becd65982c591a641068e0c2784f6d33a4f926c867a96b49c6eb787c7977ae6",
-          "bytes": 12502
+          "sha256": "8d3df90d42bdb591d347a3867c25806d5064dbdf6240c549b50bb2d654f0dd6f",
+          "bytes": 12817
         },
         {
           "path": "wqp/normalize.mjs",
@@ -1600,8 +1600,8 @@
         },
         {
           "path": "wqp/derived/measurements.csv",
-          "sha256": "2deab6b95ada036b3a5d07692293dc474f00f1064766de2412153c8f1731ea26",
-          "bytes": 863066
+          "sha256": "20600293095da71c25ffa104e84f07289b2ef1a86123342801512614eb4b0b7a",
+          "bytes": 863082
         },
         {
           "path": "wqp/derived/activities.csv",
@@ -1610,8 +1610,8 @@
         },
         {
           "path": "wqp/derived/coverage.csv",
-          "sha256": "5d1498bbb24ff9f9749105039e320393e8e63e60d443d972fc4418635afc6df5",
-          "bytes": 92553
+          "sha256": "798f24919a39aba6f7556367594e33775ecfef66247636c2b581e0ae96bf0633",
+          "bytes": 92908
         },
         {
           "path": "wqp/derived/calendar.csv",
@@ -1640,8 +1640,8 @@
         },
         {
           "path": "wqp/README.md",
-          "sha256": "534e7d2b764958b1cc91d6651a9f6f1aa6c02fa70da4c7c364c5572c7bfcc0fa",
-          "bytes": 2737
+          "sha256": "a1325d2ac5ad78768ef0975737bc30a1bc6e924899bd5ce17a5b12c138356afa",
+          "bytes": 3362
         }
       ]
     },

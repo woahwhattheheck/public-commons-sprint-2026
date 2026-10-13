@@ -2,10 +2,12 @@
 """Join additive transfer actions to the current original operator, preserving peers.
 
 Run AFTER extracting the source modules into the original application. The
-installer reads the current server instead of replacing it with an old postimage.
+installer uses the maintained descriptor's single provider when that host is
+installed, and retains the original direct integration for a standalone older
+host. It reads the current server and preserves all surrounding peer edits.
 """
 from __future__ import annotations
-import argparse,ast,hashlib,os,tempfile
+import argparse,ast,hashlib,json,os,tempfile
 from pathlib import Path
 
 
@@ -48,13 +50,106 @@ def patch(source: str) -> str:
     return source
 
 
+def registry_registration(root: Path, source: str) -> bool:
+    """Choose the installed descriptor's original provider on a maintained host."""
+    tree = ast.parse(source)
+    hosted = any(
+        isinstance(node, ast.Assign)
+        and any(isinstance(target, ast.Attribute)
+                and isinstance(target.value, ast.Name)
+                and target.value.id == "self" and target.attr == "extensions"
+                for target in node.targets)
+        and isinstance(node.value, ast.Call)
+        and isinstance(node.value.func, ast.Attribute)
+        and node.value.func.attr == "load"
+        and isinstance(node.value.func.value, ast.Call)
+        and isinstance(node.value.func.value.func, ast.Name)
+        and node.value.func.value.func.id == "ExtensionRegistry"
+        for node in ast.walk(tree)
+    )
+    descriptor = root / "operator" / "extensions" / "project-transfer.json"
+    if not hosted or not descriptor.is_file():
+        return False
+    manifest = json.loads(descriptor.read_text(encoding="utf-8"))
+    backend = manifest.get("backend", {})
+    factory = backend.get("factory", {})
+    if (manifest.get("schema") != "upstate.operator-extension/v1"
+            or manifest.get("id") != "project-transfer"
+            or backend.get("module") != "project_transfer"
+            or factory.get("handler") != "ProjectTransfers"
+            or factory.get("args") != ["operator", "fault"]):
+        raise ValueError("Compose the actual maintained project-transfer descriptor before source integration.")
+    declared = backend.get("actions", [])
+    if (not isinstance(declared, list) or not declared
+            or any(not isinstance(name, str) or not name for name in declared)
+            or len(set(declared)) != len(declared)):
+        raise ValueError("The maintained transport descriptor needs its complete unique action names.")
+    provider_tree = ast.parse((root / "operator" / "project_transfer.py").read_text(encoding="utf-8"))
+    action_nodes = [
+        node.value for node in provider_tree.body
+        if isinstance(node, ast.Assign)
+        and any(isinstance(target, ast.Name) and target.id == "ACTIONS" for target in node.targets)
+    ]
+    if (len(action_nodes) != 1 or not isinstance(action_nodes[0], ast.Call)
+            or not isinstance(action_nodes[0].func, ast.Name)
+            or action_nodes[0].func.id != "frozenset" or len(action_nodes[0].args) != 1):
+        raise ValueError("Read the original provider's actual action declaration before joining it.")
+    original_actions = set(ast.literal_eval(action_nodes[0].args[0]))
+    if set(declared) != original_actions:
+        raise ValueError("Install the matching complete transport descriptor and original provider.")
+    providers = [node for node in provider_tree.body
+                 if isinstance(node, ast.ClassDef) and node.name == "ProjectTransfers"]
+    initializers = [node for provider in providers for node in provider.body
+                    if isinstance(node, ast.FunctionDef) and node.name == "__init__"]
+    aliased = any(
+        isinstance(node, ast.Assign) and isinstance(node.value, ast.Name)
+        and node.value.id == "self"
+        and any(isinstance(target, ast.Attribute)
+                and isinstance(target.value, ast.Name)
+                and target.value.id == "operator" and target.attr == "project_transfers"
+                for target in node.targets)
+        for initializer in initializers for node in ast.walk(initializer)
+    )
+    if not aliased:
+        raise ValueError("Install the complete current transport provider with its shared operator alias.")
+    return True
+
+
+def registry_patch(source: str) -> str:
+    """Remove only the exact legacy joins when the descriptor owns dispatch."""
+    ast.parse(source)
+    marker = "# PROJECT-TRANSFER12 integration"
+    if marker not in source:
+        return source
+    replacements = (
+        ("\n# PROJECT-TRANSFER12 integration\n"
+         "from project_transfer import ProjectTransfers, ACTIONS as PROJECT_TRANSFER_ACTIONS\n"
+         "ACTIONS.update(PROJECT_TRANSFER_ACTIONS)", ""),
+        ("        self.project_transfers = ProjectTransfers(self, Fault)\n", ""),
+        ("        if task[\"action\"] in PROJECT_TRANSFER_ACTIONS:\n"
+         "            return self.project_transfers.invoke(task)\n", ""),
+        ("self.project_transfers.decorate_task(self.customer_reviews.decorate_task(task))",
+         "self.customer_reviews.decorate_task(task)"),
+    )
+    for before, after in replacements:
+        if source.count(before) != 1:
+            raise ValueError("The legacy transport join changed; compose its current source without replacing peer edits.")
+        source = source.replace(before, after, 1)
+    ast.parse(source)
+    return source
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('application',type=Path);p.add_argument('--dry-run',action='store_true');args=p.parse_args()
     root=args.application.resolve();path=root/'operator/server.py'
     for name in ('operator/project_transfer.py','model/project_transfer.py','model/project_transfer_workspace.py'):
         if not (root/name).is_file():raise SystemExit('Extract the complete transfer source before integration: '+name)
-    source=path.read_text();updated=patch(source)
-    if source==updated:print('Original operator already has the additive transfer integration.');return
+    source=path.read_text()
+    registered=registry_registration(root,source)
+    updated=registry_patch(source) if registered else patch(source)
+    if source==updated:
+        print('Original operator uses its maintained transport descriptor and shared provider.' if registered else 'Original operator already has the additive transfer integration.')
+        return
     if args.dry_run:
         import difflib
         print(''.join(difflib.unified_diff(source.splitlines(True),updated.splitlines(True),fromfile=str(path),tofile=str(path))));return
@@ -70,6 +165,6 @@ def main():
         if path.read_text()!=source:raise RuntimeError('The operator changed during integration; rerun against its latest source')
         os.replace(name,path)
     finally:Path(name).unlink(missing_ok=True)
-    print('Joined 9 transfer actions and original download tickets; prior source: '+str(backup))
+    print(('Joined the maintained transport descriptor and its original download tickets; prior source: ' if registered else 'Joined original transfer actions and download tickets; prior source: ')+str(backup))
 
 if __name__=='__main__':main()

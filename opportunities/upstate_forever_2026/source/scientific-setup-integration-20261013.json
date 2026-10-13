@@ -1,0 +1,164 @@
+{
+  "schema": "upstate.scientific-setup-integration/v1",
+  "version": "1.0.2",
+  "application": "opportunities/upstate_forever_2026",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "source_commit": "e0ebf7f2611b7b4f5672923e8eb3c5330db20f4f",
+  "coordination": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791861581087459?thread_ts=1791724121.853269",
+  "intent": "Capture an existing scientific setup as ordinary retained sources and an original customer review, then export and reopen the actual project.",
+  "files": [
+    {
+      "path": "model/setup_review.py",
+      "bytes": 42817,
+      "sha256": "6b2929e8a2df5d91a34ab1aa85b901e92da5dcec5f52a49eb0c90ae160cfdf60",
+      "operation": "add"
+    },
+    {
+      "path": "operator/scientific_setup.py",
+      "bytes": 4246,
+      "sha256": "2a781aafec72916a2581dd70859edf4906e94b7d84fee95307885c72c65b85ed",
+      "operation": "add"
+    },
+    {
+      "path": "source_tools/receive_scientific_setup.py",
+      "bytes": 12284,
+      "sha256": "af1e1d5389b254d7f15154fff06b9228064ce72a87ac329592340f1ebb0376ba",
+      "operation": "add"
+    },
+    {
+      "path": "model/SCIENTIFIC_SETUP.md",
+      "bytes": 11551,
+      "sha256": "0a881c0764c60c96cab7e78f324872431ab3206a4633c987024391d3380662bd",
+      "operation": "add"
+    },
+    {
+      "path": "source/scientific-setup-selection.schema.json",
+      "bytes": 3371,
+      "sha256": "772a82eb0f6c97a394893903f32c19b939124658baa3d3cc4e6d6f8b4d077ba2",
+      "operation": "add"
+    }
+  ],
+  "predecessors": [
+    {
+      "path": "model/workspace.py",
+      "git_blob": "200258448789f8d54fd8b9c8b3a0250dad844d8a",
+      "bytes": 23125,
+      "sha256": "9f63dc15b55b5fc0ede387dd4c9f14626efac5414b5fe79e26fbe198b4d5c0a1"
+    },
+    {
+      "path": "model/reviews.py",
+      "git_blob": "3c273cdd5c33e93c25b622241d5b0cc985ec0f9a",
+      "bytes": 61280,
+      "sha256": "2856adfc5b2c2b94478c1f3689a7d16465608fcf3b4eb062c84b87c111576a3a"
+    },
+    {
+      "path": "model/review_reconciliation.py",
+      "git_blob": "bd2a5da3c8c98d661722cb28783b4185f8e12dec",
+      "bytes": 30193,
+      "sha256": "a23ece98705be91e0d5ee5a0520901e97976df45361da03d0f5eb3e274e6e55e"
+    },
+    {
+      "path": "model/common.py",
+      "git_blob": "80f29c5beeb496a83bffec8ce84902e1ae39f3bd",
+      "bytes": 13565,
+      "sha256": "996a045501e9b190a05896af3beeff5f5b8fba8d88c60fe82d5ea44434ce134b"
+    },
+    {
+      "path": "model/portable.py",
+      "git_blob": "e17bd98ea861225d8f6878b03820b2a8c4f513f0",
+      "bytes": 19324,
+      "sha256": "a8470675cdf134fc5d71e9f96c6e933389c45a414e97f86b66c5a11bcda83827"
+    },
+    {
+      "path": "operator/customer_reviews.py",
+      "git_blob": "3005d01579e819e70f8d8740bb7f6a6789c5accd",
+      "bytes": 17201,
+      "sha256": "164b834a367333165ceeaf7a5a2ab2261d4c33fb5a4474acffc37f39a444413f"
+    },
+    {
+      "path": "model/rasters.py",
+      "git_blob": "800ffb4fedbd53839683704bf6e8fbd8202774c6",
+      "bytes": 29979,
+      "sha256": "694a75a9a94699024c1a13333f1b8740ee035ce14f9be09e757f859b1d182549"
+    },
+    {
+      "path": "model/model_selection.py",
+      "git_blob": "b8eceeebc5f5b1a9e783f82d7ed2dfeb6ce0da7b",
+      "bytes": 4689,
+      "sha256": "34e2d6f3ff7b540ab43161626e876fb3c62c9ee3be7c3f4006b2db8a996eb914"
+    },
+    {
+      "path": "model/observations.py",
+      "git_blob": "d25df3c7bcce1ab4f230aa5084a5f7e2de87a1e5",
+      "bytes": 23618,
+      "sha256": "c3ef91bfb89624c1c77b567be97e9369ad0a2b2c70072174f93c2e2a2c741e8b"
+    },
+    {
+      "path": "operator/extension_registry.py",
+      "git_blob": "3b3568b3e9199b525dc626ec3c464a7319be7538",
+      "bytes": 29648,
+      "sha256": "685633caeda86aad2a0bfc480e5395148150b7c6ef729f7141e8a584655779da"
+    },
+    {
+      "path": "operator/review_reconciliation.py",
+      "git_blob": "e9b1c581f94272081dbfbece50cd0390d882574c",
+      "bytes": 9150,
+      "sha256": "53e2781f605fcbf1fc5ba5b00bccdec9bf53892247cfe69cfdfe16834d4e6787"
+    },
+    {
+      "path": "operator/extensions/review-reconciliation.json",
+      "git_blob": "6ae89d46cbadd11a5d5973e3d469f7d37010155d",
+      "bytes": 2614,
+      "sha256": "6bacf9914a7e1bdce036637799bdee67e4116ea21c9475b1a7ecd0c4890d5530"
+    },
+    {
+      "path": "model/profiles.py",
+      "git_blob": "7e21e77a7d65f2256c700c44cdc34eff44306e9d",
+      "bytes": 6007,
+      "sha256": "01ac8234c199f9859df70205ffc776e51ac7b02dc57eec7fce3d0b000fb92a3b"
+    }
+  ],
+  "owned_interfaces": {
+    "backend": "ScientificSetup(operator,fault)",
+    "module": "scientific_setup",
+    "action": "scientific.setup.create",
+    "catalog": "GET /api/scientific-setup/catalog",
+    "preview": "POST /api/scientific-setup/preview",
+    "detail": "GET /api/scientific-setup/detail?setup_id=ID",
+    "state": "scientific_setup",
+    "verifier": "model.setup_review.verify_all",
+    "frontend_owner": "ECO13-6A4E root",
+    "frontend_asset": "operator/web/scientific-setup.mjs"
+  },
+  "composition": {
+    "review": "model.reviews",
+    "reconciliation": "model.review_reconciliation",
+    "workspace": "model.workspace.Workspace",
+    "source_manifest": "upstate.sources/v1",
+    "native_transfer": "model.portable.backup/restore"
+  },
+  "checks_completed": [
+    "Exact original Workspace/source import, current grid/profile/scenario/observation, customer review and portable return contracts read and source-reviewed.",
+    "CLI existing export uses reviews.describe_export, preserving original response generation.",
+    "Snapshot primary and all companions stay in one native source view, preserving relative document and original sidecar links.",
+    "Requested resolution/count become visible review findings; original run actions remain independent.",
+    "Provider preview verifies and removes only the current server's workspace transport field before strict scientific selection normalization.",
+    "Capture/import and final setup publication share the existing Workspace lock; original review creation takes its own lock without nesting.",
+    "Native request admission decodes, hashes and retains one original byte read.",
+    "Reused Workspace archive must match its retained bytes/SHA receipt; interrupted receipt recovery uses portable.inspect_archive(verify=True).",
+    "Peer inspection by source_engineering confirms original review source selection preserves all relative companion links and stable captured_at preserves source identity across retries.",
+    "Setup question/notes match the original review core's20,000-character limits; text NULs are rejected before source capture."
+  ],
+  "native_receiving": {
+    "status": "ready_for_existing_receiving_operation",
+    "coordination_parent": "1791857188.502629",
+    "command": "python -B -m source_tools.receive_scientific_setup --workspace ACTUAL_EXISTING_WORKSPACE --selection ACTUAL_SCIENTIFIC_SETUP_SELECTION_JSON --output-dir OWNED_OUTPUT_DIRECTORY",
+    "requires": "Original complete selected grid, actual parameter profile, baseline, explicit alternatives and source files from the receiving Workspace.",
+    "result": "invocation.json and receiving-result.json retain accepting host, interpreter, exact selected identities and actual restored project results."
+  },
+  "supersedes": "F0C8KN25V1B",
+  "source_lineage_checks": [
+    "Coefficient table's retained SHA versus the selected profile.table_summary.sha256",
+    "Prepared grid input's original source_id/source_sha256 versus the bound actual source entry"
+  ]
+}

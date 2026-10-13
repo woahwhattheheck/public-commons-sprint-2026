@@ -1,4 +1,5 @@
 /** Native report and sourced cost intake for the retained economic desk. */
+import {exportCostWorksheet,previewCostWorksheet,applyCostWorksheet} from './economic_cost_worksheet.mjs';
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const short = value => String(value || '').slice(0, 12);
@@ -28,7 +29,7 @@ export function attachEconomicDesk(host) {
   const {getState,api,endpoint,toast}=host;
   let root=null,frame=null,workspace=null,source=null,catalog=null,draft=null;
   let epoch=0,busy=false,pending=null,preview=null,openEditionId=null,requestedSource=null;
-  let rowFingerprint='',completedTask=null;
+  let rowFingerprint='',completedTask=null,worksheetPreview=null;
   const operations=new Map();
   const node=selector=>frame?.querySelector(selector);
   const key=()=> 'upstate-economic-desk:'+workspace;
@@ -43,7 +44,7 @@ export function attachEconomicDesk(host) {
     busy=value;
     const selectedZone=source?.zones.find(row=>row.zone_id===draft?.zoneId);
     for(const control of frame?.querySelectorAll('[data-submit]')||[])control.disabled=value||!source?.alternatives?.length||!selectedZone?.common_support_available;
-    for(const control of frame?.querySelectorAll('[data-inputs] input,[data-inputs] textarea,[data-inputs] select,[data-report],[data-zone]')||[])control.disabled=value;
+    for(const control of frame?.querySelectorAll('[data-inputs] input,[data-inputs] textarea,[data-inputs] select,[data-inputs] [data-worksheet-action],[data-report],[data-zone]')||[])control.disabled=value||(control.dataset.econ==='worksheet-apply'&&!!worksheetPreview?.errors?.length);
   }
   function remember() {
     if(!workspace||!draft)return;
@@ -54,7 +55,7 @@ export function attachEconomicDesk(host) {
   }
   function blank(reportId='',zoneId='') {
     return {reportId,reportSha:'',zoneId,title:'',currency:'USD',capital_limit:'',
-      annualized_limit:'',targets:{},costs:{},notes:'',originalReportId:'',originalZoneId:'',originalSelection:null};
+      annualized_limit:'',targets:{},costs:{},costWorksheets:[],notes:'',originalReportId:'',originalZoneId:'',originalSelection:null};
   }
   function current() {
     if(!draft||!frame)return draft;
@@ -80,6 +81,7 @@ export function attachEconomicDesk(host) {
     state.capital_limit=selected.budget?.capital_limit??'';
     state.annualized_limit=selected.budget?.annualized_limit??'';
     state.targets={...selected.targets};state.notes=(selected.notes||[]).join('\n');
+    state.costWorksheets=JSON.parse(JSON.stringify(selected.cost_worksheets||[]));
     for(const cost of selected.costs||[]){
       state.costs[cost.run_id]={
         originalCost:JSON.parse(JSON.stringify(cost)),enabled:true,currency:cost.currency,capital:cost.capital,
@@ -114,7 +116,10 @@ export function attachEconomicDesk(host) {
       if(!value.enabled)continue;
       if(!known.has(runId))throw Error('A saved cost names a scenario outside this native report.');
       const label=source.alternatives.find(row=>row.run_id===runId)?.label||short(runId);
-      const original=draft.originalReportId===draft.reportId?(value.originalCost||{}):{};
+      const binding=value.worksheetBinding;
+      const worksheetBound=binding&&binding.report_id===draft.reportId&&binding.report_sha256===draft.reportSha&&binding.project_id===String(source.project?.id??'')&&
+        source.zones.some(originalZone=>originalZone.zone_id===binding.zone_id);
+      const original=draft.originalReportId===draft.reportId||worksheetBound?(value.originalCost||{}):{};
       const origin={...(original.source||{}),title:String(value.source_title||'').trim(),uri:String(value.source_uri||'').trim(),as_of:String(value.source_as_of||'').trim()};
       if(!origin.title||!origin.uri||!/^\d{4}-\d{2}-\d{2}$/.test(origin.as_of))throw Error('Add the actual cost source title, reference and as-of date for '+label+'.');
       const scope=value.cost_scope;
@@ -138,6 +143,8 @@ export function attachEconomicDesk(host) {
     }
     const selection={...retained,schema:'upstate.decision-selection/v1',title:draft.title.trim(),
       comparison_id:zone.comparison_id,costs,targets:{},notes:draft.notes.split('\n').filter(line=>line.trim())};
+    if(draft.costWorksheets?.length)selection.cost_worksheets=JSON.parse(JSON.stringify(draft.costWorksheets));
+    else delete selection.cost_worksheets;
     delete selection.budget;
     const budget={...(retained.budget||{}),currency};
     let hasBudgetLimit=false;
@@ -201,6 +208,56 @@ export function attachEconomicDesk(host) {
     if(source.unavailable_alternatives?.length)body+='<details><summary>Alternatives outside this management comparison</summary><ul>'+source.unavailable_alternatives.map(row=>'<li><code>'+escape(short(row.run_id))+'</code> '+escape(row.reason)+'</li>').join('')+'</ul></details>';
     part.innerHTML=body;
   }
+  function worksheetControls() {
+    const retained=draft.costWorksheets||[];
+    return '<div class="econ-actions">'+button('worksheet-csv','Download cost worksheet CSV','data-worksheet-action')+
+      button('worksheet-json','Download cost worksheet JSON','data-worksheet-action')+
+      '<label>Review completed worksheet <input data-cost-worksheet type="file" accept=".csv,.json,text/csv,application/json"></label></div>'+
+      '<p class="econ-note">One row per original alternative. Enter the actual source, cost footprint and amounts; set include_cost to yes for reviewed estimates. Import shows every change before applying it. Rows absent from a worksheet keep their current estimates.</p>'+
+      (retained.length?'<details><summary>'+retained.length+' original imported cost worksheet'+(retained.length===1?'':'s')+'</summary><ul>'+
+        retained.map((item,index)=>'<li>'+escape(item.filename||'Cost worksheet')+' · '+escape(item.imported_at)+' '+button('worksheet-source','Download original','data-index="'+index+'" data-worksheet-action')+'</li>').join('')+'</ul></details>':'')+
+      '<div data-worksheet-preview hidden></div>';
+  }
+  function downloadWorksheet(file) {
+    const objectURL=URL.createObjectURL(new Blob([file.content],{type:file.mimeType}));
+    const link=document.createElement('a');link.href=objectURL;link.download=file.filename;
+    document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(objectURL),1000);
+  }
+  function renderWorksheetPreview() {
+    const box=node('[data-worksheet-preview]');if(!box)return;
+    box.hidden=!worksheetPreview;if(!worksheetPreview)return;
+    const selected=worksheetPreview;
+    const errors=selected.errors.length?'<ul role="alert">'+selected.errors.map(row=>'<li>'+escape(row.message)+'</li>').join('')+'</ul>':'';
+    const rows=selected.rows.map(row=>{
+      const details=row.changed.map(key=>'<li>'+escape(key.replaceAll('_',' '))+': <span>'+escape(row.before[key]??'—')+'</span> → <strong>'+escape(row.after[key]??'—')+'</strong></li>').join('');
+      const metadata=row.metadata_changed?'<details><summary>Source and estimate provenance changes</summary><p>Current retained metadata</p><pre>'+escape(JSON.stringify(row.metadata_before,null,2))+'</pre><p>Metadata retained after import</p><pre>'+escape(JSON.stringify(row.metadata_after,null,2))+'</pre></details>':'';
+      return '<tr><th>'+escape(row.label)+'<br><code>'+escape(short(row.run_id))+'</code></th><td>'+(row.after.enabled?'Include reviewed estimate':'Keep cost unchecked')+'</td><td>'+(details?'<ul>'+details+'</ul>':row.metadata_changed?'Cost amounts unchanged':'Values unchanged')+metadata+'</td></tr>';
+    }).join('');
+    box.innerHTML='<h4>Review '+escape(selected.filename)+'</h4><p>'+selected.rows.length+' valid rows · '+selected.included_count+' reviewed estimates · '+selected.untouched_count+' other alternatives kept as entered.</p>'+errors+
+      '<div class="econ-table-wrap"><table><thead><tr><th>Original alternative</th><th>Estimate selection</th><th>Changes to current inputs</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+      '<div class="econ-actions">'+button('worksheet-apply','Apply reviewed worksheet','data-worksheet-action '+(selected.errors.length?'disabled':''))+
+      button('worksheet-cancel','Cancel worksheet preview','data-worksheet-action')+'</div>';
+  }
+  async function readWorksheet(file) {
+    if(!file)return;
+    worksheetPreview=null;renderWorksheetPreview();
+    current();const token=epoch,expected=JSON.stringify(draft);
+    if(file.size>1024*1024)throw Error('Use a cost worksheet of at most 1 MiB. Split larger files by original scenario rows.');
+    setBusy(true);message('Reading the worksheet and comparing its original scenario identities…');
+    try{
+      const bytes=await file.arrayBuffer();
+      if(!valid(token))return;
+      if(JSON.stringify(current())!==expected)throw Error('The economic inputs changed while reading the file. Select the worksheet again.');
+      const content=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);
+      const hash=await crypto.subtle.digest('SHA-256',bytes);
+      if(!valid(token))return;
+      if(JSON.stringify(current())!==expected)throw Error('The economic inputs changed while reading the file. Select the worksheet again.');
+      worksheetPreview=previewCostWorksheet(content,{filename:file.name,source,draft});
+      worksheetPreview.sha256=Array.from(new Uint8Array(hash),value=>value.toString(16).padStart(2,'0')).join('');
+      renderWorksheetPreview();
+      message(worksheetPreview.errors.length?'Correct the listed worksheet rows, then select the corrected file.':'Review the worksheet changes, then apply the reviewed estimates.',!!worksheetPreview.errors.length);
+    }finally{if(valid(token))setBusy(false);}
+  }
   function renderInputs() {
     const box=node('[data-inputs]'),zone=source?.zones.find(row=>row.zone_id===draft?.zoneId);
     box.hidden=!zone;
@@ -226,11 +283,11 @@ export function attachEconomicDesk(host) {
       field('Upfront budget limit','capital_limit',draft.capital_limit,'number','min="0" step="any" placeholder="No upfront limit"')+
       field('Annualized budget limit','annualized_limit',draft.annualized_limit,'number','min="0" step="any" placeholder="No annualized limit"')+
       metricFields+'</div>'+retainedTargets+'<p class="econ-note">Empty budget or target fields leave that criterion open. Costs use the actual intervention footprint; the reporting zone’s area does not prorate them.</p></section>'+
-      '<section class="econ-card"><h3>3. Whole-scenario cost sources</h3><p>Keep a scenario’s cost unchecked until its full implementation estimate is available. Assistance and payment schedules are funding contributions; retain those references in notes instead of entering them as implementation cost. Enter explicit zero values where the estimate has no upfront or annual cost. The physical edition remains useful with every cost unchecked.</p>'+rows+
+      '<section class="econ-card"><h3>3. Whole-scenario cost sources</h3><p>Keep a scenario’s cost unchecked until its full implementation estimate is available. Assistance and payment schedules are funding contributions; retain those references in notes instead of entering them as implementation cost. Enter explicit zero values where the estimate has no upfront or annual cost. The physical edition remains useful with every cost unchecked.</p>'+worksheetControls()+rows+
       '<label class="econ-notes"><span>Working notes carried with this edition</span><textarea data-field="notes" rows="3">'+escape(draft.notes)+'</textarea></label>'+
       '<div class="econ-actions">'+button('preview','Calculate decision preview','data-submit')+button('save-draft','Save inputs to workspace','data-submit')+button('build','Build and open complete edition','data-submit class="econ-primary"')+'</div>'+
       '<p class="econ-note">Every candidate remains one complete modeled scenario. Nitrogen, phosphorus and sediment keep their own units.</p></section>';
-    setBusy(busy);
+    renderWorksheetPreview();setBusy(busy);
   }
   function renderSaved(value=catalog) {
     if(!value)return;
@@ -257,6 +314,7 @@ export function attachEconomicDesk(host) {
   }
   async function loadSource(reportId,{preserve=false,zoneId=null}={}) {
     const token=++epoch,selectedWorkspace=workspace,retained=preserve&&draft?JSON.parse(JSON.stringify(draft)):null;
+    worksheetPreview=null;
     setBusy(true);message('Reading the completed native report and exact zones…');
     try{
       const value=await api(url('/api/economic-desk/source',{report_id:reportId}));
@@ -370,6 +428,10 @@ export function attachEconomicDesk(host) {
       }
       if(action==='open-draft')return await loadSaved('draft',target.dataset.id);
       if(busy)throw Error('The current economic operation is still running; its task remains in the operator queue.');
+      if(action==='worksheet-csv'||action==='worksheet-json'){current();downloadWorksheet(exportCostWorksheet(source,draft,action==='worksheet-csv'?'csv':'json'));return;}
+      if(action==='worksheet-source'){const item=draft.costWorksheets?.[Number(target.dataset.index)];if(!item)throw Error('Choose a retained original worksheet.');downloadWorksheet({filename:item.filename,content:item.original_text,mimeType:item.format==='csv'?'text/csv;charset=utf-8':'application/json'});return;}
+      if(action==='worksheet-cancel'){worksheetPreview=null;renderWorksheetPreview();message('Worksheet preview closed. Current inputs are retained.');return;}
+      if(action==='worksheet-apply'){current();draft=applyCostWorksheet(draft,worksheetPreview,{sha256:worksheetPreview?.sha256,imported_at:new Date().toISOString()});worksheetPreview=null;preview=null;node('[data-preview]').hidden=true;renderInputs();remember();message('Reviewed cost rows applied. Save inputs or build the edition to retain the original worksheet with this work.');return;}
       if(action==='clear-target'){delete draft.targets[target.dataset.metric];preview=null;node('[data-preview]').hidden=true;renderInputs();remember();message('The selected retained target was cleared. Other criteria are preserved.');return;}
       if(action==='preview'){
         const token=epoch;setBusy(true);message('Calculating costs, affordability and separate physical objectives…');
@@ -381,6 +443,7 @@ export function attachEconomicDesk(host) {
   }
   async function onChange(event) {
     try{
+      if(event.target.matches('[data-cost-worksheet]')){try{await readWorksheet(event.target.files?.[0]);}finally{event.target.value='';}return;}
       if(event.target.matches('[data-report]')){
         current();remember();
         const id=event.target.value;
@@ -400,7 +463,7 @@ export function attachEconomicDesk(host) {
             }
           }
         }
-        draft.zoneId=nextZone;
+        worksheetPreview=null;draft.zoneId=nextZone;
         if(draft.title===source.title+' · '+oldZone?.title)draft.title=source.title+' · '+(source.zones.find(row=>row.zone_id===draft.zoneId)?.title||'economic edition');
         preview=null;node('[data-preview]').hidden=true;
         renderSource();renderInputs();remember();return;
@@ -456,7 +519,7 @@ export function attachEconomicDesk(host) {
   }
   function detach() {
     if(frame){current();remember();frame.removeEventListener('click',onClick);frame.removeEventListener('change',onChange);frame.removeEventListener('input',onInput);}
-    epoch++;root=null;frame=null;source=null;catalog=null;busy=false;preview=null;
+    epoch++;root=null;frame=null;source=null;catalog=null;busy=false;preview=null;worksheetPreview=null;
   }
   async function openReport(selection) {
     if(!selection?.report_id)throw Error('Choose an actual completed native report.');

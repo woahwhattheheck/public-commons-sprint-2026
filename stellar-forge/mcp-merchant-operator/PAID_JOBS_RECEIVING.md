@@ -71,9 +71,24 @@ merchant-paid-jobs reopen \
 
 Reopen uses the local bytes. It acquires the original download lease, rehashes every complete file, and revalidates the job, input policy, resolution, buyer receipt, and accounting selection. REOPENED includes the same original artifact identities and their current local paths.
 
-Use result.bin with job.result.filename and job.result.contentType when saving or displaying a completed application result. The stable local names also allow a downstream process to select declared inputs by their original slot without trusting an uploaded filename as a path.
+Use result.bin with job.result.filename and job.result.contentType when saving or displaying a completed application result. For an explicit named-output package, download and reopen also validate the original completed attempt, output contract and every package member. The stable local names also allow a downstream process to select declared inputs by their original slot without trusting an uploaded filename as a path.
 
 A missing complete manifest or checkpoint indicates an unfinished or incomplete receiving directory. Continue its original download first. A changed file is reported with its original name; retain the original source export and recover the matching bytes through that same receiving selection.
+
+## Receive named output files offline
+
+A package result remains the single original result.bin in the complete export. The outputs command verifies the whole original export and receives its named members into a separate private directory:
+
+~~~sh
+merchant-paid-jobs outputs \
+  --dir "$PRIVATE_RECEIVING_DIRECTORY" \
+  --out "$PRIVATE_OUTPUT_FILES_DIRECTORY" \
+  --manifest-sha256 "$JOB_EXPORT_MANIFEST_SHA256"
+~~~
+
+The two directories must be distinct and cannot contain one another, including through path aliases. Repeat the same command to finish a matching partial receive or verify all completed members. JSON and byte results continue to use result.bin directly.
+
+The response's outputs object includes the original package digest, canonical manifest, job and settlement identity, member paths and reused-file count. The complete original export is unchanged. Keep the whole output directory, including its package.zip, job-result.json and receiving records, for independent offline reopen. The [named-output guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/outputs/README.md) covers the worker contract, customer Library and portable receiving API.
 
 ## Use the JavaScript client
 
@@ -83,7 +98,8 @@ The functions accept either an existing structured MCP client or a configured UR
 import {
   inspectPaidJobExport,
   downloadPaidJobExport,
-  reopenPaidJobExport
+  reopenPaidJobExport,
+  receivePaidJobOutputs
 } from './paid-jobs-client.mjs';
 
 const selected = {
@@ -131,6 +147,6 @@ The helper returns the parsed original resolution export unchanged. The target's
 
 ## Embed the command in the maintained CLI
 
-runPaidJobClientCommand accepts either ['jobs', command, ...options] or [command, ...options]. It returns true after handling inspect, download, reopen, or selected help. An unrecognized unprefixed command returns false so the existing merchant CLI can continue its normal dispatch. A selected jobs command reports its own argument or native receiving error.
+runPaidJobClientCommand accepts either ['jobs', command, ...options] or [command, ...options]. It returns true after handling inspect, download, reopen, outputs, or selected help. An unrecognized unprefixed command returns false so the existing merchant CLI can continue its normal dispatch. A selected jobs command reports its own argument or native receiving error.
 
 Supply the shared command's signal, environment, and print callback when embedding it. This preserves one original command lifetime and keeps the structured result available to its existing user interface.

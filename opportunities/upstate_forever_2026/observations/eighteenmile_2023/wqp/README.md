@@ -19,3 +19,7 @@ Import the existing parent model-sources.json. It includes the original publishe
 ## Reproduce from retained originals
 
 Run `node observations/eighteenmile_2023/wqp/normalize.mjs` from the existing application. The CLI checks original file sizes and SHA256 values before producing the seven derived tables/summary. It uses no network and no package dependencies.
+
+## Upper quantitation limits
+
+Four original E. coli rows have blank reported concentrations, an original Upper Quantitation Limit, and the original condition Present Above Quantification Limit: SV-375 on 9 May, 5 July and 1 August, and SV-376 on 12 June. These are retained as censored_above with their original 2419.6 or 9678.4 MPN/100mL bounds, rather than quantified values. All original source fields remain unchanged. Current row classes are 525 reported_numeric, 240 censored_below, 151 quantified and 4 censored_above. Coverage includes an explicit censored_above_count. The selected chlorophyll cohort is unchanged.
